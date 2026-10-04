@@ -146,7 +146,9 @@ func show_state(s) -> void:
 	op["title"].text = "Runner"
 	_head(op, "%d" % ceili(sim.hp), "of %d HP" % int(sim.max_hp()))
 	_bar(op, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [ceili(sim.hp), int(sim.max_hp())], "bad" if low else "good")
-	_lines(op, [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]], ["Damage", "%.0f/s" % (sim.dps() * sim.pace())]])
+	var on_you_words: Array = sim.dots_on_you()
+	_lines(op, [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]], ["Damage", "%.0f/s" % (sim.dps() * sim.pace())],
+		["On you", ", ".join(on_you_words).capitalize()] if not on_you_words.is_empty() else ["", ""]])
 	var med_sig := ""
 	if m["using"] != null:
 		op["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]

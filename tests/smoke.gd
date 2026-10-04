@@ -1052,7 +1052,7 @@ func _charm_sockets(main) -> void:
 	var armour_before: float = sim.armour()
 	_check(sim.fit(sim.equipped["Primary"]["slot"], fluid["id"]), "fit() did not seat a socketable in the first socket")
 	_check(gun["attachments"]["socket 1"] != null and gun["attachments"]["socket 1"]["base"] == "Lighter fluid", "the fluid is not in socket 1")
-	_check(sim.dps() > dps_before * 1.05, "fire in a socket did not raise damage: %.1f -> %.1f" % [dps_before, sim.dps()])
+	_check(is_equal_approx(sim.conversion()["fire"], 0.15) and sim.type_dps()["fire"] > 0.0 and is_equal_approx(sim.dps(), dps_before), "fire in a socket did not convert 15%%: %s" % str(sim.conversion()))
 	_check(sim.fit_socket("Primary", "socket 2", salt["id"]), "fit_socket() did not seat the salt in socket 2")
 	_check(sim.armour() > armour_before, "salt in a socket did not raise armour")
 	_check(not sim.stash.has(fluid) and not sim.stash.has(salt), "the socketables did not leave the stash")
@@ -1742,6 +1742,87 @@ func _sink_checks(main) -> void:
 	_check_fit(main, "Runs (after)")
 	sim.load_dict(saved)
 	print("the late sinks ok: call-ins by depth and words, insurance paid and paid out")
+	_damage_model_checks(main)
+
+
+## The damage model: a hit split by type, each cut by their resist, dots
+## both ways, chill and shock, armour for physical and resists for the rest.
+func _damage_model_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	sim.equipped["Secondary"] = null
+	for s in ["Helmet", "Armour", "Charm"]:
+		sim.equipped[s] = null
+	var conv: Dictionary = sim.conversion()
+	_check(is_equal_approx(conv["physical"], 1.0), "a plain gun is not all physical: %s" % str(conv))
+	var gun: Dictionary = sim.equipped["Primary"]
+	gun["attachments"]["socket 1"] = sim._plain("Attachment", "Lighter fluid")
+	gun["affixes"] = [{"stat": "fire_pct", "value": 20, "tier": 3}]
+	conv = sim.conversion()
+	_check(is_equal_approx(conv["fire"], 0.15) and is_equal_approx(conv["physical"], 0.85), "the fluid did not make 15%% fire: %s" % str(conv))
+	var td: Dictionary = sim.type_dps()
+	_check(is_equal_approx(td["fire"], sim.dps() * 0.15 * 1.2) and is_equal_approx(td["physical"], sim.dps() * 0.85), "type dps is off: %s against %.1f" % [str(td), sim.dps()])
+	var t0 := {"dps": 10.0, "res": {"fire": 0.5}, "types": {"physical": 0.5, "fire": 0.5}}
+	_check(is_equal_approx(sim.damage_rate(t0), td["physical"] + td["fire"] * 0.5), "their fire resist did not halve the fire share")
+	_check(is_equal_approx(sim.damage_rate(t0, true), (td["physical"] + td["fire"] * 0.5) * (1.0 + Data.SHOCK)), "shocked did not take more")
+	gun["affixes"] = [{"stat": "conv_fire_pct", "value": 60, "tier": 5}, {"stat": "conv_frost_pct", "value": 60, "tier": 5}]
+	conv = sim.conversion()
+	_check(is_equal_approx(conv["fire"], 0.5) and is_equal_approx(conv["frost"], 0.5) and is_equal_approx(conv["physical"], 0.0), "over-conversion did not share out: %s" % str(conv))
+	gun["affixes"] = []
+	var armour: Dictionary = sim._plain("Armour", "Stab vest")
+	armour["affixes"] = [{"stat": "fire_res", "value": 40, "tier": 5}, {"stat": "all_res", "value": 10, "tier": 3}]
+	sim.equipped["Armour"] = armour
+	_check(is_equal_approx(sim.resist("fire"), 0.5) and is_equal_approx(sim.resist("shock"), 0.1) and is_equal_approx(sim.resist("physical"), 0.0), "resists do not add: fire %.2f shock %.2f" % [sim.resist("fire"), sim.resist("shock")])
+	armour["affixes"].append({"stat": "fire_res", "value": 90, "tier": 5})
+	_check(is_equal_approx(sim.resist("fire"), Data.RESIST_CAP / 100.0), "the resist cap did not hold: %.2f" % sim.resist("fire"))
+	var mit: float = sim.mitigation()
+	var expect: float = 10.0 * 0.5 * (1.0 - mit) + 10.0 * 0.5 * (1.0 - 0.75)
+	_check(is_equal_approx(sim.incoming_rate(t0, 1), expect), "incoming by type is off: %.2f vs %.2f" % [sim.incoming_rate(t0, 1), expect])
+	_check(is_equal_approx(sim.incoming_rate(t0, 1, true), expect * (1.0 - Data.CHILL)), "chilled did not slow their fire")
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	var e: Dictionary = sim.effective(0)
+	_check(e.has("types") and e.has("res") and is_equal_approx(e["types"]["physical"] + e["types"]["bleed"], 1.0) and e["types"]["bleed"] > 0.1, "the estate's fire is not mostly physical with some bleed: %s" % str(e["types"]))
+	sim.intel[0] = ["Burners", "Jacketed"]
+	e = sim.effective(0)
+	_check(e["types"].get("fire", 0.0) >= 0.33 and e["res"]["fire"] >= 0.4, "Burners and Jacketed did not take: %s %s" % [str(e["types"]), str(e["res"])])
+	sim.intel[0] = ["Resistant"]
+	_finish_campaign(sim)
+	sim.best_depth[0] = 20
+	sim.set_depth(0, 12)
+	e = sim.effective(0)
+	_check(e["res"]["physical"] >= 0.25 + Data.RESIST_DEPTH_STEP * 4 and e["res"]["fire"] <= Data.RESIST_ENEMY_CAP, "Resistant at depth 12 is %s" % str(e["res"]))
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	var dots := {}
+	sim._dot_add(dots, "fire", 100.0, 100.0)
+	_check(is_equal_approx(dots["fire"], 50.0), "a 100 fire hit did not leave a 50 burn: %s" % str(dots))
+	var ticked: float = sim._dot_tick(dots, 1.0)
+	_check(is_equal_approx(ticked, 12.5) and is_equal_approx(dots["fire"], 37.5), "the burn did not tick a quarter of the pool a second: %.1f" % ticked)
+	for k in range(10):
+		sim._dot_add(dots, "poison", 100.0, 100.0)
+	_check(is_equal_approx(dots["poison"], 100.0 * 0.8 * 8.0 * 5), "poison did not cap at its stacks: %.0f" % dots["poison"])
+	sim.intel[0] = ["Cutters"]
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	for k in range(6):
+		sim.advance(0.5)
+		if m["remaining"] <= 0:
+			break
+	_check((m.has("my_dots") and float(m["my_dots"].get("bleed", 0.0)) > 0.0) or m["remaining"] <= 0, "a cutters' gang left no bleed on you: %s" % str(m.get("my_dots", {})))
+	if m["remaining"] > 0 and not sim.first_med().is_empty():
+		sim.use_med(sim.first_med()["id"])
+		for k in range(40):
+			sim.advance(0.5)
+			if m["using"] == null:
+				break
+		_check(not m.get("my_dots", {}).has("bleed"), "the dressing did not stop the bleeding")
+	sim.extract_now()
+	sim.intel[0] = []
+	sim.load_dict(saved)
+	print("the damage model ok: conversion, type dps, their resists, shock, your resists and the cap, incoming by type, chill, the sites' types, the words, dots, a dressing")
 	# every gun says what it takes, and the Lock-up's panel shows it
 	for slot in ["Primary", "Secondary"]:
 		for b in Data.BASES[slot]:

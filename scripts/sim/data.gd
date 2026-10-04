@@ -345,7 +345,34 @@ const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock"]
 const SOCKET_SLOTS := ["Primary", "Secondary", "Helmet", "Armour"]
 const SOCKET_MAX := 2
 const SOCKET_ODDS := [0.45, 0.4, 0.15]     # 0, 1, 2 sockets
-const SOCKET_WORDS := {"burn_pct": "fire", "frost_pct": "frost", "poison_pct": "poison", "shock_pct": "shock", "salt": "salt", "wire_pct": "wire"}
+const SOCKET_WORDS := {"conv_fire_pct": "fire", "conv_frost_pct": "frost", "conv_poison_pct": "poison", "conv_shock_pct": "shock", "salt": "salt", "wire_pct": "wire"}
+
+## Damage types. A hit is split by type (`Sim.conversion`), each share
+## multiplied by its own increased and more, cut by their resist to it, and
+## some leave something behind: fire burns, poison poisons, bleed bleeds (a
+## share of the hit over seconds; poison stacks), frost chills (their fire
+## slower), shock shocks (they take more of everything). Physical is what's
+## left after the conversions, and armour only ever stops physical; the
+## rest only resists do.
+const TYPES := ["physical", "fire", "frost", "poison", "shock", "bleed"]
+const ELEMENTS := ["fire", "frost", "poison", "shock", "bleed"]
+const RESIST_CAP := 75.0
+const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.6, "s": 6.0, "stacks": 1}}
+const CHILL := 0.2                 # their fire, while chilled
+const SHOCK := 0.15                # more of everything they take, while shocked
+## Their side, by zone: what their fire is made of at depth 1 (physical is the
+## rest) and what they resist. The element's share grows with depth (ZONE_GROW
+## a depth, to ZONE_SHARE_CAP); "Resistant" and the depth add to the resists.
+const ZONE_TYPES := [
+	{"types": {"bleed": 0.15}, "res": {}},                                   # the estate: blades and bats
+	{"types": {"fire": 0.15, "poison": 0.1}, "res": {"bleed": 0.2, "physical": 0.1}},   # the town: petrol and whatever's in the bottles; jackets
+	{"types": {"shock": 0.15, "fire": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2}},   # the city: army kit
+]
+const ZONE_GROW := 0.02
+const ZONE_SHARE_CAP := 0.6
+const RESIST_DEPTH := 8            # from here, all their resists rise a step a depth
+const RESIST_DEPTH_STEP := 0.015
+const RESIST_ENEMY_CAP := 0.7
 const ATTACHMENTS := [
 	# optics
 	{"name": "Red dot", "mount": "optic", "tier": 1, "value": 60, "damage_pct": 5},
@@ -383,10 +410,10 @@ const ATTACHMENTS := [
 	{"name": "Precision stock", "mount": "stock", "tier": 5, "value": 420, "first_pct": 15, "damage_pct": 8},
 	{"name": "Laser module", "mount": "optic", "tier": 6, "value": 520, "first_pct": 20, "damage_pct": 6},
 	# socketables: the six things that go in a socket, found and fitted at the bench
-	{"name": "Lighter fluid", "mount": "socket", "tier": 1, "value": 120, "burn_pct": 12},
-	{"name": "Antifreeze", "mount": "socket", "tier": 1, "value": 120, "frost_pct": 10},
-	{"name": "Rat poison", "mount": "socket", "tier": 2, "value": 160, "poison_pct": 15},
-	{"name": "Car battery", "mount": "socket", "tier": 2, "value": 160, "shock_pct": 25},
+	{"name": "Lighter fluid", "mount": "socket", "tier": 1, "value": 120, "conv_fire_pct": 15},
+	{"name": "Antifreeze", "mount": "socket", "tier": 1, "value": 120, "conv_frost_pct": 15},
+	{"name": "Rat poison", "mount": "socket", "tier": 2, "value": 160, "conv_poison_pct": 15},
+	{"name": "Car battery", "mount": "socket", "tier": 2, "value": 160, "conv_shock_pct": 15},
 	{"name": "Road salt", "mount": "socket", "tier": 1, "value": 100, "salt": 12},
 	{"name": "Copper wire", "mount": "socket", "tier": 3, "value": 200, "wire_pct": 12},
 	{"name": "Suppressor", "mount": "muzzle", "tier": 6, "value": 560, "damage_pct": -3, "patrol_pct": 35},
@@ -470,6 +497,25 @@ const AFFIXES := [
 	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet"]},
 	{"stat": "patrol_pct", "label": "gangs later", "short": "gangs later", "min": 4, "max": 18, "slots": ["Helmet", "Charm"]},
 	{"stat": "notes_pct", "label": "notes", "short": "notes", "min": 5, "max": 25, "slots": ["Charm", "Backpack"]},
+	# the types: increased a type, a share of the hit as a type, resists
+	{"stat": "fire_pct", "label": "fire damage", "short": "fire", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "frost_pct", "label": "frost damage", "short": "frost", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "poison_pct", "label": "poison damage", "short": "poison", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "shock_pct", "label": "shock damage", "short": "shock", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "bleed_pct", "label": "bleed damage", "short": "bleed", "min": 6, "max": 30, "slots": ["Primary", "Secondary", "Charm"]},
+	{"stat": "physical_pct", "label": "physical damage", "short": "phys", "min": 6, "max": 30, "slots": ["Primary", "Secondary"]},
+	{"stat": "conv_fire_pct", "label": "of damage as fire", "short": "as fire", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
+	{"stat": "conv_frost_pct", "label": "of damage as frost", "short": "as frost", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
+	{"stat": "conv_poison_pct", "label": "of damage as poison", "short": "as poison", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
+	{"stat": "conv_shock_pct", "label": "of damage as shock", "short": "as shock", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
+	{"stat": "conv_bleed_pct", "label": "of damage as bleed", "short": "as bleed", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
+	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
+	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
+	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
+	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
+	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
+	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm"], "weight": 0.3},
+	{"stat": "dot_pct", "label": "burn, poison and bleed damage", "short": "dots", "min": 8, "max": 40, "slots": ["Primary", "Secondary", "Charm"], "weight": 0.6},
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
 	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
 	{"stat": "loot_pct", "label": "loot find", "short": "loot", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
@@ -893,6 +939,14 @@ const MODIFIERS := [
 	{"name": "Lying low", "words": "Fire −30%, XP −30%", "dps": 0.7, "xp": 0.7},
 	{"name": "Ex-army", "words": "HP, fire +30%, XP +60%", "hp": 1.3, "dps": 1.3, "xp": 1.6},
 	{"name": "Picked over", "words": "Slow pickings, cash +40%", "search": 2.0, "cash": 1.4},
+	# the types: what their fire is made of, and what they resist
+	{"name": "Burners", "words": "A third fire, drops +20%", "type": "fire", "share": 0.33, "drop": 1.2},
+	{"name": "Cutters", "words": "A third bleed, drops +20%", "type": "bleed", "share": 0.33, "drop": 1.2},
+	{"name": "Wired", "words": "A third shock, drops +20%", "type": "shock", "share": 0.33, "drop": 1.2},
+	{"name": "Jacketed", "words": "Fire res 40%, cash +30%", "res": "fire", "res_add": 0.4, "cash": 1.3},
+	{"name": "Rubbered", "words": "Shock res 40%, £ +30%", "res": "shock", "res_add": 0.4, "cash": 1.3},
+	{"name": "Hardened", "words": "Phys res 30%, cash +30%", "res": "physical", "res_add": 0.3, "cash": 1.3},
+	{"name": "Resistant", "words": "All res 25%, rarer finds", "res": "all", "res_add": 0.25, "rarity": 0.5, "min_depth": 8},
 ]
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth

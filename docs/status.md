@@ -677,6 +677,35 @@ Asserted: the cap by level, the ranges cut without overlap, a tier-1 base at dep
 and depth 20 rolls some T5 and more T1, every bench job and its price, the lock keeps its affix, sixty
 re-rolls of one move its tier, the bump and its cap, the menus and the panel's tier line fit.
 
+## The builds pass, step 2 and 3: the damage model as layers, their side (2026-10-04)
+
+- **Six types** (`Data.TYPES`): physical, fire, frost, poison, shock, bleed. A hit is split by
+  `Sim.conversion()` (sockets and `conv_<type>_pct` affixes; physical is what's left), each share ×
+  (1 + `increased(type)`) × `more(type)` (1 for now - keystones and uniques go there), cut by their
+  resist to it (`damage_rate`); shocked, +15% of everything. The socketables are conversions now
+  (15% as fire/frost/poison/shock; salt and wire as they were).
+- **Dots** (`Data.DOTS`): fire burns half the hit over four seconds, poison 80% over eight and stacks to
+  five, bleed 60% over six; a pool a type on the target, drained a share a second, reset on a kill.
+  Frost chills (their fire −20% for a second), shock shocks. The same on you from their elemental
+  share; a dressing stops the bleeding; nothing ticks on you in the picking over. The run panel's
+  "On you: burning, bleeding".
+- **Armour stops physical only**; the elements only resists stop (`resist(type)`: affixes, all
+  resists, capped at 75%). `incoming_rate` does both; the dry run runs on the same two rates, with
+  the dots as the share they add.
+- **Their side** (`Data.ZONE_TYPES`): the estate's fire is 15% bleed, the town's fire and poison,
+  the city's shock and fire, each share growing 2% a depth to 60%; resists by zone (the town's
+  jackets against bleed, the city's kit against most things) plus 1.5% to everything a depth from
+  depth 8, capped at 70%. Seven new words: Burners, Cutters, Wired (a third of their fire a type),
+  Jacketed, Rubbered, Hardened (a resist), Resistant (all, from depth 8).
+- **Affixes**: increased a type (six), a share as a type (five, half weight), a resist a type (five),
+  all resists (rare), burn/poison/bleed damage.
+
+Asserted (`_damage_model_checks`): a plain gun is all physical; the fluid makes 15% fire and the fire
+affix raises that share alone; their resist halves it; shocked takes more; over-conversion shares out;
+resists add and cap; incoming is physical through armour and fire through the resist, chilled slower;
+the estate's types, the words, Resistant plus depth; the dot pools and ticks and the poison cap; a
+cutters' gang bleeds you and a dressing stops it.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

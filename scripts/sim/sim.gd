@@ -144,7 +144,7 @@ func dps() -> float:
 		d += sec
 	if d <= 0.0:
 		d = Data.UNARMED_DPS
-	var pct := _affix_sum("damage_pct") + tree_sum("damage_pct") + _fitted_sum("burn_pct")
+	var pct := _affix_sum("damage_pct") + tree_sum("damage_pct")
 	var fitted := 0
 	for s in ["Primary", "Secondary"]:
 		if equipped[s] != null:
@@ -173,6 +173,110 @@ func armour() -> float:
 func mitigation() -> float:
 	var a := armour() * (1.25 if has_node("plates") else 1.0) * cm("armour")
 	return a / (a + Data.ARMOUR_K)
+
+
+# ------------------------------------------------------------------ the damage model
+## A hit is split by type (conversion), each share multiplied by its own
+## increased and more, cut by their resist to it; the sum is what lands.
+## Physical is what's left after the conversions. Armour stops physical
+## only; the elements only resists stop.
+
+## The shares of a hit by type, summing to 1.
+func conversion() -> Dictionary:
+	var out := {}
+	var total := 0.0
+	for ty in Data.ELEMENTS:
+		var share: float = (_affix_sum("conv_%s_pct" % ty) + _fitted_sum("conv_%s_pct" % ty) + tree_sum("conv_%s_pct" % ty)) / 100.0
+		out[ty] = maxf(0.0, share)
+		total += out[ty]
+	if total > 1.0:
+		for ty in Data.ELEMENTS:
+			out[ty] /= total
+		total = 1.0
+	out["physical"] = 1.0 - total
+	return out
+
+
+## Everything that increases a type, in percent, added together.
+func increased(ty: String) -> float:
+	return _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty)
+
+
+## Everything that multiplies a type on its own: keystones, uniques. 1 for now.
+func more(_ty: String) -> float:
+	return 1.0
+
+
+## Damage a second by type, before their resist: the base, split, increased, more.
+func type_dps() -> Dictionary:
+	var base := dps()
+	var conv := conversion()
+	var out := {}
+	for ty in Data.TYPES:
+		out[ty] = base * float(conv[ty]) * (1.0 + increased(ty) / 100.0) * more(ty)
+	return out
+
+
+## What lands on a target a second: each type cut by their resist to it; shocked, more of everything.
+func damage_rate(t: Dictionary, shocked := false) -> float:
+	var res: Dictionary = t.get("res", {})
+	var total := 0.0
+	for ty in Data.TYPES:
+		total += float(type_dps()[ty]) * (1.0 - float(res.get(ty, 0.0)))
+	return total * ((1.0 + Data.SHOCK) if shocked else 1.0)
+
+
+## Your resist to a type, as a share, capped.
+func resist(ty: String) -> float:
+	if ty == "physical":
+		return 0.0
+	return minf(Data.RESIST_CAP, _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res")) / 100.0
+
+
+## Their fire a second on you: each type's share, physical through armour, the
+## rest through resists; chilled, slower; three or more, the crowd rules.
+func incoming_rate(t: Dictionary, on_you: int, chilled := false) -> float:
+	var types: Dictionary = t.get("types", {"physical": 1.0})
+	var total := 0.0
+	for ty in types:
+		var share := float(types[ty])
+		total += t["dps"] * on_you * share * ((1.0 - mitigation()) if ty == "physical" else (1.0 - resist(ty)))
+	return total * ((1.0 - Data.CHILL) if chilled else 1.0)
+
+
+## A dot's pool grows by a share of what landed and drains over its seconds;
+## stacks cap the pool. `dots` is {type: pool}.
+func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> void:
+	if not Data.DOTS.has(ty) or landed <= 0.0:
+		return
+	var d: Dictionary = Data.DOTS[ty]
+	var cap: float = rate_cap * float(d["ratio"]) * float(d["s"]) * float(d["stacks"])
+	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
+
+
+## What the dots deal this tick, draining their pools.
+func _dot_tick(dots: Dictionary, dt: float) -> float:
+	var dealt := 0.0
+	for ty in dots.keys():
+		var pool := float(dots[ty])
+		if pool <= 0.0:
+			dots.erase(ty)
+			continue
+		var tick := minf(pool, pool / float(Data.DOTS[ty]["s"]) * dt)
+		dots[ty] = pool - tick
+		dealt += tick
+	return dealt
+
+
+## What's on you, for the run panel: "burning, bleeding".
+func dots_on_you() -> Array:
+	var out := []
+	if mission == null:
+		return out
+	for ty in ["fire", "poison", "bleed"]:
+		if float(mission.get("my_dots", {}).get(ty, 0.0)) > 0.5:
+			out.append({"fire": "burning", "poison": "poisoned", "bleed": "bleeding"}[ty])
+	return out
 
 
 ## Loot the pack can bring back.
@@ -1360,6 +1464,33 @@ func effective(i: int) -> Dictionary:
 		e["patrol"] *= m.get("patrol", 1.0)
 		e["search"] *= m.get("search", 1.0)
 		e["contact"] += int(m.get("contact", 0))
+	# what their fire is made of, and what they resist: the zone's, grown by depth, and the words
+	var zone: Dictionary = Data.ZONE_TYPES[int(base["zone"])]
+	var types := {}
+	for ty in zone["types"]:
+		types[ty] = minf(Data.ZONE_SHARE_CAP, float(zone["types"][ty]) + Data.ZONE_GROW * (d - 1))
+	var res := {}
+	for ty in Data.TYPES:
+		res[ty] = float(zone["res"].get(ty, 0.0)) + (Data.RESIST_DEPTH_STEP * (d - Data.RESIST_DEPTH + 1) if d >= Data.RESIST_DEPTH else 0.0)
+	for name in intel[i]:
+		var m := modifier(name)
+		if m.has("type"):
+			types[m["type"]] = minf(0.9, float(types.get(m["type"], 0.0)) + float(m["share"]))
+		if m.has("res"):
+			for ty in (Data.TYPES if m["res"] == "all" else [m["res"]]):
+				res[ty] += float(m["res_add"])
+	var elemental := 0.0
+	for ty in types:
+		elemental += types[ty]
+	if elemental > 0.9:
+		for ty in types:
+			types[ty] *= 0.9 / elemental
+		elemental = 0.9
+	types["physical"] = 1.0 - elemental
+	for ty in res:
+		res[ty] = minf(Data.RESIST_ENEMY_CAP, res[ty])
+	e["types"] = types
+	e["res"] = res
 	return e
 
 
@@ -1447,11 +1578,16 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	var remaining: int = t["pool"]
 	var target: float = t["hp"]
 	# the fight before the clear counts first_lot_pct, which dps() only adds on a run
-	var d: float = dps() * (1.0 + (_affix_sum("first_lot_pct") / 100.0 if mission == null else 0.0)) * pace() * t["pace"] * DRY_STEP
+	# the hit by type against their resists, the dots as the share they add over a fight
+	var dot_share := 0.0
+	var conv := conversion()
+	for ty in Data.DOTS:
+		dot_share += float(conv[ty]) * float(Data.DOTS[ty]["ratio"])
+	var d: float = damage_rate(t) * (1.0 + dot_share) * (1.0 + (_affix_sum("first_lot_pct") / 100.0 if mission == null else 0.0)) * pace() * t["pace"] * DRY_STEP
 	var mit := mitigation()
 	var crowd := (0.5 if has_node("bodyline") else 1.0) * (0.75 if has_rule("doormans") else 1.0) * (1.0 - _affix_sum("crowd_less_pct") / 100.0)   # with three on you
 	# the crew's head is the first of his gang the whole way down: the first-shot bonuses hold on him
-	var first := 1.0 + (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + _fitted_sum("shock_pct") + float(class_data().get("first_pct", 0)) + tree_sum("first_pct")) / 100.0 + (2.0 if has_rule("grandads") else 0.0)
+	var first := 1.0 + (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + tree_sum("first_pct")) / 100.0 + (2.0 if has_rule("grandads") else 0.0)
 	var meds := rig.filter(func(it): return Items.is_medical(it))
 	var using := {}
 	var guard := 0
@@ -1462,7 +1598,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		if boss_left:
 			if target <= 0.0:
 				break                         # the boss is down
-			h -= float(boss["dps"]) * DRY_STEP * (1.0 - mit) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
+			h -= incoming_rate({"dps": boss["dps"], "types": t.get("types", {})}, 1) * DRY_STEP * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 		else:
 			while target <= 0.0 and remaining > 0:
 				remaining -= 1
@@ -1474,7 +1610,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 				target = float(boss["hp"])
 				continue
 			var on_you := mini(remaining, contact(t))
-			h -= t["dps"] * DRY_STEP * on_you * (1.0 - mit) * (crowd if on_you >= 3 else 1.0) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
+			h -= incoming_rate(t, on_you) * DRY_STEP * (crowd if on_you >= 3 else 1.0) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 		h = minf(max_hp(), h + _affix_sum("regen") * DRY_STEP)
 		# a player who patches up under 40%, like the Use button - against the crew's head too
 		if using.is_empty() and h < max_hp() * 0.4 and not meds.is_empty():
@@ -1656,13 +1792,34 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var swing := rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	var headshot := 1.0
 	if m["fresh"]:
-		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + _fitted_sum("shock_pct") + float(class_data().get("first_pct", 0))) / 100.0
+		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0))) / 100.0
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
 	if m["fresh"] and has_rule("grandads"):
 		headshot += 2.0
 	if m["fresh"] and has_node("one_shot"):
 		m["target_hp"] = 0.0              # the first of the lot drops where it stands
-	m["target_hp"] -= dps() * pace() * t["pace"] * swing * headshot * dt
+	# the hit, by type: each share cut by their resist to it; shocked, more of everything
+	var shocked: bool = float(m.get("shock_t", 0.0)) > 0.0
+	var mult: float = pace() * t["pace"] * swing * headshot * dt
+	var res: Dictionary = t.get("res", {})
+	var per_type := type_dps()
+	var landed_total := 0.0
+	for ty in Data.TYPES:
+		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + Data.SHOCK) if shocked else 1.0)
+		landed_total += landed
+		if landed > 0.0:
+			if not m.has("dots"):
+				m["dots"] = {}
+			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"])
+			if ty == "frost":
+				m["chill_t"] = 1.0
+			if ty == "shock":
+				m["shock_t"] = 1.0
+	m["target_hp"] -= landed_total
+	if m.has("dots"):
+		m["target_hp"] -= _dot_tick(m["dots"], dt)
+	m["chill_t"] = maxf(0.0, float(m.get("chill_t", 0.0)) - dt)
+	m["shock_t"] = maxf(0.0, float(m.get("shock_t", 0.0)) - dt)
 	# the rounds behind that: the primary's rate while it's live, the secondary's when it fires
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	if primary_live and not has_rule("qm_rifle"):
@@ -1682,6 +1839,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["remaining"] = 0                           # comes out below
 			break
 		m["target_hp"] += t["hp"]
+		m["dots"] = {}                       # the next of them is a new target
+		m["chill_t"] = 0.0
+		m["shock_t"] = 0.0
 		_kill(m, t)
 	if m["remaining"] <= 0:
 		if m.has("boss") and m["boss"]["alive"] and not m["boss"]["started"]:
@@ -1694,14 +1854,16 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			return
 		m["target_hp"] = 0.0
 		m["last_incoming"] = 0.0
+		m["my_dots"] = {}                    # the picking over: nothing ticks on you
 		if not m["cleared"]:
 			_clear(m, t)
 		return
 	var on_you := mini(m["remaining"], contact(t))
-	var incoming: float = t["dps"] * on_you * (1.0 - mitigation()) * rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE) * (1.0 - _fitted_sum("frost_pct") / 100.0)
+	var chilled: bool = float(m.get("chill_t", 0.0)) > 0.0
+	var incoming: float = incoming_rate(t, on_you, chilled) * rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	if boss_on:
 		on_you = 1
-		incoming = float(m["boss"]["dps"]) * (1.0 - mitigation()) * rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
+		incoming = incoming_rate({"dps": m["boss"]["dps"], "types": t.get("types", {})}, 1, chilled) * rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	if m["fresh"] and has_rule("underlay"):
 		m["grace"] = float(m.get("grace", 0.0)) + dt
 		if m["grace"] <= 2.0:
@@ -1714,6 +1876,15 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
 	if on_you >= 3 and has_rule("doormans"):
 		incoming *= 0.75
+	# what their fire leaves on you: a share of the elemental part burns, poisons, bleeds, and ticks while the fight's on
+	if not m.has("my_dots"):
+		m["my_dots"] = {}
+	var their_types: Dictionary = t.get("types", {})
+	for ty in ["fire", "poison", "bleed"]:
+		var share := float(their_types.get(ty, 0.0))
+		if share > 0.0 and incoming > 0.0:
+			_dot_add(m["my_dots"], ty, incoming * share * dt, incoming * share)
+	incoming += _dot_tick(m["my_dots"], dt) / maxf(dt, 0.001)
 	m["last_incoming"] = incoming
 	hp -= incoming * dt
 	if hp <= 0.0:
@@ -1748,6 +1919,8 @@ func _patch(m: Dictionary, dt: float) -> void:
 	m["using"]["left"] -= dt
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
 		hp = minf(max_hp(), hp + m["using"]["heal"])
+		if m.has("my_dots"):
+			m["my_dots"].erase("bleed")      # a dressing stops the bleeding
 		m["meds_used"] += 1
 		log_event("%s used: HP %d" % [m["using"]["name"], ceili(hp)])
 		m["using"] = null
@@ -1768,7 +1941,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
 	if has_node("quiet_hands"):
 		return
-	if has_node("nothing_wasted") or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + _fitted_sum("poison_pct") / 100.0) * pay:
+	if has_node("nothing_wasted") or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
 			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)     # signed for: a tier up

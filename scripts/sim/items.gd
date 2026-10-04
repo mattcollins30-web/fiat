@@ -491,7 +491,7 @@ static func score(it: Dictionary) -> float:
 			return float(it.get("rounds", 0)) * (1.0 + float(base_of(it).get("damage_pct", 0)) / 100.0)
 		"attach":
 			if is_socketable(it):
-				return att_stat(it, "burn_pct") + att_stat(it, "frost_pct") + att_stat(it, "poison_pct") + att_stat(it, "shock_pct") / 2.0 + att_stat(it, "salt") + att_stat(it, "wire_pct")
+				return att_stat(it, "conv_fire_pct") + att_stat(it, "conv_frost_pct") + att_stat(it, "conv_poison_pct") + att_stat(it, "conv_shock_pct") + att_stat(it, "salt") + att_stat(it, "wire_pct")
 			return att_stat(it, "damage_pct") + att_stat(it, "first_pct") / 3.0 + att_stat(it, "speed_pct") + att_stat(it, "patrol_pct") / 4.0
 		"find":
 			return find(it) + cash_pct(it) * 0.5
@@ -593,7 +593,7 @@ static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var size := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
-			["burn_pct", "% fire"], ["frost_pct", "% frost"], ["poison_pct", "% poison"], ["shock_pct", "% shock"], ["salt", " salt"], ["wire_pct", "% wire"]]:
+			["conv_fire_pct", "% fire"], ["conv_frost_pct", "% frost"], ["conv_poison_pct", "% poison"], ["conv_shock_pct", "% shock"], ["salt", " salt"], ["wire_pct", "% wire"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > size:
 			size = absf(v)
@@ -605,7 +605,7 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
-			["burn_pct", "fire: damage", "fire"], ["frost_pct", "frost: their fire", "frost"], ["poison_pct", "poison: drops", "poison"], ["shock_pct", "shock: first shot", "shock"], ["salt", "salt: armour", "salt"], ["wire_pct", "wire: cash", "wire"]]:
+			["conv_fire_pct", "as fire: burns", "as fire"], ["conv_frost_pct", "as frost: chills", "as frost"], ["conv_poison_pct", "as poison: poisons", "as poison"], ["conv_shock_pct", "as shock: shocks", "as shock"], ["salt", "salt: armour", "salt"], ["wire_pct", "wire: cash", "wire"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) >= 0.5:
 			out.append("%s%.0f%s %s" % ["+" if v > 0 else "−", absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
