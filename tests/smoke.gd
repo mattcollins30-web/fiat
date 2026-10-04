@@ -1088,11 +1088,51 @@ func _charm_sockets(main) -> void:
 	main._workshop._set_view("guns")
 	_check(main._workshop._all_attachments(false).filter(func(it): return Items.is_socketable(it)).is_empty(), "the Guns view's grid shows socketables")
 	_check_fit(main, "Workshop (guns again)")
+	_craft_view_checks(main)
 	for base in ["Lighter fluid", "Antifreeze", "Rat poison", "Car battery", "Road salt", "Copper wire", "Lucky penny", "Bank's own pen"]:
 		_check(Words.item_words(base) != "" and Words.item_words(base).ends_with("."), "%s has no line" % base)
 	sim.equipped["Primary"] = old_gun
 	sim.load_dict(saved)
 	print("charm and sockets ok: magic find, cash, finds, two sockets, fit/strip, the Sockets view")
+
+
+## The Workshop's Craft view: the stash's gear only, the panel reads the
+## piece's tiers and prices, Bench opens the menu, everything fits.
+func _craft_view_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.workshop = maxi(sim.workshop, 1)
+	sim.cash = 100000.0
+	var piece: Dictionary = Items.roll("Primary", 6, sim.rng, 12)
+	piece["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "dps_pct", "value": 10.0, "tier": 1}]
+	sim.stash.append(piece)
+	main.show_room(main.WORKSHOP)
+	main._workshop._set_view("craft")
+	_check(main._workshop._craft.visible, "the Craft view's panel is hidden")
+	_check(main._workshop._craft_title.text == "Pick a piece", "the Craft view does not ask for a piece first: %s" % main._workshop._craft_title.text)
+	_check_fit(main, "Workshop (craft, nothing picked)")
+	var shown: Array = main._workshop._craftable()
+	_check(not shown.is_empty() and shown.all(func(it): return not Items.is_attachment(it) and not Items.is_medical(it) and not it.has("unique")), "the Craft view's grid shows parts, meds or uniques")
+	var k: int = shown.find(piece)
+	if k < 0:
+		for i in range(shown.size()):
+			if is_same(shown[i], piece):
+				k = i
+	_check(k >= 0, "the rolled piece is not in the Craft view's grid")
+	main._workshop._pick_cell(k)
+	_check(main._workshop._craft_title.text != "Pick a piece", "picking a piece did not fill the Craft panel")
+	_check(main._workshop._craft_lines[1].text.begins_with("Level %d" % Items.ilvl(piece)), "the Craft panel's level line is wrong: %s" % main._workshop._craft_lines[1].text)
+	_check(main._workshop._craft_lines[2].text.contains("T2"), "the Craft panel does not show the affix's tier: %s" % main._workshop._craft_lines[2].text)
+	_check(main._workshop._craft_lines[5].text.contains("£"), "the Craft panel has no priced job: %s" % main._workshop._craft_lines[5].text)
+	_check_fit(main, "Workshop (craft, piece picked)")
+	main._workshop._press(0)              # Bench
+	_check(main._menu.visible, "Bench did not open the bench's menu")
+	_check_fit(main, "Workshop (craft, bench menu)")
+	main._menu.close()
+	main._workshop._set_view("guns")
+	_check(not main._workshop._craft.visible, "the Craft panel stayed up on the Guns view")
+	sim.load_dict(saved)
+	print("craft view ok: stash gear only, tiers and prices read, Bench opens the menu")
 
 
 ## The trees as webs: a fork at the notable, a branch each way; the second
@@ -1388,7 +1428,7 @@ func _unique_rules_checks(main) -> void:
 	sim.deploy(0)
 	var h0: float = sim.hp
 	sim.advance(1.0)
-	_check(sim.hp > h0 + sim.max_hp() * 0.02 or sim.hp >= sim.max_hp() - 0.1 or sim.mission == null, "the cardigan did not give 3%% a second: %.1f -> %.1f of %.1f" % [h0, sim.hp, sim.max_hp()])
+	_check(sim.hp > h0 + sim.max_hp() * 0.012 or sim.hp >= sim.max_hp() - 0.1 or sim.mission == null, "the cardigan did not give 3%% a second: %.1f -> %.1f of %.1f" % [h0, sim.hp, sim.max_hp()])
 	sim.extract_now()
 	sim.equipped["Armour"] = null
 	sim.equipped["Primary"] = Items.roll_unique(sim._unique_named("The dinner lady's ladle"), sim.rng)

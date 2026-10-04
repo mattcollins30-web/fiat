@@ -775,6 +775,21 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The builds pass, step 7: the Craft view (2026-10-04)
+
+The Workshop's third view, beside Guns and Sockets. The grid shows the stash's gear the bench can work
+on (`_craftable`: not parts, meds, rounds, papers or uniques, dearest first); the panel reads the piece
+- name and base, figures, "Level 14 · up to T3 can roll", each affix on its own line with its tier,
+then what the bench charges for a re-roll, an added affix, a socket and a bump (cash, or notes for the
+bump). Bench opens the same menu the Lock-up uses (`signal bench(id)` → `main._open_bench`), so the
+lock/one/strip jobs live there; Sell is beside it. The view buttons are a third of the body each;
+the stash grid's filter switches with the view. Worn gear still goes to the bench from the Lock-up.
+
+Asserted (`_craft_view_checks`): the panel is up and asks for a piece; the grid holds only craftable
+gear and the rolled piece; picking fills the level line, the affix's tier and a priced job; Bench
+opens the menu; the panel goes with the view; every label fits with nothing picked, a piece picked
+and the menu open.
+
 ## The builds pass, step 6c: sets (2026-10-04)
 
 Matt: "set gear/bonuses - find all of the council gear etc. ... Sets need a special tint outside of

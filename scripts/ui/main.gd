@@ -165,6 +165,7 @@ func _build() -> void:
 	add_child(_missions)
 	_workshop = Workshop.new()
 	_workshop.acted.connect(refresh)
+	_workshop.bench.connect(_open_bench)
 	_workshop.visible = false
 	add_child(_workshop)
 	_run = Run.new()

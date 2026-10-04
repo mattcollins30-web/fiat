@@ -9,6 +9,7 @@ extends Control
 ## socketables that go in them). The grid follows the view.
 
 signal acted
+signal bench(id)                   # the bench's menu for an item, from the Craft view
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -38,6 +39,10 @@ const ROWS_A_GUN := 5              # the most mounts a gun has
 var sim
 var view := "guns"                 # "guns" or "sockets"
 var _views: Array[Button] = []
+var _craft: Panel
+var _craft_title: Label
+var _craft_lines: Array[Label] = []
+const CRAFT_LINES := 9
 var _socks := {}                   # slot -> {head, label, name, rows: {mount -> {button, mount, fitted}}}
 var sel_slot := ""                 # the gun slot whose mount is selected
 var sel_mount := ""
@@ -63,11 +68,18 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	for i in range(2):
-		var v := UI.button(self, Rect2(i * (BODY_W / 2 + 3), 0, BODY_W / 2 - 3, VIEW_H), i == 0)
-		v.text = ["Guns", "Sockets"][i]
-		v.pressed.connect(_set_view.bind(["guns", "sockets"][i]))
+	for i in range(3):
+		var vw := (BODY_W - 6) / 3
+		var v := UI.button(self, Rect2(i * (vw + 3), 0, vw, VIEW_H), i == 0)
+		v.text = ["Guns", "Sockets", "Craft"][i]
+		v.pressed.connect(_set_view.bind(["guns", "sockets", "craft"][i]))
 		_views.append(v)
+	# the Craft view: the picked piece's affixes with their tiers, down the left
+	_craft = UI.panel(self, Rect2(0, VIEW_H + ROW_GAP, BODY_W, 420), UI.box(Pal.PANEL, 8))
+	_craft.visible = false
+	_craft_title = UI.label(_craft, Rect2(PAD, 12, BODY_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for i in range(CRAFT_LINES):
+		_craft_lines.append(UI.label(_craft, Rect2(PAD, 56 + i * 30, BODY_W - 2 * PAD, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	var y := VIEW_H + ROW_GAP
 	for slot in GUNS:
 		var g := {}
@@ -178,6 +190,10 @@ func show_state(s) -> void:
 	var what: String = "Socketables" if view == "sockets" else "Attachments"
 	if sel_mount != "":
 		what = sel_mount.capitalize() if sel_mount.begins_with("socket") else "%s mount" % sel_mount.capitalize()
+	if view == "craft":
+		source = _craftable()
+		what = "Gear"
+	_inv.fixed_kind = "" if view == "craft" else Data.ATTACHMENT
 	_inv.show_items(sim, source, sim.stash_used(), sim.stash_cap(), what)
 	var sig := _signature()
 	if sig == _shown:
@@ -360,6 +376,9 @@ func _show_panel() -> void:
 		l.text = ""
 	for l in _right_lines:
 		l.text = ""
+	if view == "craft":
+		_show_craft(it)
+		return
 	if sel_mount == "" and it.is_empty():
 		_left_title.text = "Select a socket" if view == "sockets" else "Select a mount"
 		_right_title.text = ""
@@ -457,6 +476,60 @@ func _socket_for(slot: String, only_empty := false) -> String:
 	return "" if only_empty else first
 
 
+## The stash's gear the bench can work on.
+func _craftable() -> Array:
+	var out: Array = []
+	for it in sim.stash:
+		if not (Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or it.has("unique")):
+			out.append(it)
+	out.sort_custom(func(a, b): return a["value"] > b["value"])
+	return out
+
+
+## The Craft view's left column and panel: the piece, its affixes and tiers,
+## what the bench would charge; the Bench button opens the menu.
+func _show_craft(it: Dictionary) -> void:
+	for l in _craft_lines:
+		l.text = ""
+	if it.is_empty():
+		_craft_title.text = "Pick a piece"
+		_craft_lines[0].text = "Stash gear only; not parts, meds or uniques"
+		_craft_lines[1].text = "Worn gear goes to the bench from the Lock-up"
+		_left_title.text = "The bench"
+		_right_title.text = ""
+		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
+		return
+	UI.fit(_craft_title, [Items.full_name(it), it["base"]])
+	UI.fit(_craft_lines[0], Items.figure_options(it))
+	_craft_lines[1].text = "Level %d · up to T%d can roll" % [Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
+	var lines: Array = Items.affix_lines(it, false, true)
+	var short_lines: Array = Items.affix_lines(it, true, true)
+	for k in range(3):
+		if k < lines.size():
+			UI.fit(_craft_lines[2 + k], [lines[k], short_lines[k]])
+		elif k == 0:
+			_craft_lines[2].text = "No affixes"
+	var row := 5
+	for kind in ["reroll", "add", "socket", "bump"]:
+		var cost: int = sim.craft_cost(it, kind)
+		if cost >= 0 and row < CRAFT_LINES:
+			_craft_lines[row].text = "%s · %s" % [Data.CRAFT[kind]["name"], ("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost)]
+			row += 1
+	_left_title.text = Items.full_name(it)
+	_left_lines[0].text = "%s · %s" % [Items.rarity_name(it), ("%d affix%s" % [it["affixes"].size(), "" if it["affixes"].size() == 1 else "es"])]
+	_left_lines[1].text = "Prices left; Bench has the rest"
+	_right_title.text = "In hand"
+	_right_lines[0].text = "%s and %d notes" % [Fmt.money(sim.cash), sim.notes]
+	_button(0, "Bench", func(): bench.emit(it["id"]), sim.workshop >= 1 and not sim.on_mission())
+	_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
+	var x := GRID_W - PAD
+	for i in range(_buttons.size() - 1, -1, -1):
+		if _buttons[i].visible:
+			x -= _buttons[i].size.x
+			_buttons[i].position.x = x
+			x -= 12
+
+
 func _set_view(v: String) -> void:
 	if v == view:
 		return
@@ -470,8 +543,9 @@ func _set_view(v: String) -> void:
 
 
 func _show_view() -> void:
-	for i in range(2):
-		_style(_views[i], ["guns", "sockets"][i] == view)
+	for i in range(3):
+		_style(_views[i], ["guns", "sockets", "craft"][i] == view)
+	_craft.visible = view == "craft"
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["head"].visible = view == "guns"
@@ -513,7 +587,7 @@ func _on_inv_pick(id: int) -> void:
 	if id >= 0:
 		sel_id = id
 		var it := _selected_item()
-		if sel_mount == "" and not it.is_empty():
+		if sel_mount == "" and not it.is_empty() and view != "craft":
 			if Items.is_socketable(it):
 				sel_slot = _slot_for("socket")
 				sel_mount = _socket_for(sel_slot)
@@ -564,7 +638,10 @@ func text_nodes() -> Array:
 	out.append_array(_left_lines)
 	out.append_array(_right_lines)
 	out.append_array(_views)
-	if view == "guns":
+	if view == "craft":
+		out.append(_craft_title)
+		out.append_array(_craft_lines)
+	elif view == "guns":
 		for slot in GUNS:
 			var g: Dictionary = _guns[slot]
 			out.append_array([g["label"], g["name"], g["figure"]])
