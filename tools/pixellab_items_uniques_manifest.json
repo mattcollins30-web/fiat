@@ -1,6 +1,6 @@
 {
   "_readme": [
-    "FIAT GEAR - uniques. 14 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
+    "FIAT GEAR - uniques. 35 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
     "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_uniques_manifest.json   (++ --dry-run to list). A job whose file exists is skipped, so a rerun only does what's missing; one that came out wrong: ++ --only <slug> ++ --force, or delete the file and rerun.",
     "Items.slug(base) is the name: lowercase, runs of anything but a letter or digit become one underscore. The cells load the file if it exists and show text if not, so the pool fills in any order.",
     "ORDER: run long_guns first - it has no style image. Promote three or four of the best and copy them to art/reference/items/ref_01.png .. ref_04.png; every other manifest rides those as style_image with every style option on, rotated, so the whole pool shares the guns' palette and rendering.",
@@ -239,6 +239,363 @@
       "seed": 70140,
       "single": true,
       "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_council_s_weed_burner.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a council parks-department weed burner: a red gas cylinder on a frame with a long steel lance and a brass burner head, lying flat, seen from above, filling the frame, worn and sooted. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 64,
+      "no_background": true,
+      "seed": 70141,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/jump_leads.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a coiled pair of red and black car jump leads with brass crocodile clips, seen from above, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 64,
+      "no_background": true,
+      "seed": 70142,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_rat_man_s_bag.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single old brown canvas pest-control shoulder bag with a council crest and dark stains at the bottom, standing upright, seen from the front, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 70143,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_butcher_s_steel.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single butcher's sharpening steel with a worn wooden handle and a hanging ring, lying flat, seen from above, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 64,
+      "no_background": true,
+      "seed": 70144,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_gritter_s_hopper.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single yellow steel gritter hopper cut down and fitted with webbing straps like a vest, salt crusted on it, seen from the front, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 256,
+      "no_background": true,
+      "seed": 70145,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_sparky_s_gloves.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single pair of orange insulated electrician's gloves with a test stamp, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70146,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_quartermaster_s_manual.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single thick green army ring binder stamped with a crown, closed, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70147,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/a_blue_plaque.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single round blue ceramic heritage plaque with white lettering, chipped at the edge, a small object filling the frame, seen from the front. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70148,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_lollipop_lady_s_sign.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single round STOP lollipop sign on a short pole, scratched, lying flat, seen from above, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70149,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_bookie_s_pencil.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single short flat chewed bookmaker's pencil, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70150,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_float.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single large grey battery pack with webbing straps and a milk float's key on a chain, standing upright, seen from the front, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 256,
+      "no_background": true,
+      "seed": 70151,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/nan_s_cardigan.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single hand-knitted beige cardigan with wooden buttons, folded, seen from the front, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 70152,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_dinner_lady_s_ladle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single huge stainless steel serving ladle with a long handle, lying flat, seen from above, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 64,
+      "no_background": true,
+      "seed": 70153,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/a_traffic_warden_s_hat.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single black peaked traffic warden's cap with a yellow band, seen from the front at a slight angle, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 70154,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_vicar_s_thermos.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single tartan-patterned steel thermos flask with a cup lid, a small object filling the frame, seen from the front. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70155,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_scout_leader_s_whistle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single brass whistle on a green lanyard, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70156,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_sergeant_s_whistle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single olive-green army composite helmet with a chrome whistle taped to the chin strap, seen from the front, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 70157,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_electrician_s_tester.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single yellow screwdriver-shaped mains tester with a small bulb in the handle, lying flat, seen from above, filling the frame. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 64,
+      "no_background": true,
+      "seed": 70158,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_gamekeeper_s_flask.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single curved pewter hip flask with a leather cover, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70159,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_caretaker_s_keys.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single big steel ring of mixed old keys, a small object filling the frame, seen from above at a slight angle. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70160,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/the_lorry_driver_s_log.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single dog-eared lorry driver's tachograph log book with biro writing on the cover, a small object filling the frame, seen from above. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70161,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
       "style_options": {
         "color_palette": true,
         "outline": true,

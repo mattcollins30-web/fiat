@@ -460,7 +460,7 @@ static func is_melee(it: Dictionary) -> bool:
 ## What a gun takes, by the standard box of its type: "Takes shells"; a bat, nothing.
 static func ammo_words(gun: Dictionary) -> String:
 	var type := ammo_type(gun)
-	if type == "none":
+	if type == "none" or gun.get("rule", "") == "weed_burner":
 		return "Takes nothing"
 	if type == "" or not is_gun(gun):
 		return ""

@@ -279,6 +279,27 @@ UNIQUE_WORDS = {
     "The quartermaster's ledger": ("A realistic painted pixel-art still-life of a small green cloth-bound army ledger, closed, "
                                    "a single small object filling the frame, seen from above at a slight angle, lit from one side, "
                                    "the corners worn to the board, a pencil under the elastic."),
+    "The council's weed burner": "A realistic painted pixel-art still-life of a council parks-department weed burner: a red gas cylinder on a frame with a long steel lance and a brass burner head, lying flat, seen from above, filling the frame, worn and sooted.",
+    "Jump leads": "A realistic painted pixel-art still-life of a coiled pair of red and black car jump leads with brass crocodile clips, seen from above, filling the frame.",
+    "The rat man's bag": "A realistic painted pixel-art still-life of a single old brown canvas pest-control shoulder bag with a council crest and dark stains at the bottom, standing upright, seen from the front, filling the frame.",
+    "The butcher's steel": "A realistic painted pixel-art still-life of a single butcher's sharpening steel with a worn wooden handle and a hanging ring, lying flat, seen from above, filling the frame.",
+    "The gritter's hopper": "A realistic painted pixel-art still-life of a single yellow steel gritter hopper cut down and fitted with webbing straps like a vest, salt crusted on it, seen from the front, filling the frame.",
+    "The sparky's gloves": "A realistic painted pixel-art still-life of a single pair of orange insulated electrician's gloves with a test stamp, a small object filling the frame, seen from above at a slight angle.",
+    "The quartermaster's manual": "A realistic painted pixel-art still-life of a single thick green army ring binder stamped with a crown, closed, a small object filling the frame, seen from above at a slight angle.",
+    "A blue plaque": "A realistic painted pixel-art still-life of a single round blue ceramic heritage plaque with white lettering, chipped at the edge, a small object filling the frame, seen from the front.",
+    "The lollipop lady's sign": "A realistic painted pixel-art still-life of a single round STOP lollipop sign on a short pole, scratched, lying flat, seen from above, filling the frame.",
+    "The bookie's pencil": "A realistic painted pixel-art still-life of a single short flat chewed bookmaker's pencil, a small object filling the frame, seen from above at a slight angle.",
+    "The float": "A realistic painted pixel-art still-life of a single large grey battery pack with webbing straps and a milk float's key on a chain, standing upright, seen from the front, filling the frame.",
+    "Nan's cardigan": "A realistic painted pixel-art still-life of a single hand-knitted beige cardigan with wooden buttons, folded, seen from the front, filling the frame.",
+    "The dinner lady's ladle": "A realistic painted pixel-art still-life of a single huge stainless steel serving ladle with a long handle, lying flat, seen from above, filling the frame.",
+    "A traffic warden's hat": "A realistic painted pixel-art still-life of a single black peaked traffic warden's cap with a yellow band, seen from the front at a slight angle, filling the frame.",
+    "The vicar's thermos": "A realistic painted pixel-art still-life of a single tartan-patterned steel thermos flask with a cup lid, a small object filling the frame, seen from the front.",
+    "The scout leader's whistle": "A realistic painted pixel-art still-life of a single brass whistle on a green lanyard, a small object filling the frame, seen from above at a slight angle.",
+    "The sergeant's whistle": "A realistic painted pixel-art still-life of a single olive-green army composite helmet with a chrome whistle taped to the chin strap, seen from the front, filling the frame.",
+    "The electrician's tester": "A realistic painted pixel-art still-life of a single yellow screwdriver-shaped mains tester with a small bulb in the handle, lying flat, seen from above, filling the frame.",
+    "The gamekeeper's flask": "A realistic painted pixel-art still-life of a single curved pewter hip flask with a leather cover, a small object filling the frame, seen from above at a slight angle.",
+    "The caretaker's keys": "A realistic painted pixel-art still-life of a single big steel ring of mixed old keys, a small object filling the frame, seen from above at a slight angle.",
+    "The lorry driver's log": "A realistic painted pixel-art still-life of a single dog-eared lorry driver's tachograph log book with biro writing on the cover, a small object filling the frame, seen from above.",
     "The lorry's load": ("A realistic painted pixel-art still-life of a single large cargo-frame backpack with a green lorry tarp "
                          "lashed over it, standing upright as if set down on the floor, seen from the front, filling the frame, "
                          "banknotes showing at one edge under the tarp."),

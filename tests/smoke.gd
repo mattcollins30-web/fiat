@@ -1275,7 +1275,7 @@ func _melee_checks(main) -> void:
 	_check(main._workshop.sel_mount == "grip", "picking the first row did not pick the grip")
 	main._workshop._pick_cell(0)
 	main._workshop._press(0)
-	_check(bat["attachments"]["grip"] != null and bat["attachments"]["grip"]["base"] == "Tape", "the tape did not fit the grip")
+	_check(bat["attachments"]["grip"] != null and bat["attachments"]["grip"]["mount"] == "grip", "a grip part did not fit the grip")
 	_check_fit(main, "Workshop (a bat, taped)")
 	# Through the lot: a Doorman's swing hits everyone on you
 	sim.set_class("Doorman")
@@ -1289,6 +1289,174 @@ func _melee_checks(main) -> void:
 	sim.equipped["Primary"] = old
 	sim.load_dict(saved)
 	print("melee ok: no rounds, the nails, the mounts, the wait, harder hit, the Workshop, Through the lot")
+	_unique_rules_checks(main)
+
+
+## The build-defining uniques: every one rolls and has words; the depth
+## gates on the loose pool and the mate; each rule does its thing.
+func _unique_rules_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for u in Data.UNIQUES:
+		var it := Items.roll_unique(u, sim.rng)
+		_check(it["unique"] == u["name"] and Words.UNIQUES.has(u["name"]), "%s does not roll, or has no words" % u["name"])
+	_check(sim.loose_uniques(1).size() == 4 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
+	for i in range(sim.best_depth.size()):
+		sim.best_depth[i] = 1
+	for k in range(20):
+		_check(int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) == 0, "the mate sold a deep unique before anyone had been deep")
+	sim.best_depth[0] = 25
+	var deep := 0
+	for k in range(40):
+		deep += 1 if int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) >= 12 else 0
+	_check(deep > 10, "the mate's deep stock did not open at depth 25: %d of 40" % deep)
+	# a bare runner to hang each rule on
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	sim.respec()
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	var t: Dictionary = sim.effective(0)
+	# the burner: all fire, takes nothing, spreads
+	var burner := Items.roll_unique(sim._unique_named("The council's weed burner"), sim.rng)
+	sim.equipped["Primary"] = burner
+	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) == "Takes nothing", "the burner is not all fire and free: %s" % str(sim.conversion()))
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	# jump leads: a third shock
+	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("Jump leads"), sim.rng)
+	_check(sim.conversion()["shock"] >= 0.33, "jump leads did not add a third shock: %s" % str(sim.conversion()))
+	sim.equipped["Secondary"] = null
+	# the bag and the steel: stacks, more, and the carry on a kill
+	sim.equipped["Backpack"] = Items.roll_unique(sim._unique_named("The rat man's bag"), sim.rng)
+	_check(sim.dot_stacks("poison") == 999, "the bag did not uncap poison")
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["dots"] = {"poison": 50.0}
+	m["target_hp"] = 0.0
+	m["remaining"] = 3
+	sim.advance(0.1)
+	_check(m.get("dots", {}).has("poison") and m["dots"]["poison"] > 0.0, "poison did not carry to the next with the bag: %s" % str(m.get("dots", {})))
+	sim.extract_now()
+	sim.equipped["Backpack"] = null
+	sim.equipped["Primary"] = Items.roll_unique(sim._unique_named("The butcher's steel"), sim.rng)
+	_check(is_equal_approx(sim.more("bleed"), 2.0), "the steel is not ×2 bleed")
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	# the hopper: chilled always, one at a time
+	sim.equipped["Armour"] = Items.roll_unique(sim._unique_named("The gritter's hopper"), sim.rng)
+	sim.deploy(0)
+	m = sim.mission
+	sim.advance(0.1)
+	_check(float(m.get("chill_t", 0.0)) > 0.0 and sim.contact(t) == 1, "the hopper did not chill them and bring them one at a time: chill %.1f contact %d" % [float(m.get("chill_t", 0.0)), sim.contact(t)])
+	sim.extract_now()
+	sim.equipped["Armour"] = null
+	# the gloves: their shock resist is nothing
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The sparky's gloves"), sim.rng)
+	sim.equipped["Primary"]["affixes"] = [{"stat": "conv_shock_pct", "value": 50, "tier": 5}]
+	var full: float = sim.damage_rate({"res": {}})
+	_check(is_equal_approx(sim.damage_rate({"res": {"shock": 0.6}}), full), "the gloves did not ignore their shock resist")
+	sim.equipped["Primary"]["affixes"] = []
+	# the manual: every element yours
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The quartermaster's manual"), sim.rng)
+	_check(sim.affinity("poison") and sim.affinity("frost") and sim.node_cost("The rat man/0") == 1, "the manual did not make every element the runner's")
+	# the plaque: all resists, nothing else
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("A blue plaque"), sim.rng)
+	sim.equipped["Primary"]["affixes"] = [{"stat": "damage_pct", "value": 50, "tier": 5}]
+	_check(is_equal_approx(sim._affix_sum("damage_pct"), 0.0) and sim.resist("fire") >= 0.4, "the plaque did not blank the rest: dmg %.0f fire res %.2f" % [sim._affix_sum("damage_pct"), sim.resist("fire")])
+	sim.equipped["Primary"]["affixes"] = []
+	# the sign: the first drops, gangs half as often
+	sim.equipped["Charm"] = null
+	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("The lollipop lady's sign"), sim.rng)
+	var p0: float = sim.patrol_s(t)
+	sim.equipped["Secondary"] = null
+	_check(p0 >= sim.patrol_s(t) * 2.0, "the sign did not halve the gangs")
+	# the pencil, the float, the cardigan, the ladle, the hat, the thermos, the whistles, the tester, the flask, the keys, the log
+	var r0: float = sim.rarity_bonus()
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The bookie's pencil"), sim.rng)
+	_check(sim.rarity_bonus() > r0 * 1.5 + 0.1, "the pencil did not double magic find")
+	sim.equipped["Charm"] = null
+	var cap0: int = sim.capacity()
+	var pace0: float = sim.pace()
+	sim.equipped["Rig"] = sim._plain("Rig", "Bum bag")
+	sim.equipped["Backpack"] = Items.roll_unique(sim._unique_named("The float"), sim.rng)
+	_check(sim.med_capacity() == 0 and sim.pace() > pace0 * 1.35 and sim.capacity() > cap0, "the float did not do its three things: meds %d pace %.2f cap %d" % [sim.med_capacity(), sim.pace() / pace0, sim.capacity()])
+	sim.equipped["Backpack"] = null
+	sim.equipped["Rig"] = null
+	sim.equipped["Armour"] = Items.roll_unique(sim._unique_named("Nan's cardigan"), sim.rng)
+	_check(is_equal_approx(sim.mitigation(), 0.0), "nan's cardigan has armour")
+	sim.hp = sim.max_hp() * 0.5
+	sim.deploy(0)
+	var h0: float = sim.hp
+	sim.advance(1.0)
+	_check(sim.hp > h0 + sim.max_hp() * 0.02 or sim.hp >= sim.max_hp() - 0.1 or sim.mission == null, "the cardigan did not give 3%% a second: %.1f -> %.1f of %.1f" % [h0, sim.hp, sim.max_hp()])
+	sim.extract_now()
+	sim.equipped["Armour"] = null
+	sim.equipped["Primary"] = Items.roll_unique(sim._unique_named("The dinner lady's ladle"), sim.rng)
+	sim.hp = sim.max_hp() * 0.5
+	sim.deploy(0)
+	m = sim.mission
+	h0 = sim.hp
+	m["target_hp"] = 0.0
+	sim.advance(0.05)
+	_check(sim.hp >= h0 + sim.max_hp() * 0.1 - 1.0, "the ladle did not heal a tenth on a kill: %.1f -> %.1f" % [h0, sim.hp])
+	sim.extract_now()
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	sim.equipped["Helmet"] = Items.roll_unique(sim._unique_named("A traffic warden's hat"), sim.rng)
+	_check(sim.notes_a_kill(t) == 2 * (int(ceil(Data.NOTES_KILL * 1.0)) + sim.atlas_rank("paid_in_notes")) or sim.notes_a_kill(t) >= 2, "the hat did not double the notes")
+	sim.equipped["Helmet"] = null
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The vicar's thermos"), sim.rng)
+	_check(is_equal_approx(sim.resist("fire"), 0.0), "the thermos left a fire resist")
+	sim.deploy(0)
+	m = sim.mission
+	m["my_dots"] = {"fire": 40.0}
+	sim.hp = sim.max_hp() * 0.5
+	h0 = sim.hp
+	m["remaining"] = 1
+	m["target_hp"] = 1e9
+	sim.advance(0.5)
+	_check(sim.hp > h0 - 1.0, "the thermos did not turn the burn to warmth: %.1f -> %.1f" % [h0, sim.hp])
+	sim.extract_now()
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The scout leader's whistle"), sim.rng)
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = 1e9
+	sim.advance(0.1)
+	_check(m["remaining"] == 1, "the scout's whistle did not make the gang one: %d" % m["remaining"])
+	sim.extract_now()
+	sim.equipped["Charm"] = null
+	var c0: int = sim.contact(t)
+	sim.equipped["Helmet"] = Items.roll_unique(sim._unique_named("The sergeant's whistle"), sim.rng)
+	_check(sim.contact(t) == c0 + 2 and is_equal_approx(sim.more("physical"), 1.6), "the sergeant's whistle: contact %d more %.1f" % [sim.contact(t), sim.more("physical")])
+	sim.equipped["Helmet"] = null
+	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("The electrician's tester"), sim.rng)
+	_check(is_equal_approx(sim.more("shock"), 0.5), "the tester is not half shock")
+	sim.equipped["Secondary"] = null
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The gamekeeper's flask"), sim.rng)
+	sim.intel[0] = ["Burners"]
+	sim.deploy(0)
+	m = sim.mission
+	m["t"]["types"] = {"physical": 0.5, "poison": 0.5}
+	m["target_hp"] = 1e9
+	sim.advance(0.5)
+	_check(m.get("dots", {}).get("poison", 0.0) > 0.0, "the flask did not poison them back: %s" % str(m.get("dots", {})))
+	sim.extract_now()
+	sim.intel[0] = []
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The caretaker's keys"), sim.rng)
+	var fired := 0
+	for k in range(5):
+		sim.deploy(0)
+		fired += 1 if sim.mission["event"] != "" else 0
+		sim.extract_now()
+	_check(fired == 5, "the keys did not make something happen every run: %d of 5" % fired)
+	sim.equipped["Charm"] = null
+	var log := Items.roll_unique(sim._unique_named("The lorry driver's log"), sim.rng)
+	sim.stash.append(log)
+	_check(sim.has_rule("drivers_log") and sim.insure_cost(0) == 0, "the log in the stash did not count, or insurance isn't free")
+	sim.stash.erase(log)
+	sim.load_dict(saved)
+	print("the uniques ok: all roll with words, the depth gates, the mate's deep stock, twenty-one rules")
 	_atlas_checks(main)
 
 

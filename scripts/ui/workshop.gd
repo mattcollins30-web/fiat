@@ -371,8 +371,13 @@ func _show_panel() -> void:
 	else:
 		_left_title.text = shown["base"]
 		_left_lines[0].text = "%s, %s T%d, %s" % [shown["mount"], Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])]
-		UI.fit(_left_lines[1], [Items.att_words(shown), Items.att_words(shown, true)])
-		_left_lines[2].text = "In the stash" if not it.is_empty() else "Fitted on the %s" % sel_slot.to_lower()
+		# the part's figures over two lines when four stats need them
+		if UI.text_width(_left_lines[1], Items.att_words(shown)) <= _left_lines[1].size.x:
+			_left_lines[1].text = Items.att_words(shown)
+			_left_lines[2].text = ""
+		else:
+			UI.wrap([_left_lines[1], _left_lines[2]], Items.att_words(shown, true))
+		_left_lines[3].text = "In the stash" if not it.is_empty() else "Fitted on the %s" % sel_slot.to_lower()
 	# the right: what's on the mount now, and the swap
 	if not it.is_empty() and Items.is_socketable(it):
 		var target_slot := sel_slot if sel_slot != "" else _slot_for("socket")
@@ -385,7 +390,7 @@ func _show_panel() -> void:
 			var gear: Dictionary = sim.equipped[target_slot]
 			var cur = gear["attachments"].get(key, null)
 			_right_title.text = "Now: %s" % (cur["base"] if cur != null else "empty")
-			UI.fit(_right_lines[0], [Items.att_words(cur), Items.att_words(cur, true)] if cur != null else [""])
+			UI.wrap([_right_lines[0], _right_lines[2]], Items.att_words(cur, true) if cur != null else "")
 			_right_lines[1].text = "Into the %s's %s" % [target_slot.to_lower(), key]
 			_button(0, "Fit", sim.fit_socket.bind(target_slot, key, it["id"]), not sim.on_mission())
 		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
@@ -399,7 +404,7 @@ func _show_panel() -> void:
 			var gun: Dictionary = sim.equipped[target_slot]
 			var cur = gun["attachments"].get(it["mount"], null)
 			_right_title.text = "Now: %s" % (cur["base"] if cur != null else "empty")
-			UI.fit(_right_lines[0], [Items.att_words(cur), Items.att_words(cur, true)] if cur != null else [""])
+			UI.wrap([_right_lines[0], _right_lines[2]], Items.att_words(cur, true) if cur != null else "")
 			_right_lines[1].text = "Fitting it: %.0f → %.0f dmg/s" % [Items.dps(gun), _dps_with(gun, it)]
 			_button(0, "Fit", sim.fit.bind(target_slot, it["id"]), not sim.on_mission())
 		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)

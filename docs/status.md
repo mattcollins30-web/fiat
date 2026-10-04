@@ -749,6 +749,32 @@ Asserted (`_melee_checks`): the bat's mounts and words, never dry, 20% bleed and
 ×1.25, no swing in the first half second and a swing after, the Workshop's rows and a fit to the grip,
 Through the lot with a bat and not with a gun.
 
+## The builds pass, step 6: twenty-one more uniques, each a rule (2026-10-04)
+
+Matt: "may as well go big ... nothing too formulaic though, needs to be inventive and fun." Gated by
+depth on the loose pool (`"depth"`: 12 or 25; the first four stay ungated), the mate's stock opening as
+the yard goes deeper (`loose_uniques(deepest())`), the fence's contracts paying only with the ungated
+ones. A paper with a rule counts from the stash. The rules, in the sim:
+
+the council's weed burner (all fire, hits everyone on you, takes nothing), jump leads (a third shock,
+the first of a gang is every one), the rat man's bag (poison never caps, carries to the next), the
+butcher's steel (bleed ×2, carries), the gritter's hopper (everyone chilled always, chilled gangs one
+at a time), the sparky's gloves (their shock resist is nothing, Earthed costs no armour), the
+quartermaster's manual (every element yours), a blue plaque (all resists +40, nothing else on you
+counts), the lollipop lady's sign (the first drops where it stands, gangs half as often), the
+bookie's pencil (magic find ×2, cash ×½), the float (pace +40%, pack ×1.5, no meds), nan's cardigan
+(3% HP a second, no armour), the dinner lady's ladle (a tenth back a kill, meds do nothing), a
+traffic warden's hat (gangs one short, notes ×2), the vicar's thermos (burns on you heal, no fire
+resist), the scout leader's whistle (every gang after the first is one), the sergeant's whistle (two
+more on you, everything ×1.6), the electrician's tester (shocked stays shocked, shock ×½), the
+gamekeeper's flask (their poison poisons them back), the caretaker's keys (an event every run, every
+cache opens), the lorry driver's log (notes ×2, insurance free). Words for all.
+
+The bot sells meds past a dozen cells' worth (they piled to 90 cells once kits took pouches, which
+filled the stash and broke the drop tests); stacking will do this properly for the player.
+
+Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

@@ -250,6 +250,14 @@ func _restock_rounds(sim) -> void:
 
 func _sell_spares(sim) -> void:
 	var keep_type: String = TYPE_OF.get(sim.cls, "") if keystones_first else ""
+	# meds: a dozen cells' worth stay, the dearest; the rig can't carry more and they pile up otherwise
+	var meds: Array = sim.stash.filter(func(it): return Items.is_medical(it))
+	meds.sort_custom(func(a, b): return a["value"] > b["value"])
+	var med_cells := 0
+	for it in meds:
+		med_cells += Items.size(it)
+		if med_cells > 12:
+			sim.sell(it)
 	for it in sim.stash.duplicate():
 		if Items.is_medical(it):
 			continue
