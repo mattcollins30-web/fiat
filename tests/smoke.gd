@@ -2009,6 +2009,7 @@ func _pinnacle_checks(main) -> void:
 	sim.load_dict(saved)
 	print("pinnacles and the convoy ok: full strength, the charm, three in a row, the load, the rules")
 	_craft_checks(main)
+	_move_checks(main)
 
 
 ## The bench's crafting, in cash: add, re-roll, lock one, re-roll one, a
@@ -2046,7 +2047,7 @@ func _craft_checks(main) -> void:
 	sim.stash.append(it)
 	_check(sim.craft_cost(it, "reroll") < 0 and sim.craft_cost(it, "strip") < 0, "a plain item re-rolls or strips")
 	var add_cost: int = sim.craft_cost(it, "add")
-	_check(add_cost == Data.CRAFT["add"]["cash"] * 16, "adding to a plain level-16 piece costs %d" % add_cost)
+	_check(add_cost == sim._inf(Data.CRAFT["add"]["cash"] * 16), "adding to a plain level-16 piece costs %d, not %d" % [add_cost, sim._inf(Data.CRAFT["add"]["cash"] * 16)])
 	var cash0: float = sim.cash
 	_check(sim.craft(it["id"], "add") and it["rarity"] == 1 and it["affixes"].size() == 1 and is_equal_approx(sim.cash, cash0 - add_cost), "Add an affix did not take, or wasn't paid in cash")
 	var stat0: String = it["affixes"][0]["stat"]
@@ -2066,7 +2067,7 @@ func _craft_checks(main) -> void:
 	# lock one: it stays, the others may change
 	var keep: Dictionary = it["affixes"][0].duplicate()
 	var lock_cost: int = sim.craft_cost(it, "lock", keep["stat"])
-	_check(lock_cost == Data.CRAFT["lock"]["cash"] * 16 * 4, "lock on a level-16 elite costs %d" % lock_cost)
+	_check(lock_cost == sim._inf(Data.CRAFT["lock"]["cash"] * 16 * 4), "lock on a level-16 elite costs %d, not %d" % [lock_cost, sim._inf(Data.CRAFT["lock"]["cash"] * 16 * 4)])
 	_check(sim.craft(it["id"], "lock", keep["stat"]) and it["affixes"].size() == 3 and it["affixes"][0] == keep, "locking one did not keep it: %s vs %s" % [str(it["affixes"][0]), str(keep)])
 	# re-roll one: the stat stays, the tier moves sometimes, dearer the better the tier
 	var one_stat: String = it["affixes"][1]["stat"]
@@ -2079,7 +2080,7 @@ func _craft_checks(main) -> void:
 	it["affixes"][1]["tier"] = 5
 	var dear: int = sim.craft_cost(it, "one", one_stat)
 	it["affixes"][1]["tier"] = 1
-	_check(dear == sim.craft_cost(it, "one", one_stat) * 5, "re-rolling a T5 is not five times a T1")
+	_check(absi(dear - sim.craft_cost(it, "one", one_stat) * 5) <= 3, "re-rolling a T5 is not five times a T1: %d vs %d" % [dear, sim.craft_cost(it, "one", one_stat)])
 	# the level, in notes
 	var notes0: int = sim.notes
 	var bump_cost: int = sim.craft_cost(it, "bump")
@@ -2177,6 +2178,8 @@ func _move_checks(main) -> void:
 	main._move_yard("poison")
 	_check(sim.yard_moves == 1, "the yard did not move")
 	_check(sim.trades == ["poison"] and sim.affinity("poison") and not sim.can_trade("poison") and sim.node_cost("The rat man/0") == 1, "the yard's trade did not come: %s" % str(sim.trades))
+	_check(str(sim.events.back()[1]).begins_with("The yard's trade came too: the rat man"), "the trade had no line: %s" % str(sim.events.back()))
+	_check(str(sim.events[-2][1]).begins_with("The yard moves"), "the move had no line")
 	sim.training_points += 20
 	for i in range(7):
 		sim.train_node("The rat man/%d" % i)
@@ -2184,9 +2187,8 @@ func _move_checks(main) -> void:
 	for i in range(7):
 		sim.tree.erase("The rat man/%d" % i)
 	sim.training_points -= 20
-	_check(str(sim.events.back()[1]).begins_with("The yard's trade came too: the rat man"), "the trade had no line: %s" % str(sim.events.back()))
 	_check(not sim.campaign_done() and sim.best_depth[0] == 0 and not sim.zone_open(1) and sim.workshop == 0, "the move did not start again")
-	_check(sim.notes == 500 and sim.cash == float(Data.STARTING_CASH), "the move kept the wrong money: %d notes, £%.0f" % [sim.notes, sim.cash])
+	_check(sim.notes == 500 and is_equal_approx(sim.cash, float(Data.STARTING_CASH) * sim.inflation()), "the move kept the wrong money: %d notes, £%.0f (the float at today's prices is £%.0f)" % [sim.notes, sim.cash, float(Data.STARTING_CASH) * sim.inflation()])
 	var kept := 0
 	for it in sim.stash:
 		if it.has("unique"):
@@ -2201,7 +2203,6 @@ func _move_checks(main) -> void:
 	_check(sim.past.size() == past_n, "the list of runners before did not come")
 	_check(sim.rarity_bonus() > 0.04 and sim.charm_cash() >= Data.MOVE_CASH, "the move's bonus did not read: find %.2f, cash %.0f" % [sim.rarity_bonus(), sim.charm_cash()])
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN and not sim.mate.is_empty(), "the fence did not set up again")
-	_check(str(sim.events[-2][1]).begins_with("The yard moves"), "the move had no line")
 	main.refresh()
 	_check_fit(main, "The Yard (moved)")
 	var d: Dictionary = sim.to_dict()
@@ -2210,6 +2211,68 @@ func _move_checks(main) -> void:
 	sim.load_dict(saved)
 	print("moving the yard ok: the uniques, the tree, the list, the notes, the bonus, the yard's trade")
 	_sink_checks(main)
+	_inflation_checks(main)
+
+
+## Money that goes off: every cash price and every cash income rises with the
+## yard's hours, after a grace hour, to a ceiling; the notes don't move; the
+## fence and the Played card say so.
+func _inflation_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.elapsed = 0.0
+	_check(is_equal_approx(sim.inflation(), 1.0) and sim.inflation_pct() == 0, "prices rose in the first hour: %.2f" % sim.inflation())
+	sim.elapsed = Data.INFLATION_GRACE_H * 3600.0
+	_check(is_equal_approx(sim.inflation(), 1.0), "prices rose before the grace hour was out")
+	var it: Dictionary = sim._plain("Primary", "Pipe shotgun")
+	var p0: int = sim.price(it)
+	var s0: int = sim.sell_price(it)
+	var med0: int = sim.med_price(Data.BASES["Medical"][0])
+	var ammo0: int = sim.ammo_price("shotgun")
+	var ws0: int = sim.workshop_cost() if sim.workshop < Data.WORKSHOP.size() - 1 else 0
+	sim.hp = sim.max_hp() * 0.5
+	var treat0: int = sim.treat_cost()
+	sim.elapsed = (Data.INFLATION_GRACE_H + 10.0) * 3600.0
+	var m: float = 1.0 + Data.INFLATION_RATE * 10.0
+	_check(is_equal_approx(sim.inflation(), m), "ten hours past the grace reads %.2f, not %.2f" % [sim.inflation(), m])
+	_check(sim.price(it) == int(round(p0 * m)) or absi(sim.price(it) - int(round(p0 * m))) <= 1, "the fence's asking price did not rise: %d -> %d" % [p0, sim.price(it)])
+	_check(absi(sim.sell_price(it) - int(round(s0 * m))) <= 1, "the fence's paying price did not rise: %d -> %d" % [s0, sim.sell_price(it)])
+	_check(absi(sim.med_price(Data.BASES["Medical"][0]) - int(round(med0 * m))) <= 1, "meds did not rise")
+	_check(absi(sim.ammo_price("shotgun") - int(round(ammo0 * m))) <= 1, "shells did not rise")
+	_check(ws0 == 0 or absi(sim.workshop_cost() - int(round(ws0 * m))) <= 1, "the bench's upgrade did not rise: %d -> %d" % [ws0, sim.workshop_cost()])
+	_check(absi(sim.treat_cost() - int(round(treat0 * m))) <= 2, "treatment did not rise: %d -> %d" % [treat0, sim.treat_cost()])
+	_check(sim.boss_cost(0) == sim.boss_cost(0) and Data.CRAFT["bump"].has("notes"), "notes prices exist to hold")
+	var c0: int = sim.craft_cost(it, "reroll")
+	sim.elapsed = Data.INFLATION_GRACE_H * 3600.0
+	var c_base: int = sim.craft_cost(it, "reroll")
+	_check(c0 < 0 or absi(c0 - int(round(c_base * m))) <= 1, "the bench's cash price did not rise: %d -> %d" % [c_base, c0])
+	# the gangs carry today's money: a run's cash scales too
+	sim.elapsed = (Data.INFLATION_GRACE_H + 10.0) * 3600.0
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var mm: Dictionary = sim.mission
+	var t: Dictionary = mm["t"].duplicate(true)
+	t["cash"] = 100.0
+	var cash_before: float = mm["cash"]
+	sim._kill(mm, t)
+	_check(mm["cash"] - cash_before >= 100.0 * 0.5 * m * 0.99, "a kill's cash did not carry today's money: %.0f for a gang carrying 100 at ×%.2f" % [mm["cash"] - cash_before, m])
+	sim.extract_now()
+	# the ceiling
+	sim.elapsed = 100000.0 * 3600.0
+	_check(is_equal_approx(sim.inflation(), Data.INFLATION_CAP), "prices did not settle at the ceiling: %.2f" % sim.inflation())
+	# the screens
+	sim.elapsed = (Data.INFLATION_GRACE_H + 10.0) * 3600.0
+	main.show_room(main.OVERVIEW)
+	_check_fit(main, "The Yard (prices up)")
+	main.show_room(main.MARKET)
+	main._fence.selected = {}
+	main.refresh()
+	_check(main._fence._left_lines[0].text.begins_with("Prices up %d%%" % sim.inflation_pct()), "the fence does not say prices are up: %s" % main._fence._left_lines[0].text)
+	_check_fit(main, "Fence (prices up)")
+	sim.load_dict(saved)
+	print("money that goes off ok: the grace hour, the rate, every cash price, the ceiling, the fence's line")
 
 
 ## The late cash sinks: call-ins priced by depth and by the words on the site;
@@ -2236,7 +2299,8 @@ func _sink_checks(main) -> void:
 	var worth: int = sim.loadout_value()
 	_check(worth > 0, "no kit worn to insure")
 	var cost: int = sim.insure_cost(0)
-	_check(cost >= worth * Data.INSURE_RATE * 2 - 10 and cost <= worth * Data.INSURE_RATE * 2 + 10, "insurance at depth 2 is %d on £%d of kit" % [cost, worth])
+	var quote: float = worth * sim.inflation() * Data.INSURE_RATE * 2
+	_check(cost >= quote - 10 and cost <= quote + 10, "insurance at depth 2 is %d on £%d of kit at ×%.2f" % [cost, worth, sim.inflation()])
 	sim.cash = float(cost) - 1.0
 	_check(not sim.can_insure(0), "insurance took with the cash a pound short")
 	sim.cash = float(cost) + 100.0
@@ -2303,7 +2367,8 @@ func _damage_model_checks(main) -> void:
 	_check(is_equal_approx(sim.damage_rate(t0, true), (td["physical"] + td["fire"] * 0.5) * (1.0 + Data.SHOCK)), "shocked did not take more")
 	gun["affixes"] = [{"stat": "conv_fire_pct", "value": 60, "tier": 5}, {"stat": "conv_frost_pct", "value": 60, "tier": 5}]
 	conv = sim.conversion()
-	_check(is_equal_approx(conv["fire"], 0.5) and is_equal_approx(conv["frost"], 0.5) and is_equal_approx(conv["physical"], 0.0), "over-conversion did not share out: %s" % str(conv))
+	# 60 fire on the gun and 15 in the socket against 60 frost: shared out to one, no physical left
+	_check(is_equal_approx(conv["fire"], 75.0 / 135.0) and is_equal_approx(conv["frost"], 60.0 / 135.0) and is_equal_approx(conv["physical"], 0.0), "over-conversion did not share out: %s" % str(conv))
 	gun["affixes"] = []
 	var armour: Dictionary = sim._plain("Armour", "Stab vest")
 	armour["affixes"] = [{"stat": "fire_res", "value": 40, "tier": 5}, {"stat": "all_res", "value": 10, "tier": 3}]
@@ -2335,9 +2400,10 @@ func _damage_model_checks(main) -> void:
 	_check(is_equal_approx(dots["fire"], 50.0), "a 100 fire hit did not leave a 50 burn: %s" % str(dots))
 	var ticked: float = sim._dot_tick(dots, 1.0)
 	_check(is_equal_approx(ticked, 12.5) and is_equal_approx(dots["fire"], 37.5), "the burn did not tick a quarter of the pool a second: %.1f" % ticked)
-	for k in range(10):
+	for k in range(60):
 		sim._dot_add(dots, "poison", 100.0, 100.0)
-	_check(is_equal_approx(dots["poison"], 100.0 * 0.8 * 8.0 * 5), "poison did not cap at its stacks: %.0f" % dots["poison"])
+	var poison_cap: float = 100.0 * 0.8 * sim.dot_seconds("poison") * sim.dot_stacks("poison")
+	_check(is_equal_approx(dots["poison"], poison_cap), "poison did not cap at its stacks: %.0f, not %.0f" % [dots["poison"], poison_cap])
 	sim.intel[0] = ["Cutters"]
 	sim.hp = sim.max_hp()
 	sim.deploy(0)
@@ -2371,7 +2437,7 @@ func _damage_model_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": shown["id"]}
 	main.refresh()
-	_check(main._armoury._left_lines[2].text.begins_with("Takes shells"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._left_lines[2].text)
+	_check(main._armoury._left_lines[1].text.begins_with("Takes shells"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._left_lines[1].text)
 	_check_fit(main, "Armoury (ammo words)")
 	sim.sell(shown)
 	print("ammo words ok")

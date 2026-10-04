@@ -1182,6 +1182,13 @@ const STASH_CAP := 40
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling
 const STARTING_CASH := 150
+## Money that goes off. The fence's prices rise with the yard's hours - every
+## cash price and every cash the gangs carry - so cash held loses, cash earned
+## keeps pace, and the notes (the crews' own prices) don't move. A grace hour
+## for the first run; linear after it; a ceiling where the new normal settles.
+const INFLATION_GRACE_H := 1.0
+const INFLATION_RATE := 0.07        # a hour, of the opening price
+const INFLATION_CAP := 12.0
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50

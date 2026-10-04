@@ -427,7 +427,10 @@ func _show_panel() -> void:
 			_right_lines[0].text = "No more until the next run"
 		else:
 			_left_title.text = "The fence"
-			UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
+			if sim.inflation_pct() > 0:
+				UI.fit(_left_lines[0], ["Prices up %d%% since the yard opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
+			else:
+				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
 			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), Data.MARKET_LEVELS[sim.market_level]["stock"]]
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick a cell on either grid"

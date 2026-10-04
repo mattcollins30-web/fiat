@@ -775,6 +775,31 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Money that goes off (2026-10-04)
+
+Matt: "The game's called Fiat and cash never loses value. It should." Every cash price and every
+cash the gangs carry runs through `sim.inflation()`: 1.0 for the first hour of the yard
+(`INFLATION_GRACE_H`), then +7% of the opening price an hour (`INFLATION_RATE`, linear, so 7 h in
+is ×1.42, a day is ×2.6), settling at ×12 (`INFLATION_CAP`, "the new normal", about a week of
+yard hours). Through it: the fence's asking and paying prices, meds, rounds, treatment, every camp
+upgrade, call-ins, insurance, the bench's cash jobs, the respec, the fence's cash contracts (quoted
+at today's price when rolled), a kill's cash, the cash-per-kill and cash-per-cell affixes, and the
+float after a move (`STARTING_CASH` × inflation). Notes don't move: the boss prices, the mate, the
+bump, the notes contracts. So cash held loses, cash earned keeps pace, and the late pile is worth
+less by the hour from the other end. The fence's panel says "Prices up 42% since the yard opened;
+notes hold" once it's more than nothing; the Yard's Played card has a Prices line. Away time counts
+(the generator's hours are yard hours), which is the point.
+
+Asserted (`_inflation_checks`): nothing in the grace hour; the rate ten hours past it on the
+asking price, the paying price, meds, shells, the bench's upgrade, treatment, the bench's cash
+jobs; a kill carries today's money; the ceiling; the fence's line; the Yard fits.
+
+Found on the way: `_move_checks` had dropped out of the run order at some point, so the move, the
+late sinks, the damage model and the ammo-word checks had not run for a while. Restored, and three
+stale expectations fixed (over-conversion with the socket's fluid still in, the poison cap after
+enough stacks to reach it, the ammo line's row on the Lock-up panel). The yard's trade check from
+step 9a ran for the first time with it and passed once the log lines were read before training.
+
 ## The builds pass, step 9a: the yard's trade (2026-10-04)
 
 Prestige's build piece. Moving the yard asks a second question after "Move the yard?": which trade

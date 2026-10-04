@@ -381,7 +381,24 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(it["value"] * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct")) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct")) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+
+
+## Money that goes off: what a pound of the opening day's price costs now.
+## Every cash price and every cash income runs through it; the notes don't.
+func inflation() -> float:
+	var h: float = maxf(0.0, elapsed / 3600.0 - Data.INFLATION_GRACE_H)
+	return minf(Data.INFLATION_CAP, 1.0 + Data.INFLATION_RATE * h)
+
+
+## The rise, in percent, for the screens: "Prices up 42%".
+func inflation_pct() -> int:
+	return int(round((inflation() - 1.0) * 100.0))
+
+
+## A cash price of the opening day, at today's: rounded to the pound, never below the original when it was positive.
+func _inf(x: float) -> int:
+	return int(round(x * inflation()))
 
 
 # ------------------------------------------------------------------ the class
@@ -464,7 +481,7 @@ func roll_contract() -> Dictionary:
 		# worth: the slot's bases' middle value at the rarity, a piece
 		var bases: Array = Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]
 		var mid: float = float(bases[bases.size() / 2]["value"]) * float(Data.RARITIES[c["rarity"]]["value"])
-		c["amount"] = int(round(mid * Data.CONTRACT_CASH * c["count"] / 10.0)) * 10
+		c["amount"] = int(round(mid * inflation() * Data.CONTRACT_CASH * c["count"] / 10.0)) * 10   # the fence quotes today's price
 	return c
 
 
@@ -618,6 +635,7 @@ func move_yard(trade := "") -> bool:
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
 		stash.append(it)                   # whatever the new stash holds: they're the point of moving
+	cash = float(Data.STARTING_CASH) * inflation()    # the float, at today's prices
 	log_event(Words.YARD["moved"])
 	if trade != "":
 		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
@@ -670,7 +688,7 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 		for a in it["affixes"]:
 			if a["stat"] == stat:
 				price *= int(a.get("tier", 1))     # the better the tier, the dearer
-	return price
+	return _inf(price)
 
 
 func craft_in_notes(kind: String) -> bool:
@@ -883,7 +901,7 @@ func _on_show(branch: String) -> bool:
 
 
 func respec_cost() -> int:
-	return points_spent() * Data.RESPEC_CASH
+	return _inf(points_spent() * Data.RESPEC_CASH)
 
 
 func respec() -> bool:
@@ -1015,7 +1033,7 @@ func ammo_box(type: String) -> Dictionary:
 
 func ammo_price(type: String) -> int:
 	var b := ammo_box(type)
-	return int(round(b["value"] * Data.AMMO_PRICE)) if not b.is_empty() else 0
+	return _inf(b["value"] * Data.AMMO_PRICE) if not b.is_empty() else 0
 
 
 func buy_ammo(type: String) -> bool:
@@ -1112,7 +1130,7 @@ func stash_room(cells: int) -> bool:
 func stash_cost() -> int:
 	if stash_level >= Data.STASH_LEVELS.size() - 1:
 		return 0
-	return Data.STASH_LEVELS[stash_level + 1]["cost"]
+	return _inf(Data.STASH_LEVELS[stash_level + 1]["cost"])
 
 
 func can_upgrade_stash() -> bool:
@@ -1143,7 +1161,7 @@ func rest_rate() -> float:
 
 
 func medic_cost() -> int:
-	return 0 if medic_level >= Data.MEDIC_LEVELS.size() - 1 else Data.MEDIC_LEVELS[medic_level + 1]["cost"]
+	return 0 if medic_level >= Data.MEDIC_LEVELS.size() - 1 else _inf(Data.MEDIC_LEVELS[medic_level + 1]["cost"])
 
 
 func can_upgrade_medic() -> bool:
@@ -1160,7 +1178,7 @@ func upgrade_medic() -> bool:
 
 
 func market_cost() -> int:
-	return 0 if market_level >= Data.MARKET_LEVELS.size() - 1 else Data.MARKET_LEVELS[market_level + 1]["cost"]
+	return 0 if market_level >= Data.MARKET_LEVELS.size() - 1 else _inf(Data.MARKET_LEVELS[market_level + 1]["cost"])
 
 
 func can_upgrade_market() -> bool:
@@ -1178,7 +1196,7 @@ func upgrade_market() -> bool:
 
 
 func comms_cost() -> int:
-	return 0 if comms_level >= Data.COMMS_LEVELS.size() - 1 else Data.COMMS_LEVELS[comms_level + 1]["cost"]
+	return 0 if comms_level >= Data.COMMS_LEVELS.size() - 1 else _inf(Data.COMMS_LEVELS[comms_level + 1]["cost"])
 
 
 func can_upgrade_comms() -> bool:
@@ -1227,14 +1245,14 @@ func can_juice() -> bool:
 ## By depth, and by the words already on the site: the endgame's cash sink.
 func juice_cost(i: int) -> int:
 	var base: int = Data.INTEL_CASH[i] * JUICE_COST * depth[i] * int(1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
-	return base / (2 if atlas_rank("word_travels") > 0 else 1)
+	return _inf(base / (2 if atlas_rank("word_travels") > 0 else 1))
 
 
 ## Insurance: a share of the kit's worth, by the depth of the run.
 func insure_cost(i: int) -> int:
 	if has_rule("drivers_log"):
 		return 0
-	return int(ceil(loadout_value() * Data.INSURE_RATE * depth[i] / 10.0)) * 10
+	return int(ceil(loadout_value() * inflation() * Data.INSURE_RATE * depth[i] / 10.0)) * 10
 
 
 func can_insure(i: int) -> bool:
@@ -1303,7 +1321,7 @@ func set_pinned(i: int, on: bool) -> void:
 func workshop_cost() -> int:
 	if workshop >= Data.WORKSHOP.size() - 1:
 		return 0
-	return Data.WORKSHOP[workshop + 1]["cost"]
+	return _inf(Data.WORKSHOP[workshop + 1]["cost"])
 
 
 func can_upgrade_workshop() -> bool:
@@ -2138,7 +2156,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	xp += gain
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
-	m["cash"] += (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
+	m["cash"] += (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
 		* (0.8 if has_node("light_fingers") else 1.0) * (1.5 if has_rule("managers_coat") else 1.0) * trait_mult("cash")
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
@@ -2167,7 +2185,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	var before := level()
 	xp += t["xp"] * 10.0
 	_earn_points(before)
-	m["cash"] += t["cash"] * 10.0
+	m["cash"] += t["cash"] * 10.0 * inflation()
 	m["notes"] = int(m.get("notes", 0)) + Data.NOTES_BOSS * int(t["depth"])
 	var first: bool = not bosses_beaten[int(b["zone"])]
 	bosses_beaten[int(b["zone"])] = true
@@ -2397,7 +2415,7 @@ func stop_auto() -> void:
 func _extract() -> void:
 	var m: Dictionary = mission
 	var t := tier(m["tier"])
-	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m)
+	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	cash += m["cash"]
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
@@ -2609,7 +2627,7 @@ func restock() -> void:
 
 
 func price(it: Dictionary) -> int:
-	return int(round(it["value"] * Data.MARKET_MARKUP * (2.0 if has_node("buyers_market") else 1.0)))
+	return _inf(it["value"] * Data.MARKET_MARKUP * (2.0 if has_node("buyers_market") else 1.0))
 
 
 func buy(i: int) -> bool:
@@ -2716,7 +2734,7 @@ func med_stock() -> Array:
 
 
 func med_price(base: Dictionary) -> int:
-	return int(round(base["value"] * Data.MED_PRICE))
+	return _inf(base["value"] * Data.MED_PRICE)
 
 
 func buy_med(name: String) -> bool:
@@ -2743,7 +2761,7 @@ func away_cap_s() -> float:
 
 
 func generator_cost() -> int:
-	return 0 if generator_level >= Data.GENERATOR_LEVELS.size() - 1 else Data.GENERATOR_LEVELS[generator_level + 1]["cost"]
+	return 0 if generator_level >= Data.GENERATOR_LEVELS.size() - 1 else _inf(Data.GENERATOR_LEVELS[generator_level + 1]["cost"])
 
 
 func can_upgrade_generator() -> bool:
@@ -2760,7 +2778,7 @@ func upgrade_generator() -> bool:
 
 
 func lookout_cost() -> int:
-	return 0 if lookout_level >= Data.LOOKOUT_LEVELS.size() - 1 else Data.LOOKOUT_LEVELS[lookout_level + 1]["cost"]
+	return 0 if lookout_level >= Data.LOOKOUT_LEVELS.size() - 1 else _inf(Data.LOOKOUT_LEVELS[lookout_level + 1]["cost"])
 
 
 func can_upgrade_lookout() -> bool:
@@ -2778,7 +2796,7 @@ func upgrade_lookout() -> bool:
 
 
 func kennel_cost() -> int:
-	return 0 if kennel_level >= Data.KENNEL_LEVELS.size() - 1 else Data.KENNEL_LEVELS[kennel_level + 1]["cost"]
+	return 0 if kennel_level >= Data.KENNEL_LEVELS.size() - 1 else _inf(Data.KENNEL_LEVELS[kennel_level + 1]["cost"])
 
 
 func can_upgrade_kennel() -> bool:
@@ -2795,7 +2813,7 @@ func upgrade_kennel() -> bool:
 
 
 func treat_cost() -> int:
-	return int(ceil((max_hp() - hp) * Data.TREAT_CASH_PER_HP * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)))
+	return int(ceil((max_hp() - hp) * inflation() * Data.TREAT_CASH_PER_HP * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)))
 
 
 func treat() -> bool:

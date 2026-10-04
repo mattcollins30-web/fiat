@@ -648,7 +648,8 @@ func _camp_cards() -> Array:
 	out.append(town)
 	out.append({
 		"title": "Played", "headline": Fmt.clock(sim.elapsed), "unit": "",
-		"lines": [["Now", sim.tier(sim.mission["tier"])["name"] if sim.on_mission() else "in the yard"]],
+		"lines": [["Now", sim.tier(sim.mission["tier"])["name"] if sim.on_mission() else "in the yard"], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
+		"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "",
 		"status": "Autosaves every 30 s",
 	})
 	out.append(_upgrade_card("Generator", "Away counts for", "%d h" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"], Data.GENERATOR_LEVELS, sim.generator_level,
