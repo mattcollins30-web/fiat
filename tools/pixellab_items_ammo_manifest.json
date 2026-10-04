@@ -1,0 +1,216 @@
+{
+  "_readme": [
+    "FIAT GEAR - ammo. 12 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_ammo_manifest.json   (++ --dry-run to list). A job whose file exists is skipped, so a rerun only does what's missing; one that came out wrong: ++ --only <slug> ++ --force, or delete the file and rerun.",
+    "Items.slug(base) is the name: lowercase, runs of anything but a letter or digit become one underscore. The cells load the file if it exists and show text if not, so the pool fills in any order.",
+    "ORDER: run long_guns first - it has no style image. Promote three or four of the best and copy them to art/reference/items/ref_01.png .. ref_04.png; every other manifest rides those as style_image with every style option on, rotated, so the whole pool shares the guns' palette and rendering.",
+    "If the API refuses a wide aspect (a 5x1 gun is 320x64), regenerate at the same width and twice the height; the loader fits and centres it.",
+    "Regenerate these manifests with python3 tools/make_item_manifests.py after any footprint change."
+  ],
+  "jobs": [
+    {
+      "out": "art/items/nails.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a cardboard box of nails seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70085,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/hardened_bolts.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a box of hardened steel bolts seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70086,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/shells.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of shells seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70087,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/slugs.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of slugs seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70088,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/rifle_rounds.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of rifle rounds seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70089,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/match_rounds.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of match rounds seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70090,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/smg_rounds.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of smg rounds seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70091,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/smg_hollow_point.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of smg hollow point seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70092,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/pistol_rounds.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of pistol rounds seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70093,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/pistol_hollow_point.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of pistol hollow point seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70094,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/belt_links.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of belt links seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70095,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/depot_rounds.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open box of depot rounds seen from above at a slight angle, filling the frame, cardboard soft and torn, a few loose rounds beside it. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 70096,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

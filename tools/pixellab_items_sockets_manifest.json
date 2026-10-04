@@ -1,0 +1,114 @@
+{
+  "_readme": [
+    "FIAT GEAR - sockets. 6 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_sockets_manifest.json   (++ --dry-run to list). A job whose file exists is skipped, so a rerun only does what's missing; one that came out wrong: ++ --only <slug> ++ --force, or delete the file and rerun.",
+    "Items.slug(base) is the name: lowercase, runs of anything but a letter or digit become one underscore. The cells load the file if it exists and show text if not, so the pool fills in any order.",
+    "ORDER: run long_guns first - it has no style image. Promote three or four of the best and copy them to art/reference/items/ref_01.png .. ref_04.png; every other manifest rides those as style_image with every style option on, rotated, so the whole pool shares the guns' palette and rendering.",
+    "If the API refuses a wide aspect (a 5x1 gun is 320x64), regenerate at the same width and twice the height; the loader fits and centres it.",
+    "Regenerate these manifests with python3 tools/make_item_manifests.py after any footprint change."
+  ],
+  "jobs": [
+    {
+      "out": "art/items/lighter_fluid.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a dented yellow tin of lighter fluid with a red cap seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75000,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/antifreeze.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a plastic bottle of blue antifreeze from a garage, label peeling seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75001,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/rat_poison.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a council-issue cardboard box of rat poison, a warning triangle on the side, corner chewed seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75002,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/car_battery.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a car battery with both terminals bare and a short length of cable clipped to one seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75003,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/road_salt.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of an open hessian sack of coarse road salt, grey-brown, spilling seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75004,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/copper_wire.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a reel of bare copper wire stripped from a wall, bright where it was cut seen from the front at a slight angle, filling the frame, worn and dirty, the kind of thing found in a shed. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 75005,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,330 @@
+extends Control
+## The run, live: what the cards showed, as a screen, so the pack can be the
+## real grid. Left, three panels - Them (the fight, or the picking-over),
+## the Runner (HP, a med), and the run itself (the clock, the cash, Get out).
+## Right, the pack as cells, the same grid as the Lock-up: pick an item for
+## its figures and Ditch it, or Select many and ditch the lot. Under the grid
+## a panel for the pick, and what a full pack will do with the next find.
+## Fixed geometry inside the card grid's 1536 x 864.
+
+signal acted
+
+const Pal := preload("res://scripts/ui/palette.gd")
+const UI := preload("res://scripts/ui/ui.gd")
+const Fmt := preload("res://scripts/ui/fmt.gd")
+const Data := preload("res://scripts/sim/data.gd")
+const Items := preload("res://scripts/sim/items.gd")
+const Words := preload("res://scripts/sim/words.gd")
+const Inventory := preload("res://scripts/ui/inventory.gd")
+
+const BODY_W := Inventory.SIDE_W                              # 608
+const GAP := 24
+const PANEL_GAP := 12
+const THEM_H := 244                                           # no button: three lines and a note
+const PANEL_H := (Pal.GRID_H - THEM_H - 2 * PANEL_GAP) / 2    # 300: two lines, a note, a button
+const GRID_X := BODY_W + GAP
+const GRID_W := Inventory.WIDTH                                # 888
+const GRID_H := Inventory.HEIGHT                               # 552
+const PICK_Y := GRID_H + GAP                                  # 576
+const PICK_H := Pal.GRID_H - PICK_Y                           # 288
+const PAD := 20
+const INNER := BODY_W - 2 * PAD
+const LINE_H := 30                                            # a 24 px font is 29 tall
+const BAR_H := 26
+const LINES := 3
+const TITLE_Y := 6
+const HEAD_Y := 40
+const BAR_Y := 86
+const LINES_Y := 116
+const NOTE_Y := LINES_Y + 3 * LINE_H + 2                      # 204 in Them
+const NOTE_Y_BUTTON := LINES_Y + 2 * LINE_H + 2               # 174 above a button
+const BUTTON_Y := PANEL_H - PAD - Pal.BUTTON_H                # 224
+
+var sim
+var _panels: Array = []            # three: {panel, title, head, unit, track, fill, bar_text, lines[], note, status, button}
+var _inv
+var _pick: Panel
+var _pick_title: Label
+var _pick_lines: Array[Label] = []
+var _ditch: Button
+var _hint: Label
+var _words: Array[Label] = []      # the item's own line, two rows under the figures
+var _shown := ""
+
+
+func _init() -> void:
+	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	mouse_filter = Control.MOUSE_FILTER_PASS
+	for i in range(3):
+		var y := 0 if i == 0 else THEM_H + PANEL_GAP + (i - 1) * (PANEL_H + PANEL_GAP)
+		var h := THEM_H if i == 0 else PANEL_H
+		var p := UI.panel(self, Rect2(0, y, BODY_W, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+		var d := {"panel": p}
+		d["title"] = UI.label(p, Rect2(PAD, TITLE_Y, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		d["head"] = UI.label(p, Rect2(PAD, HEAD_Y, INNER, 40), "", "SemiBold", Pal.HEADLINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		d["unit"] = UI.label(p, Rect2(PAD, HEAD_Y, INNER, 40), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var track := UI.panel(p, Rect2(PAD, BAR_Y, INNER, BAR_H), UI.box(Pal.BG, 6))
+		d["track"] = track
+		d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
+		d["bar_text"] = UI.label(track, Rect2(0, 0, INNER, BAR_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		var lines := []
+		for k in range(LINES):
+			var ly := LINES_Y + k * LINE_H
+			lines.append([UI.label(p, Rect2(PAD, ly, INNER, LINE_H), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
+				UI.label(p, Rect2(PAD, ly, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)])
+		d["lines"] = lines
+		# a panel with a button shows two lines and its note above the button;
+		# one without shows three, a note and a status line
+		var has_button := i > 0
+		d["note"] = UI.label(p, Rect2(PAD, NOTE_Y_BUTTON if has_button else NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		d["status"] = UI.label(p, Rect2(PAD, 0, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		d["status"].visible = false      # Them's note carries its status now
+		if has_button:
+			lines[2][0].visible = false
+			lines[2][1].visible = false
+		var b := UI.button(p, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), true)
+		b.visible = false
+		d["button"] = b
+		var b2 := UI.button(p, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), false)
+		b2.visible = false
+		d["button2"] = b2
+		_panels.append(d)
+	_panels[1]["button"].pressed.connect(_use_med)
+	_panels[2]["button"].pressed.connect(_get_out)
+	_panels[2]["button2"].pressed.connect(_stop_auto)
+	_inv = Inventory.new()
+	_inv.position = Vector2(GRID_X, 0)
+	_inv.ditching = true
+	_inv.picked.connect(_on_inv_pick)
+	_inv.acted.connect(_on_inv_acted)
+	add_child(_inv)
+	_pick = UI.panel(self, Rect2(GRID_X, PICK_Y, GRID_W, PICK_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_pick_title = UI.label(_pick, Rect2(PAD, 10, GRID_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for i in range(4):
+		_pick_lines.append(UI.label(_pick, Rect2(PAD, 48 + i * 28, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_hint = UI.label(_pick, Rect2(PAD, PICK_H - 6 - 44, GRID_W - 2 * PAD - 260, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for i in range(2):
+		_words.append(UI.label(_pick, Rect2(PAD, 162 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_ditch = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), false)
+	_ditch.pressed.connect(_ditch_pick)
+	_ditch.visible = false
+
+
+# ------------------------------------------------------------------ showing
+
+func show_state(s) -> void:
+	sim = s
+	if not sim.on_mission():
+		return
+	var m: Dictionary = sim.mission
+	var t: Dictionary = m["t"]
+	var low: bool = sim.hp / sim.max_hp() <= 0.35
+	# them
+	var them: Dictionary = _panels[0]
+	them["title"].text = "Them"
+	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	if boss_on:
+		them["title"].text = m["boss"]["name"]
+		_head(them, "1", "on you: the crew's head")
+		_bar(them, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad")
+		_lines(them, [["Incoming", "%.1f/s" % m["last_incoming"]], ["Your fire", "%.0f/s" % (sim.dps() * sim.pace())], ["Kills", "%d" % m["kills"]]])
+		them["note"].text = "The boss"
+	elif m["remaining"] > 0:
+		var on_you: int = mini(m["remaining"], sim.contact(t))
+		_head(them, "%d" % on_you, ("on you, %d more" % (m["remaining"] - on_you)) if m["remaining"] > on_you else ("on you" if on_you > 1 else "left"))
+		_bar(them, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad")
+		_lines(them, [["Incoming", "%.1f/s" % m["last_incoming"]], ["Your fire", "%.0f/s" % (sim.dps() * sim.pace())], ["Kills", "%d" % m["kills"]]])
+		them["note"].text = "Gang %d" % m["patrols"] if m["cleared"] else ("The fight; then %s" % m["boss"]["name"].to_lower() if m.has("boss") and m["boss"]["alive"] else "The fight")
+	else:
+		_head(them, "Clear", "")
+		_bar(them, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), "Picking it over", "good")
+		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
+		_lines(them, [["Next gang in", Fmt.mss(next) if next < 1e8 else "never"], ["Gangs so far", "%d" % m["patrols"]], ["Kills", "%d" % m["kills"]]])
+		them["note"].text = "Each gang that comes is bigger than the last"
+	# the runner
+	var op: Dictionary = _panels[1]
+	op["title"].text = "Runner"
+	_head(op, "%d" % ceili(sim.hp), "of %d HP" % int(sim.max_hp()))
+	_bar(op, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [ceili(sim.hp), int(sim.max_hp())], "bad" if low else "good")
+	_lines(op, [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]], ["Damage", "%.0f/s" % (sim.dps() * sim.pace())]])
+	var med_sig := ""
+	if m["using"] != null:
+		op["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]
+		med_sig = "using"
+	elif sim.first_med().is_empty():
+		op["note"].text = _rounds_words("No meds")
+		med_sig = "none"
+	else:
+		op["note"].text = _rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"])
+		med_sig = "use:" + sim.first_med()["base"]
+	# the run
+	var run: Dictionary = _panels[2]
+	run["title"].text = t["name"]
+	_head(run, Fmt.mss(m["elapsed"]), "depth %d" % t["depth"])
+	_bar(run, (float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]), "")
+	_lines(run, [["Cash", Fmt.money(m["cash"])], ["Passed over", "%d · swapped %d" % [m["left"], int(m.get("swapped", 0))]]])
+	run["note"].text = "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
+		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot")))
+	run["note"].add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
+	# the pack
+	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
+	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
+	var sig := "%s|%s|%d|%d|%s|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m)]
+	if sig == _shown:
+		return
+	_shown = sig
+	op["button"].visible = med_sig.begins_with("use:")
+	if op["button"].visible:
+		op["button"].text = "Use %s" % sim.first_med()["base"].to_lower()
+		UI.style_button(op["button"], low)
+	var auto: bool = sim.auto_tier >= 0
+	run["button"].text = "Get out now"
+	run["button"].visible = true
+	UI.style_button(run["button"], low or m["cleared"])
+	run["button2"].visible = auto
+	run["button2"].text = "Stop auto"
+	if auto:
+		run["button"].size.x = (INNER - 12) / 2
+		run["button2"].position.x = PAD + run["button"].size.x + 12
+		run["button2"].size.x = INNER - run["button"].size.x - 12
+	else:
+		run["button"].size.x = INNER
+	_show_pick(m)
+
+
+## The headline and its unit read as one line: "3 on you, 2 more", "80 of 100 HP".
+func _head(d: Dictionary, head: String, unit: String) -> void:
+	d["head"].text = head
+	d["unit"].text = unit
+	var w := ceilf(UI.text_width(d["head"], head)) + 10
+	d["unit"].position.x = PAD + w
+	d["unit"].size.x = INNER - w
+
+
+func _bar(d: Dictionary, fill: float, text: String, tone: String) -> void:
+	(d["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
+	d["fill"].size.x = roundf(INNER * clampf(fill, 0.0, 1.0))
+	d["bar_text"].text = text
+
+
+func _lines(d: Dictionary, rows: Array) -> void:
+	for k in range(LINES):
+		d["lines"][k][0].text = rows[k][0] if k < rows.size() else ""
+		d["lines"][k][1].text = rows[k][1] if k < rows.size() else ""
+
+
+func _show_pick(m: Dictionary) -> void:
+	var it := _picked_item(m)
+	_say(it)
+	_ditch.visible = not it.is_empty()
+	for l in _pick_lines:
+		l.text = ""
+	if it.is_empty():
+		_pick_title.text = "The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()]
+		_pick_lines[0].text = "A rifle is four cells by one, armour three by three, a med or a part one"
+		if sim.pack_used(m) >= sim.capacity():
+			var cheap: Dictionary = sim.cheapest_in_pack()
+			_pick_lines[1].text = "Full: a better find swaps out the cheapest thing at least its size"
+			_pick_lines[2].text = "Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else ""
+		else:
+			_pick_lines[1].text = "%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"]
+		_hint.text = "Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet"
+		_hint.size.x = GRID_W - 2 * PAD
+		return
+	UI.fit(_pick_title, [Items.full_name(it), it["base"]])
+	UI.fit(_pick_lines[0], Items.figure_options(it, "the fence pays %s" % Fmt.money(sim.sell_price(it))))
+	UI.fit(_pick_lines[1], Items.affix_options(it))
+	var fitted = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
+	if fitted != null:
+		UI.fit(_pick_lines[2], ["Fitted now: %s, %s %s" % [Items.full_name(fitted), Items.headline(fitted)[0], Items.headline(fitted)[1]],
+			"Fitted now: %s, %s %s" % [fitted["base"], Items.headline(fitted)[0], Items.headline(fitted)[1]]])
+	elif it["slot"] in Data.SLOTS:
+		_pick_lines[2].text = "Nothing fitted as %s" % it["slot"].to_lower()
+	_hint.text = "Ditched is gone; it frees %d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]
+	_ditch.text = "Ditch %s" % it["base"].to_lower()
+	_ditch.size.x = ceilf(UI.text_width(_ditch, _ditch.text)) + 48
+	_ditch.position.x = GRID_W - PAD - _ditch.size.x
+	_hint.size.x = _ditch.position.x - PAD - 12
+
+
+func _picked_item(m: Dictionary) -> Dictionary:
+	if _inv.selected < 0:
+		return {}
+	for it in m["found"]:
+		if it["id"] == _inv.selected:
+			return it
+	return {}
+
+
+# ------------------------------------------------------------------ acting
+
+func _use_med() -> void:
+	if sim.on_mission() and not sim.first_med().is_empty():
+		sim.use_med(sim.first_med()["id"])
+
+
+## "2 meds · 38 rounds", or "2 meds · dry" when the primary has none left.
+func _rounds_words(lead: String) -> String:
+	var gun = sim.equipped["Primary"]
+	if gun == null:
+		return lead
+	var n: int = sim.rounds_for(gun)
+	return "%s · %s" % [lead, ("%d rounds" % n) if n > 0 else "primary dry"]
+	acted.emit()
+
+
+func _get_out() -> void:
+	sim.extract_now()
+	acted.emit()
+
+
+func _stop_auto() -> void:
+	sim.stop_auto()
+	acted.emit()
+
+
+func _ditch_pick() -> void:
+	if _inv.selected >= 0 and sim.ditch(_inv.selected):
+		_inv.selected = -1
+	acted.emit()
+
+
+func _on_inv_pick(_id: int) -> void:
+	acted.emit()
+
+
+func _on_inv_acted() -> void:
+	acted.emit()
+
+
+## For the tests: every label and visible button with text.
+## The item's own line, under the figures: who it was, where it came from.
+func _say(it: Dictionary) -> void:
+	UI.wrap(_words, "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+
+
+func text_nodes() -> Array:
+	var out: Array = [_pick_title, _hint]
+	out.append_array(_words)
+	out.append_array(_pick_lines)
+	if _ditch.visible:
+		out.append(_ditch)
+	for d in _panels:
+		out.append_array([d["title"], d["head"], d["unit"], d["bar_text"], d["note"], d["status"]])
+		for pair in d["lines"]:
+			out.append_array(pair)
+		for key in ["button", "button2"]:
+			if d[key].visible:
+				out.append(d[key])
+	out.append_array(_inv.text_nodes())
+	return out
+
+
+## Label + value pairs that share a line, and the headline + unit, for the fit check.
+func line_pairs() -> Array:
+	var out := []
+	for d in _panels:
+		out.append([d["head"], d["unit"]])
+		for pair in d["lines"]:
+			out.append(pair)
+	return out

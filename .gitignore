@@ -1,0 +1,8 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# secrets and scratch
+tools/pixellab_secret.txt
+_to_delete/
+*_response.json
