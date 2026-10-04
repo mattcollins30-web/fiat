@@ -152,7 +152,8 @@ MELEE_WORDS = {
 
 
 def melee(base):
-    return ("A realistic painted pixel-art still-life of a single %s lying flat, seen from above, filling the frame, "
+    # MELEE_WORDS carry their own article ("a wooden baseball bat..."), so no "a single" in front
+    return ("A realistic painted pixel-art still-life of %s, one object alone, lying flat, seen from above, filling the frame, "
             "worn and used." % MELEE_WORDS[base])
 
 
@@ -334,7 +335,7 @@ def set_jobs(seed):
         jobs.append({
             "out": "art/items/%s.png" % slug(name),
             "endpoint": "generate-image-v2",
-            "description": "A realistic painted pixel-art still-life of a single %s, worn and used." % SET_WORDS[name] + TAIL,
+            "description": "A realistic painted pixel-art still-life of %s, one object alone, worn and used." % SET_WORDS[name] + TAIL,   # SET_WORDS carry their article
             "width": w * CELL,
             "height": h * CELL,
             "no_background": True,
