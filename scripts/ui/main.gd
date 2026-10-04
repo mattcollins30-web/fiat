@@ -638,6 +638,11 @@ func _camp_cards() -> Array:
 		"tone": "good" if sim.campaign_done() else "",
 		"status": "Where the runner can go",
 	}
+	if not sim.trades.is_empty():
+		var names := []
+		for el in sim.trades:
+			names.append(Data.tree_of_element(el)["name"])
+		town["lines"].append(["Yard's trade", ", ".join(names)])
 	if sim.can_move_yard():
 		town["buttons"] = [{"text": "Move the yard", "action": _confirm_move, "enabled": true, "primary": false}]
 	out.append(town)
@@ -772,14 +777,29 @@ func _pick_runner(k: int) -> void:
 ## Moving the yard: asked twice, since everything but the uniques goes.
 func _confirm_move() -> void:
 	var items := [
-		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list and half the notes come. Nothing else.", "action": _move_yard},
+		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list, half the notes and the yard's trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
 	_menu.open("Move the yard?", "A yard that's moved finds rarer things, and more cash: +%d%% each a move, and %d points to start." % [Data.MOVE_FIND, Data.MOVE_POINTS], items, _menu.close)
 
 
-func _move_yard() -> void:
-	sim.move_yard()
+## The yard's trade: one element comes with the move, and every class after
+## takes its keystone at the class's own price. Five to pick from, one a move.
+func _pick_trade() -> void:
+	var items := []
+	for el in Data.ELEMENTS:
+		if sim.can_trade(el):
+			var t: Dictionary = Data.tree_of_element(el)
+			var key: Dictionary = t["nodes"][6]
+			items.append({"name": t["name"], "detail": "%s for every class, for good: %s" % [key["name"], key["words"]], "action": _move_yard.bind(el)})
+	if items.is_empty():
+		_move_yard("")
+		return
+	_menu.open("The yard's trade", "Which trade comes with the yard?", items, _menu.close)
+
+
+func _move_yard(trade: String) -> void:
+	sim.move_yard(trade)
 	_menu.close()
 	refresh()
 

@@ -254,5 +254,6 @@ layers that multiply, not add. Built in this order, each step leaving the game g
    stay; this is the main sink. A Craft view beside Guns and Sockets.
 8. **Tests and the reader**: a bot per element that trains to its keystone and crafts toward it, so
    "which build clears depth 40 first and by how much" is a number we chose; where each walls.
-9. The rest of the uniques; prestige's "yard's trade" (a move opens one element's keystone to every
-   class, permanently); balance last.
+9. The rest of the uniques (all thirty-five carry rules - done); prestige's "yard's trade" (a move
+   opens one element's keystone to every class, permanently - done, 4 Oct: picked at the move, one
+   of the five a move); balance last, from the element read.

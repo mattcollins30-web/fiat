@@ -1120,6 +1120,14 @@ static func element_tree(name: String) -> Dictionary:
 	return {}
 
 
+## The tree of an element ("fire" -> Petrol).
+static func tree_of_element(element: String) -> Dictionary:
+	for t in ELEMENT_TREES:
+		if t["element"] == element:
+			return t
+	return {}
+
+
 static func tree_named(name: String) -> Dictionary:
 	for t in ELEMENT_TREES:
 		if t["name"] == name:

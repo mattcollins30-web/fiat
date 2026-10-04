@@ -775,6 +775,20 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The builds pass, step 9a: the yard's trade (2026-10-04)
+
+Prestige's build piece. Moving the yard asks a second question after "Move the yard?": which trade
+comes with it - Petrol, The cold, The rat man, Live or Blades - and from then on every class takes
+that element's keystone at the class's own price, for good (`sim.trades`, one a move, five in all;
+`affinity()` counts them, so the nodes come at single cost and the keystone opens without the second
+past). The town card lists them ("Yard's trade · Petrol, Live"); the move's second line in the log
+names it. Saved with the yard. All thirty-five uniques carry a rule the sim reads, so "the rest of
+the uniques" is the manifest and the art, not code.
+
+Asserted (in `_move_checks`): the trade's menu opens with the five; a Doorman can't take poison's
+keystone before and can after; the trade can't be taken twice; the cost drops to one; the line; the
+save round-trip keeps it.
+
 ## The builds pass, step 8: a bot an element, and the band (2026-10-04)
 
 `tests/bot.gd` takes an `element`. With one set the bot is a build: it trains the element's tree

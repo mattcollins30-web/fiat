@@ -470,6 +470,7 @@ const YARD := {
 	"hardcore_lost": "Hardcore: the yard goes with the runner. Someone else will have the lock-up by morning.",
 	"campaign": "The estate, the town, the city. The yard's name is known in all three. Now it's a question of how far in you go.",
 	"moved": "The yard moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
+	"trade": "The yard's trade came too: %s, and anyone who runs for the yard learns the lot of it.",
 }
 
 

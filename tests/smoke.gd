@@ -2168,8 +2168,23 @@ func _move_checks(main) -> void:
 	main._confirm_move()
 	_check(main._menu.visible, "the move's menu did not open")
 	_check_fit(main, "The Yard (move menu)")
-	main._move_yard()
+	main._pick_trade()
+	_check(main._menu.visible and main._menu._items.size() == Data.ELEMENTS.size(), "the trade's menu did not open with the five")
+	_check_fit(main, "The Yard (trade menu)")
+	# a Doorman: poison is off his pair; the trade brings it
+	sim.set_class("Doorman")
+	_check(not sim.affinity("poison") and sim.can_trade("poison") and not sim.can_trade("physical"), "the trade offers the wrong things")
+	main._move_yard("poison")
 	_check(sim.yard_moves == 1, "the yard did not move")
+	_check(sim.trades == ["poison"] and sim.affinity("poison") and not sim.can_trade("poison") and sim.node_cost("The rat man/0") == 1, "the yard's trade did not come: %s" % str(sim.trades))
+	sim.training_points += 20
+	for i in range(7):
+		sim.train_node("The rat man/%d" % i)
+	_check(sim.tree.has("The rat man/6"), "the traded keystone did not open to a class without the affinity")
+	for i in range(7):
+		sim.tree.erase("The rat man/%d" % i)
+	sim.training_points -= 20
+	_check(str(sim.events.back()[1]).begins_with("The yard's trade came too: the rat man"), "the trade had no line: %s" % str(sim.events.back()))
 	_check(not sim.campaign_done() and sim.best_depth[0] == 0 and not sim.zone_open(1) and sim.workshop == 0, "the move did not start again")
 	_check(sim.notes == 500 and sim.cash == float(Data.STARTING_CASH), "the move kept the wrong money: %d notes, £%.0f" % [sim.notes, sim.cash])
 	var kept := 0
@@ -2186,14 +2201,14 @@ func _move_checks(main) -> void:
 	_check(sim.past.size() == past_n, "the list of runners before did not come")
 	_check(sim.rarity_bonus() > 0.04 and sim.charm_cash() >= Data.MOVE_CASH, "the move's bonus did not read: find %.2f, cash %.0f" % [sim.rarity_bonus(), sim.charm_cash()])
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN and not sim.mate.is_empty(), "the fence did not set up again")
-	_check(str(sim.events.back()[1]).begins_with("The yard moves"), "the move had no line")
+	_check(str(sim.events[-2][1]).begins_with("The yard moves"), "the move had no line")
 	main.refresh()
 	_check_fit(main, "The Yard (moved)")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
-	_check(sim.yard_moves == 1, "the move did not survive a save")
+	_check(sim.yard_moves == 1 and sim.trades == ["poison"], "the move and its trade did not survive a save")
 	sim.load_dict(saved)
-	print("moving the yard ok: the uniques, the tree, the list, the notes, the bonus")
+	print("moving the yard ok: the uniques, the tree, the list, the notes, the bonus, the yard's trade")
 	_sink_checks(main)
 
 

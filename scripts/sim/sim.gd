@@ -57,6 +57,7 @@ var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amo
 var mate := {}                     # the fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var yard_moves := 0                # how many times the yard has moved (the prestige)
+var trades: Array = []             # the yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the fence holds the paper on the kit
 var elapsed := 0.0
 var events: Array = []
@@ -426,9 +427,14 @@ func trees() -> Array:
 
 ## Whether an element is one of the runner's two (or the second past's).
 func affinity(element: String) -> bool:
-	if element == "" or has_rule("qm_manual"):
+	if element == "" or has_rule("qm_manual") or element in trades:
 		return true
 	return element in Data.AFFINITY.get(cls, []) or element in Data.AFFINITY.get(cls2, [])
+
+
+## The yard's trade: an element the move brings with it. Any of the five not taken already.
+func can_trade(element: String) -> bool:
+	return element in Data.ELEMENTS and not (element in trades)
 
 
 ## The runner's trait, as a multiplier on a figure (1.0 when it has none).
@@ -578,8 +584,8 @@ func can_move_yard() -> bool:
 
 ## Start again somewhere else. The uniques come, worn or stashed; the yard's
 ## own tree; the runners before; half the notes; the move's own bonus.
-func move_yard() -> bool:
-	if not can_move_yard():
+func move_yard(trade := "") -> bool:
+	if not can_move_yard() or (trade != "" and not can_trade(trade)):
 		return false
 	var uniques: Array = []
 	for it in stash:
@@ -593,7 +599,9 @@ func move_yard() -> bool:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
 	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost}
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate()}
+	if trade != "":
+		keep["trades"].append(trade)
 	var fresh = get_script().new()
 	fresh.start()
 	load_dict(fresh.to_dict())
@@ -605,11 +613,14 @@ func move_yard() -> bool:
 	elapsed = keep["elapsed"]
 	events = keep["events"]
 	operators_lost = keep["operators_lost"]
+	trades = keep["trades"]
 	tree = yard_tree
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
 		stash.append(it)                   # whatever the new stash holds: they're the point of moving
 	log_event(Words.YARD["moved"])
+	if trade != "":
+		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
 	return true
 
 
@@ -2826,7 +2837,7 @@ func _state() -> Dictionary:
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
-		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "insure_next": insure_next,
+		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
 
@@ -2910,6 +2921,7 @@ func load_dict(d: Dictionary) -> void:
 		mate = roll_mate()
 	runs_total = int(d.get("runs_total", 0))
 	yard_moves = int(d.get("yard_moves", 0))
+	trades = Array(d.get("trades", []))
 	insure_next = bool(d.get("insure_next", false))
 	var bb: Array = d.get("bosses_beaten", [])
 	for z in range(Data.ZONES.size()):
