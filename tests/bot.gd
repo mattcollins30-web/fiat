@@ -13,6 +13,7 @@ const CLIMB := 0.9
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
+var element := ""              # a build: its tree to the keystone first, its gear held, the bench aimed at it
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
@@ -44,6 +45,9 @@ func tidy(sim) -> void:
 		sim.equip_best(s)
 	if keystones_first and TYPE_OF.has(sim.cls):
 		_hold_the_type(sim, TYPE_OF[sim.cls])
+	if element != "":
+		_second_past_for(sim)
+		_hold_the_element(sim)
 	_climb(sim)
 	_train_tree(sim)
 	var sinks := [["workshop", sim.can_upgrade_workshop, sim.workshop_cost, sim.upgrade_workshop],
@@ -56,7 +60,10 @@ func tidy(sim) -> void:
 			var cost: int = s[2].call()
 			s[3].call()
 			bought.append([sim.elapsed, "%s for £%d" % [s[0], cost]])
-	for slot in Data.SOCKET_SLOTS:
+	var slots: Array = Data.SOCKET_SLOTS.duplicate()
+	slots.erase("Primary")
+	slots.push_front("Primary")              # the primary's sockets before the secondary's
+	for slot in slots:
 		var gun = sim.equipped[slot]
 		if gun == null:
 			continue
@@ -67,8 +74,17 @@ func tidy(sim) -> void:
 			if best.is_empty():
 				continue
 			var cur = gun["attachments"][mount]
-			if cur == null or Items.score(best[0]) > Items.score(cur):
-				sim.fit(slot, best[0]["id"])
+			var want: Dictionary = best[0]
+			if element != "" and str(mount).begins_with("socket"):
+				# the build's own socketable before the best by score
+				for a in best:
+					if float(Items.base_of(a).get("conv_%s_pct" % element, 0)) > 0.0:
+						want = a
+						break
+				if cur != null and float(Items.base_of(cur).get("conv_%s_pct" % element, 0)) > 0.0:
+					continue
+			if cur == null or Items.score(want) > Items.score(cur) or (element != "" and not is_same(want, best[0])):
+				sim.fit(slot, want["id"])
 	_sell_spares(sim)
 	_buy_upgrade(sim)
 	_restock_meds(sim)
@@ -119,6 +135,8 @@ func _endgame(sim) -> void:
 	var floor_notes: int = 0
 	for i in range(Data.TIERS.size()):
 		floor_notes = maxi(floor_notes, sim.boss_cost(i))
+	if element != "":
+		_craft_toward(sim)
 	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
 		var it = sim.equipped[s]
 		if it == null:
@@ -126,6 +144,86 @@ func _endgame(sim) -> void:
 		var cost: int = sim.craft_cost(it, "add")
 		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "add"):
 			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
+
+
+## The build's bench work on the primary: a socket for the element's
+## socketable; an affix added until the element's conversion or increased
+## turns up; when the piece is full without one, the rest re-rolled with the
+## element's affix locked, or all of it re-rolled - while two grand stays.
+func _craft_toward(sim) -> void:
+	var it = sim.equipped["Primary"]
+	if it == null or it.has("unique"):
+		return
+	var conv := "conv_%s_pct" % element
+	var inc := "%s_pct" % element
+	if Items.sockets(it) == 0:
+		var c: int = sim.craft_cost(it, "socket")
+		if c >= 0 and sim.cash - c >= 2000.0 and sim.craft(it["id"], "socket"):
+			bought.append([sim.elapsed, "bench: a socket on the primary for £%d" % c])
+	var has_conv := false
+	var has_inc := false
+	for a in it["affixes"]:
+		has_conv = has_conv or a["stat"] == conv
+		has_inc = has_inc or a["stat"] == inc
+	if has_conv and has_inc:
+		return
+	var tries := 0
+	while tries < 4 and not (has_conv and has_inc):
+		tries += 1
+		var kind := "add"
+		var stat := ""
+		if sim.craft_cost(it, "add") < 0:
+			# full: re-roll around what's right, or the lot
+			kind = "lock" if (has_conv or has_inc) and sim.craft_cost(it, "lock", conv if has_conv else inc) >= 0 else "reroll"
+			stat = (conv if has_conv else inc) if kind == "lock" else ""
+		var cost: int = sim.craft_cost(it, kind, stat)
+		if cost < 0 or sim.cash - cost < 2000.0 or not sim.craft(it["id"], kind, stat):
+			return
+		bought.append([sim.elapsed, "bench: %s on the primary for £%d, after %s" % [Data.CRAFT[kind]["name"].to_lower(), cost, element]])
+		has_conv = false
+		has_inc = false
+		for a in it["affixes"]:
+			has_conv = has_conv or a["stat"] == conv
+			has_inc = has_inc or a["stat"] == inc
+
+
+## The build's gun: the primary in the stash with the most of the element
+## behind it - the base's share, its affixes, what's fitted - weighed with its
+## score; a plain gun needs to be well ahead to displace one that carries the element.
+func _elem_share(it: Dictionary) -> float:
+	var stat := "conv_%s_pct" % element
+	var s := float(Items.base_of(it).get(stat, 0))
+	s += Items.affix_total(it, stat)
+	s += Items.fitted_sum(it, stat)
+	return s / 100.0
+
+
+func _elem_score(it: Dictionary) -> float:
+	return Items.score(it) * (1.0 + 2.0 * _elem_share(it))
+
+
+func _hold_the_element(sim) -> void:
+	var cur = sim.equipped["Primary"]
+	var best := {}
+	for it in sim.stash:
+		if it["slot"] == "Primary" and (best.is_empty() or _elem_score(it) > _elem_score(best)):
+			best = it
+	if best.is_empty():
+		return
+	if cur == null or _elem_score(best) > _elem_score(cur):
+		sim.equip_item(best["id"])
+
+
+## At the second past, a class with the element's affinity when the first
+## hasn't: the keystone needs it.
+func _second_past_for(sim) -> void:
+	if not sim.can_ascend() or sim.cls2 != "" or sim.affinity(element):
+		return
+	for c in Data.CLASSES:
+		if c["name"] != sim.cls and element in Data.AFFINITY.get(c["name"], []):
+			if sim.set_second(c["name"]):
+				bought.append([sim.elapsed, "the second past: %s, for %s" % [c["name"].to_lower(), element]])
+			return
 
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back
@@ -190,6 +288,10 @@ func _train_tree(sim) -> void:
 	var order: Array = sim.trees()
 	if keystones_first and order.size() == 3:
 		order = [order[0], order[2], order[1]]
+	if element != "":
+		# the build's tree first, to its keystone and past it; the class's after
+		var mine: Array = order.filter(func(t): return t.get("element", "") == element)
+		order = mine + order.filter(func(t): return not t.has("element"))
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:
@@ -207,6 +309,8 @@ func _train_tree(sim) -> void:
 				break
 			if keystones_first:
 				return                    # save up for it rather than spend elsewhere
+			if element != "" and b.get("element", "") == element and sim.points_free() < sim.node_cost(next_id):
+				return                    # an off-affinity node at double: save for it
 
 
 func _restock_meds(sim) -> void:
@@ -268,6 +372,12 @@ func _sell_spares(sim) -> void:
 			continue
 		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type:
 			continue
+		if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
+			continue
+		if element != "" and it["slot"] == "Primary":
+			var cur = sim.equipped["Primary"]
+			if cur == null or _elem_score(it) >= _elem_score(cur) * 0.8:
+				continue
 		if Items.is_attachment(it):
 			# the best three of a mount stay; attachments_for() is sorted best first
 			var rank: int = sim.attachments_for(it["mount"]).find(it)
@@ -282,12 +392,21 @@ func _sell_spares(sim) -> void:
 func _buy_upgrade(sim) -> void:
 	var pick := -1
 	var gain := 0.0
+	if element != "":
+		for i in range(sim.market.size()):
+			var it: Dictionary = sim.market[i]
+			if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0 and sim.cash >= sim.price(it) + 500 and _socket_wanting(sim) != "":
+				sim.buy(i)
+				bought.append([sim.elapsed, "%s for £%d" % [it["base"].to_lower(), sim.price(it)]])
+				break
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
 		if Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it):
 			continue
 		var cur = sim.equipped[it["slot"]]
 		var g: float = Items.score(it) - (Items.score(cur) if cur != null else 0.0)
+		if element != "" and it["slot"] == "Primary":
+			g = _elem_score(it) - (_elem_score(cur) if cur != null else 0.0)   # a build weighs its gun its own way
 		if g > gain and sim.cash >= sim.price(it) + 100:
 			gain = g
 			pick = i
@@ -295,4 +414,19 @@ func _buy_upgrade(sim) -> void:
 		sim.buy(pick)
 		for s in Data.SLOTS:
 			sim.equip_best(s)
+		if element != "":
+			_hold_the_element(sim)
 
+
+## A worn gun's socket without the element's socketable in it, or "".
+func _socket_wanting(sim) -> String:
+	for slot in Data.SOCKET_SLOTS:
+		var gun = sim.equipped[slot]
+		if gun == null:
+			continue
+		for mount in gun["attachments"]:
+			if str(mount).begins_with("socket"):
+				var cur = gun["attachments"][mount]
+				if cur == null or float(Items.base_of(cur).get("conv_%s_pct" % element, 0)) <= 0.0:
+					return mount
+	return ""

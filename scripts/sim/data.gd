@@ -391,13 +391,13 @@ const SHOCK := 0.15                # more of everything they take, while shocked
 ## rest) and what they resist. The element's share grows with depth (ZONE_GROW
 ## a depth, to ZONE_SHARE_CAP); "Resistant" and the depth add to the resists.
 const ZONE_TYPES := [
-	{"types": {"bleed": 0.15}, "res": {}},                                   # the estate: blades and bats
+	{"types": {"bleed": 0.15}, "res": {}},                                   # the estate: blades and bats; nothing on but a coat
 	{"types": {"fire": 0.15, "poison": 0.1}, "res": {"bleed": 0.2, "physical": 0.1}},   # the town: petrol and whatever's in the bottles; jackets
-	{"types": {"shock": 0.15, "fire": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2}},   # the city: army kit
+	{"types": {"shock": 0.15, "fire": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2, "frost": 0.1}},   # the city: army kit, greatcoats
 ]
 const ZONE_GROW := 0.02
 const ZONE_SHARE_CAP := 0.6
-const RESIST_DEPTH := 8            # from here, all their resists rise a step a depth
+const RESIST_DEPTH := 8            # from here, the zone's own resists (what it wears and what it throws) rise a step a depth; the rest stay open
 const RESIST_DEPTH_STEP := 0.015
 const RESIST_ENEMY_CAP := 0.7
 const ATTACHMENTS := [

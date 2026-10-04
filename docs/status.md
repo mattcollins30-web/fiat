@@ -775,6 +775,40 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The builds pass, step 8: a bot an element, and the band (2026-10-04)
+
+`tests/bot.gd` takes an `element`. With one set the bot is a build: it trains the element's tree
+before the class's and saves its odd point for an off-affinity node at double rather than spend it
+elsewhere; at the second past it picks a class with the element's affinity when the first lacks it
+(the keystone needs one); it holds the primary that carries the most of the element (the base's
+share, its affixes, what's in its sockets, weighed with the score - a plain gun has to be well ahead
+to displace one that carries it), keeps such guns and the element's socketables out of the fence's
+pile, seats the element's socketable before the best by score, primary first, buys one off the
+market when a worn socket wants it, and weighs a market gun its own way. At the bench
+(`_craft_toward`): a socket when the primary has none, an affix added until the element's conversion
+and increased are both on it, and when the piece is full without them, the rest re-rolled around
+the one it has, or the lot - two grand kept back, four goes a visit.
+
+`tests/balance.gd -- 6 elements [class]` reads the five builds one line each: the class (the
+element's affinity unless given), when the bank fell, when the keystone was taken, the element's
+share of a hit and its damage a second, runs and KIA, the deepest on every tier (where the build
+walls), the kit, and the bench and second-past lines.
+
+Their side changed to make the band mean something: from depth 8 a zone's *own* resists rise with
+depth - what it wears (its res) and what it throws (its types) - and the rest stay open. The estate
+hardens against bleed, the town against bleed, physical, fire and poison, the city against fire,
+shock, physical and frost (greatcoats: frost 10% added to the city). Before, every resist rose
+together, which was a flat tax on everyone rather than a reason to pick. "Resistant" still adds to
+all six.
+
+Asserted (`_element_bot_checks`): for each element as a Doorman - own tree first, the odd point
+saved, the second past taken with the affinity, the keystone reached, the gun carrying the element
+held over a stronger plain one, a socket bought and the element's socketable seated, the increased
+affix added, the build mostly its element; and the band: at depth 30 on every site, some build lands
+60% or better, something is resisted 30% or more, and something lands untouched. Three reads made
+robust against the worn kit (conversions read relative or on a plain gun; the yard's node trained
+before the class change; the rig drop makes room first).
+
 ## The builds pass, step 7: the Craft view (2026-10-04)
 
 The Workshop's third view, beside Guns and Sockets. The grid shows the stash's gear the bench can work

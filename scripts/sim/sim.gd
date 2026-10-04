@@ -1622,9 +1622,11 @@ func effective(i: int) -> Dictionary:
 	var types := {}
 	for ty in zone["types"]:
 		types[ty] = minf(Data.ZONE_SHARE_CAP, float(zone["types"][ty]) + Data.ZONE_GROW * (d - 1))
+	# a zone hardens with depth against its own: what it wears and what it throws; the rest stays open, so every site is somebody's
 	var res := {}
 	for ty in Data.TYPES:
-		res[ty] = float(zone["res"].get(ty, 0.0)) + (Data.RESIST_DEPTH_STEP * (d - Data.RESIST_DEPTH + 1) if d >= Data.RESIST_DEPTH else 0.0)
+		var own: bool = zone["res"].has(ty) or zone["types"].has(ty)
+		res[ty] = float(zone["res"].get(ty, 0.0)) + (Data.RESIST_DEPTH_STEP * (d - Data.RESIST_DEPTH + 1) if d >= Data.RESIST_DEPTH and own else 0.0)
 	for name in intel[i]:
 		var m := modifier(name)
 		if m.has("type"):

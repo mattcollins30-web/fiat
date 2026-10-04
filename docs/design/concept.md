@@ -219,7 +219,7 @@ layers that multiply, not add. Built in this order, each step leaving the game g
 3. **Their side.** Gang resist profiles by zone (soft, jacketed, ex-army with the lot); a type by zone
    and depth (estate blades and bats, town petrol and poison, city shock and fire), the share rising
    with depth; words that add a type ("Burners", "Cutters", "Wired") or a resist ("Jacketed",
-   "Rubbered", "Hardened"); "Resistant" from depth 8, all resists rising with depth; reflect gangs from
+   "Rubbered", "Hardened"); "Resistant" from depth 8; from depth 8 a zone's own resists (what it wears, what it throws) rise with depth and the rest stay open, so every site is somebody's; reflect gangs from
    depth 30 as a second pass. The depth band test becomes "every site viable for some build".
 4. **Five element trees, as webs.** Fire ("Petrol"), frost ("The cold"), poison ("The rat man"), shock
    ("Live"), bleed ("Blades"): a spine of conversion and increased, a fork, a keystone that breaks the

@@ -8,6 +8,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Bot := preload("res://tests/bot.gd")
 
 var _misfits := 0
 var _fails := 0
@@ -156,6 +157,8 @@ func _init() -> void:
 		_check_fit(main, "Armoury (rig pick)")
 	if sim.med_capacity() == 0:
 		sim.equipped["Rig"] = sim._plain("Rig", Data.BASES["Rig"][0]["name"])    # the run may have lost the rig
+	while not sim.stash_room(2) and sim.stash.size() > 0:
+		sim.sell(sim.stash.back())          # room in the stash for what the rig gives up
 	while not sim.rig_room(1) and sim.rig.size() > 0 and sim.stash_room(1):
 		sim.leave(sim.rig.back()["id"])     # room for the drop
 	var dropped := false
@@ -945,6 +948,9 @@ func _class_trees(main) -> void:
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (Doorman)")
 	# a class change refunds the class trees and keeps the yard's
+	if not sim.tree.has("The yard/0"):
+		sim.training_points += 1
+		sim.train_node("The yard/0")
 	sim.set_class("Drifter")
 	_check(not sim.tree.has("Muscle/0") and sim.tree.has("The yard/0"), "changing class did not refund the class trees and keep the yard's")
 	_check(sim.points_spent() < spent_before, "the refund did not free the points")
@@ -1052,9 +1058,10 @@ func _charm_sockets(main) -> void:
 	sim.stash.append(salt)
 	var dps_before: float = sim.dps()
 	var armour_before: float = sim.armour()
+	var fire_before: float = sim.conversion()["fire"]      # the secondary or the tree may carry some already
 	_check(sim.fit(sim.equipped["Primary"]["slot"], fluid["id"]), "fit() did not seat a socketable in the first socket")
 	_check(gun["attachments"]["socket 1"] != null and gun["attachments"]["socket 1"]["base"] == "Lighter fluid", "the fluid is not in socket 1")
-	_check(is_equal_approx(sim.conversion()["fire"], 0.15) and sim.type_dps()["fire"] > 0.0 and is_equal_approx(sim.dps(), dps_before), "fire in a socket did not convert 15%%: %s" % str(sim.conversion()))
+	_check(sim.conversion()["fire"] >= fire_before + 0.15 - 0.001 and sim.type_dps()["fire"] > 0.0 and is_equal_approx(sim.dps(), dps_before), "fire in a socket did not convert 15%% more: %.2f -> %s" % [fire_before, str(sim.conversion())])
 	_check(sim.fit_socket("Primary", "socket 2", salt["id"]), "fit_socket() did not seat the salt in socket 2")
 	_check(sim.armour() > armour_before, "salt in a socket did not raise armour")
 	_check(not sim.stash.has(fluid) and not sim.stash.has(salt), "the socketables did not leave the stash")
@@ -1196,16 +1203,130 @@ func _webs_traits(main) -> void:
 	sim.load_dict(saved)
 	print("webs, the second past and traits ok")
 	_element_checks(main)
+	_element_bot_checks(main)
 
 
 ## The element trees: affinities, double cost and the locked keystone off
 ## them, the second past opening it; the keystones' and notables' rules.
+## The element bots: each trains its tree first and saves for its keystone,
+## takes a second past for an off-affinity element, holds the gun that
+## carries the element, seats the element's socketable, and sends the primary
+## to the bench until the element's affixes are on it. Then the band: at
+## depth 30 on every site, some build still lands most of its damage.
+func _element_bot_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for t in Data.ELEMENT_TREES:
+		var el: String = t["element"]
+		sim.load_dict(saved)
+		sim.set_class("Doorman")          # bleed and physical: four of the five are off-affinity
+		sim.respec()
+		sim.workshop = maxi(sim.workshop, 1)
+		sim.cash = 400000.0
+		sim.market = []                   # nothing to buy, no contracts: the choices below are the only ones
+		sim.contracts = []
+		sim.training_points = 3
+		var bot = Bot.new()
+		bot.element = el
+		bot._train_tree(sim)
+		var mine: Array = sim.tree.filter(func(id): return str(id).begins_with(t["name"] + "/"))
+		_check(not mine.is_empty() and sim.tree.all(func(id): return str(id).begins_with(t["name"] + "/")), "the %s bot did not train its own tree first: %s" % [el, sim.tree])
+		if not sim.affinity(el):
+			# three points and double cost: one node, one spare saved, not spent on the class
+			_check(sim.points_free() == 1, "the off-affinity %s bot did not save its odd point: %d free" % [el, sim.points_free()])
+			sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
+			bot._second_past_for(sim)
+			_check(sim.cls2 != "" and sim.affinity(el), "the %s bot did not take a second past with the affinity: %s" % [el, sim.cls2])
+		sim.training_points += 40
+		bot._train_tree(sim)
+		_check(sim.tree.has("%s/6" % t["name"]), "the %s bot did not reach its keystone: %s" % [el, sim.tree])
+		# the gun: a plain better one in the stash loses to the one carrying the element
+		var top := {}
+		for b in Data.BASES["Primary"]:
+			if b.get("type", "") != "melee" and (top.is_empty() or int(b["tier"]) > int(top["tier"]) or (int(b["tier"]) == int(top["tier"]) and float(b["damage"]) * float(b["rof"]) > float(top["damage"]) * float(top["rof"]))):
+				top = b
+		var carries: Dictionary = sim._plain("Primary", top["name"])     # the hardest-hitting gun there is: nothing the market stocks is 1.5× it
+		carries["affixes"] = [{"stat": "conv_%s_pct" % el, "value": 25.0, "tier": 5}]
+		carries["rarity"] = 2
+		if el == "bleed":
+			carries["base"] = "Machete"            # a bleed base too
+			carries["attachments"] = {}
+			for name in Items.base_of(carries).get("attachments", []):
+				carries["attachments"][name] = null
+		var plain: Dictionary = carries.duplicate(true)   # the same gun, a better plain affix
+		plain["id"] = Items._next_id
+		Items._next_id += 1
+		plain["affixes"] = [{"stat": "damage_pct", "value": 30.0, "tier": 4}]
+		sim.equipped["Primary"] = null
+		sim.stash = sim.stash.filter(func(it): return it["slot"] != "Primary")   # only these two to choose from
+		while not sim.stash_room(20) and not sim.stash.is_empty():
+			sim.sell(sim.stash[0])              # room to swap guns: a full stash refuses the swap
+		sim.stash.append(plain)
+		sim.stash.append(carries)
+		bot._hold_the_element(sim)
+		_check(sim.equipped["Primary"] != null and bot._elem_share(sim.equipped["Primary"]) >= 0.249, "the %s bot did not hold a gun carrying the element: %s" % [el, sim.equipped["Primary"]["base"] if sim.equipped["Primary"] != null else "nothing"])
+		# the socketable: added at the bench when none, and the element's own seated
+		if el != "bleed":
+			var sock: Dictionary = Items.roll(Data.ATTACHMENT, 2, sim.rng)
+			var sock_base: String = {"fire": "Lighter fluid", "frost": "Antifreeze", "poison": "Rat poison", "shock": "Car battery"}[el]
+			sock["base"] = sock_base
+			sock["mount"] = "socket"
+			sock["affixes"] = []
+			sim.stash.append(sock)
+			var cash0: float = sim.cash
+			bot._craft_toward(sim)
+			_check(Items.sockets(sim.equipped["Primary"]) >= 1 and sim.cash < cash0, "the %s bot did not buy a socket at the bench" % el)
+			bot.tidy(sim)
+			var seated := false
+			for a in sim.equipped["Primary"]["attachments"].values():
+				seated = seated or (a != null and a["base"] == sock_base)
+			var where := "in the stash" if sim.stash.has(sock) else "gone"
+			for st in Data.SOCKET_SLOTS:
+				if sim.equipped[st] != null and sim.equipped[st]["attachments"].values().has(sock):
+					where = "on the " + st.to_lower()
+			for it in sim.stash:
+				if it.get("attachments", {}).values().has(sock):
+					where = "on the %s in the stash" % it["base"]
+			_check(seated, "the %s bot did not seat its socketable: it is %s; the primary is %s (carries: %s, plain: %s) with %s; bought %s" % [el, where, sim.equipped["Primary"]["base"], is_same(sim.equipped["Primary"], carries), is_same(sim.equipped["Primary"], plain), sim.equipped["Primary"]["attachments"], str(bot.bought.slice(-4))])
+		# the bench: the increased affix added next to the conversion
+		sim.cash = 400000.0
+		bot._craft_toward(sim)
+		var has_inc := false
+		for a in sim.equipped["Primary"]["affixes"]:
+			has_inc = has_inc or a["stat"] == "%s_pct" % el
+		_check(has_inc or sim.craft_cost(sim.equipped["Primary"], "add") < 0, "the %s bot did not add its increased affix: %s" % [el, sim.equipped["Primary"]["affixes"]])
+		_check(sim.conversion()[el] > 0.5, "the %s build is not mostly %s: %s" % [el, el, sim.conversion()])
+	# the band: at depth 30 on every site, some element build lands at least 60% of what it would unresisted
+	var builds := {}
+	for t in Data.ELEMENT_TREES:
+		builds[t["element"]] = {"types": {t["element"]: 1.0}}
+	builds["physical"] = {"types": {"physical": 1.0}}
+	for i in range(Data.TIERS.size()):
+		sim.depth[i] = 30
+		sim.intel[i] = []
+		var e: Dictionary = sim.effective(i)
+		var best := 0.0
+		var best_name := ""
+		for name in builds:
+			var landed: float = 1.0 - float(e["res"].get(name, 0.0))
+			if landed > best:
+				best = landed
+				best_name = name
+		_check(best >= 0.6, "no build lands 60%% on %s at depth 30: best %s at %.0f%%" % [e["name"], best_name, best * 100])
+		_check(e["res"].values().any(func(r): return float(r) >= 0.3), "%s at depth 30 resists nothing enough to matter: %s" % [e["name"], e["res"]])
+		_check(e["res"].values().any(func(r): return float(r) <= 0.01), "%s at depth 30 resists everything: %s" % [e["name"], e["res"]])
+	sim.load_dict(saved)
+	print("element bots ok: own tree first, saved points, the second past, the gun, the socketable, the bench, the band")
+
+
 func _element_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	sim.set_class("Drifter")
 	sim.respec()
 	sim.training_points += 60
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")     # nothing worn converts: the trees are read alone
+	sim.equipped["Secondary"] = null
 	_check(sim.affinity("fire") and sim.affinity("shock") and not sim.affinity("poison"), "the Drifter's affinities are not fire and shock")
 	_check(sim.node_cost("Petrol/0") == 1 and sim.node_cost("The rat man/0") == 2, "an off-affinity node does not cost double: %d / %d" % [sim.node_cost("Petrol/0"), sim.node_cost("The rat man/0")])
 	for i in range(7):
@@ -1259,9 +1380,12 @@ func _element_checks(main) -> void:
 	var dealt: float = sim._dot_tick(m["dots"], 1.0)
 	_check(dealt > 0.0 and is_equal_approx(m["dots"]["bleed"], 60.0), "Won't stop let the bleed fade: %s" % str(m["dots"]))
 	sim.extract_now()
-	# the class webs' element notables
+	# the class webs' element notables, read with a plain gun on
+	var held = sim.equipped["Primary"]
+	sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")
 	_check(sim.train_node("Muscle/0") and sim.train_node("Muscle/1") and sim.train_node("Muscle/2") and sim.train_node("Muscle/3") and sim.train_node("Muscle/7") and sim.train_node("Muscle/8"), "Muscle's branch to Glassing did not train")
 	_check(is_equal_approx(sim.conversion()["bleed"], 0.15 + 0.65), "Glassing did not add 15%% bleed: %s" % str(sim.conversion()))
+	sim.equipped["Primary"] = held
 	# the Caravan cycles the middle column through the elements
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (elements, yard)")
@@ -2188,7 +2312,7 @@ func _damage_model_checks(main) -> void:
 	sim.best_depth[0] = 20
 	sim.set_depth(0, 12)
 	e = sim.effective(0)
-	_check(e["res"]["physical"] >= 0.25 + Data.RESIST_DEPTH_STEP * 4 and e["res"]["fire"] <= Data.RESIST_ENEMY_CAP, "Resistant at depth 12 is %s" % str(e["res"]))
+	_check(e["res"]["bleed"] >= 0.25 + Data.RESIST_DEPTH_STEP * 4 and is_equal_approx(e["res"]["fire"], 0.25) and e["res"]["fire"] <= Data.RESIST_ENEMY_CAP, "Resistant at depth 12 is %s (the estate's own bleed grows, the rest stay as the word says)" % str(e["res"]))
 	sim.intel[0] = []
 	sim.set_depth(0, 1)
 	var dots := {}
@@ -2470,9 +2594,9 @@ func _check_grid(inv, cap: int, what: String) -> void:
 ## the slot is empty. Every slot pair, with a plain item of each slot.
 func _body_drops(main) -> void:
 	var sim = main.sim
-	while not sim.stash_room(12) and not sim.stash.is_empty():
-		sim.sell(sim.stash[0])                 # room for the swaps: the run may have filled it
-	_check(sim.stash_room(12), "no room could be made in the stash: %d of %d" % [sim.stash_used(), sim.stash_cap()])
+	while not sim.stash_room(30) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])                 # room for the swaps, both ways: the run may have filled it
+	_check(sim.stash_room(30), "no room could be made in the stash: %d of %d" % [sim.stash_used(), sim.stash_cap()])
 	main.show_room(main.ARMOURY)
 	var body = main._armoury._body
 	for slot in Data.SLOTS:
@@ -2505,8 +2629,10 @@ func _body_drops(main) -> void:
 	var heavy: Dictionary = sim._plain("Armour", "Riot suit")
 	var light: Dictionary = sim._plain("Armour", "Stab vest")
 	var old = sim.equipped["Armour"]
+	while not sim.stash_room(30) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
 	sim.stash.append(heavy)
-	sim.equip_item(heavy["id"])
+	_check(sim.equip_item(heavy["id"]), "the riot suit did not go on for the room test")
 	sim.stash.append(light)
 	var filler := []
 	while sim.stash_used() + Items.size(heavy) - Items.size(light) <= sim.stash_cap():
