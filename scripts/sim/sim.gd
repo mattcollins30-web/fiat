@@ -44,6 +44,7 @@ var training_points := 0           # earned, one a level, across operators
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
+var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the fence moved on
 var runner_runs := 0               # this runner's runs so far
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the bank's vault, opened once
@@ -273,7 +274,7 @@ func dot_stacks(ty: String) -> int:
 ## How much slower chilled gangs fire, and how much more shocked ones take.
 func chill_amount() -> float:
 	if has_node("frost_freeze"):
-		return 1.0
+		return Data.FREEZE
 	return 0.4 if tree.has("The cold/3") else Data.CHILL
 
 
@@ -664,6 +665,49 @@ func move_yard(trade := "") -> bool:
 	if trade != "":
 		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
 	return true
+
+
+# ------------------------------------------------------------------ the estate recycles
+
+## A piece out on the estate: worn by a gang member a few runs from now.
+func _lose(it: Dictionary, who: String, from: String) -> void:
+	loose_kit.append({"item": it.duplicate(true), "who": who, "from": from, "run": runs_total})
+	while loose_kit.size() > Data.RECYCLE_KEEP:
+		loose_kit.pop_front()
+
+
+## At the start of a run: one of a gang may be wearing something off the list.
+func _maybe_wearing(m: Dictionary, force := false) -> void:
+	if loose_kit.is_empty() or m.get("dry", false):
+		return
+	if not force and rng.randf() >= Data.RECYCLE_ODDS:
+		return
+	for k in range(loose_kit.size()):
+		var e: Dictionary = loose_kit[k]
+		if runs_total - int(e["run"]) >= Data.RECYCLE_RUNS or force:
+			loose_kit.remove_at(k)
+			m["wearing"] = e
+			var it: Dictionary = e["item"]
+			if e["from"] == "fence":
+				log_event(Words.RECYCLE["has"] % (it["unique"] if it.has("unique") else it["base"].to_lower()))
+			else:
+				log_event(Words.RECYCLE["wearing"] % [e["who"], it["base"].to_lower()])
+			return
+
+
+## The site's cleared: what he was wearing comes off him, into the pack whatever it holds.
+func _wearing_off(m: Dictionary) -> void:
+	if not m.has("wearing"):
+		return
+	var e: Dictionary = m["wearing"]
+	m.erase("wearing")
+	var it: Dictionary = e["item"]
+	m["found"].append(it)
+	if e["from"] == "fence" or it.has("unique"):
+		log_event(Words.RECYCLE["off_unique"] % (it["unique"] if it.has("unique") else it["base"]))
+	else:
+		var who: String = e["who"]
+		log_event(Words.RECYCLE["off"] % [it["base"], who.substr(0, 1).to_upper() + who.substr(1)])
 
 
 # ------------------------------------------------------------------ the bench's crafting
@@ -1931,6 +1975,7 @@ func deploy(i: int) -> void:
 	if runs_total % Data.MATE_RUNS == 0:
 		mate = roll_mate()
 	log_event("Out to %s, %s, depth %d: %s" % [t["name"], zone_name(i), t["depth"], ", ".join(t["intel"]).to_lower()])
+	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
 		seen[key] = true
@@ -2074,6 +2119,10 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			headshot = 0.0
 	elif not m["fresh"]:
 		m["melee_wait"] = 0.0
+	# a chill or a shock from the last tick wears off first, so one landed this
+	# tick holds through their fire below and into the next, whatever the tick's length
+	m["chill_t"] = maxf(0.0, float(m.get("chill_t", 0.0)) - dt)
+	m["shock_t"] = maxf(0.0, float(m.get("shock_t", 0.0)) - dt)
 	# the hit, by type: each share cut by their resist to it; shocked, more of everything
 	var shocked: bool = float(m.get("shock_t", 0.0)) > 0.0
 	var mult: float = pace() * t["pace"] * swing * headshot * dt
@@ -2083,6 +2132,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
 	for ty in Data.TYPES:
 		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
+		var single := landed                      # what one of them takes, before a spread
 		if has_node("melee_sweep"):
 			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
 		elif ty == "fire" and (has_node("fire_spread") or has_rule("weed_burner")):
@@ -2090,7 +2140,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		if ty == "shock" and (has_node("shock_chain") or has_rule("jump_leads")) and m["fresh"]:
 			landed *= crowd_on_you                # Live wire: the first of a gang is every one of them
 		if ty == "fire" and has_node("fire_more"):
-			hp -= landed * 0.02                   # petrol on your hands
+			hp -= minf(single * 0.02, max_hp() * 0.01 * dt)   # petrol on your hands: 2% of a hit, never past 1% of you a second
 		landed_total += landed
 		if landed > 0.0:
 			if not m.has("dots"):
@@ -2105,8 +2155,6 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["target_hp"] -= landed_total
 	if m.has("dots"):
 		m["target_hp"] -= _dot_tick(m["dots"], dt)
-	m["chill_t"] = maxf(0.0, float(m.get("chill_t", 0.0)) - dt)
-	m["shock_t"] = maxf(0.0, float(m.get("shock_t", 0.0)) - dt)
 	# the rounds behind that: the primary's rate while it's live, the secondary's when it fires
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	if primary_live and not has_rule("qm_rifle"):
@@ -2394,6 +2442,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	m["cleared"] = true
 	if m.get("dry", false):
 		return
+	_wearing_off(m)
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (2.0 if has_node("stand") else 1.0)
 	m["xp"] += bonus
 	var before := level()
@@ -2564,7 +2613,10 @@ func _kia() -> void:
 			stash.append(it)
 		log_event("Dead in %s. %s" % [t["name"].to_lower(), Words.FENCE["paid_out"]])
 	else:
-		log_event("Dead in %s. Kit lost (%s)." % [t["name"].to_lower(), _cash_words(lost)])
+		log_event("Dead in %s. Kit lost (%s). %s" % [t["name"].to_lower(), _cash_words(lost), Words.RECYCLE["listed"]])
+		for s in Data.SLOTS:
+			if equipped[s] != null:
+				_lose(equipped[s], "the last %s" % cls.to_lower(), "runner")
 	for s in Data.SLOTS:
 		equipped[s] = null
 	rig = []
@@ -2735,6 +2787,8 @@ func sell(it: Dictionary) -> bool:
 	if not _remove(it):
 		return false
 	cash += sell_price(it)
+	if it.has("unique"):
+		_lose(it, "", "fence")                # he said someone would want it; later someone has it
 	if Items.is_deeds(it):
 		ending = "sold"
 		log_event(Words.DEEDS["sold"])
@@ -2945,7 +2999,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -3010,6 +3064,7 @@ func load_dict(d: Dictionary) -> void:
 	training_points = int(d.get("training_points", maxi(0, level() - 1)))
 	depot_cleared = bool(d.get("depot_cleared", false))
 	past = d.get("past", [])
+	loose_kit = Array(d.get("loose_kit", []))
 	runner_runs = int(d.get("runner_runs", 0))
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))

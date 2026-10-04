@@ -463,6 +463,15 @@ const EVENTS := {
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
 
+## The estate recycles: what was lost turns up on someone, and comes off him.
+const RECYCLE := {
+	"wearing": "One of them is in %s's %s.",                # who, the piece
+	"has": "One of them has %s. The fence said someone would want it.",   # the unique
+	"off": "%s came off him. %s's, by the name in the collar.",         # the piece, who
+	"off_unique": "%s came off him. Sold once, found twice.",           # the unique
+	"listed": "Someone on the estate will be wearing it by the week's end.",
+}
+
 const YARD := {
 	"set": "The yard is set. One runner, a nail gun, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving

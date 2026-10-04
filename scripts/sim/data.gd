@@ -386,6 +386,7 @@ const ELEMENTS := ["fire", "frost", "poison", "shock", "bleed"]
 const RESIST_CAP := 75.0
 const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.6, "s": 6.0, "stacks": 1}}
 const CHILL := 0.2                 # their fire, while chilled
+const FREEZE := 0.85               # Frozen solid: how much of their fire a chilled gang loses (not all: a sliver keeps the depth honest)
 const SHOCK := 0.15                # more of everything they take, while shocked
 ## Their side, by zone: what their fire is made of at depth 1 (physical is the
 ## rest) and what they resist. The element's share grows with depth (ZONE_GROW
@@ -924,7 +925,7 @@ const ELEMENT_TREES := [
 		{"name": "Spreads", "effect": "fire_spread", "keystone": true, "words": "Fire hits everyone on you"},
 		{"name": "Fumes", "effect": "dot_pct", "value": 20, "needs": 3},
 		{"name": "Jerry can", "effect": "conv_fire_pct", "value": 20},
-		{"name": "On your hands", "effect": "fire_more", "notable": true, "words": "Fire does 40% more; you burn for 2% of it"},
+		{"name": "On your hands", "effect": "fire_more", "notable": true, "words": "Fire does 40% more; you burn for 2% of a hit"},
 	]},
 	{"name": "The cold", "element": "frost", "nodes": [
 		{"name": "Antifreeze", "effect": "conv_frost_pct", "value": 10},
@@ -933,7 +934,7 @@ const ELEMENT_TREES := [
 		{"name": "Chill", "effect": "frost_pct", "value": 30, "notable": true, "words": "+30% frost; chilled gangs fire 40% slower, not 20"},
 		{"name": "Numb", "effect": "frost_pct", "value": 12, "needs": 3},
 		{"name": "Black ice", "effect": "conv_frost_pct", "value": 20},
-		{"name": "Frozen solid", "effect": "frost_freeze", "keystone": true, "words": "Chilled gangs don't fire at all; frost does half"},
+		{"name": "Frozen solid", "effect": "frost_freeze", "keystone": true, "words": "Chilled gangs barely fire; frost does half"},
 		{"name": "Wind chill", "effect": "frost_pct", "value": 15, "needs": 3},
 		{"name": "Deep freeze", "effect": "conv_frost_pct", "value": 20},
 		{"name": "Cold hands", "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
@@ -1189,6 +1190,14 @@ const STARTING_CASH := 150
 const INFLATION_GRACE_H := 1.0
 const INFLATION_RATE := 0.07        # a hour, of the opening price
 const INFLATION_CAP := 12.0
+## The estate recycles. Nothing on it is new; it's all off someone. A dead
+## runner's worn kit, and a unique sold to the fence, go on the list, and a
+## few runs later one of a gang is wearing it; it comes off him when the
+## site's cleared. RECYCLE_RUNS runs before it can turn up, RECYCLE_ODDS a
+## run after that; the list holds RECYCLE_KEEP pieces, the oldest first.
+const RECYCLE_RUNS := 3
+const RECYCLE_ODDS := 0.3
+const RECYCLE_KEEP := 12
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50

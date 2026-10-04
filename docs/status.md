@@ -711,7 +711,7 @@ cutters' gang bleeds you and a dressing stops it.
 - Five trees (`Data.ELEMENT_TREES`): Petrol, The cold, The rat man, Live, Blades - a web each: a spine
   of conversion and increased to a notable (Lit, Chill, Dosed, Live, Opened up: +30% and the element's
   twist - dots last twice, chill 40%, shock 30%), a branch to the keystone (Spreads: fire hits
-  everyone on you; Frozen solid: chilled gangs don't fire, frost does half; Builds: poison to fifteen
+  everyone on you; Frozen solid: chilled gangs barely fire (85% off), frost does half; Builds: poison to fifteen
   stacks; Live wire: shock on the first of a gang hits every one; Won't stop: bleeds don't fade), a
   branch to a notable with a cost (×1.4 more of the element; you burn for 2% / pace −15% / loot find
   −20% / armour −20% / meds 30% slower). A committed tree plus a socket plus the class's notable is
@@ -774,6 +774,29 @@ The bot sells meds past a dozen cells' worth (they piled to 90 cells once kits t
 filled the stash and broke the drop tests); stacking will do this properly for the player.
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
+
+## The estate recycles, and three fight fixes (2026-10-05)
+
+Matt: "Nothing on the estate is new; it's all off someone." A dead runner's worn kit (uninsured)
+and any unique sold to the fence go on `sim.loose_kit` ("Someone on the estate will be wearing it
+by the week's end."). From three runs later (`RECYCLE_RUNS`), three runs in ten (`RECYCLE_ODDS`),
+one of a gang is wearing the oldest piece - "One of them is in the last doorman's riot suit." /
+"One of them has Lucky cap. The fence said someone would want it." - and it comes off him when
+the site's cleared, affixes and all, into the pack whatever it holds: "Riot suit came off him. The
+last doorman's, by the name in the collar." / "Sold once, found twice." The list holds twelve;
+saved with the yard; a move leaves it on the old estate.
+
+Three things the real-fight odds found, all fixed: (1) a chill or a shock set on a tick wore off
+on the same tick at one-second steps, so Frozen solid, Chill and Live never held in the reader or
+the odds - they wear off at the top of the next tick now; (2) On your hands burned you for 2% of
+the *spread* fire, which at level 40 with Spreads was 25 HP a second and walled every fire build
+at the bank - it is 2% of a single hit now, never past 1% of your HP a second; (3) Frozen solid
+took all of a chilled gang's fire, which made the frost build unkillable at any depth - it takes
+85% (`FREEZE`); "Chilled gangs barely fire; frost does half".
+
+Asserted (`_recycle_checks`): the dead runner's kit and the sold unique go on the list with the
+line; nothing on the very next run; worn when due, with the line; off him on the clear with its
+affix; home in the stash; the list saves. The chill test reads `FREEZE`.
 
 ## Money that goes off (2026-10-04)
 

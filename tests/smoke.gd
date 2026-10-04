@@ -1363,8 +1363,8 @@ func _element_checks(main) -> void:
 	sim.training_points += 60
 	for i in range(7):
 		sim.train_node("The cold/%d" % i)
-	_check(sim.has_node("frost_freeze") and is_equal_approx(sim.chill_amount(), 1.0) and is_equal_approx(sim.more("frost"), 0.5), "Frozen solid did not take: chill %.2f more %.2f" % [sim.chill_amount(), sim.more("frost")])
-	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true), 0.0), "a frozen gang still fires")
+	_check(sim.has_node("frost_freeze") and is_equal_approx(sim.chill_amount(), Data.FREEZE) and is_equal_approx(sim.more("frost"), 0.5), "Frozen solid did not take: chill %.2f more %.2f" % [sim.chill_amount(), sim.more("frost")])
+	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true), 10.0 * (1.0 - Data.FREEZE) * (1.0 - sim.mitigation())), "a frozen gang fires more than a sliver: %.2f" % sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true))
 	for i in range(7):
 		sim.train_node("The rat man/%d" % i)
 	_check(sim.dot_stacks("poison") == 15, "Builds did not raise the stacks")
@@ -2212,6 +2212,73 @@ func _move_checks(main) -> void:
 	print("moving the yard ok: the uniques, the tree, the list, the notes, the bonus, the yard's trade")
 	_sink_checks(main)
 	_inflation_checks(main)
+	_recycle_checks(main)
+
+
+## The estate recycles: a dead runner's worn kit and a unique sold to the fence
+## go on the list; a few runs later one of a gang is wearing it, and it comes
+## off him when the site's cleared, affixes and all.
+func _recycle_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.loose_kit = []
+	sim.hardcore = false
+	var jacket: Dictionary = sim._plain("Armour", "Riot suit")
+	jacket["affixes"] = [{"stat": "hp", "value": 33.0, "tier": 3}]
+	jacket["rarity"] = 2
+	sim.equipped["Armour"] = jacket
+	var cls_before: String = sim.cls
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.insure_next = false
+	sim.deploy(0)
+	sim._kia()
+	_check(sim.loose_kit.size() >= 1 and sim.loose_kit.any(func(e): return e["item"]["base"] == "Riot suit" and e["who"] == "the last %s" % cls_before.to_lower() and e["from"] == "runner"), "the dead runner's jacket did not go out on the estate: %s" % str(sim.loose_kit.map(func(e): return e["item"]["base"])))
+	_check(str(sim.events.back()[1]).ends_with(Words.RECYCLE["listed"]) or sim.events.any(func(ev): return str(ev[1]).ends_with(Words.RECYCLE["listed"])), "the death's line does not say the kit will turn up")
+	sim.loose_kit = sim.loose_kit.filter(func(e): return e["item"]["base"] == "Riot suit")   # the rest of the kit: the jacket's the one followed here
+	# a unique sold to the fence goes on the list too
+	var u: Dictionary = Items.roll_unique(sim._unique_named("Lucky cap"), sim.rng)
+	sim.stash.append(u)
+	sim.sell(u)
+	_check(sim.loose_kit.any(func(e): return e["from"] == "fence" and e["item"].get("unique", "") == "Lucky cap"), "the unique sold did not go out on the estate")
+	# too soon: nothing on the first runs; then one of them is wearing it
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	_check(not m.has("wearing"), "the kit turned up on the very next run")
+	sim.extract_now()
+	sim.runs_total += Data.RECYCLE_RUNS
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	if not m.has("wearing"):
+		sim._maybe_wearing(m, true)          # the deploy's own roll may have put it on someone already
+	_check(m.has("wearing") and m["wearing"]["item"]["base"] == "Riot suit", "nobody was wearing the jacket when forced: %s" % str(m.get("wearing", {})))
+	_check(sim.events.any(func(ev): return str(ev[1]) == Words.RECYCLE["wearing"] % ["the last %s" % cls_before.to_lower(), "riot suit"]), "the wearing line is off: %s" % str(sim.events.back()[1]))
+	var found_before: int = m["found"].size()
+	sim._clear(m, m["t"])
+	_check(m["found"].size() == found_before + 1 and m["found"].back()["base"] == "Riot suit" and m["found"].back()["affixes"][0]["value"] == 33.0 and not m.has("wearing"), "the jacket did not come off him with its affix: %s" % str(m["found"].back() if not m["found"].is_empty() else {}))
+	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("Riot suit came off him. The last")), "the off line is off: %s" % str(sim.events.back()[1]))
+	sim.extract_now()
+	_check(sim.stash.any(func(it): return it["base"] == "Riot suit" and it["affixes"].size() == 1 and it["affixes"][0]["value"] == 33.0), "the jacket did not come home")
+	# the unique, the same way
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	if not m.has("wearing"):
+		sim._maybe_wearing(m, true)
+	_check(m.has("wearing") and m["wearing"]["from"] == "fence", "the sold unique was not on anyone: %s" % str(m.get("wearing", {})))
+	_check(sim.events.any(func(ev): return str(ev[1]) == Words.RECYCLE["has"] % "Lucky cap"), "the has line is off: %s" % str(sim.events.back()[1]))
+	sim._clear(m, m["t"])
+	_check(not m["found"].is_empty() and m["found"].back().get("unique", "") == "Lucky cap", "the unique did not come off him")
+	sim.extract_now()
+	_check(sim.loose_kit.is_empty() or not sim.loose_kit.any(func(e): return e["item"].get("unique", "") == "Lucky cap"), "the unique stayed on the list after coming back")
+	var d: Dictionary = sim.to_dict()
+	sim.load_dict(d)
+	_check(d.has("loose_kit"), "the list does not save")
+	sim.load_dict(saved)
+	print("the estate recycles ok: the dead runner's kit, the sold unique, too soon, worn, off him, home, saved")
 
 
 ## Money that goes off: every cash price and every cash income rises with the
