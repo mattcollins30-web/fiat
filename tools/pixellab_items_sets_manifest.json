@@ -1,0 +1,284 @@
+{
+  "_readme": [
+    "FIAT GEAR - sets. 16 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_sets_manifest.json   (++ --dry-run to list). A job whose file exists is skipped, so a rerun only does what's missing; one that came out wrong: ++ --only <slug> ++ --force, or delete the file and rerun.",
+    "Items.slug(base) is the name: lowercase, runs of anything but a letter or digit become one underscore. The cells load the file if it exists and show text if not, so the pool fills in any order.",
+    "ORDER: run long_guns first - it has no style image. Promote three or four of the best and copy them to art/reference/items/ref_01.png .. ref_04.png; every other manifest rides those as style_image with every style option on, rotated, so the whole pool shares the guns' palette and rendering.",
+    "If the API refuses a wide aspect (a 5x1 gun is 320x64), regenerate at the same width and twice the height; the loader fits and centres it.",
+    "Regenerate these manifests with python3 tools/make_item_manifests.py after any footprint change."
+  ],
+  "jobs": [
+    {
+      "out": "art/items/council_hi_vis.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single an orange council hi-vis vest with a crest and a name in black marker on the back, standing upright as if on a hanger, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76000,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/council_hard_hat.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a yellow council hard hat with an inspection sticker, seen from the front at a slight angle, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 76001,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/council_rucksack.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a small grey council-issue rucksack with an orange crest patch, standing upright, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 76002,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/council_lanyard.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a council ID pass on an orange lanyard, a small object filling the frame, seen from above at a slight angle, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 76003,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/ambulance_rig.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a green ambulance crew chest rig with pouches in a row, standing upright, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 128,
+      "no_background": true,
+      "seed": 76004,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/green_overalls.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a pair of ambulance-green overalls with a reflective band, folded, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76005,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/crew_helmet.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a white ambulance crew helmet with a scratched trust logo, seen from the front at a slight angle, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 76006,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/branch_blazer.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a navy bank branch blazer with a brass pin on the lapel, standing upright as if on a hanger, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76007,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/cashier_s_pen.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a silver cashier's ballpoint pen with a bank's initials engraved, a small object filling the frame, seen from above, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 76008,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/branch_holdall.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a black canvas bank holdall with a brass clasp and a tag, standing upright, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76009,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/issue_helmet.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single an olive-green army composite helmet with a name on the band, seen from the front at a slight angle, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 128,
+      "height": 128,
+      "no_background": true,
+      "seed": 76010,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/issue_carrier.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single an olive-green army plate carrier with a blood group patch on the shoulder, standing upright, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 256,
+      "no_background": true,
+      "seed": 76011,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/issue_bergen.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a large olive army bergen packed square with a top pocket, standing upright, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76012,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_01.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/issue_rifle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a long olive-green army marksman rifle with a scope and a bipod, seen side-on, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 320,
+      "height": 64,
+      "no_background": true,
+      "seed": 76013,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_02.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/carpet_knife.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a carpet fitter's snap-off blade knife with a worn red handle, a small object filling the frame, seen from above, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 64,
+      "height": 64,
+      "no_background": true,
+      "seed": 76014,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_03.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/items/fitter_s_knee_pads.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single a pair of black carpet fitter's knee pads with worn straps, seen from the front, filling the frame, worn and used. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 192,
+      "no_background": true,
+      "seed": 76015,
+      "single": true,
+      "style_image": "res://art/reference/items/ref_04.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

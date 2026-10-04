@@ -1457,6 +1457,58 @@ func _unique_rules_checks(main) -> void:
 	sim.stash.erase(log)
 	sim.load_dict(saved)
 	print("the uniques ok: all roll with words, the depth gates, the mate's deep stock, twenty-one rules")
+	_set_checks(main)
+
+
+## Sets: pieces roll and have words, the count, the bonuses at two and the
+## full set, the rules, the drop by depth, the tint and the panel's line.
+func _set_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for st in Data.SETS:
+		for p in st["pieces"]:
+			var it := Items.roll_set_piece(st["name"], p, sim.rng)
+			_check(it["set"] == st["name"] and it["piece"] == p["name"] and Items.full_name(it) == p["name"] and Words.item_words(p["name"]) != "", "%s does not roll as a piece with words" % p["name"])
+			_check(load("res://scripts/ui/item_cell.gd").rarity_tone(it) == "set", "a set piece is not tinted")
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	var council: Dictionary = Items.set_named("The council's")
+	_check(sim.set_count("The council's") == 0 and sim.set_bonuses().is_empty(), "a bare runner has set bonuses")
+	sim.equipped["Armour"] = Items.roll_set_piece("The council's", council["pieces"][0], sim.rng)
+	sim.equipped["Helmet"] = Items.roll_set_piece("The council's", council["pieces"][1], sim.rng)
+	_check(sim.set_count("The council's") == 2 and is_equal_approx(sim.set_stat("all_res"), 20.0) and sim.resist("fire") >= 0.2, "two of the council's did not give all resists +20")
+	_check(not sim.has_set_rule("council"), "the council's rule came at two")
+	sim.equipped["Backpack"] = Items.roll_set_piece("The council's", council["pieces"][2], sim.rng)
+	sim.equipped["Charm"] = Items.roll_set_piece("The council's", council["pieces"][3], sim.rng)
+	_check(sim.set_count("The council's") == 4 and sim.has_set_rule("council") and is_equal_approx(sim.set_stat("regen"), 4.0) and sim._affix_sum("search_pct") >= 30.0 + 8.0, "the full council's did not give it all: rule %s regen %.0f search %.0f" % [str(sim.has_set_rule("council")), sim.set_stat("regen"), sim._affix_sum("search_pct")])
+	# the panel's line, in the set's tint
+	main.show_room(main.ARMOURY)
+	main._armoury._pick_slot("Armour")
+	main.refresh()
+	_check(main._armoury._left_lines[4].text.begins_with("The council's · 4 of 4"), "the panel's set line is '%s'" % main._armoury._left_lines[4].text)
+	_check_fit(main, "Armoury (a set)")
+	# the army's: contact down one, more ×1.3 at four
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	var army: Dictionary = Items.set_named("The army's")
+	var t: Dictionary = sim.effective(0)
+	var c0: int = sim.contact(t)
+	for p in army["pieces"]:
+		sim.equipped[p["slot"]] = Items.roll_set_piece("The army's", p, sim.rng)
+	_check(sim.contact(t) == c0 - 1 and is_equal_approx(sim.more("physical"), 1.3), "the army's full set: contact %d of %d, more %.1f" % [sim.contact(t), c0, sim.more("physical")])
+	# the carpet man's two: 30% bleed, bleeds last twice
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	var carpet: Dictionary = Items.set_named("The carpet man's")
+	for p in carpet["pieces"]:
+		sim.equipped[p["slot"]] = Items.roll_set_piece("The carpet man's", p, sim.rng)
+	_check(is_equal_approx(sim.conversion()["bleed"], 0.3) and is_equal_approx(sim.dot_seconds("bleed"), 12.0), "the carpet man's: bleed %.2f seconds %.0f" % [sim.conversion()["bleed"], sim.dot_seconds("bleed")])
+	# drops by depth: nothing at depth 1, pieces by depth 12, no army's before 15
+	_check(sim.set_pieces_at(1).is_empty() and sim.set_pieces_at(5).size() == 6 and sim.set_pieces_at(12).size() == 12 and sim.set_pieces_at(15).size() == 16, "the sets' depth gates are off: %d / %d / %d / %d" % [sim.set_pieces_at(1).size(), sim.set_pieces_at(5).size(), sim.set_pieces_at(12).size(), sim.set_pieces_at(15).size()])
+	sim.load_dict(saved)
+	print("sets ok: the pieces, the count, the bonuses, the rules, the tint, the panel, the gates")
 	_atlas_checks(main)
 
 

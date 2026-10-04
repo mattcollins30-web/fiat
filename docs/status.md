@@ -775,6 +775,26 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The builds pass, step 6c: sets (2026-10-04)
+
+Matt: "set gear/bonuses - find all of the council gear etc. ... Sets need a special tint outside of
+the coloured tiers." Five sets (`Data.SETS`): the council's (4: hi-vis, hard hat, rucksack, lanyard;
+all resists +20 at two, +4 HP a second at three, searches 30% quicker and notes +50% and every cache
+opens at four), the ambulance's (3: rig, overalls, crew helmet; meds 50% quicker at two, the first med
+free and meds heal double at three), the bank's (3: blazer, cashier's pen, holdall; cash +30% at two,
+cash from kills ×2 and the fence pays +25% at three), the army's (4: helmet, carrier, bergen, rifle;
+armour +15% at two, first shot +40% at three, one fewer on you and everything ×1.3 at four), the
+carpet man's (2: knife, knee pads; 30% as bleed and bleeds last twice at two). A piece is a fixed
+base with its own name and two fixed affixes, rare-valued, rolled like a unique, found loose from the
+set's depth (5/8/10/15/5) at `SET_DROP` × depth. Bonuses are stats added through `_affix_sum`
+(`set_stat`) and a rule at the top (`has_set_rule`). Drawn in `Pal.SET` (teal), apart from the
+rarity colours; the cell shows the piece's name; the Lock-up's panel says "The council's · 2 of 4
+worn · next: +4 HP a second" in the tint. Words for the sixteen pieces; a `sets` manifest (16 jobs).
+
+Asserted (`_set_checks`): every piece rolls, is named and tinted and has words; the count and the
+bonuses at two and four; no rule at two; the panel's line; the army's contact and ×1.3; the carpet
+man's bleed and doubled seconds; the depth gates.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

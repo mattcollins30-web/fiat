@@ -188,7 +188,7 @@ func _show_panel() -> void:
 		_hint.text = "A slot on the left, or a stash item on the right"
 		return
 	_hint.text = ""
-	_left_title.text = it["base"]
+	UI.fit(_left_title, [Items.full_name(it), it["base"]])
 	UI.fit(_left_lines[0], Items.figure_options(it))
 	var mounts: String = ("%d attachment slots, empty" % it["attachments"].size()) if it["attachments"].size() > 0 else ""
 	if Items.is_gun(it):
@@ -203,6 +203,19 @@ func _show_panel() -> void:
 			UI.fit(_left_lines[2 + k], [lines[k], short_lines[k]])
 		else:
 			_left_lines[2 + k].text = "No affixes" if k == 0 else ""
+	if it.has("set"):
+		# the set: whose, how many worn, what the next piece brings
+		var st: Dictionary = Items.set_named(it["set"])
+		var n: int = sim.set_count(it["set"])
+		var next_words := ""
+		for k in st["bonuses"]:
+			if int(k) > n and next_words == "":
+				next_words = st["bonuses"][k]["words"]
+		var line: String = "%s · %d of %d worn" % [it["set"], n, st["pieces"].size()]
+		UI.fit(_left_lines[4], ["%s · next: %s" % [line, next_words.to_lower()] if next_words != "" else "%s · the full set" % line, line])
+		_left_lines[4].add_theme_color_override("font_color", Pal.SET)
+	else:
+		_left_lines[4].add_theme_color_override("font_color", Pal.TEXT_2)
 	_right_lines[3].text = ""
 	if Items.is_medical(it) or Items.is_ammo(it):
 		_show_medical(it)

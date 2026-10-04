@@ -434,6 +434,26 @@ const ITEMS := {
 # ------------------------------------------------------------------ the yard's own
 
 ## The log's words for the moments the sim marks.
+## The sets' pieces: whose they were.
+const SET_PIECES := {
+	"Council hi-vis": "Orange, with the crest and a name in marker on the back. He was in Highways. He's not now.",
+	"Council hard hat": "Yellow, the council's, with the sticker of the last inspection. It passed.",
+	"Council rucksack": "Issued for the tools, used for the sandwiches. There's a tin of something under the lining.",
+	"Council lanyard": "The pass still works, if there's anywhere left to swipe it. The crews treat it like it does.",
+	"Ambulance rig": "Green, with the pouches in the order they teach you. Whoever wore it had the order by heart.",
+	"Green overalls": "Ambulance green, one knee gone. Somebody got up because of these.",
+	"Crew helmet": "White, with the trust's name on it, scratched through where someone took it off a wall.",
+	"Branch blazer": "Navy, with the pin. They're still staff, in their heads. In this, so are you.",
+	"Cashier's pen": "His own, from his own till. He counted everything twice. So will you.",
+	"Branch holdall": "The bag the cash went to the van in. It's seen more money than anyone alive.",
+	"Issue helmet": "Issued to a name, and the name's still on the band. He signed for it.",
+	"Issue carrier": "Plates in, straps right, a blood group on the shoulder. It did its job once.",
+	"Issue bergen": "The big one, packed by the book. The book's in the top pocket.",
+	"Issue rifle": "Zeroed, cleaned, signed for. The quartermaster would want it back. He can ask.",
+	"Carpet knife": "The fitter's own, blade snapped back fresh. He never cut a straight line in his life.",
+	"Fitter's knee pads": "Forty years on his knees, and a pair of these. They go on over anything.",
+}
+
 ## What happens on a run, once in a while.
 const EVENTS := {
 	"convoy": "A convoy comes through. Lorries, and a crew riding on them. They stop.",
@@ -456,6 +476,8 @@ const YARD := {
 static func item_words(base: String) -> String:
 	if ITEMS.has(base):
 		return ITEMS[base]
+	if SET_PIECES.has(base):
+		return SET_PIECES[base]
 	if base == DEEDS["name"]:
 		return DEEDS["words"]
 	for p in PAPERS:

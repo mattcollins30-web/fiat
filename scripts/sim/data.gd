@@ -533,6 +533,54 @@ const UNIQUES := [
 	{"name": "The lorry driver's log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "depth": 25,
 		"words": "Notes found doubled; insurance is free", "affixes": [{"stat": "notes_pct", "value": 50}]},
 ]
+## Sets: whose gear it was. A piece is a fixed base with its own name and a
+## couple of fixed affixes, rolled like a unique, drawn in the set's own
+## tint; the bonuses come at two pieces worn and at the full set - stats,
+## added to what's worn, and a rule at the top. Found loose from `depth` on.
+const SET_DROP := 0.004            # a share of finds a depth past the first
+const SETS := [
+	{"name": "The council's", "depth": 5, "words": "Parks, highways, pest control: the council's gear, orange and stamped",
+		"pieces": [
+			{"name": "Council hi-vis", "slot": "Armour", "base": "Stab vest", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 12}]},
+			{"name": "Council hard hat", "slot": "Helmet", "base": "Hard hat", "affixes": [{"stat": "armour", "value": 8}, {"stat": "search_pct", "value": 8}]},
+			{"name": "Council rucksack", "slot": "Backpack", "base": "School bag", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "loot_pct", "value": 10}]},
+			{"name": "Council lanyard", "slot": "Charm", "base": "Lucky penny", "affixes": [{"stat": "notes_pct", "value": 15}, {"stat": "rarity_pct", "value": 6}]},
+		],
+		"bonuses": {2: {"stats": {"all_res": 20}, "words": "All resists +20%"}, 3: {"stats": {"regen": 4}, "words": "+4 HP a second"},
+			4: {"stats": {"search_pct": 30, "notes_pct": 50}, "rule": "council", "words": "Searches 30% quicker, notes +50%, every cache opens"}}},
+	{"name": "The ambulance's", "depth": 8, "words": "A crew's kit from the one ambulance that kept going",
+		"pieces": [
+			{"name": "Ambulance rig", "slot": "Rig", "base": "Paramedic's rig", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "med_speed_pct", "value": 15}]},
+			{"name": "Green overalls", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "hp", "value": 25}, {"stat": "regen", "value": 2}]},
+			{"name": "Crew helmet", "slot": "Helmet", "base": "Cycle helmet", "affixes": [{"stat": "armour", "value": 10}, {"stat": "med_speed_pct", "value": 10}]},
+		],
+		"bonuses": {2: {"stats": {"med_speed_pct": 50}, "words": "Meds 50% quicker"},
+			3: {"rule": "ambulance", "words": "The first med of a run isn't spent; meds heal double"}}},
+	{"name": "The bank's", "depth": 10, "words": "Staff, they called themselves. The blazers say so",
+		"pieces": [
+			{"name": "Branch blazer", "slot": "Armour", "base": "Ballistic vest", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_pct", "value": 15}]},
+			{"name": "Cashier's pen", "slot": "Charm", "base": "Bank's own pen", "affixes": [{"stat": "cash_pct", "value": 20}, {"stat": "rarity_pct", "value": 8}]},
+			{"name": "Branch holdall", "slot": "Backpack", "base": "Hiking pack", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "cash_per_cell", "value": 4}]},
+		],
+		"bonuses": {2: {"stats": {"cash_pct": 30}, "words": "Cash +30%"},
+			3: {"stats": {"sell_pct": 25}, "rule": "bank", "words": "Cash from kills doubled; the fence pays +25%"}}},
+	{"name": "The army's", "depth": 15, "words": "Issue kit, the lot of it, off the one lorry that got through",
+		"pieces": [
+			{"name": "Issue helmet", "slot": "Helmet", "base": "Composite helmet", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 15}]},
+			{"name": "Issue carrier", "slot": "Armour", "base": "Full plate carrier", "affixes": [{"stat": "armour", "value": 30}, {"stat": "all_res", "value": 8}]},
+			{"name": "Issue bergen", "slot": "Backpack", "base": "Bergen", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "hp", "value": 10}]},
+			{"name": "Issue rifle", "slot": "Primary", "base": "Marksman rifle", "affixes": [{"stat": "damage_pct", "value": 15}, {"stat": "first_pct", "value": 20}]},
+		],
+		"bonuses": {2: {"stats": {"armour_pct": 15}, "words": "Armour +15%"}, 3: {"stats": {"first_pct": 40}, "words": "First shot +40%"},
+			4: {"rule": "army", "words": "One fewer on you at once; everything you do does 30% more"}}},
+	{"name": "The carpet man's", "depth": 5, "words": "A fitter's kit: the knife, the knee pads",
+		"pieces": [
+			{"name": "Carpet knife", "slot": "Secondary", "base": "Knife", "affixes": [{"stat": "bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
+			{"name": "Fitter's knee pads", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "armour", "value": 12}, {"stat": "bleed_res", "value": 20}]},
+		],
+		"bonuses": {2: {"stats": {"conv_bleed_pct": 30}, "rule": "carpet", "words": "30% of your damage as bleed; bleeds last twice as long"}}},
+]
+
 ## Workshop levels: what each opens, and what it costs to reach.
 const WORKSHOP := [
 	{"cost": 0, "mounts": [], "words": "No bench: nothing can be fitted"},

@@ -156,6 +156,10 @@ static func art(it: Dictionary) -> Texture2D:
 		var own := _art_named(slug(it["unique"]))
 		if own != null:
 			return own
+	if it.has("piece"):
+		var own := _art_named(slug(it["piece"]))
+		if own != null:
+			return own
 	return _art_named(slug(it["base"]))
 
 
@@ -214,6 +218,8 @@ static func fitted_count(gun: Dictionary) -> int:
 static func rarity_name(it: Dictionary) -> String:
 	if it.has("unique"):
 		return "Unique"
+	if it.has("set"):
+		return "Set"
 	return Data.RARITIES[it["rarity"]]["name"]
 
 
@@ -222,6 +228,8 @@ static func rarity_name(it: Dictionary) -> String:
 static func full_name(it: Dictionary) -> String:
 	if it.has("unique"):
 		return it["unique"]
+	if it.has("piece"):
+		return it["piece"]
 	return it["base"]
 
 
@@ -384,6 +392,30 @@ static func add_socket(it: Dictionary) -> bool:
 		return false
 	it["attachments"]["socket %d" % (sockets(it) + 1)] = null
 	return true
+
+
+## A set piece, rolled: its base, its fixed affixes, the set's name on it.
+static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var it := roll(piece["slot"], Data.MAX_TIER, rng)
+	it["base"] = piece["base"]
+	it["tier"] = base_of(it)["tier"]
+	it["rarity"] = 2
+	it["affixes"] = piece["affixes"].duplicate(true)
+	it["set"] = set_name
+	it["piece"] = piece["name"]
+	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[2]["value"] * 1.5))
+	return it
+
+
+static func is_set(it: Dictionary) -> bool:
+	return it.has("set")
+
+
+static func set_named(name: String) -> Dictionary:
+	for s in Data.SETS:
+		if s["name"] == name:
+			return s
+	return {}
 
 
 ## A unique, rolled: its base, its fixed affixes, its name, its rule.

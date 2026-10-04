@@ -45,6 +45,8 @@ static func px(cells: int) -> int:
 
 
 static func rarity_tone(it: Dictionary) -> String:
+	if it.has("set"):
+		return "set"
 	return ["", "good", "warn", "bad"][it["rarity"]]
 
 
@@ -92,7 +94,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	if f.x == 1 and f.y == 1:
 		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else h[0]]
 	else:
-		words = [it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
+		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:
 			words.append("T%d · %s" % [it["tier"], Items.rarity_name(it)])
 	var y := (size.y - words.size() * line_h) / 2.0

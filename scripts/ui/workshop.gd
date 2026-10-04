@@ -165,6 +165,8 @@ func _style(b: Button, on: bool, tone := "", dim := false) -> void:
 
 
 static func rarity_tone(it: Dictionary) -> String:
+	if it.has("set"):
+		return "set"
 	return ["", "good", "warn", "bad"][it["rarity"]]
 
 

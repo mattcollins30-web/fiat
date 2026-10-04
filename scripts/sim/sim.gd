@@ -227,13 +227,15 @@ func more(ty: String) -> float:
 		m *= 0.5
 	if has_rule("sergeants_whistle"):
 		m *= 1.6
+	if has_set_rule("army"):
+		m *= 1.3
 	return m
 
 
 ## A dot's seconds: the element's notable doubles them.
 func dot_seconds(ty: String) -> float:
 	var s := float(Data.DOTS[ty]["s"])
-	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and tree.has("Blades/3")):
+	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and (tree.has("Blades/3") or has_set_rule("carpet"))):
 		s *= 2.0
 	return s
 
@@ -378,7 +380,7 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(it["value"] * (1.0 + tree_sum("sell_pct") / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+	return int(round(it["value"] * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct")) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
 
 
 # ------------------------------------------------------------------ the class
@@ -895,7 +897,7 @@ func contact(t: Dictionary) -> int:
 		return 1
 	if has_rule("gritters_hopper") and mission != null and float(mission.get("chill_t", 0.0)) > 0.0:
 		return 1                                 # chilled gangs come one at a time
-	return maxi(1, (2 if has_node("overwatch") else CONTACT) + int(t.get("contact", 0)) + int(class_data().get("contact", 0)) + (2 if has_rule("sergeants_whistle") else 0))
+	return maxi(1, (2 if has_node("overwatch") else CONTACT) + int(t.get("contact", 0)) + int(class_data().get("contact", 0)) + (2 if has_rule("sergeants_whistle") else 0) - (1 if has_set_rule("army") else 0))
 
 
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
@@ -1383,9 +1385,55 @@ func _affix_sum(stat: String) -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			t += Items.affix_total(equipped[s], stat)
+	t += set_stat(stat)
 	if stat != "all_res" and has_rule("blue_plaque"):
 		return 0.0                               # a blue plaque: nothing else on you counts
 	return t
+
+
+# ------------------------------------------------------------------ sets
+## How many of a set are worn; its bonuses at two and at the full set.
+func set_count(name: String) -> int:
+	var n := 0
+	for s in Data.SLOTS:
+		if equipped[s] != null and equipped[s].get("set", "") == name:
+			n += 1
+	return n
+
+
+## The set bonuses in force: every threshold at or under the count.
+func set_bonuses() -> Array:
+	var out: Array = []
+	for st in Data.SETS:
+		var n := set_count(st["name"])
+		for k in st["bonuses"]:
+			if n >= int(k):
+				out.append(st["bonuses"][k])
+	return out
+
+
+func set_stat(stat: String) -> float:
+	var t := 0.0
+	for b in set_bonuses():
+		t += float(b.get("stats", {}).get(stat, 0.0))
+	return t
+
+
+func has_set_rule(rule: String) -> bool:
+	for b in set_bonuses():
+		if b.get("rule", "") == rule:
+			return true
+	return false
+
+
+## The sets that can turn up at a depth.
+func set_pieces_at(at_depth: int) -> Array:
+	var out: Array = []
+	for st in Data.SETS:
+		if int(st.get("depth", 0)) <= at_depth:
+			for p in st["pieces"]:
+				out.append([st["name"], p])
+	return out
 
 
 func loadout_value() -> int:
@@ -1887,7 +1935,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			promised = pool[rng.randi_range(0, pool.size() - 1)]
 			log_event(Words.EVENTS["trapped"])
 		"cache":
-			if workshop >= Data.EVENT_CACHE_BENCH or has_rule("caretakers_keys"):
+			if workshop >= Data.EVENT_CACHE_BENCH or has_rule("caretakers_keys") or has_set_rule("council"):
 				var up: Dictionary = t.duplicate()
 				up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)
 				up["rarity"] = float(t.get("rarity", 0.0)) + 0.5
@@ -2045,11 +2093,11 @@ func use_med(id: int) -> bool:
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
 			var it: Dictionary = rig[k]
-			if has_node("second_shift") and not mission.get("free_med", false):
+			if (has_node("second_shift") or has_set_rule("ambulance")) and not mission.get("free_med", false):
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
-			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0)}
+			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0)}
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
@@ -2077,7 +2125,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	xp += gain
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
-	m["cash"] += (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * pay * (0.5 if has_rule("bookies_pencil") else 1.0) \
+	m["cash"] += (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
 		* (0.8 if has_node("light_fingers") else 1.0) * (1.5 if has_rule("managers_coat") else 1.0) * trait_mult("cash")
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
@@ -2169,9 +2217,14 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 			slot = Data.AMMO
 	var it: Dictionary
 	var loose: Array = loose_uniques(int(t["depth"]))
+	var pieces: Array = set_pieces_at(int(t["depth"]))
 	if t["depth"] >= 2 and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
 		it = Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng)
 		log_event("Found: %s" % it["unique"])
+	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
+		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
+		it = Items.roll_set_piece(pick[0], pick[1], rng)
+		log_event("Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()])
 	else:
 		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, loot_bonus() + rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))

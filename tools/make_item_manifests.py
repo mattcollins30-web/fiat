@@ -306,6 +306,47 @@ UNIQUE_WORDS = {
 }
 
 
+SET_WORDS = {
+    "Council hi-vis": "an orange council hi-vis vest with a crest and a name in black marker on the back, standing upright as if on a hanger, seen from the front, filling the frame",
+    "Council hard hat": "a yellow council hard hat with an inspection sticker, seen from the front at a slight angle, filling the frame",
+    "Council rucksack": "a small grey council-issue rucksack with an orange crest patch, standing upright, seen from the front, filling the frame",
+    "Council lanyard": "a council ID pass on an orange lanyard, a small object filling the frame, seen from above at a slight angle",
+    "Ambulance rig": "a green ambulance crew chest rig with pouches in a row, standing upright, seen from the front, filling the frame",
+    "Green overalls": "a pair of ambulance-green overalls with a reflective band, folded, seen from the front, filling the frame",
+    "Crew helmet": "a white ambulance crew helmet with a scratched trust logo, seen from the front at a slight angle, filling the frame",
+    "Branch blazer": "a navy bank branch blazer with a brass pin on the lapel, standing upright as if on a hanger, seen from the front, filling the frame",
+    "Cashier's pen": "a silver cashier's ballpoint pen with a bank's initials engraved, a small object filling the frame, seen from above",
+    "Branch holdall": "a black canvas bank holdall with a brass clasp and a tag, standing upright, seen from the front, filling the frame",
+    "Issue helmet": "an olive-green army composite helmet with a name on the band, seen from the front at a slight angle, filling the frame",
+    "Issue carrier": "an olive-green army plate carrier with a blood group patch on the shoulder, standing upright, seen from the front, filling the frame",
+    "Issue bergen": "a large olive army bergen packed square with a top pocket, standing upright, seen from the front, filling the frame",
+    "Issue rifle": "a long olive-green army marksman rifle with a scope and a bipod, seen side-on, filling the frame",
+    "Carpet knife": "a carpet fitter's snap-off blade knife with a worn red handle, a small object filling the frame, seen from above",
+    "Fitter's knee pads": "a pair of black carpet fitter's knee pads with worn straps, seen from the front, filling the frame",
+}
+
+
+def set_jobs(seed):
+    jobs = []
+    body = re.search(r"const SETS := \[(.*?)\n\]", src, re.S).group(1)
+    for name, slot, base in re.findall(r'\{"name": "([^"]+)", "slot": "(\w+)", "base": "([^"]+)"', body):
+        w, h = footprint(slot, base)
+        jobs.append({
+            "out": "art/items/%s.png" % slug(name),
+            "endpoint": "generate-image-v2",
+            "description": "A realistic painted pixel-art still-life of a single %s, worn and used." % SET_WORDS[name] + TAIL,
+            "width": w * CELL,
+            "height": h * CELL,
+            "no_background": True,
+            "seed": seed,
+            "single": True,
+            "style_image": REFS[seed % len(REFS)],
+            "style_options": {"color_palette": True, "outline": True, "detail": True, "shading": True},
+        })
+        seed += 1
+    return jobs, seed
+
+
 def unique_jobs(seed):
     jobs = []
     body = re.search(r"const UNIQUES := \[(.*?)\n\]", src, re.S).group(1)
@@ -330,12 +371,15 @@ def unique_jobs(seed):
 def main():
     seed = SEED0
     index = []
-    for ti, (key, slot, keep, prompt) in enumerate(TYPES + [("uniques", None, None, None)] + EXTRA):
+    for ti, (key, slot, keep, prompt) in enumerate(TYPES + [("uniques", None, None, None)] + EXTRA + [("sets", None, None, None)]):
         if (key, slot, keep, prompt) == EXTRA[0]:
             seed = SEED_EXTRA
         jobs = []
         if key == "uniques":
             jobs, seed = unique_jobs(seed)
+        if key == "sets":
+            seed = SEED_EXTRA + 1000
+            jobs, seed = set_jobs(seed)
         for base in (names(slot) if slot else []):
             if not keep(base):
                 continue

@@ -26,6 +26,7 @@ const SELECT := Color("2b3138")
 const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
+const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
 const DIM := Color(0, 0, 0, 0.72)     # behind a full-screen moment
 # the place's tone (the fifth slice): the screen's grounds shift a little by
 # place - neutral in the village, warmer in the town, cooler in the city; the
@@ -94,4 +95,6 @@ static func tone_color(tone: String) -> Color:
 			return WARN
 		"bad":
 			return BAD
+		"set":
+			return SET
 	return TEXT_2
