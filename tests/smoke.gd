@@ -925,7 +925,7 @@ func _class_trees(main) -> void:
 	var sim = main.sim
 	sim.set_class("Doorman")
 	sim.training_points += 20
-	_check(sim.trees().size() == 3 and sim.trees()[1]["name"] == "The yard", "a Doorman does not see three trees with the yard's in the middle")
+	_check(sim.trees().size() == 3 + Data.ELEMENT_TREES.size() and sim.trees()[1]["name"] == "The yard", "a Doorman does not see three trees with the yard's in the middle, and the elements'")
 	_check(sim.train_node("Muscle/0") and sim.train_node("Muscle/1") and sim.train_node("Muscle/2") and sim.train_node("Muscle/3"), "the Muscle tree did not train")
 	var spent_before: int = sim.points_spent()
 	_check(not sim.can_train("Stalking/0"), "a Poacher's tree trained for a Doorman")
@@ -1153,6 +1153,81 @@ func _webs_traits(main) -> void:
 	_check(sim.trait_mult("patrol") > 1.1, "Wary's gangs come no later")
 	sim.load_dict(saved)
 	print("webs, the second past and traits ok")
+	_element_checks(main)
+
+
+## The element trees: affinities, double cost and the locked keystone off
+## them, the second past opening it; the keystones' and notables' rules.
+func _element_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.set_class("Drifter")
+	sim.respec()
+	sim.training_points += 60
+	_check(sim.affinity("fire") and sim.affinity("shock") and not sim.affinity("poison"), "the Drifter's affinities are not fire and shock")
+	_check(sim.node_cost("Petrol/0") == 1 and sim.node_cost("The rat man/0") == 2, "an off-affinity node does not cost double: %d / %d" % [sim.node_cost("Petrol/0"), sim.node_cost("The rat man/0")])
+	for i in range(7):
+		_check(sim.train_node("Petrol/%d" % i), "Petrol/%d did not train" % i)
+	_check(sim.has_node("fire_spread"), "Spreads did not take")
+	_check(is_equal_approx(sim.conversion()["fire"], 0.45), "the spine and keystone branch did not convert 45%%: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.dot_seconds("fire"), 8.0) and is_equal_approx(sim.dot_seconds("poison"), 8.0), "Lit did not double the burn")
+	# the other branch's cost: 40% more fire
+	_check(sim.train_node("Petrol/7") and sim.train_node("Petrol/8") and sim.train_node("Petrol/9"), "the costly branch did not train")
+	_check(is_equal_approx(sim.more("fire"), 1.4), "Petrol on your hands is not ×1.4")
+	# off-affinity: the rat man's keystone refuses; the second past opens it
+	for i in range(6):
+		sim.train_node("The rat man/%d" % i)
+	_check(not sim.can_train("The rat man/6"), "an off-affinity keystone trained")
+	sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
+	_check(sim.set_second("Poacher") and sim.affinity("poison") and sim.node_cost("The rat man/0") == 1, "the second past did not bring its affinities")
+	_check(sim.can_train("The rat man/6"), "the second past's affinity did not open the keystone")
+	# the fight: Spreads multiplies fire by those on you; a shocked gang takes more under Live
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var t: Dictionary = m["t"]
+	var on_you: int = mini(m["remaining"], sim.contact(t))
+	var before: float = m["target_hp"]
+	sim.advance(0.1)
+	var fire_only: float = sim.type_dps()["fire"] * (1.0 - float(t["res"].get("fire", 0.0))) * sim.pace() * t["pace"] * 0.1
+	_check(before - m["target_hp"] > fire_only * on_you * 0.6 or m["remaining"] < sim.mission["t"]["pool"], "Spreads did not multiply the fire by the %d on you" % on_you)
+	sim.extract_now()
+	# frost: Frozen solid stops their fire while chilled and halves frost; the cold's notable deepens the chill
+	sim.respec()
+	sim.set_class("Poacher")
+	sim.training_points += 60
+	for i in range(7):
+		sim.train_node("The cold/%d" % i)
+	_check(sim.has_node("frost_freeze") and is_equal_approx(sim.chill_amount(), 1.0) and is_equal_approx(sim.more("frost"), 0.5), "Frozen solid did not take: chill %.2f more %.2f" % [sim.chill_amount(), sim.more("frost")])
+	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true), 0.0), "a frozen gang still fires")
+	for i in range(7):
+		sim.train_node("The rat man/%d" % i)
+	_check(sim.dot_stacks("poison") == 15, "Builds did not raise the stacks")
+	sim.respec()
+	sim.set_class("Doorman")
+	sim.training_points += 60
+	for i in range(10):
+		sim.train_node("Blades/%d" % i)
+	_check(sim.has_node("bleed_forever") and is_equal_approx(sim.more("bleed"), 1.4), "Blades did not train to both ends")
+	sim.deploy(0)
+	m = sim.mission
+	m["dots"] = {"bleed": 60.0}
+	var dealt: float = sim._dot_tick(m["dots"], 1.0)
+	_check(dealt > 0.0 and is_equal_approx(m["dots"]["bleed"], 60.0), "Won't stop let the bleed fade: %s" % str(m["dots"]))
+	sim.extract_now()
+	# the class webs' element notables
+	_check(sim.train_node("Muscle/0") and sim.train_node("Muscle/1") and sim.train_node("Muscle/2") and sim.train_node("Muscle/3") and sim.train_node("Muscle/7") and sim.train_node("Muscle/8"), "Muscle's branch to Glassing did not train")
+	_check(is_equal_approx(sim.conversion()["bleed"], 0.15 + 0.65), "Glassing did not add 15%% bleed: %s" % str(sim.conversion()))
+	# the Caravan cycles the middle column through the elements
+	main.show_room(main.BARRACKS)
+	_check_fit(main, "Caravan (elements, yard)")
+	for k in range(6):
+		main._barracks._on_swap()
+		_check_fit(main, "Caravan (elements, %d)" % k)
+	sim.load_dict(saved)
+	print("the elements ok: affinities, double cost, the locked keystone and the second past, Spreads, Frozen solid, Builds, Won't stop, the class notables, the Caravan")
 	_atlas_checks(main)
 
 

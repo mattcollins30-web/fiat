@@ -20,6 +20,7 @@ const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
 const CLASS_H := 52                                            # the class bar across the top
 const TREE_Y := CLASS_H + 16
 const HEAD_H := 40
+const SWAP_W := 210                                            # the middle head's "Next: … ▸"
 const NODE_H := 40
 const NODE_GAP := 5
 const NODES_Y := TREE_Y + HEAD_H + 6
@@ -42,8 +43,8 @@ var _words: Label
 var _points: Label
 var _past: Label                   # the runners before this one
 var _ascend: Button                # the second past, from level 30
-var _swap: Button                  # over the middle column's head: the yard's tree, or the second past's
-var alt := false                   # showing the second past's tree in the middle
+var _swap: Button                  # over the middle column's head: cycles the yard's tree, the second past's, the elements'
+var mid := 0                       # which of the middle trees shows
 var _train: Button
 var _respec: Button
 var _shown := ""
@@ -94,7 +95,7 @@ func _init() -> void:
 	_ascend = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 240, Pal.BUTTON_H), false)
 	_ascend.pressed.connect(func(): ascend.emit())
 	_ascend.visible = false
-	_swap = UI.button(self, Rect2(COL_W + COL_GAP + COL_W / 2, TREE_Y, COL_W / 2, HEAD_H), false)
+	_swap = UI.button(self, Rect2(COL_W + COL_GAP + COL_W - SWAP_W, TREE_Y, SWAP_W, HEAD_H), false)
 	_swap.pressed.connect(_on_swap)
 	_swap.visible = false
 
@@ -105,6 +106,9 @@ const EFFECT_WORDS := {
 	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d med carried", "rest_pct": "Rest +%d%%", "treat_pct": "Treatment −%d%%",
 	"att_share": "+%d%% attachments", "sell_pct": "Fence pays +%d%%", "cash_pct": "Cash +%d%%", "rarity": "Rarer finds +%d%%",
 	"pace_pct": "+%d%% pace", "damage_low_pct": "+%d%% dmg under ½ HP",
+	"conv_fire_pct": "%d%% as fire", "conv_frost_pct": "%d%% as frost", "conv_poison_pct": "%d%% as poison", "conv_shock_pct": "%d%% as shock", "conv_bleed_pct": "%d%% as bleed",
+	"fire_pct": "+%d%% fire", "frost_pct": "+%d%% frost", "poison_pct": "+%d%% poison", "shock_pct": "+%d%% shock", "bleed_pct": "+%d%% bleed", "physical_pct": "+%d%% physical",
+	"dot_pct": "+%d%% dots",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols"}
 
@@ -150,7 +154,7 @@ func _style(b: Button, look: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%d|%s|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission())]
+	var sig := "%s|%s|%d|%d|%s|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -161,15 +165,18 @@ func show_state(s) -> void:
 		cb.disabled = sim.on_mission()
 		UI.style_button(cb, sim.cls == name)
 	var trees: Array = sim.trees()
-	# with no class there is one tree; it sits in the middle. With a second
-	# past there are four: the middle column shows the yard's or the second's
+	# the class's two trees either side; the middle cycles the yard's, the
+	# second past's and the five elements'. With no class, the yard's alone.
+	var mids := _mid_trees(trees)
+	mid = mid % maxi(1, mids.size())
 	var cols := [null, null, null]
-	if trees.size() >= 3:
-		cols = [trees[0], trees[3] if (alt and trees.size() > 3) else trees[1], trees[2]]
-	elif trees.size() == 1:
-		cols[1] = trees[0]
-	_swap.visible = trees.size() > 3
-	_swap.text = ("Show the yard's tree" if alt else "Show %s's tree" % sim.cls2.to_lower()) if trees.size() > 3 else ""
+	if sim.cls != "":
+		cols = [trees[0], mids[mid], trees[2]]
+	else:
+		cols[1] = mids[mid]
+	_swap.visible = mids.size() > 1
+	var next_name: String = mids[(mid + 1) % mids.size()]["name"] if mids.size() > 1 else ""
+	_swap.text = ("Next: %s ▸" % next_name) if mids.size() > 1 else ""
 	_swap.add_theme_stylebox_override("normal", UI.box(Color.TRANSPARENT, 8))
 	_swap.add_theme_stylebox_override("hover", UI.box(Color(Pal.CARD, 0.5), 8))
 	_swap.add_theme_font_size_override("font_size", 18)
@@ -184,7 +191,12 @@ func show_state(s) -> void:
 			continue
 		var taken := 0
 		var who: String = branch.get("class", "")
-		h["name"].text = branch["name"] if who == "" else "%s · %s" % [branch["name"], who]
+		# the middle head shares its row with the swap button: the name fits what's left
+		h["name"].size.x = COL_W - 2 * PAD - (SWAP_W if (b == 1 and _swap.visible) else 0)
+		if branch.has("element"):
+			UI.fit(h["name"], ["%s · %s%s" % [branch["name"], branch["element"], "" if sim.affinity(branch["element"]) else " · double"], "%s · %s" % [branch["name"], branch["element"]], branch["name"]])
+		else:
+			UI.fit(h["name"], [branch["name"] if who == "" else "%s · %s" % [branch["name"], who], branch["name"]])
 		for i in range(ROWS):
 			var n: Dictionary = _rows[b][i]
 			if i >= branch["nodes"].size():
@@ -196,7 +208,7 @@ func show_state(s) -> void:
 			n["id"] = id
 			n["button"].visible = true
 			var stacked := _place(n, branch, i)
-			var cost := Data.node_cost(i, nd.get("notable", false), nd.get("keystone", false))
+			var cost: int = sim.node_cost(id)
 			var pts := "%d pt%s" % [cost, "" if cost == 1 else "s"]
 			# a stacked node (on a branch) carries its cost in the name line, its effect under
 			n["name"].add_theme_font_override("font", UI.font("SemiBold" if (nd.get("notable", false) or nd.get("keystone", false)) else "Regular"))
@@ -372,8 +384,19 @@ static func _in_branch(branch: Dictionary, i: int) -> bool:
 	return false
 
 
+## The middle column's trees: the yard's, the second past's first, the elements'.
+func _mid_trees(trees: Array) -> Array:
+	var out: Array = []
+	if sim.cls == "":
+		return [trees[0]] if not trees.is_empty() else []
+	out.append(trees[1])
+	for t in trees.slice(3):
+		out.append(t)
+	return out
+
+
 func _on_swap() -> void:
-	alt = not alt
+	mid += 1
 	_shown = ""
 	show_state(sim)
 

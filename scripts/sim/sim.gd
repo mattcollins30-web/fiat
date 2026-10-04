@@ -166,7 +166,7 @@ func armour() -> float:
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
 		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission))
-	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0)
+	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (0.8 if has_node("shock_more") else 1.0)
 
 
 ## The share of incoming damage the armour stops.
@@ -202,9 +202,40 @@ func increased(ty: String) -> float:
 	return _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty)
 
 
-## Everything that multiplies a type on its own: keystones, uniques. 1 for now.
-func more(_ty: String) -> float:
-	return 1.0
+## Everything that multiplies a type on its own: the element's costly notable, keystones, uniques.
+func more(ty: String) -> float:
+	var m := 1.0
+	if has_node("%s_more" % ty):
+		m *= 1.4
+	if ty == "frost" and has_node("frost_freeze"):
+		m *= 0.5
+	return m
+
+
+## A dot's seconds: the element's notable doubles them.
+func dot_seconds(ty: String) -> float:
+	var s := float(Data.DOTS[ty]["s"])
+	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and tree.has("Blades/3")):
+		s *= 2.0
+	return s
+
+
+func dot_stacks(ty: String) -> int:
+	var n := int(Data.DOTS[ty]["stacks"])
+	if ty == "poison" and has_node("poison_stacks"):
+		n = 15
+	return n
+
+
+## How much slower chilled gangs fire, and how much more shocked ones take.
+func chill_amount() -> float:
+	if has_node("frost_freeze"):
+		return 1.0
+	return 0.4 if tree.has("The cold/3") else Data.CHILL
+
+
+func shock_amount() -> float:
+	return 0.3 if tree.has("Live/3") else Data.SHOCK
 
 
 ## Damage a second by type, before their resist: the base, split, increased, more.
@@ -223,7 +254,7 @@ func damage_rate(t: Dictionary, shocked := false) -> float:
 	var total := 0.0
 	for ty in Data.TYPES:
 		total += float(type_dps()[ty]) * (1.0 - float(res.get(ty, 0.0)))
-	return total * ((1.0 + Data.SHOCK) if shocked else 1.0)
+	return total * ((1.0 + shock_amount()) if shocked else 1.0)
 
 
 ## Your resist to a type, as a share, capped.
@@ -241,7 +272,7 @@ func incoming_rate(t: Dictionary, on_you: int, chilled := false) -> float:
 	for ty in types:
 		var share := float(types[ty])
 		total += t["dps"] * on_you * share * ((1.0 - mitigation()) if ty == "physical" else (1.0 - resist(ty)))
-	return total * ((1.0 - Data.CHILL) if chilled else 1.0)
+	return total * ((1.0 - chill_amount()) if chilled else 1.0)
 
 
 ## A dot's pool grows by a share of what landed and drains over its seconds;
@@ -250,7 +281,7 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	if not Data.DOTS.has(ty) or landed <= 0.0:
 		return
 	var d: Dictionary = Data.DOTS[ty]
-	var cap: float = rate_cap * float(d["ratio"]) * float(d["s"]) * float(d["stacks"])
+	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty) * dot_stacks(ty)
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
 
 
@@ -262,8 +293,9 @@ func _dot_tick(dots: Dictionary, dt: float) -> float:
 		if pool <= 0.0:
 			dots.erase(ty)
 			continue
-		var tick := minf(pool, pool / float(Data.DOTS[ty]["s"]) * dt)
-		dots[ty] = pool - tick
+		var tick := minf(pool, pool / dot_seconds(ty) * dt)
+		if not (ty == "bleed" and has_node("bleed_forever") and dots != mission.get("my_dots", {})):
+			dots[ty] = pool - tick             # Won't stop: a bleed on them doesn't fade
 		dealt += tick
 	return dealt
 
@@ -310,6 +342,8 @@ func loot_bonus() -> float:
 	if mission != null:
 		b += _affix_sum("loot_per_lot") * mission["patrols"] / 100.0
 	b += _affix_sum("loot_per_med") * rig.size() / 100.0
+	if has_node("poison_more"):
+		b -= 0.2                                 # the rat's share
 	return b
 
 
@@ -356,8 +390,18 @@ func set_class(name: String) -> bool:
 # ------------------------------------------------------------------ the tree
 
 ## The three trees on show: the class's first, the yard's, the class's second.
+## The trees on show: the class's, the yard's, the second past's, and every element's.
 func trees() -> Array:
-	return Data.trees_for(cls, cls2)
+	var out: Array = Data.trees_for(cls, cls2)
+	out.append_array(Data.ELEMENT_TREES)
+	return out
+
+
+## Whether an element is one of the runner's two (or the second past's).
+func affinity(element: String) -> bool:
+	if element == "":
+		return true
+	return element in Data.AFFINITY.get(cls, []) or element in Data.AFFINITY.get(cls2, [])
 
 
 ## The runner's trait, as a multiplier on a figure (1.0 when it has none).
@@ -758,7 +802,11 @@ func tree_sum(effect: String) -> float:
 func node_cost(id: String) -> int:
 	var parts := id.split("/")
 	var n := node(id)
-	return Data.node_cost(int(parts[1]), n.get("notable", false), n.get("keystone", false))
+	var cost := Data.node_cost(int(parts[1]), n.get("notable", false), n.get("keystone", false))
+	var t := Data.element_tree(parts[0])
+	if not t.is_empty() and not affinity(t["element"]):
+		cost *= Data.OFF_AFFINITY_COST       # off the class's pair: double
+	return cost
 
 
 func points_spent() -> int:
@@ -780,7 +828,10 @@ func can_train(id: String) -> bool:
 	if not _on_show(parts[0]):
 		return false
 	var i := int(parts[1])
-	var need := Data.node_needs(Data.tree_named(parts[0]), i)
+	var t := Data.tree_named(parts[0])
+	if t.has("element") and not affinity(t["element"]) and t["nodes"][i].get("keystone", false):
+		return false                         # an element's keystone needs its affinity: the class's, or the second past's
+	var need := Data.node_needs(t, i)
 	return need < 0 or tree.has("%s/%d" % [parts[0], need])
 
 
@@ -850,7 +901,7 @@ func patrol_s(t: Dictionary, first := false) -> float:
 func use_time(it: Dictionary) -> float:
 	if has_node("field_surgery"):
 		return 0.0
-	return Items.use_time(it) * (0.5 if has_node("triage") else 1.0) * maxf(0.3, 1.0 - (tree_sum("med_speed_pct") + _affix_sum("med_speed_pct")) / 100.0)
+	return Items.use_time(it) * (0.5 if has_node("triage") else 1.0) * maxf(0.3, 1.0 - (tree_sum("med_speed_pct") + _affix_sum("med_speed_pct")) / 100.0) * (1.3 if has_node("bleed_more") else 1.0)
 
 
 func pace() -> float:
@@ -859,7 +910,7 @@ func pace() -> float:
 		if equipped[s] != null:
 			worn += Items.base_pace(equipped[s])
 	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
-		* (1.25 if has_rule("van_keys") else 1.0)
+		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0)
 
 
 # ------------------------------------------------------------------ ammo
@@ -1804,8 +1855,15 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var res: Dictionary = t.get("res", {})
 	var per_type := type_dps()
 	var landed_total := 0.0
+	var crowd_on_you: int = mini(m["remaining"], contact(t))
 	for ty in Data.TYPES:
-		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + Data.SHOCK) if shocked else 1.0)
+		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
+		if ty == "fire" and has_node("fire_spread"):
+			landed *= crowd_on_you                # Spreads: fire hits everyone on you
+		if ty == "shock" and has_node("shock_chain") and m["fresh"]:
+			landed *= crowd_on_you                # Live wire: the first of a gang is every one of them
+		if ty == "fire" and has_node("fire_more"):
+			hp -= landed * 0.02                   # petrol on your hands
 		landed_total += landed
 		if landed > 0.0:
 			if not m.has("dots"):

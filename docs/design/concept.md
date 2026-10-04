@@ -240,6 +240,13 @@ layers that multiply, not add. Built in this order, each step leaving the game g
    bag* (poison never caps, carries to the next gang), *the butcher's steel* (bleed double, hits reopen
    it). Then *the gritter's hopper*, *the sparky's gloves*, *the quartermaster's manual*, *a blue
    plaque*. Tiers vary on uniques too, so a good one exists.
+6b. **Uniques, more of them, inventive** (Matt, 4 Oct: "may as well go big ... nothing too formulaic").
+   Twenty-odd across the slots, each a rule, several that cross elements or turn a cost into a
+   strength; some charms and papers among them, not only guns and armour. Rare by depth and source.
+6c. **Sets** (Matt, 4 Oct): named sets - the council's gear, the ambulance's, the bank's, the
+   army's, the carpet man's - two to four pieces each, with bonuses at two and at the full set that
+   make a build the way a unique does. Drawn in their own tint, apart from the rarity colours; the
+   cell and the panel say "2 of 4 · the council's" and what the next piece brings.
 7. **The bench as a crafting bench**, in cash: re-roll everything within the slot's pool; lock one and
    re-roll the rest (×3); re-roll one (same tier mostly, a chance up, a smaller chance down, narrowing
    as the tier rises); add, cut a socket, strip; and *bump the item level* in notes. Prices scale with

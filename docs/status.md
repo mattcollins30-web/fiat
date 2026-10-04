@@ -706,6 +706,32 @@ resists add and cap; incoming is physical through armour and fire through the re
 the estate's types, the words, Resistant plus depth; the dot pools and ticks and the poison cap; a
 cutters' gang bleeds you and a dressing stops it.
 
+## The builds pass, step 4: the element trees (2026-10-04)
+
+- Five trees (`Data.ELEMENT_TREES`): Petrol, The cold, The rat man, Live, Blades - a web each: a spine
+  of conversion and increased to a notable (Lit, Chill, Dosed, Live, Opened up: +30% and the element's
+  twist - dots last twice, chill 40%, shock 30%), a branch to the keystone (Spreads: fire hits
+  everyone on you; Frozen solid: chilled gangs don't fire, frost does half; Builds: poison to fifteen
+  stacks; Live wire: shock on the first of a gang hits every one; Won't stop: bleeds don't fade), a
+  branch to a notable with a cost (×1.4 more of the element; you burn for 2% / pace −15% / loot find
+  −20% / armour −20% / meds 30% slower). A committed tree plus a socket plus the class's notable is
+  about 100% conversion.
+- **Affinities** (`Data.AFFINITY`): Drifter fire/shock, Doorman bleed/physical, Poacher poison/frost,
+  Scrapper shock/fire, Paramedic poison/frost. Off the pair a node costs double and the keystone
+  refuses until the second past brings the affinity.
+- **The class webs' spare branches** carry an element notable now, in place of a small node: Rat
+  bait, Cold snap, Glassing, Knuckles, Syringe, Ice pack, Live wire, Blowtorch, Petrol bomb, Jump
+  start - 15% as the type.
+- **The Caravan**: the middle column cycles the yard's tree, the second past's and the five elements'
+  ("Next: Petrol ▸"); an element's head says its type and "double" off affinity; costs come through
+  the sim so the double shows.
+
+Asserted (`_element_checks`): the affinities and the double; Petrol to its keystone and its 45%; Lit's
+double burn; the costly branch's ×1.4; the rat man's keystone refused to a Drifter and opened by a
+Poacher past; Spreads multiplies fire by those on you in a real fight; Frozen solid's chill and half;
+Builds' fifteen; Won't stop's bleed that doesn't fade; Glassing's 15%; the Caravan through every
+middle tree.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

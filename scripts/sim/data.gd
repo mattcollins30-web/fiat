@@ -665,7 +665,7 @@ const TREES := [
 		{"name": "Long shot", "effect": "damage_pct", "value": 4},
 		{"name": "One shot", "effect": "one_shot", "keystone": true, "words": "The first of every gang drops where it stands"},
 		{"name": "Lying up", "effect": "patrol_pct", "value": 10, "needs": 3},
-		{"name": "Camouflage", "effect": "loot_pct", "value": 4},
+		{"name": "Rat bait", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
 		{"name": "Night work", "effect": "night_work", "notable": true, "words": "Every site you run is Night: rarer finds, pace −20%"},
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
@@ -677,7 +677,7 @@ const TREES := [
 		{"name": "Snare lines", "effect": "loot_pct", "value": 4},
 		{"name": "Trapline", "effect": "trapline", "keystone": true, "words": "Every gang arrives one short, the first included"},
 		{"name": "Knowing the land", "effect": "loot_pct", "value": 5, "needs": 3},
-		{"name": "Game bag", "effect": "hp", "value": 4},
+		{"name": "Cold snap", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "15% of your damage as frost"},
 		{"name": "Early doors", "effect": "early_doors", "notable": true, "words": "The first gang takes twice as long to come"},
 	]},
 	# Doorman
@@ -690,7 +690,7 @@ const TREES := [
 		{"name": "Thick skin", "effect": "armour_pct", "value": 8},
 		{"name": "Bodyline", "effect": "bodyline", "keystone": true, "words": "With three on you, you take half"},
 		{"name": "Big frame", "effect": "hp", "value": 6, "needs": 3},
-		{"name": "Elbows", "effect": "damage_pct", "value": 4},
+		{"name": "Glassing", "effect": "conv_bleed_pct", "value": 15, "notable": true, "words": "15% of your damage as bleed"},
 		{"name": "Loud", "effect": "loud", "notable": true, "words": "Gangs come sooner and one bigger; drops +30%"},
 	]},
 	{"name": "The door", "class": "Doorman", "nodes": [
@@ -702,7 +702,7 @@ const TREES := [
 		{"name": "Keep back", "effect": "armour_pct", "value": 5},
 		{"name": "One at a time", "effect": "one_at_a_time", "keystone": true, "words": "One on you at once, ever; −25% pace"},
 		{"name": "Composure", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Last orders", "effect": "damage_pct", "value": 4},
+		{"name": "Knuckles", "effect": "physical_pct", "value": 15, "notable": true, "words": "+15% physical damage"},
 		{"name": "Stand and fight", "effect": "stand", "notable": true, "words": "No cutting and running before the clear; the clear bonus doubled"},
 	]},
 	# Paramedic
@@ -715,7 +715,7 @@ const TREES := [
 		{"name": "Stock take", "effect": "med_cap", "value": 1},
 		{"name": "Field surgery", "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
 		{"name": "Pressure", "effect": "heal_pct", "value": 15, "needs": 3},
-		{"name": "Second opinion", "effect": "med_cap", "value": 1},
+		{"name": "Syringe", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
 		{"name": "Walking wounded", "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
 	]},
 	{"name": "Shifts", "class": "Paramedic", "nodes": [
@@ -727,7 +727,7 @@ const TREES := [
 		{"name": "Cold tea", "effect": "rest_pct", "value": 25},
 		{"name": "Not today", "effect": "not_today", "keystone": true, "words": "The first time a run would kill you, you're on half instead"},
 		{"name": "Discount", "effect": "treat_pct", "value": 20, "needs": 3},
-		{"name": "Overtime", "effect": "hp", "value": 5},
+		{"name": "Ice pack", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "15% of your damage as frost"},
 		{"name": "Second shift", "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
 	]},
 	# Scrapper
@@ -740,7 +740,7 @@ const TREES := [
 		{"name": "Fast strip", "effect": "search_pct", "value": 15},
 		{"name": "Nothing wasted", "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
 		{"name": "Magpie eye", "effect": "loot_pct", "value": 4, "needs": 3},
-		{"name": "Bolt cutters", "effect": "search_pct", "value": 15},
+		{"name": "Live wire", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "15% of your damage as shock"},
 		{"name": "Quiet hands", "effect": "quiet_hands", "notable": true, "words": "Every search finds two things; kills drop nothing"},
 	]},
 	{"name": "Fencing", "class": "Scrapper", "nodes": [
@@ -752,7 +752,7 @@ const TREES := [
 		{"name": "Fair price", "effect": "sell_pct", "value": 10},
 		{"name": "Buyer's market", "effect": "buyers_market", "keystone": true, "words": "The fence pays double; buying costs double"},
 		{"name": "Lucky find", "effect": "rarity", "value": 20, "needs": 3},
-		{"name": "Trolley", "effect": "pack_cells", "value": 4},
+		{"name": "Blowtorch", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "15% of your damage as fire"},
 		{"name": "Hoarder", "effect": "hoarder", "notable": true, "words": "The pack carries double; −30% pace"},
 	]},
 	# Drifter
@@ -765,7 +765,7 @@ const TREES := [
 		{"name": "Never still", "effect": "patrol_pct", "value": 10},
 		{"name": "Never there", "effect": "never_there", "keystone": true, "words": "No gang ever comes; picking over takes twice as long"},
 		{"name": "Wiry", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Long roads", "effect": "pace_pct", "value": 5},
+		{"name": "Petrol bomb", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "15% of your damage as fire"},
 		{"name": "Hit and run", "effect": "hit_and_run", "notable": true, "words": "Out when the first gang comes; kills pay half again"},
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
@@ -777,12 +777,82 @@ const TREES := [
 		{"name": "Pockets", "effect": "cash_pct", "value": 10},
 		{"name": "All or nothing", "effect": "all_or_nothing", "keystone": true, "words": "Nothing common is ever found; half as much is"},
 		{"name": "Four-leaf", "effect": "loot_pct", "value": 4, "needs": 3},
-		{"name": "Loose change", "effect": "cash_pct", "value": 10},
+		{"name": "Jump start", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "15% of your damage as shock"},
 		{"name": "Light fingers", "effect": "light_fingers", "notable": true, "words": "Papers three times as often; cash −20%"},
 	]},
 ]
 ## The second past: at ASCEND_LEVEL the runner takes a second class, whose
 ## first tree opens beside the first's. Its keystone and rule are theirs too.
+## The element trees: one a type, a web like the class ones - a spine of
+## conversion and increased to a notable, a branch to a keystone that breaks
+## the element's rule, a branch to a notable with a cost. Any class can walk
+## any of them; its two affinities (AFFINITY) come at the normal price, the
+## others cost double and their keystone needs the second past.
+const ELEMENT_TREES := [
+	{"name": "Petrol", "element": "fire", "nodes": [
+		{"name": "A can of it", "effect": "conv_fire_pct", "value": 10},
+		{"name": "Rags", "effect": "fire_pct", "value": 10},
+		{"name": "Siphoned", "effect": "conv_fire_pct", "value": 15},
+		{"name": "Lit", "effect": "fire_pct", "value": 30, "notable": true, "words": "+30% fire; burns last twice as long"},
+		{"name": "Wick", "effect": "fire_pct", "value": 12, "needs": 3},
+		{"name": "Splash", "effect": "conv_fire_pct", "value": 20},
+		{"name": "Spreads", "effect": "fire_spread", "keystone": true, "words": "Fire hits everyone on you"},
+		{"name": "Fumes", "effect": "dot_pct", "value": 20, "needs": 3},
+		{"name": "Jerry can", "effect": "conv_fire_pct", "value": 20},
+		{"name": "On your hands", "effect": "fire_more", "notable": true, "words": "Fire does 40% more; you burn for 2% of it"},
+	]},
+	{"name": "The cold", "element": "frost", "nodes": [
+		{"name": "Antifreeze", "effect": "conv_frost_pct", "value": 10},
+		{"name": "Frost", "effect": "frost_pct", "value": 10},
+		{"name": "A hard winter", "effect": "conv_frost_pct", "value": 15},
+		{"name": "Chill", "effect": "frost_pct", "value": 30, "notable": true, "words": "+30% frost; chilled gangs fire 40% slower, not 20"},
+		{"name": "Numb", "effect": "frost_pct", "value": 12, "needs": 3},
+		{"name": "Black ice", "effect": "conv_frost_pct", "value": 20},
+		{"name": "Frozen solid", "effect": "frost_freeze", "keystone": true, "words": "Chilled gangs don't fire at all; frost does half"},
+		{"name": "Wind chill", "effect": "frost_pct", "value": 15, "needs": 3},
+		{"name": "Deep freeze", "effect": "conv_frost_pct", "value": 20},
+		{"name": "Cold hands", "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
+	]},
+	{"name": "The rat man", "element": "poison", "nodes": [
+		{"name": "Under the sink", "effect": "conv_poison_pct", "value": 10},
+		{"name": "Bait", "effect": "poison_pct", "value": 10},
+		{"name": "Council issue", "effect": "conv_poison_pct", "value": 15},
+		{"name": "Dosed", "effect": "poison_pct", "value": 30, "notable": true, "words": "+30% poison; poison lasts twice as long"},
+		{"name": "Cumulative", "effect": "dot_pct", "value": 15, "needs": 3},
+		{"name": "Blue pellets", "effect": "conv_poison_pct", "value": 20},
+		{"name": "Builds", "effect": "poison_stacks", "keystone": true, "words": "Poison stacks to fifteen, not five"},
+		{"name": "Slow acting", "effect": "poison_pct", "value": 15, "needs": 3},
+		{"name": "The whole tin", "effect": "conv_poison_pct", "value": 20},
+		{"name": "Rat's share", "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot find −20%"},
+	]},
+	{"name": "Live", "element": "shock", "nodes": [
+		{"name": "Jump leads", "effect": "conv_shock_pct", "value": 10},
+		{"name": "Charge", "effect": "shock_pct", "value": 10},
+		{"name": "Off the mains", "effect": "conv_shock_pct", "value": 15},
+		{"name": "Live", "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 30% more, not 15"},
+		{"name": "Amps", "effect": "shock_pct", "value": 12, "needs": 3},
+		{"name": "Bare wire", "effect": "conv_shock_pct", "value": 20},
+		{"name": "Live wire", "effect": "shock_chain", "keystone": true, "words": "Shock on the first of a gang hits every one of them"},
+		{"name": "Volts", "effect": "shock_pct", "value": 15, "needs": 3},
+		{"name": "Substation", "effect": "conv_shock_pct", "value": 20},
+		{"name": "Earthed", "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
+	]},
+	{"name": "Blades", "element": "bleed", "nodes": [
+		{"name": "Stanley knife", "effect": "conv_bleed_pct", "value": 10},
+		{"name": "An edge", "effect": "bleed_pct", "value": 10},
+		{"name": "Sharpened", "effect": "conv_bleed_pct", "value": 15},
+		{"name": "Opened up", "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
+		{"name": "Deep", "effect": "bleed_pct", "value": 12, "needs": 3},
+		{"name": "Serrated", "effect": "conv_bleed_pct", "value": 20},
+		{"name": "Won't stop", "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down"},
+		{"name": "Nicked", "effect": "dot_pct", "value": 20, "needs": 3},
+		{"name": "Butcher's", "effect": "conv_bleed_pct", "value": 20},
+		{"name": "Blood up", "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
+	]},
+]
+const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
+const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
+
 const ASCEND_LEVEL := 30
 
 ## Insurance: the fence holds the paper on the kit for a run. Dies, and the
@@ -918,7 +988,17 @@ static func node_needs(t: Dictionary, i: int) -> int:
 	return int(t["nodes"][i].get("needs", i - 1))
 
 
+static func element_tree(name: String) -> Dictionary:
+	for t in ELEMENT_TREES:
+		if t["name"] == name:
+			return t
+	return {}
+
+
 static func tree_named(name: String) -> Dictionary:
+	for t in ELEMENT_TREES:
+		if t["name"] == name:
+			return t
 	for t in TREES:
 		if t["name"] == name:
 			return t
