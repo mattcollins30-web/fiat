@@ -453,9 +453,15 @@ static func ammo_type(gun: Dictionary) -> String:
 	return str(b.get("ammo", b.get("type", "")))
 
 
-## What a gun takes, by the standard box of its type: "Takes shells".
+static func is_melee(it: Dictionary) -> bool:
+	return base_of(it).get("type", "") == "melee"
+
+
+## What a gun takes, by the standard box of its type: "Takes shells"; a bat, nothing.
 static func ammo_words(gun: Dictionary) -> String:
 	var type := ammo_type(gun)
+	if type == "none":
+		return "Takes nothing"
 	if type == "" or not is_gun(gun):
 		return ""
 	for b in Data.BASES[Data.AMMO]:

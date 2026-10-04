@@ -187,6 +187,8 @@ func conversion() -> Dictionary:
 	var total := 0.0
 	for ty in Data.ELEMENTS:
 		var share: float = (_affix_sum("conv_%s_pct" % ty) + _fitted_sum("conv_%s_pct" % ty) + tree_sum("conv_%s_pct" % ty)) / 100.0
+		if equipped["Primary"] != null:
+			share += float(Items.base_of(equipped["Primary"]).get("conv_%s_pct" % ty, 0)) / 100.0   # a bat's nails
 		out[ty] = maxf(0.0, share)
 		total += out[ty]
 	if total > 1.0:
@@ -272,7 +274,7 @@ func incoming_rate(t: Dictionary, on_you: int, chilled := false) -> float:
 	for ty in types:
 		var share := float(types[ty])
 		total += t["dps"] * on_you * share * ((1.0 - mitigation()) if ty == "physical" else (1.0 - resist(ty)))
-	return total * ((1.0 - chill_amount()) if chilled else 1.0)
+	return total * ((1.0 - chill_amount()) if chilled else 1.0) * (Data.MELEE_INCOMING if melee() else 1.0)
 
 
 ## A dot's pool grows by a share of what landed and drains over its seconds;
@@ -926,7 +928,14 @@ func rounds_for(gun: Dictionary) -> int:
 
 
 func has_rounds(gun: Dictionary) -> bool:
+	if Items.ammo_type(gun) == "none":
+		return true                          # a bat never runs dry
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
+
+
+## A melee primary: in among them.
+func melee() -> bool:
+	return equipped["Primary"] != null and Items.is_melee(equipped["Primary"])
 
 
 ## The better grade's damage, from the stack that's feeding the gun now.
@@ -942,6 +951,8 @@ func grade_bonus(gun: Dictionary) -> float:
 ## stack is dropped, and a gun that's just run dry says so.
 func _spend_rounds(gun: Dictionary, shots: float) -> void:
 	var t := Items.ammo_type(gun)
+	if t == "none":
+		return
 	var m: Dictionary = mission
 	m["fired"] = m.get("fired", {})
 	m["fired"][t] = float(m["fired"].get(t, 0.0)) + shots
@@ -1849,6 +1860,13 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		headshot += 2.0
 	if m["fresh"] and has_node("one_shot"):
 		m["target_hp"] = 0.0              # the first of the lot drops where it stands
+	# in among them: their first shot lands before your first swing, each gang
+	if melee() and m["fresh"]:
+		m["melee_wait"] = float(m.get("melee_wait", 0.0)) + dt
+		if m["melee_wait"] <= Data.MELEE_WAIT:
+			headshot = 0.0
+	elif not m["fresh"]:
+		m["melee_wait"] = 0.0
 	# the hit, by type: each share cut by their resist to it; shocked, more of everything
 	var shocked: bool = float(m.get("shock_t", 0.0)) > 0.0
 	var mult: float = pace() * t["pace"] * swing * headshot * dt
@@ -1858,7 +1876,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
 	for ty in Data.TYPES:
 		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
-		if ty == "fire" and has_node("fire_spread"):
+		if has_node("melee_sweep"):
+			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
+		elif ty == "fire" and has_node("fire_spread"):
 			landed *= crowd_on_you                # Spreads: fire hits everyone on you
 		if ty == "shock" and has_node("shock_chain") and m["fresh"]:
 			landed *= crowd_on_you                # Live wire: the first of a gang is every one of them

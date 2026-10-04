@@ -732,6 +732,23 @@ Poacher past; Spreads multiplies fire by those on you in a real fight; Frozen so
 Builds' fifteen; Won't stop's bleed that doesn't fade; Glassing's 15%; the Caravan through every
 middle tree.
 
+## The builds pass, step 5: melee (2026-10-04)
+
+Seven primaries (spiked bat, machete, pipe wrench, fire axe, bayonet on a stick, sledgehammer, breaker
+bar) and three secondaries (knife, knuckle duster, cosh), type "melee", ammo "none" ("Takes nothing":
+`has_rounds` is always true, nothing is spent), a share of the hit bleed from the base (5–40%), grip
+and head mounts of their own (tape, cord wrap, lanyard; nails through it, a blade on it, lead in it),
+grips at bench 1 and heads at bench 2. In among them: their fire on you ×1.25 with a melee primary,
+and each gang's first second lands before your first swing (`MELEE_WAIT`). The Doorman's "Knuckles"
+became "Through the lot": with a bat or a blade, a swing hits everyone on you. The Workshop's five rows
+a gun now show the gun's own mounts in the bench's order rather than the five gun mounts, so a bat
+reads "Grip, Head, —, —, —". Words for all sixteen; three manifests more (melee 7, melee_small 3,
+melee_parts 6): 176 jobs in all.
+
+Asserted (`_melee_checks`): the bat's mounts and words, never dry, 20% bleed and 35% with nails, the
+×1.25, no swing in the first half second and a swing after, the Workshop's rows and a fit to the grip,
+Through the lot with a bat and not with a gun.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

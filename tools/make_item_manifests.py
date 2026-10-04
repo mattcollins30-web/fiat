@@ -137,6 +137,35 @@ def ammo(base):
             "soft and torn, a few loose rounds beside it." % what)
 
 
+MELEE_WORDS = {
+    "Spiked bat": "a wooden baseball bat with roofing nails hammered through the thick end",
+    "Machete": "a garden-centre machete with a black plastic handle, the blade nicked and oiled",
+    "Pipe wrench": "a heavy red Stillson pipe wrench, paint chipped, jaws rusted",
+    "Fire axe": "a red and black fire axe with a pick on the back of the head",
+    "Bayonet on a stick": "an army bayonet lashed to a broom handle with black tape",
+    "Sledgehammer": "a long-handled sledgehammer, the head scarred, the ash handle worn pale",
+    "Breaker bar": "a long steel breaker bar with a knurled grip, oil-dark",
+    "Knife": "a kitchen knife with the handle wrapped in grey tape",
+    "Knuckle duster": "a brass knuckle duster, old and worn smooth",
+    "Cosh": "a short leather cosh with a wrist loop",
+}
+
+
+def melee(base):
+    return ("A realistic painted pixel-art still-life of a single %s lying flat, seen from above, filling the frame, "
+            "worn and used." % MELEE_WORDS[base])
+
+
+MELEE_PARTS = {"Tape", "Cord wrap", "Lanyard", "Nails through it", "A blade on it", "Lead in it"}
+
+
+def melee_part(base):
+    what = {"Tape": "a roll of black gaffer tape", "Cord wrap": "a hank of green paracord", "Lanyard": "a leather wrist lanyard with a steel ring",
+            "Nails through it": "a handful of galvanised roofing nails", "A blade on it": "a length of hacksaw blade with two bolt holes",
+            "Lead in it": "a small ingot of grey lead, rough-cast"}[base]
+    return ("A realistic painted pixel-art still-life of %s seen from above at a slight angle, filling the frame, on a workbench." % what)
+
+
 def part(base):
     return ("A realistic painted pixel-art still-life of a single %s gun part seen side-on, filling the frame, anodised "
             "finish worn to bare metal at the edges." % base.lower())
@@ -181,21 +210,24 @@ def charm(base):
 # one manifest a type; the long guns first, with no style image - what gets
 # promoted from them becomes the style reference for everything after
 TYPES = [
-    ("long_guns", "Primary", lambda b: True, long_gun),
-    ("handguns", "Secondary", lambda b: True, handgun),
+    ("long_guns", "Primary", lambda b: b not in MELEE_WORDS, long_gun),
+    ("handguns", "Secondary", lambda b: b not in MELEE_WORDS, handgun),
     ("helmets", "Helmet", lambda b: True, helmet),
     ("armour", "Armour", lambda b: True, armour),
     ("rigs", "Rig", lambda b: True, bag),
     ("bags", "Backpack", lambda b: True, bag),
     ("medical", "Medical", lambda b: True, medical),
     ("ammo", "Ammo", lambda b: True, ammo),
-    ("parts", "Attachment", lambda b: b not in SOCKET_WORDS, part),
+    ("parts", "Attachment", lambda b: b not in SOCKET_WORDS and b not in MELEE_PARTS, part),
 ]
 # added later (the charm and the sockets): their own seeds, so the earlier
 # manifests' seeds don't move
 EXTRA = [
     ("sockets", "Attachment", lambda b: b in SOCKET_WORDS, socketable),
     ("charms", "Charm", lambda b: True, charm),
+    ("melee", "Primary", lambda b: b in MELEE_WORDS, melee),
+    ("melee_small", "Secondary", lambda b: b in MELEE_WORDS, melee),
+    ("melee_parts", "Attachment", lambda b: b in MELEE_PARTS, melee_part),
 ]
 SEED_EXTRA = 75000                    # SEED0 + 5000
 REFS = ["res://art/reference/items/ref_%02d.png" % i for i in range(1, 5)]

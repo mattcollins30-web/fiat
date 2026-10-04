@@ -33,6 +33,7 @@ const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
 const COL_W := (GRID_W - 3 * PAD) / 2
 const GUNS := ["Primary", "Secondary"]
+const ROWS_A_GUN := 5              # the most mounts a gun has
 
 var sim
 var view := "guns"                 # "guns" or "sockets"
@@ -76,19 +77,19 @@ func _init() -> void:
 		g["figure"] = UI.label(head, Rect2(BODY_W - PAD - 150, 0, 150, 26), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
 		g["name"] = UI.label(head, Rect2(PAD, 30, BODY_W - 2 * PAD, 32), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		y += HEAD_H + ROW_GAP
-		g["rows"] = {}
-		for mount in Data.MOUNTS:
+		g["rows"] = []                       # five rows; which mount each shows is the gun's (a bat has a grip and a head)
+		for k in range(ROWS_A_GUN):
 			var b := Button.new()
 			b.position = Vector2(0, y)
 			b.size = Vector2(BODY_W, ROW_H)
 			b.text = ""
 			b.focus_mode = Control.FOCUS_ALL
-			b.pressed.connect(_pick_mount.bind(slot, mount))
+			b.pressed.connect(_pick_row.bind(slot, k))
 			add_child(b)
-			var r := {"button": b}
-			r["mount"] = UI.label(b, Rect2(PAD, 0, 150, ROW_H), mount.capitalize(), "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var r := {"button": b, "key": ""}
+			r["mount"] = UI.label(b, Rect2(PAD, 0, 150, ROW_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			r["fitted"] = UI.label(b, Rect2(PAD, 0, BODY_W - 2 * PAD, ROW_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
-			g["rows"][mount] = r
+			g["rows"].append(r)
 			y += ROW_H + ROW_GAP
 		y += 10
 		_guns[slot] = g
@@ -191,14 +192,17 @@ func show_state(s) -> void:
 			g["name"].text = gun["base"]
 			g["name"].add_theme_color_override("font_color", Pal.TEXT)
 			UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps(gun)])
-		for mount in Data.MOUNTS:
-			var r: Dictionary = g["rows"][mount]
-			var has: bool = gun != null and gun["attachments"].has(mount)
-			var on: bool = sel_slot == slot and sel_mount == mount
+		var mounts: Array = _mounts_of(gun)
+		for k in range(ROWS_A_GUN):
+			var r: Dictionary = g["rows"][k]
+			var mount: String = mounts[k] if k < mounts.size() else ""
+			r["key"] = mount
+			var has: bool = mount != ""
+			var on: bool = sel_slot == slot and sel_mount == mount and mount != ""
 			r["button"].visible = view == "guns"
+			r["mount"].text = mount.capitalize() if mount != "" else ("—" if gun != null else "")
 			if not has:
-				r["fitted"].text = "—" if gun != null else ""
-				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
+				r["fitted"].text = ""
 				r["mount"].add_theme_color_override("font_color", Pal.TEXT_3)
 				r["button"].disabled = true
 				_style(r["button"], false, "", true)
@@ -274,6 +278,23 @@ func show_state(s) -> void:
 	_show_panel()
 
 
+## The gun's own mounts, in the bench's order, sockets apart.
+func _mounts_of(gun) -> Array:
+	var out: Array = []
+	if gun == null:
+		return out
+	for mount in Data.MOUNTS:
+		if gun["attachments"].has(mount):
+			out.append(mount)
+	return out
+
+
+func _pick_row(slot: String, k: int) -> void:
+	var key: String = _guns[slot]["rows"][k]["key"]
+	if key != "":
+		_pick_mount(slot, key)
+
+
 func _level_for(mount: String) -> int:
 	if mount.begins_with("socket"):
 		return 1
@@ -303,7 +324,7 @@ func _signature() -> String:
 		parts.append(str(gun["id"]))
 		for mount in gun["attachments"]:
 			var a = gun["attachments"][mount]
-			parts.append("-" if a == null else str(a["id"]))
+			parts.append("%s=%s" % [str(mount), "-" if a == null else str(a["id"])])
 	for it in sim.stash:
 		if Items.is_attachment(it):
 			parts.append(str(it["id"]))
@@ -447,8 +468,8 @@ func _show_view() -> void:
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["head"].visible = view == "guns"
-		for mount in g["rows"]:
-			g["rows"][mount]["button"].visible = view == "guns"
+		for r in g["rows"]:
+			r["button"].visible = view == "guns"
 	for slot in Data.SOCKET_SLOTS:
 		var g: Dictionary = _socks[slot]
 		g["head"].visible = view == "sockets"
@@ -540,8 +561,7 @@ func text_nodes() -> Array:
 		for slot in GUNS:
 			var g: Dictionary = _guns[slot]
 			out.append_array([g["label"], g["name"], g["figure"]])
-			for mount in Data.MOUNTS:
-				var r: Dictionary = g["rows"][mount]
+			for r in g["rows"]:
 				out.append_array([r["mount"], r["fitted"]])
 	else:
 		for slot in Data.SOCKET_SLOTS:
@@ -562,8 +582,8 @@ func line_pairs() -> Array:
 	var out: Array = []
 	var groups: Dictionary = _guns if view == "guns" else _socks
 	for slot in groups:
-		for mount in groups[slot]["rows"]:
-			var r: Dictionary = groups[slot]["rows"][mount]
+		var rows = groups[slot]["rows"]
+		for r in (rows if rows is Array else rows.values()):
 			if r["fitted"].text != "":
 				out.append([r["mount"], r["fitted"]])
 		if view == "sockets":

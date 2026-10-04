@@ -188,6 +188,8 @@ func _init() -> void:
 		var filler: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 		sim.stash.append(filler)
 		sim.take(filler["id"])
+	if sim.med_capacity() - sim.rig_used() == 0 and not sim.rig.is_empty():
+		sim.leave(sim.rig.back()["id"])        # one pouch free, for the refusal
 	var free_before: int = sim.med_capacity() - sim.rig_used()
 	if free_before == 1:
 		_check(not sim.take(kit["id"]) and sim.stash.has(kit), "a two-cell kit went into one free pouch")
@@ -1228,6 +1230,65 @@ func _element_checks(main) -> void:
 		_check_fit(main, "Caravan (elements, %d)" % k)
 	sim.load_dict(saved)
 	print("the elements ok: affinities, double cost, the locked keystone and the second past, Spreads, Frozen solid, Builds, Won't stop, the class notables, the Caravan")
+	_melee_checks(main)
+
+
+## Melee: no rounds, bleed built in, grip and head mounts, in among them.
+func _melee_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var bat: Dictionary = sim._plain("Primary", "Spiked bat")
+	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes nothing" and bat["attachments"].has("grip") and bat["attachments"].has("head"), "a spiked bat is not a melee weapon with a grip and a head")
+	var old = sim.equipped["Primary"]
+	sim.equipped["Primary"] = bat
+	sim.rig = []
+	_check(sim.has_rounds(bat) and sim.dps() > 0.0, "a bat ran dry")
+	_check(is_equal_approx(sim.conversion()["bleed"], 0.2), "the bat's nails are not 20%% bleed: %s" % str(sim.conversion()))
+	var head: Dictionary = sim._plain("Attachment", "Nails through it")
+	bat["attachments"]["head"] = head
+	_check(is_equal_approx(sim.conversion()["bleed"], 0.35), "nails through it did not add 15%% bleed: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1), 10.0 * (1.0 - sim.mitigation()) * Data.MELEE_INCOMING), "a melee runner is not hit %.2f× harder" % Data.MELEE_INCOMING)
+	# the first second of a gang: their shot before your swing
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var hp0: float = m["target_hp"]
+	sim.advance(0.5)
+	_check(is_equal_approx(m["target_hp"], hp0), "the bat swung inside the first second of a gang")
+	sim.advance(1.0)
+	_check(m["target_hp"] < hp0 or m["remaining"] < m["t"]["pool"], "the bat never swung")
+	sim.extract_now()
+	# the Workshop shows the bat's grip and head, and fits a part to the head
+	sim.workshop = 3
+	sim.stash.append(sim._plain("Attachment", "Tape"))
+	main.show_room(main.WORKSHOP)
+	main._workshop._set_view("guns")
+	main.refresh()
+	var labels := []
+	for r in main._workshop._guns["Primary"]["rows"]:
+		labels.append(r["mount"].text)
+	_check(labels[0] == "Grip" and labels[1] == "Head" and labels[2] == "—", "the bat's rows are %s" % str(labels))
+	_check_fit(main, "Workshop (a bat)")
+	main._workshop._pick_row("Primary", 0)
+	_check(main._workshop.sel_mount == "grip", "picking the first row did not pick the grip")
+	main._workshop._pick_cell(0)
+	main._workshop._press(0)
+	_check(bat["attachments"]["grip"] != null and bat["attachments"]["grip"]["base"] == "Tape", "the tape did not fit the grip")
+	_check_fit(main, "Workshop (a bat, taped)")
+	# Through the lot: a Doorman's swing hits everyone on you
+	sim.set_class("Doorman")
+	sim.respec()
+	sim.training_points += 30
+	for i in [0, 1, 2, 3, 7, 8]:
+		sim.train_node("The door/%d" % i)
+	_check(sim.has_node("melee_sweep"), "Through the lot did not take with a bat in hand")
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	_check(not sim.has_node("melee_sweep"), "Through the lot counts with a gun")
+	sim.equipped["Primary"] = old
+	sim.load_dict(saved)
+	print("melee ok: no rounds, the nails, the mounts, the wait, harder hit, the Workshop, Through the lot")
 	_atlas_checks(main)
 
 
@@ -2149,6 +2210,9 @@ func _check_grid(inv, cap: int, what: String) -> void:
 ## the slot is empty. Every slot pair, with a plain item of each slot.
 func _body_drops(main) -> void:
 	var sim = main.sim
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])                 # room for the swaps: the run may have filled it
+	_check(sim.stash_room(12), "no room could be made in the stash: %d of %d" % [sim.stash_used(), sim.stash_cap()])
 	main.show_room(main.ARMOURY)
 	var body = main._armoury._body
 	for slot in Data.SLOTS:

@@ -30,7 +30,7 @@ const AMMO := "Ammo"
 ## the fence. Their words live in words.gd; the deeds are the one that matters.
 const PAPER := "Paper"
 const PAPER_DROP := 0.06           # the share of a site's finds that are papers
-const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle rounds", "smg": "SMG rounds", "pistol": "Pistol rounds"}
+const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle rounds", "smg": "SMG rounds", "pistol": "Pistol rounds", "none": ""}
 
 ## An item's footprint in cells, W x H - what it takes in the stash and the
 ## pack, and the size its picture is drawn at (64 px a cell). The slot gives
@@ -39,6 +39,9 @@ const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle r
 const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Rig": [3, 2], "Backpack": [3, 3],
 	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1]}
 const FOOTPRINTS := {
+	# melee
+	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
+	"Knife": [1, 1], "Knuckle duster": [1, 1], "Cosh": [1, 1],
 	# short long guns
 	"Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
 	"Police carbine": [3, 1], "Army SMG": [3, 1], "Belt-fed SMG": [3, 1], "Army bullpup": [3, 1], "Workshop carbine": [3, 1],
@@ -180,6 +183,22 @@ const BASES := {
 		# tier 6: the city's - the services, the hospital, the barracks
 		{"name": "Armourer's carbine", "type": "improvised", "ammo": "smg", "tier": 6, "damage": 44.0, "rof": 2.6, "value": 650,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		# melee: no rounds ever, slow, hard, a fifth of it bleed; in among them, so they hit you harder
+		# and their first shot lands before your first swing. Grip and head mounts of their own.
+		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
+			"attachments": ["grip", "head"]},
+		{"name": "Machete", "type": "melee", "ammo": "none", "tier": 2, "damage": 30.0, "rof": 0.9, "value": 70, "conv_bleed_pct": 30,
+			"attachments": ["grip"]},
+		{"name": "Pipe wrench", "type": "melee", "ammo": "none", "tier": 2, "damage": 55.0, "rof": 0.5, "value": 60, "conv_bleed_pct": 10,
+			"attachments": ["grip", "head"]},
+		{"name": "Fire axe", "type": "melee", "ammo": "none", "tier": 3, "damage": 70.0, "rof": 0.6, "value": 150, "conv_bleed_pct": 25,
+			"attachments": ["grip", "head"]},
+		{"name": "Bayonet on a stick", "type": "melee", "ammo": "none", "tier": 4, "damage": 60.0, "rof": 0.9, "value": 260, "conv_bleed_pct": 30,
+			"attachments": ["grip", "head"]},
+		{"name": "Sledgehammer", "type": "melee", "ammo": "none", "tier": 5, "damage": 160.0, "rof": 0.45, "value": 420, "conv_bleed_pct": 5,
+			"attachments": ["grip", "head"]},
+		{"name": "Breaker bar", "type": "melee", "ammo": "none", "tier": 6, "damage": 90.0, "rof": 1.2, "value": 640, "conv_bleed_pct": 15,
+			"attachments": ["grip", "head"]},
 		{"name": "Assault shotgun", "type": "shotgun", "tier": 6, "damage": 48.0, "rof": 2.4, "value": 680,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Marksman rifle", "type": "rifle", "tier": 6, "damage": 90.0, "rof": 1.1, "value": 720,
@@ -194,6 +213,12 @@ const BASES := {
 			"attachments": ["muzzle"]},
 		{"name": "Flare pistol", "type": "improvised", "tier": 1, "damage": 30.0, "rof": 0.5, "value": 30,
 			"attachments": []},
+		{"name": "Knife", "type": "melee", "ammo": "none", "tier": 1, "damage": 9.0, "rof": 1.8, "value": 15, "conv_bleed_pct": 40,
+			"attachments": ["grip"]},
+		{"name": "Knuckle duster", "type": "melee", "ammo": "none", "tier": 2, "damage": 14.0, "rof": 1.5, "value": 40, "conv_bleed_pct": 10,
+			"attachments": []},
+		{"name": "Cosh", "type": "melee", "ammo": "none", "tier": 3, "damage": 24.0, "rof": 1.0, "value": 90, "conv_bleed_pct": 5,
+			"attachments": ["grip"]},
 		{"name": "Air pistol", "type": "improvised", "tier": 1, "damage": 8.0, "rof": 2.0, "value": 25,
 			"attachments": ["optic"]},
 		{"name": "Service pistol", "type": "pistol", "tier": 2, "damage": 15.0, "rof": 1.6, "value": 40,
@@ -338,7 +363,9 @@ const ATT_DROP := 0.30            # the share of a look's finds that are attachm
 ## roll affixes like gear. The Workshop's level says which mounts can be
 ## fitted at all - the camp's cash sink.
 const ATTACHMENT := "Attachment"
-const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock"]
+const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "head"]
+const MELEE_INCOMING := 1.25       # in among them: their fire on you, with a melee primary
+const MELEE_WAIT := 1.0            # seconds: their first shot lands before your first swing, each gang
 ## Sockets: a gun, a helmet or armour rolls up to SOCKET_MAX of them; a
 ## socketable (mount "socket") goes in any. What they add can't be had
 ## elsewhere: fire, frost, poison, shock, salt, wire.
@@ -399,6 +426,13 @@ const ATTACHMENTS := [
 	# stocks
 	{"name": "Folding stock", "mount": "stock", "tier": 1, "value": 60, "speed_pct": 6},
 	{"name": "Wire stock", "mount": "stock", "tier": 1, "value": 50, "damage_pct": 8, "type": "improvised"},
+	# melee: the grip and the head
+	{"name": "Tape", "mount": "grip", "tier": 1, "value": 20, "speed_pct": 4},
+	{"name": "Cord wrap", "mount": "grip", "tier": 2, "value": 60, "first_pct": 10, "speed_pct": 2},
+	{"name": "Lanyard", "mount": "grip", "tier": 3, "value": 120, "damage_pct": 4, "speed_pct": 4},
+	{"name": "Nails through it", "mount": "head", "tier": 1, "value": 30, "conv_bleed_pct": 15},
+	{"name": "A blade on it", "mount": "head", "tier": 2, "value": 90, "damage_pct": 10, "conv_bleed_pct": 10},
+	{"name": "Lead in it", "mount": "head", "tier": 3, "value": 160, "damage_pct": 18, "speed_pct": -6},
 	{"name": "Heavy stock", "mount": "stock", "tier": 2, "value": 80, "damage_pct": 9, "speed_pct": -4},
 	{"name": "Cheek riser", "mount": "stock", "tier": 2, "value": 90, "first_pct": 10},
 	{"name": "Recoil pad", "mount": "stock", "tier": 3, "value": 160, "damage_pct": 6, "first_pct": 3},
@@ -459,9 +493,9 @@ const UNIQUES := [
 ## Workshop levels: what each opens, and what it costs to reach.
 const WORKSHOP := [
 	{"cost": 0, "mounts": [], "words": "No bench: nothing can be fitted"},
-	{"cost": 1000, "mounts": ["optic", "muzzle"], "words": "A bench: optics and muzzles"},
-	{"cost": 5000, "mounts": ["optic", "muzzle", "magazine"], "words": "Tooling: magazines too"},
-	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock"], "words": "A gunsmith's: every mount"},
+	{"cost": 1000, "mounts": ["optic", "muzzle", "grip"], "words": "A bench: optics, muzzles, grips"},
+	{"cost": 5000, "mounts": ["optic", "muzzle", "magazine", "grip", "head"], "words": "Tooling: magazines, heads"},
+	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "head"], "words": "A gunsmith's: every mount"},
 ]
 
 ## Rarity: how many affixes an item rolls, its share of drops, its value multiple.
@@ -702,7 +736,7 @@ const TREES := [
 		{"name": "Keep back", "effect": "armour_pct", "value": 5},
 		{"name": "One at a time", "effect": "one_at_a_time", "keystone": true, "words": "One on you at once, ever; −25% pace"},
 		{"name": "Composure", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Knuckles", "effect": "physical_pct", "value": 15, "notable": true, "words": "+15% physical damage"},
+		{"name": "Through the lot", "effect": "melee_sweep", "type": "melee", "notable": true, "words": "With a bat or a blade: a swing hits everyone on you"},
 		{"name": "Stand and fight", "effect": "stand", "notable": true, "words": "No cutting and running before the clear; the clear bonus doubled"},
 	]},
 	# Paramedic
