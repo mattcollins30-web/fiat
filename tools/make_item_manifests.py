@@ -368,9 +368,13 @@ def unique_jobs(seed):
     return jobs, seed
 
 
+NEW_GROUPS = ["uniques", "sets", "melee", "melee_small", "melee_parts"]
+
+
 def main():
     seed = SEED0
     index = []
+    all_jobs = {}
     for ti, (key, slot, keep, prompt) in enumerate(TYPES + [("uniques", None, None, None)] + EXTRA + [("sets", None, None, None)]):
         if (key, slot, keep, prompt) == EXTRA[0]:
             seed = SEED_EXTRA
@@ -422,6 +426,30 @@ def main():
             json.dump({"_readme": readme, "jobs": jobs}, f, indent=2, ensure_ascii=False)
             f.write("\n")
         index.append((key, len(jobs)))
+        all_jobs[key] = jobs
+    # one manifest of everything added since the first art batch: the builds
+    # pass's uniques, the sets, the melee bases and their parts. A job whose
+    # file exists is skipped by the batch tool, so this is safe to rerun and
+    # lists only what's still to draw.
+    new_jobs = []
+    for key in NEW_GROUPS:
+        for job in all_jobs.get(key, []):
+            if not os.path.exists(os.path.join(ROOT, job["out"])):
+                new_jobs.append(job)
+    readme = [
+        "FIAT GEAR - the new items, in one go: the builds pass's uniques, the five sets' pieces, the melee weapons, the "
+        "small melee and the melee parts (grips and heads) - every job from %s whose art/items/<slug>.png was not on "
+        "disk when this was generated. %d jobs." % (", ".join(NEW_GROUPS), len(new_jobs)),
+        "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_new_manifest.json   "
+        "(++ --dry-run to list). Rides art/reference/items/ref_01..04.png as style like the rest of the pool. A job whose "
+        "file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force.",
+        "Regenerate with python3 tools/make_item_manifests.py on the machine that holds the art, so the 'exists' test "
+        "sees the real folder; the per-group manifests are the same jobs grouped.",
+    ]
+    with open(os.path.join(ROOT, "tools", "pixellab_items_new_manifest.json"), "w", encoding="utf-8") as f:
+        json.dump({"_readme": readme, "jobs": new_jobs}, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    index.append(("new", len(new_jobs)))
     for key, jobs in index:
         print("%-12s %3d jobs" % (key, jobs))
 
