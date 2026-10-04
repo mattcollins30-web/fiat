@@ -20,11 +20,13 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 func step(sim) -> int:
-	var t := pick_tier(sim)
+	# patched up first, then the pick: the odds read at full strength, so a
+	# boss gets armed when the runner can take him, not refused because he's hurt
 	if sim.hp < sim.max_hp() * 0.7:
-		if not (sim.cash > sim.medic_cost() * 3.0 and sim.treat()):
+		if not (sim.cash > sim.treat_cost() * 3.0 and sim.treat()):
 			sim.advance(60.0)
 			return -1
+	var t := pick_tier(sim)
 	sim.deploy(t)
 	var guard := 0
 	while sim.on_mission() and guard < 3000:

@@ -122,6 +122,10 @@ func level() -> int:
 
 
 func max_hp() -> float:
+	return _memo("max_hp", _max_hp_raw)
+
+
+func _max_hp_raw() -> float:
 	var m := Data.BASE_HP + Data.HP_PER_LEVEL * (level() - 1) + tree_sum("hp")
 	for s in Data.SLOTS:
 		if equipped[s] != null:
@@ -172,6 +176,10 @@ func armour() -> float:
 
 ## The share of incoming damage the armour stops.
 func mitigation() -> float:
+	return _memo("mitigation", _mitigation_raw)
+
+
+func _mitigation_raw() -> float:
 	if has_rule("nans_cardigan"):
 		return 0.0                               # no armour at all
 	var a := armour() * (1.25 if has_node("plates") else 1.0) * cm("armour")
@@ -186,6 +194,10 @@ func mitigation() -> float:
 
 ## The shares of a hit by type, summing to 1.
 func conversion() -> Dictionary:
+	return _memo("conversion", _conversion_raw)
+
+
+func _conversion_raw() -> Dictionary:
 	var out := {}
 	var total := 0.0
 	for ty in Data.ELEMENTS:
@@ -212,11 +224,19 @@ func conversion() -> Dictionary:
 
 ## Everything that increases a type, in percent, added together.
 func increased(ty: String) -> float:
+	return _memo("increased/" + ty, _increased_raw.bind(ty))
+
+
+func _increased_raw(ty: String) -> float:
 	return _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty)
 
 
 ## Everything that multiplies a type on its own: the element's costly notable, keystones, uniques.
 func more(ty: String) -> float:
+	return _memo("more/" + ty, _more_raw.bind(ty))
+
+
+func _more_raw(ty: String) -> float:
 	var m := 1.0
 	if has_node("%s_more" % ty):
 		m *= 1.4
@@ -286,6 +306,10 @@ func damage_rate(t: Dictionary, shocked := false) -> float:
 
 ## Your resist to a type, as a share, capped.
 func resist(ty: String) -> float:
+	return _memo("resist/" + ty, _resist_raw.bind(ty))
+
+
+func _resist_raw(ty: String) -> float:
 	if ty == "physical" or (ty == "fire" and has_rule("vicars_thermos")):
 		return 0.0
 	return minf(Data.RESIST_CAP, _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res")) / 100.0
@@ -832,9 +856,8 @@ func _active(n: Dictionary) -> bool:
 
 
 func has_node(effect: String) -> bool:
-	for id in tree:
-		var n := node(id)
-		if n.get("effect", "") == effect and _active(n):
+	for n in _nodes_for(effect):
+		if _active(n):
 			return true
 	return false
 
@@ -842,11 +865,54 @@ func has_node(effect: String) -> bool:
 ## The small nodes' numbers for an effect, added up.
 func tree_sum(effect: String) -> float:
 	var t := 0.0
-	for id in tree:
-		var n := node(id)
-		if n.get("effect", "") == effect and _active(n):
+	for n in _nodes_for(effect):
+		if _active(n):
 			t += n.get("value", 0)
 	return t
+
+
+## The trained nodes by effect, built once per shape of the tree: the fight
+## asks for effects every tick, and splitting ids each time was the cost.
+var _eff_cache := {}
+var _eff_hash := 0
+func _nodes_for(effect: String) -> Array:
+	var h := hash(tree)
+	if h != _eff_hash or _eff_cache.is_empty():
+		_eff_cache = {}
+		for id in tree:
+			var n := node(id)
+			if n.is_empty():
+				continue
+			var e: String = n.get("effect", "")
+			if not _eff_cache.has(e):
+				_eff_cache[e] = []
+			_eff_cache[e].append(n)
+		_eff_hash = h
+	return _eff_cache.get(effect, [])
+
+
+## A dry run reads the rules once: nothing worn or stashed changes while it runs.
+## The figures that only the kit and the tree decide are memoised for its length too.
+var _dry_on := false
+var _dry_rules := {}
+var _dry_memo := {}
+func _memo(key: String, f: Callable) -> Variant:
+	if not _dry_on:
+		return f.call()
+	if _dry_memo.has(key):
+		return _dry_memo[key]
+	var v = f.call()
+	_dry_memo[key] = v
+	return v
+func _snapshot_rules() -> Dictionary:
+	var out := {}
+	for s in Data.SLOTS:
+		if equipped[s] != null and equipped[s].get("rule", "") != "":
+			out[equipped[s]["rule"]] = true
+	for it in stash:
+		if Items.is_paper(it) and it.get("rule", "") != "":
+			out[it["rule"]] = true
+	return out
 
 
 func node_cost(id: String) -> int:
@@ -957,6 +1023,10 @@ func use_time(it: Dictionary) -> float:
 
 
 func pace() -> float:
+	return _memo("pace", _pace_raw)
+
+
+func _pace_raw() -> float:
 	var worn := 0.0
 	for s in Data.SLOTS:
 		if equipped[s] != null:
@@ -1063,6 +1133,8 @@ func meds_carried() -> int:
 
 ## A unique's rule, by its flag, when one is worn.
 func has_rule(rule: String) -> bool:
+	if _dry_on:
+		return _dry_rules.has(rule)
 	for s in Data.SLOTS:
 		if equipped[s] != null and equipped[s].get("rule", "") == rule:
 			return true
@@ -1092,6 +1164,10 @@ func deepest() -> int:
 ## What the fitted guns' attachments add up to for a stat (pace, patrol delay,
 ## first-hostile damage); a gun's damage attachments are already in its dps.
 func _fitted_sum(stat: String) -> float:
+	return _memo("_fitted_sum/" + stat, __fitted_sum_raw.bind(stat))
+
+
+func __fitted_sum_raw(stat: String) -> float:
 	var t := 0.0
 	for s in Data.SOCKET_SLOTS:
 		if equipped[s] != null:
@@ -1410,6 +1486,10 @@ func attachments_for(mount: String) -> Array:
 
 
 func _affix_sum(stat: String) -> float:
+	return _memo("_affix_sum/" + stat, __affix_sum_raw.bind(stat))
+
+
+func __affix_sum_raw(stat: String) -> float:
 	var t := 0.0
 	for s in Data.SLOTS:
 		if equipped[s] != null:
@@ -1754,59 +1834,60 @@ func survival(i: int) -> float:
 	return odds
 
 
-## The fight alone, DRY_STEP seconds at a time, with nothing kept: true if it ends with HP left.
+## The fight alone, run through the real fight code on a scratch mission with
+## nothing kept - the same rates, rules, dots, keystones and meds as a run -
+## DRY_STEP seconds at a time: true if it ends with HP left. The state goes
+## back as it was: HP, XP, the rig, the log, the dice.
 const DRY_STEP := 2.0
+const BAIL := 0.25                   # the HP a player (and the bots) get out at: the odds count that as lost
 func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	var t := effective(i)
-	var h := hp
-	var remaining: int = t["pool"]
-	var target: float = t["hp"]
-	# the fight before the clear counts first_lot_pct, which dps() only adds on a run
-	# the hit by type against their resists, the dots as the share they add over a fight
-	var dot_share := 0.0
-	var conv := conversion()
-	for ty in Data.DOTS:
-		dot_share += float(conv[ty]) * float(Data.DOTS[ty]["ratio"])
-	var d: float = damage_rate(t) * (1.0 + dot_share) * (1.0 + (_affix_sum("first_lot_pct") / 100.0 if mission == null else 0.0)) * pace() * t["pace"] * DRY_STEP
-	var mit := mitigation()
-	var crowd := (0.5 if has_node("bodyline") else 1.0) * (0.75 if has_rule("doormans") else 1.0) * (1.0 - _affix_sum("crowd_less_pct") / 100.0)   # with three on you
-	# the crew's head is the first of his gang the whole way down: the first-shot bonuses hold on him
-	var first := 1.0 + (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + tree_sum("first_pct")) / 100.0 + (2.0 if has_rule("grandads") else 0.0)
-	var meds := rig.filter(func(it): return Items.is_medical(it))
-	var using := {}
+	var keep := {"hp": hp, "xp": xp, "rig": rig.duplicate(true), "events": events.duplicate(true), "mission": mission,
+		"rng": rng, "promised": promised, "training_points": training_points, "insure_next": insure_next}
+	rng = r
+	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0)
+	var m := {
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false,
+		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
+		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
+		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "event": "", "event_at": -1.0, "dry": true,
+	}
+	if t.has("boss"):
+		m["boss"] = _boss_entry(t["boss"])
+		m["boss_queue"] = []
+		for q in t.get("boss_queue", []):
+			m["boss_queue"].append(_boss_entry(q))
+		m["convoy"] = t.get("convoy", false)
+	mission = m
+	_dry_rules = _snapshot_rules()
+	_dry_memo = {}
+	_dry_on = true
 	var guard := 0
-	var boss: Dictionary = t.get("boss", {})
-	var boss_left := false
-	while (remaining > 0 or boss_left) and h > 0.0 and guard < 450:    # fifteen minutes of fighting is a loss
-		target -= d * (first if boss_left else 1.0) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
-		if boss_left:
-			if target <= 0.0:
-				break                         # the boss is down
-			h -= incoming_rate({"dps": boss["dps"], "types": t.get("types", {})}, 1) * DRY_STEP * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
-		else:
-			while target <= 0.0 and remaining > 0:
-				remaining -= 1
-				target += t["hp"]
-			if remaining <= 0:
-				if boss.is_empty():
-					break
-				boss_left = true
-				target = float(boss["hp"])
-				continue
-			var on_you := mini(remaining, contact(t))
-			h -= incoming_rate(t, on_you) * DRY_STEP * (crowd if on_you >= 3 else 1.0) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
-		h = minf(max_hp(), h + _affix_sum("regen") * DRY_STEP)
-		# a player who patches up under 40%, like the Use button - against the crew's head too
-		if using.is_empty() and h < max_hp() * 0.4 and not meds.is_empty():
-			using = {"left": use_time(meds[0]), "heal": Items.heal(meds[0]) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0)}
-			meds.pop_front()
-		if not using.is_empty():
-			using["left"] -= DRY_STEP
-			if using["left"] <= 0.0:
-				h = minf(max_hp(), h + using["heal"])
-				using = {}
+	while guard < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
+		_tick(DRY_STEP)
+		if hp < max_hp() * BAIL:
+			m["dead"] = true                 # a quarter left is where anyone sensible gets out: that run's lost too
+		if m.get("dead", false):
+			break
+		var boss_alive: bool = m.has("boss") and m["boss"]["alive"]
+		if m["remaining"] <= 0 and not boss_alive:
+			break
+		# a player who patches up under 40%, like the Use button
+		if m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
+			use_med(first_med()["id"])
 		guard += 1
-	return h > 0.0
+	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard < 450
+	_dry_on = false
+	hp = keep["hp"]
+	xp = keep["xp"]
+	rig = keep["rig"]
+	events = keep["events"]
+	mission = keep["mission"]
+	rng = keep["rng"]
+	promised = keep["promised"]
+	training_points = keep["training_points"]
+	insure_next = keep["insure_next"]
+	return alive
 
 
 func deploy(i: int) -> void:
@@ -2150,6 +2231,8 @@ func _patch(m: Dictionary, dt: float) -> void:
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
 	hp = minf(max_hp(), hp + _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0))
+	if m.get("dry", false):
+		return                               # a dry run: the fight only, nothing earned
 	var gain: float = t["xp"] * (1.5 if has_node("hit_and_run") else 1.0)
 	m["xp"] += gain
 	var before := level()
@@ -2181,6 +2264,8 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	var b: Dictionary = m["boss"]
 	b["alive"] = false
 	m["kills"] += 1
+	if m.get("dry", false):
+		return
 	m["xp"] += t["xp"] * 10.0
 	var before := level()
 	xp += t["xp"] * 10.0
@@ -2307,6 +2392,8 @@ func _site_slot(site: Dictionary, from_kill: bool) -> String:
 ## The pool is down: the clear bonus, the tier opened, the search begins.
 func _clear(m: Dictionary, t: Dictionary) -> void:
 	m["cleared"] = true
+	if m.get("dry", false):
+		return
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (2.0 if has_node("stand") else 1.0)
 	m["xp"] += bonus
 	var before := level()
@@ -2413,6 +2500,8 @@ func stop_auto() -> void:
 
 
 func _extract() -> void:
+	if mission != null and mission.get("dry", false):
+		return
 	var m: Dictionary = mission
 	var t := tier(m["tier"])
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
@@ -2453,6 +2542,9 @@ func _extract() -> void:
 ## fresh operator takes over at level 1. Auto-run stops.
 func _kia() -> void:
 	var m: Dictionary = mission
+	if m.get("dry", false):
+		m["dead"] = true                     # a dry run: the answer, nothing lost
+		return
 	var t := tier(m["tier"])
 	var lost := loadout_value()
 	last_report = {

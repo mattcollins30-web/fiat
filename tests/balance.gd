@@ -29,6 +29,7 @@ func _init() -> void:
 		cls = args[1]
 	if args.size() > 2:
 		every_run = int(args[2])
+	var element := args[3] if args.size() > 3 else ""     # `-- 4 Scrapper 0 fire`: the class as a fire build
 	if cls == "all":
 		_all_classes(hours)
 		return
@@ -39,7 +40,8 @@ func _init() -> void:
 	sim.start()
 	sim.set_class(cls)
 	var bot = Bot.new()
-	print("Fiat balance read: %.0f h, %s" % [hours, cls])
+	bot.element = element
+	print("Fiat balance read: %.0f h, %s%s" % [hours, cls, (" as " + element) if element != "" else ""])
 	if every_run == 0:
 		print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var next_mark := 1800.0
@@ -151,7 +153,7 @@ func _elements(hours: float, forced: String) -> void:
 		var bank := -1.0
 		var key := -1.0
 		var t0 := Time.get_ticks_msec()
-		while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 1200000:
+		while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 480000:
 			var lost_before: int = sim.operators_lost
 			var tier: int = bot.step(sim)
 			if tier >= 0:
