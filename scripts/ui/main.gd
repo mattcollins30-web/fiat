@@ -185,7 +185,7 @@ func _build() -> void:
 	var tones := [Pal.TEXT, Pal.TEXT_2, Pal.TEXT_3]
 	var tw := ceilf(UI.font("Regular").get_string_size(EVENT_TIME_WORST, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x)
 	var sw := ceilf(UI.font("SemiBold", false).get_string_size(SPEED_TEXT, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x)
-	for i in range(3):
+	for i in range(Pal.EVENT_LINES):
 		_event_times.append(UI.label(_events, Rect2(20, 4 + i * 27, tw, 27), "", "Regular", Pal.FLOOR, tones[i],
 				HORIZONTAL_ALIGNMENT_RIGHT))
 		_event_labels.append(UI.label(_events, Rect2(20 + tw + 20, 4 + i * 27, Pal.GRID_W - 40 - tw - 20 - sw - 20, 27), "",
@@ -210,7 +210,7 @@ func layout(s: Vector2) -> void:
 	_top.size = Vector2(s.x, Pal.TOP_H)
 	var x0 := floorf((s.x - 1920.0) / 2.0) + Pal.MARGIN
 	_top_row.position = Vector2(x0, 0)
-	var free := s.y - Pal.TOP_H - Pal.MARGIN - Pal.CARD_GAP - Pal.EVENTS_H - Pal.MARGIN - Pal.GRID_H
+	var free := s.y - Pal.TOP_H - Pal.MARGIN - Pal.CARD_GAP - Pal.EVENTS_H - Pal.MARGIN - Pal.ROOM_H
 	var band_y := Pal.TOP_H + Pal.MARGIN + floorf(maxf(0.0, free) / 2.0)
 	_rail.position = Vector2(x0, band_y)
 	_grid.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, band_y)
@@ -507,7 +507,7 @@ func refresh() -> void:
 		if c.visible:
 			c.show_data(cards[i])
 	var ev: Array = sim.events
-	for i in range(3):
+	for i in range(Pal.EVENT_LINES):
 		var j := ev.size() - 1 - i
 		_event_times[i].text = _time_of_day(ev[j][0]) if j >= 0 else ""
 		_event_labels[i].text = ev[j][1] if j >= 0 else ""
@@ -788,19 +788,71 @@ func _open_bench(id: int) -> void:
 	var it: Dictionary = sim.item_by_id(id)
 	if it.is_empty():
 		return
+	# page 1: the whole-item jobs; page 2: the ones that pick an affix
+	var page1 := ["reroll", "add", "socket", "strip"]
 	var items := []
-	for kind in Data.CRAFT:
+	for kind in page1:
 		var cost: int = sim.craft_cost(it, kind)
-		if cost < 0 or items.size() >= 4:
+		if cost < 0:
 			continue
-		items.append({"name": "%s · %d notes" % [Data.CRAFT[kind]["name"], cost], "detail": Data.CRAFT[kind]["words"] + ("" if sim.notes >= cost else " · not enough notes"),
-			"action": _craft.bind(id, kind)})
+		items.append({"name": "%s · %s" % [Data.CRAFT[kind]["name"], _craft_price(kind, cost)], "detail": Data.CRAFT[kind]["words"] + ("" if sim.can_craft(id, kind) else " · not enough"),
+			"action": _craft.bind(id, kind, "")})
+	if sim.craft_cost(it, "one", it["affixes"][0]["stat"] if not it["affixes"].is_empty() else "") >= 0 or sim.craft_cost(it, "bump") >= 0:
+		items.append({"name": "One affix, or the level …", "detail": "Lock one and re-roll the rest, re-roll one, raise the level", "action": _open_bench_picks.bind(id)})
 	items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open(it["base"], "%s · %s · you have %d notes" % [Items.rarity_name(it), Items.affix_options(it)[0], sim.notes], items, _menu.close)
+	_menu.open(it["base"], "%s · level %d · %s" % [Items.rarity_name(it), Items.ilvl(it), _purse()], items.slice(0, 5), _menu.close)
 
 
-func _craft(id: int, kind: String) -> void:
-	sim.craft(id, kind)
+## The second page: the jobs that pick an affix, and the level in notes.
+func _open_bench_picks(id: int) -> void:
+	var it: Dictionary = sim.item_by_id(id)
+	if it.is_empty():
+		return
+	var items := []
+	var lines: Array = Items.affix_lines(it, true, true)
+	for k in range(mini(it["affixes"].size(), 3)):
+		var stat: String = it["affixes"][k]["stat"]
+		var lock: int = sim.craft_cost(it, "lock", stat)
+		var one: int = sim.craft_cost(it, "one", stat)
+		var detail := "Re-roll it for %s" % Fmt.money(one)
+		if lock >= 0:
+			detail += " · keep it and re-roll the rest for %s" % Fmt.money(lock)
+		items.append({"name": lines[k], "detail": detail, "action": _open_bench_one.bind(id, stat)})
+	var bump: int = sim.craft_cost(it, "bump")
+	if bump >= 0 and items.size() < 4:
+		items.append({"name": "%s · %d notes" % [Data.CRAFT["bump"]["name"], bump], "detail": Data.CRAFT["bump"]["words"], "action": _craft.bind(id, "bump", "")})
+	items.append({"name": "Back", "detail": "", "action": _open_bench.bind(id)})
+	_menu.open(it["base"], "Pick an affix · %s" % _purse(), items.slice(0, 5), _open_bench.bind(id))
+
+
+func _open_bench_one(id: int, stat: String) -> void:
+	var it: Dictionary = sim.item_by_id(id)
+	if it.is_empty():
+		return
+	var items := []
+	for kind in ["one", "lock"]:
+		var cost: int = sim.craft_cost(it, kind, stat)
+		if cost >= 0:
+			items.append({"name": "%s · %s" % [Data.CRAFT[kind]["name"], Fmt.money(cost)], "detail": Data.CRAFT[kind]["words"] + ("" if sim.can_craft(id, kind, stat) else " · not enough"),
+				"action": _craft.bind(id, kind, stat)})
+	items.append({"name": "Back", "detail": "", "action": _open_bench_picks.bind(id)})
+	var label := ""
+	for line in Items.affix_lines(it, false, true):
+		if line.contains(str(Items.affix_def(stat).get("label", stat))):
+			label = line
+	_menu.open(label if label != "" else stat, _purse(), items, _open_bench_picks.bind(id))
+
+
+func _craft_price(kind: String, cost: int) -> String:
+	return ("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost)
+
+
+func _purse() -> String:
+	return "you have %s and %d notes" % [Fmt.money(sim.cash), sim.notes]
+
+
+func _craft(id: int, kind: String, stat: String) -> void:
+	sim.craft(id, kind, stat)
 	_menu.close()
 	refresh()
 

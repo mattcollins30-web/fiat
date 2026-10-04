@@ -25,7 +25,7 @@ const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.HEIGHT
 const PANEL_Y := GRID_H + GAP
-const PANEL_H := Pal.GRID_H - PANEL_Y
+const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30
@@ -33,7 +33,7 @@ const PANEL_LINES := 4
 const COL_W := (GRID_W - 3 * PAD) / 2
 const TAB_H := 56
 const SIDE_Y := TAB_H + 16                                    # the left column's own panel starts here
-const SIDE_H := Pal.GRID_H - SIDE_Y
+const SIDE_H := Pal.ROOM_H - SIDE_Y
 
 var kind := "fence"                # "fence" or "clinic"
 var sim
@@ -80,7 +80,7 @@ var _shown := ""
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	for k in range(3):
 		var b := UI.button(self, Rect2(k * (INNER / 2 + 12) + 0, 0, (BODY_W - 12) / 2, TAB_H), k == 0)

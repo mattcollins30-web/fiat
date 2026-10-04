@@ -124,8 +124,8 @@ func _endgame(sim) -> void:
 		if it == null:
 			continue
 		var cost: int = sim.craft_cost(it, "add")
-		if cost >= 0 and sim.notes - cost >= floor_notes * 2 and sim.craft(it["id"], "add"):
-			bought.append([sim.elapsed, "bench: an affix on the %s for %d notes" % [s.to_lower(), cost]])
+		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "add"):
+			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
 
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back

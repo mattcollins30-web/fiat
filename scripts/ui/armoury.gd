@@ -29,9 +29,10 @@ const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 974
 const GRID_H := Inventory.HEIGHT                               # 588
 const PANEL_Y := GRID_H + GAP                                 # 612
-const PANEL_H := Pal.GRID_H - PANEL_Y                         # 252
+const PANEL_H := Pal.ROOM_H - PANEL_Y                         # 252
 const PANEL_PAD := 20
-const PANEL_LINES := 4
+const PANEL_LINES := 6             # figure, what it takes, three affixes with their tiers, the swap word
+const LINE_H := 26
 const COL_W := (GRID_W - 3 * PANEL_PAD) / 2                   # each half of the compare panel
 
 var sim
@@ -54,7 +55,7 @@ var _shown := ""                   # what the screen last drew, so a refresh tha
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the body: drag gear from the stash onto its slot; drag it off to the stash
 	_body = Body.new()
@@ -81,19 +82,19 @@ func _init() -> void:
 	_left_title = UI.label(_panel, Rect2(PANEL_PAD, 10, COL_W, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_right_title = UI.label(_panel, Rect2(PANEL_PAD * 2 + COL_W, 14, COL_W, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(PANEL_LINES):
-		_left_lines.append(UI.label(_panel, Rect2(PANEL_PAD, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-		_right_lines.append(UI.label(_panel, Rect2(PANEL_PAD * 2 + COL_W, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_left_lines.append(UI.label(_panel, Rect2(PANEL_PAD, 48 + i * LINE_H, COL_W, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_right_lines.append(UI.label(_panel, Rect2(PANEL_PAD * 2 + COL_W, 48 + i * LINE_H, COL_W, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for i in range(8):
 		var c := UI.label(_panel, Rect2(0, 0, 10, 30), "", "SemiBold", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c.visible = false
 		_chips.append(c)
 	# the swap in one word, on the left column's fourth line - its own label so
 	# it can be coloured without touching the lines above it
-	_overall = UI.label(_panel, Rect2(PANEL_PAD, 48 + 3 * 28, COL_W, 28), "", "SemiBold", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_overall = UI.label(_panel, Rect2(PANEL_PAD, 48 + 5 * LINE_H, COL_W, LINE_H), "", "SemiBold", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_hint = UI.label(_panel, Rect2(PANEL_PAD, PANEL_H - 6 - 44, GRID_W - 2 * PANEL_PAD, 44), "",
 			"Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_panel, Rect2(PANEL_PAD, 162 + i * 20, GRID_W - 2 * PANEL_PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_panel, Rect2(PANEL_PAD, 48 + 6 * LINE_H + 4 + i * 20, GRID_W - 2 * PANEL_PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for i in range(3):
 		var b := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 240, 44), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -147,7 +148,10 @@ func show_state(s) -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many)]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.workshop)]
+	var sel := _selected_item()
+	if not sel.is_empty():
+		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the bench changes these in place
 	for slot in Data.SLOTS:
 		parts.append(str(sim.equipped[slot]["id"]) if sim.equipped[slot] != null else "-")
 	for it in sim.rig:
@@ -174,25 +178,31 @@ func _show_panel() -> void:
 	_overall.text = ""
 	var it := _selected_item()
 	_say(it)
+	for l in _left_lines:
+		l.text = ""
+	for l in _right_lines:
+		l.text = ""
 	if it.is_empty():
 		_left_title.text = "Select an item"
 		_right_title.text = ""
-		for l in _left_lines:
-			l.text = ""
-		for l in _right_lines:
-			l.text = ""
 		_hint.text = "A slot on the left, or a stash item on the right"
 		return
 	_hint.text = ""
 	_left_title.text = it["base"]
 	UI.fit(_left_lines[0], Items.figure_options(it))
-	UI.fit(_left_lines[1], Items.affix_options(it))
 	var mounts: String = ("%d attachment slots, empty" % it["attachments"].size()) if it["attachments"].size() > 0 else ""
 	if Items.is_gun(it):
-		UI.fit(_left_lines[2], ["%s · %s" % [Items.ammo_words(it), mounts.to_lower()] if mounts != "" else Items.ammo_words(it), Items.ammo_words(it)])
+		UI.fit(_left_lines[1], ["%s · %s" % [Items.ammo_words(it), mounts.to_lower()] if mounts != "" else Items.ammo_words(it), Items.ammo_words(it)])
 	else:
-		_left_lines[2].text = mounts
-	_left_lines[3].text = ""
+		_left_lines[1].text = mounts
+	# the affixes, one a line with its tier; "No affixes" on a plain thing
+	var lines: Array = Items.affix_lines(it, false, true)
+	var short_lines: Array = Items.affix_lines(it, true, true)
+	for k in range(3):
+		if k < lines.size():
+			UI.fit(_left_lines[2 + k], [lines[k], short_lines[k]])
+		else:
+			_left_lines[2 + k].text = "No affixes" if k == 0 else ""
 	_right_lines[3].text = ""
 	if Items.is_medical(it) or Items.is_ammo(it):
 		_show_medical(it)
@@ -222,13 +232,18 @@ func _show_panel() -> void:
 			var fh := Items.headline(fitted)
 			_right_title.text = "Fitted: " + fitted["base"]
 			_right_lines[0].text = "%s %s · %s T%d" % [fh[0], fh[1], Items.rarity_name(fitted), fitted["tier"]]
-			UI.fit(_right_lines[1], Items.affix_options(fitted))
-			_right_lines[2].text = ""
-			_right_lines[3].text = ""
+			var flines: Array = Items.affix_lines(fitted, false, true)
+			var fshort: Array = Items.affix_lines(fitted, true, true)
+			for k in range(3):
+				if k < flines.size():
+					UI.fit(_right_lines[1 + k], [flines[k], fshort[k]])
+				else:
+					_right_lines[1 + k].text = "No affixes" if k == 0 else ""
+			_right_lines[4].text = ""
 			_show_swap(it, fitted)
 		_button(0, "Equip", sim.equip_item.bind(it["id"]), sim.can_equip_item(it["id"]))
 		if not sim.can_equip_item(it["id"]) and not sim.on_mission():
-			UI.fit(_right_lines[3], ["No room in the stash for what comes off", "No stash room for what comes off"])
+			_hint.text = "No room in the stash for what comes off"
 		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
 		if sim.workshop >= 1 and not it.has("unique"):
 			_button(2, "Bench", func(): bench.emit(it["id"]), not sim.on_mission())
@@ -318,13 +333,13 @@ func _show_swap(it: Dictionary, fitted: Dictionary) -> void:
 			x = x0
 		if row >= 2:
 			break
-		c.position = Vector2(x, 48 + (2 + row) * 28)
-		c.size = Vector2(w, 28)
+		c.position = Vector2(x, 48 + (4 + row) * LINE_H)
+		c.size = Vector2(w, LINE_H)
 		c.visible = true
 		x += w + 18
 		shown += 1
 	if deltas.is_empty():
-		_right_lines[2].text = "No change"
+		_right_lines[4].text = "No change"
 	var gain := Items.score(it) - Items.score(fitted)
 	if absf(gain) < 0.05:
 		_overall.text = "Sidegrade for this slot"

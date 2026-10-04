@@ -14,7 +14,7 @@ static var _next_id := 1
 ## A new item of this slot, from the bases a zone tier can drop, at a rarity
 ## rolled from the table. `rng` so the tests can replay a run.
 static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity_bonus := 0.0, no_commons := false, fewer_commons := false,
-		site := "", prefer := "", own_share := 0.33) -> Dictionary:
+		site := "", prefer := "", own_share := 0.33, depth := 0) -> Dictionary:
 	# the site's own: a base found only there drops only there, and a third of
 	# the time the roll is one of them; a site that leans to a gun type leans
 	var pool: Array = []
@@ -43,15 +43,12 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		r = 1
 	if fewer_commons and r == 0 and rng.randf() < 0.5:
 		r = _roll_rarity(rng, rarity_bonus)
+	# the item's level: its base's tier and the depth it dropped at; it sets the tiers its affixes can roll
+	var ilvl: int = int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
-	var allowed: Array = []
-	for a in Data.AFFIXES:
-		if slot in a["slots"]:
-			allowed.append(a)
-	allowed.shuffle()
-	for k in range(mini(int(Data.RARITIES[r]["affixes"]), allowed.size())):
-		var a: Dictionary = allowed[k]
-		affixes.append({"stat": a["stat"], "value": rng.randi_range(int(a["min"]), int(a["max"]))})
+	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
+	for a in picked:
+		affixes.append(roll_affix(a, ilvl, rng))
 	var attachments := {}
 	for name in base.get("attachments", []):
 		attachments[name] = null
@@ -71,7 +68,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,
-		"attachments": attachments, "tier": base["tier"],
+		"attachments": attachments, "tier": base["tier"], "ilvl": ilvl,
 		"value": int(round(base["value"] * Data.RARITIES[r]["value"])),
 	}
 	if slot == Data.AMMO:
@@ -232,7 +229,9 @@ static func is_unique(it: Dictionary) -> bool:
 	return it.has("unique")
 
 
-## The bench: the affixes rolled again, one more added, all of them off.
+# ------------------------------------------------------------------ affixes and tiers
+
+## The affixes a slot can roll.
 static func allowed_affixes(slot: String) -> Array:
 	var allowed: Array = []
 	for a in Data.AFFIXES:
@@ -241,14 +240,117 @@ static func allowed_affixes(slot: String) -> Array:
 	return allowed
 
 
-static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator) -> void:
+static func affix_def(stat: String) -> Dictionary:
+	for a in Data.AFFIXES:
+		if a["stat"] == stat:
+			return a
+	return {}
+
+
+## `n` distinct affixes for a slot, by weight, none already in `have`.
+static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have: Array = []) -> Array:
+	var pool: Array = []
+	for a in allowed_affixes(slot):
+		if not (a["stat"] in have):
+			pool.append(a)
+	var out: Array = []
+	while out.size() < n and not pool.is_empty():
+		var total := 0.0
+		for a in pool:
+			total += float(a.get("weight", 1.0))
+		var x := rng.randf() * total
+		var pick := 0
+		for k in range(pool.size()):
+			x -= float(pool[k].get("weight", 1.0))
+			if x <= 0.0:
+				pick = k
+				break
+		out.append(pool[pick])
+		pool.remove_at(pick)
+	return out
+
+
+## The best tier an item level opens: T1 always, T5 from level TIER_CAP[4].
+static func tier_cap(ilvl: int) -> int:
+	var best := 1
+	for k in range(Data.TIER_CAP.size()):
+		if ilvl >= int(Data.TIER_CAP[k]):
+			best = k + 1
+	return best
+
+
+## A tier from the ones open, the better the rarer.
+static func roll_tier(ilvl: int, rng: RandomNumberGenerator) -> int:
+	var cap := tier_cap(ilvl)
+	var total := 0.0
+	for t in range(1, cap + 1):
+		total += float(Data.TIER_WEIGHT[t - 1])
+	var x := rng.randf() * total
+	for t in range(1, cap + 1):
+		x -= float(Data.TIER_WEIGHT[t - 1])
+		if x <= 0.0:
+			return t
+	return 1
+
+
+## An affix's value range at a tier: the span cut in five, T5 the top fifth.
+static func tier_range(a: Dictionary, tier: int) -> Array:
+	var lo := float(a["min"])
+	var hi := float(a["max"])
+	var w := (hi - lo + 1.0) / float(Data.AFFIX_TIERS)
+	var k := tier - 1                                # 0 for T1, 4 for T5
+	var from := int(floor(lo + w * k))
+	var to := int(floor(lo + w * (k + 1))) - 1
+	if tier == Data.AFFIX_TIERS:
+		to = int(hi)
+	return [from, maxi(from, to)]
+
+
+static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0) -> Dictionary:
+	var t := tier if tier > 0 else roll_tier(ilvl, rng)
+	var r := tier_range(a, t)
+	return {"stat": a["stat"], "value": rng.randi_range(r[0], r[1]), "tier": t}
+
+
+static func ilvl(it: Dictionary) -> int:
+	return int(it.get("ilvl", it["tier"]))
+
+
+## The bench: the affixes rolled again (the count kept), one of them rolled
+## again (its tier mostly kept; up a step sometimes, down a step less often,
+## the odds narrowing as the tier rises), one more added, all of them off.
+static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: String = "") -> void:
 	var n: int = it["affixes"].size()
-	var allowed := allowed_affixes(it["slot"])
-	allowed.shuffle()
-	it["affixes"] = []
-	for k in range(mini(n, allowed.size())):
-		var a: Dictionary = allowed[k]
-		it["affixes"].append({"stat": a["stat"], "value": rng.randi_range(int(a["min"]), int(a["max"]))})
+	var kept: Array = []
+	for a in it["affixes"]:
+		if a["stat"] == keep:
+			kept.append(a)
+	var have: Array = []
+	for a in kept:
+		have.append(a["stat"])
+	it["affixes"] = kept
+	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
+		it["affixes"].append(roll_affix(a, ilvl(it), rng))
+
+
+## One affix rolled again. Returns the new tier, or 0 if the stat isn't on it.
+static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator) -> int:
+	for k in range(it["affixes"].size()):
+		var a: Dictionary = it["affixes"][k]
+		if a["stat"] != stat:
+			continue
+		var d := affix_def(stat)
+		var t: int = int(a.get("tier", 1))
+		var cap := tier_cap(ilvl(it))
+		var up := 0.25 / float(t)                              # T1 → T2 one in four; T4 → T5 one in sixteen
+		var x := rng.randf()
+		if x < up and t < cap:
+			t += 1
+		elif x < up + 0.1 and t > 1:
+			t -= 1
+		it["affixes"][k] = roll_affix(d, ilvl(it), rng, t)
+		return t
+	return 0
 
 
 ## One more affix, one not already on it, and the rarity up a step.
@@ -262,8 +364,10 @@ static func add_affix(it: Dictionary, rng: RandomNumberGenerator) -> bool:
 			open.append(a)
 	if open.is_empty() or int(it["rarity"]) >= Data.RARITIES.size() - 1:
 		return false
-	var a: Dictionary = open[rng.randi_range(0, open.size() - 1)]
-	it["affixes"].append({"stat": a["stat"], "value": rng.randi_range(int(a["min"]), int(a["max"]))})
+	var picked := pick_affixes(it["slot"], 1, rng, have)
+	if picked.is_empty():
+		return false
+	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng))
 	it["rarity"] = int(it["rarity"]) + 1
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
 	return true
@@ -421,18 +525,20 @@ static func sockets(it: Dictionary) -> int:
 
 
 ## One line per affix for a card: "+8% damage"; `short` for "+8% dmg".
-static func affix_lines(it: Dictionary, short := false) -> Array:
+static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array:
 	var out: Array = []
 	for a in it["affixes"]:
-		var label := ""
-		for d in Data.AFFIXES:
-			if d["stat"] == a["stat"]:
-				label = d["short"] if short else d["label"]
+		var d := affix_def(a["stat"])
+		var label: String = str(d.get("short" if short else "label", a["stat"]))
 		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] == "loot_per_lot"
+		var line: String
 		if a["stat"] == "cash_per_kill":
-			out.append("+£%d %s" % [a["value"], label])
+			line = "+£%d %s" % [a["value"], label]
 		else:
-			out.append("+%d%s %s" % [a["value"], "%" if pct else "", label])
+			line = "+%d%s %s" % [a["value"], "%" if pct else "", label]
+		if tiers and a.has("tier"):
+			line += " · T%d" % int(a["tier"])
+		out.append(line)
 	return out
 
 

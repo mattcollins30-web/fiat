@@ -38,7 +38,7 @@ const TOP := ZONE_H + 16
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the zones, as a row of buttons across the top
 	var zw := (Pal.GRID_W - COL_GAP * Data.ZONES.size()) / (Data.ZONES.size() + 1)
@@ -48,7 +48,7 @@ func _init() -> void:
 		b.pressed.connect(_pick_zone.bind(z))
 		_zone_buttons.append(b)
 	# the map: one panel, a row a passive, its rank and a button to take one
-	_map = UI.panel(self, Rect2(0, TOP, Pal.GRID_W, Pal.GRID_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_map = UI.panel(self, Rect2(0, TOP, Pal.GRID_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_map.visible = false
 	_map_title = UI.label(_map, Rect2(PAD, 16, Pal.GRID_W - 2 * PAD, 40), "The map", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_map_words = UI.label(_map, Rect2(PAD, 58, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -63,17 +63,17 @@ func _init() -> void:
 		r["button"].pressed.connect(_rank.bind(a["key"]))
 		_map_rows.append(r)
 		my += MAP_ROW_H
-	_map_reset = UI.button(_map, Rect2(PAD, Pal.GRID_H - TOP - PAD - Pal.BUTTON_H, 290, Pal.BUTTON_H), false)
+	_map_reset = UI.button(_map, Rect2(PAD, Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H, 290, Pal.BUTTON_H), false)
 	_map_reset.text = "Start the map again"
 	_map_reset.pressed.connect(_reset_map)
 	for col in range(3):
 		var x := col * (COL_W + COL_GAP)
-		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.GRID_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 		var edge := StyleBoxFlat.new()
 		edge.bg_color = Pal.GOOD
 		edge.corner_radius_top_left = 8
 		edge.corner_radius_bottom_left = 8
-		var c := {"panel": panel, "edge": UI.panel(self, Rect2(x, TOP, 6, Pal.GRID_H - TOP), edge)}
+		var c := {"panel": panel, "edge": UI.panel(self, Rect2(x, TOP, 6, Pal.ROOM_H - TOP), edge)}
 		var y := 16
 		c["tier"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		y += 30
@@ -112,7 +112,7 @@ func _init() -> void:
 			y += 60
 		c["intel_note"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		# the foot: Deploy across, Auto under it
-		var fy := Pal.GRID_H - TOP - PAD - Pal.BUTTON_H
+		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
 		c["auto"] = UI.button(panel, Rect2(PAD, fy, INNER - BOSS_W - 8, Pal.BUTTON_H), false)
 		c["auto"].pressed.connect(_auto.bind(col))
 		# insurance: the fence holds the paper on the kit for the next run

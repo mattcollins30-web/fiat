@@ -1491,19 +1491,44 @@ func _pinnacle_checks(main) -> void:
 	_craft_checks(main)
 
 
-## The bench's crafting, in notes: re-roll, add, a socket, strip.
+## The bench's crafting, in cash: add, re-roll, lock one, re-roll one, a
+## socket, strip; the level in notes. And the tiers behind it.
 func _craft_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	sim.workshop = maxi(sim.workshop, 1)
 	sim.notes = 100000
+	sim.cash = 10000000.0
+	# tiers: the cap by level, the ranges, the roll
+	_check(Items.tier_cap(0) == 1 and Items.tier_cap(3) == 2 and Items.tier_cap(6) == 3 and Items.tier_cap(10) == 4 and Items.tier_cap(15) == 5 and Items.tier_cap(40) == 5, "the tier cap by level is wrong")
+	var d: Dictionary = Items.affix_def("damage_pct")
+	var r1: Array = Items.tier_range(d, 1)
+	var r5: Array = Items.tier_range(d, 5)
+	_check(r1[0] == d["min"] and r5[1] == d["max"] and r1[1] < r5[0], "the tier ranges don't cut the span: T1 %s, T5 %s" % [str(r1), str(r5)])
+	for t in range(1, 5):
+		_check(Items.tier_range(d, t)[1] < Items.tier_range(d, t + 1)[0], "tier %d overlaps tier %d" % [t, t + 1])
+	var low := 0
+	var best := 0
+	for i in range(300):
+		var g: Dictionary = Items.roll("Primary", 1, sim.rng, 2.0, true, false, "", "", 0.33, 0)
+		for a in g["affixes"]:
+			_check(a.has("tier") and a["tier"] == 1, "a tier-1 base at depth 0 rolled T%d" % a.get("tier", 0))
+		var deep: Dictionary = Items.roll("Primary", 6, sim.rng, 2.0, true, false, "", "", 0.33, 20)
+		_check(deep["ilvl"] == deep["tier"] + 20, "the item level is not the base's tier plus the depth")
+		for a in deep["affixes"]:
+			low += 1 if a["tier"] == 1 else 0
+			best += 1 if a["tier"] == 5 else 0
+	_check(best > 5 and low > best, "deep drops rolled %d T5 and %d T1; some T5, more T1 was the aim" % [best, low])
+	# the bench
 	var it: Dictionary = sim._plain("Helmet", "Hard hat")
 	it["attachments"] = {}
+	it["ilvl"] = 16
 	sim.stash.append(it)
 	_check(sim.craft_cost(it, "reroll") < 0 and sim.craft_cost(it, "strip") < 0, "a plain item re-rolls or strips")
 	var add_cost: int = sim.craft_cost(it, "add")
-	_check(add_cost == Data.CRAFT["add"]["notes"] * it["tier"], "adding to a common T%d costs %d" % [it["tier"], add_cost])
-	_check(sim.craft(it["id"], "add") and it["rarity"] == 1 and it["affixes"].size() == 1 and sim.notes == 100000 - add_cost, "Add an affix did not take")
+	_check(add_cost == Data.CRAFT["add"]["cash"] * 16, "adding to a plain level-16 piece costs %d" % add_cost)
+	var cash0: float = sim.cash
+	_check(sim.craft(it["id"], "add") and it["rarity"] == 1 and it["affixes"].size() == 1 and is_equal_approx(sim.cash, cash0 - add_cost), "Add an affix did not take, or wasn't paid in cash")
 	var stat0: String = it["affixes"][0]["stat"]
 	var val0: int = it["affixes"][0]["value"]
 	var changed := false
@@ -1518,24 +1543,47 @@ func _craft_checks(main) -> void:
 	for a in it["affixes"]:
 		_check(not (a["stat"] in stats), "an affix doubled: %s" % a["stat"])
 		stats.append(a["stat"])
+	# lock one: it stays, the others may change
+	var keep: Dictionary = it["affixes"][0].duplicate()
+	var lock_cost: int = sim.craft_cost(it, "lock", keep["stat"])
+	_check(lock_cost == Data.CRAFT["lock"]["cash"] * 16 * 4, "lock on a level-16 elite costs %d" % lock_cost)
+	_check(sim.craft(it["id"], "lock", keep["stat"]) and it["affixes"].size() == 3 and it["affixes"][0] == keep, "locking one did not keep it: %s vs %s" % [str(it["affixes"][0]), str(keep)])
+	# re-roll one: the stat stays, the tier moves sometimes, dearer the better the tier
+	var one_stat: String = it["affixes"][1]["stat"]
+	var tiers_seen := {}
+	for k in range(60):
+		sim.craft(it["id"], "one", one_stat)
+		_check(it["affixes"][1]["stat"] == one_stat, "re-rolling one changed its stat")
+		tiers_seen[int(it["affixes"][1]["tier"])] = true
+	_check(tiers_seen.size() >= 2, "sixty re-rolls of one never moved its tier: %s" % str(tiers_seen.keys()))
+	it["affixes"][1]["tier"] = 5
+	var dear: int = sim.craft_cost(it, "one", one_stat)
+	it["affixes"][1]["tier"] = 1
+	_check(dear == sim.craft_cost(it, "one", one_stat) * 5, "re-rolling a T5 is not five times a T1")
+	# the level, in notes
+	var notes0: int = sim.notes
+	var bump_cost: int = sim.craft_cost(it, "bump")
+	_check(sim.craft(it["id"], "bump") and it["ilvl"] == 19 and sim.notes == notes0 - bump_cost, "the bump did not raise the level by %d in notes" % Data.BUMP_LEVELS)
+	while sim.craft_cost(it, "bump") >= 0:
+		sim.craft(it["id"], "bump")
+	_check(it["ilvl"] == it["tier"] + Data.BUMP_CAP, "the level went past its cap: %d" % it["ilvl"])
 	_check(sim.craft(it["id"], "socket") and sim.craft(it["id"], "socket") and Items.sockets(it) == 2 and sim.craft_cost(it, "socket") < 0, "two sockets did not cut, or a third would")
 	var value_elite: int = it["value"]
 	_check(sim.craft(it["id"], "strip") and it["rarity"] == 0 and it["affixes"].is_empty() and it["value"] < value_elite, "Strip did not take it back to plain")
 	_check(Items.sockets(it) == 2, "stripping took the sockets")
-	# not on a unique, not on paper, not without a bench, not on a run, not short of notes
+	# not on a unique, not on paper, not without a bench, not on a run, not short
 	var u := Items.roll_unique(Data.UNIQUES[0], sim.rng)
 	sim.stash.append(u)
 	_check(sim.craft_cost(u, "reroll") < 0, "a unique re-rolls")
 	sim.workshop = 0
 	_check(not sim.can_craft(it["id"], "add"), "the bench works with no bench")
 	sim.workshop = 1
-	sim.notes = 0
-	_check(not sim.can_craft(it["id"], "add"), "the bench works with no notes")
-	sim.notes = 1000
-	# the charm's bench: a charm has no affixes to add through the bench
+	sim.cash = 0.0
+	_check(not sim.can_craft(it["id"], "add"), "the bench works with no cash")
+	sim.cash = 100000.0
 	var ch: Dictionary = sim._plain("Charm", "Lucky penny")
 	_check(sim.craft_cost(ch, "add") < 0 and sim.craft_cost(ch, "socket") < 0, "a charm takes an affix or a socket at the bench")
-	# through the screen: the Bench button and the menu
+	# through the screen: the Bench button and the menus
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
 	main.refresh()
@@ -1543,17 +1591,27 @@ func _craft_checks(main) -> void:
 	main._open_bench(it["id"])
 	_check(main._menu.visible, "the bench menu did not open")
 	_check_fit(main, "Armoury (bench menu)")
-	main._craft(it["id"], "add")
+	main._craft(it["id"], "add", "")
 	_check(it["rarity"] == 1 and not main._menu.visible, "the menu's Add did not take")
+	main._open_bench_picks(it["id"])
+	_check(main._menu.visible, "the picks page did not open")
+	_check_fit(main, "Armoury (bench picks)")
+	main._open_bench_one(it["id"], it["affixes"][0]["stat"])
+	_check_fit(main, "Armoury (bench one)")
+	main._menu.close()
+	# the affix list on the panel, with tiers
+	main._armoury.selected = {"kind": "stash", "id": it["id"]}
+	main.refresh()
+	_check(main._armoury._left_lines[2].text.contains("· T"), "the panel's affix line has no tier: '%s'" % main._armoury._left_lines[2].text)
+	_check_fit(main, "Armoury (affix list)")
 	# worn gear can go to the bench too
 	var worn: Dictionary = sim.equipped["Armour"]
 	if worn != null and not worn.has("unique") and sim.craft_cost(worn, "socket") >= 0 and is_same(sim.item_by_id(worn["id"]), worn):
 		var n0: int = Items.sockets(worn)
 		var scost: int = sim.craft_cost(worn, "socket")
-		_check(sim.craft(worn["id"], "socket") and Items.sockets(worn) == n0 + 1, "a socket did not cut on the armour worn: cost %d, notes %d, bench %d, can %s, sockets %d, slot %s" % [scost, sim.notes, sim.workshop, str(sim.can_craft(worn["id"], "socket")), Items.sockets(worn), worn["slot"]])
+		_check(sim.craft(worn["id"], "socket") and Items.sockets(worn) == n0 + 1, "a socket did not cut on the armour worn: cost %d, cash %.0f, bench %d, can %s, sockets %d, slot %s" % [scost, sim.cash, sim.workshop, str(sim.can_craft(worn["id"], "socket")), Items.sockets(worn), worn["slot"]])
 	sim.load_dict(saved)
-	print("the bench ok: add, re-roll, sockets, strip, the menu, the rules")
-	_move_checks(main)
+	print("the bench ok: tiers, add, re-roll, lock, one, the level, sockets, strip, the menus")
 
 
 ## Moving the yard: after the campaign; the uniques, the yard's tree, the

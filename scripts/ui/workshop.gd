@@ -29,7 +29,7 @@ const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.HEIGHT
 const PANEL_Y := GRID_H + GAP
-const PANEL_H := Pal.GRID_H - PANEL_Y
+const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
 const COL_W := (GRID_W - 3 * PAD) / 2
 const GUNS := ["Primary", "Secondary"]
@@ -60,7 +60,7 @@ var _shown := ""
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	for i in range(2):
 		var v := UI.button(self, Rect2(i * (BODY_W / 2 + 3), 0, BODY_W / 2 - 3, VIEW_H), i == 0)
@@ -120,7 +120,7 @@ func _init() -> void:
 		_socks[slot] = g
 	_show_view()
 	# the bench's level, under the guns
-	_bench = UI.panel(self, Rect2(0, Pal.GRID_H - 120, BODY_W, 120), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_bench = UI.panel(self, Rect2(0, Pal.ROOM_H - 120, BODY_W, 120), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_bench_title = UI.label(_bench, Rect2(PAD, 10, BODY_W - 2 * PAD, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_bench_words = UI.label(_bench, Rect2(PAD, 40, BODY_W - 2 * PAD, 26), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_upgrade = UI.button(_bench, Rect2(PAD, 120 - 12 - 44, BODY_W - 2 * PAD, 44), true)

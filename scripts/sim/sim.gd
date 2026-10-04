@@ -155,7 +155,7 @@ func dps() -> float:
 		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (40.0 if has_node("walking_wounded") else 0.0)
 	if mission != null and not mission["cleared"]:
 		pct += _affix_sum("first_lot_pct")
-	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * cm("damage") * trait_mult("damage")
+	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage")
 
 
 func armour() -> float:
@@ -166,7 +166,7 @@ func armour() -> float:
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
 		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission))
-	return a * (1.0 + tree_sum("armour_pct") / 100.0)
+	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0)
 
 
 ## The share of incoming damage the armour stops.
@@ -186,7 +186,7 @@ func capacity() -> int:
 func med_capacity() -> int:
 	if equipped["Rig"] == null:
 		return 0
-	return (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
+	return (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
 
 
 ## The rig's pouches are cells: a first aid kit takes two, a surgeon's kit four.
@@ -457,13 +457,23 @@ func item_by_id(id: int) -> Dictionary:
 	return {}
 
 
-## What the bench can do to this item, in notes; -1 for can't.
-func craft_cost(it: Dictionary, kind: String) -> int:
+## What the bench can do to this item: the price, in cash (notes for a bump);
+## -1 for can't. `stat` is the affix picked, for lock and one.
+func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 	if it.is_empty() or it.has("unique") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
 		return -1
+	var has_stat := false
+	for a in it["affixes"]:
+		has_stat = has_stat or a["stat"] == stat
 	match kind:
-		"reroll":
+		"reroll", "strip":
 			if it["affixes"].is_empty():
+				return -1
+		"lock":
+			if it["affixes"].size() < 2 or not has_stat:
+				return -1
+		"one":
+			if not has_stat:
 				return -1
 		"add":
 			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.is_charm(it) or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
@@ -471,27 +481,44 @@ func craft_cost(it: Dictionary, kind: String) -> int:
 		"socket":
 			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= Data.SOCKET_MAX:
 				return -1
-		"strip":
-			if it["affixes"].is_empty():
+		"bump":
+			if Items.ilvl(it) >= int(it["tier"]) + Data.BUMP_CAP:
 				return -1
-	return int(Data.CRAFT[kind]["notes"]) * int(it["tier"]) * (int(it["rarity"]) + 1)
+			return int(Data.CRAFT[kind]["notes"]) * Items.ilvl(it)
+	var price: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(it) * (int(it["rarity"]) + 1)
+	if kind == "one":
+		for a in it["affixes"]:
+			if a["stat"] == stat:
+				price *= int(a.get("tier", 1))     # the better the tier, the dearer
+	return price
 
 
-func can_craft(id: int, kind: String) -> bool:
+func craft_in_notes(kind: String) -> bool:
+	return Data.CRAFT.get(kind, {}).has("notes")
+
+
+func can_craft(id: int, kind: String, stat := "") -> bool:
 	if mission != null or workshop < 1:
 		return false
-	var cost := craft_cost(item_by_id(id), kind)
-	return cost >= 0 and notes >= cost
+	var cost := craft_cost(item_by_id(id), kind, stat)
+	if cost < 0:
+		return false
+	return notes >= cost if craft_in_notes(kind) else cash >= float(cost)
 
 
-func craft(id: int, kind: String) -> bool:
-	if not can_craft(id, kind):
+func craft(id: int, kind: String, stat := "") -> bool:
+	if not can_craft(id, kind, stat):
 		return false
 	var it := item_by_id(id)
-	var cost := craft_cost(it, kind)
+	var cost := craft_cost(it, kind, stat)
 	match kind:
 		"reroll":
 			Items.reroll_affixes(it, rng)
+		"lock":
+			Items.reroll_affixes(it, rng, stat)
+		"one":
+			if Items.reroll_one(it, stat, rng) == 0:
+				return false
 		"add":
 			if not Items.add_affix(it, rng):
 				return false
@@ -500,8 +527,14 @@ func craft(id: int, kind: String) -> bool:
 				return false
 		"strip":
 			Items.strip_affixes(it)
-	notes -= cost
-	log_event("At the bench, for %d notes: %s, %s." % [cost, Data.CRAFT[kind]["name"].to_lower(), it["base"].to_lower()])
+		"bump":
+			it["ilvl"] = mini(int(it["tier"]) + Data.BUMP_CAP, Items.ilvl(it) + Data.BUMP_LEVELS)
+	if craft_in_notes(kind):
+		notes -= cost
+		log_event("At the bench, for %d notes: %s, %s." % [cost, Data.CRAFT[kind]["name"].to_lower(), it["base"].to_lower()])
+	else:
+		cash -= float(cost)
+		log_event("At the bench, for %s: %s, %s." % [_cash_words(float(cost)), Data.CRAFT[kind]["name"].to_lower(), it["base"].to_lower()])
 	return true
 
 
@@ -691,7 +724,7 @@ func contact(t: Dictionary) -> int:
 
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
-	return SEARCH_S * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - tree_sum("search_pct") / 100.0) * cm("search") * (2.0 if has_node("never_there") else 1.0) * trait_mult("search") \
+	return SEARCH_S * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (2.0 if has_node("never_there") else 1.0) * trait_mult("search") \
 		* (1.0 - 0.1 * atlas_rank("deeper_pockets"))
 
 
@@ -701,7 +734,7 @@ func patrol_s(t: Dictionary, first := false) -> float:
 	if has_node("never_there"):
 		return INF
 	var base := (30.0 if has_node("quiet_feet") else PATROL_S) * float(t.get("patrol", 1.0)) * cm("patrol")
-	base *= 1.0 + (_fitted_sum("patrol_pct") + tree_sum("patrol_pct")) / 100.0
+	base *= 1.0 + (_fitted_sum("patrol_pct") + tree_sum("patrol_pct") + _affix_sum("patrol_pct")) / 100.0
 	base *= Data.KENNEL_LEVELS[kennel_level]["patrol"]
 	if first:
 		base *= Data.LOOKOUT_LEVELS[lookout_level]["first"] * (2.0 if has_node("early_doors") else 1.0)
@@ -713,7 +746,7 @@ func patrol_s(t: Dictionary, first := false) -> float:
 func use_time(it: Dictionary) -> float:
 	if has_node("field_surgery"):
 		return 0.0
-	return Items.use_time(it) * (0.5 if has_node("triage") else 1.0) * maxf(0.3, 1.0 - tree_sum("med_speed_pct") / 100.0)
+	return Items.use_time(it) * (0.5 if has_node("triage") else 1.0) * maxf(0.3, 1.0 - (tree_sum("med_speed_pct") + _affix_sum("med_speed_pct")) / 100.0)
 
 
 func pace() -> float:
@@ -1416,7 +1449,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	# the fight before the clear counts first_lot_pct, which dps() only adds on a run
 	var d: float = dps() * (1.0 + (_affix_sum("first_lot_pct") / 100.0 if mission == null else 0.0)) * pace() * t["pace"] * DRY_STEP
 	var mit := mitigation()
-	var crowd := (0.5 if has_node("bodyline") else 1.0) * (0.75 if has_rule("doormans") else 1.0)   # with three on you
+	var crowd := (0.5 if has_node("bodyline") else 1.0) * (0.75 if has_rule("doormans") else 1.0) * (1.0 - _affix_sum("crowd_less_pct") / 100.0)   # with three on you
 	# the crew's head is the first of his gang the whole way down: the first-shot bonuses hold on him
 	var first := 1.0 + (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + _fitted_sum("shock_pct") + float(class_data().get("first_pct", 0)) + tree_sum("first_pct")) / 100.0 + (2.0 if has_rule("grandads") else 0.0)
 	var meds := rig.filter(func(it): return Items.is_medical(it))
@@ -1442,6 +1475,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 				continue
 			var on_you := mini(remaining, contact(t))
 			h -= t["dps"] * DRY_STEP * on_you * (1.0 - mit) * (crowd if on_you >= 3 else 1.0) * r.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
+		h = minf(max_hp(), h + _affix_sum("regen") * DRY_STEP)
 		# a player who patches up under 40%, like the Use button - against the crew's head too
 		if using.is_empty() and h < max_hp() * 0.4 and not meds.is_empty():
 			using = {"left": use_time(meds[0]), "heal": Items.heal(meds[0]) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0)}
@@ -1553,6 +1587,8 @@ func _tick(dt: float) -> void:
 			hp = minf(max_hp(), hp + dt)
 	if mission == null:
 		return
+	if _affix_sum("regen") > 0.0:
+		hp = minf(max_hp(), hp + _affix_sum("regen") * dt)
 	if float(m.get("event_at", -1.0)) >= 0.0 and m["elapsed"] >= float(m["event_at"]):
 		_event(m, t)
 	# the Medic's rule: a med by itself under 40%
@@ -1674,6 +1710,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["grace"] = 0.0
 	if on_you >= 3 and has_node("bodyline"):
 		incoming *= 0.5
+	if on_you >= 3:
+		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
 	if on_you >= 3 and has_rule("doormans"):
 		incoming *= 0.75
 	m["last_incoming"] = incoming
@@ -1717,6 +1755,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
+	hp = minf(max_hp(), hp + _affix_sum("life_per_kill"))
 	var gain: float = t["xp"] * (1.5 if has_node("hit_and_run") else 1.0)
 	m["xp"] += gain
 	var before := level()
@@ -1740,7 +1779,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 
 ## The old paper money: every kill carries some, more the deeper you are.
 func notes_a_kill(t: Dictionary) -> int:
-	return int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0))) + atlas_rank("paid_in_notes")
+	return int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0) * (1.0 + _affix_sum("notes_pct") / 100.0))) + atlas_rank("paid_in_notes")
 
 
 ## The crew's head is down: their drop, the notes they held, the zone's boss beaten.
@@ -1823,7 +1862,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 		log_event("Found: %s" % it["unique"])
 	else:
 		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, loot_bonus() + rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
 			var mine := Items.ammo_type(equipped["Primary"])

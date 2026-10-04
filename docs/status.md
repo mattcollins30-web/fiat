@@ -651,6 +651,32 @@ it holds ten times the price.
   carbines 9mm, the blank-firer pistol rounds; the nail gun, bolt gun, crossbow, air and flare pistols
   stay on nails and bolts. The Scrapper's notables still count them all as improvised.
 
+## The builds pass, step 1: affixes wide and tiered, the bench in cash (2026-10-04)
+
+The spec is concept.md's "Builds" section. This step:
+
+- **Tiers.** Every affix's `min`..`max` is cut in five: T1 the worst fifth, T5 the best, counting up
+  like the bases' tiers do (not PoE's way round, so one word means one direction everywhere). What can
+  roll comes from the item's level, `ilvl` = the base's tier + the depth it dropped at (`Items.tier_cap`:
+  T2 from 3, T3 from 6, T4 from 10, T5 from 15); the better the tier the rarer (8:5:3:2:1). Affixes
+  carry `{stat, value, tier}`; picks are by weight and never doubled.
+- **The pool**, first batch: HP a second, HP a kill, armour %, less from three or more, rate of fire,
+  pouches, quicker meds, quicker searches, gangs later, notes; the old ones' spans widened. The
+  elemental and resist affixes come with the damage model (step 2).
+- **The bench in cash** (notes only for raising the level): re-roll everything, lock one and re-roll
+  the rest (×3), re-roll one (same tier mostly; up a step one in four at T1 falling to one in sixteen
+  at T4, down one in ten; the price × the tier), add, cut a socket, strip, and bump the level by three
+  (to the base's tier + 20). Prices × the item's level × (rarity + 1). The menu is two pages: the
+  whole-item jobs, then the affix picks.
+- **The room.** One line of log, the latest (`Pal.EVENTS_H` 36, `EVENT_LINES` 1); every room is
+  `Pal.ROOM_H` (916) now, the Yard's card grid keeps `GRID_H`. The Lock-up's panel spends it on six
+  lines a column: the figure, what it takes, three affixes with tiers ("+8% quicker searches · T4"),
+  the swap word; the fitted side the same, the chips under them.
+
+Asserted: the cap by level, the ranges cut without overlap, a tier-1 base at depth 0 rolls T1 only
+and depth 20 rolls some T5 and more T1, every bench job and its price, the lock keeps its affix, sixty
+re-rolls of one move its tier, the bump and its cap, the menus and the panel's tier line fit.
+
 ## Ammo (2026-10-02)
 
 Guns fire rounds now. Five types match the gun types - nails, shells, rifle rounds, 9mm, pistol rounds -

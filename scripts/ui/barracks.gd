@@ -24,7 +24,7 @@ const NODE_H := 40
 const NODE_GAP := 5
 const NODES_Y := TREE_Y + HEAD_H + 6
 const PANEL_Y := NODES_Y + 12 * (NODE_H + NODE_GAP) - NODE_GAP + 16     # 650
-const PANEL_H := Pal.GRID_H - PANEL_Y                          # 214
+const PANEL_H := Pal.ROOM_H - PANEL_Y                          # 214
 const PAD := 20
 
 var sim
@@ -50,7 +50,7 @@ var _shown := ""
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the class bar: a button a class, the chosen one lit
 	var cw := (Pal.GRID_W - COL_GAP * (Data.CLASSES.size() - 1)) / Data.CLASSES.size()

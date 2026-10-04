@@ -65,7 +65,9 @@ const COLS := 4
 const ROWS := 2
 const GRID_W := COLS * CARD_W + (COLS - 1) * CARD_GAP     # 1536
 const GRID_H := ROWS * CARD_H + (ROWS - 1) * CARD_GAP     # 864
-const EVENTS_H := 88
+const EVENTS_H := 36                                       # one line of log: the latest; the rooms get the rest
+const EVENT_LINES := 1
+const ROOM_H := GRID_H + 88 - EVENTS_H                     # 916: a room's height; the Yard's card grid keeps GRID_H
 const MAX_CARDS := COLS * ROWS                             # eight a room, never more
 
 # the card (Pithole's menu_shell.md §3)

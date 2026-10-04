@@ -182,3 +182,70 @@ change the sim's rules rather than add numbers.
     8. **The collection.** Papers read, uniques found, the runners before, on one screen.
     9. **Juice.** Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
 23. Manual placement in the bag (true tetris), if first-fit feels wrong in play.
+
+## Builds (4 Oct 2026): the gear pass before any art
+
+Matt: "we need to spend time on the gear, affixes and builds ... resists ... enemies need to use those
+damage types as it scales ... damage over time ... melee ... this all comes before anything above and
+certainly before any art - that's the Greenhorn trap"; then "it needs to go further where we can actually
+create entire builds out of fire ... perk trees expanded to account for the element types per class ...
+build defining uniques that are rare but powerful enough to define a build ... power spikes that take you
+from depth 20 to depth 60"; then "expand the entire affix system ... much wider and deeper ... tiers of
+affixes so the workshop can be used to reroll ... that could also be the late game cash sink."
+
+The thesis: a build is three layers multiplying - a commitment that converts what you do into one
+thing, a tree that multiplies that thing, an item that changes that thing's rules. Depth 20 to 60 is
+about ×190 in enemy HP on the curve, so a build has to be able to make ×100, and that only comes from
+layers that multiply, not add. Built in this order, each step leaving the game green:
+
+1. **Affixes, wide and tiered.** Sixty-odd affixes against today's fourteen, each with a slot list, five
+   tiers (T5 worst, T1 best; the same affix at a different value), a weight, and for some a condition.
+   Offence: increased and added damage per type, conversions on gear, attack speed, first-shot, dot
+   duration and damage, spread chance. Defence: armour, HP, regen a second, life on hit, life on kill,
+   a resist per type, all resists, dot resistance, less from three-plus. Utility: pace, search, loot
+   find, magic find, cash, notes, cells, pouches, med speed and power. Conditional: per socket filled,
+   per med carried, while bleeding, under half, against burning/frozen/poisoned. Which tiers can roll
+   comes from the item's level - its base's tier plus the depth it dropped at - so depth has a third
+   reason beside quantity and rarity: the ceiling on what the bench can make. Rarity still sets the
+   count. The item panel shows the affixes as a list with tiers ("+21% fire · T1"); the Lock-up's log
+   drops to its latest line to make the room (every room gets that 60 px).
+2. **The damage model as layers.** Base hit → conversion by type → increased (everything additive, one
+   multiplier) → more (keystones and uniques, each its own multiplier) → how many it hits → what stays
+   on them (dots) → their resist. Six types: physical, fire, frost, poison, shock, bleed. Dots: burn (a
+   share of the hit over four seconds), poison (slow, long, stacks), bleed (flat a second until a med
+   or the gang's down), on them per target and on you as three states the run panel shows; searching
+   doesn't tick dots on you. Frost slows their fire; shock is the first-shot type. The socketables
+   become conversions.
+3. **Their side.** Gang resist profiles by zone (soft, jacketed, ex-army with the lot); a type by zone
+   and depth (estate blades and bats, town petrol and poison, city shock and fire), the share rising
+   with depth; words that add a type ("Burners", "Cutters", "Wired") or a resist ("Jacketed",
+   "Rubbered", "Hardened"); "Resistant" from depth 8, all resists rising with depth; reflect gangs from
+   depth 30 as a second pass. The depth band test becomes "every site viable for some build".
+4. **Five element trees, as webs.** Fire ("Petrol"), frost ("The cold"), poison ("The rat man"), shock
+   ("Live"), bleed ("Blades"): a spine of conversion and increased, a fork, a keystone that breaks the
+   element's rule (fire spreads to the next; bleed never stops; poison past the cap; frost makes them
+   miss; shock on the first is the whole gang) and a notable with a cost (fire: you burn too). Points are
+   the points you have: an element's keystone means an unfinished class tree. **Affinities:** each class
+   has two elements its nodes come cheaper on and whose keystone it reaches by 30; the other three cost
+   double and need the second past. Drifter fire/shock, Doorman bleed/physical, Poacher poison/frost,
+   Scrapper shock/fire, Paramedic poison/frost from the other side. The class webs' spare branches each
+   get an element notable that keys the pairing.
+5. **Melee**, a sixth build: primaries (spiked bat, machete, pipe wrench, fire axe, sledgehammer, a
+   bayonet on a stick) and secondaries (knife, knuckle duster, a cosh). No ammo ("Takes nothing"), slow,
+   hard, bleed built in, grip and head mounts plus sockets; +25% incoming and the gang's first shot
+   before yours. Keystone "Through the lot": a swing hits everyone on you.
+6. **Uniques that are rules**, depth-gated (12+, then 25+), from pinnacles, the convoy and the mate's
+   deep stock, one in a few hundred finds. The first four: *the council's weed burner* (fire hits
+   everyone on you and spreads), *jump leads* (the first of a gang is every one of them), *the rat man's
+   bag* (poison never caps, carries to the next gang), *the butcher's steel* (bleed double, hits reopen
+   it). Then *the gritter's hopper*, *the sparky's gloves*, *the quartermaster's manual*, *a blue
+   plaque*. Tiers vary on uniques too, so a good one exists.
+7. **The bench as a crafting bench**, in cash: re-roll everything within the slot's pool; lock one and
+   re-roll the rest (×3); re-roll one (same tier mostly, a chance up, a smaller chance down, narrowing
+   as the tier rises); add, cut a socket, strip; and *bump the item level* in notes. Prices scale with
+   the item's level and what's on it, so perfection is dear and bottomless. Insurance and call-ins
+   stay; this is the main sink. A Craft view beside Guns and Sockets.
+8. **Tests and the reader**: a bot per element that trains to its keystone and crafts toward it, so
+   "which build clears depth 40 first and by how much" is a number we chose; where each walls.
+9. The rest of the uniques; prestige's "yard's trade" (a move opens one element's keystone to every
+   class, permanently); balance last.

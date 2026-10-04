@@ -448,13 +448,33 @@ const RARITIES := [
 ## Affixes: a stat and its roll range per tier. "pct" ones are percentages of
 ## the whole operator's figure; the rest add to it. `slots` says which items
 ## can carry it.
+## Affixes. `min`..`max` is the whole span, T1 (the worst fifth) to T5 (the
+## best) - tiers count up like the bases' do; which tiers an item can roll
+## comes from its level (its base's tier plus the depth it dropped at:
+## `Items.tier_cap`). `weight` is its share of a roll (1 if absent).
+const AFFIX_TIERS := 5
+const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5
+const TIER_WEIGHT := [8.0, 5.0, 3.0, 2.0, 1.0]  # T1 .. T5: the better, the rarer
 const AFFIXES := [
-	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 4, "max": 12, "slots": ["Primary", "Secondary"]},
-	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig"]},
-	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 20, "slots": ["Helmet", "Armour", "Rig", "Backpack"]},
-	{"stat": "loot_pct", "label": "loot find", "short": "loot", "min": 5, "max": 20, "slots": ["Rig", "Backpack", "Helmet"]},
-	{"stat": "capacity", "label": "capacity", "short": "cap", "min": 1, "max": 4, "slots": ["Rig", "Backpack"]},
-	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 10, "slots": ["Primary", "Secondary", "Armour"]},
+	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 4, "max": 24, "slots": ["Primary", "Secondary"]},
+	# the body: regen, life on kill, armour as a share, less from a crowd
+	{"stat": "regen", "label": "HP a second", "short": "HP/s", "min": 1, "max": 6, "slots": ["Armour", "Helmet", "Charm"], "flat": true},
+	{"stat": "life_per_kill", "label": "HP a kill", "short": "HP/kill", "min": 2, "max": 12, "slots": ["Primary", "Secondary", "Helmet"], "flat": true},
+	{"stat": "armour_pct", "label": "armour", "short": "arm", "min": 3, "max": 18, "slots": ["Armour", "Helmet"]},
+	{"stat": "crowd_less_pct", "label": "less from three or more on you", "short": "less/crowd", "min": 4, "max": 16, "slots": ["Armour"]},
+	# the guns: rate of fire
+	{"stat": "attack_pct", "label": "rate of fire", "short": "RoF", "min": 3, "max": 15, "slots": ["Primary", "Secondary"]},
+	# the carry: pouches, meds, searches, gangs later, notes
+	{"stat": "med_cap", "label": "pouches", "short": "pouch", "min": 1, "max": 3, "slots": ["Rig"], "flat": true},
+	{"stat": "med_speed_pct", "label": "quicker meds", "short": "med spd", "min": 5, "max": 30, "slots": ["Rig", "Helmet"]},
+	{"stat": "search_pct", "label": "quicker searches", "short": "search", "min": 4, "max": 20, "slots": ["Backpack", "Helmet"]},
+	{"stat": "patrol_pct", "label": "gangs later", "short": "gangs later", "min": 4, "max": 18, "slots": ["Helmet", "Charm"]},
+	{"stat": "notes_pct", "label": "notes", "short": "notes", "min": 5, "max": 25, "slots": ["Charm", "Backpack"]},
+	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
+	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
+	{"stat": "loot_pct", "label": "loot find", "short": "loot", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
+	{"stat": "capacity", "label": "capacity", "short": "cap", "min": 1, "max": 6, "slots": ["Backpack"], "flat": true},
+	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Primary", "Secondary", "Armour"]},
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from
@@ -735,12 +755,20 @@ const MOVE_POINTS := 2             # training points a move, free at the start
 const MOVE_NOTES_KEPT := 0.5
 
 ## The bench's crafting, paid in notes: times the item's tier and its rarity + 1.
+## The bench's crafting, in cash: a price × the item's level × (rarity + 1).
+## Perfection is dear and bottomless; that's the late game's cash sink.
+## "bump" is in notes: the crews' thing, not the fence's.
 const CRAFT := {
-	"reroll": {"name": "Re-roll the affixes", "notes": 6, "words": "The same number, rolled again"},
-	"add": {"name": "Add an affix", "notes": 15, "words": "One more, a rarity up"},
-	"socket": {"name": "Cut a socket", "notes": 12, "words": "One more socket, up to two"},
-	"strip": {"name": "Strip the affixes", "notes": 2, "words": "Back to plain; the value goes with them"},
+	"reroll": {"name": "Re-roll the affixes", "cash": 40, "words": "The same number, rolled again, tiers and all"},
+	"lock": {"name": "Lock one, re-roll the rest", "cash": 120, "words": "The one you pick stays as it is", "pick": true},
+	"one": {"name": "Re-roll one", "cash": 80, "words": "Rolled again; a chance up a tier, a smaller one down", "pick": true},
+	"add": {"name": "Add an affix", "cash": 100, "words": "One more, a rarity up"},
+	"socket": {"name": "Cut a socket", "cash": 80, "words": "One more socket, up to two"},
+	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Back to plain; the value goes with them"},
+	"bump": {"name": "Raise the item's level", "notes": 10, "words": "Three levels up: better tiers can roll; up to the base's tier plus 20"},
 }
+const BUMP_LEVELS := 3
+const BUMP_CAP := 20
 
 ## Events: something happens on a run, once at most, EVENT_ODDS of runs,
 ## some way in. A convoy passes (a bigger gang, and they carry notes); a

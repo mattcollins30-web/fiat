@@ -21,12 +21,12 @@ const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
 const PANEL_GAP := 12
 const THEM_H := 244                                           # no button: three lines and a note
-const PANEL_H := (Pal.GRID_H - THEM_H - 2 * PANEL_GAP) / 2    # 300: two lines, a note, a button
+const PANEL_H := (Pal.ROOM_H - THEM_H - 2 * PANEL_GAP) / 2    # 300: two lines, a note, a button
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 888
 const GRID_H := Inventory.HEIGHT                               # 552
 const PICK_Y := GRID_H + GAP                                  # 576
-const PICK_H := Pal.GRID_H - PICK_Y                           # 288
+const PICK_H := Pal.ROOM_H - PICK_Y                           # 288
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30                                            # a 24 px font is 29 tall
@@ -53,7 +53,7 @@ var _shown := ""
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.GRID_H)
+	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	for i in range(3):
 		var y := 0 if i == 0 else THEM_H + PANEL_GAP + (i - 1) * (PANEL_H + PANEL_GAP)
