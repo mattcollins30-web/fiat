@@ -2852,6 +2852,7 @@ func _playtest_checks(main) -> void:
 	_check_fit(main, "Lock-up (a paper)")
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
+	_check(Items.art(sim._plain(Data.PAPER, "A P45")) != null and Items.art(sim._plain(Data.PAPER, "A boarding pass")) == Items.art(sim._plain(Data.PAPER, "A P45")), "papers have no picture in the cell, or not the same one")
 	sim.load_dict(saved)
 	# the boss toggle on the Runs card: one press, one toast, however many refreshes follow
 	_finish_campaign(sim)

@@ -164,7 +164,10 @@ static func art(it: Dictionary) -> Texture2D:
 		var own := _art_named(slug(it["piece"]))
 		if own != null:
 			return own
-	return _art_named(slug(it["base"]))
+	var base := _art_named(slug(it["base"]))
+	if base == null and is_paper(it) and not is_deeds(it):
+		return _art_named("paper")        # every paper is the same folded thing in the cell; the words tell them apart
+	return base
 
 
 static func _art_named(s: String) -> Texture2D:
