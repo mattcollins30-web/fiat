@@ -839,6 +839,23 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The bench says what it did; the run screen's rig (5 Oct)
+
+- **The bench's words.** Every job at the bench now says what it did, in words the player can check against
+  the piece (`sim.last_craft`, `_craft_words`): "Added +12% damage · T2", "Re-rolled: a, b → c, d", "Kept
+  x; re-rolled the rest: ...", "+4% damage · T1 → +12% damage · T3", "A socket cut: 2 now", "Stripped: ...
+  gone", "Level 4 → 6: up to T3 can roll". The words toast as the menu closes, stay on the Craft panel's
+  hint line (green) while that piece is picked, and the log line carries them. Asserted for add, re-roll,
+  bump and one.
+- **The run screen.** The run's panel (the clock, cash, Get out) is 20 px shorter, its top level with the
+  pack's; the Runner panel takes the room and shows the rig's pouches in it - a cell a pouch, empties as
+  outlines, a med's cell uses that med (eight at 64 px, smaller past eight). A med or rounds found out
+  there can go in the rig during the run: `sim.take_from_pack(id)` (the Lock-up's `take` and it share
+  `_take_from`; rounds top up the rig's stack first), a "Take into the rig" button on the pick panel
+  beside Ditch, "The rig is full" / "No rig fitted" when it can't. Asserted: the tops level, the Runner
+  panel clear of the run's, the pouches shown and inside the panel and off the button, a found med
+  offered and taken, rounds topping up.
+
 ## Damage numbers by type (5 Oct)
 
 The numbers off a hit come one a type, in the type's colour: physical white, fire orange-red, frost ice,

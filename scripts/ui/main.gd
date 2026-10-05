@@ -964,7 +964,8 @@ func _purse() -> String:
 
 
 func _craft(id: int, kind: String, stat: String) -> void:
-	sim.craft(id, kind, stat)
+	if sim.craft(id, kind, stat) and _juice != null:
+		_juice.toast(sim.last_craft["words"], "good")
 	_menu.close()
 	refresh()
 

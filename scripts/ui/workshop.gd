@@ -519,8 +519,16 @@ func _show_craft(it: Dictionary) -> void:
 		_left_title.text = "The bench"
 		_right_title.text = ""
 		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
+		_hint.add_theme_color_override("font_color", Pal.TEXT_3)
 		return
 	UI.fit(_craft_title, [Items.full_name(it), it["base"]])
+	# the bench's last job on this piece stays on the hint until the next
+	if sim.last_craft.get("id", -1) == it["id"]:
+		UI.fit(_hint, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT[sim.last_craft["kind"]]["name"]])
+		_hint.add_theme_color_override("font_color", Pal.GOOD)
+	else:
+		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
+		_hint.add_theme_color_override("font_color", Pal.TEXT_3)
 	UI.fit(_craft_lines[0], Items.figure_options(it))
 	_craft_lines[1].text = "Level %d · up to T%d can roll" % [Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
 	var lines: Array = Items.affix_lines(it, false, true)

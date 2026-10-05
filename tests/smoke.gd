@@ -936,6 +936,46 @@ func _run_screen(main) -> void:
 		return
 	main.show_room(main.MISSIONS)
 	_check_fit(main, "Run (live)")
+	# the run's panel sits level with the pack's; the rig's pouches show in the Runner panel; a med found goes in the rig
+	var run_ui = main._run
+	_check(is_equal_approx(run_ui._panels[2]["panel"].position.y, run_ui._pick.position.y), "the run's panel top (%.0f) is not level with the pack's (%.0f)" % [run_ui._panels[2]["panel"].position.y, run_ui._pick.position.y])
+	_check(run_ui._panels[1]["panel"].position.y + run_ui._panels[1]["panel"].size.y + run_ui.PANEL_GAP <= run_ui._panels[2]["panel"].position.y + 0.5, "the Runner panel runs into the run's")
+	var shown_cells := 0
+	var shown_outlines := 0
+	for c in run_ui._rig_cells:
+		if c.visible:
+			shown_cells += 1
+	for o in run_ui._rig_outlines:
+		if o.visible:
+			shown_outlines += 1
+	_check(shown_cells == mini(sim.rig.size(), run_ui.RIG_MAX) and shown_cells + shown_outlines == mini(sim.med_capacity(), run_ui.RIG_MAX), "the rig on the run screen shows %d cells and %d empty pouches for %d of %d" % [shown_cells, shown_outlines, sim.rig.size(), sim.med_capacity()])
+	for c in run_ui._rig_cells:
+		if c.visible:
+			var pr := Rect2(Vector2.ZERO, run_ui._panels[1]["panel"].size)
+			_check(pr.encloses(Rect2(c.position, c.size)) and c.position.y + c.size.y <= run_ui._panels[1]["button"].position.y, "a rig cell on the run screen leaves its panel or sits on the button: cell %s, panel %s, button at %.0f" % [str(Rect2(c.position, c.size)), str(pr), run_ui._panels[1]["button"].position.y])
+	if sim.med_capacity() > 0:
+		var found_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		sim.mission["found"].append(found_med)
+		while not sim.rig_room(1) and not sim.rig.is_empty():
+			sim.rig.pop_back()
+		main.refresh()
+		main._run._inv._pick(main._run._inv.cell_of(found_med["id"]))
+		main.refresh()
+		_check(main._run._take.visible and not main._run._take.disabled, "a med in the pack offers no Take into the rig")
+		_check_fit(main, "Run (a med picked)")
+		var rig_n: int = sim.rig.size()
+		main._run._take_pick()
+		_check(sim.rig.size() == rig_n + 1 and not sim.mission["found"].has(found_med), "Take into the rig did not move the med")
+		main.refresh()
+		_check_fit(main, "Run (med taken)")
+		# rounds top up the rig's stack of the same type
+		var box: Dictionary = sim._plain(Data.AMMO, "Nails")
+		Items.set_stack(box, 10)
+		sim.mission["found"].append(box)
+		var rounds_before: int = sim.rounds_for({"slot": "Primary", "base": "Nail gun", "affixes": [], "attachments": {}, "rarity": 0, "tier": 1})
+		_check(sim.take_from_pack(box["id"]), "rounds found did not go into the rig")
+		_check(not sim.mission["found"].has(box) or Items.stack_size(box) < 10, "the rounds stayed whole in the pack")
+		main.refresh()
 	var m: Dictionary = sim.mission
 	# the grid is the container: a pack of N cells shows N outlines, no more,
 	# unless the packing reaches past them - and then exactly as far as it reached
@@ -2209,6 +2249,40 @@ func _craft_checks(main) -> void:
 	_check_fit(main, "Armoury (bench menu)")
 	main._craft(it["id"], "add", "")
 	_check(it["rarity"] == 1 and not main._menu.visible, "the menu's Add did not take")
+	# the bench says what it did: a toast with the affix added, the same on the craft panel's line, and in the log
+	var added_line: String = Items.affix_lines(it, false, true)[0]
+	_check(sim.last_craft.get("id", -1) == it["id"] and str(sim.last_craft["words"]) == "Added " + added_line, "the bench's words are '%s', not 'Added %s'" % [str(sim.last_craft.get("words", "")), added_line])
+	_check(main._juice.lines().has(sim.last_craft["words"]), "the bench's words did not toast: %s" % str(main._juice.lines()))
+	_check(str(sim.events.back()[1]).ends_with(sim.last_craft["words"]), "the log line does not carry the bench's words: '%s'" % str(sim.events.back()[1]))
+	main.show_room(main.WORKSHOP)
+	main._workshop._set_view("craft")
+	var craftable: Array = main._workshop._craftable()
+	var kc := -1
+	for i in range(craftable.size()):
+		if craftable[i]["id"] == it["id"]:
+			kc = i
+	_check(kc >= 0, "the added-to piece is not in the Craft view")
+	if kc >= 0:
+		main._workshop._pick_cell(kc)
+	main.refresh()
+	_check(main._workshop._hint.text.begins_with("Added"), "the craft panel's line does not say what the bench did: '%s'" % main._workshop._hint.text)
+	_check_fit(main, "Workshop (craft, after an add)")
+	# every kind has words: re-roll says before and after, bump the levels, one the swap
+	var words_seen := {}
+	sim.cash = 999999.0
+	sim.notes = 9999
+	for kind in ["reroll", "bump"]:
+		if sim.craft_cost(it, kind) >= 0 and sim.craft(it["id"], kind):
+			words_seen[kind] = str(sim.last_craft["words"])
+	_check(words_seen.get("reroll", "").begins_with("Re-rolled: ") and words_seen.get("reroll", "").contains(" → "), "re-roll's words: '%s'" % words_seen.get("reroll", ""))
+	_check(not words_seen.has("bump") or (words_seen["bump"].begins_with("Level ") and words_seen["bump"].contains(" → ")), "bump's words: '%s'" % words_seen.get("bump", ""))
+	if not it["affixes"].is_empty() and sim.craft_cost(it, "one", it["affixes"][0]["stat"]) >= 0:
+		var was_line: String = Items.affix_lines(it, false, true)[0]
+		if sim.craft(it["id"], "one", it["affixes"][0]["stat"]):
+			_check(str(sim.last_craft["words"]).begins_with(was_line + " → ") or str(sim.last_craft["words"]) == "Re-rolled one: no change", "one's words: '%s'" % str(sim.last_craft["words"]))
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": it["id"]}
+	main.refresh()
 	main._open_bench_picks(it["id"])
 	_check(main._menu.visible, "the picks page did not open")
 	_check_fit(main, "Armoury (bench picks)")
@@ -2808,14 +2882,14 @@ func _juice_checks(main) -> void:
 	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 50, "tier": 3}]
 	sim.equipped["Primary"] = torch
 	sim.rig.append(sim._plain(Data.AMMO, "Nails"))
-	sim.mission["t"]["types"] = {"physical": 0.5, "poison": 0.5}
+	sim.mission["t"]["types"] = {"physical": 0.2, "poison": 0.8}
 	sim.mission["elapsed"] += 1.0
-	for k in range(6):
+	var colours := {}
+	for k in range(8):
 		sim.advance(0.5)
 		main.refresh()
-	var colours := {}
-	for n in main._juice._numbers:
-		colours[n["label"].get_theme_color("font_color")] = true
+		for n in main._juice._numbers:                      # gathered as they come: twelve show at once, the rest go
+			colours[n["label"].get_theme_color("font_color")] = true
 	_check(colours.has(Pal.ELEMENT_COLOURS["fire"]) and colours.has(Pal.ELEMENT_COLOURS["physical"]), "the hits did not come in fire and physical colours: dealt_by %s" % str(sim.mission.get("dealt_by", {})))
 	_check(colours.has(Pal.ELEMENT_COLOURS["poison"]), "their poison on you did not come up green: taken_by %s" % str(sim.mission.get("taken_by", {})))
 	var dealt_sum := 0.0

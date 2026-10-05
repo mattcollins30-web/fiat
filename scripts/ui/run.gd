@@ -17,17 +17,24 @@ const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const People := preload("res://scripts/ui/people.gd")
+const ItemCell := preload("res://scripts/ui/item_cell.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
 const PANEL_GAP := 12
 const THEM_H := 244                                           # no button: three lines and a note
-const PANEL_H := (Pal.ROOM_H - THEM_H - 2 * PANEL_GAP) / 2    # 300: two lines, a note, a button
 const GRID_X := BODY_W + GAP
-const GRID_W := Inventory.WIDTH                                # 888
-const GRID_H := Inventory.HEIGHT                               # 552
-const PICK_Y := GRID_H + GAP                                  # 576
-const PICK_H := Pal.ROOM_H - PICK_Y                           # 288
+const GRID_W := Inventory.WIDTH                                # 904
+const GRID_H := Inventory.HEIGHT                               # 588
+const PICK_Y := GRID_H + GAP                                  # 612
+const PICK_H := Pal.ROOM_H - PICK_Y                           # 304
+const RUN_Y := PICK_Y                                         # the run's panel, its top level with the pack's
+const RUN_H := PICK_H
+const RUNNER_Y := THEM_H + PANEL_GAP                          # 256
+const RUNNER_H := RUN_Y - PANEL_GAP - RUNNER_Y                # 344: two lines, a note, the rig's pouches, a button
+const RIG_Y := 210                                            # the pouches' row in the Runner panel, under the note, clear of the button
+const RUNNER_FOOT := 12                                       # the Runner panel's button sits lower, to make the pouches room
+const RIG_MAX := 18
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30                                            # a 24 px font is 29 tall
@@ -39,7 +46,6 @@ const BAR_Y := 86
 const LINES_Y := 116
 const NOTE_Y := LINES_Y + 3 * LINE_H + 2                      # 204 in Them
 const NOTE_Y_BUTTON := LINES_Y + 2 * LINE_H + 2               # 174 above a button
-const BUTTON_Y := PANEL_H - PAD - Pal.BUTTON_H                # 224
 
 var sim
 var _panels: Array = []            # three: {panel, title, head, unit, track, fill, bar_text, lines[], note, status, button}
@@ -52,6 +58,9 @@ var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
 var _shown := ""
 var _head_face: TextureRect        # the crew's head, while he's out
+var _rig_cells: Array = []         # ItemCells, one a pouch, in the Runner panel
+var _rig_outlines: Array = []
+var _take: Button                  # a med or rounds from the pack into the rig
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
 var _dealt_seen_by := {}           # and by type, for the coloured numbers
@@ -67,8 +76,9 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	for i in range(3):
-		var y := 0 if i == 0 else THEM_H + PANEL_GAP + (i - 1) * (PANEL_H + PANEL_GAP)
-		var h := THEM_H if i == 0 else PANEL_H
+		var y: int = [0, RUNNER_Y, RUN_Y][i]
+		var h: int = [THEM_H, RUNNER_H, RUN_H][i]
+		var button_y: int = h - (RUNNER_FOOT if i == 1 else PAD) - Pal.BUTTON_H
 		var p := UI.panel(self, Rect2(0, y, BODY_W, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 		var d := {"panel": p}
 		d["title"] = UI.label(p, Rect2(PAD, TITLE_Y, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -93,14 +103,27 @@ func _init() -> void:
 		if has_button:
 			lines[2][0].visible = false
 			lines[2][1].visible = false
-		var b := UI.button(p, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), true)
+		var b := UI.button(p, Rect2(PAD, button_y, INNER, Pal.BUTTON_H), true)
 		b.visible = false
 		d["button"] = b
-		var b2 := UI.button(p, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), false)
+		var b2 := UI.button(p, Rect2(PAD, button_y, INNER, Pal.BUTTON_H), false)
 		b2.visible = false
 		d["button2"] = b2
 		_panels.append(d)
 	_head_face = People.rect(_panels[0]["panel"], Vector2(BODY_W - PAD - 64, TITLE_Y), 0.5)
+	# the rig's pouches in the Runner panel: what's carried, a cell a pouch;
+	# a med's cell uses that med
+	for k in range(RIG_MAX):
+		var o := UI.panel(_panels[1]["panel"], Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
+		o.visible = false
+		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_rig_outlines.append(o)
+		var c := ItemCell.new()
+		c.position = Vector2(PAD, RIG_Y)
+		c.visible = false
+		c.pressed.connect(_rig_pressed.bind(k))
+		_panels[1]["panel"].add_child(c)
+		_rig_cells.append(c)
 	_panels[1]["button"].pressed.connect(_use_med)
 	_panels[2]["button"].pressed.connect(_get_out)
 	_panels[2]["button2"].pressed.connect(_stop_auto)
@@ -120,6 +143,9 @@ func _init() -> void:
 	_ditch = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), false)
 	_ditch.pressed.connect(_ditch_pick)
 	_ditch.visible = false
+	_take = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), true)
+	_take.pressed.connect(_take_pick)
+	_take.visible = false
 
 
 # ------------------------------------------------------------------ showing
@@ -172,6 +198,7 @@ func show_state(s) -> void:
 	else:
 		op["note"].text = _rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"])
 		med_sig = "use:" + sim.first_med()["base"]
+	_show_rig()
 	# the run
 	var run: Dictionary = _panels[2]
 	run["title"].text = t["name"]
@@ -185,7 +212,7 @@ func show_state(s) -> void:
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
-	var sig := "%s|%s|%d|%d|%s|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m)]
+	var sig := "%s|%s|%d|%d|%s|%d|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size()]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -233,6 +260,7 @@ func _show_pick(m: Dictionary) -> void:
 	var it := _picked_item(m)
 	_say(it)
 	_ditch.visible = not it.is_empty()
+	_take.visible = false
 	for l in _pick_lines:
 		l.text = ""
 	if it.is_empty():
@@ -256,11 +284,22 @@ func _show_pick(m: Dictionary) -> void:
 			"Fitted now: %s, %s %s" % [fitted["base"], Items.headline(fitted)[0], Items.headline(fitted)[1]]])
 	elif it["slot"] in Data.SLOTS:
 		_pick_lines[2].text = "Nothing fitted as %s" % it["slot"].to_lower()
-	_hint.text = "Ditched is gone; it frees %d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]
+	var cells_words := "%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]
 	_ditch.text = "Ditch %s" % it["base"].to_lower()
 	_ditch.size.x = ceilf(UI.text_width(_ditch, _ditch.text)) + 48
 	_ditch.position.x = GRID_W - PAD - _ditch.size.x
-	_hint.size.x = _ditch.position.x - PAD - 12
+	var left_edge: float = _ditch.position.x
+	# a med or rounds found out there can go in the rig now, if there's a pouch
+	_take.visible = Items.is_medical(it) or Items.is_ammo(it)
+	if _take.visible:
+		var room: bool = sim.rig_room(Items.size(it)) or (Items.is_ammo(it) and sim.rig_stack_room(it))
+		_take.text = "Take into the rig" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")
+		_take.disabled = not room
+		_take.size.x = ceilf(UI.text_width(_take, _take.text)) + 48
+		_take.position.x = _ditch.position.x - 12 - _take.size.x
+		left_edge = _take.position.x
+	_hint.size.x = left_edge - PAD - 12
+	UI.fit(_hint, ["Ditched is gone; it frees %s" % cells_words, "Ditched frees %s" % cells_words, "Frees %s" % cells_words])
 
 
 func _picked_item(m: Dictionary) -> Dictionary:
@@ -337,6 +376,43 @@ func _numbers_by(by: Dictionary, seen: Dictionary, panel: Panel, sign: String, b
 func _scatter(panel: Panel) -> Vector2:
 	var local := Vector2(PAD + 60 + randf() * (INNER - 120), BAR_Y - 6 + randf_range(-16.0, 16.0))
 	return panel.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
+
+
+## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
+func _show_rig() -> void:
+	var cap: int = mini(RIG_MAX, sim.med_capacity())
+	var cell: int = Pal.CELL if cap <= 8 else maxi(28, int((INNER + Pal.CELL_GAP) / cap) - Pal.CELL_GAP)
+	var k := 0
+	for it in sim.rig:
+		if k >= cap:
+			break
+		var c = _rig_cells[k]
+		c.position = Vector2(PAD + k * (cell + Pal.CELL_GAP), RIG_Y)
+		c.show_item(it, false, Vector2(cell, cell))
+		c.visible = true
+		k += 1
+	var filled := k
+	for i in range(RIG_MAX):
+		_rig_cells[i].visible = i < filled
+		var o = _rig_outlines[i]
+		o.visible = i >= filled and i < cap
+		o.position = Vector2(PAD + i * (cell + Pal.CELL_GAP), RIG_Y)
+		o.size = Vector2(cell, cell)
+
+
+func _rig_pressed(k: int) -> void:
+	if k < sim.rig.size() and Items.is_medical(sim.rig[k]) and sim.on_mission():
+		sim.use_med(sim.rig[k]["id"])
+		acted.emit()
+
+
+func _take_pick() -> void:
+	if not sim.on_mission():
+		return
+	var it := _picked_item(sim.mission)
+	if not it.is_empty() and sim.take_from_pack(it["id"]):
+		_inv.selected = -1
+		acted.emit()
 
 
 func _use_med() -> void:

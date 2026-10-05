@@ -41,6 +41,7 @@ var intel: Array = []              # per tier: the modifier names on offer now
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
 var training_points := 0           # earned, one a level, across operators
+var last_craft := {}               # the bench's last job: {id, kind, words}, for the toast and the craft panel
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
@@ -935,6 +936,9 @@ func craft(id: int, kind: String, stat := "") -> bool:
 		return false
 	var it := item_by_id(id)
 	var cost := craft_cost(it, kind, stat)
+	var before: Array = Items.affix_lines(it, false, true)
+	var sockets_before: int = Items.sockets(it)
+	var level_before: int = Items.ilvl(it)
 	match kind:
 		"reroll":
 			Items.reroll_affixes(it, rng)
@@ -953,13 +957,54 @@ func craft(id: int, kind: String, stat := "") -> bool:
 			Items.strip_affixes(it)
 		"bump":
 			it["ilvl"] = mini(int(it["tier"]) + Data.BUMP_CAP, Items.ilvl(it) + Data.BUMP_LEVELS)
+	# what the bench did, in words the player can check against the piece
+	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
+	last_craft = {"id": id, "kind": kind, "words": words}
 	if craft_in_notes(kind):
 		notes -= cost
-		log_event("At the bench, for %d notes: %s, %s." % [cost, Data.CRAFT[kind]["name"].to_lower(), it["base"].to_lower()])
+		log_event("At the bench, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
 	else:
 		cash -= float(cost)
-		log_event("At the bench, for %s: %s, %s." % [_cash_words(float(cost)), Data.CRAFT[kind]["name"].to_lower(), it["base"].to_lower()])
+		log_event("At the bench, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
 	return true
+
+
+## "Added +12% damage · T2", "Re-rolled: +4% damage · T1, +2 HP/s · T1 → ...".
+func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, sockets_before: int, level_before: int) -> String:
+	var after: Array = Items.affix_lines(it, false, true)
+	match kind:
+		"add":
+			for line in after:
+				if not (line in before):
+					return "Added %s" % line
+			return "Added an affix"
+		"reroll":
+			return "Re-rolled: %s → %s" % [", ".join(before), ", ".join(after)]
+		"lock":
+			var kept := ""
+			for line in after:
+				if line in before and line.contains(str(Items.affix_def(stat).get("label", stat))):
+					kept = line
+			var rest_before := before.filter(func(l): return l != kept)
+			var rest_after := after.filter(func(l): return l != kept)
+			return "Kept %s; re-rolled the rest: %s → %s" % [kept, ", ".join(rest_before), ", ".join(rest_after)]
+		"one":
+			var was := ""
+			var now := ""
+			for line in before:
+				if not (line in after):
+					was = line
+			for line in after:
+				if not (line in before):
+					now = line
+			return "%s → %s" % [was, now] if was != "" and now != "" else "Re-rolled one: no change"
+		"socket":
+			return "A socket cut: %d now" % Items.sockets(it)
+		"strip":
+			return "Stripped: %s gone" % ", ".join(before)
+		"bump":
+			return "Level %d → %d: up to T%d can roll" % [level_before, Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
+	return Data.CRAFT[kind]["name"]
 
 
 ## The map: its points and ranks.
@@ -2983,7 +3028,27 @@ func can_equip_item(id: int) -> bool:
 func take(id: int) -> bool:
 	if mission != null:
 		return false
-	for it in stash:
+	return _take_from(stash, id)
+
+
+## A med or rounds found out there, into the rig while the run's on.
+func take_from_pack(id: int) -> bool:
+	if mission == null:
+		return false
+	return _take_from(mission["found"], id)
+
+
+## Whether a stack of rounds would top up the rig's own stack entirely, with no pouch.
+func rig_stack_room(it: Dictionary) -> bool:
+	var left: int = Items.stack_size(it)
+	for r in rig:
+		if Items.same_stack(r, it):
+			left -= Items.stack_cap(r) - Items.stack_size(r)
+	return left <= 0
+
+
+func _take_from(src: Array, id: int) -> bool:
+	for it in src:
 		if it["id"] == id and (Items.is_medical(it) or Items.is_ammo(it)):
 			if Items.is_ammo(it):
 				# top up the rig's stack of the same rounds first; what's left takes a pouch, or stays
@@ -2996,13 +3061,13 @@ func take(id: int) -> bool:
 							Items.set_stack(it, Items.stack_size(it) - moved)
 							topped = true
 						if Items.stack_size(it) <= 0:
-							_remove(it)
+							src.erase(it)
 							return true
 				if not rig_room(1):
 					return topped
 			if not rig_room(Items.size(it)):
 				return false
-			_remove(it)
+			src.erase(it)
 			rig.append(it)
 			return true
 	return false
