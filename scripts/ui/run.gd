@@ -149,7 +149,7 @@ func _init() -> void:
 		_pick_right.append(UI.label(_pick, Rect2(PAD * 2 + col_w, 14 + i * 28, col_w, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_hint = UI.label(_pick, Rect2(PAD, PICK_H - 6 - 44, GRID_W - 2 * PAD - 260, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_pick, Rect2(PAD, 206 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_pick, Rect2(PAD, 228 + i * 20, (GRID_W - 3 * PAD) / 2, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_ditch = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), false)
 	_ditch.pressed.connect(_ditch_pick)
 	_ditch.visible = false
@@ -286,9 +286,9 @@ func _show_pick(m: Dictionary) -> void:
 		_hint.text = "Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet"
 		_hint.size.x = GRID_W - 2 * PAD
 		return
-	var tail := ""
+	var tail = ""
 	if Items.is_gun(it):
-		tail = Items.ammo_words(it).to_lower().replace("smg", "SMG")
+		tail = [Items.fitted_words(it), Items.ammo_words(it).to_lower().replace("smg", "SMG")]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
 	_pick_head.show_item(it, sim, tail)
@@ -470,7 +470,8 @@ func _on_inv_acted() -> void:
 ## For the tests: every label and visible button with text.
 ## The item's own line, under the figures: who it was, where it came from.
 func _say(it: Dictionary) -> void:
-	UI.wrap(_words, "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+	UI.fit_sentences(_words[0], "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+	_words[1].text = ""
 
 
 func text_nodes() -> Array:

@@ -222,6 +222,35 @@ static func fitted_count(gun: Dictionary) -> int:
 	return n
 
 
+## What's fitted on a gun, long to short: "Holo sight, Bipod + lighter fluid",
+## "2 parts + 1 socketable", "3 fitted"; "nothing fitted" / "no mounts" when empty.
+static func fitted_words(gun: Dictionary) -> Array:
+	var parts := []
+	var socks := []
+	for mount in gun.get("attachments", {}):
+		var a = gun["attachments"][mount]
+		if a == null:
+			continue
+		if str(mount).begins_with("socket"):
+			socks.append(str(a["base"]).to_lower())
+		else:
+			parts.append(str(a["base"]))
+	var mounts: int = gun.get("attachments", {}).size()
+	if mounts == 0:
+		return ["no mounts"]
+	if parts.is_empty() and socks.is_empty():
+		return ["nothing fitted", "%d mount%s" % [mounts, "" if mounts == 1 else "s"]]
+	var long: String = ", ".join(parts)
+	if not socks.is_empty():
+		long += (" + " if not parts.is_empty() else "") + ", ".join(socks)
+	var counts := []
+	if not parts.is_empty():
+		counts.append("%d part%s" % [parts.size(), "" if parts.size() == 1 else "s"])
+	if not socks.is_empty():
+		counts.append("%d socketable%s" % [socks.size(), "" if socks.size() == 1 else "s"])
+	return [long, " + ".join(counts), "%d fitted" % (parts.size() + socks.size())]
+
+
 static func rarity_name(it: Dictionary) -> String:
 	if it.has("unique"):
 		return "Unique"

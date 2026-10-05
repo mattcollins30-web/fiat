@@ -29,6 +29,8 @@ var rows := ROWS
 var chips_y := 0
 var headline_y := 0
 var rows_y := 0
+var tail_y := 0
+const TAIL_H := 26                 # the tail's own line under the headline
 var _title: Label
 var _chips: Array[Panel] = []
 var _chip_labels: Array[Label] = []
@@ -43,13 +45,14 @@ var _rows: Array[Label] = []
 func _init(w := 440, small := false) -> void:
 	width = w
 	compact = small
-	head_h = 34 if compact else 46
-	row_h = 28 if compact else 30
-	rows = 3 if compact else ROWS
+	head_h = 30 if compact else 46
+	row_h = 28
+	rows = 3
 	var gap := 4 if compact else 6
 	chips_y = TITLE_H + gap
 	headline_y = chips_y + CHIP_H + gap
-	rows_y = headline_y + head_h + gap
+	tail_y = headline_y + head_h
+	rows_y = tail_y + TAIL_H + gap
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size = Vector2(width, rows_y + rows * row_h)
 	_title = UI.label(self, Rect2(0, 0, width, TITLE_H), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -61,7 +64,7 @@ func _init(w := 440, small := false) -> void:
 	var fsize: int = Pal.TITLE if compact else Pal.HEADLINE
 	_figure = UI.label(self, Rect2(0, headline_y, width, head_h), "", "SemiBold", fsize, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_tail = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_tail = UI.label(self, Rect2(0, tail_y, width, TAIL_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(rows):
 		var y := rows_y + k * row_h
 		var t := UI.panel(self, Rect2(0, y + 1, TAG_W, row_h - 2), UI.box(Pal.BUTTON, 6))
@@ -73,7 +76,7 @@ func _init(w := 440, small := false) -> void:
 
 ## `tail` follows the headline: "takes SMG rounds · 600 carried". `extra` is a
 ## line for the fourth row when there's no open affix to say (a set's words).
-func show_item(it: Dictionary, sim, tail := "", extra := "") -> void:
+func show_item(it: Dictionary, sim, tail = "", extra := "") -> void:
 	UI.fit(_title, [Items.full_name(it), it["base"]])
 	# the chips: what it is, in the order a player asks
 	var chips := _chip_words(it)
@@ -113,13 +116,35 @@ func show_item(it: Dictionary, sim, tail := "", extra := "") -> void:
 	var fw: float = ceilf(UI.text_width(_figure, h[0]))
 	_unit.position.x = fw + 10
 	_unit.size.x = maxf(10.0, width - _unit.position.x)
-	var parts: Array = tail.split(" · ", false) if tail != "" else []
+	# the tail's clauses: each a string, or [long, shorter, ...] forms; the fit
+	# tries every clause long, then each clause's shorter forms, then fewer clauses
+	var clauses: Array = []
+	if tail is Array:
+		clauses = tail
+	elif tail != "":
+		clauses = Array(tail.split(" · ", false))
+	_unit.text = h[1]
+	# the tail on its own line, the whole width: every clause long, then shorter forms, then fewer clauses
 	var options := []
-	for n in range(parts.size(), 0, -1):
-		options.append(h[1] + " · " + " · ".join(parts.slice(0, n)))
-	options.append(h[1])
-	UI.fit(_unit, options)
-	_tail.text = ""
+	var deepest := 1
+	for c in clauses:
+		if c is Array:
+			deepest = maxi(deepest, c.size())
+	# the first clause matters most: its long form is kept while the rest shorten or go
+	for form_first in range(deepest):
+		for n in range(clauses.size(), 0, -1):
+			for form_rest in range(deepest):
+				var words := []
+				for k in range(n):
+					var c = clauses[k]
+					var form: int = form_first if k == 0 else form_rest
+					words.append(str(c[mini(form, c.size() - 1)]) if c is Array else str(c))
+				var line: String = " · ".join(words)
+				if not options.has(line):
+					options.append(line)
+	if options.is_empty():
+		options.append("")
+	UI.fit(_tail, options)
 	# the affixes, a row each in the tier's colour; the open row; the extra line
 	var lines: Array = Items.affix_lines(it, false, false)
 	var short_lines: Array = Items.affix_lines(it, true, false)
@@ -209,7 +234,7 @@ static func _chip_words(it: Dictionary) -> Array:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_title, _figure, _unit]
+	var out: Array = [_title, _figure, _unit, _tail]
 	for k in range(CHIPS):
 		if _chips[k].visible:
 			out.append(_chip_labels[k])

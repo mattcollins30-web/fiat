@@ -1631,7 +1631,7 @@ func _melee_checks(main) -> void:
 	main.refresh()
 	var bhead = main._armoury._head
 	_check(bhead.visible and bhead._title.text == "Bipod" and bhead._figure.text == "+18%", "the part's head is off: '%s' '%s'" % [bhead._title.text, bhead._figure.text])
-	_check(bhead._unit.text.contains("−6% pace") and not bhead._unit.text.contains("+22"), "the part's own figures carry its affix too: '%s'" % bhead._unit.text)
+	_check(bhead._tail.text.contains("−6% pace") and not bhead._tail.text.contains("+22"), "the part's own figures carry its affix too: '%s'" % bhead._tail.text)
 	_check(bhead._rows[0].text == "+4% damage" and bhead._tag_labels[0].text == "T2" and bhead._rows[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not on its own banded row: '%s'" % bhead._rows[0].text)
 	var chip_words := []
 	for k in range(bhead.CHIPS):
@@ -1640,6 +1640,23 @@ func _melee_checks(main) -> void:
 	_check(chip_words.has("Gun part") and chip_words.has("Handguard") and chip_words.has("Uncommon") and chip_words.has("Rifles only") and not chip_words.has("1 cell"), "the part's chips are %s" % str(chip_words))
 	_check_fit(main, "Armoury (a bipod)")
 	sim.stash.erase(bipod)
+	# a gun with parts and a socketable on: the head's tail names them, the fitted gun's right column lists them
+	var kitted: Dictionary = sim._plain("Primary", "Workshop SMG")
+	kitted["attachments"]["optic"] = sim._plain(Data.ATTACHMENT, "Red dot")
+	kitted["attachments"]["muzzle"] = sim._plain(Data.ATTACHMENT, "Choke") if Data.ATTACHMENTS.any(func(b): return b["name"] == "Choke") else null
+	kitted["attachments"]["socket 1"] = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	var held_primary = sim.equipped["Primary"]
+	sim.equipped["Primary"] = kitted
+	main._armoury._pick_slot("Primary")
+	main.refresh()
+	var khead = main._armoury._head
+	_check(khead._tail.text.contains("Red dot") or khead._tail.text.contains("part"), "a kitted gun's head does not say what's on it: '%s'" % khead._tail.text)
+	_check(main._armoury._right_lines[0].text.begins_with("Red dot"), "the fitted gun's column does not list its parts: '%s'" % main._armoury._right_lines[0].text)
+	_check(main._armoury._right_lines.any(func(l): return l.text.begins_with("Lighter fluid")), "the socketable is not listed with the parts")
+	_check_fit(main, "Armoury (a kitted gun)")
+	sim.equipped["Primary"] = held_primary
+	var kit_words: Array = Items.fitted_words(kitted)
+	_check(kit_words[0].contains("Red dot") and kit_words[0].contains("lighter fluid") and kit_words[1].contains("socketable") and kit_words[2].ends_with("fitted"), "fitted_words: %s" % str(kit_words))
 	main.show_room(main.WORKSHOP)
 	main.refresh()
 	# the bench says what the next level adds, at every level short of the last
@@ -3120,7 +3137,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._unit.text.contains("from before") and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._head._title.text, main._armoury._head._unit.text])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("from before") and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text])
 	_check(main._armoury._right_lines[0].text.begins_with("Read") or main._armoury._right_lines[0].text == "In the drawer", "a read paper's line is off: %s" % main._armoury._right_lines[0].text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the fence's stash tab (it crashed there too)
@@ -3529,7 +3546,7 @@ func _damage_model_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": shown["id"]}
 	main.refresh()
-	_check(main._armoury._head._unit.text.contains("takes shells"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._head._unit.text)
+	_check(main._armoury._head._tail.text.contains("takes shells") or main._armoury._head._tail.text.contains("shotgun rounds"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._head._tail.text)
 	_check_fit(main, "Armoury (ammo words)")
 	sim.sell(shown)
 	print("ammo words ok")

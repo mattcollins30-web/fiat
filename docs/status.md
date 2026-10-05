@@ -839,6 +839,19 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## What's on the gun (5 Oct)
+
+Matt's SMG with four parts and a socketable read as a bare gun. The head's tail is its own line under
+the headline now, the whole column wide, and for a gun it leads with what's fitted (`Items.fitted_words`:
+"Holo sight, Bipod, Drum magazine, Wire stock + lighter fluid", then "4 parts + 1 socketable", then
+"5 fitted" as the room shrinks; "nothing fitted" when bare), then the rounds ("takes SMG rounds, 600 in
+the rig", "600 SMG rounds", "takes SMG rounds"). The fit keeps the first clause long while the rest
+shorten or go. The Lock-up's right column, when the pick is the fitted gun, lists each part with its
+figures ("Red dot · +10% first", "Lighter fluid · 15% of your hits land as fire") above the stash's room.
+Every panel runs the compact head; the flavour is one row under it, shortening by sentence, then clause,
+then words (`UI.fit_sentences`). Asserted: a kitted gun's tail names a part, its column lists the parts
+and the socketable, `fitted_words` in its three forms.
+
 ## The Yard as option A; the Runs cards' elements; the Radio's cards (5 Oct)
 
 The card widget grew two things the new screens needed: a row of **chips** ([words, tone], in the first

@@ -93,7 +93,7 @@ func _init() -> void:
 		_chips.append(c)
 	# the swap in one word, on the left column's fourth line - its own label so
 	# it can be coloured without touching the lines above it
-	_overall = UI.label(_panel, Rect2(PANEL_PAD, 48 + 6 * LINE_H + 4, COL_W, 20), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_overall = UI.label(_panel, Rect2(PANEL_PAD, 228, COL_W, 20), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_head = ItemHead.new(COL_W, true)
 	_head.position = Vector2(PANEL_PAD, 10)
 	_head.visible = false
@@ -101,7 +101,8 @@ func _init() -> void:
 	_hint = UI.label(_panel, Rect2(PANEL_PAD, PANEL_H - 6 - 44, GRID_W - 2 * PANEL_PAD, 44), "",
 			"Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_panel, Rect2(PANEL_PAD, 48 + 6 * LINE_H + 4 + i * 20, GRID_W - 2 * PANEL_PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_panel, Rect2(PANEL_PAD, 228 + i * 20, COL_W + 60, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_words[1].visible = false                 # under the head there's one row for the flavour
 	for i in range(3):
 		var b := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 240, 44), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -194,6 +195,7 @@ func _show_panel() -> void:
 		l.text = ""
 	for l in _right_lines:
 		l.text = ""
+		l.add_theme_color_override("font_color", Pal.TEXT_2)
 	for tb in _toggles:
 		tb.visible = false
 	_head.visible = not it.is_empty()
@@ -222,15 +224,10 @@ func _show_panel() -> void:
 		return
 	_hint.text = ""
 	# the left column is the head: name, chips, the headline figure, the affix rows
-	var tail := ""
+	var tail = ""
 	var extra := ""
 	if Items.is_gun(it):
-		var takes: String = Items.ammo_words(it)
-		tail = takes.to_lower().replace("smg", "SMG")
-		if Items.ammo_type(it) != "none" and Items.ammo_type(it) != "":
-			tail += " · %d in the rig" % sim.rounds_for(it)
-		if it["attachments"].size() > 0:
-			tail += " · %d mounts" % it["attachments"].size()
+		tail = [Items.fitted_words(it), _rounds_clause(it)]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
 	elif Items.is_ammo(it):
@@ -303,9 +300,22 @@ func _show_panel() -> void:
 		_right_title.text = "Fitted"
 		if sim.workshop >= 1 and not it.has("unique"):
 			_button(1, "Bench", func(): bench.emit(it["id"]), not sim.on_mission())
-		_right_lines[0].text = "Unequip to put it in the stash"
-		_right_lines[1].text = "Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]
-		_right_lines[2].text = ""
+		# a gun's parts, each with its figures; the rest of the column for the stash
+		var row := 0
+		for mount in it.get("attachments", {}):
+			var a = it["attachments"][mount]
+			if a == null or row >= 4:
+				continue
+			var figures: String = Items.att_words(a, true) if not Items.is_socketable(a) else Items.socket_words(a).get_slice(": ", 1)
+			UI.fit(_right_lines[row], ["%s · %s" % [a["base"], figures], a["base"]])
+			_right_lines[row].add_theme_color_override("font_color", Pal.TEXT)
+			row += 1
+		if row == 0:
+			_right_lines[0].text = "Unequip to put it in the stash"
+			_right_lines[1].text = "Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]
+		else:
+			_right_lines[row].text = "Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]
+			_right_lines[row].add_theme_color_override("font_color", Pal.TEXT_2)
 		_button(0, "Unequip", sim.unequip.bind(it["slot"]), not sim.on_mission() and sim.stash_room(Items.size(it)))
 	_lay_buttons()
 
@@ -315,6 +325,15 @@ func _say(it: Dictionary) -> void:
 	UI.wrap(_words, "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
 
 
+## "takes SMG rounds, 600 in the rig", shorter forms after it.
+func _rounds_clause(gun: Dictionary) -> Array:
+	var takes: String = Items.ammo_words(gun).to_lower().replace("smg", "SMG")
+	if Items.ammo_type(gun) == "none" or Items.ammo_type(gun) == "":
+		return [takes]
+	var n: int = sim.rounds_for(gun)
+	return ["%s, %d in the rig" % [takes, n], "%d %s rounds" % [n, Items.type_word(gun)], takes]
+
+
 func _lay_buttons() -> void:
 	var x := GRID_W - PANEL_PAD
 	for i in range(_buttons.size() - 1, -1, -1):
@@ -322,15 +341,13 @@ func _lay_buttons() -> void:
 			x -= _buttons[i].size.x
 			_buttons[i].position.x = x
 			x -= 12
-	# the swap's verdict takes the flavour's first row: the flavour keeps the second
-	if _overall.text != "" and _words[0].text != "":
-		var whole: String = _words[0].text + (" " + _words[1].text if _words[1].text != "" else "")
-		var sentences: Array = whole.split(". ", false)
-		var options := [whole]
-		for n in range(sentences.size() - 1, 0, -1):
-			options.append(". ".join(sentences.slice(0, n)) + ".")
-		UI.fit(_words[1], options)        # one row: the whole, or fewer sentences
+	# one row under the head: the swap's verdict when there is one, else the flavour, shortened by sentence
+	var whole: String = _words[0].text + (" " + _words[1].text if _words[1].text != "" else "")
+	_words[1].text = ""
+	if _overall.text != "" or whole == "":
 		_words[0].text = ""
+	else:
+		UI.fit_sentences(_words[0], whole)
 	# the hint shares the strip with the buttons: it stops where they start
 	_hint.size.x = maxf(80.0, x - PANEL_PAD)
 	if _hint.text != "" and UI.text_width(_hint, _hint.text) > _hint.size.x:

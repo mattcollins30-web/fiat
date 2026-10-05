@@ -141,6 +141,23 @@ static func wrap(labels: Array, text: String) -> void:
 		labels[i].text = ""
 
 
+## A sentence or two on one label: the whole when it fits, else fewer sentences from the front.
+static func fit_sentences(l: Label, text: String) -> void:
+	var sentences: Array = text.split(". ", false)
+	var options := [text]
+	for n in range(sentences.size() - 1, 0, -1):
+		options.append(". ".join(sentences.slice(0, n)) + ".")
+	# then the first sentence's first clause, then its first few words
+	var first: String = str(sentences[0]) if not sentences.is_empty() else text
+	for sep in [", ", "; ", ": "]:
+		if first.contains(sep):
+			options.append(first.get_slice(sep, 0) + "…")
+	var words: PackedStringArray = first.split(" ", false)
+	for n in range(mini(6, words.size() - 1), 2, -1):
+		options.append(" ".join(words.slice(0, n)) + "…")
+	fit(l, options)
+
+
 ## Width the text needs at its font and size - what the tests compare with the box.
 static func text_width(c: Control, text: String) -> float:
 	var f: Font = c.get_theme_font("font")

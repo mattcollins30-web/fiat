@@ -161,7 +161,7 @@ func _init() -> void:
 	_panel.add_child(_head)
 	_hint = UI.label(_panel, Rect2(PAD, PANEL_H - 6 - 44, GRID_W - 2 * PAD, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_panel, Rect2(PAD, 206 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_panel, Rect2(PAD, 228 + i * 20, COL_W, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for i in range(3):
 		var b := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 200, 44), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -445,11 +445,11 @@ func _show_panel() -> void:
 		return
 	_hint.text = ""
 	# the left column is the head; the tail says what the runner would get out of it
-	var tail := ""
+	var tail = ""
 	if Items.is_medical(it):
 		tail = "heals %.0f for you, over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]
 	elif Items.is_gun(it):
-		tail = Items.ammo_words(it).to_lower().replace("smg", "SMG")
+		tail = [Items.fitted_words(it), Items.ammo_words(it).to_lower().replace("smg", "SMG")]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
 	_head.show_item(it, sim, tail)
@@ -512,7 +512,8 @@ func _button(i: int, text: String, action: Callable, enabled: bool) -> void:
 
 ## The item's own line, under the figures: who it was, where it came from.
 func _say(it: Dictionary) -> void:
-	UI.wrap(_words, "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+	UI.fit_sentences(_words[0], "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+	_words[1].text = ""
 
 
 func _lay_buttons() -> void:
