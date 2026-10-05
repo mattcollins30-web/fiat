@@ -1550,6 +1550,20 @@ Placeholder for drawn art, but the shapes are the shapes an artist would be give
 The worst-case pass covers the whole pool and the uniques; the smoke test drives juicing, the Clinic and
 the pool's rules (a choke counts on a shotgun and not on a rifle; a unique's rule and name; weight as pace).
 
+## The Finds card's figures, checked against a save (2026-10-05)
+
+Matt's second save (8.2 h, 110 runs, a Poacher) read "+35% loot quality / Loot quantity +-5%". Both figures were
+what the sim says: quality is Night eyes 20 + the Dog tag's find 15; quantity is the Snares' 12 + Knowing the
+streets 3 − Rat's share 20. The "+-5%" was a sign bug: every bonus on the card went through `"+%.0f%%"`.
+`Main._signed_pct` now reads "+8%", "−5%" or "0%" (rounded, so −0.2 is "0%"), used for quality, quantity, cash
+and notes. Smoke: `_yard_checks` trains Rat's share, asserts no figure on the card carries a doubled sign and a
+quantity below nought starts with "−", and checks the helper on −5, 8, 0 and −0.2.
+
+Noted, not changed: at roll time `Items.roll` gets `loot_bonus() + rarity_bonus() + the intel's rarity`, so the
+quantity figure feeds the rarity weights too (Rat's share takes 20 off quality as well as quantity); the "quality"
+bonus scales the non-common weights (60/28/10/2), so +35% moves Common from 60% to 53% and Elite from 2.0% to
+2.4%. Both are for the balance pass.
+
 ## The top bar (2026-10-02)
 
 Level and HP on the left, where the runner is in the centre, cash on the right in semibold; the game's

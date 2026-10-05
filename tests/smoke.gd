@@ -167,14 +167,14 @@ func _init() -> void:
 		sim.equipped["Rig"] = sim._plain("Rig", Data.BASES["Rig"][0]["name"])    # the run may have lost the rig
 	while not sim.stash_room(2) and sim.stash.size() > 0:
 		sim.sell(sim.stash.back())          # room in the stash for what the rig gives up
-	while not sim.rig_room(1) and sim.rig.size() > 0 and sim.stash_room(1):
-		sim.leave(sim.rig.back()["id"])     # room for the drop
+	while not sim.rig_room(2) and sim.rig.size() > 0 and sim.stash_room(2):
+		sim.leave(sim.rig.back()["id"])     # room for the drop, a two-cell kit included
 	var dropped := false
 	var any_med := false
 	for it in sim.stash:
-		any_med = any_med or Items.is_medical(it) or Items.is_ammo(it)
+		any_med = any_med or ((Items.is_medical(it) or Items.is_ammo(it)) and sim.rig_room(Items.size(it)))
 	if not any_med:
-		sim.stash.append(sim._plain("Medical", "Bandage"))      # the run may have used them all
+		sim.stash.append(sim._plain("Medical", "Bandage"))      # the run may have used them all, or what's left is too big for the room
 	for k in range(sim.stash.size()):
 		var it: Dictionary = sim.stash[k]
 		if (Items.is_medical(it) or Items.is_ammo(it)) and sim.rig_room(Items.size(it)):
@@ -4156,6 +4156,17 @@ func _yard_checks(main) -> void:
 		main.refresh()
 	var finds = main._cards[titles.find("Finds")]
 	_check(finds._unit.text == "loot quality" and finds._labels[0].text == "Loot quantity", "the Finds card is off: %s / %s" % [finds._unit.text, finds._labels[0].text])
+	# a bonus below nought reads with a minus, never "+-5%": the rat's share takes 20% off quantity
+	var hold_tree: Array = sim.tree.duplicate()
+	if not sim.tree.has("The rat man/9"):
+		sim.tree.append("The rat man/9")
+	main.refresh()
+	var figures: Array = [finds._headline.text] + finds._values.map(func(l): return l.text)
+	_check(not figures.any(func(t): return str(t).contains("+-") or str(t).contains("+−")), "a Finds figure reads with a doubled sign: %s" % str(figures))
+	_check(sim.loot_bonus() >= 0.0 or finds._values[0].text.begins_with("−"), "a quantity below nought reads '%s'" % finds._values[0].text)
+	_check(main._signed_pct(-5.0) == "−5%" and main._signed_pct(8.0) == "+8%" and main._signed_pct(0.0) == "0%" and main._signed_pct(-0.2) == "0%", "signed percents read off: %s %s %s" % [main._signed_pct(-5.0), main._signed_pct(8.0), main._signed_pct(-0.2)])
+	sim.tree = hold_tree
+	main.refresh()
 	_check_fit(main, "The Yard (option A)")
 	# the Runs cards: a chip an element they fire, with your resist; the town fires fire and poison
 	main.show_room(main.MISSIONS)

@@ -679,6 +679,14 @@ func _rail_status(name: String) -> Dictionary:
 
 # ------------------------------------------------------------------ camp
 
+## A bonus as a signed percent: "+8%", "−5%", "0%"; never "+-5%".
+static func _signed_pct(v: float) -> String:
+	var r := roundf(v)
+	if r < 0.0:
+		return "−%.0f%%" % -r
+	return "+%.0f%%" % r if r > 0.0 else "0%"
+
+
 func _camp_cards() -> Array:
 	var out := []
 	var lv: int = sim.level()
@@ -731,9 +739,9 @@ func _camp_cards() -> Array:
 	var search_faster: float = (1.0 - sim.search_s({}) / sim.SEARCH_S) * 100.0
 	var patrol_later: float = (sim.patrol_s({}) / sim.PATROL_S - 1.0) * 100.0 if not sim.has_node("never_there") else 0.0
 	out.append({
-		"title": "Finds", "headline": "+%.0f%%" % (sim.rarity_bonus() * 100.0), "unit": "loot quality",
-		"lines": [["Loot quantity", "+%.0f%%" % (sim.loot_bonus() * 100.0)], ["Cash", "+%.0f%%" % (sim.tree_sum("cash_pct") + sim.charm_cash())],
-			["Notes", "+%.0f%%" % sim._affix_sum("notes_pct")], ["Search", ("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"],
+		"title": "Finds", "headline": _signed_pct(sim.rarity_bonus() * 100.0), "unit": "loot quality",
+		"lines": [["Loot quantity", _signed_pct(sim.loot_bonus() * 100.0)], ["Cash", _signed_pct(sim.tree_sum("cash_pct") + sim.charm_cash())],
+			["Notes", _signed_pct(sim._affix_sum("notes_pct"))], ["Search", ("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"],
 			["Gangs", ("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "as they come")]],
 		"note": "Quality: rarer. Quantity: more",
 		"status": "A dog finds +%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"] if sim.kennel_level > 0 else "No dog yet",
