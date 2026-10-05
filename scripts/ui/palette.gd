@@ -27,9 +27,10 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
-# an affix's tier as a band of colour on its whole line, T1 to T5: grey, white,
-# green, blue, violet - read at a glance, apart from the rarity tones
-const TIER_COLOURS := [TEXT_2, TEXT, GOOD, Color("6fa8e6"), Color("c48ae8")]
+# an affix's tier as a band of colour on its whole line, T1 to T5: white,
+# green, blue, violet, gold - read at a glance; T1 reads as plain text, so the
+# first colour is the first step up
+const TIER_COLOURS := [TEXT, GOOD, Color("6fa8e6"), Color("c48ae8"), ACCENT]
 const DIM := Color(0, 0, 0, 0.72)     # behind a full-screen moment
 # the place's tone (the fifth slice): the screen's grounds shift a little by
 # place - neutral in the village, warmer in the town, cooler in the city; the

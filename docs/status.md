@@ -843,8 +843,8 @@ anything with affixes keep the gear markup. Asserted for every box type, and tha
 
 - **Bands.** Wherever an item's affixes are one a line - the Lock-up's panel (the pick and the fitted
   piece), the Bench's craft panel, the bench's pick menu - the whole line is in its tier's colour:
-  T1 grey, T2 white, T3 green, T4 blue, T5 violet (`Pal.TIER_COLOURS`, `Pal.tier_color`), apart from the
-  rarity tones on the cell borders. The fence's and the run's panels put the affixes on one line and stay
+  T1 white, T2 green, T3 blue, T4 violet, T5 gold (`Pal.TIER_COLOURS`, `Pal.tier_color`; the first cut
+  had T1 grey and T2 white, which read as no colour at all on a T1/T2 piece). The fence's and the run's panels put the affixes on one line and stay
   one colour. A menu item takes a `color` for its name. Asserted on the Lock-up for a three-affix item.
 - **Charms.** Matt had only ever seen magic find on a charm, and the bench would only bump one. Both were
   real: the stacks build (e2a7dea) had lumped the charm in with the boxes and bottles and rolled every
