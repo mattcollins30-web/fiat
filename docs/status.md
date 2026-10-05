@@ -839,6 +839,18 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## Loot quality and loot quantity (5 Oct)
+
+Three names for two stats: "magic find" (the affix), "rarer finds" (the tree, the traits, the site words)
+and `rarity` were one thing - the chance a find rolls a higher rarity; "loot find" was the other - how
+much comes out of a search. Now **loot quality** and **loot quantity**, everywhere the player reads them
+(affix labels, the charm's headline, the tree's rows and panel, the traits, the lanyard, the modifiers'
+words - "rarer loot" where a card line is short). The stat keys are unchanged.
+
+Not shown anywhere yet: the resists and the two loot figures. The Yard's cards are the place; two mockups
+are on the item-panel canvas (option A: Resists and Finds cards, the three works merged, a log card;
+option B: the runner's sheet two cards tall with resists as pills). Nothing built yet.
+
 ## The Caravan's panel, the notables' words, a part's affixes (5 Oct)
 
 - *"Cash +10%, for every runner the yard sends"* read as a bonus per runner sent. It never was: the tail

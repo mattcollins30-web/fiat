@@ -115,10 +115,10 @@ func _init() -> void:
 
 
 const EFFECT_WORDS := {
-	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% loot find", "search_pct": "Search %d%% faster",
+	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% quantity", "search_pct": "Search %d%% faster",
 	"first_pct": "First shot +%d%%", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
 	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d med carried", "rest_pct": "Rest +%d%%", "treat_pct": "Treatment −%d%%",
-	"att_share": "+%d%% attachments", "sell_pct": "Fence pays +%d%%", "cash_pct": "Cash +%d%%", "rarity": "Rarer finds +%d%%",
+	"att_share": "+%d%% attachments", "sell_pct": "Fence pays +%d%%", "cash_pct": "Cash +%d%%", "rarity": "+%d%% quality",
 	"pace_pct": "+%d%% pace", "damage_low_pct": "+%d%% dmg under ½ HP",
 	"conv_fire_pct": "%d%% as fire", "conv_frost_pct": "%d%% as frost", "conv_poison_pct": "%d%% as poison", "conv_shock_pct": "%d%% as shock", "conv_bleed_pct": "%d%% as bleed",
 	"fire_pct": "+%d%% fire", "frost_pct": "+%d%% frost", "poison_pct": "+%d%% poison", "shock_pct": "+%d%% shock", "bleed_pct": "+%d%% bleed", "physical_pct": "+%d%% physical",
@@ -127,11 +127,11 @@ const EFFECT_WORDS := {
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's fuller words for a plain node, where the row's short form isn't enough.
 const PANEL_WORDS := {
-	"damage_pct": "+%d%% damage, whatever's in hand", "hp": "+%d max HP", "loot_pct": "+%d%% loot find: more comes out of every search",
+	"damage_pct": "+%d%% damage, whatever's in hand", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity: more comes out of every search",
 	"search_pct": "Searches go %d%% faster", "first_pct": "Your first shot on every gang does %d%% more", "patrol_pct": "Gangs come %d%% later",
 	"armour_pct": "+%d%% armour", "heal_pct": "Meds heal %d%% more", "med_speed_pct": "Meds work %d%% quicker", "med_cap": "+%d pouch on the rig",
 	"rest_pct": "Resting at the yard heals %d%% faster", "treat_pct": "The clinic's treatment costs %d%% less", "att_share": "Gun parts count %d%% more",
-	"sell_pct": "The fence pays %d%% more for what you sell", "cash_pct": "+%d%% cash on every run's take", "rarity": "+%d%% magic find: rarer finds",
+	"sell_pct": "The fence pays %d%% more for what you sell", "cash_pct": "+%d%% cash on every run's take", "rarity": "+%d%% loot quality: rarer finds",
 	"pace_pct": "+%d%% pace: the fight and the search, quicker", "damage_low_pct": "+%d%% damage while under half HP",
 	"conv_fire_pct": "%d%% of your damage dealt as fire", "conv_frost_pct": "%d%% of your damage dealt as frost", "conv_poison_pct": "%d%% of your damage dealt as poison",
 	"conv_shock_pct": "%d%% of your damage dealt as shock", "conv_bleed_pct": "%d%% of your damage dealt as bleed",

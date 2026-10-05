@@ -517,7 +517,7 @@ const UNIQUES := [
 	{"name": "The lollipop lady's sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "depth": 12,
 		"words": "Stop: the first of every gang drops where it stands; gangs come half as often", "affixes": [{"stat": "first_pct", "value": 30}, {"stat": "patrol_pct", "value": 15}]},
 	{"name": "The bookie's pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "depth": 12,
-		"words": "Magic find doubled; cash halved", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
+		"words": "Loot quality doubled; cash halved", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
 	{"name": "The float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "depth": 25,
 		"words": "Pace +40% and the pack half again; you carry no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
 	{"name": "Nan's cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "depth": 12,
@@ -651,7 +651,7 @@ const AFFIXES := [
 	{"stat": "dot_pct", "label": "burn, poison and bleed damage", "short": "dots", "min": 8, "max": 40, "slots": ["Primary", "Secondary", "Charm"], "weight": 0.6},
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
 	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
-	{"stat": "loot_pct", "label": "loot find", "short": "loot", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
+	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 30, "slots": ["Rig", "Backpack", "Helmet"]},
 	{"stat": "capacity", "label": "capacity", "short": "cap", "min": 1, "max": 6, "slots": ["Backpack"], "flat": true},
 	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Primary", "Secondary", "Armour"]},
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
@@ -659,19 +659,19 @@ const AFFIXES := [
 	# conditional: they pay only in a situation, which is where builds come from
 	{"stat": "damage_low_pct", "label": "dmg under ½ HP", "short": "dmg <½HP", "min": 8, "max": 20, "slots": ["Primary", "Secondary"]},
 	{"stat": "first_lot_pct", "label": "damage on the first gang", "short": "dmg 1st gang", "min": 10, "max": 25, "slots": ["Primary"]},
-	{"stat": "loot_per_lot", "label": "loot find a gang seen off", "short": "loot/gang", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
+	{"stat": "loot_per_lot", "label": "loot quantity a gang seen off", "short": "qty/gang", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "armour_per_med", "label": "armour a med carried", "short": "arm/med", "min": 2, "max": 5, "slots": ["Rig", "Armour"]},
 	{"stat": "cash_per_kill", "label": "cash a kill", "short": "£/kill", "min": 2, "max": 6, "slots": ["Helmet", "Backpack"]},
 	# keyed off the build: they scale with a choice, not a number
 	{"stat": "damage_per_att", "label": "damage an attachment fitted", "short": "dmg/part", "min": 2, "max": 4, "slots": ["Primary"]},
 	{"stat": "armour_per_free", "label": "armour an empty pack cell", "short": "arm/free", "min": 1, "max": 3, "slots": ["Armour", "Backpack"]},
-	{"stat": "loot_per_med", "label": "loot find a med carried", "short": "loot/med", "min": 2, "max": 5, "slots": ["Rig", "Helmet"]},
+	{"stat": "loot_per_med", "label": "loot quantity a med carried", "short": "qty/med", "min": 2, "max": 5, "slots": ["Rig", "Helmet"]},
 	{"stat": "cash_per_cell", "label": "cash a pack cell filled, on the way out", "short": "£/cell", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 2, "max": 5, "slots": ["Attachment"]},
-	# the charm's: magic find is rarer finds; loot find is more of them
-	{"stat": "rarity_pct", "label": "magic find", "short": "MF", "min": 5, "max": 15, "slots": ["Charm", "Helmet"]},
+	# the charm's: loot quality is rarer finds; loot quantity is more of them
+	{"stat": "rarity_pct", "label": "loot quality", "short": "quality", "min": 5, "max": 15, "slots": ["Charm", "Helmet"]},
 	{"stat": "cash_pct", "label": "cash", "short": "cash", "min": 5, "max": 15, "slots": ["Charm"]},
-	{"stat": "loot_pct", "label": "loot find", "short": "loot", "min": 5, "max": 12, "slots": ["Charm"]},
+	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 12, "slots": ["Charm"]},
 ]
 
 ## The one zone, in three tiers. `pool` is enemy count; each has `hp` and
@@ -799,7 +799,7 @@ const TREES := [
 		{"name": "One shot", "effect": "one_shot", "keystone": true, "words": "The first of every gang drops to your first shot"},
 		{"name": "Lying up", "effect": "patrol_pct", "value": 10, "needs": 3},
 		{"name": "Rat bait", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
-		{"name": "Night work", "effect": "night_work", "notable": true, "words": "Every site you run is Night: rarer finds, pace −20%"},
+		{"name": "Night work", "effect": "night_work", "notable": true, "words": "Every site you run is Night: +50% loot quality, pace −20%"},
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
 		{"name": "Quick hands", "effect": "search_pct", "value": 15},
@@ -956,7 +956,7 @@ const ELEMENT_TREES := [
 		{"name": "Builds", "effect": "poison_stacks", "keystone": true, "words": "Poison stacks to fifteen, not five"},
 		{"name": "Slow acting", "effect": "poison_pct", "value": 15, "needs": 3},
 		{"name": "The whole tin", "effect": "conv_poison_pct", "value": 20},
-		{"name": "Rat's share", "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot find −20%"},
+		{"name": "Rat's share", "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot quantity −20%"},
 	]},
 	{"name": "Live", "element": "shock", "nodes": [
 		{"name": "Jump leads", "effect": "conv_shock_pct", "value": 10},
@@ -1054,7 +1054,7 @@ const ATLAS := [
 
 ## Traits: what a runner turns up with. Two turn up when one dies; you pick.
 const TRAITS := [
-	{"name": "Lucky", "words": "Rarer finds, +10%", "rarity": 0.1},
+	{"name": "Lucky", "words": "+10% loot quality", "rarity": 0.1},
 	{"name": "Heavy-handed", "words": "+8% damage, −5% pace", "damage": 1.08, "pace": 0.95},
 	{"name": "Wary", "words": "Gangs come 20% later", "patrol": 1.2},
 	{"name": "Greedy", "words": "+15% cash, −10% max HP", "cash": 1.15, "hp": 0.9},
@@ -1078,7 +1078,7 @@ const CLASSES := [
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP; −10% damage",
 		"heal": 1.5, "auto_med": true, "damage": 0.9},
-	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot find; −5% damage",
+	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity; −5% damage",
 		"search": 0.7, "loot": 0.15, "damage": 0.95},
 	{"name": "Drifter", "words": "One fewer on you at a time; +10% pace; −15% max HP",
 		"contact": -1, "pace": 1.1, "hp": 0.85},
@@ -1152,7 +1152,7 @@ static func tree_named(name: String) -> Dictionary:
 const MODIFIERS := [
 	{"name": "Numbers", "words": "+50% HP, drops +40%", "hp": 1.5, "drop": 1.4},
 	{"name": "Tooled up", "words": "Fire +40%, loot a tier up", "dps": 1.4, "loot_tier": 1},
-	{"name": "Night", "words": "Pace −20%, rarer finds", "pace": 0.8, "rarity": 0.5},
+	{"name": "Night", "words": "Pace −20%, rarer loot", "pace": 0.8, "rarity": 0.5},
 	{"name": "Delivery day", "words": "Gangs ×2, cash +80%", "patrol": 0.6, "cash": 1.8},
 	{"name": "Quiet road", "words": "Gangs ×½, drops −30%", "patrol": 1.5, "drop": 0.7},
 	{"name": "Spread out", "words": "−1 on you, HP +30%", "contact": -1, "hp": 1.3},
@@ -1170,7 +1170,7 @@ const MODIFIERS := [
 	{"name": "Jacketed", "words": "Fire res 40%, cash +30%", "res": "fire", "res_add": 0.4, "cash": 1.3},
 	{"name": "Rubbered", "words": "Shock res 40%, £ +30%", "res": "shock", "res_add": 0.4, "cash": 1.3},
 	{"name": "Hardened", "words": "Phys res 30%, cash +30%", "res": "physical", "res_add": 0.3, "cash": 1.3},
-	{"name": "Resistant", "words": "All res 25%, rarer finds", "res": "all", "res_add": 0.25, "rarity": 0.5, "min_depth": 8},
+	{"name": "Resistant", "words": "All res 25%, rarer loot", "res": "all", "res_add": 0.25, "rarity": 0.5, "min_depth": 8},
 ]
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth

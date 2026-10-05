@@ -1150,7 +1150,7 @@ func _charm_sockets(main) -> void:
 	_check(is_equal_approx(sim.charm_find(), 18.0 + sim._affix_sum("rarity_pct")), "a Casino chip with +10 magic find reads %.1f, not %.1f" % [sim.charm_find(), 18.0 + sim._affix_sum("rarity_pct")])
 	_check(sim.rarity_bonus() > without + 0.27, "the charm's magic find did not reach rarity_bonus: %.2f vs %.2f" % [sim.rarity_bonus(), without])
 	_check(sim.charm_cash() >= 15.0, "the charm's cash did not count: %.1f" % sim.charm_cash())
-	_check(Items.headline(charm)[0] == "+28%" and Items.headline(charm)[1] == "magic find", "a charm's headline is not its magic find: %s" % str(Items.headline(charm)))
+	_check(Items.headline(charm)[0] == "+28%" and Items.headline(charm)[1] == "loot quality", "a charm's headline is not its magic find: %s" % str(Items.headline(charm)))
 	var worn_find: float = sim._affix_sum("rarity_pct") - 10.0     # the helmet's, if any
 	# charms roll like gear: rarities and affixes from their own list (they had rolled plain since the stacks)
 	var rolled_rare := 0

@@ -679,7 +679,7 @@ static func headline(it: Dictionary) -> Array:
 	if it["slot"] == Data.PAPER:
 		return ["£%d" % int(it["value"]), "to the fence"]
 	if it["slot"] == Data.CHARM:
-		return ["+%.0f%%" % find(it), "magic find"]
+		return ["+%.0f%%" % find(it), "loot quality"]
 	return ["%d" % capacity(it), "capacity"]
 
 
