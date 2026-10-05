@@ -15,6 +15,11 @@ extends Control
 ## `unit` is the headline figure's unit in words, set smaller beside it, so a
 ## unit in plain words fits beside its figure.
 ##
+## `chips` is a row of short words in boxes - what a site is, what a thing
+## is - each [words, tone]; it takes a line's place after the bar. A line may
+## carry a third entry, a tone, that colours its value (an element's colour for
+## a resist or a damage type).
+##
 ## `bar` is something running - a job, a wait, an offer ending - drawn under the
 ## headline, 0 to 1 full, with its timer inside (Pithole's menu_shell.md §16).
 ## It takes the first line's place, so a card with a bar holds five lines. The
@@ -54,6 +59,10 @@ const BUTTON_ROOM := 32         # a button's text needs this much more: margins,
 const LINES_Y := 112
 const BAR_Y := 113              # in the first line's place
 const BAR_H := 30
+const CHIPS := 6
+const CHIP_H := 26
+const CHIP_PAD := 8
+const CHIP_GAP := 6
 
 var _bg: Panel
 var _edge: Panel                # the tone, down the left edge
@@ -68,6 +77,8 @@ var _headline: Label
 var _unit: Label
 var _labels: Array[Label] = []
 var _values: Array[Label] = []
+var _chips: Array[Panel] = []
+var _chip_labels: Array[Label] = []
 var _note: Label
 var _status: Label
 var _sketch: Control
@@ -133,6 +144,11 @@ func _init() -> void:
 		_labels.append(UI.label(self, Rect2(x, y, w, Pal.LINE_H), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_values.append(UI.label(self, Rect2(x, y, w, Pal.LINE_H), "", "Medium", Pal.LINE, Pal.TEXT,
 				HORIZONTAL_ALIGNMENT_RIGHT))
+	for i in range(CHIPS):
+		var cp := UI.panel(self, Rect2(x, LINES_Y + 3, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
+		cp.visible = false
+		_chips.append(cp)
+		_chip_labels.append(UI.label(cp, Rect2(CHIP_PAD, 0, 10, CHIP_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_note = UI.label(self, Rect2(x, 308, w, 34), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_sketch = Sketch.new()
 	_sketch.position = Vector2(x, LINES_Y + (Pal.LINES - SKETCH_LINES) * Pal.LINE_H)
@@ -171,13 +187,15 @@ func show_data(d: Dictionary) -> void:
 	_sketch.position.y = LINES_Y + (Pal.LINES - sketch_lines) * Pal.LINE_H
 	_sketch.size.y = sketch_lines * Pal.LINE_H
 	_sketch.show_sketch(sketch)
+	first += _show_chips(d.get("chips", []), first)
 	var room: int = Pal.LINES - first - (sketch_lines if not sketch.is_empty() else 0)
 	var lines: Array = d.get("lines", [])
-	assert(lines.size() <= room, "a card holds six lines, five with a bar, two fewer with a sketch: " + _title.text)
+	assert(lines.size() <= room, "a card holds six lines, five with a bar or chips, two fewer with a sketch: " + _title.text)
 	for i in range(Pal.LINES):
 		var on := i < lines.size()
 		_labels[i].text = lines[i][0] if on else ""
 		_values[i].text = lines[i][1] if on else ""
+		_values[i].add_theme_color_override("font_color", Pal.tone_color(lines[i][2]) if on and lines[i].size() > 2 and lines[i][2] != "" else Pal.TEXT)
 		_labels[i].position.y = LINES_Y + (i + first) * Pal.LINE_H
 		_values[i].position.y = _labels[i].position.y
 	_note.text = d.get("note", "")
@@ -215,6 +233,37 @@ func show_data(d: Dictionary) -> void:
 		_actions[i] = bd.get("action", Callable())
 	_status.visible = buttons.is_empty()
 	_status.text = d.get("status", "")
+
+
+## The chips, or none: returns the line places they take (one, when there are any).
+## Chips that don't fit the row are left off from the right.
+func _show_chips(chips: Array, after: int) -> int:
+	var x := 0.0
+	var y := LINES_Y + after * Pal.LINE_H + 3
+	var shown := false
+	for k in range(CHIPS):
+		var on := k < chips.size()
+		_chips[k].visible = on
+		if not on:
+			continue
+		var words: String = chips[k][0]
+		var tone: String = chips[k][1] if chips[k].size() > 1 else ""
+		var l := _chip_labels[k]
+		l.text = words
+		var w: float = ceilf(UI.text_width(l, words)) + 2 * CHIP_PAD
+		if x + w > Pal.INNER:
+			for j in range(k, CHIPS):
+				_chips[j].visible = false
+			break
+		_chips[k].position = Vector2(Pal.PAD + x, y)
+		_chips[k].size = Vector2(w, CHIP_H)
+		l.size.x = w - 2 * CHIP_PAD
+		var colour: Color = Pal.tone_color(tone) if tone != "" else Pal.TEXT_2
+		l.add_theme_color_override("font_color", colour)
+		_chips[k].add_theme_stylebox_override("panel", UI.box(colour.darkened(0.72) if tone != "" else Pal.BUTTON, 6))
+		x += w + CHIP_GAP
+		shown = true
+	return 1 if shown else 0
 
 
 ## The bar, or none: returns how many line places it takes.
@@ -331,6 +380,9 @@ func text_nodes() -> Array:
 		out.append(_bar_off)            # the whole bar wide: the text has to fit it
 	out.append_array(_labels)
 	out.append_array(_values)
+	for k in range(CHIPS):
+		if _chips[k].visible:
+			out.append(_chip_labels[k])
 	for b in _buttons:
 		if b.visible:
 			out.append(b)

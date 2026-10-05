@@ -675,35 +675,52 @@ func _camp_cards() -> Array:
 	var next_xp := Data.xp_for_level(mini(lv + 1, Data.MAX_LEVEL))
 	var this_xp := Data.xp_for_level(lv)
 	var fill: float = 1.0 if lv >= Data.MAX_LEVEL else clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
+	# the runner: the fight's figures
 	out.append({
-		"title": "Runner", "headline": "Level %d" % lv, "unit": "",
+		"title": "Runner", "headline": "Level %d" % lv, "unit": sim.cls if sim.cls != "" else "no past yet",
 		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
-			["Max HP", "%d" % sim.max_hp_shown()], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d of %d pouches" % [sim.rig_used(), sim.med_capacity()]]],
-		"status": "%s · runners lost: %d" % [sim.cls if sim.cls != "" else "No past yet", sim.operators_lost],
+			["Pace", "×%.2f" % sim.pace()], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d pouches" % sim.med_capacity()]],
+		"status": "Runners lost: %d" % sim.operators_lost,
 		"note": sim.next_words(true),
 	})
-	var cash_card := {
-		"title": "Cash", "headline": Fmt.money(sim.cash), "unit": "",
-		"lines": [["Kit worth", Fmt.money(sim.loadout_value())], ["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]]],
-		"note": "What the fence pays",
-	}
-	if sim.stash_cost() > 0:
-		cash_card["lines"].append(["Bigger stash", Fmt.money(sim.stash_cost())])
-		cash_card["buttons"] = [{"text": "Upgrade stash (%s)" % Fmt.money(sim.stash_cost()), "action": sim.upgrade_stash, "enabled": sim.can_upgrade_stash(), "primary": false}]
-	else:
-		cash_card["status"] = "The stash is as big as it gets"
-	out.append(cash_card)
-	var r = sim.last_report
-	if r != null:
-		var t: Dictionary = sim.tier(r["tier"])
-		out.append({
-			"title": "Last run", "headline": r["outcome"], "unit": "",
-			"lines": [["Where", t["name"]], ["Kills", "%d" % r["kills"]], ["Loot", "%d items" % r["loot"]],
-				["Gangs", "%d" % int(r.get("patrols", 0))], ["Cash", Fmt.money(r["cash"])], ["Took", Fmt.mss(r["time"])]],
-			"tone": "bad" if r["outcome"] == "Dead" else "good",
-			"status": ("Lost %s of kit" % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else ("XP +%s" % Fmt.num(r["xp"])),
-		})
+	# the elements: what you deal as each, what you resist of each
+	var conv: Dictionary = sim.conversion()
+	var elem_share: float = clampf(1.0 - float(conv.get("physical", 1.0)), 0.0, 1.0)
+	var elines := []
+	var zone_fires := {}
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i):
+			for ty in Data.ZONE_TYPES[int(Data.TIERS[i]["zone"])]["types"]:
+				zone_fires[ty] = true
+	for ty in Data.ELEMENTS:
+		var deal: float = float(conv.get(ty, 0.0)) * 100.0
+		var res: float = sim.resist(ty) * 100.0
+		var words: String = ("deal %.0f%% · res %.0f%%" % [deal, res]) if deal > 0.0 else ("res %.0f%%" % res)
+		elines.append([ty.capitalize(), words, ty])
+	var fire_chips := []
+	for ty in Data.ELEMENTS:
+		if zone_fires.has(ty):
+			fire_chips.append([ty.capitalize(), ty])
+	out.append({
+		"title": "Elements", "headline": "%.0f%%" % (elem_share * 100.0), "unit": "of your damage",
+		"chips": fire_chips,
+		"lines": elines,
+		"note": "Resists cap at %d%%" % int(Data.RESIST_CAP),
+		"status": "What the open sites fire" if not fire_chips.is_empty() else "Nothing open fires an element",
+	})
+	# the finds: quality and quantity, and the rest of what a run gives
+	var search_faster: float = (1.0 - sim.search_s({}) / sim.SEARCH_S) * 100.0
+	var patrol_later: float = (sim.patrol_s({}) / sim.PATROL_S - 1.0) * 100.0 if not sim.has_node("never_there") else 0.0
+	out.append({
+		"title": "Finds", "headline": "+%.0f%%" % (sim.rarity_bonus() * 100.0), "unit": "loot quality",
+		"lines": [["Loot quantity", "+%.0f%%" % (sim.loot_bonus() * 100.0)], ["Cash", "+%.0f%%" % (sim.tree_sum("cash_pct") + sim.charm_cash())],
+			["Notes", "+%.0f%%" % sim._affix_sum("notes_pct")], ["Search", ("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"],
+			["Gangs", ("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "as they come")]],
+		"note": "Quality: rarer. Quantity: more",
+		"status": "A dog finds +%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"] if sim.kennel_level > 0 else "No dog yet",
+	})
+	# the town
 	var zlines := []
 	for z in range(Data.ZONES.size()):
 		var deepest := 0
@@ -729,19 +746,84 @@ func _camp_cards() -> Array:
 	if sim.can_move_yard():
 		town["buttons"] = [{"text": "Move the yard", "action": _confirm_move, "enabled": true, "primary": false}]
 	out.append(town)
+	# the cash, and the stash
+	var cash_card := {
+		"title": "Cash", "headline": Fmt.money(sim.cash), "unit": "",
+		"lines": [["Notes", "%d" % sim.notes], ["Kit worth", Fmt.money(sim.loadout_value())], ["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]],
+			["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
+		"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays",
+	}
+	if sim.stash_cost() > 0:
+		cash_card["buttons"] = [{"text": "Bigger stash (%s)" % Fmt.money(sim.stash_cost()), "action": sim.upgrade_stash, "enabled": sim.can_upgrade_stash(), "primary": false}]
+	else:
+		cash_card["status"] = "The stash is as big as it gets"
+	out.append(cash_card)
+	# the yard's works: the generator, the lookout and the kennel on one card
+	var built: int = sim.generator_level + sim.lookout_level + sim.kennel_level
+	var of: int = Data.GENERATOR_LEVELS.size() + Data.LOOKOUT_LEVELS.size() + Data.KENNEL_LEVELS.size() - 3
+	var works := {
+		"title": "The yard's works", "headline": "%d" % built, "unit": "of %d levels built" % of,
+		"lines": [["Generator %d" % sim.generator_level, "%d h away" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"]],
+			["Lookout %d" % sim.lookout_level, "first ×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"]],
+			["Kennel %d" % sim.kennel_level, "+%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"]]],
+	}
+	# one button: the cheapest next job; the note names the others
+	var jobs := []
+	for job in [["generator", sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator], ["lookout", sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout],
+			["kennel", sim.kennel_cost(), sim.can_upgrade_kennel(), sim.upgrade_kennel]]:
+		if int(job[1]) > 0:
+			jobs.append(job)
+	jobs.sort_custom(func(a, b): return int(a[1]) < int(b[1]))
+	if jobs.is_empty():
+		works["status"] = "As good as it gets"
+		works["note"] = ""
+	else:
+		var first_job: Array = jobs[0]
+		works["buttons"] = [{"text": "%s (%s)" % [str(first_job[0]).capitalize(), Fmt.money(int(first_job[1]))], "action": first_job[3], "enabled": first_job[2], "primary": false}]
+		var rest := []
+		for j in jobs.slice(1):
+			rest.append(str(j[0]))
+		works["note"] = ("Then: %s" % ", ".join(rest)) if not rest.is_empty() else "The last of the works"
+	out.append(works)
+	# the last run
+	var r = sim.last_report
+	if r != null:
+		var t: Dictionary = sim.tier(r["tier"])
+		out.append({
+			"title": "Last run", "headline": r["outcome"], "unit": "",
+			"lines": [["Where", t["name"]], ["Kills · gangs", "%d · %d" % [r["kills"], int(r.get("patrols", 0))]], ["Loot", "%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]],
+				["Cash", Fmt.money(r["cash"])], ["Took", Fmt.mss(r["time"])]],
+			"tone": "bad" if r["outcome"] == "Dead" else "good",
+			"status": ("Lost %s of kit" % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else ("XP +%s" % Fmt.num(r["xp"])),
+		})
+	else:
+		out.append({"title": "Last run", "headline": "None yet", "unit": "", "lines": [], "note": "The first run writes here", "status": ""})
+	# the log: the clock, and the last few lines
+	var llines := []
+	var recent: Array = sim.events.slice(maxi(0, sim.events.size() - 5))
+	recent.reverse()
+	for e in recent:
+		llines.append([_short_line(str(e[1]), Pal.INNER), ""])
 	out.append({
-		"title": "Played", "headline": Fmt.clock(sim.elapsed), "unit": "",
-		"lines": [["Now", sim.tier(sim.mission["tier"])["name"] if sim.on_mission() else "in the yard"], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
-		"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "",
+		"title": "The log", "headline": Fmt.clock(sim.elapsed), "unit": "played",
+		"lines": llines,
+		"note": "",
 		"status": "Autosaves every 30 s",
 	})
-	out.append(_upgrade_card("Generator", "Away counts for", "%d h" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"], Data.GENERATOR_LEVELS, sim.generator_level,
-			sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator, Words.NOTES["generator"]))
-	out.append(_upgrade_card("Lookout", "First gang takes", "×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"], Data.LOOKOUT_LEVELS, sim.lookout_level,
-			sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout, "Sees the first gang coming"))
-	out.append(_upgrade_card("Kennel", "Extra a search", "+%d" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"], Data.KENNEL_LEVELS, sim.kennel_level,
-			sim.kennel_cost(), sim.can_upgrade_kennel(), sim.upgrade_kennel, "A dog, when there is one"))
 	return out
+
+
+## A log line cut to a width for a card's value column: the first sentence, then the first clause.
+func _short_line(line: String, width: float) -> String:
+	var probe: Label = _cards[0]._labels[0] if not _cards.is_empty() else _top_labels["where"]
+	var options := [line, line.get_slice(". ", 0) + ("." if line.contains(". ") else ""), line.get_slice(": ", 0), line.get_slice(",", 0), line.get_slice(";", 0)]
+	var words: PackedStringArray = line.split(" ", false)
+	for n in range(mini(6, words.size()), 0, -1):
+		options.append(" ".join(words.slice(0, n)))
+	for option in options:
+		if option != "" and UI.text_width(probe, option) <= width:
+			return option
+	return str(words[0]) if words.size() > 0 else ""
 
 
 ## A yard upgrade as a card: its level, what it does now, what the next costs.
@@ -788,18 +870,21 @@ func _comms_cards() -> Array:
 		if not sim.tier_open(i):
 			continue
 		var t: Dictionary = sim.effective(i)
-		var lines := []
-		# the radio's own words, not the sky's: those are on the Runs card
+		# the radio's own words, not the sky's: those are on the Runs card. The
+		# words as chips (a harder site's in amber, an easier one's in green), each
+		# one's figures on a line under; the odds to clear the fight with them on
 		var words: Array = sim.intel[i]
-		var tight: bool = words.size() > 2 and sim.can_juice()     # four buttons leave four lines
+		var chips := []
+		var lines := []
 		for name in words:
-			if tight:
-				lines.append([name, sim.modifier(name)["words"]])
-			else:
-				lines.append([name, ""])
-				lines.append(["", sim.modifier(name)["words"]])
-		var d := {"title": t["name"], "headline": "D%d" % t["depth"], "unit": sim.zone_name(i), "lines": lines,
-			"tone": "good" if sim.pinned[i] else ""}
+			var m: Dictionary = sim.modifier(name)
+			chips.append([name, _word_tone(m)])
+			lines.append([m["words"], ""])
+		if words.is_empty():
+			lines.append(["Nothing on the air for it", ""])
+		var odds: float = sim.survival(i)
+		var d := {"title": t["name"], "headline": Fmt.pct(odds), "unit": ("to clear, D%d" % t["depth"]) if sim.odds_settled(i) else "reading",
+			"chips": chips, "lines": lines, "tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
 		if sim.can_pin():
 			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
@@ -810,10 +895,22 @@ func _comms_cards() -> Array:
 			buttons.append({"text": "Hold", "action": _choose_hold.bind(i), "enabled": sim.can_lock_word(i), "primary": false})
 		d["buttons"] = buttons
 		# a note only while there's a line for it: two rows of buttons and three words fill the card
-		if lines.size() <= 4 and buttons.size() <= 2:
+		if lines.size() + 1 <= 4 and buttons.size() <= 2:
 			d["note"] = "Pinned: runs don't spend it" if sim.pinned[i] else ""
 		out.append(d)
 	return out
+
+
+## A word's tone for its chip: amber when it makes the fight harder, green when
+## it makes it easier or richer, plain when it's a trade.
+static func _word_tone(m: Dictionary) -> String:
+	var harder: bool = float(m.get("hp", 1.0)) > 1.0 or float(m.get("dps", 1.0)) > 1.0 or float(m.get("patrol", 1.0)) < 1.0 or int(m.get("contact", 0)) > 0
+	var easier: bool = float(m.get("hp", 1.0)) < 1.0 or float(m.get("dps", 1.0)) < 1.0 or float(m.get("patrol", 1.0)) > 1.0 or int(m.get("contact", 0)) < 0
+	if harder and not easier:
+		return "warn"
+	if easier and not harder:
+		return "good"
+	return ""
 
 
 ## The menu as a chooser: four words a page and More, for calling one in.

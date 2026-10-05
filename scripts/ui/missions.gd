@@ -20,6 +20,10 @@ const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
 const BOSS_W := 150                # the boss toggle beside Set off
 const DEPTH_BTN := 72
+const CHIPS := 4
+const CHIP_H := 26
+const CHIP_PAD := 8
+const CHIP_GAP := 6
 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
@@ -100,16 +104,25 @@ func _init() -> void:
 			var v := UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
 			c["lines"].append([l, v])
 			y += LINE_H
-		y += 12
+		# what they fire, as chips in the element's colour, with your resist to each
+		y += 2
+		c["chips"] = []
+		c["chip_labels"] = []
+		for k in range(CHIPS):
+			var cp := UI.panel(panel, Rect2(PAD, y, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
+			cp.visible = false
+			c["chips"].append(cp)
+			c["chip_labels"].append(UI.label(cp, Rect2(CHIP_PAD, 0, 10, CHIP_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		y += CHIP_H + 8
 		# the intel
-		c["intel_head"] = UI.label(panel, Rect2(PAD, y, INNER, 30), "Word", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		y += 30
+		c["intel_head"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "Word", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		y += 28
 		c["intel"] = []
 		for k in range(3):                     # the radio's two, and the sky's
-			var n := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			var w := UI.label(panel, Rect2(PAD, y + 30, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var n := UI.label(panel, Rect2(PAD, y, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var w := UI.label(panel, Rect2(PAD, y + 28, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			c["intel"].append([n, w])
-			y += 60
+			y += 56
 		c["intel_note"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		# the foot: Deploy across, Auto under it
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
@@ -130,7 +143,7 @@ func _init() -> void:
 		# the site's own line at this depth, two rows under the word, above the note
 		c["site"] = []
 		for k in range(2):
-			c["site"].append(UI.label(panel, Rect2(PAD, y + 32 + k * 22, INNER, 22), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+			c["site"].append(UI.label(panel, Rect2(PAD, y + 32 + k * 21, INNER, 21), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_cols.append(c)
 
 
@@ -206,11 +219,29 @@ func show_state(s) -> void:
 			["Drops up to", "tier %d gear" % t["loot_tier"]],
 			["Rewards", "×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)],
 		]
+		var res_words := []
+		for ty in Data.ELEMENTS:
+			if float(t.get("res", {}).get(ty, 0.0)) > 0.0:
+				res_words.append("%s %.0f%%" % [ty, float(t["res"][ty]) * 100.0])
 		if sim.wear(i) > 0.0:
 			rows[4] = ["The site", sim.site_state(i)]
+		elif not res_words.is_empty():
+			rows[4] = ["They resist", ", ".join(res_words)]
 		for r in range(5):
 			c["lines"][r][0].text = rows[r][0]
-			c["lines"][r][1].text = rows[r][1]
+			# the value beside its label: whole, then fewer of its clauses, the rest as "+N"
+			var clauses: PackedStringArray = str(rows[r][1]).split(", ", false)
+			var options := []
+			for n in range(clauses.size(), 0, -1):
+				options.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
+			var label_w: float = UI.text_width(c["lines"][r][0], rows[r][0]) + 16.0
+			var picked: String = options.back()
+			for o in options:
+				if label_w + UI.text_width(c["lines"][r][1], o) <= INNER:
+					picked = o
+					break
+			c["lines"][r][1].text = picked
+		_show_chips(c, t, is_open)
 		for r in range(3):
 			if r < t["intel"].size():
 				var m: Dictionary = sim.modifier(t["intel"][r])
@@ -300,6 +331,42 @@ func _reset_map() -> void:
 	show_state(sim)
 
 
+## What they fire, a chip an element in its colour with your resist to it;
+## "Physical" alone when a site fires nothing else. Chips past the row are left off.
+func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
+	var chips := []
+	for ty in Data.ELEMENTS:
+		var share: float = float(t.get("types", {}).get(ty, 0.0))
+		if share > 0.0:
+			chips.append(["%s %.0f%% · you resist %.0f%%" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0], "%s · res %.0f%%" % [ty.capitalize(), sim.resist(ty) * 100.0], ty])
+	if chips.is_empty():
+		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
+	var x := 0.0
+	for k in range(CHIPS):
+		var on: bool = is_open and k < chips.size()
+		c["chips"][k].visible = on
+		if not on:
+			continue
+		var l: Label = c["chip_labels"][k]
+		var colour: Color = Pal.tone_color(chips[k][2])
+		l.add_theme_color_override("font_color", colour)
+		c["chips"][k].add_theme_stylebox_override("panel", UI.box(colour.darkened(0.72), 6))
+		var w := 0.0
+		for words in [chips[k][0], chips[k][1]]:
+			w = ceilf(UI.text_width(l, words)) + 2 * CHIP_PAD
+			l.text = words
+			if x + w <= INNER:
+				break
+		if x + w > INNER:
+			for j in range(k, CHIPS):
+				c["chips"][j].visible = false
+			break
+		c["chips"][k].position.x = PAD + x
+		c["chips"][k].size.x = w
+		l.size.x = w - 2 * CHIP_PAD
+		x += w + CHIP_GAP
+
+
 func _depth(k: int, by: int) -> void:
 	var i := _tier(k)
 	sim.set_depth(i, sim.depth[i] + by)
@@ -341,6 +408,9 @@ func text_nodes() -> Array:
 	for c in _cols:
 		out.append_array([c["tier"], c["name"], c["odds"], c["odds_unit"], c["depth_label"], c["depth"], c["intel_head"], c["intel_note"], c["note"]])
 		out.append_array(c["site"])
+		for k in range(CHIPS):
+			if c["chips"][k].visible:
+				out.append(c["chip_labels"][k])
 		for pair in c["lines"]:
 			out.append_array(pair)
 		for pair in c["intel"]:

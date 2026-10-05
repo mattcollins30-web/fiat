@@ -839,6 +839,31 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The Yard as option A; the Runs cards' elements; the Radio's cards (5 Oct)
+
+The card widget grew two things the new screens needed: a row of **chips** ([words, tone], in the first
+line's place after the bar; those past the row are left off) and a **tone on a line's value** (the
+element's colour on a resist). With them:
+
+- **The Yard**, eight cards: Runner (level, class, XP; damage, armour, pace, pack, rig), **Elements** (the
+  share of your damage dealt as elements as the headline; chips for what the open sites fire; a line an
+  element, "deal 8% · res 30%" in the element's colour), **Finds** (loot quality the headline; quantity,
+  cash, notes, search, gangs), The town, Cash (notes, kit worth, stash, prices), **The yard's works** (the
+  generator, lookout and kennel on one card; one button for the cheapest next job, the note names the
+  rest), Last run, **The log** (the last five lines, shortened to the card). Generator, Lookout, Kennel and
+  Played as cards are gone.
+- **Runs**: each site's column has a chip row under its figures - an element they fire, in its colour, with
+  the share and your resist ("Fire 15% · you resist 30%", shorter when the row's full; "Physical only ·
+  armour takes 56%" when they fire nothing else) - and "They resist fire 20%, shock 20%" takes the rewards
+  row where a site resists anything (the site's wear still comes first). The intel rows tightened to make
+  the room.
+- **Radio**: a site's card leads with the odds to clear it with the words on, the words as chips (amber
+  when a word makes the fight harder, green when easier or richer), each word's figures on a line under.
+
+Asserted (`_yard_checks`): the eight cards; the fire line's words and colour; a torch's 20% reads as the
+deal share and the headline; the Finds card's lead; the town's card chips fire and resist; the radio's
+odds headline and chips; every fit check on the three screens.
+
 ## The item panel, option B (5 Oct)
 
 Matt picked B from the mockups: the item's head is one control now (`scripts/ui/item_head.gd`), mounted

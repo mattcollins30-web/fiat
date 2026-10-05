@@ -2486,6 +2486,7 @@ func _move_checks(main) -> void:
 	_next_checks(main)
 	_idle_checks(main)
 	_juice_checks(main)
+	_yard_checks(main)
 	_sound_checks(main)
 	_playtest_checks(main)
 
@@ -4069,3 +4070,65 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 
 func _hours(s: float) -> String:
 	return "%.1f h" % (s / 3600.0)
+
+
+## The Yard as option A: Elements and Finds cards with the figures nowhere else
+## showed; the works on one card; the Runs cards say what a site fires and what
+## you resist; the Radio's cards carry the words as chips and the odds.
+func _yard_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	var titles: Array = main._cards.map(func(c): return c._title.text if c.visible else "")
+	for want in ["Runner", "Elements", "Finds", "The town", "Cash", "The yard's works", "Last run", "The log"]:
+		_check(titles.has(want), "the Yard has no %s card: %s" % [want, str(titles)])
+	var elements = main._cards[titles.find("Elements")]
+	var fire_row := -1
+	for k in range(elements._labels.size()):
+		if elements._labels[k].text == "Fire":
+			fire_row = k
+	_check(fire_row >= 0 and elements._values[fire_row].text.contains("res ") and elements._values[fire_row].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["fire"], "the Elements card's fire line is off: %s" % (elements._values[fire_row].text if fire_row >= 0 else "none"))
+	# a torch makes the deal share show
+	var hold_gun = sim.equipped["Primary"]
+	var torch: Dictionary = sim._plain("Primary", "Nail gun")
+	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 20, "tier": 2}]
+	sim.equipped["Primary"] = torch
+	main.refresh()
+	_check(elements._values[fire_row].text.begins_with("deal 20%"), "with 20%% as fire the Elements card reads '%s'" % elements._values[fire_row].text)
+	_check(elements._headline.text == "20%", "the Elements headline is '%s', not 20%%" % elements._headline.text)
+	sim.equipped["Primary"] = hold_gun
+	var finds = main._cards[titles.find("Finds")]
+	_check(finds._unit.text == "loot quality" and finds._labels[0].text == "Loot quantity", "the Finds card is off: %s / %s" % [finds._unit.text, finds._labels[0].text])
+	_check_fit(main, "The Yard (option A)")
+	# the Runs cards: a chip an element they fire, with your resist; the town fires fire and poison
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(1)
+	main.refresh()
+	var col: Dictionary = main._missions._cols[0]
+	var chip_texts := []
+	for k in range(main._missions.CHIPS):
+		if col["chips"][k].visible:
+			chip_texts.append(col["chip_labels"][k].text)
+	if sim.tier_open(Data.ZONES[1]["tiers"][0]):
+		_check(chip_texts.any(func(t): return str(t).begins_with("Fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
+	_check_fit(main, "Runs (elements)")
+	main._missions._pick_zone(0)
+	# the Radio: the words as chips, the odds as the headline
+	if sim.comms_level > 0:
+		main.show_room(main.COMMS)
+		main.refresh()
+		var site_card = null
+		for c in main._cards:
+			if c.visible and c._title.text != "The set":
+				site_card = c
+				break
+		if site_card != null:
+			_check(site_card._headline.text.ends_with("%"), "the radio's site card has no odds headline: '%s'" % site_card._headline.text)
+			var any_chip := false
+			for k in range(site_card.CHIPS):
+				any_chip = any_chip or site_card._chips[k].visible
+			_check(any_chip or sim.intel[0].is_empty(), "the radio's site card has no word chips")
+		_check_fit(main, "Radio (chips)")
+	print("the Yard as option A ok: Elements, Finds, the works; the Runs cards' chips; the Radio's chips")
