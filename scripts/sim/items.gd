@@ -22,6 +22,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 	for b in (Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]):
 		if b["tier"] > max_tier:
 			continue
+		if int(b.get("depth", 0)) > depth:
+			continue                          # a deep paper: only past its depth
 		var home := exclusive_to(b["name"])
 		if home != "" and home != site:
 			continue

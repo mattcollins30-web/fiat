@@ -316,6 +316,13 @@ const BASES := {
 		{"name": "A boarding pass", "tier": 1, "value": 4},
 		{"name": "A parking ticket", "tier": 1, "value": 2},
 		{"name": "A Christmas list", "tier": 1, "value": 3},
+		# the deep ones: only past these depths, so the whole book is a reason to go there
+		{"name": "A ration book", "tier": 1, "value": 4, "depth": 12},
+		{"name": "A council minute", "tier": 1, "value": 4, "depth": 18},
+		{"name": "A bus timetable, amended", "tier": 1, "value": 4, "depth": 24},
+		{"name": "A letter to the bank", "tier": 1, "value": 5, "depth": 30},
+		{"name": "A list of names", "tier": 1, "value": 5, "depth": 40},
+		{"name": "The manager's note", "tier": 1, "value": 6, "depth": 50},
 		{"name": "The deeds", "tier": 5, "value": 5000},
 	],
 	## Medical: heals `heal` HP over `use` seconds, under fire the whole time.
@@ -384,10 +391,10 @@ const SOCKET_WORDS := {"conv_fire_pct": "fire", "conv_frost_pct": "frost", "conv
 const TYPES := ["physical", "fire", "frost", "poison", "shock", "bleed"]
 const ELEMENTS := ["fire", "frost", "poison", "shock", "bleed"]
 const RESIST_CAP := 75.0
-const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.6, "s": 6.0, "stacks": 1}}
+const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.7, "s": 6.0, "stacks": 1}}
 const CHILL := 0.2                 # their fire, while chilled
 const FREEZE := 0.85               # Frozen solid: how much of their fire a chilled gang loses (not all: a sliver keeps the depth honest)
-const SHOCK := 0.15                # more of everything they take, while shocked
+const SHOCK := 0.25                # more of everything they take, while shocked
 ## Their side, by zone: what their fire is made of at depth 1 (physical is the
 ## rest) and what they resist. The element's share grows with depth (ZONE_GROW
 ## a depth, to ZONE_SHARE_CAP); "Resistant" and the depth add to the resists.
@@ -494,7 +501,7 @@ const UNIQUES := [
 	{"name": "The council's weed burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "depth": 12,
 		"words": "A flamethrower: all fire, fire hits everyone on you, takes nothing", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
 	{"name": "Jump leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "depth": 12,
-		"words": "A third of your damage as shock; the first of a gang is every one of them", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
+		"words": "A third of your damage as shock; shock on one of them is shock on all of them", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
 	{"name": "The rat man's bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "depth": 12,
 		"words": "Poison never caps and carries to the next of them", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
 	{"name": "The butcher's steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "depth": 12,
@@ -955,10 +962,10 @@ const ELEMENT_TREES := [
 		{"name": "Jump leads", "effect": "conv_shock_pct", "value": 10},
 		{"name": "Charge", "effect": "shock_pct", "value": 10},
 		{"name": "Off the mains", "effect": "conv_shock_pct", "value": 15},
-		{"name": "Live", "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 30% more, not 15"},
+		{"name": "Live", "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 40% more, not 25"},
 		{"name": "Amps", "effect": "shock_pct", "value": 12, "needs": 3},
 		{"name": "Bare wire", "effect": "conv_shock_pct", "value": 20},
-		{"name": "Live wire", "effect": "shock_chain", "keystone": true, "words": "Shock on the first of a gang hits every one of them"},
+		{"name": "Live wire", "effect": "shock_chain", "keystone": true, "words": "Shock on one of them is shock on all of them"},
 		{"name": "Volts", "effect": "shock_pct", "value": 15, "needs": 3},
 		{"name": "Substation", "effect": "conv_shock_pct", "value": 20},
 		{"name": "Earthed", "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
@@ -970,7 +977,7 @@ const ELEMENT_TREES := [
 		{"name": "Opened up", "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
 		{"name": "Deep", "effect": "bleed_pct", "value": 12, "needs": 3},
 		{"name": "Serrated", "effect": "conv_bleed_pct", "value": 20},
-		{"name": "Won't stop", "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down"},
+		{"name": "Won't stop", "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down, and stack to three"},
 		{"name": "Nicked", "effect": "dot_pct", "value": 20, "needs": 3},
 		{"name": "Butcher's", "effect": "conv_bleed_pct", "value": 20},
 		{"name": "Blood up", "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
@@ -1153,6 +1160,9 @@ const MODIFIERS := [
 	{"name": "Lying low", "words": "Fire −30%, XP −30%", "dps": 0.7, "xp": 0.7},
 	{"name": "Ex-army", "words": "HP, fire +30%, XP +60%", "hp": 1.3, "dps": 1.3, "xp": 1.6},
 	{"name": "Picked over", "words": "Slow pickings, cash +40%", "search": 2.0, "cash": 1.4},
+	# the sky's: never rolled as a word; the clock and the weather put them on
+	{"name": "Rain", "words": "Slower search, gangs later", "search": 1.3, "patrol": 1.25, "sky": true},
+	{"name": "Fog", "words": "−1 on you, drops −10%", "contact": -1, "drop": 0.9, "sky": true},
 	# the types: what their fire is made of, and what they resist
 	{"name": "Burners", "words": "A third fire, drops +20%", "type": "fire", "share": 0.33, "drop": 1.2},
 	{"name": "Cutters", "words": "A third bleed, drops +20%", "type": "bleed", "share": 0.33, "drop": 1.2},
@@ -1198,6 +1208,18 @@ const INFLATION_CAP := 12.0
 const RECYCLE_RUNS := 3
 const RECYCLE_ODDS := 0.3
 const RECYCLE_KEEP := 12
+## The places changing. A cleared site is picked over for a while: its drops
+## and cash thin and come back over RECOVER_H yard hours. The clock: the yard
+## opens at CLOCK_START; from NIGHT_FROM to NIGHT_TO every site is Night. The
+## weather by zone, re-rolled every WEATHER_H: the odds of rain, then fog.
+const RECOVER_H := 2.0
+const WORN_DROP := 0.5             # drops lose this much at fully picked over
+const WORN_CASH := 0.3
+const CLOCK_START := 9.0
+const NIGHT_FROM := 21.0
+const NIGHT_TO := 6.0
+const WEATHER_H := 1.0
+const WEATHER_ODDS := [[0.35, 0.15], [0.25, 0.2], [0.2, 0.25]]   # by zone: rain, fog
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50

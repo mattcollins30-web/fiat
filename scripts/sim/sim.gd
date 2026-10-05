@@ -45,6 +45,10 @@ var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the fence moved on
+var book: Array = []               # the papers found, by name, in the order found: the drawer in the caravan
+var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
+var weather: Array = []            # per zone: "", "Rain" or "Fog"
+var weather_at := -1               # the hour the weather was last rolled
 var runner_runs := 0               # this runner's runs so far
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the bank's vault, opened once
@@ -73,8 +77,10 @@ func _init() -> void:
 		depth.append(1)
 		best_depth.append(0)
 		pinned.append(false)
+		worn.append(-1.0)
 	for z in range(Data.ZONES.size()):
 		bosses_beaten.append(false)
+		weather.append("")
 
 
 ## A fresh camp: a starter loadout, the first stock on the market.
@@ -268,6 +274,8 @@ func dot_stacks(ty: String) -> int:
 		n = 15
 	if ty == "poison" and has_rule("rat_mans_bag"):
 		n = 999
+	if ty == "bleed" and has_node("bleed_forever"):
+		n = 3                                    # Won't stop: a bleed on a bleed on a bleed
 	return n
 
 
@@ -279,7 +287,7 @@ func chill_amount() -> float:
 
 
 func shock_amount() -> float:
-	return 0.3 if tree.has("Live/3") else Data.SHOCK
+	return 0.4 if tree.has("Live/3") else Data.SHOCK
 
 
 ## Damage a second by type, before their resist: the base, split, increased, more.
@@ -641,7 +649,7 @@ func move_yard(trade := "") -> bool:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
 	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate()}
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate()}
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
@@ -656,6 +664,7 @@ func move_yard(trade := "") -> bool:
 	events = keep["events"]
 	operators_lost = keep["operators_lost"]
 	trades = keep["trades"]
+	book = keep["book"]
 	tree = yard_tree
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
@@ -665,6 +674,80 @@ func move_yard(trade := "") -> bool:
 	if trade != "":
 		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
 	return true
+
+
+# ------------------------------------------------------------------ the places changing
+
+## The yard's clock: hours on the 24, from the morning the yard opened.
+func hour_of_day() -> float:
+	return fmod(Data.CLOCK_START + elapsed / 3600.0, 24.0)
+
+
+func is_night() -> bool:
+	var h := hour_of_day()
+	return h >= Data.NIGHT_FROM or h < Data.NIGHT_TO
+
+
+func clock_words() -> String:
+	var h := hour_of_day()
+	return "%02d:%02d" % [int(h), int(fmod(h, 1.0) * 60.0)]
+
+
+## The weather by zone, rolled once an hour of the yard's time.
+func _roll_weather() -> void:
+	var hour := int(elapsed / (Data.WEATHER_H * 3600.0))
+	if hour == weather_at:
+		return
+	weather_at = hour
+	for z in range(Data.ZONES.size()):
+		var odds: Array = Data.WEATHER_ODDS[mini(z, Data.WEATHER_ODDS.size() - 1)]
+		var r := rng.randf()
+		weather[z] = "Rain" if r < float(odds[0]) else ("Fog" if r < float(odds[0]) + float(odds[1]) else "")
+
+
+func weather_of(i: int) -> String:
+	return str(weather[int(Data.TIERS[i]["zone"])])
+
+
+## How picked over a site is, 0 to 1: full on the clear, gone RECOVER_H later.
+func wear(i: int) -> float:
+	if worn[i] < 0.0:
+		return 0.0
+	return clampf(1.0 - (elapsed - worn[i]) / (Data.RECOVER_H * 3600.0), 0.0, 1.0)
+
+
+## The site's state, for the card: fresh, settling, or picked over and when it's back.
+func site_state(i: int) -> String:
+	var w := wear(i)
+	if w <= 0.0:
+		return Words.SKY["fresh"]
+	var back: float = Data.RECOVER_H * 3600.0 - (elapsed - float(worn[i]))
+	var mins: int = int(ceil(back / 60.0))
+	var when := ("%dh%02d" % [mins / 60, mins % 60]) if mins >= 60 else ("%d min" % mins)
+	return (Words.SKY["worn"] if w > 0.5 else Words.SKY["settling"]) % when
+
+
+## The sky over a site, in words: the clock, night or day, the weather.
+func sky_words(i: int) -> String:
+	var w := weather_of(i)
+	return "%s, %s%s" % [clock_words(), Words.SKY["night"] if is_night() else Words.SKY["day"], (", " + Words.SKY[w.to_lower()]) if w != "" else ""]
+
+
+# ------------------------------------------------------------------ the papers as the book
+
+## A paper picked up is read, and goes in the drawer by name, once, in the order found.
+func _read(it: Dictionary) -> void:
+	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
+		book.append(it["base"])
+
+
+## Every paper there is to find, deep ones last.
+func book_pages() -> Array:
+	var out: Array = []
+	for b in Data.BASES[Data.PAPER]:
+		if b["name"] != "The deeds":
+			out.append(b["name"])
+	return out
 
 
 # ------------------------------------------------------------------ the estate recycles
@@ -1387,7 +1470,7 @@ func set_insure(on: bool) -> void:
 func juice_options(i: int) -> Array:
 	var out := []
 	for m in Data.MODIFIERS:
-		if not (m["name"] in intel[i]):
+		if not (m["name"] in intel[i]) and not m.get("sky", false):
 			out.append(m["name"])
 	return out
 
@@ -1741,11 +1824,18 @@ func effective(i: int) -> Dictionary:
 		e["loot_tier"] = Data.MAX_TIER
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
-	if has_node("night_work") and not ("Night" in intel[i]):
+	if (has_node("night_work") or is_night()) and not ("Night" in intel[i]):
 		var night := modifier("Night")
 		e["pace"] *= night.get("pace", 1.0)
 		e["rarity"] += night.get("rarity", 0.0)
 		e["intel"].append("Night")
+	var sky: String = weather_of(i)
+	if sky != "" and not (sky in intel[i]):
+		e["intel"].append(sky)               # applied with the words below
+	var w := wear(i)
+	if w > 0.0:
+		e["drop"] *= 1.0 - Data.WORN_DROP * w
+		e["cash"] *= 1.0 - Data.WORN_CASH * w
 	var b := boss_of(i)
 	if boss_armed.get(i, false) and is_convoy(i):
 		# the convoy: all three, one after another, at full strength
@@ -1757,7 +1847,9 @@ func effective(i: int) -> Dictionary:
 		e["convoy"] = true
 	elif not b.is_empty() and boss_armed.get(i, false):
 		e["boss"] = boss_form(b, e, is_pinnacle(i))
-	for name in intel[i]:
+	for name in e["intel"]:
+		if name == "Night" and not ("Night" in intel[i]):
+			continue                              # the clock's night is applied above
 		var m := modifier(name)
 		e["hp"] *= m.get("hp", 1.0)
 		e["dps"] *= m.get("dps", 1.0)
@@ -1823,7 +1915,7 @@ func _roll_tier_intel(i: int) -> void:
 	if Data.TIERS[i]["zone"] >= 1:
 		n = 2
 	var names := []
-	var pool: Array = Data.MODIFIERS.duplicate()
+	var pool: Array = Data.MODIFIERS.filter(func(m): return not m.get("sky", false))   # the sky's words come from the clock, not the radio
 	pool.shuffle()
 	for k in range(n):
 		names.append(pool[k]["name"])
@@ -1993,6 +2085,7 @@ func set_auto(i: int) -> void:
 ## redeploys and missions run in order, so an offline span plays as a live one would.
 func advance(seconds: float) -> void:
 	elapsed += seconds
+	_roll_weather()
 	var left := seconds
 	while left > 0.0:
 		if mission != null:
@@ -2137,8 +2230,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
 		elif ty == "fire" and (has_node("fire_spread") or has_rule("weed_burner")):
 			landed *= crowd_on_you                # Spreads: fire hits everyone on you
-		if ty == "shock" and (has_node("shock_chain") or has_rule("jump_leads")) and m["fresh"]:
-			landed *= crowd_on_you                # Live wire: the first of a gang is every one of them
+		if ty == "shock" and (has_node("shock_chain") or has_rule("jump_leads")) and (m["fresh"] or shocked):
+			landed *= crowd_on_you                # Live wire: shock on one of them is shock on all of them, while it holds
 		if ty == "fire" and has_node("fire_more"):
 			hp -= minf(single * 0.02, max_hp() * 0.01 * dt)   # petrol on your hands: 2% of a hit, never past 1% of you a second
 		landed_total += landed
@@ -2403,6 +2496,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if pack_used(m) + Items.size(it) <= capacity():
 		m["found"].append(it)
+		_read(it)
 		return
 	# the pack is full: the find takes the place of the cheapest thing at
 	# least its size, if it's worth more; anything else is passed over
@@ -2413,6 +2507,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	if cheapest >= 0 and it["value"] > m["found"][cheapest]["value"]:
 		m["found"][cheapest] = it
 		m["swapped"] = m.get("swapped", 0) + 1
+		_read(it)
 	else:
 		m["left"] += 1
 
@@ -2443,6 +2538,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	if m.get("dry", false):
 		return
 	_wearing_off(m)
+	worn[m["tier"]] = elapsed
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (2.0 if has_node("stand") else 1.0)
 	m["xp"] += bonus
 	var before := level()
@@ -2976,7 +3072,7 @@ func treat() -> bool:
 ## The figures a return-from-away summary compares: a snapshot before and after.
 func snapshot() -> Dictionary:
 	return {"cash": cash, "xp": xp, "level": level(), "stash": stash.size(), "lost": operators_lost,
-		"events": events.size(), "elapsed": elapsed}
+		"events": events.size(), "elapsed": elapsed, "runs": runs_total}
 
 
 func log_event(text: String) -> void:
@@ -2999,7 +3095,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -3065,6 +3161,14 @@ func load_dict(d: Dictionary) -> void:
 	depot_cleared = bool(d.get("depot_cleared", false))
 	past = d.get("past", [])
 	loose_kit = Array(d.get("loose_kit", []))
+	book = Array(d.get("book", []))
+	if d.has("worn"):
+		for i in range(mini(worn.size(), d["worn"].size())):
+			worn[i] = float(d["worn"][i])
+	if d.has("weather"):
+		for z in range(mini(weather.size(), d["weather"].size())):
+			weather[z] = str(d["weather"][z])
+	weather_at = int(d.get("weather_at", -1))
 	runner_runs = int(d.get("runner_runs", 0))
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))

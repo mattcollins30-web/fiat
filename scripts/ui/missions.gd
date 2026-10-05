@@ -105,7 +105,7 @@ func _init() -> void:
 		c["intel_head"] = UI.label(panel, Rect2(PAD, y, INNER, 30), "Word", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		y += 30
 		c["intel"] = []
-		for k in range(2):
+		for k in range(3):                     # the radio's two, and the sky's
 			var n := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			var w := UI.label(panel, Rect2(PAD, y + 30, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			c["intel"].append([n, w])
@@ -138,7 +138,7 @@ func _init() -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel), sim.auto_tier,
+	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel) + str(sim.weather) + str(int(sim.elapsed / 60.0)), sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
 		return
@@ -195,10 +195,12 @@ func show_state(s) -> void:
 			["Drops up to", "tier %d gear" % t["loot_tier"]],
 			["Rewards", "×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)],
 		]
+		if sim.wear(i) > 0.0:
+			rows[4] = ["The site", sim.site_state(i)]
 		for r in range(5):
 			c["lines"][r][0].text = rows[r][0]
 			c["lines"][r][1].text = rows[r][1]
-		for r in range(2):
+		for r in range(3):
 			if r < t["intel"].size():
 				var m: Dictionary = sim.modifier(t["intel"][r])
 				c["intel"][r][0].text = m["name"]
@@ -206,7 +208,7 @@ func show_state(s) -> void:
 			else:
 				c["intel"][r][0].text = ""
 				c["intel"][r][1].text = ""
-		c["intel_note"].text = "Pinned at the radio" if sim.pinned[i] else "New word after every run"
+		UI.fit(c["intel_note"], ["%s · %s" % [sim.sky_words(i), "pinned at the radio" if sim.pinned[i] else "new word after every run"], sim.sky_words(i)])
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and sim.notes < sim.boss_cost(i))

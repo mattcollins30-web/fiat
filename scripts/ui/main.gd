@@ -408,18 +408,25 @@ func _settle_away(away: float) -> void:
 	var after: Dictionary = sim.snapshot()
 	# the log's deploys all carry the replay's real time, so the summary counts
 	# by cash and items - what the player cares about
-	var words := "%s away%s. " % [Fmt.away(away), " (settled %s of it)" % Fmt.away(seconds) if away > seconds else ""]
-	if sim.auto_tier >= 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
-		words += "%s%s, %d items to the stash, level %d → %d" % ["+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
-				after["stash"] - before["stash"], before["level"], after["level"]]
+	var words := ""
+	var runs: int = int(after.get("runs", 0)) - int(before.get("runs", 0))
+	if sim.auto_tier >= 0 or runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
+		var where: String = sim.tier(sim.auto_tier)["name"].to_lower() if sim.auto_tier >= 0 else "the estate"
+		var things: int = after["stash"] - before["stash"]
+		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
+				things, "" if things == 1 else "s", before["level"], after["level"]]
 		if after["lost"] > before["lost"]:
-			words += ", a runner lost"
+			words += Words.AWAY["lost"]
 	else:
-		words += "The runner rested."
+		words = Words.AWAY["rested"] % Fmt.away(away)
+	if away > seconds:
+		words += Words.AWAY["settled"] % Fmt.away(seconds)
+	if sim.inflation_pct() > 0:
+		words += Words.AWAY["prices"] % sim.inflation_pct()
 	if sim.camp_lost:
 		show_camp_lost()
 		return
-	_menu.open("While you were away", words, [{"name": "Continue", "detail": "", "action": _menu.close}], _menu.close)
+	_menu.open(Words.AWAY["title"], words, [{"name": "Continue", "detail": "", "action": _menu.close}], _menu.close)
 	save_game()
 
 
@@ -634,9 +641,9 @@ func _camp_cards() -> Array:
 	var town := {
 		"title": "The town" if sim.yard_moves == 0 else "The town · yard %d" % (sim.yard_moves + 1), "headline": "%d" % open_zones, "unit": "of %d zones open" % Data.ZONES.size(),
 		"lines": zlines,
-		"note": "Each zone opens the next" if not sim.campaign_done() else "Deepest clear per zone",
+		"note": Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"],
 		"tone": "good" if sim.campaign_done() else "",
-		"status": "Where the runner can go",
+		"status": Words.NOTES["patch"],
 	}
 	if not sim.trades.is_empty():
 		var names := []
@@ -653,7 +660,7 @@ func _camp_cards() -> Array:
 		"status": "Autosaves every 30 s",
 	})
 	out.append(_upgrade_card("Generator", "Away counts for", "%d h" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"], Data.GENERATOR_LEVELS, sim.generator_level,
-			sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator, "Keeps the yard going away"))
+			sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator, Words.NOTES["generator"]))
 	out.append(_upgrade_card("Lookout", "First gang takes", "×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"], Data.LOOKOUT_LEVELS, sim.lookout_level,
 			sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout, "Sees the first gang coming"))
 	out.append(_upgrade_card("Kennel", "Extra a search", "+%d" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"], Data.KENNEL_LEVELS, sim.kennel_level,
@@ -706,9 +713,15 @@ func _comms_cards() -> Array:
 			continue
 		var t: Dictionary = sim.effective(i)
 		var lines := []
-		for name in t["intel"]:
-			lines.append([name, ""])
-			lines.append(["", sim.modifier(name)["words"]])
+		# the radio's own words, not the sky's: those are on the Runs card
+		var words: Array = sim.intel[i]
+		var tight: bool = words.size() > 2 and sim.can_juice()     # four buttons leave four lines
+		for name in words:
+			if tight:
+				lines.append([name, sim.modifier(name)["words"]])
+			else:
+				lines.append([name, ""])
+				lines.append(["", sim.modifier(name)["words"]])
 		var d := {"title": t["name"], "headline": "D%d" % t["depth"], "unit": sim.zone_name(i), "lines": lines,
 			"tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]

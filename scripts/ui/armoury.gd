@@ -186,6 +186,7 @@ func _show_panel() -> void:
 		_left_title.text = "Select an item"
 		_right_title.text = ""
 		_hint.text = "A slot on the left, or a stash item on the right"
+		_lay_buttons()                       # none showing: the hint gets the whole strip back
 		return
 	_hint.text = ""
 	UI.fit(_left_title, [Items.full_name(it), it["base"]])
@@ -283,6 +284,10 @@ func _lay_buttons() -> void:
 			x -= _buttons[i].size.x
 			_buttons[i].position.x = x
 			x -= 12
+	# the hint shares the strip with the buttons: it stops where they start
+	_hint.size.x = maxf(80.0, x - PANEL_PAD)
+	if _hint.text != "" and UI.text_width(_hint, _hint.text) > _hint.size.x:
+		UI.fit(_hint, [_hint.text, _hint.text.get_slice(";", 0), _hint.text.get_slice(",", 0), _hint.text.get_slice(" for ", 0)])
 
 
 ## A med: in the stash it can be taken; in the rig it can be left behind.

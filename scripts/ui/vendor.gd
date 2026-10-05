@@ -234,7 +234,7 @@ func _show_deals() -> void:
 			r["pass"].visible = false
 			continue
 		var c: Dictionary = sim.contracts[k]
-		r["title"].text = _cap(sim.contract_words(c))
+		UI.fit(r["title"], [_cap(Words.CONTRACT_ASKS[(k + sim.runs_total) % Words.CONTRACT_ASKS.size()] % sim.contract_words(c)), _cap(sim.contract_words(c))])
 		r["pay"].text = "Pays %s" % sim.contract_pay_words(c) if c["pay"] != "unique" else "Pays with %s" % c["unique"]
 		var have: int = sim.contract_items(c).size()
 		r["have"].text = "You have %d of %d in the stash" % [have, int(c["count"])] if have < int(c["count"]) else "Ready: the cheapest %d that fit go" % int(c["count"])

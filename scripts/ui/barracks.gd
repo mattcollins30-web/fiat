@@ -45,6 +45,8 @@ var _past: Label                   # the runners before this one
 var _ascend: Button                # the second past, from level 30
 var _swap: Button                  # over the middle column's head: cycles the yard's tree, the second past's, the elements'
 var mid := 0                       # which of the middle trees shows
+var drawer_page := 0               # the drawer's page: PAGE papers at a time
+const PAGE := 6
 var _train: Button
 var _respec: Button
 var _shown := ""
@@ -154,7 +156,7 @@ func _style(b: Button, look: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%d|%s|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2]
+	var sig := "%s|%s|%d|%d|%s|%s|%d|%s|%d|%d" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2, sim.book.size(), drawer_page]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -193,6 +195,9 @@ func show_state(s) -> void:
 		var who: String = branch.get("class", "")
 		# the middle head shares its row with the swap button: the name fits what's left
 		h["name"].size.x = COL_W - 2 * PAD - (SWAP_W if (b == 1 and _swap.visible) else 0)
+		if branch.get("drawer", false):
+			_show_drawer(b, branch)
+			continue
 		if branch.has("element"):
 			UI.fit(h["name"], ["%s · %s%s" % [branch["name"], branch["element"], "" if sim.affinity(branch["element"]) else " · double"], "%s · %s" % [branch["name"], branch["element"]], branch["name"]])
 		else:
@@ -314,6 +319,11 @@ func _show_past() -> void:
 
 
 func _pick(id: String) -> void:
+	if id.begins_with("drawer/"):
+		drawer_page += 1                   # a click on the drawer turns the page
+		_shown = ""
+		show_state(sim)
+		return
 	selected = id
 	show_state(sim)
 
@@ -392,7 +402,60 @@ func _mid_trees(trees: Array) -> Array:
 	out.append(trees[1])
 	for t in trees.slice(3):
 		out.append(t)
+	out.append(_drawer_branch())
 	return out
+
+
+## The drawer, as a column: the papers found so far, in the order found,
+## PAGE a page; a click on any of them turns the page.
+func _drawer_branch() -> Dictionary:
+	var pages: int = maxi(1, ceili(float(sim.book.size()) / PAGE))
+	drawer_page = drawer_page % pages
+	var nodes: Array = []
+	var start: int = drawer_page * PAGE
+	for k in range(start, mini(sim.book.size(), start + PAGE)):
+		nodes.append({"name": "%d. %s" % [k + 1, sim.book[k]], "words": Words.item_words(sim.book[k])})
+	if nodes.is_empty():
+		nodes.append({"name": Words.BOOK["empty"], "words": ""})
+	return {"name": "The drawer", "drawer": true, "nodes": nodes, "pages": pages}
+
+
+func _show_drawer(b: int, branch: Dictionary) -> void:
+	var h: Dictionary = _heads[b]
+	var total: int = sim.book_pages().size()
+	var page := (" · page %d of %d" % [drawer_page + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
+	var short_page := (" · p%d/%d" % [drawer_page + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
+	UI.fit(h["name"], ["The drawer · " + Words.BOOK["count"] % [sim.book.size(), total] + page, "Drawer · %d of %d%s" % [sim.book.size(), total, short_page], "Drawer %d/%d%s" % [sim.book.size(), total, short_page], "%d/%d%s" % [sim.book.size(), total, short_page], "The drawer"])
+	h["count"].visible = false
+	for i in range(ROWS):
+		var n: Dictionary = _rows[b][i]
+		if i >= branch["nodes"].size():
+			n["button"].visible = false
+			n["id"] = ""
+			continue
+		var nd: Dictionary = branch["nodes"][i]
+		var btn: Button = n["button"]
+		btn.visible = true
+		btn.position = Vector2(n["x"], NODES_Y + i * (BRANCH_H + NODE_GAP))
+		btn.size = Vector2(COL_W, BRANCH_H)
+		n["id"] = "drawer/%d" % i
+		n["name"].position = Vector2(PAD, 4)
+		n["name"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
+		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" else "Regular"))
+		UI.fit(n["name"], [nd["name"]])
+		n["effect"].position = Vector2(PAD, NODE_H - 2)
+		n["effect"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
+		n["effect"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		UI.fit(n["effect"], [nd["words"], _short(nd["words"])])
+		_style(btn, "taken" if nd["words"] != "" else "locked")
+		n["name"].add_theme_color_override("font_color", Pal.TEXT)
+		n["effect"].add_theme_color_override("font_color", Pal.TEXT_2)
+
+
+## A paper's words cut to the column: up to the last full stop that fits.
+static func _short(words: String) -> String:
+	var cut := words.rfind(".", words.length() - 2)
+	return words.substr(0, cut + 1) if cut > 0 else words
 
 
 func _on_swap() -> void:

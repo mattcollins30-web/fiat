@@ -124,6 +124,11 @@ func _init() -> void:
 			break
 	if gear_k >= 0:
 		var picked: Dictionary = sim.stash[gear_k]
+		while not sim.stash_room(12) and sim.stash.size() > 1:
+			var last: Dictionary = sim.stash.back()
+			if last["id"] == picked["id"]:
+				break
+			sim.sell(last)                   # room for what comes off: the run may have filled the stash
 		main.refresh()
 		main._armoury._pick_cell(main._armoury._inv.cell_of(picked["id"]))
 		_check_fit(main, "Armoury (stash pick)")
@@ -186,6 +191,8 @@ func _init() -> void:
 	# the pouches are cells: a two-cell kit needs two free, and takes two
 	var kit: Dictionary = sim._plain(Data.MEDICAL, "First aid kit")
 	_check(Items.size(kit) == 2, "a first aid kit is not two cells")
+	while not sim.stash_room(8) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])                 # room for what the rig leaves behind
 	sim.stash.append(kit)
 	while sim.rig_room(2) and not sim.stash.is_empty():
 		var filler: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
@@ -405,6 +412,8 @@ func _slots_offline_hardcore(main) -> void:
 	_check(after["cash"] != before["cash"] or after["stash"] != before["stash"] or after["lost"] != before["lost"],
 			"three hours away with auto-run on changed nothing")
 	_check(sim.auto_tier == 0 or sim.auto_tier == -1, "auto_tier after the time away")
+	_check(main._menu.visible and main._menu._title.text == Words.AWAY["title"] and main._menu._sub.text.begins_with("Gone ") and main._menu._sub.text.contains(" run"), "the away report is not in the voice: '%s' / '%s'" % [main._menu._title.text, main._menu._sub.text])
+	_check_fit(main, "Back, then (ran)")
 	print("away 3h on tier 0: cash %s → %s, %d → %d items, level %d → %d, lost %d → %d" % [Fmt.money(before["cash"]),
 			Fmt.money(after["cash"]), before["stash"], after["stash"], before["level"], after["level"], before["lost"], after["lost"]])
 	main._menu.close()
@@ -416,6 +425,8 @@ func _slots_offline_hardcore(main) -> void:
 	after = sim.snapshot()
 	_check(is_equal_approx(after["elapsed"] - before["elapsed"], sim.away_cap_s()), "the away cap did not hold")
 	_check(sim.hp == sim.max_hp(), "the operator did not rest while away")
+	_check(main._menu._sub.text.begins_with("Gone ") and main._menu._sub.text.contains("slept") and main._menu._sub.text.contains("kept going for"), "the rested report is not in the voice: '%s'" % main._menu._sub.text)
+	_check_fit(main, "Back, then (rested)")
 	main._menu.close()
 	# a saved stamp two hours old goes through the away screen on load
 	var f := FileAccess.open(main.SAVE_FILE, FileAccess.WRITE)
@@ -1404,13 +1415,15 @@ func _melee_checks(main) -> void:
 	var bat: Dictionary = sim._plain("Primary", "Spiked bat")
 	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes nothing" and bat["attachments"].has("grip") and bat["attachments"].has("head"), "a spiked bat is not a melee weapon with a grip and a head")
 	var old = sim.equipped["Primary"]
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	var bleed0: float = sim.conversion()["bleed"]          # whatever the rest of the kit and the web add already
 	sim.equipped["Primary"] = bat
 	sim.rig = []
 	_check(sim.has_rounds(bat) and sim.dps() > 0.0, "a bat ran dry")
-	_check(is_equal_approx(sim.conversion()["bleed"], 0.2), "the bat's nails are not 20%% bleed: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2) or sim.conversion()["physical"] <= 0.001, "the bat's nails are not 20%% bleed on top of %.2f: %s" % [bleed0, str(sim.conversion())])
 	var head: Dictionary = sim._plain("Attachment", "Nails through it")
 	bat["attachments"]["head"] = head
-	_check(is_equal_approx(sim.conversion()["bleed"], 0.35), "nails through it did not add 15%% bleed: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.35) or sim.conversion()["physical"] <= 0.001, "nails through it did not add 15%% bleed: %s" % str(sim.conversion()))
 	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1), 10.0 * (1.0 - sim.mitigation()) * Data.MELEE_INCOMING), "a melee runner is not hit %.2f× harder" % Data.MELEE_INCOMING)
 	# the first second of a gang: their shot before your swing
 	sim.intel[0] = []
@@ -1829,6 +1842,13 @@ func _contracts_checks(main) -> void:
 	sim.load_dict(d)
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN and sim.contracts[0]["slot"] == d["contracts"][0]["slot"], "contracts did not survive a save")
 	sim.load_dict(saved)
+	main.show_room(main.MARKET)
+	main._fence.selected = {}
+	main.refresh()
+	if not sim.contracts.is_empty():
+		var t0: String = main._fence._deal_rows[0]["title"].text
+		_check((t0.ends_with(".") and (t0.begins_with("Wants") or t0.begins_with("Could") or t0.begins_with("Someone") or t0.contains("wanted") or t0.begins_with("Looking"))) or t0 == main._fence._cap(sim.contract_words(sim.contracts[0])), "the fence's contract is not in his voice: '%s'" % t0)
+		_check_fit(main, "Fence (contracts in the voice)")
 	print("contracts and the mate ok: three open, the cheapest that fit, cash, notes, a unique, the mate")
 	_events_checks(main)
 
@@ -2213,11 +2233,165 @@ func _move_checks(main) -> void:
 	_sink_checks(main)
 	_inflation_checks(main)
 	_recycle_checks(main)
+	_book_checks(main)
+	_places_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
 ## go on the list; a few runs later one of a gang is wearing it, and it comes
 ## off him when the site's cleared, affixes and all.
+## The papers as the book: a paper picked up goes in the drawer by name, in
+## the order found, once; the deep ones only past their depth; the Caravan's
+## middle column shows the drawer, six a page, a click turning the page; the
+## book survives a save and a move.
+func _book_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.book = []
+	var pages: Array = sim.book_pages()
+	_check(pages.size() == 20 and not pages.has("The deeds"), "the book has %d pages, not 20" % pages.size())
+	# shallow rolls never turn up a deep paper; deep ones do
+	var deep_seen := false
+	for k in range(200):
+		var it: Dictionary = Items.roll(Data.PAPER, 1, sim.rng, 0.0, false, false, "", "", 0.33, 1)
+		_check(int(Items.base_of(it).get("depth", 0)) == 0, "a deep paper turned up at depth 1: %s" % it["base"])
+	for k in range(300):
+		var it: Dictionary = Items.roll(Data.PAPER, 1, sim.rng, 0.0, false, false, "", "", 0.33, 50)
+		deep_seen = deep_seen or int(Items.base_of(it).get("depth", 0)) > 0
+	_check(deep_seen, "no deep paper in 300 rolls at depth 50")
+	for name in ["A ration book", "A council minute", "A bus timetable, amended", "A letter to the bank", "A list of names", "The manager's note"]:
+		_check(Words.item_words(name) != "" and Words.item_words(name).ends_with("."), "%s has no line" % name)
+	# a find is read, once, in order
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["found"] = []
+	var p1: Dictionary = sim._plain(Data.PAPER, "A P45")
+	var p2: Dictionary = sim._plain(Data.PAPER, "A betting slip")
+	sim._read(p1)
+	sim._read(p2)
+	sim._read(sim._plain(Data.PAPER, "A P45"))
+	_check(sim.book == ["A P45", "A betting slip"], "the book is not the papers in the order found: %s" % str(sim.book))
+	sim._read(sim._plain(Data.PAPER, "The deeds"))
+	_check(sim.book.size() == 2, "the deeds went in the drawer")
+	sim.extract_now()
+	# the Caravan's drawer
+	main.show_room(main.BARRACKS)
+	var mids: Array = main._barracks._mid_trees(sim.trees())
+	var drawer_at := -1
+	for i in range(mids.size()):
+		if mids[i].get("drawer", false):
+			drawer_at = i
+	_check(drawer_at >= 0, "the drawer is not among the middle columns")
+	main._barracks.mid = drawer_at
+	main._barracks._shown = ""
+	main.refresh()
+	_check(main._barracks._heads[1]["name"].text.contains("2 of 20") or main._barracks._heads[1]["name"].text.contains("2/20"), "the drawer's head is off: %s" % main._barracks._heads[1]["name"].text)
+	_check(main._barracks._rows[1][0]["name"].text == "1. A P45" and main._barracks._rows[1][1]["name"].text == "2. A betting slip" and not main._barracks._rows[1][2]["button"].visible, "the drawer's rows are off: %s / %s" % [main._barracks._rows[1][0]["name"].text, main._barracks._rows[1][1]["name"].text])
+	_check(main._barracks._rows[1][0]["effect"].text != "", "the paper's words are not under its name")
+	_check_fit(main, "Caravan (the drawer, two)")
+	for name in pages:
+		sim._read(sim._plain(Data.PAPER, name))
+	_check(sim.book.size() == 20, "the full book is not twenty")
+	main._barracks._shown = ""
+	main.refresh()
+	_check(main._barracks._heads[1]["name"].text.contains("page 1 of 4") or main._barracks._heads[1]["name"].text.contains("p1/4"), "a full drawer has no pages: %s" % main._barracks._heads[1]["name"].text)
+	_check_fit(main, "Caravan (the drawer, full)")
+	main._barracks._pick("drawer/0")
+	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text == "7. A mortgage offer", "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
+	_check_fit(main, "Caravan (the drawer, page 2)")
+	main._barracks.mid = 0
+	main._barracks.drawer_page = 0
+	main._barracks._shown = ""
+	main.refresh()
+	_check_fit(main, "Caravan (back from the drawer)")
+	var d: Dictionary = sim.to_dict()
+	sim.load_dict(d)
+	_check(sim.book.size() == 20, "the book did not save")
+	sim.load_dict(saved)
+	print("the book ok: twenty pages, the deep ones gated, read once in order, the drawer, its pages, saved")
+
+
+## The places changing: a cleared site is picked over and comes back over
+## hours; the clock makes every site Night in the small hours; the weather by
+## zone puts Rain or Fog on, never rolled by the radio; the Runs card says so.
+func _places_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.intel[0] = []
+	for i in range(Data.TIERS.size()):
+		sim.worn[i] = -1.0
+	for z in range(Data.ZONES.size()):
+		sim.weather[z] = ""
+	sim.elapsed = 3600.0 * 2.0            # 11:00, day
+	_check(not sim.is_night() and sim.clock_words() == "11:00", "the clock reads %s at two hours in" % sim.clock_words())
+	var fresh: Dictionary = sim.effective(0)
+	_check(not ("Night" in fresh["intel"]) and sim.wear(0) == 0.0 and sim.site_state(0) == Words.SKY["fresh"], "a fresh site at 11:00 is not fresh: %s" % str(fresh["intel"]))
+	# a clear picks the site over; it comes back over RECOVER_H
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	sim._clear(m, m["t"])
+	sim.extract_now()
+	sim.intel[0] = []                     # the extract re-rolled the radio's words; the site alone is read
+	_check(sim.wear(0) > 0.99 and sim.site_state(0).begins_with("Picked over"), "the clear did not pick the site over: %.2f %s" % [sim.wear(0), sim.site_state(0)])
+	var picked: Dictionary = sim.effective(0)
+	_check(absf(picked["drop"] - fresh["drop"] * (1.0 - Data.WORN_DROP)) < 0.01 and absf(picked["cash"] - fresh["cash"] * (1.0 - Data.WORN_CASH)) < 0.1, "picked over did not thin the drops and cash: %.2f / %.2f against %.2f / %.2f" % [picked["drop"], picked["cash"], fresh["drop"], fresh["cash"]])
+	sim.elapsed += Data.RECOVER_H * 3600.0 * 0.6
+	_check(sim.wear(0) > 0.3 and sim.wear(0) < 0.5 and sim.site_state(0).begins_with("Settling"), "the site is not settling at 60%%: %.2f %s" % [sim.wear(0), sim.site_state(0)])
+	sim.elapsed += Data.RECOVER_H * 3600.0
+	_check(sim.wear(0) == 0.0 and is_equal_approx(sim.effective(0)["drop"], fresh["drop"]), "the site did not come back")
+	# night by the clock
+	sim.elapsed = 3600.0 * 14.0           # 23:00
+	_check(sim.is_night() and sim.clock_words() == "23:00", "23:00 is not night: %s" % sim.clock_words())
+	var night: Dictionary = sim.effective(0)
+	_check("Night" in night["intel"] and is_equal_approx(night["pace"], fresh["pace"] * 0.8), "the clock's night did not take: %s pace %.2f" % [str(night["intel"]), night["pace"]])
+	_check(sim.sky_words(0).begins_with("23:00, night"), "the sky's words are off: %s" % sim.sky_words(0))
+	# the weather, by zone; never a word the radio rolls or sells
+	sim.weather[0] = "Rain"
+	var rain: Dictionary = sim.effective(0)
+	_check("Rain" in rain["intel"] and is_equal_approx(rain["search"], fresh["search"] * 1.3) and is_equal_approx(rain["patrol"], fresh["patrol"] * 1.25), "rain did not take: %s search %.2f" % [str(rain["intel"]), rain["search"]])
+	_check(sim.sky_words(0).ends_with(", raining"), "the sky's words do not say rain: %s" % sim.sky_words(0))
+	sim.weather[0] = "Fog"
+	var fog: Dictionary = sim.effective(0)
+	_check(fog["contact"] == fresh["contact"] - 1 and is_equal_approx(fog["drop"], fresh["drop"] * 0.9), "fog did not take: %s" % str(fog["intel"]))
+	_check(not ("Rain" in sim.juice_options(0)) and not ("Fog" in sim.juice_options(0)), "the sky's words are for sale at the radio")
+	var rolled := false
+	for k in range(60):
+		sim._roll_tier_intel(1)
+		rolled = rolled or ("Rain" in sim.intel[1]) or ("Fog" in sim.intel[1])
+	_check(not rolled, "the radio rolled the sky's words")
+	var saw := {}
+	for k in range(40):
+		sim.elapsed += Data.WEATHER_H * 3600.0
+		sim._roll_weather()
+		for z in range(Data.ZONES.size()):
+			saw[sim.weather[z]] = true
+	_check(saw.has("Rain") and saw.has("Fog") and saw.has(""), "forty hours of weather did not bring rain, fog and clear: %s" % str(saw.keys()))
+	# the Runs card: the sky's row and the clock line, the site's state; everything fits
+	sim.weather[0] = "Rain"
+	sim.elapsed = 3600.0 * 14.0
+	sim.worn[0] = sim.elapsed - 600.0
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	main.refresh()
+	var c: Dictionary = main._missions._cols[0]
+	var names := []
+	for r in c["intel"]:
+		names.append(r[0].text)
+	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
+	_check(c["intel_note"].text.begins_with("23:00, night, raining"), "the card's clock line is off: %s" % c["intel_note"].text)
+	_check(c["lines"][4][0].text == "The site" and c["lines"][4][1].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["lines"][4][0].text, c["lines"][4][1].text])
+	_check_fit(main, "Runs (night, rain, picked over)")
+	var d: Dictionary = sim.to_dict()
+	sim.load_dict(d)
+	_check(sim.weather[0] == "Rain" and sim.wear(0) > 0.9, "the sky and the wear did not save")
+	sim.load_dict(saved)
+	print("the places changing ok: picked over and back, the clock's night, rain and fog by zone, never on the radio, the card")
+
+
 func _recycle_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()

@@ -179,7 +179,21 @@ const PAPERS := [
 	{"name": "A boarding pass", "value": 4, "words": "One way. The flight went; the ticket didn't."},
 	{"name": "A parking ticket", "value": 2, "words": "Issued the morning of. The car's still there."},
 	{"name": "A Christmas list", "value": 3, "words": "In a child's hand. Most of it's in the retail park."},
+	# the deep ones
+	{"name": "A ration book", "value": 4, "words": "Printed after. Someone tried to run it properly, for a while."},
+	{"name": "A council minute", "value": 4, "words": "The last meeting. Item nine, the lights. There's no item ten."},
+	{"name": "A bus timetable, amended", "value": 4, "words": "In biro over the print: 'when he's up'."},
+	{"name": "A letter to the bank", "value": 5, "words": "'I would like to withdraw.' Posted. The bank's the one you cleared."},
+	{"name": "A list of names", "value": 5, "words": "Chalked, then written, then typed. The typed ones are crossed out."},
+	{"name": "The manager's note", "value": 6, "words": "'Back in five.' Pinned to the inside of the vault."},
 ]
+## The drawer in the caravan: the papers found, in the order found, are the
+## story of the estate; nobody else is telling it.
+const BOOK := {
+	"empty": "Nothing in the drawer yet. Papers come off the sites.",
+	"count": "%d of %d found",
+	"deep": "The rest are deeper than you've been.",
+}
 
 ## The deeds: what the bank was holding. Dropped once, when the bank is
 ## first cleared; two cells; the ending is what you do with it.
@@ -461,6 +475,30 @@ const EVENTS := {
 	"trapped": "Someone under a fallen ceiling, alive. You get them out. They say they know a yard.",
 	"cache": "A locked cabinet, council green. The bench's tools open it.",
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
+}
+
+## The voice where the UI used to explain itself: the away report, the
+## fence's contracts, the cards' notes.
+const AWAY := {
+	"title": "Back, then.",
+	"rested": "Gone %s. The runner slept, the radio played to nobody.",
+	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s on the shelf, level %d to %d.",
+	"settled": " The yard kept going for %s of it; the rest is just the clock.",
+	"lost": " One runner didn't come back.",
+	"prices": " The fence's prices are up %d%% on when the yard opened.",
+}
+const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
+const SKY := {
+	"night": "night", "day": "day", "rain": "raining", "fog": "fog down", "clear": "clear",
+	"worn": "Picked over · back in %s",
+	"fresh": "Fresh",
+	"settling": "Settling · back in %s",
+}
+const NOTES := {
+	"zones": "Heads down open the next",
+	"zones_done": "Deepest clear on each",
+	"patch": "The runner's patch",
+	"generator": "Keeps the yard going while you're gone",
 }
 
 ## The estate recycles: what was lost turns up on someone, and comes off him.

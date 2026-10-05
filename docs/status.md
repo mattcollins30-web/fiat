@@ -775,6 +775,73 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The balance pass, from the element read (2026-10-05)
+
+The reader with the real-fight odds, eight minutes of wall-clock a build (four to five yard
+hours), one line each: when the bank fell and how deep the campaign went.
+
+    fire    Scrapper   bank 2:16   keystone 1:27   L41   tier 7 cleared
+    frost   Poacher    bank 2:58   keystone 1:13   L31   every tier at depth 1
+    poison  Poacher    bank 3:11   keystone 1:35   L34   tier 6
+    shock   Scrapper   bank 4:28 → 4:02 after the first buff; a second applied below
+    bleed   Doorman    bank 4:55 → 3:32 after the buff
+    plain   Scrapper   bank about 3:45 (the class reads)
+
+Changes made, all defaults of mine, Matt to overrule: **shock** - shocked gangs take 25% more
+(`SHOCK`, was 15), 40% under Live (was 30), and Live wire / the jump leads chain shock to everyone
+on you while the shock holds, not only on the first of a gang ("Shock on one of them is shock on
+all of them"); **bleed** - bleeds take 70% of a hit (`DOTS` ratio, was 60) and under Won't stop they
+stack to three. Fire's self-burn and Frozen solid's take were fixed above (the first walled the
+fire build at the bank; the second made frost unkillable). The band now runs 2:16 to about 3:30
+for the five against 3:45 for a build with no element, which is the point of the builds: an
+element is a spike, and each spikes somewhere different (fire at the estate and the city, frost
+anywhere its damage holds, poison at the city, bleed and shock where they aren't resisted). The
+estate's boss is the gate most reads stall at for a while (the odds with him in sit under 75%
+until the kit catches up), which reads as right. The run-to-run spread of a single read is
+about ±40 minutes, so none of these is a precise figure.
+
+Also found and fixed on the way: the Lock-up's hint line ran under the buttons when it said "No
+room in the stash for what comes off" - the hint stops where the buttons start now, and shortens
+to its first clause when it has to; three state-sensitive tests (the equip, the rig's pouches,
+the body drops) make stash room before they act.
+
+## The voice, the book, the places changing (2026-10-05)
+
+**The voice.** The away screen is "Back, then." and reads like the log: "Gone 3 h. 11 runs on
+ransacked streets: +£1,240 in, 9 things on the shelf, level 4 to 9." / "Gone 11 h. The runner
+slept, the radio played to nobody." with the generator's share ("The yard kept going for 8 h of
+it; the rest is just the clock."), a lost runner, and the prices ("The fence's prices are up 42% on
+when the yard opened."). The fence's contracts are his asks - "Wants two rare armours, if you're
+asking." / "Could use three common helmets. No questions." / "Someone's after one elite rig; the
+fence is in the middle." - five phrasings turned by run. The Yard's zone card: "Heads down open
+the next" / "Deepest clear on each" / "The runner's patch"; the generator "Keeps the yard going
+while you're gone". `Words.AWAY`, `CONTRACT_ASKS`, `NOTES`.
+
+**The papers as the book.** A paper picked up is read and goes in `sim.book` by name, once, in
+the order found; six deep ones (`"depth"` on the base: a ration book at 12, a council minute at
+18, a bus timetable amended at 24, a letter to the bank at 30, a list of names at 40, the
+manager's note at 50) only roll past their depth, so the full twenty is a reason to go there. The
+Caravan's middle column cycles to "The drawer · 7 of 20 found": the papers six a page, name over
+words, a click turning the page. The book survives a save and comes with a move (it's the
+player's reading, not the yard's).
+
+**The places changing.** A cleared site is picked over: drops lose half and cash 30% at full,
+coming back over two yard hours (`RECOVER_H`); the Runs card's last row reads "The site · Picked
+over · back in 1h20" then "Settling". The clock: the yard opens at 09:00 and from 21:00 to 06:00
+every site is Night (the word's effects, from the clock rather than the radio); the weather by
+zone, rolled every yard hour (estate 35% rain / 15% fog, town 25/20, city 20/25) - Rain: slower
+search, gangs later; Fog: one fewer on you, drops −10%. The sky's words sit in the card's word
+rows (a third row for them) and never roll from the radio or sell at it; the card's note line is
+the clock: "23:00, night, raining · new word after every run". Saved with the yard. The run
+view, when it exists, gets the same.
+
+Asserted: the away report's title and shape both ways and that it fits; a contract's ask;
+`_book_checks` (twenty pages, the deep ones gated by depth in 200 shallow and 300 deep rolls,
+their lines, read once in order, the deeds not in it, the drawer's head and rows and page turn,
+the save); `_places_checks` (fresh at 11:00, picked over on the clear with the thinner drops and
+cash, settling, back; 23:00 is Night with the pace; rain and fog's effects; never at the radio;
+forty hours bring all three; the card's rows, clock line and site row fit; the save).
+
 ## The estate recycles, and three fight fixes (2026-10-05)
 
 Matt: "Nothing on the estate is new; it's all off someone." A dead runner's worn kit (uninsured)
