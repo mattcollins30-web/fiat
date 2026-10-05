@@ -42,6 +42,9 @@ var _title: Label
 var _words: Label
 var _points: Label
 var _past: Label                   # the runners before this one
+var _wall: Array = []              # their faces, newest first, small
+const WALL := 6
+const WALL_S := 64
 var _ascend: Button                # the second past, from level 30
 var _swap: Button                  # over the middle column's head: cycles the yard's tree, the second past's, the elements'
 var mid := 0                       # which of the middle trees shows
@@ -90,6 +93,8 @@ func _init() -> void:
 	_words = UI.label(_panel, Rect2(PAD, 56, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_points = UI.label(_panel, Rect2(PAD, 90, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_past = UI.label(_panel, Rect2(PAD, 124, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(WALL):
+		_wall.append(People.rect(_panel, Vector2(PAD, PANEL_H - WALL_S - 10), 0.5))
 	_train = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 200, Pal.BUTTON_H), true)
 	_train.pressed.connect(_on_train)
 	_respec = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 240, Pal.BUTTON_H), false)
@@ -307,6 +312,8 @@ func _show_panel() -> void:
 func _show_past() -> void:
 	if sim.past.is_empty():
 		# no one before this runner: what this one was, instead
+		for t in _wall:
+			t.visible = false
 		UI.fit(_past, [Words.PASTS[sim.cls]["was"] if Words.PASTS.has(sim.cls) else "", ""])
 		return
 	var long := []
@@ -315,7 +322,28 @@ func _show_past() -> void:
 		var r: Dictionary = sim.past[k]
 		long.append("a %s, %d run%s, %s" % [str(r["class"]).to_lower(), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", r["end"]])
 		short.append("%s %d" % [str(r["class"]).to_lower(), int(r["runs"])])
-	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + ", ".join(short), "%d runner%s before this one" % [sim.past.size(), "" if sim.past.size() == 1 else "s"]])
+	# the wall: their faces, newest first, and the line beside it in what's left
+	var x: float = _past.position.x
+	var faces := 0
+	for k in range(WALL):
+		var t: TextureRect = _wall[k]
+		var shown := false
+		if k < sim.past.size():
+			shown = People.show(t, str(sim.past[sim.past.size() - 1 - k]["class"]))
+		else:
+			t.visible = false
+		if shown:
+			t.position = Vector2(x, PANEL_H - WALL_S - 10)
+			x += WALL_S + 8
+			faces += 1
+	var right: float = _past.position.x + _past.size.x
+	if faces > 0:
+		x += 8
+		_past.position.x = x
+		_past.size.x = maxf(60.0, right - x)
+	var more: int = sim.past.size() - faces
+	var tail := (" and %d more" % more) if faces > 0 and more > 0 else ""
+	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + ("; ".join(long.slice(0, 2)) + tail if faces > 0 else "; ".join(long)), "Before: " + ", ".join(short), long[0] + tail, "%d runner%s before this one" % [sim.past.size(), "" if sim.past.size() == 1 else "s"]])
 
 
 func _pick(id: String) -> void:

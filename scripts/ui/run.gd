@@ -16,6 +16,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
+const People := preload("res://scripts/ui/people.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -50,6 +51,7 @@ var _ditch: Button
 var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
 var _shown := ""
+var _head_face: TextureRect        # the crew's head, while he's out
 
 
 func _init() -> void:
@@ -89,6 +91,7 @@ func _init() -> void:
 		b2.visible = false
 		d["button2"] = b2
 		_panels.append(d)
+	_head_face = People.rect(_panels[0]["panel"], Vector2(BODY_W - PAD - 64, TITLE_Y), 0.5)
 	_panels[1]["button"].pressed.connect(_use_med)
 	_panels[2]["button"].pressed.connect(_get_out)
 	_panels[2]["button2"].pressed.connect(_stop_auto)
@@ -123,6 +126,7 @@ func show_state(s) -> void:
 	var them: Dictionary = _panels[0]
 	them["title"].text = "Them"
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	People.show(_head_face, m["boss"]["name"] if boss_on else "")
 	if boss_on:
 		them["title"].text = m["boss"]["name"]
 		_head(them, "1", "on you: the crew's head")

@@ -23,8 +23,9 @@ static func portrait(name: String) -> Texture2D:
 	return _cache[s]
 
 
-## A TextureRect for a portrait at an integer scale, hidden until shown.
-static func rect(parent: Node, at: Vector2, scale: int) -> TextureRect:
+## A TextureRect for a portrait at an integer scale (or a clean half, for a
+## wall of small faces), hidden until shown.
+static func rect(parent: Node, at: Vector2, scale: float) -> TextureRect:
 	var t := TextureRect.new()
 	t.position = at
 	t.size = Vector2(128 * scale, 128 * scale)

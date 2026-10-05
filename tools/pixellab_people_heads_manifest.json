@@ -1,0 +1,59 @@
+{
+  "_readme": [
+    "FIAT PEOPLE - the three heads. 128 x 128 portraits to art/people/<slug>.png, in the fence's style (style_image res://art/people/fence.png, every style option on). Items.slug(name) is the file: the_carpet_man, the_manager, the_quartermaster. The run screen shows the face while the head is out; the game shows nothing where there is none.",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_people_heads_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force."
+  ],
+  "jobs": [
+    {
+      "out": "art/people/the_carpet_man.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a heavy man in his fifties who ran a carpet warehouse before the collapse and runs the car park now: a fleece with the shop's name half unpicked, a flat cap, a face that has decided things, a roll of carpet tape on a lanyard, grey stubble, a kettle's steam behind him. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 80000,
+      "single": true,
+      "style_image": "res://art/people/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people/the_manager.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a bank branch manager in his forties still in the suit, which fits: a clean collar, a tie done properly, a name badge with the name scratched off, hair combed with water, a face that is polite and will not help. Looking just past the viewer. Post-collapse Britain, strip-light pale. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 80001,
+      "single": true,
+      "style_image": "res://art/people/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people/the_quartermaster.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of an army quartermaster in his sixties, out of the army and still in it: issue jumper with the rank unpicked, a clipboard held like a weapon, reading glasses pushed up, a face that signs for everything. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 80002,
+      "single": true,
+      "style_image": "res://art/people/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

@@ -211,9 +211,9 @@ const DEEDS := {
 
 ## The crews' heads: a line when they come out, a line when they go down.
 const BOSSES := {
-	"The carpet man": {"out": "He's brought the whole warehouse.", "down": "The warehouse crew go quiet. Somebody else will have the car park by morning."},
-	"The manager": {"out": "He's in a suit. It fits.", "down": "The staff stop. Nobody's told them what to do next, and he isn't going to."},
-	"The quartermaster": {"out": "He signs for you.", "down": "The depot's unlocked. Nobody's counting any more."},
+	"The carpet man": {"armed": "Word goes to the warehouse that you're coming. He puts the kettle on.", "out": "He's brought the whole warehouse.", "down": "The warehouse crew go quiet. Somebody else will have the car park by morning."},
+	"The manager": {"armed": "The branch is told to expect you. He has the staff tidy the counters.", "out": "He's in a suit. It fits.", "down": "The staff stop. Nobody's told them what to do next, and he isn't going to."},
+	"The quartermaster": {"armed": "The depot's gate is left open for you. That's not a kindness.", "out": "He signs for you.", "down": "The depot's unlocked. Nobody's counting any more."},
 }
 
 

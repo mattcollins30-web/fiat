@@ -775,6 +775,23 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Faces for the people who matter (2026-10-05)
+
+The three heads have a line when you arm them ("The carpet man: Word goes to the warehouse that
+you're coming. He puts the kettle on." / "The manager: The branch is told to expect you. He has
+the staff tidy the counters." / "The quartermaster: The depot's gate is left open for you. That's
+not a kindness.") beside the lines they had for coming out and going down; the run screen has a
+64 px face slot at the top right of Them that shows the head while he's out, where the art
+exists. `tools/pixellab_people_heads_manifest.json` has the three portraits (128 x 128, in the
+fence's style) - that one's Matt's to run. The Caravan's runners before are a wall of faces now:
+up to six small (64 px) class faces, newest first, at the foot of the panel, with the line beside
+them ("Before: a scrapper, 3 runs, died in ransacked streets; ... and 2 more"), the sentence alone
+when nothing fits.
+
+Asserted (`_faces_checks`): every head has an armed line; arming logs it once and not again;
+the face slot follows whether the art is there; the run fits with the head out; the wall shows
+three, newest first, the line clear of the faces, nothing with nobody before.
+
 ## The balance pass, from the element read (2026-10-05)
 
 The reader with the real-fight odds, eight minutes of wall-clock a build (four to five yard

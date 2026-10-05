@@ -1773,8 +1773,13 @@ func can_arm_boss(i: int) -> bool:
 func arm_boss(i: int, on: bool) -> void:
 	if on and not can_arm_boss(i):
 		return
+	var was: bool = boss_armed.get(i, false)
 	boss_armed[i] = on
 	_surv_cache.erase(i)
+	if on and not was and not _dry_on:
+		var b := boss_of(i)
+		if not b.is_empty() and Words.BOSSES.has(b["name"]):
+			log_event("%s: %s" % [b["name"], Words.BOSSES[b["name"]]["armed"]])
 
 
 ## A tier is open when its zone is and the tier before it in that zone has

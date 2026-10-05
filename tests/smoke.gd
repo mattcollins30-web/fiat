@@ -9,6 +9,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
+const People := preload("res://scripts/ui/people.gd")
 
 var _misfits := 0
 var _fails := 0
@@ -2235,6 +2236,7 @@ func _move_checks(main) -> void:
 	_recycle_checks(main)
 	_book_checks(main)
 	_places_checks(main)
+	_faces_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2390,6 +2392,62 @@ func _places_checks(main) -> void:
 	_check(sim.weather[0] == "Rain" and sim.wear(0) > 0.9, "the sky and the wear did not save")
 	sim.load_dict(saved)
 	print("the places changing ok: picked over and back, the clock's night, rain and fog by zone, never on the radio, the card")
+
+
+## Faces for the people who matter: a line when a head is armed, his face on
+## the run screen while he's out (where the art exists), and the Caravan's
+## runners before as a wall of small faces with the line beside it.
+func _faces_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for b in Data.BOSSES:
+		_check(Words.BOSSES.has(b["name"]) and Words.BOSSES[b["name"]].has("armed") and str(Words.BOSSES[b["name"]]["armed"]).ends_with("."), "%s has no line for being armed" % b["name"])
+	_finish_campaign(sim)
+	sim.notes = 1000
+	var bt := 2
+	sim.best_depth[bt] = maxi(sim.best_depth[bt], 1)
+	sim.arm_boss(bt, false)
+	var armed_line: String = sim.boss_of(bt)["name"] + ": " + Words.BOSSES[sim.boss_of(bt)["name"]]["armed"]
+	var n0: int = sim.events.filter(func(ev): return str(ev[1]) == armed_line).size()
+	sim.arm_boss(bt, true)
+	var n1: int = sim.events.filter(func(ev): return str(ev[1]) == armed_line).size()
+	_check(sim.boss_armed.get(bt, false) and n1 == n0 + 1 and str(sim.events.back()[1]) == armed_line, "arming the head had no line: %s" % str(sim.events.back()))
+	sim.arm_boss(bt, true)
+	_check(sim.events.filter(func(ev): return str(ev[1]) == armed_line).size() == n1, "arming an armed head spoke twice")
+	# the run screen's face slot follows the head; the fit holds either way
+	sim.intel[bt] = []
+	sim.hp = sim.max_hp()
+	sim.deploy(bt)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 1
+	m["target_hp"] = 0.1                  # the last of the pool drops: the head comes out
+	sim.advance(1.0)
+	_check(m.has("boss") and m["boss"]["started"], "the head did not come out")
+	main.show_room(main.MISSIONS)        # on a run, Runs is the run screen
+	main.refresh()
+	var face_file := "res://art/people/%s.png" % Items.slug(m["boss"]["name"])
+	_check(main._run._head_face.visible == (ResourceLoader.exists(face_file) or FileAccess.file_exists(face_file)), "the head's face slot does not follow the art")
+	_check_fit(main, "Run (the head out)")
+	sim.extract_now()
+	# the wall: three runners before, their faces where the art is
+	sim.past = [{"class": "Doorman", "level": 9, "runs": 12, "end": "died in the parade"}, {"class": "Poacher", "level": 14, "runs": 30, "end": "moved on"}, {"class": "Scrapper", "level": 4, "runs": 3, "end": "died in ransacked streets"}]
+	main.show_room(main.BARRACKS)
+	main._barracks._shown = ""
+	main.refresh()
+	var shown := 0
+	for t in main._barracks._wall:
+		if t.visible:
+			shown += 1
+	_check(shown == 3 and main._barracks._wall[0].texture == People.portrait("Scrapper"), "the wall does not show the three, newest first: %d" % shown)
+	_check(main._barracks._past.text.begins_with("Before: a scrapper, 3 runs") or main._barracks._past.text.begins_with("a scrapper, 3 runs") or main._barracks._past.text.begins_with("Before: scrapper"), "the line beside the wall is off: %s" % main._barracks._past.text)
+	_check(main._barracks._past.position.x >= main._barracks._wall[2].position.x + 64, "the line runs under the faces")
+	_check_fit(main, "Caravan (the wall)")
+	sim.past = []
+	main._barracks._shown = ""
+	main.refresh()
+	_check(not main._barracks._wall[0].visible, "the wall shows with nobody before")
+	sim.load_dict(saved)
+	print("faces ok: the heads' armed lines, the face slot on the run, the wall of runners before")
 
 
 func _recycle_checks(main) -> void:
