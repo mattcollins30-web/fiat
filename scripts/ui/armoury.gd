@@ -325,7 +325,12 @@ func _show_paper(it: Dictionary) -> void:
 	_left_lines[1].text = ""
 	_left_lines[2].text = ""
 	_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
-	_right_lines[0].text = ("Read, and kept in the caravan's drawer" if it["base"] in sim.book else "Not read yet") if not Items.is_deeds(it) else "Held, sold or burned: the ending"
+	if Items.is_deeds(it):
+		UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
+	elif it["base"] in sim.book:
+		UI.fit(_right_lines[0], ["Read, and kept in the caravan's drawer", "Read; in the caravan's drawer", "In the drawer"])
+	else:
+		_right_lines[0].text = "Not read yet"
 	_right_lines[1].text = ""
 	_right_lines[2].text = ""
 	_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)

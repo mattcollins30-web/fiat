@@ -2816,10 +2816,12 @@ func _playtest_checks(main) -> void:
 	while not sim.stash_room(2) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	sim.stash.append(paper)
+	sim._read(paper)                      # read: the longer line, the one that clipped
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
 	_check(main._armoury._left_title.text == "A P45" and main._armoury._left_lines[0].text == "From before" and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._left_title.text, main._armoury._left_lines[0].text])
+	_check(main._armoury._right_lines[0].text.begins_with("Read") or main._armoury._right_lines[0].text == "In the drawer", "a read paper's line is off: %s" % main._armoury._right_lines[0].text)
 	_check_fit(main, "Lock-up (a paper)")
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
