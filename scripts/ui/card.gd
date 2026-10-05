@@ -42,6 +42,7 @@ signal acted
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Sketch := preload("res://scripts/ui/sketch.gd")
+const Band := preload("res://scripts/ui/band.gd")
 
 const SKETCH_LINES := 3         # the lines a sketch takes
 const CORNER_W := 64            # a corner sketch: at the right of the title's row
@@ -63,8 +64,12 @@ const CHIPS := 6
 const CHIP_H := 26
 const CHIP_PAD := 8
 const CHIP_GAP := 6
+const BAND_H := 140             # a card with a band: the title and the headline in it, the lines under
+const LINES_Y_BAND := BAND_H + 8
 
 var _bg: Panel
+var _band: Band                 # the art band, for a card that's a place (the radio's sites)
+var _lines_y := LINES_Y         # where the lines start: under the band when there is one
 var _edge: Panel                # the tone, down the left edge
 var _track: Button              # the bar: its track - a button, when it's a job's - its fill, its text twice
 var _fill: Panel
@@ -106,6 +111,10 @@ func _init() -> void:
 	edge.corner_radius_top_left = 8
 	edge.corner_radius_bottom_left = 8
 	_edge = UI.panel(self, Rect2(0, 0, 6, Pal.CARD_H), edge)
+	_band = Band.new(Pal.CARD_W, BAND_H)
+	_band.visible = false
+	add_child(_band)
+	move_child(_band, _edge.get_index())          # under the tone's edge, so a pinned site's green runs the card's whole height
 	var x := Pal.PAD
 	var w := Pal.INNER
 	_track = Button.new()
@@ -181,6 +190,18 @@ func show_data(d: Dictionary) -> void:
 	var used := ceilf(UI.text_width(_headline, _headline.text)) + UNIT_GAP
 	_unit.position.x = Pal.PAD + used
 	_unit.size.x = Pal.INNER - used
+	# a band: {"site": name, "tone": zone, "kicker": words, "colour": the headline's}; the title, headline and unit move into it
+	var band: Dictionary = d.get("band", {})
+	_band.visible = not band.is_empty()
+	_lines_y = LINES_Y_BAND if _band.visible else LINES_Y
+	for l in [_title, _headline, _unit]:
+		l.visible = not _band.visible
+	if _band.visible:
+		_band.set_site(str(band.get("site", _title.text)))
+		_band.set_tone(int(band.get("tone", 0)))
+		_band.set_words(str(band.get("kicker", "")), _title.text, _headline.text, d.get("unit_forms", [_unit.text]), band.get("colour", Pal.ACCENT))
+		_band.headline_under_title(true)
+		_band.set_right([])
 	var first := _show_bar(d.get("bar", null))
 	var sketch: Dictionary = d.get("sketch", {})
 	var sketch_lines: int = int(sketch.get("lines", SKETCH_LINES))
@@ -194,9 +215,20 @@ func show_data(d: Dictionary) -> void:
 	for i in range(Pal.LINES):
 		var on := i < lines.size()
 		_labels[i].text = lines[i][0] if on else ""
-		_values[i].text = lines[i][1] if on else ""
+		# the value as a string, or its forms long to short: the first that shares the line with its label
+		if on and lines[i][1] is Array:
+			var label_w: float = UI.text_width(_labels[i], _labels[i].text) + 16.0
+			_values[i].text = str(lines[i][1].back())
+			for form in lines[i][1]:
+				if label_w + UI.text_width(_values[i], str(form)) <= Pal.INNER:
+					_values[i].text = str(form)
+					break
+		else:
+			_values[i].text = str(lines[i][1]) if on else ""
 		_values[i].add_theme_color_override("font_color", Pal.tone_color(lines[i][2]) if on and lines[i].size() > 2 and lines[i][2] != "" else Pal.TEXT)
-		_labels[i].position.y = LINES_Y + (i + first) * Pal.LINE_H
+		# a fourth entry tones the label (the radio's words in their tone)
+		_labels[i].add_theme_color_override("font_color", Pal.tone_color(lines[i][3]) if on and lines[i].size() > 3 and lines[i][3] != "" else Pal.TEXT_2)
+		_labels[i].position.y = _lines_y + (i + first) * Pal.LINE_H
 		_values[i].position.y = _labels[i].position.y
 	_note.text = d.get("note", "")
 	_note.add_theme_color_override("font_color", Pal.tone_color(d.get("note_tone", "")))
@@ -239,7 +271,7 @@ func show_data(d: Dictionary) -> void:
 ## Chips that don't fit the row are left off from the right.
 func _show_chips(chips: Array, after: int) -> int:
 	var x := 0.0
-	var y := LINES_Y + after * Pal.LINE_H + 3
+	var y := _lines_y + after * Pal.LINE_H + 3
 	var shown := false
 	for k in range(CHIPS):
 		var on := k < chips.size()
@@ -376,6 +408,8 @@ func _on_pressed(i: int) -> void:
 ## Every label and button with text, for the geometry test.
 func text_nodes() -> Array:
 	var out: Array = [_title, _headline, _unit, _note, _status]
+	if _band.visible:
+		out.append_array(_band.text_nodes())
 	if _track.visible:
 		out.append(_bar_off)            # the whole bar wide: the text has to fit it
 	out.append_array(_labels)
@@ -397,4 +431,6 @@ func line_pairs() -> Array:
 	for i in range(Pal.LINES):
 		if _labels[i].text != "":
 			out.append([_labels[i], _values[i]])
+	if _band.visible:
+		out.append([_band.headline, _band.unit])
 	return out

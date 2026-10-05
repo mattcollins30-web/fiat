@@ -4317,16 +4317,27 @@ func _yard_checks(main) -> void:
 		main.refresh()
 		var site_card = null
 		for c in main._cards:
-			if c.visible and c._title.text != "The set":
+			if c.visible and c != main._cards[0]:       # the first card is the set's
 				site_card = c
 				break
 		if site_card != null:
 			_check(Words.ODDS.any(func(b): return b[1] == site_card._headline.text) and site_card._unit.text.contains("%"), "the radio's site card has no odds headline in words with the figure beside: '%s' / '%s'" % [site_card._headline.text, site_card._unit.text])
-			var any_chip := false
-			for k in range(site_card.CHIPS):
-				any_chip = any_chip or site_card._chips[k].visible
-			_check(any_chip or sim.intel[0].is_empty(), "the radio's site card has no word chips")
-		_check_fit(main, "Radio (chips)")
+			# the A style: the band carries the site and the odds; the words as rows, the name in its tone, the effect beside
+			_check(site_card._band.visible and site_card._band.title.text == site_card._title.text and site_card._band.headline.text == site_card._headline.text and not site_card._title.visible, "the radio card's band does not carry its title and odds")
+			_check(site_card._labels[0].position.y >= site_card.BAND_H, "the radio card's first row sits in the band")
+			var intel_i := -1
+			for i in range(Data.TIERS.size()):
+				if Data.TIERS[i]["name"] == site_card._title.text:
+					intel_i = i
+			if intel_i >= 0 and not sim.intel[intel_i].is_empty():
+				# the effect shares the name's row, or takes the row under it
+				_check(site_card._labels[0].text == sim.intel[intel_i][0] and (site_card._values[0].text != "" or (site_card._labels[1].text == "" and site_card._values[1].text != "")), "the radio card's first word row is off: '%s' / '%s' / '%s'" % [site_card._labels[0].text, site_card._values[0].text, site_card._values[1].text])
+				var m0: Dictionary = sim.modifier(sim.intel[intel_i][0])
+				var want_tone: String = main._word_tone(m0)
+				_check(site_card._labels[0].get_theme_color("font_color") == (Pal.tone_color(want_tone) if want_tone != "" else Pal.TEXT_2), "the word's name is not in its tone")
+			var set_card = main._cards[0]
+			_check(set_card.visible and set_card._band.visible and set_card._band.kicker.text == "The radio" and set_card._headline.text.begins_with("Level "), "the set's card band is off: '%s' / '%s'" % [set_card._band.kicker.text, set_card._headline.text])
+		_check_fit(main, "Radio (bands)")
 	print("the Yard as option A ok: Elements, Finds, the works; the Runs cards' chips; the Radio's chips")
 	_fill_up_checks(main)
 

@@ -1606,6 +1606,15 @@ under the band, the tabs inside it, the tiles' keys and tones, the med kinds cou
 face, and a heal node trained elsewhere moving the clinic's figures (the reviewer's catch: the tree and the
 class are in the vendor's signature now).
 
+**The radio** (`card.gd`, `main.gd`): a card can carry a band (`"band": {site, tone, kicker, colour}`): the
+title, headline and unit move into it and the lines start under it; a line's value can be forms long to
+short, and a fourth entry tones the label. The radio's site cards get the Runs card's band (zone · depth,
+the site, the odds in words with the figure beside), and each word is a row with its name in its tone (amber
+harder, green easier) and its effect beside it, or on the row under when the two won't share one and there
+is room (`_word_rows`; a word never takes more lines than the card has under its buttons). The set's card has
+a band too: the set's name, its level, what it hears, the next set and its cost. Smoke: the band carries the
+title and odds, the first row sits under the band, the word's name is in its tone, the set's band.
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a

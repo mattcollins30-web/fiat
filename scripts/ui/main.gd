@@ -881,11 +881,14 @@ func _upgrade_card(title: String, line: String, figure: String, levels: Array, l
 
 func _comms_cards() -> Array:
 	var out := []
-	var tower := {"title": "The set", "headline": "Level %d" % sim.comms_level, "unit": "of %d" % (Data.COMMS_LEVELS.size() - 1),
-		"lines": [["Now", Data.COMMS_LEVELS[sim.comms_level]["words"].split(":")[0]]],
-		"note": Data.COMMS_LEVELS[sim.comms_level]["words"].split(": ")[1].capitalize()}
+	var set_words: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level]["words"].split(": ")
+	var tower := {"title": set_words[0], "headline": "Level %d" % sim.comms_level, "unit": "of %d" % (Data.COMMS_LEVELS.size() - 1),
+		"band": {"site": "the radio", "tone": 3, "kicker": "The radio"},
+		"lines": [["Hears", [set_words[1] if set_words.size() > 1 else "", "the word"]]]}
 	if sim.comms_cost() > 0:
-		tower["lines"].append(["Next", Fmt.money(sim.comms_cost())])
+		var nxt: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level + 1]["words"].split(": ")
+		tower["lines"].append(["Next", [nxt[0], "a better set"]])
+		tower["lines"].append(["Costs", Fmt.money(sim.comms_cost())])
 		tower["buttons"] = [{"text": "Build (%s)" % Fmt.money(sim.comms_cost()), "action": sim.upgrade_comms, "enabled": sim.can_upgrade_comms()}]
 	else:
 		tower["status"] = "As good as it gets"
@@ -899,18 +902,27 @@ func _comms_cards() -> Array:
 		# the radio's own words, not the sky's: those are on the Runs card. The
 		# words as chips (a harder site's in amber, an easier one's in green), each
 		# one's figures on a line under; the odds to clear the fight with them on
+		# a row a word: its name in its tone (amber harder, green easier), its effect beside, shortened by clause when it must
 		var words: Array = sim.intel[i]
-		var chips := []
 		var lines := []
+		# the room: six lines, two fewer under four buttons, one kept for the note when it shows
+		var room: int = Pal.LINES - (2 if sim.can_juice() else 0)
 		for name in words:
 			var m: Dictionary = sim.modifier(name)
-			chips.append([name, _word_tone(m)])
-			lines.append([m["words"], ""])
+			var tone := _word_tone(m)
+			lines.append_array(_word_rows(name, str(m["words"]), tone, room - lines.size() - (words.size() - words.find(name) - 1)))
 		if words.is_empty():
 			lines.append(["Nothing on the air for it", ""])
 		var odds: float = sim.survival(i)
-		var d := {"title": t["name"], "headline": Words.odds_words(odds), "unit": ("%s, D%d" % [Fmt.pct(odds), t["depth"]]) if sim.odds_settled(i) else "reading",
-			"chips": chips, "lines": lines, "tone": "good" if sim.pinned[i] else ""}
+		var zone_i := 0
+		for z in range(Data.ZONES.size()):
+			if i in Data.ZONES[z]["tiers"]:
+				zone_i = z
+		var odds_tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
+		var d := {"title": t["name"], "headline": Words.odds_words(odds), "unit": ("%s to clear, D%d" % [Fmt.pct(odds), t["depth"]]) if sim.odds_settled(i) else "reading the odds",
+			"unit_forms": ["%s to clear, D%d" % [Fmt.pct(odds), t["depth"]], "%s, D%d" % [Fmt.pct(odds), t["depth"]], Fmt.pct(odds)] if sim.odds_settled(i) else ["reading the odds", "reading"],
+			"band": {"site": t["name"], "tone": zone_i, "kicker": "%s · depth %d" % [Data.ZONES[zone_i]["name"], t["depth"]], "colour": Pal.tone_color(odds_tone) if sim.odds_settled(i) else Pal.TEXT_3},
+			"lines": lines, "tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
 		if sim.can_pin():
 			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
@@ -925,6 +937,25 @@ func _comms_cards() -> Array:
 			d["note"] = "Pinned: runs don't spend it" if sim.pinned[i] else ""
 		out.append(d)
 	return out
+
+
+## A word on a radio card: its name and effect on one row when they share it,
+## else the name on one row and the effect on the next (right-aligned, the
+## width to itself) when there's room, else one row with the effect cut to its
+## first clause and "+N". Rows: [name, forms, "", tone].
+static func _word_rows(name: String, words: String, tone: String, room: int) -> Array:
+	var name_w: float = UI.font("Regular", false).get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.LINE).x
+	var words_w: float = UI.font("Medium", false).get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.LINE).x
+	if name_w + 16.0 + words_w <= Pal.INNER:
+		return [[name, words, "", tone]]
+	if room >= 2 and words_w <= Pal.INNER:
+		return [[name, "", "", tone], ["", words]]
+	var clauses: PackedStringArray = words.split(", ", false)
+	var forms := []
+	for n in range(clauses.size(), 0, -1):
+		forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
+	forms.append("%d effects" % clauses.size())
+	return [[name, forms, "", tone]]
 
 
 ## A word's tone for its chip: amber when it makes the fight harder, green when
