@@ -3312,6 +3312,24 @@ func _playtest_checks(main) -> void:
 	main._missions._pick_zone(0)
 	main.refresh()
 	_check(c["intel_head"].text.begins_with("THE WORD"), "the word's head is off: '%s'" % c["intel_head"].text)
+	# three boxes under the band: the fight holds its tiles, the elements their chips, the word its rows and the site lines; none overlap, and the last clears the note
+	var bx: Array = c["boxes"]
+	var r0 := Rect2(bx[0].position, bx[0].size)
+	var r1 := Rect2(bx[1].position, bx[1].size)
+	var r2 := Rect2(bx[2].position, bx[2].size)
+	_check(r0.encloses(Rect2(c["tiles"][5]["panel"].position, c["tiles"][5]["panel"].size)) and r0.position.y >= main._missions.BAND_H, "the fight's box does not hold its tiles")
+	_check(r1.encloses(Rect2(c["chips"].position, c["chips"].size)) and r1.encloses(Rect2(c["resist"].position, c["resist"].size)) and r1.encloses(Rect2(c["resist_label"].position, c["resist_label"].size)), "the elements' box does not hold its chips")
+	_check(r2.encloses(Rect2(c["intel"][2][0].position, c["intel"][2][0].size)) and r2.encloses(Rect2(c["site"][1].position, c["site"][1].size)) and r2.encloses(Rect2(c["intel_head"].position, c["intel_head"].size)), "the word's box does not hold its rows")
+	_check(r0.end.y + 8 <= r1.position.y and r1.end.y + 8 <= r2.position.y and r2.end.y <= c["note"].position.y, "the Runs card's boxes run into each other or the note: %s %s %s note %.0f" % [str(r0), str(r1), str(r2), c["note"].position.y])
+	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
+	_check(c["resist_label"].text == "They resist" and c["resist"].visible and c["resist"].shown() >= 1, "the resist chips are missing")
+	var t0: Dictionary = sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])
+	var any_res := false
+	for ty in Data.ELEMENTS:
+		any_res = any_res or float(t0.get("res", {}).get(ty, 0.0)) > 0.0
+	_check((c["resist"].words(0) == "Nothing") == (not any_res), "the resist chips disagree with the site: '%s'" % c["resist"].words(0))
+	if any_res:
+		_check(c["resist"].words(0).contains("%"), "a resist chip has no figure: '%s'" % c["resist"].words(0))
 	for pair in c["intel"]:
 		if pair[0].text != "":
 			_check(pair[1].text != "" and pair[1].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "a word's effect is missing or not right of its name: '%s' / '%s'" % [pair[0].text, pair[1].text])

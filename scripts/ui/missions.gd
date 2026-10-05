@@ -24,7 +24,8 @@ const BOSS_W := 150                # the boss toggle beside Set off
 const DEPTH_BTN := 48              # the −/+ stacked at the depth tile's right, the endgame's ladder
 const DEPTH_TILE := 4              # the depth tile's place in the six
 const BAND_H := 200                # the art band at the top of a column
-const FIRE_W := 120                # "They fire" before the chips
+const FIRE_W := 148                # "They fire" / "They resist" before the chips
+const BOX_PAD := 10                # the outline round the fight, the elements and the word
 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
@@ -84,6 +85,12 @@ func _init() -> void:
 		panel.add_child(band)
 		c["band"] = band
 		var y := BAND_H + 14
+		# three boxes under the band: the fight, the elements, the word
+		c["boxes"] = []
+		for k in range(3):
+			c["boxes"].append(UI.panel(panel, Rect2(PAD - BOX_PAD, 0, INNER + 2 * BOX_PAD, 10), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE)))
+		c["boxes"][0].position.y = y
+		y += BOX_PAD
 		# the fight, as tiles: them, their fire, the fight's length, the drops, the depth, the rewards
 		c["tiles"] = UI.tile_row(panel, PAD, y, INNER, 3) + UI.tile_row(panel, PAD, y + UI.TILE_H + 8, INNER, 3)
 		var depth_tile: Dictionary = c["tiles"][DEPTH_TILE]
@@ -95,16 +102,26 @@ func _init() -> void:
 			b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)     # small enough for a 26 px button
 		c["depth_up"].text = "+"
 		c["depth_up"].pressed.connect(_depth.bind(col, 1))
-		y += 2 * UI.TILE_H + 8 + 12
-		# what they fire, as chips in the element's colour, with your resist to each
+		y += 2 * UI.TILE_H + 8 + BOX_PAD
+		c["boxes"][0].size.y = y - c["boxes"][0].position.y
+		y += 12
+		c["boxes"][1].position.y = y
+		y += BOX_PAD
+		# what they fire, as chips in the element's colour, with your resist to each; what they resist, the same way
 		c["fire_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "They fire", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["chips"] = Chips.new(INNER - FIRE_W)
 		c["chips"].position = Vector2(PAD + FIRE_W, y)
 		panel.add_child(c["chips"])
 		y += Chips.CHIP_H + 8
-		c["resist"] = [UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "They resist", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
-			UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)]
-		y += LINE_H + 6
+		c["resist_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "They resist", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["resist"] = Chips.new(INNER - FIRE_W)
+		c["resist"].position = Vector2(PAD + FIRE_W, y)
+		panel.add_child(c["resist"])
+		y += Chips.CHIP_H + BOX_PAD
+		c["boxes"][1].size.y = y - c["boxes"][1].position.y
+		y += 12
+		c["boxes"][2].position.y = y
+		y += BOX_PAD
 		# the word: the head carries the sky; a row a word, its name left and its effect right
 		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "The word")
 		y += UI.HEAD_H + 2
@@ -119,6 +136,8 @@ func _init() -> void:
 		c["site"] = []
 		for k in range(2):
 			c["site"].append(UI.label(panel, Rect2(PAD, y + k * 24, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
+		y += 2 * 24 + BOX_PAD
+		c["boxes"][2].size.y = y - c["boxes"][2].position.y
 		# the foot: Deploy across, Auto under it
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
 		c["auto"] = UI.button(panel, Rect2(PAD, fy, INNER - BOSS_W - 8, Pal.BUTTON_H), false)
@@ -196,10 +215,6 @@ func show_state(s) -> void:
 		c["depth_up"].visible = endgame
 		c["depth_down"].disabled = not is_open or sim.on_mission() or t["depth"] <= 1
 		c["depth_up"].disabled = not is_open or sim.on_mission() or t["depth"] > sim.best_depth[i]
-		var res_words := []
-		for ty in Data.ELEMENTS:
-			if float(t.get("res", {}).get(ty, 0.0)) > 0.0:
-				res_words.append("%s %.0f%%" % [ty, float(t["res"][ty]) * 100.0])
 		var tiles: Array = [
 			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
@@ -218,20 +233,16 @@ func show_state(s) -> void:
 			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20 - ((DEPTH_BTN + 8) if endgame else 0)
 		UI.set_tile(c["tiles"][DEPTH_TILE], tiles[DEPTH_TILE][0], tiles[DEPTH_TILE][1], Pal.TEXT if is_open else Pal.TEXT_3)
 		_show_chips(c, t, is_open)
-		c["resist"][0].visible = is_open and not res_words.is_empty()
-		c["resist"][1].visible = c["resist"][0].visible
-		if c["resist"][0].visible:
-			# whole, then fewer of its clauses, the rest as "+N"
-			var options := []
-			for n in range(res_words.size(), 0, -1):
-				options.append(", ".join(res_words.slice(0, n)) + ((" +%d" % (res_words.size() - n)) if n < res_words.size() else ""))
-			var label_w: float = UI.text_width(c["resist"][0], c["resist"][0].text) + 16.0
-			var picked: String = options.back()
-			for o in options:
-				if label_w + UI.text_width(c["resist"][1], o) <= INNER:
-					picked = o
-					break
-			c["resist"][1].text = picked
+		# what they resist, a chip an element in its colour, the same shape as what they fire; "nothing" when they don't
+		c["resist_label"].visible = is_open
+		c["resist"].visible = is_open
+		var res_chips := []
+		for ty in Data.ELEMENTS:
+			if float(t.get("res", {}).get(ty, 0.0)) > 0.0:
+				res_chips.append(["%s %.0f%%" % [ty.capitalize(), float(t["res"][ty]) * 100.0], ty])
+		if res_chips.is_empty():
+			res_chips.append(["Nothing", Pal.TEXT_2])
+		c["resist"].show_chips(res_chips if is_open else [])
 		for r in range(3):
 			if r < t["intel"].size():
 				var m: Dictionary = sim.modifier(t["intel"][r])
@@ -387,9 +398,10 @@ func text_nodes() -> Array:
 		return out
 	for c in _cols:
 		out.append_array(c["band"].text_nodes())
-		out.append_array([c["intel_head"], c["note"], c["fire_label"]])
+		out.append_array([c["intel_head"], c["note"], c["fire_label"], c["resist_label"]])
 		out.append_array(c["site"])
-		out.append_array(c["resist"])
+		if c["resist"].visible:
+			out.append_array(c["resist"].text_nodes())
 		for t in c["tiles"]:
 			out.append_array([t["key"], t["value"]])
 		if c["chips"].visible:
@@ -409,6 +421,4 @@ func line_pairs() -> Array:
 		for pair in c["intel"]:
 			if pair[0].text != "":
 				out.append(pair)
-		if c["resist"][0].visible:
-			out.append(c["resist"])
 	return out

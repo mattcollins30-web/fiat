@@ -1564,9 +1564,13 @@ to PNG through xvfb (`xvfb-run -a -s "-screen 0 1920x1080x24" Godot --path . --r
 
 **Runs cards** (`missions.gd`): the band (tier · zone, the site, the odds in words as the headline with the
 figure beside), six tiles (them, their fire, fight, drops, depth, rewards or the site's state), "They fire"
-with the element chips, "They resist" when they do, THE WORD head carrying the sky and the radio's note, three
+with the element chips, "They resist" as chips in the same shape ("Shock 40%" in its colour; "Nothing" when
+they resist nothing), THE WORD head carrying the sky and the radio's note, three
 word rows name-left effect-right (the effect shortened by clause with "+N"), the site's lines, the buttons as
-before. The depth's −/+ stack at the right of the depth tile in the endgame. Smoke: the band's words inside
+before. The depth's −/+ stack at the right of the depth tile in the endgame. The three parts under the band (the fight,
+the elements, the word with the site lines) each sit in an outlined box with a gap between, as on the run
+screen. Smoke: the boxes hold their parts, sit apart and clear the note; the resist chips match the site;
+the band's words inside
 it, the odds bands fit the band's foot, the tiles' keys, the word rows right-aligned with an effect each, the
 depth buttons inside their tile with a minimum no taller than their box, the sky's tone following the zone.
 A reviewer pass caught the tone never following the zone and the depth buttons under Button's minimum height.
