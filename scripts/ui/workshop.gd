@@ -386,6 +386,7 @@ func _fitted() -> Dictionary:
 func _show_panel() -> void:
 	for b in _buttons:
 		b.visible = false
+	_hint.size.x = GRID_W - 2 * PAD           # the craft view narrows it to its buttons
 	var it := _selected_item()
 	var fitted := _fitted()
 	_say(it if not it.is_empty() else fitted)
@@ -518,17 +519,13 @@ func _show_craft(it: Dictionary) -> void:
 		_craft_lines[1].text = "Worn gear goes to the bench from the Lock-up"
 		_left_title.text = "The bench"
 		_right_title.text = ""
+		_hint.size.x = GRID_W - 2 * PAD
 		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
 		_hint.add_theme_color_override("font_color", Pal.TEXT_3)
 		return
 	UI.fit(_craft_title, [Items.full_name(it), it["base"]])
 	# the bench's last job on this piece stays on the hint until the next
-	if sim.last_craft.get("id", -1) == it["id"]:
-		UI.fit(_hint, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT[sim.last_craft["kind"]]["name"]])
-		_hint.add_theme_color_override("font_color", Pal.GOOD)
-	else:
-		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
-		_hint.add_theme_color_override("font_color", Pal.TEXT_3)
+	_hint.add_theme_color_override("font_color", Pal.GOOD if sim.last_craft.get("id", -1) == it["id"] else Pal.TEXT_3)
 	UI.fit(_craft_lines[0], Items.figure_options(it))
 	_craft_lines[1].text = "Level %d · up to T%d can roll" % [Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
 	var lines: Array = Items.affix_lines(it, false, true)
@@ -559,6 +556,12 @@ func _show_craft(it: Dictionary) -> void:
 			x -= _buttons[i].size.x
 			_buttons[i].position.x = x
 			x -= 12
+	# the hint stops at the buttons, and shortens if it must
+	_hint.size.x = x - PAD
+	if sim.last_craft.get("id", -1) == it["id"]:
+		UI.fit(_hint, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT[sim.last_craft["kind"]]["name"]])
+	else:
+		UI.fit(_hint, ["Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes], "%s and %d notes in hand" % [Fmt.money(sim.cash), sim.notes], "Bench level %d" % sim.workshop])
 
 
 func _set_view(v: String) -> void:

@@ -700,11 +700,12 @@ static func att_lead(it: Dictionary) -> Array:
 
 
 ## Every effect an attachment carries, as short words: "+9% dmg, −4% pace".
-static func att_words(it: Dictionary, short := false) -> String:
+## `base_only`: the part's own figures, its rolled affixes left for their own lines.
+static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
 			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["salt", "armour", "armour"], ["wire_pct", "cash from every kill", "cash"]]:
-		var v := att_stat(it, pair[0])
+		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
 			var sign: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
 			out.append("%s%.0f%s %s" % [sign, absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])

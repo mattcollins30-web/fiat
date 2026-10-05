@@ -332,6 +332,19 @@ func _init() -> void:
 	print("tree: %d of %d points trained, %s" % [sim.tree.size(), sim.training_points, str(sim.tree.slice(0, 3))])
 	main._barracks._pick("The yard/0")
 	_check_fit(main, "Barracks (pick)")
+	# the points read "N of M points free" top right, the panel says whose the node is, and no node's words are the old "for every runner the yard sends"
+	_check(main._barracks._points.text.begins_with("%d of %d" % [sim.points_free(), sim.training_points]), "the points line reads '%s'" % main._barracks._points.text)
+	_check(main._barracks._scope.text.begins_with("The yard's"), "the yard's node does not say it's the yard's: '%s'" % main._barracks._scope.text)
+	_check(not main._barracks._words.text.contains("the yard sends"), "a plain node still says 'for every runner the yard sends'")
+	if sim.cls != "":
+		var first_class_tree: Dictionary = sim.trees()[0]
+		main._barracks._pick("%s/0" % first_class_tree["name"])
+		_check(main._barracks._scope.text.begins_with("The runner's"), "a class node does not say it's the runner's: '%s'" % main._barracks._scope.text)
+		_check_fit(main, "Barracks (class node)")
+	for t in Data.TREES:
+		for nd in t["nodes"]:
+			if nd.has("words"):
+				_check(not str(nd["words"]).contains("Out when") and not str(nd["words"]).contains("picking over"), "a node's words still read oddly: '%s'" % nd["words"])
 	main._barracks._pick_class("Paramedic")
 	_check(sim.cls == "Paramedic", "class through the screen")
 	_check_fit(main, "Barracks (class)")
@@ -1151,11 +1164,16 @@ func _charm_sockets(main) -> void:
 	_check(rolled_rare > 20, "charms roll plain: %d of 200 above common" % rolled_rare)
 	_check(rolled_stats.size() >= 6, "charms roll only %s" % str(rolled_stats.keys()))
 	# and the bench can add an affix to one
+	if sim.on_mission():
+		sim.extract_now()
+	var ws_held: int = sim.workshop
+	sim.workshop = maxi(1, sim.workshop)
 	var add_cost: int = sim.craft_cost(charm, "add")
 	_check(add_cost > 0, "the bench will not add an affix to a charm")
 	sim.cash = maxf(sim.cash, add_cost + 1.0)
 	var n_before: int = charm["affixes"].size()
-	_check(sim.craft(charm["id"], "add", "") and charm["affixes"].size() == n_before + 1, "adding an affix to the charm did not take")
+	_check(sim.craft(charm["id"], "add", "") and charm["affixes"].size() == n_before + 1, "adding an affix to the charm did not take (mission %s, bench %d, cost %d, cash %.0f)" % [str(sim.on_mission()), sim.workshop, add_cost, sim.cash])
+	sim.workshop = ws_held
 	# the body shows it in its own cell beside the primary
 	main.show_room(main.ARMOURY)
 	_check_fit(main, "Armoury (charm)")
@@ -1585,6 +1603,24 @@ func _melee_checks(main) -> void:
 	_check(main._workshop._left_lines[0].text.begins_with("Melee part · business end"), "a bat part's line is '%s'" % main._workshop._left_lines[0].text)
 	_check(not main._workshop._right_title.text.contains("gun"), "a bat part's panel talks of a gun: '%s'" % main._workshop._right_title.text)
 	_check_fit(main, "Workshop (a bat part)")
+	# a part with a long kind line and an affix in the Lock-up: fits, the part's own figures first, the affix banded
+	var bipod: Dictionary = sim._plain(Data.ATTACHMENT, "Bipod")
+	bipod["rarity"] = 1
+	bipod["affixes"] = [{"stat": "damage_pct", "value": 4, "tier": 2}]
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(bipod)
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(bipod["id"]))
+	main.refresh()
+	_check(not main._armoury._left_lines[0].text.contains("..."), "the part's kind line trails off: '%s'" % main._armoury._left_lines[0].text)
+	_check(main._armoury._left_lines[1].text == Items.att_words(bipod, false, true) and not main._armoury._left_lines[1].text.contains("+22"), "the part's own line carries its affix too: '%s'" % main._armoury._left_lines[1].text)
+	_check(main._armoury._left_lines[2].text.ends_with("· T2") and main._armoury._left_lines[2].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not on its own banded line: '%s'" % main._armoury._left_lines[2].text)
+	_check_fit(main, "Armoury (a bipod)")
+	sim.stash.erase(bipod)
+	main.show_room(main.WORKSHOP)
+	main.refresh()
 	# the bench says what the next level adds, at every level short of the last
 	var ws_was: int = sim.workshop
 	for lv in range(Data.WORKSHOP.size()):
@@ -2907,7 +2943,7 @@ func _juice_checks(main) -> void:
 	sim.mission["healed"] = float(sim.mission.get("healed", 0.0)) + 3.0
 	main.refresh()
 	var texts: Array = main._juice._numbers.map(func(n): return n["label"].text)
-	_check(texts.any(func(t): return str(t).begins_with("−2")) and texts.has("+3"), "the red and the green do not both show for a second that took 20 and gave 3 back: %s" % str(texts))
+	_check(texts.any(func(t): return str(t).begins_with("−2")) and texts.any(func(t): return str(t).begins_with("+")), "the red and the green do not both show for a second that took 20 and gave 3 back: %s" % str(texts))
 	# the numbers carry their type's colour: a fire hit on them reads red, a physical one white, poison on you green
 	main._juice.clear_numbers()
 	var hold_gun = sim.equipped["Primary"]

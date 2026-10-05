@@ -839,6 +839,26 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The Caravan's panel, the notables' words, a part's affixes (5 Oct)
+
+- *"Cash +10%, for every runner the yard sends"* read as a bonus per runner sent. It never was: the tail
+  meant the yard's tree holds for every runner. The panel now gives a plain node its fuller words
+  (`PANEL_WORDS`: "+10% cash on every run's take", "Your first shot on every gang does 20% more", ...)
+  and a third line says whose the node is: "The yard's: trained once, kept through every runner" or
+  "The runner's: goes with them when they go; a new past starts it over".
+- The "N points free of M earned · one a level · changing class refunds its two trees" line is gone
+  from the panel; "3 of 29 points free" sits top right of it instead.
+- A language pass on the notables: "Hit and run" is "Leaves as the first gang arrives, the loot kept;
+  every kill pays 50% more"; "Stand and fight", "Not today", "Rifleman", "One shot", "Loud",
+  "Chokepoints", "One at a time", "Bodyline", "Never there", "All or nothing", "Trapline", "Frozen
+  solid", "On your hands", "Walk it off", "Quiet hands" and the lanyard's words all say what they do in
+  a sentence. Asserted: the points line, both scopes, no "the yard sends", the old phrasings gone.
+- A part's panel: its kind line has shorter forms (the bipod's "Gun part · handguard · Uncommon T2 · 1
+  cell" trailed off), its own figures sit on their line (`att_words(it, short, base_only)`), and its
+  rolled affixes get a line each in their tier's colour like a gun's. Asserted on a bipod with a T2 affix.
+- The Craft panel's hint stops at its buttons and shortens, like the Lock-up's; the Workshop's other
+  views get the full width back each refresh.
+
 ## The pouches are the controls; rounds top up a full rig (5 Oct)
 
 The Runner panel's "Use" button is gone: a med's pouch on the run screen is the control, lit when HP is

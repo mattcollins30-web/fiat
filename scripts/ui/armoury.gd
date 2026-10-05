@@ -253,9 +253,19 @@ func _show_panel() -> void:
 		_lay_buttons()
 		return
 	if Items.is_attachment(it):
-		UI.fit(_left_lines[0], ["%s · %s T%d · 1 cell" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]], "%s · %s T%d" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]]])
-		UI.fit(_left_lines[1], [Items.att_words(it), Items.att_words(it, true)])
-		_left_lines[2].text = ""
+		UI.fit(_left_lines[0], ["%s · %s T%d · 1 cell" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]], "%s · %s T%d" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]],
+				"%s · T%d" % [Items.kind_words(it), it["tier"]], "%s · T%d" % [Items.kind_words(it).get_slice(" · ", 0), it["tier"]]])
+		# the part's own figures, then its rolled affixes a line each in their tier's colour, like a gun's
+		UI.fit(_left_lines[1], [Items.att_words(it, false, true), Items.att_words(it, true, true)])
+		var alines: Array = Items.affix_lines(it, false, true)
+		var ashort: Array = Items.affix_lines(it, true, true)
+		for k in range(3):
+			if k < alines.size():
+				UI.fit(_left_lines[2 + k], [alines[k], ashort[k]])
+				_left_lines[2 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(it, k)))
+			else:
+				_left_lines[2 + k].text = ""
+				_left_lines[2 + k].add_theme_color_override("font_color", Pal.TEXT_2)
 		if Items.is_socketable(it):
 			UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
 			UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))

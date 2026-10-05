@@ -40,7 +40,8 @@ var _panel: Panel
 var _face: TextureRect             # the class's portrait, at the panel's left, when there is one
 var _title: Label
 var _words: Label
-var _points: Label
+var _points: Label                 # "3 of 29 points free", top right of the panel
+var _scope: Label                  # whose a node is: the yard's, kept, or the runner's, gone with them
 var _past: Label                   # the runners before this one
 var _wall: Array = []              # their faces, newest first, small
 const WALL := 6
@@ -96,7 +97,8 @@ func _init() -> void:
 	_face = People.rect(_panel, Vector2(PAD, (PANEL_H - 128) / 2), 1)
 	_title = UI.label(_panel, Rect2(PAD, 14, Pal.GRID_W - 2 * PAD - 260, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_words = UI.label(_panel, Rect2(PAD, 56, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_points = UI.label(_panel, Rect2(PAD, 90, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_scope = UI.label(_panel, Rect2(PAD, 90, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_points = UI.label(_panel, Rect2(Pal.GRID_W - PAD - 240, 14, 240, 36), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)
 	_past = UI.label(_panel, Rect2(PAD, 124, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(WALL):
 		_wall.append(People.rect(_panel, Vector2(PAD, PANEL_H - WALL_S - 10), 0.5))
@@ -123,6 +125,29 @@ const EFFECT_WORDS := {
 	"dot_pct": "+%d%% dots",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
+## The panel's fuller words for a plain node, where the row's short form isn't enough.
+const PANEL_WORDS := {
+	"damage_pct": "+%d%% damage, whatever's in hand", "hp": "+%d max HP", "loot_pct": "+%d%% loot find: more comes out of every search",
+	"search_pct": "Searches go %d%% faster", "first_pct": "Your first shot on every gang does %d%% more", "patrol_pct": "Gangs come %d%% later",
+	"armour_pct": "+%d%% armour", "heal_pct": "Meds heal %d%% more", "med_speed_pct": "Meds work %d%% quicker", "med_cap": "+%d pouch on the rig",
+	"rest_pct": "Resting at the yard heals %d%% faster", "treat_pct": "The clinic's treatment costs %d%% less", "att_share": "Gun parts count %d%% more",
+	"sell_pct": "The fence pays %d%% more for what you sell", "cash_pct": "+%d%% cash on every run's take", "rarity": "+%d%% magic find: rarer finds",
+	"pace_pct": "+%d%% pace: the fight and the search, quicker", "damage_low_pct": "+%d%% damage while under half HP",
+	"conv_fire_pct": "%d%% of your damage dealt as fire", "conv_frost_pct": "%d%% of your damage dealt as frost", "conv_poison_pct": "%d%% of your damage dealt as poison",
+	"conv_shock_pct": "%d%% of your damage dealt as shock", "conv_bleed_pct": "%d%% of your damage dealt as bleed",
+	"fire_pct": "+%d%% fire damage", "frost_pct": "+%d%% frost damage", "poison_pct": "+%d%% poison damage", "shock_pct": "+%d%% shock damage",
+	"bleed_pct": "+%d%% bleed damage", "physical_pct": "+%d%% physical damage", "dot_pct": "+%d%% to burns, poison and bleeds",
+}
+
+
+## The panel's words for a plain node: the fuller form, "with rifles" when typed.
+static func _panel_words(nd: Dictionary) -> String:
+	if not PANEL_WORDS.has(nd["effect"]):
+		return _effect_words(nd)
+	var w: String = PANEL_WORDS[nd["effect"]] % nd.get("value", 0)
+	if nd.has("type"):
+		w += ", with %s" % TYPE_WORDS[nd["type"]]
+	return w
 
 
 static func _effect_words(nd: Dictionary) -> String:
@@ -260,12 +285,13 @@ func _show_panel() -> void:
 	_train.visible = false
 	# the runner's face at the left, the words beside it; no class, no face
 	var faced := People.show(_face, sim.cls)
-	for l in [_title, _words, _points]:
+	for l in [_title, _words, _scope]:
 		l.position.x = PAD + 148 if faced else PAD
 		l.size.x = Pal.GRID_W - 2 * PAD - 260 - (148 if faced else 0)
 	_past.position.x = PAD + 148 if faced else PAD
 	var free: int = sim.points_free()
-	_points.text = "%d point%s free of %d earned · one a level · changing class refunds its two trees" % [free, "" if free == 1 else "s", sim.training_points]
+	UI.fit(_points, ["%d of %d point%s free" % [free, sim.training_points, "" if sim.training_points == 1 else "s"], "%d of %d free" % [free, sim.training_points]])
+	_scope.text = ""
 	if selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
@@ -282,10 +308,12 @@ func _show_panel() -> void:
 			_show_panel()
 			return
 		_title.text = nd["name"] + (" · keystone" if nd.get("keystone", false) else (" · notable" if nd.get("notable", false) else ""))
-		if nd.has("words"):
-			_words.text = nd["words"]
-		else:
-			_words.text = _effect_words(nd) + ", for every runner the yard sends"
+		UI.fit(_words, [nd["words"] if nd.has("words") else _panel_words(nd), _effect_words(nd)])
+		# whose it is: the yard's tree and the elements' stay through every runner; a class's goes with them
+		var branch: String = str(selected).get_slice("/", 0)
+		var yards: bool = branch == Data.COMMON_TREE or Data.ELEMENT_TREES.any(func(t): return t["name"] == branch)
+		UI.fit(_scope, ["The yard's: trained once, kept through every runner" if yards else "The runner's: goes with them when they go; a new past starts it over",
+				"The yard's: kept through every runner" if yards else "The runner's: goes with them"])
 		if sim.tree.has(selected):
 			_title.text += " · trained" if sim._active(nd) else " · trained, idle without the gun for it"
 		else:
@@ -549,7 +577,7 @@ func _on_respec() -> void:
 
 ## For the tests: every label with text.
 func text_nodes() -> Array:
-	var out: Array = [_title, _words, _points, _past, _respec]
+	var out: Array = [_title, _words, _points, _scope, _past, _respec]
 	if _ascend.visible:
 		out.append(_ascend)
 	if _swap.visible:
