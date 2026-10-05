@@ -1,27 +1,61 @@
 extends SceneTree
-## Renders the Lock-up to a PNG, so a layout change can be looked at and not
-## just measured: on the Legion `godot --path . --rendering-driver opengl3
-## -s tests/shot.gd` (under xvfb-run on a headless Linux box). Writes
-## lockup.png beside the project.
+## Screenshots of the rooms with a save loaded: `-- <save> <room,room,...> <out dir>`.
+## Needs a display (xvfb-run). The rooms by name from main.ROOMS; "run" for a live run.
+
+var main
+var _rooms: Array = []
+var _out := "res://shots"
+var _k := 0
+var _wait := 0
+
+
 func _init() -> void:
-	var main = load("res://scripts/ui/main.gd").new()
+	var args := OS.get_cmdline_user_args()
+	var path := "res://tests/matt.save" if args.is_empty() else args[0]
+	_rooms = args[1].split(",") if args.size() > 1 else ["missions"]
+	_out = args[2] if args.size() > 2 else "res://shots"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_out))
+	main = load("res://scripts/ui/main.gd").new()
 	main.intro = false
 	root.add_child(main)
 	main.new_game()
-	var sim = main.sim
-	# a few things in the stash to see the packing
-	for pair in [["Primary", "Old .303"], ["Armour", "Riot suit"], ["Helmet", "Hard hat"], ["Medical", "First aid kit"], ["Ammo", "Shells"], ["Backpack", "Bergen"], ["Secondary", "Flare pistol"], ["Attachment", "Red dot"]]:
-		sim.stash.append(sim._plain(pair[0], pair[1]))
-	main.show_room(main.ARMOURY)
-	main._menu.close()
-	main._menu.close()
-	main._armoury._pick_slot("Backpack")
+	var f := FileAccess.open(path, FileAccess.READ)
+	var d = JSON.parse_string(f.get_as_text())
+	main.sim.load_dict(d["sim"])
 	main.refresh()
-	await process_frame
-	main._menu.close()
+	_wait = -1
+
+
+func _next() -> void:
+	if _k >= _rooms.size():
+		quit()
+		return
+	var r: String = _rooms[_k]
+	if r == "run":
+		if not main.sim.on_mission():
+			main.sim.deploy(0)
+		for i in range(12):
+			main.sim.advance(1.0)
+		main.show_room(main.MISSIONS)
+	else:
+		if main.sim.on_mission():
+			main.sim.extract_now()
+		main.show_room(r)
 	main.refresh()
-	await process_frame
-	await process_frame
-	var img := root.get_viewport().get_texture().get_image()
-	img.save_png(ProjectSettings.globalize_path("res://../lockup.png"))
-	quit()
+	_wait = 3
+
+
+func _process(_dt: float) -> bool:
+	if _wait == -1:
+		# a frame in: the title menu the shell opened on entering the tree is closed here
+		main._menu.close()
+		_next()
+		return false
+	if _wait > 0:
+		_wait -= 1
+		if _wait == 0:
+			var img: Image = root.get_viewport().get_texture().get_image()
+			img.save_png(ProjectSettings.globalize_path("%s/%s.png" % [_out, _rooms[_k]]))
+			_k += 1
+			_next()
+	return false
