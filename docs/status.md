@@ -775,6 +775,20 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## What a thing is (2026-10-05)
+
+Matt, at a bag of road salt: "how am I supposed to know what this does? what type of item is it?
+what is salt?" Every card leads with its kind now (`Items.kind_words`): "Primary · rifle",
+"Secondary · melee", "Helmet", "Rounds · shotgun", "Gun part · optic", "Socketable", "Med",
+"Paper", "Charm" - first on the figures line in the Lock-up, the fence, the run's pick and the
+bench. A socketable's figures say what it does rather than name the stat ("+12 armour", not
+"+12 salt"; "15% of hits as fire"), and its right column says where it goes and what for: "A
+socketable: packed into any socket, +12 armour" / "in any socket, 15% of your hits land as
+fire" / "+12% cash from every kill", under "Fitted at the bench, Sockets view".
+
+Asserted: thirteen kinds read right; a card line leads with its kind at every width; salt and
+fluid's figures; the Lock-up and the fence say a socketable is one; both fit.
+
 ## The green among the red (2026-10-05)
 
 Matt: "even if I saw a green +1 on the bar amongst the −1s I would know as a player regen is

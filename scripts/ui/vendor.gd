@@ -439,10 +439,10 @@ func _show_panel() -> void:
 	_hint.text = ""
 	UI.fit(_left_title, [Items.full_name(it), it["base"]])
 	if Items.is_medical(it):
-		_left_lines[0].text = "Heals %.0f HP over %.0f s · 1 cell" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]
+		UI.fit(_left_lines[0], ["Med · heals %.0f HP over %.0f s · 1 cell" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)], "Med · heals %.0f HP over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]])
 	elif Items.is_ammo(it):
 		var h := Items.headline(it)
-		UI.fit(_left_lines[0], ["%s %s · for %s guns · 1 cell" % [h[0], h[1], Items.base_of(it)["type"]], "%s %s · %s guns" % [h[0], h[1], Items.base_of(it)["type"]]])
+		UI.fit(_left_lines[0], ["%s · %s %s · 1 cell" % [Items.kind_words(it), h[0], h[1]], "%s · %s %s" % [Items.kind_words(it), h[0], h[1]]])
 	else:
 		UI.fit(_left_lines[0], Items.figure_options(it))
 	UI.fit(_left_lines[1], Items.affix_options(it))
@@ -459,8 +459,12 @@ func _show_panel() -> void:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.is_medical(it) or Items.is_ammo(it):
 		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
+	elif Items.is_socketable(it):
+		UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
+		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
 	else:
 		_right_title.text = "Fitted at the bench"
+		_right_lines[0].text = "Goes on a gun's %s mount" % it["mount"]
 	if selected["kind"] == "shelf":
 		var room: bool = sim.stash_room(Items.size(it))
 		_left_lines[2].text = "They want %s" % Fmt.money(_price(it))

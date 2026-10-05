@@ -2859,6 +2859,32 @@ func _playtest_checks(main) -> void:
 	_check_fit(main, "Lock-up (a paper)")
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
+	# every piece says what kind of thing it is on its card
+	for pair in [["Primary", "Stalking rifle", "Primary · rifle"], ["Primary", "Spiked bat", "Primary · melee"], ["Secondary", "Service pistol", "Secondary · pistol"], ["Helmet", "Hard hat", "Helmet"], ["Armour", "Stab vest", "Armour"], ["Rig", "Bum bag", "Rig"], ["Backpack", "School bag", "Backpack"], ["Charm", "Lucky penny", "Charm"], [Data.MEDICAL, "Bandage", "Med"], [Data.AMMO, "Shells", "Rounds · shotgun"], [Data.PAPER, "A P45", "Paper"], [Data.ATTACHMENT, "Road salt", "Socketable"], [Data.ATTACHMENT, "Red dot", "Gun part · optic"]]:
+		var piece: Dictionary = sim._plain(pair[0], pair[1])
+		_check(Items.kind_words(piece) == pair[2], "%s reads as '%s', not '%s'" % [pair[1], Items.kind_words(piece), pair[2]])
+		if pair[0] in Data.SLOTS:
+			_check(Items.figure_options(piece)[0].begins_with(pair[2] + " · ") and Items.figure_options(piece).back().begins_with(pair[2].get_slice(" · ", 0)), "%s's card line does not lead with its kind: %s" % [pair[1], Items.figure_options(piece)[0]])
+	# a socketable says what it is and what it does, in the Lock-up and at the fence
+	var salt_it: Dictionary = sim._plain(Data.ATTACHMENT, "Road salt")
+	_check(Items.att_lead(salt_it) == ["+12", "armour"] and Items.att_words(salt_it) == "+12 armour", "salt's figures do not say armour: %s / %s" % [str(Items.att_lead(salt_it)), Items.att_words(salt_it)])
+	var fluid_it: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	_check(Items.att_lead(fluid_it)[0] == "15%" and Items.att_lead(fluid_it)[1].begins_with("of hits as fire") and Items.socket_words(fluid_it).contains("15% of your hits land as fire"), "fluid's figures do not say what it does: %s / %s" % [str(Items.att_lead(fluid_it)), Items.socket_words(fluid_it)])
+	while not sim.stash_room(2) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(salt_it)
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(salt_it["id"]))
+	_check(main._armoury._right_lines[0].text.begins_with("A socketable"), "the Lock-up does not say salt is a socketable: %s" % main._armoury._right_lines[0].text)
+	_check_fit(main, "Lock-up (salt)")
+	sim.sell(salt_it)
+	sim.market.append(sim._plain(Data.ATTACHMENT, "Road salt"))
+	main.show_room(main.MARKET)
+	main._fence.selected = {"kind": "shelf", "id": sim.market.back()["id"]}
+	main.refresh()
+	_check(main._fence._right_lines[0].text.begins_with("A socketable"), "the fence does not say salt is a socketable: %s" % main._fence._right_lines[0].text)
+	_check_fit(main, "Fence (salt)")
 	_check(Items.art(sim._plain(Data.PAPER, "A P45")) != null and Items.art(sim._plain(Data.PAPER, "A boarding pass")) == Items.art(sim._plain(Data.PAPER, "A P45")), "papers have no picture in the cell, or not the same one")
 	sim.load_dict(saved)
 	# the boss toggle on the Runs card: one press, one toast, however many refreshes follow

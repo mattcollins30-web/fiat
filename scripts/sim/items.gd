@@ -589,17 +589,39 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 
 ## An item's figure line, long to short, for UI.fit: "17 dmg/s · Common T1
 ## improvised · 3 cells" down to "17 dmg/s · T1". `tail` is appended to each.
+## What kind of thing it is, for the card: the slot it fills, and the type
+## where the slot has them - "Primary · rifle", "Secondary · melee", "Helmet",
+## "Rounds · shotgun", "Gun part · optic", "Socketable", "Paper", "Charm", "Med".
+static func kind_words(it: Dictionary) -> String:
+	var slot: String = it["slot"]
+	if slot == Data.ATTACHMENT:
+		return "Socketable" if is_socketable(it) else "Gun part · %s" % it.get("mount", "")
+	if slot == Data.AMMO:
+		return "Rounds · %s" % base_of(it).get("type", "")
+	if slot == Data.MEDICAL:
+		return "Med"
+	if slot == Data.PAPER:
+		return "Paper"
+	if is_melee(it):
+		return "%s · melee" % slot
+	var tw := type_word(it)
+	return ("%s · %s" % [slot, tw]) if tw != "" else slot
+
+
 static func figure_options(it: Dictionary, tail := "") -> Array:
 	var h := headline(it)
 	var tw := type_word(it)
 	var unit: String = "dmg/s" if tw != "" else h[1]
 	var cells := "%d cell%s" % [size(it), "" if size(it) == 1 else "s"]
 	var t := (" · " + tail) if tail != "" else ""
+	var kind := kind_words(it)
+	var short_kind: String = kind.get_slice(" · ", 0)
 	return [
-		"%s %s · %s T%d%s · %s%s" % [h[0], unit, rarity_name(it), it["tier"], (" " + tw) if tw != "" else "", cells, t],
-		"%s %s · %s T%d · %s%s" % [h[0], unit, rarity_name(it), it["tier"], cells, t],
-		"%s %s · T%d · %s%s" % [h[0], unit, it["tier"], cells, t],
-		"%s %s · T%d%s" % [h[0], unit, it["tier"], t],
+		"%s · %s %s · %s T%d · %s%s" % [kind, h[0], unit, rarity_name(it), it["tier"], cells, t],
+		"%s · %s %s · %s T%d%s" % [kind, h[0], unit, rarity_name(it), it["tier"], t],
+		"%s · %s %s · T%d%s" % [kind, h[0], unit, it["tier"], t],
+		"%s · %s %s · T%d%s" % [short_kind, h[0], unit, it["tier"], t],
+		"%s · %s %s%s" % [short_kind, h[0], unit, t],
 	]
 
 
@@ -638,11 +660,14 @@ static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var size := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
-			["conv_fire_pct", "% fire"], ["conv_frost_pct", "% frost"], ["conv_poison_pct", "% poison"], ["conv_shock_pct", "% shock"], ["salt", " salt"], ["wire_pct", "% wire"]]:
+			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["salt", " armour"], ["wire_pct", "% cash"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > size:
 			size = absf(v)
-			best = ["%s%.0f" % ["+" if v > 0 else "−", absf(v)], pair[1].strip_edges()]
+			var sign: String = "+" if v > 0 else "−"
+			if pair[0].begins_with("conv_"):
+				sign = ""                     # "15% of hits as fire" is a share, not a bonus
+			best = ["%s%.0f%s" % [sign, absf(v), "%" if pair[1].begins_with("%") else ""], pair[1].trim_prefix("%").strip_edges()]
 	return best
 
 
@@ -650,11 +675,25 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
-			["conv_fire_pct", "as fire: burns", "as fire"], ["conv_frost_pct", "as frost: chills", "as frost"], ["conv_poison_pct", "as poison: poisons", "as poison"], ["conv_shock_pct", "as shock: shocks", "as shock"], ["salt", "salt: armour", "salt"], ["wire_pct", "wire: cash", "wire"]]:
+			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["salt", "armour", "armour"], ["wire_pct", "cash from every kill", "cash"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) >= 0.5:
-			out.append("%s%.0f%s %s" % ["+" if v > 0 else "−", absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
+			var sign: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
+			out.append("%s%.0f%s %s" % [sign, absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
 	return ", ".join(out)
+
+
+## What a socketable is, in a line: where it goes and what it does there.
+static func socket_words(it: Dictionary) -> String:
+	var b := base_of(it)
+	if b.has("salt"):
+		return "A socketable: packed into any socket, +%d armour" % int(b["salt"])
+	if b.has("wire_pct"):
+		return "A socketable: in any socket, +%d%% cash from every kill" % int(b["wire_pct"])
+	for ty in ["fire", "frost", "poison", "shock"]:
+		if b.has("conv_%s_pct" % ty):
+			return "A socketable: in any socket, %d%% of your hits land as %s" % [int(b["conv_%s_pct" % ty]), ty]
+	return "A socketable: goes in a socket at the bench"
 
 
 ## Stacks: how many a stack of this can hold, and how many it holds.

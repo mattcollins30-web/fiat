@@ -251,11 +251,15 @@ func _show_panel() -> void:
 		_lay_buttons()
 		return
 	if Items.is_attachment(it):
-		_left_lines[0].text = "%s mount, %s T%d" % [it["mount"].capitalize(), Items.rarity_name(it), it["tier"]]
+		UI.fit(_left_lines[0], ["%s · %s T%d · 1 cell" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]], "%s · %s T%d" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]]])
 		UI.fit(_left_lines[1], [Items.att_words(it), Items.att_words(it, true)])
 		_left_lines[2].text = ""
-		_right_title.text = "Fitted at the bench"
-		_right_lines[0].text = "Goes on a gun's %s mount" % it["mount"]
+		if Items.is_socketable(it):
+			UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
+			UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
+		else:
+			_right_title.text = "Fitted at the bench"
+			_right_lines[0].text = "Goes on a gun's %s mount" % it["mount"]
 		_right_lines[1].text = ""
 		_right_lines[2].text = ""
 		_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)
