@@ -839,6 +839,21 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## Affix tiers as colour bands; charms roll again (5 Oct)
+
+- **Bands.** Wherever an item's affixes are one a line - the Lock-up's panel (the pick and the fitted
+  piece), the Bench's craft panel, the bench's pick menu - the whole line is in its tier's colour:
+  T1 grey, T2 white, T3 green, T4 blue, T5 violet (`Pal.TIER_COLOURS`, `Pal.tier_color`), apart from the
+  rarity tones on the cell borders. The fence's and the run's panels put the affixes on one line and stay
+  one colour. A menu item takes a `color` for its name. Asserted on the Lock-up for a three-affix item.
+- **Charms.** Matt had only ever seen magic find on a charm, and the bench would only bump one. Both were
+  real: the stacks build (e2a7dea) had lumped the charm in with the boxes and bottles and rolled every
+  charm plain, common and bare - a regression - and the bench had refused "Add an affix" on charms since the
+  base build. Charms roll rarities and affixes from their own list again (HP a second, gangs later,
+  notes, the five elements' damage and resists, all resists, dots, magic find, cash, loot find), and the
+  bench adds to them like any other piece. Asserted: 200 rolls at level 3 give rarities above common and
+  six or more stats; the bench prices and performs an add on a charm; no socket on a charm still.
+
 ## The secondary spends what it fires (5 Oct)
 
 Matt: a pistol with 600 rounds in the rig, run after run, and the count never moved. The secondary gave

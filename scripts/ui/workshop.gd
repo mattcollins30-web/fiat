@@ -528,8 +528,10 @@ func _show_craft(it: Dictionary) -> void:
 	for k in range(3):
 		if k < lines.size():
 			UI.fit(_craft_lines[2 + k], [lines[k], short_lines[k]])
-		elif k == 0:
-			_craft_lines[2].text = "No affixes"
+			_craft_lines[2 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(it, k)))
+		else:
+			_craft_lines[2 + k].text = "No affixes" if k == 0 else ""
+			_craft_lines[2 + k].add_theme_color_override("font_color", Pal.TEXT_2)
 	var row := 5
 	for kind in ["reroll", "add", "socket", "bump"]:
 		var cost: int = sim.craft_cost(it, kind)

@@ -928,7 +928,7 @@ func _open_bench_picks(id: int) -> void:
 		var detail := "Re-roll it for %s" % Fmt.money(one)
 		if lock >= 0:
 			detail += " · keep it and re-roll the rest for %s" % Fmt.money(lock)
-		items.append({"name": lines[k], "detail": detail, "action": _open_bench_one.bind(id, stat)})
+		items.append({"name": lines[k], "detail": detail, "action": _open_bench_one.bind(id, stat), "color": Pal.tier_color(Items.affix_tier(it, k))})
 	var bump: int = sim.craft_cost(it, "bump")
 	if bump >= 0 and items.size() < 4:
 		items.append({"name": "%s · %d notes" % [Data.CRAFT["bump"]["name"], bump], "detail": Data.CRAFT["bump"]["words"], "action": _craft.bind(id, "bump", "")})

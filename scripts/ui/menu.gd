@@ -111,7 +111,7 @@ func _init() -> void:
 	visible = false
 
 
-## items: [{name, detail, action: Callable, enabled (true), confirm ("")}]. With
+## items: [{name, detail, action: Callable, enabled (true), confirm (""), color (the name's)}]. With
 ## `confirm` set, the first press arms the row and shows it; the second acts.
 ## `opaque` hides the game behind (the title screen); otherwise it dims it.
 ## `title` is a String, or an Array of forms, long to short, the first that fits shown.
@@ -144,7 +144,7 @@ func open(title, sub: String, items: Array, back := Callable(), opaque := false)
 		var it: Dictionary = items[i]
 		_rows[i].disabled = not it.get("enabled", true)
 		_names[i].text = it.get("name", "")
-		_names[i].add_theme_color_override("font_color", Pal.TEXT if not _rows[i].disabled else Pal.TEXT_3)
+		_names[i].add_theme_color_override("font_color", it.get("color", Pal.TEXT) if not _rows[i].disabled else Pal.TEXT_3)
 		_show_detail(i)
 		if first < 0 and not _rows[i].disabled:
 			first = i

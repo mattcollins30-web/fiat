@@ -10,6 +10,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
 const People := preload("res://scripts/ui/people.gd")
+const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 
 var _misfits := 0
@@ -1065,6 +1066,23 @@ func _charm_sockets(main) -> void:
 	_check(sim.charm_cash() >= 15.0, "the charm's cash did not count: %.1f" % sim.charm_cash())
 	_check(Items.headline(charm)[0] == "+28%" and Items.headline(charm)[1] == "magic find", "a charm's headline is not its magic find: %s" % str(Items.headline(charm)))
 	var worn_find: float = sim._affix_sum("rarity_pct") - 10.0     # the helmet's, if any
+	# charms roll like gear: rarities and affixes from their own list (they had rolled plain since the stacks)
+	var rolled_rare := 0
+	var rolled_stats := {}
+	for k in range(200):
+		var c: Dictionary = Items.roll("Charm", 3, sim.rng, 0.0, false, false, "", "", 0.33, 3)
+		if int(c["rarity"]) > 0:
+			rolled_rare += 1
+		for a in c["affixes"]:
+			rolled_stats[a["stat"]] = true
+	_check(rolled_rare > 20, "charms roll plain: %d of 200 above common" % rolled_rare)
+	_check(rolled_stats.size() >= 6, "charms roll only %s" % str(rolled_stats.keys()))
+	# and the bench can add an affix to one
+	var add_cost: int = sim.craft_cost(charm, "add")
+	_check(add_cost > 0, "the bench will not add an affix to a charm")
+	sim.cash = maxf(sim.cash, add_cost + 1.0)
+	var n_before: int = charm["affixes"].size()
+	_check(sim.craft(charm["id"], "add", "") and charm["affixes"].size() == n_before + 1, "adding an affix to the charm did not take")
 	# the body shows it in its own cell beside the primary
 	main.show_room(main.ARMOURY)
 	_check_fit(main, "Armoury (charm)")
@@ -2180,7 +2198,7 @@ func _craft_checks(main) -> void:
 	_check(not sim.can_craft(it["id"], "add"), "the bench works with no cash")
 	sim.cash = 100000.0
 	var ch: Dictionary = sim._plain("Charm", "Lucky penny")
-	_check(sim.craft_cost(ch, "add") < 0 and sim.craft_cost(ch, "socket") < 0, "a charm takes an affix or a socket at the bench")
+	_check(sim.craft_cost(ch, "add") > 0 and sim.craft_cost(ch, "socket") < 0, "a charm takes no affix at the bench, or takes a socket")
 	# through the screen: the Bench button and the menus
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
@@ -2202,6 +2220,12 @@ func _craft_checks(main) -> void:
 	main.refresh()
 	_check(main._armoury._left_lines[2].text.contains("· T"), "the panel's affix line has no tier: '%s'" % main._armoury._left_lines[2].text)
 	_check_fit(main, "Armoury (affix list)")
+	# each affix line is banded in its tier's colour
+	for k in range(mini(3, it["affixes"].size())):
+		var want: Color = Pal.tier_color(int(it["affixes"][k].get("tier", 1)))
+		_check(main._armoury._left_lines[2 + k].get_theme_color("font_color") == want, "affix %d (T%d) is not in its tier's colour" % [k, int(it["affixes"][k].get("tier", 1))])
+	if it["affixes"].size() < 3:
+		_check(main._armoury._left_lines[4].get_theme_color("font_color") == Pal.TEXT_2 or main._armoury._left_lines[4].text == "", "an empty affix line kept a band")
 	# worn gear can go to the bench too
 	var worn: Dictionary = sim.equipped["Armour"]
 	if worn != null and not worn.has("unique") and sim.craft_cost(worn, "socket") >= 0 and is_same(sim.item_by_id(worn["id"]), worn):

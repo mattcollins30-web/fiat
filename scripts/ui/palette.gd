@@ -27,6 +27,9 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
+# an affix's tier as a band of colour on its whole line, T1 to T5: grey, white,
+# green, blue, violet - read at a glance, apart from the rarity tones
+const TIER_COLOURS := [TEXT_2, TEXT, GOOD, Color("6fa8e6"), Color("c48ae8")]
 const DIM := Color(0, 0, 0, 0.72)     # behind a full-screen moment
 # the place's tone (the fifth slice): the screen's grounds shift a little by
 # place - neutral in the village, warmer in the town, cooler in the city; the
@@ -85,6 +88,10 @@ static func place_bg(place: String) -> Color:
 
 static func place_panel(place: String) -> Color:
 	return PLACE_PANEL.get(place, PANEL)
+
+
+static func tier_color(tier: int) -> Color:
+	return TIER_COLOURS[clampi(tier, 1, TIER_COLOURS.size()) - 1]
 
 
 static func tone_color(tone: String) -> Color:

@@ -65,7 +65,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 				break
 		for k in range(n):
 			attachments["socket %d" % (k + 1)] = null
-	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.CHARM or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
+	if slot == Data.AMMO or slot == Data.PAPER or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
 		r = 0                             # a box is a box; a letter is a letter; a bottle is a bottle, so they stack
 		affixes = []
 	var it := {
@@ -644,6 +644,13 @@ static func figure_options(it: Dictionary, tail := "") -> Array:
 		"%s · %s %s · T%d%s" % [short_kind, h[0], unit, it["tier"], t],
 		"%s · %s %s%s" % [short_kind, h[0], unit, t],
 	]
+
+
+## The tier of the k-th affix (1 when it has none recorded), for its colour band.
+static func affix_tier(it: Dictionary, k: int) -> int:
+	if k >= it["affixes"].size():
+		return 1
+	return int(it["affixes"][k].get("tier", 1))
 
 
 ## An item's affix line, long to short: every affix in words, then the short

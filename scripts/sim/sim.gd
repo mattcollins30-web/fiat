@@ -883,7 +883,7 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 			if not has_stat:
 				return -1
 		"add":
-			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.is_charm(it) or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
+			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
 				return -1
 		"socket":
 			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= Data.SOCKET_MAX:

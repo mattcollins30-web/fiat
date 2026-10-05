@@ -226,8 +226,10 @@ func _show_panel() -> void:
 	for k in range(3):
 		if k < lines.size():
 			UI.fit(_left_lines[2 + k], [lines[k], short_lines[k]])
+			_left_lines[2 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(it, k)))
 		else:
 			_left_lines[2 + k].text = "No affixes" if k == 0 else ""
+			_left_lines[2 + k].add_theme_color_override("font_color", Pal.TEXT_2)
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -283,8 +285,10 @@ func _show_panel() -> void:
 			for k in range(3):
 				if k < flines.size():
 					UI.fit(_right_lines[1 + k], [flines[k], fshort[k]])
+					_right_lines[1 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(fitted, k)))
 				else:
 					_right_lines[1 + k].text = "No affixes" if k == 0 else ""
+					_right_lines[1 + k].add_theme_color_override("font_color", Pal.TEXT_2)
 			_right_lines[4].text = ""
 			_show_swap(it, fitted)
 		_button(0, "Equip", sim.equip_item.bind(it["id"]), sim.can_equip_item(it["id"]))
