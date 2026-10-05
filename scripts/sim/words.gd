@@ -532,6 +532,7 @@ const RECYCLE := {
 }
 
 const YARD := {
+	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The yard is set. One runner, a nail gun, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. The estate doesn't know the yard yet.",

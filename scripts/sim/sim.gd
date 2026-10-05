@@ -2858,6 +2858,27 @@ func _kia() -> void:
 		promised = ""
 	runner_trait = candidates[0]
 	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the yard with their own kit.")
+	# the dead runner's past goes with them: their class and its trees come
+	# back as points for the next to spend from the start, with a past of their
+	# own to pick. The yard's tree and the elements' are the yard's and stay.
+	_refund_runner_trees()
+
+
+## The runner's own trees (the class's and the second past's) back to points;
+## the class unpicked. What's on show with no class - the yard's tree, the
+## elements' - stays taken.
+func _refund_runner_trees() -> void:
+	var spent_before := points_spent()
+	cls = ""
+	cls2 = ""
+	var kept := []
+	for id in tree:
+		if _on_show(str(id).get_slice("/", 0)):
+			kept.append(id)
+	tree = kept
+	var freed := spent_before - points_spent()
+	if freed > 0:
+		log_event(Words.YARD["runner_refund"] % [freed, "" if freed == 1 else "s"])
 
 
 func _cash_words(x: float) -> String:

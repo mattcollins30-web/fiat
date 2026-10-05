@@ -441,7 +441,7 @@ func _show_panel() -> void:
 		UI.fit(_left_lines[0], ["Med · heals %.0f HP over %.0f s · 1 cell" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)], "Med · heals %.0f HP over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]])
 	elif Items.is_ammo(it):
 		var h := Items.headline(it)
-		UI.fit(_left_lines[0], ["%s · %s %s · 1 cell" % [Items.kind_words(it), h[0], h[1]], "%s · %s %s" % [Items.kind_words(it), h[0], h[1]]])
+		UI.fit(_left_lines[0], ["%s · %s %s · 1 cell" % [Items.kind_words(it), h[0], h[1]], "%s · %s %s" % [Items.kind_words(it), h[0], h[1]], "Rounds · %s %s" % [h[0], h[1]]])
 	else:
 		UI.fit(_left_lines[0], Items.figure_options(it))
 	UI.fit(_left_lines[1], Items.affix_options(it))

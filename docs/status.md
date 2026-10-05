@@ -839,6 +839,20 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## A death takes the runner's past with them (5 Oct)
+
+Matt's call after a death: the Caravan looked exactly as before - same class, same points taken - which
+jarred. Now a KIA (not hardcore, which ends the yard) refunds the dead runner's own trees - the class's
+two and the second past's - as points, and unpicks the class and the second past, so the next runner's
+past is picked from the start and the points spent fresh. The yard's tree and the elements' are the
+yard's and stay taken. The log says so ("The last runner's training went with them: N points back to
+spend, and a past to pick for the next"), and "what's next" says to pick a past. Asserted: after a KIA
+the class is empty, the class's nodes are gone, the yard's node stays, the points are free, the log line.
+
+The smoke's ammo check then flaked: with no tree the runner could die in its twenty seconds; it fights
+a gang that fires nothing now. The fence's special rounds (on the shelf since the box change) needed a
+shorter form of their line: "Rounds · 120 rounds, +15%".
+
 ## dmg/s on the top bar (5 Oct)
 
 The runner's damage a second, between HP and XP, from `sim.dps()` (so a dry gun reads as it fights: 0 from
