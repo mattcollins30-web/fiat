@@ -2245,6 +2245,7 @@ func _move_checks(main) -> void:
 	_next_checks(main)
 	_idle_checks(main)
 	_juice_checks(main)
+	_sound_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2713,6 +2714,49 @@ func _juice_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("juice ok: the toasts and their tones, the cap, the fit, the numbers, the flash")
+
+
+## Sound: every placeholder file reads; the zone's ambient while out, rain
+## over it, the gun's tick, the sting, the door; off from the pause menu.
+func _sound_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for name in ["ambient_estate", "ambient_town", "ambient_city", "rain", "tick_improvised", "tick_shotgun", "tick_rifle", "tick_smg", "tick_pistol", "tick_melee", "sting", "door", "found"]:
+		_check(main._sound.stream(name) != null, "no sound reads for %s" % name)
+	main._sound.set_enabled(true)
+	sim.intel[0] = []
+	sim.weather[0] = "Rain"
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["t"]["hp"] = 100000.0
+	sim.mission["target_hp"] = 100000.0
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var p: Dictionary = main._sound.playing()
+	_check(p["ambient"] == "ambient_estate" and p["rain"], "the estate's ambient and the rain are not playing out on the estate: %s" % str(p))
+	sim.advance(2.0)
+	main.refresh()
+	_check(main._sound._tick_at > 0.0, "the gun did not tick")
+	sim.mission["patrols"] = 1
+	main.refresh()
+	_check(main._sound._patrols_seen == 1 and main._sound._one.stream == main._sound.stream("sting"), "the gang's sting did not play")
+	sim.extract_now()
+	main.refresh()
+	p = main._sound.playing()
+	_check(p["ambient"] == "" and not p["rain"], "the ambient kept playing in the yard: %s" % str(p))
+	main._sound.set_enabled(false)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	main.refresh()
+	_check(main._sound.playing()["ambient"] == "", "sound off still plays")
+	main._sound.set_enabled(true)
+	sim.extract_now()
+	main.show_pause()
+	_check(main._menu._items.any(func(i): return str(i["name"]).begins_with("Sound: ")), "the pause menu has no sound toggle")
+	_check_fit(main, "Paused (sound)")
+	main._menu.close()
+	sim.load_dict(saved)
+	print("sound ok: the files, the ambient and the rain, the tick, the sting, off in the yard, the toggle")
 
 
 func _recycle_checks(main) -> void:

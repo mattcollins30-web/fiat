@@ -173,7 +173,7 @@ change the sim's rules rather than add numbers.
        rectangles first (no art, no sim change), art second (the biggest art job in the game: plates,
        cover, enemies in four states at three scales, the heads, the hands), a click-to-focus-fire layer
        later if it earns it. The side-on street strip is the fallback.
-    4. **Sound.** Ambient a site, the gun's tick, a sting when a gang arrives, the boss's door.
+    4. ~~**Sound.**~~ Done (5 Oct) with synthesised placeholders. Ambient a site, the gun's tick, a sting when a gang arrives, the boss's door.
     5. ~~**The first ten minutes.**~~ Done (5 Oct), as "what's next" in the voice. An objective line on the Yard ("Clear the parade") and the log carrying
        the tutorial in the voice.
     6. ~~**The away report.**~~ Done (5 Oct): "Back, then." in the log's voice, with the fence's prices.

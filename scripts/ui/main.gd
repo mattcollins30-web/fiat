@@ -19,6 +19,8 @@ const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
+const Sound := preload("res://scripts/ui/sound.gd")
+const SETTINGS_FILE := "user://fiat_settings.save"
 const Data := preload("res://scripts/sim/data.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
@@ -81,6 +83,7 @@ var _missions
 var _workshop
 var _run
 var _juice
+var _sound
 var _events_seen := 0              # how many log lines the toasts have looked at
 var _fence
 var _clinic
@@ -200,6 +203,9 @@ func _build() -> void:
 	_juice = Juice.new()
 	add_child(_juice)
 	_run.juice = _juice
+	_sound = Sound.new()
+	add_child(_sound)
+	_load_settings()
 	_menu = Menu.new()
 	add_child(_menu)
 
@@ -358,10 +364,33 @@ func _save_to_slot(path: String) -> void:
 func show_pause() -> void:
 	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close},
+		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The yard's ambient, the gun, the gangs, the door", "action": _toggle_sound},
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause)},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title},
 	], _menu.close)
+
+
+func _toggle_sound() -> void:
+	_sound.set_enabled(not _sound.enabled)
+	_save_settings()
+	show_pause()
+
+
+func _load_settings() -> void:
+	if FileAccess.file_exists(SETTINGS_FILE):
+		var f := FileAccess.open(SETTINGS_FILE, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text())
+		f.close()
+		if d is Dictionary:
+			_sound.enabled = bool(d.get("sound", true))
+
+
+func _save_settings() -> void:
+	var f := FileAccess.open(SETTINGS_FILE, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"sound": _sound.enabled}))
+		f.close()
 
 
 func _save_and_resume() -> void:
@@ -489,6 +518,7 @@ func refresh() -> void:
 		_asked_runner = true
 		_choose_runner()
 	_toast_new_lines()
+	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.money(sim.cash)
 	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
 	_top_labels["level"].text = "Level %d" % sim.level()

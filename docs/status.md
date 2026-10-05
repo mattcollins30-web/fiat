@@ -775,6 +775,24 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Sound (2026-10-05)
+
+`scripts/ui/sound.gd` on the shell, following the sim at every refresh: the zone's ambient
+while the runner's out (`ambient_estate` wind, `ambient_town` hum and a drip, `ambient_city` roar),
+rain over it when the site's raining, the gun's tick at the gun's rate while the fight's on (a
+clack for the nail gun, a thump for shotguns, a crack for rifles, a rattle for SMGs, a snap for
+pistols, a thud for a bat; a garage rifle sounds like a rifle), a two-note sting when a gang
+arrives, the boss's door when the head comes out, a short note when a rare lands in the pack.
+Nothing in the yard. The pause menu has "Sound: on/off", kept in `user://fiat_settings.save`.
+The files are `art/sound/<name>.wav`, read by hand (no import step); `tools/make_sounds.py`
+synthesised the thirteen placeholders (2.5 MB; wind is filtered noise, the drip a sine - they
+are stand-ins, and any real recording of the same name replaces one). A missing file plays
+nothing.
+
+Asserted (`_sound_checks`): every file reads; the estate's ambient and the rain out on a wet
+estate; the gun ticks; the sting on a gang; nothing in the yard; off stays off; the pause menu's
+toggle, and the menu fits.
+
 ## Juice (2026-10-05)
 
 `scripts/ui/juice.gd`, an overlay the shell owns: damage numbers float off the run screen's Them
