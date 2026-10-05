@@ -494,6 +494,24 @@ const SKY := {
 	"fresh": "Fresh",
 	"settling": "Settling · back in %s",
 }
+## The first ten minutes: what's next, in the voice, on the Runner card and
+## in the log when it changes. Nobody says objective.
+const NEXT := {
+	"past": "The runner's in the caravan. Ask what they were, before.",
+	"first": "Ransacked streets is outside. Go and see what's left.",
+	"site": "%s hasn't been cleared. That's where the next lot are.",
+	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
+	"lot": "The %s's done with. %s is open, if you're asking.",
+	"done": "The town's yours. Depth is the game now; the yard can move when you've had enough.",
+	"moved": "A new yard, the same list on the wall. Start at the streets.",
+}
+const NEXT_SHORT := {
+	"past": "Pick a past in the caravan",
+	"first": "The streets are outside",
+	"site": "Next: %s",
+	"head": "Arm %s on Runs",
+	"done": "Depth is the game now",
+}
 const NOTES := {
 	"zones": "Heads down open the next",
 	"zones_done": "Deepest clear on each",

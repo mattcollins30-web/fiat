@@ -49,6 +49,7 @@ var book: Array = []               # the papers found, by name, in the order fou
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
+var last_next := ""                # the last "what's next" line the log carried
 var runner_runs := 0               # this runner's runs so far
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the bank's vault, opened once
@@ -92,6 +93,7 @@ func start() -> void:
 		contracts.append(roll_contract())
 	mate = roll_mate()
 	log_event(Words.YARD["set"])
+	_say_next()
 
 
 func _starter_loadout() -> void:
@@ -463,6 +465,7 @@ func set_class(name: String) -> bool:
 					kept.append(id)
 			tree = kept
 			log_event("The runner was a %s, before" % name.to_lower())
+			_say_next()
 			return true
 	return false
 
@@ -675,7 +678,43 @@ func move_yard(trade := "") -> bool:
 	log_event(Words.YARD["moved"])
 	if trade != "":
 		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
+	last_next = ""
+	log_event(Words.NEXT["moved"])
 	return true
+
+
+# ------------------------------------------------------------------ what's next
+
+## The first ten minutes, and every minute after: what the yard would say to
+## do next, from where the campaign stands. The log carries it when it changes.
+func next_words(short := false) -> String:
+	var w: Dictionary = Words.NEXT_SHORT if short else Words.NEXT
+	if cls == "":
+		return w["past"]
+	if runs_total == 0:
+		return w["first"]
+	if campaign_done():
+		return w["done"]
+	for z in range(Data.ZONES.size()):
+		if zone_complete(z):
+			continue
+		if not zone_open(z):
+			break
+		for i in Data.ZONES[z]["tiers"]:
+			if best_depth[i] <= 0:
+				return w["site"] % Data.TIERS[i]["name"]
+		for b in Data.BOSSES:
+			if int(b["zone"]) == z and not bosses_beaten[z]:
+				return (w["head"] % [b["name"].to_lower() if short else b["name"], Data.TIERS[int(b["tier"])]["name"].to_lower()]) if not short else (w["head"] % b["name"].to_lower())
+	return w["done"]
+
+
+## Say it once, when it changes; the yard's set line says it first.
+func _say_next() -> void:
+	var w := next_words()
+	if w != last_next:
+		last_next = w
+		log_event(w)
 
 
 # ------------------------------------------------------------------ the places changing
@@ -2708,6 +2747,7 @@ func _extract() -> void:
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
 			_cash_words(m["cash"])])
 	mission = null
+	_say_next()
 	restock()
 
 
@@ -3177,7 +3217,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -3251,6 +3291,7 @@ func load_dict(d: Dictionary) -> void:
 		for z in range(mini(weather.size(), d["weather"].size())):
 			weather[z] = str(d["weather"][z])
 	weather_at = int(d.get("weather_at", -1))
+	last_next = str(d.get("last_next", ""))
 	runner_runs = int(d.get("runner_runs", 0))
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))

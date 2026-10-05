@@ -606,6 +606,7 @@ func _camp_cards() -> Array:
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
 			["Max HP", "%d" % int(sim.max_hp())], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d of %d pouches" % [sim.rig_used(), sim.med_capacity()]]],
 		"status": "%s · runners lost: %d" % [sim.cls if sim.cls != "" else "No past yet", sim.operators_lost],
+		"note": sim.next_words(true),
 	})
 	var cash_card := {
 		"title": "Cash", "headline": Fmt.money(sim.cash), "unit": "",

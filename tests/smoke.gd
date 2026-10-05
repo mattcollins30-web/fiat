@@ -1670,6 +1670,8 @@ func _set_checks(main) -> void:
 	for s in Data.SLOTS:
 		sim.equipped[s] = null
 	var army: Dictionary = Items.set_named("The army's")
+	sim.intel[0] = []
+	sim.weather[0] = ""                  # fog would take the one the set takes
 	var t: Dictionary = sim.effective(0)
 	var c0: int = sim.contact(t)
 	for p in army["pieces"]:
@@ -2199,8 +2201,9 @@ func _move_checks(main) -> void:
 	main._move_yard("poison")
 	_check(sim.yard_moves == 1, "the yard did not move")
 	_check(sim.trades == ["poison"] and sim.affinity("poison") and not sim.can_trade("poison") and sim.node_cost("The rat man/0") == 1, "the yard's trade did not come: %s" % str(sim.trades))
-	_check(str(sim.events.back()[1]).begins_with("The yard's trade came too: the rat man"), "the trade had no line: %s" % str(sim.events.back()))
-	_check(str(sim.events[-2][1]).begins_with("The yard moves"), "the move had no line")
+	_check(str(sim.events[-2][1]).begins_with("The yard's trade came too: the rat man"), "the trade had no line: %s" % str(sim.events[-2]))
+	_check(str(sim.events[-3][1]).begins_with("The yard moves"), "the move had no line")
+	_check(str(sim.events.back()[1]) == Words.NEXT["moved"], "the move did not say what's next: %s" % str(sim.events.back()))
 	sim.training_points += 20
 	for i in range(7):
 		sim.train_node("The rat man/%d" % i)
@@ -2238,6 +2241,7 @@ func _move_checks(main) -> void:
 	_places_checks(main)
 	_faces_checks(main)
 	_stack_checks(main)
+	_next_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2550,6 +2554,46 @@ func _stack_checks(main) -> void:
 	_check(sim.stash.any(func(it): return Items.is_socketable(it) and int(it.get("count", 1)) == Data.SOCKET_STACK), "the stack did not save")
 	sim.load_dict(saved)
 	print("stacks ok: rounds merge to five boxes, bottles to ten, the buy, the take and the split, the leave, the pack, one off for a socket and back, the save")
+
+
+## The first ten minutes: what's next, in the voice, on the Runner card and
+## in the log when it changes - the past, the first run, the site, the head,
+## the campaign done, the move.
+func _next_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var fresh = load("res://scripts/sim/sim.gd").new()
+	fresh.start()
+	_check(fresh.next_words() == Words.NEXT["past"] and fresh.events.any(func(ev): return str(ev[1]) == Words.NEXT["past"]), "a new yard does not say to pick a past: %s" % fresh.next_words())
+	fresh.set_class("Doorman")
+	_check(fresh.next_words() == Words.NEXT["first"] and str(fresh.events.back()[1]) == Words.NEXT["first"], "a runner with a past is not sent out: %s" % str(fresh.events.back()))
+	_check(fresh.next_words(true) == Words.NEXT_SHORT["first"], "the short form is off: %s" % fresh.next_words(true))
+	# after the first run: the next site; then the head; then the next lot
+	fresh.hp = fresh.max_hp()
+	fresh.deploy(0)
+	fresh.extract_now()
+	_check(fresh.next_words().begins_with("Ransacked streets hasn't") or fresh.next_words().begins_with("The parade hasn't"), "after the first run the next site is not named: %s" % fresh.next_words())
+	for i in [0, 1, 2]:
+		fresh.best_depth[i] = 1
+	_check(fresh.next_words() == Words.NEXT["head"] % ["The carpet man", "the retail park"] and fresh.next_words(true) == "Arm the carpet man on Runs", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
+	fresh.bosses_beaten[0] = true
+	_check(fresh.next_words() == Words.NEXT["site"] % "The pleasure park", "the town's first site is not named: %s" % fresh.next_words())
+	var n0: int = fresh.events.size()
+	fresh.hp = fresh.max_hp()
+	fresh.deploy(0)
+	fresh.extract_now()
+	_check(fresh.events.any(func(ev): return str(ev[1]) == Words.NEXT["site"] % "The pleasure park"), "the log did not carry the change")
+	var n1: int = fresh.events.size()
+	fresh.hp = fresh.max_hp()
+	fresh.deploy(0)
+	fresh.extract_now()
+	_check(not fresh.events.slice(n1).any(func(ev): return str(ev[1]).begins_with("The pleasure park hasn't")), "the log said the same thing twice")
+	_finish_campaign(sim)
+	_check(sim.next_words() == Words.NEXT["done"], "the campaign done has no line: %s" % sim.next_words())
+	main.show_room(main.OVERVIEW)
+	_check_fit(main, "The Yard (what's next)")
+	sim.load_dict(saved)
+	print("what's next ok: the past, the first run, the site, the head, the next lot, once in the log, the campaign done")
 
 
 func _recycle_checks(main) -> void:

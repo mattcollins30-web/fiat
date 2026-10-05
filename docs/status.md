@@ -775,6 +775,21 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The first ten minutes: what's next (2026-10-05)
+
+No objective line, no tutorial: the yard says what's next, in its voice, on the Runner card's note
+("Pick a past in the caravan" / "The streets are outside" / "Next: The parade" / "Arm the carpet
+man on Runs" / "Depth is the game now") and the log carries the long form once, when it changes
+("The runner's in the caravan. Ask what they were, before." / "Ransacked streets is outside. Go
+and see what's left." / "The parade hasn't been cleared. That's where the next lot are." / "The
+carpet man is behind the retail park. Arm him on Runs when the odds hold." / "The town's yours.
+Depth is the game now; the yard can move when you've had enough." / after a move, "A new yard, the
+same list on the wall. Start at the streets."). `sim.next_words(short)`, `Words.NEXT` and
+`NEXT_SHORT`; said at the yard's set, a class pick, every extract, the move.
+
+Asserted (`_next_checks`): the past, the first run, the next site, the head, the next lot, the
+log carrying the change once, the campaign done, the move's line, the Yard fitting.
+
 ## Stacks (2026-10-05)
 
 Matt: "a lot of different stacks of nails felt wrong". Rounds of a base merge into one stack in the
