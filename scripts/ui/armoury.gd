@@ -259,7 +259,7 @@ func _show_panel() -> void:
 			UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
 		else:
 			_right_title.text = "Fitted at the bench"
-			_right_lines[0].text = "Goes on a gun's %s mount" % it["mount"]
+			_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
 		_right_lines[1].text = ""
 		_right_lines[2].text = ""
 		_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)

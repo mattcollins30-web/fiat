@@ -388,12 +388,13 @@ func _show_panel() -> void:
 	# the left: the selection, or the mount's fitted attachment
 	var shown := it if not it.is_empty() else fitted
 	if shown.is_empty():
-		UI.fit(_left_title, ["%s · %s: empty" % [sel_slot.to_lower(), sel_mount], "%s: empty" % sel_mount])
+		UI.fit(_left_title, ["%s · %s: empty" % [sel_slot, Items.mount_name(sel_mount)], "%s: empty" % Items.mount_name(sel_mount)])
 		_left_lines[0].text = "Nothing in the stash fits" if sim.attachments_for(sel_mount).is_empty() else "Pick one on the right"
 	else:
 		_left_title.text = shown["base"]
-		UI.fit(_left_lines[0], ["%s, %s T%d, %s" % [shown["mount"], Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])],
-				"%s, %s T%d" % [shown["mount"], Items.rarity_name(shown), shown["tier"]]])
+		UI.fit(_left_lines[0], ["%s · %s T%d · %s" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])],
+				"%s · %s T%d" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"]],
+				"%s · %s T%d" % [Items.mount_name(shown["mount"]), Items.rarity_name(shown), shown["tier"]]])
 		# the part's figures over two lines when four stats need them
 		if UI.text_width(_left_lines[1], Items.att_words(shown)) <= _left_lines[1].size.x:
 			_left_lines[1].text = Items.att_words(shown)
@@ -420,7 +421,8 @@ func _show_panel() -> void:
 	elif not it.is_empty():
 		var target_slot := sel_slot if sel_slot != "" else _slot_for(it["mount"])
 		if target_slot == "":
-			_right_title.text = "No gun with a %s mount" % it["mount"]
+			UI.fit(_right_title, ["No %s with a %s mount" % ["bat or blade" if Items.is_melee_mount(it["mount"]) else "gun", it["mount"]],
+					"Nothing fitted takes a %s" % it["mount"]])
 		elif not sim.mount_open(it["mount"]):
 			_right_title.text = "Needs bench level %d" % _level_for(it["mount"])
 		else:

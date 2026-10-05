@@ -839,6 +839,16 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## "head" (5 Oct)
+
+*"Lead in it - head, Common T3, £160 - No gun with a head mount."* A bat's parts (grip, head) read like a
+gun's. `Items.is_melee_mount`, `mount_words` ("a bat's head" / "a gun's optic") and `mount_name` ("Head")
+carry the wording: the kind reads "Melee part · head" (kind_words, and now leading the Bench's panel line
+in place of the bare mount), the Lock-up and the Fence say "Goes on a bat's head", and the Bench says
+"No bat or blade with a head mount". Mount names are capitalised where they lead a line ("Primary ·
+Head: empty"). Asserted: the kinds for a head and a grip part; the Bench's panel for a bat part leads
+with its kind and never calls a bat a gun.
+
 ## Three more from the playtest, 5 Oct
 
 - *The shelf stocks a standard box.* It no longer does: `restock()` rerolls a plain box (the box row has

@@ -592,10 +592,31 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 ## What kind of thing it is, for the card: the slot it fills, and the type
 ## where the slot has them - "Primary · rifle", "Secondary · melee", "Helmet",
 ## "Rounds · shotgun", "Gun part · optic", "Socketable", "Paper", "Charm", "Med".
+## The mounts a bat or a blade has, not a gun: a part for one says so.
+const MELEE_MOUNTS := ["grip", "head"]
+
+
+static func is_melee_mount(mount: String) -> bool:
+	return mount in MELEE_MOUNTS
+
+
+## What a part fits, as a player reads it: "a gun's optic", "a bat's head".
+static func mount_words(mount: String) -> String:
+	return ("a bat's %s" if is_melee_mount(mount) else "a gun's %s") % mount
+
+
+## The mount as a line's first word: "Optic", "Head".
+static func mount_name(mount: String) -> String:
+	return mount.capitalize()
+
+
 static func kind_words(it: Dictionary) -> String:
 	var slot: String = it["slot"]
 	if slot == Data.ATTACHMENT:
-		return "Socketable" if is_socketable(it) else "Gun part · %s" % it.get("mount", "")
+		if is_socketable(it):
+			return "Socketable"
+		var mount: String = it.get("mount", "")
+		return ("Melee part · %s" if is_melee_mount(mount) else "Gun part · %s") % mount
 	if slot == Data.AMMO:
 		return "Rounds · %s" % base_of(it).get("type", "")
 	if slot == Data.MEDICAL:

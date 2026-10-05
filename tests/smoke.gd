@@ -1467,6 +1467,20 @@ func _melee_checks(main) -> void:
 	main._workshop._press(0)
 	_check(bat["attachments"]["grip"] != null and bat["attachments"]["grip"]["mount"] == "grip", "a grip part did not fit the grip")
 	_check_fit(main, "Workshop (a bat, taped)")
+	# a bat's part on the panel: the kind leads, the mount reads as a word, and nothing calls a bat a gun
+	var lead: Dictionary = sim._plain(Data.ATTACHMENT, "Lead in it")
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(lead)
+	main._workshop.sel_slot = ""
+	main._workshop.sel_mount = ""
+	main.refresh()
+	main._workshop._pick_cell(main._workshop._inv.cell_of(lead["id"]))
+	main.refresh()
+	_check(main._workshop._left_lines[0].text.begins_with("Melee part · head"), "a bat part's line is '%s'" % main._workshop._left_lines[0].text)
+	_check(not main._workshop._right_title.text.contains("gun"), "a bat part's panel talks of a gun: '%s'" % main._workshop._right_title.text)
+	_check_fit(main, "Workshop (a bat part)")
+	sim.stash.erase(lead)
 	# Through the lot: a Doorman's swing hits everyone on you
 	sim.set_class("Doorman")
 	sim.respec()
@@ -2883,7 +2897,7 @@ func _playtest_checks(main) -> void:
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
-	for pair in [["Primary", "Stalking rifle", "Primary · rifle"], ["Primary", "Spiked bat", "Primary · melee"], ["Secondary", "Service pistol", "Secondary · pistol"], ["Helmet", "Hard hat", "Helmet"], ["Armour", "Stab vest", "Armour"], ["Rig", "Bum bag", "Rig"], ["Backpack", "School bag", "Backpack"], ["Charm", "Lucky penny", "Charm"], [Data.MEDICAL, "Bandage", "Med"], [Data.AMMO, "Shells", "Rounds · shotgun"], [Data.PAPER, "A P45", "Paper"], [Data.ATTACHMENT, "Road salt", "Socketable"], [Data.ATTACHMENT, "Red dot", "Gun part · optic"]]:
+	for pair in [["Primary", "Stalking rifle", "Primary · rifle"], ["Primary", "Spiked bat", "Primary · melee"], ["Secondary", "Service pistol", "Secondary · pistol"], ["Helmet", "Hard hat", "Helmet"], ["Armour", "Stab vest", "Armour"], ["Rig", "Bum bag", "Rig"], ["Backpack", "School bag", "Backpack"], ["Charm", "Lucky penny", "Charm"], [Data.MEDICAL, "Bandage", "Med"], [Data.AMMO, "Shells", "Rounds · shotgun"], [Data.PAPER, "A P45", "Paper"], [Data.ATTACHMENT, "Road salt", "Socketable"], [Data.ATTACHMENT, "Red dot", "Gun part · optic"], [Data.ATTACHMENT, "Lead in it", "Melee part · head"], [Data.ATTACHMENT, "Tape", "Melee part · grip"]]:
 		var piece: Dictionary = sim._plain(pair[0], pair[1])
 		_check(Items.kind_words(piece) == pair[2], "%s reads as '%s', not '%s'" % [pair[1], Items.kind_words(piece), pair[2]])
 		if pair[0] in Data.SLOTS:
