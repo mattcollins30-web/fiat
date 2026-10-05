@@ -482,6 +482,18 @@ const EVENTS := {
 
 ## The voice where the UI used to explain itself: the away report, the
 ## fence's contracts, the cards' notes.
+## The odds to clear a fight, in the yard's words: the headline on a site's
+## card, the figure small beside it. Bands from the top down.
+const ODDS := [[0.9, "Safe"], [0.75, "Likely"], [0.6, "Risky"], [0.4, "A coin toss"], [0.2, "Long odds"], [0.0, "A bad idea"]]
+
+
+static func odds_words(odds: float) -> String:
+	for band in ODDS:
+		if odds >= float(band[0]):
+			return band[1]
+	return ODDS.back()[1]
+
+
 const AWAY := {
 	"title": "Back, then.",
 	"rested": "Gone %s. The runner slept, the radio played to nobody.",

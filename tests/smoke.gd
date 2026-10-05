@@ -4147,6 +4147,15 @@ func _yard_checks(main) -> void:
 			chip_texts.append(col["chip_labels"][k].text)
 	if sim.tier_open(Data.ZONES[1]["tiers"][0]):
 		_check(chip_texts.any(func(t): return str(t).begins_with("Fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
+	# the odds in words, the figure small beside them; every band fits the card
+	if sim.tier_open(Data.ZONES[1]["tiers"][0]):
+		_check(Words.ODDS.any(func(b): return b[1] == col["odds"].text) and col["odds_unit"].text.ends_with("to clear") or col["odds_unit"].text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["odds"].text, col["odds_unit"].text])
+	for band in Words.ODDS:
+		col["odds"].text = band[1]
+		col["odds_unit"].text = "100% to clear"
+		_check(UI.text_width(col["odds"], col["odds"].text) + 16 + UI.text_width(col["odds_unit"], col["odds_unit"].text) <= col["odds"].size.x, "the odds band '%s' and its figure don't share the row" % band[1])
+	main.refresh()
+	_check(Words.odds_words(0.95) == "Safe" and Words.odds_words(0.5) == "A coin toss" and Words.odds_words(0.05) == "A bad idea", "the odds bands are off")
 	_check_fit(main, "Runs (elements)")
 	main._missions._pick_zone(0)
 	# the Radio: the words as chips, the odds as the headline
@@ -4159,7 +4168,7 @@ func _yard_checks(main) -> void:
 				site_card = c
 				break
 		if site_card != null:
-			_check(site_card._headline.text.ends_with("%"), "the radio's site card has no odds headline: '%s'" % site_card._headline.text)
+			_check(Words.ODDS.any(func(b): return b[1] == site_card._headline.text) and site_card._unit.text.contains("%"), "the radio's site card has no odds headline in words with the figure beside: '%s' / '%s'" % [site_card._headline.text, site_card._unit.text])
 			var any_chip := false
 			for k in range(site_card.CHIPS):
 				any_chip = any_chip or site_card._chips[k].visible

@@ -839,6 +839,14 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The odds in words (5 Oct)
+
+The site cards' big figure was "72%". It's the yard's word now (`Words.ODDS`, `odds_words`): Safe (90%
+up), Likely (75), Risky (60), A coin toss (40), Long odds (20), A bad idea; the figure sits small beside
+it ("72% to clear"), and the Radio's cards read the same ("Likely" / "72%, D1"). The edge's tone is as
+it was. Asserted: the headline is a band and the figure beside it; every band and the widest figure
+share the row.
+
 ## The elements' trees go with the runner too (5 Oct)
 
 Matt: the Caravan kept Petrol, The cold, the rat's tree and the rest through a death, so getting out of a

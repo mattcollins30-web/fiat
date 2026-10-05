@@ -891,7 +891,7 @@ func _comms_cards() -> Array:
 		if words.is_empty():
 			lines.append(["Nothing on the air for it", ""])
 		var odds: float = sim.survival(i)
-		var d := {"title": t["name"], "headline": Fmt.pct(odds), "unit": ("to clear, D%d" % t["depth"]) if sim.odds_settled(i) else "reading",
+		var d := {"title": t["name"], "headline": Words.odds_words(odds), "unit": ("%s, D%d" % [Fmt.pct(odds), t["depth"]]) if sim.odds_settled(i) else "reading",
 			"chips": chips, "lines": lines, "tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
 		if sim.can_pin():

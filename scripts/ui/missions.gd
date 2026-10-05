@@ -193,10 +193,10 @@ func show_state(s) -> void:
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
 		c["name"].add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
 		if is_open:
-			c["odds"].text = Fmt.pct(odds)
+			c["odds"].text = Words.odds_words(odds)
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			c["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
-			c["odds_unit"].text = "to clear the fight" if sim.odds_settled(i) else "reading the odds"
+			c["odds_unit"].text = ("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds"
 		else:
 			c["odds"].text = "Locked"
 			c["odds"].add_theme_color_override("font_color", Pal.TEXT_3)
