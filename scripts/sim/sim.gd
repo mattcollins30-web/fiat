@@ -424,6 +424,15 @@ func sell_price(it: Dictionary) -> int:
 	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct")) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
 
 
+## HP for the screens: whole points, rounded the same way both sides, never past the max.
+func max_hp_shown() -> int:
+	return int(round(max_hp()))
+
+
+func hp_shown() -> int:
+	return mini(max_hp_shown(), int(ceil(hp - 0.001)))
+
+
 ## Money that goes off: what a pound of the opening day's price costs now.
 ## Every cash price and every cash income runs through it; the notes don't.
 func inflation() -> float:
@@ -2151,6 +2160,8 @@ func set_auto(i: int) -> void:
 func advance(seconds: float) -> void:
 	elapsed += seconds
 	_roll_weather()
+	if hp > max_hp():
+		hp = max_hp()                        # the max can drop when kit comes off
 	var left := seconds
 	while left > 0.0:
 		if mission != null:
@@ -3262,7 +3273,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -3340,6 +3351,7 @@ func load_dict(d: Dictionary) -> void:
 			weather[z] = str(d["weather"][z])
 	weather_at = int(d.get("weather_at", -1))
 	last_next = str(d.get("last_next", ""))
+	events_total = int(d.get("events_total", events.size()))
 	runner_runs = int(d.get("runner_runs", 0))
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))

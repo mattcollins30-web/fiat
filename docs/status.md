@@ -775,6 +775,27 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## From the playtest, 5 Oct (Matt's six)
+
+1. *HP read 94 of 93.* The bar ceilinged your HP and floored the max. `hp_shown()` / `max_hp_shown()`
+   round the same way and never read past the max; `advance` clamps HP when the max drops (kit off).
+2. *"Depth · Locked" sat in the middle.* The figure is centred between its − and + when the ladder's
+   open; locked, the buttons go and it is right-justified across the row.
+3. *The boss toggle's toast came three times.* Each arming logs its line (toggling on, off, on is
+   three), and a toast could repeat a line still showing; a toast now shows only once while it's up,
+   and only for a line logged in the last five seconds, so a load or a settle never brings old ones.
+4. *The "Level 3: 1 training point" toast came back after the point was spent.* The same cause - old
+   lines re-toasted after a batch; fixed by (3), and `events_total` is saved so a load counts right.
+5. *Some log lines trailed off with an ellipsis.* The one-line log shortens by sentence now - the
+   whole line, then fewer sentences, then the first clause - and the fit check holds it to the box.
+6. *A paper picked in the Lock-up froze the game* (`sim.equipped["Paper"]`: a paper has no slot on the
+   body). Papers have their own panel: "From before", read and in the drawer or not, Sell.
+
+Asserted (`_playtest_checks`): full HP reads equal, a fraction under never past; HP clamps when
+the kit comes off; Locked is right-justified to the row's edge and fits; the same line toasts once;
+a line a minute old does not toast; a long line shortens by sentence, fits and ends with a stop;
+the sentence forms; a paper's panel, fit, and sale.
+
 ## Sound (2026-10-05)
 
 `scripts/ui/sound.gd` on the shell, following the sim at every refresh: the zone's ambient

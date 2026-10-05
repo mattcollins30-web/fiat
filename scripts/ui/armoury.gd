@@ -246,6 +246,10 @@ func _show_panel() -> void:
 		_show_medical(it)
 		_lay_buttons()
 		return
+	if Items.is_paper(it):
+		_show_paper(it)
+		_lay_buttons()
+		return
 	if Items.is_attachment(it):
 		_left_lines[0].text = "%s mount, %s T%d" % [it["mount"].capitalize(), Items.rarity_name(it), it["tier"]]
 		UI.fit(_left_lines[1], [Items.att_words(it), Items.att_words(it, true)])
@@ -315,6 +319,19 @@ func _lay_buttons() -> void:
 
 
 ## A med: in the stash it can be taken; in the rig it can be left behind.
+## A paper: read already, in the drawer; worth pennies to the fence; the deeds are their own matter.
+func _show_paper(it: Dictionary) -> void:
+	_left_lines[0].text = "From before" if not Items.is_deeds(it) else "What the bank was holding"
+	_left_lines[1].text = ""
+	_left_lines[2].text = ""
+	_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
+	_right_lines[0].text = ("Read, and kept in the caravan's drawer" if it["base"] in sim.book else "Not read yet") if not Items.is_deeds(it) else "Held, sold or burned: the ending"
+	_right_lines[1].text = ""
+	_right_lines[2].text = ""
+	_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)
+	_button(0, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
+
+
 func _show_medical(it: Dictionary) -> void:
 	_right_title.text = "The rig"
 	_right_lines[0].text = "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()]

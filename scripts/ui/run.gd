@@ -151,8 +151,8 @@ func show_state(s) -> void:
 	# the runner
 	var op: Dictionary = _panels[1]
 	op["title"].text = "Runner"
-	_head(op, "%d" % ceili(sim.hp), "of %d HP" % int(sim.max_hp()))
-	_bar(op, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [ceili(sim.hp), int(sim.max_hp())], "bad" if low else "good")
+	_head(op, "%d" % sim.hp_shown(), "of %d HP" % sim.max_hp_shown())
+	_bar(op, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good")
 	var on_you_words: Array = sim.dots_on_you()
 	_lines(op, [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]], ["Damage", "%.0f/s" % (sim.dps() * sim.pace())],
 		["On you", ", ".join(on_you_words).capitalize()] if not on_you_words.is_empty() else ["", ""]])

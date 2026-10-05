@@ -19,8 +19,9 @@ var _numbers: Array = []           # {label, left}
 var _toast_y := 0.0                # where the first toast sits (set by the shell)
 
 
-func _ready() -> void:
+func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_process(true)
 
 
 func set_top(y: float) -> void:

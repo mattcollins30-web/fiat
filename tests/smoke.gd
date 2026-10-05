@@ -2246,6 +2246,7 @@ func _move_checks(main) -> void:
 	_idle_checks(main)
 	_juice_checks(main)
 	_sound_checks(main)
+	_playtest_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2757,6 +2758,73 @@ func _sound_checks(main) -> void:
 	main._menu.close()
 	sim.load_dict(saved)
 	print("sound ok: the files, the ambient and the rain, the tick, the sting, off in the yard, the toggle")
+
+
+## From Matt's playtest (5 Oct): HP never reads past its max; Locked sits
+## right-justified; a toast shows once and only for what just happened; a
+## long log line shortens by sentence rather than trailing off; a paper picked
+## in the Lock-up gets a panel, not a crash.
+func _playtest_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	# HP: the same rounding both sides
+	sim.hp = sim.max_hp()
+	_check(sim.hp_shown() == sim.max_hp_shown(), "full HP reads %d of %d" % [sim.hp_shown(), sim.max_hp_shown()])
+	sim.hp = sim.max_hp() - 0.4
+	_check(sim.hp_shown() <= sim.max_hp_shown(), "HP a fraction under full reads past the max: %d of %d" % [sim.hp_shown(), sim.max_hp_shown()])
+	var worn = sim.equipped["Armour"]
+	sim.equipped["Armour"] = sim._plain("Armour", "Stab vest")
+	var hp_before: float = sim.hp
+	var big: Dictionary = sim._plain("Armour", "Riot suit")
+	big["affixes"] = [{"stat": "hp", "value": 200.0, "tier": 5}]
+	sim.equipped["Armour"] = big
+	sim.hp = sim.max_hp()
+	sim.equipped["Armour"] = sim._plain("Armour", "Stab vest")
+	sim.advance(0.1)
+	_check(sim.hp <= sim.max_hp() + 0.001, "HP stayed past the max when the kit came off: %.0f of %.0f" % [sim.hp, sim.max_hp()])
+	sim.equipped["Armour"] = worn
+	# Locked, right-justified across the row
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	main.refresh()
+	var c: Dictionary = main._missions._cols[0]
+	if not sim.campaign_done():
+		_check(c["depth"].text == "Locked" and c["depth"].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT and is_equal_approx(c["depth"].position.x + c["depth"].size.x, main._missions.PAD + main._missions.INNER), "Locked is not right-justified to the row's edge")
+	_check_fit(main, "Runs (locked)")
+	# toasts: once, and only for what just happened
+	var line := "Found: Lucky cap"
+	sim.log_event(line)
+	main.refresh()
+	sim.log_event(line)
+	main.refresh()
+	_check(main._juice.toasts().count(line) == 1, "the same line toasted twice")
+	var stale := "Level 99: 1 training point"
+	sim.events.append([Time.get_unix_time_from_system() - 60.0, stale])
+	sim.events_total += 1
+	main.refresh()
+	_check(not main._juice.toasts().has(stale), "a line a minute old toasted")
+	# the log line: shortened by sentence, never trailing off
+	var long := "A convoy comes through. Lorries, and a crew riding on them. They stop. They were carrying notes. The yard takes what it can carry and the rest goes back on the lorry."
+	sim.log_event(long)
+	main.refresh()
+	var shown: String = main._event_labels[0].text
+	_check(shown.ends_with(".") and long.begins_with(shown) and UI.text_width(main._event_labels[0], shown) <= main._event_labels[0].size.x, "the long line trails off or does not fit: '%s'" % shown)
+	var forms: Array = main._by_sentence(long)
+	_check(forms.size() >= 4 and forms[1] == "A convoy comes through. Lorries, and a crew riding on them. They stop. They were carrying notes." and forms[-1] == "A convoy comes through.", "the sentence forms are off: %s" % str(forms))
+	# a paper picked in the Lock-up
+	var paper: Dictionary = sim._plain(Data.PAPER, "A P45")
+	while not sim.stash_room(2) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(paper)
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
+	_check(main._armoury._left_title.text == "A P45" and main._armoury._left_lines[0].text == "From before" and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._left_title.text, main._armoury._left_lines[0].text])
+	_check_fit(main, "Lock-up (a paper)")
+	main._armoury._press(0)
+	_check(not sim.stash.has(paper), "the paper did not sell")
+	sim.load_dict(saved)
+	print("the playtest's five ok: HP, Locked, the toasts, the log line, a paper in the Lock-up")
 
 
 func _recycle_checks(main) -> void:

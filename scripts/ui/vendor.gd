@@ -303,8 +303,8 @@ func _signature() -> String:
 ## The clinic's treatment block, at the top of the side panel.
 func _show_treatment() -> void:
 	_side_title.text = "Treatment"
-	_side_head.text = "%d" % ceili(sim.hp)
-	_side_unit.text = "of %d HP" % int(sim.max_hp())
+	_side_head.text = "%d" % sim.hp_shown()
+	_side_unit.text = "of %d HP" % sim.max_hp_shown()
 	var w := ceilf(UI.text_width(_side_head, _side_head.text)) + 10
 	_side_unit.position.x = PAD + w
 	_side_unit.size.x = INNER - w

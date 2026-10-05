@@ -267,10 +267,12 @@ func _toast_new_lines() -> void:
 		_events_seen = total               # a new game, a load, or the first look: nothing old gets toasted
 		return
 	var fresh: int = mini(total - _events_seen, sim.events.size())
+	var now: float = Time.get_unix_time_from_system()
 	for k in range(sim.events.size() - fresh, sim.events.size()):
 		var line: String = str(sim.events[k][1])
 		var tone := Words.toast_tone(line)
-		if tone != "none":
+		# only what just happened: a load or a settle brings old lines, and those stay in the log
+		if tone != "none" and now - float(sim.events[k][0]) < 5.0 and not (line in _juice.toasts()):
 			_juice.toast(line, tone)
 	_events_seen = total
 
@@ -522,7 +524,7 @@ func refresh() -> void:
 	_top_labels["cash"].text = Fmt.money(sim.cash)
 	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
 	_top_labels["level"].text = "Level %d" % sim.level()
-	_top_labels["hp"].text = "HP %d / %d" % [ceili(sim.hp), int(sim.max_hp())]
+	_top_labels["hp"].text = "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
 	_top_labels["xp"].text = _xp_words()
 	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the yard"
 	for name in ROOMS:
@@ -573,7 +575,20 @@ func refresh() -> void:
 	for i in range(Pal.EVENT_LINES):
 		var j := ev.size() - 1 - i
 		_event_times[i].text = _time_of_day(ev[j][0]) if j >= 0 else ""
-		_event_labels[i].text = ev[j][1] if j >= 0 else ""
+		UI.fit(_event_labels[i], _by_sentence(str(ev[j][1])) if j >= 0 else [""])
+
+
+## A line's shorter forms: the whole, then fewer sentences, then the first clause - never trailing off.
+static func _by_sentence(line: String) -> Array:
+	var out: Array = [line]
+	var parts := line.split(". ", false)
+	for n in range(parts.size() - 1, 0, -1):
+		var head := ". ".join(parts.slice(0, n))
+		out.append(head if head.ends_with(".") else head + ".")
+	var clause := line.get_slice(";", 0).get_slice(":", 0)
+	if clause != line and not (clause in out):
+		out.append(clause)
+	return out
 
 
 ## "XP 1,234 / 2,345": into this level, of what the next takes; "XP 101,333" at the top.
@@ -633,7 +648,7 @@ func _rail_status(name: String) -> Dictionary:
 					"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}
 		MEDIC:
 			var full: bool = sim.hp >= sim.max_hp() - 0.5
-			return {"status1": "HP %d / %d" % [ceili(sim.hp), int(sim.max_hp())],
+			return {"status1": "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()],
 					"status2": "Fit" if full else "Resting", "badge": "" if full or sim.on_mission() else "Hurt",
 					"badge_tone": "warn"}
 		MARKET:
@@ -659,7 +674,7 @@ func _camp_cards() -> Array:
 		"title": "Runner", "headline": "Level %d" % lv, "unit": "",
 		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
-			["Max HP", "%d" % int(sim.max_hp())], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d of %d pouches" % [sim.rig_used(), sim.med_capacity()]]],
+			["Max HP", "%d" % sim.max_hp_shown()], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d of %d pouches" % [sim.rig_used(), sim.med_capacity()]]],
 		"status": "%s · runners lost: %d" % [sim.cls if sim.cls != "" else "No past yet", sim.operators_lost],
 		"note": sim.next_words(true),
 	})

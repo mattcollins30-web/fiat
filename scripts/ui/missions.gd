@@ -186,6 +186,10 @@ func show_state(s) -> void:
 		c["depth"].text = ("%d of %d" % [t["depth"], sim.best_depth[i] + 1]) if endgame else "Locked"
 		c["depth_down"].visible = endgame
 		c["depth_up"].visible = endgame
+		# between its buttons when the ladder's open; across the row, right-justified, when it's locked
+		c["depth"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if endgame else HORIZONTAL_ALIGNMENT_RIGHT
+		c["depth"].position.x = (PAD + INNER - DEPTH_BTN - 8 - 150) if endgame else (PAD + 120)
+		c["depth"].size.x = 150 if endgame else (INNER - 120)
 		c["depth_down"].disabled = not is_open or sim.on_mission() or t["depth"] <= 1
 		c["depth_up"].disabled = not is_open or sim.on_mission() or t["depth"] > sim.best_depth[i]
 		var rows := [
