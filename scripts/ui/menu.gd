@@ -114,12 +114,13 @@ func _init() -> void:
 ## items: [{name, detail, action: Callable, enabled (true), confirm ("")}]. With
 ## `confirm` set, the first press arms the row and shows it; the second acts.
 ## `opaque` hides the game behind (the title screen); otherwise it dims it.
-func open(title: String, sub: String, items: Array, back := Callable(), opaque := false) -> void:
+## `title` is a String, or an Array of forms, long to short, the first that fits shown.
+func open(title, sub: String, items: Array, back := Callable(), opaque := false) -> void:
 	assert(items.size() <= ROWS, "a menu holds five rows")
 	_items = items
 	_armed = -1
 	_back = back
-	_title.text = title
+	UI.fit(_title, title if title is Array else [title])
 	UI.wrap(_subs, sub)
 	_backdrop.visible = opaque
 	_picture.visible = opaque and _picture.texture != null

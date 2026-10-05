@@ -643,8 +643,9 @@ func _clinic_screen(main) -> void:
 		_check(sim.rig.size() == rig_before + 1, "Take through the clinic did not take")
 		main.refresh()
 		_check_fit(main, "Clinic (rig)")
-		main._clinic._press(0)          # Leave the last taken
-		_check(sim.rig.size() == rig_before, "Leave through the clinic did not leave")
+		# leaving is the Lock-up's (the clinic's empty panel acts on nothing)
+		_check(sim.leave(sim.rig.back()["id"]), "leave from the rig did not leave")
+		_check(sim.rig.size() == rig_before, "the rig did not go back down")
 	main._clinic._show("shelf")
 	print("clinic screen ok")
 
@@ -3053,6 +3054,28 @@ func _inflation_checks(main) -> void:
 			var special: Dictionary = sim._plain(Data.AMMO, b["name"])
 			_check(sim.price(special) > sim.ammo_price(str(b["type"])), "%s is no dearer than the plain box" % b["name"])
 			break
+	# and the shelf never stocks a standard box at all: the box row has those without end
+	var plain_on_shelf := 0
+	var specials := 0
+	for k in range(40):
+		sim.restock()
+		for stocked in sim.market:
+			if Items.is_ammo(stocked):
+				if Items.base_of(stocked).has("damage_pct"):
+					specials += 1
+				elif stocked["affixes"].is_empty():
+					plain_on_shelf += 1
+	_check(plain_on_shelf == 0, "the shelf stocked a standard box %d times over forty restocks" % plain_on_shelf)
+	_check(specials > 0 or sim.gear_tier() < 2, "forty restocks at gear tier %d put no special rounds on the shelf" % sim.gear_tier())
+	# the clinic with nothing picked: the rig's summary, and no button acting on something unpicked
+	main.show_room(main.MEDIC)
+	main._clinic.selected = {}
+	main.refresh()
+	var any_button := false
+	for b in main._clinic._buttons:
+		any_button = any_button or b.visible
+	_check(not any_button, "the clinic's empty panel shows a button: %s" % str(main._clinic._buttons.map(func(b): return b.text if b.visible else "")))
+	_check_fit(main, "Clinic (nothing picked)")
 	_check(ws0 == 0 or absi(sim.workshop_cost() - int(round(ws0 * m))) <= 1, "the bench's upgrade did not rise: %d -> %d" % [ws0, sim.workshop_cost()])
 	_check(absi(sim.treat_cost() - int(round(treat0 * m))) <= 2, "treatment did not rise: %d -> %d" % [treat0, sim.treat_cost()])
 	_check(sim.boss_cost(0) == sim.boss_cost(0) and Data.CRAFT["bump"].has("notes"), "notes prices exist to hold")
@@ -3605,7 +3628,51 @@ func _check_fit(main, where: String) -> void:
 	var all_labels := []
 	_labels_under(main, all_labels)
 	bad += _check_widths(all_labels, where + " (sweep)")
+	bad += _check_buttons_clear(main, all_labels, where + " (sweep)")
 	_misfits += bad
+
+
+## No button over a label's text beside it in the same panel (the Bench's
+## upgrade button clipped the words above it). Same parent only: headless,
+## panels placed by the shell's layout can still be at their birth positions,
+## so rects across panels don't compare.
+func _check_buttons_clear(main, labels: Array, where: String) -> int:
+	var UI = load("res://scripts/ui/ui.gd")
+	var buttons := []
+	_buttons_under(main, buttons)
+	var bad := 0
+	for b in buttons:
+		var br := Rect2(b.position, b.size)
+		for l in labels:
+			if l is Button or l.get_parent() != b.get_parent():
+				continue
+			var x: Rect2 = br.intersection(Rect2(l.position, l.size).intersection(_text_rect_local(l, UI)))
+			if x.size.x > 2.0 and x.size.y > 2.0:
+				push_error("%s: the button '%s' sits on '%s' (%.0f × %.0f px)" % [where, b.text, l.text, x.size.x, x.size.y])
+				bad += 1
+	return bad
+
+
+## A label's text rect in its parent's space: its width at its alignment, the font's height centred.
+static func _text_rect_local(n: Control, UI) -> Rect2:
+	var tw: float = UI.text_width(n, n.text)
+	var f: Font = n.get_theme_font("font")
+	var th: float = f.get_height(n.get_theme_font_size("font_size"))
+	var x := n.position.x
+	if n.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		x = n.position.x + n.size.x - tw
+	elif n.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		x = n.position.x + (n.size.x - tw) / 2.0
+	return Rect2(x, n.position.y + (n.size.y - th) / 2.0, tw, th)
+
+
+static func _buttons_under(n: Node, out: Array) -> void:
+	if n is CanvasItem and not n.visible:
+		return
+	if n is Button:
+		out.append(n)
+	for c in n.get_children():
+		_buttons_under(c, out)
 
 
 ## Width alone: the text fits its box. (A menu over a room puts its words over

@@ -26,6 +26,7 @@ const ROW_H := 46
 const ROW_GAP := 6
 const VIEW_H := 36                 # the Guns / Sockets toggle across the top
 const SOCK_HEAD_H := 44
+const BENCH_H := 136               # title, words, a gap, the upgrade button
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.HEIGHT
@@ -133,10 +134,10 @@ func _init() -> void:
 		_socks[slot] = g
 	_show_view()
 	# the bench's level, under the guns
-	_bench = UI.panel(self, Rect2(0, Pal.ROOM_H - 120, BODY_W, 120), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_bench = UI.panel(self, Rect2(0, Pal.ROOM_H - BENCH_H, BODY_W, BENCH_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_bench_title = UI.label(_bench, Rect2(PAD, 10, BODY_W - 2 * PAD, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_bench_words = UI.label(_bench, Rect2(PAD, 40, BODY_W - 2 * PAD, 26), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_upgrade = UI.button(_bench, Rect2(PAD, 120 - 12 - 44, BODY_W - 2 * PAD, 44), true)
+	_bench_words = UI.label(_bench, Rect2(PAD, 40, BODY_W - 2 * PAD, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_upgrade = UI.button(_bench, Rect2(PAD, BENCH_H - 12 - 44, BODY_W - 2 * PAD, 44), true)
 	_upgrade.pressed.connect(_on_upgrade)
 	# the grid: the stash's attachments, for the selected mount when one is
 	_inv = Inventory.new()

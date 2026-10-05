@@ -421,8 +421,7 @@ func _show_panel() -> void:
 					words.append(name if counts[name] == 1 else "%s ×%d" % [name, counts[name]])
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
 				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
-				var last: Dictionary = sim.rig.back()
-				_button(0, "Leave %s" % last["base"].to_lower(), sim.leave.bind(last["id"]), not sim.on_mission() and sim.stash_room(1))
+				UI.fit(_left_lines[2], ["Taken out again in the Lock-up, from the rig", "Taken out in the Lock-up"])
 			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), Data.MEDIC_LEVELS[sim.medic_level]["stock"]]
 			_right_lines[0].text = "No more until the next run"
 		else:

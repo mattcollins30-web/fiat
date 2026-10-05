@@ -3012,7 +3012,15 @@ func restock() -> void:
 			slot = Data.ATTACHMENT
 		elif roll < 0.45:
 			slot = Data.AMMO
-		market.append(Items.roll(slot, t, rng))
+		var it: Dictionary = Items.roll(slot, t, rng)
+		# a standard box is on the box row without end; the shelf's rounds are the special ones
+		for tries in range(8):
+			if not (Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty()):
+				break
+			it = Items.roll(slot, t, rng)
+		if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
+			it = Items.roll(Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)], t, rng)
+		market.append(it)
 
 
 ## A standard box of rounds on the shelf costs what the box row charges for

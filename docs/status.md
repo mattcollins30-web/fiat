@@ -832,6 +832,29 @@ weather and the clock's night too, since they change the fight.
 Asserted: with a budget of three a refresh does not settle every tier at once; forty refreshes
 settle them all; the screen fits settling and settled; without a budget the odds read at once.
 
+## The shelf's box price (5 Oct)
+
+*The fence sold 300 pistol rounds for £79 on the shelf while the box row sold the same 300 for £40.* The
+shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5. `price()` now charges a
+standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
+anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
+
+## Three more from the playtest, 5 Oct
+
+- *The shelf stocks a standard box.* It no longer does: `restock()` rerolls a plain box (the box row has
+  those without end) and the shelf's rounds are the special grades; at gear tier 1, where there are none,
+  the slot rolls gear instead. Asserted over forty restocks.
+- *The clinic with nothing picked showed "Leave smg rounds".* The empty panel's button acted on the last
+  thing in the rig, which the player hadn't picked. The panel keeps the rig's summary and says leaving is
+  done in the Lock-up (where the rig is a grid and each pouch has its own Leave); the button is gone.
+  Asserted: the empty panel shows no button.
+- *The Bench's upgrade button clipped the words above it.* The bench panel was 120 px: the words' line ran
+  to 66 and the button started at 64. The panel is 136 now. The fit check gained a sibling rule: no button
+  may sit on a label's text in the same panel (same parent only: headless, panels placed by the shell's
+  layout can still be at their birth positions, so rects across panels don't compare).
+- Found by the sweep on the way: the bench-one menu's title (an affix line, "+2 loot find a med carried ·
+  T1") ran past the panel. `Menu.open` takes a title as a list of forms, long to short, and fits the first.
+
 ## Clipping, 5 Oct (the away menu, and a sweep)
 
 *"Back, then." trailed off* ("Gone 3 m. The runner slept, the radio played to nobody. The f..."). The

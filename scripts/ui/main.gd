@@ -949,7 +949,8 @@ func _open_bench_one(id: int, stat: String) -> void:
 	for line in Items.affix_lines(it, false, true):
 		if line.contains(str(Items.affix_def(stat).get("label", stat))):
 			label = line
-	_menu.open(label if label != "" else stat, _purse(), items, _open_bench_picks.bind(id))
+	var short := str(Items.affix_def(stat).get("label", stat))
+	_menu.open([label, short, stat] if label != "" else [short, stat], _purse(), items, _open_bench_picks.bind(id))
 
 
 func _craft_price(kind: String, cost: int) -> String:
