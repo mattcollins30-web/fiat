@@ -2237,6 +2237,7 @@ func _move_checks(main) -> void:
 	_book_checks(main)
 	_places_checks(main)
 	_faces_checks(main)
+	_stack_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2448,6 +2449,107 @@ func _faces_checks(main) -> void:
 	_check(not main._barracks._wall[0].visible, "the wall shows with nobody before")
 	sim.load_dict(saved)
 	print("faces ok: the heads' armed lines, the face slot on the run, the wall of runners before")
+
+
+## Stacks: rounds of a base merge in the stash and the pack to five boxes'
+## worth, a bottle onto the bottles to ten; a take tops up the rig's stack
+## first and splits the rest; fitting takes one bottle off the stack; a strip
+## puts it back on; the value follows what the stack holds.
+func _stack_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.stash = sim.stash.filter(func(it): return not Items.is_ammo(it) and not Items.is_socketable(it))
+	sim.rig = []
+	sim.cash = 100000.0
+	var cap_nails: int = 200 * Data.STACK_BOXES
+	sim.stash_put(sim._plain(Data.AMMO, "Nails"))
+	sim.stash_put(sim._plain(Data.AMMO, "Nails"))
+	var nails: Array = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails")
+	_check(nails.size() == 1 and int(nails[0]["rounds"]) == 400 and nails[0]["value"] == 40, "two boxes of nails did not make one stack of 400 worth two boxes: %s" % str(nails))
+	for k in range(5):
+		sim.stash_put(sim._plain(Data.AMMO, "Nails"))
+	nails = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails")
+	_check(nails.size() == 2 and int(nails[0]["rounds"]) == cap_nails and int(nails[1]["rounds"]) == 400, "seven boxes did not make a full stack and a second: %s" % str(nails.map(func(it): return it["rounds"])))
+	var shells: Dictionary = sim._plain(Data.AMMO, "Shells")
+	sim.stash_put(shells)
+	_check(sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Shells").size() == 1, "shells joined the nails")
+	# buying tops the stack, no cell needed when it fits
+	var cells: int = sim.stash_used()
+	var before: int = int(nails[1]["rounds"])
+	_check(sim.buy_ammo("improvised") and int(nails[1]["rounds"]) == before + 200 and sim.stash_used() == cells, "a bought box did not join the stack: %d -> %d, cells %d -> %d" % [before, int(nails[1]["rounds"]), cells, sim.stash_used()])
+	# the rig: a take tops up the rig's stack and splits the rest
+	var full: Dictionary = nails[0]
+	_check(sim.take(full["id"]) and sim.rig.size() == 1 and int(sim.rig[0]["rounds"]) == cap_nails, "the full stack did not go to the rig whole")
+	var part: Dictionary = nails[1]
+	var part_before: int = int(part["rounds"])
+	sim.rig[0]["rounds"] = cap_nails - 150
+	Items.set_stack(sim.rig[0], cap_nails - 150)
+	var pouches: int = sim.med_capacity()
+	while sim.rig_room(1):
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))       # no pouch free: only the top-up can happen
+	_check(sim.take(part["id"]) and int(sim.rig[0]["rounds"]) == cap_nails and int(part["rounds"]) == part_before - 150 and sim.stash.has(part), "the take did not top up the rig's stack and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]), int(part["rounds"])])
+	sim.rig = sim.rig.filter(func(it): return Items.is_ammo(it))
+	_check(sim.take(part["id"]) and sim.rig.size() == 2, "the rest did not take a pouch of its own once one was free")
+	# leaving merges back
+	var rig_part: Dictionary = sim.rig[1]
+	_check(sim.leave(rig_part["id"]) and sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Nails").size() == 1, "the stack left did not merge back")
+	# the pack: found rounds join the found stack
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["found"] = [sim._plain(Data.AMMO, "Shells")]
+	var fake: Dictionary = sim._plain(Data.AMMO, "Shells")
+	var t: Dictionary = m["t"]
+	# a find of shells through the pack rule
+	if sim.pack_used(m) + 1 <= sim.capacity():
+		sim.stash_put(fake)         # not the pack; just to use the roll - the merge below is the real check
+	var found_box: Dictionary = sim._plain(Data.AMMO, "Shells")
+	var packed: int = m["found"].size()
+	# call the pack rule the way _find does
+	var it2: Dictionary = found_box
+	if Items.stacks(it2):
+		for f in m["found"]:
+			if Items.same_stack(f, it2) and Items.stack_size(f) < Items.stack_cap(f):
+				var moved: int = mini(Items.stack_cap(f) - Items.stack_size(f), Items.stack_size(it2))
+				Items.set_stack(f, Items.stack_size(f) + moved)
+				Items.set_stack(it2, Items.stack_size(it2) - moved)
+	_check(int(m["found"][0]["rounds"]) == 300 and Items.stack_size(it2) == 0, "found shells did not join the found stack")
+	sim.extract_now()
+	# bottles: ten to a stack, one off for a socket, back on from a strip
+	var fluid: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	_check(Items.stacks(fluid) and fluid.get("count", 0) == 1 and fluid["affixes"].is_empty(), "a bottle is not a plain stackable")
+	for k in range(3):
+		sim.stash_put(sim._plain(Data.ATTACHMENT, "Lighter fluid"))
+	var fluids: Array = sim.stash.filter(func(it): return Items.is_socketable(it) and it["base"] == "Lighter fluid")
+	_check(fluids.size() == 1 and int(fluids[0]["count"]) == 3 and fluids[0]["value"] == 360, "three bottles did not stack: %s" % str(fluids.map(func(it): return it.get("count", 0))))
+	var rolled: Dictionary = Items.roll(Data.ATTACHMENT, 6, sim.rng)
+	var tries := 0
+	while rolled["mount"] != "socket" and tries < 200:
+		rolled = Items.roll(Data.ATTACHMENT, 6, sim.rng)
+		tries += 1
+	_check(rolled["mount"] != "socket" or (rolled["affixes"].is_empty() and rolled["rarity"] == 0), "a rolled socketable carries affixes: %s" % str(rolled))
+	var gun: Dictionary = sim._plain("Primary", "Army SMG")
+	gun["attachments"]["socket 1"] = null
+	var old_gun = sim.equipped["Primary"]
+	sim.equipped["Primary"] = gun
+	sim.workshop = maxi(sim.workshop, 1)
+	_check(sim.fit("Primary", fluids[0]["id"]) and gun["attachments"]["socket 1"] != null and int(gun["attachments"]["socket 1"]["count"]) == 1 and int(fluids[0]["count"]) == 2 and sim.stash.has(fluids[0]), "fitting did not take one bottle off the stack: socket %s, stack %d" % [str(gun["attachments"]["socket 1"]), int(fluids[0]["count"])])
+	_check(sim.strip("Primary", "socket 1") and int(fluids[0]["count"]) == 3, "the strip did not put the bottle back on the stack: %d" % int(fluids[0]["count"]))
+	for k in range(9):
+		sim.stash_put(sim._plain(Data.ATTACHMENT, "Lighter fluid"))
+	fluids = sim.stash.filter(func(it): return Items.is_socketable(it) and it["base"] == "Lighter fluid")
+	_check(fluids.size() == 2 and int(fluids[0]["count"]) == Data.SOCKET_STACK and int(fluids[1]["count"]) == 2, "twelve bottles did not make ten and two: %s" % str(fluids.map(func(it): return it.get("count", 0))))
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	_check_fit(main, "Lock-up (stacks)")
+	sim.equipped["Primary"] = old_gun
+	var d: Dictionary = sim.to_dict()
+	sim.load_dict(d)
+	_check(sim.stash.any(func(it): return Items.is_socketable(it) and int(it.get("count", 1)) == Data.SOCKET_STACK), "the stack did not save")
+	sim.load_dict(saved)
+	print("stacks ok: rounds merge to five boxes, bottles to ten, the buy, the take and the split, the leave, the pack, one off for a socket and back, the save")
 
 
 func _recycle_checks(main) -> void:

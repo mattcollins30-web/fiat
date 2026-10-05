@@ -65,8 +65,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 				break
 		for k in range(n):
 			attachments["socket %d" % (k + 1)] = null
-	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.CHARM:
-		r = 0                             # a box is a box; a letter is a letter
+	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.CHARM or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
+		r = 0                             # a box is a box; a letter is a letter; a bottle is a bottle, so they stack
 		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,
@@ -77,6 +77,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		it["rounds"] = int(base["rounds"])
 	if slot == Data.ATTACHMENT:
 		it["mount"] = base["mount"]
+		if base["mount"] == "socket":
+			it["count"] = 1
 	_next_id += 1
 	return it
 
@@ -650,3 +652,49 @@ static func att_words(it: Dictionary, short := false) -> String:
 		if absf(v) >= 0.5:
 			out.append("%s%.0f%s %s" % ["+" if v > 0 else "−", absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
 	return ", ".join(out)
+
+
+## Stacks: how many a stack of this can hold, and how many it holds.
+static func stack_cap(it: Dictionary) -> int:
+	if is_ammo(it):
+		return int(base_of(it)["rounds"]) * Data.STACK_BOXES
+	if is_socketable(it):
+		return Data.SOCKET_STACK
+	return 1
+
+
+static func stack_size(it: Dictionary) -> int:
+	if is_ammo(it):
+		return int(it.get("rounds", 0))
+	if is_socketable(it):
+		return int(it.get("count", 1))
+	return 1
+
+
+static func stacks(it: Dictionary) -> bool:
+	return is_ammo(it) or (is_socketable(it) and it.get("affixes", []).is_empty())
+
+
+## Two stacks that can merge: the same base, both plain.
+static func same_stack(a: Dictionary, b: Dictionary) -> bool:
+	return stacks(a) and stacks(b) and a["base"] == b["base"] and a["slot"] == b["slot"]
+
+
+## Put n of a stack's rounds or count into another; the stack's value follows what it holds.
+static func set_stack(it: Dictionary, n: int) -> void:
+	var b := base_of(it)
+	if is_ammo(it):
+		it["rounds"] = n
+		it["value"] = int(round(float(b["value"]) * n / float(b["rounds"])))
+	elif is_socketable(it):
+		it["count"] = n
+		it["value"] = int(b["value"]) * n
+
+
+## A copy of one off a stack (a socketable going into a socket).
+static func one_of(it: Dictionary) -> Dictionary:
+	var one := it.duplicate(true)
+	one["id"] = _next_id
+	_next_id += 1
+	set_stack(one, 1)
+	return one

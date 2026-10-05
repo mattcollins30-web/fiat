@@ -85,7 +85,7 @@ func show_state(s) -> void:
 	var cap: int = sim.med_capacity()
 	var sig := "%d|%d|%d|%d" % [cap, sim.capacity(), selected, sim.rig_used()]
 	for it in sim.rig:
-		sig += ",%d:%d" % [it["id"], int(it.get("rounds", 0))]
+		sig += ",%d:%d" % [it["id"], Items.stack_size(it)]
 	if sig == _shown:
 		return
 	_shown = sig

@@ -775,6 +775,22 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Stacks (2026-10-05)
+
+Matt: "a lot of different stacks of nails felt wrong". Rounds of a base merge into one stack in the
+stash, the pack and the rig, up to five boxes' worth (`STACK_BOXES`; 1,000 nails, 750 shells);
+socketables are plain now (a bottle is a bottle: no affixes, common) and merge by count to ten
+(`SOCKET_STACK`), the cell showing "×3". `sim.stash_put` does the merging for everything that
+comes home, is bought, is left from the rig or stripped from a socket; a stack's value follows
+what it holds. A take tops up the rig's stack of the same rounds first and the rest takes a
+pouch or stays. Fitting takes one bottle off the stack; a strip puts it back on. A full stack
+starts the next. Saved as the dicts they are.
+
+Asserted (`_stack_checks`): two boxes make one stack of 400 worth two boxes; seven make a full
+and a second; shells keep apart; a bought box joins without a cell; the rig top-up and the split;
+the leave merges back; found rounds join the found stack; bottles roll plain and stack to ten;
+one off for a socket and back on from the strip; the Lock-up fits; the save.
+
 ## Faces for the people who matter (2026-10-05)
 
 The three heads have a line when you arm them ("The carpet man: Word goes to the warehouse that

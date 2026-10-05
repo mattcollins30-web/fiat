@@ -72,8 +72,8 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		# does: 64 a cell, the cell 64 plus the gaps); only a bigger one is scaled
 		var fits: bool = tex.get_width() <= _art.size.x and tex.get_height() <= _art.size.y
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if Items.is_ammo(it):
-			_corner.text = "%d" % int(it["rounds"])
+		if Items.is_ammo(it) or (Items.is_socketable(it) and int(it.get("count", 1)) > 1):
+			_corner.text = ("%d" % int(it["rounds"])) if Items.is_ammo(it) else ("×%d" % int(it["count"]))
 			_corner.position = Vector2(0, size.y - 20)
 			_corner.size = Vector2(size.x - 4, 18)
 			_corner.visible = true
@@ -92,7 +92,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	var line_h := 22 if big else 20
 	var words: Array = []
 	if f.x == 1 and f.y == 1:
-		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else h[0]]
+		words = [SHORT[it["slot"]], ("%d" % int(it["rounds"])) if Items.is_ammo(it) else (("×%d" % int(it["count"])) if Items.is_socketable(it) and int(it.get("count", 1)) > 1 else h[0])]
 	else:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:

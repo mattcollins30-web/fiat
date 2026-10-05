@@ -119,6 +119,8 @@ func _plain(slot: String, base: String) -> Dictionary:
 		it["rounds"] = int(Items.base_of(it)["rounds"])
 	if slot == Data.ATTACHMENT:
 		it["mount"] = Items.base_of(it)["mount"]
+		if it["mount"] == "socket":
+			it["count"] = 1
 	return it
 
 
@@ -1235,10 +1237,10 @@ func ammo_price(type: String) -> int:
 
 func buy_ammo(type: String) -> bool:
 	var b := ammo_box(type)
-	if b.is_empty() or cash < ammo_price(type) or not stash_room(1):
+	if b.is_empty() or cash < ammo_price(type) or not (stash_room(1) or _stack_room(_plain(Data.AMMO, b["name"]))):
 		return false
 	cash -= ammo_price(type)
-	stash.append(_plain(Data.AMMO, b["name"]))
+	stash_put(_plain(Data.AMMO, b["name"]))
 	return true
 
 
@@ -1566,12 +1568,21 @@ func fit(slot: String, id: int) -> bool:
 					return false
 			if not gun["attachments"].has(mount) or not mount_open(mount):
 				return false
-			_remove(it)
+			var going: Dictionary = _one_off(it)
 			if gun["attachments"][mount] != null:
-				stash.append(gun["attachments"][mount])
-			gun["attachments"][mount] = it
+				stash_put(gun["attachments"][mount])
+			gun["attachments"][mount] = going
 			return true
 	return false
+
+
+## One off a stack in the stash (a bottle from the bottles), or the item itself.
+func _one_off(it: Dictionary) -> Dictionary:
+	if Items.stacks(it) and Items.stack_size(it) > 1:
+		Items.set_stack(it, Items.stack_size(it) - 1)
+		return Items.one_of(it)
+	_remove(it)
+	return it
 
 
 ## A socketable into a named socket of a fitted item.
@@ -1583,21 +1594,23 @@ func fit_socket(slot: String, mount: String, id: int) -> bool:
 		return false
 	for it in stash:
 		if it["id"] == id and Items.is_socketable(it):
-			_remove(it)
+			var going: Dictionary = _one_off(it)
 			if it_at["attachments"][mount] != null:
-				stash.append(it_at["attachments"][mount])
-			it_at["attachments"][mount] = it
+				stash_put(it_at["attachments"][mount])
+			it_at["attachments"][mount] = going
 			return true
 	return false
 
 
 func strip(slot: String, mount: String) -> bool:
-	if mission != null or equipped[slot] == null or not stash_room(1):
+	if mission != null or equipped[slot] == null:
 		return false
 	var gun: Dictionary = equipped[slot]
 	if gun["attachments"].get(mount, null) == null:
 		return false
-	stash.append(gun["attachments"][mount])
+	if not (stash_room(1) or _stack_room(gun["attachments"][mount])):
+		return false
+	stash_put(gun["attachments"][mount])
 	gun["attachments"][mount] = null
 	return true
 
@@ -2499,6 +2512,14 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 					fits.append(b)
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
+	if Items.stacks(it):
+		for f in m["found"]:
+			if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
+				var moved: int = mini(Items.stack_cap(f) - Items.stack_size(f), Items.stack_size(it))
+				Items.set_stack(f, Items.stack_size(f) + moved)
+				Items.set_stack(it, Items.stack_size(it) - moved)
+				if Items.stack_size(it) <= 0:
+					return                    # joined what was found already: no new cell
 	if pack_used(m) + Items.size(it) <= capacity():
 		m["found"].append(it)
 		_read(it)
@@ -2666,12 +2687,14 @@ func _extract() -> void:
 	notes += run_notes
 	var stashed := 0
 	for it in m["found"]:
-		if stash_room(Items.size(it)) or Items.is_deeds(it):
-			stash.append(it)
+		if Items.is_deeds(it):
+			stash.append(it)                 # whatever the room: the deeds come home
 			stashed += 1
-			if Items.is_deeds(it) and ending == "":
+			if ending == "":
 				ending = "held"
 				log_event(Words.DEEDS["held"])
+		elif stash_put(it):
+			stashed += 1
 	var outcome := "Back"
 	if not m["cleared"]:
 		outcome = "Cut and run"
@@ -2817,6 +2840,21 @@ func take(id: int) -> bool:
 		return false
 	for it in stash:
 		if it["id"] == id and (Items.is_medical(it) or Items.is_ammo(it)):
+			if Items.is_ammo(it):
+				# top up the rig's stack of the same rounds first; what's left takes a pouch, or stays
+				var topped := false
+				for r in rig:
+					if Items.same_stack(r, it) and Items.stack_size(r) < Items.stack_cap(r):
+						var moved: int = mini(Items.stack_cap(r) - Items.stack_size(r), Items.stack_size(it))
+						if moved > 0:
+							Items.set_stack(r, Items.stack_size(r) + moved)
+							Items.set_stack(it, Items.stack_size(it) - moved)
+							topped = true
+						if Items.stack_size(it) <= 0:
+							_remove(it)
+							return true
+				if not rig_room(1):
+					return topped
 			if not rig_room(Items.size(it)):
 				return false
 			_remove(it)
@@ -2825,14 +2863,30 @@ func take(id: int) -> bool:
 	return false
 
 
+## Whether a stack would merge into the stash entirely without a cell.
+func _stack_room(it: Dictionary) -> bool:
+	var left: int = Items.stack_size(it)
+	for s in stash:
+		if Items.same_stack(s, it):
+			left -= Items.stack_cap(s) - Items.stack_size(s)
+	return left <= 0
+
+
 ## A med out of the rig, back to the stash.
 func leave(id: int) -> bool:
-	if mission != null or not stash_room(1):
+	if mission != null:
+		return false
+	var leaving := {}
+	for r in rig:
+		if r["id"] == id:
+			leaving = r
+	if leaving.is_empty() or not (stash_room(1) or _stack_room(leaving)):
 		return false
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
-			stash.append(rig[k])
+			var it: Dictionary = rig[k]
 			rig.remove_at(k)
+			stash_put(it)
 			return true
 	return false
 
@@ -2876,10 +2930,10 @@ func price(it: Dictionary) -> int:
 
 
 func buy(i: int) -> bool:
-	if i >= market.size() or not stash_room(Items.size(market[i])) or cash < price(market[i]):
+	if i >= market.size() or not (stash_room(Items.size(market[i])) or _stack_room(market[i])) or cash < price(market[i]):
 		return false
 	cash -= price(market[i])
-	stash.append(market[i])
+	stash_put(market[i])
 	market.remove_at(i)
 	return true
 
@@ -2893,6 +2947,29 @@ func sell(it: Dictionary) -> bool:
 	if Items.is_deeds(it):
 		ending = "sold"
 		log_event(Words.DEEDS["sold"])
+	return true
+
+
+## Into the stash, merging what stacks: rounds into the same base's stack to
+## its cap, a bottle onto the bottles; the rest as its own stack if there's
+## room. Returns whether everything found a place.
+func stash_put(it: Dictionary) -> bool:
+	if Items.stacks(it):
+		var left: int = Items.stack_size(it)
+		for s in stash:
+			if left <= 0:
+				break
+			if Items.same_stack(s, it) and Items.stack_size(s) < Items.stack_cap(s):
+				var room: int = Items.stack_cap(s) - Items.stack_size(s)
+				var moved: int = mini(room, left)
+				Items.set_stack(s, Items.stack_size(s) + moved)
+				left -= moved
+		if left <= 0:
+			return true
+		Items.set_stack(it, left)
+	if not stash_room(Items.size(it)):
+		return false
+	stash.append(it)
 	return true
 
 

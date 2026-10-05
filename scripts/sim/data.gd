@@ -1220,6 +1220,12 @@ const NIGHT_FROM := 21.0
 const NIGHT_TO := 6.0
 const WEATHER_H := 1.0
 const WEATHER_ODDS := [[0.35, 0.15], [0.25, 0.2], [0.2, 0.25]]   # by zone: rain, fog
+## Stacks. Rounds of a base merge into one stack, up to STACK_BOXES boxes'
+## worth; socketables (no affixes, a bottle is a bottle) merge by count, up
+## to SOCKET_STACK. A stack is one cell whatever it holds; taking rounds to
+## the rig tops up the rig's stack first and splits what's left.
+const STACK_BOXES := 5
+const SOCKET_STACK := 10
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50

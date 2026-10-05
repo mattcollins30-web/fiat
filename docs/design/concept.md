@@ -158,7 +158,7 @@ change the sim's rules rather than add numbers.
 21. ~~The late cash sinks~~ — built (2 Oct): call-ins priced by depth and by the words on the site;
     insurance, the fence holding the paper on the kit for a run.
 22. **From the playtest (2 Oct), the list** — in the order I'd do them:
-    1. **Stacks.** Ammo stacks of a type merge (a box of nails found joins the nails in the stash and the
+    1. ~~**Stacks.**~~ Done (5 Oct). Ammo stacks of a type merge (a box of nails found joins the nails in the stash and the
        rig, up to a stack cap), and socketables stack the same way; "a lot of different stacks of nails
        felt wrong". Stack caps per type; a stack splits when taken to the rig if the rig's pouch can't
        hold it all.

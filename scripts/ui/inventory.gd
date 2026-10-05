@@ -178,7 +178,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page]
 	for it in items:
-		sig += "," + str(it["id"])
+		sig += ",%d:%d" % [it["id"], Items.stack_size(it)]     # a stack redraws as it fills
 	if sig == _shown:
 		return
 	_shown = sig
