@@ -19,37 +19,48 @@ const Inventory := preload("res://scripts/ui/inventory.gd")
 const People := preload("res://scripts/ui/people.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const ItemHead := preload("res://scripts/ui/item_head.gd")
+const Band := preload("res://scripts/ui/band.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
-const PANEL_GAP := 12
-const THEM_H := 244                                           # no button: three lines and a note
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 904
 const GRID_H := Inventory.HEIGHT                               # 588
 const PICK_Y := GRID_H + GAP                                  # 612
 const PICK_H := Pal.ROOM_H - PICK_Y                           # 304
-const RUN_Y := PICK_Y                                         # the run's panel, its top level with the pack's
-const RUN_H := PICK_H
-const RUNNER_Y := THEM_H + PANEL_GAP                          # 256
-const RUNNER_H := RUN_Y - PANEL_GAP - RUNNER_Y                # 344: two lines, a note, the rig's pouches, a button
-const RIG_Y := 216                                            # the pouches' row in the Runner panel, under the note
-const RUNNER_FOOT := 12                                       # the Runner panel's button sits lower, to make the pouches room
+const BAND_H := 200                                           # the site's art band at the top of the column
 const RIG_MAX := 18
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30                                            # a 24 px font is 29 tall
-const BAR_H := 26
-const LINES := 3
-const TITLE_Y := 6
-const HEAD_Y := 40
-const BAR_Y := 86
-const LINES_Y := 116
-const NOTE_Y := LINES_Y + 3 * LINE_H + 2                      # 204 in Them
-const NOTE_Y_BUTTON := LINES_Y + 2 * LINE_H + 2               # 174 above a button
+const BAR_H := 24
+const SECTION_GAP := 12
+# the left column, top to bottom: the band, the fight, the runner, the rig, the take, the buttons
+const FIGHT_Y := BAND_H + 14
+const FIGHT_TILES_Y := FIGHT_Y + UI.HEAD_H + 16                 # room over the tiles for the crew head's face
+const FIGHT_BAR_Y := FIGHT_TILES_Y + UI.TILE_H + 6
+const RUNNER_Y := FIGHT_BAR_Y + BAR_H + SECTION_GAP
+const RUNNER_BAR_Y := RUNNER_Y + UI.HEAD_H + 2
+const RUNNER_TILES_Y := RUNNER_BAR_Y + BAR_H + 6
+const RUNNER_NOTE_Y := RUNNER_TILES_Y + UI.TILE_H + 2
+const RIG_HEAD_Y := RUNNER_NOTE_Y + LINE_H + 4
+const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
+const TAKE_Y := RIG_Y + Pal.CELL + SECTION_GAP
+const TAKE_TILES_Y := TAKE_Y + UI.HEAD_H + 2
+const NOTE_Y := TAKE_TILES_Y + UI.TILE_H + 10                 # the run's own line, above the buttons
+const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 
 var sim
-var _panels: Array = []            # three: {panel, title, head, unit, track, fill, bar_text, lines[], note, status, button}
+var _left: Panel                   # the column: the band and the sections
+var _band: Band
+var _fight := {}                   # {head, tiles[4], track, fill, bar_text}
+var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note}
+var _rig_head: Label
+var _take_head: Label
+var _take_tiles: Array = []
+var _note: Label                   # the run's own line: leaving keeps the loot, HP low, filling up
+var _button: Button                # Get out now
+var _button2: Button               # Stop auto, or Fill up then go
 var _inv
 var _pick: Panel
 var _pick_title: Label             # the pack's state with nothing picked; a pick shows the head
@@ -78,46 +89,23 @@ var _found_seen: Array = []        # the finds the flashes have seen
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	for i in range(3):
-		var y: int = [0, RUNNER_Y, RUN_Y][i]
-		var h: int = [THEM_H, RUNNER_H, RUN_H][i]
-		var button_y: int = h - (RUNNER_FOOT if i == 1 else PAD) - Pal.BUTTON_H
-		var p := UI.panel(self, Rect2(0, y, BODY_W, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-		var d := {"panel": p}
-		d["title"] = UI.label(p, Rect2(PAD, TITLE_Y, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		d["head"] = UI.label(p, Rect2(PAD, HEAD_Y, INNER, 40), "", "SemiBold", Pal.HEADLINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		d["unit"] = UI.label(p, Rect2(PAD, HEAD_Y, INNER, 40), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var track := UI.panel(p, Rect2(PAD, BAR_Y, INNER, BAR_H), UI.box(Pal.BG, 6))
-		d["track"] = track
-		d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
-		d["bar_text"] = UI.label(track, Rect2(0, 0, INNER, BAR_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-		var lines := []
-		for k in range(LINES):
-			var ly := LINES_Y + k * LINE_H
-			lines.append([UI.label(p, Rect2(PAD, ly, INNER, LINE_H), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
-				UI.label(p, Rect2(PAD, ly, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)])
-		d["lines"] = lines
-		# a panel with a button shows two lines and its note above the button;
-		# one without shows three, a note and a status line
-		var has_button := i > 0
-		d["note"] = UI.label(p, Rect2(PAD, NOTE_Y_BUTTON if has_button else NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		d["status"] = UI.label(p, Rect2(PAD, 0, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		d["status"].visible = false      # Them's note carries its status now
-		if has_button:
-			lines[2][0].visible = false
-			lines[2][1].visible = false
-		var b := UI.button(p, Rect2(PAD, button_y, INNER, Pal.BUTTON_H), true)
-		b.visible = false
-		d["button"] = b
-		var b2 := UI.button(p, Rect2(PAD, button_y, INNER, Pal.BUTTON_H), false)
-		b2.visible = false
-		d["button2"] = b2
-		_panels.append(d)
-	_head_face = People.rect(_panels[0]["panel"], Vector2(BODY_W - PAD - 64, TITLE_Y), 0.5)
-	# the rig's pouches in the Runner panel: what's carried, a cell a pouch;
-	# a med's cell uses that med
+	_left = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_band = Band.new(BODY_W, BAND_H)
+	_left.add_child(_band)
+	# the fight: a head, four tiles, their HP as the bar (or the search's)
+	_fight["head"] = UI.head(_left, Rect2(PAD, FIGHT_Y, INNER - 80, UI.HEAD_H), "The fight")
+	_fight["tiles"] = UI.tile_row(_left, PAD, FIGHT_TILES_Y, INNER, 4)
+	_bar_make(_fight, FIGHT_BAR_Y)
+	_head_face = People.rect(_left, Vector2(BODY_W - PAD - 48, FIGHT_Y - 12), 0.375)     # 48 px, between the band and the tiles
+	# the runner: the head, your HP as the bar, four tiles, a note
+	_runner["head"] = UI.head(_left, Rect2(PAD, RUNNER_Y, INNER, UI.HEAD_H), "The runner")
+	_bar_make(_runner, RUNNER_BAR_Y)
+	_runner["tiles"] = UI.tile_row(_left, PAD, RUNNER_TILES_Y, INNER, 4)
+	_runner["note"] = UI.label(_left, Rect2(PAD, RUNNER_NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the rig's pouches: what's carried, a cell a pouch; a med's cell uses that med
+	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · a pouch is a button")
 	for k in range(RIG_MAX):
-		var o := UI.panel(_panels[1]["panel"], Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
+		var o := UI.panel(_left, Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
 		o.visible = false
 		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_rig_outlines.append(o)
@@ -125,11 +113,17 @@ func _init() -> void:
 		c.position = Vector2(PAD, RIG_Y)
 		c.visible = false
 		c.pressed.connect(_rig_pressed.bind(k))
-		_panels[1]["panel"].add_child(c)
+		_left.add_child(c)
 		_rig_cells.append(c)
-	_panels[1]["button"].visible = false        # the pouches are the controls: a med's cell uses it
-	_panels[2]["button"].pressed.connect(_get_out)
-	_panels[2]["button2"].pressed.connect(_second_button)
+	# the take: cash, what was passed over or swapped, the pack
+	_take_head = UI.head(_left, Rect2(PAD, TAKE_Y, INNER, UI.HEAD_H), "The take")
+	_take_tiles = UI.tile_row(_left, PAD, TAKE_TILES_Y, INNER, 4)
+	_note = UI.label(_left, Rect2(PAD, NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_button = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), true)
+	_button.pressed.connect(_get_out)
+	_button2 = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), false)
+	_button2.visible = false
+	_button2.pressed.connect(_second_button)
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.ditching = true
@@ -167,92 +161,96 @@ func show_state(s) -> void:
 	var m: Dictionary = sim.mission
 	var t: Dictionary = m["t"]
 	var low: bool = sim.hp / sim.max_hp() <= 0.35
+	var tier_i: int = int(m["tier"])
+	# the band: the site, the clock as the headline, the fight's progress as the bar
+	var zone_i := 0
+	for z in range(Data.ZONES.size()):
+		if tier_i in Data.ZONES[z]["tiers"]:
+			zone_i = z
+	_band.set_site(t["name"])
+	_band.set_tone(zone_i)
+	_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(m["elapsed"]), "of the run", Pal.ACCENT)
+	_band.headline_under_title(true)
+	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]])
+	_band.set_bar((float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]))
 	# them
-	var them: Dictionary = _panels[0]
-	them["title"].text = "Them"
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	People.show(_head_face, m["boss"]["name"] if boss_on else "")
 	if boss_on:
-		them["title"].text = m["boss"]["name"]
-		_head(them, "1", "on you: the crew's head")
-		_bar(them, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad")
-		_lines(them, [["Incoming", "%.1f/s" % m["last_incoming"]], ["Your fire", "%.0f/s" % (sim.dps() * sim.pace())], ["Kills", "%d" % m["kills"]]])
-		them["note"].text = "The boss"
+		_fight["head"].text = m["boss"]["name"].to_upper()
+		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
+		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad")
 	elif m["remaining"] > 0:
 		var on_you: int = mini(m["remaining"], sim.contact(t))
-		_head(them, "%d" % on_you, ("on you, %d more" % (m["remaining"] - on_you)) if m["remaining"] > on_you else ("on you" if on_you > 1 else "left"))
-		_bar(them, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad")
-		_lines(them, [["Incoming", "%.1f/s" % m["last_incoming"]], ["Your fire", "%.0f/s" % (sim.dps() * sim.pace())], ["Kills", "%d" % m["kills"]]])
-		them["note"].text = "Gang %d" % m["patrols"] if m["cleared"] else ("The fight; then %s" % m["boss"]["name"].to_lower() if m.has("boss") and m["boss"]["alive"] else "The fight")
+		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
+		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you, m["remaining"] - on_you]) if m["remaining"] > on_you else "%d" % on_you, "%d" % on_you]],
+			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
+		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad")
 	else:
-		_head(them, "Clear", "")
-		_bar(them, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), "Picking it over", "good")
+		_fight["head"].text = "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		_lines(them, [["Next gang in", Fmt.mss(next) if next < 1e8 else "never"], ["Gangs so far", "%d" % m["patrols"]], ["Kills", "%d" % m["kills"]]])
-		them["note"].text = "Each gang that comes is bigger than the last"
+		_tiles(_fight["tiles"], [["Next gang", [Fmt.mss(next) if next < 1e8 else "never"]], ["Gangs so far", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
+		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), "Searching", "good")
 	# the runner
-	var op: Dictionary = _panels[1]
-	op["title"].text = "Runner"
-	_head(op, "%d" % sim.hp_shown(), "of %d HP" % sim.max_hp_shown())
-	_bar(op, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good")
+	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good")
+	var gun = sim.equipped["Primary"]
+	var rounds: int = sim.rounds_for(gun) if gun != null else 0
+	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
+		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("dry" if gun != null else "no gun")]]])
+	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 else Pal.TEXT)
 	var on_you_words: Array = sim.dots_on_you()
-	_lines(op, [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]], ["Damage", "%.0f/s" % (sim.dps() * sim.pace())],
-		["On you", ", ".join(on_you_words).capitalize()] if not on_you_words.is_empty() else ["", ""]])
 	var med_sig := ""
 	if m["using"] != null:
-		op["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]
+		_runner["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]
 		med_sig = "using"
+	elif not on_you_words.is_empty():
+		UI.fit(_runner["note"], ["On you: " + ", ".join(on_you_words), "On you: " + str(on_you_words[0])])
+		med_sig = "dots"
 	elif sim.first_med().is_empty():
-		op["note"].text = _rounds_words("No meds")
+		_runner["note"].text = "No meds in the rig"
 		med_sig = "none"
 	else:
-		UI.fit(op["note"], [_rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"]) + " · press a pouch to use one",
-				_rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"])])
+		_runner["note"].text = "Press a pouch to use its med"
 		med_sig = "use:" + sim.first_med()["base"]
 	_show_rig()
-	# the run
-	var run: Dictionary = _panels[2]
-	run["title"].text = t["name"]
-	_head(run, Fmt.mss(m["elapsed"]), "depth %d" % t["depth"])
-	_bar(run, (float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]), "")
-	_lines(run, [["Cash", Fmt.money(m["cash"])], ["Passed over", "%d · swapped %d" % [m["left"], int(m.get("swapped", 0))]]])
-	run["note"].text = "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
+	# the take
+	_tiles(_take_tiles, [["Cash", [Fmt.money(m["cash"])]], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
+	_note.text = "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
-	run["note"].add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
+	_note.add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
-	var sig := "%s|%s|%d|%d|%s|%d|%d|%s" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false))]
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0))]
 	if sig == _shown:
 		return
 	_shown = sig
 	var auto: bool = sim.auto_tier >= 0
 	var filling: bool = m.get("leave_full", false)
-	run["button"].text = "Get out now"
-	run["button"].visible = true
-	UI.style_button(run["button"], low or (m["cleared"] and not filling))
+	_button.text = "Get out now"
+	_button.visible = true
+	UI.style_button(_button, low or (m["cleared"] and not filling))
 	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
-	run["button2"].visible = auto or m["cleared"]
-	run["button2"].text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
-	UI.style_button(run["button2"], false, "good" if (filling and not auto) else "")
-	if run["button2"].visible:
-		run["button"].size.x = (INNER - 12) / 2
-		run["button2"].position.x = PAD + run["button"].size.x + 12
-		run["button2"].size.x = INNER - run["button"].size.x - 12
+	_button2.visible = auto or m["cleared"]
+	_button2.text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
+	UI.style_button(_button2, false, "good" if (filling and not auto) else "")
+	if _button2.visible:
+		_button.size.x = (INNER - 12) / 2
+		_button2.position.x = PAD + _button.size.x + 12
+		_button2.size.x = INNER - _button.size.x - 12
 	else:
-		run["button"].size.x = INNER
+		_button.size.x = INNER
 	_show_pick(m)
 
 
-## The headline and its unit read as one line: "3 on you, 2 more", "80 of 100 HP".
-func _head(d: Dictionary, head: String, unit: String) -> void:
-	d["head"].text = head
-	d["unit"].text = unit
-	var w := ceilf(UI.text_width(d["head"], head)) + 10
-	d["unit"].position.x = PAD + w
-	d["unit"].size.x = INNER - w
+## A bar: its track, its fill and its words, at `y` across the column.
+func _bar_make(d: Dictionary, y: float) -> void:
+	var track := UI.panel(_left, Rect2(PAD, y, INNER, BAR_H), UI.box(Pal.BG, 6))
+	d["track"] = track
+	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
+	d["bar_text"] = UI.label(track, Rect2(0, 0, INNER, BAR_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _bar(d: Dictionary, fill: float, text: String, tone: String) -> void:
@@ -261,10 +259,13 @@ func _bar(d: Dictionary, fill: float, text: String, tone: String) -> void:
 	d["bar_text"].text = text
 
 
-func _lines(d: Dictionary, rows: Array) -> void:
-	for k in range(LINES):
-		d["lines"][k][0].text = rows[k][0] if k < rows.size() else ""
-		d["lines"][k][1].text = rows[k][1] if k < rows.size() else ""
+## The tiles' words: [[key, [long, shorter...]], ...].
+func _tiles(tiles: Array, rows: Array) -> void:
+	for k in range(tiles.size()):
+		if k < rows.size():
+			UI.set_tile(tiles[k], rows[k][0], rows[k][1])
+		else:
+			UI.set_tile(tiles[k], "", [""])
 
 
 func _show_pick(m: Dictionary) -> void:
@@ -352,22 +353,21 @@ func _juice_tick(m: Dictionary) -> void:
 	# One a type, in the type's colour: white for the physical, red for fire, green for poison
 	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0 and float(m["elapsed"]) - _number_at >= 0.3:
 		_number_at = float(m["elapsed"])
-		_numbers_by(m.get("dealt_by", {}), _dealt_seen_by, _panels[0]["panel"], "", 100)
+		_numbers_by(m.get("dealt_by", {}), _dealt_seen_by, FIGHT_BAR_Y, "", 100)
 		_dealt_seen = dealt
 	# and on your own bar: what you took, by type, and green for what came back - counted apart,
 	# so a helmet's +1 a second shows among the hits even when the hits are winning
 	var taken: float = float(m.get("taken", 0.0))
 	var healed: float = float(m.get("healed", 0.0))
 	if juice != null and float(m["elapsed"]) - _hp_at >= 0.5:
-		var you: Panel = _panels[1]["panel"]
 		var shown := false
 		if taken - _taken_seen >= 1.0:
-			_numbers_by(m.get("taken_by", {}), _taken_seen_by, you, "−", 40)
+			_numbers_by(m.get("taken_by", {}), _taken_seen_by, RUNNER_BAR_Y, "−", 40)
 			_taken_seen = taken
 			shown = true
 		if healed - _healed_seen >= 1.0:
 			var n: int = int(round(healed - _healed_seen))
-			juice.number(_scatter(you), "+%d" % n, "good", n >= 40)
+			juice.number(_scatter(RUNNER_BAR_Y), "+%d" % n, "good", n >= 40)
 			_healed_seen = healed
 			shown = true
 		if shown:
@@ -384,19 +384,19 @@ func _juice_tick(m: Dictionary) -> void:
 
 ## A number a type for what's new in `by` since `seen`, each in its type's
 ## colour, scattered along the panel; whole points only, the rest carried.
-func _numbers_by(by: Dictionary, seen: Dictionary, panel: Panel, sign: String, big_at: int) -> void:
+func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sign: String, big_at: int) -> void:
 	for ty in Data.TYPES:
 		var total: float = float(by.get(ty, 0.0))
 		var n: int = int(floor(total - float(seen.get(ty, 0.0))))
 		if n >= 1:
-			juice.number(_scatter(panel), "%s%d" % [sign, n], ty, n >= big_at)
+			juice.number(_scatter(bar_y), "%s%d" % [sign, n], ty, n >= big_at)
 			seen[ty] = float(seen.get(ty, 0.0)) + n
 
 
-## A spot along a panel's bar, at a different height each time, in the juice's own space.
-func _scatter(panel: Panel) -> Vector2:
-	var local := Vector2(PAD + 60 + randf() * (INNER - 120), BAR_Y - 6 + randf_range(-16.0, 16.0))
-	return panel.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
+## A spot along a bar of the column, at a different height each time, in the juice's own space.
+func _scatter(bar_y: float) -> Vector2:
+	var local := Vector2(PAD + 60 + randf() * (INNER - 120), bar_y - 6 + randf_range(-16.0, 16.0))
+	return _left.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
 
 
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
@@ -435,16 +435,6 @@ func _take_pick() -> void:
 	if not it.is_empty() and sim.take_from_pack(it["id"]):
 		_inv.selected = -1
 		acted.emit()
-
-
-## "2 meds · 38 rounds", or "2 meds · dry" when the primary has none left.
-func _rounds_words(lead: String) -> String:
-	var gun = sim.equipped["Primary"]
-	if gun == null:
-		return lead
-	var n: int = sim.rounds_for(gun)
-	return "%s · %s" % [lead, ("%d rounds" % n) if n > 0 else "primary dry"]
-	acted.emit()
 
 
 func _get_out() -> void:
@@ -495,13 +485,15 @@ func text_nodes() -> Array:
 		out.append_array(_pick_head.text_nodes())
 	if _ditch.visible:
 		out.append(_ditch)
-	for d in _panels:
-		out.append_array([d["title"], d["head"], d["unit"], d["bar_text"], d["note"], d["status"]])
-		for pair in d["lines"]:
-			out.append_array(pair)
-		for key in ["button", "button2"]:
-			if d[key].visible:
-				out.append(d[key])
+	if _take.visible:
+		out.append(_take)
+	out.append_array(_band.text_nodes())
+	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _runner["bar_text"], _runner["note"], _rig_head, _take_head, _note])
+	for t in _fight["tiles"] + _runner["tiles"] + _take_tiles:
+		out.append_array([t["key"], t["value"]])
+	for b in [_button, _button2]:
+		if b.visible:
+			out.append(b)
 	out.append_array(_inv.text_nodes())
 	return out
 
@@ -511,8 +503,5 @@ func line_pairs() -> Array:
 	var out := []
 	if _pick_head.visible:
 		out.append_array(_pick_head.line_pairs())
-	for d in _panels:
-		out.append([d["head"], d["unit"]])
-		for pair in d["lines"]:
-			out.append(pair)
+	out.append([_band.headline, _band.unit])
 	return out

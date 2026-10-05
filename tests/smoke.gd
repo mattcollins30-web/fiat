@@ -970,8 +970,7 @@ func _run_screen(main) -> void:
 	_check_fit(main, "Run (live)")
 	# the run's panel sits level with the pack's; the rig's pouches show in the Runner panel; a med found goes in the rig
 	var run_ui = main._run
-	_check(is_equal_approx(run_ui._panels[2]["panel"].position.y, run_ui._pick.position.y), "the run's panel top (%.0f) is not level with the pack's (%.0f)" % [run_ui._panels[2]["panel"].position.y, run_ui._pick.position.y])
-	_check(run_ui._panels[1]["panel"].position.y + run_ui._panels[1]["panel"].size.y + run_ui.PANEL_GAP <= run_ui._panels[2]["panel"].position.y + 0.5, "the Runner panel runs into the run's")
+	_check(run_ui._left.size.y == Pal.ROOM_H and run_ui._band.size.x == run_ui.BODY_W, "the run's column is not the room's height with the band across it")
 	var shown_cells := 0
 	var shown_outlines := 0
 	for c in run_ui._rig_cells:
@@ -983,9 +982,9 @@ func _run_screen(main) -> void:
 	_check(shown_cells == mini(sim.rig.size(), run_ui.RIG_MAX) and shown_cells + shown_outlines == mini(sim.med_capacity(), run_ui.RIG_MAX), "the rig on the run screen shows %d cells and %d empty pouches for %d of %d" % [shown_cells, shown_outlines, sim.rig.size(), sim.med_capacity()])
 	for c in run_ui._rig_cells:
 		if c.visible:
-			var pr := Rect2(Vector2.ZERO, run_ui._panels[1]["panel"].size)
+			var pr := Rect2(Vector2.ZERO, run_ui._left.size)
 			_check(pr.encloses(Rect2(c.position, c.size)), "a rig cell on the run screen leaves its panel: cell %s, panel %s" % [str(Rect2(c.position, c.size)), str(pr)])
-	_check(not run_ui._panels[1]["button"].visible, "the Runner panel still has a Use button; the pouches are the controls")
+			_check(c.position.y >= run_ui.RIG_Y and c.position.y + c.size.y <= run_ui.TAKE_Y, "a rig cell sits outside the rig's row")
 	# a pouch is the control: pressing a med's cell uses it
 	if sim.med_capacity() > 0 and sim.mission["using"] == null:
 		while not sim.rig_room(1) and not sim.rig.is_empty():
@@ -3056,10 +3055,12 @@ func _juice_checks(main) -> void:
 	_check(float(sim.mission.get("healed", 0.0)) - healed0 >= 9.0, "five seconds of +2 regen did not count as healed: %.1f" % (float(sim.mission.get("healed", 0.0)) - healed0))
 	_check(float(sim.mission.get("taken", 0.0)) > taken0, "their fire did not count as taken")
 	sim.equipped["Helmet"] = hold
-	var you_y: float = main._run._panels[1]["panel"].global_position.y
-	var them_y: float = main._run._panels[0]["panel"].global_position.y
+	var you_y: float = main._run._left.global_position.y + main._run.RUNNER_BAR_Y
+	var them_y: float = main._run._left.global_position.y + main._run.FIGHT_BAR_Y
 	var reds: Array = main._juice._numbers.filter(func(n): return n["label"].text.begins_with("−") or n["label"].text.begins_with("+"))
-	_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 300), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
+	_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 40), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
+	var whites: Array = main._juice._numbers.filter(func(n): return not (n["label"].text.begins_with("−") or n["label"].text.begins_with("+")))
+	_check(whites.all(func(n): return n["from"] > them_y - main._juice.global_position.y - 40 and n["from"] < them_y - main._juice.global_position.y + 40), "the hits are not on their bar")
 	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
 	rare["rarity"] = 2
 	sim.mission["found"].append(rare)
@@ -4176,8 +4177,13 @@ func _yard_checks(main) -> void:
 	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 20, "tier": 2}]
 	sim.equipped["Primary"] = torch
 	main.refresh()
-	_check(elements._values[fire_row].text.begins_with("deal 20%"), "with 20%% as fire the Elements card reads '%s'" % elements._values[fire_row].text)
-	_check(elements._headline.text == "20%", "the Elements headline is '%s', not 20%%" % elements._headline.text)
+	# the card reads the whole conversion: the torch's 20 and whatever the tree adds
+	var fire_share: int = int(round(float(sim.conversion().get("fire", 0.0)) * 100.0))
+	_check(fire_share >= 20 and elements._values[fire_row].text.begins_with("deal %d%%" % fire_share), "with %d%% as fire the Elements card reads '%s'" % [fire_share, elements._values[fire_row].text])
+	var total_share: int = 0
+	for ty in Data.ELEMENTS:
+		total_share += int(round(float(sim.conversion().get(ty, 0.0)) * 100.0))
+	_check(elements._headline.text == "%d%%" % total_share or elements._headline.text == "%d%%" % fire_share, "the Elements headline is '%s', not %d%%" % [elements._headline.text, total_share])
 	sim.equipped["Primary"] = hold_gun
 	# the runner's trait reads as a stat: a chip with its figures on the Runner card, a line on the Caravan
 	var runner_card = main._cards[titles.find("Runner")]
@@ -4261,14 +4267,23 @@ func _fill_up_checks(main) -> void:
 	var m: Dictionary = sim.mission
 	main.show_room(main.MISSIONS)
 	main.refresh()
-	_check(not main._run._panels[2]["button2"].visible, "the second button shows before the clear on a manual run")
+	# the run screen's column: the band carries the site and the clock, the sections stack without overlap, the buttons at the foot
+	var rn = main._run
+	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text.begins_with("Depth "), "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
+	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
+	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.LINE_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
+	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Cash", "the run's tiles are off")
+	# the crew head's face sits between the band and the fight tiles, never on either
+	var face_r := Rect2(rn._head_face.position, rn._head_face.size)
+	_check(face_r.position.y >= rn.BAND_H and face_r.end.y <= rn.FIGHT_TILES_Y, "the head's face (%s) runs into the band or the tiles" % str(face_r))
+	_check(not main._run._button2.visible, "the second button shows before the clear on a manual run")
 	m["remaining"] = 0
 	sim._clear(m, m["t"])
 	main.refresh()
-	_check(main._run._panels[2]["button2"].visible and main._run._panels[2]["button2"].text == "Fill up, then go", "after the clear the second button reads '%s'" % main._run._panels[2]["button2"].text)
+	_check(main._run._button2.visible and main._run._button2.text == "Fill up, then go", "after the clear the second button reads '%s'" % main._run._button2.text)
 	main._run._second_button()
 	main.refresh()
-	_check(m.get("leave_full", false) and main._run._panels[2]["button2"].text.begins_with("Filling up"), "the button did not set the run to fill up then go")
+	_check(m.get("leave_full", false) and main._run._button2.text.begins_with("Filling up"), "the button did not set the run to fill up then go")
 	_check_fit(main, "Run (fill up)")
 	# a gang arriving ends it
 	var runs_before: int = sim.runs_total

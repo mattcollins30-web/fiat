@@ -1571,6 +1571,18 @@ it, the odds bands fit the band's foot, the tiles' keys, the word rows right-ali
 depth buttons inside their tile with a minimum no taller than their box, the sky's tone following the zone.
 A reviewer pass caught the tone never following the zone and the depth buttons under Button's minimum height.
 
+**The run in flow** (`run.gd`): the three left panels are one column. The band carries depth · zone, the
+site, the clock as the headline, cash and gangs so far on the right, and the fight's progress as the bar along
+its foot (the search's "Cleared" once the pool's down). Then THE FIGHT (on you, incoming, your fire, kills as
+tiles; their HP bar, or the search bar and next gang / gangs so far / kills / found while picking over; the
+crew head's face between the band and the tiles on a boss fight), THE RUNNER (your HP bar; armour, damage,
+meds, rounds as tiles, rounds red when dry; a note: the med in use, what's on you, no meds, press a pouch),
+THE RIG (the pouches as before), THE TAKE (cash, passed over, swapped, pack), the run's own line, the two
+buttons. The hit numbers scatter over their bar, yours and the heals over your bar. Smoke: the band's words
+and bar, the sections' order with no overlap, the tiles' keys, the face clear of the band and the tiles, the
+hits on their bar and the reds on yours; a reviewer pass caught the face on the Kills tile, the Take button
+missing from the fit list, and a same-size swap leaving the pick panel stale (swapped is in the sig now).
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a
