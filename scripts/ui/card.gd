@@ -230,7 +230,11 @@ func show_data(d: Dictionary) -> void:
 		_labels[i].add_theme_color_override("font_color", Pal.tone_color(lines[i][3]) if on and lines[i].size() > 3 and lines[i][3] != "" else Pal.TEXT_2)
 		_labels[i].position.y = _lines_y + (i + first) * Pal.LINE_H
 		_values[i].position.y = _labels[i].position.y
-	_note.text = d.get("note", "")
+	var note = d.get("note", "")
+	if note is Array:
+		UI.fit(_note, note)              # the note's forms, long to short
+	else:
+		_note.text = str(note)
 	_note.add_theme_color_override("font_color", Pal.tone_color(d.get("note_tone", "")))
 	var tone: String = d.get("tone", "")
 	_edge.visible = tone != ""

@@ -708,7 +708,7 @@ func _camp_cards() -> Array:
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
 			["Pace", "×%.2f" % sim.pace()], ["Pack · rig", "%d cells · %d" % [sim.capacity(), sim.med_capacity()]]],
 		"status": "Runners lost: %d" % sim.operators_lost,
-		"note": sim.next_words(true),
+		"note": [sim.next_words(true), sim.next_words(true).replace(" on Runs", "")],     # "Arm the quartermaster on Runs" is the long one
 	})
 	# the elements: what you deal as each, what you resist of each
 	var conv: Dictionary = sim.conversion()

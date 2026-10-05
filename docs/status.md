@@ -1637,9 +1637,11 @@ wraps. Smoke: both buttons present, the name centred and fitting between them, n
 the same tree, back from the first wraps to the last, fit checks on the way. The checks caught "The rat man"
 at 151 px in a 150 px button and the name at 166 px between 170 px buttons, which set the widths.
 
-The design canvas now holds the A style on every screen (Runs cards A picked; the run in flow, bench, clinic,
-fence, radio as drawn; the Caravan as D, tiles two across with a rail). Build order: Runs cards, run in flow,
-then the rest.
+The design canvas holds the A style on every screen (Runs cards A picked; the run in flow, bench, clinic,
+fence, radio as drawn; the Caravan as D, tiles two across with a rail). All built, each its own commit with
+a reviewer pass before it; the clip probe over Matt's save runs clean (it caught the Runner card's
+"Arm the quartermaster on Runs" at 355 px in 332: a card's note takes forms now, and the Yard drops
+" on Runs" when the long one won't fit). The Yard and the Lock-up are as they were.
 
 ## The Finds card's figures, checked against a save (2026-10-05)
 

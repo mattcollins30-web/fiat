@@ -3296,6 +3296,10 @@ func _playtest_checks(main) -> void:
 	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
 	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.begins_with("Tier 1 · "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
 	_check(c["tiles"][0]["key"].text == "Them" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight", "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
+	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
+	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
+	if yard_note != null and yard_note.text != "":
+		_check(UI.text_width(yard_note, yard_note.text) <= yard_note.size.x + 0.5, "the Runner card's note trails off: '%s'" % yard_note.text)
 	# the depth's −/+ sit inside their tile, one above the other, never on each other
 	var du = c["depth_up"]
 	var dd = c["depth_down"]
