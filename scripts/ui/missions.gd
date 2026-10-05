@@ -138,7 +138,13 @@ func _init() -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel) + str(sim.weather) + str(int(sim.elapsed / 60.0)), sim.auto_tier,
+	# the odds read a few dry runs a refresh (the shell's budget) until every open tier has settled
+	var settled := ""
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i) and not sim.odds_settled(i):
+			sim.survival(i)
+		settled += "1" if sim.odds_settled(i) else "0"
+	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
 		return
@@ -175,8 +181,9 @@ func show_state(s) -> void:
 		c["name"].add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
 		if is_open:
 			c["odds"].text = Fmt.pct(odds)
-			c["odds"].add_theme_color_override("font_color", Pal.tone_color(tone))
-			c["odds_unit"].text = "to clear the fight"
+			# still reading: dimmer, and the screen keeps refreshing until it's settled
+			c["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
+			c["odds_unit"].text = "to clear the fight" if sim.odds_settled(i) else "reading the odds"
 		else:
 			c["odds"].text = "Locked"
 			c["odds"].add_theme_color_override("font_color", Pal.TEXT_3)

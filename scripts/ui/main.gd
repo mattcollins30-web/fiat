@@ -37,6 +37,7 @@ const SLOTS := 3
 const SAVE_VERSION := 1
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
+const ODDS_BUDGET := 3              # dry runs a tier a refresh on the Runs screen: nine tiers settle in about a second
 const OVERVIEW := "The Yard"
 const MISSIONS := "Runs"
 const ARMOURY := "Lock-up"
@@ -410,6 +411,7 @@ func _quit_to_title() -> void:
 
 func new_game(hardcore := false) -> void:
 	sim = Sim.new()
+	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.hardcore = hardcore
 	sim.start()
 	room = OVERVIEW
@@ -437,6 +439,7 @@ func load_game(path := SAVE_FILE) -> void:
 	if d.is_empty():
 		return
 	sim = Sim.new()
+	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.load_dict(d["sim"])
 	room = OVERVIEW
 	speed = 1.0

@@ -2826,7 +2826,31 @@ func _playtest_checks(main) -> void:
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	sim.load_dict(saved)
-	print("the playtest's five ok: HP, Locked, the toasts, the log line, a paper in the Lock-up")
+	# the odds read over a few refreshes with a budget, and settle; without one, all at once
+	sim._surv_cache = {}
+	sim.odds_budget = 3
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	main.refresh()
+	var open_tiers := 0
+	var settled_at_once := 0
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i):
+			open_tiers += 1
+			if sim.odds_settled(i):
+				settled_at_once += 1
+	_check(settled_at_once < open_tiers or Data.LOOKOUT_LEVELS[sim.lookout_level]["runs"] <= 3, "a budget of three read every tier in one go")
+	for k in range(40):
+		main._missions._shown = ""
+		main.refresh()
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i):
+			_check(sim.odds_settled(i), "tier %d's odds never settled" % i)
+	_check_fit(main, "Runs (odds settled)")
+	sim.odds_budget = 0
+	sim._surv_cache = {}
+	_check(sim.survival(0) >= 0.0 and sim.odds_settled(0), "without a budget the odds did not read at once")
+	print("the playtest's five ok: HP, Locked, the toasts, the log line, a paper in the Lock-up; the odds settle over refreshes")
 
 
 func _recycle_checks(main) -> void:

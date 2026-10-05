@@ -775,6 +775,20 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The Runs screen's lag (2026-10-05)
+
+Matt: "a few seconds between clicking the menu and the menu appearing", only on Runs. Cause: the
+odds are the real fight run dry now, and the Runs screen asked for nine tiers' worth at once -
+up to 9 × 24 fights of 450 ticks - whenever the cache missed (a tenth of the HP bar, a word, the
+weather). The shell gives the sim a budget (`odds_budget`, 3 dry runs a tier a refresh): the
+screen comes up at once with the odds dimmed and "reading the odds" under them, keeps refreshing
+while any open tier is unsettled, and settles in about a second. The bots and the tests leave
+the budget at 0 and get the whole answer in one call, as before. The cache key carries the
+weather and the clock's night too, since they change the fight.
+
+Asserted: with a budget of three a refresh does not settle every tier at once; forty refreshes
+settle them all; the screen fits settling and settled; without a budget the odds read at once.
+
 ## From the playtest, 5 Oct (Matt's six)
 
 1. *HP read 94 of 93.* The bar ceilinged your HP and floored the max. `hp_shown()` / `max_hp_shown()`

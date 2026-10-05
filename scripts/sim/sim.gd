@@ -2027,21 +2027,37 @@ func estimate(i: int) -> float:
 
 ## The chance of clearing the fight alive from here, from SURVIVAL_RUNS dry
 ## runs with the swing in. Cached until the figures it depends on change.
+## The shell sets a budget: that many dry runs a call, the rest on later
+## calls, so the Runs screen settles over a few frames rather than hanging
+## while nine tiers read at once. The bots and the tests leave it at 0: all at once.
+var odds_budget := 0
+
 func survival(i: int) -> float:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second
-	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas)]
-	if _surv_cache.has(i) and _surv_cache[i][0] == key:
-		return _surv_cache[i][1]
-	var r := RandomNumberGenerator.new()
-	r.seed = hash(key) + i
-	var alive := 0
+	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night()]
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
-	for k in range(runs):
-		if _dry_run(i, r):
-			alive += 1
-	var odds := float(alive) / runs
-	_surv_cache[i] = [key, odds]
-	return odds
+	var c: Array
+	if _surv_cache.has(i) and _surv_cache[i][0] == key:
+		c = _surv_cache[i]
+		if c[2] >= runs:
+			return c[1]
+	else:
+		var r := RandomNumberGenerator.new()
+		r.seed = hash(key) + i
+		c = [key, 0.0, 0, 0, r]              # key, odds so far, runs done, alive, the dice
+		_surv_cache[i] = c
+	var to_do: int = runs - c[2] if odds_budget <= 0 else mini(odds_budget, runs - c[2])
+	for k in range(to_do):
+		if _dry_run(i, c[4]):
+			c[3] += 1
+		c[2] += 1
+	c[1] = float(c[3]) / maxf(1.0, c[2])
+	return c[1]
+
+
+## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).
+func odds_settled(i: int) -> bool:
+	return _surv_cache.has(i) and _surv_cache[i][2] >= int(Data.LOOKOUT_LEVELS[lookout_level]["runs"])
 
 
 ## The fight alone, run through the real fight code on a scratch mission with
