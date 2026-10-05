@@ -1583,6 +1583,17 @@ and bar, the sections' order with no overlap, the tiles' keys, the face clear of
 hits on their bar and the reds on yours; a reviewer pass caught the face on the Kills tile, the Take button
 missing from the fit list, and a same-size swap leaving the pick panel stale (swapped is in the sig now).
 
+**The bench** (`workshop.gd`): the bottom panel is gone. The band carries "The bench · Level N" with what the
+level fits beside it, the next level and its cost on the right (or "The top bench"), the Upgrade button at
+its top right and Guns / Sockets / Craft along its foot. Each gun: its head (slot, figure, name), a chip row
+(type, rarity in its tone, "5 fitted" in green), and its mounts as six tiles three across, the fitted part's
+name in its tier's colour (`Pal.tier_color`) with the rarity's bar down the tile's left; a name too long for
+its tile falls back to its first word ("Drum" under "Magazine"; `_short_names`), never an ellipsis. The
+sockets view is the same shape, two tiles a group. Smoke: the band's level and words at every bench level,
+the upgrade inside the band, a fitted tile in its part's tier colour, a drum magazine on a tile, and a bench
+job on the craft view's piece showing without a re-pick (the reviewer caught the craft view's signature not
+reading the piece: notes, last_craft and the piece's level, affixes and sockets are in it now).
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a

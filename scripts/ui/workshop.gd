@@ -18,15 +18,22 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
+const Band := preload("res://scripts/ui/band.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
-const HEAD_H := 64
-const ROW_H := 46
-const ROW_GAP := 6
-const VIEW_H := 36                 # the Guns / Sockets toggle across the top
+const HEAD_H := 64                 # a gun's head: its slot and figure over its name
+const CHIPS_H := Chips.CHIP_H + 8  # the chip row under a gun's head
+const TILE_COLS := 3               # a gun's mounts as tiles, three across
+const TILES := 6                   # five mounts and a spare, two rows
+const ROW_GAP := 8
+const VIEW_H := 36                 # the Guns / Sockets / Craft toggle, along the band's foot
+const VIEW_W := 140
+const UPGRADE_W := 270             # the upgrade button at the band's top right
 const SOCK_HEAD_H := 44
-const BENCH_H := 136               # title, words, a gap, the upgrade button
+const BAND_H := 200                # the bench's band: its level, what it fits, what the next level adds
+const TOP := BAND_H + 14           # the column under the band
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.HEIGHT
@@ -50,9 +57,8 @@ var sel_mount := ""
 var sel_id := -1                   # a stash attachment selected, or -1
 var _guns := {}                    # slot -> {head, name, figure, rows: {mount -> {button, mount, fitted}}}
 var _inv
-var _bench: Panel
-var _bench_title: Label
-var _bench_words: Label
+var _band: Band
+var _bench_words: Label            # the band's unit: what the level fits, or what the next level adds
 var _upgrade: Button
 var _panel: Panel
 var _left_title: Label
@@ -69,45 +75,58 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	# the band: the bench's level as the headline, the views and the upgrade along its foot
+	_band = Band.new(BODY_W, BAND_H, 3)
+	add_child(_band)
+	_bench_words = _band.unit
+	var vy := BAND_H - 14 - VIEW_H
 	for i in range(3):
-		var vw := (BODY_W - 6) / 3
-		var v := UI.button(self, Rect2(i * (vw + 3), 0, vw, VIEW_H), i == 0)
+		var v := UI.button(self, Rect2(PAD + i * (VIEW_W + 6), vy, VIEW_W, VIEW_H), i == 0)
 		v.text = ["Guns", "Sockets", "Craft"][i]
 		v.pressed.connect(_set_view.bind(["guns", "sockets", "craft"][i]))
 		_views.append(v)
+	_upgrade = UI.button(self, Rect2(BODY_W - PAD - UPGRADE_W, 12, UPGRADE_W, 40), true)
+	_upgrade.pressed.connect(_on_upgrade)
+	_band.right_from(60)
 	# the Craft view: the picked piece's affixes with their tiers, down the left
-	_craft = UI.panel(self, Rect2(0, VIEW_H + ROW_GAP, BODY_W, 420), UI.box(Pal.PANEL, 8))
+	_craft = UI.panel(self, Rect2(0, TOP, BODY_W, 420), UI.box(Pal.PANEL, 8))
 	_craft.visible = false
 	_craft_title = UI.label(_craft, Rect2(PAD, 12, BODY_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(CRAFT_LINES):
 		_craft_lines.append(UI.label(_craft, Rect2(PAD, 56 + i * 30, BODY_W - 2 * PAD, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	var y := VIEW_H + ROW_GAP
+	var y := TOP
+	var tw := (BODY_W - 2 * PAD - ROW_GAP * (TILE_COLS - 1)) / TILE_COLS
 	for slot in GUNS:
 		var g := {}
 		var head := UI.panel(self, Rect2(0, y, BODY_W, HEAD_H), UI.box(Pal.PANEL, 8))
 		g["head"] = head
-		g["label"] = UI.label(head, Rect2(PAD, 0, 200, 26), slot, "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		g["figure"] = UI.label(head, Rect2(BODY_W - PAD - 150, 0, 150, 26), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+		g["label"] = UI.label(head, Rect2(PAD, 0, BODY_W - 2 * PAD, 26), slot, "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		g["figure"] = UI.label(head, Rect2(PAD, 0, BODY_W - 2 * PAD, 26), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
 		g["name"] = UI.label(head, Rect2(PAD, 30, BODY_W - 2 * PAD, 32), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		y += HEAD_H + ROW_GAP
-		g["rows"] = []                       # five rows; which mount each shows is the gun's (a bat has a grip and a head)
-		for k in range(ROWS_A_GUN):
+		y += HEAD_H + 4
+		# the gun's chips: its type, rarity, what's fitted
+		g["chips"] = Chips.new(BODY_W - 2 * PAD)
+		g["chips"].position = Vector2(PAD, y)
+		add_child(g["chips"])
+		y += CHIPS_H
+		g["rows"] = []                       # six tiles; which mount each shows is the gun's (a bat has a grip and a head)
+		for k in range(TILES):
 			var b := Button.new()
-			b.position = Vector2(0, y)
-			b.size = Vector2(BODY_W, ROW_H)
+			b.position = Vector2(PAD + (k % TILE_COLS) * (tw + ROW_GAP), y + (k / TILE_COLS) * (UI.TILE_H + ROW_GAP))
+			b.size = Vector2(tw, UI.TILE_H)
 			b.text = ""
 			b.focus_mode = Control.FOCUS_ALL
 			b.pressed.connect(_pick_row.bind(slot, k))
 			add_child(b)
 			var r := {"button": b, "key": ""}
-			r["mount"] = UI.label(b, Rect2(PAD, 0, 190, ROW_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			r["fitted"] = UI.label(b, Rect2(PAD, 0, BODY_W - 2 * PAD, ROW_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+			r["mount"] = UI.label(b, Rect2(10, 4, tw - 20, 22), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["fitted"] = UI.label(b, Rect2(10, 26, tw - 20, 30), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			g["rows"].append(r)
-			y += ROW_H + ROW_GAP
-		y += 10
+		y += 2 * UI.TILE_H + ROW_GAP + 16
 		_guns[slot] = g
 	# the sockets view: the same shape, four groups, two rows each
-	y = VIEW_H + ROW_GAP
+	y = TOP
+	var sw := (BODY_W - 2 * PAD - ROW_GAP) / 2
 	for slot in Data.SOCKET_SLOTS:
 		var g := {}
 		var head := UI.panel(self, Rect2(0, y, BODY_W, SOCK_HEAD_H), UI.box(Pal.PANEL, 8))
@@ -119,26 +138,19 @@ func _init() -> void:
 		for k in range(Data.SOCKET_MAX):
 			var mount := "socket %d" % (k + 1)
 			var b := Button.new()
-			b.position = Vector2(0, y)
-			b.size = Vector2(BODY_W, ROW_H)
+			b.position = Vector2(PAD + k * (sw + ROW_GAP), y)
+			b.size = Vector2(sw, UI.TILE_H)
 			b.text = ""
 			b.focus_mode = Control.FOCUS_ALL
 			b.pressed.connect(_pick_mount.bind(slot, mount))
 			add_child(b)
 			var r := {"button": b}
-			r["mount"] = UI.label(b, Rect2(PAD, 0, 190, ROW_H), Items.mount_name(mount), "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			r["fitted"] = UI.label(b, Rect2(PAD, 0, BODY_W - 2 * PAD, ROW_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+			r["mount"] = UI.label(b, Rect2(10, 4, sw - 20, 22), Items.mount_name(mount), "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["fitted"] = UI.label(b, Rect2(10, 26, sw - 20, 30), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			g["rows"][mount] = r
-			y += ROW_H + ROW_GAP
-		y += 10
+		y += UI.TILE_H + ROW_GAP + 10
 		_socks[slot] = g
 	_show_view()
-	# the bench's level, under the guns
-	_bench = UI.panel(self, Rect2(0, Pal.ROOM_H - BENCH_H, BODY_W, BENCH_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_bench_title = UI.label(_bench, Rect2(PAD, 10, BODY_W - 2 * PAD, 30), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_bench_words = UI.label(_bench, Rect2(PAD, 40, BODY_W - 2 * PAD, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_upgrade = UI.button(_bench, Rect2(PAD, BENCH_H - 12 - 44, BODY_W - 2 * PAD, 44), true)
-	_upgrade.pressed.connect(_on_upgrade)
 	# the grid: the stash's attachments, for the selected mount when one is
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
@@ -211,14 +223,22 @@ func show_state(s) -> void:
 			g["name"].text = gun["base"]
 			g["name"].add_theme_color_override("font_color", Pal.TEXT)
 			UI.fit(g["figure"], ["%.0f dmg/s · %s" % [Items.dps(gun), Items.ammo_words(gun).trim_prefix("Takes ")], "%.0f dmg/s" % Items.dps(gun)])
+		# the chips: the slot, the type, the rarity in its tone, what's fitted
+		g["chips"].visible = view == "guns" and gun != null
+		if gun != null:
+			var fw: Array = Items.fitted_words(gun)
+			var fitted_chip: String = fw[2] if fw.size() > 2 else fw[0]          # "5 fitted", or "nothing fitted" / "no mounts"
+			var type_word: String = str(Items.base_of(gun).get("type", "gun"))
+			g["chips"].show_chips([[type_word.to_upper() if type_word == "smg" else type_word.capitalize(), Pal.TEXT_2], [Items.rarity_name(gun), Pal.tone_color(rarity_tone(gun)) if rarity_tone(gun) != "" else Pal.TEXT_2],
+				[fitted_chip, Pal.GOOD if fw.size() > 2 else Pal.TEXT_2]])
 		var mounts: Array = _mounts_of(gun)
-		for k in range(ROWS_A_GUN):
+		for k in range(TILES):
 			var r: Dictionary = g["rows"][k]
 			var mount: String = mounts[k] if k < mounts.size() else ""
 			r["key"] = mount
 			var has: bool = mount != ""
 			var on: bool = sel_slot == slot and sel_mount == mount and mount != ""
-			r["button"].visible = view == "guns"
+			r["button"].visible = view == "guns" and (has or (gun != null and k < ROWS_A_GUN))
 			r["mount"].text = Items.mount_name(mount) if mount != "" else ("—" if gun != null else "")
 			if not has:
 				r["fitted"].text = ""
@@ -238,8 +258,8 @@ func show_state(s) -> void:
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
 				_style(r["button"], on)
 			else:
-				r["fitted"].text = a["base"]
-				r["fitted"].add_theme_color_override("font_color", Pal.TEXT)
+				UI.fit(r["fitted"], _short_names(a["base"]))
+				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))     # the part's tier, as the Lock-up bands it
 				_style(r["button"], on, rarity_tone(a))
 	for slot in Data.SOCKET_SLOTS:
 		var g: Dictionary = _socks[slot]
@@ -283,16 +303,18 @@ func show_state(s) -> void:
 				_style(r["button"], on)
 			else:
 				r["fitted"].text = a["base"]
-				r["fitted"].add_theme_color_override("font_color", Pal.TEXT)
+				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))
 				_style(r["button"], on, rarity_tone(a))
 	# the bench
 	# the level and what it fits; under it, what the next level adds, so the
 	# upgrade's price buys something the player can read
 	var level: Dictionary = Data.WORKSHOP[sim.workshop]
 	var fits: String = ", ".join(level["mounts"].map(func(m): return m + "s"))
-	UI.fit(_bench_title, ["Bench level %d · %s" % [sim.workshop, fits] if fits != "" else "Bench level %d" % sim.workshop, "Bench level %d" % sim.workshop])
+	_band.set_words("The yard's works", "The bench", "Level %d" % sim.workshop, "", Pal.ACCENT)
+	_band.headline_under_title(true)
+	UI.fit(_bench_words, [("fits %s" % fits) if fits != "" else str(level["words"]).to_lower(), str(level["words"]).to_lower(), "fits %d mounts" % level["mounts"].size()])
 	if sim.workshop >= Data.WORKSHOP.size() - 1:
-		_bench_words.text = level["words"]
+		_band.set_right(["The top bench"])
 		_upgrade.visible = false
 	else:
 		var next: Dictionary = Data.WORKSHOP[sim.workshop + 1]
@@ -300,11 +322,28 @@ func show_state(s) -> void:
 		for m in next["mounts"]:
 			if not (m in level["mounts"]):
 				added.append(m + "s")
-		UI.fit(_bench_words, ["Next: %s" % _and(added) if not added.is_empty() else next["words"], next["words"]])
+		var adds: String = ("Next: %s" % _and(added)) if not added.is_empty() else ("Next: %s" % str(next["words"]).to_lower())
+		var adds_short: String = ("Next: %d more mount%s" % [added.size(), "" if added.size() == 1 else "s"]) if not added.is_empty() else "Next level"
+		_band.set_right(["Level %d, %s" % [sim.workshop + 1, Fmt.money(sim.workshop_cost())], adds if UI.text_width(_band.right[1], adds) <= _band.RIGHT_W else adds_short])
 		_upgrade.visible = true
-		_upgrade.text = "Upgrade for %s" % Fmt.money(sim.workshop_cost())
+		var long_up := "Upgrade for %s" % Fmt.money(sim.workshop_cost())
+		_upgrade.text = long_up if UI.text_width(_upgrade, long_up) + 32 <= UPGRADE_W else "Upgrade %s" % Fmt.money(sim.workshop_cost())
 		_upgrade.disabled = not sim.can_upgrade_workshop()
+	# the unit beside the level, fitted once the right-hand lines have taken their width
+	var n_mounts: int = level["mounts"].size()
+	UI.fit(_bench_words, [("fits %s" % fits) if fits != "" else str(level["words"]).to_lower(), ("fits %d mount%s" % [n_mounts, "" if n_mounts == 1 else "s"]) if n_mounts > 0 else "fits nothing yet", "fits %d" % n_mounts if n_mounts > 0 else "nothing"])
 	_show_panel()
+
+
+## A part's name as it fits a tile: whole, then its first word ("Drum" under
+## "Magazine"), then its first word cut to six letters; never an ellipsis.
+static func _short_names(base: String) -> Array:
+	var words: PackedStringArray = base.split(" ", false)
+	var out: Array = [base]
+	if words.size() > 1 and words[0].length() >= 3:
+		out.append(words[0])
+	out.append(words[0].substr(0, 6) if not words.is_empty() else base)
+	return out
 
 
 ## "optics, muzzles and grips".
@@ -351,7 +390,12 @@ func _all_attachments(socketables: bool) -> Array:
 
 
 func _signature() -> String:
-	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sim.on_mission()), str(sim.workshop), str(int(sim.cash) / 100), str(_inv.many)]
+	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sim.on_mission()), str(sim.workshop), str(int(sim.cash) / 100), str(_inv.many),
+		str(sim.notes), str(sim.last_craft.get("id", -1))]
+	# the craft view's piece changes under the bench: its level, affixes and sockets are in the signature too
+	var picked := _selected_item()
+	if not picked.is_empty():
+		parts.append(str(hash([picked.get("ilvl", 0), picked.get("affixes", []), picked.get("attachments", {}).keys()])))
 	for slot in Data.SOCKET_SLOTS:
 		var gun = sim.equipped[slot]
 		if gun == null:
@@ -583,8 +627,9 @@ func _show_view() -> void:
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["head"].visible = view == "guns"
+		g["chips"].visible = view == "guns" and g["chips"].visible
 		for r in g["rows"]:
-			r["button"].visible = view == "guns"
+			r["button"].visible = view == "guns" and r["button"].visible
 	for slot in Data.SOCKET_SLOTS:
 		var g: Dictionary = _socks[slot]
 		g["head"].visible = view == "sockets"
@@ -665,7 +710,8 @@ func _say(it: Dictionary) -> void:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_left_title, _right_title, _hint, _bench_title, _bench_words]
+	var out: Array = [_left_title, _right_title, _hint]
+	out.append_array(_band.text_nodes())
 	out.append_array(_words)
 	if _upgrade.visible:
 		out.append(_upgrade)
@@ -679,8 +725,11 @@ func text_nodes() -> Array:
 		for slot in GUNS:
 			var g: Dictionary = _guns[slot]
 			out.append_array([g["label"], g["name"], g["figure"]])
+			if g["chips"].visible:
+				out.append_array(g["chips"].text_nodes())
 			for r in g["rows"]:
-				out.append_array([r["mount"], r["fitted"]])
+				if r["button"].visible:
+					out.append_array([r["mount"], r["fitted"]])
 	else:
 		for slot in Data.SOCKET_SLOTS:
 			var g: Dictionary = _socks[slot]
@@ -695,15 +744,14 @@ func text_nodes() -> Array:
 	return out
 
 
-## A mount row's name and fitted text share the row.
+## A mount tile's name sits over its fitted part now, so no pair shares a line;
+## the gun's head keeps its slot and figure on one.
 func line_pairs() -> Array:
 	var out: Array = []
-	var groups: Dictionary = _guns if view == "guns" else _socks
-	for slot in groups:
-		var rows = groups[slot]["rows"]
-		for r in (rows if rows is Array else rows.values()):
-			if r["fitted"].text != "":
-				out.append([r["mount"], r["fitted"]])
-		if view == "sockets":
-			out.append([groups[slot]["label"], groups[slot]["name"]])
+	if view == "guns":
+		for slot in GUNS:
+			out.append([_guns[slot]["label"], _guns[slot]["figure"]])
+	elif view == "sockets":
+		for slot in Data.SOCKET_SLOTS:
+			out.append([_socks[slot]["label"], _socks[slot]["name"]])
 	return out

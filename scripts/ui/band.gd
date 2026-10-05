@@ -33,6 +33,8 @@ var _bar_label: Label
 var _tone := 0
 var _seed := 0
 var _fade_to := Pal.CARD
+var _under := false                   # the headline under the title, the unit beside it
+var _right_any := false               # right-hand lines showing: the unit keeps clear of them
 
 
 ## `w` × `h` at the parent's top left; `tone` picks the sky; `fade_to` is the panel colour under it.
@@ -73,6 +75,7 @@ func set_words(k: String, t: String, h: String, u: String, headline_colour := Pa
 
 ## Where the headline sits: at the foot (the default) or under the title, with the unit beside it.
 func headline_under_title(on: bool) -> void:
+	_under = on
 	if on:
 		headline.position.y = 78
 		headline.size.y = 44
@@ -80,7 +83,7 @@ func headline_under_title(on: bool) -> void:
 		unit.size.y = 36
 		unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		unit.position.x = PAD + ceilf(UI.text_width(headline, headline.text)) + 10
-		unit.size.x = size.x - unit.position.x - PAD
+		unit.size.x = size.x - unit.position.x - PAD - (RIGHT_W + 12 if _right_any else 0)
 	else:
 		headline.position.y = size.y - 60
 		headline.size.y = 48
@@ -91,6 +94,12 @@ func headline_under_title(on: bool) -> void:
 		unit.size.x = size.x - 2 * PAD
 
 
+## Where the right-hand lines start: lower when something sits over them (the bench's upgrade button).
+func right_from(y: float) -> void:
+	for k in range(RIGHT_LINES):
+		right[k].position.y = y + k * 24
+
+
 ## The right-hand lines, top right; up to three, the rest dropped.
 func set_right(lines: Array) -> void:
 	var any := false
@@ -98,8 +107,11 @@ func set_right(lines: Array) -> void:
 		right[k].text = str(lines[k]) if k < lines.size() else ""
 		any = any or right[k].text != ""
 	# with no right-hand lines the kicker and the title take the width
+	_right_any = any
 	kicker.size.x = size.x - 2 * PAD - (RIGHT_W if any else 0)
 	title.size.x = kicker.size.x
+	if _under:
+		headline_under_title(true)
 
 
 ## A progress bar along the foot, in place of the chips.

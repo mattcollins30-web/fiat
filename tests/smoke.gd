@@ -1681,13 +1681,52 @@ func _melee_checks(main) -> void:
 	for lv in range(Data.WORKSHOP.size()):
 		sim.workshop = lv
 		main.refresh()
-		var words: String = main._workshop._bench_words.text
+		var words: String = main._workshop._band.right[1].text
+		_check(main._workshop._band.headline.text == "Level %d" % lv and main._workshop._bench_words.text != "", "bench level %d's band reads '%s' / '%s'" % [lv, main._workshop._band.headline.text, main._workshop._bench_words.text])
 		if lv < Data.WORKSHOP.size() - 1:
 			_check(words.begins_with("Next: ") and words.ends_with("s"), "bench level %d's words don't say what the upgrade adds: '%s'" % [lv, words])
-			_check(main._workshop._upgrade.visible and main._workshop._upgrade.text.begins_with("Upgrade for"), "bench level %d has no upgrade button" % lv)
+			_check(main._workshop._upgrade.visible and main._workshop._upgrade.text.begins_with("Upgrade"), "bench level %d has no upgrade button" % lv)
+			_check(main._workshop._upgrade.position.y + main._workshop._upgrade.size.y <= main._workshop.BAND_H, "the upgrade button leaves the band")
 		else:
 			_check(not main._workshop._upgrade.visible, "the top bench still offers an upgrade")
+		# a fitted part's tile carries its name in its tier's colour
+		var prim = sim.equipped["Primary"]
+		if prim != null:
+			for r in main._workshop._guns["Primary"]["rows"]:
+				if r["key"] != "" and prim["attachments"].get(r["key"], null) != null and sim.mount_open(r["key"]):
+					var part: Dictionary = prim["attachments"][r["key"]]
+					_check(r["fitted"].get_theme_color("font_color") == Pal.tier_color(int(part.get("tier", 1))), "the %s tile is not in its part's tier colour" % r["key"])
 		_check_fit(main, "Workshop (bench level %d)" % lv)
+	# a bench job on the craft view's piece shows at once, with nothing re-picked (notes paid: the level bump)
+	var ws_piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	if sim.stash_room(1):
+		sim.stash.append(ws_piece)
+		main._workshop._set_view("craft")
+		main.refresh()
+		var kc: int = main._workshop._inv.cell_of(ws_piece["id"])
+		if kc >= 0:
+			main._workshop._pick_cell(kc)
+			main.refresh()
+			var before_words: String = main._workshop._craft_lines[1].text
+			sim.notes += 1000
+			sim.craft(ws_piece["id"], "bump")
+			main.refresh()
+			_check(main._workshop._craft_lines[1].text != before_words or main._workshop._hint.get_theme_color("font_color") == Pal.GOOD, "the craft view did not refresh after a bump: '%s'" % main._workshop._craft_lines[1].text)
+		sim.stash.erase(ws_piece)
+		main._workshop._set_view("guns")
+		main.refresh()
+	# a long part name on a tile falls back to its first word, never an ellipsis
+	_check(main._workshop._short_names("Drum magazine") == ["Drum magazine", "Drum", "Drum"] and main._workshop._short_names("Tape") == ["Tape", "Tape"], "the tile's short names are off: %s" % str(main._workshop._short_names("Drum magazine")))
+	var drum_gun = sim.equipped["Primary"]
+	if drum_gun != null and drum_gun["attachments"].has("magazine") and sim.mount_open("magazine"):
+		var hold_mag = drum_gun["attachments"]["magazine"]
+		drum_gun["attachments"]["magazine"] = sim._plain("Attachment", "Drum magazine")
+		main._workshop._shown = ""
+		main.refresh()
+		_check_fit(main, "Workshop (a drum magazine on a tile)")
+		drum_gun["attachments"]["magazine"] = hold_mag
+		main._workshop._shown = ""
+		main.refresh()
 	sim.workshop = ws_was
 	main.refresh()
 	sim.stash.erase(lead)
