@@ -725,6 +725,9 @@ func next_words(short := false) -> String:
 		return w["past"]
 	if runs_total == 0:
 		return w["first"]
+	for k in range(contracts.size()):
+		if can_hand_in(k) and mission == null:
+			return w["contract"]
 	if campaign_done():
 		return w["done"]
 	for z in range(Data.ZONES.size()):

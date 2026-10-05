@@ -514,6 +514,7 @@ const SKY := {
 const NEXT := {
 	"past": "The runner's in the caravan. Ask what they were, before.",
 	"first": "Ransacked streets is outside. Go and see what's left.",
+	"contract": "The fence has a contract you can fill. Contracts, on his screen: hand it in.",
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
@@ -523,6 +524,7 @@ const NEXT := {
 const NEXT_SHORT := {
 	"past": "Pick a past in the caravan",
 	"first": "The streets are outside",
+	"contract": "A contract's ready: the fence",
 	"site": "Next: %s",
 	"head": "Arm %s on Runs",
 	"done": "Depth is the game now",

@@ -839,6 +839,21 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The contracts, where you'd see them (5 Oct)
+
+Matt played seven hours without opening the fence's Contracts tab. Now: the Fence's rail button says
+"3 contracts" on its second line and carries a badge - "Unique" while a contract pays with one, "Ready" /
+"2 ready" (green) when one can be handed in; the tab reads "Contracts ★" or "Contracts ✓1" and lights
+green when one's ready; and "what's next" (the Runner card's note, the log) says "The fence has a contract
+you can fill. Contracts, on his screen: hand it in" ahead of the site line. Asserted: the badge, the
+status, the tab and the next words for a unique contract and a ready one.
+
+Matt's save at 7.3 h (`tests/matt.save` in the scratch project): 100 runs, 7 runners lost, two zones'
+heads down, the quartermaster not; £30,905 and 226 notes with the market at level 0; the last scrapper
+died in the barracks in 29 s with £13,765 of kit on (hardened, wired), now in the loose kit; a fresh
+level-1 runner with a nail gun reads Safe on the streets and A bad idea everywhere else. The clip probe
+over it: nothing clipped.
+
 ## The odds in words (5 Oct)
 
 The site cards' big figure was "72%". It's the yard's word now (`Words.ODDS`, `odds_words`): Safe (90%

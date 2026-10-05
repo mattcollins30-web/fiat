@@ -657,7 +657,17 @@ func _rail_status(name: String) -> Dictionary:
 					"status2": "Fit" if full else "Resting", "badge": "" if full or sim.on_mission() else "Hurt",
 					"badge_tone": "warn"}
 		MARKET:
-			return {"status1": "%d for sale" % sim.market.size(), "status2": "%d to sell" % sim.stash.size()}
+			# the contracts were easy to miss as a tab: the rail says when one's ready, or pays a unique
+			var ready := 0
+			var unique_pay := 0
+			for k in range(sim.contracts.size()):
+				if sim.can_hand_in(k):
+					ready += 1
+				elif sim.contracts[k].get("pay", "") == "unique":
+					unique_pay += 1
+			var badge: String = ("Ready" if ready == 1 else "%d ready" % ready) if ready > 0 else ("Unique" if unique_pay > 0 else "")
+			return {"status1": "%d for sale" % sim.market.size(), "status2": ("%d contract%s" % [sim.contracts.size(), "" if sim.contracts.size() == 1 else "s"]) if not sim.contracts.is_empty() else "%d to sell" % sim.stash.size(),
+					"badge": badge, "badge_tone": "good" if ready > 0 else "warn"}
 		COMMS:
 			var pins := 0
 			for p in sim.pinned:

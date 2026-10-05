@@ -2060,6 +2060,27 @@ func _contracts_checks(main) -> void:
 	_check(sim.runs_total == runs0 + Data.MATE_RUNS, "runs_total did not count the runs")
 	main._fence._show("contracts")
 	_check_fit(main, "Fence (contracts, after)")
+	# the contracts show from the rail and the tab: a unique on offer, a contract ready; what's next says so
+	sim.contracts = [{"amount": 0, "count": 3, "pay": "unique", "rarity": 2, "slot": "Attachment", "unique": "The Doorman's jacket"}]
+	main.refresh()
+	var fence_status: Dictionary = main._rail_status(main.MARKET) if main.has_method("_rail_status") else {}
+	_check(fence_status.get("badge", "") == "Unique" and str(fence_status.get("status2", "")).contains("contract"), "the rail does not flag a contract that pays a unique: %s" % str(fence_status))
+	main.show_room(main.MARKET)
+	main.refresh()
+	_check(main._fence._tabs[2].text == "Contracts ★", "the contracts tab reads '%s'" % main._fence._tabs[2].text)
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	for k in range(3):
+		var part: Dictionary = sim._plain(Data.ATTACHMENT, "Red dot")
+		part["rarity"] = 2
+		part["affixes"] = [{"stat": "damage_pct", "value": 3, "tier": 1}, {"stat": "speed_pct", "value": 2, "tier": 1}]
+		sim.stash.append(part)
+	main.refresh()
+	_check(sim.can_hand_in(0), "three rare parts did not make the contract ready")
+	fence_status = main._rail_status(main.MARKET)
+	_check(fence_status.get("badge", "") == "Ready" and main._fence._tabs[2].text == "Contracts ✓1", "a ready contract is not flagged: %s / %s" % [str(fence_status), main._fence._tabs[2].text])
+	_check(sim.next_words() == Words.NEXT["contract"], "what's next does not point at the ready contract: '%s'" % sim.next_words())
+	_check_fit(main, "Fence (contract ready)")
 	main._fence._show("shelf")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)

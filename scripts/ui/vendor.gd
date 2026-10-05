@@ -222,8 +222,15 @@ func show_state(s) -> void:
 	UI.style_button(_tabs[0], showing == "shelf")
 	UI.style_button(_tabs[1], showing == "stash")
 	if kind == "fence":
-		_tabs[2].text = "Contracts"
-		UI.style_button(_tabs[2], showing == "contracts")
+		var ready := 0
+		var unique_pay := 0
+		for k in range(sim.contracts.size()):
+			if sim.can_hand_in(k):
+				ready += 1
+			elif sim.contracts[k].get("pay", "") == "unique":
+				unique_pay += 1
+		_tabs[2].text = ("Contracts ✓%d" % ready) if ready > 0 else (("Contracts ★") if unique_pay > 0 else "Contracts (%d)" % sim.contracts.size())
+		UI.style_button(_tabs[2], showing == "contracts", "good" if (ready > 0 and showing != "contracts") else "")
 		_show_deals()
 	_show_side()
 	_show_panel()
