@@ -3044,6 +3044,15 @@ func _inflation_checks(main) -> void:
 	_check(absi(sim.sell_price(it) - int(round(s0 * m))) <= 1, "the fence's paying price did not rise: %d -> %d" % [s0, sim.sell_price(it)])
 	_check(absi(sim.med_price(Data.BASES["Medical"][0]) - int(round(med0 * m))) <= 1, "meds did not rise")
 	_check(absi(sim.ammo_price("shotgun") - int(round(ammo0 * m))) <= 1, "shells did not rise")
+	# a standard box on the shelf costs what the box row charges for it; special rounds carry the markup
+	for type in ["pistol", "shotgun", "rifle", "smg", "improvised"]:
+		var box: Dictionary = sim._plain(Data.AMMO, sim.ammo_box(type)["name"])
+		_check(sim.price(box) == sim.ammo_price(type), "%s on the shelf: %d, the box row: %d" % [type, sim.price(box), sim.ammo_price(type)])
+	for b in Data.BASES[Data.AMMO]:
+		if b.has("damage_pct"):
+			var special: Dictionary = sim._plain(Data.AMMO, b["name"])
+			_check(sim.price(special) > sim.ammo_price(str(b["type"])), "%s is no dearer than the plain box" % b["name"])
+			break
 	_check(ws0 == 0 or absi(sim.workshop_cost() - int(round(ws0 * m))) <= 1, "the bench's upgrade did not rise: %d -> %d" % [ws0, sim.workshop_cost()])
 	_check(absi(sim.treat_cost() - int(round(treat0 * m))) <= 2, "treatment did not rise: %d -> %d" % [treat0, sim.treat_cost()])
 	_check(sim.boss_cost(0) == sim.boss_cost(0) and Data.CRAFT["bump"].has("notes"), "notes prices exist to hold")

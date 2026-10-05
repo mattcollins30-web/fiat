@@ -3015,7 +3015,11 @@ func restock() -> void:
 		market.append(Items.roll(slot, t, rng))
 
 
+## A standard box of rounds on the shelf costs what the box row charges for
+## the same box; everything else carries the gear markup.
 func price(it: Dictionary) -> int:
+	if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
+		return ammo_price(str(Items.base_of(it)["type"]))
 	return _inf(it["value"] * Data.MARKET_MARKUP * (2.0 if has_node("buyers_market") else 1.0))
 
 
