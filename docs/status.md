@@ -839,6 +839,17 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## Damage numbers by type (5 Oct)
+
+The numbers off a hit come one a type, in the type's colour: physical white, fire orange-red, frost ice,
+poison green, shock yellow, bleed crimson (`Pal.ELEMENT_COLOURS`; `tone_color` knows the type names). On
+their bar and on yours: a gang that fires half poison puts a white and a green number on you, a torch
+that converts half to fire puts a white and a red one on them; what came back stays the green "+". The
+sim keeps `dealt_by` and `taken_by` per mission (the direct hits by type, the dots by their own type via
+`_dot_tick`'s `by`, the fire on you the thermos drinks left out), beside `dealt` and `taken`; whole points
+show, the rest carries to the next. Asserted: fire and physical colours on them, poison on you, and
+`dealt_by` adds up to `dealt`.
+
 ## Affix tiers as colour bands; charms roll again (5 Oct)
 
 - **Bands.** Wherever an item's affixes are one a line - the Lock-up's panel (the pick and the fitted

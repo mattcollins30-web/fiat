@@ -54,6 +54,8 @@ var _shown := ""
 var _head_face: TextureRect        # the crew's head, while he's out
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
+var _dealt_seen_by := {}           # and by type, for the coloured numbers
+var _taken_seen_by := {}
 var _number_at := -1.0             # the run's clock when the last number came off
 var _taken_seen := 0.0             # what the red numbers have shown so far this run
 var _healed_seen := 0.0            # and the green
@@ -277,20 +279,22 @@ func _picked_item(m: Dictionary) -> Dictionary:
 func _juice_tick(m: Dictionary) -> void:
 	if m.get("elapsed", 0.0) < 1.5:
 		_dealt_seen = 0.0
+		_dealt_seen_by = {}
 		_number_at = -1.0
 		_hp_at = -1.0
 		_taken_seen = 0.0
+		_taken_seen_by = {}
 		_healed_seen = 0.0
 		_found_seen = []
 	var dealt: float = float(m.get("dealt", 0.0))
 	# a number every third of a second or so, not every refresh, scattered along their bar
-	# at different heights, bigger for a bigger hit - a column of them reads as nothing
+	# at different heights, bigger for a bigger hit - a column of them reads as nothing.
+	# One a type, in the type's colour: white for the physical, red for fire, green for poison
 	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0 and float(m["elapsed"]) - _number_at >= 0.3:
 		_number_at = float(m["elapsed"])
-		var hit: int = int(round(dealt - _dealt_seen))
-		juice.number(_scatter(_panels[0]["panel"]), "%d" % hit, "warn", hit >= 100)
+		_numbers_by(m.get("dealt_by", {}), _dealt_seen_by, _panels[0]["panel"], "", 100)
 		_dealt_seen = dealt
-	# and on your own bar: red for what you took, green for what came back - counted apart,
+	# and on your own bar: what you took, by type, and green for what came back - counted apart,
 	# so a helmet's +1 a second shows among the hits even when the hits are winning
 	var taken: float = float(m.get("taken", 0.0))
 	var healed: float = float(m.get("healed", 0.0))
@@ -298,8 +302,7 @@ func _juice_tick(m: Dictionary) -> void:
 		var you: Panel = _panels[1]["panel"]
 		var shown := false
 		if taken - _taken_seen >= 1.0:
-			var n: int = int(round(taken - _taken_seen))
-			juice.number(_scatter(you), "−%d" % n, "bad", n >= 40)
+			_numbers_by(m.get("taken_by", {}), _taken_seen_by, you, "−", 40)
 			_taken_seen = taken
 			shown = true
 		if healed - _healed_seen >= 1.0:
@@ -317,6 +320,17 @@ func _juice_tick(m: Dictionary) -> void:
 				var k: int = _inv.cell_of(it["id"])
 				if k >= 0:
 					juice.flash(_inv.cell_node(k), "set" if it.has("set") else ("good" if it.has("unique") else ""))
+
+
+## A number a type for what's new in `by` since `seen`, each in its type's
+## colour, scattered along the panel; whole points only, the rest carried.
+func _numbers_by(by: Dictionary, seen: Dictionary, panel: Panel, sign: String, big_at: int) -> void:
+	for ty in Data.TYPES:
+		var total: float = float(by.get(ty, 0.0))
+		var n: int = int(floor(total - float(seen.get(ty, 0.0))))
+		if n >= 1:
+			juice.number(_scatter(panel), "%s%d" % [sign, n], ty, n >= big_at)
+			seen[ty] = float(seen.get(ty, 0.0)) + n
 
 
 ## A spot along a panel's bar, at a different height each time, in the juice's own space.

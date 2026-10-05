@@ -1433,7 +1433,7 @@ func _element_checks(main) -> void:
 	sim.deploy(0)
 	m = sim.mission
 	m["dots"] = {"bleed": 60.0}
-	var dealt: float = sim._dot_tick(m["dots"], 1.0)
+	var dealt: float = sim._dot_tick(m["dots"], 1.0, {})
 	_check(dealt > 0.0 and is_equal_approx(m["dots"]["bleed"], 60.0), "Won't stop let the bleed fade: %s" % str(m["dots"]))
 	sim.extract_now()
 	# the class webs' element notables, read with a plain gun on
@@ -2795,10 +2795,34 @@ func _juice_checks(main) -> void:
 	main.refresh()
 	sim.mission["elapsed"] += 1.0
 	sim.mission["taken"] = float(sim.mission.get("taken", 0.0)) + 20.0
+	sim.mission["taken_by"] = sim.mission.get("taken_by", {})
+	sim.mission["taken_by"]["physical"] = float(sim.mission["taken_by"].get("physical", 0.0)) + 20.0
 	sim.mission["healed"] = float(sim.mission.get("healed", 0.0)) + 3.0
 	main.refresh()
 	var texts: Array = main._juice._numbers.map(func(n): return n["label"].text)
 	_check(texts.any(func(t): return str(t).begins_with("−2")) and texts.has("+3"), "the red and the green do not both show for a second that took 20 and gave 3 back: %s" % str(texts))
+	# the numbers carry their type's colour: a fire hit on them reads red, a physical one white, poison on you green
+	main._juice.clear_numbers()
+	var hold_gun = sim.equipped["Primary"]
+	var torch: Dictionary = sim._plain("Primary", "Nail gun")
+	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 50, "tier": 3}]
+	sim.equipped["Primary"] = torch
+	sim.rig.append(sim._plain(Data.AMMO, "Nails"))
+	sim.mission["t"]["types"] = {"physical": 0.5, "poison": 0.5}
+	sim.mission["elapsed"] += 1.0
+	for k in range(6):
+		sim.advance(0.5)
+		main.refresh()
+	var colours := {}
+	for n in main._juice._numbers:
+		colours[n["label"].get_theme_color("font_color")] = true
+	_check(colours.has(Pal.ELEMENT_COLOURS["fire"]) and colours.has(Pal.ELEMENT_COLOURS["physical"]), "the hits did not come in fire and physical colours: dealt_by %s" % str(sim.mission.get("dealt_by", {})))
+	_check(colours.has(Pal.ELEMENT_COLOURS["poison"]), "their poison on you did not come up green: taken_by %s" % str(sim.mission.get("taken_by", {})))
+	var dealt_sum := 0.0
+	for ty in sim.mission.get("dealt_by", {}):
+		dealt_sum += float(sim.mission["dealt_by"][ty])
+	_check(absf(dealt_sum - float(sim.mission["dealt"])) < 1.0, "dealt by type (%.0f) does not add up to dealt (%.0f)" % [dealt_sum, float(sim.mission["dealt"])])
+	sim.equipped["Primary"] = hold_gun
 	# the counters come from the fight: regen heals, their fire takes
 	var hold = sim.equipped["Helmet"]
 	var regen_hat: Dictionary = sim._plain("Helmet", "Hard hat")
@@ -3301,7 +3325,7 @@ func _damage_model_checks(main) -> void:
 	var dots := {}
 	sim._dot_add(dots, "fire", 100.0, 100.0)
 	_check(is_equal_approx(dots["fire"], 50.0), "a 100 fire hit did not leave a 50 burn: %s" % str(dots))
-	var ticked: float = sim._dot_tick(dots, 1.0)
+	var ticked: float = sim._dot_tick(dots, 1.0, {})
 	_check(is_equal_approx(ticked, 12.5) and is_equal_approx(dots["fire"], 37.5), "the burn did not tick a quarter of the pool a second: %.1f" % ticked)
 	for k in range(60):
 		sim._dot_add(dots, "poison", 100.0, 100.0)

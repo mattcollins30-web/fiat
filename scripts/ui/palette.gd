@@ -27,6 +27,10 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
+# a damage type's colour, for the numbers off a hit: physical white, fire
+# orange-red, frost ice, poison green, shock yellow, bleed crimson
+const ELEMENT_COLOURS := {"physical": TEXT, "fire": Color("ff6b3d"), "frost": Color("8ad4ff"), "poison": Color("8be05a"),
+		"shock": Color("ffe24a"), "bleed": Color("e0485e")}
 # an affix's tier as a band of colour on its whole line, T1 to T5: white,
 # green, blue, violet, gold - read at a glance; T1 reads as plain text, so the
 # first colour is the first step up
@@ -105,4 +109,6 @@ static func tone_color(tone: String) -> Color:
 			return BAD
 		"set":
 			return SET
+	if ELEMENT_COLOURS.has(tone):
+		return ELEMENT_COLOURS[tone]
 	return TEXT_2

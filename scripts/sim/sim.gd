@@ -353,7 +353,8 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 
 
 ## What the dots deal this tick, draining their pools.
-func _dot_tick(dots: Dictionary, dt: float) -> float:
+## `by`, when given, collects the tick per type (for the run screen's colours).
+func _dot_tick(dots: Dictionary, dt: float, by: Dictionary) -> float:
 	var dealt := 0.0
 	for ty in dots.keys():
 		var pool := float(dots[ty])
@@ -364,7 +365,23 @@ func _dot_tick(dots: Dictionary, dt: float) -> float:
 		if not (ty == "bleed" and has_node("bleed_forever") and dots != mission.get("my_dots", {})):
 			dots[ty] = pool - tick             # Won't stop: a bleed on them doesn't fade
 		dealt += tick
+		by[ty] = float(by.get(ty, 0.0)) + tick
 	return dealt
+
+
+## Their fire on you this second, by type, after your armour and resists: the
+## shares of incoming_rate, for the run screen's colours.
+func incoming_shares(t: Dictionary) -> Dictionary:
+	var types: Dictionary = t.get("types", {"physical": 1.0})
+	var out := {}
+	var total := 0.0
+	for ty in types:
+		var part: float = float(types[ty]) * ((1.0 - mitigation()) if ty == "physical" else (1.0 - resist(ty)))
+		out[ty] = part
+		total += part
+	for ty in out:
+		out[ty] = out[ty] / total if total > 0.0 else 0.0
+	return out
 
 
 ## What's on you, for the run panel: "burning, bleeding".
@@ -2335,6 +2352,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			hp -= minf(single * 0.02, max_hp() * 0.01 * dt)   # petrol on your hands: 2% of a hit, never past 1% of you a second
 		landed_total += landed
 		if landed > 0.0:
+			if not m.has("dealt_by"):
+				m["dealt_by"] = {}
+			m["dealt_by"][ty] = float(m["dealt_by"].get(ty, 0.0)) + landed
 			if not m.has("dots"):
 				m["dots"] = {}
 			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"])
@@ -2347,7 +2367,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["target_hp"] -= landed_total
 	var ticked_on_them := 0.0
 	if m.has("dots"):
-		ticked_on_them = _dot_tick(m["dots"], dt)
+		if not m.has("dealt_by"):
+			m["dealt_by"] = {}
+		ticked_on_them = _dot_tick(m["dots"], dt, m["dealt_by"])
 		m["target_hp"] -= ticked_on_them
 	m["dealt"] = float(m.get("dealt", 0.0)) + landed_total + ticked_on_them    # for the numbers on the run screen
 	# the rounds behind that: the primary's rate while it's live, the secondary's when it fires
@@ -2426,12 +2448,21 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				if not m.has("dots"):
 					m["dots"] = {}
 				_dot_add(m["dots"], "poison", incoming * share * dt, incoming * share)   # poisons them back
+	if not m.has("taken_by"):
+		m["taken_by"] = {}
+	var shares := incoming_shares({"types": their_types} if not their_types.is_empty() else {})
+	for ty in shares:
+		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + incoming * dt * float(shares[ty])
 	var fire_pool: float = float(m["my_dots"].get("fire", 0.0))
-	var ticked: float = _dot_tick(m["my_dots"], dt)
+	var ticked_by := {}
+	var ticked: float = _dot_tick(m["my_dots"], dt, ticked_by)
 	if has_rule("vicars_thermos") and fire_pool > 0.0:
 		var fire_tick: float = fire_pool - float(m["my_dots"].get("fire", 0.0))
 		ticked -= fire_tick
+		ticked_by.erase("fire")
 		_heal(m, fire_tick)                        # a burn on you heals you instead
+	for ty in ticked_by:
+		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + float(ticked_by[ty])
 	incoming += ticked / maxf(dt, 0.001)
 	m["last_incoming"] = incoming
 	hp -= incoming * dt
