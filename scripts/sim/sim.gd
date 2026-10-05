@@ -2943,16 +2943,16 @@ func _kia() -> void:
 	_refund_runner_trees()
 
 
-## The runner's own trees (the class's and the second past's) back to points;
-## the class unpicked. What's on show with no class - the yard's tree, the
-## elements' - stays taken.
+## The runner's own trees - the class's, the second past's, and the elements'
+## (a fire build is the runner's, not the yard's) - back to points; the class
+## unpicked. Only the yard's tree stays taken.
 func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
 	cls = ""
 	cls2 = ""
 	var kept := []
 	for id in tree:
-		if _on_show(str(id).get_slice("/", 0)):
+		if str(id).get_slice("/", 0) == Data.COMMON_TREE:
 			kept.append(id)
 	tree = kept
 	var freed := spent_before - points_spent()

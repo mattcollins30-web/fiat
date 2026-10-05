@@ -313,7 +313,7 @@ func _show_panel() -> void:
 		UI.fit(_words, [nd["words"] if nd.has("words") else _panel_words(nd), _effect_words(nd)])
 		# whose it is: the yard's tree and the elements' stay through every runner; a class's goes with them
 		var branch: String = str(selected).get_slice("/", 0)
-		var yards: bool = branch == Data.COMMON_TREE or Data.ELEMENT_TREES.any(func(t): return t["name"] == branch)
+		var yards: bool = branch == Data.COMMON_TREE
 		UI.fit(_scope, ["The yard's: trained once, kept through every runner" if yards else "The runner's: goes with them when they go; a new past starts it over",
 				"The yard's: kept through every runner" if yards else "The runner's: goes with them"])
 		if sim.tree.has(selected):

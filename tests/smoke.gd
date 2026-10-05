@@ -898,14 +898,15 @@ func _narrative_checks(main) -> void:
 	var fresh2 = load("res://scripts/sim/sim.gd").new()
 	fresh2.start()
 	fresh2.set_class("Doorman")
-	fresh2.training_points = 6
-	_check(fresh2.train_node("Muscle/0") and fresh2.train_node("Muscle/1") and fresh2.train_node("The yard/0"), "the death test could not train")
+	fresh2.training_points = 8
+	var elem_tree: String = Data.ELEMENT_TREES[0]["name"]
+	_check(fresh2.train_node("Muscle/0") and fresh2.train_node("Muscle/1") and fresh2.train_node("The yard/0") and fresh2.train_node("%s/0" % elem_tree), "the death test could not train")
 	var spent: int = fresh2.points_spent()
 	fresh2.deploy(0)
 	fresh2._kia()
 	_check(fresh2.cls == "" and fresh2.cls2 == "", "a death left the class picked: '%s'" % fresh2.cls)
-	_check(fresh2.tree == ["The yard/0"], "a death did not refund the runner's trees and keep the yard's: %s" % str(fresh2.tree))
-	_check(fresh2.points_free() == 6 - fresh2.points_spent() and fresh2.points_spent() < spent, "the refunded points are not free to spend: %d free" % fresh2.points_free())
+	_check(fresh2.tree == ["The yard/0"], "a death did not refund the runner's trees (the class's and the element's) and keep the yard's: %s" % str(fresh2.tree))
+	_check(fresh2.points_free() == 8 - fresh2.points_spent() and fresh2.points_spent() < spent, "the refunded points are not free to spend: %d free" % fresh2.points_free())
 	_check(fresh2.next_words() == Words.NEXT["past"], "after a death the yard does not say to pick a past: '%s'" % fresh2.next_words())
 	_check(str(fresh2.events.back()[1]).contains("point") or str(fresh2.events[-2][1]).contains("point"), "the refund was not logged")
 	main.show_room(main.BARRACKS)

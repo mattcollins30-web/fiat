@@ -64,9 +64,9 @@ rig in the Armoury, used from the Operator card under fire. Decisions settled: m
 later), KIA loses the rig's meds, meds are found rarely so cash matters.
 
 **The tree** (same day): built as above - the camp's, kept across operators, three chains with notables that
-change the sim's rules rather than add numbers. (5 Oct: the yard's tree and the elements' are kept across
-runners; a runner's own trees - the class's and the second past's - go with them on a death, refunded as
-points, and the next runner picks a past from the start.)
+change the sim's rules rather than add numbers. (5 Oct: only the yard's tree is kept across runners; a
+runner's own trees - the class's, the second past's and the elements' (a fire build is the runner's) - go
+with them on a death, refunded as points, and the next runner picks a past from the start.)
 
 ## After the slice, in order
 

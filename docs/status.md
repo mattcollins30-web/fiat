@@ -839,6 +839,13 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The elements' trees go with the runner too (5 Oct)
+
+Matt: the Caravan kept Petrol, The cold, the rat's tree and the rest through a death, so getting out of a
+fire build on a new runner cost tens of thousands at the respec. The elements' trees are the runner's
+now: a death refunds them with the class's, and only the yard's tree stays. The Caravan's scope line says
+"The runner's" on an element node. Asserted: a trained element node is gone after a KIA, the yard's stays.
+
 ## The trait as a stat (5 Oct)
 
 Matt asked where the stat he picks on a death adds up. It doesn't: the pick is the new runner's trait,
