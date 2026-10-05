@@ -1592,8 +1592,71 @@ func _element_checks(main) -> void:
 	for k in range(6):
 		main._barracks._on_swap()
 		_check_fit(main, "Caravan (elements, %d)" % k)
-	# the middle head: the name centred between a back and a next, and back undoes next
+	# the D layout: the band with the runner and the points, the classes in its top right; tiles two across
+	# with the keystone the width, none overlapping, every one inside its column; the rail filled as far as
+	# the tree is taken; the sum strip under the trees and the panel under that
 	var bk = main._barracks
+	_check(bk._band.title.text == "The caravan" and bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the caravan's band is off: '%s' / '%s'" % [bk._band.title.text, bk._points.text])
+	for cb in bk._class_buttons:
+		_check(cb.position.y + cb.size.y <= bk.BAND_H and cb.position.x >= bk._band.kicker.position.x, "a class button is not in the band's top right")
+	for col in range(3):
+		var rects := []
+		for n in bk._rows[col]:
+			if n["button"].visible:
+				var rc := Rect2(n["button"].position, n["button"].size)
+				_check(rc.position.x >= col * (bk.COL_W + bk.COL_GAP) + bk.RAIL_W - 0.5 and rc.end.x <= (col + 1) * bk.COL_W + col * bk.COL_GAP + 0.5 and rc.position.y >= bk.NODES_Y and rc.end.y <= bk.NODES_Y + bk.COLUMN_H + 0.5, "a tile leaves its column: %s in column %d" % [str(rc), col])
+				for other in rects:
+					_check(not rc.intersects(other), "tiles overlap in column %d: %s and %s" % [col, str(rc), str(other)])
+				rects.append(rc)
+		var r: Dictionary = bk._rails[col]
+		if r["track"].visible:
+			_check(r["fill"].size.y <= r["track"].size.y + 0.5 and r["fill"].size.y >= 0.0, "the rail's fill leaves its track in column %d" % col)
+			_check(r["top"].text != "" and r["bottom"].text != "" and int(r["top"].text) <= int(r["bottom"].text), "the rail's counts are off: %s of %s" % [r["top"].text, r["bottom"].text])
+	# a fully taken tree fills its rail; the yard's, part taken, part fills it
+	var full_col := -1
+	for col in range(3):
+		var r: Dictionary = bk._rails[col]
+		if r["track"].visible and r["top"].text == r["bottom"].text and int(r["top"].text) > 0:
+			full_col = col
+	if full_col >= 0:
+		_check(is_equal_approx(bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y), "a fully taken tree's rail is not full: %.0f of %.0f" % [bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y])
+	_check(bk.SUM_Y >= bk.NODES_Y + bk.COLUMN_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk._sum_tiles[0]["key"].text == "Damage" and bk._sum_tiles[7]["key"].text == "Notables", "the sum strip is off: %s" % str(bk._sum_tiles.map(func(t): return t["key"].text + " " + t["value"].text)))
+	# a keystone's tile spans both columns of tiles; a plain node's one
+	for n in bk._rows[0]:
+		if n["button"].visible and n["id"] != "":
+			var nd: Dictionary = sim.node(n["id"])
+			if nd.get("keystone", false):
+				_check(n["button"].size.x > bk.TILE_W * 1.5, "the keystone's tile is not the width")
+			else:
+				_check(is_equal_approx(n["button"].size.x, bk.TILE_W), "a node's tile is not one across")
+	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
+	var typed_id := ""
+	for b in Data.TREES:
+		for i in range(b["nodes"].size()):
+			if b["nodes"][i].has("type") and sim.tree.has("%s/%d" % [b["name"], i]) and typed_id == "":
+				typed_id = "%s/%d" % [b["name"], i]
+	if typed_id != "" and sim.equipped["Primary"] != null:
+		var hold_gun = sim.equipped["Primary"]
+		var typed_node: Dictionary = sim.node(typed_id)
+		# a gun of the node's type, then one of another: the node goes active, then idle, and the screen follows
+		var same_base := ""
+		var other_base := ""
+		for base in Data.BASES["Primary"]:
+			if base.get("type", "") == typed_node["type"] and same_base == "":
+				same_base = base["name"]
+			elif base.get("type", "") != typed_node["type"] and other_base == "":
+				other_base = base["name"]
+		if same_base != "" and other_base != "":
+			sim.equipped["Primary"] = sim._plain("Primary", same_base)
+			main.refresh()
+			var shown_active: String = bk._shown
+			sim.equipped["Primary"] = sim._plain("Primary", other_base)
+			main.refresh()
+			_check(not sim._active(typed_node) and bk._shown != shown_active, "the gun swap did not refresh the caravan: typed node %s" % typed_id)
+		sim.equipped["Primary"] = hold_gun
+		main.refresh()
+		_check(bk._shown.contains(sim.gun_type()), "the caravan's signature does not carry the gun in hand")
+	# the middle head: the name centred between a back and a next, and back undoes next
 	var mid_name: Label = bk._heads[1]["name"]
 	_check(bk._back.visible and bk._swap.visible and bk._back.text.begins_with("◂ ") and bk._swap.text.ends_with(" ▸"), "the middle head's back/next read '%s' / '%s'" % [bk._back.text, bk._swap.text])
 	_check(mid_name.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER and mid_name.position.x >= bk.SWAP_W and mid_name.position.x + mid_name.size.x <= bk.COL_W - bk.SWAP_W, "the middle head's name is not centred between the buttons: x %d w %d" % [mid_name.position.x, mid_name.size.x])
@@ -2683,10 +2746,13 @@ func _book_checks(main) -> void:
 	_check(sim.book.size() == 20, "the full book is not twenty")
 	main._barracks._shown = ""
 	main.refresh()
-	_check(main._barracks._heads[1]["name"].text.contains("page 1 of 4") or main._barracks._heads[1]["name"].text.contains("p1/4"), "a full drawer has no pages: %s" % main._barracks._heads[1]["name"].text)   # five a page: twenty is four pages
+	# a page holds what the column takes; twenty papers are that many pages
+	var per_page: int = main._barracks._rows[1].filter(func(n): return n["button"].visible).size()
+	var n_pages: int = ceili(20.0 / per_page)
+	_check(per_page >= 3 and (main._barracks._heads[1]["name"].text.contains("page 1 of %d" % n_pages) or main._barracks._heads[1]["name"].text.contains("p1/%d" % n_pages)), "a full drawer has no pages: %s (%d a page)" % [main._barracks._heads[1]["name"].text, per_page])
 	_check_fit(main, "Caravan (the drawer, full)")
 	main._barracks._pick("drawer/0")
-	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text == "6. A food bank voucher", "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
+	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text.begins_with("%d. " % (per_page + 1)), "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
 	_check_fit(main, "Caravan (the drawer, page 2)")
 	main._barracks.mid = 0
 	main._barracks.drawer_page = 0
@@ -4020,8 +4086,8 @@ func _check_fit(main, where: String) -> void:
 		var pairs := []
 		for col in main._barracks._rows:
 			for n in col:
-				if n["button"].visible and n["name"].position.y == n["effect"].position.y:   # stacked branch nodes aren't a pair
-					pairs.append([n["name"], n["effect"]])
+				if n["button"].visible and n["more"].visible and n["name"].position.y == n["more"].position.y:   # a tile's name and its cost share the row
+					pairs.append([n["name"], n["more"]])
 		bad += _check_nodes(main._barracks.text_nodes(), pairs, where + " screen")
 	elif main.room == main.MARKET:
 		bad += _check_nodes(main._fence.text_nodes(), main._fence.line_pairs(), where + " screen")

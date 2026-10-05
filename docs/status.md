@@ -1615,6 +1615,19 @@ is room (`_word_rows`; a word never takes more lines than the card has under its
 a band too: the set's name, its level, what it hears, the next set and its cost. Smoke: the band carries the
 title and odds, the first row sits under the band, the word's name is in its tone, the set's band.
 
+**The caravan as D** (`barracks.gd`): the band carries the runner's face, class · trait, "N of M points free"
+as the headline, the trait's line on the right and the five class buttons across its top right. Each tree:
+its head, a rail down the left (filled as far as the tree is taken, a half-taken row filling half; a tick a
+notable, amber when taken; the taken count over it, the tree's size under), and the nodes as tiles two
+across in the tree's order (`_tile_rects`), the keystone the width, ★ a notable and ◆ the keystone, the name
+left and the cost right on the first line, the effect under (a notable's words cut to their first clause).
+The drawer and the shelf keep their full-width rows, no rail. Under the trees a strip of what the small nodes
+add up to (damage, max HP, first shot, search, gangs, loot quality, loot quantity, notables taken and open);
+under that the panel as before, the face gone to the band. Smoke: the band and the classes in it, every tile
+inside its column with none overlapping, the keystone the width, the rail's fill inside its track and full
+on a full tree, the sum strip's keys, the drawer paging by what the column takes, and a gun swap refreshing a
+typed node (the reviewer's catch: the gun in hand, the level and the yard's trades are in the signature).
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a

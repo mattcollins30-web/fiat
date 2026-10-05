@@ -14,18 +14,29 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Band := preload("res://scripts/ui/band.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
-const CLASS_H := 52                                            # the class bar across the top
-const TREE_Y := CLASS_H + 16
+const BAND_H := 150                                            # the band: the runner, the points free, the classes along its foot
+const FACE := 116                                              # the runner's portrait in the band
+const CLASS_H := 40                                            # the class buttons, across the band's top right
+const CLASS_W := 176
+const TREE_Y := BAND_H + 14
 const HEAD_H := 40
 const SWAP_W := 160                                            # the middle head's "◂ Petrol" and "Live ▸", either side of the name
-const NODE_H := 40
-const NODE_GAP := 5
+const NODE_H := 40                                             # a drawer row's name line
+const NODE_GAP := 6
 const NODES_Y := TREE_Y + HEAD_H + 6
-const PANEL_Y := NODES_Y + 12 * (NODE_H + NODE_GAP) - NODE_GAP + 16     # 650
-const PANEL_H := Pal.ROOM_H - PANEL_Y                          # 214
+const TILE_H := UI.TILE_H                                      # a node: a tile, two across, the keystone the width
+const RAIL_W := 22                                             # the rail down a tree's left: filled as far as it's taken
+const TILE_W := (COL_W - RAIL_W - NODE_GAP) / 2
+const TILE_ROWS := 6                                           # the yard's twelve nodes, two across
+const COLUMN_H := TILE_ROWS * (TILE_H + NODE_GAP) - NODE_GAP   # what a tree takes: a drawer page fits in it too (390)
+const SUM_Y := NODES_Y + COLUMN_H + 12                         # what the trees add up to
+const SUM_H := UI.HEAD_H + 4 + TILE_H + 10
+const PANEL_Y := SUM_Y + SUM_H + 12
+const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
 
 var sim
@@ -34,13 +45,19 @@ var _class_buttons: Array = []
 var _class_words: Label
 const ROWS := 12                   # the yard's tree is 12 deep; a class tree 8
 var _heads: Array = []             # a column each: {name, count}
-var _rows: Array = []              # [column][row] -> {button, name, effect, id}
+var _rows: Array = []              # [column][row] -> {button, name, effect, more (the cost), id}
+var _rails: Array = []             # a column each: {track, fill, ticks[], top, bottom}
+const TICKS := 4
+var _band: Band
+var _sum: Panel                    # what the small nodes add up to, under the trees
+var _sum_head: Label
+var _sum_tiles: Array = []
 var _shown_trees := ""
 var _panel: Panel
-var _face: TextureRect             # the class's portrait, at the panel's left, when there is one
+var _face: TextureRect             # the class's portrait, in the band, when there is one
 var _title: Label
 var _words: Label
-var _points: Label                 # "3 of 29 points free", top right of the panel
+var _points: Label                 # "3 of 29" points free: the band's headline
 var _scope: Label                  # whose a node is: the yard's, kept, or the runner's, gone with them
 var _past: Label                   # the runners before this one
 var _wall: Array = []              # their faces, newest first, small
@@ -52,7 +69,6 @@ var _back: Button                  # its left: the one before, so an overshoot i
 var mid := 0                       # which of the middle trees shows
 var drawer_page := 0               # the drawer's page: PAGE papers at a time
 const WORD_H := 26                                 # a line of a paper's or a unique's words
-const COLUMN_H := 12 * (NODE_H + NODE_GAP) - NODE_GAP   # what a tree's twelve rows take: a page fits in it
 var _train: Button
 var _respec: Button
 var _shown := ""
@@ -61,11 +77,20 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the class bar: a button a class, the chosen one lit
-	var cw := (Pal.GRID_W - COL_GAP * (Data.CLASSES.size() - 1)) / Data.CLASSES.size()
+	# the band: the runner's face, the class and trait, the points free; the classes along its foot
+	var band_panel := UI.panel(self, Rect2(0, 0, Pal.GRID_W, BAND_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_band = Band.new(Pal.GRID_W, BAND_H, 3)
+	band_panel.add_child(_band)
+	_face = People.rect(_band, Vector2(PAD, 16), FACE / 128.0)
+	_points = _band.headline
+	_band.right_from(64)
+	# the classes: five buttons across the band's top right; the trait's lines sit under them
+	var cw := CLASS_W
+	var cx0: float = Pal.GRID_W - PAD - Data.CLASSES.size() * cw - 8 * (Data.CLASSES.size() - 1)
 	for k in range(Data.CLASSES.size()):
-		var cb := UI.button(self, Rect2(k * (cw + COL_GAP), 0, cw, CLASS_H), false)
+		var cb := UI.button(band_panel, Rect2(cx0 + k * (cw + 8), 12, cw, CLASS_H), false)
 		cb.text = Data.CLASSES[k]["name"]
+		cb.add_theme_font_size_override("font_size", 22)
 		cb.pressed.connect(_pick_class.bind(Data.CLASSES[k]["name"]))
 		_class_buttons.append(cb)
 	for b in range(3):
@@ -76,31 +101,44 @@ func _init() -> void:
 		h["count"] = UI.label(head, Rect2(PAD, 0, COL_W - 2 * PAD, HEAD_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)
 		h["panel"] = head
 		_heads.append(h)
+		# the rail: a track, its fill, ticks where the notables sit, the taken count over it and the tree's size under
+		var r := {}
+		r["top"] = UI.label(self, Rect2(x - 4, NODES_Y - 2, RAIL_W + 2, 16), "", "SemiBold", 13, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+		r["track"] = UI.panel(self, Rect2(x + (RAIL_W - 6) / 2 - 3, NODES_Y + 16, 6, COLUMN_H - 32), UI.box(Pal.CARD_LINE, 3))
+		r["fill"] = UI.panel(r["track"], Rect2(0, 0, 6, 0), UI.box(Pal.ACCENT, 3))
+		r["ticks"] = []
+		for t in range(TICKS):
+			var tick := UI.panel(r["track"], Rect2(-3, 0, 12, 3), UI.box(Pal.ACCENT, 2))
+			tick.visible = false
+			r["ticks"].append(tick)
+		r["bottom"] = UI.label(self, Rect2(x - 4, NODES_Y + COLUMN_H - 14, RAIL_W + 2, 16), "", "Regular", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER)
+		_rails.append(r)
 		var col := []
 		for i in range(ROWS):
 			var btn := Button.new()
-			btn.position = Vector2(x, NODES_Y + i * (NODE_H + NODE_GAP))
-			btn.size = Vector2(COL_W, NODE_H)
+			btn.position = Vector2(x + RAIL_W, NODES_Y)
+			btn.size = Vector2(TILE_W, TILE_H)
 			btn.text = ""
 			btn.focus_mode = Control.FOCUS_ALL
 			btn.pressed.connect(_pick_at.bind(b, i))
 			add_child(btn)
 			var n := {"button": btn, "id": "", "x": x}
-			n["name"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Regular", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			n["effect"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-			n["more"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			n["more"].visible = false      # the drawer's second line of words; hidden on a tree
+			n["name"] = UI.label(btn, Rect2(10, 4, TILE_W - 20, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			n["more"] = UI.label(btn, Rect2(10, 4, TILE_W - 20, 24), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)   # the cost, right of the name; the drawer's second line
+			n["effect"] = UI.label(btn, Rect2(10, 30, TILE_W - 20, 24), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			n["more2"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			n["more2"].visible = false     # the shelf's third
+			n["more2"].visible = false     # the shelf's third line
 			col.append(n)
 		_rows.append(col)
+	# what the trees add up to: the small nodes' figures, summed
+	_sum = UI.panel(self, Rect2(0, SUM_Y, Pal.GRID_W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_sum_head = UI.head(_sum, Rect2(PAD, 6, Pal.GRID_W - 2 * PAD, UI.HEAD_H), "What the trees add up to · the small nodes, summed")
+	_sum_tiles = UI.tile_row(_sum, PAD, 6 + UI.HEAD_H + 4, Pal.GRID_W - 2 * PAD, 8)
 	_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_face = People.rect(_panel, Vector2(PAD, (PANEL_H - 128) / 2), 1)
-	_title = UI.label(_panel, Rect2(PAD, 14, Pal.GRID_W - 2 * PAD - 260, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_words = UI.label(_panel, Rect2(PAD, 56, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_scope = UI.label(_panel, Rect2(PAD, 90, Pal.GRID_W - 2 * PAD - 260, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_points = UI.label(_panel, Rect2(Pal.GRID_W - PAD - 240, 14, 240, 36), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)
-	_past = UI.label(_panel, Rect2(PAD, 124, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_title = UI.label(_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words = UI.label(_panel, Rect2(PAD, 46, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_scope = UI.label(_panel, Rect2(PAD, 74, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_past = UI.label(_panel, Rect2(PAD, 108, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(WALL):
 		_wall.append(People.rect(_panel, Vector2(PAD, PANEL_H - WALL_S - 10), 0.5))
 	_train = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 200, Pal.BUTTON_H), true)
@@ -197,7 +235,8 @@ func _style(b: Button, look: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%d|%s|%s|%d|%s|%d|%d|%d" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size()]
+	var sig := "%s|%s|%d|%d|%s|%s|%d|%s|%d|%d|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size(),
+		sim.gun_type(), sim.level(), str(sim.trades)]        # the gun in hand idles typed nodes; the level opens the second past; a trade halves costs
 	if sig == _shown:
 		return
 	_shown = sig
@@ -207,6 +246,21 @@ func show_state(s) -> void:
 		cb.text = name if sim.cls != name else "%s ✓" % name
 		cb.disabled = sim.on_mission()
 		UI.style_button(cb, sim.cls == name)
+	# the band: the runner, the points free as the headline, the trait on the right
+	var cd0: Dictionary = sim.class_data()
+	var td0: Dictionary = sim.trait_data()
+	var faced := People.show(_face, sim.cls)
+	_band.portrait_width(FACE if faced else 0)
+	var free0: int = sim.points_free()
+	var who0: String = str(cd0.get("name", "No past yet"))
+	_band.set_words(("%s · %s" % [who0, td0["name"]]) if not td0.is_empty() else who0, "The caravan",
+		"%d of %d" % [free0, sim.training_points], ["point%s free" % ("" if sim.training_points == 1 else "s"), "free"], Pal.ACCENT if free0 > 0 else Pal.TEXT_2)
+	_band.headline_under_title(true)
+	if not td0.is_empty():
+		var trait_line := "%s: %s" % [td0["name"], td0["words"]]
+		_band.set_right([trait_line if UI.text_width(_band.right[0], trait_line) <= _band.RIGHT_W else td0["name"], "one a runner, theirs"])
+	else:
+		_band.set_right([])
 	var trees: Array = sim.trees()
 	# the class's two trees either side; the middle cycles the yard's, the
 	# second past's and the five elements'. With no class, the yard's alone.
@@ -231,6 +285,7 @@ func show_state(s) -> void:
 		var branch = cols[b]
 		var h: Dictionary = _heads[b]
 		h["panel"].visible = branch != null
+		_rail_show(b, branch)
 		if branch == null:
 			for i in range(ROWS):
 				_rows[b][i]["button"].visible = false
@@ -260,24 +315,31 @@ func show_state(s) -> void:
 			var nd: Dictionary = branch["nodes"][i]
 			n["id"] = id
 			n["button"].visible = true
-			n["more"].visible = false
-			n["more"].text = ""
 			n["more2"].visible = false
 			n["more2"].text = ""
-			var stacked := _place(n, branch, i)
+			_place(n, branch, i)
 			var cost: int = sim.node_cost(id)
 			var pts := "%d pt%s" % [cost, "" if cost == 1 else "s"]
-			# a stacked node (on a branch) carries its cost in the name line, its effect under
-			n["name"].add_theme_font_override("font", UI.font("SemiBold" if (nd.get("notable", false) or nd.get("keystone", false)) else "Regular"))
-			if stacked:
-				UI.fit(n["name"], ["%s · %s" % [nd["name"], pts], nd["name"]])
-				if n["name"].text == nd["name"]:
-					UI.fit(n["effect"], ["%s · %s" % [_effect_words(nd), pts], _effect_words(nd)])   # the cost moves down when the name's long
-				else:
-					n["effect"].text = _effect_words(nd)
+			# the tile: ★ a notable, ◆ the keystone, the name; the cost at the right; the effect under
+			var big: bool = nd.get("notable", false) or nd.get("keystone", false)
+			n["name"].add_theme_font_override("font", UI.font("SemiBold" if big else "Regular", false))
+			var mark: String = "◆ " if nd.get("keystone", false) else ("★ " if nd.get("notable", false) else "")
+			n["more"].visible = true
+			n["more"].text = pts
+			# the name keeps clear of the cost: whole, then its first word
+			var room: float = n["name"].size.x - UI.text_width(n["more"], pts) - 16.0
+			n["name"].text = mark + nd["name"]
+			if UI.text_width(n["name"], n["name"].text) > room:
+				n["name"].text = mark + _short_name(nd["name"])
+			# a plain node's figure; a notable's words cut to their first clause, "Notable" when even that won't fit
+			var eff: String = _effect_words(nd)
+			if big and nd.has("words"):
+				var first: String = str(nd["words"])
+				for sep in ["; ", ": ", ", "]:
+					first = first.get_slice(sep, 0)
+				UI.fit(n["effect"], [str(nd["words"]), first, eff])
 			else:
-				n["name"].text = nd["name"]
-				n["effect"].text = "%s · %s" % [_effect_words(nd), pts]
+				UI.fit(n["effect"], [eff, eff.get_slice(", ", 0)])
 			var is_taken: bool = sim.tree.has(id)
 			var need := Data.node_needs(branch, i)
 			var open: bool = sim.can_train(id) or (not is_taken and (need < 0 or sim.tree.has("%s/%d" % [branch["name"], need])))
@@ -289,21 +351,104 @@ func show_state(s) -> void:
 			_style(n["button"], look)
 			n["name"].add_theme_color_override("font_color", Pal.TEXT if (is_taken or open) else Pal.TEXT_3)
 			n["effect"].add_theme_color_override("font_color", Pal.TEXT_2 if (is_taken or open) else Pal.TEXT_3)
+			n["more"].add_theme_color_override("font_color", Pal.TEXT_2 if (is_taken or open) else Pal.TEXT_3)
 		h["count"].text = "%d of %d" % [taken, branch["nodes"].size()]
 		h["count"].visible = not (b == 1 and _swap.visible)      # the swap sits where the count would
+		_rail_fill(b, branch, taken)
+	_show_sum(cols)
 	_show_panel()
+
+
+## A node's name cut to its first word when the tile won't take it.
+static func _short_name(name: String) -> String:
+	var words: PackedStringArray = name.split(" ", false)
+	return words[0] if words.size() > 1 else name
+
+
+## The rail beside a tree: shown for a tree, hidden for the drawer and the shelf.
+func _rail_show(b: int, branch) -> void:
+	var r: Dictionary = _rails[b]
+	var on: bool = branch != null and not branch.get("drawer", false)
+	for k in ["top", "track", "bottom"]:
+		r[k].visible = on
+
+
+## The rail's fill: as far down the tiles as the tree is taken (a half-taken row fills half); a tick a notable.
+func _rail_fill(b: int, branch: Dictionary, taken: int) -> void:
+	var r: Dictionary = _rails[b]
+	var rects: Array = _tile_rects(branch)
+	var rows_total: int = _rows_of(rects)
+	var filled := 0.0
+	var row_taken := {}
+	var row_n := {}
+	for i in range(branch["nodes"].size()):
+		var row: int = int(rects[i].position.y)
+		row_n[row] = int(row_n.get(row, 0)) + 1
+		if sim.tree.has("%s/%d" % [branch["name"], i]):
+			row_taken[row] = int(row_taken.get(row, 0)) + 1
+	for row in row_n:
+		filled += float(row_taken.get(row, 0)) / float(row_n[row])
+	var track_h: float = r["track"].size.y
+	r["fill"].size.y = roundf(track_h * (filled / maxf(1.0, float(rows_total))))
+	r["top"].text = "%d" % taken
+	r["bottom"].text = "%d" % branch["nodes"].size()
+	var t := 0
+	for i in range(branch["nodes"].size()):
+		var nd: Dictionary = branch["nodes"][i]
+		if (nd.get("notable", false) or nd.get("keystone", false)) and t < TICKS:
+			var tick: Panel = r["ticks"][t]
+			tick.visible = true
+			# the tick at the row's middle, in the track's own height
+			tick.position.y = clampf((rects[i].position.y + TILE_H / 2.0 - 16.0) / (COLUMN_H - 32.0) * track_h, 0.0, track_h - 3.0)
+			(tick.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if sim.tree.has("%s/%d" % [branch["name"], i]) else Pal.TEXT_3
+			t += 1
+	for k in range(t, TICKS):
+		r["ticks"][k].visible = false
+
+
+## How many rows of tiles a set of rects takes.
+static func _rows_of(rects: Array) -> int:
+	var ys := {}
+	for rc in rects:
+		ys[int(rc.position.y)] = true
+	return ys.size()
+
+
+## What the small nodes add up to, over the trees showing: the figures the Yard reads, by source.
+func _show_sum(cols: Array) -> void:
+	var sums := {}
+	var notables_taken := 0
+	var notables_open := 0
+	for branch in cols:
+		if branch == null or branch.get("drawer", false):
+			continue
+		for i in range(branch["nodes"].size()):
+			var nd: Dictionary = branch["nodes"][i]
+			var id := "%s/%d" % [branch["name"], i]
+			if nd.get("notable", false) or nd.get("keystone", false):
+				if sim.tree.has(id):
+					notables_taken += 1
+				else:
+					notables_open += 1
+			elif sim.tree.has(id) and sim._active(nd):
+				sums[nd["effect"]] = float(sums.get(nd["effect"], 0.0)) + float(nd.get("value", 0))
+	var figures := [
+		["Damage", "+%.0f%%" % sums.get("damage_pct", 0.0)], ["Max HP", "+%.0f" % sums.get("hp", 0.0)], ["First shot", "+%.0f%%" % sums.get("first_pct", 0.0)],
+		["Search", "%.0f%% faster" % sums.get("search_pct", 0.0)], ["Gangs", "%.0f%% later" % sums.get("patrol_pct", 0.0)],
+		["Loot quality", "+%.0f%%" % sums.get("rarity", 0.0)], ["Loot quantity", "+%.0f%%" % sums.get("loot_pct", 0.0)],
+		["Notables", "%d taken · %d open" % [notables_taken, notables_open], "%d of %d" % [notables_taken, notables_taken + notables_open]],
+	]
+	for k in range(_sum_tiles.size()):
+		var zero: bool = figures[k][1].begins_with("+0") or figures[k][1].begins_with("0%")
+		UI.set_tile(_sum_tiles[k], figures[k][0], figures[k].slice(1), Pal.TEXT_3 if zero else Pal.TEXT)
 
 
 func _show_panel() -> void:
 	_train.visible = false
-	# the runner's face at the left, the words beside it; no class, no face
-	var faced := People.show(_face, sim.cls)
 	for l in [_title, _words, _scope]:
-		l.position.x = PAD + 148 if faced else PAD
-		l.size.x = Pal.GRID_W - 2 * PAD - 260 - (148 if faced else 0)
-	_past.position.x = PAD + 148 if faced else PAD
-	var free: int = sim.points_free()
-	UI.fit(_points, ["%d of %d point%s free" % [free, sim.training_points, "" if sim.training_points == 1 else "s"], "%d of %d free" % [free, sim.training_points]])
+		l.position.x = PAD
+		l.size.x = Pal.GRID_W - 2 * PAD
+	_past.position.x = PAD
 	_scope.text = ""
 	if selected == "":
 		var cd: Dictionary = sim.class_data()
@@ -414,42 +559,44 @@ func _pick_at(col: int, row: int) -> void:
 		_pick(id)
 
 
-## Where a node sits: a class tree is a web - the spine down the column to
-## its notable, then the two branches side by side under it, keystone's on
-## the left, the rule's on the right, each node its name over its effect.
-## The yard's tree is a ladder and stays one.
-const BRANCH_H := NODE_H * 2 + NODE_GAP            # a stacked node is two rows tall
-const BRANCH_PAD := 10
-func _place(n: Dictionary, branch: Dictionary, i: int) -> bool:
+## Where a node sits: the tiles two across in the order of the tree, the
+## keystone across both; a notable's row is its own. Returns the rects for
+## every node of the branch, in the column's own space.
+static func _tile_rects(branch: Dictionary) -> Array:
+	var out: Array = []
+	var row := 0
+	var col := 0
+	for i in range(branch["nodes"].size()):
+		var nd: Dictionary = branch["nodes"][i]
+		var wide: bool = nd.get("keystone", false)
+		if wide and col == 1:
+			row += 1
+			col = 0
+		out.append(Rect2(RAIL_W + col * (TILE_W + NODE_GAP), row * (TILE_H + NODE_GAP), (2 * TILE_W + NODE_GAP) if wide else TILE_W, TILE_H))
+		if wide:
+			row += 1
+			col = 0
+		else:
+			col += 1
+			if col == 2:
+				col = 0
+				row += 1
+	return out
+
+
+func _place(n: Dictionary, branch: Dictionary, i: int) -> void:
 	var b: Button = n["button"]
-	var x: float = n["x"]
-	b.position.x = x
-	var fork := _fork_at(branch)
-	var stacked: bool = fork >= 0 and i > fork
-	if not stacked:
-		b.position.y = NODES_Y + i * (NODE_H + NODE_GAP)
-		b.size = Vector2(COL_W, NODE_H)
-		n["name"].position = Vector2(PAD, 0)
-		n["name"].size = Vector2(COL_W - 2 * PAD, NODE_H)
-		n["effect"].position = Vector2(PAD, 0)
-		n["effect"].size = Vector2(COL_W - 2 * PAD, NODE_H)
-		n["effect"].horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		return false
-	# which branch, and how far along it: the first branch after the fork is the keystone's
-	var half := (COL_W - COL_GAP) / 2
-	var k := i - fork - 1
-	var per: int = (branch["nodes"].size() - fork - 1) / 2
-	var side := k / per
-	var row := k % per
-	b.position.y = NODES_Y + (fork + 1) * (NODE_H + NODE_GAP) + row * (BRANCH_H + NODE_GAP)
-	b.position.x = x + side * (half + COL_GAP)
-	b.size = Vector2(half, BRANCH_H)
-	n["name"].position = Vector2(BRANCH_PAD, 4)
-	n["name"].size = Vector2(half - 2 * BRANCH_PAD, NODE_H - 4)
-	n["effect"].position = Vector2(BRANCH_PAD, NODE_H - 2)
-	n["effect"].size = Vector2(half - 2 * BRANCH_PAD, NODE_H - 4)
+	var rc: Rect2 = _tile_rects(branch)[i]
+	b.position = Vector2(n["x"] + rc.position.x, NODES_Y + rc.position.y)
+	b.size = rc.size
+	n["name"].position = Vector2(10, 4)
+	n["name"].size = Vector2(rc.size.x - 20, 24)
+	n["more"].position = Vector2(10, 4)
+	n["more"].size = Vector2(rc.size.x - 20, 24)
+	n["more"].horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	n["effect"].position = Vector2(10, 30)
+	n["effect"].size = Vector2(rc.size.x - 20, 24)
 	n["effect"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	return true
 
 
 ## The node the branches fork from: the first node two others need.
@@ -539,7 +686,7 @@ func _show_drawer(b: int, branch: Dictionary) -> void:
 		n["id"] = "drawer/%d" % i
 		n["name"].position = Vector2(PAD, 4)
 		n["name"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
-		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" else "Regular"))
+		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" else "Regular", false))
 		var word_labels: Array = [n["effect"], n["more"], n["more2"]]
 		for k in range(3):
 			var l: Label = word_labels[k]
@@ -608,7 +755,13 @@ func _on_respec() -> void:
 
 ## For the tests: every label with text.
 func text_nodes() -> Array:
-	var out: Array = [_title, _words, _points, _scope, _past, _respec]
+	var out: Array = [_title, _words, _scope, _past, _respec, _sum_head]
+	out.append_array(_band.text_nodes())
+	for t in _sum_tiles:
+		out.append_array([t["key"], t["value"]])
+	for r in _rails:
+		if r["track"].visible:
+			out.append_array([r["top"], r["bottom"]])
 	if _ascend.visible:
 		out.append(_ascend)
 	if _swap.visible:
