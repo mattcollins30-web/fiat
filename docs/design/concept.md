@@ -176,12 +176,22 @@ change the sim's rules rather than add numbers.
     4. **Sound.** Ambient a site, the gun's tick, a sting when a gang arrives, the boss's door.
     5. **The first ten minutes.** An objective line on the Yard ("Clear the parade") and the log carrying
        the tutorial in the voice.
-    6. **The away report.** One screen when you come back: runs, what came home, who died, in the voice.
+    6. ~~**The away report.**~~ Done (5 Oct): "Back, then." in the log's voice, with the fence's prices.
     7. **Idle quality of life.** "Equip if better" and "sell commons on return" toggles; the reads leave
        184-item stashes.
-    8. **The collection.** Papers read, uniques found, the runners before, on one screen.
+    8. **The collection.** Papers read, uniques found, the runners before, on one screen. (The papers are
+       the drawer in the Caravan and the runners before are its wall of faces, 5 Oct; uniques found is left.)
     9. **Juice.** Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
 23. Manual placement in the bag (true tetris), if first-fit feels wrong in play.
+24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
+    (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;
+    notes hold); the estate recycles (a dead runner's kit and a sold unique turn up on a gang member a
+    few runs later and come off him on the clear); faces for the people who matter (the heads' lines
+    when armed and a face slot on the run, a manifest for their portraits, the Caravan's wall of
+    runners before); the places changing (sites picked over and back over two hours, the clock's
+    night, rain and fog by zone on the Runs card); the voice where the UI explained itself (the away
+    report, the fence's contracts, the Yard's notes); the papers as the book (read in the order found,
+    six deep ones, the drawer in the Caravan).
 
 ## Builds (4 Oct 2026): the gear pass before any art
 
