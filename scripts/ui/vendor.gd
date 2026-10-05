@@ -17,6 +17,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
+const ItemHead := preload("res://scripts/ui/item_head.gd")
 const People := preload("res://scripts/ui/people.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
@@ -68,7 +69,8 @@ var _side_lines: Array = []        # [label, value] pairs
 var _side_buttons: Array[Button] = []
 var _side_actions: Array = []
 var _panel: Panel
-var _left_title: Label
+var _left_title: Label             # the fence's or the rig's line with nothing picked; a pick shows the head
+var _head                          # the pick's name, chips, headline and affix rows (item_head.gd)
 var _left_lines: Array[Label] = []
 var _right_title: Label
 var _right_lines: Array[Label] = []
@@ -153,9 +155,13 @@ func _init() -> void:
 	for i in range(PANEL_LINES):
 		_left_lines.append(UI.label(_panel, Rect2(PAD, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_right_lines.append(UI.label(_panel, Rect2(PAD * 2 + COL_W, 48 + i * 28, COL_W, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_head = ItemHead.new(COL_W, true)
+	_head.position = Vector2(PAD, 10)
+	_head.visible = false
+	_panel.add_child(_head)
 	_hint = UI.label(_panel, Rect2(PAD, PANEL_H - 6 - 44, GRID_W - 2 * PAD, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_panel, Rect2(PAD, 162 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_panel, Rect2(PAD, 206 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for i in range(3):
 		var b := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 200, 44), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -401,6 +407,8 @@ func _show_panel() -> void:
 		l.text = ""
 	var it := _selected_item()
 	_say(it)
+	_head.visible = not it.is_empty()
+	_left_title.visible = it.is_empty()
 	if it.is_empty():
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
@@ -436,15 +444,15 @@ func _show_panel() -> void:
 		_lay_buttons()
 		return
 	_hint.text = ""
-	UI.fit(_left_title, [Items.full_name(it), it["base"]])
+	# the left column is the head; the tail says what the runner would get out of it
+	var tail := ""
 	if Items.is_medical(it):
-		UI.fit(_left_lines[0], ["Med · heals %.0f HP over %.0f s · 1 cell" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)], "Med · heals %.0f HP over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]])
-	elif Items.is_ammo(it):
-		var h := Items.headline(it)
-		UI.fit(_left_lines[0], ["%s · %s %s · 1 cell" % [Items.kind_words(it), h[0], h[1]], "%s · %s %s" % [Items.kind_words(it), h[0], h[1]], "Rounds · %s %s" % [h[0], h[1]]])
-	else:
-		UI.fit(_left_lines[0], Items.figure_options(it))
-	UI.fit(_left_lines[1], Items.affix_options(it))
+		tail = "heals %.0f for you, over %.0f s" % [Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0), sim.use_time(it)]
+	elif Items.is_gun(it):
+		tail = Items.ammo_words(it).to_lower().replace("smg", "SMG")
+	elif Items.is_attachment(it) and not Items.is_socketable(it):
+		tail = Items.att_words(it, true, true)
+	_head.show_item(it, sim, tail)
 	var fitted = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
 	if fitted != null:
 		var fh := Items.headline(fitted)
@@ -475,15 +483,14 @@ func _show_panel() -> void:
 	else:
 		_right_title.text = ""
 	if selected["kind"] == "shelf":
-		var room: bool = sim.stash_room(Items.size(it))
-		_left_lines[2].text = "They want %s" % Fmt.money(_price(it))
-		_left_lines[3].text = ("" if room else "No room in your stash") if not Items.is_gun(it) or not room else Items.ammo_words(it)
+		var room: bool = sim.stash_room(Items.size(it)) or sim._stack_room(it)
+		if not room:
+			_hint.text = "No room in your stash"
+		elif sim.cash < _price(it):
+			_hint.text = "Short by %s" % Fmt.money(_price(it) - sim.cash)
 		var action: Callable = sim.buy_clinic.bind(it["id"]) if kind == "clinic" else sim.buy_id.bind(it["id"])
 		_button(0, "Buy for %s" % Fmt.money(_price(it)), action, sim.cash >= _price(it) and room)
 	else:
-		_left_lines[2].text = "The fence pays %s" % Fmt.money(sim.sell_price(it))
-		if Items.is_gun(it):
-			_left_lines[3].text = Items.ammo_words(it)
 		if (kind == "clinic" and Items.is_medical(it)) or Items.is_ammo(it):
 			var room: bool = sim.rig_room(Items.size(it))
 			_right_lines[0].text = "" if room else ("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
@@ -651,6 +658,8 @@ func face_clear() -> bool:
 func text_nodes() -> Array:
 	var out: Array = [_left_title, _right_title, _hint, _side_title]
 	out.append_array(_words)
+	if _head.visible:
+		out.append_array(_head.text_nodes())
 	if _face_name.visible:
 		out.append(_face_name)
 	for l in _said:
@@ -687,6 +696,8 @@ func text_nodes() -> Array:
 
 func line_pairs() -> Array:
 	var out := []
+	if _head.visible:
+		out.append_array(_head.line_pairs())
 	for pair in _side_lines:
 		out.append(pair)
 	if _side_head.visible:

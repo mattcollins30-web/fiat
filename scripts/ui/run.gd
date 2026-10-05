@@ -18,6 +18,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const People := preload("res://scripts/ui/people.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
+const ItemHead := preload("res://scripts/ui/item_head.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -51,7 +52,9 @@ var sim
 var _panels: Array = []            # three: {panel, title, head, unit, track, fill, bar_text, lines[], note, status, button}
 var _inv
 var _pick: Panel
-var _pick_title: Label
+var _pick_title: Label             # the pack's state with nothing picked; a pick shows the head
+var _pick_head                     # the pick's name, chips, headline and affix rows (item_head.gd)
+var _pick_right: Array[Label] = [] # the right column: what's fitted, what the fence pays
 var _pick_lines: Array[Label] = []
 var _ditch: Button
 var _hint: Label
@@ -137,9 +140,16 @@ func _init() -> void:
 	_pick_title = UI.label(_pick, Rect2(PAD, 10, GRID_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(4):
 		_pick_lines.append(UI.label(_pick, Rect2(PAD, 48 + i * 28, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	var col_w: int = (GRID_W - 3 * PAD) / 2
+	_pick_head = ItemHead.new(col_w, true)
+	_pick_head.position = Vector2(PAD, 10)
+	_pick_head.visible = false
+	_pick.add_child(_pick_head)
+	for i in range(3):
+		_pick_right.append(UI.label(_pick, Rect2(PAD * 2 + col_w, 14 + i * 28, col_w, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_hint = UI.label(_pick, Rect2(PAD, PICK_H - 6 - 44, GRID_W - 2 * PAD - 260, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
-		_words.append(UI.label(_pick, Rect2(PAD, 162 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_words.append(UI.label(_pick, Rect2(PAD, 206 + i * 20, GRID_W - 2 * PAD, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_ditch = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), false)
 	_ditch.pressed.connect(_ditch_pick)
 	_ditch.visible = false
@@ -260,6 +270,10 @@ func _show_pick(m: Dictionary) -> void:
 	_take.visible = false
 	for l in _pick_lines:
 		l.text = ""
+	for l in _pick_right:
+		l.text = ""
+	_pick_head.visible = not it.is_empty()
+	_pick_title.visible = it.is_empty()
 	if it.is_empty():
 		_pick_title.text = "The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()]
 		_pick_lines[0].text = "A rifle is four cells by one, armour three by three, a med or a part one"
@@ -272,15 +286,21 @@ func _show_pick(m: Dictionary) -> void:
 		_hint.text = "Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet"
 		_hint.size.x = GRID_W - 2 * PAD
 		return
-	UI.fit(_pick_title, [Items.full_name(it), it["base"]])
-	UI.fit(_pick_lines[0], Items.figure_options(it, "the fence pays %s" % Fmt.money(sim.sell_price(it))))
-	UI.fit(_pick_lines[1], Items.affix_options(it))
+	var tail := ""
+	if Items.is_gun(it):
+		tail = Items.ammo_words(it).to_lower().replace("smg", "SMG")
+	elif Items.is_attachment(it) and not Items.is_socketable(it):
+		tail = Items.att_words(it, true, true)
+	_pick_head.show_item(it, sim, tail)
+	# the right column: the fence's price, and what's fitted in its slot
+	_pick_right[0].text = "The fence pays %s" % Fmt.money(sim.sell_price(it))
 	var fitted = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
 	if fitted != null:
-		UI.fit(_pick_lines[2], ["Fitted now: %s, %s %s" % [Items.full_name(fitted), Items.headline(fitted)[0], Items.headline(fitted)[1]],
-			"Fitted now: %s, %s %s" % [fitted["base"], Items.headline(fitted)[0], Items.headline(fitted)[1]]])
+		UI.fit(_pick_right[1], ["Fitted now: %s, %s %s" % [Items.full_name(fitted), Items.headline(fitted)[0], Items.headline(fitted)[1]],
+			"Fitted now: %s, %s %s" % [fitted["base"], Items.headline(fitted)[0], Items.headline(fitted)[1]], "Fitted now: %s" % fitted["base"]])
+		UI.fit(_pick_right[2], Items.affix_options(fitted))
 	elif it["slot"] in Data.SLOTS:
-		_pick_lines[2].text = "Nothing fitted as %s" % it["slot"].to_lower()
+		_pick_right[1].text = "Nothing fitted as %s" % it["slot"].to_lower()
 	var cells_words := "%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]
 	_ditch.text = "Ditch %s" % it["base"].to_lower()
 	_ditch.size.x = ceilf(UI.text_width(_ditch, _ditch.text)) + 48
@@ -457,6 +477,9 @@ func text_nodes() -> Array:
 	var out: Array = [_pick_title, _hint]
 	out.append_array(_words)
 	out.append_array(_pick_lines)
+	out.append_array(_pick_right)
+	if _pick_head.visible:
+		out.append_array(_pick_head.text_nodes())
 	if _ditch.visible:
 		out.append(_ditch)
 	for d in _panels:
@@ -473,6 +496,8 @@ func text_nodes() -> Array:
 ## Label + value pairs that share a line, and the headline + unit, for the fit check.
 func line_pairs() -> Array:
 	var out := []
+	if _pick_head.visible:
+		out.append_array(_pick_head.line_pairs())
 	for d in _panels:
 		out.append([d["head"], d["unit"]])
 		for pair in d["lines"]:

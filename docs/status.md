@@ -839,6 +839,30 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The item panel, option B (5 Oct)
+
+Matt picked B from the mockups: the item's head is one control now (`scripts/ui/item_head.gd`), mounted
+in the left column of the Lock-up's panel, the fence's and the clinic's, and the run's pick panel:
+
+- the name; a row of chips for what it is - slot, type (or "Gun part · Handguard", "Melee part", "Rounds",
+  "Med", "Paper"), "Rifles only" on a typed part, the rarity in its tone, the level, the cells when more than
+  one - chips that don't fit the row are left off from the right;
+- the headline figure big (a gun's dmg/s, armour, a med's HP, a box's rounds, a part's own first stat) with
+  its unit and a tail after it ("takes SMG rounds · 600 in the rig · 3 mounts"; "heals 42 for you, over 6 s";
+  "from before" on a paper), the tail dropping clauses from the end until it fits;
+- the affix rows: a tier tag (T1..T5, in the tier's colour) and the affix's words in the same colour, then
+  an "open" row ("One more can be added at the bench") while the rarity's below Elite, or a set's line.
+  The Lock-up's 252 px panel runs the compact form (three rows, a smaller figure); the open row gives way
+  to the set's words there.
+
+The right columns stay what they were (the compare with its deltas and verdict, the rig's room, the shelf's
+notes), the fence's price lines are gone since the buttons carry the price (the hint says "No room in your
+stash" or "Short by £n"), the run's pick shows "The fence pays £n" and what's fitted on the right, and the
+Lock-up's swap verdict takes the flavour's first row, the flavour shortening by sentence to one. Asserted:
+the head on every panel's pick, the bipod's head (figure +18%, "−6% pace" in the tail, its affix on a
+banded row, chips Gun part / Handguard / Rifles only / Uncommon), the shotgun's tail, the council's set
+line, a paper's "from before", and every fit check.
+
 ## Loot quality and loot quantity (5 Oct)
 
 Three names for two stats: "magic find" (the affix), "rarer finds" (the tree, the traits, the site words)

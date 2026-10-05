@@ -215,6 +215,7 @@ func _init() -> void:
 	# rounds dropped on a full rig top up its own stack of the same type (it only stacked the other way)
 	var rig_box: Dictionary = sim._plain(Data.AMMO, "Nails")
 	Items.set_stack(rig_box, 50)
+	var rig_held: Array = sim.rig.duplicate()
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
 	sim.rig.append(rig_box)                       # over the top: the test's own full rig
@@ -225,7 +226,7 @@ func _init() -> void:
 	var nails_before: int = sim.rounds_for(sim._plain("Primary", "Nail gun"))
 	var rig_n_before: int = sim.rig.size()
 	_check(sim.take(stash_box["id"]) and sim.rounds_for(sim._plain("Primary", "Nail gun")) == nails_before + 30 and sim.rig.size() == rig_n_before and not sim.stash.has(stash_box), "the drop did not top up the rig's nails: %d -> %d" % [nails_before, sim.rounds_for(sim._plain("Primary", "Nail gun"))])
-	sim.rig.erase(rig_box)
+	sim.rig = rig_held                            # the test's bandages and box go; the rig as it was
 	sim.leave(kit["id"])
 	sim.sell(kit)
 	main.refresh()
@@ -662,7 +663,7 @@ func _clinic_screen(main) -> void:
 	main.refresh()
 	_check_fit(main, "Clinic (your meds)")
 	var k: int = main._clinic._stash.cell_of(it["id"])
-	if k >= 0 and sim.rig_room(1):
+	if k >= 0 and sim.rig_room(Items.size(it)):
 		main._clinic._stash._pick(k)
 		main.refresh()
 		_check_fit(main, "Clinic (med pick)")
@@ -688,6 +689,9 @@ func _fence_screen(main) -> void:
 		main._fence._shelf._pick(main._fence._shelf.cell_of(it["id"]))
 		main.refresh()
 		_check_fit(main, "Fence (shelf pick)")
+		# the pick's head: the name, the chips, the figure big, the title label away
+		var fh = main._fence._head
+		_check(fh.visible and not main._fence._left_title.visible and fh._title.text != "" and fh._figure.text != "" and fh._chips[0].visible, "the fence's pick has no head: %s / %s" % [fh._title.text, fh._figure.text])
 		sim.cash += sim.price(it)
 		var n_before: int = sim.stash.size()
 		var shelf_before: int = sim.market.size()
@@ -1032,6 +1036,8 @@ func _run_screen(main) -> void:
 	main.refresh()
 	_check(main._run._ditch.visible, "picking a find did not offer Ditch")
 	_check_fit(main, "Run (pick)")
+	var rh = main._run._pick_head
+	_check(rh.visible and not main._run._pick_title.visible and rh._title.text != "" and rh._chips[0].visible and main._run._pick_right[0].text.begins_with("The fence pays"), "the run's pick has no head or price: %s / %s" % [rh._title.text, main._run._pick_right[0].text])
 	main._run._ditch_pick()
 	_check(sim.mission["found"].size() == n_before - 1, "Ditch did not drop the find")
 	if sim.mission["found"].size() > 0:
@@ -1212,7 +1218,16 @@ func _charm_sockets(main) -> void:
 	_check(sim.fit_socket("Primary", "socket 2", salt["id"]), "fit_socket() did not seat the salt in socket 2")
 	_check(sim.armour() > armour_before, "salt in a socket did not raise armour")
 	_check(not sim.stash.has(fluid) and not sim.stash.has(salt), "the socketables did not leave the stash")
-	_check(sim.strip("Primary", "socket 2") and sim.stash.has(salt), "strip() did not take the salt back")
+	var salt_count_before: int = 0
+	for st in sim.stash:
+		if st["base"] == "Road salt":
+			salt_count_before += Items.stack_size(st)
+	var salt_count_after: int = 0
+	var stripped: bool = sim.strip("Primary", "socket 2")
+	for st in sim.stash:
+		if st["base"] == "Road salt":
+			salt_count_after += Items.stack_size(st)
+	_check(stripped and salt_count_after == salt_count_before + 1, "strip() did not take the salt back (it may merge into a stack): %d -> %d" % [salt_count_before, salt_count_after])
 	_check(not sim.fit_socket("Primary", "optic", salt["id"]), "a socketable went on an optic mount")
 	# rolled gear carries sockets at the stated odds, never more than SOCKET_MAX
 	var with := 0
@@ -1614,9 +1629,15 @@ func _melee_checks(main) -> void:
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(bipod["id"]))
 	main.refresh()
-	_check(not main._armoury._left_lines[0].text.contains("..."), "the part's kind line trails off: '%s'" % main._armoury._left_lines[0].text)
-	_check(main._armoury._left_lines[1].text == Items.att_words(bipod, false, true) and not main._armoury._left_lines[1].text.contains("+22"), "the part's own line carries its affix too: '%s'" % main._armoury._left_lines[1].text)
-	_check(main._armoury._left_lines[2].text.ends_with("· T2") and main._armoury._left_lines[2].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not on its own banded line: '%s'" % main._armoury._left_lines[2].text)
+	var bhead = main._armoury._head
+	_check(bhead.visible and bhead._title.text == "Bipod" and bhead._figure.text == "+18%", "the part's head is off: '%s' '%s'" % [bhead._title.text, bhead._figure.text])
+	_check(bhead._unit.text.contains("−6% pace") and not bhead._unit.text.contains("+22"), "the part's own figures carry its affix too: '%s'" % bhead._unit.text)
+	_check(bhead._rows[0].text == "+4% damage" and bhead._tag_labels[0].text == "T2" and bhead._rows[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not on its own banded row: '%s'" % bhead._rows[0].text)
+	var chip_words := []
+	for k in range(bhead.CHIPS):
+		if bhead._chips[k].visible:
+			chip_words.append(bhead._chip_labels[k].text)
+	_check(chip_words.has("Gun part") and chip_words.has("Handguard") and chip_words.has("Uncommon") and chip_words.has("Rifles only") and not chip_words.has("1 cell"), "the part's chips are %s" % str(chip_words))
 	_check_fit(main, "Armoury (a bipod)")
 	sim.stash.erase(bipod)
 	main.show_room(main.WORKSHOP)
@@ -1845,7 +1866,7 @@ func _set_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury._pick_slot("Armour")
 	main.refresh()
-	_check(main._armoury._left_lines[4].text.begins_with("The council's · 4 of 4"), "the panel's set line is '%s'" % main._armoury._left_lines[4].text)
+	_check(main._armoury._head._rows.any(func(r): return r.text.begins_with("The council's · 4 of 4")), "the panel's set line is missing: %s" % str(main._armoury._head._rows.map(func(r): return r.text)))
 	_check_fit(main, "Armoury (a set)")
 	# the army's: contact down one, more ×1.3 at four
 	for s in Data.SLOTS:
@@ -2361,14 +2382,14 @@ func _craft_checks(main) -> void:
 	# the affix list on the panel, with tiers
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
 	main.refresh()
-	_check(main._armoury._left_lines[2].text.contains("· T"), "the panel's affix line has no tier: '%s'" % main._armoury._left_lines[2].text)
+	_check(main._armoury._head._tags[0].visible and main._armoury._head._tag_labels[0].text.begins_with("T"), "the panel's affix row has no tier tag: '%s'" % main._armoury._head._tag_labels[0].text)
 	_check_fit(main, "Armoury (affix list)")
-	# each affix line is banded in its tier's colour
+	# each affix row is banded in its tier's colour, tag and words
 	for k in range(mini(3, it["affixes"].size())):
 		var want: Color = Pal.tier_color(int(it["affixes"][k].get("tier", 1)))
-		_check(main._armoury._left_lines[2 + k].get_theme_color("font_color") == want, "affix %d (T%d) is not in its tier's colour" % [k, int(it["affixes"][k].get("tier", 1))])
+		_check(main._armoury._head._rows[k].get_theme_color("font_color") == want and main._armoury._head._tag_labels[k].get_theme_color("font_color") == want, "affix %d (T%d) is not in its tier's colour" % [k, int(it["affixes"][k].get("tier", 1))])
 	if it["affixes"].size() < 3:
-		_check(main._armoury._left_lines[4].get_theme_color("font_color") == Pal.TEXT_2 or main._armoury._left_lines[4].text == "", "an empty affix line kept a band")
+		_check(not main._armoury._head._tags[it["affixes"].size()].visible or main._armoury._head._tag_labels[it["affixes"].size()].text == "·", "the row after the affixes is not the open row")
 	# worn gear can go to the bench too
 	var worn: Dictionary = sim.equipped["Armour"]
 	if worn != null and not worn.has("unique") and sim.craft_cost(worn, "socket") >= 0 and is_same(sim.item_by_id(worn["id"]), worn):
@@ -3098,7 +3119,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._left_title.text == "A P45" and main._armoury._left_lines[0].text == "From before" and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._left_title.text, main._armoury._left_lines[0].text])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._unit.text.contains("from before") and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._head._title.text, main._armoury._head._unit.text])
 	_check(main._armoury._right_lines[0].text.begins_with("Read") or main._armoury._right_lines[0].text == "In the drawer", "a read paper's line is off: %s" % main._armoury._right_lines[0].text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the fence's stash tab (it crashed there too)
@@ -3507,7 +3528,7 @@ func _damage_model_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": shown["id"]}
 	main.refresh()
-	_check(main._armoury._left_lines[1].text.begins_with("Takes shells"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._left_lines[1].text)
+	_check(main._armoury._head._unit.text.contains("takes shells"), "the Lock-up's panel does not say the shotgun takes shells: '%s'" % main._armoury._head._unit.text)
 	_check_fit(main, "Armoury (ammo words)")
 	sim.sell(shown)
 	print("ammo words ok")

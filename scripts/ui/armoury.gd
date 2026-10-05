@@ -21,12 +21,13 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const Containers := preload("res://scripts/ui/containers.gd")
 const Body := preload("res://scripts/ui/body.gd")
+const ItemHead := preload("res://scripts/ui/item_head.gd")
 
 const BODY_W := Body.WIDTH                                    # 420
 const CONTAINERS_Y := Body.HEIGHT + 8                         # 568: the body, then the rig and the pack (to 864)
 const GAP := 24
 const GRID_X := BODY_W + GAP
-const GRID_W := Inventory.WIDTH                                # 974
+const GRID_W := Inventory.WIDTH                                # 904
 const GRID_H := Inventory.HEIGHT                               # 588
 const PANEL_Y := GRID_H + GAP                                 # 612
 const PANEL_H := Pal.ROOM_H - PANEL_Y                         # 252
@@ -41,8 +42,9 @@ var _body                          # the slots as boxes to drop on
 var _inv                           # the stash grid
 var _containers                    # the rig and the pack
 var _panel: Panel
-var _left_title: Label
+var _left_title: Label             # "Select an item" with nothing picked; the head carries a pick's name
 var _left_lines: Array[Label] = []
+var _head                          # the pick's name, chips, headline and affix rows (item_head.gd)
 var _right_title: Label
 var _right_lines: Array[Label] = []
 var _chips: Array[Label] = []      # the swap's changes, one each, green up and red down
@@ -91,7 +93,11 @@ func _init() -> void:
 		_chips.append(c)
 	# the swap in one word, on the left column's fourth line - its own label so
 	# it can be coloured without touching the lines above it
-	_overall = UI.label(_panel, Rect2(PANEL_PAD, 48 + 5 * LINE_H, COL_W, LINE_H), "", "SemiBold", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_overall = UI.label(_panel, Rect2(PANEL_PAD, 48 + 6 * LINE_H + 4, COL_W, 20), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_head = ItemHead.new(COL_W, true)
+	_head.position = Vector2(PANEL_PAD, 10)
+	_head.visible = false
+	_panel.add_child(_head)
 	_hint = UI.label(_panel, Rect2(PANEL_PAD, PANEL_H - 6 - 44, GRID_W - 2 * PANEL_PAD, 44), "",
 			"Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
@@ -190,6 +196,8 @@ func _show_panel() -> void:
 		l.text = ""
 	for tb in _toggles:
 		tb.visible = false
+	_head.visible = not it.is_empty()
+	_left_title.visible = it.is_empty()
 	if it.is_empty():
 		_left_title.text = "Select an item"
 		_right_title.text = ""
@@ -213,23 +221,20 @@ func _show_panel() -> void:
 			UI.fit(_hint, [_hint.text, _hint.text.get_slice(",", 0)])
 		return
 	_hint.text = ""
-	UI.fit(_left_title, [Items.full_name(it), it["base"]])
-	UI.fit(_left_lines[0], Items.figure_options(it))
-	var mounts: String = ("%d attachment slots, empty" % it["attachments"].size()) if it["attachments"].size() > 0 else ""
+	# the left column is the head: name, chips, the headline figure, the affix rows
+	var tail := ""
+	var extra := ""
 	if Items.is_gun(it):
-		UI.fit(_left_lines[1], ["%s · %s" % [Items.ammo_words(it), mounts.to_lower()] if mounts != "" else Items.ammo_words(it), Items.ammo_words(it)])
-	else:
-		_left_lines[1].text = mounts
-	# the affixes, one a line with its tier; "No affixes" on a plain thing
-	var lines: Array = Items.affix_lines(it, false, true)
-	var short_lines: Array = Items.affix_lines(it, true, true)
-	for k in range(3):
-		if k < lines.size():
-			UI.fit(_left_lines[2 + k], [lines[k], short_lines[k]])
-			_left_lines[2 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(it, k)))
-		else:
-			_left_lines[2 + k].text = "No affixes" if k == 0 else ""
-			_left_lines[2 + k].add_theme_color_override("font_color", Pal.TEXT_2)
+		var takes: String = Items.ammo_words(it)
+		tail = takes.to_lower().replace("smg", "SMG")
+		if Items.ammo_type(it) != "none" and Items.ammo_type(it) != "":
+			tail += " · %d in the rig" % sim.rounds_for(it)
+		if it["attachments"].size() > 0:
+			tail += " · %d mounts" % it["attachments"].size()
+	elif Items.is_attachment(it) and not Items.is_socketable(it):
+		tail = Items.att_words(it, true, true)
+	elif Items.is_ammo(it):
+		tail = "feeds %s" % ("the " + Items.base_of(it)["type"] if Items.base_of(it)["type"] != "smg" else "the SMG")
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -239,10 +244,10 @@ func _show_panel() -> void:
 			if int(k) > n and next_words == "":
 				next_words = st["bonuses"][k]["words"]
 		var line: String = "%s · %d of %d worn" % [it["set"], n, st["pieces"].size()]
-		UI.fit(_left_lines[4], ["%s · next: %s" % [line, next_words.to_lower()] if next_words != "" else "%s · the full set" % line, line])
-		_left_lines[4].add_theme_color_override("font_color", Pal.SET)
-	else:
-		_left_lines[4].add_theme_color_override("font_color", Pal.TEXT_2)
+		extra = ("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line
+		if UI.text_width(_left_lines[0], extra) > COL_W:
+			extra = line
+	_head.show_item(it, sim, tail, extra)
 	_right_lines[3].text = ""
 	if Items.is_medical(it) or Items.is_ammo(it):
 		_show_medical(it)
@@ -253,19 +258,6 @@ func _show_panel() -> void:
 		_lay_buttons()
 		return
 	if Items.is_attachment(it):
-		UI.fit(_left_lines[0], ["%s · %s T%d · 1 cell" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]], "%s · %s T%d" % [Items.kind_words(it), Items.rarity_name(it), it["tier"]],
-				"%s · T%d" % [Items.kind_words(it), it["tier"]], "%s · T%d" % [Items.kind_words(it).get_slice(" · ", 0), it["tier"]]])
-		# the part's own figures, then its rolled affixes a line each in their tier's colour, like a gun's
-		UI.fit(_left_lines[1], [Items.att_words(it, false, true), Items.att_words(it, true, true)])
-		var alines: Array = Items.affix_lines(it, false, true)
-		var ashort: Array = Items.affix_lines(it, true, true)
-		for k in range(3):
-			if k < alines.size():
-				UI.fit(_left_lines[2 + k], [alines[k], ashort[k]])
-				_left_lines[2 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(it, k)))
-			else:
-				_left_lines[2 + k].text = ""
-				_left_lines[2 + k].add_theme_color_override("font_color", Pal.TEXT_2)
 		if Items.is_socketable(it):
 			UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
 			UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
@@ -330,6 +322,15 @@ func _lay_buttons() -> void:
 			x -= _buttons[i].size.x
 			_buttons[i].position.x = x
 			x -= 12
+	# the swap's verdict takes the flavour's first row: the flavour keeps the second
+	if _overall.text != "" and _words[0].text != "":
+		var whole: String = _words[0].text + (" " + _words[1].text if _words[1].text != "" else "")
+		var sentences: Array = whole.split(". ", false)
+		var options := [whole]
+		for n in range(sentences.size() - 1, 0, -1):
+			options.append(". ".join(sentences.slice(0, n)) + ".")
+		UI.fit(_words[1], options)        # one row: the whole, or fewer sentences
+		_words[0].text = ""
 	# the hint shares the strip with the buttons: it stops where they start
 	_hint.size.x = maxf(80.0, x - PANEL_PAD)
 	if _hint.text != "" and UI.text_width(_hint, _hint.text) > _hint.size.x:
@@ -339,9 +340,7 @@ func _lay_buttons() -> void:
 ## A med: in the stash it can be taken; in the rig it can be left behind.
 ## A paper: read already, in the drawer; worth pennies to the fence; the deeds are their own matter.
 func _show_paper(it: Dictionary) -> void:
-	_left_lines[0].text = "From before" if not Items.is_deeds(it) else "What the bank was holding"
-	_left_lines[1].text = ""
-	_left_lines[2].text = ""
+	_head.show_item(it, sim, "from before" if not Items.is_deeds(it) else "what the bank was holding")
 	_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
 	if Items.is_deeds(it):
 		UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
@@ -564,10 +563,17 @@ func _press(i: int) -> void:
 
 
 ## For the tests: every label with text.
+## The head's figure and unit share a row.
+func line_pairs() -> Array:
+	return _head.line_pairs() if _head.visible else []
+
+
 func text_nodes() -> Array:
 	var out: Array = [_left_title, _right_title, _hint, _overall]
 	out.append_array(_words)
 	out.append_array(_left_lines)
+	if _head.visible:
+		out.append_array(_head.text_nodes())
 	out.append_array(_right_lines)
 	for c in _chips:
 		if c.visible:
