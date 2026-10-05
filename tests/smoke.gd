@@ -2079,7 +2079,7 @@ func _contracts_checks(main) -> void:
 	_check(sim.can_hand_in(0), "three rare parts did not make the contract ready")
 	fence_status = main._rail_status(main.MARKET)
 	_check(fence_status.get("badge", "") == "Ready" and main._fence._tabs[2].text == "Contracts ✓1", "a ready contract is not flagged: %s / %s" % [str(fence_status), main._fence._tabs[2].text])
-	_check(sim.next_words() == Words.NEXT["contract"], "what's next does not point at the ready contract: '%s'" % sim.next_words())
+	_check(sim.next_words() == Words.NEXT["contract"] or sim.campaign_done(), "what's next does not point at the ready contract: '%s'" % sim.next_words())
 	_check_fit(main, "Fence (contract ready)")
 	main._fence._show("shelf")
 	var d: Dictionary = sim.to_dict()
@@ -4196,3 +4196,45 @@ func _yard_checks(main) -> void:
 			_check(any_chip or sim.intel[0].is_empty(), "the radio's site card has no word chips")
 		_check_fit(main, "Radio (chips)")
 	print("the Yard as option A ok: Elements, Finds, the works; the Runs cards' chips; the Radio's chips")
+	_fill_up_checks(main)
+
+
+## "Fill up, then go": once the fight's won, a button sets the run to leave by
+## itself when the pack's full or the next gang comes.
+func _fill_up_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.auto_tier = -1
+	sim.intel[0] = []
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(not main._run._panels[2]["button2"].visible, "the second button shows before the clear on a manual run")
+	m["remaining"] = 0
+	sim._clear(m, m["t"])
+	main.refresh()
+	_check(main._run._panels[2]["button2"].visible and main._run._panels[2]["button2"].text == "Fill up, then go", "after the clear the second button reads '%s'" % main._run._panels[2]["button2"].text)
+	main._run._second_button()
+	main.refresh()
+	_check(m.get("leave_full", false) and main._run._panels[2]["button2"].text.begins_with("Filling up"), "the button did not set the run to fill up then go")
+	_check_fit(main, "Run (fill up)")
+	# a gang arriving ends it
+	var runs_before: int = sim.runs_total
+	m["patrol_timer"] = sim.patrol_s(m["t"], true) + 1.0
+	sim.advance(1.0)
+	_check(not sim.on_mission() and sim.last_report["outcome"] != "Dead", "fill up then go did not leave as the gang came: %s" % str(sim.last_report.get("outcome", "")))
+	# and a full pack ends it
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 0
+	sim._clear(m, m["t"])
+	sim.set_leave_full(true)
+	while sim.pack_used(m) < sim.capacity():
+		m["found"].append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.advance(0.5)
+	_check(not sim.on_mission(), "fill up then go did not leave with the pack full")
+	print("fill up, then go ok")

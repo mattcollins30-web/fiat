@@ -839,6 +839,19 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## Fill up, then go (5 Oct)
+
+Matt, with gangs delayed three minutes by the tree: the fight won, the search ticking, nothing to do
+but watch the clock or leave the finds on the table. Once the fight's won a manual run gets a second
+button, "Fill up, then go": the run searches on and leaves by itself when the pack's full or the next
+gang comes - the auto-run's rule, for one run, without the redeploy (`set_leave_full`,
+`mission["leave_full"]`). The button reads "Filling up ✓" while set and the note says what will end it;
+pressing again cancels. Asserted: the button appears at the clear, sets the flag, a gang's arrival ends
+the run alive, a full pack ends it.
+
+Also: the Fence's rail badge is "Ready" whatever the count (two ready overlapped the name); "what's next"
+gives the campaign's line before a ready contract.
+
 ## Parked for after the playtest: crafting, grenades, the pack grid (5 Oct)
 
 Shaped in the chat, written into `docs/design/concept.md` as items 23, 25 and 26, nothing built: the

@@ -725,11 +725,11 @@ func next_words(short := false) -> String:
 		return w["past"]
 	if runs_total == 0:
 		return w["first"]
+	if campaign_done():
+		return w["done"]
 	for k in range(contracts.size()):
 		if can_hand_in(k) and mission == null:
 			return w["contract"]
-	if campaign_done():
-		return w["done"]
 	for z in range(Data.ZONES.size()):
 		if zone_complete(z):
 			continue
@@ -2309,11 +2309,23 @@ func _tick(dt: float) -> void:
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
 			log_event("Another gang, %d of them" % size)
-			if auto_tier >= 0:
-				_extract()                  # auto-run leaves at the first patrol
+			if auto_tier >= 0 or m.get("leave_full", false):
+				_extract()                  # auto-run, or "fill up then go", leaves as the gang arrives
 				return
-	if auto_tier >= 0 and m["cleared"] and pack_used(m) >= capacity():
+	if (auto_tier >= 0 or m.get("leave_full", false)) and m["cleared"] and pack_used(m) >= capacity():
 		_extract()
+
+
+## "Fill up, then go": with the fight won, keep searching and leave by itself
+## when the pack's full or the next gang comes - the auto-run's rule, for one
+## run, so a long gang delay isn't three minutes of watching.
+func set_leave_full(on: bool) -> bool:
+	if mission == null:
+		return false
+	mission["leave_full"] = on
+	if on and mission["cleared"] and pack_used(mission) >= capacity():
+		_extract()
+	return true
 
 
 ## HP back, counted for the run screen's green numbers (regen, a med, life on a kill).

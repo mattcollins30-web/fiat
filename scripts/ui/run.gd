@@ -129,7 +129,7 @@ func _init() -> void:
 		_rig_cells.append(c)
 	_panels[1]["button"].visible = false        # the pouches are the controls: a med's cell uses it
 	_panels[2]["button"].pressed.connect(_get_out)
-	_panels[2]["button2"].pressed.connect(_stop_auto)
+	_panels[2]["button2"].pressed.connect(_second_button)
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.ditching = true
@@ -217,23 +217,27 @@ func show_state(s) -> void:
 	_bar(run, (float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]), "")
 	_lines(run, [["Cash", Fmt.money(m["cash"])], ["Passed over", "%d · swapped %d" % [m["left"], int(m.get("swapped", 0))]]])
 	run["note"].text = "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
-		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot")))
+		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
+		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
 	run["note"].add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
-	var sig := "%s|%s|%d|%d|%s|%d|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size()]
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false))]
 	if sig == _shown:
 		return
 	_shown = sig
 	var auto: bool = sim.auto_tier >= 0
+	var filling: bool = m.get("leave_full", false)
 	run["button"].text = "Get out now"
 	run["button"].visible = true
-	UI.style_button(run["button"], low or m["cleared"])
-	run["button2"].visible = auto
-	run["button2"].text = "Stop auto"
-	if auto:
+	UI.style_button(run["button"], low or (m["cleared"] and not filling))
+	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
+	run["button2"].visible = auto or m["cleared"]
+	run["button2"].text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
+	UI.style_button(run["button2"], false, "good" if (filling and not auto) else "")
+	if run["button2"].visible:
 		run["button"].size.x = (INNER - 12) / 2
 		run["button2"].position.x = PAD + run["button"].size.x + 12
 		run["button2"].size.x = INNER - run["button"].size.x - 12
@@ -446,6 +450,14 @@ func _rounds_words(lead: String) -> String:
 func _get_out() -> void:
 	sim.extract_now()
 	acted.emit()
+
+
+func _second_button() -> void:
+	if sim.auto_tier >= 0:
+		_stop_auto()
+	elif sim.on_mission():
+		sim.set_leave_full(not sim.mission.get("leave_full", false))
+		acted.emit()
 
 
 func _stop_auto() -> void:

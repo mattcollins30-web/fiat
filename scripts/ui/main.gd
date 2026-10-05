@@ -665,7 +665,7 @@ func _rail_status(name: String) -> Dictionary:
 					ready += 1
 				elif sim.contracts[k].get("pay", "") == "unique":
 					unique_pay += 1
-			var badge: String = ("Ready" if ready == 1 else "%d ready" % ready) if ready > 0 else ("Unique" if unique_pay > 0 else "")
+			var badge: String = "Ready" if ready > 0 else ("Unique" if unique_pay > 0 else "")
 			return {"status1": "%d for sale" % sim.market.size(), "status2": ("%d contract%s" % [sim.contracts.size(), "" if sim.contracts.size() == 1 else "s"]) if not sim.contracts.is_empty() else "%d to sell" % sim.stash.size(),
 					"badge": badge, "badge_tone": "good" if ready > 0 else "warn"}
 		COMMS:
