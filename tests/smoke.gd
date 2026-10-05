@@ -1426,7 +1426,7 @@ func _melee_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	var bat: Dictionary = sim._plain("Primary", "Spiked bat")
-	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes nothing" and bat["attachments"].has("grip") and bat["attachments"].has("head"), "a spiked bat is not a melee weapon with a grip and a head")
+	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes nothing" and bat["attachments"].has("grip") and bat["attachments"].has("business end"), "a spiked bat is not a melee weapon with a grip and a head")
 	var old = sim.equipped["Primary"]
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
 	var bleed0: float = sim.conversion()["bleed"]          # whatever the rest of the kit and the web add already
@@ -1435,7 +1435,7 @@ func _melee_checks(main) -> void:
 	_check(sim.has_rounds(bat) and sim.dps() > 0.0, "a bat ran dry")
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2) or sim.conversion()["physical"] <= 0.001, "the bat's nails are not 20%% bleed on top of %.2f: %s" % [bleed0, str(sim.conversion())])
 	var head: Dictionary = sim._plain("Attachment", "Nails through it")
-	bat["attachments"]["head"] = head
+	bat["attachments"]["business end"] = head
 	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.35) or sim.conversion()["physical"] <= 0.001, "nails through it did not add 15%% bleed: %s" % str(sim.conversion()))
 	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1), 10.0 * (1.0 - sim.mitigation()) * Data.MELEE_INCOMING), "a melee runner is not hit %.2f× harder" % Data.MELEE_INCOMING)
 	# the first second of a gang: their shot before your swing
@@ -1459,7 +1459,7 @@ func _melee_checks(main) -> void:
 	var labels := []
 	for r in main._workshop._guns["Primary"]["rows"]:
 		labels.append(r["mount"].text)
-	_check(labels[0] == "Grip" and labels[1] == "Head" and labels[2] == "—", "the bat's rows are %s" % str(labels))
+	_check(labels[0] == "Grip" and labels[1] == "Business end" and labels[2] == "—", "the bat's rows are %s" % str(labels))
 	_check_fit(main, "Workshop (a bat)")
 	main._workshop._pick_row("Primary", 0)
 	_check(main._workshop.sel_mount == "grip", "picking the first row did not pick the grip")
@@ -1477,9 +1477,23 @@ func _melee_checks(main) -> void:
 	main.refresh()
 	main._workshop._pick_cell(main._workshop._inv.cell_of(lead["id"]))
 	main.refresh()
-	_check(main._workshop._left_lines[0].text.begins_with("Melee part · head"), "a bat part's line is '%s'" % main._workshop._left_lines[0].text)
+	_check(main._workshop._left_lines[0].text.begins_with("Melee part · business end"), "a bat part's line is '%s'" % main._workshop._left_lines[0].text)
 	_check(not main._workshop._right_title.text.contains("gun"), "a bat part's panel talks of a gun: '%s'" % main._workshop._right_title.text)
 	_check_fit(main, "Workshop (a bat part)")
+	# the bench says what the next level adds, at every level short of the last
+	var ws_was: int = sim.workshop
+	for lv in range(Data.WORKSHOP.size()):
+		sim.workshop = lv
+		main.refresh()
+		var words: String = main._workshop._bench_words.text
+		if lv < Data.WORKSHOP.size() - 1:
+			_check(words.begins_with("Next: ") and words.ends_with("s"), "bench level %d's words don't say what the upgrade adds: '%s'" % [lv, words])
+			_check(main._workshop._upgrade.visible and main._workshop._upgrade.text.begins_with("Upgrade for"), "bench level %d has no upgrade button" % lv)
+		else:
+			_check(not main._workshop._upgrade.visible, "the top bench still offers an upgrade")
+		_check_fit(main, "Workshop (bench level %d)" % lv)
+	sim.workshop = ws_was
+	main.refresh()
 	sim.stash.erase(lead)
 	# Through the lot: a Doorman's swing hits everyone on you
 	sim.set_class("Doorman")
@@ -2897,7 +2911,7 @@ func _playtest_checks(main) -> void:
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
-	for pair in [["Primary", "Stalking rifle", "Primary · rifle"], ["Primary", "Spiked bat", "Primary · melee"], ["Secondary", "Service pistol", "Secondary · pistol"], ["Helmet", "Hard hat", "Helmet"], ["Armour", "Stab vest", "Armour"], ["Rig", "Bum bag", "Rig"], ["Backpack", "School bag", "Backpack"], ["Charm", "Lucky penny", "Charm"], [Data.MEDICAL, "Bandage", "Med"], [Data.AMMO, "Shells", "Rounds · shotgun"], [Data.PAPER, "A P45", "Paper"], [Data.ATTACHMENT, "Road salt", "Socketable"], [Data.ATTACHMENT, "Red dot", "Gun part · optic"], [Data.ATTACHMENT, "Lead in it", "Melee part · head"], [Data.ATTACHMENT, "Tape", "Melee part · grip"]]:
+	for pair in [["Primary", "Stalking rifle", "Primary · rifle"], ["Primary", "Spiked bat", "Primary · melee"], ["Secondary", "Service pistol", "Secondary · pistol"], ["Helmet", "Hard hat", "Helmet"], ["Armour", "Stab vest", "Armour"], ["Rig", "Bum bag", "Rig"], ["Backpack", "School bag", "Backpack"], ["Charm", "Lucky penny", "Charm"], [Data.MEDICAL, "Bandage", "Med"], [Data.AMMO, "Shells", "Rounds · shotgun"], [Data.PAPER, "A P45", "Paper"], [Data.ATTACHMENT, "Road salt", "Socketable"], [Data.ATTACHMENT, "Red dot", "Gun part · optic"], [Data.ATTACHMENT, "Lead in it", "Melee part · business end"], [Data.ATTACHMENT, "Tape", "Melee part · grip"]]:
 		var piece: Dictionary = sim._plain(pair[0], pair[1])
 		_check(Items.kind_words(piece) == pair[2], "%s reads as '%s', not '%s'" % [pair[1], Items.kind_words(piece), pair[2]])
 		if pair[0] in Data.SLOTS:
@@ -3629,6 +3643,8 @@ func _check_fit(main, where: String) -> void:
 			bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
 	bad += _check_nodes(main._top_labels.values(), [], where + " top bar")
+	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["dps"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x < main._top_labels["xp"].position.x,
+			"%s: the top bar's dmg/s is off: '%s'" % [where, main._top_labels["dps"].text])
 	if main._menu.visible:
 		bad += _check_nodes(main._menu.text_nodes(), [], where + " menu")
 		var pr: Rect2 = main._menu.panel_rect()

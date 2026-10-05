@@ -839,6 +839,19 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## dmg/s on the top bar (5 Oct)
+
+The runner's damage a second, between HP and XP, from `sim.dps()` (so a dry gun reads as it fights: 0 from
+that gun). Asserted on every fit check: present, ends in "dmg/s", and sits between HP and XP.
+
+## Business ends, and what the bench's upgrade buys (5 Oct)
+
+The melee mount "head" is "business end" now (data, the bench's rows, the parts: "Nails through it",
+"A blade on it", "Lead in it" go on a bat's business end; the mount column is 190 px to hold the word).
+The bench panel's title carries what the level fits ("Bench level 1 · optics, muzzles, grips") and the
+line under it what the next level adds ("Next: magazines and business ends"), so the upgrade's price
+buys something readable; the top level keeps its own words and no button. Asserted at every level.
+
 ## "head" (5 Oct)
 
 *"Lead in it - head, Common T3, £160 - No gun with a head mount."* A bat's parts (grip, head) read like a

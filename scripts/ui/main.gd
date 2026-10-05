@@ -51,12 +51,13 @@ const ROOMS := [OVERVIEW, MISSIONS, ARMOURY, WORKSHOP, BARRACKS, MEDIC, MARKET, 
 ## The top bar: level and HP on the left, where the runner is in the centre,
 ## cash on the right; each in a fixed slot as wide as the widest text it can
 ## hold, so nothing shifts as figures change.
-const TOP_KEYS := ["level", "hp", "xp", "where", "notes", "cash"]
+const TOP_KEYS := ["level", "hp", "dps", "xp", "where", "notes", "cash"]
 const TOP_WORST := {
 	"cash": "£9,999,999",
 	"notes": "999,999 notes",
 	"level": "Level 50",
 	"hp": "HP 999 / 999",
+	"dps": "9,999 dmg/s",
 	"xp": "XP 999,999 / 999,999",
 	"where": "Out: Ransacked streets",
 }
@@ -528,6 +529,7 @@ func refresh() -> void:
 	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
 	_top_labels["level"].text = "Level %d" % sim.level()
 	_top_labels["hp"].text = "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
+	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
 	_top_labels["xp"].text = _xp_words()
 	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the yard"
 	for name in ROOMS:

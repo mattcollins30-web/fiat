@@ -100,7 +100,7 @@ func _init() -> void:
 			b.pressed.connect(_pick_row.bind(slot, k))
 			add_child(b)
 			var r := {"button": b, "key": ""}
-			r["mount"] = UI.label(b, Rect2(PAD, 0, 150, ROW_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["mount"] = UI.label(b, Rect2(PAD, 0, 190, ROW_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			r["fitted"] = UI.label(b, Rect2(PAD, 0, BODY_W - 2 * PAD, ROW_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 			g["rows"].append(r)
 			y += ROW_H + ROW_GAP
@@ -126,7 +126,7 @@ func _init() -> void:
 			b.pressed.connect(_pick_mount.bind(slot, mount))
 			add_child(b)
 			var r := {"button": b}
-			r["mount"] = UI.label(b, Rect2(PAD, 0, 150, ROW_H), mount.capitalize(), "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			r["mount"] = UI.label(b, Rect2(PAD, 0, 190, ROW_H), Items.mount_name(mount), "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			r["fitted"] = UI.label(b, Rect2(PAD, 0, BODY_W - 2 * PAD, ROW_H), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 			g["rows"][mount] = r
 			y += ROW_H + ROW_GAP
@@ -190,7 +190,7 @@ func show_state(s) -> void:
 	var source: Array = sim.attachments_for(sel_mount) if sel_mount != "" else _all_attachments(view == "sockets")
 	var what: String = "Socketables" if view == "sockets" else "Attachments"
 	if sel_mount != "":
-		what = sel_mount.capitalize() if sel_mount.begins_with("socket") else "%s mount" % sel_mount.capitalize()
+		what = sel_mount.capitalize() if sel_mount.begins_with("socket") else "%s mount" % Items.mount_name(sel_mount)
 	if view == "craft":
 		source = _craftable()
 		what = "Gear"
@@ -219,7 +219,7 @@ func show_state(s) -> void:
 			var has: bool = mount != ""
 			var on: bool = sel_slot == slot and sel_mount == mount and mount != ""
 			r["button"].visible = view == "guns"
-			r["mount"].text = mount.capitalize() if mount != "" else ("—" if gun != null else "")
+			r["mount"].text = Items.mount_name(mount) if mount != "" else ("—" if gun != null else "")
 			if not has:
 				r["fitted"].text = ""
 				r["mount"].add_theme_color_override("font_color", Pal.TEXT_3)
@@ -286,15 +286,32 @@ func show_state(s) -> void:
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT)
 				_style(r["button"], on, rarity_tone(a))
 	# the bench
-	_bench_title.text = "Bench level %d" % sim.workshop
-	_bench_words.text = Data.WORKSHOP[sim.workshop]["words"]
+	# the level and what it fits; under it, what the next level adds, so the
+	# upgrade's price buys something the player can read
+	var level: Dictionary = Data.WORKSHOP[sim.workshop]
+	var fits: String = ", ".join(level["mounts"].map(func(m): return m + "s"))
+	UI.fit(_bench_title, ["Bench level %d · %s" % [sim.workshop, fits] if fits != "" else "Bench level %d" % sim.workshop, "Bench level %d" % sim.workshop])
 	if sim.workshop >= Data.WORKSHOP.size() - 1:
+		_bench_words.text = level["words"]
 		_upgrade.visible = false
 	else:
+		var next: Dictionary = Data.WORKSHOP[sim.workshop + 1]
+		var added := []
+		for m in next["mounts"]:
+			if not (m in level["mounts"]):
+				added.append(m + "s")
+		UI.fit(_bench_words, ["Next: %s" % _and(added) if not added.is_empty() else next["words"], next["words"]])
 		_upgrade.visible = true
 		_upgrade.text = "Upgrade for %s" % Fmt.money(sim.workshop_cost())
 		_upgrade.disabled = not sim.can_upgrade_workshop()
 	_show_panel()
+
+
+## "optics, muzzles and grips".
+static func _and(words: Array) -> String:
+	if words.size() <= 1:
+		return "" if words.is_empty() else str(words[0])
+	return ", ".join(words.slice(0, words.size() - 1)) + " and " + str(words.back())
 
 
 ## The gun's own mounts, in the bench's order, sockets apart.
@@ -394,7 +411,7 @@ func _show_panel() -> void:
 		_left_title.text = shown["base"]
 		UI.fit(_left_lines[0], ["%s · %s T%d · %s" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])],
 				"%s · %s T%d" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"]],
-				"%s · %s T%d" % [Items.mount_name(shown["mount"]), Items.rarity_name(shown), shown["tier"]]])
+				"%s · T%d" % [Items.kind_words(shown), shown["tier"]]])
 		# the part's figures over two lines when four stats need them
 		if UI.text_width(_left_lines[1], Items.att_words(shown)) <= _left_lines[1].size.x:
 			_left_lines[1].text = Items.att_words(shown)

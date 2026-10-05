@@ -593,7 +593,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 ## where the slot has them - "Primary · rifle", "Secondary · melee", "Helmet",
 ## "Rounds · shotgun", "Gun part · optic", "Socketable", "Paper", "Charm", "Med".
 ## The mounts a bat or a blade has, not a gun: a part for one says so.
-const MELEE_MOUNTS := ["grip", "head"]
+const MELEE_MOUNTS := ["grip", "business end"]
 
 
 static func is_melee_mount(mount: String) -> bool:
@@ -605,9 +605,9 @@ static func mount_words(mount: String) -> String:
 	return ("a bat's %s" if is_melee_mount(mount) else "a gun's %s") % mount
 
 
-## The mount as a line's first word: "Optic", "Head".
+## The mount as a line's first word: "Optic", "Business end".
 static func mount_name(mount: String) -> String:
-	return mount.capitalize()
+	return mount.left(1).to_upper() + mount.substr(1)
 
 
 static func kind_words(it: Dictionary) -> String:

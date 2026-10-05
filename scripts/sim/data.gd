@@ -186,19 +186,19 @@ const BASES := {
 		# melee: no rounds ever, slow, hard, a fifth of it bleed; in among them, so they hit you harder
 		# and their first shot lands before your first swing. Grip and head mounts of their own.
 		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Machete", "type": "melee", "ammo": "none", "tier": 2, "damage": 30.0, "rof": 0.9, "value": 70, "conv_bleed_pct": 30,
 			"attachments": ["grip"]},
 		{"name": "Pipe wrench", "type": "melee", "ammo": "none", "tier": 2, "damage": 55.0, "rof": 0.5, "value": 60, "conv_bleed_pct": 10,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Fire axe", "type": "melee", "ammo": "none", "tier": 3, "damage": 70.0, "rof": 0.6, "value": 150, "conv_bleed_pct": 25,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Bayonet on a stick", "type": "melee", "ammo": "none", "tier": 4, "damage": 60.0, "rof": 0.9, "value": 260, "conv_bleed_pct": 30,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Sledgehammer", "type": "melee", "ammo": "none", "tier": 5, "damage": 160.0, "rof": 0.45, "value": 420, "conv_bleed_pct": 5,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Breaker bar", "type": "melee", "ammo": "none", "tier": 6, "damage": 90.0, "rof": 1.2, "value": 640, "conv_bleed_pct": 15,
-			"attachments": ["grip", "head"]},
+			"attachments": ["grip", "business end"]},
 		{"name": "Assault shotgun", "type": "shotgun", "tier": 6, "damage": 48.0, "rof": 2.4, "value": 680,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Marksman rifle", "type": "rifle", "tier": 6, "damage": 90.0, "rof": 1.1, "value": 720,
@@ -370,7 +370,7 @@ const ATT_DROP := 0.30            # the share of a look's finds that are attachm
 ## roll affixes like gear. The Workshop's level says which mounts can be
 ## fitted at all - the camp's cash sink.
 const ATTACHMENT := "Attachment"
-const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "head"]
+const MOUNTS := ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"]
 const MELEE_INCOMING := 1.25       # in among them: their fire on you, with a melee primary
 const MELEE_WAIT := 1.0            # seconds: their first shot lands before your first swing, each gang
 ## Sockets: a gun, a helmet or armour rolls up to SOCKET_MAX of them; a
@@ -438,9 +438,9 @@ const ATTACHMENTS := [
 	{"name": "Tape", "mount": "grip", "tier": 1, "value": 20, "speed_pct": 4},
 	{"name": "Cord wrap", "mount": "grip", "tier": 2, "value": 60, "first_pct": 10, "speed_pct": 2},
 	{"name": "Lanyard", "mount": "grip", "tier": 3, "value": 120, "damage_pct": 4, "speed_pct": 4},
-	{"name": "Nails through it", "mount": "head", "tier": 1, "value": 30, "conv_bleed_pct": 15},
-	{"name": "A blade on it", "mount": "head", "tier": 2, "value": 90, "damage_pct": 10, "conv_bleed_pct": 10},
-	{"name": "Lead in it", "mount": "head", "tier": 3, "value": 160, "damage_pct": 18, "speed_pct": -6},
+	{"name": "Nails through it", "mount": "business end", "tier": 1, "value": 30, "conv_bleed_pct": 15},
+	{"name": "A blade on it", "mount": "business end", "tier": 2, "value": 90, "damage_pct": 10, "conv_bleed_pct": 10},
+	{"name": "Lead in it", "mount": "business end", "tier": 3, "value": 160, "damage_pct": 18, "speed_pct": -6},
 	{"name": "Heavy stock", "mount": "stock", "tier": 2, "value": 80, "damage_pct": 9, "speed_pct": -4},
 	{"name": "Cheek riser", "mount": "stock", "tier": 2, "value": 90, "first_pct": 10},
 	{"name": "Recoil pad", "mount": "stock", "tier": 3, "value": 160, "damage_pct": 6, "first_pct": 3},
@@ -593,8 +593,8 @@ const SETS := [
 const WORKSHOP := [
 	{"cost": 0, "mounts": [], "words": "No bench: nothing can be fitted"},
 	{"cost": 1000, "mounts": ["optic", "muzzle", "grip"], "words": "A bench: optics, muzzles, grips"},
-	{"cost": 5000, "mounts": ["optic", "muzzle", "magazine", "grip", "head"], "words": "Tooling: magazines, heads"},
-	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "head"], "words": "A gunsmith's: every mount"},
+	{"cost": 5000, "mounts": ["optic", "muzzle", "magazine", "grip", "business end"], "words": "Tooling: magazines, business ends"},
+	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"], "words": "A gunsmith's: every mount"},
 ]
 
 ## Rarity: how many affixes an item rolls, its share of drops, its value multiple.
