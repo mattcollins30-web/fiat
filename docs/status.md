@@ -775,6 +775,19 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The collection: the shelf (2026-10-05)
+
+The last of the collection: uniques found go on `sim.shelf` by name, in the order found (the
+pack, the heads' drops, the convoy's load, the mate, a piece that came off a gang member), and
+the Caravan's middle column cycles to "The shelf · 7 of 35 found", four a page with each unique's
+three lines under its name. The drawer and the shelf share the page machinery (`_pages_branch`):
+rows sized to their lines, as many to a page as a tree's column takes (five papers, four
+uniques), a click turning the page. So the collection is the Caravan: the past on its wall, the
+papers in its drawer, the uniques on its shelf. Saved; comes with a move.
+
+Asserted (in `_book_checks`): the shelf holds the uniques once, in order; the column, its head and
+rows; the fit with three lines of words.
+
 ## Idle quality of life (2026-10-05)
 
 Two toggles on the Lock-up, where the buttons sit when nothing's selected: "Equip if better" (the

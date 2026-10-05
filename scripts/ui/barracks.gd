@@ -49,7 +49,8 @@ var _ascend: Button                # the second past, from level 30
 var _swap: Button                  # over the middle column's head: cycles the yard's tree, the second past's, the elements'
 var mid := 0                       # which of the middle trees shows
 var drawer_page := 0               # the drawer's page: PAGE papers at a time
-const PAGE := 6
+const WORD_H := 26                                 # a line of a paper's or a unique's words
+const COLUMN_H := 12 * (NODE_H + NODE_GAP) - NODE_GAP   # what a tree's twelve rows take: a page fits in it
 var _train: Button
 var _respec: Button
 var _shown := ""
@@ -85,6 +86,10 @@ func _init() -> void:
 			var n := {"button": btn, "id": "", "x": x}
 			n["name"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Regular", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 			n["effect"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+			n["more"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			n["more"].visible = false      # the drawer's second line of words; hidden on a tree
+			n["more2"] = UI.label(btn, Rect2(PAD, 0, COL_W - 2 * PAD, NODE_H), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			n["more2"].visible = false     # the shelf's third
 			col.append(n)
 		_rows.append(col)
 	_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -161,7 +166,7 @@ func _style(b: Button, look: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%d|%s|%s|%d|%s|%d|%d" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2, sim.book.size(), drawer_page]
+	var sig := "%s|%s|%d|%d|%s|%s|%d|%s|%d|%d|%d" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), mid, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size()]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -217,6 +222,10 @@ func show_state(s) -> void:
 			var nd: Dictionary = branch["nodes"][i]
 			n["id"] = id
 			n["button"].visible = true
+			n["more"].visible = false
+			n["more"].text = ""
+			n["more2"].visible = false
+			n["more2"].text = ""
 			var stacked := _place(n, branch, i)
 			var cost: int = sim.node_cost(id)
 			var pts := "%d pt%s" % [cost, "" if cost == 1 else "s"]
@@ -431,29 +440,45 @@ func _mid_trees(trees: Array) -> Array:
 	for t in trees.slice(3):
 		out.append(t)
 	out.append(_drawer_branch())
+	out.append(_shelf_branch())
 	return out
 
 
 ## The drawer, as a column: the papers found so far, in the order found,
 ## PAGE a page; a click on any of them turns the page.
 func _drawer_branch() -> Dictionary:
-	var pages: int = maxi(1, ceili(float(sim.book.size()) / PAGE))
-	drawer_page = drawer_page % pages
+	return _pages_branch("The drawer", sim.book, sim.book_pages().size(), Words.BOOK["empty"], func(name): return Words.item_words(name), 2)
+
+
+## The shelf: the uniques found, the same way, their three lines under each.
+func _shelf_branch() -> Dictionary:
+	return _pages_branch("The shelf", sim.shelf, Data.UNIQUES.size(), Words.SHELF["empty"], func(name): return Words.UNIQUES.get(name, ""), 3)
+
+
+## A page of a list: a row a name with `lines` of words under it, as many rows as the column takes.
+func _pages_branch(title: String, list: Array, total: int, empty: String, words: Callable, lines: int) -> Dictionary:
+	var row_h: int = NODE_H + lines * WORD_H + 4
+	var per: int = maxi(1, (COLUMN_H + NODE_GAP) / (row_h + NODE_GAP))
+	var pages: int = maxi(1, ceili(float(list.size()) / per))
+	var page: int = drawer_page % pages
 	var nodes: Array = []
-	var start: int = drawer_page * PAGE
-	for k in range(start, mini(sim.book.size(), start + PAGE)):
-		nodes.append({"name": "%d. %s" % [k + 1, sim.book[k]], "words": Words.item_words(sim.book[k])})
+	var start: int = page * per
+	for k in range(start, mini(list.size(), start + per)):
+		nodes.append({"name": "%d. %s" % [k + 1, list[k]], "words": str(words.call(list[k]))})
 	if nodes.is_empty():
-		nodes.append({"name": Words.BOOK["empty"], "words": ""})
-	return {"name": "The drawer", "drawer": true, "nodes": nodes, "pages": pages}
+		nodes.append({"name": empty, "words": ""})
+	return {"name": title, "drawer": true, "nodes": nodes, "pages": pages, "page": page, "found": list.size(), "total": total, "lines": lines, "row_h": row_h}
 
 
 func _show_drawer(b: int, branch: Dictionary) -> void:
 	var h: Dictionary = _heads[b]
-	var total: int = sim.book_pages().size()
-	var page := (" · page %d of %d" % [drawer_page + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
-	var short_page := (" · p%d/%d" % [drawer_page + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
-	UI.fit(h["name"], ["The drawer · " + Words.BOOK["count"] % [sim.book.size(), total] + page, "Drawer · %d of %d%s" % [sim.book.size(), total, short_page], "Drawer %d/%d%s" % [sim.book.size(), total, short_page], "%d/%d%s" % [sim.book.size(), total, short_page], "The drawer"])
+	var total: int = branch["total"]
+	var found: int = branch["found"]
+	var title: String = branch["name"]
+	var page := (" · page %d of %d" % [int(branch["page"]) + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
+	var short_page := (" · p%d/%d" % [int(branch["page"]) + 1, int(branch["pages"])]) if int(branch["pages"]) > 1 else ""
+	var short_title: String = title.get_slice(" ", 1).capitalize()
+	UI.fit(h["name"], [title + " · " + Words.BOOK["count"] % [found, total] + page, "%s · %d of %d%s" % [short_title, found, total, short_page], "%s %d/%d%s" % [short_title, found, total, short_page], "%d/%d%s" % [found, total, short_page], title])
 	h["count"].visible = false
 	for i in range(ROWS):
 		var n: Dictionary = _rows[b][i]
@@ -463,21 +488,31 @@ func _show_drawer(b: int, branch: Dictionary) -> void:
 			continue
 		var nd: Dictionary = branch["nodes"][i]
 		var btn: Button = n["button"]
+		var row_h: int = branch["row_h"]
+		var lines: int = branch["lines"]
 		btn.visible = true
-		btn.position = Vector2(n["x"], NODES_Y + i * (BRANCH_H + NODE_GAP))
-		btn.size = Vector2(COL_W, BRANCH_H)
+		btn.position = Vector2(n["x"], NODES_Y + i * (row_h + NODE_GAP))
+		btn.size = Vector2(COL_W, row_h)
 		n["id"] = "drawer/%d" % i
 		n["name"].position = Vector2(PAD, 4)
 		n["name"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
 		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" else "Regular"))
-		UI.fit(n["name"], [nd["name"]])
-		n["effect"].position = Vector2(PAD, NODE_H - 2)
-		n["effect"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
-		n["effect"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		UI.fit(n["effect"], [nd["words"], _short(nd["words"])])
+		var word_labels: Array = [n["effect"], n["more"], n["more2"]]
+		for k in range(3):
+			var l: Label = word_labels[k]
+			l.visible = k < lines
+			l.position = Vector2(PAD, NODE_H - 2 + k * WORD_H)
+			l.size = Vector2(COL_W - 2 * PAD, WORD_H)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			l.add_theme_color_override("font_color", Pal.TEXT_2)
+			l.text = ""
+		if nd["words"] == "":
+			UI.wrap([n["name"]] + word_labels.slice(0, lines), nd["name"])     # the empty line, over the row
+		else:
+			UI.fit(n["name"], [nd["name"]])
+			UI.wrap(word_labels.slice(0, lines), nd["words"])
 		_style(btn, "taken" if nd["words"] != "" else "locked")
 		n["name"].add_theme_color_override("font_color", Pal.TEXT)
-		n["effect"].add_theme_color_override("font_color", Pal.TEXT_2)
 
 
 ## A paper's words cut to the column: up to the last full stop that fits.
@@ -488,6 +523,7 @@ static func _short(words: String) -> String:
 
 func _on_swap() -> void:
 	mid += 1
+	drawer_page = 0
 	_shown = ""
 	show_state(sim)
 
@@ -528,4 +564,8 @@ func text_nodes() -> Array:
 		for n in col:
 			if n["button"].visible:
 				out.append_array([n["name"], n["effect"]])
+				if n["more"].visible:
+					out.append(n["more"])
+				if n["more2"].visible:
+					out.append(n["more2"])
 	return out

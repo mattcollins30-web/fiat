@@ -179,8 +179,8 @@ change the sim's rules rather than add numbers.
     6. ~~**The away report.**~~ Done (5 Oct): "Back, then." in the log's voice, with the fence's prices.
     7. ~~**Idle quality of life.**~~ Done (5 Oct). "Equip if better" and "sell commons on return" toggles; the reads leave
        184-item stashes.
-    8. **The collection.** Papers read, uniques found, the runners before, on one screen. (The papers are
-       the drawer in the Caravan and the runners before are its wall of faces, 5 Oct; uniques found is left.)
+    8. ~~**The collection.**~~ Done (5 Oct): the Caravan is the collection - the runners before on its
+       wall, the papers in its drawer, the uniques on its shelf.
     9. **Juice.** Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
 23. Manual placement in the bag (true tetris), if first-fit feels wrong in play.
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off

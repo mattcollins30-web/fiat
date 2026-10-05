@@ -46,6 +46,7 @@ var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the caravan
+var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the caravan
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
@@ -628,6 +629,7 @@ func buy_mate() -> bool:
 	notes -= int(mate["notes"])
 	var it := Items.roll_unique(_unique_named(mate["unique"]), rng)
 	stash.append(it)
+	_read(it)
 	log_event("From the fence's mate, for %d notes: %s." % [int(mate["notes"]), it["unique"]])
 	mate = roll_mate()
 	return true
@@ -656,7 +658,7 @@ func move_yard(trade := "") -> bool:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
 	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate()}
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate()}
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
@@ -672,6 +674,7 @@ func move_yard(trade := "") -> bool:
 	operators_lost = keep["operators_lost"]
 	trades = keep["trades"]
 	book = keep["book"]
+	shelf = keep["shelf"]
 	tree = yard_tree
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
@@ -782,6 +785,8 @@ func sky_words(i: int) -> String:
 func _read(it: Dictionary) -> void:
 	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
 		book.append(it["base"])
+	if it.has("unique") and not (it["unique"] in shelf):
+		shelf.append(it["unique"])
 
 
 ## Every paper there is to find, deep ones last.
@@ -829,6 +834,7 @@ func _wearing_off(m: Dictionary) -> void:
 	m.erase("wearing")
 	var it: Dictionary = e["item"]
 	m["found"].append(it)
+	_read(it)
 	if e["from"] == "fence" or it.has("unique"):
 		log_event(Words.RECYCLE["off_unique"] % (it["unique"] if it.has("unique") else it["base"]))
 	else:
@@ -2488,14 +2494,17 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		# the last of the convoy: the lorry's load comes home too
 		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng)
 		m["found"].append(load)
+		_read(load)
 		log_event("The convoy's done. Found: %s" % load["unique"])
 	if not pool.is_empty():
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
+		_read(it)
 		log_event("%s is down. %s Found: %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
 			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng)
 			m["found"].append(it2)
+			_read(it2)
 			log_event("And a second: %s." % it2["unique"])
 	if first and campaign_done():
 		log_event(Words.YARD["campaign"])
@@ -3248,7 +3257,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -3317,6 +3326,7 @@ func load_dict(d: Dictionary) -> void:
 	past = d.get("past", [])
 	loose_kit = Array(d.get("loose_kit", []))
 	book = Array(d.get("book", []))
+	shelf = Array(d.get("shelf", []))
 	if d.has("worn"):
 		for i in range(mini(worn.size(), d["worn"].size())):
 			worn[i] = float(d["worn"][i])

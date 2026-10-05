@@ -2290,7 +2290,7 @@ func _book_checks(main) -> void:
 	var mids: Array = main._barracks._mid_trees(sim.trees())
 	var drawer_at := -1
 	for i in range(mids.size()):
-		if mids[i].get("drawer", false):
+		if mids[i].get("name", "") == "The drawer":
 			drawer_at = i
 	_check(drawer_at >= 0, "the drawer is not among the middle columns")
 	main._barracks.mid = drawer_at
@@ -2305,10 +2305,10 @@ func _book_checks(main) -> void:
 	_check(sim.book.size() == 20, "the full book is not twenty")
 	main._barracks._shown = ""
 	main.refresh()
-	_check(main._barracks._heads[1]["name"].text.contains("page 1 of 4") or main._barracks._heads[1]["name"].text.contains("p1/4"), "a full drawer has no pages: %s" % main._barracks._heads[1]["name"].text)
+	_check(main._barracks._heads[1]["name"].text.contains("page 1 of 4") or main._barracks._heads[1]["name"].text.contains("p1/4"), "a full drawer has no pages: %s" % main._barracks._heads[1]["name"].text)   # five a page: twenty is four pages
 	_check_fit(main, "Caravan (the drawer, full)")
 	main._barracks._pick("drawer/0")
-	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text == "7. A mortgage offer", "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
+	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text == "6. A food bank voucher", "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
 	_check_fit(main, "Caravan (the drawer, page 2)")
 	main._barracks.mid = 0
 	main._barracks.drawer_page = 0
@@ -2318,8 +2318,31 @@ func _book_checks(main) -> void:
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
 	_check(sim.book.size() == 20, "the book did not save")
+	# the shelf: the uniques found, the same way
+	sim.shelf = []
+	var u1: Dictionary = Items.roll_unique(sim._unique_named("Lucky cap"), sim.rng)
+	sim._read(u1)
+	sim._read(Items.roll_unique(sim._unique_named("Lucky cap"), sim.rng))
+	sim._read(Items.roll_unique(sim._unique_named("Jump leads"), sim.rng))
+	_check(sim.shelf == ["Lucky cap", "Jump leads"], "the shelf is not the uniques in the order found: %s" % str(sim.shelf))
+	var shelf_at := -1
+	mids = main._barracks._mid_trees(sim.trees())
+	for i in range(mids.size()):
+		if mids[i].get("name", "") == "The shelf":
+			shelf_at = i
+	_check(shelf_at >= 0, "the shelf is not among the middle columns")
+	main._barracks.mid = shelf_at
+	main._barracks.drawer_page = 0
+	main._barracks._shown = ""
+	main.refresh()
+	_check(main._barracks._heads[1]["name"].text.contains("2 of %d" % Data.UNIQUES.size()) or main._barracks._heads[1]["name"].text.contains("2/%d" % Data.UNIQUES.size()), "the shelf's head is off: %s" % main._barracks._heads[1]["name"].text)
+	_check(main._barracks._rows[1][0]["name"].text == "1. Lucky cap" and main._barracks._rows[1][0]["effect"].text != "" and main._barracks._rows[1][1]["name"].text == "2. Jump leads", "the shelf's rows are off: %s" % main._barracks._rows[1][0]["name"].text)
+	_check_fit(main, "Caravan (the shelf)")
+	main._barracks.mid = 0
+	main._barracks._shown = ""
+	main.refresh()
 	sim.load_dict(saved)
-	print("the book ok: twenty pages, the deep ones gated, read once in order, the drawer, its pages, saved")
+	print("the book ok: twenty pages, the deep ones gated, read once in order, the drawer, its pages, saved; the shelf of uniques")
 
 
 ## The places changing: a cleared site is picked over and comes back over

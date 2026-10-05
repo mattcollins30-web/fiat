@@ -194,6 +194,9 @@ const BOOK := {
 	"count": "%d of %d found",
 	"deep": "The rest are deeper than you've been.",
 }
+const SHELF := {
+	"empty": "Nothing on the shelf yet. The heads carry them.",
+}
 
 ## The deeds: what the bank was holding. Dropped once, when the bank is
 ## first cleared; two cells; the ending is what you do with it.
