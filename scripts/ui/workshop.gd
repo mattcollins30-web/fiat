@@ -387,11 +387,12 @@ func _show_panel() -> void:
 	# the left: the selection, or the mount's fitted attachment
 	var shown := it if not it.is_empty() else fitted
 	if shown.is_empty():
-		_left_title.text = "%s · %s: empty" % [sel_slot.to_lower(), sel_mount]
+		UI.fit(_left_title, ["%s · %s: empty" % [sel_slot.to_lower(), sel_mount], "%s: empty" % sel_mount])
 		_left_lines[0].text = "Nothing in the stash fits" if sim.attachments_for(sel_mount).is_empty() else "Pick one on the right"
 	else:
 		_left_title.text = shown["base"]
-		_left_lines[0].text = "%s, %s T%d, %s" % [shown["mount"], Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])]
+		UI.fit(_left_lines[0], ["%s, %s T%d, %s" % [shown["mount"], Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])],
+				"%s, %s T%d" % [shown["mount"], Items.rarity_name(shown), shown["tier"]]])
 		# the part's figures over two lines when four stats need them
 		if UI.text_width(_left_lines[1], Items.att_words(shown)) <= _left_lines[1].size.x:
 			_left_lines[1].text = Items.att_words(shown)

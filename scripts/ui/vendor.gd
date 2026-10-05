@@ -462,9 +462,19 @@ func _show_panel() -> void:
 	elif Items.is_socketable(it):
 		UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
-	else:
+	elif Items.is_paper(it):
+		_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
+		if Items.is_deeds(it):
+			UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
+		elif it["base"] in sim.book:
+			UI.fit(_right_lines[0], ["Read, and kept in the caravan's drawer", "Read; in the caravan's drawer", "In the drawer"])
+		else:
+			_right_lines[0].text = "Not read yet"
+	elif it.has("mount"):
 		_right_title.text = "Fitted at the bench"
 		_right_lines[0].text = "Goes on a gun's %s mount" % it["mount"]
+	else:
+		_right_title.text = ""
 	if selected["kind"] == "shelf":
 		var room: bool = sim.stash_room(Items.size(it))
 		_left_lines[2].text = "They want %s" % Fmt.money(_price(it))

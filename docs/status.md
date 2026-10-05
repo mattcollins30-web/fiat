@@ -832,6 +832,31 @@ weather and the clock's night too, since they change the fight.
 Asserted: with a budget of three a refresh does not settle every tier at once; forty refreshes
 settle them all; the screen fits settling and settled; without a budget the odds read at once.
 
+## Clipping, 5 Oct (the away menu, and a sweep)
+
+*"Back, then." trailed off* ("Gone 3 m. The runner slept, the radio played to nobody. The f..."). The
+menu's line under the heading was one 40 px label, and the fit check never looked at the menu. Now:
+
+- The menu's sub wraps over up to four lines (`UI.wrap`; the away report at its longest - every clause,
+  long numbers - takes three), and the rows move down to make room. A row's detail wraps over two lines,
+  the row growing 28 px for the second, so the trade menu's "Won't stop for every class, for good: ...",
+  the move menu's "Start again. The uniques, ...", and the second past's class lines no longer trail off.
+  The panel grows past 760 px when it must; the title screen's panel is still only as tall as its rows.
+- `_check_fit` now judges the menu whenever one is open (every label, each row inside the panel, the panel
+  on the screen) and the toasts, and then **sweeps every Label and Button showing anywhere under the shell**
+  for width, whether or not its screen lists it in `text_nodes()`. The sweep is width only (a menu over a
+  room sits on the room's words by design). Found by it in the test's states: the three menus above.
+- `tests/clip_probe.gd -- <save>` tours a player's save through every room, slot, cell, shelf, bench mount,
+  menu and twenty seconds of a run with the same sweep. On Matt's save it found the Bench's
+  "secondary · magazine: empty" (7 px over; it fits now with a shorter form) and **a crash: a paper picked
+  on the Fence's stash tab** (`it["mount"]` on a paper) - the same hole as the Lock-up's, closed the same
+  way (the drawer panel), and anything else with no slot, mount or kind shows no right panel rather than
+  dying. The part's "mount, rarity T, value" line on the Bench drops the value when inflation makes it long.
+
+Asserted: the away report in both forms fits and a two-line one moves the row down; the worst report keeps
+every word and takes at most four lines; every menu the smoke opens fits; a paper at the fence's stash tab
+shows the drawer and fits; every label and button on every screen the smoke shows fits its box.
+
 ## From the playtest, 5 Oct (Matt's six)
 
 1. *HP read 94 of 93.* The bar ceilinged your HP and floored the max. `hp_shown()` / `max_hp_shown()`

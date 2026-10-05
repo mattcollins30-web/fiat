@@ -414,7 +414,7 @@ func _slots_offline_hardcore(main) -> void:
 	_check(after["cash"] != before["cash"] or after["stash"] != before["stash"] or after["lost"] != before["lost"],
 			"three hours away with auto-run on changed nothing")
 	_check(sim.auto_tier == 0 or sim.auto_tier == -1, "auto_tier after the time away")
-	_check(main._menu.visible and main._menu._title.text == Words.AWAY["title"] and main._menu._sub.text.begins_with("Gone ") and main._menu._sub.text.contains(" run"), "the away report is not in the voice: '%s' / '%s'" % [main._menu._title.text, main._menu._sub.text])
+	_check(main._menu.visible and main._menu._title.text == Words.AWAY["title"] and main._menu.sub().begins_with("Gone ") and main._menu.sub().contains(" run"), "the away report is not in the voice: '%s' / '%s'" % [main._menu._title.text, main._menu.sub()])
 	_check_fit(main, "Back, then (ran)")
 	print("away 3h on tier 0: cash %s → %s, %d → %d items, level %d → %d, lost %d → %d" % [Fmt.money(before["cash"]),
 			Fmt.money(after["cash"]), before["stash"], after["stash"], before["level"], after["level"], before["lost"], after["lost"]])
@@ -427,8 +427,18 @@ func _slots_offline_hardcore(main) -> void:
 	after = sim.snapshot()
 	_check(is_equal_approx(after["elapsed"] - before["elapsed"], sim.away_cap_s()), "the away cap did not hold")
 	_check(sim.hp == sim.max_hp(), "the operator did not rest while away")
-	_check(main._menu._sub.text.begins_with("Gone ") and main._menu._sub.text.contains("slept") and main._menu._sub.text.contains("kept going for"), "the rested report is not in the voice: '%s'" % main._menu._sub.text)
+	_check(main._menu.sub().begins_with("Gone ") and main._menu.sub().contains("slept") and main._menu.sub().contains("kept going for"), "the rested report is not in the voice: '%s'" % main._menu.sub())
 	_check_fit(main, "Back, then (rested)")
+	_check(main._menu.sub_lines() < 2 or main._menu._rows[0].position.y > main._menu.ROWS_Y,
+			"a two-line away report did not push the row down")
+	main._menu.close()
+	# the worst the away report gets: every clause, long numbers - it wraps, nothing trails off
+	var worst: String = Words.AWAY["ran"] % ["2 d 17 h", 1234, "s", "the north estate", "+", Fmt.money(1234567.0), 42, "s", 12, 48]
+	worst += Words.AWAY["lost"] + Words.AWAY["settled"] % "8 h" + Words.AWAY["prices"] % 1100
+	main._menu.open(Words.AWAY["title"], worst, [{"name": "Continue", "detail": "", "action": main._menu.close}], main._menu.close)
+	_check(main._menu.sub() == worst, "the worst away report lost words in the wrap: '%s'" % main._menu.sub())
+	_check(main._menu.sub_lines() <= main._menu.SUB_LINES, "the worst away report needs %d lines" % main._menu.sub_lines())
+	_check_fit(main, "Back, then (worst)")
 	main._menu.close()
 	# a saved stamp two hours old goes through the away screen on load
 	var f := FileAccess.open(main.SAVE_FILE, FileAccess.WRITE)
@@ -2857,6 +2867,18 @@ func _playtest_checks(main) -> void:
 	_check(main._armoury._left_title.text == "A P45" and main._armoury._left_lines[0].text == "From before" and main._armoury._buttons[0].visible and main._armoury._buttons[0].text.begins_with("Sell"), "a paper's panel is off: %s / %s" % [main._armoury._left_title.text, main._armoury._left_lines[0].text])
 	_check(main._armoury._right_lines[0].text.begins_with("Read") or main._armoury._right_lines[0].text == "In the drawer", "a read paper's line is off: %s" % main._armoury._right_lines[0].text)
 	_check_fit(main, "Lock-up (a paper)")
+	# and the same paper picked at the fence's stash tab (it crashed there too)
+	main.show_room(main.MARKET)
+	main._fence._show("stash")
+	main.refresh()
+	main._fence._stash._pick(main._fence._stash.cell_of(paper["id"]))
+	main.refresh()
+	_check(main._fence._right_title.text == "The drawer" and main._fence._right_lines[0].text.begins_with("Read") or main._fence._right_lines[0].text == "In the drawer", "a paper at the fence: %s / %s" % [main._fence._right_title.text, main._fence._right_lines[0].text])
+	_check_fit(main, "Fence (a paper)")
+	main._fence._show("shelf")
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
@@ -3561,7 +3583,45 @@ func _check_fit(main, where: String) -> void:
 			bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
 	bad += _check_nodes(main._top_labels.values(), [], where + " top bar")
+	if main._menu.visible:
+		bad += _check_nodes(main._menu.text_nodes(), [], where + " menu")
+		var pr: Rect2 = main._menu.panel_rect()
+		for i in range(main._menu._items.size()):
+			var b = main._menu._rows[i]
+			_check(b.position.y + b.size.y + main._menu.PAD <= main._menu._panel.size.y + 0.5, "%s menu: row %d runs off the panel" % [where, i])
+		_check(pr.position.y >= 0.0 and pr.end.y <= 1080.0, "%s menu: the panel leaves the screen (%s)" % [where, pr])
+	bad += _check_nodes(main._juice.text_nodes(), [], where + " toasts")
+	# and the sweep: every label showing anywhere, whether or not its screen
+	# lists it - a label the lists miss is the one that trails off in play
+	var all_labels := []
+	_labels_under(main, all_labels)
+	bad += _check_widths(all_labels, where + " (sweep)")
 	_misfits += bad
+
+
+## Width alone: the text fits its box. (A menu over a room puts its words over
+## the room's, so the sweep doesn't judge overlap.)
+func _check_widths(nodes: Array, where: String) -> int:
+	var UI = load("res://scripts/ui/ui.gd")
+	var bad := 0
+	for n in nodes:
+		var w: float = UI.text_width(n, n.text) + (32.0 if n is Button else 0.0)
+		if w > n.size.x + 0.5:
+			push_error("%s: '%s' needs %.0f px, has %.0f" % [where, n.text, w, n.size.x])
+			bad += 1
+	return bad
+
+
+## Every single-line Label under n that's showing, with text.
+static func _labels_under(n: Node, out: Array) -> void:
+	if n is CanvasItem and not n.visible:
+		return
+	if n is Label and n.text != "" and n.autowrap_mode == TextServer.AUTOWRAP_OFF:
+		out.append(n)
+	elif n is Button and n.text != "" and n.icon == null:
+		out.append(n)
+	for c in n.get_children():
+		_labels_under(c, out)
 
 
 ## Visible up the chain of controls (headless, the window itself reports hidden).

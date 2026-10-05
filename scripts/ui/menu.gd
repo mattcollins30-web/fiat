@@ -3,7 +3,10 @@ extends Control
 ## menu_shell.md §12). One panel: a heading, a line under it, and up to five
 ## rows. A row is a full-width button carrying a name and a line of detail. A row
 ## that needs a second press - overwriting a slot, starting over - says so in its
-## detail line on the first. Fixed geometry, like the cards.
+## detail line on the first. Fixed geometry, like the cards - except where the
+## words run long: the line under the heading wraps over up to four lines (the
+## away report) and pushes the rows down, and a row's detail wraps over two,
+## the row growing to hold it. Nothing in a menu trails off.
 ##
 ## The title screen (opaque) stands on art/title.png when it exists - the
 ## town after the collapse, covering the screen, the panel over its left
@@ -18,9 +21,13 @@ const PANEL_H := 760
 const PAD := 48
 const ROW_W := PANEL_W - 2 * PAD          # 784
 const ROW_H := 96
+const DETAIL_H := 28                      # a detail line; a second one grows the row by this
 const ROW_GAP := 16
 const ROWS := 5
 const ROWS_Y := 196
+const SUB_Y := 116
+const SUB_H := 32                         # a sub line's height
+const SUB_LINES := 4                      # the most the sub wraps over
 const TITLE_ART := "res://art/title.png"
 const WORDMARK_ART := "res://art/wordmark.png"
 const PICTURE_X := 96              # the panel's left edge over a picture
@@ -34,10 +41,12 @@ var _picture: TextureRect          # the title's painting, when there is one
 var _wordmark: TextureRect         # "Fiat - let it be done" over the sky, when there is one
 var _panel: Panel
 var _title: Label
-var _sub: Label
+var _subs: Array[Label] = []              # the line under the heading, wrapped
 var _rows: Array[Button] = []
 var _names: Array[Label] = []
 var _details: Array[Label] = []
+var _details2: Array[Label] = []           # the detail's second line, when it needs one
+var _rows_y := ROWS_Y                      # where the first row sits this time
 var _items: Array = []
 var _armed := -1                            # the row waiting for its second press
 var _back := Callable()
@@ -82,8 +91,9 @@ func _init() -> void:
 	add_child(_dim)
 	_panel = UI.panel(self, Rect2(0, 0, PANEL_W, PANEL_H), UI.box(Pal.CARD, 12, 1, Pal.CARD_LINE))
 	_title = UI.label(_panel, Rect2(PAD, 40, ROW_W, 72), "", "Bold", 56, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_sub = UI.label(_panel, Rect2(PAD, 116, ROW_W, 40), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT,
-			false)
+	for k in range(SUB_LINES):
+		_subs.append(UI.label(_panel, Rect2(PAD, SUB_Y + k * SUB_H, ROW_W, SUB_H), "", "Regular", Pal.LINE, Pal.TEXT_2,
+				HORIZONTAL_ALIGNMENT_LEFT, false))
 	for i in range(ROWS):
 		var b := Button.new()
 		b.position = Vector2(PAD, ROWS_Y + i * (ROW_H + ROW_GAP))
@@ -97,6 +107,7 @@ func _init() -> void:
 		_names.append(UI.label(b, Rect2(24, 12, ROW_W - 48, 40), "", "SemiBold", Pal.TITLE, Pal.TEXT,
 				HORIZONTAL_ALIGNMENT_LEFT, false))
 		_details.append(UI.label(b, Rect2(24, 52, ROW_W - 48, 32), "", "Regular", Pal.FLOOR, Pal.TEXT_2))
+		_details2.append(UI.label(b, Rect2(24, 52 + DETAIL_H, ROW_W - 48, 32), "", "Regular", Pal.FLOOR, Pal.TEXT_2))
 	visible = false
 
 
@@ -109,7 +120,7 @@ func open(title: String, sub: String, items: Array, back := Callable(), opaque :
 	_armed = -1
 	_back = back
 	_title.text = title
-	_sub.text = sub
+	UI.wrap(_subs, sub)
 	_backdrop.visible = opaque
 	_picture.visible = opaque and _picture.texture != null
 	_wordmark.visible = _picture.visible and _wordmark.texture != null
@@ -119,12 +130,10 @@ func open(title: String, sub: String, items: Array, back := Callable(), opaque :
 	# middle with the heading
 	_panel.add_theme_stylebox_override("panel", UI.box(Color(Pal.CARD, 0.88) if _picture.visible else Pal.CARD, 12, 1, Pal.CARD_LINE))
 	_title.visible = not _picture.visible
-	_sub.visible = not _picture.visible
-	var rows_y := PAD if _picture.visible else ROWS_Y
-	for i in range(ROWS):
-		_rows[i].position.y = rows_y + i * (ROW_H + ROW_GAP)
-	_panel.size.y = (rows_y + items.size() * (ROW_H + ROW_GAP) - ROW_GAP + PAD) if _picture.visible else PANEL_H
-	layout(get_viewport_rect().size if is_inside_tree() else Vector2(1920, 1080))
+	for l in _subs:
+		l.visible = not _picture.visible
+	# a sub over more than one line pushes the rows down
+	_rows_y = PAD if _picture.visible else maxi(ROWS_Y, SUB_Y + sub_lines() * SUB_H + 48)
 	var first := -1
 	for i in range(ROWS):
 		var on := i < items.size()
@@ -138,6 +147,7 @@ func open(title: String, sub: String, items: Array, back := Callable(), opaque :
 		_show_detail(i)
 		if first < 0 and not _rows[i].disabled:
 			first = i
+	_lay_rows()
 	visible = true
 	if first >= 0 and is_inside_tree():
 		_rows[first].grab_focus()
@@ -153,6 +163,19 @@ func close() -> void:
 func back() -> void:
 	if _back.is_valid():
 		_back.call()
+
+
+## The rows from _rows_y, each as tall as its detail needs; the panel grows
+## to hold them when it must (the title screen's panel is only as tall as its rows).
+func _lay_rows() -> void:
+	var y := _rows_y
+	for i in range(_items.size()):
+		_rows[i].position.y = y
+		_rows[i].size.y = ROW_H + (DETAIL_H if _details2[i].text != "" else 0)
+		y += int(_rows[i].size.y) + ROW_GAP
+	var rows_h := y - ROW_GAP + PAD
+	_panel.size.y = rows_h if _picture.visible else maxi(PANEL_H, rows_h)
+	layout(get_viewport_rect().size if is_inside_tree() else Vector2(1920, 1080))
 
 
 func layout(s: Vector2) -> void:
@@ -175,17 +198,21 @@ func _on_pressed(i: int) -> void:
 		if was >= 0:
 			_show_detail(was)
 		_show_detail(i)
+		_lay_rows()
 		return
 	var a: Callable = it.get("action", Callable())
 	if a.is_valid():
 		a.call()
 
 
+## The detail: `detail` (or `confirm` when the row's armed) over one line, or
+## two when it runs long. The row grows for the second (_lay_rows).
 func _show_detail(i: int) -> void:
 	var it: Dictionary = _items[i]
 	var armed := i == _armed
-	_details[i].text = it.get("confirm", "") if armed else it.get("detail", "")
-	_details[i].add_theme_color_override("font_color", Pal.WARN if armed else Pal.TEXT_2)
+	UI.wrap([_details[i], _details2[i]], it.get("confirm", "") if armed else it.get("detail", ""))
+	for l in [_details[i], _details2[i]]:
+		l.add_theme_color_override("font_color", Pal.WARN if armed else Pal.TEXT_2)
 	# a row with no detail carries its name in the middle
 	_names[i].position.y = 12 if _details[i].text != "" else 28
 
@@ -201,10 +228,13 @@ func _style(b: Button) -> void:
 func text_nodes() -> Array:
 	var out: Array = []
 	if _title.visible:
-		out.append_array([_title, _sub])
+		out.append(_title)
+		for l in _subs:
+			if l.text != "":
+				out.append(l)
 	for i in range(ROWS):
 		if _rows[i].visible:
-			out.append_array([_names[i], _details[i]])
+			out.append_array([_names[i], _details[i], _details2[i]])
 	return out
 
 
@@ -225,4 +255,21 @@ func row_names() -> Array:
 
 
 func detail(i: int) -> String:
-	return _details[i].text
+	return _details[i].text if _details2[i].text == "" else _details[i].text + " " + _details2[i].text
+
+
+## How many lines the sub takes.
+func sub_lines() -> int:
+	var n := 0
+	for l in _subs:
+		if l.text != "":
+			n += 1
+	return n
+
+
+func sub() -> String:
+	var parts := []
+	for l in _subs:
+		if l.text != "":
+			parts.append(l.text)
+	return " ".join(parts)
