@@ -938,10 +938,48 @@ func _narrative_checks(main) -> void:
 	main.refresh()
 	_check(main._fence._line != "", "the fence said nothing")
 	_check_fit(main, "Fence (said)")
+	# the A style on the vendors: the band with the face, the name and the figure; the line under it; the tabs in the band's foot; the sections
+	var fv = main._fence
+	_check(fv._band.title.text == "The fence" and fv._band.headline.text.begins_with("£") and fv._band.kicker.text.begins_with("The fence · "), "the fence's band is off: '%s' / '%s' / '%s'" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text])
+	_check(fv._said[0].text != "" and fv._said[0].position.y >= fv.BAND_H, "the fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._said[0].position.y])
+	for t in fv._tabs:
+		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
+	_check(fv._side_tiles[0]["key"].text == "Common" and fv._side_tiles[3]["key"].text == "Elite" and fv._side_tiles[4]["key"].text.begins_with("Nails") and fv._side_tiles[9]["button"].visible, "the fence's tiles are off: %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
+	_check(fv._side_tiles[1]["value"].get_theme_color("font_color") == Pal.GOOD or fv._side_tiles[1]["button"].disabled, "the uncommon tile's figure is not green")
+	_check(fv._heads[2].visible and fv._heads[2].text.begins_with("THE CONTRACTS"), "the fence's contracts head is off: '%s'" % fv._heads[2].text)
+	_check(fv._band.kicker.position.x >= fv._face.position.x + fv._face.size.x or not fv._face.visible, "the fence's words sit on the face")
 	main.show_room(main.MEDIC)
 	main.refresh()
 	_check(main._clinic._line != "", "the medic said nothing")
 	_check_fit(main, "Clinic (said)")
+	var cv = main._clinic
+	_check(cv._band.title.text == "The medic" and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
+	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Treatment" and cv._side_tiles_c[2]["key"].text == "Clinic", "the clinic's treatment tiles are off")
+	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the clinic has no YOUR MEDS head")
+	var med_kinds := {}
+	for it in sim.stash:
+		if Items.is_medical(it):
+			med_kinds[it["base"]] = true
+	var shown_meds: int = cv._med_tiles.filter(func(t): return t["panel"].visible and not t["key"].text.begins_with("The rig")).size()
+	_check(shown_meds == mini(med_kinds.size(), 4), "the clinic shows %d med kinds for %d in the stash" % [shown_meds, med_kinds.size()])
+	for t in cv._med_tiles:
+		if t["panel"].visible and not t["key"].text.begins_with("The rig"):
+			_check(t["value"].text.begins_with("heals "), "a med tile does not say what it heals: '%s'" % t["value"].text)
+	# a heal node trained elsewhere moves the clinic's figures without anything else changing (the reviewer's catch)
+	if shown_meds > 0:
+		var heal_before: String = cv._med_tiles[0]["value"].text
+		var hold_tree: Array = sim.tree.duplicate()
+		var heal_node := ""
+		for b in Data.TREES:
+			for i in range(b["nodes"].size()):
+				if b["nodes"][i].get("effect", "") == "heal_pct" and heal_node == "":
+					heal_node = "%s/%d" % [b["name"], i]
+		if heal_node != "" and not sim.tree.has(heal_node):
+			sim.tree.append(heal_node)
+			main.refresh()
+			_check(cv._med_tiles[0]["value"].text != heal_before, "a heal node did not move the clinic's med figure: still '%s'" % heal_before)
+			sim.tree = hold_tree
+			main.refresh()
 	sim.load_dict(save)
 	print("narrative ok: site lines, the deeds three ways, the past, papers, every item's words, the vendors")
 

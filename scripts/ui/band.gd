@@ -33,6 +33,7 @@ var _bar_label: Label
 var _tone := 0
 var _seed := 0
 var _fade_to := Pal.CARD
+var _left := PAD                      # where the words start: past a portrait when one sits at the left
 var _under := false                   # the headline under the title, the unit beside it
 var _right_any := false               # right-hand lines showing: the unit keeps clear of them
 
@@ -64,13 +65,22 @@ func _init(w: float, h: float, tone := 0, fade_to := Pal.CARD) -> void:
 	bar.visible = false
 
 
-## The words. `headline_colour` is the odds' tone, the accent by default.
-func set_words(k: String, t: String, h: String, u: String, headline_colour := Pal.ACCENT) -> void:
+## The words. `u` is the unit, a string or its forms long to short; `headline_colour` is the odds' tone, the accent by default.
+var _unit_forms: Array = []
+func set_words(k: String, t: String, h: String, u, headline_colour := Pal.ACCENT) -> void:
 	kicker.text = k
 	title.text = t
 	headline.text = h
-	unit.text = u
+	_unit_forms = u if u is Array else [str(u)]
+	unit.text = str(_unit_forms[0])
 	headline.add_theme_color_override("font_color", headline_colour)
+	_fit_unit()
+
+
+## The unit's first form that fits its box.
+func _fit_unit() -> void:
+	if not _unit_forms.is_empty():
+		UI.fit(unit, _unit_forms)
 
 
 ## Where the headline sits: at the foot (the default) or under the title, with the unit beside it.
@@ -82,16 +92,27 @@ func headline_under_title(on: bool) -> void:
 		unit.position.y = 84
 		unit.size.y = 36
 		unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		unit.position.x = PAD + ceilf(UI.text_width(headline, headline.text)) + 10
+		unit.position.x = _left + ceilf(UI.text_width(headline, headline.text)) + 10
 		unit.size.x = size.x - unit.position.x - PAD - (RIGHT_W + 12 if _right_any else 0)
+		_fit_unit()
 	else:
 		headline.position.y = size.y - 60
 		headline.size.y = 48
 		unit.position.y = size.y - 54
 		unit.size.y = 36
 		unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		unit.position.x = PAD
-		unit.size.x = size.x - 2 * PAD
+		unit.position.x = _left
+		unit.size.x = size.x - _left - PAD
+		_fit_unit()
+
+
+## A portrait `w` wide sits at the band's left: the words start past it.
+func portrait_width(w: float) -> void:
+	_left = PAD + w + 14
+	for l in [kicker, title, headline, unit]:
+		l.position.x = _left
+	set_right([right[0].text, right[1].text, right[2].text])
+	headline_under_title(_under)
 
 
 ## Where the right-hand lines start: lower when something sits over them (the bench's upgrade button).
@@ -108,7 +129,7 @@ func set_right(lines: Array) -> void:
 		any = any or right[k].text != ""
 	# with no right-hand lines the kicker and the title take the width
 	_right_any = any
-	kicker.size.x = size.x - 2 * PAD - (RIGHT_W if any else 0)
+	kicker.size.x = size.x - _left - PAD - (RIGHT_W if any else 0)
 	title.size.x = kicker.size.x
 	if _under:
 		headline_under_title(true)

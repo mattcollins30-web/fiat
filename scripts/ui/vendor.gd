@@ -19,6 +19,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const ItemHead := preload("res://scripts/ui/item_head.gd")
 const People := preload("res://scripts/ui/people.gd")
+const Band := preload("res://scripts/ui/band.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -32,9 +33,12 @@ const INNER := BODY_W - 2 * PAD
 const LINE_H := 30
 const PANEL_LINES := 4
 const COL_W := (GRID_W - 3 * PAD) / 2
-const TAB_H := 56
-const SIDE_Y := TAB_H + 16                                    # the left column's own panel starts here
-const SIDE_H := Pal.ROOM_H - SIDE_Y
+const TAB_H := 40                                             # the tabs, along the band's foot
+const BAND_H := 200                                           # the vendor's band: the face, the name, the headline figure
+const FACE := 116                                             # the portrait in the band
+const TOP := BAND_H + 36                                      # the sections under the band and the vendor's line
+const TILE_GAP := 8
+const SIDE_TILES := 10                                        # the fence's tile-shaped buttons: four rarities, five boxes, the shelf
 
 var kind := "fence"                # "fence" or "clinic"
 var sim
@@ -51,21 +55,22 @@ const DEAL_H := 150
 var _shelf                         # the vendor's grid
 var _stash                         # your grid
 var _side: Panel
-var _side_title: Label
-var _face: TextureRect             # the vendor, at the foot of the side panel
-var _face_name: Label
-var _said: Array[Label] = []       # what they said, three rows beside the face
+var _band: Band
+var _side_title: Label             # the first section's head
+var _face: TextureRect             # the vendor, in the band
+var _said: Array[Label] = []       # what they said: one line under the band
+var _heads: Array[Label] = []      # the section heads under the band
+var _side_tiles: Array = []        # the fence's tile buttons: {button, key, value}
+var _med_tiles: Array = []         # the clinic's: your meds by kind
+var _side_tiles_c: Array = []      # the clinic's figures: resting, treatment, the clinic's level
 var _visits := 0
 var _said_n := 0
 var _line := ""
 var _lost_seen := -1               # the medic notices a new runner
 var _town_said := false            # the fence, once, when the town opens
-var _side_head: Label
-var _side_unit: Label
 var _side_track: Panel
 var _side_fill: Panel
 var _side_bar_text: Label
-var _side_lines: Array = []        # [label, value] pairs
 var _side_buttons: Array[Button] = []
 var _side_actions: Array = []
 var _panel: Panel
@@ -84,8 +89,15 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	# the left column: the band with the tabs along its foot, the vendor's business under it
+	_side = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_band = Band.new(BODY_W, BAND_H, 3)
+	_side.add_child(_band)
+	_face = People.rect(_band, Vector2(PAD, 16), FACE / 128.0)
+	_band.portrait_width(FACE)
+	_said.append(UI.label(_side, Rect2(PAD, BAND_H + 4, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for k in range(3):
-		var b := UI.button(self, Rect2(k * (INNER / 2 + 12) + 0, 0, (BODY_W - 12) / 2, TAB_H), k == 0)
+		var b := UI.button(_side, Rect2(PAD + k * ((INNER - 8) / 2 + 8), BAND_H - 14 - TAB_H, (INNER - 8) / 2, TAB_H), k == 0)
 		b.pressed.connect(_show.bind(["shelf", "stash", "contracts"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
@@ -122,32 +134,42 @@ func _init() -> void:
 	_stash.picked.connect(_on_pick.bind("stash"))
 	_stash.acted.connect(_on_acted)
 	add_child(_stash)
-	# the left column's panel: the vendor's own business
-	_side = UI.panel(self, Rect2(0, SIDE_Y, BODY_W, SIDE_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_side_title = UI.label(_side, Rect2(PAD, 6, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_face = People.rect(_side, Vector2(PAD, SIDE_H - PAD - 128), 1)
-	_face_name = UI.label(_side, Rect2(PAD + 128 + 16, SIDE_H - PAD - 128, INNER - 128 - 16, 28), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_face_name.visible = false
-	for i in range(3):
-		var l := UI.label(_side, Rect2(PAD + 128 + 16, SIDE_H - PAD - 128 + 32 + i * 26, INNER - 128 - 16, 26), "", "Regular", 20, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		l.visible = false
-		_said.append(l)
-	_side_head = UI.label(_side, Rect2(PAD, 40, INNER, 40), "", "SemiBold", Pal.HEADLINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_side_unit = UI.label(_side, Rect2(PAD, 40, INNER, 40), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_side_track = UI.panel(_side, Rect2(PAD, 86, INNER, 26), UI.box(Pal.BG, 6))
-	_side_fill = UI.panel(_side_track, Rect2(0, 0, 0, 26), UI.box(Pal.GOOD, 6))
-	_side_bar_text = UI.label(_side_track, Rect2(0, 0, INNER, 26), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	for i in range(6):
-		var y := 120 + i * LINE_H
-		_side_lines.append([UI.label(_side, Rect2(PAD, y, INNER, LINE_H), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
-			UI.label(_side, Rect2(PAD, y, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)])
-	for i in range(11):
+	# the vendor's own business, as sections under the band
+	for i in range(4):
+		var h := UI.head(_side, Rect2(PAD, TOP + i * 100, INNER, UI.HEAD_H), "")
+		h.visible = false
+		_heads.append(h)
+	_side_title = _heads[0]
+	# the clinic: the HP bar, three figures, your meds by kind
+	_side_track = UI.panel(_side, Rect2(PAD, TOP + UI.HEAD_H + 2, INNER, 24), UI.box(Pal.BG, 6))
+	_side_fill = UI.panel(_side_track, Rect2(0, 0, 0, 24), UI.box(Pal.GOOD, 6))
+	_side_bar_text = UI.label(_side_track, Rect2(0, 0, INNER, 24), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	_side_tiles_c = UI.tile_row(_side, PAD, TOP + UI.HEAD_H + 2 + 24 + 6, INNER, 3)
+	_med_tiles = UI.tile_row(_side, PAD, 0, INNER, 2) + UI.tile_row(_side, PAD, 0, INNER, 2)
+	for t in _side_tiles_c + _med_tiles:
+		t["panel"].visible = false
+	for i in range(2):
 		var b := UI.button(_side, Rect2(PAD, 0, INNER, 48), false)
 		b.add_theme_font_size_override("font_size", 22)
 		b.pressed.connect(_side_press.bind(i))
 		b.visible = false
 		_side_buttons.append(b)
+	for i in range(SIDE_TILES + 2):
 		_side_actions.append(Callable())
+	# the fence: tile-shaped buttons, four rarities then the boxes and the bigger shelf
+	for i in range(SIDE_TILES):
+		var b := Button.new()
+		b.position = Vector2(PAD, 0)
+		b.size = Vector2(100, UI.TILE_H)
+		b.text = ""
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_side_press.bind(i))
+		b.visible = false
+		_side.add_child(b)
+		var t := {"button": b}
+		t["key"] = UI.label(b, Rect2(10, 4, 80, 22), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["value"] = UI.label(b, Rect2(10, 26, 80, 30), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT)
+		_side_tiles.append(t)
 	# the panel under the grid: the pick
 	_panel = UI.panel(self, Rect2(GRID_X, PANEL_Y, GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_left_title = UI.label(_panel, Rect2(PAD, 10, COL_W, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -173,17 +195,17 @@ func _init() -> void:
 func setup(k: String) -> void:
 	kind = k
 	if kind == "fence":
-		var tw := (BODY_W - 24) / 3
+		var tw := (INNER - 16) / 3
 		for i in range(3):
-			_tabs[i].position.x = i * (tw + 12)
+			_tabs[i].position.x = PAD + i * (tw + 8)
 			_tabs[i].size.x = tw
 			_tabs[i].visible = true
+			_tabs[i].add_theme_font_size_override("font_size", 22)
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
-	if People.show(_face, "medic" if kind == "clinic" else "fence"):
-		_face_name.text = "The medic" if kind == "clinic" else "The fence"
-		_face_name.visible = true
+	if not People.show(_face, "medic" if kind == "clinic" else "fence"):
+		_band.portrait_width(0)           # no art yet: the words take the band
 
 
 # ------------------------------------------------------------------ showing
@@ -213,6 +235,10 @@ func show_state(s) -> void:
 	_deals.visible = showing == "contracts"
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
+		for t in _side_tiles_c:
+			if t["panel"].visible and t["key"].text == "Treatment":
+				var full_now: bool = sim.hp >= sim.max_hp() - 0.5
+				UI.set_tile(t, "Treatment", ["not needed" if full_now else Fmt.money(sim.treat_cost())], Pal.TEXT_2 if full_now else Pal.TEXT)
 	var sig := _signature()
 	if sig == _shown:
 		return
@@ -301,7 +327,8 @@ func _stash_meds() -> int:
 
 func _signature() -> String:
 	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.market_level), str(sim.medic_level),
-		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes)]
+		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes),
+		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
 		parts.append("m" + str(it["id"]))
 	for it in sim.stash:
@@ -315,24 +342,17 @@ func _signature() -> String:
 
 ## The clinic's treatment block, at the top of the side panel.
 func _show_treatment() -> void:
-	_side_title.text = "Treatment"
-	_side_head.text = "%d" % sim.hp_shown()
-	_side_unit.text = "of %d HP" % sim.max_hp_shown()
-	var w := ceilf(UI.text_width(_side_head, _side_head.text)) + 10
-	_side_unit.position.x = PAD + w
-	_side_unit.size.x = INNER - w
+	var full: bool = sim.hp >= sim.max_hp() - 0.5
+	_band.set_words("The clinic · level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "The medic", "%d" % sim.hp_shown(),
+		["of %d HP · %s" % [sim.max_hp_shown(), "fit for duty" if full else ("out on a run" if sim.on_mission() else "resting")], "of %d HP" % sim.max_hp_shown()], Pal.GOOD if full else Pal.ACCENT)
+	_band.headline_under_title(true)
+	_side_title.text = "TREATMENT"
+	_side_title.visible = true
 	var fill: float = clampf(sim.hp / sim.max_hp(), 0.0, 1.0)
 	_side_fill.size.x = roundf(INNER * fill)
 	(_side_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if fill > 0.5 else Pal.WARN
-	_side_bar_text.text = Fmt.pct(fill)
+	_side_bar_text.text = "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
 	_side_track.visible = true
-	_side_head.visible = true
-	_side_unit.visible = true
-
-
-func _side_line(i: int, label: String, value: String) -> void:
-	_side_lines[i][0].text = label
-	_side_lines[i][1].text = value
 
 
 func _side_button(i: int, y: float, text: String, action: Callable, enabled: bool, tone := "", primary := false) -> void:
@@ -345,64 +365,129 @@ func _side_button(i: int, y: float, text: String, action: Callable, enabled: boo
 	_side_actions[i] = action
 
 
-## The vendor's own business, down the left.
+## A tile-shaped button: its key over its figure, the figure in a tone; `w` wide at (x, y).
+func _side_tile(i: int, x: float, y: float, w: float, key: String, options: Array, tone: Color, action: Callable, enabled: bool) -> void:
+	var t: Dictionary = _side_tiles[i]
+	var b: Button = t["button"]
+	b.visible = true
+	b.position = Vector2(x, y)
+	b.size = Vector2(w, UI.TILE_H)
+	b.disabled = not enabled
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		b.add_theme_stylebox_override(state, UI.box(Pal.BG if state != "hover" else Pal.SELECT, 6))
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 6, 2, Pal.TEXT))
+	t["key"].size.x = w - 20
+	t["value"].size.x = w - 20
+	t["key"].text = key
+	UI.fit(t["value"], options)
+	t["value"].add_theme_color_override("font_color", tone if enabled else Pal.TEXT_3)
+	t["key"].add_theme_color_override("font_color", Pal.TEXT_2 if enabled else Pal.TEXT_3)
+	_side_actions[i] = action
+
+
+## The vendor's own business, down the left, under the band.
 func _show_side() -> void:
-	for pair in _side_lines:
-		pair[0].text = ""
-		pair[1].text = ""
 	for b in _side_buttons:
 		b.visible = false
-	if kind == "clinic":
-		var full: bool = sim.hp >= sim.max_hp() - 0.5
-		_side_line(0, "Resting", "+%.1f HP a second" % sim.rest_rate())
-		_side_line(1, "Treatment", Fmt.money(sim.treat_cost()) if not full else "not needed")
-		_side_button(0, 120 + 2 * LINE_H + 8, "Fit for duty" if full else ("The runner is out" if sim.on_mission() else "Treat (%s)" % Fmt.money(sim.treat_cost())),
-			sim.treat, not full and not sim.on_mission() and sim.cash >= sim.treat_cost(), "", not full)
-		var y := 120 + 2 * LINE_H + 8 + 48 + 20
-		_side_line(3, "The clinic", "level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1])
-		_side_lines[3][0].position.y = y
-		_side_lines[3][1].position.y = y
-		y += LINE_H
-		if sim.medic_cost() > 0:
-			_side_line(4, "Next", "+%.1f HP/s, %d meds" % [Data.MEDIC_LEVELS[sim.medic_level + 1]["rest"], Data.MEDIC_LEVELS[sim.medic_level + 1]["stock"]])
-			_side_lines[4][0].position.y = y
-			_side_lines[4][1].position.y = y
-			y += LINE_H + 8
-			_side_button(1, y, "Upgrade (%s)" % Fmt.money(sim.medic_cost()), sim.upgrade_medic, sim.can_upgrade_medic())
-		else:
-			_side_line(4, "Fully kitted", "")
-			_side_lines[4][0].position.y = y
-			_side_lines[4][1].position.y = y
-		return
-	# the fence: sell by rarity, the shelf's size
-	_side_title.text = "Sell by rarity"
-	_side_head.visible = false
-	_side_unit.visible = false
+	for t in _side_tiles:
+		t["button"].visible = false
+	for t in _side_tiles_c + _med_tiles:
+		t["panel"].visible = false
+	for h in _heads:
+		h.visible = false
 	_side_track.visible = false
+	if kind == "clinic":
+		_show_treatment()
+		var full: bool = sim.hp >= sim.max_hp() - 0.5
+		var y: float = TOP + UI.HEAD_H + 2 + 24 + 6
+		for t in _side_tiles_c:
+			t["panel"].visible = true
+		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
+		UI.set_tile(_side_tiles_c[1], "Treatment", ["not needed" if full else Fmt.money(sim.treat_cost())], Pal.TEXT_2 if full else Pal.TEXT)
+		if sim.medic_cost() > 0:
+			UI.set_tile(_side_tiles_c[2], "Clinic", ["level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "level %d" % sim.medic_level])
+		else:
+			UI.set_tile(_side_tiles_c[2], "Clinic", ["fully kitted", "level %d" % sim.medic_level], Pal.GOOD)
+		y += UI.TILE_H + 10
+		_side_button(0, y, "Fit for duty" if full else ("The runner is out" if sim.on_mission() else "Treat (%s)" % Fmt.money(sim.treat_cost())),
+			sim.treat, not full and not sim.on_mission() and sim.cash >= sim.treat_cost(), "", not full)
+		y += 48 + 8
+		if sim.medic_cost() > 0:
+			var nxt: Dictionary = Data.MEDIC_LEVELS[sim.medic_level + 1]
+			_side_button(1, y, "Upgrade (%s): +%.1f HP/s, %d meds" % [Fmt.money(sim.medic_cost()), nxt["rest"], nxt["stock"]], sim.upgrade_medic, sim.can_upgrade_medic())
+			y += 48 + 8
+		# your meds, by kind: what each heals for you, and how many there are
+		y += 8
+		_heads[1].position.y = y
+		_heads[1].text = "YOUR MEDS · IN THE STASH, WHAT EACH DOES FOR YOU"
+		_heads[1].visible = true
+		y += UI.HEAD_H + 2
+		var counts := {}
+		var order := []
+		for it in sim.stash:
+			if Items.is_medical(it):
+				if not counts.has(it["base"]):
+					counts[it["base"]] = {"n": 0, "it": it}
+					order.append(it["base"])
+				counts[it["base"]]["n"] += 1
+		for k in range(_med_tiles.size()):
+			var t: Dictionary = _med_tiles[k]
+			t["panel"].position.y = y + (k / 2) * (UI.TILE_H + TILE_GAP)
+			if k < order.size():
+				var it: Dictionary = counts[order[k]]["it"]
+				var heal: float = Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0)
+				t["panel"].visible = true
+				UI.set_tile(t, "%s ×%d" % [order[k], counts[order[k]]["n"]], ["heals %.0f over %.0f s" % [heal, sim.use_time(it)], "heals %.0f" % heal])
+			elif k == order.size():
+				t["panel"].visible = true
+				UI.set_tile(t, "The rig", ["%d of %d pouches" % [sim.rig_used(), sim.med_capacity()], "%d of %d" % [sim.rig_used(), sim.med_capacity()]] if sim.med_capacity() > 0 else ["no rig fitted"], Pal.TEXT if sim.med_capacity() > 0 else Pal.TEXT_3)
+		return
+	# the fence: the band, then sell by rarity, the boxes and the shelf, the contracts
+	var worth_all := 0
+	for it in sim.stash:
+		worth_all += sim.sell_price(it)
+	_band.set_words("The fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "The fence",
+		Fmt.money(worth_all), ["for the lot · %d in the stash" % sim.stash.size(), "for the lot of %d" % sim.stash.size(), "for the lot"], Pal.ACCENT)
+	_band.headline_under_title(true)
+	_side_title.text = "SELL BY RARITY"
+	_side_title.visible = true
 	var counts := [0, 0, 0, 0]
 	var worth := [0, 0, 0, 0]
 	for it in sim.stash:
 		counts[it["rarity"]] += 1
 		worth[it["rarity"]] += sim.sell_price(it)
-	var y := 40
+	var y: float = TOP + UI.HEAD_H + 2
+	var tw4 := (INNER - 3 * TILE_GAP) / 4.0
 	for r in range(4):
-		_side_button(r, y, "%s: %d, %s" % [Data.RARITIES[r]["name"], counts[r], Fmt.money(worth[r])], sim.sell_rarity.bind(r), counts[r] > 0, ["", "good", "warn", "bad"][r])
-		y += 48 + 8
-	y += 8
-	if sim.market_cost() > 0:
-		_side_button(4, y, "Bigger shelf: %d for %s" % [Data.MARKET_LEVELS[sim.market_level + 1]["stock"], Fmt.money(sim.market_cost())], sim.upgrade_market, sim.can_upgrade_market())
-		y += 48 + 12
-	# boxes of standard rounds, without end: a cell in your stash each
-	_side_line(0, "By the box", "to the stash")
-	_side_lines[0][0].position.y = y
-	_side_lines[0][1].position.y = y
-	y += LINE_H + 4
-	var k := 5
-	for type in ["improvised", "shotgun", "rifle", "smg", "pistol"]:
-		var box: Dictionary = sim.ammo_box(type)
-		_side_button(k, y, "%s ×%d (%s)" % [box["name"], int(box["rounds"]), Fmt.money(sim.ammo_price(type))], sim.buy_ammo.bind(type), sim.cash >= sim.ammo_price(type) and sim.stash_room(1))
+		var tone: Color = [Pal.TEXT, Pal.GOOD, Pal.WARN, Pal.BAD][r]
+		_side_tile(r, PAD + r * (tw4 + TILE_GAP), y, tw4, Data.RARITIES[r]["name"], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)
+	y += UI.TILE_H + 12
+	_heads[1].position.y = y
+	_heads[1].text = "BY THE BOX · TO THE STASH"
+	_heads[1].visible = true
+	y += UI.HEAD_H + 2
+	# boxes of standard rounds, without end: a cell in your stash each; the bigger shelf beside them
+	var tw3 := (INNER - 2 * TILE_GAP) / 3.0
+	var k := 4
+	var types := ["improvised", "shotgun", "rifle", "smg", "pistol"]
+	for n in range(types.size()):
+		var box: Dictionary = sim.ammo_box(types[n])
+		_side_tile(k, PAD + (n % 3) * (tw3 + TILE_GAP), y + (n / 3) * (UI.TILE_H + TILE_GAP), tw3, "%s ×%d" % [box["name"], int(box["rounds"])], [Fmt.money(sim.ammo_price(types[n]))], Pal.TEXT,
+			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and sim.stash_room(1))
 		k += 1
-		y += 48 + 6
+	if sim.market_cost() > 0:
+		_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Bigger shelf · %d" % Data.MARKET_LEVELS[sim.market_level + 1]["stock"], [Fmt.money(sim.market_cost())], Pal.ACCENT, sim.upgrade_market, sim.can_upgrade_market())
+	else:
+		_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Their shelf", ["%d, the biggest" % Data.MARKET_LEVELS[sim.market_level]["stock"], "the biggest"], Pal.TEXT_2, Callable(), false)
+	y += 2 * UI.TILE_H + TILE_GAP + 12
+	# the contracts, in brief: the tab has the lot
+	_heads[2].position.y = y
+	var ready := 0
+	for c in range(sim.contracts.size()):
+		if sim.can_hand_in(c):
+			ready += 1
+	_heads[2].text = ("THE CONTRACTS · %d OPEN, %d READY" % [sim.contracts.size(), ready]) if not sim.contracts.is_empty() else "THE CONTRACTS · NONE OPEN"
+	_heads[2].visible = true
 
 
 func _show_panel() -> void:
@@ -603,11 +688,7 @@ func _says(key: String) -> void:
 
 
 func _show_said() -> void:
-	if not _face.visible:
-		return
-	UI.wrap(_said, _line)
-	for l in _said:
-		l.visible = l.text != ""
+	UI.fit_sentences(_said[0], _line)
 
 
 func _side_press(i: int) -> void:
@@ -652,31 +733,36 @@ func face_clear() -> bool:
 	if not _face.visible:
 		return true
 	var mine := Rect2(_face.position, _face.size)
-	var own: Array = [_face, _face_name]
-	own.append_array(_said)
-	for c in _side.get_children():
-		if own.has(c) or not (c is Control) or not c.visible:
+	for c in _band.get_children():
+		if c == _face or not (c is Control) or not c.visible or (c is Label and c.text == ""):
 			continue
 		if mine.intersects(Rect2(c.position, c.size)):
+			return false
+	for b in _tabs:
+		if b.visible and mine.intersects(Rect2(b.position, b.size)):
 			return false
 	return true
 
 
 ## For the tests: every label and visible button with text.
 func text_nodes() -> Array:
-	var out: Array = [_left_title, _right_title, _hint, _side_title]
+	var out: Array = [_left_title, _right_title, _hint]
 	out.append_array(_words)
 	if _head.visible:
 		out.append_array(_head.text_nodes())
-	if _face_name.visible:
-		out.append(_face_name)
-	for l in _said:
-		if l.visible:
-			out.append(l)
-	if _side_head.visible:
-		out.append_array([_side_head, _side_unit, _side_bar_text])
-	for pair in _side_lines:
-		out.append_array(pair)
+	out.append_array(_band.text_nodes())
+	out.append_array(_said)
+	for h in _heads:
+		if h.visible:
+			out.append(h)
+	if _side_track.visible:
+		out.append(_side_bar_text)
+	for t in _side_tiles_c + _med_tiles:
+		if t["panel"].visible:
+			out.append_array([t["key"], t["value"]])
+	for t in _side_tiles:
+		if t["button"].visible:
+			out.append_array([t["key"], t["value"]])
 	for b in _side_buttons:
 		if b.visible:
 			out.append(b)
@@ -706,8 +792,5 @@ func line_pairs() -> Array:
 	var out := []
 	if _head.visible:
 		out.append_array(_head.line_pairs())
-	for pair in _side_lines:
-		out.append(pair)
-	if _side_head.visible:
-		out.append([_side_head, _side_unit])
+	out.append([_band.headline, _band.unit])
 	return out

@@ -1594,6 +1594,18 @@ the upgrade inside the band, a fitted tile in its part's tier colour, a drum mag
 job on the craft view's piece showing without a re-pick (the reviewer caught the craft view's signature not
 reading the piece: notes, last_craft and the piece's level, affixes and sockets are in it now).
 
+**The clinic and the fence** (`vendor.gd`): the left column is one panel with the band at the top: the
+vendor's face in it (`Band.portrait_width`), the clinic's level or the fence's prices as the kicker, the name,
+the headline (the runner's HP; the stash's worth to the fence) with its unit fitted from forms, the tabs
+along the band's foot, and what the vendor said as one line under the band. The clinic: TREATMENT (the HP
+bar, resting / treatment / clinic tiles, the Treat and Upgrade buttons), YOUR MEDS (a tile a kind in the
+stash with what it heals for you and over how long, the rig's pouches). The fence: SELL BY RARITY (four tile
+buttons in the rarity colours, count and worth), BY THE BOX (the five boxes and the bigger shelf as tile
+buttons), THE CONTRACTS head with open and ready counts (the tab has the lot). Smoke: both bands, the line
+under the band, the tabs inside it, the tiles' keys and tones, the med kinds counted, the words clear of the
+face, and a heal node trained elsewhere moving the clinic's figures (the reviewer's catch: the tree and the
+class are in the vendor's signature now).
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a
