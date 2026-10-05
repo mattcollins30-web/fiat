@@ -839,6 +839,14 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## Parked for after the playtest: crafting, grenades, the pack grid (5 Oct)
+
+Shaped in the chat, written into `docs/design/concept.md` as items 23, 25 and 26, nothing built: the
+pack as a real grid; crafting at the bench from one material (scrap: found, or stripped from any item)
+- standard rounds, the better grades from a standard box of the type, meds up the grades, improvised guns
+of a chosen type that fire nails and key Bodger; grenades as rig items thrown like a med, one an element,
+through the damage model, built from scrap and the element's socketable.
+
 ## The contracts, where you'd see them (5 Oct)
 
 Matt played seven hours without opening the fence's Contracts tab. Now: the Fence's rail button says

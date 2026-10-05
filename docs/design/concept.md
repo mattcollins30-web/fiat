@@ -184,7 +184,39 @@ with them on a death, refunded as points, and the next runner picks a past from 
     8. ~~**The collection.**~~ Done (5 Oct): the Caravan is the collection - the runners before on its
        wall, the papers in its drawer, the uniques on its shelf.
     9. ~~**Juice.**~~ Done (5 Oct). Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
-23. Manual placement in the bag (true tetris), if first-fit feels wrong in play.
+23. **Manual placement in the bag (true tetris)** — agreed 5 Oct, after the playtest: the pack is a count
+    today (`pack_used` sums footprints; the grid draws them first-come); it becomes a real grid, each find
+    with a position, a find landing where it fits or not at all, drag to repack on the run and in the
+    Lock-up's pack map; the bot and the estimator pack too. Balanced with 25, since both change what
+    comes home and what it's worth.
+25. **Crafting at the bench** (Matt, 5 Oct; shaped in the chat, after the playtest). One material,
+    **scrap**: a stackable like the socketables, found on searches (one find in five a handful) and
+    made by stripping any item at the bench or ditching it on a run (its value over twenty), so a ditch
+    and a full stash both have a third answer beside sell and ditch. A **Build** column on the Craft view:
+    - **a box of rounds**, standard, of any type you have a gun for, for scrap - cheap, so a dry gun has
+      a fix at the yard and the pistol's rounds stop being a tax;
+    - **the better grades**, from scrap plus a standard box of the type: nails to hardened bolts, shells
+      to slugs, rifle rounds to match rounds, SMG rounds to hollow point, pistol rounds to hollow point,
+      and the tier-3 grades (belt links, depot rounds) from the grade below - each step wanting the one
+      under it, so the fence's shelf keeps its place for the top;
+    - **a med**: scrap to a bandage; scrap plus a bandage to a first aid kit; and on up the grades, each
+      wanting the one below - the clinic keeps the top grades and the healing affixes;
+    - **a gun**: scrap to an improvised gun of a type you choose (improvised shotgun, rifle, SMG...),
+      a plain roll at the bench's level with a random mount set, Common, firing nails whatever its type
+      so the crafted rounds feed it. The improvised tag is the point: Bodger and the Scrapper's past key
+      off it, and the bench's own jobs are how it becomes yours. Never strictly better than a found gun
+      of its tier; the one you can have now, for scrap, and build a whole improvised runner around.
+    Not crafted: gear with affixes, armour, helmets (the body slots stay what you find); not a second
+    material. The balance levers: scrap per pound on a strip, a gun's price in scrap against the shelf,
+    Bodger's +40% once improvised guns are on tap.
+26. **Grenades in the rig** (Matt, 5 Oct; after the playtest). A rig item beside the meds, thrown the way
+    a med is used - from a pouch on the run - for damage to everyone on you instead of healing: one an
+    element (a petrol bomb, a nail bomb for bleed, a bottle of something for poison, a wired battery for
+    shock, a dry-ice bag for the cold), its hit by type through the damage model so resists, conversion
+    and the element trees all read it, and its dot lands on the gang. Found on runs, on the fence's
+    shelf, and built at the bench from scrap plus the element's socketable (lighter fluid to a petrol
+    bomb). A thrown one spends the pouch; Second shift and the rig's rules decide whether they cover
+    it. The rig's pouches are the limit: a grenade is a med you didn't carry.
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;
     notes hold); the estate recycles (a dead runner's kit and a sold unique turn up on a gang member a
