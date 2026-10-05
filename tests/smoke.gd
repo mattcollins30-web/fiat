@@ -4430,6 +4430,14 @@ func _fill_up_checks(main) -> void:
 	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text.begins_with("Depth "), "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
 	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
 	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.LINE_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
+	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart
+	var fb := Rect2(rn._fight["box"].position, rn._fight["box"].size)
+	var rb := Rect2(rn._runner["box"].position, rn._runner["box"].size)
+	for piece in [rn._fight["head"], rn._fight["track"], rn._fight["tiles"][3]["panel"]]:
+		_check(fb.encloses(Rect2(piece.position, piece.size)), "the fight's box does not hold its %s" % piece.name)
+	for piece in [rn._runner["head"], rn._runner["track"], rn._runner["tiles"][3]["panel"], rn._runner["note"]]:
+		_check(rb.encloses(Rect2(piece.position, piece.size)), "the runner's box does not hold its %s" % piece.name)
+	_check(fb.end.y + 8 <= rb.position.y and fb.position.y >= rn.BAND_H and rb.end.y < rn.RIG_HEAD_Y, "the fight's and the runner's boxes are not apart: %s / %s" % [str(fb), str(rb)])
 	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Cash", "the run's tiles are off")
 	# the crew head's face sits between the band and the fight tiles, never on either
 	var face_r := Rect2(rn._head_face.position, rn._head_face.size)

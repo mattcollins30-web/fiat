@@ -35,15 +35,20 @@ const INNER := BODY_W - 2 * PAD
 const LINE_H := 30                                            # a 24 px font is 29 tall
 const BAR_H := 24
 const SECTION_GAP := 12
-# the left column, top to bottom: the band, the fight, the runner, the rig, the take, the buttons
-const FIGHT_Y := BAND_H + 14
+# the left column, top to bottom: the band, the fight in its box, the runner in its box, the rig, the take, the buttons
+const BOX_PAD := 10                                           # the outline round them and round you
+const FIGHT_BOX_Y := BAND_H + 14
+const FIGHT_Y := FIGHT_BOX_Y + BOX_PAD
 const FIGHT_TILES_Y := FIGHT_Y + UI.HEAD_H + 16                 # room over the tiles for the crew head's face
 const FIGHT_BAR_Y := FIGHT_TILES_Y + UI.TILE_H + 6
-const RUNNER_Y := FIGHT_BAR_Y + BAR_H + SECTION_GAP
+const FIGHT_BOX_H := FIGHT_BAR_Y + BAR_H + BOX_PAD - FIGHT_BOX_Y
+const RUNNER_BOX_Y := FIGHT_BOX_Y + FIGHT_BOX_H + SECTION_GAP
+const RUNNER_Y := RUNNER_BOX_Y + BOX_PAD
 const RUNNER_BAR_Y := RUNNER_Y + UI.HEAD_H + 2
 const RUNNER_TILES_Y := RUNNER_BAR_Y + BAR_H + 6
 const RUNNER_NOTE_Y := RUNNER_TILES_Y + UI.TILE_H + 2
-const RIG_HEAD_Y := RUNNER_NOTE_Y + LINE_H + 4
+const RUNNER_BOX_H := RUNNER_NOTE_Y + LINE_H + BOX_PAD - RUNNER_BOX_Y
+const RIG_HEAD_Y := RUNNER_BOX_Y + RUNNER_BOX_H + SECTION_GAP
 const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
 const TAKE_Y := RIG_Y + Pal.CELL + SECTION_GAP
 const TAKE_TILES_Y := TAKE_Y + UI.HEAD_H + 2
@@ -53,7 +58,7 @@ const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 var sim
 var _left: Panel                   # the column: the band and the sections
 var _band: Band
-var _fight := {}                   # {head, tiles[4], track, fill, bar_text}
+var _fight := {}                   # {box, head, tiles[4], track, fill, bar_text}
 var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note}
 var _rig_head: Label
 var _take_head: Label
@@ -92,6 +97,9 @@ func _init() -> void:
 	_left = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_band = Band.new(BODY_W, BAND_H)
 	_left.add_child(_band)
+	# the fight and the runner each in an outlined box, so them and you read apart
+	_fight["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, FIGHT_BOX_Y, INNER + 2 * BOX_PAD, FIGHT_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
+	_runner["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, RUNNER_BOX_Y, INNER + 2 * BOX_PAD, RUNNER_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	# the fight: a head, four tiles, their HP as the bar (or the search's)
 	_fight["head"] = UI.head(_left, Rect2(PAD, FIGHT_Y, INNER - 80, UI.HEAD_H), "The fight")
 	_fight["tiles"] = UI.tile_row(_left, PAD, FIGHT_TILES_Y, INNER, 4)

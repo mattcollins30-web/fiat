@@ -1578,7 +1578,9 @@ tiles; their HP bar, or the search bar and next gang / gangs so far / kills / fo
 crew head's face between the band and the tiles on a boss fight), THE RUNNER (your HP bar; armour, damage,
 meds, rounds as tiles, rounds red when dry; a note: the med in use, what's on you, no meds, press a pouch),
 THE RIG (the pouches as before), THE TAKE (cash, passed over, swapped, pack), the run's own line, the two
-buttons. The hit numbers scatter over their bar, yours and the heals over your bar. Smoke: the band's words
+buttons. The fight and the runner each sit in an outlined box (`BOX_PAD` 10, the card line's colour, no
+fill) with a gap between, after Matt found them running together; the rig and the take moved down into the
+room under the note. Smoke: each box holds its head, tiles and bar, and the two sit apart. The hit numbers scatter over their bar, yours and the heals over your bar. Smoke: the band's words
 and bar, the sections' order with no overlap, the tiles' keys, the face clear of the band and the tiles, the
 hits on their bar and the reds on yours; a reviewer pass caught the face on the Kills tile, the Take button
 missing from the fit list, and a same-size swap leaving the pick panel stale (swapped is in the sig now).
