@@ -2704,6 +2704,33 @@ func _juice_checks(main) -> void:
 	sim.advance(2.0)
 	main.refresh()
 	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f" % float(sim.mission.get("dealt", 0.0)))
+	# scattered: a run of numbers lands at different places, not one column; no more than one a third of a second
+	main._juice.clear_numbers()
+	var spots := {}
+	for k in range(8):
+		sim.advance(0.4)
+		main.refresh()
+	for n in main._juice._numbers:
+		spots["%d,%d" % [int(n["label"].position.x / 20), int(n["from"] / 8)]] = true
+	_check(main._juice.numbers() >= 4 and main._juice.numbers() <= 18 and spots.size() >= 3, "the numbers come as one column or too thick: %d numbers in %d places" % [main._juice.numbers(), spots.size()])
+	# red for damage taken, green for a heal, on your own bar
+	main._juice.clear_numbers()
+	sim.hp = sim.max_hp()
+	main.refresh()
+	sim.mission["elapsed"] += 1.0
+	sim.hp -= 20.0
+	main.refresh()
+	var texts: Array = main._juice._numbers.map(func(n): return n["label"].text)
+	_check(texts.has("−20"), "no red number for the damage taken: %s" % str(texts))
+	sim.mission["elapsed"] += 1.0
+	sim.hp = sim.max_hp()
+	main.refresh()
+	texts = main._juice._numbers.map(func(n): return n["label"].text)
+	_check(texts.has("+20"), "no green number for the heal: %s" % str(texts))
+	var you_y: float = main._run._panels[1]["panel"].global_position.y
+	var them_y: float = main._run._panels[0]["panel"].global_position.y
+	var reds: Array = main._juice._numbers.filter(func(n): return n["label"].text.begins_with("−") or n["label"].text.begins_with("+"))
+	_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 300), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
 	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
 	rare["rarity"] = 2
 	sim.mission["found"].append(rare)
@@ -2826,6 +2853,26 @@ func _playtest_checks(main) -> void:
 	main._armoury._press(0)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	sim.load_dict(saved)
+	# the boss toggle on the Runs card: one press, one toast, however many refreshes follow
+	_finish_campaign(sim)
+	sim.notes = 1000
+	sim.arm_boss(2, false)
+	main._juice._toasts = []
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	main.refresh()
+	main._missions._boss(2)
+	for k in range(4):
+		main._missions._shown = ""
+		main.refresh()
+	var boss_toasts: int = main._juice.lines().filter(func(l): return str(l).begins_with("The carpet man: ")).size()
+	_check(boss_toasts == 1, "the boss toggle toasted %d times" % boss_toasts)
+	main._missions._boss(2)
+	main.refresh()
+	main._missions._boss(2)
+	main.refresh()
+	boss_toasts = main._juice.lines().filter(func(l): return str(l).begins_with("The carpet man: ")).size()
+	_check(boss_toasts == 1, "toggling off and on again toasted again while the first still showed: %d" % boss_toasts)
 	# the odds read over a few refreshes with a budget, and settle; without one, all at once
 	sim._surv_cache = {}
 	sim.odds_budget = 3

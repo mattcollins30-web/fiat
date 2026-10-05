@@ -34,7 +34,7 @@ func toast(text: String, tone := "") -> void:
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := UI.label(p, Rect2(16, 0, TOAST_W - 32, TOAST_H), "", "SemiBold", Pal.FLOOR, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
 	UI.fit(l, [text, text.get_slice(". ", 0) + ".", text.get_slice(":", 0)])
-	_toasts.push_front({"panel": p, "label": l, "left": TOAST_S})
+	_toasts.push_front({"panel": p, "label": l, "left": TOAST_S, "line": text})
 	while _toasts.size() > TOAST_MAX:
 		var old: Dictionary = _toasts.pop_back()
 		old["panel"].queue_free()
@@ -49,10 +49,10 @@ func _lay_toasts() -> void:
 
 
 ## A number off a hit: rises and fades from `at` (in this control's space).
-func number(at: Vector2, text: String, tone := "") -> void:
-	var l := UI.label(self, Rect2(at.x - 60, at.y, 120, 30), text, "SemiBold", Pal.LINE, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+func number(at: Vector2, text: String, tone := "", big := false) -> void:
+	var l := UI.label(self, Rect2(at.x - 60, at.y, 120, 36), text, "SemiBold", Pal.TITLE if big else Pal.LINE, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_numbers.append({"label": l, "left": NUMBER_S, "from": at.y})
+	_numbers.append({"label": l, "left": NUMBER_S, "from": at.y, "drift": randf_range(-18.0, 18.0), "x": at.x - 60})
 	if _numbers.size() > 12:
 		var old: Dictionary = _numbers.pop_front()
 		old["label"].queue_free()
@@ -86,6 +86,7 @@ func _process(delta: float) -> void:
 		n["left"] -= delta
 		var k: float = 1.0 - maxf(0.0, n["left"]) / NUMBER_S
 		n["label"].position.y = n["from"] - NUMBER_RISE * k
+		n["label"].position.x = n["x"] + n["drift"] * k          # a little sideways too, so two never share a path
 		n["label"].modulate.a = 1.0 - k * k
 		if n["left"] <= 0.0:
 			done.append(n)
@@ -99,6 +100,14 @@ func toasts() -> Array:
 	var out := []
 	for t in _toasts:
 		out.append(t["label"].text)
+	return out
+
+
+## The whole lines showing, fitted or not: what a repeat is checked against.
+func lines() -> Array:
+	var out := []
+	for t in _toasts:
+		out.append(t["line"])
 	return out
 
 

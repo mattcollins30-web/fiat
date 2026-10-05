@@ -273,7 +273,7 @@ func _toast_new_lines() -> void:
 		var line: String = str(sim.events[k][1])
 		var tone := Words.toast_tone(line)
 		# only what just happened: a load or a settle brings old lines, and those stay in the log
-		if tone != "none" and now - float(sim.events[k][0]) < 5.0 and not (line in _juice.toasts()):
+		if tone != "none" and now - float(sim.events[k][0]) < 5.0 and not (line in _juice.lines()):
 			_juice.toast(line, tone)
 	_events_seen = total
 

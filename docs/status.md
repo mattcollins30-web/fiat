@@ -775,6 +775,23 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Numbers that read, and the boss toast (2026-10-05)
+
+Matt: "all in the same place fading up doesn't read as anything". A damage number comes off
+their bar at most every third of a second (the hits since the last one added up), scattered along
+the bar at a different height each time, drifting a little sideways as it rises, bigger from a
+hundred. Your own bar has them too: red "−12" for what you took, green "+25" for what came back
+(a med, regen, life on a kill), the same cadence. Positions are taken from the panels' global
+place, so they sit on the bars wherever the room is.
+
+The boss toast: a repeat is checked against the whole line now (it was checked against the
+fitted short form, "The carpet man", which never matched the line, so the check never held), and
+the Runs card's toggle is under test: one press, one toast, through four refreshes; off and on
+again while the first shows, still one.
+
+Asserted: eight refreshes of a long fight give four to eighteen numbers in three or more places;
+−20 on a hit taken and +20 on a heal, both on your bar; the toggle's single toast.
+
 ## The Runs screen's lag (2026-10-05)
 
 Matt: "a few seconds between clicking the menu and the menu appearing", only on Runs. Cause: the

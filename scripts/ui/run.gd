@@ -54,6 +54,9 @@ var _shown := ""
 var _head_face: TextureRect        # the crew's head, while he's out
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
+var _number_at := -1.0             # the run's clock when the last number came off
+var _hp_seen := -1.0               # your HP at the last look, for the red and green
+var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
 
 
@@ -273,11 +276,28 @@ func _picked_item(m: Dictionary) -> Dictionary:
 func _juice_tick(m: Dictionary) -> void:
 	if m.get("elapsed", 0.0) < 1.5:
 		_dealt_seen = 0.0
+		_number_at = -1.0
+		_hp_at = -1.0
+		_hp_seen = -1.0
 		_found_seen = []
 	var dealt: float = float(m.get("dealt", 0.0))
-	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0:
-		juice.number(Vector2(BODY_W - PAD - 70, BAR_Y + 6), "%d" % int(round(dealt - _dealt_seen)), "warn")
-	_dealt_seen = dealt
+	# a number every third of a second or so, not every refresh, scattered along their bar
+	# at different heights, bigger for a bigger hit - a column of them reads as nothing
+	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0 and float(m["elapsed"]) - _number_at >= 0.3:
+		_number_at = float(m["elapsed"])
+		var hit: int = int(round(dealt - _dealt_seen))
+		juice.number(_scatter(_panels[0]["panel"]), "%d" % hit, "warn", hit >= 100)
+		_dealt_seen = dealt
+	# and on your own bar: red for what you took, green for what came back
+	if _hp_seen < 0.0 or m.get("elapsed", 0.0) < 1.5:
+		_hp_seen = sim.hp
+	var hp_delta: float = sim.hp - _hp_seen
+	if juice != null and absf(hp_delta) >= 1.0 and float(m["elapsed"]) - _hp_at >= 0.3:
+		_hp_at = float(m["elapsed"])
+		var n: int = int(round(absf(hp_delta)))
+		juice.number(_scatter(_panels[1]["panel"]), ("+%d" if hp_delta > 0.0 else "−%d") % n, "good" if hp_delta > 0.0 else "bad", n >= 40)
+		_hp_seen = sim.hp
+
 	for it in m["found"]:
 		if not (it["id"] in _found_seen):
 			_found_seen.append(it["id"])
@@ -285,6 +305,12 @@ func _juice_tick(m: Dictionary) -> void:
 				var k: int = _inv.cell_of(it["id"])
 				if k >= 0:
 					juice.flash(_inv.cell_node(k), "set" if it.has("set") else ("good" if it.has("unique") else ""))
+
+
+## A spot along a panel's bar, at a different height each time, in the juice's own space.
+func _scatter(panel: Panel) -> Vector2:
+	var local := Vector2(PAD + 60 + randf() * (INNER - 120), BAR_Y - 6 + randf_range(-16.0, 16.0))
+	return panel.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
 
 
 func _use_med() -> void:
