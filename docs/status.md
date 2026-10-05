@@ -775,6 +775,20 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Juice (2026-10-05)
+
+`scripts/ui/juice.gd`, an overlay the shell owns: damage numbers float off the run screen's Them
+panel as the hits land (what landed since the last look, amber, rising and fading over 0.8 s); a
+rare, a unique or a set piece flashes its cell when it comes into the pack; and the log's best
+lines come up as toasts under the top bar for three seconds, three deep - a find ("Found: Lucky
+cap", green), a head coming out (amber) or going down (green), a level, "Not today", the yard
+moving, the trade, what came off him, a death (red). `Words.toast_tone` says which lines and
+what colour; the rest stay in the log. The sim counts what's dealt (`m["dealt"]`) and every line
+ever logged (`events_total`, the log keeps twenty) for it.
+
+Asserted (`_juice_checks`): a find toasts and training doesn't; the tones; the stack caps at
+three; toasts fit; numbers come off the hits; a rare flashes.
+
 ## The collection: the shelf (2026-10-05)
 
 The last of the collection: uniques found go on `sim.shelf` by name, in the order found (the

@@ -287,6 +287,11 @@ func placed() -> Dictionary:
 
 
 ## The cell index showing this id on the current page, or -1 (for the tests).
+## The cell button at k, for a flash.
+func cell_node(k: int) -> Control:
+	return _cells[k] if k >= 0 and k < _cells.size() else null
+
+
 func cell_of(id: int) -> int:
 	for k in range(_cells.size()):
 		if _cells[k].id == id and _cells[k].visible:

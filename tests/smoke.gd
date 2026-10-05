@@ -10,6 +10,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
 const People := preload("res://scripts/ui/people.gd")
+const UI := preload("res://scripts/ui/ui.gd")
 
 var _misfits := 0
 var _fails := 0
@@ -2243,6 +2244,7 @@ func _move_checks(main) -> void:
 	_stack_checks(main)
 	_next_checks(main)
 	_idle_checks(main)
+	_juice_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2666,6 +2668,51 @@ func _idle_checks(main) -> void:
 	_check(sim.auto_sell, "the toggle did not save")
 	sim.load_dict(saved)
 	print("idle ok: the toggles, the junk run, equip if better, the lines, the save")
+
+
+## Juice: the log's best lines as toasts under the top bar, a damage number
+## off the run panel as the hits land, a flash on a rare in the pack.
+func _juice_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	main.refresh()
+	var before: int = main._juice.toasts().size()
+	sim.log_event("Found: Lucky cap")
+	sim.log_event("Trained: Stance")
+	main.refresh()
+	var shown: Array = main._juice.toasts()
+	_check(not shown.is_empty() and shown[0] == "Found: Lucky cap" and not shown.has("Trained: Stance"), "the find did not toast, or the training did: %s" % str(shown))
+	_check(Words.toast_tone("The carpet man comes out. He's brought the whole warehouse.") == "warn" and Words.toast_tone("The carpet man is down. x") == "good" and Words.toast_tone("Dead in the parade. Kit lost (£100).") == "bad" and Words.toast_tone("Out to The parade, The Estate, depth 1: night") == "none", "the toast tones are off")
+	for k in range(5):
+		sim.log_event("Level %d: 1 training point" % (k + 50))
+	main.refresh()
+	_check(main._juice.toasts().size() <= main._juice.TOAST_MAX, "the toasts piled past three")
+	for t in main._juice.text_nodes():
+		_check(t.text != "" and UI.text_width(t, t.text) <= t.size.x, "a toast does not fit: %s" % t.text)
+	# the run: numbers as the hits land, a flash on a rare
+	sim.intel[0] = []
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	main._juice.clear_numbers()
+	var n0: int = 0
+	sim.mission["t"]["hp"] = 100000.0        # a lot that takes a while, so the hits are seen landing
+	sim.mission["target_hp"] = 100000.0
+	sim.advance(2.0)
+	main.refresh()
+	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f" % float(sim.mission.get("dealt", 0.0)))
+	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
+	rare["rarity"] = 2
+	sim.mission["found"].append(rare)
+	main.refresh()
+	var k: int = main._run._inv.cell_of(rare["id"])
+	_check(k >= 0 and main._run._inv.cell_node(k).modulate != Color.WHITE, "the rare did not flash in the pack")
+	sim.extract_now()
+	main.refresh()
+	sim.load_dict(saved)
+	main.refresh()
+	print("juice ok: the toasts and their tones, the cap, the fit, the numbers, the flash")
 
 
 func _recycle_checks(main) -> void:

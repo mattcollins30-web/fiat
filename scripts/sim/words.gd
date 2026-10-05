@@ -572,3 +572,19 @@ static func rotate(lines: Array, n: int) -> String:
 	if lines.is_empty():
 		return ""
 	return lines[n % lines.size()]
+
+
+## Which log lines earn a toast, and in what tone: "" for a plain one, "none" for the rest.
+static func toast_tone(line: String) -> String:
+	if line.begins_with("Found: ") or line.begins_with("And a second: ") or line.contains(" Found: "):
+		return "good"
+	if line.begins_with("Level ") or line.begins_with("Not today") or line.begins_with("The yard moves") or line.begins_with("The yard's trade"):
+		return "good"
+	for b in BOSSES:
+		if line.begins_with(b + " comes out") or line.begins_with(b + " is down") or line.begins_with(b + ": "):
+			return "warn" if not line.begins_with(b + " is down") else "good"
+	if line.begins_with("One of them ") or line.contains(" came off him."):
+		return ""
+	if line.begins_with("Dead in "):
+		return "bad"
+	return "none"

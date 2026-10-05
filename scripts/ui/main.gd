@@ -18,6 +18,7 @@ const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Juice := preload("res://scripts/ui/juice.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Items := preload("res://scripts/sim/items.gd")
@@ -79,6 +80,8 @@ var _barracks
 var _missions
 var _workshop
 var _run
+var _juice
+var _events_seen := 0              # how many log lines the toasts have looked at
 var _fence
 var _clinic
 var _events: Panel
@@ -194,6 +197,9 @@ func _build() -> void:
 	_speed_label = UI.label(_events, Rect2(Pal.GRID_W - 20 - sw, 4, sw, 27), SPEED_TEXT, "SemiBold", Pal.FLOOR, Pal.WARN,
 			HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_speed_label.visible = false
+	_juice = Juice.new()
+	add_child(_juice)
+	_run.juice = _juice
 	_menu = Menu.new()
 	add_child(_menu)
 
@@ -209,6 +215,8 @@ func _on_resize() -> void:
 func layout(s: Vector2) -> void:
 	_bg.size = s
 	_top.size = Vector2(s.x, Pal.TOP_H)
+	_juice.size = s
+	_juice.set_top(Pal.TOP_H + 12)
 	var x0 := floorf((s.x - 1920.0) / 2.0) + Pal.MARGIN
 	_top_row.position = Vector2(x0, 0)
 	var free := s.y - Pal.TOP_H - Pal.MARGIN - Pal.CARD_GAP - Pal.EVENTS_H - Pal.MARGIN - Pal.ROOM_H
@@ -243,6 +251,22 @@ func _process(delta: float) -> void:
 	if _since_refresh >= REFRESH_S:
 		_since_refresh = 0.0
 		refresh()
+
+
+## The log's best lines as toasts: what was found, who's out and who's down,
+## a level, what came off him, a yard moved. Lines the shell's seen stay seen.
+func _toast_new_lines() -> void:
+	var total: int = sim.events_total
+	if _events_seen > total or _events_seen == 0:
+		_events_seen = total               # a new game, a load, or the first look: nothing old gets toasted
+		return
+	var fresh: int = mini(total - _events_seen, sim.events.size())
+	for k in range(sim.events.size() - fresh, sim.events.size()):
+		var line: String = str(sim.events[k][1])
+		var tone := Words.toast_tone(line)
+		if tone != "none":
+			_juice.toast(line, tone)
+	_events_seen = total
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -464,6 +488,7 @@ func refresh() -> void:
 	if sim.candidates.size() == 2 and not _menu.visible and not sim.on_mission() and not _asked_runner:
 		_asked_runner = true
 		_choose_runner()
+	_toast_new_lines()
 	_top_labels["cash"].text = Fmt.money(sim.cash)
 	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
 	_top_labels["level"].text = "Level %d" % sim.level()

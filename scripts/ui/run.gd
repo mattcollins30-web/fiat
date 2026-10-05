@@ -52,6 +52,9 @@ var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
 var _shown := ""
 var _head_face: TextureRect        # the crew's head, while he's out
+var juice = null                   # the shell's, for numbers and flashes; null in a bare test
+var _dealt_seen := 0.0             # what the numbers have shown so far this run
+var _found_seen: Array = []        # the finds the flashes have seen
 
 
 func _init() -> void:
@@ -174,6 +177,7 @@ func show_state(s) -> void:
 	run["note"].add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
+	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
 	var sig := "%s|%s|%d|%d|%s|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m)]
 	if sig == _shown:
@@ -263,6 +267,25 @@ func _picked_item(m: Dictionary) -> Dictionary:
 
 
 # ------------------------------------------------------------------ acting
+
+## The juice: a number for what's landed since the last look, a flash on a
+## rare that's just come into the pack. A new run starts the count again.
+func _juice_tick(m: Dictionary) -> void:
+	if m.get("elapsed", 0.0) < 1.5:
+		_dealt_seen = 0.0
+		_found_seen = []
+	var dealt: float = float(m.get("dealt", 0.0))
+	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0:
+		juice.number(Vector2(BODY_W - PAD - 70, BAR_Y + 6), "%d" % int(round(dealt - _dealt_seen)), "warn")
+	_dealt_seen = dealt
+	for it in m["found"]:
+		if not (it["id"] in _found_seen):
+			_found_seen.append(it["id"])
+			if juice != null and (int(it["rarity"]) >= 2 or it.has("unique") or it.has("set")):
+				var k: int = _inv.cell_of(it["id"])
+				if k >= 0:
+					juice.flash(_inv.cell_node(k), "set" if it.has("set") else ("good" if it.has("unique") else ""))
+
 
 func _use_med() -> void:
 	if sim.on_mission() and not sim.first_med().is_empty():

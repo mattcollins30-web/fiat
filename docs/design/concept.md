@@ -181,7 +181,7 @@ change the sim's rules rather than add numbers.
        184-item stashes.
     8. ~~**The collection.**~~ Done (5 Oct): the Caravan is the collection - the runners before on its
        wall, the papers in its drawer, the uniques on its shelf.
-    9. **Juice.** Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
+    9. ~~**Juice.**~~ Done (5 Oct). Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
 23. Manual placement in the bag (true tetris), if first-fit feels wrong in play.
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;

@@ -2311,8 +2311,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if has_rule("gritters_hopper"):
 		m["chill_t"] = 1.0                        # everyone on you is chilled, always
 	m["target_hp"] -= landed_total
+	var ticked_on_them := 0.0
 	if m.has("dots"):
-		m["target_hp"] -= _dot_tick(m["dots"], dt)
+		ticked_on_them = _dot_tick(m["dots"], dt)
+		m["target_hp"] -= ticked_on_them
+	m["dealt"] = float(m.get("dealt", 0.0)) + landed_total + ticked_on_them    # for the numbers on the run screen
 	# the rounds behind that: the primary's rate while it's live, the secondary's when it fires
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	if primary_live and not has_rule("qm_rifle"):
@@ -3237,8 +3240,10 @@ func snapshot() -> Dictionary:
 		"events": events.size(), "elapsed": elapsed, "runs": runs_total}
 
 
+var events_total := 0              # every line ever logged, counted (the log keeps twenty)
 func log_event(text: String) -> void:
 	events.append([Time.get_unix_time_from_system(), text])
+	events_total += 1
 	while events.size() > 20:
 		events.pop_front()
 
