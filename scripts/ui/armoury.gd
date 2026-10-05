@@ -49,6 +49,7 @@ var _chips: Array[Label] = []      # the swap's changes, one each, green up and 
 var _overall: Label                # the swap in one word, at the right of the panel's title row
 var _buttons: Array[Button] = []
 var _actions: Array = []
+var _toggles: Array[Button] = []   # idle: equip if better, sell the junk - shown with nothing selected
 var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
 var _shown := ""                   # what the screen last drew, so a refresh that changes nothing redraws nothing
@@ -101,6 +102,11 @@ func _init() -> void:
 		b.visible = false
 		_buttons.append(b)
 		_actions.append(Callable())
+	for i in range(2):
+		var tb := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 240, 44), false)
+		tb.pressed.connect(_toggle.bind(i))
+		tb.visible = false
+		_toggles.append(tb)
 
 
 ## "Bandage ×5, Medkit" - items by name with counts.
@@ -148,7 +154,7 @@ func show_state(s) -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.workshop)]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.workshop), str(sim.auto_equip), str(sim.auto_sell)]
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the bench changes these in place
@@ -182,11 +188,29 @@ func _show_panel() -> void:
 		l.text = ""
 	for l in _right_lines:
 		l.text = ""
+	for tb in _toggles:
+		tb.visible = false
 	if it.is_empty():
 		_left_title.text = "Select an item"
 		_right_title.text = ""
 		_hint.text = "A slot on the left, or a stash item on the right"
-		_lay_buttons()                       # none showing: the hint gets the whole strip back
+		# the idle toggles live here, where the buttons would be
+		_toggles[0].visible = true
+		_toggles[0].text = "Equip if better ✓" if sim.auto_equip else "Equip if better"
+		_toggles[1].visible = true
+		_toggles[1].text = "Sell the junk on return ✓" if sim.auto_sell else "Sell the junk on return"
+		var x := GRID_W - PANEL_PAD
+		for k in [1, 0]:
+			var tb: Button = _toggles[k]
+			tb.size.x = ceilf(UI.text_width(tb, tb.text)) + 48
+			x -= tb.size.x
+			tb.position.x = x
+			x -= 12
+			UI.style_button(tb, false, "good" if (sim.auto_equip if k == 0 else sim.auto_sell) else "")
+		_lay_buttons()                       # none showing: the hint gets the strip up to the toggles
+		_hint.size.x = maxf(80.0, x - PANEL_PAD)
+		if UI.text_width(_hint, _hint.text) > _hint.size.x:
+			UI.fit(_hint, [_hint.text, _hint.text.get_slice(",", 0)])
 		return
 	_hint.text = ""
 	UI.fit(_left_title, [Items.full_name(it), it["base"]])
@@ -379,6 +403,15 @@ func _button(i: int, text: String, action: Callable, enabled: bool) -> void:
 	_actions[i] = action
 
 
+func _toggle(i: int) -> void:
+	if i == 0:
+		sim.auto_equip = not sim.auto_equip
+	else:
+		sim.auto_sell = not sim.auto_sell
+	acted.emit()
+	show_state(sim)
+
+
 func _selected_item() -> Dictionary:
 	if selected.is_empty() or sim == null:
 		return {}
@@ -505,4 +538,7 @@ func text_nodes() -> Array:
 	for b in _buttons:
 		if b.visible:
 			out.append(b)
+	for tb in _toggles:
+		if tb.visible:
+			out.append(tb)
 	return out

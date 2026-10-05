@@ -177,7 +177,7 @@ change the sim's rules rather than add numbers.
     5. ~~**The first ten minutes.**~~ Done (5 Oct), as "what's next" in the voice. An objective line on the Yard ("Clear the parade") and the log carrying
        the tutorial in the voice.
     6. ~~**The away report.**~~ Done (5 Oct): "Back, then." in the log's voice, with the fence's prices.
-    7. **Idle quality of life.** "Equip if better" and "sell commons on return" toggles; the reads leave
+    7. ~~**Idle quality of life.**~~ Done (5 Oct). "Equip if better" and "sell commons on return" toggles; the reads leave
        184-item stashes.
     8. **The collection.** Papers read, uniques found, the runners before, on one screen. (The papers are
        the drawer in the Caravan and the runners before are its wall of faces, 5 Oct; uniques found is left.)

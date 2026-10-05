@@ -50,6 +50,8 @@ var worn: Array = []               # per tier: the elapsed second it was last cl
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
 var last_next := ""                # the last "what's next" line the log carried
+var auto_equip := false            # idle: the best of each slot goes on when a run comes home
+var auto_sell := false             # idle: the common gear is sold when a run comes home
 var runner_runs := 0               # this runner's runs so far
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the bank's vault, opened once
@@ -2747,6 +2749,7 @@ func _extract() -> void:
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
 			_cash_words(m["cash"])])
 	mission = null
+	_idle_tidy()
 	_say_next()
 	restock()
 
@@ -3037,6 +3040,34 @@ func sell_commons() -> int:
 	return sell_rarity(0)
 
 
+## The idle junk run: common gear only - never rounds, meds, bottles, papers, uniques or set pieces.
+func sell_junk() -> int:
+	var n := 0
+	var got := 0.0
+	for it in stash.duplicate():
+		if int(it["rarity"]) == 0 and not (Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set")):
+			got += sell_price(it)
+			sell(it)
+			n += 1
+	if n > 0:
+		log_event("The fence took the junk: %d thing%s, %s." % [n, "" if n == 1 else "s", _cash_words(got)])
+	return n
+
+
+## Idle: what the toggles do when a run comes home.
+func _idle_tidy() -> void:
+	if auto_sell:
+		sell_junk()
+	if auto_equip:
+		var changed := []
+		for s in Data.SLOTS:
+			var was = equipped[s]
+			if equip_best(s):
+				changed.append(Items.full_name(equipped[s]))
+		if not changed.is_empty():
+			log_event("Put on: %s." % ", ".join(changed))
+
+
 ## The stash's unequipped items, dearest first, for the market's sell cards.
 func stash_by_value() -> Array:
 	var out := stash.duplicate()
@@ -3212,7 +3243,7 @@ func _state() -> Dictionary:
 		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
-		"next_id": Items._next_id, "auto_tier": auto_tier, "tree": tree, "training_points": training_points,
+		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "training_points": training_points,
 		"intel": intel, "depth": depth, "best_depth": best_depth, "workshop": workshop, "class": cls, "stash_level": stash_level,
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
@@ -3241,6 +3272,8 @@ func load_dict(d: Dictionary) -> void:
 	operators_lost = int(d.get("operators_lost", 0))
 	best_tier = int(d.get("best_tier", 0))
 	auto_tier = int(d.get("auto_tier", -1))
+	auto_equip = bool(d.get("auto_equip", false))
+	auto_sell = bool(d.get("auto_sell", false))
 	tree = d.get("tree", [])
 	workshop = int(d.get("workshop", 0))
 	cls = d.get("class", "")

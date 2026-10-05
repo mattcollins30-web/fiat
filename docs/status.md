@@ -775,6 +775,18 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## Idle quality of life (2026-10-05)
+
+Two toggles on the Lock-up, where the buttons sit when nothing's selected: "Equip if better" (the
+best of each slot by score goes on when a run comes home; "Put on: Riot suit, Army helmet.") and
+"Sell the junk on return" (common gear to the fence on the way in - never rounds, meds, bottles,
+papers, uniques or set pieces; "The fence took the junk: 6 things, £84."). `sim.auto_equip`,
+`sim.auto_sell`, `sell_junk()`, `_idle_tidy()` on every extract; saved. The old "Sell commons"
+button is untouched (it sells everything common, on purpose, by hand).
+
+Asserted (`_idle_checks`): the toggles show and fit, on and off; a run home sells the junk and
+keeps the rounds, med and bottle; the better armour goes on; the lines; the save.
+
 ## The first ten minutes: what's next (2026-10-05)
 
 No objective line, no tutorial: the yard says what's next, in its voice, on the Runner card's note

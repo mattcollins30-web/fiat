@@ -2242,6 +2242,7 @@ func _move_checks(main) -> void:
 	_faces_checks(main)
 	_stack_checks(main)
 	_next_checks(main)
+	_idle_checks(main)
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the fence
@@ -2426,7 +2427,7 @@ func _faces_checks(main) -> void:
 	var m: Dictionary = sim.mission
 	m["remaining"] = 1
 	m["target_hp"] = 0.1                  # the last of the pool drops: the head comes out
-	sim.advance(1.0)
+	sim.advance(4.0)                      # past a melee wait or an underlay's grace
 	_check(m.has("boss") and m["boss"]["started"], "the head did not come out")
 	main.show_room(main.MISSIONS)        # on a run, Runs is the run screen
 	main.refresh()
@@ -2594,6 +2595,54 @@ func _next_checks(main) -> void:
 	_check_fit(main, "The Yard (what's next)")
 	sim.load_dict(saved)
 	print("what's next ok: the past, the first run, the site, the head, the next lot, once in the log, the campaign done")
+
+
+## Idle quality of life: two toggles on the Lock-up with nothing selected -
+## the best of each slot goes on when a run comes home, and the common gear
+## goes to the fence (never rounds, meds, bottles, papers, uniques or sets).
+func _idle_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {}
+	main.refresh()
+	_check(main._armoury._toggles[0].visible and main._armoury._toggles[1].visible, "the idle toggles are not on the Lock-up")
+	_check_fit(main, "Lock-up (idle toggles)")
+	main._armoury._toggle(0)
+	main._armoury._toggle(1)
+	_check(sim.auto_equip and sim.auto_sell and main._armoury._toggles[0].text.ends_with("✓"), "the toggles did not turn on")
+	_check_fit(main, "Lock-up (idle toggles on)")
+	# a run home: the junk goes, the better piece goes on, the rest stays
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	var junk: Dictionary = sim._plain("Helmet", "Hard hat")
+	var keep_ammo: Dictionary = sim._plain(Data.AMMO, "Nails")
+	var keep_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	var keep_bottle: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	var better: Dictionary = sim._plain("Armour", "Riot suit")
+	better["rarity"] = 2
+	better["affixes"] = [{"stat": "hp", "value": 40.0, "tier": 3}]
+	for it in [junk, keep_ammo, keep_med, keep_bottle, better]:
+		sim.stash_put(it)
+	sim.equipped["Armour"] = sim._plain("Armour", "Stab vest")
+	sim.intel[0] = []
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["found"] = []
+	sim.extract_now()
+	_check(not sim.stash.has(junk) and sim.stash.has(keep_ammo) and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
+	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
+	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
+	main._armoury._toggle(0)
+	main._armoury._toggle(1)
+	_check(not sim.auto_equip and not sim.auto_sell, "the toggles did not turn off")
+	var d: Dictionary = sim.to_dict()
+	sim.auto_sell = true
+	d = sim.to_dict()
+	sim.load_dict(d)
+	_check(sim.auto_sell, "the toggle did not save")
+	sim.load_dict(saved)
+	print("idle ok: the toggles, the junk run, equip if better, the lines, the save")
 
 
 func _recycle_checks(main) -> void:
