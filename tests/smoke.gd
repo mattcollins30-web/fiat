@@ -212,6 +212,20 @@ func _init() -> void:
 	_check(sim.take(kit["id"]) and sim.rig_used() == used_before + 2, "a two-cell kit did not take two pouches: %d -> %d" % [used_before, sim.rig_used()])
 	main.refresh()
 	_check_fit(main, "Armoury (kit in the rig)")
+	# rounds dropped on a full rig top up its own stack of the same type (it only stacked the other way)
+	var rig_box: Dictionary = sim._plain(Data.AMMO, "Nails")
+	Items.set_stack(rig_box, 50)
+	while sim.rig_room(1):
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.rig.append(rig_box)                       # over the top: the test's own full rig
+	var stash_box: Dictionary = sim._plain(Data.AMMO, "Nails")
+	Items.set_stack(stash_box, 30)
+	sim.stash.append(stash_box)
+	_check(not sim.rig_room(1) and main._armoury._containers._can_drop(Vector2.ZERO, {"id": stash_box["id"], "src": "stash"}), "a full rig refuses rounds that would top up its stack")
+	var nails_before: int = sim.rounds_for(sim._plain("Primary", "Nail gun"))
+	var rig_n_before: int = sim.rig.size()
+	_check(sim.take(stash_box["id"]) and sim.rounds_for(sim._plain("Primary", "Nail gun")) == nails_before + 30 and sim.rig.size() == rig_n_before and not sim.stash.has(stash_box), "the drop did not top up the rig's nails: %d -> %d" % [nails_before, sim.rounds_for(sim._plain("Primary", "Nail gun"))])
+	sim.rig.erase(rig_box)
 	sim.leave(kit["id"])
 	sim.sell(kit)
 	main.refresh()
@@ -952,7 +966,26 @@ func _run_screen(main) -> void:
 	for c in run_ui._rig_cells:
 		if c.visible:
 			var pr := Rect2(Vector2.ZERO, run_ui._panels[1]["panel"].size)
-			_check(pr.encloses(Rect2(c.position, c.size)) and c.position.y + c.size.y <= run_ui._panels[1]["button"].position.y, "a rig cell on the run screen leaves its panel or sits on the button: cell %s, panel %s, button at %.0f" % [str(Rect2(c.position, c.size)), str(pr), run_ui._panels[1]["button"].position.y])
+			_check(pr.encloses(Rect2(c.position, c.size)), "a rig cell on the run screen leaves its panel: cell %s, panel %s" % [str(Rect2(c.position, c.size)), str(pr)])
+	_check(not run_ui._panels[1]["button"].visible, "the Runner panel still has a Use button; the pouches are the controls")
+	# a pouch is the control: pressing a med's cell uses it
+	if sim.med_capacity() > 0 and sim.mission["using"] == null:
+		while not sim.rig_room(1) and not sim.rig.is_empty():
+			sim.rig.pop_back()
+		var pouch_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		sim.rig.append(pouch_med)
+		sim.hp = sim.max_hp() * 0.5
+		main.refresh()
+		var kp := -1
+		for i in range(run_ui._rig_cells.size()):
+			if run_ui._rig_cells[i].visible and run_ui._rig_cells[i].id == pouch_med["id"]:
+				kp = i
+		_check(kp >= 0, "the med in the rig has no pouch on the run screen")
+		if kp >= 0:
+			run_ui._rig_pressed(kp)
+			_check(sim.mission["using"] != null and sim.mission["using"]["name"] == "Bandage", "pressing the pouch did not use the med")
+			main.refresh()
+			_check_fit(main, "Run (med in use)")
 	if sim.med_capacity() > 0:
 		var found_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 		sim.mission["found"].append(found_med)

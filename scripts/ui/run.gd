@@ -32,7 +32,7 @@ const RUN_Y := PICK_Y                                         # the run's panel,
 const RUN_H := PICK_H
 const RUNNER_Y := THEM_H + PANEL_GAP                          # 256
 const RUNNER_H := RUN_Y - PANEL_GAP - RUNNER_Y                # 344: two lines, a note, the rig's pouches, a button
-const RIG_Y := 210                                            # the pouches' row in the Runner panel, under the note, clear of the button
+const RIG_Y := 216                                            # the pouches' row in the Runner panel, under the note
 const RUNNER_FOOT := 12                                       # the Runner panel's button sits lower, to make the pouches room
 const RIG_MAX := 18
 const PAD := 20
@@ -124,7 +124,7 @@ func _init() -> void:
 		c.pressed.connect(_rig_pressed.bind(k))
 		_panels[1]["panel"].add_child(c)
 		_rig_cells.append(c)
-	_panels[1]["button"].pressed.connect(_use_med)
+	_panels[1]["button"].visible = false        # the pouches are the controls: a med's cell uses it
 	_panels[2]["button"].pressed.connect(_get_out)
 	_panels[2]["button2"].pressed.connect(_stop_auto)
 	_inv = Inventory.new()
@@ -196,7 +196,8 @@ func show_state(s) -> void:
 		op["note"].text = _rounds_words("No meds")
 		med_sig = "none"
 	else:
-		op["note"].text = _rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"])
+		UI.fit(op["note"], [_rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"]) + " · press a pouch to use one",
+				_rounds_words("%d med%s" % [sim.meds_carried(), "" if sim.meds_carried() == 1 else "s"])])
 		med_sig = "use:" + sim.first_med()["base"]
 	_show_rig()
 	# the run
@@ -216,10 +217,6 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
-	op["button"].visible = med_sig.begins_with("use:")
-	if op["button"].visible:
-		op["button"].text = "Use %s" % sim.first_med()["base"].to_lower()
-		UI.style_button(op["button"], low)
 	var auto: bool = sim.auto_tier >= 0
 	run["button"].text = "Get out now"
 	run["button"].visible = true
@@ -292,7 +289,7 @@ func _show_pick(m: Dictionary) -> void:
 	# a med or rounds found out there can go in the rig now, if there's a pouch
 	_take.visible = Items.is_medical(it) or Items.is_ammo(it)
 	if _take.visible:
-		var room: bool = sim.rig_room(Items.size(it)) or (Items.is_ammo(it) and sim.rig_stack_room(it))
+		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_take.text = "Take into the rig" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")
 		_take.disabled = not room
 		_take.size.x = ceilf(UI.text_width(_take, _take.text)) + 48
@@ -388,7 +385,8 @@ func _show_rig() -> void:
 			break
 		var c = _rig_cells[k]
 		c.position = Vector2(PAD + k * (cell + Pal.CELL_GAP), RIG_Y)
-		c.show_item(it, false, Vector2(cell, cell))
+		var lit: bool = Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null
+		c.show_item(it, lit, Vector2(cell, cell))
 		c.visible = true
 		k += 1
 	var filled := k
@@ -413,11 +411,6 @@ func _take_pick() -> void:
 	if not it.is_empty() and sim.take_from_pack(it["id"]):
 		_inv.selected = -1
 		acted.emit()
-
-
-func _use_med() -> void:
-	if sim.on_mission() and not sim.first_med().is_empty():
-		sim.use_med(sim.first_med()["id"])
 
 
 ## "2 meds · 38 rounds", or "2 meds · dry" when the primary has none left.

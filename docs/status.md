@@ -839,6 +839,18 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The pouches are the controls; rounds top up a full rig (5 Oct)
+
+The Runner panel's "Use" button is gone: a med's pouch on the run screen is the control, lit when HP is
+under 35% and nothing's in use, and the note says "press a pouch to use one". Asserted: no button, a
+pressed pouch uses its med.
+
+Dragging rounds onto a full rig in the Lock-up was refused (`_can_drop` wanted a pouch free) though the
+take itself would have topped up the rig's stack of the same rounds - so stacking only worked rig to
+stash. `sim.rig_tops_up(it)` says whether any rig stack of the same rounds has room, and the drop, the
+run's Take and the Lock-up's take all allow it. Asserted: a full rig takes a drop of nails and its own
+stack grows by them, no new pouch.
+
 ## The bench says what it did; the run screen's rig (5 Oct)
 
 - **The bench's words.** Every job at the bench now says what it did, in words the player can check against

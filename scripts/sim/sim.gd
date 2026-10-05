@@ -3038,6 +3038,17 @@ func take_from_pack(id: int) -> bool:
 	return _take_from(mission["found"], id)
 
 
+## Whether any of the rig's stacks of the same rounds has room: a drop that
+## tops up, even with no pouch free and even if some stays behind.
+func rig_tops_up(it: Dictionary) -> bool:
+	if not Items.is_ammo(it):
+		return false
+	for r in rig:
+		if Items.same_stack(r, it) and Items.stack_size(r) < Items.stack_cap(r):
+			return true
+	return false
+
+
 ## Whether a stack of rounds would top up the rig's own stack entirely, with no pouch.
 func rig_stack_room(it: Dictionary) -> bool:
 	var left: int = Items.stack_size(it)
