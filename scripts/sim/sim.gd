@@ -2354,8 +2354,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	if primary_live and not has_rule("qm_rifle"):
 		_spend_rounds(equipped["Primary"], Items.base_of(equipped["Primary"])["rof"] * pace() * t["pace"] * dt)
-	if equipped["Secondary"] != null and has_rounds(equipped["Secondary"]) and (not primary_live or has_node("double_tap")):
-		_spend_rounds(equipped["Secondary"], Items.base_of(equipped["Secondary"])["rof"] * pace() * t["pace"] * dt)
+	# the secondary spends what it fires: its full rate when it's the gun in
+	# hand (the primary dry or gone, or Double tap), a third while it backs the primary
+	if equipped["Secondary"] != null and has_rounds(equipped["Secondary"]):
+		var share: float = 1.0 if (not primary_live or has_node("double_tap") or has_rule("vans_spare")) else 1.0 / 3.0
+		_spend_rounds(equipped["Secondary"], Items.base_of(equipped["Secondary"])["rof"] * pace() * t["pace"] * dt * share)
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	while m["target_hp"] <= 0.0 and m["remaining"] > 0:
 		m["remaining"] -= 1

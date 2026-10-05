@@ -839,6 +839,15 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The secondary spends what it fires (5 Oct)
+
+Matt: a pistol with 600 rounds in the rig, run after run, and the count never moved. The secondary gave
+a third of its damage while the primary was live and spent nothing for it; it only spent rounds when it
+was the gun in hand (the primary dry or gone, or Double tap). Now it spends at the share it fires: a
+third of its rate backing a live primary, the full rate in hand (Double tap and the van's spare count as
+in hand, as they do for the damage). Asserted: a pistol backing a nail gun spends rounds over thirty
+seconds, and more than twice as many when the nail gun is dry.
+
 ## A death takes the runner's past with them (5 Oct)
 
 Matt's call after a death: the Caravan looked exactly as before - same class, same points taken - which

@@ -3377,6 +3377,29 @@ func _ammo_checks(sim) -> void:
 	for k in range(20):
 		sim.advance(1.0)
 	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) < before, "the nail gun fired twenty seconds and spent no rounds")
+	# the secondary backing a live primary spends a third of its rate; alone, all of it
+	sim.extract_now()
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim.rig = [sim._plain(Data.AMMO, "Nails"), sim._plain(Data.AMMO, "Pistol rounds")]
+	var pistol0: int = sim.rounds_for(sim.equipped["Secondary"])
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["t"]["dps"] = 0.0
+	for k in range(30):
+		sim.advance(1.0)
+	var backing: int = pistol0 - sim.rounds_for(sim.equipped["Secondary"])
+	_check(backing > 0, "a pistol backing a live primary spent no rounds over thirty seconds")
+	sim.extract_now()
+	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]        # the nail gun dry: the pistol is the gun in hand
+	pistol0 = sim.rounds_for(sim.equipped["Secondary"])
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["t"]["dps"] = 0.0
+	for k in range(30):
+		sim.advance(1.0)
+	var alone: int = pistol0 - sim.rounds_for(sim.equipped["Secondary"])
+	_check(alone > backing * 2, "the pistol in hand (%d rounds) fires no faster than backing (%d)" % [alone, backing])
+	sim.equipped["Secondary"] = null
 	sim.extract_now()
 	sim.rig = []
 	_check(sim.dps() < with_rounds * 0.5, "a gun with no rounds still fires: %.1f against %.1f" % [sim.dps(), with_rounds])
