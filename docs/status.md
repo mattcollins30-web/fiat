@@ -775,6 +775,18 @@ filled the stash and broke the drop tests); stacking will do this properly for t
 
 Asserted (`_unique_rules_checks`): every unique rolls and has words; the gates; the mate; each rule.
 
+## The green among the red (2026-10-05)
+
+Matt: "even if I saw a green +1 on the bar amongst the −1s I would know as a player regen is
+working." Your bar's numbers were the net change in HP, so regen under fire never showed. The sim
+counts what you took (`m["taken"]`, their fire) and what came back (`m["healed"]`: regen, the
+cardigan, a med, life on a kill, the ladle, the thermos) apart, and the run screen shows both
+every half second - "−6" in red and "+1" in green, side by side on your bar. Regen on gear
+still counts only out on a run, as Matt wants; the yard's rest is the Clinic's.
+
+Asserted: a second that took 20 and gave 3 shows a red twenty-odd and a green +3; five seconds of
++2 regen count nine or more healed; their fire counts as taken.
+
 ## Numbers that read, and the boss toast (2026-10-05)
 
 Matt: "all in the same place fading up doesn't read as anything". A damage number comes off

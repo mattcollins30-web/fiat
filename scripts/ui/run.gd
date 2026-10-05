@@ -55,7 +55,8 @@ var _head_face: TextureRect        # the crew's head, while he's out
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
 var _number_at := -1.0             # the run's clock when the last number came off
-var _hp_seen := -1.0               # your HP at the last look, for the red and green
+var _taken_seen := 0.0             # what the red numbers have shown so far this run
+var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
 
@@ -278,7 +279,8 @@ func _juice_tick(m: Dictionary) -> void:
 		_dealt_seen = 0.0
 		_number_at = -1.0
 		_hp_at = -1.0
-		_hp_seen = -1.0
+		_taken_seen = 0.0
+		_healed_seen = 0.0
 		_found_seen = []
 	var dealt: float = float(m.get("dealt", 0.0))
 	# a number every third of a second or so, not every refresh, scattered along their bar
@@ -288,15 +290,25 @@ func _juice_tick(m: Dictionary) -> void:
 		var hit: int = int(round(dealt - _dealt_seen))
 		juice.number(_scatter(_panels[0]["panel"]), "%d" % hit, "warn", hit >= 100)
 		_dealt_seen = dealt
-	# and on your own bar: red for what you took, green for what came back
-	if _hp_seen < 0.0 or m.get("elapsed", 0.0) < 1.5:
-		_hp_seen = sim.hp
-	var hp_delta: float = sim.hp - _hp_seen
-	if juice != null and absf(hp_delta) >= 1.0 and float(m["elapsed"]) - _hp_at >= 0.3:
-		_hp_at = float(m["elapsed"])
-		var n: int = int(round(absf(hp_delta)))
-		juice.number(_scatter(_panels[1]["panel"]), ("+%d" if hp_delta > 0.0 else "−%d") % n, "good" if hp_delta > 0.0 else "bad", n >= 40)
-		_hp_seen = sim.hp
+	# and on your own bar: red for what you took, green for what came back - counted apart,
+	# so a helmet's +1 a second shows among the hits even when the hits are winning
+	var taken: float = float(m.get("taken", 0.0))
+	var healed: float = float(m.get("healed", 0.0))
+	if juice != null and float(m["elapsed"]) - _hp_at >= 0.5:
+		var you: Panel = _panels[1]["panel"]
+		var shown := false
+		if taken - _taken_seen >= 1.0:
+			var n: int = int(round(taken - _taken_seen))
+			juice.number(_scatter(you), "−%d" % n, "bad", n >= 40)
+			_taken_seen = taken
+			shown = true
+		if healed - _healed_seen >= 1.0:
+			var n: int = int(round(healed - _healed_seen))
+			juice.number(_scatter(you), "+%d" % n, "good", n >= 40)
+			_healed_seen = healed
+			shown = true
+		if shown:
+			_hp_at = float(m["elapsed"])
 
 	for it in m["found"]:
 		if not (it["id"] in _found_seen):

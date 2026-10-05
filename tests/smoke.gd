@@ -2713,20 +2713,27 @@ func _juice_checks(main) -> void:
 	for n in main._juice._numbers:
 		spots["%d,%d" % [int(n["label"].position.x / 20), int(n["from"] / 8)]] = true
 	_check(main._juice.numbers() >= 4 and main._juice.numbers() <= 18 and spots.size() >= 3, "the numbers come as one column or too thick: %d numbers in %d places" % [main._juice.numbers(), spots.size()])
-	# red for damage taken, green for a heal, on your own bar
+	# red for damage taken, green for what came back, counted apart: a helmet's regen shows among the hits
 	main._juice.clear_numbers()
-	sim.hp = sim.max_hp()
 	main.refresh()
 	sim.mission["elapsed"] += 1.0
-	sim.hp -= 20.0
+	sim.mission["taken"] = float(sim.mission.get("taken", 0.0)) + 20.0
+	sim.mission["healed"] = float(sim.mission.get("healed", 0.0)) + 3.0
 	main.refresh()
 	var texts: Array = main._juice._numbers.map(func(n): return n["label"].text)
-	_check(texts.has("−20"), "no red number for the damage taken: %s" % str(texts))
-	sim.mission["elapsed"] += 1.0
-	sim.hp = sim.max_hp()
-	main.refresh()
-	texts = main._juice._numbers.map(func(n): return n["label"].text)
-	_check(texts.has("+20"), "no green number for the heal: %s" % str(texts))
+	_check(texts.any(func(t): return str(t).begins_with("−2")) and texts.has("+3"), "the red and the green do not both show for a second that took 20 and gave 3 back: %s" % str(texts))
+	# the counters come from the fight: regen heals, their fire takes
+	var hold = sim.equipped["Helmet"]
+	var regen_hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	regen_hat["affixes"] = [{"stat": "regen", "value": 2.0, "tier": 2}]
+	sim.equipped["Helmet"] = regen_hat
+	sim.hp = sim.max_hp() * 0.5
+	var healed0: float = float(sim.mission.get("healed", 0.0))
+	var taken0: float = float(sim.mission.get("taken", 0.0))
+	sim.advance(5.0)
+	_check(float(sim.mission.get("healed", 0.0)) - healed0 >= 9.0, "five seconds of +2 regen did not count as healed: %.1f" % (float(sim.mission.get("healed", 0.0)) - healed0))
+	_check(float(sim.mission.get("taken", 0.0)) > taken0, "their fire did not count as taken")
+	sim.equipped["Helmet"] = hold
 	var you_y: float = main._run._panels[1]["panel"].global_position.y
 	var them_y: float = main._run._panels[0]["panel"].global_position.y
 	var reds: Array = main._juice._numbers.filter(func(n): return n["label"].text.begins_with("−") or n["label"].text.begins_with("+"))

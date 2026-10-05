@@ -2219,9 +2219,9 @@ func _tick(dt: float) -> void:
 	if mission == null:
 		return
 	if _affix_sum("regen") > 0.0:
-		hp = minf(max_hp(), hp + _affix_sum("regen") * dt)
+		_heal(m, _affix_sum("regen") * dt)
 	if has_rule("nans_cardigan"):
-		hp = minf(max_hp(), hp + max_hp() * 0.03 * dt)
+		_heal(m, max_hp() * 0.03 * dt)
 	if float(m.get("event_at", -1.0)) >= 0.0 and m["elapsed"] >= float(m["event_at"]):
 		_event(m, t)
 	# the Medic's rule: a med by itself under 40%
@@ -2249,6 +2249,13 @@ func _tick(dt: float) -> void:
 				return
 	if auto_tier >= 0 and m["cleared"] and pack_used(m) >= capacity():
 		_extract()
+
+
+## HP back, counted for the run screen's green numbers (regen, a med, life on a kill).
+func _heal(m: Dictionary, amount: float) -> void:
+	var before := hp
+	hp = minf(max_hp(), hp + amount)
+	m["healed"] = float(m.get("healed", 0.0)) + (hp - before)
 
 
 func _boss_entry(b: Dictionary) -> Dictionary:
@@ -2421,10 +2428,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if has_rule("vicars_thermos") and fire_pool > 0.0:
 		var fire_tick: float = fire_pool - float(m["my_dots"].get("fire", 0.0))
 		ticked -= fire_tick
-		hp = minf(max_hp(), hp + fire_tick)       # a burn on you heals you instead
+		_heal(m, fire_tick)                        # a burn on you heals you instead
 	incoming += ticked / maxf(dt, 0.001)
 	m["last_incoming"] = incoming
 	hp -= incoming * dt
+	m["taken"] = float(m.get("taken", 0.0)) + incoming * dt     # for the run screen's red numbers
 	if hp <= 0.0:
 		if has_node("not_today") and not m.get("saved", false):
 			m["saved"] = true
@@ -2456,7 +2464,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 		return
 	m["using"]["left"] -= dt
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
-		hp = minf(max_hp(), hp + m["using"]["heal"])
+		_heal(m, m["using"]["heal"])
 		if m.has("my_dots"):
 			m["my_dots"].erase("bleed")      # a dressing stops the bleeding
 		m["meds_used"] += 1
@@ -2466,7 +2474,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
-	hp = minf(max_hp(), hp + _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0))
+	_heal(m, _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0))
 	if m.get("dry", false):
 		return                               # a dry run: the fight only, nothing earned
 	var gain: float = t["xp"] * (1.5 if has_node("hit_and_run") else 1.0)
