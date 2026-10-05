@@ -1550,6 +1550,19 @@ Placeholder for drawn art, but the shapes are the shapes an artist would be give
 The worst-case pass covers the whole pool and the uniques; the smoke test drives juicing, the Clinic and
 the pool's rules (a choke counts on a shotgun and not on a rifle; a unique's rule and name; weight as pace).
 
+## The Caravan's middle head: back and next (2026-10-05)
+
+The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a
+"◂ Petrol" on the left and a "Live ▸" on the right of the head, the tree's name centred between them
+(`SWAP_W` 160 a side; a name that won't fit its button reads "◂ Back" / "Next ▸", `_arrow_text`). `_on_back`
+wraps. Smoke: both buttons present, the name centred and fitting between them, next then back returns to
+the same tree, back from the first wraps to the last, fit checks on the way. The checks caught "The rat man"
+at 151 px in a 150 px button and the name at 166 px between 170 px buttons, which set the widths.
+
+The design canvas now holds the A style on every screen (Runs cards A picked; the run in flow, bench, clinic,
+fence, radio as drawn; the Caravan as D, tiles two across with a rail). Build order: Runs cards, run in flow,
+then the rest.
+
 ## The Finds card's figures, checked against a save (2026-10-05)
 
 Matt's second save (8.2 h, 110 runs, a Poacher) read "+35% loot quality / Loot quantity +-5%". Both figures were

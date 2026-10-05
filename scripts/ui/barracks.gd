@@ -20,7 +20,7 @@ const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
 const CLASS_H := 52                                            # the class bar across the top
 const TREE_Y := CLASS_H + 16
 const HEAD_H := 40
-const SWAP_W := 210                                            # the middle head's "Next: … ▸"
+const SWAP_W := 160                                            # the middle head's "◂ Petrol" and "Live ▸", either side of the name
 const NODE_H := 40
 const NODE_GAP := 5
 const NODES_Y := TREE_Y + HEAD_H + 6
@@ -47,7 +47,8 @@ var _wall: Array = []              # their faces, newest first, small
 const WALL := 6
 const WALL_S := 64
 var _ascend: Button                # the second past, from level 30
-var _swap: Button                  # over the middle column's head: cycles the yard's tree, the second past's, the elements'
+var _swap: Button                  # over the middle column's head, right: the next of the yard's tree, the second past's, the elements', the drawer, the shelf
+var _back: Button                  # its left: the one before, so an overshoot is one press back
 var mid := 0                       # which of the middle trees shows
 var drawer_page := 0               # the drawer's page: PAGE papers at a time
 const WORD_H := 26                                 # a line of a paper's or a unique's words
@@ -112,6 +113,11 @@ func _init() -> void:
 	_swap = UI.button(self, Rect2(COL_W + COL_GAP + COL_W - SWAP_W, TREE_Y, SWAP_W, HEAD_H), false)
 	_swap.pressed.connect(_on_swap)
 	_swap.visible = false
+	_swap.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_back = UI.button(self, Rect2(COL_W + COL_GAP, TREE_Y, SWAP_W, HEAD_H), false)
+	_back.pressed.connect(_on_back)
+	_back.visible = false
+	_back.alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 
 const EFFECT_WORDS := {
@@ -212,11 +218,15 @@ func show_state(s) -> void:
 	else:
 		cols[1] = mids[mid]
 	_swap.visible = mids.size() > 1
+	_back.visible = mids.size() > 1
 	var next_name: String = mids[(mid + 1) % mids.size()]["name"] if mids.size() > 1 else ""
-	_swap.text = ("Next: %s ▸" % next_name) if mids.size() > 1 else ""
-	_swap.add_theme_stylebox_override("normal", UI.box(Color.TRANSPARENT, 8))
-	_swap.add_theme_stylebox_override("hover", UI.box(Color(Pal.CARD, 0.5), 8))
-	_swap.add_theme_font_size_override("font_size", 18)
+	var prev_name: String = mids[(mid - 1 + mids.size()) % mids.size()]["name"] if mids.size() > 1 else ""
+	for sb in [_swap, _back]:
+		sb.add_theme_stylebox_override("normal", UI.box(Color.TRANSPARENT, 8))
+		sb.add_theme_stylebox_override("hover", UI.box(Color(Pal.CARD, 0.5), 8))
+		sb.add_theme_font_size_override("font_size", 18)
+	_swap.text = _arrow_text(_swap, next_name, false) if mids.size() > 1 else ""
+	_back.text = _arrow_text(_back, prev_name, true) if mids.size() > 1 else ""
 	for b in range(3):
 		var branch = cols[b]
 		var h: Dictionary = _heads[b]
@@ -228,8 +238,11 @@ func show_state(s) -> void:
 			continue
 		var taken := 0
 		var who: String = branch.get("class", "")
-		# the middle head shares its row with the swap button: the name fits what's left
-		h["name"].size.x = COL_W - 2 * PAD - (SWAP_W if (b == 1 and _swap.visible) else 0)
+		# the middle head shares its row with the back and next buttons: the name sits centred between them
+		var flanked: bool = b == 1 and _swap.visible
+		h["name"].position.x = SWAP_W if flanked else PAD
+		h["name"].size.x = COL_W - 2 * (SWAP_W if flanked else PAD)
+		h["name"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if flanked else HORIZONTAL_ALIGNMENT_LEFT
 		if branch.get("drawer", false):
 			_show_drawer(b, branch)
 			continue
@@ -558,6 +571,22 @@ func _on_swap() -> void:
 	show_state(sim)
 
 
+## "◂ Petrol" when the name fits the button, "◂ Back" when it doesn't.
+func _arrow_text(b: Button, name: String, back: bool) -> String:
+	var full := ("◂ %s" % name) if back else ("%s ▸" % name)
+	var w: float = b.get_theme_font("font").get_string_size(full, HORIZONTAL_ALIGNMENT_LEFT, -1, b.get_theme_font_size("font_size")).x
+	if w <= SWAP_W - 12:
+		return full
+	return "◂ Back" if back else "Next ▸"
+
+
+func _on_back() -> void:
+	mid = mid - 1 + _mid_trees(sim.trees()).size()
+	drawer_page = 0
+	_shown = ""
+	show_state(sim)
+
+
 func _pick_class(name: String) -> void:
 	if sim.set_class(name):
 		selected = ""
@@ -583,7 +612,7 @@ func text_nodes() -> Array:
 	if _ascend.visible:
 		out.append(_ascend)
 	if _swap.visible:
-		out.append(_swap)
+		out.append_array([_swap, _back])
 	if _train.visible:
 		out.append(_train)
 	out.append_array(_class_buttons)

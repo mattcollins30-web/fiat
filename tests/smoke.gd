@@ -1555,6 +1555,23 @@ func _element_checks(main) -> void:
 	for k in range(6):
 		main._barracks._on_swap()
 		_check_fit(main, "Caravan (elements, %d)" % k)
+	# the middle head: the name centred between a back and a next, and back undoes next
+	var bk = main._barracks
+	var mid_name: Label = bk._heads[1]["name"]
+	_check(bk._back.visible and bk._swap.visible and bk._back.text.begins_with("◂ ") and bk._swap.text.ends_with(" ▸"), "the middle head's back/next read '%s' / '%s'" % [bk._back.text, bk._swap.text])
+	_check(mid_name.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER and mid_name.position.x >= bk.SWAP_W and mid_name.position.x + mid_name.size.x <= bk.COL_W - bk.SWAP_W, "the middle head's name is not centred between the buttons: x %d w %d" % [mid_name.position.x, mid_name.size.x])
+	_check(mid_name.get_theme_font("font").get_string_size(mid_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, mid_name.get_theme_font_size("font_size")).x <= mid_name.size.x, "the middle head's name '%s' does not fit between the buttons" % mid_name.text)
+	var here: int = bk.mid
+	var was: String = mid_name.text
+	bk._on_swap()
+	_check(bk.mid != here and mid_name.text != was, "next did not move the middle tree")
+	_check(bk._back.text == "◂ " + was or bk._back.text == "◂ Back", "back does not name the tree just left: '%s' for %s" % [bk._back.text, was])
+	bk._on_back()
+	_check(bk.mid == here and mid_name.text == was, "back did not return to %s: %s" % [was, mid_name.text])
+	bk._on_back()
+	_check(bk.mid == (here - 1 + bk._mid_trees(sim.trees()).size()) % bk._mid_trees(sim.trees()).size(), "back from the first tree did not wrap to the last")
+	_check_fit(main, "Caravan (back)")
+	bk._on_swap()
 	sim.load_dict(saved)
 	print("the elements ok: affinities, double cost, the locked keystone and the second past, Spreads, Frozen solid, Builds, Won't stop, the class notables, the Caravan")
 	_melee_checks(main)
