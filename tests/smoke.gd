@@ -2715,8 +2715,8 @@ func _places_checks(main) -> void:
 	for r in c["intel"]:
 		names.append(r[0].text)
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_note"].text.begins_with("23:00, night, raining"), "the card's clock line is off: %s" % c["intel_note"].text)
-	_check(c["lines"][4][0].text == "The site" and c["lines"][4][1].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["lines"][4][0].text, c["lines"][4][1].text])
+	_check(c["intel_head"].text.begins_with("THE WORD · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
+	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
@@ -3145,8 +3145,28 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
 	if not sim.campaign_done():
-		_check(c["depth"].text == "Locked" and c["depth"].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT and is_equal_approx(c["depth"].position.x + c["depth"].size.x, main._missions.PAD + main._missions.INNER), "Locked is not right-justified to the row's edge")
+		_check(c["tiles"][main._missions.DEPTH_TILE]["value"].text == "Locked" and not c["depth_up"].visible and not c["depth_down"].visible, "the depth tile does not read Locked with its buttons hidden before the campaign's done")
 	_check_fit(main, "Runs (locked)")
+	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
+	var band0 = c["band"]
+	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
+	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.begins_with("Tier 1 · "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
+	_check(c["tiles"][0]["key"].text == "Them" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight", "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
+	# the depth's −/+ sit inside their tile, one above the other, never on each other
+	var du = c["depth_up"]
+	var dd = c["depth_down"]
+	_check(du.position.y + du.size.y <= dd.position.y and dd.position.y + dd.size.y <= c["tiles"][main._missions.DEPTH_TILE]["panel"].size.y, "the depth buttons overlap or leave the tile: up %s/%s down %s/%s" % [du.position.y, du.size.y, dd.position.y, dd.size.y])
+	_check(du.get_combined_minimum_size().y <= du.size.y, "the depth button's minimum (%.0f) is taller than its box (%.0f)" % [du.get_combined_minimum_size().y, du.size.y])
+	# the band's sky follows the zone
+	main._missions._pick_zone(1)
+	main.refresh()
+	_check(c["band"]._tone == 1, "the band's tone did not follow the zone")
+	main._missions._pick_zone(0)
+	main.refresh()
+	_check(c["intel_head"].text.begins_with("THE WORD"), "the word's head is off: '%s'" % c["intel_head"].text)
+	for pair in c["intel"]:
+		if pair[0].text != "":
+			_check(pair[1].text != "" and pair[1].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "a word's effect is missing or not right of its name: '%s' / '%s'" % [pair[0].text, pair[1].text])
 	# toasts: once, and only for what just happened
 	var line := "Found: Lucky cap"
 	sim.log_event(line)
@@ -3677,8 +3697,12 @@ func _ammo_checks(sim) -> void:
 	sim.cash += 1000.0
 	while not sim.stash_room(1) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])                 # room for the box
-	var n_before: int = sim.stash.size()
-	_check(sim.buy_ammo("shotgun") and sim.stash.size() == n_before + 1 and Items.is_ammo(sim.stash.back()), "a box from the fence did not land in the stash")
+	# the box lands as a new stack, or tops up a shells stack already there
+	var shells_before: int = sim.stash.reduce(func(a, it): return a + (int(it.get("rounds", 0)) if Items.is_ammo(it) and Items.ammo_type(it) == "shotgun" else 0), 0)
+	var cash_before: float = sim.cash
+	_check(sim.buy_ammo("shotgun"), "the fence would not sell a box of shells (cash £%.0f, room %s)" % [sim.cash, str(sim.stash_room(1))])
+	var shells_after: int = sim.stash.reduce(func(a, it): return a + (int(it.get("rounds", 0)) if Items.is_ammo(it) and Items.ammo_type(it) == "shotgun" else 0), 0)
+	_check(shells_after > shells_before and sim.cash < cash_before, "a box from the fence did not land in the stash: %d shells then %d" % [shells_before, shells_after])
 	sim.sell(sim.stash.back())
 	sim.rig = kept_rig
 	sim.equipped["Primary"] = gun
@@ -4190,19 +4214,16 @@ func _yard_checks(main) -> void:
 	main._missions._pick_zone(1)
 	main.refresh()
 	var col: Dictionary = main._missions._cols[0]
-	var chip_texts := []
-	for k in range(main._missions.CHIPS):
-		if col["chips"][k].visible:
-			chip_texts.append(col["chip_labels"][k].text)
+	var chip_texts: Array = col["chips"].text_nodes().map(func(l): return l.text)
 	if sim.tier_open(Data.ZONES[1]["tiers"][0]):
 		_check(chip_texts.any(func(t): return str(t).begins_with("Fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
 	# the odds in words, the figure small beside them; every band fits the card
 	if sim.tier_open(Data.ZONES[1]["tiers"][0]):
-		_check(Words.ODDS.any(func(b): return b[1] == col["odds"].text) and col["odds_unit"].text.ends_with("to clear") or col["odds_unit"].text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["odds"].text, col["odds_unit"].text])
+		_check(Words.ODDS.any(func(b): return b[1] == col["band"].headline.text) and col["band"].unit.text.ends_with("to clear") or col["band"].unit.text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["band"].headline.text, col["band"].unit.text])
 	for band in Words.ODDS:
-		col["odds"].text = band[1]
-		col["odds_unit"].text = "100% to clear"
-		_check(UI.text_width(col["odds"], col["odds"].text) + 16 + UI.text_width(col["odds_unit"], col["odds_unit"].text) <= col["odds"].size.x, "the odds band '%s' and its figure don't share the row" % band[1])
+		col["band"].headline.text = band[1]
+		col["band"].unit.text = "100% to clear"
+		_check(UI.text_width(col["band"].headline, band[1]) + 16 + UI.text_width(col["band"].unit, col["band"].unit.text) <= col["band"].headline.size.x, "the odds band '%s' and its figure don't share the band's foot" % band[1])
 	main.refresh()
 	_check(Words.odds_words(0.95) == "Safe" and Words.odds_words(0.5) == "A coin toss" and Words.odds_words(0.05) == "A bad idea", "the odds bands are off")
 	_check_fit(main, "Runs (elements)")

@@ -12,6 +12,8 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Band := preload("res://scripts/ui/band.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
@@ -19,11 +21,10 @@ const PAD := 20
 const INNER := COL_W - 2 * PAD                                # 461
 const LINE_H := 28
 const BOSS_W := 150                # the boss toggle beside Set off
-const DEPTH_BTN := 72
-const CHIPS := 4
-const CHIP_H := 26
-const CHIP_PAD := 8
-const CHIP_GAP := 6
+const DEPTH_BTN := 48              # the −/+ stacked at the depth tile's right, the endgame's ladder
+const DEPTH_TILE := 4              # the depth tile's place in the six
+const BAND_H := 200                # the art band at the top of a column
+const FIRE_W := 120                # "They fire" before the chips
 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
@@ -78,52 +79,46 @@ func _init() -> void:
 		edge.corner_radius_top_left = 8
 		edge.corner_radius_bottom_left = 8
 		var c := {"panel": panel, "edge": UI.panel(self, Rect2(x, TOP, 6, Pal.ROOM_H - TOP), edge)}
-		var y := 16
-		c["tier"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		y += 30
-		c["name"] = UI.label(panel, Rect2(PAD, y, INNER, 40), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		y += 46
-		# the odds, big
-		c["odds"] = UI.label(panel, Rect2(PAD, y, INNER, 52), "", "SemiBold", Pal.HEADLINE, Pal.TEXT)
-		c["odds_unit"] = UI.label(panel, Rect2(PAD, y, INNER, 52), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-		y += 58
-		# the depth, with its buttons either side of the figure
-		c["depth_label"] = UI.label(panel, Rect2(PAD, y, 120, Pal.BUTTON_H), "Depth", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c["depth_down"] = UI.button(panel, Rect2(PAD + INNER - 2 * DEPTH_BTN - 8 - 150, y, DEPTH_BTN, Pal.BUTTON_H), false)
+		# the art band: tier and zone, the site's name, the odds as the headline
+		var band := Band.new(COL_W, BAND_H, zone)
+		panel.add_child(band)
+		c["band"] = band
+		var y := BAND_H + 14
+		# the fight, as tiles: them, their fire, the fight's length, the drops, the depth, the rewards
+		c["tiles"] = UI.tile_row(panel, PAD, y, INNER, 3) + UI.tile_row(panel, PAD, y + UI.TILE_H + 8, INNER, 3)
+		var depth_tile: Dictionary = c["tiles"][DEPTH_TILE]
+		c["depth_up"] = UI.button(depth_tile["panel"], Rect2(depth_tile["panel"].size.x - DEPTH_BTN - 6, 4, DEPTH_BTN, 26), false)
+		c["depth_down"] = UI.button(depth_tile["panel"], Rect2(depth_tile["panel"].size.x - DEPTH_BTN - 6, 32, DEPTH_BTN, 26), false)
 		c["depth_down"].text = "−"
 		c["depth_down"].pressed.connect(_depth.bind(col, -1))
-		c["depth"] = UI.label(panel, Rect2(PAD + INNER - DEPTH_BTN - 8 - 150, y, 150, Pal.BUTTON_H), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-		c["depth_up"] = UI.button(panel, Rect2(PAD + INNER - DEPTH_BTN, y, DEPTH_BTN, Pal.BUTTON_H), false)
+		for b in [c["depth_up"], c["depth_down"]]:
+			b.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)     # small enough for a 26 px button
 		c["depth_up"].text = "+"
 		c["depth_up"].pressed.connect(_depth.bind(col, 1))
-		y += Pal.BUTTON_H + 12
-		# the figures
-		c["lines"] = []
-		for k in range(5):
-			var l := UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			var v := UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
-			c["lines"].append([l, v])
-			y += LINE_H
+		y += 2 * UI.TILE_H + 8 + 12
 		# what they fire, as chips in the element's colour, with your resist to each
-		y += 2
-		c["chips"] = []
-		c["chip_labels"] = []
-		for k in range(CHIPS):
-			var cp := UI.panel(panel, Rect2(PAD, y, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
-			cp.visible = false
-			c["chips"].append(cp)
-			c["chip_labels"].append(UI.label(cp, Rect2(CHIP_PAD, 0, 10, CHIP_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-		y += CHIP_H + 8
-		# the intel
-		c["intel_head"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "Word", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		y += 28
+		c["fire_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "They fire", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["chips"] = Chips.new(INNER - FIRE_W)
+		c["chips"].position = Vector2(PAD + FIRE_W, y)
+		panel.add_child(c["chips"])
+		y += Chips.CHIP_H + 8
+		c["resist"] = [UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "They resist", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false),
+			UI.label(panel, Rect2(PAD, y, INNER, LINE_H), "", "Medium", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)]
+		y += LINE_H + 6
+		# the word: the head carries the sky; a row a word, its name left and its effect right
+		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "The word")
+		y += UI.HEAD_H + 2
 		c["intel"] = []
 		for k in range(3):                     # the radio's two, and the sky's
-			var n := UI.label(panel, Rect2(PAD, y, INNER, 28), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			var w := UI.label(panel, Rect2(PAD, y + 28, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var n := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var w := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
 			c["intel"].append([n, w])
-			y += 56
-		c["intel_note"] = UI.label(panel, Rect2(PAD, y, INNER, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+			y += 30
+		y += 6
+		# the site's own line at this depth, two rows
+		c["site"] = []
+		for k in range(2):
+			c["site"].append(UI.label(panel, Rect2(PAD, y + k * 24, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
 		# the foot: Deploy across, Auto under it
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
 		c["auto"] = UI.button(panel, Rect2(PAD, fy, INNER - BOSS_W - 8, Pal.BUTTON_H), false)
@@ -140,10 +135,6 @@ func _init() -> void:
 		c["boss"].pressed.connect(_boss.bind(col))
 		c["boss"].visible = false
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		# the site's own line at this depth, two rows under the word, above the note
-		c["site"] = []
-		for k in range(2):
-			c["site"].append(UI.label(panel, Rect2(PAD, y + 32 + k * 21, INNER, 21), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_cols.append(c)
 
 
@@ -183,74 +174,84 @@ func show_state(s) -> void:
 	for k in range(3):
 		var i: int = tiers[k]
 		var c: Dictionary = _cols[k]
-		c["tier"].text = "Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]]
-		c["name"].text = Data.TIERS[i]["name"]
 		var t: Dictionary = sim.effective(i)
 		var is_open: bool = sim.tier_open(i)
 		var odds: float = sim.survival(i) if is_open else 0.0
 		var tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
 		c["edge"].visible = is_open
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
-		c["name"].add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
+		var band: Band = c["band"]
+		band.set_site(Data.TIERS[i]["name"])
+		band.set_tone(zone)
+		band.title.add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
 		if is_open:
-			c["odds"].text = Words.odds_words(odds)
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
-			c["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
-			c["odds_unit"].text = ("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds"
+			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], Words.odds_words(odds),
+				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 		else:
-			c["odds"].text = "Locked"
-			c["odds"].add_theme_color_override("font_color", Pal.TEXT_3)
-			c["odds_unit"].text = "clear tier %d first" % k
+			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "clear tier %d first" % k, Pal.TEXT_3)
 		# the depth ladder is the endgame's: until the campaign's done it reads as such
 		var endgame: bool = sim.campaign_done()
-		c["depth"].text = ("%d of %d" % [t["depth"], sim.best_depth[i] + 1]) if endgame else "Locked"
 		c["depth_down"].visible = endgame
 		c["depth_up"].visible = endgame
-		# between its buttons when the ladder's open; across the row, right-justified, when it's locked
-		c["depth"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if endgame else HORIZONTAL_ALIGNMENT_RIGHT
-		c["depth"].position.x = (PAD + INNER - DEPTH_BTN - 8 - 150) if endgame else (PAD + 120)
-		c["depth"].size.x = 150 if endgame else (INNER - 120)
 		c["depth_down"].disabled = not is_open or sim.on_mission() or t["depth"] <= 1
 		c["depth_up"].disabled = not is_open or sim.on_mission() or t["depth"] > sim.best_depth[i]
-		var rows := [
-			["Them", "%d × %.0f HP" % [t["pool"], t["hp"]]],
-			["Their fire", "%.1f/s each" % t["dps"]],
-			["Fight takes", Fmt.mss(sim.estimate(i))],
-			["Drops up to", "tier %d gear" % t["loot_tier"]],
-			["Rewards", "×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)],
-		]
 		var res_words := []
 		for ty in Data.ELEMENTS:
 			if float(t.get("res", {}).get(ty, 0.0)) > 0.0:
 				res_words.append("%s %.0f%%" % [ty, float(t["res"][ty]) * 100.0])
+		var tiles: Array = [
+			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
+			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
+			["Fight", [Fmt.mss(sim.estimate(i))]],
+			["Drops", ["tier %d gear" % t["loot_tier"], "tier %d" % t["loot_tier"]]],
+			["Depth", [("%d of %d" % [t["depth"], sim.best_depth[i] + 1]), "%d/%d" % [t["depth"], sim.best_depth[i] + 1]] if endgame else ["Locked"]],
+			["Rewards", ["×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)]],
+		]
 		if sim.wear(i) > 0.0:
-			rows[4] = ["The site", sim.site_state(i)]
-		elif not res_words.is_empty():
-			rows[4] = ["They resist", ", ".join(res_words)]
-		for r in range(5):
-			c["lines"][r][0].text = rows[r][0]
-			# the value beside its label: whole, then fewer of its clauses, the rest as "+N"
-			var clauses: PackedStringArray = str(rows[r][1]).split(", ", false)
+			var state: String = sim.site_state(i)
+			tiles[5] = ["The site", [state, state.get_slice(" · ", 0)]]
+		for r in range(6):
+			UI.set_tile(c["tiles"][r], tiles[r][0], tiles[r][1], Pal.TEXT if is_open else Pal.TEXT_3)
+		# the figure keeps clear of the −/+ when the ladder's open
+		for l in [c["tiles"][DEPTH_TILE]["value"], c["tiles"][DEPTH_TILE]["key"]]:
+			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20 - ((DEPTH_BTN + 8) if endgame else 0)
+		UI.set_tile(c["tiles"][DEPTH_TILE], tiles[DEPTH_TILE][0], tiles[DEPTH_TILE][1], Pal.TEXT if is_open else Pal.TEXT_3)
+		_show_chips(c, t, is_open)
+		c["resist"][0].visible = is_open and not res_words.is_empty()
+		c["resist"][1].visible = c["resist"][0].visible
+		if c["resist"][0].visible:
+			# whole, then fewer of its clauses, the rest as "+N"
 			var options := []
-			for n in range(clauses.size(), 0, -1):
-				options.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
-			var label_w: float = UI.text_width(c["lines"][r][0], rows[r][0]) + 16.0
+			for n in range(res_words.size(), 0, -1):
+				options.append(", ".join(res_words.slice(0, n)) + ((" +%d" % (res_words.size() - n)) if n < res_words.size() else ""))
+			var label_w: float = UI.text_width(c["resist"][0], c["resist"][0].text) + 16.0
 			var picked: String = options.back()
 			for o in options:
-				if label_w + UI.text_width(c["lines"][r][1], o) <= INNER:
+				if label_w + UI.text_width(c["resist"][1], o) <= INNER:
 					picked = o
 					break
-			c["lines"][r][1].text = picked
-		_show_chips(c, t, is_open)
+			c["resist"][1].text = picked
 		for r in range(3):
 			if r < t["intel"].size():
 				var m: Dictionary = sim.modifier(t["intel"][r])
 				c["intel"][r][0].text = m["name"]
-				c["intel"][r][1].text = m["words"]
+				# the effect beside the name: whole, then its first clause with "+N"
+				var clauses: PackedStringArray = str(m["words"]).split(", ", false)
+				var forms := []
+				for n in range(clauses.size(), 0, -1):
+					forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
+				var name_w: float = UI.text_width(c["intel"][r][0], m["name"]) + 16.0
+				var picked_w: String = forms.back()
+				for o in forms:
+					if name_w + UI.text_width(c["intel"][r][1], o) <= INNER:
+						picked_w = o
+						break
+				c["intel"][r][1].text = picked_w
 			else:
 				c["intel"][r][0].text = ""
 				c["intel"][r][1].text = ""
-		UI.fit(c["intel_note"], ["%s · %s" % [sim.sky_words(i), "pinned at the radio" if sim.pinned[i] else "new word after every run"], sim.sky_words(i)])
+		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), "pinned at the radio" if sim.pinned[i] else "new word after every run"], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and sim.notes < sim.boss_cost(i))
@@ -341,30 +342,9 @@ func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
 			chips.append(["%s %.0f%% · you resist %.0f%%" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0], "%s · res %.0f%%" % [ty.capitalize(), sim.resist(ty) * 100.0], ty])
 	if chips.is_empty():
 		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
-	var x := 0.0
-	for k in range(CHIPS):
-		var on: bool = is_open and k < chips.size()
-		c["chips"][k].visible = on
-		if not on:
-			continue
-		var l: Label = c["chip_labels"][k]
-		var colour: Color = Pal.tone_color(chips[k][2])
-		l.add_theme_color_override("font_color", colour)
-		c["chips"][k].add_theme_stylebox_override("panel", UI.box(colour.darkened(0.72), 6))
-		var w := 0.0
-		for words in [chips[k][0], chips[k][1]]:
-			w = ceilf(UI.text_width(l, words)) + 2 * CHIP_PAD
-			l.text = words
-			if x + w <= INNER:
-				break
-		if x + w > INNER:
-			for j in range(k, CHIPS):
-				c["chips"][j].visible = false
-			break
-		c["chips"][k].position.x = PAD + x
-		c["chips"][k].size.x = w
-		l.size.x = w - 2 * CHIP_PAD
-		x += w + CHIP_GAP
+	c["fire_label"].visible = is_open
+	c["chips"].visible = is_open
+	c["chips"].show_chips(chips if is_open else [])
 
 
 func _depth(k: int, by: int) -> void:
@@ -406,13 +386,14 @@ func text_nodes() -> Array:
 			out.append_array([r["name"], r["words"], r["rank"], r["button"]])
 		return out
 	for c in _cols:
-		out.append_array([c["tier"], c["name"], c["odds"], c["odds_unit"], c["depth_label"], c["depth"], c["intel_head"], c["intel_note"], c["note"]])
+		out.append_array(c["band"].text_nodes())
+		out.append_array([c["intel_head"], c["note"], c["fire_label"]])
 		out.append_array(c["site"])
-		for k in range(CHIPS):
-			if c["chips"][k].visible:
-				out.append(c["chip_labels"][k])
-		for pair in c["lines"]:
-			out.append_array(pair)
+		out.append_array(c["resist"])
+		for t in c["tiles"]:
+			out.append_array([t["key"], t["value"]])
+		if c["chips"].visible:
+			out.append_array(c["chips"].text_nodes())
 		for pair in c["intel"]:
 			out.append_array(pair)
 		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
@@ -425,7 +406,9 @@ func text_nodes() -> Array:
 func line_pairs() -> Array:
 	var out: Array = []
 	for c in _cols:
-		for pair in c["lines"]:
+		for pair in c["intel"]:
 			if pair[0].text != "":
 				out.append(pair)
+		if c["resist"][0].visible:
+			out.append(c["resist"])
 	return out

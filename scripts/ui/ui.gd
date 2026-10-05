@@ -163,3 +163,51 @@ static func text_width(c: Control, text: String) -> float:
 	var f: Font = c.get_theme_font("font")
 	var s: int = c.get_theme_font_size("font_size")
 	return f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, s).x
+
+
+# ------------------------------------------------------------------ the A style's pieces
+
+const TILE_H := 60                    # a tile: its key over its figure, on the dark ground
+const HEAD_H := 24                    # a section head: small capitals in the muted tone
+const TILE_TEXT := 22                 # the figure on a tile
+
+
+## A tile: a small dark box with a muted key on the first line and the
+## figure, semibold, on the second. Returns {panel, key, value}.
+static func tile(parent: Node, rect: Rect2, key := "", value := "") -> Dictionary:
+	var p := panel(parent, rect, box(Pal.BG, 6))
+	var t := {"panel": p}
+	t["key"] = label(p, Rect2(10, 4, rect.size.x - 20, 22), key, "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	t["value"] = label(p, Rect2(10, 26, rect.size.x - 20, 30), value, "SemiBold", TILE_TEXT, Pal.TEXT)
+	return t
+
+
+## The tile's words and the figure's tone. `options` offers the figure's
+## forms long to short; the first that fits is shown.
+static func set_tile(t: Dictionary, key: String, options: Array, tone := Pal.TEXT) -> void:
+	t["key"].text = key
+	fit(t["value"], options)
+	t["value"].add_theme_color_override("font_color", tone)
+
+
+## A row of `n` tiles across `w` at `y`, `gap` apart. Returns the tiles.
+static func tile_row(parent: Node, x: float, y: float, w: float, n: int, gap := 8) -> Array:
+	var out := []
+	var tw := (w - gap * (n - 1)) / n
+	for k in range(n):
+		out.append(tile(parent, Rect2(x + k * (tw + gap), y, tw, TILE_H)))
+	return out
+
+
+## A section head: "THE FIGHT", small, muted; the text given is uppercased.
+static func head(parent: Node, rect: Rect2, text: String) -> Label:
+	var l := label(parent, rect, text.to_upper(), "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	return l
+
+
+## A shadow under a label's glyphs, for words drawn over art.
+static func shadow(l: Label) -> void:
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	l.add_theme_constant_override("shadow_offset_x", 0)
+	l.add_theme_constant_override("shadow_offset_y", 1)
+	l.add_theme_constant_override("shadow_outline_size", 2)

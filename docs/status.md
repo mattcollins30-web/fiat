@@ -1550,6 +1550,27 @@ Placeholder for drawn art, but the shapes are the shapes an artist would be give
 The worst-case pass covers the whole pool and the uniques; the smoke test drives juicing, the Clinic and
 the pool's rules (a choke counts on a shotgun and not on a rifle; a unique's rule and name; weight as pace).
 
+## The A style, screen by screen (2026-10-05)
+
+The design canvas's A layout, built. Shared pieces first: `scripts/ui/band.gd` (the art band: a sky in the
+zone's tone, a skyline of blocks seeded from the site's name with the odd lit window, a fade into the card;
+kicker, title, headline in a tone with its unit, up to three right-hand lines, a chip row or a progress bar
+along the foot; `set_words`, `set_right`, `set_chips`, `set_bar`, `set_site`, `set_tone`,
+`headline_under_title`), `scripts/ui/chips.gd` (a row of chips with long and short words, dropped from the
+right), and in `ui.gd` `tile` / `set_tile` / `tile_row` (a key over a figure on the dark ground, the figure
+fitted from options), `head` (a section head in small capitals) and `shadow`. `tests/shot.gd` renders rooms
+to PNG through xvfb (`xvfb-run -a -s "-screen 0 1920x1080x24" Godot --path . --rendering-driver opengl3
+-s tests/shot.gd -- <save> Runs,Bench ../shots`), so a screen can be looked at as well as measured.
+
+**Runs cards** (`missions.gd`): the band (tier · zone, the site, the odds in words as the headline with the
+figure beside), six tiles (them, their fire, fight, drops, depth, rewards or the site's state), "They fire"
+with the element chips, "They resist" when they do, THE WORD head carrying the sky and the radio's note, three
+word rows name-left effect-right (the effect shortened by clause with "+N"), the site's lines, the buttons as
+before. The depth's −/+ stack at the right of the depth tile in the endgame. Smoke: the band's words inside
+it, the odds bands fit the band's foot, the tiles' keys, the word rows right-aligned with an effect each, the
+depth buttons inside their tile with a minimum no taller than their box, the sky's tone following the zone.
+A reviewer pass caught the tone never following the zone and the depth buttons under Button's minimum height.
+
 ## The Caravan's middle head: back and next (2026-10-05)
 
 The middle column cycled one way ("Next: Petrol ▸"); an overshoot meant going round all eight again. Now a
