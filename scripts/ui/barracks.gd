@@ -300,7 +300,9 @@ func _show_panel() -> void:
 		else:
 			var td: Dictionary = sim.trait_data()
 			_title.text = ("%s · %s" % [cd["name"], td["name"]]) if not td.is_empty() else "%s" % cd["name"]
-			UI.fit(_words, [cd["words"] + ((" · %s" % td["words"]) if not td.is_empty() else ""), cd["words"]])
+			UI.fit(_words, [cd["words"]])
+			if not td.is_empty():
+				UI.fit(_scope, ["%s: %s · the runner's trait, one each, goes with them" % [td["name"], td["words"]], "%s: %s · one a runner" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]]])
 	else:
 		var nd: Dictionary = sim.node(selected)
 		if nd.is_empty():

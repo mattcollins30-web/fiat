@@ -4116,6 +4116,22 @@ func _yard_checks(main) -> void:
 	_check(elements._values[fire_row].text.begins_with("deal 20%"), "with 20%% as fire the Elements card reads '%s'" % elements._values[fire_row].text)
 	_check(elements._headline.text == "20%", "the Elements headline is '%s', not 20%%" % elements._headline.text)
 	sim.equipped["Primary"] = hold_gun
+	# the runner's trait reads as a stat: a chip with its figures on the Runner card, a line on the Caravan
+	var runner_card = main._cards[titles.find("Runner")]
+	var tdata: Dictionary = sim.trait_data()
+	if not tdata.is_empty():
+		var chip_texts2 := []
+		for k in range(runner_card.CHIPS):
+			if runner_card._chips[k].visible:
+				chip_texts2.append(runner_card._chip_labels[k].text)
+		_check(chip_texts2.any(func(t): return str(t).begins_with(tdata["name"] + ": ")), "the Runner card has no trait chip: %s" % str(chip_texts2))
+		main.show_room(main.BARRACKS)
+		main._barracks.selected = ""
+		main.refresh()
+		_check(main._barracks._scope.text.begins_with(tdata["name"] + ": "), "the Caravan does not give the trait's figures: '%s'" % main._barracks._scope.text)
+		_check_fit(main, "Caravan (trait)")
+		main.show_room(main.OVERVIEW)
+		main.refresh()
 	var finds = main._cards[titles.find("Finds")]
 	_check(finds._unit.text == "loot quality" and finds._labels[0].text == "Loot quantity", "the Finds card is off: %s / %s" % [finds._unit.text, finds._labels[0].text])
 	_check_fit(main, "The Yard (option A)")

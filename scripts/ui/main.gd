@@ -676,11 +676,19 @@ func _camp_cards() -> Array:
 	var this_xp := Data.xp_for_level(lv)
 	var fill: float = 1.0 if lv >= Data.MAX_LEVEL else clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
 	# the runner: the fight's figures
+	# the runner's past and trait as chips: one each, theirs, gone with them
+	var td: Dictionary = sim.trait_data()
+	var who := []
+	if sim.cls != "":
+		who.append([sim.cls, ""])
+	if not td.is_empty():
+		who.append(["%s: %s" % [td["name"], td["words"]], "good"])
 	out.append({
-		"title": "Runner", "headline": "Level %d" % lv, "unit": sim.cls if sim.cls != "" else "no past yet",
+		"title": "Runner", "headline": "Level %d" % lv, "unit": "no past yet" if sim.cls == "" else "",
 		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
+		"chips": who,
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
-			["Pace", "×%.2f" % sim.pace()], ["Pack", "%d cells" % sim.capacity()], ["Rig", "%d pouches" % sim.med_capacity()]],
+			["Pace", "×%.2f" % sim.pace()], ["Pack · rig", "%d cells · %d" % [sim.capacity(), sim.med_capacity()]]],
 		"status": "Runners lost: %d" % sim.operators_lost,
 		"note": sim.next_words(true),
 	})

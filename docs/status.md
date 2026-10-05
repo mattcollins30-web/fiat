@@ -839,6 +839,14 @@ shelf priced ammo like gear (value × 3); the box row prices it at value × 1.5.
 standard box on the shelf exactly what the box row does; special rounds (the ones with `damage_pct`) and
 anything with affixes keep the gear markup. Asserted for every box type, and that a special box is dearer.
 
+## The trait as a stat (5 Oct)
+
+Matt asked where the stat he picks on a death adds up. It doesn't: the pick is the new runner's trait,
+one each, gone with them. So it now reads as a stat where the runner is: a chip on the Yard's Runner card
+("Tough: +15% max HP", green, beside the class chip; the rig's pouches fold into the pack line to make
+the room) and a line on the Caravan's panel with nothing picked ("Tough: +15% max HP · the runner's
+trait, one each, goes with them"). Asserted both.
+
 ## What's on the gun (5 Oct)
 
 Matt's SMG with four parts and a socketable read as a bare gun. The head's tail is its own line under
