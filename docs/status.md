@@ -1972,8 +1972,46 @@ seven runners over 116 runs. The bot never dies (it bails at a quarter), but a b
 the run that kills a player who pushes on, so the gate reads the bot's bail-outs an hour (`bails` in
 the bot and the gate; the summary's row: one every 1 to 4 hours, Matt's 1.9 the middle).
 
-**The fence's screen** is next: a mockup on the design canvas first (the gamble tab's row of kinds, a
-picture and a price each), then the view.
+**The fence's screen (built after the canvas board Fence-B, Matt: "design is good").** The fence's
+fourth tab, "The word": where the grid would be, the title and a line with the price, five tiles across
+with a picture of a base of the kind (the first with art), the kind's words (a short form where the
+long one would clip), "sealed · any rarity" and Pay with the price; a kind bought reads Taken, "back
+after a run", until the restock; under the offer "The last word", the thing the last gamble got you as
+the item head (the stash's item by `last_craft`), or a line saying nothing yet; a note at the foot. The
+four tabs run the band's foot from its edge at 16 px (the reviewer measured "Contracts ✓1" at 146 px
+against a 142 px tab at 18). The fence says a line on a gamble. Smoke: the tab's panel alone, the tiles
+against the offer, the fit, Pay through the screen (the stash cleared to make room), the last word, the
+taken tile. `tests/shot.gd "word"` renders it.
+
+## The evening's pass (6 Oct, Matt to bed: "take defaults on anything that needs it and record where required")
+
+The ninth read (the deaths row live, the end odds on the plain site at full HP, the gamble in the bot's
+hands): eight red, and three of them readers or the bot's appetite rather than the game.
+
+**The odds, a third time.** Half the merged odds read 50%: one read 100%, the other 0%, and the
+diagnostic says why - "rounds true 26": the gun had 26 rounds left at the end, the dry run burns them in
+seconds, and an unarmed runner reads 0% on every tier. The read arms both guns with a full box for the
+reading and takes it back after.
+
+**The sinks priced off the yard's takings.** The poison Poacher gambled fifty times a read and still
+ended on £105k-£195k: the price (two runs' pay in kills) was £300-£700 against runs that brought in ten
+times that, because the money is the loot sold, not the kills' cash. The sim keeps `takings` now - the
+run's cash and the fence's money since the last run, averaged over the last few (`_earn` counts every
+cash-in: the run, a sale, a contract) - and the word and the gamble are priced off that
+(`a_runs_takings`; the top tier's kills before a run has come home). Saved. Smoke: the call-in half a
+run's takings, the depth not moving it, the gamble's price, a run's cash reaching the takings.
+
+**Deaths: the bot's risk to Matt's.** Bail-outs under a quarter read one every 0.5-0.8 h on the pushy
+builds (the element Drifters, the Poacher) against Matt's one death every 1.9 h: the bot at PUSH 0.75
+takes a one-in-four run, Matt's save says one in seventeen. `PUSH` 0.75 → 0.85, `CLIMB` 0.9 → 0.92: the
+bot plays to Matt's appetite. This moves every row that depends on how hard the bot pushes (the band,
+wounds, depth), which is why wounds move with it: `WOUND_AT` 0.30 → 0.35, since a bot that stays over
+85% is under a third less often. `SCRAP_HANDFUL` [4, 8] → [6, 12] for the builds that search least (the
+Doorman 0.2 of a craft an hour). The band's unit beside the headline fits by the line the two make (a
+radio card read two pixels over).
+
+The reads for the rest of the evening run here, one build each (the Legion's twenty-one is a
+two-core night), and the next entry carries them.
 
 ## The dots as the end of the bar (6 Oct)
 

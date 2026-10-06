@@ -8,8 +8,8 @@ extends RefCounted
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
-const PUSH := 0.75
-const CLIMB := 0.9
+const PUSH := 0.85             # the pass (6 Oct): at 0.75 the bot bailed under a quarter every 0.5-0.8 h on the pushy builds against Matt's one death every 1.9 h
+const CLIMB := 0.92
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's

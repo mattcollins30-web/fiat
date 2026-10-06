@@ -720,6 +720,33 @@ func _fence_screen(main) -> void:
 			var cash_before: float = sim.cash
 			main._fence._press(0)
 			_check(sim.cash > cash_before, "Sell through the screen did not sell")
+	# the fence's word (the gamble, Matt, 6 Oct): the fourth tab, five kinds with a price, Pay through the screen, the last word under them
+	main._fence._show("word")
+	main.refresh()
+	_check(main._fence._word.visible and not main._fence._shelf.visible and not main._fence._deals.visible, "the word tab did not show its panel alone")
+	_check(main._fence._tabs[3].visible and main._fence._tabs[3].text.begins_with("The word"), "the word tab reads '%s'" % main._fence._tabs[3].text)
+	var shown_offers: int = 0
+	for o in main._fence._offers:
+		if o["pay"].visible:
+			shown_offers += 1
+			_check(o["pay"].text.begins_with("Pay £") and o["kind"].text != "", "an offer tile is blank: '%s' / '%s'" % [o["kind"].text, o["pay"].text])
+	_check(shown_offers == sim.gamble.size(), "the offer tiles do not match the offer: %d for %s" % [shown_offers, str(sim.gamble)])
+	_check_fit(main, "Fence (the word)")
+	if not sim.gamble.is_empty():
+		sim.cash = maxf(sim.cash, sim.gamble_price(sim.gamble[0]) * 2.0)
+		while not sim.stash_room(12) and not sim.stash.is_empty():
+			sim.sell(sim.stash[0])        # room for whatever he gets: a full stash refuses the word
+		var kind0: String = sim.gamble[0]
+		var n0: int = sim.stash.size()
+		var cash0: float = sim.cash
+		main.refresh()
+		main._fence._gamble(0)
+		main.refresh()
+		_check(sim.stash.size() == n0 + 1 and sim.cash < cash0 and not (kind0 in sim.gamble), "Pay through the screen did not gamble: stash %d from %d, cash %.0f from %.0f" % [sim.stash.size(), n0, sim.cash, cash0])
+		_check(main._fence._last.visible and main._fence._last._title.text != "" and not main._fence._last_none.visible, "the last word is not shown after a gamble: '%s'" % main._fence._last._title.text)
+		_check(main._fence._offers[main._fence._offers.size() - 1]["kind"].text == "Taken" or sim.gamble.size() == Data.GAMBLE_SHOWN, "the bought kind did not read as taken")
+		_check_fit(main, "Fence (the word, after)")
+	main._fence._show("shelf")
 	main._fence.selected = {}
 	main.refresh()
 	var commons := 0
@@ -3834,12 +3861,17 @@ func _sink_checks(main) -> void:
 	sim.atlas = {}
 	sim.intel[0] = []
 	sim.set_depth(0, 1)
+	# the call-in is half a run's takings (the yard's own average: the run's cash and the fence's money), never under the tier's word price three times
+	sim.takings = 4000.0
 	var c1: int = sim.juice_cost(0)
-	_check(c1 >= sim._inf(Data.INTEL_CASH[0] * sim.JUICE_COST) and c1 >= sim._inf(sim.run_pay(0) * sim.JUICE_SHARE) - 1, "a call-in at depth 1 is under its floor: %d" % c1)
+	_check(absi(c1 - int(round(maxf(float(sim._inf(Data.INTEL_CASH[0] * sim.JUICE_COST)), 4000.0 * sim.JUICE_SHARE)))) <= 1, "a call-in is not half a run's takings: %d" % c1)
+	sim.takings = 0.0
+	_check(sim.juice_cost(0) >= sim._inf(Data.INTEL_CASH[0] * sim.JUICE_COST) and sim.juice_cost(0) <= c1, "before a run has come home the call-in is not read off the top tier's kills: %d" % sim.juice_cost(0))
+	sim.takings = 4000.0
 	sim.best_depth[0] = 5
 	sim.set_depth(0, 4)
 	var c4: int = sim.juice_cost(0)
-	_check(c4 > c1 and absi(c4 - sim._inf(sim.run_pay(0) * sim.JUICE_SHARE)) <= 1, "a call-in at depth 4 is not half the run's pay there: %d (depth 1 %d, the run pays %.0f)" % [c4, c1, sim.run_pay(0)])
+	_check(c4 == c1, "the depth moved the call-in's price when the takings had not: %d vs %d" % [c4, c1])
 	sim.intel[0] = ["Numbers", "Night"]
 	_check(absi(sim.juice_cost(0) - c4 * 3) <= 2, "two words on the site did not treble the call-in: %d vs %d" % [sim.juice_cost(0), c4 * 3])
 	sim.atlas_points = 1
@@ -5964,7 +5996,7 @@ func _gamble_checks(main) -> void:
 	# the price: runs' pay on the top open tier, never under the floor
 	var kind: String = sim.gamble[0]
 	var price: int = sim.gamble_price(kind)
-	_check(price >= sim._inf(Data.GAMBLE_FLOOR) and price == sim._inf(maxf(float(Data.GAMBLE_FLOOR), sim.run_pay(sim.top_tier()) * Data.GAMBLE_RUNS)), "the gamble's price is off: %d" % price)
+	_check(price >= sim._inf(Data.GAMBLE_FLOOR) and absi(price - int(round(maxf(float(sim._inf(Data.GAMBLE_FLOOR)), sim.a_runs_takings() * Data.GAMBLE_RUNS)))) <= 1, "the gamble's price is off: %d (a run's takings %.0f)" % [price, sim.a_runs_takings()])
 	_check(sim.gamble_price("no such kind") < 0 and not sim.can_gamble("no such kind"), "a kind not on offer can be gambled")
 	# short of cash: refused; paid: a thing of the kind in the stash, never Common, the kind off the offer
 	sim.cash = price - 1
@@ -5999,6 +6031,12 @@ func _gamble_checks(main) -> void:
 	sim.cash = sim.gamble_price("rifle") * 3
 	bot._gamble_one(sim)
 	_check(bot.bought.size() == 1 and "rifle" in str(bot.bought[0][1]) and not ("rifle" in sim.gamble), "the bot did not gamble a rifle when flush: %s" % str(bot.bought))
+	# the takings: a run's cash and the fence's money, averaged over the last few runs
+	var tk0: float = sim.takings
+	sim.deploy(0)
+	sim.mission["cash"] = 5000.0
+	sim.extract_now()
+	_check(sim.takings > 0.0 and (tk0 <= 0.0 or absf(sim.takings - lerp(tk0, 5000.0, 0.25)) <= 1.0 or sim.takings >= 5000.0 * 0.25), "a run's cash did not reach the takings: %.0f from %.0f" % [sim.takings, tk0])
 	sim.load_dict(saved)
 	print("the fence's gamble ok")
 	_start_kit_checks(main)

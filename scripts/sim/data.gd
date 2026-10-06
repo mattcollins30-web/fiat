@@ -1125,7 +1125,7 @@ const BUMP_CAP := 20
 ## plus the element's socketable. Costs are untuned until the pass.
 const SCRAP_PER_POUND := 20
 const SCRAP_SEARCH := 0.5           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
-const SCRAP_HANDFUL := [4, 8]       # the pass (6 Oct): was [3, 6]
+const SCRAP_HANDFUL := [6, 12]      # the pass (6 Oct): was [3, 6], then [4, 8]; the builds that search least (a melee Doorman) read a fifth of a craft an hour
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
 const BUILD_MED := 8                # a med, times its tier, with the one below (painkillers and a bandage: scrap alone)
@@ -1319,7 +1319,7 @@ const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
-const WOUND_AT := 0.30            # the pass (6 Oct): a quarter read 2-10% of runs wounded across five reads against a 10-25% band, a third 28-32% on four builds
+const WOUND_AT := 0.35            # the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
 const WOUND_CASH := 20
@@ -1336,8 +1336,8 @@ const GAMBLE_KINDS := [
 	{"kind": "rifle", "slot": "Primary", "type": "rifle", "words": "A rifle"},
 	{"kind": "shotgun", "slot": "Primary", "type": "shotgun", "words": "A shotgun"},
 	{"kind": "smg", "slot": "Primary", "type": "smg", "words": "An SMG"},
-	{"kind": "improvised", "slot": "Primary", "type": "improvised", "words": "Something improvised"},
-	{"kind": "melee", "slot": "Primary", "type": "melee", "words": "Something with an edge"},
+	{"kind": "improvised", "slot": "Primary", "type": "improvised", "words": "Something improvised", "short": "Improvised"},
+	{"kind": "melee", "slot": "Primary", "type": "melee", "words": "Something with an edge", "short": "An edge"},
 	{"kind": "pistol", "slot": "Secondary", "type": "", "words": "A sidearm"},
 	{"kind": "helmet", "slot": "Helmet", "type": "", "words": "A helmet"},
 	{"kind": "armour", "slot": "Armour", "type": "", "words": "Body armour"},

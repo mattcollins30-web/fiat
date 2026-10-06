@@ -252,6 +252,14 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	var odds := []
 	var hp0: float = sim.hp
 	sim.hp = sim.max_hp()                 # read whole: the last run may have left it hurt, and the reader keys on the HP
+	var boxes: Array = []                 # and armed: a gun with a few rounds left reads 0% (the dry run burns them in seconds)
+	for s in ["Primary", "Secondary"]:
+		var gun = sim.equipped[s]
+		if gun != null and Items.ammo_type(gun) != "none" and not sim.ammo_box(Items.ammo_type(gun)).is_empty():
+			var box: Dictionary = sim._plain(Data.AMMO, sim.ammo_box(Items.ammo_type(gun))["name"])
+			box["rounds"] = 100000
+			sim.rig.append(box)
+			boxes.append(box)
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
 			var d0: int = sim.depth[i]
@@ -264,6 +272,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 				_odds_detail(sim, i, s)
 			sim.intel[i] = intel0
 			sim.set_depth(i, d0)
+	for box in boxes:
+		sim.rig.erase(box)
 	sim.hp = hp0
 	g["odds"] = odds
 	g["cash_end"] = int(sim.cash)

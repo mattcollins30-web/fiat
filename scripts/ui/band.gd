@@ -77,10 +77,21 @@ func set_words(k: String, t: String, h: String, u, headline_colour := Pal.ACCENT
 	_fit_unit()
 
 
-## The unit's first form that fits its box.
+## The unit's first form that fits its box - and, beside the headline, the first that fits the line
+## the two make (the headline, a gap of 16, the unit) in the wider of their boxes: the rule the tests read.
 func _fit_unit() -> void:
-	if not _unit_forms.is_empty():
+	if _unit_forms.is_empty():
+		return
+	if not _under:
 		UI.fit(unit, _unit_forms)
+		return
+	var room: float = maxf(headline.size.x, unit.size.x)
+	var hw: float = UI.text_width(headline, headline.text)
+	for o in _unit_forms:
+		if hw + 16.0 + UI.text_width(unit, str(o)) <= room and UI.text_width(unit, str(o)) <= unit.size.x:
+			unit.text = str(o)
+			return
+	unit.text = str(_unit_forms.back())
 
 
 ## Where the headline sits: at the foot (the default) or under the title, with the unit beside it.

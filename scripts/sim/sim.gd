@@ -65,6 +65,8 @@ var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
 var notes := 0                     # the old paper money: the crews still take it
 var scrap := 0                     # the bench's material (34): found, stripped, ditched for
+var takings := 0.0                 # what the yard takes a run, averaged over the last few: the run's cash and the fence's money (the pass, 6 Oct)
+var _takings_run := 0.0            # the cash in since the last run came home
 var atlas := {}                    # the map's passives: key -> rank
 var atlas_points := 0              # earned: one a new depth cleared past the first
 var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
@@ -744,7 +746,7 @@ func hand_in(k: int) -> bool:
 	var paid := ""
 	match c["pay"]:
 		"cash":
-			cash += float(c["amount"])
+			_earn(float(c["amount"]))
 			paid = _cash_words(float(c["amount"]))
 		"notes":
 			notes += int(c["amount"])
@@ -1926,19 +1928,34 @@ func can_juice() -> bool:
 	return comms_level >= 3 and campaign_done()
 
 
-## What a run on the tier pays in kills, at its depth, before the day's prices: the base the
-## endgame's sinks are priced off (the pass, 6 Oct), so a sink at depth 15 costs what depth 15 pays.
+## Cash in, counted: the sinks are priced off what the yard takes a run.
+func _earn(x: float) -> void:
+	cash += x
+	_takings_run += x
+
+
+## What a run on the tier pays in kills, at its depth, before the day's prices.
 func run_pay(i: int) -> float:
 	var t := effective(i)
 	return float(t["cash"]) * float(t["pool"])
+
+
+## What a run brings in, as the yard has found it lately: the run's cash and the fence's money for
+## its loot, averaged over the last few runs, at the day's prices already. The base the endgame's sinks
+## are priced off (the pass, 6 Oct): the kills' cash alone was a tenth of it, the loot is the money.
+## Before any run has come home, the top open tier's kills.
+func a_runs_takings() -> float:
+	if takings > 0.0:
+		return takings
+	return run_pay(top_tier()) * inflation()
 
 
 ## The endgame's cash sink: half a run's pay on the site (never under the tier's word price three
 ## times over), and more by the words already on it. It was the tier's word price × 3 × the depth,
 ## which at depth 15 was £70k against a run paying £5k, and the pile sat under it.
 func juice_cost(i: int) -> int:
-	var base: float = maxf(float(Data.INTEL_CASH[i] * JUICE_COST), run_pay(i) * JUICE_SHARE) * (1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
-	return _inf(base / (2 if atlas_rank("word_travels") > 0 else 1))
+	var base: float = maxf(_inf(Data.INTEL_CASH[i] * JUICE_COST), a_runs_takings() * JUICE_SHARE) * (1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
+	return int(round(base / (2 if atlas_rank("word_travels") > 0 else 1)))
 
 
 ## Insurance: a share of the kit's worth, by the depth of the run.
@@ -3405,7 +3422,9 @@ func _extract() -> void:
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity():
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
-	cash += m["cash"]
+	_earn(float(m["cash"]))
+	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the fence's money since the last
+	_takings_run = 0.0
 	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
@@ -3825,7 +3844,7 @@ func top_tier() -> int:
 func gamble_price(kind: String) -> int:
 	if gamble_kind(kind).is_empty():
 		return -1
-	return _inf(maxf(float(Data.GAMBLE_FLOOR), run_pay(top_tier()) * Data.GAMBLE_RUNS))
+	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_runs_takings() * Data.GAMBLE_RUNS)))
 
 
 func can_gamble(kind: String) -> bool:
@@ -3901,7 +3920,7 @@ func buy(i: int) -> bool:
 func sell(it: Dictionary) -> bool:
 	if not _remove(it):
 		return false
-	cash += sell_price(it)
+	_earn(float(sell_price(it)))
 	if it.has("unique"):
 		_lose(it, "", "fence")                # he said someone would want it; later someone has it
 	if Items.is_deeds(it):
@@ -4178,7 +4197,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
@@ -4264,6 +4283,7 @@ func load_dict(d: Dictionary) -> void:
 	ending = str(d.get("ending", ""))
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))
+	takings = float(d.get("takings", 0.0))
 	retired = []
 	for r in d.get("retired", []):
 		retired.append(str(r))
