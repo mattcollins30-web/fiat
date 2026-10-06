@@ -1326,6 +1326,30 @@ const WOUND_CASH := 20
 const STASH_CAP := 40
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling
+
+## The fence's gamble (Matt, 6 Oct; the endgame's cash sink): a handful of kinds on offer, a picture
+## each - a rifle, a helmet - rotated with the fence's restock; pay and get a random one of the kind,
+## rolled at the top tier opened with the fence's quality on it, never Common; and any gamble can be a
+## unique of the kind, from the first save on. The price is GAMBLE_RUNS of what a run on the top open
+## tier pays, never under GAMBLE_FLOOR. Untuned until the pass reads it.
+const GAMBLE_KINDS := [
+	{"kind": "rifle", "slot": "Primary", "type": "rifle", "words": "A rifle"},
+	{"kind": "shotgun", "slot": "Primary", "type": "shotgun", "words": "A shotgun"},
+	{"kind": "smg", "slot": "Primary", "type": "smg", "words": "An SMG"},
+	{"kind": "improvised", "slot": "Primary", "type": "improvised", "words": "Something improvised"},
+	{"kind": "melee", "slot": "Primary", "type": "melee", "words": "Something with an edge"},
+	{"kind": "pistol", "slot": "Secondary", "type": "", "words": "A sidearm"},
+	{"kind": "helmet", "slot": "Helmet", "type": "", "words": "A helmet"},
+	{"kind": "armour", "slot": "Armour", "type": "", "words": "Body armour"},
+	{"kind": "rig", "slot": "Rig", "type": "", "words": "A rig"},
+	{"kind": "backpack", "slot": "Backpack", "type": "", "words": "A pack"},
+	{"kind": "charm", "slot": "Charm", "type": "", "words": "A charm"},
+]
+const GAMBLE_SHOWN := 5             # kinds on offer at once, of the eleven
+const GAMBLE_RUNS := 2.0            # the price, in runs' pay on the top open tier
+const GAMBLE_FLOOR := 300           # and never under this, at the opening day's prices
+const GAMBLE_QUALITY := 0.5         # the fence's quality on the roll (+50%: the rarity weights compound by rank)
+const GAMBLE_UNIQUE := 0.02         # the chance any gamble is a unique of the kind
 const STARTING_CASH := 150
 ## Money that goes off. The fence's prices rise with the yard's hours - every
 ## cash price and every cash the gangs carry - so cash held loses, cash earned

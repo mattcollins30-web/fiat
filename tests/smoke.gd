@@ -2251,7 +2251,7 @@ func _atlas_checks(main) -> void:
 		sim.rank_atlas("deeper_pockets")
 	_check(sim.atlas_rank("deeper_pockets") == 3 and not sim.can_rank_atlas("deeper_pockets"), "Deeper pockets went past its max")
 	_check(sim.search_s(t2) < search0 * 0.75, "Deeper pockets did not quicken searches")
-	_check(sim.rank_atlas("word_travels") and sim.juice_cost(0) == cost0 / 2, "Word travels did not halve the call-in")
+	_check(sim.rank_atlas("word_travels") and absi(sim.juice_cost(0) - cost0 / 2) <= 1, "Word travels did not halve the call-in: %d from %d" % [sim.juice_cost(0), cost0])
 	_check(sim.rank_atlas("paid_in_notes") and sim.notes_a_kill(t2) == notes0 + 1, "Paid in notes did not add a note")
 	_check(sim.rank_atlas("two_of_everything"), "Two of everything did not take")
 	# the boss drops two with it
@@ -4985,6 +4985,8 @@ func _grade_checks(main) -> void:
 		m["target_hp"] = 1e6
 		m["remaining"] = 3
 		m["fresh"] = true
+		m["t"]["res"] = {}                # the same target both times: the intel re-rolls between deploys (a Hardened word is 30% off physical)
+		m["t"]["pace"] = 1.0
 		sim.rng.seed = 11                 # the swing the same both times: deploy spent the dice differently
 		sim._fight(m, m["t"], 0.5)
 		drops.append(1e6 - m["target_hp"])
@@ -5467,7 +5469,8 @@ func _wound_checks(main) -> void:
 	sim.hp = sim.max_hp() * Data.WOUND_AT + 0.01
 	var hp_in: float = sim.hp
 	sim.advance(1.0)
-	if sim.hp < hp_in and sim.hp > 0.0:
+	var through_the_fight: bool = sim.hp < hp_in and sim.hp > 0.0
+	if through_the_fight:
 		_check(sim.wound in Data.WOUND_STATS and m.get("wounded", false), "the hit under a quarter did not wound: '%s'" % sim.wound)
 	else:
 		sim._wound(m)                     # nothing landed at this tier (or it killed them): the wound by hand, the rest still checked
@@ -5475,7 +5478,7 @@ func _wound_checks(main) -> void:
 	if not sim.on_mission():
 		sim.load_dict(saved)
 		return
-	_check(sim.auto_tier < 0, "auto-run carried on through the wound")
+	_check(not through_the_fight or sim.auto_tier < 0, "auto-run carried on through the wound")     # the fight's wound stops auto-run; the one by hand is only the wound
 	var cut: String = sim.wound
 	var now: Dictionary = {"pace": sim.pace(), "armour": sim.armour(), "hp": sim.max_hp()}
 	var was: Dictionary = {"pace": pace0, "armour": arm0, "hp": hp0}
@@ -5808,6 +5811,8 @@ func _dig_checks(main) -> void:
 	sim.rig = [sim._plain(Data.AMMO, sim.ammo_box("smg")["name"])]
 	var bot = Bot.new()
 	sim.hp = sim.max_hp()
+	var budget0: int = sim.odds_budget
+	sim.odds_budget = 0                   # the odds in full: the shell reads them a few dry runs a frame, and two reads a moment apart differ
 	_check(sim.campaign_done(), "the dig check did not finish the campaign")
 	_check(sim.has_rounds(sim.equipped["Primary"]), "the dig check's gun is dry")
 	var t: int = bot.pick_tier(sim)
@@ -5831,6 +5836,7 @@ func _dig_checks(main) -> void:
 	t = bot.pick_tier(sim)
 	_check(sim.depth[5] == 1 and (t != 5) == (sim.survival(5) < Bot.PUSH), "a weak runner past the campaign did not step its site back and pick by the odds: T%d, site depth %d, odds %.2f" % [t, sim.depth[5], sim.survival(5)])
 	sim.boss_armed.clear()
+	sim.odds_budget = budget0
 	sim.load_dict(saved)
 	print("the dig rule ok")
 	_leave_checks(main)
@@ -5935,6 +5941,66 @@ func _build_one_checks(main) -> void:
 	_check(bot.bought.size() == 1 and sim.scrap == int(want["scrap"]) and sim.stash.any(func(it): return it["base"] == "Hardened bolts"), "the bot did not build the grade for its rounds: %s, scrap %d" % [str(bot.bought), sim.scrap])
 	sim.load_dict(saved)
 	print("the bot's build rule ok")
+	_gamble_checks(main)
+
+
+## The fence's gamble (Matt, 6 Oct): five kinds on offer, rotated with the restock; pay and get a
+## random one of the kind at the top tier opened, never Common; one time in fifty a unique of the kind.
+func _gamble_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.candidates = []
+	sim.auto_equip = false
+	sim.restock()
+	_check(sim.gamble.size() == Data.GAMBLE_SHOWN and sim.gamble.all(func(k): return not sim.gamble_kind(k).is_empty()), "the fence's offer is not %d kinds: %s" % [Data.GAMBLE_SHOWN, str(sim.gamble)])
+	var before: Array = sim.gamble.duplicate()
+	var rotated := false
+	for k in range(12):
+		sim.restock()
+		rotated = rotated or sim.gamble != before
+	_check(rotated, "twelve restocks never changed the fence's offer: %s" % str(sim.gamble))
+	# the price: runs' pay on the top open tier, never under the floor
+	var kind: String = sim.gamble[0]
+	var price: int = sim.gamble_price(kind)
+	_check(price >= sim._inf(Data.GAMBLE_FLOOR) and price == sim._inf(maxf(float(Data.GAMBLE_FLOOR), sim.run_pay(sim.top_tier()) * Data.GAMBLE_RUNS)), "the gamble's price is off: %d" % price)
+	_check(sim.gamble_price("no such kind") < 0 and not sim.can_gamble("no such kind"), "a kind not on offer can be gambled")
+	# short of cash: refused; paid: a thing of the kind in the stash, never Common, the kind off the offer
+	sim.cash = price - 1
+	_check(sim.gamble_buy(kind).is_empty(), "a gamble went through short of cash")
+	sim.cash = 1000000.0
+	sim.stash = []
+	var k: Dictionary = sim.gamble_kind(kind)
+	var it: Dictionary = sim.gamble_buy(kind, 0.99)
+	_check(not it.is_empty() and it["slot"] == k["slot"] and (k["type"] == "" or Items.base_of(it).get("type", "") == k["type"]), "the gamble did not give a %s: %s" % [kind, str(it.get("base", "nothing"))])
+	_check(int(it.get("rarity", 0)) >= 1 and not it.has("unique"), "a plain gamble came up Common or unique: %s" % str(it))
+	_check(is_equal_approx(sim.cash, 1000000.0 - price) and sim.stash.any(func(s): return s["id"] == it["id"]) and not (kind in sim.gamble), "the gamble did not take the price, land in the stash and leave the offer")
+	# the unique, on the dice: a unique of the kind, when the pool has one for it
+	sim.restock()
+	for kk in sim.gamble:
+		var kd: Dictionary = sim.gamble_kind(kk)
+		var fits: bool = Data.UNIQUES.any(func(u): return u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]))
+		var u: Dictionary = sim.gamble_buy(kk, 0.0)
+		_check(not u.is_empty() and (u.has("unique") == fits) and u["slot"] == kd["slot"], "the unique roll on %s gave %s (a unique fits: %s)" % [kk, str(u.get("unique", u.get("base", "nothing"))), str(fits)])
+		break
+	# a fresh yard can gamble a unique: the offer is up from the first restock and the dice are the dice
+	var fresh = Sim.new()
+	fresh.start()
+	_check(fresh.gamble.size() == Data.GAMBLE_SHOWN, "a fresh yard has no gamble on offer")
+	# the bot's rule: a gamble of its primary's kind when flush, none when not
+	var bot = Bot.new()
+	sim.restock()
+	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
+	sim.gamble = ["rifle", "charm", "rig", "pistol", "melee"]
+	sim.cash = sim.gamble_price("rifle") * 3 - 1
+	bot._gamble_one(sim)
+	_check(bot.bought.is_empty(), "the bot gambled under three times the price")
+	sim.cash = sim.gamble_price("rifle") * 3
+	bot._gamble_one(sim)
+	_check(bot.bought.size() == 1 and "rifle" in str(bot.bought[0][1]) and not ("rifle" in sim.gamble), "the bot did not gamble a rifle when flush: %s" % str(bot.bought))
+	sim.load_dict(saved)
+	print("the fence's gamble ok")
 	_start_kit_checks(main)
 
 

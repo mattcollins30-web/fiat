@@ -333,7 +333,7 @@ weights or the gate's figure move in the pass.
 | Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
 | Cash sink | cash in hand at the end, in hours of the build's takings | no more than two hours' takings (was 3× the top bench: the wrong shape for a ladder that pays by depth) |
 | Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
-| Deaths | the player's own, from the playtest save | one every N hours at Matt's risk (N to set) |
+| Deaths | the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on) | one every 1 to 4 hours; Matt's save read one death every 1.9 h |
 | Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |
 | Scrap economy | scrap in hand against the dearest craft, hour 4 | between one and three crafts' worth |
 
@@ -426,7 +426,7 @@ between. Each move is one commit with its before-and-after summary lines in stat
    the probe's gate figure with it), and the smoke's hard-set rarities. Nothing in the manifests. Moves:
    Loot quality visible; the whole loot feel. Can break: every odds row, since every drop gets stronger
    - read after, and let 3 absorb it. **Built 6 Oct** (in status.md); the gate row reads a Legendary share.
-6. **Deaths and wounds.** N from Matt's playtest. A wound lands when a hit takes the runner under
+6. **Deaths and wounds.** N from Matt's playtest: 1.9 h (**read 6 Oct**, the bot's bail-outs standing for deaths). A wound lands when a hit takes the runner under
    `WOUND_AT` 0.25 of max HP (sim.gd ~2948); the bot bails at a quarter and the odds reader counts that
    as lost, so the two agree, and a bot that plays to PUSH 0.75 is rarely under a quarter. If the
    wounds row stays under the band with the bot playing to its odds, `WOUND_AT` moves (a wound from

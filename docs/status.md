@@ -1945,6 +1945,36 @@ run's pay there. Reader: the odds at the end were read in whatever state the las
 28-32% over on four builds to 5-10% under on five with the threshold moved 0.03, so that stat is noisy
 at two reads a build; left at 0.30 for one more read before it moves again.
 
+## The fence's gamble, and deaths read (6 Oct)
+
+Matt: "lets just design a late game cash spend now ... the mechanics of it need to copy diablo 2 - each
+item rotated in a new stash tab at the fence. A base image of a rifle for example which then rolls you
+a random rifle. Not all items available at a time so you have to do a run or two to get a refresh you
+want to gamble on. Also need to include uniques at any stage so you could always gamble a unique on a
+fresh save with some immense luck." The sim side, built: `GAMBLE_KINDS` (eleven: the five gun types,
+a sidearm, a helmet, body armour, a rig, a pack, a charm), `GAMBLE_SHOWN` five of them on offer at a
+time, rotated with every restock (so after every run) and only the kinds the fence can source at the
+tier opened (a fresh yard sees nine, no rifle or SMG at tier 1); the price `GAMBLE_RUNS` (two) runs'
+pay on the top open tier, never under `GAMBLE_FLOOR` (£300), at the day's prices; the roll
+(`roll_gamble`) a drop of the slot at the loot tier opened, at the best depth there, with the fence's
+quality on it (`GAMBLE_QUALITY` +50%, which compounds up the rarity ladder) and never Common, of the
+kind's type; and on `GAMBLE_UNIQUE` (one in fifty) a unique of the kind, from the first save on, when
+the pool has one for it (every kind but the charm has). Pay and it lands in the stash, the kind leaves
+the offer. Saved as `gamble`; a save from before gets its offer rolled at load. The bot gambles its
+primary's kind, else armour or a helmet, one a run, at three times the price in hand. Reviewer: the
+older-save fallback ran before the tiers were loaded, and an empty offer is also a bought-out one -
+keyed on the key's absence, at the end of the load. Smoke: `_gamble_checks` - the offer's size and
+rotation, the price, refused short, the kind and never Common, the stash and the offer, the unique on
+the dice, a fresh yard's offer, the bot's rule. The figures are untuned until the read.
+
+**Deaths, read.** Matt's save: 46,841 s of yard time (13.0 h), `operators_lost` 7 - one every 1.9 h,
+seven runners over 116 runs. The bot never dies (it bails at a quarter), but a bail-out at a quarter is
+the run that kills a player who pushes on, so the gate reads the bot's bail-outs an hour (`bails` in
+the bot and the gate; the summary's row: one every 1 to 4 hours, Matt's 1.9 the middle).
+
+**The fence's screen** is next: a mockup on the design canvas first (the gamble tab's row of kinds, a
+picture and a price each), then the view.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

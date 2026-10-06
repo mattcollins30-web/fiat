@@ -15,6 +15,7 @@ var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
 var element := ""              # a build: its tree to the keystone first, its gear held, the bench aimed at it
 var last_tier := -1            # the tier of the last run, the one the climb reads
+var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
@@ -43,6 +44,8 @@ func step(sim) -> int:
 		if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
 			sim.use_med(sim.first_med()["id"])
 		if sim.on_mission() and should_leave(sim):
+			if sim.hp < sim.max_hp() * 0.25:
+				bails += 1
 			sim.extract_now()
 		guard += 1
 	if sim.on_mission():
@@ -174,6 +177,24 @@ func _endgame(sim) -> void:
 			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
 	_bench_worn(sim)
 	_build_one(sim)
+	_gamble_one(sim)
+
+
+## The fence's gamble as a flush player takes it: one a run at most, the kind of the primary's type
+## when it's on offer, else armour or a helmet, while three times the price stays in hand.
+func _gamble_one(sim) -> void:
+	var gun = sim.equipped["Primary"]
+	var want: Array = []
+	if gun != null:
+		want.append(str(Items.base_of(gun).get("type", "")))
+	want.append_array(["armour", "helmet"])
+	for kind in want:
+		if kind in sim.gamble and sim.cash >= sim.gamble_price(kind) * 3 and sim.can_gamble(kind):
+			var cost: int = sim.gamble_price(kind)
+			var it: Dictionary = sim.gamble_buy(kind)
+			if not it.is_empty():
+				bought.append([sim.elapsed, "gambled %s for £%d: %s" % [kind, cost, Items.full_name(it).to_lower()]])
+			return
 
 
 ## The bench's scrap as a player spends it: one build a run at most, while

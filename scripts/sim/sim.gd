@@ -16,6 +16,7 @@ var equipped := {}                 # slot -> item or null
 var rig: Array = []                # medical items carried, in the rig's slots
 var stash: Array = []              # items
 var market: Array = []
+var gamble: Array = []             # the fence's gamble: the kinds on offer, rotated with the restock (GAMBLE_KINDS keys)
 var clinic: Array = []             # the clinic's shelf: meds, so many a level, restocked after a run             # items for sale
 var mission = null                 # null, or the mission in progress (a Dictionary)
 var last_report = null             # the last mission's outcome, for Mission Control
@@ -3763,6 +3764,7 @@ func gear_tier() -> int:
 func restock() -> void:
 	reroll_intel()
 	_restock_clinic()
+	_restock_gamble()
 	market = []
 	var t := gear_tier()
 	for k in range(Data.MARKET_LEVELS[market_level]["stock"]):
@@ -3783,6 +3785,100 @@ func restock() -> void:
 		if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 			it = Items.roll(Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)], t, rng)
 		market.append(it)
+
+
+## The fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
+func _restock_gamble() -> void:
+	var kinds: Array = []
+	for k in Data.GAMBLE_KINDS:
+		if _gamble_has_base(k):
+			kinds.append(k["kind"])        # only a kind the fence can source at the tier opened
+	kinds.shuffle()
+	gamble = kinds.slice(0, Data.GAMBLE_SHOWN)
+
+
+## Whether the pool holds a base of the kind at the tier opened (not a start base).
+func _gamble_has_base(k: Dictionary) -> bool:
+	for b in Data.BASES[k["slot"]]:
+		if not b.get("start", false) and int(b["tier"]) <= gear_tier() and (k["type"] == "" or b.get("type", "") == k["type"]):
+			return true
+	return false
+
+
+static func gamble_kind(kind: String) -> Dictionary:
+	for k in Data.GAMBLE_KINDS:
+		if k["kind"] == kind:
+			return k
+	return {}
+
+
+## The top open tier: what the fence rolls a gamble at, and what its price is read off.
+func top_tier() -> int:
+	var top := 0
+	for i in range(Data.TIERS.size()):
+		if tier_open(i):
+			top = i
+	return top
+
+
+## The price of a gamble: GAMBLE_RUNS of what a run on the top open tier pays, never under the floor.
+func gamble_price(kind: String) -> int:
+	if gamble_kind(kind).is_empty():
+		return -1
+	return _inf(maxf(float(Data.GAMBLE_FLOOR), run_pay(top_tier()) * Data.GAMBLE_RUNS))
+
+
+func can_gamble(kind: String) -> bool:
+	return mission == null and kind in gamble and cash >= gamble_price(kind) and stash_room(1)     # room for one cell at least: the roll's own size is checked when it lands
+
+
+## Pay, and the thing turns up in the stash: a random one of the kind, rolled at the top tier opened
+## with the fence's quality, never Common; or, one time in fifty, a unique of the kind. The kind leaves
+## the offer; the next restock brings five more. `unique_roll` is the tests' dice.
+func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
+	if not can_gamble(kind):
+		return {}
+	var k := gamble_kind(kind)
+	var it := roll_gamble(k, unique_roll)
+	if not (stash_room(Items.size(it)) or _stack_room(it)):
+		return {}
+	cash -= gamble_price(kind)
+	gamble.erase(kind)
+	stash_put(it)
+	last_craft = {"id": it["id"], "kind": "gamble", "words": "The fence's word: %s" % Items.full_name(it).to_lower()}
+	log_event("A word in the right ear: %s" % Items.full_name(it).to_lower())
+	return it
+
+
+## The roll behind a gamble, for the kind: a unique of the kind on GAMBLE_UNIQUE, else a drop of the
+## slot at the top open tier's loot tier with the fence's quality on it, never Common, of the type
+## when the kind has one.
+func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
+	var x: float = unique_roll if unique_roll >= 0.0 else rng.randf()
+	if x < Data.GAMBLE_UNIQUE:
+		var fits: Array = []
+		for u in Data.UNIQUES:
+			if u["slot"] == k["slot"] and (k["type"] == "" or Items.base_named(k["slot"], u["base"]).get("type", "") == k["type"]):
+				fits.append(u)
+		if not fits.is_empty():
+			return Items.roll_unique(fits[rng.randi_range(0, fits.size() - 1)], rng)
+	var t := top_tier()
+	var it: Dictionary = {}
+	for tries in range(40):
+		it = Items.roll(k["slot"], gear_tier(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, maxi(0, best_depth[t] - 1))
+		if k["type"] == "" or Items.base_of(it).get("type", "") == k["type"]:
+			return it
+	# the type never came up: the kind's lowest base, with the roll's affixes on it
+	for b in Data.BASES[k["slot"]]:
+		if not b.get("start", false) and b.get("type", "") == k["type"]:
+			it["base"] = b["name"]
+			it["tier"] = int(b["tier"])
+			it["attachments"] = {}
+			for name in b.get("attachments", []):
+				it["attachments"][name] = null
+			it["value"] = int(round(float(b["value"]) * float(Data.RARITIES[int(it["rarity"])]["value"])))
+			break
+	return it
 
 
 ## A standard box of rounds on the shelf costs what the box row charges for
@@ -4073,7 +4169,7 @@ func to_dict() -> Dictionary:
 
 func _state() -> Dictionary:
 	return {
-		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market,
+		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "training_points": training_points,
@@ -4099,6 +4195,7 @@ func load_dict(d: Dictionary) -> void:
 	rig = d.get("rig", [])
 	stash = d.get("stash", [])
 	market = d.get("market", [])
+	gamble = d.get("gamble", [])
 	clinic = d.get("clinic", [])
 	mission = d.get("mission", null)
 	last_report = d.get("last_report", null)
@@ -4224,6 +4321,8 @@ func load_dict(d: Dictionary) -> void:
 			it["rounds"] = int(it["rounds"])
 	if market.is_empty():
 		restock()
+	if not d.has("gamble"):
+		_restock_gamble()                 # a save from before the fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
 
 
 func _all_items() -> Array:
