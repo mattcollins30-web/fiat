@@ -360,13 +360,17 @@ const BASES := {
 		{"name": "Shells", "type": "shotgun", "tier": 1, "rounds": 150, "value": 30},
 		{"name": "Slugs", "type": "shotgun", "tier": 2, "rounds": 90, "value": 75, "damage_pct": 20},
 		{"name": "Rifle rounds", "type": "rifle", "tier": 1, "rounds": 400, "value": 40},
-		{"name": "Match rounds", "type": "rifle", "tier": 2, "rounds": 240, "value": 100, "damage_pct": 15},
+		## grades with an element (33): a share of the gun's hits land as the type, through the model like a conversion affix
+		{"name": "Match rounds", "type": "rifle", "tier": 2, "rounds": 240, "value": 100, "damage_pct": 15, "first_pct": 25},
 		{"name": "SMG rounds", "type": "smg", "tier": 1, "rounds": 600, "value": 40},
-		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15},
+		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15, "conv_bleed_pct": 20},
 		{"name": "Pistol rounds", "type": "pistol", "tier": 1, "rounds": 300, "value": 25},
-		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15},
+		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15, "conv_bleed_pct": 20},
 		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20},
 		{"name": "Depot rounds", "type": "rifle", "tier": 3, "rounds": 300, "value": 170, "damage_pct": 25},
+		{"name": "Incendiary shells", "type": "shotgun", "tier": 3, "rounds": 80, "value": 140, "damage_pct": 10, "conv_fire_pct": 30},
+		{"name": "Incendiary SMG rounds", "type": "smg", "tier": 3, "rounds": 320, "value": 150, "damage_pct": 10, "conv_fire_pct": 30},
+		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30},
 	],
 }
 const AMMO_PRICE := 1.5             # the fence's markup on a standard box

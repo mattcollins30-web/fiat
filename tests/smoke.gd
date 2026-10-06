@@ -4556,6 +4556,71 @@ func _loot_roll_checks(main) -> void:
 	_pick_panel_checks(main)
 	_bench_pick_checks(main)
 	_grenade_checks(main)
+	_grade_checks(main)
+
+
+## 33: ammo grades with an element. The gun's live stack of hollow point bleeds, incendiary burns, salted chills,
+## match rounds weight the first shot: read through the model like a conversion affix on the gun.
+func _grade_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var hp_rounds: Dictionary = {}
+	for b in Data.BASES[Data.AMMO]:
+		if b.has("conv_bleed_pct") or b.has("conv_fire_pct") or b.has("conv_frost_pct") or b.has("first_pct"):
+			var it: Dictionary = sim._plain(Data.AMMO, b["name"])
+			_check(Items.grade_words(b) != "" and Items.headline(it)[1].contains(Items.grade_words(b).trim_prefix(", ")) and Words.item_words(b["name"]) != "", "%s's grade does not read: '%s'" % [b["name"], Items.headline(it)[1]])
+	_check(Data.BASES[Data.AMMO].any(func(b): return b["type"] == "shotgun" and b.has("conv_fire_pct")) and Data.BASES[Data.AMMO].any(func(b): return b["type"] == "smg" and b.has("conv_fire_pct")) and Data.BASES[Data.AMMO].any(func(b): return b["type"] == "rifle" and b.has("conv_frost_pct")), "a grade is missing: incendiary shells and SMG rounds, salted rifle rounds")
+	# the live stack's share reaches the conversion; an empty stack or the wrong type does not
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Petrol/") and not str(id).begins_with("Live/") and not str(id).begins_with("Blades/"))
+	var smg: Dictionary = sim._plain("Primary", "Workshop SMG")
+	sim.equipped["Primary"] = smg
+	sim.equipped["Secondary"] = null
+	if sim.equipped["Rig"] == null:
+		sim.equipped["Rig"] = sim._plain("Rig", Data.BASES["Rig"][0]["name"])
+	sim.rig = []
+	sim._dry_memo.clear()
+	var bleed0: float = sim.conversion()["bleed"]
+	var hollow: Dictionary = sim._plain(Data.AMMO, "SMG hollow point")
+	sim.rig = [hollow]
+	_check(is_equal_approx(sim.conversion()["bleed"], bleed0 + 0.2), "hollow point did not add its bleed share: %.2f from %.2f" % [sim.conversion()["bleed"], bleed0])
+	_check(is_equal_approx(sim.grade_stat(smg, "conv_bleed_pct"), 20.0), "grade_stat reads %.0f" % sim.grade_stat(smg, "conv_bleed_pct"))
+	hollow["rounds"] = 0
+	_check(is_equal_approx(sim.conversion()["bleed"], bleed0), "an empty stack still converted")
+	var fire_shells: Dictionary = sim._plain(Data.AMMO, "Incendiary shells")
+	sim.rig = [fire_shells]
+	_check(is_equal_approx(sim.grade_stat(smg, "conv_fire_pct"), 0.0), "shotgun shells fed the SMG's conversion")
+	# match rounds weight the first shot
+	var rifle: Dictionary = sim._plain("Primary", "Stalking rifle")
+	sim.equipped["Primary"] = rifle
+	sim.rig = [sim._plain(Data.AMMO, "Match rounds")]
+	_check(is_equal_approx(sim.grade_stat(rifle, "first_pct"), 25.0) and is_equal_approx(sim.grade_bonus(rifle), 15.0), "match rounds' first shot and damage read %.0f / %.0f" % [sim.grade_stat(rifle, "first_pct"), sim.grade_bonus(rifle)])
+	# the first shot through the fight: a tick fresh with match rounds lands more than one with plain rounds
+	var plain_r: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	var drops := []
+	for stack in [plain_r, sim._plain(Data.AMMO, "Match rounds")]:
+		sim.rig = [stack]
+		sim.rng.seed = 11
+		sim.deploy(0)
+		var m: Dictionary = sim.mission
+		m["target_hp"] = 1e6
+		m["remaining"] = 3
+		m["fresh"] = true
+		sim._fight(m, m["t"], 0.5)
+		drops.append(1e6 - m["target_hp"])
+		sim.extract_now()
+	_check(drops[1] > drops[0] * 1.2, "match rounds' first shot did not land heavier: %.1f against %.1f" % [drops[1], drops[0]])
+	# no gun in hand: the odds read without a grade, not a crash
+	sim.equipped["Primary"] = null
+	sim.rig = []
+	sim._surv_cache = {}
+	var odds: float = sim.survival(0)
+	_check(odds >= 0.0 and odds <= 1.0, "the odds with no gun in hand read %.2f" % odds)
+	sim.equipped["Primary"] = rifle
+	sim.load_dict(saved)
+	main.refresh()
+	print("the grades ok: the words, the three new ones, the share through the conversion, the empty and the wrong stack, the match rounds")
 
 
 ## 32: grenades in the rig. A pouch each, thrown at everyone on you as the type's damage through the model, a dot on the gang.

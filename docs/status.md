@@ -1653,6 +1653,20 @@ a throw's dot cap is the gun's own rate or the throw's, whichever is bigger, so 
 a burn a fire build has going; Bleed out takes a nail bomb too; the bots do not throw yet, so the balance
 reader will not measure grenades until a bot carries them.
 
+**33 · Ammo grades with an element.** A grade's base can carry `conv_<type>_pct` or `first_pct` beside
+its `damage_pct`: SMG and pistol hollow point 20% as bleed, Match rounds first shot +25% (the flat crit),
+and three new tier-3 grades, Incendiary shells and Incendiary SMG rounds 30% as fire, Salted rounds (rifle)
+30% as frost, each with its line. `grade_stat(gun, stat)` reads the gun's live stack (`grade_bonus` is it
+for damage); `_conversion_raw` adds the primary's grade share like a conversion affix on the gun, so the
+trees' increases, the resists and the dots all read it; the first-shot weight joins the fitted parts' in
+`_fight`. The rounds' headline reads "360 rounds, +15%, 20% as bleed". Crafting (34) gets these in its
+ladder. Smoke: the words on every graded base, the three new ones present, the live stack's share in the
+conversion, none from an empty stack or shells on an SMG, match rounds' first shot and damage, the first
+shot heavier through the fight, the odds with no gun in hand. Reviewer: `grade_stat` takes an untyped gun
+(a typed parameter would refuse the empty slot and the odds reader meets it); a stack emptying in a dry run
+clears the conversion's memo, so the share goes with the stack; the secondary's grade is damage only, as
+the primary's base conversion already was.
+
 ## The bench on the pick frame; a typed part refused (6 Oct)
 
 Matt: "Gun attachments need the same chips treatment as everything else - also I can still attach a shotgun

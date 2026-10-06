@@ -243,6 +243,7 @@ func _conversion_raw() -> Dictionary:
 		var share: float = (_affix_sum("conv_%s_pct" % ty) + _fitted_sum("conv_%s_pct" % ty) + tree_sum("conv_%s_pct" % ty)) / 100.0
 		if equipped["Primary"] != null:
 			share += float(Items.base_of(equipped["Primary"]).get("conv_%s_pct" % ty, 0)) / 100.0   # a bat's nails
+			share += grade_stat(equipped["Primary"], "conv_%s_pct" % ty) / 100.0                     # the rounds' grade (33): hollow point bleeds, incendiary burns; the secondary's grade is damage only
 		out[ty] = maxf(0.0, share)
 		total += out[ty]
 	if has_rule("jump_leads"):
@@ -1363,10 +1364,17 @@ func melee() -> bool:
 
 ## The better grade's damage, from the stack that's feeding the gun now.
 func grade_bonus(gun: Dictionary) -> float:
+	return grade_stat(gun, "damage_pct")
+
+
+## What the grade in the gun's live stack carries for a stat: its damage, a share as an element (33), a first-shot weight.
+func grade_stat(gun, stat: String) -> float:
+	if gun == null:
+		return 0.0                       # no gun in hand: untyped on purpose, a typed parameter would refuse the null
 	var t := Items.ammo_type(gun)
 	for it in rig:
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
-			return float(Items.base_of(it).get("damage_pct", 0))
+			return float(Items.base_of(it).get(stat, 0))
 	return 0.0
 
 
@@ -1392,6 +1400,7 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 		m["fired"][t] -= 1.0
 		if int(stack["rounds"]) <= 0:
 			rig.erase(stack)
+			_dry_memo.erase("conversion")   # the grade's share goes with the stack (33), in a dry run too
 			if rounds_for(gun) <= 0:
 				log_event("%s: dry" % gun["base"])
 
@@ -2471,7 +2480,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var swing := rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	var headshot := 1.0
 	if m["fresh"]:
-		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0))) / 100.0
+		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
 	if m["fresh"] and has_rule("grandads"):
 		headshot += 2.0

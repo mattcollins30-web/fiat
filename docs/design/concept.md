@@ -278,7 +278,9 @@ pass. In build order; the economy items last so the reader runs once over all of
 33. **Ammo grades with an element.** The tier-2 and tier-3 grades carry a type as well as damage:
     hollow point bleeds, match rounds a flat crit, incendiary (a new grade of shells and SMG rounds)
     fire, salted (rifle) frost, so crafting has something to craft toward and a build can run its
-    element off the rounds. Through the damage model like a conversion affix on the gun.
+    element off the rounds. Through the damage model like a conversion affix on the gun. *Built (6 Oct):*
+    hollow point 20% bleed, match rounds first shot +25%, incendiary shells and SMG rounds 30% fire, salted
+    rifle rounds 30% frost; the primary's live stack feeds the conversion.
 34. **Crafting at the bench** - as 25, with 33's grades in its ladder and grenades (32) in its Build
     column.
 35. **Contracts paying in craft materials.** A third pay kind beside cash and notes: scrap by the

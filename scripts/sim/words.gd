@@ -380,6 +380,9 @@ const ITEMS := {
 	"Hospital kit": "The hospital's own crash bag. Everything in it is real and most of it is out of date. It still works.",
 	"Belt links": "Linked rounds for the section gun, in a tin from the lorry. They don't fit anything else.",
 	"Depot rounds": "The army's rifle ammunition, boxed and dated. Better than anything the garage ever loaded.",
+	"Incendiary shells": "Shells with something in the wad that keeps burning. What they hit, they set alight.",
+	"Incendiary SMG rounds": "Tracer that was never meant for the range. Every third one goes in burning.",
+	"Salted rounds": "Rifle rounds dipped in the gritter's salt, the way the rat man said. The hit goes cold.",
 	# attachments - optics
 	"Red dot": "A dot in a tube. It's where the round goes, give or take the shake.",
 	"Torch": "A torch on a rail. They see you first; you see what you're shooting.",

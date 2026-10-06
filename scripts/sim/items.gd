@@ -720,7 +720,8 @@ static func headline(it: Dictionary) -> Array:
 	if b.has("heal"):
 		return ["%.0f" % heal(it), "HP in %.0f s" % use_time(it)]
 	if b.has("rounds"):
-		return ["%d" % int(it.get("rounds", 0)), "rounds" + ((", +%d%%" % int(b["damage_pct"])) if b.has("damage_pct") else "")]
+		return ["%d" % int(it.get("rounds", 0)), "rounds" + ((", +%d%%" % int(b["damage_pct"])) if b.has("damage_pct") else "") + grade_words(b)]
+
 	if b.has("mount"):
 		var lead := att_lead(it)
 		return [lead[0], lead[1]]
@@ -729,6 +730,16 @@ static func headline(it: Dictionary) -> Array:
 	if it["slot"] == Data.CHARM:
 		return ["+%.0f%%" % find(it), "loot quality"]
 	return ["%d" % capacity(it), "capacity"]
+
+
+## A grade's element or crit, as words after its damage: ", 20% as bleed", ", first shot +25%".
+static func grade_words(b: Dictionary) -> String:
+	for ty in Data.ELEMENTS:
+		if b.has("conv_%s_pct" % ty):
+			return ", %d%% as %s" % [int(b["conv_%s_pct" % ty]), ty]
+	if b.has("first_pct"):
+		return ", first shot +%d%%" % int(b["first_pct"])
+	return ""
 
 
 ## An attachment's headline: its biggest effect.
