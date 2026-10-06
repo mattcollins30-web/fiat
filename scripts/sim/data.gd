@@ -1124,7 +1124,7 @@ const BUMP_CAP := 20
 ## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap
 ## plus the element's socketable. Costs are untuned until the pass.
 const SCRAP_PER_POUND := 20
-const SCRAP_SEARCH := 0.4           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build
+const SCRAP_SEARCH := 0.5           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
 const SCRAP_HANDFUL := [4, 8]       # the pass (6 Oct): was [3, 6]
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
@@ -1217,7 +1217,7 @@ static func capstone_cost(t: Dictionary) -> int:
 		var n: Dictionary = t["nodes"][i]
 		if not n.get("capstone", false):
 			total += node_cost(i, n.get("notable", false), n.get("keystone", false))
-	return maxi(1, ceili(total / 3.0))
+	return maxi(1, ceili(total / 4.0))     # the pass (6 Oct): a third left three builds at 4.3-4.6 h against the 4 h gate
 
 
 ## The trees a class sees: its first, the common one, its second - and the
@@ -1319,7 +1319,7 @@ const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
-const WOUND_AT := 0.33            # the pass (6 Oct): a quarter read 2-10% of runs wounded across five reads against a 10-25% band - under a quarter is where the bot (and the odds) call a run lost
+const WOUND_AT := 0.30            # the pass (6 Oct): a quarter read 2-10% of runs wounded across five reads against a 10-25% band, a third 28-32% on four builds
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
 const WOUND_CASH := 20

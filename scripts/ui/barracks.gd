@@ -482,9 +482,9 @@ func _show_panel() -> void:
 		if nd.get("capstone", false) and not sim.tree.has(selected):
 			var has_key: bool = Data.tree_named(branch)["nodes"].any(func(x): return x.get("keystone", false))
 			if has_key:
-				UI.fit(_scope, ["The capstone: wants the keystone and every notable of the tree, and a third of the tree's points again", "Wants the keystone and every notable first", "Wants the whole tree first"])
+				UI.fit(_scope, ["The capstone: wants the keystone and every notable of the tree, and a quarter of the tree's points again", "Wants the keystone and every notable first", "Wants the whole tree first"])
 			else:
-				UI.fit(_scope, ["The capstone: wants every notable of the tree, and a third of the tree's points again", "Wants every notable first", "Wants the whole tree first"])
+				UI.fit(_scope, ["The capstone: wants every notable of the tree, and a quarter of the tree's points again", "Wants every notable first", "Wants the whole tree first"])
 		else:
 			UI.fit(_scope, ["The yard's: trained once, kept through every runner" if yards else "The runner's: goes with them when they go; a new past starts it over",
 				"The yard's: kept through every runner" if yards else "The runner's: goes with them"])

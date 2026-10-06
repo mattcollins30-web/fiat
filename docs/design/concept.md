@@ -237,7 +237,7 @@ pass. In build order; the economy items last so the reader runs once over all of
     the dog's level adding quality, so a build can lean on it. The weights themselves are the pass's.
 28. **Capstones** (Matt, 6 Oct: "the skill tree doesn't feel all that impactful - there needs to be a
     final keystone above and beyond what we already have"). One a tree, past the keystone, costing a
-    third of the tree's points, taken only with the keystone and both notables; each changes how a run
+    quarter of the tree's points (a third until the pass), taken only with the keystone and both notables; each changes how a run
     is played rather than a figure, and each reads on the run screen. Defaults, Matt to redirect:
     Stalking: *Patience* - no gang comes while you haven't fired; the search is free until you choose
     the fight (the Next gang tile reads "when you fire"). Snares: *Poached* - a gang that arrives a head
@@ -331,7 +331,7 @@ weights or the gate's figure move in the pass.
 | No reds | the odds reader at every open tier at depth 1, in the kit at the end | no tier under 60% |
 | Loot quality visible | Legendary share at +35% quality | at least 2.0% (0.8% unboosted) |
 | Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
-| Cash sink | cash in hand at the campaign's end | no more than 3× the top bench level |
+| Cash sink | cash in hand at the end, in hours of the build's takings | no more than two hours' takings (was 3× the top bench: the wrong shape for a ladder that pays by depth) |
 | Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
 | Deaths | the player's own, from the playtest save | one every N hours at Matt's risk (N to set) |
 | Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |

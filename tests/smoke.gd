@@ -1690,7 +1690,7 @@ func _element_checks(main) -> void:
 
 
 ## Melee: no rounds, bleed built in, grip and head mounts, in among them.
-## 28: a capstone a tree, past the keystone, wanting the keystone and every notable, a third of the tree again.
+## 28: a capstone a tree, past the keystone, wanting the keystone and every notable, a quarter of the tree again (a third until the pass).
 func _capstone_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -1704,7 +1704,7 @@ func _capstone_checks(main) -> void:
 		var others := 0
 		for i in range(b["nodes"].size() - 1):
 			others += Data.node_cost(i, b["nodes"][i].get("notable", false), b["nodes"][i].get("keystone", false))
-		_check(Data.capstone_cost(b) == ceili(others / 3.0), "%s's capstone costs %d, not a third of %d" % [b["name"], Data.capstone_cost(b), others])
+		_check(Data.capstone_cost(b) == ceili(others / 4.0), "%s's capstone costs %d, not a quarter of %d" % [b["name"], Data.capstone_cost(b), others])
 	# it opens only once the keystone and every notable are taken
 	sim.set_class("Poacher")
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Snares/"))

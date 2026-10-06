@@ -1917,6 +1917,20 @@ rule stops at the rarity's cap, not T5, or it would pay for "no change" every ru
 and a full re-roll on a level-16 Rare stay T3; every bench kind refused on a set piece; the re-roll-one
 tier walk reads 240 rolls (a T4 at the floor only moves up, one in sixteen).
 
+**The sixth read (twenty reads merged; rarity, the readers and the wound threshold in).** The band 1.3
+to 2.6 h (was 1.4 to 6.1 on single reads), the keystone green, the Legendary share green (2.57%
+boosted, 0.91% plain), wounds in the band on five builds and 28-32% on four, depth pace one build
+short, the capstone late on three at 4.3-4.6 h. Cash back on seven at £100k-£390k, and the table says
+why: the rich reads dug T8 to depth 9-15 (the bleed Doorman £261k at depth 15), the poor stayed at
+depth 1 (£300-£6k); the curve pays 10% a depth compounding and the word - the sink that scales with
+depth - is £70k a run at depth 15, so the bot's three-times reserve stopped it buying and the pile
+sat under three words. The gate's figure (three times a £14k bench) was the wrong shape for a ladder:
+the cash row reads hours of the build's takings in hand now (`cash_per_h` in the gate, two hours the
+band), and the word reserve is twice. The moves with it: `WOUND_AT` 0.33 → 0.30; `SCRAP_SEARCH` 0.4
+→ 0.5 (three builds at 0.5-0.8 a craft an hour); `capstone_cost` a third → a quarter of the tree
+(lever 4's one touch; the barracks' words with it). The builds table reads wounds, crafts and pace
+for every read now, not only the merged line.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are
