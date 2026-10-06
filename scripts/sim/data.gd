@@ -336,19 +336,19 @@ const BASES := {
 	"Medical": [
 		{"name": "Painkillers", "tier": 1, "heal": 15.0, "use": 1.5, "value": 12},
 		{"name": "Bandage", "tier": 1, "heal": 25.0, "use": 3.0, "value": 15},
-		{"name": "First aid kit", "tier": 1, "heal": 60.0, "use": 6.0, "value": 45},
-		{"name": "Field dressing", "tier": 2, "heal": 40.0, "use": 2.0, "value": 50},
-		{"name": "Trauma kit", "tier": 2, "heal": 120.0, "use": 10.0, "value": 120},
-		{"name": "Surgeon's kit", "tier": 3, "heal": 200.0, "use": 12.0, "value": 220},
-		{"name": "Hospital kit", "tier": 4, "heal": 300.0, "use": 14.0, "value": 380},
+		{"name": "First aid kit", "tier": 1, "heal": 60.0, "use": 6.0, "value": 45, "from": "Bandage"},
+		{"name": "Field dressing", "tier": 2, "heal": 40.0, "use": 2.0, "value": 50, "from": "First aid kit"},
+		{"name": "Trauma kit", "tier": 2, "heal": 120.0, "use": 10.0, "value": 120, "from": "Field dressing"},
+		{"name": "Surgeon's kit", "tier": 3, "heal": 200.0, "use": 12.0, "value": 220, "from": "Trauma kit"},
+		{"name": "Hospital kit", "tier": 4, "heal": 300.0, "use": 14.0, "value": 380, "from": "Surgeon's kit"},
 	],
 	## Grenades (32): a pouch each, thrown at everyone on you; the hit is the type's, through the damage model
 	"Grenade": [
-		{"name": "Petrol bomb", "tier": 1, "damage": 80.0, "type": "fire", "value": 30},
+		{"name": "Petrol bomb", "tier": 1, "damage": 80.0, "type": "fire", "value": 30, "from": "Lighter fluid"},
 		{"name": "Nail bomb", "tier": 1, "damage": 70.0, "type": "bleed", "value": 30},
-		{"name": "Bottle of something", "tier": 2, "damage": 90.0, "type": "poison", "value": 45},
-		{"name": "Dry-ice bag", "tier": 2, "damage": 60.0, "type": "frost", "value": 45},
-		{"name": "Wired battery", "tier": 3, "damage": 100.0, "type": "shock", "value": 60},
+		{"name": "Bottle of something", "tier": 2, "damage": 90.0, "type": "poison", "value": 45, "from": "Rat poison"},
+		{"name": "Dry-ice bag", "tier": 2, "damage": 60.0, "type": "frost", "value": 45, "from": "Antifreeze"},
+		{"name": "Wired battery", "tier": 3, "damage": 100.0, "type": "shock", "value": 60, "from": "Car battery"},
 	],
 	## Ammo: a stack of `rounds` for a gun `type`, standard or a better grade
 	## (damage_pct). Standard is always at the fence by the box; the better
@@ -356,21 +356,21 @@ const BASES := {
 	"Ammo": [
 		# a stack is a bag of rounds, sized so a run takes about a third of one at the type's rate
 		{"name": "Nails", "type": "improvised", "tier": 1, "rounds": 200, "value": 20},
-		{"name": "Hardened bolts", "type": "improvised", "tier": 2, "rounds": 120, "value": 50, "damage_pct": 15},
+		{"name": "Hardened bolts", "type": "improvised", "tier": 2, "rounds": 120, "value": 50, "damage_pct": 15, "from": "Nails"},
 		{"name": "Shells", "type": "shotgun", "tier": 1, "rounds": 150, "value": 30},
-		{"name": "Slugs", "type": "shotgun", "tier": 2, "rounds": 90, "value": 75, "damage_pct": 20},
+		{"name": "Slugs", "type": "shotgun", "tier": 2, "rounds": 90, "value": 75, "damage_pct": 20, "from": "Shells"},
 		{"name": "Rifle rounds", "type": "rifle", "tier": 1, "rounds": 400, "value": 40},
 		## grades with an element (33): a share of the gun's hits land as the type, through the model like a conversion affix
-		{"name": "Match rounds", "type": "rifle", "tier": 2, "rounds": 240, "value": 100, "damage_pct": 15, "first_pct": 25},
+		{"name": "Match rounds", "type": "rifle", "tier": 2, "rounds": 240, "value": 100, "damage_pct": 15, "first_pct": 25, "from": "Rifle rounds"},
 		{"name": "SMG rounds", "type": "smg", "tier": 1, "rounds": 600, "value": 40},
-		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15, "conv_bleed_pct": 20},
+		{"name": "SMG hollow point", "type": "smg", "tier": 2, "rounds": 360, "value": 100, "damage_pct": 15, "conv_bleed_pct": 20, "from": "SMG rounds"},
 		{"name": "Pistol rounds", "type": "pistol", "tier": 1, "rounds": 300, "value": 25},
-		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15, "conv_bleed_pct": 20},
-		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20},
-		{"name": "Depot rounds", "type": "rifle", "tier": 3, "rounds": 300, "value": 170, "damage_pct": 25},
-		{"name": "Incendiary shells", "type": "shotgun", "tier": 3, "rounds": 80, "value": 140, "damage_pct": 10, "conv_fire_pct": 30},
-		{"name": "Incendiary SMG rounds", "type": "smg", "tier": 3, "rounds": 320, "value": 150, "damage_pct": 10, "conv_fire_pct": 30},
-		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30},
+		{"name": "Pistol hollow point", "type": "pistol", "tier": 2, "rounds": 180, "value": 65, "damage_pct": 15, "conv_bleed_pct": 20, "from": "Pistol rounds"},
+		{"name": "Belt links", "type": "smg", "tier": 3, "rounds": 500, "value": 160, "damage_pct": 20, "from": "SMG hollow point"},
+		{"name": "Depot rounds", "type": "rifle", "tier": 3, "rounds": 300, "value": 170, "damage_pct": 25, "from": "Match rounds"},
+		{"name": "Incendiary shells", "type": "shotgun", "tier": 3, "rounds": 80, "value": 140, "damage_pct": 10, "conv_fire_pct": 30, "from": "Slugs"},
+		{"name": "Incendiary SMG rounds", "type": "smg", "tier": 3, "rounds": 320, "value": 150, "damage_pct": 10, "conv_fire_pct": 30, "from": "SMG hollow point"},
+		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30, "from": "Match rounds"},
 	],
 }
 const AMMO_PRICE := 1.5             # the fence's markup on a standard box
@@ -1056,6 +1056,22 @@ const CRAFT := {
 }
 const BUMP_LEVELS := 3
 const BUMP_CAP := 20
+
+## Crafting (34): one material, scrap, a count in hand. Found on a search
+## (SCRAP_SEARCH of them a handful), made by scrapping an item at the bench or
+## ditching it on a run (its value over SCRAP_PER_POUND). The Build column:
+## a standard box of rounds for scrap; the grades, scrap plus the box below
+## ("from"); a med, scrap plus the one below; an improvised gun of a type for
+## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap
+## plus the element's socketable. Costs are untuned until the pass.
+const SCRAP_PER_POUND := 20
+const SCRAP_SEARCH := 0.2
+const SCRAP_HANDFUL := [3, 6]
+const BUILD_BOX := 8                # a standard box of any type you have a gun for
+const BUILD_GRADE := 15             # a grade, with the box below
+const BUILD_MED := 8                # a med, times its tier, with the one below (painkillers and a bandage: scrap alone)
+const BUILD_GUN := 40               # an improvised gun, times its tier
+const BUILD_GRENADE := 12           # with the element's socketable; the nail bomb scrap alone
 
 ## Events: something happens on a run, once at most, EVENT_ODDS of runs,
 ## some way in. A convoy passes (a bigger gang, and they carry notes); a

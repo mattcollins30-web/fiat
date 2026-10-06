@@ -283,7 +283,8 @@ pass. In build order; the economy items last so the reader runs once over all of
     hollow point 20% bleed, match rounds first shot +25%, incendiary shells and SMG rounds 30% fire, salted
     rifle rounds 30% frost; the primary's live stack feeds the conversion.
 34. **Crafting at the bench** - as 25, with 33's grades in its ladder and grenades (32) in its Build
-    column.
+    column. *Built (6 Oct):* scrap as a count in hand, not a stackable (no stash cells; one figure for the
+    gate); the Build menu off the craft view; a built gun is flagged to fire nails.
 35. **Contracts paying in craft materials.** A third pay kind beside cash and notes: scrap by the
     handful, a socketable of the zone's element, or a grade of rounds, so the fence's contracts feed
     the bench and the Contracts tab has a reason once cash is easy.

@@ -62,6 +62,7 @@ var ending := ""                   # what became of the deeds: burned, sold, hel
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
 var notes := 0                     # the old paper money: the crews still take it
+var scrap := 0                     # the bench's material (34): found, stripped, ditched for
 var atlas := {}                    # the map's passives: key -> rank
 var atlas_points := 0              # earned: one a new depth cleared past the first
 var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
@@ -729,7 +730,7 @@ func move_yard(trade := "") -> bool:
 	for id in tree:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
-	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT),
+	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate()}
 	if trade != "":
 		keep["trades"].append(trade)
@@ -740,6 +741,7 @@ func move_yard(trade := "") -> bool:
 	ending = keep["ending"]
 	hardcore = keep["hardcore"]
 	notes = keep["notes"]
+	scrap = keep["scrap"]                 # scrap moves with the yard the way notes do (34)
 	yard_moves = keep["moves"]
 	elapsed = keep["elapsed"]
 	events = keep["events"]
@@ -968,6 +970,172 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 
 func craft_in_notes(kind: String) -> bool:
 	return Data.CRAFT.get(kind, {}).has("notes")
+
+
+# ------------------------------------------------------------------ scrap and the Build column (34)
+
+## What an item is worth in scrap: its value over SCRAP_PER_POUND, a stack by what it holds.
+func scrap_of(it: Dictionary) -> int:
+	if it.is_empty() or Items.is_deeds(it):
+		return 0
+	return int(float(it["value"]) / Data.SCRAP_PER_POUND)
+
+
+## A stash item broken down at the bench for its scrap. Gone for good.
+func scrap_item(id: int) -> bool:
+	if mission != null or workshop < 1:
+		return false
+	for it in stash:
+		if it["id"] == id:
+			var bits: int = scrap_of(it)
+			_remove(it)
+			scrap += bits
+			log_event("Scrapped %s: %d scrap" % [it["base"].to_lower(), bits])
+			return true
+	return false
+
+
+## The stash's standard boxes of this base, as rounds; a full box of them is what a grade wants.
+func _rounds_in_stash(base_name: String) -> int:
+	var n := 0
+	for it in stash:
+		if Items.is_ammo(it) and it["base"] == base_name:
+			n += int(it["rounds"])
+	return n
+
+
+func _count_in_stash(base_name: String) -> int:
+	var n := 0
+	for it in stash:
+		if it["base"] == base_name:
+			n += Items.stack_size(it)
+	return n
+
+
+## The guns' types the runner has a gun for: what a box can be built of.
+func gun_types_held() -> Array:
+	var out := []
+	for s in ["Primary", "Secondary"]:
+		if equipped[s] != null:
+			var t := Items.ammo_type(equipped[s])
+			if t != "" and t != "none" and not out.has(t):
+				out.append(t)
+	for it in stash:
+		if Items.is_gun(it):
+			var t := Items.ammo_type(it)
+			if t != "" and t != "none" and not out.has(t):
+				out.append(t)
+	return out
+
+
+## The Build column: every build of a kind, with its cost, what it wants and whether it can be built now.
+## kind: "box" (a standard box of a type), "grade" (a graded box, from the one below), "med", "gun"
+## (an improvised gun, Common, firing nails), "grenade". Each: {name, scrap, from, from_n, ok, why, tier}.
+func build_options(kind: String) -> Array:
+	var out := []
+	match kind:
+		"box":
+			for b in Data.BASES[Data.AMMO]:
+				if b.has("from") or b.has("damage_pct"):
+					continue
+				var held: bool = b["type"] in gun_types_held()
+				out.append(_build_entry(kind, b["name"], Data.BUILD_BOX, "", 0, held, "" if held else "No gun for it", int(b["tier"])))
+		"grade":
+			for b in Data.BASES[Data.AMMO]:
+				if not b.has("from"):
+					continue
+				var need: int = int(Items.base_named(Data.AMMO, b["from"])["rounds"])
+				var have: int = _rounds_in_stash(b["from"])
+				out.append(_build_entry(kind, b["name"], Data.BUILD_GRADE * int(b["tier"]), b["from"], need, have >= need, "" if have >= need else "Wants a box of %s" % b["from"].to_lower(), int(b["tier"])))
+		"med":
+			for b in Data.BASES[Data.MEDICAL]:
+				var from: String = str(b.get("from", ""))
+				var have: int = _count_in_stash(from) if from != "" else 1
+				out.append(_build_entry(kind, b["name"], Data.BUILD_MED * int(b["tier"]), from, 1 if from != "" else 0, have >= 1, "" if have >= 1 else "Wants a %s" % from.to_lower(), int(b["tier"])))
+		"gun":
+			for b in Data.BASES["Primary"]:
+				if b.get("type", "") != "improvised" or int(b["tier"]) > workshop:
+					continue
+				out.append(_build_entry(kind, b["name"], Data.BUILD_GUN * int(b["tier"]), "", 0, true, "", int(b["tier"])))
+		"grenade":
+			for b in Data.BASES[Data.GRENADE]:
+				var from: String = str(b.get("from", ""))
+				var have: int = _count_in_stash(from) if from != "" else 1
+				out.append(_build_entry(kind, b["name"], Data.BUILD_GRENADE * int(b["tier"]), from, 1 if from != "" else 0, have >= 1, "" if have >= 1 else "Wants %s" % from.to_lower(), int(b["tier"])))
+	return out
+
+
+func _build_entry(kind: String, name: String, cost: int, from: String, from_n: int, has_from: bool, why: String, tier: int) -> Dictionary:
+	var ok: bool = has_from and scrap >= cost and mission == null and workshop >= 1
+	if why == "" and not ok:
+		why = "The runner is out" if mission != null else ("Needs a bench" if workshop < 1 else "Short of scrap")
+	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier}
+
+
+func build_option(kind: String, name: String) -> Dictionary:
+	for o in build_options(kind):
+		if o["name"] == name:
+			return o
+	return {}
+
+
+## Build it: the scrap goes, what it wants goes (a box's rounds off the stash's stacks, one off a socketable's
+## stack, a med), and the thing lands in the stash. A gun built is Common, plain, and fires nails.
+func build(kind: String, name: String) -> bool:
+	var o := build_option(kind, name)
+	if o.is_empty() or not o["ok"]:
+		return false
+	var made: Dictionary
+	match kind:
+		"box", "grade":
+			made = _plain(Data.AMMO, name)       # a full box
+			if o["from"] != "":
+				_take_rounds(o["from"], o["from_n"])
+		"med":
+			made = _plain(Data.MEDICAL, name)
+			if o["from"] != "":
+				_take_one(o["from"])
+		"gun":
+			made = _plain("Primary", name)
+			made["nails"] = true
+			made["built"] = true
+		"grenade":
+			made = _plain(Data.GRENADE, name)
+			if o["from"] != "":
+				_take_one(o["from"])
+	scrap -= int(o["scrap"])
+	if not stash_put(made):
+		stash.append(made)                   # whatever the room: it was paid for
+	last_craft = {"id": made["id"], "kind": "build", "words": "Built %s for %d scrap" % [name.to_lower(), int(o["scrap"])]}
+	log_event("At the bench, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
+	_dry_memo.clear()
+	return true
+
+
+## Rounds of a base off the stash's stacks, the fullest first.
+func _take_rounds(base_name: String, n: int) -> void:
+	var left := n
+	var stacks: Array = stash.filter(func(it): return Items.is_ammo(it) and it["base"] == base_name)
+	stacks.sort_custom(func(a, b): return int(a["rounds"]) > int(b["rounds"]))
+	for st in stacks:
+		if left <= 0:
+			break
+		var take: int = mini(left, int(st["rounds"]))
+		Items.set_stack(st, int(st["rounds"]) - take)
+		left -= take
+		if int(st["rounds"]) <= 0:
+			stash.erase(st)
+
+
+## One of a base off the stash: one off a stack, or the item itself.
+func _take_one(base_name: String) -> void:
+	for it in stash:
+		if it["base"] == base_name:
+			if Items.stacks(it) and Items.stack_size(it) > 1:
+				Items.set_stack(it, Items.stack_size(it) - 1)
+			else:
+				_remove(it)
+			return
 
 
 func can_craft(id: int, kind: String, stat := "") -> bool:
@@ -2983,6 +3151,8 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["searches"] += 1
 		if rng.randf() < Data.NOTES_SEARCH:
 			m["notes"] = int(m.get("notes", 0)) + rng.randi_range(1, 2)
+		if rng.randf() < Data.SCRAP_SEARCH:
+			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		# every find this search is one of the share still there (29): past thin_after, each is a roll
 		var thin := thinning(m, t)
 		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[kennel_level]["finds"]) + (1 if has_rule("postman") else 0)
@@ -3020,7 +3190,9 @@ func ditch(id: int) -> bool:
 				ending = "burned"
 				log_event(Words.DEEDS["burned"])
 			else:
-				log_event("Ditched: %s" % it["base"].to_lower())
+				var bits: int = scrap_of(it)
+				mission["scrap"] = int(mission.get("scrap", 0)) + bits     # ditched for scrap (34): what comes home of it
+				log_event("Ditched: %s%s" % [it["base"].to_lower(), (", %d scrap" % bits) if bits > 0 else ""])
 			return true
 	return false
 
@@ -3069,6 +3241,7 @@ func _extract() -> void:
 	if has_node("cap_the_lot") and pack_used(m) >= capacity():
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
 	cash += m["cash"]
+	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
 		run_notes += maxi(0, capacity() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
@@ -3095,7 +3268,7 @@ func _extract() -> void:
 	last_report = {
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
-		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)),
+		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)),
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
 			_cash_words(m["cash"])])
@@ -3745,7 +3918,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
-		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
@@ -3829,6 +4002,7 @@ func load_dict(d: Dictionary) -> void:
 	deeds_found = bool(d.get("deeds_found", false))
 	ending = str(d.get("ending", ""))
 	notes = int(d.get("notes", 0))
+	scrap = int(d.get("scrap", 0))
 	atlas = {}
 	for k in d.get("atlas", {}):
 		atlas[str(k)] = int(d["atlas"][k])

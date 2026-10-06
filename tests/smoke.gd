@@ -1325,7 +1325,7 @@ func _craft_view_checks(main) -> void:
 	main.show_room(main.WORKSHOP)
 	main._workshop._set_view("craft")
 	_check(main._workshop._craft.visible, "the Craft view's panel is hidden")
-	_check(main._workshop._craft_title.text == "Pick a piece", "the Craft view does not ask for a piece first: %s" % main._workshop._craft_title.text)
+	_check(main._workshop._craft_title.text.begins_with("Pick a piece"), "the Craft view does not ask for a piece first: %s" % main._workshop._craft_title.text)
 	_check_fit(main, "Workshop (craft, nothing picked)")
 	var shown: Array = main._workshop._craftable()
 	_check(not shown.is_empty() and shown.all(func(it): return not Items.is_attachment(it) and not Items.is_medical(it) and not it.has("unique")), "the Craft view's grid shows parts, meds or uniques")
@@ -4557,6 +4557,112 @@ func _loot_roll_checks(main) -> void:
 	_bench_pick_checks(main)
 	_grenade_checks(main)
 	_grade_checks(main)
+	_build_checks(main)
+
+
+## 34: crafting at the bench. Scrap in hand from searches, scrapping and ditching; the Build column: a box of rounds,
+## a grade from the box below, a med from the one below, an improvised gun firing nails, a grenade from its socketable.
+func _build_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.workshop = maxi(sim.workshop, 1)
+	sim.scrap = 0
+	# scrap from a search comes home; a ditch is scrap too; scrapping an item at the bench is its value over twenty
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0
+	var guard := 0
+	while int(m.get("scrap", 0)) == 0 and guard < 600:
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+		guard += 1
+	var run_scrap: int = int(m.get("scrap", 0))
+	_check(run_scrap >= Data.SCRAP_HANDFUL[0], "searches brought no scrap in %d seconds" % guard)
+	var vest: Dictionary = sim._plain("Armour", "Riot suit")
+	m["found"].append(vest)
+	sim.ditch(vest["id"])
+	_check(int(m.get("scrap", 0)) == run_scrap + sim.scrap_of(vest) and sim.scrap_of(vest) == int(vest["value"] / Data.SCRAP_PER_POUND), "the ditch did not pay its scrap: %d" % int(m.get("scrap", 0)))
+	sim.extract_now()
+	_check(sim.scrap == run_scrap + sim.scrap_of(vest), "the run's scrap did not come home: %d" % sim.scrap)
+	var junk: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
+	sim.stash.append(junk)
+	var before_scrap: int = sim.scrap
+	_check(sim.scrap_item(junk["id"]) and not sim.stash.has(junk) and sim.scrap == before_scrap + sim.scrap_of(junk), "scrapping at the bench is off: %d" % sim.scrap)
+	# the Build column: each kind lists, with costs and what it wants
+	sim.scrap = 1000
+	sim.equipped["Primary"] = sim._plain("Primary", "Sawn-off")
+	sim.equipped["Secondary"] = null
+	for it in sim.stash.duplicate():
+		if Items.is_gun(it) and Items.ammo_type(it) == "rifle":
+			sim.stash.erase(it)
+	var boxes: Array = sim.build_options("box")
+	_check(boxes.any(func(o): return o["name"] == "Shells" and o["ok"]) and boxes.any(func(o): return o["name"] == "Rifle rounds" and not o["ok"] and o["why"] == "No gun for it"), "the boxes are off: %s" % str(boxes.map(func(o): return [o["name"], o["ok"]])))
+	_check(sim.build("box", "Shells") and sim.scrap == 1000 - Data.BUILD_BOX and sim.stash.any(func(it): return Items.is_ammo(it) and it["base"] == "Shells"), "a box of shells did not build")
+	# a grade wants a full box of the one below; it takes the rounds and leaves the rest
+	var slugs: Dictionary = sim.build_option("grade", "Slugs")
+	_check(slugs["from"] == "Shells" and slugs["from_n"] == 150 and slugs["ok"], "slugs' build is off: %s" % str(slugs))
+	var shells_before: int = sim._rounds_in_stash("Shells")
+	for it in sim.stash.duplicate():
+		if Items.is_ammo(it) and it["base"] == "Slugs":
+			sim.stash.erase(it)
+	_check(not sim.build_option("grade", "Incendiary shells")["ok"] and sim.build_option("grade", "Incendiary shells")["why"].contains("slugs"), "incendiary shells built without a box of slugs under them")
+	_check(sim.build("grade", "Slugs") and sim._rounds_in_stash("Shells") == shells_before - 150 and sim.stash.any(func(it): return Items.is_ammo(it) and it["base"] == "Slugs" and int(it["rounds"]) == 90), "slugs did not build from the shells")
+	_check(sim.build_option("grade", "Incendiary shells")["ok"], "a box of slugs did not open the incendiary shells")
+	# a med from the one below; a bandage from scrap alone
+	for it in sim.stash.duplicate():
+		if it["base"] == "Bandage" or it["base"] == "First aid kit":
+			sim.stash.erase(it)
+	_check(sim.build_option("med", "Bandage")["ok"] and not sim.build_option("med", "First aid kit")["ok"], "the med ladder's first step is off")
+	_check(sim.build("med", "Bandage") and sim.build_option("med", "First aid kit")["ok"] and sim.build("med", "First aid kit") and not sim.stash.any(func(it): return it["base"] == "Bandage"), "a first aid kit did not take the bandage")
+	# a gun: improvised, Common, plain, firing nails whatever it is, up to the bench's level
+	var guns: Array = sim.build_options("gun")
+	_check(not guns.is_empty() and guns.all(func(o): return o["tier"] <= sim.workshop), "the guns' list is off: %s" % str(guns.map(func(o): return [o["name"], o["tier"]])))
+	_check(sim.build("gun", "Pipe shotgun"), "the pipe shotgun did not build")
+	var built: Dictionary = sim.stash.back()
+	_check(built["base"] == "Pipe shotgun" and int(built["rarity"]) == 0 and built["affixes"].is_empty() and built.get("nails", false) and Items.ammo_type(built) == "improvised", "the built gun is not plain and firing nails: %s" % str(built))
+	# a grenade from its socketable; the nail bomb from scrap alone
+	for it in sim.stash.duplicate():
+		if it["base"] == "Lighter fluid":
+			sim.stash.erase(it)
+	_check(not sim.build_option("grenade", "Petrol bomb")["ok"] and sim.build_option("grenade", "Nail bomb")["ok"], "the grenade's socketable is not wanted")
+	var fluid: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	fluid["count"] = 2
+	sim.stash.append(fluid)
+	_check(sim.build("grenade", "Petrol bomb") and int(fluid["count"]) == 1 and sim.stash.any(func(it): return Items.is_grenade(it) and it["base"] == "Petrol bomb"), "the petrol bomb did not take one lighter fluid off the stack")
+	# short of scrap: refused; out on a run: refused, scrapping too
+	sim.scrap = 0
+	_check(not sim.build_option("box", "Shells")["ok"] and sim.build_option("box", "Shells")["why"] == "Short of scrap" and not sim.build("box", "Shells"), "a build went through with no scrap")
+	sim.scrap = 100
+	sim.deploy(0)
+	var out_opt: Dictionary = sim.build_option("box", "Shells")
+	_check(not out_opt["ok"] and out_opt["why"] == "The runner is out" and not sim.build("box", "Shells") and not sim.scrap_item(sim.stash[0]["id"]), "the bench worked with the runner out")
+	sim.extract_now()
+	_check(sim.last_report.has("scrap"), "the report does not carry the run's scrap")
+	# the bench's craft view says so and fits; the menus open and fit
+	sim.scrap = 50
+	main.show_room(main.WORKSHOP)
+	main._workshop._set_view("craft")
+	main._workshop.sel_id = -1
+	main._workshop._shown = ""
+	main.refresh()
+	_check(main._workshop._buttons[0].visible and main._workshop._buttons[0].text == "Build for scrap", "the craft view has no Build button: '%s'" % main._workshop._buttons[0].text)
+	_check_fit(main, "Workshop (craft, build)")
+	main._open_builds(0)
+	_check(main._menu.visible and main._menu._items.size() == 5, "the build menu did not open with its kinds")
+	_check_fit(main, "Workshop (build menu)")
+	main._open_build_kind("grade", 0)
+	_check(main._menu.visible and main._menu._items[0]["name"].contains("scrap"), "the grades' menu is off: %s" % str(main._menu._items[0]))
+	_check_fit(main, "Workshop (build grades)")
+	main._menu.close()
+	main._workshop._set_view("guns")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the bench's builds ok: scrap from a search, a ditch and a scrapping; a box, a grade from the box below, the med ladder, a gun firing nails, a grenade from its socketable, the refusals, the view and the menus")
 
 
 ## 33: ammo grades with an element. The gun's live stack of hollow point bleeds, incendiary burns, salted chills,
@@ -4598,6 +4704,7 @@ func _grade_checks(main) -> void:
 	_check(is_equal_approx(sim.grade_stat(rifle, "first_pct"), 25.0) and is_equal_approx(sim.grade_bonus(rifle), 15.0), "match rounds' first shot and damage read %.0f / %.0f" % [sim.grade_stat(rifle, "first_pct"), sim.grade_bonus(rifle)])
 	# the first shot through the fight: a tick fresh with match rounds lands more than one with plain rounds
 	var plain_r: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	sim.auto_equip = false                # "Equip if better" would swap the rifle out on deploy
 	var drops := []
 	for stack in [plain_r, sim._plain(Data.AMMO, "Match rounds")]:
 		sim.rig = [stack]

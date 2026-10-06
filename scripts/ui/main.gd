@@ -174,6 +174,7 @@ func _build() -> void:
 	_workshop = Workshop.new()
 	_workshop.acted.connect(refresh)
 	_workshop.bench.connect(_open_bench)
+	_workshop.build.connect(_open_builds)
 	_workshop.visible = false
 	add_child(_workshop)
 	_run = Run.new()
@@ -777,7 +778,7 @@ func _camp_cards() -> Array:
 	# the cash, and the stash
 	var cash_card := {
 		"title": "Cash", "headline": Fmt.money(sim.cash), "unit": "",
-		"lines": [["Notes", "%d" % sim.notes], ["Kit worth", Fmt.money(sim.loadout_value())], ["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]],
+		"lines": [["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())], ["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]],
 			["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
 		"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays",
 	}
@@ -820,7 +821,7 @@ func _camp_cards() -> Array:
 		out.append({
 			"title": "Last run", "headline": r["outcome"], "unit": "",
 			"lines": [["Where", t["name"]], ["Kills · gangs", "%d · %d" % [r["kills"], int(r.get("patrols", 0))]], ["Loot", "%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]],
-				["Cash", Fmt.money(r["cash"])], ["Took", Fmt.mss(r["time"])]],
+				["Cash · scrap", "%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]], ["Took", Fmt.mss(r["time"])]],
 			"tone": "bad" if r["outcome"] == "Dead" else "good",
 			"status": (("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else (("XP +%s · wounded" % Fmt.num(r["xp"])) if r.get("wounded", false) else "XP +%s" % Fmt.num(r["xp"])),
 		})
@@ -1014,6 +1015,49 @@ func _move_yard(trade: String) -> void:
 
 
 ## The bench's menu for an item: what can be done to it, in notes.
+## The Build column (34): a kind, then its builds four a page, each priced in scrap and saying what it wants.
+const BUILD_KINDS := [["box", "A box of rounds", "A standard box of any type you have a gun for"], ["grade", "A better grade", "Scrap and the box below it"],
+	["med", "A med", "Scrap and the one below it"], ["gun", "An improvised gun", "Common, plain, fires nails whatever it is"], ["grenade", "A grenade", "Scrap and the element's socketable"]]
+
+func _open_builds(page := 0) -> void:
+	var items := []
+	var kinds: Array = BUILD_KINDS.slice(page * 4, page * 4 + 4)
+	for k in kinds:
+		items.append({"name": k[1], "detail": k[2], "action": _open_build_kind.bind(k[0], 0)})
+	if BUILD_KINDS.size() > (page + 1) * 4:
+		items.append({"name": "More …", "detail": "", "action": _open_builds.bind(page + 1)})
+	else:
+		items.append({"name": "Back", "detail": "", "action": _menu.close})
+	_menu.open("Build for scrap", "%d scrap in hand · bench level %d" % [sim.scrap, sim.workshop], items.slice(0, 5), _menu.close)
+
+
+func _open_build_kind(kind: String, page: int) -> void:
+	var opts: Array = sim.build_options(kind)
+	var items := []
+	for o in opts.slice(page * 4, page * 4 + 4):
+		var wants: String = (" · wants %s" % (("a box of %s" % str(o["from"]).to_lower()) if kind == "grade" else str(o["from"]).to_lower())) if o["from"] != "" else ""
+		var detail: String = ("Tier %d%s" % [o["tier"], wants]) + ("" if o["ok"] else " · %s" % o["why"])
+		items.append({"name": "%s · %d scrap" % [o["name"], o["scrap"]], "detail": detail, "action": _build_one.bind(kind, o["name"]), "enabled": bool(o["ok"])})
+	if opts.size() > (page + 1) * 4:
+		items.append({"name": "More …", "detail": "", "action": _open_build_kind.bind(kind, page + 1)})
+	else:
+		items.append({"name": "Back", "detail": "", "action": _open_builds.bind(0)})
+	if items.size() > 5:
+		items = items.slice(0, 5)
+	var title: String = ""
+	for k in BUILD_KINDS:
+		if k[0] == kind:
+			title = k[1]
+	_menu.open(title, "%d scrap in hand" % sim.scrap, items, _open_builds.bind(0))
+
+
+func _build_one(kind: String, name: String) -> void:
+	if sim.build(kind, name):
+		_menu.close()
+		refresh()
+		_juice.toast("Built: %s" % name.to_lower(), "good")
+
+
 func _open_bench(id: int) -> void:
 	var it: Dictionary = sim.item_by_id(id)
 	if it.is_empty():

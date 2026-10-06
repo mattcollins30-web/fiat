@@ -10,6 +10,7 @@ extends Control
 
 signal acted
 signal bench(id)                   # the bench's menu for an item, from the Craft view
+signal build                       # the Build column's menu (34): rounds, meds, a gun, a grenade for scrap
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -323,7 +324,7 @@ func show_state(s) -> void:
 	_band.headline_under_title(true)
 	UI.fit(_bench_words, [("fits %s" % fits) if fits != "" else str(level["words"]).to_lower(), str(level["words"]).to_lower(), "fits %d mounts" % level["mounts"].size()])
 	if sim.workshop >= Data.WORKSHOP.size() - 1:
-		_band.set_right(["The top bench"])
+		_band.set_right(["The top bench", "%d scrap in hand" % sim.scrap])
 		_upgrade.visible = false
 	else:
 		var next: Dictionary = Data.WORKSHOP[sim.workshop + 1]
@@ -333,7 +334,7 @@ func show_state(s) -> void:
 				added.append(m + "s")
 		var adds: String = ("Next: %s" % _and(added)) if not added.is_empty() else ("Next: %s" % str(next["words"]).to_lower())
 		var adds_short: String = ("Next: %d more mount%s" % [added.size(), "" if added.size() == 1 else "s"]) if not added.is_empty() else "Next level"
-		_band.set_right(["Level %d, %s" % [sim.workshop + 1, Fmt.money(sim.workshop_cost())], adds if UI.text_width(_band.right[1], adds) <= _band.RIGHT_W else adds_short])
+		_band.set_right(["Level %d, %s" % [sim.workshop + 1, Fmt.money(sim.workshop_cost())], adds if UI.text_width(_band.right[1], adds) <= _band.RIGHT_W else adds_short, "%d scrap in hand" % sim.scrap])
 		_upgrade.visible = true
 		var long_up := "Upgrade for %s" % Fmt.money(sim.workshop_cost())
 		_upgrade.text = long_up if UI.text_width(_upgrade, long_up) + 32 <= UPGRADE_W else "Upgrade %s" % Fmt.money(sim.workshop_cost())
@@ -588,14 +589,24 @@ func _show_craft(it: Dictionary) -> void:
 	for l in _craft_lines:
 		l.text = ""
 	if it.is_empty():
-		_craft_title.text = "Pick a piece"
+		_craft_title.text = "Pick a piece, or build"
 		_craft_lines[0].text = "Stash gear only; not parts, meds or uniques"
 		_craft_lines[1].text = "Worn gear goes to the bench from the Lock-up"
+		_craft_lines[2].text = "Or build for scrap: rounds, meds, guns, grenades"
 		_left_title.text = "The bench"
-		_right_title.text = ""
-		_hint.size.x = GRID_W - 2 * PAD
-		_hint.text = "Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes]
-		_hint.add_theme_color_override("font_color", Pal.TEXT_3)
+		_right_title.text = "In hand"
+		_right_lines[0].text = "%d scrap · %s and %d notes" % [sim.scrap, Fmt.money(sim.cash), sim.notes]
+		UI.fit(_right_lines[1], ["Scrap: searched up, scrapped here, ditched", "Scrap: found, scrapped, ditched"])
+		_button(0, "Build for scrap", func(): build.emit(), sim.workshop >= 1 and not sim.on_mission())
+		var bx := GRID_W - PAD - _buttons[0].size.x
+		_buttons[0].position.x = bx
+		_hint.size.x = bx - PAD - 12
+		if sim.last_craft.get("kind", "") == "build":
+			UI.fit(_hint, [str(sim.last_craft["words"]), "Built"])
+			_hint.add_theme_color_override("font_color", Pal.GOOD)
+		else:
+			UI.fit(_hint, ["Bench level %d · %d scrap in hand" % [sim.workshop, sim.scrap], "%d scrap in hand" % sim.scrap])
+			_hint.add_theme_color_override("font_color", Pal.TEXT_3)
 		return
 	UI.fit(_craft_title, [Items.full_name(it), it["base"]])
 	# the bench's last job on this piece stays on the hint until the next
@@ -621,8 +632,9 @@ func _show_craft(it: Dictionary) -> void:
 	_left_lines[0].text = "%s · %s" % [Items.rarity_name(it), ("%d affix%s" % [it["affixes"].size(), "" if it["affixes"].size() == 1 else "es"])]
 	_left_lines[1].text = "Prices left; Bench has the rest"
 	_right_title.text = "In hand"
-	_right_lines[0].text = "%s and %d notes" % [Fmt.money(sim.cash), sim.notes]
+	_right_lines[0].text = "%s and %d notes · %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap]
 	_button(0, "Bench", func(): bench.emit(it["id"]), sim.workshop >= 1 and not sim.on_mission())
+	_button(1, "Scrap it (+%d)" % sim.scrap_of(it), sim.scrap_item.bind(it["id"]), sim.workshop >= 1 and not sim.on_mission())
 	var x := GRID_W - PAD
 	for i in range(_buttons.size() - 1, -1, -1):
 		if _buttons[i].visible:
@@ -632,7 +644,7 @@ func _show_craft(it: Dictionary) -> void:
 	# the hint stops at the buttons, and shortens if it must
 	_hint.size.x = x - PAD
 	if sim.last_craft.get("id", -1) == it["id"]:
-		UI.fit(_hint, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT[sim.last_craft["kind"]]["name"]])
+		UI.fit(_hint, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT.get(sim.last_craft["kind"], {}).get("name", "Built")])
 	else:
 		UI.fit(_hint, ["Bench level %d · %s and %d notes in hand" % [sim.workshop, Fmt.money(sim.cash), sim.notes], "%s and %d notes in hand" % [Fmt.money(sim.cash), sim.notes], "Bench level %d" % sim.workshop])
 

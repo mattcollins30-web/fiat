@@ -1667,6 +1667,27 @@ shot heavier through the fight, the odds with no gun in hand. Reviewer: `grade_s
 clears the conversion's memo, so the share goes with the stack; the secondary's grade is damage only, as
 the primary's base conversion already was.
 
+**34 · Crafting at the bench.** One material, scrap, a count in hand (`sim.scrap`; a count rather than a
+stackable, so it takes no stash cells and the gates' "scrap in hand" is one figure): a handful on one
+search in five (`SCRAP_SEARCH`, `SCRAP_HANDFUL` 3–6, carried on the mission and home on the extract), an
+item's value over `SCRAP_PER_POUND` 20 for scrapping it at the bench (`scrap_item`, the craft view's "Scrap
+it (+N)") or ditching it on a run (the log says what the ditch paid). The Build column, `build_options(kind)`
+and `build(kind, name)`: a standard box of any type you have a gun for (`BUILD_BOX` 8); a grade from scrap
+plus a full box of the one below it (`"from"` on the graded bases, `BUILD_GRADE` × tier; the rounds come off
+the stash's stacks, fullest first), the tier-3 grades from the tier-2 ones so the fence keeps the top; a
+med from scrap plus the one below (`BUILD_MED` × tier; painkillers and a bandage from scrap alone); an
+improvised gun up to the bench's level (`BUILD_GUN` × tier), Common, plain, `"nails": true` so it fires nails
+whatever it is (`Items.ammo_type` reads it); a grenade from scrap plus its element's socketable, one off the
+stack (`BUILD_GRENADE` × tier; the nail bomb scrap alone). Each option says what it wants and why not ("No
+gun for it", "Wants a box of shells", "Short of scrap"). The craft view with nothing picked offers "Build
+for scrap", which opens a menu of the five kinds and then the builds four a page with their prices; the
+bench band and the Cash card show the scrap in hand. Costs untuned. Smoke: scrap from a search, a ditch and
+a scrapping; a box; slugs from a box of shells (and not the incendiaries until slugs are there); the med
+ladder; a plain gun firing nails; a petrol bomb taking one lighter fluid; the refusals, the runner out
+too; the view and the menus fitted. Reviewer: scrap moves with the yard the way notes do; the run report
+and the Last run card carry the run's scrap; a build with the stash full lands over capacity like the deeds
+do (left as is).
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

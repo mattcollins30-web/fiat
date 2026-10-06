@@ -114,6 +114,14 @@ static func exclusive_to(base: String) -> String:
 
 
 ## The base's table row.
+## A base by its slot and name; {} when there is none.
+static func base_named(slot: String, name: String) -> Dictionary:
+	for b in (Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]):
+		if b["name"] == name:
+			return b
+	return {}
+
+
 static func base_of(it: Dictionary) -> Dictionary:
 	for b in (Data.ATTACHMENTS if it["slot"] == Data.ATTACHMENT else Data.BASES[it["slot"]]):
 		if b["name"] == it["base"]:
@@ -532,6 +540,8 @@ static func rig_item(it: Dictionary) -> bool:
 
 ## The ammo type a gun fires, "" for anything that isn't a gun.
 static func ammo_type(gun: Dictionary) -> String:
+	if gun.get("nails", false):
+		return "improvised"               # built at the bench (34): fires nails whatever it is
 	var b := base_of(gun)
 	return str(b.get("ammo", b.get("type", "")))
 
