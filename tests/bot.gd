@@ -42,10 +42,26 @@ func step(sim) -> int:
 		sim.advance(1.0)
 		if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
 			sim.use_med(sim.first_med()["id"])
-		if sim.on_mission() and (sim.hp < sim.max_hp() * 0.25 or (sim.searching() and (sim.pack_used(sim.mission) >= sim.capacity() or sim.mission["patrols"] >= 2))):
+		if sim.on_mission() and should_leave(sim):
 			sim.extract_now()
 		guard += 1
+	if sim.on_mission():
+		sim.extract_now()                 # never back with a run still on: the yard would stand still
 	return t
+
+
+## When the bot leaves a run: under a quarter HP; or with the site cleared,
+## the pack full, a second gang in, or the site picked over (its finds down to
+## the floor - a Never there runner, whom no gang moves on, leaves on this).
+func should_leave(sim) -> bool:
+	if not sim.on_mission():
+		return false
+	if sim.hp < sim.max_hp() * 0.25:
+		return true
+	if not sim.searching():
+		return false
+	var m: Dictionary = sim.mission
+	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.thinning(m, m["t"]) <= Data.THIN_FLOOR
 
 
 ## Between missions: fit the best of every slot and mount, spend points, buy

@@ -1782,6 +1782,16 @@ for most builds - the bank at 2.8 to 7.4 h - so that row stays with the pass. Sm
 strong runner past the campaign keeps to its deepest site and digs it; a weak one steps back and picks by
 the odds. `tools\smoke.bat` runs the smoke on the Legion and prints the failures and the verdict.
 
+**The second read; the bot leaves a picked-over site (6 Oct).** With the dry gun fixed the second pass
+read eight red: the keystone row green (every build by 1.7 h), the bank 1.4 to 5.0 h, the 0% odds gone
+from the tiers a build had cleared. One build stood still: the plain Drifter took Never there at 0.9 h
+(no gang ever comes), its pack would not fill once the site was picked over, so its run never ended; the
+bot's 3000-tick guard handed back with the run still on, and from 1:50 to 8:00 it waited at 95/165 HP
+with £315 - the treat refused on a run, the rest not happening on one. The bot's leaving is one rule now
+(`should_leave`: under a quarter, or with the site cleared the pack full, a second gang in, or the site
+picked over - `thinning` at the floor), and it never hands back with a run on. Smoke: `_leave_checks` -
+a Never there runner stays on a fresh cleared site and leaves a picked-over one.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

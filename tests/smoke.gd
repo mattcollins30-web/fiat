@@ -5786,3 +5786,37 @@ func _dig_checks(main) -> void:
 	sim.boss_armed.clear()
 	sim.load_dict(saved)
 	print("the dig rule ok")
+	_leave_checks(main)
+
+
+## The bot leaves a picked-over site: a runner no gang moves on (Never
+## there) with a pack that won't fill would otherwise stand on the site for
+## good - the plain Drifter did, for six hours of the first read.
+func _leave_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.candidates = []
+	sim.auto_equip = false
+	sim.tree = []
+	for t in Data.TREES:
+		for k in range(t["nodes"].size()):
+			if t["nodes"][k].get("effect", "") == "never_there":
+				sim.tree.append("%s/%d" % [t["name"], k])
+	_check(sim.has_node("never_there"), "the leave check could not train Never there: %s" % sim.tree)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission(), "the leave check did not deploy")
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["event_at"] = -1.0
+	var bot = Bot.new()
+	_check(not bot.should_leave(sim), "the bot leaves a fresh cleared site")
+	m["searches"] = int(m.get("thin_after", 0)) + sim.thin_after(m["t"]) + 20     # picked over: the finds at the floor
+	_check(sim.thinning(m, m["t"]) <= Data.THIN_FLOOR, "the leave check's site is not picked over: %.2f" % sim.thinning(m, m["t"]))
+	_check(bot.should_leave(sim), "the bot stays on a picked-over site")
+	sim.extract_now()
+	sim.load_dict(saved)
+	print("the bot leaves a picked-over site ok")
