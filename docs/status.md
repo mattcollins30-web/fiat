@@ -1605,6 +1605,22 @@ the share is 1, one past it a fifth off, far past it the floor; the two bar read
 searches bring under four fifths of a fresh site's; +100% quantity near doubles the searches, depth adds
 two each.
 
+**30 · Wounds.** `sim.wound` is "" or one of pace, armour, hp. The hit that takes the runner from a quarter
+of max HP or more to under it (`WOUND_AT` 0.25, in `_fight` after the second's damage lands, never in a dry
+run) rolls one of the three and cuts it a tenth (`WOUND_PCT`) through `wound_mult` in `_pace_raw`,
+`armour()` and `_max_hp_raw`; a second wound replaces the first. The clinic treats it: `treat_cost` adds
+`WOUND_CASH` 20 a level (the clinic's discount and inflation on the whole), `needs_treating` is HP short or
+a wound, Treat clears both; the button reads "See to the wound (£)" at full HP, the band's unit "wounded:
+pace −10%" in the bad tone. The run's runner head reads "THE RUNNER · WOUNDED: PACE −10%", the yard's
+Runner card carries a bad chip first in its row (the trait's words are long and a full row drops from
+the right), the Last run card's status "XP +93 · wounded", and the report carries `wounded`. Saved as
+`wound`; cleared in `_kia`; auto-run stops on a wound (the clinic stays a decision). The bot sees to a
+wound on return when it has three times the price. Reviewer: the odds' cache key carries the wound (an
+armour wound on small armour could leave it stale), a stray save value reads as none, Not today's save does
+not wound (no double punishment on the save). Smoke:
+through the fight a hair over the quarter; one stat cut and the other two whole; a second still one; the
+run, yard and clinic words fit; the price by level; Treat clears it; saved, loaded, gone with the dead.
+
 ## Chips everywhere: the word and the affixes (2026-10-06)
 
 Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips

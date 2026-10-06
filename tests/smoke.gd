@@ -4541,6 +4541,100 @@ func _loot_roll_checks(main) -> void:
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_thinning_checks(main)
+	_wound_checks(main)
+
+
+## 30: wounds. A hit that takes the runner under a quarter leaves one stat cut a tenth until the clinic treats
+## it for cash by level; one at a time; the yard, the run and the clinic say so; it goes with the runner.
+func _wound_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.wound = ""
+	# the hit under a quarter wounds; one already under it does not
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var pace0: float = sim.pace()          # on the mission: armour counts the pack's free cells
+	var arm0: float = sim.armour()
+	var hp0: float = sim.max_hp()
+	m["remaining"] = 6
+	m["target_hp"] = 1e9
+	sim.hp = sim.max_hp() * Data.WOUND_AT - 0.01
+	sim.advance(1.0)
+	_check(sim.wound == "", "a hit already under the quarter wounded")
+	_check(sim.on_mission(), "the runner died under the first wound check")
+	if not sim.on_mission():
+		sim.load_dict(saved)
+		return
+	# through the fight itself: a hair over the quarter, their fire takes the runner under it; auto-run stops on it
+	sim.auto_tier = 0
+	sim.hp = sim.max_hp() * Data.WOUND_AT + 0.01
+	var hp_in: float = sim.hp
+	sim.advance(1.0)
+	if sim.hp < hp_in and sim.hp > 0.0:
+		_check(sim.wound in Data.WOUND_STATS and m.get("wounded", false), "the hit under a quarter did not wound: '%s'" % sim.wound)
+	else:
+		sim._wound(m)                     # nothing landed at this tier (or it killed them): the wound by hand, the rest still checked
+	_check(sim.on_mission(), "the runner died under the wound check")
+	if not sim.on_mission():
+		sim.load_dict(saved)
+		return
+	_check(sim.auto_tier < 0, "auto-run carried on through the wound")
+	var cut: String = sim.wound
+	var now: Dictionary = {"pace": sim.pace(), "armour": sim.armour(), "hp": sim.max_hp()}
+	var was: Dictionary = {"pace": pace0, "armour": arm0, "hp": hp0}
+	for st in Data.WOUND_STATS:
+		if st == cut:
+			_check(is_equal_approx(now[st], was[st] * (1.0 - Data.WOUND_PCT / 100.0)), "the wound did not cut %s: %.2f from %.2f" % [st, now[st], was[st]])
+		else:
+			_check(is_equal_approx(now[st], was[st]), "the wound cut %s too: %.2f from %.2f" % [st, now[st], was[st]])
+	# a second replaces the first: still one
+	sim._wound(m)
+	_check(sim.wound in Data.WOUND_STATS, "the second wound is off: '%s'" % sim.wound)
+	# the run says so and fits
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._runner["head"].text.begins_with("THE RUNNER · WOUNDED:"), "the run's runner head does not say wounded: '%s'" % main._run._runner["head"].text)
+	_check_fit(main, "Run (wounded)")
+	sim.extract_now()
+	_check(sim.last_report.get("wounded", false), "the report does not carry the wound")
+	# the yard's Runner card and the last run say so
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	var runner_card = main._cards[0]
+	_check(runner_card._title.text == "Runner" and runner_card._chips[0].visible and runner_card._chip_labels[0].text.begins_with("Wounded:"), "the Runner card does not carry the wound chip: '%s'" % runner_card._chip_labels[0].text)
+	_check_fit(main, "Yard (wounded)")
+	# the clinic: the band says so, Treat costs the wound's price by level at full HP, and clears it
+	sim.hp = sim.max_hp()
+	sim.cash += 5000.0
+	var lv: int = sim.level()
+	var expect: int = int(ceil(Data.WOUND_CASH * lv * sim.inflation() * maxf(0.2, 1.0 - sim.tree_sum("treat_pct") / 100.0)))
+	_check(sim.needs_treating() and sim.treat_cost() == expect, "the wound's price reads %d, not %d" % [sim.treat_cost(), expect])
+	main.show_room(main.MEDIC)
+	main._clinic._shown = ""
+	main.refresh()
+	_check(main._clinic._band.unit.text.contains("wounded"), "the clinic's band does not say wounded: '%s'" % main._clinic._band.unit.text)
+	_check(main._clinic._side_buttons[0].text.begins_with("See to the wound") and not main._clinic._side_buttons[0].disabled, "the clinic's button is off: '%s'" % main._clinic._side_buttons[0].text)
+	_check_fit(main, "Clinic (wounded)")
+	var cash0: float = sim.cash
+	main._clinic._side_press(0)
+	_check(sim.wound == "" and is_equal_approx(cash0 - sim.cash, float(expect)) and not sim.needs_treating(), "Treat did not see to the wound: '%s', %.0f paid" % [sim.wound, cash0 - sim.cash])
+	main.refresh()
+	_check(main._clinic._side_buttons[0].text == "Fit for duty", "the clinic's button after treatment: '%s'" % main._clinic._side_buttons[0].text)
+	# saved and loaded; gone with a dead runner
+	sim.wound = "pace"
+	var d: Dictionary = sim.to_dict()
+	_check(str(d.get("wound", "")) == "pace", "the wound is not saved")
+	sim.load_dict(d)
+	_check(sim.wound == "pace", "the wound is not loaded")
+	sim.deploy(0)
+	sim.hp = 0.0
+	sim._kia()
+	_check(sim.wound == "", "the wound went on to the next runner")
+	sim.load_dict(saved)
+	main.refresh()
+	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the yard, the clinic's price and cure, the save, the death")
 
 
 ## 29: picked over inside a run. After thin_after searches a site's finds thin a fifth a search to the floor;

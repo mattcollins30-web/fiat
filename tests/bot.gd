@@ -26,6 +26,8 @@ func step(sim) -> int:
 		if not (sim.cash > sim.treat_cost() * 3.0 and sim.treat()):
 			sim.advance(60.0)
 			return -1
+	elif sim.wound != "" and sim.cash > sim.treat_cost() * 3.0:
+		sim.treat()                       # the wound seen to on return, when the cash is there (30)
 	var t := pick_tier(sim)
 	sim.deploy(t)
 	var guard := 0

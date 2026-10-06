@@ -701,6 +701,8 @@ func _camp_cards() -> Array:
 		who.append([sim.cls, ""])
 	if not td.is_empty():
 		who.append(["%s: %s" % [td["name"], td["words"]], "good"])
+	if sim.wound != "":
+		who.push_front([sim.wound_words(), "bad"])                # the wound (30) first: the trait's words are long and a full row drops from the right
 	out.append({
 		"title": "Runner", "headline": "Level %d" % lv, "unit": "no past yet" if sim.cls == "" else "",
 		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
@@ -820,7 +822,7 @@ func _camp_cards() -> Array:
 			"lines": [["Where", t["name"]], ["Kills · gangs", "%d · %d" % [r["kills"], int(r.get("patrols", 0))]], ["Loot", "%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]],
 				["Cash", Fmt.money(r["cash"])], ["Took", Fmt.mss(r["time"])]],
 			"tone": "bad" if r["outcome"] == "Dead" else "good",
-			"status": ("Lost %s of kit" % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else ("XP +%s" % Fmt.num(r["xp"])),
+			"status": ("Lost %s of kit" % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else (("XP +%s · wounded" % Fmt.num(r["xp"])) if r.get("wounded", false) else "XP +%s" % Fmt.num(r["xp"])),
 		})
 	else:
 		out.append({"title": "Last run", "headline": "None yet", "unit": "", "lines": [], "note": "The first run writes here", "status": ""})

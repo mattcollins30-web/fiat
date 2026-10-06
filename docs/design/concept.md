@@ -264,7 +264,8 @@ pass. In build order; the economy items last so the reader runs once over all of
 30. **Wounds.** A hit that takes the runner under a quarter HP leaves a wound: one worn stat cut (pace,
     armour or max HP, −10%) until treated at the clinic for a price by level; the clinic's Treat gets a
     second reason, the band and the Runner card show it ("Wounded: pace −10%"), and dying stops being
-    the only cost of risk. One wound at a time; a second replaces it. The bot treats on return.
+    the only cost of risk. One wound at a time; a second replaces it. The bot treats on return. *Built
+    (6 Oct):* −10%, £20 a level (the clinic's discount applies), the wound chip first on the Runner card.
 31. **The works' top levels.** One level above what each has, each a rule rather than a figure: the
     generator powers a second rig row (the rig's pouches double, meds and grenades alike); the lookout
     names the first gang before you set off (the Runs card's Them tile reads the real count and HP, not
@@ -313,6 +314,13 @@ never change with it and every affix's tier comes from the item level alone, so 
 Elite from shallow. Matt: "it should probably be both" - a floor on affix tiers by rarity (an Elite rolls no
 T1s) and a base multiplier per rarity. Both are numbers, so they go in with the pass, and a gate for them
 ("an Elite outguns a Rare of the same level") joins the table once the shape is agreed.
+
+**Also for the pass (Matt, 6 Oct):** the starting kit must be the worst kit in the game. Today the runner
+starts with a Nail gun (28 × 0.6 = 16.8 damage/s, two mounts) and a Stab vest (15 armour), and the pool
+holds a Bolt gun (38 × 0.4 = 15.2) and a Padded jacket (10 armour, +2 pace) under them, so those two bases
+are never an upgrade for anyone. Recommendation: a starting pair of its own below the pool (a "Hand-me-down
+nail gun" and a "Work jacket", say, with no mounts and nothing rolled), or start on the Bolt gun and the
+Padded jacket; the gate: every base in the pool beats the starting kit of its slot on its own figures.
 
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;

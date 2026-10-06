@@ -24,6 +24,7 @@ var generator_level := 0           # the yard's: hours away that count
 var lookout_level := 0             # the first lot later; better odds
 var kennel_level := 0              # a dog
 var hardcore := false              # a death ends the yard, stash and all
+var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the clinic treats it; "" for none
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
 var cls := ""                      # the operator's class, by name; "" is none yet
@@ -145,7 +146,7 @@ func _max_hp_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			m += Items.affix_total(equipped[s], "hp")
-	return m * cm("hp") * trait_mult("hp")
+	return m * cm("hp") * trait_mult("hp") * wound_mult("hp")
 
 
 ## Damage a second: the primary, a third of the secondary, the level, the affixes.
@@ -186,7 +187,30 @@ func armour() -> float:
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
 		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission)) + float(mission.get("bonus_armour", 0.0))
-	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (0.8 if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0)
+	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (0.8 if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
+
+
+## The wound's cut on a stat: a tenth off the one it names, nothing off the rest.
+func wound_mult(stat: String) -> float:
+	return 1.0 - Data.WOUND_PCT / 100.0 if wound == stat else 1.0
+
+
+## The wound in words: "Wounded: pace −10%", or "" unhurt.
+func wound_words() -> String:
+	if wound == "":
+		return ""
+	return "Wounded: %s −%d%%" % [("max HP" if wound == "hp" else wound), Data.WOUND_PCT]
+
+
+## A hit took the runner under a quarter: a wound, one stat cut until treated. A second replaces the first.
+func _wound(m: Dictionary) -> void:
+	var was := wound
+	wound = Data.WOUND_STATS[rng.randi_range(0, Data.WOUND_STATS.size() - 1)]
+	m["wounded"] = true
+	_dry_memo.clear()
+	if wound == "hp":
+		hp = minf(hp, max_hp())
+	log_event(("Wounded again: %s" if was != "" else "Wounded: %s") % wound_words().trim_prefix("Wounded: "))
 
 
 ## The share of incoming damage the armour stops.
@@ -1292,7 +1316,7 @@ func _pace_raw() -> float:
 		if equipped[s] != null:
 			worn += Items.base_pace(equipped[s])
 	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
-		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0)
+		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0) * wound_mult("pace")
 
 
 # ------------------------------------------------------------------ ammo
@@ -2109,7 +2133,7 @@ var odds_budget := 0
 
 func survival(i: int) -> float:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second
-	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night()]
+	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound]
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
 	var c: Array
 	if _surv_cache.has(i) and _surv_cache[i][0] == key:
@@ -2560,8 +2584,14 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if has_node("cap_held"):
 		incoming = minf(incoming, max_hp() * 0.1)       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
 	m["last_incoming"] = incoming
+	var above: bool = hp >= max_hp() * Data.WOUND_AT
 	hp -= incoming * dt
 	m["taken"] = float(m.get("taken", 0.0)) + incoming * dt     # for the run screen's red numbers
+	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
+		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
+		if auto_tier >= 0:
+			auto_tier = -1                   # auto-run stops on a wound: the clinic is a decision, not a silent tax
+			log_event("Auto-run stopped: wounded")
 	if hp <= 0.0:
 		if has_node("not_today") and not m.get("saved", false):
 			m["saved"] = true
@@ -2956,7 +2986,7 @@ func _extract() -> void:
 	last_report = {
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
-		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"],
+		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)),
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
 			_cash_words(m["cash"])])
@@ -3009,6 +3039,7 @@ func _kia() -> void:
 	rig = []
 	operators_lost += 1
 	xp = 0.0
+	wound = ""                           # theirs, gone with them
 	hp = Data.BASE_HP
 	mission = null
 	auto_tier = -1
@@ -3491,14 +3522,24 @@ func upgrade_kennel() -> bool:
 	return true
 
 
+## The HP back, and the wound seen to: WOUND_CASH a level, the clinic's discount on both.
 func treat_cost() -> int:
-	return int(ceil((max_hp() - hp) * inflation() * Data.TREAT_CASH_PER_HP * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)))
+	var wound_cash: float = Data.WOUND_CASH * level() if wound != "" else 0.0
+	return int(ceil(((max_hp() - hp) * Data.TREAT_CASH_PER_HP + wound_cash) * inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)))
+
+
+func needs_treating() -> bool:
+	return hp < max_hp() or wound != ""
 
 
 func treat() -> bool:
-	if mission != null or hp >= max_hp() or cash < treat_cost():
+	if mission != null or not needs_treating() or cash < treat_cost():
 		return false
 	cash -= treat_cost()
+	if wound != "":
+		log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
+		wound = ""
+		_dry_memo.clear()
 	hp = max_hp()
 	return true
 
@@ -3532,7 +3573,7 @@ func _state() -> Dictionary:
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "training_points": training_points,
 		"intel": intel, "depth": depth, "best_depth": best_depth, "workshop": workshop, "class": cls, "stash_level": stash_level,
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
-		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic,
+		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
@@ -3581,6 +3622,7 @@ func load_dict(d: Dictionary) -> void:
 	market_level = int(d.get("market_level", 0))
 	comms_level = int(d.get("comms_level", 0))
 	hardcore = bool(d.get("hardcore", false))
+	wound = str(d.get("wound", "")) if str(d.get("wound", "")) in Data.WOUND_STATS else ""
 	generator_level = int(d.get("generator_level", 0))
 	lookout_level = int(d.get("lookout_level", 0))
 	kennel_level = int(d.get("kennel_level", 0))

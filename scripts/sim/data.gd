@@ -1217,6 +1217,13 @@ const DMG_PER_LEVEL := 0.02
 const UNARMED_DPS := 3.0          # fists; a mission with no gun is a bad idea
 const REST_HP_PER_S := 0.5        # the Medic Tent, for free, slowly
 const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
+## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
+## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
+## WOUND_CASH a level. One at a time; a second replaces it.
+const WOUND_AT := 0.25
+const WOUND_PCT := 10
+const WOUND_STATS := ["pace", "armour", "hp"]
+const WOUND_CASH := 20
 const STASH_CAP := 40
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling

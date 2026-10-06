@@ -237,7 +237,7 @@ func show_state(s) -> void:
 		_show_treatment()                 # HP moves while resting: every refresh
 		for t in _side_tiles_c:
 			if t["panel"].visible and t["key"].text == "Treatment":
-				var full_now: bool = sim.hp >= sim.max_hp() - 0.5
+				var full_now: bool = sim.hp >= sim.max_hp() - 0.5 and sim.wound == ""
 				UI.set_tile(t, "Treatment", ["not needed" if full_now else Fmt.money(sim.treat_cost())], Pal.TEXT_2 if full_now else Pal.TEXT)
 	var sig := _signature()
 	if sig == _shown:
@@ -327,7 +327,7 @@ func _stash_meds() -> int:
 
 func _signature() -> String:
 	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.market_level), str(sim.medic_level),
-		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes),
+		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), sim.wound,
 		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
 		parts.append("m" + str(it["id"]))
@@ -343,8 +343,9 @@ func _signature() -> String:
 ## The clinic's treatment block, at the top of the side panel.
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
+	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), Data.WOUND_PCT]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
 	_band.set_words("The clinic · level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "The medic", "%d" % sim.hp_shown(),
-		["of %d HP · %s" % [sim.max_hp_shown(), "fit for duty" if full else ("out on a run" if sim.on_mission() else "resting")], "of %d HP" % sim.max_hp_shown()], Pal.GOOD if full else Pal.ACCENT)
+		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
 	_band.headline_under_title(true)
 	_side_title.text = "TREATMENT"
 	_side_title.visible = true
@@ -398,7 +399,7 @@ func _show_side() -> void:
 	_side_track.visible = false
 	if kind == "clinic":
 		_show_treatment()
-		var full: bool = sim.hp >= sim.max_hp() - 0.5
+		var full: bool = sim.hp >= sim.max_hp() - 0.5 and sim.wound == ""
 		var y: float = TOP + UI.HEAD_H + 2 + 24 + 6
 		for t in _side_tiles_c:
 			t["panel"].visible = true
@@ -409,7 +410,7 @@ func _show_side() -> void:
 		else:
 			UI.set_tile(_side_tiles_c[2], "Clinic", ["fully kitted", "level %d" % sim.medic_level], Pal.GOOD)
 		y += UI.TILE_H + 10
-		_side_button(0, y, "Fit for duty" if full else ("The runner is out" if sim.on_mission() else "Treat (%s)" % Fmt.money(sim.treat_cost())),
+		_side_button(0, y, "Fit for duty" if full else ("The runner is out" if sim.on_mission() else (("See to the wound (%s)" if sim.hp >= sim.max_hp() - 0.5 else "Treat (%s)") % Fmt.money(sim.treat_cost()))),
 			sim.treat, not full and not sim.on_mission() and sim.cash >= sim.treat_cost(), "", not full)
 		y += 48 + 8
 		if sim.medic_cost() > 0:
