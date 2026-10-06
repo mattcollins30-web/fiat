@@ -1809,6 +1809,18 @@ anyway: **a game gap, raised, not fixed** - the bench lets a set piece be re-rol
 excludes uniques, ammo and paper, not sets), and `reroll_one` on a set stat outside `AFFIXES` would
 error; for Matt to call.
 
+**The third read, and the scrap reader (6 Oct).** The third pass (the dig and leave rules in, the bench
+rule not yet): 8 red, the keystone and quantity rows green, the bank 1.5 to 6.0 h, cash £47k–£492k,
+scrap 4.4 to 6.3 crafts' worth, the odds reds now on tiers above the builds' best, which is the reader
+being honest. Before the scrap number moves, its reader: the bot never built anything with scrap, so
+the row read income alone. `_build_one`: one build a run at most, the best grade of rounds for the
+primary's type the stash can make, else the best med, while the scrap stays at twice the price. Smoke:
+`_build_one_checks`. Reviewer: the check's scrap arithmetic. The next read carries both bench rules;
+cash and scrap move on what it says. A flake seen once this run, to pin: "match rounds' first shot did
+not land heavier: 25.9 against 25.7" with the stats read right, so the half-second fight fired the same
+either way - the check wants the shot itself, not a half-second of fight. Matt runs the smoke on the
+Legion from here (`tools\smoke.bat`); a commit waits on his verdict.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

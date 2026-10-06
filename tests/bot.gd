@@ -172,6 +172,30 @@ func _endgame(sim) -> void:
 		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "add"):
 			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
 	_bench_worn(sim)
+	_build_one(sim)
+
+
+## The bench's scrap as a player spends it: one build a run at most, while
+## the scrap stays at twice the price - the best grade of rounds for the
+## primary's type the stash can make, else the best med. The reader for the
+## scrap row: what piles up past a build a run is the prices' to answer for.
+func _build_one(sim) -> void:
+	var gun = sim.equipped["Primary"]
+	var type: String = Items.ammo_type(gun) if gun != null else ""
+	var picks: Array = []
+	for o in sim.build_options("grade"):
+		if o["ok"] and Items.base_named(Data.AMMO, o["name"]).get("type", "") == type:
+			picks.append(o)
+	if picks.is_empty():
+		for o in sim.build_options("med"):
+			if o["ok"] and o["from"] != "":
+				picks.append(o)
+	if picks.is_empty():
+		return
+	picks.sort_custom(func(a, b): return int(a["tier"]) > int(b["tier"]))
+	var o: Dictionary = picks[0]
+	if sim.scrap >= int(o["scrap"]) * 2 and sim.build(o["kind"], o["name"]):
+		bought.append([sim.elapsed, "built %s for %d scrap" % [o["name"].to_lower(), int(o["scrap"])]])
 
 
 ## The bench as a player uses it late: the worn kit's weakest affix re-rolled,

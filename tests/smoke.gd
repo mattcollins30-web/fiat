@@ -5852,3 +5852,28 @@ func _bench_worn_checks(main) -> void:
 	_check(bot.bought.is_empty(), "the bot's bench rule re-rolled a piece with every affix at the top")
 	sim.load_dict(saved)
 	print("the bot's bench rule ok")
+	_build_one_checks(main)
+
+
+## The bot's build rule: the best grade of its primary's rounds the stash can
+## make, one a run, while the scrap stays at twice the price.
+func _build_one_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.workshop = maxi(sim.workshop, 1)
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	sim.stash = []
+	sim.stash_put(sim._plain(Data.AMMO, "Nails"))
+	var bot = Bot.new()
+	var want: Dictionary = sim.build_option("grade", "Hardened bolts")
+	_check(not want.is_empty(), "the build check found no Hardened bolts to build")
+	sim.scrap = int(want["scrap"]) * 2 - 1
+	bot._build_one(sim)
+	_check(bot.bought.is_empty(), "the bot built with the scrap under twice the price")
+	sim.scrap = int(want["scrap"]) * 2
+	bot._build_one(sim)
+	_check(bot.bought.size() == 1 and sim.scrap == int(want["scrap"]) and sim.stash.any(func(it): return it["base"] == "Hardened bolts"), "the bot did not build the grade for its rounds: %s, scrap %d" % [str(bot.bought), sim.scrap])
+	sim.load_dict(saved)
+	print("the bot's build rule ok")
