@@ -26,6 +26,7 @@ const DEPTH_TILE := 4              # the depth tile's place in the six
 const BAND_H := 200                # the art band at the top of a column
 const FIRE_W := 148                # "They fire" / "They resist" before the chips
 const BOX_PAD := 10                # the outline round the fight, the elements and the word
+const WORD_ROWS := 4               # the radio's two words and the sky's two, a row each
 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
@@ -125,18 +126,14 @@ func _init() -> void:
 		# the word: the head carries the sky; a row a word, its name left and its effect right
 		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "The word")
 		y += UI.HEAD_H + 2
-		c["intel"] = []
-		for k in range(3):                     # the radio's two, and the sky's
-			var n := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			var w := UI.label(panel, Rect2(PAD, y, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-			c["intel"].append([n, w])
-			y += 30
-		y += 6
-		# the site's own line at this depth, two rows
-		c["site"] = []
-		for k in range(2):
-			c["site"].append(UI.label(panel, Rect2(PAD, y + k * 24, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
-		y += 2 * 24 + BOX_PAD
+		# the words as toned rows: the name in its tone, its effect muted beside it, one chip a row
+		c["intel"] = Chips.new(INNER)
+		c["intel"].position = Vector2(PAD, y)
+		panel.add_child(c["intel"])
+		y += WORD_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP + 8
+		# the site's own line at this depth, one row (the whole, else its first sentence)
+		c["site"] = [UI.label(panel, Rect2(PAD, y, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)]
+		y += 24 + BOX_PAD
 		c["boxes"][2].size.y = y - c["boxes"][2].position.y
 		# the foot: Deploy across, Auto under it
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
@@ -243,25 +240,8 @@ func show_state(s) -> void:
 		if res_chips.is_empty():
 			res_chips.append(["Nothing", Pal.TEXT_2])
 		c["resist"].show_chips(res_chips if is_open else [])
-		for r in range(3):
-			if r < t["intel"].size():
-				var m: Dictionary = sim.modifier(t["intel"][r])
-				c["intel"][r][0].text = m["name"]
-				# the effect beside the name: whole, then its first clause with "+N"
-				var clauses: PackedStringArray = str(m["words"]).split(", ", false)
-				var forms := []
-				for n in range(clauses.size(), 0, -1):
-					forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
-				var name_w: float = UI.text_width(c["intel"][r][0], m["name"]) + 16.0
-				var picked_w: String = forms.back()
-				for o in forms:
-					if name_w + UI.text_width(c["intel"][r][1], o) <= INNER:
-						picked_w = o
-						break
-				c["intel"][r][1].text = picked_w
-			else:
-				c["intel"][r][0].text = ""
-				c["intel"][r][1].text = ""
+		# four rows: the radio's words first, the sky's after; a fifth (three called in, at night, in weather) is left off the end
+		c["intel"].show_rows(word_rows(sim, t["intel"]) if is_open else [], WORD_ROWS)
 		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), "pinned at the radio" if sim.pinned[i] else "new word after every run"], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
@@ -300,7 +280,7 @@ func show_state(s) -> void:
 			c["note"].text = "Rests to 95%, leaves when the next gang comes"
 		else:
 			c["note"].text = ""
-		UI.wrap(c["site"], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
+		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
 
 
 # ------------------------------------------------------------------ acting
@@ -341,6 +321,33 @@ func _reset_map() -> void:
 	acted.emit()
 	_shown = ""
 	show_state(sim)
+
+
+## The words as chip rows: the name in its tone (amber harder, green easier),
+## the effect as the tail, whole then cut by clause with "+N". Shared with the radio.
+static func word_rows(sim, names: Array) -> Array:
+	var out := []
+	for name in names:
+		var m: Dictionary = sim.modifier(name)
+		var clauses: PackedStringArray = str(m["words"]).split(", ", false)
+		var forms := []
+		for n in range(clauses.size(), 0, -1):
+			forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
+		var tone := word_tone(m)
+		out.append({"forms": [name], "colour": Pal.tone_color(tone) if tone != "" else Pal.TEXT_2, "tail": forms})
+	return out
+
+
+## A word's tone: amber when it makes the fight harder, green when it makes it
+## easier or richer, plain when it's a trade.
+static func word_tone(m: Dictionary) -> String:
+	var harder: bool = float(m.get("hp", 1.0)) > 1.0 or float(m.get("dps", 1.0)) > 1.0 or float(m.get("patrol", 1.0)) < 1.0 or int(m.get("contact", 0)) > 0
+	var easier: bool = float(m.get("hp", 1.0)) < 1.0 or float(m.get("dps", 1.0)) < 1.0 or float(m.get("patrol", 1.0)) > 1.0 or int(m.get("contact", 0)) < 0
+	if harder and not easier:
+		return "warn"
+	if easier and not harder:
+		return "good"
+	return ""
 
 
 ## What they fire, a chip an element in its colour with your resist to it;
@@ -406,8 +413,7 @@ func text_nodes() -> Array:
 			out.append_array([t["key"], t["value"]])
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())
-		for pair in c["intel"]:
-			out.append_array(pair)
+		out.append_array(c["intel"].text_nodes())
 		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
 			if b.visible:
 				out.append(b)
@@ -417,8 +423,4 @@ func text_nodes() -> Array:
 ## Label/value pairs that share a line, for the fit check.
 func line_pairs() -> Array:
 	var out: Array = []
-	for c in _cols:
-		for pair in c["intel"]:
-			if pair[0].text != "":
-				out.append(pair)
 	return out

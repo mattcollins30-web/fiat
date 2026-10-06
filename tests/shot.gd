@@ -37,6 +37,16 @@ func _next() -> void:
 		for i in range(12):
 			main.sim.advance(1.0)
 		main.show_room(main.MISSIONS)
+	elif r == "pick":
+		# the Lock-up with the stash's best-affixed piece picked
+		main.show_room(main.ARMOURY)
+		main.refresh()
+		var best = null
+		for it in main.sim.stash:
+			if best == null or it.get("affixes", []).size() > best.get("affixes", []).size():
+				best = it
+		if best != null:
+			main._armoury._pick_cell(main._armoury._inv.cell_of(best["id"]))
 	else:
 		if main.sim.on_mission():
 			main.sim.extract_now()

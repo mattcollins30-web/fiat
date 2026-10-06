@@ -2,8 +2,8 @@ extends Control
 ## An item's head on a panel, the way the mockup's option B lays it out: the
 ## name, a row of chips for what it is (slot, type, rarity, level, cells), and
 ## the headline figure big with its unit and a tail ("takes SMG rounds · 600
-## carried"). Under it, up to three affix rows: a tier tag in the tier's colour
-## and the affix's words, and a dashed "open" row when the bench could add
+## carried"). Under it, the affixes as chips in the tier's colour with a T-tag
+## inside, over two rows, and a muted "open" line when the bench could add
 ## one. Every screen with an item panel (the Lock-up, the fence, the clinic,
 ## the run's pick) mounts one in its left column; the right column stays the
 ## screen's own (the compare, the shelf's price, the pack's room).
@@ -12,13 +12,13 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const TITLE_H := 36
 const CHIP_H := 26
 const CHIP_PAD := 8
 const CHIP_GAP := 6
 const CHIPS := 6
-const TAG_W := 56
 const ROWS := 4                    # three affixes and the open row, or a set line
 
 var width := 440
@@ -37,9 +37,9 @@ var _chip_labels: Array[Label] = []
 var _figure: Label
 var _unit: Label
 var _tail: Label
-var _tags: Array[Panel] = []
-var _tag_labels: Array[Label] = []
-var _rows: Array[Label] = []
+var _affixes: Chips                # the affixes, chips in their tier's colour, two rows
+var _rows: Array[Label] = []       # the open line, a set's words, "No affixes"
+const AFFIX_ROWS := 2
 
 
 func _init(w := 440, small := false) -> void:
@@ -47,14 +47,15 @@ func _init(w := 440, small := false) -> void:
 	compact = small
 	head_h = 30 if compact else 46
 	row_h = 28
-	rows = 3
+	rows = 1
 	var gap := 4 if compact else 6
 	chips_y = TITLE_H + gap
 	headline_y = chips_y + CHIP_H + gap
 	tail_y = headline_y + head_h
 	rows_y = tail_y + TAIL_H + gap
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	size = Vector2(width, rows_y + rows * row_h)
+	var affix_h := AFFIX_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP
+	size = Vector2(width, rows_y + affix_h + 4 + rows * row_h)
 	_title = UI.label(self, Rect2(0, 0, width, TITLE_H), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(CHIPS):
 		var p := UI.panel(self, Rect2(0, chips_y, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
@@ -65,13 +66,12 @@ func _init(w := 440, small := false) -> void:
 	_figure = UI.label(self, Rect2(0, headline_y, width, head_h), "", "SemiBold", fsize, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_tail = UI.label(self, Rect2(0, tail_y, width, TAIL_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_affixes = Chips.new(width)
+	_affixes.position = Vector2(0, rows_y)
+	add_child(_affixes)
 	for k in range(rows):
-		var y := rows_y + k * row_h
-		var t := UI.panel(self, Rect2(0, y + 1, TAG_W, row_h - 2), UI.box(Pal.BUTTON, 6))
-		t.visible = false
-		_tags.append(t)
-		_tag_labels.append(UI.label(t, Rect2(0, 0, TAG_W, row_h - 2), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false))
-		_rows.append(UI.label(self, Rect2(TAG_W + 12, y, width - TAG_W - 12, row_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		var y := rows_y + affix_h + 4 + k * row_h
+		_rows.append(UI.label(self, Rect2(0, y, width, row_h), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
 
 
 ## `tail` follows the headline: "takes SMG rounds · 600 carried". `extra` is a
@@ -145,57 +145,32 @@ func show_item(it: Dictionary, sim, tail = "", extra := "") -> void:
 	if options.is_empty():
 		options.append("")
 	UI.fit(_tail, options)
-	# the affixes, a row each in the tier's colour; the open row; the extra line
+	# the affixes as chips: the tier tag inside, the words short, in the tier's colour; two rows
 	var lines: Array = Items.affix_lines(it, false, false)
 	var short_lines: Array = Items.affix_lines(it, true, false)
 	var n: int = lines.size()
+	var chips_a := []
+	for k in range(n):
+		var tier: int = Items.affix_tier(it, k)
+		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
+	_affixes.show_chips(chips_a, AFFIX_ROWS)
+	_affixes.visible = n > 0
+	# the line under: the open affix, a set's words, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
-	if rows == 3 and n + (1 if open else 0) + (1 if extra != "" else 0) > rows:
-		open = false                       # the Lock-up's three rows: the affixes and the set's words come first
-	for k in range(rows):
-		var tag := _tags[k]
-		var row := _rows[k]
-		if k < n:
-			var tier: int = Items.affix_tier(it, k)
-			var colour: Color = Pal.tier_color(tier)
-			tag.visible = true
-			tag.add_theme_stylebox_override("panel", UI.box(colour.darkened(0.72), 6))
-			_tag_labels[k].text = "T%d" % tier
-			_tag_labels[k].add_theme_color_override("font_color", colour)
-			UI.fit(row, [lines[k], short_lines[k]])
-			row.add_theme_color_override("font_color", colour)
-		elif k == n and n == 0 and not open and extra == "":
-			tag.visible = false
-			row.text = "No affixes" if not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) else ""
-			row.position.x = 0
-			row.add_theme_color_override("font_color", Pal.TEXT_3)
-		elif k == n and open:
-			tag.visible = true
-			tag.add_theme_stylebox_override("panel", UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
-			_tag_labels[k].text = "·"
-			_tag_labels[k].add_theme_color_override("font_color", Pal.TEXT_3)
-			var left: int = Data.RARITIES.size() - 1 - int(it["rarity"])
-			UI.fit(row, ["%s can be added at the bench" % ("One more" if left == 1 else ("Two more" if left == 2 else "Three more")), "Room for %d more" % left, "%d open" % left])
-			row.add_theme_color_override("font_color", Pal.TEXT_3)
-		elif k == (n + (1 if open else 0)) and extra != "":
-			tag.visible = false
-			row.position.x = 0
-			row.text = extra
-			row.add_theme_color_override("font_color", Pal.SET)
-		else:
-			tag.visible = false
-			row.text = ""
-		if tag.visible:
-			row.position.x = TAG_W + 12
-			row.size.x = width - TAG_W - 12
-		elif row.text != "":
-			row.position.x = 0
-			row.size.x = width
-	if n == 0 and (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) and extra != "":
-		_rows[0].text = extra
-		_rows[0].position.x = 0
-		_rows[0].size.x = width
-		_rows[0].add_theme_color_override("font_color", Pal.TEXT_2)
+	var row := _rows[0]
+	row.position.y = rows_y + (_affixes.size.y + 4 if n > 0 else 0)
+	if extra != "":
+		row.text = extra
+		row.add_theme_color_override("font_color", Pal.SET if not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) else Pal.TEXT_2)
+	elif open:
+		var left: int = Data.RARITIES.size() - 1 - int(it["rarity"])
+		UI.fit(row, ["%s can be added at the bench" % ("One more" if left == 1 else ("Two more" if left == 2 else "Three more")), "Room for %d more" % left, "%d open" % left])
+		row.add_theme_color_override("font_color", Pal.TEXT_3)
+	elif n == 0:
+		row.text = "No affixes" if not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) else ""
+		row.add_theme_color_override("font_color", Pal.TEXT_3)
+	else:
+		row.text = ""
 
 
 ## [words, tone] a chip: the slot, the type, the rarity (in its tone), the level, the cells.
@@ -238,10 +213,9 @@ func text_nodes() -> Array:
 	for k in range(CHIPS):
 		if _chips[k].visible:
 			out.append(_chip_labels[k])
-	for k in range(rows):
-		if _tags[k].visible:
-			out.append(_tag_labels[k])
-		out.append(_rows[k])
+	if _affixes.visible:
+		out.append_array(_affixes.text_nodes())
+	out.append_array(_rows)
 	return out
 
 

@@ -12,6 +12,7 @@ const Bot := preload("res://tests/bot.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 var _misfits := 0
 var _fails := 0
@@ -1750,7 +1751,7 @@ func _melee_checks(main) -> void:
 	var bhead = main._armoury._head
 	_check(bhead.visible and bhead._title.text == "Bipod" and bhead._figure.text == "+18%", "the part's head is off: '%s' '%s'" % [bhead._title.text, bhead._figure.text])
 	_check(bhead._tail.text.contains("−6% pace") and not bhead._tail.text.contains("+22"), "the part's own figures carry its affix too: '%s'" % bhead._tail.text)
-	_check(bhead._rows[0].text == "+4% damage" and bhead._tag_labels[0].text == "T2" and bhead._rows[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not on its own banded row: '%s'" % bhead._rows[0].text)
+	_check(bhead._affixes.visible and bhead._affixes.words(0) == "+4% damage" and bhead._affixes._tags[0].text == "T2" and bhead._affixes._labels[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not a chip in its tier's colour: '%s'" % bhead._affixes.words(0))
 	var chip_words := []
 	for k in range(bhead.CHIPS):
 		if bhead._chips[k].visible:
@@ -2577,14 +2578,31 @@ func _craft_checks(main) -> void:
 	# the affix list on the panel, with tiers
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
 	main.refresh()
-	_check(main._armoury._head._tags[0].visible and main._armoury._head._tag_labels[0].text.begins_with("T"), "the panel's affix row has no tier tag: '%s'" % main._armoury._head._tag_labels[0].text)
+	var ah = main._armoury._head._affixes
+	_check(ah.visible and ah._tags[0].visible and ah._tags[0].text.begins_with("T"), "the panel's affix chip has no tier tag: '%s'" % ah._tags[0].text)
 	_check_fit(main, "Armoury (affix list)")
-	# each affix row is banded in its tier's colour, tag and words
+	# each affix is a chip in its tier's colour, tag and words; every affix shows, over two rows at most
+	_check(ah.shown() == it["affixes"].size() and ah.rows_used() <= ah.get_parent().AFFIX_ROWS, "the panel shows %d affix chips for %d affixes over %d rows" % [ah.shown(), it["affixes"].size(), ah.rows_used()])
 	for k in range(mini(3, it["affixes"].size())):
 		var want: Color = Pal.tier_color(int(it["affixes"][k].get("tier", 1)))
-		_check(main._armoury._head._rows[k].get_theme_color("font_color") == want and main._armoury._head._tag_labels[k].get_theme_color("font_color") == want, "affix %d (T%d) is not in its tier's colour" % [k, int(it["affixes"][k].get("tier", 1))])
+		_check(ah._labels[k].get_theme_color("font_color") == want and ah._tags[k].get_theme_color("font_color") == want, "affix %d (T%d) is not in its tier's colour" % [k, int(it["affixes"][k].get("tier", 1))])
 	if it["affixes"].size() < 3:
-		_check(not main._armoury._head._tags[it["affixes"].size()].visible or main._armoury._head._tag_labels[it["affixes"].size()].text == "·", "the row after the affixes is not the open row")
+		_check(main._armoury._head._rows[0].text.contains("can be added") or main._armoury._head._rows[0].text.contains("open") or main._armoury._head._rows[0].text.contains("Room"), "the line after the affixes is not the open line: '%s'" % main._armoury._head._rows[0].text)
+	# a three-affix piece with long words: every affix still a chip, none trailing off
+	var three: Dictionary = sim._plain("Armour", "Riot suit")
+	three["rarity"] = 3
+	three["affixes"] = [{"stat": "armour_pct", "value": 18, "tier": 4}, {"stat": "loot_pct", "value": 12, "tier": 2}, {"stat": "poison_res", "value": 9, "tier": 3}]
+	sim.stash.append(three)
+	main._armoury._inv._set_kind(0)
+	main.refresh()
+	var c3: int = main._armoury._inv.cell_of(three["id"])
+	if c3 >= 0:
+		main._armoury._pick_cell(c3)
+		main.refresh()
+		_check(main._armoury._head._affixes.shown() == 3, "a three-affix piece shows %d chips" % main._armoury._head._affixes.shown())
+		_check_fit(main, "Armoury (three affix chips)")
+	sim.stash.erase(three)
+	main.refresh()
 	# worn gear can go to the bench too
 	var worn: Dictionary = sim.equipped["Armour"]
 	if worn != null and not worn.has("unique") and sim.craft_cost(worn, "socket") >= 0 and is_same(sim.item_by_id(worn["id"]), worn):
@@ -2854,8 +2872,8 @@ func _places_checks(main) -> void:
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
 	var names := []
-	for r in c["intel"]:
-		names.append(r[0].text)
+	for r in range(c["intel"].shown()):
+		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
 	_check(c["intel_head"].text.begins_with("THE WORD · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
 	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
@@ -3319,7 +3337,7 @@ func _playtest_checks(main) -> void:
 	var r2 := Rect2(bx[2].position, bx[2].size)
 	_check(r0.encloses(Rect2(c["tiles"][5]["panel"].position, c["tiles"][5]["panel"].size)) and r0.position.y >= main._missions.BAND_H, "the fight's box does not hold its tiles")
 	_check(r1.encloses(Rect2(c["chips"].position, c["chips"].size)) and r1.encloses(Rect2(c["resist"].position, c["resist"].size)) and r1.encloses(Rect2(c["resist_label"].position, c["resist_label"].size)), "the elements' box does not hold its chips")
-	_check(r2.encloses(Rect2(c["intel"][2][0].position, c["intel"][2][0].size)) and r2.encloses(Rect2(c["site"][1].position, c["site"][1].size)) and r2.encloses(Rect2(c["intel_head"].position, c["intel_head"].size)), "the word's box does not hold its rows")
+	_check(r2.encloses(Rect2(c["intel"].position, Vector2(c["intel"].size.x, main._missions.WORD_ROWS * (Chips.CHIP_H + Chips.ROW_GAP)))) and r2.encloses(Rect2(c["site"][0].position, c["site"][0].size)) and r2.encloses(Rect2(c["intel_head"].position, c["intel_head"].size)), "the word's box does not hold its rows")
 	_check(r0.end.y + 8 <= r1.position.y and r1.end.y + 8 <= r2.position.y and r2.end.y <= c["note"].position.y, "the Runs card's boxes run into each other or the note: %s %s %s note %.0f" % [str(r0), str(r1), str(r2), c["note"].position.y])
 	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
 	_check(c["resist_label"].text == "They resist" and c["resist"].visible and c["resist"].shown() >= 1, "the resist chips are missing")
@@ -3330,9 +3348,26 @@ func _playtest_checks(main) -> void:
 	_check((c["resist"].words(0) == "Nothing") == (not any_res), "the resist chips disagree with the site: '%s'" % c["resist"].words(0))
 	if any_res:
 		_check(c["resist"].words(0).contains("%"), "a resist chip has no figure: '%s'" % c["resist"].words(0))
-	for pair in c["intel"]:
-		if pair[0].text != "":
-			_check(pair[1].text != "" and pair[1].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "a word's effect is missing or not right of its name: '%s' / '%s'" % [pair[0].text, pair[1].text])
+	for k in range(c["intel"].shown()):
+		_check(c["intel"].tail(k) != "", "a word's effect is missing from its row: '%s'" % c["intel"].words(k))
+	_check(c["intel"].shown() == mini(main._missions.WORD_ROWS, sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])["intel"].size()), "the Runs card shows %d word rows" % c["intel"].shown())
+	# five words (three called in, night, weather) never run past the rows into the site line (the reviewer's catch)
+	var tier0: int = Data.ZONES[main._missions.zone]["tiers"][0]
+	var hold_intel: Array = sim.intel[tier0].duplicate()
+	var hold_elapsed: float = sim.elapsed
+	var hold_weather: Array = sim.weather.duplicate()
+	sim.intel[tier0] = ["Quiet road", "Rubbered", "Lying low"]
+	sim.elapsed = 3600.0 * 23.0
+	sim.weather[main._missions.zone] = "Rain"
+	main._missions._shown = ""
+	main.refresh()
+	_check(sim.effective(tier0)["intel"].size() >= 4 and c["intel"].shown() <= main._missions.WORD_ROWS and c["intel"].position.y + c["intel"].size.y <= c["site"][0].position.y, "five words run past the word rows: %d shown, rows end %.0f, site at %.0f" % [c["intel"].shown(), c["intel"].position.y + c["intel"].size.y, c["site"][0].position.y])
+	_check_fit(main, "Runs (five words)")
+	sim.intel[tier0] = hold_intel
+	sim.elapsed = hold_elapsed
+	sim.weather = hold_weather
+	main._missions._shown = ""
+	main.refresh()
 	# toasts: once, and only for what just happened
 	var line := "Found: Lucky cap"
 	sim.log_event(line)
@@ -4412,17 +4447,19 @@ func _yard_checks(main) -> void:
 			_check(Words.ODDS.any(func(b): return b[1] == site_card._headline.text) and site_card._unit.text.contains("%"), "the radio's site card has no odds headline in words with the figure beside: '%s' / '%s'" % [site_card._headline.text, site_card._unit.text])
 			# the A style: the band carries the site and the odds; the words as rows, the name in its tone, the effect beside
 			_check(site_card._band.visible and site_card._band.title.text == site_card._title.text and site_card._band.headline.text == site_card._headline.text and not site_card._title.visible, "the radio card's band does not carry its title and odds")
-			_check(site_card._labels[0].position.y >= site_card.BAND_H, "the radio card's first row sits in the band")
 			var intel_i := -1
 			for i in range(Data.TIERS.size()):
 				if Data.TIERS[i]["name"] == site_card._title.text:
 					intel_i = i
 			if intel_i >= 0 and not sim.intel[intel_i].is_empty():
-				# the effect shares the name's row, or takes the row under it
-				_check(site_card._labels[0].text == sim.intel[intel_i][0] and (site_card._values[0].text != "" or (site_card._labels[1].text == "" and site_card._values[1].text != "")), "the radio card's first word row is off: '%s' / '%s' / '%s'" % [site_card._labels[0].text, site_card._values[0].text, site_card._values[1].text])
+				# the words as chip rows under the band: the name in its tone, the effect as the tail, one a row, the same piece the Runs card uses
+				var wr = site_card._word_rows
+				_check(wr.visible and wr.position.y >= site_card.BAND_H and wr.shown() == sim.intel[intel_i].size(), "the radio card's word rows are off: %d shown for %d words" % [wr.shown(), sim.intel[intel_i].size()])
+				_check(wr.words(0) == sim.intel[intel_i][0] and wr.tail(0) != "", "the radio card's first word row is off: '%s' / '%s'" % [wr.words(0), wr.tail(0)])
 				var m0: Dictionary = sim.modifier(sim.intel[intel_i][0])
-				var want_tone: String = main._word_tone(m0)
-				_check(site_card._labels[0].get_theme_color("font_color") == (Pal.tone_color(want_tone) if want_tone != "" else Pal.TEXT_2), "the word's name is not in its tone")
+				var want_tone: String = main._missions.word_tone(m0)
+				_check(wr._labels[0].get_theme_color("font_color") == (Pal.tone_color(want_tone) if want_tone != "" else Pal.TEXT_2), "the word's name is not in its tone")
+				_check(wr.position.y + wr.size.y <= site_card._buttons[0].position.y, "the word rows run into the buttons")
 			var set_card = main._cards[0]
 			_check(set_card.visible and set_card._band.visible and set_card._band.kicker.text == "The radio" and set_card._headline.text.begins_with("Level "), "the set's card band is off: '%s' / '%s'" % [set_card._band.kicker.text, set_card._headline.text])
 		_check_fit(main, "Radio (bands)")

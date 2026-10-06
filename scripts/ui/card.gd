@@ -43,6 +43,7 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Sketch := preload("res://scripts/ui/sketch.gd")
 const Band := preload("res://scripts/ui/band.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const SKETCH_LINES := 3         # the lines a sketch takes
 const CORNER_W := 64            # a corner sketch: at the right of the title's row
@@ -69,6 +70,7 @@ const LINES_Y_BAND := BAND_H + 8
 
 var _bg: Panel
 var _band: Band                 # the art band, for a card that's a place (the radio's sites)
+var _word_rows: Chips           # toned rows: a word's name in its tone with its effect beside, one a row
 var _lines_y := LINES_Y         # where the lines start: under the band when there is one
 var _edge: Panel                # the tone, down the left edge
 var _track: Button              # the bar: its track - a button, when it's a job's - its fill, its text twice
@@ -115,6 +117,10 @@ func _init() -> void:
 	_band.visible = false
 	add_child(_band)
 	move_child(_band, _edge.get_index())          # under the tone's edge, so a pinned site's green runs the card's whole height
+	_word_rows = Chips.new(Pal.INNER)
+	_word_rows.position = Vector2(Pal.PAD, LINES_Y)
+	_word_rows.visible = false
+	add_child(_word_rows)
 	var x := Pal.PAD
 	var w := Pal.INNER
 	_track = Button.new()
@@ -209,6 +215,13 @@ func show_data(d: Dictionary) -> void:
 	_sketch.size.y = sketch_lines * Pal.LINE_H
 	_sketch.show_sketch(sketch)
 	first += _show_chips(d.get("chips", []), first)
+	# toned rows, a chip a row (the radio's words): each takes a line's place
+	var rows_data: Array = d.get("word_rows", [])
+	_word_rows.visible = not rows_data.is_empty()
+	if _word_rows.visible:
+		_word_rows.position.y = _lines_y + first * Pal.LINE_H + 2
+		_word_rows.show_rows(rows_data)
+		first += _word_rows.shown()
 	var room: int = Pal.LINES - first - (sketch_lines if not sketch.is_empty() else 0)
 	var lines: Array = d.get("lines", [])
 	assert(lines.size() <= room, "a card holds six lines, five with a bar or chips, two fewer with a sketch: " + _title.text)
@@ -414,6 +427,8 @@ func text_nodes() -> Array:
 	var out: Array = [_title, _headline, _unit, _note, _status]
 	if _band.visible:
 		out.append_array(_band.text_nodes())
+	if _word_rows.visible:
+		out.append_array(_word_rows.text_nodes())
 	if _track.visible:
 		out.append(_bar_off)            # the whole bar wide: the text has to fit it
 	out.append_array(_labels)

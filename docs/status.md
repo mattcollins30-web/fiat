@@ -1550,6 +1550,21 @@ Placeholder for drawn art, but the shapes are the shapes an artist would be give
 The worst-case pass covers the whole pool and the uniques; the smoke test drives juicing, the Clinic and
 the pool's rules (a choke counts on a shotgun and not on a rifle; a unique's rule and name; weight as pace).
 
+## Chips everywhere: the word and the affixes (2026-10-06)
+
+Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips
+coloured by tier, so one shape reads the same across the game. Built from the canvas board (Chips-A):
+`Chips` takes items as dictionaries ({forms, colour, tag, tail}), wraps to `rows` rows in `show_chips`, and
+lays one full-width chip a row in `show_rows` (the name in its tone, the effect muted inside the chip as the
+tail, shortened by clause). The Runs card's THE WORD box holds four such rows (the radio's words first, the
+sky's after; a fifth is dropped off the end, the reviewer's catch) over the site's line, now one sentence-
+fitted row. The radio's site cards use the same rows (`Card` takes `"word_rows"`; `Missions.word_rows` and
+`word_tone` are the shared helpers). The item head's three affix rows are a Chips over two rows, each chip
+in its tier's colour with the T-tag inside and the short words; the open line, a set's words or "No
+affixes" sit under. Smoke: the Runs rows carry a tail each and cap at four with five words showing none
+past the site line; the radio card's rows match its words, tone and position; every affix shows as a chip
+over two rows at most, in its tier's colour, with a three-affix piece fitting.
+
 ## The A style, screen by screen (2026-10-05)
 
 The design canvas's A layout, built. Shared pieces first: `scripts/ui/band.gd` (the art band: a sky in the

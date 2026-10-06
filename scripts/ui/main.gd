@@ -905,12 +905,6 @@ func _comms_cards() -> Array:
 		# a row a word: its name in its tone (amber harder, green easier), its effect beside, shortened by clause when it must
 		var words: Array = sim.intel[i]
 		var lines := []
-		# the room: six lines, two fewer under four buttons, one kept for the note when it shows
-		var room: int = Pal.LINES - (2 if sim.can_juice() else 0)
-		for name in words:
-			var m: Dictionary = sim.modifier(name)
-			var tone := _word_tone(m)
-			lines.append_array(_word_rows(name, str(m["words"]), tone, room - lines.size() - (words.size() - words.find(name) - 1)))
 		if words.is_empty():
 			lines.append(["Nothing on the air for it", ""])
 		var odds: float = sim.survival(i)
@@ -922,7 +916,7 @@ func _comms_cards() -> Array:
 		var d := {"title": t["name"], "headline": Words.odds_words(odds), "unit": ("%s to clear, D%d" % [Fmt.pct(odds), t["depth"]]) if sim.odds_settled(i) else "reading the odds",
 			"unit_forms": ["%s to clear, D%d" % [Fmt.pct(odds), t["depth"]], "%s, D%d" % [Fmt.pct(odds), t["depth"]], Fmt.pct(odds)] if sim.odds_settled(i) else ["reading the odds", "reading"],
 			"band": {"site": t["name"], "tone": zone_i, "kicker": "%s · depth %d" % [Data.ZONES[zone_i]["name"], t["depth"]], "colour": Pal.tone_color(odds_tone) if sim.odds_settled(i) else Pal.TEXT_3},
-			"lines": lines, "tone": "good" if sim.pinned[i] else ""}
+			"lines": lines, "word_rows": _missions.word_rows(sim, words), "tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
 		if sim.can_pin():
 			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
@@ -933,41 +927,10 @@ func _comms_cards() -> Array:
 			buttons.append({"text": "Hold", "action": _choose_hold.bind(i), "enabled": sim.can_lock_word(i), "primary": false})
 		d["buttons"] = buttons
 		# a note only while there's a line for it: two rows of buttons and three words fill the card
-		if lines.size() + 1 <= 4 and buttons.size() <= 2:
+		if lines.size() + words.size() + 1 <= 4 and buttons.size() <= 2:
 			d["note"] = "Pinned: runs don't spend it" if sim.pinned[i] else ""
 		out.append(d)
 	return out
-
-
-## A word on a radio card: its name and effect on one row when they share it,
-## else the name on one row and the effect on the next (right-aligned, the
-## width to itself) when there's room, else one row with the effect cut to its
-## first clause and "+N". Rows: [name, forms, "", tone].
-static func _word_rows(name: String, words: String, tone: String, room: int) -> Array:
-	var name_w: float = UI.font("Regular", false).get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.LINE).x
-	var words_w: float = UI.font("Medium", false).get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.LINE).x
-	if name_w + 16.0 + words_w <= Pal.INNER:
-		return [[name, words, "", tone]]
-	if room >= 2 and words_w <= Pal.INNER:
-		return [[name, "", "", tone], ["", words]]
-	var clauses: PackedStringArray = words.split(", ", false)
-	var forms := []
-	for n in range(clauses.size(), 0, -1):
-		forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
-	forms.append("%d effects" % clauses.size())
-	return [[name, forms, "", tone]]
-
-
-## A word's tone for its chip: amber when it makes the fight harder, green when
-## it makes it easier or richer, plain when it's a trade.
-static func _word_tone(m: Dictionary) -> String:
-	var harder: bool = float(m.get("hp", 1.0)) > 1.0 or float(m.get("dps", 1.0)) > 1.0 or float(m.get("patrol", 1.0)) < 1.0 or int(m.get("contact", 0)) > 0
-	var easier: bool = float(m.get("hp", 1.0)) < 1.0 or float(m.get("dps", 1.0)) < 1.0 or float(m.get("patrol", 1.0)) > 1.0 or int(m.get("contact", 0)) < 0
-	if harder and not easier:
-		return "warn"
-	if easier and not harder:
-		return "good"
-	return ""
 
 
 ## The menu as a chooser: four words a page and More, for calling one in.
