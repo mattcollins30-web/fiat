@@ -1792,6 +1792,23 @@ with £315 - the treat refused on a run, the rest not happening on one. The bot'
 picked over - `thinning` at the floor), and it never hands back with a run on. Smoke: `_leave_checks` -
 a Never there runner stays on a fresh cleared site and leaves a picked-over one.
 
+**The bot spends at the bench; the plan wired to the code (6 Oct).** Matt: "wire the rest up similar to
+cash - everything will be ready by the time this pass finishes". The plan in concept.md ("The pass plan")
+now names the code each lever touches, from a survey against the sim: income has two shapes (the tier's
+cash before the campaign, `CURVE.cash` 40 × 1.10 a depth past it), so lever 1's base is one reader, the
+open tier's pay through `effective()`; a gun is built only at a tier the bench has reached and the bench
+stops at level 3, so `BUILD_GUN` reaches T1–T3 only (a question for lever 2); Pipe shotgun and Carrier
+bags sit under the starting kit too; the affix tier has no item-level floor today (`TIER_CAP` and
+`TIER_WEIGHT` only), so the floor in Matt's rarity shape is new, and T5 needs item level 15, which the
+rarity's cap overrides; the Builds section had the tiers backwards (T1 is the worst, as built). The
+reader for the cash row: `_bench_worn` re-rolls the worn kit's weakest affix, one job a run at most, while
+two grand stays (a player with £200k re-rolls; the bot added one affix a piece and stopped), so the spend
+is bounded by the runs and what piles up past it is the prices'. Smoke: `_bench_worn_checks`. Reviewer:
+set pieces skipped - their affixes are the set's, with no tier, and `craft_cost` would re-roll one
+anyway: **a game gap, raised, not fixed** - the bench lets a set piece be re-rolled (`craft_cost`
+excludes uniques, ammo and paper, not sets), and `reroll_one` on a set stat outside `AFFIXES` would
+error; for Matt to call.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

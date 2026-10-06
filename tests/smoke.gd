@@ -5820,3 +5820,35 @@ func _leave_checks(main) -> void:
 	sim.extract_now()
 	sim.load_dict(saved)
 	print("the bot leaves a picked-over site ok")
+	_bench_worn_checks(main)
+
+
+## The bot's bench rule: the worn kit's weakest affix re-rolled, one job a
+## run, while two grand stays.
+func _bench_worn_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.workshop = maxi(sim.workshop, 1)
+	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
+		sim.equipped[s] = null
+	var it: Dictionary = sim._plain("Armour", "Stab vest")
+	it["affixes"] = [{"stat": "regen", "value": 1.0, "tier": 1}, {"stat": "armour_pct", "value": 15.0, "tier": 4}]
+	it["rarity"] = 2
+	sim.equipped["Armour"] = it
+	var bot = Bot.new()
+	sim.cash = 2000.0 + sim.craft_cost(it, "one", "regen") - 1
+	bot._bench_worn(sim)
+	_check(bot.bought.is_empty(), "the bot's bench rule spent under the two grand it keeps")
+	sim.cash = 50000.0
+	var cash0: float = sim.cash
+	bot._bench_worn(sim)
+	_check(bot.bought.size() == 1 and sim.cash < cash0 and "regen" in str(bot.bought[0][1]), "the bot's bench rule did not re-roll the weakest affix: %s" % str(bot.bought))
+	bot.bought = []
+	for a in sim.equipped["Armour"]["affixes"]:
+		a["tier"] = Data.AFFIX_TIERS
+	bot._bench_worn(sim)
+	_check(bot.bought.is_empty(), "the bot's bench rule re-rolled a piece with every affix at the top")
+	sim.load_dict(saved)
+	print("the bot's bench rule ok")

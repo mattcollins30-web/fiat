@@ -351,65 +351,91 @@ are never an upgrade for anyone. Recommendation: a starting pair of its own belo
 nail gun" and a "Work jacket", say, with no mounts and nothing rolled), or start on the Bolt gun and the
 Padded jacket; the gate: every base in the pool beats the starting kit of its slot on its own figures.
 
-### The pass plan (6 Oct, after two reads; to argue with before the figures move)
+### The pass plan (6 Oct, after two reads; wired to the code, to argue with before the figures move)
 
 Two full reads on the Legion (`docs/balance/summary.md`), the second with the bot's dry gun fixed: the
 keystone row green, the bank 1.4 to 5.0 h, the capstone 2.1 to 7.1 h, cash at £150k–£300k against a £14k
 top bench in seven builds of ten, scrap at four to nine crafts' worth, the Elite share 2.35% against 3%.
-A lever a line below, with the row it moves and the rows it can break. No figures here: they come from the
-read before and after each move, one move at a time, the summary re-read between.
+A lever a line below, with the code it touches, the row it moves and the rows it can break. No figures
+here: they come from the read before and after each move, one move at a time, the summary re-read
+between. Each move is one commit with its before-and-after summary lines in status.md.
 
-1. **Cash: the bench and the words priced off the player's tier, and the bot spending like a player.**
-   Every cash price already takes the yard's inflation (`_inf`), so that is not it. The half-hour lines
-   show cash climbing from about hour 4 because income scales with the tier and the depth (`t["cash"]`
-   by tier, 12% a depth) on top of the inflation, while every sink scales with the inflation alone from
-   an opening figure: a T8 run at hour 6 pays ten times a T2 run, a bench job costs the same multiple of
-   its opening price. The sinks a player uses late - the bench's jobs (`craft_cost`: cash × ilvl ×
-   rarity) and the words (`juice_cost`) - take the open tier's pay as their base, so a lock on a T8 gun
-   costs what a T8 run pays; the works' ladders stay opening prices, since each is bought once. And the
-   reader: the bot adds one affix a worn piece and stops, where a player with £200k re-rolls and locks
-   until the kit is right, so a bot rule (re-roll the worn kit's weakest affix while cash stays above a
-   reserve) goes in before the row is trusted - the dry gun's lesson, the reader before the number.
-   Moves: Cash sink. Can break: the capstone (a point's price) and the band if a work is what gets a
-   slow class there - so the works' first levels stay. Not touched: income; the early hours are the
-   right pace.
-2. **Scrap: the crafts dearer, not the contracts leaner.** Four to nine crafts' worth in hand says the
-   ladder's prices are low against what the contracts and the sites hand out. `BUILD_GUN` and the
-   `"from"` ladder go up; the contracts stay, because the player feels a contract and a craft is a sink.
-   Moves: Scrap economy. Can break: nothing read; the builds that craft toward an element bench their gun
-   later.
-3. **The bank's band: the classes' early game, through the starting kit and the class figures.** The
-   late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the low dps at hour 2 in the lines; the capstone
-   follows the bank because it needs the level, so this row carries most of the capstone row with it.
-   The starting kit becomes the worst kit (above), one pair below the pool, so the first find is an
-   upgrade for every class; then the class figures that differ at hour 2 (the Paramedic's gun, the
-   Poacher's rifle rate). Moves: the bank's band, the capstone. Can break: nothing else reads before
-   hour 2.
-4. **The capstone's own price, only if the band leaves it late.** Read again after 3; move the late
-   nodes' prices only for what's left.
+0. **The reader first: the bot spends at the bench like a player.** The bot added one affix a worn piece
+   and stopped, where a player with £200k re-rolls until the kit is right. `tests/bot.gd _bench_worn`:
+   the worn kit's weakest affix re-rolled (`craft "one"`), one job a run at most, while two grand stays -
+   one a run bounds the spend by the runs, so what piles up past it is the prices' to answer for. Built
+   6 Oct, in status.md; the next read carries it.
+1. **Cash: the bench and the words priced off the run's pay.** Every cash price takes the inflation
+   already (`_inf`, sim.gd ~535: ×(1 + 0.07 an hour past the first, to ×12)), so that is not it. Income
+   has two shapes: before the campaign `TIERS[i].cash` by tier (6, 9, 14, 22, 24, 30, 40, 44, 50) ×
+   1.12 a depth; past it, at depth 2 and up, `CURVE.cash` 40 × 1.10 a depth × the site's shape
+   (`effective()`, sim.gd ~2321). Every sink scales from an opening figure by the inflation alone, so a
+   T8 run at hour 6 pays five times a T2 run on the base alone (more with depth) while a bench job
+   costs the same multiple of its opening price. The move: one reader, the open tier's pay
+   (`effective(top open tier)["cash"]`, whichever shape it's in), as the base of `craft_cost` (today
+   `CRAFT[kind].cash` × ilvl × (rarity + 1), sim.gd ~1089) and `juice_cost` (today `INTEL_CASH[i]` × 3 ×
+   depth × words, sim.gd ~1929); the works' ladders stay opening prices, each bought once. Moves: Cash
+   sink. Can break: the capstone and the band if a work is what gets a slow class there - so the works'
+   first levels stay. Not touched: income; the early hours are the right pace.
+2. **Scrap: the ladder dearer, not the contracts leaner.** Scrap comes from searches (a fifth of them,
+   3–6; `SCRAP_SEARCH`, `SCRAP_HANDFUL`), the bench (`scrap_of` = value ÷ 20, the rarity multiple in
+   the value), ditching on a run, and contracts (count × rarity × `CONTRACT_SCRAP` 6, so 6–36, on the
+   materials branch only). The ladder: box 8, grade 15 × tier, med 8 × tier, gun `BUILD_GUN` 40 × tier,
+   grenade 12 × tier (`build_options`, sim.gd ~1160; data.gd ~1115). A catch the plan missed: a gun is
+   built only at a tier the bench has reached and the bench stops at level 3, so the tier 4–6 improvised
+   guns are never built and `BUILD_GUN` reaches T1–T3 only - either the bench's top level builds any
+   tier, or the gun ladder is three rungs by design and the dearest craft is a T3 gun. Moves: Scrap
+   economy. Can break: nothing read; the element builds bench their gun later.
+3. **The bank's band: the starting kit and the classes' early game.** `_starter_loadout` (sim.gd ~117)
+   gives every class the same Nail gun (28 × 0.6 = 16.8), Stab vest (15), School bag (12 cells), Bum
+   bag, two bandages and nails: no helmet, no secondary, nothing rolled. Under it in the pool: Bolt gun
+   (15.2), Pipe shotgun (15.0), Padded jacket (10 armour, +2 pace), Carrier bags (8 cells, +3 pace).
+   The move: a starting pair of its own below the pool (a "Hand-me-down nail gun" and a "Work jacket",
+   no mounts), so every base is an upgrade for someone; the gate, every pool base above the start of its
+   slot on its own figures. The classes (`CLASSES`, data.gd ~1173): Poacher +40% on a gang's first,
+   gangs ×1.25 later, HP ×0.9; Doorman damage ×1.15, armour ×1.2, pace ×0.9; Paramedic heal ×1.5, meds
+   by themselves, damage ×0.9; Scrapper search ×0.7, +15% quantity, damage ×0.95; Drifter one fewer on
+   you, pace ×1.1, HP ×0.85. The late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the two with no
+   damage or armour in their figures, so their hour-2 dps is the kit's alone; the move there is a class
+   figure each, read against the band. Moves: the bank's band, the capstone (which follows the bank:
+   it needs the level). Can break: nothing else reads before hour 2.
+4. **The capstone's own price, only if the band leaves it late.** `capstone_cost` = ⌈the tree's other
+   nodes ÷ 3⌉ (data.gd ~1202), `node_cost` 1 + i÷4 (+2 keystone, +1 notable), `OFF_AFFINITY_COST` 2 on
+   top; a point a level, 49 by level 50, two a yard move; the three trees on show cost 57. Read again
+   after 3; move the late nodes' prices only for what's left.
 5. **Rarity.** Matt (6 Oct): rarity is the affix slots, and the tier an affix can roll: "common can have
    1 and it can only ever roll tier 1 affix and so on" - so "a nail gun rolled as epic with 4 affixes
    available stays relevant for levelling builds in the stash", and the question whether the pool wants
    another tier: common, uncommon, rare, epic, legendary, unique. There are five affix tiers
    (`AFFIX_TIERS`), so five rarities map one to one: Common one affix at T1, Uncommon two to T2, Rare
-   three to T3, Epic four to T4, Legendary five to T5, Unique the rules. Recommendation: that shape, with
-   the item level keeping a *floor* (deep finds roll no T1s) and the rarity the *cap*, so depth and
-   rarity both mean something and a Legendary from the first site is five T5s on a tier-1 base - the
-   stash's levelling gun, as Matt says, and worth a Nail gun's picture on it. Elite goes (its name and
-   colour in the shell, the manifests' words); Common gains an affix, which raises every drop a notch
-   and is read with it. The weights: a Legendary rare enough that the probe's gate is a Legendary share,
-   and quality's +35% buys a visible step. Moves: Loot quality visible; the whole loot feel. Can break:
-   every odds row, since every drop gets stronger - read after, and let 3 absorb it.
-6. **Deaths: N from Matt's playtest; wounds and odds read after the bot's rules** (the bot bails at a
-   quarter HP; the odds reader counts that as lost, so the two agree). If the wounds row stays under the
-   band with the bot playing to its odds, the wound threshold (`WOUND_AT`) moves, not the bot.
-7. **Depth pace last.** It assumes the campaign done by hour 4, which 3 decides; read after everything
-   else and move the curve (`Data.CURVE`) only for what's left.
+   three to T3, Epic four to T4, Legendary five to T5, Unique the rules. Today (`RARITIES`, data.gd
+   ~663): Common 0 affixes / weight 60 / value ×1, Uncommon 1 / 28 / ×1.8, Rare 2 / 10 / ×3.5, Elite 3 /
+   2 / ×8; the affix tier comes from the item level alone (`TIER_CAP` [0, 3, 6, 10, 15]: T5 needs item
+   level 15; `TIER_WEIGHT` [8, 5, 3, 2, 1], T1 the heaviest), rarity plays no part in it, and there is no
+   floor - a deep find rolls T1s as readily as a shallow one. The shape: the rarity sets the cap on the
+   tier (over `TIER_CAP`, so a Legendary from the first site is five T5s on a tier-1 base - the stash's
+   levelling gun, as Matt says), and the item level gains a floor it never had (deep finds roll no T1s),
+   so depth and rarity both mean something. Elite goes; Common gains an affix, which raises every drop a
+   notch. What it touches: `roll`/`_roll_rarity`/`roll_tier`/`pick_affixes` (items.gd), the add's cap
+   (`RARITIES.size() - 1`, sim.gd ~1080 and items.gd ~423), sets at `RARITIES[2]` and uniques at `[3]`
+   (items.gd ~456, ~480), contracts rolling 1–2 (sim.gd ~665), the four-entry tone arrays in
+   armoury/item_cell/item_head/workshop, the inventory's filter labels, the vendor's `[0,0,0,0]`, the
+   find sound at rarity ≥ 2, the balance reader's Elite share (a Legendary share, with new weights, and
+   the probe's gate figure with it), and the smoke's hard-set rarities. Nothing in the manifests. Moves:
+   Loot quality visible; the whole loot feel. Can break: every odds row, since every drop gets stronger
+   - read after, and let 3 absorb it.
+6. **Deaths and wounds.** N from Matt's playtest. A wound lands when a hit takes the runner under
+   `WOUND_AT` 0.25 of max HP (sim.gd ~2948); the bot bails at a quarter and the odds reader counts that
+   as lost, so the two agree, and a bot that plays to PUSH 0.75 is rarely under a quarter. If the
+   wounds row stays under the band with the bot playing to its odds, `WOUND_AT` moves (a wound from
+   under a third, say), not the bot.
+7. **Depth pace last.** It assumes the campaign done by hour 4, which 3 decides. The curve: `CURVE`
+   hp 3200 × 1.14 a depth, cash 40 × 1.10, rarity 0.10 a depth (data.gd ~794); before the campaign
+   hostiles ×1.25 a depth against rewards ×1.12. Read after everything else; move `CURVE.grow` only for
+   what's left.
 
-The order is the order above, with the bot's bench rule first of all (it is a reader, not a number): then
-cash and scrap (they break nothing that reads early), then the band, then rarity, then the rest for what's
-left. Every move is one commit with its before-and-after summary
-lines in status.md, so the pass can be read back.
+The order is the order above: the bench rule is in; then cash and scrap (they break nothing that reads
+early), then the band, then rarity, then the rest for what's left.
 
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;
@@ -437,7 +463,7 @@ about ×190 in enemy HP on the curve, so a build has to be able to make ×100, a
 layers that multiply, not add. Built in this order, each step leaving the game green:
 
 1. **Affixes, wide and tiered.** Sixty-odd affixes against today's fourteen, each with a slot list, five
-   tiers (T5 worst, T1 best; the same affix at a different value), a weight, and for some a condition.
+   tiers (T1 worst, T5 best, as built; the same affix at a different value), a weight, and for some a condition.
    Offence: increased and added damage per type, conversions on gear, attack speed, first-shot, dot
    duration and damage, spread chance. Defence: armour, HP, regen a second, life on hit, life on kill,
    a resist per type, all resists, dot resistance, less from three-plus. Utility: pace, search, loot

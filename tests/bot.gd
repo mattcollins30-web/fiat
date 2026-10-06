@@ -171,6 +171,27 @@ func _endgame(sim) -> void:
 		var cost: int = sim.craft_cost(it, "add")
 		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "add"):
 			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
+	_bench_worn(sim)
+
+
+## The bench as a player uses it late: the worn kit's weakest affix re-rolled,
+## one job a run at most, while two grand stays. One a run bounds the spend
+## by the runs, so what piles up past it is the prices' to answer for.
+func _bench_worn(sim) -> void:
+	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
+		var it = sim.equipped[s]
+		if it == null or it.has("unique") or it.has("set"):
+			continue                      # a set piece's affixes are the set's, no tier on them
+		var weakest := {}
+		for a in it["affixes"]:
+			if int(a.get("tier", 1)) < Data.AFFIX_TIERS and (weakest.is_empty() or int(a.get("tier", 1)) < int(weakest.get("tier", 1))):
+				weakest = a
+		if weakest.is_empty():
+			continue
+		var cost: int = sim.craft_cost(it, "one", weakest["stat"])
+		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "one", weakest["stat"]):
+			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d" % [s.to_lower(), weakest["stat"], cost]])
+			return
 
 
 ## The build's bench work on the primary: a socket for the element's
