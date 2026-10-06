@@ -328,8 +328,8 @@ weights or the gate's figure move in the pass.
 | The bank's band | time to the bank, six builds | slowest within 1.5× the fastest |
 | The keystone | hour each build takes its keystone | by hour 2, every build |
 | The capstone | hour each build takes its capstone | by hour 4, every build |
-| No reds | the odds reader at every tier in the kit the tier before drops | no tier under 60% |
-| Loot quality visible | Elite share at +35% quality | at least 3.0% (2.0% unboosted) |
+| No reds | the odds reader at every open tier at depth 1, in the kit at the end | no tier under 60% |
+| Loot quality visible | Legendary share at +35% quality | at least 2.0% (0.8% unboosted) |
 | Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
 | Cash sink | cash in hand at the campaign's end | no more than 3× the top bench level |
 | Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
@@ -423,12 +423,12 @@ between. Each move is one commit with its before-and-after summary lines in stat
    find sound at rarity ≥ 2, the balance reader's Elite share (a Legendary share, with new weights, and
    the probe's gate figure with it), and the smoke's hard-set rarities. Nothing in the manifests. Moves:
    Loot quality visible; the whole loot feel. Can break: every odds row, since every drop gets stronger
-   - read after, and let 3 absorb it.
+   - read after, and let 3 absorb it. **Built 6 Oct** (in status.md); the gate row reads a Legendary share.
 6. **Deaths and wounds.** N from Matt's playtest. A wound lands when a hit takes the runner under
    `WOUND_AT` 0.25 of max HP (sim.gd ~2948); the bot bails at a quarter and the odds reader counts that
    as lost, so the two agree, and a bot that plays to PUSH 0.75 is rarely under a quarter. If the
    wounds row stays under the band with the bot playing to its odds, `WOUND_AT` moves (a wound from
-   under a third, say), not the bot.
+   under a third, say), not the bot. **Moved 6 Oct:** 0.25 → 0.33 after five reads at 2–10%.
 7. **Depth pace last.** It assumes the campaign done by hour 4, which 3 decides. The curve: `CURVE`
    hp 3200 × 1.14 a depth, cash 40 × 1.10, rarity 0.10 a depth (data.gd ~794); before the campaign
    hostiles ×1.25 a depth against rewards ×1.12. Read after everything else; move `CURVE.grow` only for

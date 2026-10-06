@@ -1868,6 +1868,42 @@ words with them); they were the two slowest to the bank, at 6.0 h and 4.4 h on t
 1.5 h for the fastest, and the only classes with a damage figure under one. Everything else about them
 stays (the heal, the auto-med, the search pace, the loot share).
 
+**Rarity as quality (lever 5).** Matt: "rarity tier means more affix slots available - common can have 1
+and it can only ever roll tier 1 affix and so on ... a nail gun rolled as epic with 4 affixes available
+stays relevant for levelling builds in the stash", and "common, uncommon, rare, epic, legendary, unique".
+Five rarities to the five affix tiers (`RARITIES`: Common one affix to T1, Uncommon two to T2, Rare three
+to T3, Epic four to T4, Legendary five to T5; weights 50/30/13/6/1, values ×1/1.8/3.5/6/10; Elite gone;
+uniques at the top index, sets at Rare). The rarity caps the tier (`roll_affix` takes the cap on a drop,
+over `TIER_CAP`, so a Legendary from the first site is five T5s on a tier-1 base) and the item level
+floors it (`TIER_FLOOR` [0, 6, 10, 14]: a deep find rolls no T1s, the floor never above the cap, so a
+deep Common is one T1). Quality compounds up the ladder (`_roll_rarity`: a rank's weight × (1 +
+quality)^rank), so +35% is ×1.35 on Uncommon and ×3.3 on Legendary: the probe reads Legendary 0.98%
+plain, 2.75% boosted, where Elite went 2.0% → 2.4%; the gate is a Legendary share now (2% boosted, 0.8%
+plain - the weights give 2.5% and 1.0%, the probe's noise ±0.1). The bench: an add rolls at the new
+rarity's cap; the re-rolls keep the level's cap (a Common can be re-rolled past its rarity - the bench's
+point) - reviewer: three rules at one bench (reroll and lock take the floor, re-roll one does not), **for
+Matt to call**. The shell: `Pal.rarity_tone` (Epic lilac, Legendary orange) in place of four arrays; the
+Lock-up's filter row six buttons at 70 (the row fits in front of the pages); the fence sells by five
+rarities (`SIDE_TILES` 11). Smoke: five to five, each rarity's count and cap, four hundred shallow and
+deep rolls inside floor and cap, a T5 from the first site, no T1s deep, the bench's add to the top, the
+fence's tiles; the label-fit sweep's worst items are Legendaries with five affixes at the top roll. Old
+saves: an Elite reads as Epic. Noted, not changed: a plain item taken up the bench ends a Legendary with
+four affixes (one short of a drop), as a set piece is a Rare with two. Smoke: the Lock-up's filter row
+needed 17 px for six buttons; the fence's five tiles take the short names ("Uncommon" would not fit);
+the away check sold four rarities of five, so auto-run stopped on a full stash.
+
+**The fifth read, and two readers more (6 Oct).** With the words, the scrap and the class figures in:
+cash green on nine of ten (the shock Drifter £121k), scrap 1.1 to 1.8 crafts an hour on seven with
+three under, the keystone row green. Two things in it for the reading rather than the game: the plain
+Poacher banked at 6.1 h this read and 2.5 h the last with nothing about it changed, so one eight-hour
+run is a noisy sample of the bank and the band flickers - `tools\balance.bat` runs each build twice now
+(twenty-one jobs) and the summary merges a build's reads (the firsts and the odds by the median, cash
+and scrap by the mean, the counts summed; each read still on its own line in the builds table). And the
+"No reds" row was reading the endgame ladder - a build that cleared T8 showed it at 0% at the depth the
+dig rule had pushed it to - so `_gate` reads every open tier at depth 1, the campaign's odds, and puts
+the depth back. Wounds read 2 to 10% in every build across five reads against a 10 to 25% band, with
+a quarter being where the bot and the odds call a run lost: `WOUND_AT` 0.25 → 0.33.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are
