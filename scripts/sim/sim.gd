@@ -2684,6 +2684,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 ## rig. From a look: what the site holds - attachments, meds, packs, and a
 ## share of gear left lying about.
 func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
+	m["finds"] = int(m.get("finds", 0)) + 1    # every find, stacked, swapped or left: the count the tests read
 	if has_node("all_or_nothing"):
 		m["skipped"] = int(m.get("skipped", 0)) + 1
 		if m["skipped"] % 2 == 0:
@@ -2818,6 +2819,22 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.DEEDS["found"])
 
 
+## Picked over inside a run (29): the searches a site gives in full before its
+## finds thin. By depth, and quantity bonuses push it.
+func thin_after(t: Dictionary) -> int:
+	var n: float = Data.THIN_AFTER + Data.THIN_PER_DEPTH * int(t["depth"])
+	return int(roundf(n * (1.0 + maxf(0.0, loot_bonus()))))
+
+
+## The share of a search's finds still there, 1 until thin_after, then a fifth
+## less a search to the floor.
+func thinning(m: Dictionary, t: Dictionary) -> float:
+	# the searches in full only grow through a run (a med used would shrink the quantity bonus): the best figure yet holds
+	m["thin_after"] = maxi(int(m.get("thin_after", 0)), thin_after(t))
+	var past: int = maxi(0, int(m["searches"]) - int(m["thin_after"]))
+	return clampf(1.0 - Data.THIN_STEP * past, Data.THIN_FLOOR, 1.0)
+
+
 ## Nothing alive on the site: a cache every SEARCH_S.
 func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["search"] += dt
@@ -2827,18 +2844,17 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["searches"] += 1
 		if rng.randf() < Data.NOTES_SEARCH:
 			m["notes"] = int(m.get("notes", 0)) + rng.randi_range(1, 2)
-		_find(m, t)
-		if has_node("scavenger") or has_node("quiet_hands"):
-			_find(m, t)
-		for k in range(Data.KENNEL_LEVELS[kennel_level]["finds"]):
-			_find(m, t)                   # the dog
-		if has_rule("postman"):
-			_find(m, t)
+		# every find this search is one of the share still there (29): past thin_after, each is a roll
+		var thin := thinning(m, t)
+		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[kennel_level]["finds"]) + (1 if has_rule("postman") else 0)
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
 		m["extra"] = float(m.get("extra", 0.0)) + maxf(0.0, loot_bonus())
 		while m["extra"] >= 1.0:
 			m["extra"] -= 1.0
-			_find(m, t)
+			finds += 1
+		for k in range(finds):
+			if thin >= 1.0 or rng.randf() < thin:
+				_find(m, t)
 
 
 ## Drop something from the pack mid-run to make room: the cheapest thing, or

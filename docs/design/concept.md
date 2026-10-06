@@ -259,7 +259,8 @@ pass. In build order; the economy items last so the reader runs once over all of
 29. **Picked over inside a run.** The between-run curve applied within one: after the Nth search on a
     site in a run (N by depth), finds thin by a fifth a search, to a floor; the Searching bar's words
     say so ("Thinning"). "Fill up, then go" and the pack grid get a natural stop, and quantity bonuses
-    push N.
+    push N. *Built (6 Oct):* N = 6 + 2 a depth, scaled by the quantity bonus; a fifth a search to a floor
+    of two fifths; "Thinning: finds at 80%", "Thinned out: finds at 40%" on the Searching bar.
 30. **Wounds.** A hit that takes the runner under a quarter HP leaves a wound: one worn stat cut (pace,
     armour or max HP, −10%) until treated at the clinic for a price by level; the clinic's Treat gets a
     second reason, the band and the Runner card show it ("Wounded: pace −10%"), and dying stops being
@@ -305,6 +306,13 @@ green. Figures to be set with Matt's death count from the playtest; the rest are
 | Deaths | the player's own, from the playtest save | one every N hours at Matt's risk (N to set) |
 | Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |
 | Scrap economy | scrap in hand against the dearest craft, hour 4 | between one and three crafts' worth |
+
+**On the list for the pass, to discuss before it starts (Matt, 6 Oct):** rarity as quality in itself. Today
+a rarity is only its affix count (Uncommon one, Rare two, Elite three) and its fence value; the base figures
+never change with it and every affix's tier comes from the item level alone, so a Rare from deep beats an
+Elite from shallow. Matt: "it should probably be both" - a floor on affix tiers by rarity (an Elite rolls no
+T1s) and a base multiplier per rarity. Both are numbers, so they go in with the pass, and a gate for them
+("an Elite outguns a Rare of the same level") joins the table once the shape is agreed.
 
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;

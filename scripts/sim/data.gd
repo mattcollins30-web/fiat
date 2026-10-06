@@ -1243,6 +1243,13 @@ const RECYCLE_KEEP := 12
 const RECOVER_H := 2.0
 const WORN_DROP := 0.5             # drops lose this much at fully picked over
 const WORN_CASH := 0.3
+## Picked over inside a run (29): after THIN_AFTER searches on a site (more by
+## depth, and quantity bonuses push it) each search's finds thin by THIN_STEP,
+## down to THIN_FLOOR of them.
+const THIN_AFTER := 6
+const THIN_PER_DEPTH := 2
+const THIN_STEP := 0.2
+const THIN_FLOOR := 0.4
 const CLOCK_START := 9.0
 const NIGHT_FROM := 21.0
 const NIGHT_TO := 6.0

@@ -4507,14 +4507,14 @@ func _loot_roll_checks(main) -> void:
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9              # no gang
-	var found0: int = m["found"].size()
+	var found0: int = int(m.get("finds", 0))
 	var searches0: int = m["searches"]
 	for k in range(400):
 		sim.advance(1.0)
 		if not sim.on_mission() or m["searches"] - searches0 >= 3:
 			break                        # three searches, however slow this runner's are (Never there doubles them)
 	if sim.on_mission():
-		var per_search: float = float(m["found"].size() + int(m.get("left", 0)) - found0) / maxf(1.0, float(m["searches"] - searches0))
+		var per_search: float = float(int(m.get("finds", 0)) - found0) / maxf(1.0, float(m["searches"] - searches0))
 		var base_finds: int = 1 + (1 if sim.has_node("scavenger") or sim.has_node("quiet_hands") else 0) + int(Data.KENNEL_LEVELS[sim.kennel_level]["finds"]) + (1 if sim.has_rule("postman") else 0)
 		_check(m["searches"] - searches0 >= 2 and per_search >= float(base_finds) + floorf(q) - 0.6, "with +%.0f%% quantity a search brings %.2f, base %d" % [q * 100.0, per_search, base_finds])
 		sim.extract_now()
@@ -4540,6 +4540,84 @@ func _loot_roll_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
+	_thinning_checks(main)
+
+
+## 29: picked over inside a run. After thin_after searches a site's finds thin a fifth a search to the floor;
+## deeper sites and quantity bonuses give more searches in full; the Searching bar says so.
+func _thinning_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var hold_pack = sim.equipped["Backpack"]
+	sim.equipped["Backpack"] = null
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("The rat man/"))
+	sim.set_depth(0, 1)
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var t: Dictionary = m["t"]
+	var n: int = sim.thin_after(t)
+	_check(n >= Data.THIN_AFTER, "thin_after at depth 1 reads %d" % n)
+	m["searches"] = 0
+	_check(sim.thinning(m, t) == 1.0, "a fresh site is thinning already")
+	m["searches"] = n
+	_check(sim.thinning(m, t) == 1.0, "the site thins before its searches are up")
+	m["searches"] = n + 1
+	_check(is_equal_approx(sim.thinning(m, t), 1.0 - Data.THIN_STEP), "the first thinned search reads %.2f" % sim.thinning(m, t))
+	m["searches"] = n + 100
+	_check(is_equal_approx(sim.thinning(m, t), Data.THIN_FLOOR), "the floor reads %.2f" % sim.thinning(m, t))
+	# the bar says so, and fits
+	m["remaining"] = 0
+	m["cleared"] = true
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._fight["bar_text"].text.begins_with("Thinned out: finds at %d%%" % int(roundf(Data.THIN_FLOOR * 100.0))), "the bar does not say the site is thinned out: '%s'" % main._run._fight["bar_text"].text)
+	_check_fit(main, "Run (thinned out)")
+	m["searches"] = n + 1
+	main.refresh()
+	_check(main._run._fight["bar_text"].text.begins_with("Thinning: finds at"), "the bar does not say the site is thinning: '%s'" % main._run._fight["bar_text"].text)
+	_check_fit(main, "Run (thinning)")
+	# at the floor, a hundred searches bring about the floor's share of what a fresh site would
+	m["searches"] = n + 100
+	m["patrol_timer"] = -1e9
+	sim.auto_tier = -1
+	m["leave_full"] = false
+	var found0: int = int(m.get("finds", 0))
+	var s0: int = m["searches"]
+	for k in range(int(70.0 * sim.search_s(t))):
+		sim.advance(1.0)
+		if not sim.on_mission() or m["searches"] - s0 >= 60:
+			break
+	_check(sim.on_mission(), "the run ended under the thinning check")
+	if sim.on_mission():
+		var finds_each: int = 1 + (1 if (sim.has_node("scavenger") or sim.has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[sim.kennel_level]["finds"]) + (1 if sim.has_rule("postman") else 0)
+		var per: float = float(int(m.get("finds", 0)) - found0) / maxf(1.0, float(m["searches"] - s0))
+		_check(m["searches"] - s0 >= 20 and per < float(finds_each) * 0.8, "at the floor a search still brings %.2f of %d (%d searches)" % [per, finds_each, m["searches"] - s0])
+		sim.extract_now()
+	# deeper sites and quantity give more searches in full; the figure ratchets through a run
+	sim.deploy(0)
+	m = sim.mission
+	var shallow: int = sim.thin_after(m["t"])
+	var expect := func(d: int) -> int: return int(roundf((Data.THIN_AFTER + Data.THIN_PER_DEPTH * d) * (1.0 + maxf(0.0, sim.loot_bonus()))))
+	_check(shallow == expect.call(int(m["t"]["depth"])), "thin_after reads %d, not %d" % [shallow, expect.call(int(m["t"]["depth"]))])
+	var heavy: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"][0]["name"])
+	heavy["affixes"] = [{"stat": "loot_pct", "value": 100, "tier": 5}]
+	sim.equipped["Backpack"] = heavy
+	_check(sim.thin_after(m["t"]) == expect.call(int(m["t"]["depth"])) and sim.thin_after(m["t"]) > shallow, "+100%% quantity did not push the searches: %d from %d" % [sim.thin_after(m["t"]), shallow])
+	var heavy_n: int = sim.thin_after(m["t"])
+	sim.thinning(m, m["t"])
+	sim.equipped["Backpack"] = null
+	sim.thinning(m, m["t"])
+	_check(int(m["thin_after"]) == heavy_n, "the searches in full did not hold when the quantity bonus went: %d, not %d" % [int(m["thin_after"]), heavy_n])
+	var deeper: Dictionary = m["t"].duplicate()
+	deeper["depth"] = int(m["t"]["depth"]) + 3
+	_check(sim.thin_after(deeper) == expect.call(int(deeper["depth"])) and sim.thin_after(deeper) > shallow, "depth did not push the searches: %d from %d" % [sim.thin_after(deeper), shallow])
+	sim.extract_now()
+	sim.equipped["Backpack"] = hold_pack
+	sim.load_dict(saved)
+	main.refresh()
+	print("thinning ok: the searches in full, the fifth a search, the floor, the bar, depth and quantity")
 
 
 func _yard_checks(main) -> void:

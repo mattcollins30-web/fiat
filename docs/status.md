@@ -1591,6 +1591,20 @@ notable, not a keystone it has not got. Also caught by the fence check on the wa
 business end whose only stat is a bleed share) had no headline and no words, as the bleed share was in
 neither attachment list; it is in both now, and every part is asserted to have a headline.
 
+**29 · Picked over inside a run.** The between-run curve applied within one. A site gives `thin_after`
+searches in full (`THIN_AFTER` 6, +`THIN_PER_DEPTH` 2 a depth, the lot scaled up by the quantity bonus:
++25% is a quarter more searches), then each search's finds thin by `THIN_STEP` a fifth, to `THIN_FLOOR`
+two fifths. It lands in `_search`: the search's finds (the base, Scavenger's, the dog's, the postman's and
+the quantity fraction's) are counted first, then each is a roll against the share still there, so nothing
+changes before the searches are up and no random number is spent there. The run screen's Searching bar
+reads "Thinning: finds at 80%" in the warning tone, then "Thinned out: finds at 40%" at the floor ("picked
+over" is a weather and an atlas rank already); the searches-in-full figure ratchets through a run, as a med
+used would shrink the quantity bonus and jump the share; the
+fight box's head says "every gang the size of the first" under Dead quiet. Smoke: fresh and at the limit
+the share is 1, one past it a fifth off, far past it the floor; the two bar readings fit; at the floor sixty
+searches bring under four fifths of a fresh site's; +100% quantity near doubles the searches, depth adds
+two each.
+
 ## Chips everywhere: the word and the affixes (2026-10-06)
 
 Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips

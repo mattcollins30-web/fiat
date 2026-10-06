@@ -206,10 +206,12 @@ func show_state(s) -> void:
 			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad")
 	else:
-		_fight["head"].text = "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
+		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
 		_tiles(_fight["tiles"], [["Next gang", [Fmt.mss(next) if next < 1e8 else "never"]], ["Gangs so far", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
-		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), "Searching", "good")
+		var thin: float = sim.thinning(m, t)
+		var search_words: String = "Searching" if thin >= 1.0 else (("Thinned out: finds at %d%%" if is_equal_approx(thin, Data.THIN_FLOOR) else "Thinning: finds at %d%%") % int(roundf(thin * 100.0)))
+		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
 	# the runner
 	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good")
 	var gun = sim.equipped["Primary"]
