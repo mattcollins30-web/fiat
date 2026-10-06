@@ -351,6 +351,58 @@ are never an upgrade for anyone. Recommendation: a starting pair of its own belo
 nail gun" and a "Work jacket", say, with no mounts and nothing rolled), or start on the Bolt gun and the
 Padded jacket; the gate: every base in the pool beats the starting kit of its slot on its own figures.
 
+### The pass plan (6 Oct, after two reads; to argue with before the figures move)
+
+Two full reads on the Legion (`docs/balance/summary.md`), the second with the bot's dry gun fixed: the
+keystone row green, the bank 1.4 to 5.0 h, the capstone 2.1 to 7.1 h, cash at £150k–£300k against a £14k
+top bench in seven builds of ten, scrap at four to nine crafts' worth, the Elite share 2.35% against 3%.
+A lever a line below, with the row it moves and the rows it can break. No figures here: they come from the
+read before and after each move, one move at a time, the summary re-read between.
+
+1. **Cash: the late sinks priced off the yard's hours, and the works' top levels dearer.** The half-hour
+   lines show cash climbing from about hour 4, once every work is bought: nothing left to buy, income
+   still rising on the inflation. The bench's add and reroll, the words, insurance and the atlas take the
+   same inflation income does, so a sink at hour 7 costs what hour 7 pays; and the works' last levels cost
+   enough that the last of them lands at hour 5 or 6, not 3. Moves: Cash sink. Can break: the capstone
+   (a point's price) and the bank's band if the works are what gets a slow class there - so the works'
+   *first* levels stay where they are. Not touched: income, because the early hours are the right pace.
+2. **Scrap: the crafts dearer, not the contracts leaner.** Four to nine crafts' worth in hand says the
+   ladder's prices are low against what the contracts and the sites hand out. `BUILD_GUN` and the
+   `"from"` ladder go up; the contracts stay, because the player feels a contract and a craft is a sink.
+   Moves: Scrap economy. Can break: nothing read; the builds that craft toward an element bench their gun
+   later.
+3. **The bank's band: the classes' early game, through the starting kit and the class figures.** The
+   late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the low dps at hour 2 in the lines; the capstone
+   follows the bank because it needs the level, so this row carries most of the capstone row with it.
+   The starting kit becomes the worst kit (above), one pair below the pool, so the first find is an
+   upgrade for every class; then the class figures that differ at hour 2 (the Paramedic's gun, the
+   Poacher's rifle rate). Moves: the bank's band, the capstone. Can break: nothing else reads before
+   hour 2.
+4. **The capstone's own price, only if the band leaves it late.** Read again after 3; move the late
+   nodes' prices only for what's left.
+5. **Rarity.** Matt (6 Oct): rarity is the affix slots, and the tier an affix can roll: "common can have
+   1 and it can only ever roll tier 1 affix and so on" - so "a nail gun rolled as epic with 4 affixes
+   available stays relevant for levelling builds in the stash", and the question whether the pool wants
+   another tier: common, uncommon, rare, epic, legendary, unique. There are five affix tiers
+   (`AFFIX_TIERS`), so five rarities map one to one: Common one affix at T1, Uncommon two to T2, Rare
+   three to T3, Epic four to T4, Legendary five to T5, Unique the rules. Recommendation: that shape, with
+   the item level keeping a *floor* (deep finds roll no T1s) and the rarity the *cap*, so depth and
+   rarity both mean something and a Legendary from the first site is five T5s on a tier-1 base - the
+   stash's levelling gun, as Matt says, and worth a Nail gun's picture on it. Elite goes (its name and
+   colour in the shell, the manifests' words); Common gains an affix, which raises every drop a notch
+   and is read with it. The weights: a Legendary rare enough that the probe's gate is a Legendary share,
+   and quality's +35% buys a visible step. Moves: Loot quality visible; the whole loot feel. Can break:
+   every odds row, since every drop gets stronger - read after, and let 3 absorb it.
+6. **Deaths: N from Matt's playtest; wounds and odds read after the bot's rules** (the bot bails at a
+   quarter HP; the odds reader counts that as lost, so the two agree). If the wounds row stays under the
+   band with the bot playing to its odds, the wound threshold (`WOUND_AT`) moves, not the bot.
+7. **Depth pace last.** It assumes the campaign done by hour 4, which 3 decides; read after everything
+   else and move the curve (`Data.CURVE`) only for what's left.
+
+The order is the order above: cash and scrap first (they break nothing that reads early), then the band,
+then rarity, then the rest for what's left. Every move is one commit with its before-and-after summary
+lines in status.md, so the pass can be read back.
+
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;
     notes hold); the estate recycles (a dead runner's kit and a sold unique turn up on a gang member a
