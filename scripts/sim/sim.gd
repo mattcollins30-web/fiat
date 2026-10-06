@@ -434,7 +434,8 @@ func loot_bonus() -> float:
 
 ## Rarer finds: the tree's and the class's, as a bonus the roll reads.
 func rarity_bonus() -> float:
-	var r := tree_sum("rarity") / 100.0 + float(trait_data().get("rarity", 0.0)) + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0
+	var r := tree_sum("rarity") / 100.0 + float(trait_data().get("rarity", 0.0)) + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
+		+ float(Data.KENNEL_LEVELS[kennel_level].get("quality", 0.0)) / 100.0       # the dog knows what's worth carrying (27)
 	return r * (2.0 if has_rule("bookies_pencil") else 1.0)
 
 
@@ -1427,7 +1428,7 @@ func __fitted_sum_raw(stat: String) -> float:
 
 ## The charm's figures: magic find (rarer finds) and cash, in percent.
 func charm_find() -> float:
-	# the charm's own figure, and every magic-find affix worn (the charm's and the helmet's)
+	# the charm's own figure, and every loot-quality affix worn (the charm's, the helmet's, the pack's)
 	return (float(Items.base_of(equipped[Data.CHARM]).get("find", 0)) if equipped[Data.CHARM] != null else 0.0) + _affix_sum("rarity_pct")
 
 
@@ -2683,7 +2684,8 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 		it = Items.roll_set_piece(pick[0], pick[1], rng)
 		log_event("Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()])
 	else:
-		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, loot_bonus() + rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
+		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
@@ -2789,6 +2791,11 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		for k in range(Data.KENNEL_LEVELS[kennel_level]["finds"]):
 			_find(m, t)                   # the dog
 		if has_rule("postman"):
+			_find(m, t)
+		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
+		m["extra"] = float(m.get("extra", 0.0)) + maxf(0.0, loot_bonus())
+		while m["extra"] >= 1.0:
+			m["extra"] -= 1.0
 			_find(m, t)
 
 

@@ -4356,8 +4356,64 @@ func _hours(s: float) -> String:
 ## The Yard as option A: Elements and Finds cards with the figures nowhere else
 ## showed; the works on one card; the Runs cards say what a site fires and what
 ## you resist; the Radio's cards carry the words as chips and the odds.
+## 27: quantity is how much, not how good; it reaches searches; the dog adds quality.
+func _loot_roll_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	# quantity reaches searches: +100% quantity doubles what a search brings, carried as a fraction
+	var hold_pack = sim.equipped["Backpack"]
+	var heavy: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"][0]["name"])
+	heavy["affixes"] = [{"stat": "loot_pct", "value": 100, "tier": 5}]
+	sim.equipped["Backpack"] = heavy
+	var hold_tree: Array = sim.tree.duplicate()
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("The rat man/"))     # no Rat's share eating the bonus
+	var q: float = sim.loot_bonus()
+	_check(q >= 1.0, "a +100%% quantity pack reads %.2f" % q)
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9              # no gang
+	var found0: int = m["found"].size()
+	var searches0: int = m["searches"]
+	for k in range(40):
+		sim.advance(1.0)
+		if not sim.on_mission():
+			break
+	if sim.on_mission():
+		var per_search: float = float(m["found"].size() + int(m.get("left", 0)) - found0) / maxf(1.0, float(m["searches"] - searches0))
+		var base_finds: int = 1 + (1 if sim.has_node("scavenger") or sim.has_node("quiet_hands") else 0) + int(Data.KENNEL_LEVELS[sim.kennel_level]["finds"]) + (1 if sim.has_rule("postman") else 0)
+		_check(m["searches"] - searches0 >= 2 and per_search >= float(base_finds) + floorf(q) - 0.6, "with +%.0f%% quantity a search brings %.2f, base %d" % [q * 100.0, per_search, base_finds])
+		sim.extract_now()
+	# the dog adds quality
+	var hold_k: int = sim.kennel_level
+	sim.kennel_level = 0
+	var r0: float = sim.rarity_bonus()
+	sim.kennel_level = 1
+	_check(is_equal_approx(sim.rarity_bonus(), r0 + 0.05), "a dog did not add 5%% quality: %.3f then %.3f" % [r0, sim.rarity_bonus()])
+	sim.kennel_level = hold_k
+	# quantity is out of the rarity roll: Rat's share no longer moves the quality figure the roll reads
+	var rat := "The rat man/9"
+	var rar_before: float = sim.rarity_bonus()
+	if not sim.tree.has(rat):
+		sim.tree.append(rat)
+	_check(is_equal_approx(sim.rarity_bonus(), rar_before) and sim.loot_bonus() < q, "Rat's share moved quality (%.3f → %.3f) or not quantity" % [rar_before, sim.rarity_bonus()])
+	# a rarity node a class: the Doorman's and the Paramedic's trees carry one now
+	for t in ["Muscle", "Triage"]:
+		_check(Data.tree_named(t)["nodes"].any(func(n): return n.get("effect", "") == "rarity"), "%s has no loot quality node" % t)
+	_check(Data.AFFIXES.any(func(a): return a["stat"] == "rarity_pct" and "Backpack" in a["slots"]), "no loot quality affix rolls on a backpack")
+	sim.equipped["Backpack"] = hold_pack
+	sim.tree = hold_tree
+	sim.load_dict(saved)
+	main.refresh()
+	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
+
+
 func _yard_checks(main) -> void:
 	var sim = main.sim
+	_loot_roll_checks(main)
 	if sim.on_mission():
 		sim.extract_now()
 	main.show_room(main.OVERVIEW)

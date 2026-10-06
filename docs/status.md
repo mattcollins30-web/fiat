@@ -1550,6 +1550,21 @@ Placeholder for drawn art, but the shapes are the shapes an artist would be give
 The worst-case pass covers the whole pool and the uniques; the smoke test drives juicing, the Clinic and
 the pool's rules (a choke counts on a shotgun and not on a rifle; a unique's rule and name; weight as pace).
 
+## Before the one balance pass: the numeric features (2026-10-06)
+
+The plan is concept.md's "Before the one balance pass" section (items 27–37 in build order, the gates
+table under them). Each lands as its own commit with a reviewer pass; nothing is tuned while they go in.
+
+**27 · The loot roll straightened.** `Items.roll` reads `rarity_bonus()` and the intel's rarity, not
+`loot_bonus()` too, so Rat's share's −20% quantity no longer takes 20 off quality. Quantity reaches
+searches: `_search` carries `m["extra"] += loot_bonus()` and a whole point of it is an extra find (+25% is a
+fourth find one search in four; the mission dictionary holds the fraction, an old save starts it at 0).
+Quality's sources widen: the dog adds 5% then 10% (`KENNEL_LEVELS.quality`), loot quality rolls on
+backpacks, and the two classes without a rarity node have one appended at the end of a tree so no node id
+moves under a live save (Muscle's *Spoils*, Triage's *Pockets checked*, 15 each off the notable). Smoke:
+a +100% pack doubles what a search brings, the dog adds 5% quality, Rat's share moves quantity and not
+quality, the two trees carry a rarity node, the backpack affix rolls. Reviewer: clean.
+
 ## Chips everywhere: the word and the affixes (2026-10-06)
 
 Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips

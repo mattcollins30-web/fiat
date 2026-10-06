@@ -104,8 +104,8 @@ const LOOKOUT_LEVELS := [
 ]
 const KENNEL_LEVELS := [
 	{"finds": 0, "patrol": 1.0, "cost": 0, "words": "No dog"},
-	{"finds": 1, "patrol": 1.0, "cost": 2500, "words": "A dog: one more find every look"},
-	{"finds": 1, "patrol": 1.2, "cost": 7000, "words": "A good dog: it hears the next gang coming, so they arrive 20% later"},
+	{"finds": 1, "patrol": 1.0, "cost": 2500, "quality": 5, "words": "A dog: one more find every look, +5% loot quality"},
+	{"finds": 1, "patrol": 1.2, "cost": 7000, "quality": 10, "words": "A good dog: it hears the next gang coming, so they arrive 20% later; +10% loot quality"},
 ]
 
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
@@ -669,7 +669,7 @@ const AFFIXES := [
 	{"stat": "cash_per_cell", "label": "cash a pack cell filled, on the way out", "short": "£/cell", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 2, "max": 5, "slots": ["Attachment"]},
 	# the charm's: loot quality is rarer finds; loot quantity is more of them
-	{"stat": "rarity_pct", "label": "loot quality", "short": "quality", "min": 5, "max": 15, "slots": ["Charm", "Helmet"]},
+	{"stat": "rarity_pct", "label": "loot quality", "short": "quality", "min": 5, "max": 15, "slots": ["Charm", "Helmet", "Backpack"]},
 	{"stat": "cash_pct", "label": "cash", "short": "cash", "min": 5, "max": 15, "slots": ["Charm"]},
 	{"stat": "loot_pct", "label": "loot quantity", "short": "quantity", "min": 5, "max": 12, "slots": ["Charm"]},
 ]
@@ -825,6 +825,7 @@ const TREES := [
 		{"name": "Big frame", "effect": "hp", "value": 6, "needs": 3},
 		{"name": "Glassing", "effect": "conv_bleed_pct", "value": 15, "notable": true, "words": "15% of your damage as bleed"},
 		{"name": "Loud", "effect": "loud", "notable": true, "words": "Gangs come sooner and one head bigger; +30% drops"},
+		{"name": "Spoils", "effect": "rarity", "value": 15, "needs": 3},
 	]},
 	{"name": "The door", "class": "Doorman", "nodes": [
 		{"name": "Stance", "effect": "hp", "value": 5},
@@ -850,6 +851,7 @@ const TREES := [
 		{"name": "Pressure", "effect": "heal_pct", "value": 15, "needs": 3},
 		{"name": "Syringe", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
 		{"name": "Walking wounded", "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
+		{"name": "Pockets checked", "effect": "rarity", "value": 15, "needs": 3},
 	]},
 	{"name": "Shifts", "class": "Paramedic", "nodes": [
 		{"name": "Night shift", "effect": "hp", "value": 5},
