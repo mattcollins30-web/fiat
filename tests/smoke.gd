@@ -9,6 +9,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
+const Sim := preload("res://scripts/sim/sim.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -4950,11 +4951,16 @@ func _grade_checks(main) -> void:
 		m["target_hp"] = 1e6
 		m["remaining"] = 3
 		m["fresh"] = true
+		sim.rng.seed = 11                 # the swing the same both times: deploy spent the dice differently
 		sim._fight(m, m["t"], 0.5)
 		drops.append(1e6 - m["target_hp"])
 		drops.append("%s rig %s rounds %s grade %.0f first %.0f melee %s rules %s" % [sim.equipped["Primary"]["base"], str(sim.rig.map(func(x): return x["base"])), str(sim.has_rounds(sim.equipped["Primary"])), sim.grade_bonus(sim.equipped["Primary"]), sim.grade_stat(sim.equipped["Primary"], "first_pct"), str(sim.melee()), str(sim.has_rule("qm_rifle"))])
 		sim.extract_now()
-	_check(drops[2] > drops[0] * 1.2, "match rounds' first shot did not land heavier: %.1f against %.1f (%s / %s)" % [drops[2], drops[0], drops[1], drops[3]])
+	# the class's own first-shot share (the Poacher's +40%) is on both: the expected ratio is the grade's 15% times
+	# (class + 25%) over (class), read against the class at hand
+	var cls_first: float = float(sim.class_data().get("first_pct", 0)) / 100.0
+	var expect: float = 1.15 * (1.0 + cls_first + 0.25) / (1.0 + cls_first)
+	_check(drops[2] > drops[0] * expect * 0.97, "match rounds' first shot did not land heavier: %.1f against %.1f, expected ×%.2f (%s / %s)" % [drops[2], drops[0], expect, drops[1], drops[3]])
 	# no gun in hand: the odds read without a grade, not a crash
 	sim.equipped["Primary"] = null
 	sim.rig = []
@@ -5147,6 +5153,7 @@ func _pick_panel_checks(main) -> void:
 	# on a run: an armour in the pack against the one worn; Equip swaps them; the pack must hold what comes off
 	var worn: Dictionary = sim._plain("Armour", "Riot suit")
 	sim.equipped["Armour"] = worn
+	sim.equipped["Backpack"] = sim._plain("Backpack", "School bag")     # twelve cells: the leathers and the suit's three more; the start's bag has nine
 	sim.deploy(0)
 	var m: Dictionary = sim.mission
 	var found: Dictionary = sim._plain("Armour", "Motorbike leathers")
@@ -5183,7 +5190,7 @@ func _pick_panel_checks(main) -> void:
 	var worn_pack = sim.equipped["Backpack"]
 	var big_pack: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"].back()["name"])
 	sim.equipped["Backpack"] = big_pack
-	var small_pack: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"][0]["name"])
+	var small_pack: Dictionary = sim._plain("Backpack", "School bag")     # the smallest found pack; the start is under it
 	m["found"] = [small_pack]
 	while sim.pack_used(m) + Items.size(big_pack) + 1 <= sim.capacity():
 		m["found"].append(sim._plain(Data.AMMO, "Nails"))
@@ -5770,10 +5777,16 @@ func _dig_checks(main) -> void:
 	_check(sim.campaign_done(), "the dig check did not finish the campaign")
 	_check(sim.has_rounds(sim.equipped["Primary"]), "the dig check's gun is dry")
 	var t: int = bot.pick_tier(sim)
-	_check(t == 5 and sim.depth[5] == 3, "past the campaign the bot did not keep to the site dug deepest: T%d at depth %d (odds %.2f)" % [t, sim.depth[t], sim.survival(t)])
+	# the rule, not the state: the site it dug deepest, at the deepest depth that reads PUSH
+	# (the odds read by the night, the weather and the tree, so the depth itself may differ)
+	var at_push: bool = sim.survival(5) >= Bot.PUSH
+	var deepest: bool = sim.depth[5] == 3 or not _reads_push_deeper(sim, 5)
+	_check(t == 5 and at_push and deepest, "past the campaign the bot did not keep to the site dug deepest at a depth that reads PUSH: T%d at depth %d (odds %.2f)" % [t, sim.depth[t], sim.survival(t)])
 	bot.last_tier = t
+	var d0: int = sim.depth[5]
+	var climbs: bool = sim.survival(5) >= Bot.CLIMB
 	bot._climb(sim)
-	_check(sim.depth[5] == 4, "the bot did not dig its site a depth at CLIMB: depth %d, odds %.2f" % [sim.depth[5], sim.survival(5)])
+	_check(sim.depth[5] == (d0 + 1 if climbs else d0), "the bot's climb did not follow CLIMB: depth %d from %d, odds %.2f" % [sim.depth[5], d0, sim.survival(5)])
 	# a runner that can't hold the depth steps back and picks as before: no
 	# armour, no meds, level 3 - under at T5 whatever the tree
 	sim.equipped["Primary"]["affixes"] = []
@@ -5787,6 +5800,17 @@ func _dig_checks(main) -> void:
 	sim.load_dict(saved)
 	print("the dig rule ok")
 	_leave_checks(main)
+
+
+## Whether the site one depth deeper than it stands reads PUSH; the depth is put back after.
+func _reads_push_deeper(sim, i: int) -> bool:
+	var d0: int = sim.depth[i]
+	sim.set_depth(i, d0 + 1)
+	if sim.depth[i] == d0:
+		return false
+	var ok: bool = sim.survival(i) >= Bot.PUSH
+	sim.set_depth(i, d0)
+	return ok
 
 
 ## The bot leaves a picked-over site: a runner no gang moves on (Never
@@ -5877,3 +5901,39 @@ func _build_one_checks(main) -> void:
 	_check(bot.bought.size() == 1 and sim.scrap == int(want["scrap"]) and sim.stash.any(func(it): return it["base"] == "Hardened bolts"), "the bot did not build the grade for its rounds: %s, scrap %d" % [str(bot.bought), sim.scrap])
 	sim.load_dict(saved)
 	print("the bot's build rule ok")
+	_start_kit_checks(main)
+
+
+## The starting kit is the worst kit in the game (Matt, 6 Oct): a pair of its
+## own under the pool, never found, so every base in the pool beats the start
+## of its slot on its own figures and the first find is somebody's upgrade.
+func _start_kit_checks(main) -> void:
+	var sim = main.sim
+	var fresh = Sim.new()
+	fresh.start()
+	var start := {"Primary": fresh.equipped["Primary"]["base"], "Armour": fresh.equipped["Armour"]["base"], "Backpack": fresh.equipped["Backpack"]["base"]}
+	for slot in start:
+		var mine: Dictionary = Items.base_named(slot, start[slot])
+		_check(mine.get("start", false), "the starting %s is not flagged as the start: %s" % [slot, start[slot]])
+		for b in Data.BASES[slot]:
+			if b.get("start", false):
+				continue
+			var worse := false
+			match slot:
+				"Primary":
+					worse = float(b["damage"]) * float(b["rof"]) <= float(mine["damage"]) * float(mine["rof"])
+				"Armour":
+					worse = float(b["armour"]) <= float(mine["armour"])
+				"Backpack":
+					worse = int(b["capacity"]) <= int(mine["capacity"])
+			_check(not worse, "%s is no better than the starting %s (%s)" % [b["name"], slot.to_lower(), start[slot]])
+	# never found: a thousand rolls a slot at the top tier, none of them the start
+	var r := RandomNumberGenerator.new()
+	r.seed = 7
+	for slot in start:
+		var seen := 0
+		for k in range(1000):
+			if Items.roll(slot, Data.MAX_TIER, r)["base"] == start[slot]:
+				seen += 1
+		_check(seen == 0, "the starting %s turned up in the loot %d times" % [slot.to_lower(), seen])
+	print("the starting kit is the worst kit ok")

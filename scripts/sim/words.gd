@@ -271,6 +271,10 @@ const UNIQUES := {
 
 ## A line for every base: what it is, where it came from, in the one voice.
 const ITEMS := {
+	# the start
+	"Hand-me-down nail gun": "Somebody's before it was yours, and somebody's before that. Fires when it feels like it.",
+	"Work jacket": "A donkey jacket with the council's name half off the back. Warm. That's the whole of it.",
+	"Plastic bag": "A bag for life, one of them. Holds nine things and the shape of the rain.",
 	# improvised
 	"Nail gun": "From the DIY place. Takes nails; makes holes. The estate's first gun, and most people's last.",
 	"Bolt gun": "A captive-bolt from the abattoir, filed down to fire free. One at a time, and it means it.",

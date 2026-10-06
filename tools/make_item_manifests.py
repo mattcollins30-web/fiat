@@ -109,6 +109,7 @@ ARMOUR_WORDS = {
     "Ballistic vest": "a black ballistic vest, the soft armour panels inside a nylon cover",
     "Police body armour": "a police stab-and-ballistic vest in black with the POLICE label picked off",
     "Stab vest": "a security guard's stab vest in black, the panels inside a nylon cover",
+    "Work jacket": "an old navy donkey jacket with a worn leather shoulder patch, no armour in it at all, the starting kit",
     "Padded jacket": "a thick padded work jacket, nothing armoured about it but the padding",
     "Motorbike leathers": "a motorcycle leather jacket with the armour inserts at the shoulders and elbows",
     "Riot suit": "a police riot suit's torso and arm armour, hard black plates over padding",
@@ -130,7 +131,18 @@ def armour(base):
             "been hit. Clothing or a vest, never crockery." % what)
 
 
+BAG_WORDS = {
+    # no zips or buckles on these, so the whole line is their own
+    "Plastic bag": ("A realistic painted pixel-art still-life of a single thin white supermarket carrier bag, the cheap "
+                    "crinkled plastic kind with two loop handles, standing upright as if set down on the floor, seen from the "
+                    "front, filling the frame, half full and sagging, the plastic stretched thin and translucent, a split "
+                    "patched with a strip of brown parcel tape."),
+}
+
+
 def bag(base):
+    if base in BAG_WORDS:
+        return BAG_WORDS[base]
     return ("A realistic painted pixel-art still-life of a single %s standing upright as if set down on the floor, seen "
             "from the front, filling the frame, half full, zips and buckles worn, repaired with tape and stitching." % base.lower())
 

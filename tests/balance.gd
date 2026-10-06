@@ -227,7 +227,10 @@ func _gate(hours: float, cls: String, element: String) -> void:
 				if sim.best_depth[i] > 0 and not depth_seen.has(key):
 					depth_seen[key] = true
 					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
+			var scrap_before: int = int(sim.scrap)
 			bot.tidy(sim)
+			if int(sim.scrap) < scrap_before:
+				g["scrap_spent"] = int(g.get("scrap_spent", 0)) + scrap_before - int(sim.scrap)     # the bench's builds: earned = in hand + spent
 		if float(g["keystone_at"]) < 0.0 or float(g["capstone_at"]) < 0.0:
 			for id in sim.tree:
 				var nd: Dictionary = sim.node(id)
@@ -252,6 +255,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["cash_end"] = int(sim.cash)
 	g["notes_end"] = int(sim.notes)
 	g["scrap_end"] = int(sim.scrap)
+	g["scrap_spent"] = int(g.get("scrap_spent", 0))
+	g["scrap_per_h"] = snappedf((int(sim.scrap) + int(g["scrap_spent"])) / maxf(0.01, sim.elapsed / 3600.0), 0.1)
 	g["level"] = sim.level()
 	g["best_tier"] = sim.best_tier
 	g["best_depth"] = sim.best_depth

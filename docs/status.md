@@ -1821,6 +1821,35 @@ not land heavier: 25.9 against 25.7" with the stats read right, so the half-seco
 either way - the check wants the shot itself, not a half-second of fight. Matt runs the smoke on the
 Legion from here (`tools\smoke.bat`); a commit waits on his verdict.
 
+**The starting kit is the worst kit (lever 3, the kit half; 6 Oct).** Three bases of their own under
+the pool, flagged `"start": true` and skipped by `Items.roll` (never found) and by the bench's gun builds:
+the Hand-me-down nail gun (24 × 0.5 = 12 a second, no mounts, under the Pipe shotgun's 15), the Work
+jacket (6 armour, under the Padded jacket's 10), the Plastic bag (9 cells, under the Carrier bags' 10 -
+nine so a found vest, 3 × 3, comes home; the Carrier bags went 8 → 10 to stay above it, still under the
+School bag's 12 with their pace). Words for all three; the manifest words for the jacket (the gun and
+the bag take their group's). The gate, as a smoke check (`_start_kit_checks`): every base in the pool
+beats the start of its slot on its own figures, and a thousand rolls a slot at the top tier never turn
+one up. Reviewer: the bench listed the hand-me-down as a build; a six-cell bag could never carry an
+armour home; the smoke's "smaller backpack" check read `BASES[0]` as the smallest found pack. Art: three
+new jobs on the next `python3 tools/make_item_manifests.py` on the Legion (the generator seeds by list
+order, so the inserts shift the seeds of the long guns, armour and bags after them - files already
+drawn are skipped, but a forced redraw of one gets a different seed). The match-rounds flake pinned:
+the swing's dice seeded right before the fight, not before the deploy that spent them.
+
+**The fourth read; scrap read as income (6 Oct).** With both bench rules in: cash red in two builds
+(the poison Poacher £108k, the plain Poacher £43k against a £42k line) where it was seven, so most of
+that row was the bot not spending and lever 1 is a small move; scrap 0.1 to 0.7 crafts' worth in hand
+everywhere, the bot's reserve (it builds at twice a grade's price), not the economy. The gate reads
+scrap earned an hour now: `_gate` counts what the builds spent, `scrap_per_h` = (in hand + spent) over
+the hours, the summary's band in the dearest craft's worth an hour (older reads fall back to in hand
+over the hours). On the reads so far the economy yields about half a craft an hour, so lever 2 reads
+the other way from the plan's "dearer": the ladder is cheap against the stash but scrap is slow against
+the ladder; the band's figure is Matt's to set. The summary skips `smoke.txt`. The Pick-A check puts a
+School bag on first (Equip on a run wants room for what comes off; the start's bag has nine cells); the
+match-rounds check reads the class's first-shot share (a Poacher's +40% is on both shots); the dig
+check asserts the rule (the deepest depth that reads PUSH, a dig at CLIMB), not the depths, since the
+odds read by the night, the weather and the tree.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

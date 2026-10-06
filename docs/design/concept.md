@@ -392,7 +392,7 @@ between. Each move is one commit with its before-and-after summary lines in stat
    (15.2), Pipe shotgun (15.0), Padded jacket (10 armour, +2 pace), Carrier bags (8 cells, +3 pace).
    The move: a starting pair of its own below the pool (a "Hand-me-down nail gun" and a "Work jacket",
    no mounts), so every base is an upgrade for someone; the gate, every pool base above the start of its
-   slot on its own figures. The classes (`CLASSES`, data.gd ~1173): Poacher +40% on a gang's first,
+   slot on its own figures. **Built 6 Oct** (three: the gun, the jacket, a Plastic bag; in status.md). The classes (`CLASSES`, data.gd ~1173): Poacher +40% on a gang's first,
    gangs ×1.25 later, HP ×0.9; Doorman damage ×1.15, armour ×1.2, pace ×0.9; Paramedic heal ×1.5, meds
    by themselves, damage ×0.9; Scrapper search ×0.7, +15% quantity, damage ×0.95; Drifter one fewer on
    you, pace ×1.1, HP ×0.85. The late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the two with no

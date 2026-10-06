@@ -24,6 +24,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 			continue
 		if int(b.get("depth", 0)) > depth:
 			continue                          # a deep paper: only past its depth
+		if b.get("start", false):
+			continue                          # the starting kit: worn on day one, never found
 		var home := exclusive_to(b["name"])
 		if home != "" and home != site:
 			continue

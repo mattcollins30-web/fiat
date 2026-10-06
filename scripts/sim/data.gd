@@ -44,14 +44,14 @@ const FOOTPRINTS := {
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
 	"Knife": [1, 1], "Knuckle duster": [1, 1], "Cosh": [1, 1],
 	# short long guns
-	"Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
+	"Hand-me-down nail gun": [3, 1], "Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
 	"Police carbine": [3, 1], "Army SMG": [3, 1], "Belt-fed SMG": [3, 1], "Army bullpup": [3, 1], "Workshop carbine": [3, 1],
 	# scoped long guns
 	"Old .303": [5, 1], "Scoped .308": [5, 1], "Sniper rifle": [5, 1], "Marksman rifle": [5, 1], "Section gun": [5, 1], "Police marksman's rifle": [5, 1],
 	# heavy armour
 	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Issue plates": [3, 4], "Bomb suit": [3, 4], "Butcher's chainmail": [3, 4],
 	# bags
-	"School bag": [2, 2], "Carrier bags": [2, 2], "Holdall": [2, 2],
+	"Plastic bag": [2, 2], "School bag": [2, 2], "Carrier bags": [2, 2], "Holdall": [2, 2],
 	"Framed pack": [3, 4], "Expedition pack": [3, 4], "Cargo frame": [3, 4], "Patrol pack": [3, 4], "Full bergen": [3, 4],
 	# medical
 	"First aid kit": [2, 1], "Trauma kit": [2, 1], "Surgeon's kit": [2, 2], "Hospital kit": [2, 2],
@@ -132,6 +132,9 @@ const BASES := {
 	## each with a reason - rate, first-shot weight, mounts, value - so a type is
 	## a build you can stay in, not a ladder you climb off.
 	"Primary": [
+		# the start: the worst gun in the game, never found, so every base in the pool is someone's first upgrade
+		{"name": "Hand-me-down nail gun", "type": "improvised", "tier": 1, "damage": 24.0, "rof": 0.5, "value": 20, "start": true,
+			"attachments": []},
 		# improvised - the Bodger's
 		{"name": "Nail gun", "type": "improvised", "tier": 1, "damage": 28.0, "rof": 0.6, "value": 90,
 			"attachments": ["optic", "muzzle"]},
@@ -272,6 +275,7 @@ const BASES := {
 		{"name": "Bomb-squad helmet", "tier": 6, "armour": 72.0, "pace": -8, "value": 560, "res": {"fire": 20, "shock": 20}},
 	],
 	"Armour": [
+		{"name": "Work jacket", "tier": 1, "armour": 6.0, "value": 10, "start": true},     # the start: the worst there is, never found
 		{"name": "Stab vest", "tier": 1, "armour": 15.0, "value": 60},
 		{"name": "Padded jacket", "tier": 1, "armour": 10.0, "pace": 2, "value": 40},
 		{"name": "Police body armour", "tier": 2, "armour": 35.0, "value": 80},
@@ -305,8 +309,9 @@ const BASES := {
 		{"name": "Bomb-disposal rig", "tier": 6, "capacity": 11, "pace": -3, "value": 620},
 	],
 	"Backpack": [
+		{"name": "Plastic bag", "tier": 1, "capacity": 9, "value": 5, "start": true},     # the start: the worst there is, never found; nine cells, so a found vest (3×3) comes home
 		{"name": "School bag", "tier": 1, "capacity": 12, "value": 30},
-		{"name": "Carrier bags", "tier": 1, "capacity": 8, "pace": 3, "value": 15},
+		{"name": "Carrier bags", "tier": 1, "capacity": 10, "pace": 3, "value": 15},
 		{"name": "Hiking pack", "tier": 2, "capacity": 24, "value": 60},
 		{"name": "Holdall", "tier": 2, "capacity": 20, "pace": 2, "value": 70},
 		{"name": "Bergen", "tier": 3, "capacity": 40, "value": 110},

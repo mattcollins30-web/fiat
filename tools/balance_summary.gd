@@ -24,7 +24,7 @@ const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against p
 const CASH_SINK := 3.0          # cash in hand at the end, times the top bench level
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
-const SCRAP := [1.0, 3.0]       # scrap in hand at the end against the dearest craft
+const SCRAP := [1.0, 3.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy)
 
 
 func _init() -> void:
@@ -37,7 +37,7 @@ func _init() -> void:
 		return
 	var names: Array = []
 	for f in dir.get_files():
-		if f.ends_with(".txt"):
+		if f.ends_with(".txt") and f != "smoke.txt":
 			names.append(f)
 	names.sort()
 	for f in names:
@@ -160,16 +160,17 @@ func _init() -> void:
 				off.append("%s %.0f%%" % [b["build"], share * 100.0])
 		rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
-	# scrap economy
+	# scrap economy: earned an hour against the dearest craft (older reads carry no scrap_per_h: in hand over the hours)
 	if not full.is_empty():
 		var off: Array = []
 		for b in full:
 			var dearest := float(b.get("dearest_build", 0))
-			var crafts: float = (float(b["scrap_end"]) / dearest) if dearest > 0.0 else 0.0
+			var per_h: float = float(b.get("scrap_per_h", float(b["scrap_end"]) / maxf(0.01, float(b.get("elapsed_h", b["hours"])))))
+			var crafts: float = (per_h / dearest) if dearest > 0.0 else 0.0
 			b["_crafts"] = crafts
 			if crafts < SCRAP[0] or crafts > SCRAP[1]:
-				off.append("%s %.1f crafts" % [b["build"], crafts])
-		rows.append(["Scrap economy", "scrap in hand worth %.0f to %.0f of the dearest craft" % [SCRAP[0], SCRAP[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+				off.append("%s %.1f crafts/h" % [b["build"], crafts])
+		rows.append(["Scrap economy", "scrap earned an hour worth %.0f to %.0f of the dearest craft" % [SCRAP[0], SCRAP[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
 	var reds := 0
 	for r in rows:
@@ -197,7 +198,7 @@ func _init() -> void:
 	out.append("")
 	out.append("## The builds")
 	out.append("")
-	out.append("| Build | Hours | Bank | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap (crafts) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
+	out.append("| Build | Hours | Bank | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap in hand (crafts earned/h) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
 	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for b in full:
 		var bt: int = int(b.get("best_tier", 0))

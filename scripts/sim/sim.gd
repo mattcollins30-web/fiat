@@ -104,9 +104,9 @@ func start() -> void:
 
 
 func _starter_loadout() -> void:
-	equipped["Primary"] = _plain("Primary", "Nail gun")
-	equipped["Armour"] = _plain("Armour", "Stab vest")
-	equipped["Backpack"] = _plain("Backpack", "School bag")
+	equipped["Primary"] = _plain("Primary", "Hand-me-down nail gun")
+	equipped["Armour"] = _plain("Armour", "Work jacket")
+	equipped["Backpack"] = _plain("Backpack", "Plastic bag")
 	equipped["Rig"] = _plain("Rig", "Bum bag")
 	for k in range(2):
 		rig.append(_plain(Data.MEDICAL, "Bandage"))
@@ -1180,8 +1180,8 @@ func build_options(kind: String) -> Array:
 				out.append(_build_entry(kind, b["name"], Data.BUILD_MED * int(b["tier"]), from, 1 if from != "" else 0, have >= 1, "" if have >= 1 else "Wants a %s" % from.to_lower(), int(b["tier"])))
 		"gun":
 			for b in Data.BASES["Primary"]:
-				if b.get("type", "") != "improvised" or int(b["tier"]) > workshop:
-					continue
+				if b.get("type", "") != "improvised" or int(b["tier"]) > workshop or b.get("start", false):
+					continue                  # the starting gun is nobody's build
 				out.append(_build_entry(kind, b["name"], Data.BUILD_GUN * int(b["tier"]), "", 0, true, "", int(b["tier"])))
 		"grenade":
 			for b in Data.BASES[Data.GRENADE]:
