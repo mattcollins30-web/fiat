@@ -1931,6 +1931,20 @@ band), and the word reserve is twice. The moves with it: `WOUND_AT` 0.33 → 0.3
 (lever 4's one touch; the barracks' words with it). The builds table reads wounds, crafts and pace
 for every read now, not only the merged line.
 
+**The seventh read: the word priced off the run's pay (lever 1 proper).** Six red; depth pace green,
+the capstone late on one at 4.1 h, the band 1.3-2.5 h. Cash red on seven, and the pairs say what it
+is: one read of a pair ends on £170-£4k and the other on £140k-£228k, the same build - the rich read
+is the one that dug deep. The word cost the tier's price × 3 × the depth × the words on it: at depth 9
+on T8 that is £194k against a run paying a few thousand, so the bot's reserve never met it and the pile
+sat; at depth 1 it was £22k and bought every run. A sink that scales with depth faster than the pay
+does is no sink. `juice_cost` is half of what a run on the site pays in kills now (`run_pay`:
+`effective(i)` cash × pool, so the curve's depth is in it), never under the tier's word price three
+times over, the words' multiplier and Word travels as before. Smoke: the depth-4 call-in is half the
+run's pay there. Reader: the odds at the end were read in whatever state the last run left the runner
+(a Doorman read T2-T8 at 0% hurt, 100% whole), so `_gate` reads them at full HP. Wounds swung from
+28-32% over on four builds to 5-10% under on five with the threshold moved 0.03, so that stat is noisy
+at two reads a build; left at 0.30 for one more read before it moves again.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

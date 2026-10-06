@@ -1919,14 +1919,24 @@ func buy_intel(i: int) -> bool:
 ## unless it's pinned, like PoE's map.
 const MAX_WORDS := 3
 const JUICE_COST := 3
+const JUICE_SHARE := 0.5                  # the pass (6 Oct): a word costs half of what a run on the site pays
 
 func can_juice() -> bool:
 	return comms_level >= 3 and campaign_done()
 
 
-## By depth, and by the words already on the site: the endgame's cash sink.
+## What a run on the tier pays in kills, at its depth, before the day's prices: the base the
+## endgame's sinks are priced off (the pass, 6 Oct), so a sink at depth 15 costs what depth 15 pays.
+func run_pay(i: int) -> float:
+	var t := effective(i)
+	return float(t["cash"]) * float(t["pool"])
+
+
+## The endgame's cash sink: half a run's pay on the site (never under the tier's word price three
+## times over), and more by the words already on it. It was the tier's word price × 3 × the depth,
+## which at depth 15 was £70k against a run paying £5k, and the pile sat under it.
 func juice_cost(i: int) -> int:
-	var base: int = Data.INTEL_CASH[i] * JUICE_COST * depth[i] * int(1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
+	var base: float = maxf(float(Data.INTEL_CASH[i] * JUICE_COST), run_pay(i) * JUICE_SHARE) * (1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
 	return _inf(base / (2 if atlas_rank("word_travels") > 0 else 1))
 
 

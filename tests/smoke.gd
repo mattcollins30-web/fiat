@@ -3835,14 +3835,16 @@ func _sink_checks(main) -> void:
 	sim.intel[0] = []
 	sim.set_depth(0, 1)
 	var c1: int = sim.juice_cost(0)
+	_check(c1 >= sim._inf(Data.INTEL_CASH[0] * sim.JUICE_COST) and c1 >= sim._inf(sim.run_pay(0) * sim.JUICE_SHARE) - 1, "a call-in at depth 1 is under its floor: %d" % c1)
 	sim.best_depth[0] = 5
 	sim.set_depth(0, 4)
-	_check(sim.juice_cost(0) == c1 * 4, "a call-in at depth 4 is not four times depth 1: %d vs %d" % [sim.juice_cost(0), c1])
+	var c4: int = sim.juice_cost(0)
+	_check(c4 > c1 and absi(c4 - sim._inf(sim.run_pay(0) * sim.JUICE_SHARE)) <= 1, "a call-in at depth 4 is not half the run's pay there: %d (depth 1 %d, the run pays %.0f)" % [c4, c1, sim.run_pay(0)])
 	sim.intel[0] = ["Numbers", "Night"]
-	_check(sim.juice_cost(0) == c1 * 4 * 3, "two words on the site did not treble the call-in: %d" % sim.juice_cost(0))
+	_check(absi(sim.juice_cost(0) - c4 * 3) <= 2, "two words on the site did not treble the call-in: %d vs %d" % [sim.juice_cost(0), c4 * 3])
 	sim.atlas_points = 1
 	sim.rank_atlas("word_travels")
-	_check(sim.juice_cost(0) == c1 * 4 * 3 / 2, "Word travels did not halve it: %d" % sim.juice_cost(0))
+	_check(absi(sim.juice_cost(0) - c4 * 3 / 2) <= 2, "Word travels did not halve it: %d" % sim.juice_cost(0))
 	sim.atlas = {}
 	# insurance: priced on the kit by depth, paid at deploy, pays out on a death
 	sim.set_depth(0, 2)

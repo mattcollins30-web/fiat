@@ -376,7 +376,9 @@ between. Each move is one commit with its before-and-after summary lines in stat
    `CRAFT[kind].cash` × ilvl × (rarity + 1), sim.gd ~1089) and `juice_cost` (today `INTEL_CASH[i]` × 3 ×
    depth × words, sim.gd ~1929); the works' ladders stay opening prices, each bought once. Moves: Cash
    sink. Can break: the capstone and the band if a work is what gets a slow class there - so the works'
-   first levels stay. Not touched: income; the early hours are the right pace.
+   first levels stay. Not touched: income; the early hours are the right pace. **Moved 6 Oct:** the
+   word (`juice_cost`) is half a run's pay on the site; the bench's prices stay (the bot's one job a run
+   never piled; the pile was the word out of reach at depth).
 2. **Scrap: the ladder dearer, not the contracts leaner.** Scrap comes from searches (a fifth of them,
    3–6; `SCRAP_SEARCH`, `SCRAP_HANDFUL`), the bench (`scrap_of` = value ÷ 20, the rarity multiple in
    the value), ditching on a run, and contracts (count × rarity × `CONTRACT_SCRAP` 6, so 6–36, on the

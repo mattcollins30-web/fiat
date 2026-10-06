@@ -595,7 +595,7 @@ func _show_craft(it: Dictionary) -> void:
 		_craft_lines[2].text = "Or build for scrap: rounds, meds, guns, grenades"
 		_left_title.text = "The bench"
 		_right_title.text = "In hand"
-		_right_lines[0].text = "%d scrap · %s and %d notes" % [sim.scrap, Fmt.money(sim.cash), sim.notes]
+		UI.fit(_right_lines[0], ["%d scrap · %s and %d notes" % [sim.scrap, Fmt.money(sim.cash), sim.notes], "%d scrap · %s · %d notes" % [sim.scrap, Fmt.money(sim.cash), sim.notes], "%ds · %s · %dn" % [sim.scrap, Fmt.money(sim.cash), sim.notes]])
 		UI.fit(_right_lines[1], ["Scrap: searched up, scrapped here, ditched", "Scrap: found, scrapped, ditched"])
 		_button(0, "Build for scrap", func(): build.emit(), sim.workshop >= 1 and not sim.on_mission())
 		var bx := GRID_W - PAD - _buttons[0].size.x
@@ -632,7 +632,7 @@ func _show_craft(it: Dictionary) -> void:
 	_left_lines[0].text = "%s · %s" % [Items.rarity_name(it), ("%d affix%s" % [it["affixes"].size(), "" if it["affixes"].size() == 1 else "es"])]
 	_left_lines[1].text = "Prices left; Bench has the rest"
 	_right_title.text = "In hand"
-	_right_lines[0].text = "%s and %d notes · %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap]
+	UI.fit(_right_lines[0], ["%s and %d notes · %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "%s · %d notes · %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "%s · %dn · %ds" % [Fmt.money(sim.cash), sim.notes, sim.scrap]])
 	_button(0, "Bench", func(): bench.emit(it["id"]), sim.workshop >= 1 and not sim.on_mission())
 	_button(1, "Scrap it (+%d)" % sim.scrap_of(it), sim.scrap_item.bind(it["id"]), sim.workshop >= 1 and not sim.on_mission())
 	var x := GRID_W - PAD

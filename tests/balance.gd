@@ -250,12 +250,15 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	var odds := []
+	var hp0: float = sim.hp
+	sim.hp = sim.max_hp()                 # read whole: the last run may have left it hurt, and the reader keys on the HP
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
 			var d0: int = sim.depth[i]
 			sim.set_depth(i, 1)
 			odds.append([i, snappedf(sim.survival(i), 0.001)])
 			sim.set_depth(i, d0)
+	sim.hp = hp0
 	g["odds"] = odds
 	g["cash_end"] = int(sim.cash)
 	g["cash_per_h"] = snappedf(float(g.get("cash_earned", 0.0)) / maxf(0.01, sim.elapsed / 3600.0), 1.0)
