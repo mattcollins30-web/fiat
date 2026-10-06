@@ -179,7 +179,18 @@ func show_state(s) -> void:
 	_band.set_tone(zone_i)
 	_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(m["elapsed"]), "of the run", Pal.ACCENT)
 	_band.headline_under_title(true)
-	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]])
+	# the capstones in play on this run, by name, as the band's third line
+	var caps := []
+	for b in sim.trees():
+		if b == null or b.get("drawer", false):
+			continue
+		for k in range(b["nodes"].size()):
+			if b["nodes"][k].get("capstone", false) and sim.tree.has("%s/%d" % [b["name"], k]):
+				caps.append(b["nodes"][k]["name"])
+	var cap_line: String = ("◆◆ " + ", ".join(caps)) if not caps.is_empty() else ""
+	if cap_line != "" and UI.text_width(_band.right[2], cap_line) > _band.RIGHT_W:
+		cap_line = "◆◆ %d capstones" % caps.size()
+	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"], cap_line])
 	_band.set_bar((float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]))
 	# them
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]

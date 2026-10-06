@@ -784,6 +784,7 @@ const TREES := [
 		{"name": "Sleeping rough", "effect": "hp", "value": 5},
 		{"name": "Stashing", "effect": "loot_pct", "value": 4},
 		{"name": "Pack horse", "effect": "pack_mule", "notable": true, "words": "The pack carries six cells more"},
+		{"name": "The dog's share", "effect": "cap_dogs_share", "capstone": true, "needs": 11, "words": "A dead runner's rig comes home: the dog carries it"},
 	]},
 	# A class tree is a web: a spine of four to its notable, then two branches
 	# off it - one to the keystone, one to a rule of its own - so a tree is a
@@ -800,6 +801,7 @@ const TREES := [
 		{"name": "Lying up", "effect": "patrol_pct", "value": 10, "needs": 3},
 		{"name": "Rat bait", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
 		{"name": "Night work", "effect": "night_work", "notable": true, "words": "Every site you run is Night: +50% loot quality, pace −20%"},
+		{"name": "Dead quiet", "effect": "cap_dead_quiet", "capstone": true, "needs": 6, "words": "Every gang is the size of the first: they never grow"},
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
 		{"name": "Quick hands", "effect": "search_pct", "value": 15},
@@ -812,6 +814,7 @@ const TREES := [
 		{"name": "Knowing the land", "effect": "loot_pct", "value": 5, "needs": 3},
 		{"name": "Cold snap", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "15% of your damage as frost"},
 		{"name": "Early doors", "effect": "early_doors", "notable": true, "words": "The first gang takes twice as long to come"},
+		{"name": "Poached", "effect": "cap_poached", "capstone": true, "needs": 6, "words": "Every gang arrives already light: a find is yours the moment they come"},
 	]},
 	# Doorman
 	{"name": "Muscle", "class": "Doorman", "nodes": [
@@ -826,6 +829,7 @@ const TREES := [
 		{"name": "Glassing", "effect": "conv_bleed_pct", "value": 15, "notable": true, "words": "15% of your damage as bleed"},
 		{"name": "Loud", "effect": "loud", "notable": true, "words": "Gangs come sooner and one head bigger; +30% drops"},
 		{"name": "Spoils", "effect": "rarity", "value": 15, "needs": 3},
+		{"name": "Iron", "effect": "cap_iron", "capstone": true, "needs": 6, "words": "Under half HP, every kill heals a tenth of you"},
 	]},
 	{"name": "The door", "class": "Doorman", "nodes": [
 		{"name": "Stance", "effect": "hp", "value": 5},
@@ -838,6 +842,7 @@ const TREES := [
 		{"name": "Composure", "effect": "hp", "value": 5, "needs": 3},
 		{"name": "Through the lot", "effect": "melee_sweep", "type": "melee", "notable": true, "words": "With a bat or a blade: a swing hits everyone on you"},
 		{"name": "Stand and fight", "effect": "stand", "notable": true, "words": "No leaving before the fight is won; the bonus for winning it is doubled"},
+		{"name": "Held", "effect": "cap_held", "capstone": true, "needs": 6, "words": "No second of their fire takes more than a tenth of you"},
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
@@ -852,6 +857,7 @@ const TREES := [
 		{"name": "Syringe", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "15% of your damage as poison"},
 		{"name": "Walking wounded", "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
 		{"name": "Pockets checked", "effect": "rarity", "value": 15, "needs": 3},
+		{"name": "Clean hands", "effect": "cap_clean_hands", "capstone": true, "needs": 6, "words": "A med clears everything on you, and nothing lands for three seconds"},
 	]},
 	{"name": "Shifts", "class": "Paramedic", "nodes": [
 		{"name": "Night shift", "effect": "hp", "value": 5},
@@ -864,6 +870,7 @@ const TREES := [
 		{"name": "Discount", "effect": "treat_pct", "value": 20, "needs": 3},
 		{"name": "Ice pack", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "15% of your damage as frost"},
 		{"name": "Second shift", "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
+		{"name": "Transfusion", "effect": "cap_transfusion", "capstone": true, "needs": 6, "words": "Healing past full becomes armour for the run, two HP to one"},
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
@@ -877,6 +884,7 @@ const TREES := [
 		{"name": "Magpie eye", "effect": "loot_pct", "value": 4, "needs": 3},
 		{"name": "Live wire", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "15% of your damage as shock"},
 		{"name": "Quiet hands", "effect": "quiet_hands", "notable": true, "words": "Every search finds two things, and kills drop nothing"},
+		{"name": "Jerry-rigged", "effect": "cap_jerry", "capstone": true, "needs": 6, "words": "Something improvised hits half again as hard"},
 	]},
 	{"name": "Fencing", "class": "Scrapper", "nodes": [
 		{"name": "Haggling", "effect": "sell_pct", "value": 10},
@@ -889,6 +897,7 @@ const TREES := [
 		{"name": "Lucky find", "effect": "rarity", "value": 20, "needs": 3},
 		{"name": "Blowtorch", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "15% of your damage as fire"},
 		{"name": "Hoarder", "effect": "hoarder", "notable": true, "words": "The pack carries double; −30% pace"},
+		{"name": "The lot", "effect": "cap_the_lot", "capstone": true, "needs": 6, "words": "A pack that comes home full pays double cash"},
 	]},
 	# Drifter
 	{"name": "Moving on", "class": "Drifter", "nodes": [
@@ -902,6 +911,7 @@ const TREES := [
 		{"name": "Wiry", "effect": "hp", "value": 5, "needs": 3},
 		{"name": "Petrol bomb", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "15% of your damage as fire"},
 		{"name": "Hit and run", "effect": "hit_and_run", "notable": true, "words": "Leaves as the first gang arrives, the loot kept; every kill pays 50% more"},
+		{"name": "Ghost", "effect": "cap_ghost", "capstone": true, "needs": 6, "words": "The first gang never comes: a run starts at the search, and a full pack brought home is the clear"},
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
 		{"name": "Lucky", "effect": "rarity", "value": 10},
@@ -914,6 +924,7 @@ const TREES := [
 		{"name": "Four-leaf", "effect": "loot_pct", "value": 4, "needs": 3},
 		{"name": "Jump start", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "15% of your damage as shock"},
 		{"name": "Light fingers", "effect": "light_fingers", "notable": true, "words": "Papers three times as often; cash −20%"},
+		{"name": "Loaded dice", "effect": "cap_loaded_dice", "capstone": true, "needs": 6, "words": "A Rare or better find rolls twice and keeps the better"},
 	]},
 ]
 ## The second past: at ASCEND_LEVEL the runner takes a second class, whose
@@ -935,6 +946,7 @@ const ELEMENT_TREES := [
 		{"name": "Fumes", "effect": "dot_pct", "value": 20, "needs": 3},
 		{"name": "Jerry can", "effect": "conv_fire_pct", "value": 20},
 		{"name": "On your hands", "effect": "fire_more", "notable": true, "words": "Fire does 40% more; every hit of it burns you for 2% of it"},
+		{"name": "Spread", "effect": "cap_spread", "capstone": true, "needs": 6, "words": "The burn on one of them carries to the next"},
 	]},
 	{"name": "The cold", "element": "frost", "nodes": [
 		{"name": "Antifreeze", "effect": "conv_frost_pct", "value": 10},
@@ -947,6 +959,7 @@ const ELEMENT_TREES := [
 		{"name": "Wind chill", "effect": "frost_pct", "value": 15, "needs": 3},
 		{"name": "Deep freeze", "effect": "conv_frost_pct", "value": 20},
 		{"name": "Cold hands", "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
+		{"name": "Shatter", "effect": "cap_shatter", "capstone": true, "needs": 6, "words": "A chilled target takes double from the physical"},
 	]},
 	{"name": "The rat man", "element": "poison", "nodes": [
 		{"name": "Under the sink", "effect": "conv_poison_pct", "value": 10},
@@ -959,6 +972,7 @@ const ELEMENT_TREES := [
 		{"name": "Slow acting", "effect": "poison_pct", "value": 15, "needs": 3},
 		{"name": "The whole tin", "effect": "conv_poison_pct", "value": 20},
 		{"name": "Rat's share", "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot quantity −20%"},
+		{"name": "Lingers", "effect": "cap_lingers", "capstone": true, "needs": 6, "words": "The poison on one of them carries to the next"},
 	]},
 	{"name": "Live", "element": "shock", "nodes": [
 		{"name": "Jump leads", "effect": "conv_shock_pct", "value": 10},
@@ -971,6 +985,7 @@ const ELEMENT_TREES := [
 		{"name": "Volts", "effect": "shock_pct", "value": 15, "needs": 3},
 		{"name": "Substation", "effect": "conv_shock_pct", "value": 20},
 		{"name": "Earthed", "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
+		{"name": "Arc", "effect": "cap_arc", "capstone": true, "needs": 6, "words": "A shock holds as long as you fire"},
 	]},
 	{"name": "Blades", "element": "bleed", "nodes": [
 		{"name": "Stanley knife", "effect": "conv_bleed_pct", "value": 10},
@@ -983,6 +998,7 @@ const ELEMENT_TREES := [
 		{"name": "Nicked", "effect": "dot_pct", "value": 20, "needs": 3},
 		{"name": "Butcher's", "effect": "conv_bleed_pct", "value": 20},
 		{"name": "Blood up", "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
+		{"name": "Bleed out", "effect": "cap_bleed_out", "capstone": true, "needs": 6, "words": "A bleed carries to the next, and bleeds half again as hard"},
 	]},
 ]
 const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
@@ -1093,6 +1109,16 @@ const CLASSES := [
 ## points by level 50.
 static func node_cost(i: int, notable: bool, keystone := false) -> int:
 	return 1 + i / 4 + (2 if keystone else (1 if notable else 0))
+
+
+## A capstone costs a third of what the rest of its tree does, rounded up.
+static func capstone_cost(t: Dictionary) -> int:
+	var total := 0
+	for i in range(t["nodes"].size()):
+		var n: Dictionary = t["nodes"][i]
+		if not n.get("capstone", false):
+			total += node_cost(i, n.get("notable", false), n.get("keystone", false))
+	return maxi(1, ceili(total / 3.0))
 
 
 ## The trees a class sees: its first, the common one, its second - and the

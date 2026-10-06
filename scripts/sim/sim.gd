@@ -156,7 +156,7 @@ func dps() -> float:
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
 	if primary_live:
-		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0)
+		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (1.5 if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0)   # Jerry-rigged: something improvised hits half again as hard
 	if secondary_live:
 		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) / (1.0 if (has_node("double_tap") or has_rule("vans_spare") or not primary_live) else 3.0)
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
@@ -173,7 +173,7 @@ func dps() -> float:
 	# conditional: under half HP; on the first lot (the fight before the clear)
 	if hp < max_hp() * 0.5:
 		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (40.0 if has_node("walking_wounded") else 0.0)
-	if mission != null and not mission["cleared"]:
+	if mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)):
 		pct += _affix_sum("first_lot_pct")
 	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage")
 
@@ -185,7 +185,7 @@ func armour() -> float:
 			a += Items.armour(equipped[s])
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
-		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission))
+		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission)) + float(mission.get("bonus_armour", 0.0))
 	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (0.8 if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0)
 
 
@@ -1170,6 +1170,8 @@ func node_cost(id: String) -> int:
 	var parts := id.split("/")
 	var n := node(id)
 	var cost := Data.node_cost(int(parts[1]), n.get("notable", false), n.get("keystone", false))
+	if n.get("capstone", false):
+		cost = Data.capstone_cost(Data.tree_named(parts[0]))     # a third of the tree, on top of the tree
 	var t := Data.element_tree(parts[0])
 	if not t.is_empty() and not affinity(t["element"]):
 		cost *= Data.OFF_AFFINITY_COST       # off the class's pair: double
@@ -1198,6 +1200,13 @@ func can_train(id: String) -> bool:
 	var t := Data.tree_named(parts[0])
 	if t.has("element") and not affinity(t["element"]) and t["nodes"][i].get("keystone", false):
 		return false                         # an element's keystone needs its affinity: the class's, or the second past's
+	if t["nodes"][i].get("capstone", false):
+		# the capstone wants the whole tree's shape behind it: the keystone and every notable
+		for k in range(t["nodes"].size()):
+			var nd: Dictionary = t["nodes"][k]
+			if (nd.get("keystone", false) or nd.get("notable", false)) and not tree.has("%s/%d" % [parts[0], k]):
+				return false
+		return true
 	var need := Data.node_needs(t, i)
 	return need < 0 or tree.has("%s/%d" % [parts[0], need])
 
@@ -2206,6 +2215,12 @@ func deploy(i: int) -> void:
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0,
 	}
+	if has_node("cap_ghost") and not t.has("boss"):
+		mission["remaining"] = 0              # Ghost: the first gang never comes; the run starts at the search
+		mission["target_hp"] = 0.0
+		mission["fresh"] = false
+		mission["cleared"] = true             # searching from the first second; the clear itself (the ladder, the bonus) is a full pack brought home, or the first gang beaten
+		mission["ghost_pending"] = true
 	if t.has("boss"):
 		mission["boss"] = _boss_entry(t["boss"])
 		mission["boss_queue"] = []
@@ -2294,15 +2309,20 @@ func _tick(dt: float) -> void:
 	if class_data().get("auto_med", false) and m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 		use_med(first_med()["id"])
 	_patch(m, dt)
+	if float(m.get("immune_t", 0.0)) > 0.0:
+		m["immune_t"] = maxf(0.0, float(m["immune_t"]) - dt)     # Clean hands' grace runs down whether they're on you or not
 	if m["cleared"]:
 		m["patrol_timer"] += dt
 		if m["patrol_timer"] >= patrol_s(t, m["patrols"] == 0):
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1
 			m["fresh"] = true
-			var size: int = maxi(1, PATROL_BASE + m["patrols"] - 1 - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
+			var grown: int = 0 if has_node("cap_dead_quiet") else m["patrols"] - 1      # Dead quiet: every gang the size of the first
+			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
 				size = 1
+			if has_node("cap_poached"):
+				_find(m, t)                  # Poached: they arrive already light
 			if has_node("hit_and_run"):
 				_extract()                  # out when the first gang comes
 				return
@@ -2330,10 +2350,13 @@ func set_leave_full(on: bool) -> bool:
 
 
 ## HP back, counted for the run screen's green numbers (regen, a med, life on a kill).
-func _heal(m: Dictionary, amount: float) -> void:
+## `med` marks a med's heal: Transfusion keeps its overflow, not a trickle's.
+func _heal(m: Dictionary, amount: float, med := false) -> void:
 	var before := hp
 	hp = minf(max_hp(), hp + amount)
 	m["healed"] = float(m.get("healed", 0.0)) + (hp - before)
+	if med and has_node("cap_transfusion"):
+		m["bonus_armour"] = float(m.get("bonus_armour", 0.0)) + maxf(0.0, amount - (hp - before)) / 2.0     # Transfusion: a med's overflow is armour, two to one
 
 
 func _boss_entry(b: Dictionary) -> Dictionary:
@@ -2402,6 +2425,10 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
 	for ty in Data.TYPES:
 		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
+		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
+			landed *= 2.0                             # Shatter: a chilled target takes double from the physical
+		if ty == "bleed" and has_node("cap_bleed_out"):
+			landed *= 1.5                             # Bleed out: bleeds half again as hard
 		var single := landed                      # what one of them takes, before a spread
 		if has_node("melee_sweep"):
 			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
@@ -2418,11 +2445,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["dealt_by"][ty] = float(m["dealt_by"].get(ty, 0.0)) + landed
 			if not m.has("dots"):
 				m["dots"] = {}
-			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"])
+			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
 			if ty == "frost":
 				m["chill_t"] = 1.0
 			if ty == "shock":
-				m["shock_t"] = 999.0 if has_rule("tester") else 1.0
+				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 1.0     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
 		m["chill_t"] = 1.0                        # everyone on you is chilled, always
 	m["target_hp"] -= landed_total
@@ -2456,10 +2483,12 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			break
 		m["target_hp"] += t["hp"]
 		var carried := {}
-		if has_rule("rat_mans_bag") and m.get("dots", {}).has("poison"):
-			carried["poison"] = m["dots"]["poison"]  # the rat man's bag: poison carries to the next
-		if has_rule("butchers_steel") and m.get("dots", {}).has("bleed"):
+		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
+			carried["poison"] = m["dots"]["poison"]  # the rat man's bag, or Lingers: poison carries to the next
+		if (has_rule("butchers_steel") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
 			carried["bleed"] = m["dots"]["bleed"]
+		if has_node("cap_spread") and m.get("dots", {}).has("fire"):
+			carried["fire"] = m["dots"]["fire"]      # Spread: the burn carries
 		m["dots"] = carried                  # the next of them is a new target
 		m["chill_t"] = 0.0
 		m["shock_t"] = 0.0
@@ -2476,8 +2505,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["target_hp"] = 0.0
 		m["last_incoming"] = 0.0
 		m["my_dots"] = {}                    # the picking over: nothing ticks on you
-		if not m["cleared"]:
-			_clear(m, t)
+		if not m["cleared"] or m.get("ghost_pending", false):
+			m["ghost_pending"] = false
+			_clear(m, t)                     # a Ghost's clear is the first gang beaten
 		return
 	var on_you := mini(m["remaining"], contact(t))
 	var chilled: bool = float(m.get("chill_t", 0.0)) > 0.0
@@ -2497,6 +2527,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
 	if on_you >= 3 and has_rule("doormans"):
 		incoming *= 0.75
+	if float(m.get("immune_t", 0.0)) > 0.0:
+		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
 	# what their fire leaves on you: a share of the elemental part burns, poisons, bleeds, and ticks while the fight's on
 	if not m.has("my_dots"):
 		m["my_dots"] = {}
@@ -2525,6 +2557,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	for ty in ticked_by:
 		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + float(ticked_by[ty])
 	incoming += ticked / maxf(dt, 0.001)
+	if has_node("cap_held"):
+		incoming = minf(incoming, max_hp() * 0.1)       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
 	m["last_incoming"] = incoming
 	hp -= incoming * dt
 	m["taken"] = float(m.get("taken", 0.0)) + incoming * dt     # for the run screen's red numbers
@@ -2559,9 +2593,12 @@ func _patch(m: Dictionary, dt: float) -> void:
 		return
 	m["using"]["left"] -= dt
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
-		_heal(m, m["using"]["heal"])
+		_heal(m, m["using"]["heal"], true)
 		if m.has("my_dots"):
 			m["my_dots"].erase("bleed")      # a dressing stops the bleeding
+		if has_node("cap_clean_hands"):
+			m["my_dots"] = {}                # Clean hands: everything on you cleared, and a grace
+			m["immune_t"] = 3.0
 		m["meds_used"] += 1
 		log_event("%s used: HP %d" % [m["using"]["name"], ceili(hp)])
 		m["using"] = null
@@ -2569,7 +2606,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
-	_heal(m, _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0))
+	_heal(m, _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0) + (max_hp() * 0.1 if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
 	if m.get("dry", false):
 		return                               # a dry run: the fight only, nothing earned
 	var gain: float = t["xp"] * (1.5 if has_node("hit_and_run") else 1.0)
@@ -2696,6 +2733,11 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 					fits.append(b)
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
+	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
+		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))
+		if Items.score(again) > Items.score(it):
+			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	if Items.stacks(it):
 		for f in m["found"]:
 			if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
@@ -2864,7 +2906,13 @@ func _extract() -> void:
 		return
 	var m: Dictionary = mission
 	var t := tier(m["tier"])
+	if m.get("ghost_pending", false) and pack_used(m) >= capacity():
+		m["ghost_pending"] = false
+		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
+		log_event("Ghost: the pack full, and %s counts as cleared" % t["name"].to_lower())
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
+	if has_node("cap_the_lot") and pack_used(m) >= capacity():
+		m["cash"] *= 2.0                      # The lot: a full pack pays double
 	cash += m["cash"]
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
@@ -2910,7 +2958,11 @@ func _kia() -> void:
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
 	var t := tier(m["tier"])
+	var dogs_share: bool = has_node("cap_dogs_share") and not m.get("insured", false) and not rig.is_empty()
 	var lost := loadout_value()
+	if dogs_share:
+		for it in rig:
+			lost -= int(it["value"])         # the dog's share: the rig is not lost
 	last_report = {
 		"outcome": "Dead", "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": 0,
 		"left": m["found"].size() + m["left"], "cash": 0.0, "xp": 0.0, "hp_lost": m["hp_start"], "time": m["elapsed"],
@@ -2932,6 +2984,10 @@ func _kia() -> void:
 		for s in Data.SLOTS:
 			if equipped[s] != null:
 				_lose(equipped[s], "the last %s" % cls.to_lower(), "runner")
+		if dogs_share:
+			for it in rig:
+				stash.append(it)                 # the dog's share: the rig comes home
+			log_event("The dog came home with the rig: %d pouch%s" % [rig.size(), "" if rig.size() == 1 else "es"])
 	for s in Data.SLOTS:
 		equipped[s] = null
 	rig = []

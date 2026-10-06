@@ -1565,6 +1565,32 @@ moves under a live save (Muscle's *Spoils*, Triage's *Pockets checked*, 15 each 
 a +100% pack doubles what a search brings, the dog adds 5% quality, Rat's share moves quantity and not
 quality, the two trees carry a rarity node, the backpack affix rolls. Reviewer: clean.
 
+**28 · Capstones, one a tree.** A sixteenth node appended last to every tree (so no node id moves under a
+live save), `{"capstone": true, "effect": "cap_*", "needs": <the keystone>}`, costing a third of the rest
+of the tree (`Data.capstone_cost`), and trainable only once the keystone and every notable are. Each is a
+rule, not a stat: The yard's *The dog's share* (the rig comes home to the stash when an uninsured runner
+dies), Stalking's *Dead quiet* (patrols arrive as one gang, never grown), Snares' *Poached* (a patrol's
+arrival is a find), Muscle's *Iron* (a kill heals), The door's *Held* (no hit over a tenth of max HP, with
+a grace after), Triage's *Clean hands* (a patch clears the runner's dots and gives three seconds' immunity),
+Shifts' *Transfusion* (heal overflow becomes bonus armour), Stripping's *Jerry-rigged* (improvised guns
+×1.5), Fencing's *The lot* (double cash on an extract with a full pack), Moving on's *Ghost* (the first
+gang never comes, and a full pack brought home is the clear: the tree's keystone is Never there, so no gang
+ever arrives on that tree and a clear by fighting could never happen), Luck's *Loaded dice*
+(a find rolls twice and keeps the better), Petrol's *Spread*, The cold's *Shatter* (physical ×2 on a
+chilled target), The rat man's *Lingers*, Live's *Arc* (shock does not wear off), Blades' *Bleed out*
+(bleeds ×1.5). The Caravan shows it as a wide ◆◆ tile under the keystone (TILE_H 52, seven rows), the
+panel titles it "capstone", the ticks and the sum count it, and the run band's third right line names the
+runner's capstones. Smoke: one a tree, the cost, the gate, Poached finds on arrival, the wide tile, the
+band's line, Dead quiet's size, Ghost's start, no clear on arrival or on a light extract and the clear on a
+full one, Held's cap, Iron's heal. Reviewer: Ghost as first written ("clears on the first gang beaten") was
+unreachable behind Never there, so it became the full-pack clear; Held now caps after the dots on you are
+added, not before; Transfusion keeps a med's overflow only, not the regen trickle's; Jerry-rigged scales the
+primary alone; Clean hands' grace runs down in the search too; Bleed out scales the bleed's rate as well as
+its hit; the dog's share leaves the rig out of "Kit lost"; the yard's capstone scope line asks for every
+notable, not a keystone it has not got. Also caught by the fence check on the way: *Nails through it* (a
+business end whose only stat is a bleed share) had no headline and no words, as the bleed share was in
+neither attachment list; it is in both now, and every part is asserted to have a headline.
+
 ## Chips everywhere: the word and the affixes (2026-10-06)
 
 Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips

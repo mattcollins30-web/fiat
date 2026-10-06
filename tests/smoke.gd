@@ -543,6 +543,9 @@ func _worst_case(main) -> void:
 		worst.append(sim._plain(Data.AMMO, b["name"]))
 	for b in Data.ATTACHMENTS:
 		worst.append(_worst_item(Data.ATTACHMENT, b, sim))
+		# every part has a headline figure and words of its own (Nails through it had neither: its bleed share was not in the lists)
+		var plain: Dictionary = sim._plain(Data.ATTACHMENT, b["name"])
+		_check(Items.headline(plain)[0] != "" and Items.att_words(plain, true, true) != "", "%s has no headline or words" % b["name"])
 	for u in Data.UNIQUES:
 		worst.append(Items.roll_unique(u, sim.rng))
 	# fitted: the longest-named of each slot, every mount filled
@@ -1622,11 +1625,11 @@ func _element_checks(main) -> void:
 	if full_col >= 0:
 		_check(is_equal_approx(bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y), "a fully taken tree's rail is not full: %.0f of %.0f" % [bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y])
 	_check(bk.SUM_Y >= bk.NODES_Y + bk.COLUMN_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk._sum_tiles[0]["key"].text == "Damage" and bk._sum_tiles[7]["key"].text == "Notables", "the sum strip is off: %s" % str(bk._sum_tiles.map(func(t): return t["key"].text + " " + t["value"].text)))
-	# a keystone's tile spans both columns of tiles; a plain node's one
+	# a keystone's or a capstone's tile spans both columns of tiles; a plain node's one
 	for n in bk._rows[0]:
 		if n["button"].visible and n["id"] != "":
 			var nd: Dictionary = sim.node(n["id"])
-			if nd.get("keystone", false):
+			if nd.get("keystone", false) or nd.get("capstone", false):
 				_check(n["button"].size.x > bk.TILE_W * 1.5, "the keystone's tile is not the width")
 			else:
 				_check(is_equal_approx(n["button"].size.x, bk.TILE_W), "a node's tile is not one across")
@@ -1675,10 +1678,138 @@ func _element_checks(main) -> void:
 	bk._on_swap()
 	sim.load_dict(saved)
 	print("the elements ok: affinities, double cost, the locked keystone and the second past, Spreads, Frozen solid, Builds, Won't stop, the class notables, the Caravan")
+	_capstone_checks(main)
 	_melee_checks(main)
 
 
 ## Melee: no rounds, bleed built in, grip and head mounts, in among them.
+## 28: a capstone a tree, past the keystone, wanting the keystone and every notable, a third of the tree again.
+func _capstone_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	# every tree carries one, last, wide on the caravan, and its cost is a third of the tree rounded up
+	for b in Data.TREES + Data.ELEMENT_TREES:
+		var last: Dictionary = b["nodes"].back()
+		_check(last.get("capstone", false) and last.has("words") and last["effect"].begins_with("cap_"), "%s has no capstone at its end" % b["name"])
+		_check(b["nodes"].filter(func(n): return n.get("capstone", false)).size() == 1, "%s has more than one capstone" % b["name"])
+		var others := 0
+		for i in range(b["nodes"].size() - 1):
+			others += Data.node_cost(i, b["nodes"][i].get("notable", false), b["nodes"][i].get("keystone", false))
+		_check(Data.capstone_cost(b) == ceili(others / 3.0), "%s's capstone costs %d, not a third of %d" % [b["name"], Data.capstone_cost(b), others])
+	# it opens only once the keystone and every notable are taken
+	sim.set_class("Poacher")
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Snares/"))
+	sim.training_points = 200
+	var snares: Dictionary = Data.tree_named("Snares")
+	var cap_id := "Snares/%d" % (snares["nodes"].size() - 1)
+	_check(not sim.can_train(cap_id), "the capstone opened with nothing behind it")
+	# train the spine and the notables, not the keystone yet
+	for i in range(snares["nodes"].size() - 1):
+		if not snares["nodes"][i].get("keystone", false):
+			sim.tree.append("Snares/%d" % i)
+	_check(not sim.can_train(cap_id), "the capstone opened without the keystone")
+	# the keystone in, one notable out: still shut
+	var a_notable := ""
+	for i in range(snares["nodes"].size() - 1):
+		if snares["nodes"][i].get("keystone", false):
+			sim.tree.append("Snares/%d" % i)
+		elif snares["nodes"][i].get("notable", false) and a_notable == "":
+			a_notable = "Snares/%d" % i
+	sim.tree.erase(a_notable)
+	_check(not sim.can_train(cap_id), "the capstone opened with a notable missing")
+	sim.tree.append(a_notable)
+	_check(sim.can_train(cap_id) and sim.node_cost(cap_id) == Data.capstone_cost(snares), "the capstone did not open with the whole tree behind it (cost %d)" % sim.node_cost(cap_id))
+	_check(sim.train_node(cap_id) and sim.has_node("cap_poached"), "the capstone did not train")
+	# Poached: a gang's arrival brings a find
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	var found_before: int = m["found"].size() + int(m["left"])
+	m["patrol_timer"] = 1e9
+	sim.advance(0.5)
+	_check(m["patrols"] >= 1 and m["found"].size() + int(m["left"]) > found_before, "Poached did not bring a find when the gang came")
+	sim.extract_now()
+	# the caravan shows it as a wide ◆◆ tile under the keystone, and the run band names it
+	main.show_room(main.BARRACKS)
+	main._barracks.selected = ""
+	main._barracks._shown = ""
+	main.refresh()
+	var cap_tile = null
+	for col in main._barracks._rows:
+		for n in col:
+			if n["button"].visible and n["id"] == cap_id:
+				cap_tile = n
+	_check(cap_tile != null and cap_tile["name"].text.begins_with("◆◆ ") and cap_tile["button"].size.x > main._barracks.TILE_W * 1.5 and cap_tile["effect"].text != "", "the capstone's tile is off: %s" % (cap_tile["name"].text if cap_tile != null else "none"))
+	_check_fit(main, "Caravan (capstone)")
+	main._barracks._pick(cap_id)
+	main.refresh()
+	_check(main._barracks._title.text.ends_with("capstone · trained"), "the capstone's panel title is off: '%s'" % main._barracks._title.text)
+	_check_fit(main, "Caravan (capstone picked)")
+	sim.deploy(0)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._band.right[2].text.contains("Poached") or main._run._band.right[2].text.contains("capstone"), "the run band does not name the capstone: '%s'" % main._run._band.right[2].text)
+	_check_fit(main, "Run (capstone)")
+	sim.extract_now()
+	# Dead quiet: every gang the size of the first; Ghost: a run starts at the search and a full pack brought home is the clear
+	sim.tree.append("Stalking/%d" % (Data.tree_named("Stalking")["nodes"].size() - 1))
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrols"] = 4
+	m["patrol_timer"] = 1e9
+	sim.advance(0.5)
+	_check(m["remaining"] == sim.PATROL_BASE - (1 if sim.has_node("trapline") else 0), "Dead quiet let the fifth gang grow: %d" % m["remaining"])
+	sim.extract_now()
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Stalking/"))
+	sim.set_class("Drifter")
+	sim.tree.append("Moving on/%d" % (Data.tree_named("Moving on")["nodes"].size() - 1))
+	var best_before: int = sim.best_tier
+	sim.deploy(0)
+	m = sim.mission
+	_check(m["remaining"] == 0 and m["cleared"] and m.get("ghost_pending", false), "Ghost did not start the run at the search")
+	_check(sim.best_tier == best_before, "Ghost cleared the ladder on arrival")
+	sim.extract_now()
+	_check(sim.best_tier == best_before, "a Ghost run brought home light counted as a clear")
+	sim.best_tier = 0
+	sim.best_depth[0] = 0
+	sim.deploy(0)
+	m = sim.mission
+	m["found"] = []
+	while sim.pack_used(m) < sim.capacity():
+		m["found"].append(sim._plain(Data.AMMO, "Nails"))
+	sim.extract_now()
+	_check(sim.best_tier == 1 and sim.best_depth[0] >= 1, "a Ghost run brought home full did not clear the site (best tier %d)" % sim.best_tier)
+	sim.load_dict(saved)
+	# Held: no second takes more than a tenth of you, their shots and what they left on you together
+	sim.tree.append("The door/%d" % (Data.tree_named("The door")["nodes"].size() - 1))
+	var deep: int = sim.best_tier
+	sim.deploy(deep)
+	m = sim.mission
+	m["remaining"] = 40
+	sim.hp = sim.max_hp()
+	sim.advance(1.0)
+	_check(sim.on_mission() and float(m["last_incoming"]) <= sim.max_hp() * 0.1 + 0.01, "Held let a second take %.1f of %.1f" % [float(m["last_incoming"]), sim.max_hp()])
+	sim.extract_now()
+	sim.load_dict(saved)
+	# Iron: a kill under half HP heals a tenth
+	sim.tree.append("Muscle/%d" % (Data.tree_named("Muscle")["nodes"].size() - 1))
+	sim.deploy(0)
+	m = sim.mission
+	sim.hp = sim.max_hp() * 0.3
+	var hp_before: float = sim.hp
+	sim._kill(m, m["t"])
+	_check(sim.hp >= hp_before + sim.max_hp() * 0.1 - 0.01, "Iron did not heal on the kill: %.1f to %.1f" % [hp_before, sim.hp])
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the capstones ok: one a tree, the cost, the gate, Poached, the tile, the band, Dead quiet, Ghost, Held, Iron")
+
+
 func _melee_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -4378,10 +4509,10 @@ func _loot_roll_checks(main) -> void:
 	m["patrol_timer"] = -1e9              # no gang
 	var found0: int = m["found"].size()
 	var searches0: int = m["searches"]
-	for k in range(40):
+	for k in range(400):
 		sim.advance(1.0)
-		if not sim.on_mission():
-			break
+		if not sim.on_mission() or m["searches"] - searches0 >= 3:
+			break                        # three searches, however slow this runner's are (Never there doubles them)
 	if sim.on_mission():
 		var per_search: float = float(m["found"].size() + int(m.get("left", 0)) - found0) / maxf(1.0, float(m["searches"] - searches0))
 		var base_finds: int = 1 + (1 if sim.has_node("scavenger") or sim.has_node("quiet_hands") else 0) + int(Data.KENNEL_LEVELS[sim.kennel_level]["finds"]) + (1 if sim.has_rule("postman") else 0)

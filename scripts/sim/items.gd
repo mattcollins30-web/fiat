@@ -717,7 +717,7 @@ static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var size := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
-			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["salt", " armour"], ["wire_pct", "% cash"]]:
+			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% cash"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > size:
 			size = absf(v)
@@ -733,7 +733,7 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
-			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["salt", "armour", "armour"], ["wire_pct", "cash from every kill", "cash"]]:
+			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "cash from every kill", "cash"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
 			var sign: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")

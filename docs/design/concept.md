@@ -247,6 +247,15 @@ pass. In build order; the economy items last so the reader runs once over all of
     misses; *The rat man*: poison keeps ticking on the next gang; *Live*: a shock chain never breaks
     while you fire; *Blades*: a bleeding target bleeds its neighbour. The second past's tree gets the
     class's. Shown as a ◆◆ tile at the foot of the tree, its own line on the run's fight box.
+    *Built (6 Oct), the set as it landed:* The yard *The dog's share*; Stalking *Dead quiet* (every gang
+    the size of the first); Snares *Poached*; Muscle *Iron*; The door *Held* (no second of their fire
+    over a tenth of you); Triage *Clean hands* (a med clears what's on you, three seconds' grace);
+    Shifts *Transfusion* (a med's overflow is armour, two to one); Stripping *Jerry-rigged*
+    (improvised ×1.5); Fencing *The lot* (a full pack pays double); Moving on *Ghost* (the first gang
+    never comes, and a full pack brought home is the clear: the tree's keystone is Never there, so a
+    clear by fighting can never happen on it); Luck *Loaded dice*; Petrol *Spread*; The cold *Shatter*
+    (physical ×2 on a chilled target); The rat man *Lingers*; Live *Arc*; Blades *Bleed out*. Each
+    reads on the run band's third line, not the fight box.
 29. **Picked over inside a run.** The between-run curve applied within one: after the Nth search on a
     site in a run (N by depth), finds thin by a fifth a search, to a floor; the Searching bar's words
     say so ("Thinning"). "Fill up, then go" and the pack grid get a natural stop, and quantity bonuses
