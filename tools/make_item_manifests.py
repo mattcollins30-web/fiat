@@ -424,7 +424,7 @@ def unique_jobs(seed):
     return jobs, seed
 
 
-NEW_GROUPS = ["uniques", "sets", "melee", "melee_small", "melee_parts", "grenades", "misc", "ammo"]
+NEW_GROUPS = [t[0] for t in TYPES] + ["uniques"] + [t[0] for t in EXTRA] + ["sets"]     # every group: the "new" manifest is whatever is not drawn yet
 
 
 def main():
