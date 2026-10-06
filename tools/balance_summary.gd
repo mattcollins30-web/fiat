@@ -21,7 +21,7 @@ const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it s
 const TOP_SHARE := 0.02         # the top rarity (Legendary) at +35% quality (the weights give 2.5%; the probe's noise is ±0.1); the plain share is the weights' own
 const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against plain
-const CASH_SINK := 3.0          # cash in hand at the end, times the top bench level
+const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's takings (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
 const SCRAP := [1.0, 3.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy)
@@ -126,16 +126,19 @@ func _init() -> void:
 		rows.append(["Loot quality visible", "", "no probe read", false])
 		rows.append(["Quantity honest", "", "no probe read", false])
 
-	# cash sink
+	# cash sink: hours of takings in hand (older reads carry no cash_per_h: read against 3x the top bench)
 	if not full.is_empty():
 		var over: Array = []
-		var most := 0
+		var most := 0.0
 		for b in full:
-			most = maxi(most, int(b["cash_end"]))
-			if float(b["cash_end"]) > CASH_SINK * float(b["top_bench"]):
-				over.append("%s holds £%d against a £%d top bench" % [b["build"], int(b["cash_end"]), int(b["top_bench"])])
-		var text: String = "; ".join(over) if not over.is_empty() else "every build under %.0fx the top bench (most £%d)" % [CASH_SINK, most]
-		rows.append(["Cash sink", "cash in hand at the end no more than %.0fx the top bench level" % CASH_SINK, text, over.is_empty()])
+			var per_h := float(b.get("cash_per_h", 0.0))
+			var held: float = (float(b["cash_end"]) / per_h) if per_h > 0.0 else (float(b["cash_end"]) / (3.0 * float(b["top_bench"])) * CASH_HOURS)
+			b["_held"] = held
+			most = maxf(most, held)
+			if held > CASH_HOURS:
+				over.append("%s holds £%d, %.1f hours' takings" % [b["build"], int(b["cash_end"]), held])
+		var text: String = "; ".join(over) if not over.is_empty() else "every build under %.0f hours' takings (most %.1f)" % [CASH_HOURS, most]
+		rows.append(["Cash sink", "cash in hand at the end no more than %.0f hours' takings" % CASH_HOURS, text, over.is_empty()])
 
 	# depth pace, over the hours actually run
 	if not full.is_empty():
@@ -212,6 +215,15 @@ func _init() -> void:
 	out.append("| Build | Hours | Bank | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap in hand (crafts earned/h) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
 	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for b in reads:
+		b["_wounds"] = (float(b["wounded_runs"]) / float(b["runs"])) if int(b["runs"]) > 0 else 0.0
+		var dearest_b := float(b.get("dearest_build", 0))
+		b["_crafts"] = (float(b.get("scrap_per_h", 0.0)) / dearest_b) if dearest_b > 0.0 else 0.0
+		var span_b := maxf(0.0, float(b.get("elapsed_h", b["hours"])) - DEPTH_FROM)
+		var late_b := 0
+		for c in b.get("depth_clears", []):
+			if float(c[0]) >= DEPTH_FROM:
+				late_b += 1
+		b["_pace"] = (late_b / span_b) if span_b > 0.0 else 0.0
 		var bt: int = int(b.get("best_tier", 0))
 		var bd: Array = b.get("best_depth", [])
 		var depth: int = int(bd[bt]) if bt >= 0 and bt < bd.size() else 0
@@ -250,7 +262,7 @@ func _merged(gs: Array) -> Dictionary:
 		var vals: Array = gs.map(func(g): return (float(g[key]) if float(g[key]) >= 0.0 else 999.0))
 		var med := _median(vals)
 		m[key] = -1.0 if med >= 999.0 else snappedf(med, 0.01)
-	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "elapsed_h", "wall_s"]:
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "elapsed_h", "wall_s"]:
 		var total := 0.0
 		for g in gs:
 			total += float(g.get(key, 0))

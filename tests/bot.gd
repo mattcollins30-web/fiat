@@ -150,10 +150,10 @@ func _endgame(sim) -> void:
 		bought.append([sim.elapsed, "the mate: %s" % name])
 	# the cash sinks past the campaign: a word called in on the tier it'll run (the
 	# words go with the run, so it's a sink every run), and the kit insured, while
-	# there's three times the price in hand - a flush player's reserve, not a miser's
+	# there's twice the price in hand - a flush player's reserve, not a miser's
 	if sim.campaign_done():
 		var t: int = pick_tier(sim)
-		while sim.can_add_word(t) and sim.cash >= sim.juice_cost(t) * 3:
+		while sim.can_add_word(t) and sim.cash >= sim.juice_cost(t) * 2:     # twice: at depth 15 a word is £70k and the pile sat under three of them
 			var cost: int = sim.juice_cost(t)
 			sim.add_word(t, sim.juice_options(t)[0])
 			bought.append([sim.elapsed, "word on tier %d for £%d" % [t, cost]])

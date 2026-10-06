@@ -219,6 +219,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			elif bool(r.get("wounded", false)):
 				g["wounded_runs"] += 1
 			mark_cash += float(r.get("cash", 0.0))
+			g["cash_earned"] = float(g.get("cash_earned", 0.0)) + float(r.get("cash", 0.0))     # the runs' takings, for the cash row (hours of takings in hand)
 			mark_items += sim.stash.size() - items_before
 			if float(g["bank_at"]) < 0.0 and sim.best_depth[Data.BANK] > 0:
 				g["bank_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
@@ -257,6 +258,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			sim.set_depth(i, d0)
 	g["odds"] = odds
 	g["cash_end"] = int(sim.cash)
+	g["cash_per_h"] = snappedf(float(g.get("cash_earned", 0.0)) / maxf(0.01, sim.elapsed / 3600.0), 1.0)
 	g["notes_end"] = int(sim.notes)
 	g["scrap_end"] = int(sim.scrap)
 	g["scrap_spent"] = int(g.get("scrap_spent", 0))
