@@ -725,7 +725,7 @@ func _camp_cards() -> Array:
 	for ty in Data.ELEMENTS:
 		var deal: float = float(conv.get(ty, 0.0)) * 100.0
 		var res: float = sim.resist(ty) * 100.0
-		var words: String = ("deal %.0f%% · res %.0f%%" % [deal, res]) if deal > 0.0 else ("res %.0f%%" % res)
+		var words = (["deal %.0f%% · res %.0f%%" % [deal, res], "%.0f%% · res %.0f%%" % [deal, res]]) if deal > 0.0 else ("res %.0f%%" % res)
 		elines.append([ty.capitalize(), words, ty])
 	var fire_chips := []
 	for ty in Data.ELEMENTS:

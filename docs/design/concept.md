@@ -287,7 +287,8 @@ pass. In build order; the economy items last so the reader runs once over all of
     gate); the Build menu off the craft view; a built gun is flagged to fire nails.
 35. **Contracts paying in craft materials.** A third pay kind beside cash and notes: scrap by the
     handful, a socketable of the zone's element, or a grade of rounds, so the fence's contracts feed
-    the bench and the Contracts tab has a reason once cash is easy.
+    the bench and the Contracts tab has a reason once cash is easy. *Built (6 Oct):* a third of the
+    non-unique contracts, scrap 6 a rarity a piece, the zone's element's socketable, a grade for a gun held.
 36. **Retirement.** A runner at level 30 can be retired to the wall: the yard keeps a sliver of their
     trait for good (a third, stacking to a cap of three retired), the class and its trees refund as a
     death does, the Caravan's wall shows them as retired not dead. A death is not the only way a runner

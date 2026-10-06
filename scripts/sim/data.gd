@@ -1092,6 +1092,10 @@ const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Bac
 const CONTRACT_CASH := 2.5         # times the items' sell price
 const CONTRACT_NOTES := 4          # a note a rarity a piece, times this
 const CONTRACT_UNIQUE_ODDS := 0.2  # a contract paying a unique: three rares
+## Contracts paying in craft materials (35): a third of the rest pay scrap by the handful, a socketable of
+## the zone's element, or a graded box of rounds for a gun you hold.
+const CONTRACT_SCRAP := 6          # scrap a rarity a piece, times this
+const CONTRACT_MATERIAL_ODDS := 0.34
 const MATE_RUNS := 5
 const MATE_NOTES := 400            # a unique from the mate, times the tier
 

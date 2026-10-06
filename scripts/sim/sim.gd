@@ -588,6 +588,31 @@ func roll_contract() -> Dictionary:
 		c["count"] = 3
 		c["pay"] = "unique"
 		c["unique"] = loose[rng.randi_range(0, loose.size() - 1)]["name"]
+	elif rng.randf() < Data.CONTRACT_MATERIAL_ODDS:
+		# craft materials (35): scrap, a socketable of the zone's element, or a graded box for a gun held
+		var kind: int = rng.randi_range(0, 2)
+		var types: Array = gun_types_held()
+		if kind == 2 and not types.is_empty():
+			var held: String = types[rng.randi_range(0, types.size() - 1)]
+			var grades: Array = Data.BASES[Data.AMMO].filter(func(b): return b.has("from") and b["type"] == held)
+			if not grades.is_empty():
+				c["pay"] = "rounds"
+				c["what"] = grades[rng.randi_range(0, grades.size() - 1)]["name"]
+				c["amount"] = 1
+		if kind == 1 and c["pay"] == "cash":
+			var zone: int = int(Data.TIERS[best_tier]["zone"])
+			var els: Array = Data.ZONE_TYPES[zone]["types"].keys()
+			var el: String = els[rng.randi_range(0, els.size() - 1)] if not els.is_empty() else "fire"
+			var socks: Array = Data.ATTACHMENTS.filter(func(a): return a.get("mount", "") == "socket" and a.has("conv_%s_pct" % el))
+			if socks.is_empty():
+				socks = Data.ATTACHMENTS.filter(func(a): return a["name"] == "Road salt")     # the estate's blades have no bottle: the salt instead
+			if not socks.is_empty():
+				c["pay"] = "socketable"
+				c["what"] = socks[0]["name"]
+				c["amount"] = 1
+		if c["pay"] == "cash":
+			c["pay"] = "scrap"
+			c["amount"] = int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_SCRAP
 	elif rng.randf() < 0.5:
 		c["pay"] = "notes"
 		c["amount"] = int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_NOTES
@@ -646,6 +671,19 @@ func hand_in(k: int) -> bool:
 			var it := Items.roll_unique(_unique_named(c["unique"]), rng)
 			stash.append(it)
 			paid = it["unique"]
+		"scrap":
+			scrap += int(c["amount"])
+			paid = "%d scrap" % int(c["amount"])
+		"socketable":
+			var sock: Dictionary = _plain(Data.ATTACHMENT, str(c["what"]))
+			if not stash_put(sock):
+				stash.append(sock)           # paid for: whatever the room, like a unique
+			paid = str(c["what"])
+		"rounds":
+			var box: Dictionary = _plain(Data.AMMO, str(c["what"]))
+			if not stash_put(box):
+				stash.append(box)
+			paid = "a box of %s" % str(c["what"]).to_lower()
 	log_event("Handed in: %s. %s" % [contract_words(c), paid])
 	contracts[k] = roll_contract()
 	return true
@@ -671,6 +709,12 @@ func contract_pay_words(c: Dictionary) -> String:
 			return _cash_words(float(c["amount"]))
 		"notes":
 			return "%d notes" % int(c["amount"])
+		"scrap":
+			return "%d scrap" % int(c["amount"])
+		"socketable":
+			return str(c.get("what", ""))
+		"rounds":
+			return "a box of %s" % str(c.get("what", "")).to_lower()
 	return str(c["unique"])
 
 
@@ -4009,7 +4053,7 @@ func load_dict(d: Dictionary) -> void:
 	atlas_points = int(d.get("atlas_points", 0))
 	contracts = []
 	for c in d.get("contracts", []):
-		contracts.append({"slot": str(c["slot"]), "rarity": int(c["rarity"]), "count": int(c["count"]), "pay": str(c["pay"]), "amount": int(c["amount"]), "unique": str(c.get("unique", ""))})
+		contracts.append({"slot": str(c["slot"]), "rarity": int(c["rarity"]), "count": int(c["count"]), "pay": str(c["pay"]), "amount": int(c["amount"]), "unique": str(c.get("unique", "")), "what": str(c.get("what", ""))})
 	while contracts.size() < Data.CONTRACTS_OPEN:
 		contracts.append(roll_contract())
 	mate = {}

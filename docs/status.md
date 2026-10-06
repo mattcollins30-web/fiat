@@ -1688,6 +1688,19 @@ too; the view and the menus fitted. Reviewer: scrap moves with the yard the way 
 and the Last run card carry the run's scrap; a build with the stash full lands over capacity like the deeds
 do (left as is).
 
+**35 · Contracts paying in craft materials.** A third of the contracts that do not pay a unique
+(`CONTRACT_MATERIAL_ODDS`) pay in materials, one of three: scrap by the handful (`CONTRACT_SCRAP` 6 a rarity
+a piece), a socketable of the zone's element (the best tier's zone, its types' first socketable, a bottle
+of lighter fluid in the town), or a graded box of rounds for a gun held (one of the grades of a type in
+`gun_types_held`; cash when none). `pay` is "scrap", "socketable" or "rounds" with `what` naming the thing;
+`hand_in` pays it (a box or a socketable into the stash whatever the room, like a unique), the words read
+"6 scrap", "Lighter fluid", "a box of slugs". Saved with `what`. Smoke: three hundred rolls cover every
+pay with the right amounts and names, each of the three paid on a hand-in, the tab fitted. Reviewer: the
+estate's zone has no bottle for its blades, so its socketable contract pays road salt instead of falling
+to scrap; one held type is picked before the grades are filtered. Two flakes fixed on the way: the
+workshop test picks the optic mount only when the primary has one, and the resists card's "deal · res"
+line has a shorter form.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

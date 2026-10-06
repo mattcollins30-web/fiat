@@ -298,7 +298,7 @@ func _init() -> void:
 		if sim.equipped[s] != null:
 			fitted_before += Items.fitted_count(sim.equipped[s])
 	print("workshop level %d, %d attachments fitted" % [sim.workshop, fitted_before])
-	if sim.equipped["Primary"] != null and sim.workshop > 0:
+	if sim.equipped["Primary"] != null and sim.workshop > 0 and sim.equipped["Primary"]["attachments"].has("optic"):
 		main._workshop._pick_mount("Primary", "optic")
 		_check_fit(main, "Workshop (mount pick)")
 		var opts: Array = sim.attachments_for("optic")
@@ -2356,6 +2356,9 @@ func _contracts_checks(main) -> void:
 	_check_fit(main, "Fence (contracts, after)")
 	# the contracts show from the rail and the tab: a unique on offer, a contract ready; what's next says so
 	sim.contracts = [{"amount": 0, "count": 3, "pay": "unique", "rarity": 2, "slot": "Attachment", "unique": "The Doorman's jacket"}]
+	for it in sim.stash.duplicate():
+		if sim.contract_fits(sim.contracts[0], it):
+			sim.stash.erase(it)              # nothing in the stash to hand in: the unique is on offer, not ready
 	main.refresh()
 	var fence_status: Dictionary = main._rail_status(main.MARKET) if main.has_method("_rail_status") else {}
 	_check(fence_status.get("badge", "") == "Unique" and str(fence_status.get("status2", "")).contains("contract"), "the rail does not flag a contract that pays a unique: %s" % str(fence_status))
@@ -4558,6 +4561,68 @@ func _loot_roll_checks(main) -> void:
 	_grenade_checks(main)
 	_grade_checks(main)
 	_build_checks(main)
+	_contract_material_checks(main)
+
+
+## 35: contracts paying in craft materials: scrap by the handful, a socketable of the zone's element, a graded box for a gun held.
+func _contract_material_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Sawn-off")
+	var kinds := {}
+	for k in range(300):
+		var c: Dictionary = sim.roll_contract()
+		kinds[c["pay"]] = kinds.get(c["pay"], 0) + 1
+		if c["pay"] == "scrap":
+			_check(int(c["amount"]) == int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_SCRAP, "a scrap contract's amount is off: %s" % str(c))
+		elif c["pay"] == "socketable":
+			var a: Dictionary = Items.base_named(Data.ATTACHMENT, str(c["what"]))
+			_check(not a.is_empty() and a.get("mount", "") == "socket", "a socketable contract names %s" % str(c.get("what", "")))
+		elif c["pay"] == "rounds":
+			var b: Dictionary = Items.base_named(Data.AMMO, str(c["what"]))
+			_check(not b.is_empty() and b.has("from") and b["type"] in sim.gun_types_held(), "a rounds contract names %s" % str(c.get("what", "")))
+		_check(sim.contract_pay_words(c) != "", "a contract has no pay words: %s" % str(c))
+	_check(kinds.has("scrap") and kinds.has("socketable") and kinds.has("rounds") and kinds.has("cash") and kinds.has("notes"), "three hundred contracts did not cover every pay: %s" % str(kinds))
+	# handing in pays what it says
+	for pay in ["scrap", "socketable", "rounds"]:
+		var c: Dictionary = {}
+		for k in range(400):
+			c = sim.roll_contract()
+			if c["pay"] == pay:
+				break
+		_check(c["pay"] == pay, "four hundred rolls gave no %s contract" % pay)
+		if c["pay"] != pay:
+			continue
+		sim.contracts[0] = c
+		for it in sim.stash.duplicate():
+			if sim.contract_fits(c, it):
+				sim.stash.erase(it)
+		for k in range(int(c["count"])):
+			var piece: Dictionary = sim._plain(c["slot"], (Data.ATTACHMENTS if c["slot"] == Data.ATTACHMENT else Data.BASES[c["slot"]])[0]["name"])
+			piece["rarity"] = int(c["rarity"])
+			sim.stash.append(piece)
+		var scrap0: int = sim.scrap
+		var stash_n: int = sim.stash.size()
+		_check(sim.can_hand_in(0) and sim.hand_in(0), "a %s contract could not be handed in" % pay)
+		match pay:
+			"scrap":
+				_check(sim.scrap == scrap0 + int(c["amount"]), "the scrap contract paid %d" % (sim.scrap - scrap0))
+			"socketable":
+				_check(sim.stash.any(func(it): return it["base"] == c["what"]), "the socketable contract did not pay %s" % str(c["what"]))
+			"rounds":
+				_check(sim.stash.any(func(it): return Items.is_ammo(it) and it["base"] == c["what"]), "the rounds contract did not pay %s" % str(c["what"]))
+	# the fence's contracts tab reads them and fits
+	main.show_room(main.MARKET)
+	main._fence._show("contracts")
+	main._fence._shown = ""
+	main.refresh()
+	_check_fit(main, "Fence (material contracts)")
+	main._fence._show("shelf")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the material contracts ok: the three pays rolled and worded, each paid on the hand-in, the tab fitted")
 
 
 ## 34: crafting at the bench. Scrap in hand from searches, scrapping and ditching; the Build column: a box of rounds,
@@ -4705,6 +4770,7 @@ func _grade_checks(main) -> void:
 	# the first shot through the fight: a tick fresh with match rounds lands more than one with plain rounds
 	var plain_r: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
 	sim.auto_equip = false                # "Equip if better" would swap the rifle out on deploy
+	sim.candidates = []                   # a runner waiting to be picked would take over the kit on deploy
 	var drops := []
 	for stack in [plain_r, sim._plain(Data.AMMO, "Match rounds")]:
 		sim.rig = [stack]
