@@ -209,7 +209,7 @@ func _bench_worn(sim) -> void:
 			continue                      # a set piece's affixes are the set's, no tier on them
 		var weakest := {}
 		for a in it["affixes"]:
-			if int(a.get("tier", 1)) < Data.AFFIX_TIERS and (weakest.is_empty() or int(a.get("tier", 1)) < int(weakest.get("tier", 1))):
+			if int(a.get("tier", 1)) < Items.rarity_cap(it) and (weakest.is_empty() or int(a.get("tier", 1)) < int(weakest.get("tier", 1))):     # under the rarity's cap: at it, there is nothing to roll for
 				weakest = a
 		if weakest.is_empty():
 			continue

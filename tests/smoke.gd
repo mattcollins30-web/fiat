@@ -2648,11 +2648,11 @@ func _craft_checks(main) -> void:
 	# re-roll one: the stat stays, the tier moves sometimes, dearer the better the tier
 	var one_stat: String = it["affixes"][1]["stat"]
 	var tiers_seen := {}
-	for k in range(60):
+	for k in range(240):                  # a T4 at the floor moves only up, one in sixteen: enough rolls that it does
 		sim.craft(it["id"], "one", one_stat)
 		_check(it["affixes"][1]["stat"] == one_stat, "re-rolling one changed its stat")
 		tiers_seen[int(it["affixes"][1]["tier"])] = true
-	_check(tiers_seen.size() >= 2, "sixty re-rolls of one never moved its tier: %s" % str(tiers_seen.keys()))
+	_check(tiers_seen.size() >= 2, "240 re-rolls of one never moved its tier: %s" % str(tiers_seen.keys()))
 	it["affixes"][1]["tier"] = 5
 	var dear: int = sim.craft_cost(it, "one", one_stat)
 	it["affixes"][1]["tier"] = 1
@@ -2668,6 +2668,25 @@ func _craft_checks(main) -> void:
 	var value_elite: int = it["value"]
 	_check(sim.craft(it["id"], "strip") and it["rarity"] == 0 and it["affixes"].is_empty() and it["value"] < value_elite, "Strip did not take it back to plain")
 	_check(Items.sockets(it) == 2, "stripping took the sockets")
+	# the bench works as a drop does (the pass, 6 Oct): re-roll one within the rarity's cap, never under the level's floor
+	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
+	rare["ilvl"] = 16
+	rare["rarity"] = 2
+	rare["affixes"] = [{"stat": "armour_pct", "value": 10, "tier": 2}, {"stat": "regen", "value": 2, "tier": 3}]
+	sim.stash.append(rare)
+	var lo_r: int = mini(Items.tier_floor(16), Items.rarity_cap(rare))      # the floor never above the cap: a deep Rare is T3s
+	for k in range(80):
+		sim.craft(rare["id"], "one", "armour_pct")
+		var tr: int = int(rare["affixes"][0]["tier"])
+		_check(tr >= lo_r and tr <= Items.rarity_cap(rare), "re-roll one left a level-16 Rare's affix at T%d, outside T%d..T%d" % [tr, lo_r, Items.rarity_cap(rare)])
+	sim.craft(rare["id"], "reroll")
+	for a in rare["affixes"]:
+		_check(int(a["tier"]) <= Items.rarity_cap(rare) and int(a["tier"]) >= lo_r, "a re-roll on a level-16 Rare gave T%d" % int(a["tier"]))
+	# a set piece: no bench job at all, its affixes are the set's
+	var set_piece: Dictionary = Items.roll_set_piece(Data.SETS[0]["name"], Data.SETS[0]["pieces"][0], sim.rng)
+	sim.stash.append(set_piece)
+	for kind in Data.CRAFT:
+		_check(sim.craft_cost(set_piece, kind, set_piece["affixes"][0]["stat"] if not set_piece["affixes"].is_empty() else "") < 0, "the bench offers %s on a set piece" % kind)
 	# not on a unique, not on paper, not without a bench, not on a run, not short
 	var u := Items.roll_unique(Data.UNIQUES[0], sim.rng)
 	sim.stash.append(u)

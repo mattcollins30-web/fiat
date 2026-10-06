@@ -407,7 +407,7 @@ static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: Str
 		have.append(a["stat"])
 	it["affixes"] = kept
 	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
-		it["affixes"].append(roll_affix(a, ilvl(it), rng))
+		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it)))     # the bench works as a drop does: the rarity's cap, the level's floor
 
 
 ## One affix rolled again. Returns the new tier, or 0 if the stat isn't on it.
@@ -418,16 +418,23 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator)
 			continue
 		var d := affix_def(stat)
 		var t: int = int(a.get("tier", 1))
-		var cap := tier_cap(ilvl(it))
+		var cap := maxi(rarity_cap(it), t)                     # one rule at the bench (the pass, 6 Oct): the rarity's cap, the level's floor; a tier already past the cap (an old save) is left where it is
+		var lo := mini(tier_floor(ilvl(it)), cap)
 		var up := 0.25 / float(t)                              # T1 → T2 one in four; T4 → T5 one in sixteen
 		var x := rng.randf()
 		if x < up and t < cap:
 			t += 1
-		elif x < up + 0.1 and t > 1:
+		elif x < up + 0.1 and t > lo:
 			t -= 1
+		t = clampi(t, lo, cap)
 		it["affixes"][k] = roll_affix(d, ilvl(it), rng, t)
 		return t
 	return 0
+
+
+## The best tier an item's rarity allows its affixes: the drop's cap, and the bench's.
+static func rarity_cap(it: Dictionary) -> int:
+	return int(Data.RARITIES[clampi(int(it.get("rarity", 0)), 0, Data.RARITIES.size() - 1)]["tier"])
 
 
 ## One more affix, one not already on it, and the rarity up a step.
@@ -445,7 +452,7 @@ static func add_affix(it: Dictionary, rng: RandomNumberGenerator) -> bool:
 	if picked.is_empty():
 		return false
 	it["rarity"] = int(it["rarity"]) + 1
-	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng, 0, int(Data.RARITIES[it["rarity"]]["tier"])))     # the new rarity's cap
+	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng, 0, rarity_cap(it)))     # the new rarity's cap
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
 	return true
 

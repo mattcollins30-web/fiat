@@ -686,7 +686,7 @@ const RARITY_SHORT := ["Com", "Unc", "Rare", "Epic", "Leg"]
 ## comes from its level (its base's tier plus the depth it dropped at:
 ## `Items.tier_cap`). `weight` is its share of a roll (1 if absent).
 const AFFIX_TIERS := 5
-const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5 (the bench's re-roll reads it; a drop's cap is its rarity's)
+const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5: the old rule, a fallback in roll_tier only; the cap is the rarity's, on a drop and at the bench
 const TIER_FLOOR := [0, 6, 10, 14, 99]  # the item level from which an affix rolls no lower than T1, T2, T3, T4 (T5 never a floor): deep finds roll no T1s
 const TIER_WEIGHT := [8.0, 5.0, 3.0, 2.0, 1.0]  # T1 .. T5: the better, the rarer
 const AFFIXES := [
@@ -1107,11 +1107,11 @@ const MOVE_NOTES_KEPT := 0.5
 const CRAFT := {
 	"reroll": {"name": "Re-roll the affixes", "cash": 40, "words": "The same number, rolled again, tiers and all"},
 	"lock": {"name": "Lock one, re-roll the rest", "cash": 120, "words": "The one you pick stays as it is", "pick": true},
-	"one": {"name": "Re-roll one", "cash": 80, "words": "Rolled again; a chance up a tier, a smaller one down", "pick": true},
+	"one": {"name": "Re-roll one", "cash": 80, "words": "Rolled again; a chance up a tier, a smaller one down, within the rarity", "pick": true},
 	"add": {"name": "Add an affix", "cash": 100, "words": "One more, a rarity up"},
 	"socket": {"name": "Cut a socket", "cash": 80, "words": "One more socket, up to two"},
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Back to plain; the value goes with them"},
-	"bump": {"name": "Raise the item's level", "notes": 10, "words": "Three levels up: better tiers can roll; up to the base's tier plus 20"},
+	"bump": {"name": "Raise the item's level", "notes": 10, "words": "Three levels up: the worst tiers stop rolling; up to the base's tier plus 20"},
 }
 const BUMP_LEVELS := 3
 const BUMP_CAP := 20

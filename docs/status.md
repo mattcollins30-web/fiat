@@ -1904,6 +1904,19 @@ dig rule had pushed it to - so `_gate` reads every open tier at depth 1, the cam
 the depth back. Wounds read 2 to 10% in every build across five reads against a 10 to 25% band, with
 a quarter being where the bot and the odds call a run lost: `WOUND_AT` 0.25 → 0.33.
 
+**One rule at the bench; no bench job on a set piece (6 Oct, Matt: "take defaults and build").** The
+bench works as a drop does: within the rarity's cap and the level's floor (`Items.rarity_cap`; re-roll
+and lock, re-roll one - which steps up only under the cap and down only above the floor - and add at
+the new rarity's cap), so rarity means the same at the bench as in the loot and the way up a tier is an
+add (a rarity up) or a better drop; a tier already past the cap on an old save is left where it is. The
+level's bump raises the floor now, and its words say so ("the worst tiers stop rolling"; the craft
+view's line "Level 16 · T4 to T5 roll"). A set piece gets no bench job (`craft_cost` −1, the Lock-up's
+and the bench's lists and buttons leave it out, the empty-pick words name sets): its affixes are the
+set's, with no tier, and a re-roll of one outside the affix table would have errored. The bot's bench
+rule stops at the rarity's cap, not T5, or it would pay for "no change" every run. Smoke: re-roll one
+and a full re-roll on a level-16 Rare stay T3; every bench kind refused on a set piece; the re-roll-one
+tier walk reads 240 rolls (a T4 at the floor only moves up, one in sixteen).
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

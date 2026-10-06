@@ -1061,8 +1061,8 @@ func item_by_id(id: int) -> Dictionary:
 ## What the bench can do to this item: the price, in cash (notes for a bump);
 ## -1 for can't. `stat` is the affix picked, for lock and one.
 func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
-	if it.is_empty() or it.has("unique") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
-		return -1
+	if it.is_empty() or it.has("unique") or it.has("set") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
+		return -1                             # a set piece's affixes are the set's: no bench job on one (the pass, 6 Oct)
 	var has_stat := false
 	for a in it["affixes"]:
 		has_stat = has_stat or a["stat"] == stat
@@ -1345,7 +1345,7 @@ func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, soc
 		"strip":
 			return "Stripped: %s gone" % ", ".join(before)
 		"bump":
-			return "Level %d → %d: up to T%d can roll" % [level_before, Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
+			return "Level %d → %d: nothing under T%d rolls" % [level_before, Items.ilvl(it), mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it))]
 	return Data.CRAFT[kind]["name"]
 
 

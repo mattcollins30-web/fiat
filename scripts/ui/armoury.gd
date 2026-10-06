@@ -217,7 +217,7 @@ func _show_panel() -> void:
 			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				_pick.set_hint("No room in the stash for what comes off")
-			if sim.workshop >= 1 and not it.has("unique"):
+			if sim.workshop >= 1 and not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 		else:
 			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
@@ -231,7 +231,7 @@ func _show_panel() -> void:
 			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_room(Items.size(it)), "primary": true})
-			if sim.workshop >= 1 and not it.has("unique"):
+			if sim.workshop >= 1 and not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 	_set_buttons(buttons)
 

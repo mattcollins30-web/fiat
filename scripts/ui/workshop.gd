@@ -577,7 +577,7 @@ func _socket_for(slot: String, only_empty := false) -> String:
 func _craftable() -> Array:
 	var out: Array = []
 	for it in sim.stash:
-		if not (Items.is_attachment(it) or Items.rig_item(it) or Items.is_paper(it) or it.has("unique")):
+		if not (Items.is_attachment(it) or Items.rig_item(it) or Items.is_paper(it) or it.has("unique") or it.has("set")):
 			out.append(it)
 	out.sort_custom(func(a, b): return a["value"] > b["value"])
 	return out
@@ -590,7 +590,7 @@ func _show_craft(it: Dictionary) -> void:
 		l.text = ""
 	if it.is_empty():
 		_craft_title.text = "Pick a piece, or build"
-		_craft_lines[0].text = "Stash gear only; not parts, meds or uniques"
+		_craft_lines[0].text = "Stash gear only; not parts, meds, uniques or sets"
 		_craft_lines[1].text = "Worn gear goes to the bench from the Lock-up"
 		_craft_lines[2].text = "Or build for scrap: rounds, meds, guns, grenades"
 		_left_title.text = "The bench"
@@ -612,7 +612,7 @@ func _show_craft(it: Dictionary) -> void:
 	# the bench's last job on this piece stays on the hint until the next
 	_hint.add_theme_color_override("font_color", Pal.GOOD if sim.last_craft.get("id", -1) == it["id"] else Pal.TEXT_3)
 	UI.fit(_craft_lines[0], Items.figure_options(it))
-	_craft_lines[1].text = "Level %d · up to T%d can roll" % [Items.ilvl(it), Items.tier_cap(Items.ilvl(it))]
+	_craft_lines[1].text = "Level %d · T%d to T%d roll" % [Items.ilvl(it), mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it)), Items.rarity_cap(it)]     # the level's floor, the rarity's cap
 	var lines: Array = Items.affix_lines(it, false, true)
 	var short_lines: Array = Items.affix_lines(it, true, true)
 	for k in range(3):
