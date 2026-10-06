@@ -44,7 +44,9 @@ FOOTPRINTS = gd_dict("FOOTPRINTS")
 
 
 def names(section):
-    """Base names in a BASES section, or ATTACHMENTS."""
+    """Base names in a BASES section, or ATTACHMENTS; the misc icons from their own table."""
+    if section == "Misc":
+        return list(MISC.keys())
     if section == "Attachment":
         m = re.search(r"const ATTACHMENTS := \[(.*?)\n\]", src, re.S)
     else:
@@ -53,7 +55,7 @@ def names(section):
 
 
 def footprint(slot, base):
-    return FOOTPRINTS.get(base, SIZE[slot])
+    return FOOTPRINTS.get(base, SIZE.get(slot, (1, 1)))
 
 
 def slug(name):
@@ -132,7 +134,10 @@ def medical(base):
 
 
 def ammo(base):
-    what = {"Nails": "a cardboard box of nails", "Hardened bolts": "a box of hardened steel bolts"}.get(base, "an open box of %s" % base.lower())
+    what = {"Nails": "a cardboard box of nails", "Hardened bolts": "a box of hardened steel bolts",
+            "Incendiary shells": "an open box of red shotgun shells with a painted orange band, a scorch mark on the lid",
+            "Incendiary SMG rounds": "an open box of tracer rounds with red-painted tips, the box singed",
+            "Salted rounds": "an open box of rifle rounds crusted white with road salt, the brass dulled"}.get(base, "an open box of %s" % base.lower())
     return ("A realistic painted pixel-art still-life of %s seen from above at a slight angle, filling the frame, cardboard "
             "soft and torn, a few loose rounds beside it." % what)
 
@@ -158,6 +163,28 @@ def melee(base):
 
 
 MELEE_PARTS = {"Tape", "Cord wrap", "Lanyard", "Nails through it", "A blade on it", "Lead in it"}
+
+# the grenades (32): a pouch each, thrown; the things a British estate would actually throw
+GRENADE_WORDS = {
+    "Petrol bomb": "a glass milk bottle of petrol with a rag stuffed in the neck, the glass smeared, lying on its side",
+    "Nail bomb": "a small paint tin packed with roofing nails and wrapped in black tape, a short fuse out of the lid",
+    "Bottle of something": "an unlabelled brown chemist's bottle with a cork, a hand-written warning scrawled on tape",
+    "Dry-ice bag": "a knotted supermarket carrier bag swollen with dry ice, frosted and sweating",
+    "Wired battery": "a scuffed car battery with two bare wires twisted on the terminals and a crocodile clip",
+}
+
+
+def grenade(base):
+    return ("A realistic painted pixel-art still-life of %s, one object alone, seen from above at a slight angle, filling the "
+            "frame, used and dangerous-looking." % GRENADE_WORDS[base])
+
+
+# scrap (34): not an item in the stash but a count in hand; one 64 px icon for the cards and the bench
+MISC = {"Scrap": "a small heap of scrap metal: bent nails, a hinge, copper wire, a cog, a broken padlock, piled loosely"}
+
+
+def misc(base):
+    return ("A realistic painted pixel-art still-life of %s, seen from above, filling the frame." % MISC[base])
 
 
 def melee_part(base):
@@ -229,6 +256,8 @@ EXTRA = [
     ("melee", "Primary", lambda b: b in MELEE_WORDS, melee),
     ("melee_small", "Secondary", lambda b: b in MELEE_WORDS, melee),
     ("melee_parts", "Attachment", lambda b: b in MELEE_PARTS, melee_part),
+    ("grenades", "Grenade", lambda b: True, grenade),
+    ("misc", "Misc", lambda b: True, misc),
 ]
 SEED_EXTRA = 75000                    # SEED0 + 5000
 REFS = ["res://art/reference/items/ref_%02d.png" % i for i in range(1, 5)]
@@ -369,7 +398,7 @@ def unique_jobs(seed):
     return jobs, seed
 
 
-NEW_GROUPS = ["uniques", "sets", "melee", "melee_small", "melee_parts"]
+NEW_GROUPS = ["uniques", "sets", "melee", "melee_small", "melee_parts", "grenades", "misc", "ammo"]
 
 
 def main():
@@ -439,8 +468,8 @@ def main():
                 new_jobs.append(job)
     readme = [
         "FIAT GEAR - the new items, in one go: the builds pass's uniques, the five sets' pieces, the melee weapons, the "
-        "small melee and the melee parts (grips and heads) - every job from %s whose art/items/<slug>.png was not on "
-        "disk when this was generated. %d jobs." % (", ".join(NEW_GROUPS), len(new_jobs)),
+        "small melee and the melee parts (grips and heads), the grenades, the scrap icon and the new ammo grades - every "
+        "job from %s whose art/items/<slug>.png was not on disk when this was generated. %d jobs." % (", ".join(NEW_GROUPS), len(new_jobs)),
         "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_new_manifest.json   "
         "(++ --dry-run to list). Rides art/reference/items/ref_01..04.png as style like the rest of the pool. A job whose "
         "file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force.",
