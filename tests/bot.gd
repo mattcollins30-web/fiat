@@ -405,7 +405,7 @@ func _buy_upgrade(sim) -> void:
 				break
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
-		if Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it):
+		if Items.is_attachment(it) or Items.rig_item(it):
 			continue
 		var cur = sim.equipped[it["slot"]]
 		var g: float = Items.score(it) - (Items.score(cur) if cur != null else 0.0)

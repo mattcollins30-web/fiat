@@ -273,7 +273,8 @@ pass. In build order; the economy items last so the reader runs once over all of
     home on a death (the best in the pack). Priced as the top cash sink alongside the bench. *Built
     (6 Oct):* the Them tile already read the real count and HP, so the lookout's rule is the call alone:
     the first gang after the clear waits for a full pack. £30,000, £24,000, £18,000, untuned.
-32. **Grenades in the rig** - as 26.
+32. **Grenades in the rig** - as 26. *Built (6 Oct):* five, one an element, 60–100 damage to everyone on
+    you through the model, a pouch each; found, on the fence's shelf, the bench's build under 34.
 33. **Ammo grades with an element.** The tier-2 and tier-3 grades carry a type as well as damage:
     hollow point bleeds, match rounds a flat crit, incendiary (a new grade of shells and SMG rounds)
     fire, salted (rifle) frost, so crafting has something to craft toward and a build can run its

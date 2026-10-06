@@ -2666,6 +2666,51 @@ func use_med(id: int) -> bool:
 	return false
 
 
+## A grenade thrown from a pouch (32): its damage to everyone on you, as its
+## type through the damage model (the trees' increases and mores, their
+## resist), its dot on the gang, a chill or a shock as its type does. Spends
+## the pouch; Second shift covers meds, not these.
+func use_grenade(id: int) -> bool:
+	if mission == null or mission["remaining"] <= 0 or mission.get("dry", false):
+		return false
+	var m: Dictionary = mission
+	var t: Dictionary = m["t"]
+	for k in range(rig.size()):
+		var it: Dictionary = rig[k]
+		if it["id"] != id or not Items.is_grenade(it):
+			continue
+		var b := Items.base_of(it)
+		var ty: String = b["type"]
+		var res: Dictionary = t.get("res", {})
+		var r := float(res.get(ty, 0.0))
+		if ty == "shock" and has_rule("sparkys_gloves"):
+			r = 0.0
+		var single: float = float(b["damage"]) * (1.0 + increased(ty) / 100.0) * more(ty) * (1.0 - r) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
+		if ty == "bleed" and has_node("cap_bleed_out"):
+			single *= 1.5                     # Bleed out: a nail bomb's bleed, half again too
+		var crowd: int = mini(m["remaining"], contact(t))
+		var landed: float = single * crowd
+		rig.remove_at(k)
+		m["target_hp"] -= landed
+		m["dealt"] = float(m.get("dealt", 0.0)) + landed
+		if not m.has("dealt_by"):
+			m["dealt_by"] = {}
+		m["dealt_by"][ty] = float(m["dealt_by"].get(ty, 0.0)) + landed
+		if not m.has("dots"):
+			m["dots"] = {}
+		# the dot's cap: the gun's own rate for the type, or the throw's, whichever is the bigger, so a throw never shrinks a burn the gun built
+		var gun_rate: float = float(type_dps()[ty]) * (1.0 - r) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0)
+		_dot_add(m["dots"], ty, single, maxf(single, gun_rate))
+		if ty == "frost":
+			m["chill_t"] = 2.0
+		if ty == "shock":
+			m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 2.0
+		m["thrown"] = int(m.get("thrown", 0)) + 1
+		log_event("%s thrown: %.0f %s to %d of them" % [it["base"], landed, ty, crowd])
+		return true
+	return false
+
+
 func _patch(m: Dictionary, dt: float) -> void:
 	if m["using"] == null:
 		return
@@ -2789,6 +2834,8 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 			slot = Data.ATTACHMENT
 		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)) + (Data.ATT_DROP + tree_sum("att_share") / 100.0) * float(shape.get("att", 1.0)) + Data.AMMO_DROP * 0.5 * float(shape.get("ammo", 1.0)):
 			slot = Data.AMMO
+		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)) + (Data.ATT_DROP + tree_sum("att_share") / 100.0) * float(shape.get("att", 1.0)) + Data.AMMO_DROP * 0.5 * float(shape.get("ammo", 1.0)) + Data.GRENADE_DROP:
+			slot = Data.GRENADE                   # a grenade lying about (32)
 	var it: Dictionary
 	var loose: Array = loose_uniques(int(t["depth"]))
 	var pieces: Array = set_pieces_at(int(t["depth"]))
@@ -3237,7 +3284,7 @@ func can_equip_from_pack(id: int) -> bool:
 			var was = equipped[slot]
 			equipped[slot] = it
 			_dry_memo.clear()
-			var ok: bool = pack_used(mission) - Items.size(it) + (Items.size(was) if was != null else 0) <= capacity() and rig_used() <= med_capacity()
+			var ok: bool = pack_used(mission) - Items.size(it) + (Items.size(was) if was != null else 0) <= capacity() and (slot != "Rig" or rig_used() <= med_capacity())
 			equipped[slot] = was
 			_dry_memo.clear()
 			return ok
@@ -3296,7 +3343,7 @@ func rig_stack_room(it: Dictionary) -> bool:
 
 func _take_from(src: Array, id: int) -> bool:
 	for it in src:
-		if it["id"] == id and (Items.is_medical(it) or Items.is_ammo(it)):
+		if it["id"] == id and Items.rig_item(it):
 			if Items.is_ammo(it):
 				# top up the rig's stack of the same rounds first; what's left takes a pouch, or stays
 				var topped := false
@@ -3379,6 +3426,8 @@ func restock() -> void:
 			slot = Data.ATTACHMENT
 		elif roll < 0.45:
 			slot = Data.AMMO
+		elif roll < 0.52:
+			slot = Data.GRENADE                  # a grenade or two on the shelf (32)
 		var it: Dictionary = Items.roll(slot, t, rng)
 		# a standard box is on the box row without end; the shelf's rounds are the special ones
 		for tries in range(8):
@@ -3471,7 +3520,7 @@ func sell_junk() -> int:
 	var n := 0
 	var got := 0.0
 	for it in stash.duplicate():
-		if int(it["rarity"]) == 0 and not (Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set")):
+		if int(it["rarity"]) == 0 and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set")):
 			got += sell_price(it)
 			sell(it)
 			n += 1

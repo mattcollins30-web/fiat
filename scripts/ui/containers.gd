@@ -149,7 +149,7 @@ func _can_drop(_at: Vector2, data: Variant) -> bool:
 	for it in sim.stash:
 		if it["id"] == data["id"]:
 			# a pouch free, or rounds that top up a stack already in the rig
-			return (Items.is_medical(it) or Items.is_ammo(it)) and (sim.rig_room(Items.size(it)) or sim.rig_tops_up(it))
+			return Items.rig_item(it) and (sim.rig_room(Items.size(it)) or sim.rig_tops_up(it))
 	return false
 
 

@@ -557,7 +557,7 @@ func _show_panel() -> void:
 		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if absf(gain) < 0.05 else (Pal.GOOD if gain > 0 else Pal.BAD))
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
-	elif Items.is_medical(it) or Items.is_ammo(it):
+	elif Items.rig_item(it):
 		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 	elif Items.is_socketable(it):
 		UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
@@ -584,7 +584,7 @@ func _show_panel() -> void:
 		var action: Callable = sim.buy_clinic.bind(it["id"]) if kind == "clinic" else sim.buy_id.bind(it["id"])
 		_button(0, "Buy for %s" % Fmt.money(_price(it)), action, sim.cash >= _price(it) and room)
 	else:
-		if (kind == "clinic" and Items.is_medical(it)) or Items.is_ammo(it):
+		if (kind == "clinic" and Items.is_medical(it)) or Items.is_ammo(it) or Items.is_grenade(it):
 			var room: bool = sim.rig_room(Items.size(it))
 			_right_lines[0].text = "" if room else ("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
 			_button(0, "Take", sim.take.bind(it["id"]), not sim.on_mission() and room)

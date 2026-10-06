@@ -65,8 +65,8 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 				break
 		for k in range(n):
 			attachments["socket %d" % (k + 1)] = null
-	if slot == Data.AMMO or slot == Data.PAPER or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
-		r = 0                             # a box is a box; a letter is a letter; a bottle is a bottle, so they stack
+	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
+		r = 0                             # a box is a box; a letter is a letter; a bottle is a bottle; a grenade is a grenade
 		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,
@@ -188,7 +188,7 @@ static func is_attachment(it: Dictionary) -> bool:
 
 
 static func is_gun(it: Dictionary) -> bool:
-	return base_of(it).has("damage")
+	return base_of(it).has("damage") and base_of(it).has("rof")     # a grenade has damage and no rate
 
 
 ## An attachment's figure for a stat: its base plus its affixes.
@@ -487,7 +487,7 @@ static func type_word(it: Dictionary) -> String:
 ## A gun's damage a second as fitted, before the operator's own multipliers.
 static func dps(it: Dictionary) -> float:
 	var b := base_of(it)
-	if not b.has("damage"):
+	if not b.has("damage") or not b.has("rof"):
 		return 0.0
 	return b["damage"] * b["rof"] * (1.0 + fitted_sum(it, "damage_pct") / 100.0)
 
@@ -519,6 +519,15 @@ static func is_deeds(it: Dictionary) -> bool:
 
 static func is_ammo(it: Dictionary) -> bool:
 	return it["slot"] == Data.AMMO
+
+
+static func is_grenade(it: Dictionary) -> bool:
+	return it["slot"] == Data.GRENADE
+
+
+## What goes in the rig's pouches: meds, rounds, grenades.
+static func rig_item(it: Dictionary) -> bool:
+	return is_medical(it) or is_ammo(it) or is_grenade(it)
 
 
 ## The ammo type a gun fires, "" for anything that isn't a gun.
@@ -567,6 +576,8 @@ static func score(it: Dictionary) -> float:
 			return capacity(it) + affix_total(it, "loot_pct") * 0.1
 		"heal":
 			return heal(it)
+		"throw":
+			return float(base_of(it).get("damage", 0.0))
 		"rounds":
 			return float(it.get("rounds", 0)) * (1.0 + float(base_of(it).get("damage_pct", 0)) / 100.0)
 		"attach":
@@ -667,7 +678,7 @@ static func kind_words(it: Dictionary) -> String:
 static func figure_options(it: Dictionary, tail := "") -> Array:
 	var h := headline(it)
 	var tw := type_word(it)
-	var unit: String = "dmg/s" if tw != "" else h[1]
+	var unit: String = "dmg/s" if (tw != "" and is_gun(it)) else h[1]
 	var cells := "%d cell%s" % [size(it), "" if size(it) == 1 else "s"]
 	var t := (" · " + tail) if tail != "" else ""
 	var kind := kind_words(it)
@@ -700,6 +711,8 @@ static func affix_options(it: Dictionary) -> Array:
 ## The headline figure and its unit for a card.
 static func headline(it: Dictionary) -> Array:
 	var b := base_of(it)
+	if it["slot"] == Data.GRENADE:
+		return ["%.0f" % b["damage"], "%s to everyone on you" % b["type"]]
 	if b.has("damage"):
 		return ["%.0f" % dps(it), "damage/s"]
 	if b.has("armour"):

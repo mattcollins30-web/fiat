@@ -44,7 +44,7 @@ const HEIGHT := GRID_Y + ROWS * CELL + (ROWS - 1) * GAP         # 588
 static func height_for(n: int) -> int:
 	return GRID_Y + n * CELL + (n - 1) * GAP
 const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helmet", "Armour", "Charm"]], ["Bags", ["Rig", "Backpack"]],
-	["Meds", ["Medical", "Ammo"]], ["Parts", ["Attachment"]], ["Paper", ["Paper"]]]
+	["Meds", ["Medical", "Ammo", "Grenade"]], ["Parts", ["Attachment"]], ["Paper", ["Paper"]]]
 # the bars' widths, measured: a button needs its text and 32 px of margin;
 # bar one is 122 + 6 + 7 × 90 + 6 × 3 + 124 = 900, inside the grid's 904
 const FILL_W := 122

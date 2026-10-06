@@ -1635,6 +1635,24 @@ deeds carried home count as held; the report's "left" leaves the carried one out
 cap, a 24-pouch rig inside its box on the run and in the Lock-up, the held clock, the tile, the full pack's
 call, the second gang unheld, the dog's carry and the report, the deeds held, the card fitted.
 
+**32 · Grenades in the rig.** A slot of their own (`Data.GRENADE`, one pouch, no rarity, no affixes, so
+they read plain like rounds): Petrol bomb (fire 80), Nail bomb (bleed 70), Bottle of something (poison 90),
+Dry-ice bag (frost 60), Wired battery (shock 100), each with its line. `sim.use_grenade(id)` throws one from
+a pouch at everyone on you: the base damage through the type's increases and mores and their resist to it
+(Sparky's gloves clear shock's, a shock on them adds its share), times the crowd on you, off their HP; the
+dot lands on the gang through `_dot_add`; dry ice chills for two seconds, the battery shocks (held by the
+Tester and Arc); the pouch is spent (Second shift covers meds, not these); nothing throws at no one. A
+look's finds carry them (`GRENADE_DROP` 4%), the fence's shelf has one in fourteen, `Items.rig_item` is
+meds, rounds or grenades wherever the rig took meds or rounds (Take, the drag, the Lock-up's and the run's
+panels, the kind tabs), the run's pouch lights while a gang is on you and throws when pressed, the head's
+chips read "Grenade · Fire". Guns are a damage and a rate now, so a grenade is not a gun anywhere. The bench
+builds them under crafting (34). Smoke: the five plain, the throw's figure against the model and the
+resist, the dot, the chill, the shock, no one there, the pouch pressed, the pick's Take, the Lock-up's
+Take and chips, the shelf. Reviewer: the idle junk run left grenades alone from the start (it sold them);
+a throw's dot cap is the gun's own rate or the throw's, whichever is bigger, so a petrol bomb never shrinks
+a burn a fire build has going; Bleed out takes a nail bomb too; the bots do not throw yet, so the balance
+reader will not measure grenades until a bot carries them.
+
 ## The bench on the pick frame; a typed part refused (6 Oct)
 
 Matt: "Gun attachments need the same chips treatment as everything else - also I can still attach a shotgun

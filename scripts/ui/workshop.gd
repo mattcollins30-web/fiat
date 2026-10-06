@@ -576,7 +576,7 @@ func _socket_for(slot: String, only_empty := false) -> String:
 func _craftable() -> Array:
 	var out: Array = []
 	for it in sim.stash:
-		if not (Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or it.has("unique")):
+		if not (Items.is_attachment(it) or Items.rig_item(it) or Items.is_paper(it) or it.has("unique")):
 			out.append(it)
 	out.sort_custom(func(a, b): return a["value"] > b["value"])
 	return out

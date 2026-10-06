@@ -155,8 +155,8 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
 	# after them, as muted chips: the open slots ("1 open at the bench"), a set's words in the set's tone, or "No affixes"
-	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
-	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)
+	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
+	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it)
 	var has_extra: bool = (not extra.is_empty()) if extra is Array else (str(extra) != "")
 	if has_extra:
 		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
@@ -182,6 +182,9 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 		out.append([Items.type_word(it) if Items.type_word(it) != "" else str(Items.base_of(it).get("type", "")), ""])
 	elif slot == Data.MEDICAL:
 		out.append(["Med", ""])
+	elif slot == Data.GRENADE:
+		out.append(["Grenade", ""])
+		out.append([str(Items.base_of(it)["type"]).capitalize(), str(Items.base_of(it)["type"])])
 	elif slot == Data.PAPER:
 		out.append(["Paper", ""])
 	else:
@@ -194,9 +197,10 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 	var rarity_tone: String = "set" if it.has("set") else ("warn" if it.has("unique") else ["", "good", "warn", "bad"][int(it["rarity"])])
 	if slot == Data.ATTACHMENT and Items.base_of(it).has("type"):
 		out.append([Items.only_words(it), ""])
-	if not (slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL) or int(it["rarity"]) > 0:
+	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE
+	if not plain or int(it["rarity"]) > 0:
 		out.append([Items.rarity_name(it), rarity_tone])
-	if not (slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL):
+	if not plain:
 		out.append(["Level %d" % Items.ilvl(it), ""])
 	var cells: int = Items.size(it)
 	if cells > 1 and cells_chip:

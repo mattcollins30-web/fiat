@@ -11,7 +11,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Backpack": "PCK",
-	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM"}
+	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN"}
 const INSET := 3                   # the picture sits inside the border
 
 var id := -1

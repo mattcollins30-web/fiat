@@ -173,12 +173,12 @@ func _init() -> void:
 	var dropped := false
 	var any_med := false
 	for it in sim.stash:
-		any_med = any_med or ((Items.is_medical(it) or Items.is_ammo(it)) and sim.rig_room(Items.size(it)))
+		any_med = any_med or (Items.rig_item(it) and sim.rig_room(Items.size(it)))
 	if not any_med:
 		sim.stash.append(sim._plain("Medical", "Bandage"))      # the run may have used them all, or what's left is too big for the room
 	for k in range(sim.stash.size()):
 		var it: Dictionary = sim.stash[k]
-		if (Items.is_medical(it) or Items.is_ammo(it)) and sim.rig_room(Items.size(it)):
+		if Items.rig_item(it) and sim.rig_room(Items.size(it)):
 			dropped = true
 			var data := {"id": it["id"], "src": "stash"}
 			_check(main._armoury._containers._can_drop(Vector2.ZERO, data), "the rig refuses a med dropped on it")
@@ -4145,7 +4145,7 @@ func _restock_meds(sim) -> void:
 ## tidy-up, and what keeps the stash from filling.
 func _sell_spares(sim) -> void:
 	for it in sim.stash.duplicate():
-		if Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it):
+		if Items.is_attachment(it) or Items.rig_item(it):
 			continue
 		var best: Dictionary = sim.best_in_stash(it["slot"])
 		if best.is_empty() or best["id"] != it["id"]:
@@ -4158,7 +4158,7 @@ func _buy_upgrade(sim) -> void:
 	var gain := 0.0
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
-		if Items.is_attachment(it) or Items.is_medical(it) or Items.is_ammo(it):
+		if Items.is_attachment(it) or Items.rig_item(it):
 			continue
 		var cur = sim.equipped[it["slot"]]
 		var g: float = Items.score(it) - (Items.score(cur) if cur != null else 0.0)
@@ -4555,6 +4555,123 @@ func _loot_roll_checks(main) -> void:
 	_top_works_checks(main)
 	_pick_panel_checks(main)
 	_bench_pick_checks(main)
+	_grenade_checks(main)
+
+
+## 32: grenades in the rig. A pouch each, thrown at everyone on you as the type's damage through the model, a dot on the gang.
+func _grenade_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	for b in Data.BASES[Data.GRENADE]:
+		var g: Dictionary = sim._plain(Data.GRENADE, b["name"])
+		_check(Items.is_grenade(g) and Items.rig_item(g) and Items.size(g) == 1 and int(g["rarity"]) == 0 and g["affixes"].is_empty() and Items.headline(g)[0] != "" and Words.item_words(b["name"]) != "", "%s is not a plain one-pouch grenade with words" % b["name"])
+	# the throw: the type's damage to everyone on you, the resist read, the dot landed, the pouch spent
+	if sim.equipped["Rig"] == null:
+		sim.equipped["Rig"] = sim._plain("Rig", Data.BASES["Rig"][0]["name"])
+	sim.rig = []
+	var bomb: Dictionary = sim._plain(Data.GRENADE, "Petrol bomb")
+	sim.rig.append(bomb)
+	sim.deploy(0)
+	_check(sim.on_mission(), "no run for the grenade checks")
+	if not sim.on_mission():
+		sim.load_dict(saved)
+		return
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	_check(not sim.use_grenade(bomb["id"]) and sim.rig.size() == 1, "a grenade went off with no one there")
+	m["remaining"] = 5
+	m["target_hp"] = 100000.0
+	m["dots"] = {}
+	var t: Dictionary = m["t"]
+	var crowd: int = mini(5, sim.contact(t))
+	var expect: float = 80.0 * (1.0 + sim.increased("fire") / 100.0) * sim.more("fire") * (1.0 - float(t.get("res", {}).get("fire", 0.0))) * crowd
+	var hp0: float = m["target_hp"]
+	_check(sim.use_grenade(bomb["id"]), "the petrol bomb did not throw")
+	_check(is_equal_approx(hp0 - m["target_hp"], expect) and sim.rig.is_empty() and float(m["dots"].get("fire", 0.0)) > 0.0 and int(m.get("thrown", 0)) == 1, "the throw landed %.0f, not %.0f; rig %d; fire dot %.1f" % [hp0 - m["target_hp"], expect, sim.rig.size(), float(m["dots"].get("fire", 0.0))])
+	# a throw onto a burn the gun built never shrinks it; a kill by a throw resolves on the next tick
+	var gun_rate: float = float(sim.type_dps()["fire"]) * (1.0 - float(t.get("res", {}).get("fire", 0.0))) * sim.pace() * t["pace"]
+	var gun_cap: float = gun_rate * float(Data.DOTS["fire"]["ratio"]) * sim.dot_seconds("fire") * sim.dot_stacks("fire")
+	m["dots"] = {"fire": gun_cap}
+	sim.rig = [sim._plain(Data.GRENADE, "Petrol bomb")]
+	sim.use_grenade(sim.rig[0]["id"])
+	_check(float(m["dots"]["fire"]) >= gun_cap - 0.01, "the throw shrank the burn: %.0f from %.0f" % [float(m["dots"]["fire"]), gun_cap])
+	m["dots"] = {}
+	m["remaining"] = 3
+	m["target_hp"] = 1.0
+	var kills0: int = m["kills"]
+	sim.rig = [sim._plain(Data.GRENADE, "Petrol bomb")]
+	sim.use_grenade(sim.rig[0]["id"])
+	sim.advance(0.5)
+	_check(sim.on_mission() and m["kills"] > kills0 and m["remaining"] < 3, "the throw's kill did not resolve: kills %d, remaining %d" % [m["kills"], m["remaining"]])
+	m["target_hp"] = 100000.0
+	# the idle junk run leaves grenades alone
+	var hold_auto: bool = sim.auto_sell
+	var keep: Dictionary = sim._plain(Data.GRENADE, "Nail bomb")
+	sim.stash.append(keep)
+	sim.auto_sell = true
+	sim.sell_junk()
+	_check(sim.stash.has(keep), "the junk run sold a grenade")
+	sim.auto_sell = hold_auto
+	sim.stash.erase(keep)
+	# frost chills, shock shocks; no enemies, no throw
+	var ice: Dictionary = sim._plain(Data.GRENADE, "Dry-ice bag")
+	var battery: Dictionary = sim._plain(Data.GRENADE, "Wired battery")
+	sim.rig = [ice, battery]
+	sim.use_grenade(ice["id"])
+	_check(float(m.get("chill_t", 0.0)) > 0.0, "the dry ice did not chill them")
+	sim.use_grenade(battery["id"])
+	_check(float(m.get("shock_t", 0.0)) > 0.0 and sim.rig.is_empty(), "the battery did not shock them")
+	m["remaining"] = 0
+	sim.rig = [sim._plain(Data.GRENADE, "Nail bomb")]
+	_check(not sim.use_grenade(sim.rig[0]["id"]) and sim.rig.size() == 1, "a grenade was thrown at no one")
+	# the run's pouch: lit with a gang on you, pressed it throws; the pick panel knows a grenade
+	m["remaining"] = 3
+	m["target_hp"] = 100000.0
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._rig_cells[0].visible, "the grenade's pouch does not show on the run")
+	_check_fit(main, "Run (a grenade in the rig)")
+	var thrown0: int = int(m.get("thrown", 0))
+	main._run._rig_pressed(0)
+	_check(sim.rig.is_empty() and int(m.get("thrown", 0)) == thrown0 + 1, "pressing the pouch did not throw the nail bomb")
+	m["found"].append(sim._plain(Data.GRENADE, "Bottle of something"))
+	main.refresh()
+	main._run._inv._pick(main._run._inv.cell_of(m["found"].back()["id"]))
+	main.refresh()
+	_check(main._run._pick.button_texts()[0] == "Take into the rig", "a grenade found does not offer the rig: %s" % str(main._run._pick.button_texts()))
+	_check_fit(main, "Run (a grenade found)")
+	main._run._pick.press(0)
+	_check(sim.rig.size() == 1 and Items.is_grenade(sim.rig[0]), "Take did not put the grenade in the rig")
+	sim.extract_now()
+	# the Lock-up: a grenade in the stash goes to the rig; the head's chips say what it is
+	sim.rig = []
+	var g2: Dictionary = sim._plain(Data.GRENADE, "Petrol bomb")
+	sim.stash.append(g2)
+	main.show_room(main.ARMOURY)
+	main._armoury._inv._set_kind(4)
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(g2["id"]))
+	main.refresh()
+	var chips_g: Array = main._armoury._head._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
+	_check(chips_g.size() >= 2 and chips_g[0] == "Grenade" and chips_g[1] == "Fire", "a grenade's chips are %s" % str(chips_g))
+	_check(main._armoury._pick.button_texts()[0] == "Take", "a stash grenade does not offer Take: %s" % str(main._armoury._pick.button_texts()))
+	_check_fit(main, "Lock-up (a grenade)")
+	main._armoury._press(0)
+	_check(sim.rig.size() == 1 and sim.rig[0]["id"] == g2["id"], "Take did not move the grenade to the rig")
+	# the fence's shelf carries them now and then
+	var seen := false
+	for k in range(40):
+		sim.restock()
+		if sim.market.any(func(it): return Items.is_grenade(it)):
+			seen = true
+			break
+	_check(seen, "forty restocks put no grenade on the fence's shelf")
+	main._armoury._inv._set_kind(0)
+	sim.load_dict(saved)
+	main.refresh()
+	print("grenades ok: the five, the throw, the chill and the shock, no one there, the pouch, the pick, the Lock-up, the shelf")
 
 
 ## The bench's panel on the pick frame (Matt, 6 Oct), and a typed part refused on the wrong gun.
@@ -4978,15 +5095,18 @@ func _thinning_checks(main) -> void:
 	# at the floor, a hundred searches bring about the floor's share of what a fresh site would
 	m["searches"] = n + 100
 	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0                  # no event lands a gang on the search
 	sim.auto_tier = -1
 	m["leave_full"] = false
 	var found0: int = int(m.get("finds", 0))
 	var s0: int = m["searches"]
 	for k in range(int(70.0 * sim.search_s(t))):
+		sim.hp = sim.max_hp()
+		m["remaining"] = 0
 		sim.advance(1.0)
 		if not sim.on_mission() or m["searches"] - s0 >= 60:
 			break
-	_check(sim.on_mission(), "the run ended under the thinning check")
+	_check(sim.on_mission(), "the run ended under the thinning check: %s / %s" % [str(sim.last_report.get("outcome", "")), str(sim.events.slice(maxi(0, sim.events.size() - 3)).map(func(e): return e[1]))])
 	if sim.on_mission():
 		var finds_each: int = 1 + (1 if (sim.has_node("scavenger") or sim.has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[sim.kennel_level]["finds"]) + (1 if sim.has_rule("postman") else 0)
 		var per: float = float(int(m.get("finds", 0)) - found0) / maxf(1.0, float(m["searches"] - s0))

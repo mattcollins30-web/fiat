@@ -23,6 +23,7 @@ const CHARM_DROP := 0.05           # the share of a site's finds that are charms
 ## Medical items aren't fitted: they ride in the rig, which is their capacity.
 ## The backpack's capacity is loot.
 const MEDICAL := "Medical"
+const GRENADE := "Grenade"        # thrown from a pouch (32): damage to everyone on you, by type
 ## Ammo rides in the rig too, a stack a cell. A gun fires its type's rounds
 ## and runs dry without them: then the secondary, then fists.
 const AMMO := "Ammo"
@@ -37,7 +38,7 @@ const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle r
 ## the default; FOOTPRINTS names the bases that differ. The art is generated
 ## to these: change a footprint and its picture no longer fits.
 const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour": [3, 3], "Rig": [3, 2], "Backpack": [3, 3],
-	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1]}
+	"Medical": [1, 1], "Attachment": [1, 1], "Ammo": [1, 1], "Paper": [1, 1], "Charm": [1, 1], "Grenade": [1, 1]}
 const FOOTPRINTS := {
 	# melee
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
@@ -117,7 +118,7 @@ const RIG_CAP := 24
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {
 	"Primary": "dps", "Secondary": "dps", "Helmet": "armour", "Armour": "armour",
-	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value",
+	"Rig": "capacity", "Backpack": "capacity", "Medical": "heal", "Attachment": "attach", "Ammo": "rounds", "Paper": "value", "Grenade": "throw",
 	"Charm": "find",
 }
 
@@ -341,6 +342,14 @@ const BASES := {
 		{"name": "Surgeon's kit", "tier": 3, "heal": 200.0, "use": 12.0, "value": 220},
 		{"name": "Hospital kit", "tier": 4, "heal": 300.0, "use": 14.0, "value": 380},
 	],
+	## Grenades (32): a pouch each, thrown at everyone on you; the hit is the type's, through the damage model
+	"Grenade": [
+		{"name": "Petrol bomb", "tier": 1, "damage": 80.0, "type": "fire", "value": 30},
+		{"name": "Nail bomb", "tier": 1, "damage": 70.0, "type": "bleed", "value": 30},
+		{"name": "Bottle of something", "tier": 2, "damage": 90.0, "type": "poison", "value": 45},
+		{"name": "Dry-ice bag", "tier": 2, "damage": 60.0, "type": "frost", "value": 45},
+		{"name": "Wired battery", "tier": 3, "damage": 100.0, "type": "shock", "value": 60},
+	],
 	## Ammo: a stack of `rounds` for a gun `type`, standard or a better grade
 	## (damage_pct). Standard is always at the fence by the box; the better
 	## grades are found, or on its shelf.
@@ -369,6 +378,7 @@ const KILL_SLOTS := ["Primary", "Primary", "Secondary", "Helmet", "Armour", "Arm
 const SITE_SLOTS := ["Backpack", "Rig", "Secondary", "Helmet", "Primary", "Armour"]
 const MED_PRICE := 1.5            # the clinic's markup on a common med
 const MED_DROP := 0.08            # the share of finds that are medical
+const GRENADE_DROP := 0.04        # the share of a look's finds that are grenades (32)
 const ATT_DROP := 0.30            # the share of a look's finds that are attachments
 
 ## Attachments: items that fit a gun's slots at the Workshop. `mount` is the

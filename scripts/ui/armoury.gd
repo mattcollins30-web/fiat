@@ -189,7 +189,7 @@ func _show_panel() -> void:
 		extra = [("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line, line, "%d of %d worn" % [n, st["pieces"].size()]]
 	var where: String = {"stash": "in the stash", "rig": "in the rig", "slot": "fitted"}.get(selected["kind"], "")
 	_pick.show_pick(it, sim, "The pick · " + where, tail, extra)
-	if Items.is_medical(it) or Items.is_ammo(it):
+	if Items.rig_item(it):
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
 		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the caravan's drawer" if it["base"] in sim.book else "Not read yet"),
@@ -258,7 +258,7 @@ func _rounds_clause(gun: Dictionary) -> Array:
 
 ## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
 func _show_medical(it: Dictionary) -> Array:
-	var lines := [("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else "Used under fire, over a few seconds"]
+	var lines := [("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
 	if Items.is_ammo(it):
 		var gun = sim.equipped["Primary"]
 		var sec = sim.equipped["Secondary"]
@@ -378,7 +378,7 @@ func _press(i: int) -> void:
 		_actions[i].call()
 	# follow the item: equipped, it's now in its slot; unequipped, it's in the
 	# stash under its id; sold, it's gone
-	if was.get("kind", "") == "stash" and not it.is_empty() and (Items.is_medical(it) or Items.is_ammo(it)):
+	if was.get("kind", "") == "stash" and not it.is_empty() and Items.rig_item(it):
 		selected = {}
 		for k in range(sim.rig.size()):
 			if sim.rig[k]["id"] == it["id"]:

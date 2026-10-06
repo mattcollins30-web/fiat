@@ -304,11 +304,11 @@ func _show_pick(m: Dictionary) -> void:
 		tail = Items.att_words(it, true, true)
 	_pick.show_pick(it, sim, "The pick · in the pack", tail)
 	var buttons := []
-	if Items.is_medical(it) or Items.is_ammo(it):
-		# a med or rounds: the rig on the right, Take into it when there's a pouch
+	if Items.rig_item(it):
+		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
-			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else "Used under fire, over a few seconds",
+			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds"),
 			"" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")])
 		buttons.append({"text": "Take into the rig", "action": _take_pick, "enabled": room, "primary": true})
 	elif it["slot"] in Data.SLOTS:
@@ -427,7 +427,7 @@ func _show_rig() -> void:
 			break
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
-		var lit: bool = Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null
+		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)
 		c.show_item(it, lit, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		c.visible = true
 		for j in range(w):
@@ -444,8 +444,11 @@ func _show_rig() -> void:
 
 
 func _rig_pressed(k: int) -> void:
-	if k < sim.rig.size() and Items.is_medical(sim.rig[k]) and sim.on_mission():
-		sim.use_med(sim.rig[k]["id"])
+	if k < sim.rig.size() and sim.on_mission():
+		if Items.is_medical(sim.rig[k]):
+			sim.use_med(sim.rig[k]["id"])
+		elif Items.is_grenade(sim.rig[k]):
+			sim.use_grenade(sim.rig[k]["id"])     # thrown at everyone on you (32)
 		acted.emit()
 
 

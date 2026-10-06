@@ -346,6 +346,11 @@ const ITEMS := {
 	"Cargo frame": "A frame and straps, no bag: you tie things to it. People, once.",
 	# medical
 	"Painkillers": "From a bathroom cabinet. Takes the edge off; the edge comes back.",
+	"Petrol bomb": "A milk bottle, a rag, a splash of unleaded. Thrown underarm, like at the match.",
+	"Nail bomb": "A tin of nails round something that goes bang. Everyone near it keeps bleeding.",
+	"Bottle of something": "Nobody knows what. It was under the sink. They breathe it and go green.",
+	"Dry-ice bag": "A carrier bag of the stuff from the ice-cream van. It bursts, and they stop moving.",
+	"Wired battery": "A car battery with the terminals wired wrong. Thrown, it finds everyone standing in the wet.",
 	"Bandage": "A roll of it. Pressure, time, and don't look.",
 	"First aid kit": "A green box from a kitchen wall. Most of what's in it is plasters. The rest is what you want.",
 	"Field dressing": "Army issue, vacuum packed. Tear, press, hold. It's quicker than it sounds.",
