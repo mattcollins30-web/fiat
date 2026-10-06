@@ -18,8 +18,8 @@ const BANK_BAND := 1.5          # slowest to the bank within this many times the
 const KEYSTONE_BY := 2.0        # hour
 const CAPSTONE_BY := 4.0        # hour
 const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it stands
-const ELITE_SHARE := 0.03       # at +35% quality
-const ELITE_SHARE_PLAIN := 0.02
+const TOP_SHARE := 0.02         # the top rarity (Legendary) at +35% quality (the weights give 2.5%; the probe's noise is ±0.1); the plain share is the weights' own
+const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against plain
 const CASH_SINK := 3.0          # cash in hand at the end, times the top bench level
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
@@ -55,7 +55,18 @@ func _init() -> void:
 			probe = g
 		else:
 			builds.append(g)
-	var full: Array = builds.filter(func(b): return not b.get("missing", false))
+	var reads: Array = builds.filter(func(b): return not b.get("missing", false))
+	# the same build read more than once (the bat runs each twice): one line a build for the gates -
+	# the firsts and the odds by their median, the money by the mean, the counts summed - and every
+	# read on its own in the builds table
+	var by_build: Dictionary = {}
+	for g in reads:
+		if not by_build.has(g["build"]):
+			by_build[g["build"]] = []
+		by_build[g["build"]].append(g)
+	var full: Array = []
+	for name in by_build:
+		full.append(_merged(by_build[name]))
 	if full.is_empty() and probe.is_empty():
 		printerr("no GATES lines under docs/balance; run tools\\balance.bat first")
 		quit(1)
@@ -104,10 +115,10 @@ func _init() -> void:
 
 	# the probe's two
 	if not probe.is_empty():
-		var es := float(probe["elite_share"])
-		var esp := float(probe["elite_share_plain"])
-		rows.append(["Loot quality visible", "Elite share %.1f%% at +35%% quality (%.1f%% plain)" % [ELITE_SHARE * 100.0, ELITE_SHARE_PLAIN * 100.0],
-			"%.2f%% boosted, %.2f%% plain" % [es * 100.0, esp * 100.0], es >= ELITE_SHARE and esp >= ELITE_SHARE_PLAIN])
+		var es := float(probe.get("top_share", probe.get("elite_share", 0.0)))
+		var esp := float(probe.get("top_share_plain", probe.get("elite_share_plain", 0.0)))
+		rows.append(["Loot quality visible", "Legendary share %.1f%% at +35%% quality (%.1f%% plain)" % [TOP_SHARE * 100.0, TOP_SHARE_PLAIN * 100.0],
+			"%.2f%% boosted, %.2f%% plain" % [es * 100.0, esp * 100.0], es >= TOP_SHARE and esp >= TOP_SHARE_PLAIN])
 		var fr := float(probe["finds_ratio"])
 		rows.append(["Quantity honest", "finds at +25%% quantity %.2f to %.2f times plain" % [FINDS_RATIO[0], FINDS_RATIO[1]],
 			"%.2f (%.2f against %.2f a search)" % [fr, float(probe["finds_boosted"]), float(probe["finds_plain"])], FINDS_RATIO[0] <= fr and fr <= FINDS_RATIO[1]])
@@ -179,8 +190,8 @@ func _init() -> void:
 	var out: Array = []
 	out.append("# Balance summary")
 	out.append("")
-	out.append("Written %s by tools/balance_summary.gd from %d build reads%s. %s" % [
-		Time.get_datetime_string_from_system(false, true), full.size(), " and the probe" if not probe.is_empty() else " (no probe)",
+	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds%s. %s" % [
+		Time.get_datetime_string_from_system(false, true), reads.size(), full.size(), " and the probe" if not probe.is_empty() else " (no probe)",
 		("%d RED." % reds) if reds > 0 else "No reds."])
 	var missing: Array = []
 	for b in builds:
@@ -200,7 +211,7 @@ func _init() -> void:
 	out.append("")
 	out.append("| Build | Hours | Bank | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap in hand (crafts earned/h) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
 	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-	for b in full:
+	for b in reads:
 		var bt: int = int(b.get("best_tier", 0))
 		var bd: Array = b.get("best_depth", [])
 		var depth: int = int(bd[bt]) if bt >= 0 and bt < bd.size() else 0
@@ -214,7 +225,7 @@ func _init() -> void:
 	out.append("")
 	out.append("Depth clears as [hour, tier, depth]:")
 	out.append("")
-	for b in full:
+	for b in reads:
 		var clears: Array = []
 		for c in b.get("depth_clears", []):
 			clears.append("%.1f T%d d%d" % [float(c[0]), int(c[1]), int(c[2])])
@@ -227,6 +238,56 @@ func _init() -> void:
 		print(out[k])
 	print("-> docs/balance/summary.md")
 	quit(0)
+
+
+## One build's reads as one: the firsts by their median (never counts as late), the odds by the median a
+## tier, cash, scrap and level by the mean, runs, deaths and wounded runs summed, the clears joined.
+func _merged(gs: Array) -> Dictionary:
+	if gs.size() == 1:
+		return gs[0]
+	var m: Dictionary = gs[0].duplicate(true)
+	for key in ["bank_at", "keystone_at", "capstone_at"]:
+		var vals: Array = gs.map(func(g): return (float(g[key]) if float(g[key]) >= 0.0 else 999.0))
+		var med := _median(vals)
+		m[key] = -1.0 if med >= 999.0 else snappedf(med, 0.01)
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "elapsed_h", "wall_s"]:
+		var total := 0.0
+		for g in gs:
+			total += float(g.get(key, 0))
+		m[key] = snappedf(total / gs.size(), 0.01)
+	for key in ["runs", "deaths", "wounded_runs"]:
+		var n := 0
+		for g in gs:
+			n += int(g.get(key, 0))
+		m[key] = n
+	var per_tier: Dictionary = {}
+	for g in gs:
+		for o in g.get("odds", []):
+			if not per_tier.has(int(o[0])):
+				per_tier[int(o[0])] = []
+			per_tier[int(o[0])].append(float(o[1]))
+	var odds: Array = []
+	var tiers: Array = per_tier.keys()
+	tiers.sort()
+	for t in tiers:
+		odds.append([t, snappedf(_median(per_tier[t]), 0.001)])
+	m["odds"] = odds
+	var clears: Array = []
+	for g in gs:
+		clears.append_array(g.get("depth_clears", []))
+	m["depth_clears"] = clears
+	m["hours"] = float(gs[0]["hours"])
+	m["reads"] = gs.size()
+	return m
+
+
+func _median(vals: Array) -> float:
+	var v := vals.duplicate()
+	v.sort()
+	var n := v.size()
+	if n == 0:
+		return 0.0
+	return float(v[n / 2]) if n % 2 == 1 else (float(v[n / 2 - 1]) + float(v[n / 2])) / 2.0
 
 
 func _hours(v: float) -> String:

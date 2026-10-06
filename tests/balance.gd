@@ -246,11 +246,15 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			mark_runs = 0
 			mark_cash = 0.0
 			mark_items = 0
-	# the end: the odds at every open tier, in the kit as it stands
+	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
+	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	var odds := []
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
+			var d0: int = sim.depth[i]
+			sim.set_depth(i, 1)
 			odds.append([i, snappedf(sim.survival(i), 0.001)])
+			sim.set_depth(i, d0)
 	g["odds"] = odds
 	g["cash_end"] = int(sim.cash)
 	g["notes_end"] = int(sim.notes)
@@ -272,15 +276,15 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	quit(0)
 
 
-## The loot gates, build-free: the Elite share at +35% quality, finds a search at +25% quantity, from a
+## The loot gates, build-free: the Legendary share at +35% quality, finds a search at +25% quantity, from a
 ## fresh yard with a big sample. One process, seconds.
 func _probe() -> void:
 	var sim = Sim.new()
 	sim.start()
 	sim.set_class("Doorman")                 # no class loot share: the plain read is plain
 	var g := {"build": "probe"}
-	# the Elite share at +35% quality (and unboosted), tier 3 gear, 20000 rolls
-	for pair in [["elite_share", 0.35], ["elite_share_plain", 0.0]]:
+	# the Legendary share at +35% quality (and unboosted), tier 3 gear, 20000 rolls
+	for pair in [["top_share", 0.35], ["top_share_plain", 0.0]]:
 		var elites := 0
 		for k in range(20000):
 			var it: Dictionary = Items.roll("Primary", 3, sim.rng, pair[1])

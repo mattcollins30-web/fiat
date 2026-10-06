@@ -2,9 +2,11 @@
 rem The balance pass, in one command: every gate read at once, then the summary.
 rem   tools\balance.bat           eight simulated hours a build (about three minutes of wall each)
 rem   tools\balance.bat 4         four hours a build
-rem Runs eleven Godot jobs side by side: the five classes keystones-first, the five
-rem element builds on their affinity class, and the loot probe. Each writes
-rem docs\balance\<build>.txt; the summary lands in docs\balance\summary.md.
+rem Runs twenty-one Godot jobs side by side: the five classes keystones-first and
+rem the five element builds on their affinity class, twice each (one eight-hour run
+rem is a noisy read of when the bank falls; the summary takes the median), and the
+rem loot probe. Each writes docs\balance\<build>[-2].txt; the summary lands in
+rem docs\balance\summary.md.
 rem Godot: the path in tools\godot.txt if that file exists (point it at the
 rem _console.exe so the output reaches the files), else "godot" on the PATH.
 setlocal enabledelayedexpansion
@@ -21,14 +23,16 @@ if not exist docs\balance mkdir docs\balance
 del /q docs\balance\*.txt docs\balance\*.done 2>nul
 
 set N=0
-for %%C in (Doorman Drifter Poacher Scrapper Paramedic) do (
-	set /a N+=1
-	start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%C > docs\balance\%%C.txt 2>&1 & echo done > docs\balance\%%C.done"
-)
-for %%E in ("fire Drifter" "shock Drifter" "frost Poacher" "poison Poacher" "bleed Doorman") do (
-	for /f "tokens=1,2" %%A in (%%E) do (
+for %%S in (1 2) do (
+	for %%C in (Doorman Drifter Poacher Scrapper Paramedic) do (
 		set /a N+=1
-		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%B %%A > docs\balance\%%B-%%A.txt 2>&1 & echo done > docs\balance\%%B-%%A.done"
+		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%C > docs\balance\%%C-%%S.txt 2>&1 & echo done > docs\balance\%%C-%%S.done"
+	)
+	for %%E in ("fire Drifter" "shock Drifter" "frost Poacher" "poison Poacher" "bleed Doorman") do (
+		for /f "tokens=1,2" %%A in (%%E) do (
+			set /a N+=1
+			start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%B %%A > docs\balance\%%B-%%A-%%S.txt 2>&1 & echo done > docs\balance\%%B-%%A-%%S.done"
+		)
 	)
 )
 set /a N+=1
