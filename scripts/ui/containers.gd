@@ -22,7 +22,7 @@ const Inventory := preload("res://scripts/ui/inventory.gd")
 const WIDTH := Inventory.SIDE_W    # 608
 const LABEL_H := 22
 const RIG_COLS := 8                # 8 × 64 + 7 × 6 = 554
-const RIG_MAX := 18                # the biggest rig doubled by Issue webbing: three rows
+const RIG_MAX := Data.RIG_CAP      # the sim's cap, 24: three full rows
 const RIG_Y := LABEL_H + 2
 const ROW_W := RIG_COLS * (Pal.CELL + Pal.CELL_GAP) - Pal.CELL_GAP   # 554
 const PACK_MAX := 80               # the biggest pack (72) with Pack horse (+6) is 78

@@ -791,9 +791,9 @@ func _camp_cards() -> Array:
 	var of: int = Data.GENERATOR_LEVELS.size() + Data.LOOKOUT_LEVELS.size() + Data.KENNEL_LEVELS.size() - 3
 	var works := {
 		"title": "The yard's works", "headline": "%d" % built, "unit": "of %d levels built" % of,
-		"lines": [["Generator %d" % sim.generator_level, "%d h away" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"]],
-			["Lookout %d" % sim.lookout_level, "first ×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"]],
-			["Kennel %d" % sim.kennel_level, "+%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"]]],
+		"lines": [["Generator %d" % sim.generator_level, "a rig row" if Data.GENERATOR_LEVELS[sim.generator_level].get("rig_row", false) else "%d h away" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"]],
+			["Lookout %d" % sim.lookout_level, "the call" if Data.LOOKOUT_LEVELS[sim.lookout_level].get("call", false) else "first ×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"]],
+			["Kennel %d" % sim.kennel_level, "carries home" if Data.KENNEL_LEVELS[sim.kennel_level].get("carries", false) else "+%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"]]],
 	}
 	# one button: the cheapest next job; the note names the others
 	var jobs := []
@@ -822,7 +822,7 @@ func _camp_cards() -> Array:
 			"lines": [["Where", t["name"]], ["Kills · gangs", "%d · %d" % [r["kills"], int(r.get("patrols", 0))]], ["Loot", "%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]],
 				["Cash", Fmt.money(r["cash"])], ["Took", Fmt.mss(r["time"])]],
 			"tone": "bad" if r["outcome"] == "Dead" else "good",
-			"status": ("Lost %s of kit" % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else (("XP +%s · wounded" % Fmt.num(r["xp"])) if r.get("wounded", false) else "XP +%s" % Fmt.num(r["xp"])),
+			"status": (("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else (("XP +%s · wounded" % Fmt.num(r["xp"])) if r.get("wounded", false) else "XP +%s" % Fmt.num(r["xp"])),
 		})
 	else:
 		out.append({"title": "Last run", "headline": "None yet", "unit": "", "lines": [], "note": "The first run writes here", "status": ""})

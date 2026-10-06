@@ -270,7 +270,9 @@ pass. In build order; the economy items last so the reader runs once over all of
     generator powers a second rig row (the rig's pouches double, meds and grenades alike); the lookout
     names the first gang before you set off (the Runs card's Them tile reads the real count and HP, not
     the estimate, and the first gang comes at the lookout's call); the kennel's dog carries one find
-    home on a death (the best in the pack). Priced as the top cash sink alongside the bench.
+    home on a death (the best in the pack). Priced as the top cash sink alongside the bench. *Built
+    (6 Oct):* the Them tile already read the real count and HP, so the lookout's rule is the call alone:
+    the first gang after the clear waits for a full pack. £30,000, £24,000, £18,000, untuned.
 32. **Grenades in the rig** - as 26.
 33. **Ammo grades with an element.** The tier-2 and tier-3 grades carry a type as well as damage:
     hollow point bleeds, match rounds a flat crit, incendiary (a new grade of shells and SMG rounds)

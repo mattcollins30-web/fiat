@@ -4543,6 +4543,104 @@ func _loot_roll_checks(main) -> void:
 	_thinning_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
+	_top_works_checks(main)
+
+
+## 31: the works' top levels, each a rule: the generator's rig row, the lookout's call, the dog that carries one home.
+func _top_works_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_check(Data.GENERATOR_LEVELS.back().get("rig_row", false) and Data.LOOKOUT_LEVELS.back().get("call", false) and Data.KENNEL_LEVELS.back().get("carries", false), "a work's top level is not the rule")
+	# the generator: a second row of pouches, never past the cap
+	var hold_rig = sim.equipped["Rig"]
+	var big: Dictionary = sim._plain("Rig", Data.BASES["Rig"].back()["name"])
+	big["affixes"] = [{"stat": "med_cap", "value": 3, "tier": 5}]
+	sim.equipped["Rig"] = big
+	sim.generator_level = Data.GENERATOR_LEVELS.size() - 2
+	var before: int = sim.med_capacity()
+	sim.generator_level = Data.GENERATOR_LEVELS.size() - 1
+	_check(before > 0 and sim.med_capacity() == mini(before + Data.RIG_ROW, Data.RIG_CAP) and sim.med_capacity() > before, "the generator's row reads %d from %d" % [sim.med_capacity(), before])
+	# past the cap it clips, and the run's rig and the Lock-up's rig hold the cap: the run's two rows in the one row's height
+	sim.rig = []
+	var pouches: int = sim.med_capacity()
+	while sim.rig.size() < pouches:
+		sim.rig.append(sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"]))
+	_check(main._run.RIG_MAX >= Data.RIG_CAP and main._armoury._containers.RIG_MAX >= Data.RIG_CAP, "a rig display clips under the sim's cap")
+	sim.deploy(0)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var right_edge := 0.0
+	var bottom := 0.0
+	for c in main._run._rig_cells:
+		if c.visible:
+			right_edge = maxf(right_edge, c.position.x + c.size.x)
+			bottom = maxf(bottom, c.position.y + c.size.y)
+	_check(right_edge <= main._run.PAD + main._run.INNER + 0.5 and bottom <= main._run.RIG_Y + Pal.CELL + 0.5, "the run's rig of %d spills: to x %.0f, y %.0f" % [pouches, right_edge, bottom])
+	_check_fit(main, "Run (a full rig)")
+	sim.extract_now()
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	_check_fit(main, "Lock-up (a full rig)")
+	sim.rig = []
+	sim.equipped["Rig"] = hold_rig
+	# the lookout: the first gang after the clear waits for a full pack; a second gang does not
+	sim.lookout_level = Data.LOOKOUT_LEVELS.size() - 1
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["found"] = []
+	m["patrol_timer"] = 0.0
+	sim.advance(5.0)
+	_check(sim.on_mission() and m["patrols"] == 0 and m["patrol_timer"] == 0.0, "the first gang's clock ran before the call: %.1f" % m["patrol_timer"])
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._run._fight["tiles"][0]["value"].text == "on the call", "the Next gang tile does not say on the call: '%s'" % main._run._fight["tiles"][0]["value"].text)
+	_check_fit(main, "Run (on the call)")
+	while sim.pack_used(m) < sim.capacity():
+		m["found"].append(sim._plain(Data.AMMO, "Nails"))
+	sim.advance(5.0)
+	_check(m["patrol_timer"] > 0.0 or m["patrols"] >= 1, "the full pack did not call the first gang")
+	m["patrols"] = 1
+	m["found"] = []
+	m["patrol_timer"] = 0.0
+	sim.advance(5.0)
+	_check(m["patrol_timer"] > 0.0 or m["patrols"] >= 2, "the second gang waited for the call too")
+	sim.extract_now()
+	# the kennel: the best thing in the pack comes home with the dog on a death
+	sim.kennel_level = Data.KENNEL_LEVELS.size() - 1
+	sim.deploy(0)
+	m = sim.mission
+	var cheap: Dictionary = sim._plain(Data.AMMO, "Nails")
+	var dear: Dictionary = sim._plain("Armour", Data.BASES["Armour"].back()["name"])
+	m["found"] = [cheap, dear]
+	var stash_before: int = sim.stash.size()
+	sim.hp = 0.0
+	sim._kia()
+	_check(sim.stash.size() == stash_before + 1 and sim.stash.back()["id"] == dear["id"] and sim.last_report.get("carried", "") != "" and int(sim.last_report["left"]) == 1, "the dog did not carry the best thing home")
+	# the deeds carried home are held all the same
+	sim.load_dict(saved)
+	sim.kennel_level = Data.KENNEL_LEVELS.size() - 1
+	var hold_ending: String = sim.ending
+	sim.ending = ""
+	sim.deploy(0)
+	m = sim.mission
+	var deeds: Dictionary = sim._plain(Data.PAPER, "The deeds")
+	deeds["deeds"] = true
+	m["found"] = [deeds]
+	sim.hp = 0.0
+	sim._kia()
+	_check(sim.ending == "held" and sim.stash.back().get("deeds", false), "the deeds carried home were not held: '%s'" % sim.ending)
+	sim.ending = hold_ending
+	# the works card reads the rules and fits
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	_check_fit(main, "Yard (the works' top levels)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the works' top levels ok: the rig row, the call, the dog that carries")
 
 
 ## What's on them and on you as chips (Matt, 6 Oct): "On them" under their bar, "On you" in place of the runner's note.

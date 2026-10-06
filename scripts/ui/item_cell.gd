@@ -97,6 +97,11 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:
 			words.append("T%d · %s" % [it["tier"], Items.rarity_name(it)])
+	if size.x < 44.0:
+		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
+		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
+		fs = 11
+		line_h = 14
 	var y := (size.y - words.size() * line_h) / 2.0
 	for i in range(words.size()):
 		var l := _lines[i]

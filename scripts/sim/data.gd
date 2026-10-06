@@ -96,17 +96,23 @@ const GENERATOR_LEVELS := [
 	{"hours": 8, "cost": 0, "words": "No generator: eight hours away counts"},
 	{"hours": 12, "cost": 4000, "words": "A generator: twelve hours away counts"},
 	{"hours": 24, "cost": 12000, "words": "Diesel and a tank: a day away counts"},
+	{"hours": 24, "cost": 30000, "rig_row": true, "words": "The works wired: a second row of pouches on the rig"},
 ]
 const LOOKOUT_LEVELS := [
 	{"first": 1.0, "runs": 24, "cost": 0, "words": "No lookout: odds are a guess"},
 	{"first": 1.5, "runs": 24, "cost": 3000, "words": "A lookout: the first gang takes half as long again to arrive"},
 	{"first": 2.0, "runs": 60, "cost": 9000, "words": "A lookout with glasses: the first gang takes twice as long to arrive, and the odds shown are good ones"},
+	{"first": 2.0, "runs": 60, "cost": 24000, "call": true, "words": "A lookout on the radio: the first gang after the clear waits for the call, and the call is a full pack"},
 ]
 const KENNEL_LEVELS := [
 	{"finds": 0, "patrol": 1.0, "cost": 0, "words": "No dog"},
 	{"finds": 1, "patrol": 1.0, "cost": 2500, "quality": 5, "words": "A dog: one more find every look, +5% loot quality"},
 	{"finds": 1, "patrol": 1.2, "cost": 7000, "quality": 10, "words": "A good dog: it hears the next gang coming, so they arrive 20% later; +10% loot quality"},
+	{"finds": 1, "patrol": 1.2, "cost": 18000, "quality": 10, "carries": true, "words": "The best dog: when a runner dies it carries the best thing in the pack home"},
 ]
+## The works' top levels (31): the generator's second rig row is RIG_ROW pouches; the rig never shows past RIG_CAP.
+const RIG_ROW := 8
+const RIG_CAP := 24
 
 ## What a slot's item is scored by, when the Armoury picks the best in the stash.
 const SLOT_SCORE := {

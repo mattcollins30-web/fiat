@@ -30,7 +30,7 @@ const GRID_H := Inventory.HEIGHT                               # 588
 const PICK_Y := GRID_H + GAP                                  # 612
 const PICK_H := Pal.ROOM_H - PICK_Y                           # 304
 const BAND_H := 200                                           # the site's art band at the top of the column
-const RIG_MAX := 18
+const RIG_MAX := Data.RIG_CAP                                 # the rig never shows past the sim's cap (24)
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30                                            # a 24 px font is 29 tall
@@ -220,7 +220,7 @@ func show_state(s) -> void:
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		_tiles(_fight["tiles"], [["Next gang", [Fmt.mss(next) if next < 1e8 else "never"]], ["Gangs so far", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
+		_tiles(_fight["tiles"], [["Next gang", [("on the call" if sim.gang_held(m) else (Fmt.mss(next) if next < 1e8 else "never"))]], ["Gangs so far", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
 		var thin: float = sim.thinning(m, t)
 		var search_words: String = "Searching" if thin >= 1.0 else (("Thinned out: finds at %d%%" if is_equal_approx(thin, Data.THIN_FLOOR) else "Thinning: finds at %d%%") % int(roundf(thin * 100.0)))
 		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
@@ -441,13 +441,16 @@ func _scatter(bar_y: float) -> Vector2:
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
 func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
-	var cell: int = Pal.CELL if cap <= 8 else maxi(28, int((INNER + Pal.CELL_GAP) / cap) - Pal.CELL_GAP)
+	# one row of full cells to eight, one row of smaller to twelve, two rows past that (the generator's row): the same 64 px tall
+	var rows: int = 1 if cap <= 12 else 2
+	var per_row: int = ceili(float(cap) / rows)
+	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
 	var k := 0
 	for it in sim.rig:
 		if k >= cap:
 			break
 		var c = _rig_cells[k]
-		c.position = Vector2(PAD + k * (cell + Pal.CELL_GAP), RIG_Y)
+		c.position = Vector2(PAD + (k % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (k / per_row) * (cell + Pal.CELL_GAP))
 		var lit: bool = Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null
 		c.show_item(it, lit, Vector2(cell, cell))
 		c.visible = true
@@ -457,7 +460,7 @@ func _show_rig() -> void:
 		_rig_cells[i].visible = i < filled
 		var o = _rig_outlines[i]
 		o.visible = i >= filled and i < cap
-		o.position = Vector2(PAD + i * (cell + Pal.CELL_GAP), RIG_Y)
+		o.position = Vector2(PAD + (i % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (i / per_row) * (cell + Pal.CELL_GAP))
 		o.size = Vector2(cell, cell)
 
 

@@ -1621,6 +1621,20 @@ not wound (no double punishment on the save). Smoke:
 through the fight a hair over the quarter; one stat cut and the other two whole; a second still one; the
 run, yard and clinic words fit; the price by level; Treat clears it; saved, loaded, gone with the dead.
 
+**31 · The works' top levels.** A fourth level on each, a rule not a figure, priced as the top sink: the
+generator's "The works wired" (£30,000) adds a second row of pouches to the rig (`RIG_ROW` 8, the rig never
+past `RIG_CAP` 24, which the Lock-up's three rows and the run's row hold); the lookout's "A lookout on the
+radio" (£24,000) holds the first gang after the clear until the call, and the call is a full pack (the
+clock does not run while the pack has room; the second gang comes as it would); the kennel's "The best dog"
+(£18,000) carries the dearest thing in the pack home to the stash when the runner dies, insured or not,
+and the Last run card says so. The works card reads "a rig row", "the call", "carries home" for them.
+Reviewer: both rig displays now hold `Data.RIG_CAP` (they clipped at 18, which Issue webbing on a big
+rig already passed); the run's rig goes to two rows of 29 px past twelve pouches, in the one row's height,
+a small pouch carrying the slot's short word alone; the Next gang tile reads "on the call" while held; the
+deeds carried home count as held; the report's "left" leaves the carried one out. Smoke: the row and the
+cap, a 24-pouch rig inside its box on the run and in the Lock-up, the held clock, the tile, the full pack's
+call, the second gang unheld, the dog's carry and the report, the deeds held, the card fitted.
+
 ## On them, on you: the dots as chips (6 Oct)
 
 Matt: "on you: poisoned - the poisoned etc should be in the chip format. also add an 'on them:' line under

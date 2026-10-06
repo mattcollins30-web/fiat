@@ -447,7 +447,10 @@ func capacity() -> int:
 func med_capacity() -> int:
 	if equipped["Rig"] == null or has_rule("the_float"):
 		return 0
-	return (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
+	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
+	if Data.GENERATOR_LEVELS[generator_level].get("rig_row", false):
+		n += Data.RIG_ROW                    # the generator's top level: a second row of pouches (31)
+	return mini(n, Data.RIG_CAP)
 
 
 ## The rig's pouches are cells: a first aid kit takes two, a surgeon's kit four.
@@ -2352,7 +2355,8 @@ func _tick(dt: float) -> void:
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		m["immune_t"] = maxf(0.0, float(m["immune_t"]) - dt)     # Clean hands' grace runs down whether they're on you or not
 	if m["cleared"]:
-		m["patrol_timer"] += dt
+		if not gang_held(m):
+			m["patrol_timer"] += dt
 		if m["patrol_timer"] >= patrol_s(t, m["patrols"] == 0):
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1
@@ -2881,6 +2885,11 @@ func thinning(m: Dictionary, t: Dictionary) -> float:
 	return clampf(1.0 - Data.THIN_STEP * past, Data.THIN_FLOOR, 1.0)
 
 
+## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
+func gang_held(m: Dictionary) -> bool:
+	return m["patrols"] == 0 and Data.LOOKOUT_LEVELS[lookout_level].get("call", false) and pack_used(m) < capacity() and not m.get("dry", false)
+
+
 ## Nothing alive on the site: a cache every SEARCH_S.
 func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["search"] += dt
@@ -3050,6 +3059,19 @@ func _kia() -> void:
 			for it in rig:
 				stash.append(it)                 # the dog's share: the rig comes home
 			log_event("The dog came home with the rig: %d pouch%s" % [rig.size(), "" if rig.size() == 1 else "es"])
+	if Data.KENNEL_LEVELS[kennel_level].get("carries", false) and not m["found"].is_empty():
+		# the kennel's top level (31): the dog carries the best thing in the pack home
+		var best: Dictionary = m["found"][0]
+		for it in m["found"]:
+			if sell_price(it) > sell_price(best):
+				best = it
+		stash.append(best)
+		last_report["carried"] = Items.full_name(best)
+		last_report["left"] = int(last_report["left"]) - 1
+		log_event("The dog came home with %s" % Items.full_name(best).to_lower())
+		if Items.is_deeds(best) and ending == "":
+			ending = "held"                  # the deeds, carried home: held all the same
+			log_event(Words.DEEDS["held"])
 	for s in Data.SLOTS:
 		equipped[s] = null
 	rig = []
