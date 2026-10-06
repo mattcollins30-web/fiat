@@ -296,21 +296,28 @@ func _more_raw(ty: String) -> float:
 
 
 ## A dot's seconds: the element's notable doubles them.
-func dot_seconds(ty: String) -> float:
+## `theirs`: the dot is on them (the runner's rules shape it); false for one on you, which keeps the plain figures.
+func dot_seconds(ty: String, theirs := true) -> float:
 	var s := float(Data.DOTS[ty]["s"])
+	if not theirs:
+		return s
 	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and (tree.has("Blades/3") or has_set_rule("carpet"))):
 		s *= 2.0
+	if ty == "poison" and has_rule("rat_mans_overalls"):
+		s *= 0.5                                 # the overalls: the same pool, twice as fast
 	return s
 
 
-func dot_stacks(ty: String) -> int:
+func dot_stacks(ty: String, theirs := true) -> int:
 	var n := int(Data.DOTS[ty]["stacks"])
+	if not theirs:
+		return n
 	if ty == "poison" and has_node("poison_stacks"):
 		n = 15
-	if ty == "poison" and has_rule("rat_mans_bag"):
+	if ty == "poison" and (has_rule("rat_mans_bag") or has_rule("rat_mans_overalls")):
 		n = 999
-	if ty == "bleed" and has_node("bleed_forever"):
-		n = 3                                    # Won't stop: a bleed on a bleed on a bleed
+	if ty == "bleed" and (has_node("bleed_forever") or has_rule("butchers_apron")):
+		n = 3                                    # Won't stop, or the apron: a bleed on a bleed on a bleed
 	return n
 
 
@@ -322,6 +329,8 @@ func chill_amount() -> float:
 
 
 func shock_amount() -> float:
+	if has_rule("substation_key"):
+		return 0.6                               # the substation key: shocked, they take 60% more
 	return 0.4 if tree.has("Live/3") else Data.SHOCK
 
 
@@ -356,7 +365,16 @@ func resist(ty: String) -> float:
 func _resist_raw(ty: String) -> float:
 	if ty == "physical" or (ty == "fire" and has_rule("vicars_thermos")):
 		return 0.0
-	return minf(Data.RESIST_CAP, _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res")) / 100.0
+	return minf(Data.RESIST_CAP, _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + (0.0 if has_rule("blue_plaque") else base_res(ty))) / 100.0
+
+
+## A resist built into what's worn (the welder's mask, the lineman's coat): the bases' own, beside the affixes.
+func base_res(ty: String) -> float:
+	var r := 0.0
+	for s in Data.SLOTS:
+		if equipped[s] != null:
+			r += float(Items.base_of(equipped[s]).get("res", {}).get(ty, 0.0))
+	return r
 
 
 ## Their fire a second on you: each type's share, physical through armour, the
@@ -376,7 +394,8 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	if not Data.DOTS.has(ty) or landed <= 0.0:
 		return
 	var d: Dictionary = Data.DOTS[ty]
-	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty) * dot_stacks(ty)
+	var theirs: bool = mission == null or dots != mission.get("my_dots", {})
+	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs)
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
 
 
@@ -389,8 +408,9 @@ func _dot_tick(dots: Dictionary, dt: float, by: Dictionary) -> float:
 		if pool <= 0.0:
 			dots.erase(ty)
 			continue
-		var tick := minf(pool, pool / dot_seconds(ty) * dt)
-		if not (ty == "bleed" and has_node("bleed_forever") and dots != mission.get("my_dots", {})):
+		var theirs: bool = mission == null or dots != mission.get("my_dots", {})
+		var tick := minf(pool, pool / dot_seconds(ty, theirs) * dt)
+		if not (ty == "bleed" and has_node("bleed_forever") and theirs):
 			dots[ty] = pool - tick             # Won't stop: a bleed on them doesn't fade
 		dealt += tick
 		by[ty] = float(by.get(ty, 0.0)) + tick
@@ -2461,9 +2481,17 @@ func estimate(i: int) -> float:
 ## while nine tiers read at once. The bots and the tests leave it at 0: all at once.
 var odds_budget := 0
 
+## What's worn, by id: a swap that moves only a resist or a rule still reads the odds again.
+func _kit_ids() -> Array:
+	var out := []
+	for s in Data.SLOTS:
+		out.append(equipped[s]["id"] if equipped[s] != null else -1)
+	return out
+
+
 func survival(i: int) -> float:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second
-	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound]
+	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
 	var c: Array
 	if _surv_cache.has(i) and _surv_cache[i][0] == key:
@@ -2782,6 +2810,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
 		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
 			landed *= 2.0                             # Shatter: a chilled target takes double from the physical
+		if ty == "frost" and has_rule("gritters_keys") and float(m.get("chill_t", 0.0)) > 0.0:
+			landed *= 2.0                             # the gritter's keys: chilled, they take double frost
 		if ty == "bleed" and has_node("cap_bleed_out"):
 			landed *= 1.5                             # Bleed out: bleeds half again as hard
 		var single := landed                      # what one of them takes, before a spread
@@ -2789,7 +2819,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
 		elif ty == "fire" and (has_node("fire_spread") or has_rule("weed_burner")):
 			landed *= crowd_on_you                # Spreads: fire hits everyone on you
-		if ty == "shock" and (has_node("shock_chain") or has_rule("jump_leads")) and (m["fresh"] or shocked):
+		if ty == "shock" and (has_node("shock_chain") or has_rule("jump_leads") or has_rule("substation_key")) and (m["fresh"] or shocked):
 			landed *= crowd_on_you                # Live wire: shock on one of them is shock on all of them, while it holds
 		if ty == "fire" and has_node("fire_more"):
 			hp -= minf(single * 0.02, max_hp() * 0.01 * dt)   # petrol on your hands: 2% of a hit, never past 1% of you a second
@@ -2802,7 +2832,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["dots"] = {}
 			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
 			if ty == "frost":
-				m["chill_t"] = 1.0
+				m["chill_t"] = 999.0 if has_rule("gritters_keys") else 1.0    # the gritter's keys: a chill holds as long as you fire
 			if ty == "shock":
 				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 1.0     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
@@ -2840,7 +2870,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		var carried := {}
 		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
 			carried["poison"] = m["dots"]["poison"]  # the rat man's bag, or Lingers: poison carries to the next
-		if (has_rule("butchers_steel") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
+		if (has_rule("butchers_steel") or has_rule("butchers_apron") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
 			carried["bleed"] = m["dots"]["bleed"]
 		if has_node("cap_spread") and m.get("dots", {}).has("fire"):
 			carried["fire"] = m["dots"]["fire"]      # Spread: the burn carries
@@ -2949,6 +2979,22 @@ func use_med(id: int) -> bool:
 	return false
 
 
+## The arsonist's rig: a petrol bomb's worth of fire on everyone on you, through the model.
+func _alight(m: Dictionary) -> void:
+	var t: Dictionary = m["t"]
+	var r := float(t.get("res", {}).get("fire", 0.0))
+	var single: float = 80.0 * (1.0 + increased("fire") / 100.0) * more("fire") * (1.0 - r) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
+	var crowd: int = mini(m["remaining"], contact(t))
+	m["target_hp"] -= single * crowd
+	m["dealt"] = float(m.get("dealt", 0.0)) + single * crowd
+	if not m.has("dealt_by"):
+		m["dealt_by"] = {}
+	m["dealt_by"]["fire"] = float(m["dealt_by"].get("fire", 0.0)) + single * crowd
+	if not m.has("dots"):
+		m["dots"] = {}
+	_dot_add(m["dots"], "fire", single, maxf(single, float(type_dps()["fire"]) * (1.0 - r) * pace() * t["pace"]))
+
+
 ## A grenade thrown from a pouch (32): its damage to everyone on you, as its
 ## type through the damage model (the trees' increases and mores, their
 ## resist), its dot on the gang, a chill or a shock as its type does. Spends
@@ -3005,6 +3051,8 @@ func _patch(m: Dictionary, dt: float) -> void:
 		if has_node("cap_clean_hands"):
 			m["my_dots"] = {}                # Clean hands: everything on you cleared, and a grace
 			m["immune_t"] = 3.0
+		if has_rule("arsonists_rig") and m["remaining"] > 0:
+			_alight(m)                       # the arsonist's rig: the med's a petrol bomb's worth on everyone on you
 		m["meds_used"] += 1
 		log_event("%s used: HP %d" % [m["using"]["name"], ceili(hp)])
 		m["using"] = null

@@ -15,9 +15,9 @@
       "width": 64,
       "height": 64,
       "no_background": true,
-      "seed": 75035,
+      "seed": 75036,
       "single": true,
-      "style_image": "res://art/reference/items/ref_04.png",
+      "style_image": "res://art/reference/items/ref_01.png",
       "style_options": {
         "color_palette": true,
         "outline": true,

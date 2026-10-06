@@ -2200,7 +2200,8 @@ func _set_checks(main) -> void:
 		sim.equipped[p["slot"]] = Items.roll_set_piece("The carpet man's", p, sim.rng)
 	_check(is_equal_approx(sim.conversion()["bleed"], 0.3) and is_equal_approx(sim.dot_seconds("bleed"), 12.0), "the carpet man's: bleed %.2f seconds %.0f" % [sim.conversion()["bleed"], sim.dot_seconds("bleed")])
 	# drops by depth: nothing at depth 1, pieces by depth 12, no army's before 15
-	_check(sim.set_pieces_at(1).is_empty() and sim.set_pieces_at(5).size() == 6 and sim.set_pieces_at(12).size() == 12 and sim.set_pieces_at(15).size() == 16, "the sets' depth gates are off: %d / %d / %d / %d" % [sim.set_pieces_at(1).size(), sim.set_pieces_at(5).size(), sim.set_pieces_at(12).size(), sim.set_pieces_at(15).size()])
+	# (the fire crew's three at depth 9 join the count from 12 on)
+	_check(sim.set_pieces_at(1).is_empty() and sim.set_pieces_at(5).size() == 6 and sim.set_pieces_at(12).size() == 15 and sim.set_pieces_at(15).size() == 19, "the sets' depth gates are off: %d / %d / %d / %d" % [sim.set_pieces_at(1).size(), sim.set_pieces_at(5).size(), sim.set_pieces_at(12).size(), sim.set_pieces_at(15).size()])
 	sim.load_dict(saved)
 	print("sets ok: the pieces, the count, the bonuses, the rules, the tint, the panel, the gates")
 	_atlas_checks(main)
@@ -4567,6 +4568,104 @@ func _loot_roll_checks(main) -> void:
 	_build_checks(main)
 	_contract_material_checks(main)
 	_retire_checks(main)
+	_last_add_checks(main)
+
+
+## The pool's last add (6 Oct): the top of each slot, resist gear with the resist in the base, the elements' five
+## uniques with a rule each, and the fire crew's set. Every one has words (the manifest generator carries the art).
+func _last_add_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.candidates = []
+	sim.auto_equip = false
+	for name in ["Police marksman's rifle", "Riot squad's shotgun", "Officer's revolver", "Army machine pistol", "Bomb-squad helmet", "Bomb suit", "Bomb-disposal rig", "Full bergen", "Mayor's chain", "Welder's mask", "Fireman's tunic", "Lineman's rubber coat", "Cold-store parka", "Hazmat suit", "Butcher's chainmail"]:
+		_check(Words.item_words(name) != "", "%s has no words" % name)
+	for u in ["The arsonist's rig", "The gritter's keys", "The rat man's overalls", "The substation key", "The butcher's apron"]:
+		_check(Data.UNIQUES.any(func(x): return x["name"] == u) and Words.UNIQUES.has(u), "%s is not a unique with words" % u)
+	_check(Data.SETS.any(func(st): return st["name"] == "The fire crew's" and st["pieces"].size() == 3), "the fire crew's set is missing")
+	# a resist in the base reads through resist() and on the head
+	var hold: Dictionary = {"Armour": sim.equipped["Armour"], "Helmet": sim.equipped["Helmet"], "Rig": sim.equipped["Rig"], "Charm": sim.equipped["Charm"]}
+	var tree0: Array = sim.tree.duplicate()
+	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Petrol/") and not str(id).begins_with("The cold/") and not str(id).begins_with("Live/") and not str(id).begins_with("Blades/") and not str(id).begins_with("The rat man/"))
+	sim.equipped["Armour"] = null
+	sim.equipped["Helmet"] = null
+	sim.equipped["Charm"] = null
+	sim._dry_memo.clear()
+	var fire0: float = sim.resist("fire")
+	sim.equipped["Armour"] = sim._plain("Armour", "Fireman's tunic")
+	_check(is_equal_approx(sim.resist("fire"), minf(Data.RESIST_CAP, fire0 * 100.0 + 40.0) / 100.0), "the tunic's fire resist does not read: %.2f from %.2f" % [sim.resist("fire"), fire0])
+	_check(Items.base_res_words(sim.equipped["Armour"]) == "fire res 40", "the tunic's words read '%s'" % Items.base_res_words(sim.equipped["Armour"]))
+	main.show_room(main.ARMOURY)
+	main._armoury._pick_slot("Armour")
+	main.refresh()
+	_check(main._armoury._head._tail.text.contains("fire res 40"), "the head does not say the base's resist: '%s'" % main._armoury._head._tail.text)
+	_check_fit(main, "Lock-up (resist gear)")
+	# the rules: each unique's effect through the model
+	var rig_u: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The arsonist's rig")[0], sim.rng)
+	sim.equipped["Rig"] = rig_u
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 3
+	m["target_hp"] = 1e6
+	m["dots"] = {}
+	sim.hp = sim.max_hp() * 0.5
+	sim.use_med(sim.rig[0]["id"])
+	if m["using"] != null:
+		sim._patch(m, 100.0)
+	_check(float(m["dots"].get("fire", 0.0)) > 0.0 and m["target_hp"] < 1e6, "the arsonist's rig did not set them alight on a med: %.0f left" % m["target_hp"])
+	sim.extract_now()
+	sim.equipped["Rig"] = hold["Rig"]
+	var keys_u: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The gritter's keys")[0], sim.rng)
+	sim.equipped["Charm"] = keys_u
+	sim.equipped["Primary"] = sim._plain("Primary", "Workshop SMG")
+	sim.rig = [sim._plain(Data.AMMO, "SMG rounds")]
+	sim._dry_memo.clear()
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 3
+	m["target_hp"] = 1e6
+	sim._fight(m, m["t"], 0.5)
+	_check(float(m.get("chill_t", 0.0)) > 100.0, "the gritter's keys did not hold the chill: %.1f" % float(m.get("chill_t", 0.0)))
+	sim.extract_now()
+	sim.equipped["Charm"] = null
+	var key_u: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The substation key")[0], sim.rng)
+	sim.equipped["Charm"] = key_u
+	_check(is_equal_approx(sim.shock_amount(), 0.6), "the substation key's shock reads %.2f" % sim.shock_amount())
+	sim.equipped["Charm"] = null
+	var overalls: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The rat man's overalls")[0], sim.rng)
+	sim.equipped["Armour"] = overalls
+	_check(sim.dot_stacks("poison") == 999 and is_equal_approx(sim.dot_seconds("poison"), float(Data.DOTS["poison"]["s"]) * 0.5), "the overalls' poison reads %d stacks over %.1f s" % [sim.dot_stacks("poison"), sim.dot_seconds("poison")])
+	_check(sim.dot_stacks("poison", false) == int(Data.DOTS["poison"]["stacks"]) and is_equal_approx(sim.dot_seconds("poison", false), float(Data.DOTS["poison"]["s"])), "the overalls shaped the poison on you too")
+	var apron: Dictionary = Items.roll_unique(Data.UNIQUES.filter(func(x): return x["name"] == "The butcher's apron")[0], sim.rng)
+	sim.equipped["Armour"] = apron
+	_check(sim.dot_stacks("bleed") == 3 and sim.has_rule("butchers_apron"), "the apron's bleed reads %d stacks" % sim.dot_stacks("bleed"))
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 2
+	m["target_hp"] = 0.0
+	m["dots"] = {"bleed": 40.0}
+	sim._fight(m, m["t"], 0.1)
+	_check(float(m.get("dots", {}).get("bleed", 0.0)) > 0.0, "the apron did not carry the bleed to the next of them")
+	sim.extract_now()
+	# the set's pieces roll, its bonus reads
+	var pieces := []
+	for pc in Data.SETS.filter(func(st): return st["name"] == "The fire crew's")[0]["pieces"]:
+		pieces.append(Items.roll_set_piece("The fire crew's", pc, sim.rng))
+	sim.equipped["Armour"] = pieces[0]
+	sim.equipped["Helmet"] = pieces[1]
+	sim._dry_memo.clear()
+	_check(sim.set_count("The fire crew's") == 2 and sim.set_stat("fire_res") >= 40.0, "two of the fire crew's do not give the fire resist: %d, %.0f" % [sim.set_count("The fire crew's"), sim.set_stat("fire_res")])
+	main.show_room(main.ARMOURY)
+	main._armoury._pick_slot("Armour")
+	main.refresh()
+	_check_fit(main, "Lock-up (the fire crew's)")
+	sim.tree = tree0
+	sim.load_dict(saved)
+	main.refresh()
+	print("the pool ok: the words, the five uniques, the set, the base resist on the model and the head, the rig, the keys, the key, the overalls, the apron, the set's bonus")
 
 
 ## 36: retirement. At level 30 a runner goes to the wall: kit to the stash, trees refunded, a third of the trait kept

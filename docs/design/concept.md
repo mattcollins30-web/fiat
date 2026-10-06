@@ -297,6 +297,21 @@ pass. In build order; the economy items last so the reader runs once over all of
 37. ~~Manual placement in the bag~~ - *to the backlog (Matt, 6 Oct): "essentially a UI item and doesn't
     add anything to the game as it stands". The pass starts once 34, 35 and 36 are in.*
 
+38. **The pool's last add** (Matt, 6 Oct: "expand the item pool and generate art for it - this will be the
+    last item add for a while. Real top tier items. Uniques that really lean on elemental damage types
+    for those broken builds. Some defensive gear that provides good resists."). *Built the same day,
+    untuned:* the top of each slot at tier 6 - Police marksman's rifle, Riot squad's shotgun, Officer's
+    revolver, Army machine pistol, Bomb-squad helmet, Bomb suit, Bomb-disposal rig, Full bergen, Mayor's
+    chain; resist gear with the resist built into the base (`"res"`, read by `resist()` beside the
+    affixes and said on the head) - Welder's mask, Station helmet (visored), Fireman's tunic, Lineman's
+    rubber coat, Cold-store parka, Hazmat suit, Butcher's chainmail; five uniques, one an element, each a
+    rule: The arsonist's rig (every med used sets everyone on you alight), The gritter's keys (a chill
+    holds while you fire; chilled, double frost), The rat man's overalls (poison stacks without end and
+    ticks twice as fast), The substation key (shock on one is shock on all; shocked, +60%), The butcher's
+    apron (bleeds carry to the next and cut three deep); and a defensive set, The fire crew's (tunic,
+    helmet, breathing set: fire resist +40% at two, all resists +15% and regen at three). Art for every one
+    in the manifests.
+
 ### The gates
 
 Measured by `tests/balance.gd` (the five element builds and the plain Scrapper, eight minutes of

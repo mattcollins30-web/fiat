@@ -1714,6 +1714,21 @@ the arrival line logs as a death's does; saved as `retired`. Smoke: the level ga
 wall's line and class, the kit to the stash, the reset and the candidates, Tough's third on max HP, two
 Lucky ones' thirds, the cap making way, the button, the chip, the menu, the save.
 
+**38 · The pool's last add.** Nine tier-6 bases at the top of every slot, seven pieces of resist gear with
+the resist in the base (`base_res`, a new term in `_resist_raw`; `Items.base_res_words` on the head's
+tail), the elements' five uniques with their rules (`arsonists_rig` → `_alight` on a med used, a petrol
+bomb's worth; `gritters_keys` → chill 999 and frost ×2 on the chilled; `rat_mans_overalls` → poison stacks
+999 and half the seconds; `substation_key` → the shock chain and `shock_amount` 0.6; `butchers_apron` → the
+bleed carried and three stacks) and The fire crew's set at depth 9. Every one has its line and its art job
+(the manifest words for all of them; three existing names - Riot shotgun, Fire helmet, Bergen - made the
+new ones Riot squad's shotgun, Station helmet (visored), Full bergen). Smoke: the words, the uniques, the
+set, the tunic's resist through the model and on the head, each rule's effect, the set's bonus at two.
+Reviewer: the dot rules (the overalls, the apron, the bag, Won't stop, the notables' doubled seconds) shape
+dots on them only now (`dot_seconds`/`dot_stacks` take `theirs`), so enemy poison on the overalls' wearer
+keeps its plain figures; a blue plaque silences base resists too; the arsonist's rig reads a shock on them
+like a throw does; the odds' cache key carries the kit's ids, so a swap that moves only a resist or a rule
+reads the odds again.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

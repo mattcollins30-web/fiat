@@ -47,12 +47,12 @@ const FOOTPRINTS := {
 	"Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
 	"Police carbine": [3, 1], "Army SMG": [3, 1], "Belt-fed SMG": [3, 1], "Army bullpup": [3, 1], "Workshop carbine": [3, 1],
 	# scoped long guns
-	"Old .303": [5, 1], "Scoped .308": [5, 1], "Sniper rifle": [5, 1], "Marksman rifle": [5, 1], "Section gun": [5, 1],
+	"Old .303": [5, 1], "Scoped .308": [5, 1], "Sniper rifle": [5, 1], "Marksman rifle": [5, 1], "Section gun": [5, 1], "Police marksman's rifle": [5, 1],
 	# heavy armour
-	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Issue plates": [3, 4],
+	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Issue plates": [3, 4], "Bomb suit": [3, 4], "Butcher's chainmail": [3, 4],
 	# bags
 	"School bag": [2, 2], "Carrier bags": [2, 2], "Holdall": [2, 2],
-	"Framed pack": [3, 4], "Expedition pack": [3, 4], "Cargo frame": [3, 4], "Patrol pack": [3, 4],
+	"Framed pack": [3, 4], "Expedition pack": [3, 4], "Cargo frame": [3, 4], "Patrol pack": [3, 4], "Full bergen": [3, 4],
 	# medical
 	"First aid kit": [2, 1], "Trauma kit": [2, 1], "Surgeon's kit": [2, 2], "Hospital kit": [2, 2],
 	# the deeds
@@ -190,6 +190,11 @@ const BASES := {
 		# tier 6: the city's - the services, the hospital, the barracks
 		{"name": "Armourer's carbine", "type": "improvised", "ammo": "smg", "tier": 6, "damage": 44.0, "rof": 2.6, "value": 650,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		## the top of the pool (6 Oct): the firearms squad's and the barracks' own
+		{"name": "Police marksman's rifle", "type": "rifle", "tier": 6, "damage": 125.0, "rof": 0.9, "value": 820,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Riot squad's shotgun", "type": "shotgun", "tier": 6, "damage": 52.0, "rof": 2.2, "value": 760,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		# melee: no rounds ever, slow, hard, a fifth of it bleed; in among them, so they hit you harder
 		# and their first shot lands before your first swing. Grip and head mounts of their own.
 		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
@@ -240,6 +245,10 @@ const BASES := {
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Tactical pistol", "type": "pistol", "tier": 4, "damage": 20.0, "rof": 2.2, "value": 150,
 			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Officer's revolver", "type": "pistol", "tier": 6, "damage": 48.0, "rof": 1.2, "value": 360,
+			"attachments": ["optic", "muzzle"]},
+		{"name": "Army machine pistol", "type": "smg", "tier": 6, "damage": 16.0, "rof": 4.6, "value": 380,
+			"attachments": ["muzzle", "magazine", "stock"]},
 		{"name": "Issue pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300,
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Automatic pistol", "type": "smg", "tier": 5, "damage": 14.0, "rof": 4.2, "value": 240,
@@ -257,6 +266,10 @@ const BASES := {
 		{"name": "Ballistic visor", "tier": 4, "armour": 36.0, "pace": -3, "value": 180},
 		{"name": "Full-face helmet", "tier": 5, "armour": 48.0, "pace": -6, "value": 280},
 		{"name": "Composite helmet", "tier": 6, "armour": 60.0, "pace": -4, "value": 420},
+		## resist gear (6 Oct): a resist built into the base, read by resist() beside the affixes
+		{"name": "Welder's mask", "tier": 3, "armour": 22.0, "pace": -2, "value": 150, "res": {"fire": 35}},
+		{"name": "Station helmet, visored", "tier": 4, "armour": 40.0, "pace": -3, "value": 300, "res": {"fire": 25}},
+		{"name": "Bomb-squad helmet", "tier": 6, "armour": 72.0, "pace": -8, "value": 560, "res": {"fire": 20, "shock": 20}},
 	],
 	"Armour": [
 		{"name": "Stab vest", "tier": 1, "armour": 15.0, "value": 60},
@@ -270,6 +283,13 @@ const BASES := {
 		{"name": "Full plate carrier", "tier": 5, "armour": 140.0, "pace": -10, "value": 680},
 		{"name": "Light plates", "tier": 5, "armour": 110.0, "pace": 2, "value": 720},
 		{"name": "Issue plates", "tier": 6, "armour": 160.0, "pace": -6, "value": 900},
+		## resist gear (6 Oct): what the trades wore against their own hazards
+		{"name": "Fireman's tunic", "tier": 4, "armour": 55.0, "pace": -2, "value": 380, "res": {"fire": 40}},
+		{"name": "Lineman's rubber coat", "tier": 4, "armour": 45.0, "value": 360, "res": {"shock": 45}},
+		{"name": "Cold-store parka", "tier": 4, "armour": 40.0, "pace": -2, "value": 340, "res": {"frost": 45}},
+		{"name": "Hazmat suit", "tier": 5, "armour": 50.0, "pace": -4, "value": 520, "res": {"poison": 50}},
+		{"name": "Butcher's chainmail", "tier": 5, "armour": 90.0, "pace": -4, "value": 600, "res": {"bleed": 45}},
+		{"name": "Bomb suit", "tier": 6, "armour": 190.0, "pace": -14, "value": 1200, "res": {"fire": 20, "shock": 20}},
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
@@ -282,6 +302,7 @@ const BASES := {
 		{"name": "Medic's harness", "tier": 4, "capacity": 9, "pace": -2, "value": 220},
 		{"name": "Plate rig", "tier": 5, "capacity": 8, "pace": 2, "value": 340},
 		{"name": "Assault rig", "tier": 6, "capacity": 9, "value": 460},
+		{"name": "Bomb-disposal rig", "tier": 6, "capacity": 11, "pace": -3, "value": 620},
 	],
 	"Backpack": [
 		{"name": "School bag", "tier": 1, "capacity": 12, "value": 30},
@@ -293,6 +314,7 @@ const BASES := {
 		{"name": "Expedition pack", "tier": 4, "capacity": 56, "pace": -3, "value": 260},
 		{"name": "Cargo frame", "tier": 5, "capacity": 72, "pace": -8, "value": 400},
 		{"name": "Patrol pack", "tier": 6, "capacity": 60, "value": 480},
+		{"name": "Full bergen", "tier": 6, "capacity": 80, "pace": -6, "value": 640},
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.
@@ -305,6 +327,7 @@ const BASES := {
 		{"name": "Dog tag", "tier": 4, "find": 15, "cash": 8, "value": 320},
 		{"name": "Casino chip", "tier": 5, "find": 18, "cash": 15, "value": 520},
 		{"name": "Bank's own pen", "tier": 6, "find": 20, "cash": 20, "value": 800},
+		{"name": "Mayor's chain", "tier": 6, "find": 24, "cash": 24, "value": 1100},
 	],
 	## Papers: the before, on paper. Worth their value to the fence and nothing
 	## else; the deeds are dropped by the bank once and are the ending.
@@ -560,6 +583,17 @@ const UNIQUES := [
 		"words": "Something happens on every run, and every cache opens", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
 	{"name": "The lorry driver's log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "depth": 25,
 		"words": "Notes found doubled; insurance is free", "affixes": [{"stat": "notes_pct", "value": 50}]},
+	# the elements' own (6 Oct): one a type, each leaning the whole way into it, for the builds that break the game
+	{"name": "The arsonist's rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "depth": 14,
+		"words": "Every med used sets everyone on you alight", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "med_cap", "value": 2}, {"stat": "conv_fire_pct", "value": 20}]},
+	{"name": "The gritter's keys", "slot": "Charm", "base": "Wedding ring", "rule": "gritters_keys", "depth": 14,
+		"words": "A chill holds as long as you fire; chilled, they take double frost", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "conv_frost_pct", "value": 25}]},
+	{"name": "The rat man's overalls", "slot": "Armour", "base": "Motorbike leathers", "rule": "rat_mans_overalls", "depth": 14,
+		"words": "Poison stacks without end and ticks twice as fast", "affixes": [{"stat": "poison_pct", "value": 50}, {"stat": "poison_res", "value": 35}, {"stat": "armour", "value": 20}]},
+	{"name": "The substation key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "depth": 14,
+		"words": "Shock on one of them is shock on all; shocked, they take 60% more", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "conv_shock_pct", "value": 20}]},
+	{"name": "The butcher's apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "depth": 14,
+		"words": "A bleed carries to the next of them and cuts three deep", "affixes": [{"stat": "bleed_pct", "value": 50}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "armour", "value": 25}]},
 ]
 ## Sets: whose gear it was. A piece is a fixed base with its own name and a
 ## couple of fixed affixes, rolled like a unique, drawn in the set's own
@@ -567,6 +601,14 @@ const UNIQUES := [
 ## added to what's worn, and a rule at the top. Found loose from `depth` on.
 const SET_DROP := 0.004            # a share of finds a depth past the first
 const SETS := [
+	{"name": "The fire crew's", "depth": 9, "words": "Breathing kit and a tunic from the station that answered the last call",
+		"pieces": [
+			{"name": "Station tunic", "slot": "Armour", "base": "Fireman's tunic", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 20}]},
+			{"name": "Station helmet", "slot": "Helmet", "base": "Station helmet, visored", "affixes": [{"stat": "armour", "value": 12}, {"stat": "fire_res", "value": 15}]},
+			{"name": "Breathing set", "slot": "Rig", "base": "Medic's harness", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "poison_res", "value": 25}]},
+		],
+		"bonuses": {2: {"stats": {"fire_res": 40}, "words": "Fire resist +40%"},
+			3: {"stats": {"all_res": 15, "regen": 2}, "words": "All resists +15%, +2 HP a second"}}},
 	{"name": "The council's", "depth": 5, "words": "Parks, highways, pest control: the council's gear, orange and stamped",
 		"pieces": [
 			{"name": "Council hi-vis", "slot": "Armour", "base": "Stab vest", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 12}]},

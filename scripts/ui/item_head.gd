@@ -107,6 +107,8 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 	# the headline: the figure big, its unit after, the tail after that. A
 	# part's figure is its own first stat, its affixes kept for their rows
 	var h := Items.headline(it)
+	if (tail is String and tail == "") and Items.base_res_words(it) != "":
+		tail = Items.base_res_words(it)        # a resist built into the base (the welder's mask): the tail says so
 	if it["slot"] == Data.ATTACHMENT and not Items.is_socketable(it):
 		var own: String = Items.att_words(it, true, true)
 		var first: String = own.get_slice(", ", 0)

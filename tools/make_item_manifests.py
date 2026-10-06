@@ -113,6 +113,13 @@ ARMOUR_WORDS = {
     "Motorbike leathers": "a motorcycle leather jacket with the armour inserts at the shoulders and elbows",
     "Riot suit": "a police riot suit's torso and arm armour, hard black plates over padding",
     "Issue plates": "the army's own plate carrier in olive, front and back plates inside, pouches on the front, a name tape",
+    # the resist gear and the top of the pool (6 Oct)
+    "Fireman's tunic": "a fire brigade turnout tunic in dark grey with faded yellow reflective bands, heat-marked, the collar up",
+    "Lineman's rubber coat": "a lineman's thick black rubber coat with a high collar, cracked at the elbows, electricity-board badge",
+    "Cold-store parka": "a cold-store worker's heavy quilted parka with a fur-edged hood, frost still in the seams",
+    "Hazmat suit": "a yellow hazmat suit's torso, taped at the seams, a respirator port, a chemical works' stencil",
+    "Butcher's chainmail": "a butcher's stainless chainmail vest over a dark rubber apron, meat-stained, the rings bright",
+    "Bomb suit": "a bomb-disposal suit's torso in olive green, thick layered plates over the chest and neck collar, straps everywhere",
 }
 
 
@@ -227,6 +234,7 @@ CHARM_WORDS = {
     "Dog tag": "a single military dog tag on a ball chain, the stamped letters worn",
     "Casino chip": "a casino chip, dark green with a gold edge, the printing scuffed",
     "Bank's own pen": "a bank counter's ballpoint pen on its short bead chain, the chain snapped",
+    "Mayor's chain": "a mayor's gilt chain of office with its enamel medallion, tarnished, one link bent",
 }
 
 
@@ -266,6 +274,21 @@ SEED0 = 70000
 
 # the uniques: their base's footprint and view, their own look
 UNIQUE_WORDS = {
+    "The arsonist's rig": ("A realistic painted pixel-art still-life of a single black chest rig with six pouches, standing upright as if "
+                           "hung on a hook, seen from the front, filling the frame: every pouch dark with petrol stains, a lighter on a "
+                           "cord, scorch marks up one side, a rag tucked in a pouch."),
+    "The gritter's keys": ("A realistic painted pixel-art still-life of a single council lorry key ring: a worn brass key and a plastic "
+                           "fob with the council's crest, a frost of road salt on both, a small object filling the frame, seen from "
+                           "above at a slight angle."),
+    "The rat man's overalls": ("A realistic painted pixel-art still-life of a single pair of pest-control overalls in faded blue, stiff and "
+                               "stained green-yellow at the chest and knees, hung flat as if on a hook, seen from the front, filling the "
+                               "frame top to bottom, a pest control company's badge on the breast."),
+    "The substation key": ("A realistic painted pixel-art still-life of a single heavy steel substation key on a ring with a yellow "
+                           "DANGER OF DEATH tag, the metal blackened at one end as if it arced, a small object filling the frame, "
+                           "seen from above at a slight angle."),
+    "The butcher's apron": ("A realistic painted pixel-art still-life of a single butcher's stainless chainmail vest worn over a dark "
+                            "rubber apron, hung flat as if on a hook, seen from the front, filling the frame top to bottom, the rings "
+                            "bright, the apron dark with old blood."),
     "Grandad's shotgun": ("A realistic painted pixel-art still-life of a single old side-by-side farmer's shotgun, seen exactly "
                           "side-on with the muzzle pointing left, laid level and filling the frame left to right: a gun kept "
                           "for sixty years, the walnut stock dark with hand oil and worn pale at the grip, the barrels "
@@ -341,6 +364,9 @@ SET_WORDS = {
     "Council hard hat": "a yellow council hard hat with an inspection sticker, seen from the front at a slight angle, filling the frame",
     "Council rucksack": "a small grey council-issue rucksack with an orange crest patch, standing upright, seen from the front, filling the frame",
     "Council lanyard": "a council ID pass on an orange lanyard, a small object filling the frame, seen from above at a slight angle",
+    "Station tunic": "a fire station's turnout tunic in dark grey with yellow reflective bands and a name tape, hung flat, seen from the front, filling the frame",
+    "Station helmet": "a fire crew helmet with the station's number on the front and the visor down, scorched, seen from the front at a slight angle, filling the frame",
+    "Breathing set": "a fire crew breathing set, the cylinder on its harness with the mask hanging from it, standing upright, seen from the front, filling the frame",
     "Ambulance rig": "a green ambulance crew chest rig with pouches in a row, standing upright, seen from the front, filling the frame",
     "Green overalls": "a pair of ambulance-green overalls with a reflective band, folded, seen from the front, filling the frame",
     "Crew helmet": "a white ambulance crew helmet with a scratched trust logo, seen from the front at a slight angle, filling the frame",

@@ -711,6 +711,16 @@ static func affix_tier(it: Dictionary, k: int) -> int:
 
 ## An item's affix line, long to short: every affix in words, then the short
 ## words, then a count.
+## A base's built-in resists as words: "fire res 35", "fire res 20 · shock res 20"; "" for none.
+static func base_res_words(it: Dictionary) -> String:
+	var out := []
+	var res: Dictionary = base_of(it).get("res", {})
+	for ty in Data.ELEMENTS:
+		if res.has(ty):
+			out.append("%s res %d" % [ty, int(res[ty])])
+	return " · ".join(out)
+
+
 static func affix_options(it: Dictionary) -> Array:
 	if it["affixes"].is_empty():
 		return ["No affixes"]
