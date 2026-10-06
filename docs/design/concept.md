@@ -359,13 +359,20 @@ top bench in seven builds of ten, scrap at four to nine crafts' worth, the Elite
 A lever a line below, with the row it moves and the rows it can break. No figures here: they come from the
 read before and after each move, one move at a time, the summary re-read between.
 
-1. **Cash: the late sinks priced off the yard's hours, and the works' top levels dearer.** The half-hour
-   lines show cash climbing from about hour 4, once every work is bought: nothing left to buy, income
-   still rising on the inflation. The bench's add and reroll, the words, insurance and the atlas take the
-   same inflation income does, so a sink at hour 7 costs what hour 7 pays; and the works' last levels cost
-   enough that the last of them lands at hour 5 or 6, not 3. Moves: Cash sink. Can break: the capstone
-   (a point's price) and the bank's band if the works are what gets a slow class there - so the works'
-   *first* levels stay where they are. Not touched: income, because the early hours are the right pace.
+1. **Cash: the bench and the words priced off the player's tier, and the bot spending like a player.**
+   Every cash price already takes the yard's inflation (`_inf`), so that is not it. The half-hour lines
+   show cash climbing from about hour 4 because income scales with the tier and the depth (`t["cash"]`
+   by tier, 12% a depth) on top of the inflation, while every sink scales with the inflation alone from
+   an opening figure: a T8 run at hour 6 pays ten times a T2 run, a bench job costs the same multiple of
+   its opening price. The sinks a player uses late - the bench's jobs (`craft_cost`: cash × ilvl ×
+   rarity) and the words (`juice_cost`) - take the open tier's pay as their base, so a lock on a T8 gun
+   costs what a T8 run pays; the works' ladders stay opening prices, since each is bought once. And the
+   reader: the bot adds one affix a worn piece and stops, where a player with £200k re-rolls and locks
+   until the kit is right, so a bot rule (re-roll the worn kit's weakest affix while cash stays above a
+   reserve) goes in before the row is trusted - the dry gun's lesson, the reader before the number.
+   Moves: Cash sink. Can break: the capstone (a point's price) and the band if a work is what gets a
+   slow class there - so the works' first levels stay. Not touched: income; the early hours are the
+   right pace.
 2. **Scrap: the crafts dearer, not the contracts leaner.** Four to nine crafts' worth in hand says the
    ladder's prices are low against what the contracts and the sites hand out. `BUILD_GUN` and the
    `"from"` ladder go up; the contracts stay, because the player feels a contract and a craft is a sink.
@@ -399,8 +406,9 @@ read before and after each move, one move at a time, the summary re-read between
 7. **Depth pace last.** It assumes the campaign done by hour 4, which 3 decides; read after everything
    else and move the curve (`Data.CURVE`) only for what's left.
 
-The order is the order above: cash and scrap first (they break nothing that reads early), then the band,
-then rarity, then the rest for what's left. Every move is one commit with its before-and-after summary
+The order is the order above, with the bot's bench rule first of all (it is a reader, not a number): then
+cash and scrap (they break nothing that reads early), then the band, then rarity, then the rest for what's
+left. Every move is one commit with its before-and-after summary
 lines in status.md, so the pass can be read back.
 
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
