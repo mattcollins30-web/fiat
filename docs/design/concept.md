@@ -217,6 +217,86 @@ with them on a death, refunded as points, and the next runner picks a past from 
     shelf, and built at the bench from scrap plus the element's socketable (lighter fluid to a petrol
     bomb). A thrown one spends the pouch; Second shift and the rig's rules decide whether they cover
     it. The rig's pouches are the limit: a grenade is a med you didn't carry.
+
+## Before the one balance pass (6 Oct 2026): everything that moves a number
+
+Matt, 6 Oct: "we need to get as much in as possible that changes numbers and then balance pass only after
+they are in - my point was we added stuff after a balance pass in greenhorn and then immediately had to
+rebalance", and "we need to really select balance pass gates so as to not waste time." So: every feature
+below goes in first, nothing numeric is tuned while they go in (the shock and bleed figures, the rest
+threshold, the rarity weights and the prices wait), and then one pass against the gates at the end of this
+section, ending when every gate is green with no accepted red. Anything numeric after the pass starts a new
+pass. In build order; the economy items last so the reader runs once over all of it.
+
+27. **The loot roll, straightened.** Quantity comes out of the rarity roll (`Items.roll` reads
+    `rarity_bonus()` and the intel's rarity, not `loot_bonus()`), so Rat's share stops charging quality
+    twice. Quantity reaches searches: a search's find count carries a fractional extra (quantity +25% is a
+    fourth find one search in four), so the stat means "more" everywhere a find comes from. Quality's
+    sources widen: a rarity node on every class tree's second branch, a rarity affix on backpacks, and
+    the dog's level adding quality, so a build can lean on it. The weights themselves are the pass's.
+28. **Capstones** (Matt, 6 Oct: "the skill tree doesn't feel all that impactful - there needs to be a
+    final keystone above and beyond what we already have"). One a tree, past the keystone, costing a
+    third of the tree's points, taken only with the keystone and both notables; each changes how a run
+    is played rather than a figure, and each reads on the run screen. Defaults, Matt to redirect:
+    Stalking: *Patience* - no gang comes while you haven't fired; the search is free until you choose
+    the fight (the Next gang tile reads "when you fire"). Snares: *Poached* - a gang that arrives a head
+    short arrives having lost that head's loot to you (a find on every gang's arrival). Muscle:
+    *Second wind* becomes a rule - kills under half HP heal a tenth of max. The yard's tree: *The dog's
+    share* - a dead runner's rig comes home. Luck: *Loaded dice* - every Elite find rolls twice and keeps
+    the better. The elements': *Petrol*: burns spread on a kill; *The cold*: a frozen gang's first shot
+    misses; *The rat man*: poison keeps ticking on the next gang; *Live*: a shock chain never breaks
+    while you fire; *Blades*: a bleeding target bleeds its neighbour. The second past's tree gets the
+    class's. Shown as a ◆◆ tile at the foot of the tree, its own line on the run's fight box.
+29. **Picked over inside a run.** The between-run curve applied within one: after the Nth search on a
+    site in a run (N by depth), finds thin by a fifth a search, to a floor; the Searching bar's words
+    say so ("Thinning"). "Fill up, then go" and the pack grid get a natural stop, and quantity bonuses
+    push N.
+30. **Wounds.** A hit that takes the runner under a quarter HP leaves a wound: one worn stat cut (pace,
+    armour or max HP, −10%) until treated at the clinic for a price by level; the clinic's Treat gets a
+    second reason, the band and the Runner card show it ("Wounded: pace −10%"), and dying stops being
+    the only cost of risk. One wound at a time; a second replaces it. The bot treats on return.
+31. **The works' top levels.** One level above what each has, each a rule rather than a figure: the
+    generator powers a second rig row (the rig's pouches double, meds and grenades alike); the lookout
+    names the first gang before you set off (the Runs card's Them tile reads the real count and HP, not
+    the estimate, and the first gang comes at the lookout's call); the kennel's dog carries one find
+    home on a death (the best in the pack). Priced as the top cash sink alongside the bench.
+32. **Grenades in the rig** - as 26.
+33. **Ammo grades with an element.** The tier-2 and tier-3 grades carry a type as well as damage:
+    hollow point bleeds, match rounds a flat crit, incendiary (a new grade of shells and SMG rounds)
+    fire, salted (rifle) frost, so crafting has something to craft toward and a build can run its
+    element off the rounds. Through the damage model like a conversion affix on the gun.
+34. **Crafting at the bench** - as 25, with 33's grades in its ladder and grenades (32) in its Build
+    column.
+35. **Contracts paying in craft materials.** A third pay kind beside cash and notes: scrap by the
+    handful, a socketable of the zone's element, or a grade of rounds, so the fence's contracts feed
+    the bench and the Contracts tab has a reason once cash is easy.
+36. **Retirement.** A runner at level 30 can be retired to the wall: the yard keeps a sliver of their
+    trait for good (a third, stacking to a cap of three retired), the class and its trees refund as a
+    death does, the Caravan's wall shows them as retired not dead. A death is not the only way a runner
+    ends, and the trait pool gets a cumulative side without touching the refund rule.
+37. **Manual placement in the bag** - as 23. Last, since it changes what comes home and every item
+    above changes what there is to bring.
+
+### The gates
+
+Measured by `tests/balance.gd` (the five element builds and the plain Scrapper, eight minutes of
+wall-clock a build) before any value moves, and again after each change; the pass ends when every row is
+green. Figures to be set with Matt's death count from the playtest; the rest are defaults to overrule.
+
+| Gate | Read by | Green when |
+| --- | --- | --- |
+| The bank's band | time to the bank, six builds | slowest within 1.5× the fastest |
+| The keystone | hour each build takes its keystone | by hour 2, every build |
+| The capstone | hour each build takes its capstone | by hour 4, every build |
+| No reds | the odds reader at every tier in the kit the tier before drops | no tier under 60% |
+| Loot quality visible | Elite share at +35% quality | at least 3.0% (2.0% unboosted) |
+| Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
+| Cash sink | cash in hand at the campaign's end | no more than 3× the top bench level |
+| Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
+| Deaths | the player's own, from the playtest save | one every N hours at Matt's risk (N to set) |
+| Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |
+| Scrap economy | scrap in hand against the dearest craft, hour 4 | between one and three crafts' worth |
+
 24. **Fiat feeling like Fiat (Matt, 4 Oct) — all built 4–5 Oct, in status.md:** money that goes off
     (every cash price and income rises with the yard's hours, 7% an hour after a grace hour, to ×12;
     notes hold); the estate recycles (a dead runner's kit and a sold unique turn up on a gang member a
