@@ -110,7 +110,7 @@ func row_names() -> Array:
 
 
 static func rarity_tone(it: Dictionary) -> String:
-	return ["", "good", "warn", "bad"][it["rarity"]]
+	return Pal.rarity_tone(int(it["rarity"]))
 
 
 # ------------------------------------------------------------------ showing

@@ -38,7 +38,7 @@ const BAND_H := 200                                           # the vendor's ban
 const FACE := 116                                             # the portrait in the band
 const TOP := BAND_H + 36                                      # the sections under the band and the vendor's line
 const TILE_GAP := 8
-const SIDE_TILES := 10                                        # the fence's tile-shaped buttons: four rarities, five boxes, the shelf
+const SIDE_TILES := 11            # five rarities, five boxes, the shelf (the pass, 6 Oct)
 
 var kind := "fence"                # "fence" or "clinic"
 var sim
@@ -156,7 +156,7 @@ func _init() -> void:
 		_side_buttons.append(b)
 	for i in range(SIDE_TILES + 2):
 		_side_actions.append(Callable())
-	# the fence: tile-shaped buttons, four rarities then the boxes and the bigger shelf
+	# the fence: tile-shaped buttons, five rarities then the boxes and the bigger shelf
 	for i in range(SIDE_TILES):
 		var b := Button.new()
 		b.position = Vector2(PAD, 0)
@@ -452,16 +452,20 @@ func _show_side() -> void:
 	_band.headline_under_title(true)
 	_side_title.text = "SELL BY RARITY"
 	_side_title.visible = true
-	var counts := [0, 0, 0, 0]
-	var worth := [0, 0, 0, 0]
+	var nr: int = Data.RARITIES.size()
+	var counts := []
+	var worth := []
+	for r in range(nr):
+		counts.append(0)
+		worth.append(0)
 	for it in sim.stash:
 		counts[it["rarity"]] += 1
 		worth[it["rarity"]] += sim.sell_price(it)
 	var y: float = TOP + UI.HEAD_H + 2
-	var tw4 := (INNER - 3 * TILE_GAP) / 4.0
-	for r in range(4):
-		var tone: Color = [Pal.TEXT, Pal.GOOD, Pal.WARN, Pal.BAD][r]
-		_side_tile(r, PAD + r * (tw4 + TILE_GAP), y, tw4, Data.RARITIES[r]["name"], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)
+	var twr := (INNER - (nr - 1) * TILE_GAP) / float(nr)
+	for r in range(nr):
+		var tone: Color = Pal.TEXT if r == 0 else Pal.tone_color(Pal.rarity_tone(r))
+		_side_tile(r, PAD + r * (twr + TILE_GAP), y, twr, Data.RARITY_SHORT[r], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r]), str(counts[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)     # the short names: five tiles across, "Uncommon" would not fit
 	y += UI.TILE_H + 12
 	_heads[1].position.y = y
 	_heads[1].text = "BY THE BOX · TO THE STASH"
@@ -469,7 +473,7 @@ func _show_side() -> void:
 	y += UI.HEAD_H + 2
 	# boxes of standard rounds, without end: a cell in your stash each; the bigger shelf beside them
 	var tw3 := (INNER - 2 * TILE_GAP) / 3.0
-	var k := 4
+	var k: int = Data.RARITIES.size()
 	var types := ["improvised", "shotgun", "rifle", "smg", "pistol"]
 	for n in range(types.size()):
 		var box: Dictionary = sim.ammo_box(types[n])

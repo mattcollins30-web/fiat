@@ -27,6 +27,9 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
+const EPIC := Color("b58cf0")         # the two rarities above Rare (the pass, 6 Oct)
+const LEGENDARY := Color("f08a4b")
+const RARITY_TONES := ["", "good", "warn", "epic", "legendary"]   # Common .. Legendary
 # a damage type's colour, for the numbers off a hit: physical white, fire
 # orange-red, frost ice, poison green, shock yellow, bleed crimson
 const ELEMENT_COLOURS := {"physical": TEXT, "fire": Color("ff6b3d"), "frost": Color("8ad4ff"), "poison": Color("8be05a"),
@@ -99,6 +102,11 @@ static func tier_color(tier: int) -> Color:
 	return TIER_COLOURS[clampi(tier, 1, TIER_COLOURS.size()) - 1]
 
 
+## The tone of a rarity, by index.
+static func rarity_tone(r: int) -> String:
+	return RARITY_TONES[clampi(r, 0, RARITY_TONES.size() - 1)]
+
+
 static func tone_color(tone: String) -> Color:
 	match tone:
 		"good":
@@ -109,6 +117,10 @@ static func tone_color(tone: String) -> Color:
 			return BAD
 		"set":
 			return SET
+		"epic":
+			return EPIC
+		"legendary":
+			return LEGENDARY
 	if ELEMENT_COLOURS.has(tone):
 		return ELEMENT_COLOURS[tone]
 	return TEXT_2

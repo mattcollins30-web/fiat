@@ -664,13 +664,19 @@ const WORKSHOP := [
 	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"], "words": "A gunsmith's: every mount"},
 ]
 
-## Rarity: how many affixes an item rolls, its share of drops, its value multiple.
+## Rarity (the pass, Matt, 6 Oct): the affixes an item rolls AND the best tier any of them can be -
+## "common can have 1 and it can only ever roll tier 1 affix and so on", five rarities to the five
+## affix tiers, so an Epic nail gun is four affixes up to T4 on a tier-1 base, a stash gun that carries
+## a levelling build. `tier` is the cap; the item level sets a floor under it (TIER_FLOOR). The share
+## of drops by weight, the value multiple. Uniques sit at the top index, sets at Rare.
 const RARITIES := [
-	{"name": "Common", "affixes": 0, "weight": 60, "value": 1.0},
-	{"name": "Uncommon", "affixes": 1, "weight": 28, "value": 1.8},
-	{"name": "Rare", "affixes": 2, "weight": 10, "value": 3.5},
-	{"name": "Elite", "affixes": 3, "weight": 2, "value": 8.0},
+	{"name": "Common", "affixes": 1, "tier": 1, "weight": 50, "value": 1.0},
+	{"name": "Uncommon", "affixes": 2, "tier": 2, "weight": 30, "value": 1.8},
+	{"name": "Rare", "affixes": 3, "tier": 3, "weight": 13, "value": 3.5},
+	{"name": "Epic", "affixes": 4, "tier": 4, "weight": 6, "value": 6.0},
+	{"name": "Legendary", "affixes": 5, "tier": 5, "weight": 1, "value": 10.0},
 ]
+const RARITY_SHORT := ["Com", "Unc", "Rare", "Epic", "Leg"]
 
 ## Affixes: a stat and its roll range per tier. "pct" ones are percentages of
 ## the whole operator's figure; the rest add to it. `slots` says which items
@@ -680,7 +686,8 @@ const RARITIES := [
 ## comes from its level (its base's tier plus the depth it dropped at:
 ## `Items.tier_cap`). `weight` is its share of a roll (1 if absent).
 const AFFIX_TIERS := 5
-const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5
+const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5 (the bench's re-roll reads it; a drop's cap is its rarity's)
+const TIER_FLOOR := [0, 6, 10, 14, 99]  # the item level from which an affix rolls no lower than T1, T2, T3, T4 (T5 never a floor): deep finds roll no T1s
 const TIER_WEIGHT := [8.0, 5.0, 3.0, 2.0, 1.0]  # T1 .. T5: the better, the rarer
 const AFFIXES := [
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 4, "max": 24, "slots": ["Primary", "Secondary"]},

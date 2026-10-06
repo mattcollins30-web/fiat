@@ -47,7 +47,7 @@ static func px(cells: int) -> int:
 static func rarity_tone(it: Dictionary) -> String:
 	if it.has("set"):
 		return "set"
-	return ["", "good", "warn", "bad"][it["rarity"]]
+	return Pal.rarity_tone(int(it["rarity"]))
 
 
 ## The item, drawn: the cell takes the footprint's size, or `box` when given

@@ -435,7 +435,7 @@ func _slots_offline_hardcore(main) -> void:
 	sim = main.sim
 	# away three hours with auto-run on: missions ran, the log moved, the clock moved
 	sim.set_depth(0, 1)
-	for r in range(4):
+	for r in range(Data.RARITIES.size()):
 		sim.sell_rarity(r)            # room in the stash, or auto-run stops at once
 	sim.set_auto(0)
 	var before: Dictionary = sim.snapshot()
@@ -511,12 +511,13 @@ func _worst_item(slot: String, base: Dictionary, sim) -> Dictionary:
 	var it := Items.roll(slot, Data.MAX_TIER, sim.rng)
 	it["base"] = base["name"]
 	it["tier"] = base["tier"]
-	it["rarity"] = 3
-	it["value"] = int(round(base["value"] * Data.RARITIES[3]["value"]))
+	var top: int = Data.RARITIES.size() - 1
+	it["rarity"] = top
+	it["value"] = int(round(base["value"] * Data.RARITIES[top]["value"]))
 	it["affixes"] = []
 	for a in Data.AFFIXES:
-		if slot in a["slots"] and it["affixes"].size() < 3:
-			it["affixes"].append({"stat": a["stat"], "value": int(a["max"])})
+		if slot in a["slots"] and it["affixes"].size() < int(Data.RARITIES[top]["affixes"]):
+			it["affixes"].append({"stat": a["stat"], "value": int(a["max"]), "tier": Data.AFFIX_TIERS})
 	if slot == Data.ATTACHMENT:
 		it["mount"] = base["mount"]
 	else:
@@ -949,7 +950,7 @@ func _narrative_checks(main) -> void:
 	_check(fv._said[0].text != "" and fv._said[0].position.y >= fv.BAND_H, "the fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._said[0].position.y])
 	for t in fv._tabs:
 		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
-	_check(fv._side_tiles[0]["key"].text == "Common" and fv._side_tiles[3]["key"].text == "Elite" and fv._side_tiles[4]["key"].text.begins_with("Nails") and fv._side_tiles[9]["button"].visible, "the fence's tiles are off: %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
+	_check(fv._side_tiles[0]["key"].text == "Com" and fv._side_tiles[Data.RARITIES.size() - 1]["key"].text == "Leg" and fv._side_tiles[Data.RARITIES.size()]["key"].text.begins_with("Nails") and fv._side_tiles[Data.RARITIES.size() + 5]["button"].visible, "the fence's tiles are off: %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
 	_check(fv._side_tiles[1]["value"].get_theme_color("font_color") == Pal.GOOD or fv._side_tiles[1]["button"].disabled, "the uncommon tile's figure is not green")
 	_check(fv._heads[2].visible and fv._heads[2].text.begins_with("THE CONTRACTS"), "the fence's contracts head is off: '%s'" % fv._heads[2].text)
 	_check(fv._band.kicker.position.x >= fv._face.position.x + fv._face.size.x or not fv._face.visible, "the fence's words sit on the face")
@@ -2591,18 +2592,29 @@ func _craft_checks(main) -> void:
 	_check(r1[0] == d["min"] and r5[1] == d["max"] and r1[1] < r5[0], "the tier ranges don't cut the span: T1 %s, T5 %s" % [str(r1), str(r5)])
 	for t in range(1, 5):
 		_check(Items.tier_range(d, t)[1] < Items.tier_range(d, t + 1)[0], "tier %d overlaps tier %d" % [t, t + 1])
-	var low := 0
-	var best := 0
-	for i in range(300):
+	# rarity as quality (the pass, Matt, 6 Oct): the rarity caps the tier, the level floors it
+	_check(Items.tier_floor(0) == 1 and Items.tier_floor(5) == 1 and Items.tier_floor(6) == 2 and Items.tier_floor(10) == 3 and Items.tier_floor(14) == 4 and Items.tier_floor(40) == 4, "the tier floor by level is wrong")
+	_check(Data.RARITIES.size() == Data.AFFIX_TIERS and Data.RARITIES.back()["name"] == "Legendary", "five rarities to the five tiers: %s" % str(Data.RARITIES.map(func(r): return r["name"])))
+	for k in range(Data.RARITIES.size()):
+		_check(int(Data.RARITIES[k]["affixes"]) == k + 1 and int(Data.RARITIES[k]["tier"]) == k + 1, "%s is not %d affixes to T%d" % [Data.RARITIES[k]["name"], k + 1, k + 1])
+	var shallow_top := 0
+	var deep_low := 0
+	for i in range(400):
 		var g: Dictionary = Items.roll("Primary", 1, sim.rng, 2.0, true, false, "", "", 0.33, 0)
+		var cap_g: int = int(Data.RARITIES[int(g["rarity"])]["tier"])
+		_check(g["affixes"].size() == int(g["rarity"]) + 1, "a %s rolled %d affixes" % [Data.RARITIES[int(g["rarity"])]["name"], g["affixes"].size()])
 		for a in g["affixes"]:
-			_check(a.has("tier") and a["tier"] == 1, "a tier-1 base at depth 0 rolled T%d" % a.get("tier", 0))
+			_check(a.has("tier") and a["tier"] >= 1 and a["tier"] <= cap_g, "a shallow %s rolled T%d past its cap T%d" % [Data.RARITIES[int(g["rarity"])]["name"], a.get("tier", 0), cap_g])
+			shallow_top += 1 if (a["tier"] == 5) else 0
 		var deep: Dictionary = Items.roll("Primary", 6, sim.rng, 2.0, true, false, "", "", 0.33, 20)
 		_check(deep["ilvl"] == deep["tier"] + 20, "the item level is not the base's tier plus the depth")
+		var cap_d: int = int(Data.RARITIES[int(deep["rarity"])]["tier"])
+		var floor_d: int = mini(Items.tier_floor(int(deep["ilvl"])), cap_d)
 		for a in deep["affixes"]:
-			low += 1 if a["tier"] == 1 else 0
-			best += 1 if a["tier"] == 5 else 0
-	_check(best > 5 and low > best, "deep drops rolled %d T5 and %d T1; some T5, more T1 was the aim" % [best, low])
+			_check(a["tier"] >= floor_d and a["tier"] <= cap_d, "a deep %s rolled T%d outside T%d..T%d" % [Data.RARITIES[int(deep["rarity"])]["name"], a["tier"], floor_d, cap_d])
+			deep_low += 1 if (a["tier"] == 1 and int(deep["rarity"]) > 0) else 0
+	_check(shallow_top > 0, "four hundred shallow rolls at +200% quality never made a T5: a Legendary from the first site is five T5s")
+	_check(deep_low == 0, "a deep find above Common rolled T1s: %d" % deep_low)
 	# the bench
 	var it: Dictionary = sim._plain("Helmet", "Hard hat")
 	it["attachments"] = {}
@@ -2622,7 +2634,8 @@ func _craft_checks(main) -> void:
 	_check(changed and it["affixes"].size() == 1, "twelve re-rolls changed nothing, or the count")
 	while sim.craft_cost(it, "add") >= 0:
 		sim.craft(it["id"], "add")
-	_check(it["rarity"] == 3 and it["affixes"].size() == 3, "adding to the top did not make an elite with three: %d, %d" % [it["rarity"], it["affixes"].size()])
+	var top: int = Data.RARITIES.size() - 1
+	_check(it["rarity"] == top and it["affixes"].size() == top, "adding to the top did not make a %s with %d: %d, %d" % [Data.RARITIES[top]["name"], top, it["rarity"], it["affixes"].size()])
 	var stats := []
 	for a in it["affixes"]:
 		_check(not (a["stat"] in stats), "an affix doubled: %s" % a["stat"])
@@ -2630,8 +2643,8 @@ func _craft_checks(main) -> void:
 	# lock one: it stays, the others may change
 	var keep: Dictionary = it["affixes"][0].duplicate()
 	var lock_cost: int = sim.craft_cost(it, "lock", keep["stat"])
-	_check(lock_cost == sim._inf(Data.CRAFT["lock"]["cash"] * 16 * 4), "lock on a level-16 elite costs %d, not %d" % [lock_cost, sim._inf(Data.CRAFT["lock"]["cash"] * 16 * 4)])
-	_check(sim.craft(it["id"], "lock", keep["stat"]) and it["affixes"].size() == 3 and it["affixes"][0] == keep, "locking one did not keep it: %s vs %s" % [str(it["affixes"][0]), str(keep)])
+	_check(lock_cost == sim._inf(Data.CRAFT["lock"]["cash"] * 16 * (top + 1)), "lock on a level-16 %s costs %d, not %d" % [Data.RARITIES[top]["name"], lock_cost, sim._inf(Data.CRAFT["lock"]["cash"] * 16 * (top + 1))])
+	_check(sim.craft(it["id"], "lock", keep["stat"]) and it["affixes"].size() == top and it["affixes"][0] == keep, "locking one did not keep it: %s vs %s" % [str(it["affixes"][0]), str(keep)])
 	# re-roll one: the stat stays, the tier moves sometimes, dearer the better the tier
 	var one_stat: String = it["affixes"][1]["stat"]
 	var tiers_seen := {}
@@ -2734,7 +2747,7 @@ func _craft_checks(main) -> void:
 		_check(ah.words(ah.shown() - 1).contains("open"), "the chip after the affixes is not the open one: '%s'" % ah.words(ah.shown() - 1))
 	# a three-affix piece with long words: every affix still a chip, none trailing off
 	var three: Dictionary = sim._plain("Armour", "Riot suit")
-	three["rarity"] = 3
+	three["rarity"] = Data.RARITIES.size() - 1       # at the top: no open chip after the three
 	three["affixes"] = [{"stat": "armour_pct", "value": 18, "tier": 4}, {"stat": "loot_pct", "value": 12, "tier": 2}, {"stat": "poison_res", "value": 9, "tier": 3}]
 	sim.stash.append(three)
 	main._armoury._inv._set_kind(0)
@@ -4954,7 +4967,7 @@ func _grade_checks(main) -> void:
 		sim.rng.seed = 11                 # the swing the same both times: deploy spent the dice differently
 		sim._fight(m, m["t"], 0.5)
 		drops.append(1e6 - m["target_hp"])
-		drops.append("%s rig %s rounds %s grade %.0f first %.0f melee %s rules %s" % [sim.equipped["Primary"]["base"], str(sim.rig.map(func(x): return x["base"])), str(sim.has_rounds(sim.equipped["Primary"])), sim.grade_bonus(sim.equipped["Primary"]), sim.grade_stat(sim.equipped["Primary"], "first_pct"), str(sim.melee()), str(sim.has_rule("qm_rifle"))])
+		drops.append("%s rig %s rounds %s grade %.0f first %.0f melee %s rules %s dps %.1f physical %.1f pace %.2f site pace %.2f res %s fresh %s dealt_by %s" % [sim.equipped["Primary"]["base"], str(sim.rig.map(func(x): return x["base"])), str(sim.has_rounds(sim.equipped["Primary"])), sim.grade_bonus(sim.equipped["Primary"]), sim.grade_stat(sim.equipped["Primary"], "first_pct"), str(sim.melee()), str(sim.has_rule("qm_rifle")), sim.dps(), float(sim.type_dps()["physical"]), sim.pace(), float(m["t"]["pace"]), str(m["t"].get("res", {})), str(m["fresh"]), str(m.get("dealt_by", {}))])
 		sim.extract_now()
 	# the class's own first-shot share (the Poacher's +40%) is on both: the expected ratio is the grade's 15% times
 	# (class + 25%) over (class), read against the class at hand

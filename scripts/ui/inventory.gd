@@ -50,7 +50,7 @@ const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helm
 const FILL_W := 122
 const KIND_W := 90
 const SORT_W := 124
-const RARITY_W := 82
+const RARITY_W := 72                 # six buttons with five rarities, at 17 px (the pass, 6 Oct): the row ends before the pages
 const MANY_W := 100
 const SELL_W := 180
 const PAGE_BTN := 44
@@ -110,8 +110,8 @@ func _init() -> void:
 	x = 0
 	for r in range(Data.RARITIES.size() + 1):
 		var b := UI.button(self, Rect2(x, y, RARITY_W, BAR_H), false)
-		b.text = ["Any", "Com", "Unc", "Rare", "Elite"][r]
-		b.add_theme_font_size_override("font_size", 20)
+		b.text = "Any" if r == 0 else Data.RARITY_SHORT[r - 1]
+		b.add_theme_font_size_override("font_size", 17)
 		b.pressed.connect(_set_rarity.bind(r - 1))
 		_rarity_buttons.append(b)
 		x += RARITY_W + 6

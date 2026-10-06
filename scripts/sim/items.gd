@@ -47,12 +47,13 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		r = 1
 	if fewer_commons and r == 0 and rng.randf() < 0.5:
 		r = _roll_rarity(rng, rarity_bonus)
-	# the item's level: its base's tier and the depth it dropped at; it sets the tiers its affixes can roll
+	# the item's level: its base's tier and the depth it dropped at; it sets the floor under the tiers its
+	# affixes roll, and the rarity sets the cap (a Legendary from the first site is five T5s on a tier-1 base)
 	var ilvl: int = int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
 	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
 	for a in picked:
-		affixes.append(roll_affix(a, ilvl, rng))
+		affixes.append(roll_affix(a, ilvl, rng, 0, int(Data.RARITIES[r]["tier"])))
 	var attachments := {}
 	for name in base.get("attachments", []):
 		attachments[name] = null
@@ -86,13 +87,16 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 
 
 ## Rarity weights, shifted toward the rare end by loot find.
+## The rarity by weight; quality compounds up the ladder (a rank's weight × (1 + quality)^rank), so
+## +35% is ×1.35 on Uncommon and ×3.3 on Legendary - a step the player can see at the top, where it
+## was a flat ×1.35 on everything above Common and the Legendary share barely moved.
 static func _roll_rarity(rng: RandomNumberGenerator, bonus: float) -> int:
 	var weights: Array = []
 	var total := 0.0
 	for i in range(Data.RARITIES.size()):
 		var w: float = Data.RARITIES[i]["weight"]
 		if i > 0:
-			w *= 1.0 + bonus
+			w *= pow(1.0 + bonus, i)
 		weights.append(w)
 		total += w
 	var x := rng.randf() * total
@@ -339,18 +343,31 @@ static func tier_cap(ilvl: int) -> int:
 	return best
 
 
+## The floor an item level puts under a drop's affix tiers: T1 until TIER_FLOOR[1], T2 from there, and so
+## on; never above the cap the rarity gives (a Common from the deep is still one T1).
+static func tier_floor(ilvl: int) -> int:
+	var lo := 1
+	for k in range(Data.TIER_FLOOR.size()):
+		if ilvl >= int(Data.TIER_FLOOR[k]):
+			lo = k + 1
+	return lo
+
+
 ## A tier from the ones open, the better the rarer.
-static func roll_tier(ilvl: int, rng: RandomNumberGenerator) -> int:
-	var cap := tier_cap(ilvl)
+## A tier between the level's floor and the cap, by weight. The cap is the rarity's on a drop
+## (`rarity_cap` > 0), the level's at the bench.
+static func roll_tier(ilvl: int, rng: RandomNumberGenerator, rarity_cap := 0) -> int:
+	var cap := rarity_cap if rarity_cap > 0 else tier_cap(ilvl)
+	var lo := mini(tier_floor(ilvl), cap)
 	var total := 0.0
-	for t in range(1, cap + 1):
+	for t in range(lo, cap + 1):
 		total += float(Data.TIER_WEIGHT[t - 1])
 	var x := rng.randf() * total
-	for t in range(1, cap + 1):
+	for t in range(lo, cap + 1):
 		x -= float(Data.TIER_WEIGHT[t - 1])
 		if x <= 0.0:
 			return t
-	return 1
+	return lo
 
 
 ## An affix's value range at a tier: the span cut in five, T5 the top fifth.
@@ -366,8 +383,8 @@ static func tier_range(a: Dictionary, tier: int) -> Array:
 	return [from, maxi(from, to)]
 
 
-static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0) -> Dictionary:
-	var t := tier if tier > 0 else roll_tier(ilvl, rng)
+static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0, rarity_cap := 0) -> Dictionary:
+	var t := tier if tier > 0 else roll_tier(ilvl, rng, rarity_cap)
 	var r := tier_range(a, t)
 	return {"stat": a["stat"], "value": rng.randi_range(r[0], r[1]), "tier": t}
 
@@ -427,8 +444,8 @@ static func add_affix(it: Dictionary, rng: RandomNumberGenerator) -> bool:
 	var picked := pick_affixes(it["slot"], 1, rng, have)
 	if picked.is_empty():
 		return false
-	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng))
 	it["rarity"] = int(it["rarity"]) + 1
+	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng, 0, int(Data.RARITIES[it["rarity"]]["tier"])))     # the new rarity's cap
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
 	return true
 
@@ -475,11 +492,11 @@ static func roll_unique(u: Dictionary, rng: RandomNumberGenerator) -> Dictionary
 	var it := roll(u["slot"], Data.MAX_TIER, rng)
 	it["base"] = u["base"]
 	it["tier"] = base_of(it)["tier"]
-	it["rarity"] = 3
+	it["rarity"] = Data.RARITIES.size() - 1
 	it["affixes"] = u["affixes"].duplicate(true)
 	it["unique"] = u["name"]
 	it["rule"] = u["rule"]
-	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[3]["value"] * 1.5))
+	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[Data.RARITIES.size() - 1]["value"] * 1.5))
 	return it
 
 
