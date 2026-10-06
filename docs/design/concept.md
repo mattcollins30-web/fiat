@@ -184,7 +184,8 @@ with them on a death, refunded as points, and the next runner picks a past from 
     8. ~~**The collection.**~~ Done (5 Oct): the Caravan is the collection - the runners before on its
        wall, the papers in its drawer, the uniques on its shelf.
     9. ~~**Juice.**~~ Done (5 Oct). Damage numbers on the run panel, a flash on a rare, the log's best lines as toasts.
-23. **Manual placement in the bag (true tetris)** — agreed 5 Oct, after the playtest: the pack is a count
+23. **Manual placement in the bag (true tetris)** — *backlog (Matt, 6 Oct): after the balance pass, if at
+    all; a UI item that adds nothing to the game as it stands.* Agreed 5 Oct, after the playtest: the pack is a count
     today (`pack_used` sums footprints; the grid draws them first-come); it becomes a real grid, each find
     with a position, a find landing where it fits or not at all, drag to repack on the run and in the
     Lock-up's pack map; the bot and the estimator pack too. Balanced with 25, since both change what
@@ -290,8 +291,8 @@ pass. In build order; the economy items last so the reader runs once over all of
     trait for good (a third, stacking to a cap of three retired), the class and its trees refund as a
     death does, the Caravan's wall shows them as retired not dead. A death is not the only way a runner
     ends, and the trait pool gets a cumulative side without touching the refund rule.
-37. **Manual placement in the bag** - as 23. Last, since it changes what comes home and every item
-    above changes what there is to bring.
+37. ~~Manual placement in the bag~~ - *to the backlog (Matt, 6 Oct): "essentially a UI item and doesn't
+    add anything to the game as it stands". The pass starts once 34, 35 and 36 are in.*
 
 ### The gates
 

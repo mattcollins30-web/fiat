@@ -5001,6 +5001,31 @@ func _dots_chip_checks(main) -> void:
 	_check(rn._runner["chips"].visible and not rn._runner["note"].visible and rn._runner["chips"].shown() == 2 and rn._runner["chips"].words(0) == "Poisoned" and rn._runner["chips"].words(1) == "Bleeding", "On you reads %d chips" % rn._runner["chips"].shown())
 	_check(rn._fight["chips"].position.y + Chips.CHIP_H <= rn._fight["box"].position.y + rn._fight["box"].size.y and rn._runner["chips"].position.y + Chips.CHIP_H <= rn._runner["box"].position.y + rn._runner["box"].size.y, "the chips sit out of their boxes")
 	_check_fit(main, "Run (on them, on you)")
+	# the dots' pools are the end of the bar (Matt, 6 Oct): what fire and poison still have to take off them sits at the
+	# fill's end in their colours, so the fill goes down into it; yours the same for what's on you
+	var of_hp: float = float(m["t"]["hp"])
+	m["target_hp"] = of_hp * 0.5
+	m["dots"] = {"fire": of_hp * 0.1, "poison": of_hp * 0.2}
+	m["my_dots"] = {"poison": sim.max_hp() * 0.1, "bleed": sim.max_hp() * 0.6}
+	sim.hp = sim.max_hp() * 0.5
+	main.refresh()
+	var segs: Array = rn._fight["segments"]
+	var fire_i: int = Data.TYPES.find("fire")
+	var poison_i: int = Data.TYPES.find("poison")
+	var bleed_i: int = Data.TYPES.find("bleed")
+	var fill_px: float = rn._fight["fill"].size.x
+	_check(segs[fire_i].visible and segs[poison_i].visible and absf(segs[fire_i].size.x - rn.INNER * 0.1) <= 1.5 and absf(segs[poison_i].size.x - rn.INNER * 0.2) <= 1.5, "their bar's end is not the dots' pools: fire %.0f, poison %.0f" % [segs[fire_i].size.x, segs[poison_i].size.x])
+	_check(absf(segs[fire_i].position.x + segs[fire_i].size.x - fill_px) <= 0.5 and absf(segs[poison_i].position.x + segs[poison_i].size.x - segs[fire_i].position.x) <= 0.5, "the pools do not sit at the fill's end, in a row")
+	var ysegs: Array = rn._runner["segments"]
+	var yfill: float = rn._runner["fill"].size.x
+	_check(ysegs[poison_i].visible and ysegs[bleed_i].visible and absf(ysegs[poison_i].size.x - rn.INNER * 0.1) <= 1.5 and absf(ysegs[bleed_i].size.x - (yfill - ysegs[poison_i].size.x)) <= 1.5 and ysegs[bleed_i].position.x >= -0.5, "a pool past the fill's left end is not cut to it: poison %.0f, bleed %.0f of a %.0f fill" % [ysegs[poison_i].size.x, ysegs[bleed_i].size.x, yfill])
+	m["dots"] = {}
+	m["my_dots"] = {}
+	main.refresh()
+	_check(not segs[fire_i].visible and not ysegs[bleed_i].visible, "the pools did not clear with the dots")
+	m["dots"] = {"fire": 20.0, "poison": 20.0}
+	m["my_dots"] = {"poison": 20.0, "bleed": 20.0}
+	main.refresh()
 	# a med in use rides beside the chips as a muted one; nothing on you brings the note back
 	m["using"] = {"name": "Bandage", "heal": 10.0, "left": 4.0}      # a med in use, by hand: the chip beside what's on you
 	main.refresh()

@@ -68,6 +68,10 @@ func _next() -> void:
 			m["dots"] = {"fire": 20.0, "poison": 20.0}
 			m["chill_t"] = 1.0
 			m["my_dots"] = {"poison": 20.0, "bleed": 20.0}
+			m["target_hp"] = float(m["t"]["hp"]) * 0.7
+			m["dots"] = {"fire": float(m["t"]["hp"]) * 0.15, "poison": float(m["t"]["hp"]) * 0.2}
+			m["my_dots"] = {"poison": main.sim.max_hp() * 0.08, "bleed": main.sim.max_hp() * 0.12}
+			main.sim.hp = main.sim.max_hp() * 0.6
 		main.show_room(main.MISSIONS)
 	elif r == "pick":
 		# the Lock-up with the stash's best-affixed piece picked

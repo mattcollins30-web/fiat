@@ -1667,6 +1667,18 @@ shot heavier through the fight, the odds with no gun in hand. Reviewer: `grade_s
 clears the conversion's memo, so the share goes with the stack; the secondary's grade is damage only, as
 the primary's base conversion already was.
 
+## The dots as the end of the bar (6 Oct)
+
+Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are
+receiving or dealing", then on the first cut (the lost part coloured by what took it): "the poison, bleed
+etc should be the actual bar that moves down, not detached from it." So the dots' pools are the end of
+the fill: what fire, poison and bleed still have to take off them sits at the right end of their HP fill
+in the elements' colours, a segment a type, and the fill goes down into it as the dots tick; yours the
+same for what is on you. `_bar(d, fill, text, tone, pending, of)` lays the pools from the fill's right
+edge leftwards, never past its left end; no pools, no segments (the search bar). Item 37, the pack grid,
+goes to the backlog at Matt's call; the pass starts after 34, 35 and 36. Smoke: the pools' widths from the
+amounts, in a row at the fill's end, cut at the fill's left end, cleared with the dots.
+
 ## The bench on the pick frame; a typed part refused (6 Oct)
 
 Matt: "Gun attachments need the same chips treatment as everything else - also I can still attach a shotgun

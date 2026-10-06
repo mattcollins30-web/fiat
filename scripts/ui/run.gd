@@ -186,13 +186,13 @@ func show_state(s) -> void:
 	if boss_on:
 		_fight["head"].text = m["boss"]["name"].to_upper()
 		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
-		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad")
+		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif m["remaining"] > 0:
 		var on_you: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you, m["remaining"] - on_you]) if m["remaining"] > on_you else "%d" % on_you, "%d" % on_you]],
 			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
-		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad")
+		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
@@ -202,7 +202,7 @@ func show_state(s) -> void:
 		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
-	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good")
+	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good", m.get("my_dots", {}), sim.max_hp())
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
@@ -265,13 +265,39 @@ func _bar_make(d: Dictionary, y: float) -> void:
 	var track := UI.panel(_left, Rect2(PAD, y, INNER, BAR_H), UI.box(Pal.BG, 6))
 	d["track"] = track
 	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
+	# what the dots still have to take off the bar (Matt, 6 Oct): the end of the fill, a segment a type, so the
+	# fill is seen going down into them as they tick
+	d["segments"] = []
+	for ty in Data.TYPES:
+		var seg := UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3, 0))
+		seg.visible = false
+		d["segments"].append(seg)
 	d["bar_text"] = UI.label(track, Rect2(0, 0, INNER, BAR_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	track.move_child(d["bar_text"], -1)
 
 
-func _bar(d: Dictionary, fill: float, text: String, tone: String) -> void:
+func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0) -> void:
 	(d["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
 	d["fill"].size.x = roundf(INNER * clampf(fill, 0.0, 1.0))
 	d["bar_text"].text = text
+	_bar_segments(d, pending, of)
+
+
+## The dots' pools as the end of the fill: `pending` is {type: HP still to tick off}, `of` the bar's whole in HP.
+## Laid from the fill's right edge leftwards, a type each, never past the fill's left end.
+func _bar_segments(d: Dictionary, pending: Dictionary, of: float) -> void:
+	var right: float = d["fill"].size.x
+	var left_limit: float = 0.0
+	for k in range(Data.TYPES.size()):
+		var ty: String = Data.TYPES[k]
+		var seg: Panel = d["segments"][k]
+		var amount: float = maxf(0.0, float(pending.get(ty, 0.0)))
+		var w: float = floorf(INNER * amount / maxf(of, 1.0)) if amount > 0.0 else 0.0
+		w = minf(w, right - left_limit)
+		seg.visible = w >= 1.0
+		seg.size.x = w
+		seg.position.x = right - w
+		right -= w
 
 
 ## The tiles' words: [[key, [long, shorter...]], ...].
