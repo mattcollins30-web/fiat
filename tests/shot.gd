@@ -31,7 +31,18 @@ func _next() -> void:
 		quit()
 		return
 	var r: String = _rooms[_k]
-	if r == "run" or r == "dots":
+	if r == "runpick":
+		# a live run with an armour in the pack picked, against the one worn
+		if not main.sim.on_mission():
+			main.sim.deploy(0)
+		var found: Dictionary = main.sim._plain("Armour", "Motorbike leathers")
+		found["rarity"] = 2
+		found["affixes"] = [{"stat": "poison_res", "value": 7, "tier": 1}, {"stat": "armour", "value": 3, "tier": 1}]
+		main.sim.mission["found"].append(found)
+		main.show_room(main.MISSIONS)
+		main.refresh()
+		main._run._inv._pick(main._run._inv.cell_of(found["id"]))
+	elif r == "run" or r == "dots":
 		if not main.sim.on_mission():
 			main.sim.deploy(0)
 		for i in range(12):

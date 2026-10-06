@@ -19,7 +19,7 @@ const CHIP_H := 26
 const CHIP_PAD := 8
 const CHIP_GAP := 6
 const CHIPS := 6
-const ROWS := 4                    # three affixes and the open row, or a set line
+const ROWS := 0                    # the open slots, a set's words and "No affixes" are chips in the affix rows now
 
 var width := 440
 var compact := false               # a shorter headline and tighter rows, for the Lock-up's 252 px panel
@@ -47,7 +47,7 @@ func _init(w := 440, small := false) -> void:
 	compact = small
 	head_h = 30 if compact else 46
 	row_h = 28
-	rows = 1
+	rows = ROWS
 	var gap := 4 if compact else 6
 	chips_y = TITLE_H + gap
 	headline_y = chips_y + CHIP_H + gap
@@ -55,7 +55,7 @@ func _init(w := 440, small := false) -> void:
 	rows_y = tail_y + TAIL_H + gap
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var affix_h := AFFIX_ROWS * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP
-	size = Vector2(width, rows_y + affix_h + 4 + rows * row_h)
+	size = Vector2(width, rows_y + affix_h + (4 + rows * row_h if rows > 0 else 0))
 	_title = UI.label(self, Rect2(0, 0, width, TITLE_H), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(CHIPS):
 		var p := UI.panel(self, Rect2(0, chips_y, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
@@ -76,10 +76,11 @@ func _init(w := 440, small := false) -> void:
 
 ## `tail` follows the headline: "takes SMG rounds · 600 carried". `extra` is a
 ## line for the fourth row when there's no open affix to say (a set's words).
-func show_item(it: Dictionary, sim, tail = "", extra := "") -> void:
+## `cells`: the cells chip, left off where the panel's kicker carries the cells.
+func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> void:
 	UI.fit(_title, [Items.full_name(it), it["base"]])
 	# the chips: what it is, in the order a player asks
-	var chips := _chip_words(it)
+	var chips := _chip_words(it, cells)
 	var x := 0.0
 	for k in range(CHIPS):
 		var on := k < chips.size()
@@ -153,28 +154,23 @@ func show_item(it: Dictionary, sim, tail = "", extra := "") -> void:
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
-	_affixes.show_chips(chips_a, AFFIX_ROWS)
-	_affixes.visible = n > 0
-	# the line under: the open affix, a set's words, or "No affixes"
+	# after them, as muted chips: the open slots ("1 open at the bench"), a set's words in the set's tone, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
-	var row := _rows[0]
-	row.position.y = rows_y + (_affixes.size.y + 4 if n > 0 else 0)
-	if extra != "":
-		row.text = extra
-		row.add_theme_color_override("font_color", Pal.SET if not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) else Pal.TEXT_2)
+	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)
+	var has_extra: bool = (not extra.is_empty()) if extra is Array else (str(extra) != "")
+	if has_extra:
+		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
 	elif open:
 		var left: int = Data.RARITIES.size() - 1 - int(it["rarity"])
-		UI.fit(row, ["%s can be added at the bench" % ("One more" if left == 1 else ("Two more" if left == 2 else "Three more")), "Room for %d more" % left, "%d open" % left])
-		row.add_theme_color_override("font_color", Pal.TEXT_3)
-	elif n == 0:
-		row.text = "No affixes" if not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it)) else ""
-		row.add_theme_color_override("font_color", Pal.TEXT_3)
-	else:
-		row.text = ""
+		chips_a.append({"forms": ["%d open at the bench" % left, "%d open" % left], "colour": Pal.TEXT_2})
+	elif n == 0 and not plain:
+		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
+	_affixes.show_chips(chips_a, AFFIX_ROWS)
+	_affixes.visible = not chips_a.is_empty()
 
 
 ## [words, tone] a chip: the slot, the type, the rarity (in its tone), the level, the cells.
-static func _chip_words(it: Dictionary) -> Array:
+static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 	var out := []
 	var slot: String = it["slot"]
 	if slot == Data.ATTACHMENT:
@@ -203,7 +199,7 @@ static func _chip_words(it: Dictionary) -> Array:
 	if not (slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL):
 		out.append(["Level %d" % Items.ilvl(it), ""])
 	var cells: int = Items.size(it)
-	if cells > 1:
+	if cells > 1 and cells_chip:
 		out.append(["%d cells" % cells, ""])
 	return out
 

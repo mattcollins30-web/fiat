@@ -1635,6 +1635,31 @@ deeds carried home count as held; the report's "left" leaves the carried one out
 cap, a 24-pouch rig inside its box on the run and in the Lock-up, the held clock, the tile, the full pack's
 call, the second gang unheld, the dog's carry and the report, the deeds held, the card fitted.
 
+## The pick panel, Pick-A (6 Oct)
+
+Matt: "the display on the left should be exactly the same as on the right so you can clearly compare both
+items"; drop the ditched line and the fence line for a price tag; the run and the Lock-up consistent; no Sell
+in the Lock-up (the fence's); Equip or Ditch on a run; use the dead space. Mocked as Pick-A on the canvas
+and built as `scripts/ui/pick_panel.gd`, one widget both screens use: two columns of the one shape, a kicker
+with the place and the cells ("THE PICK · IN THE PACK · 9 CELLS", "FITTED NOW · 9 CELLS") and a price tag
+at its right, then the item head. The head's open slots, a set's words and "No affixes" are chips in the
+affix rows now (`ItemHead.ROWS` 0, the cells chip optional), so the head is 190 tall and the foot has its
+44. The foot: the verdict ("▲ Upgrade", "Sidegrade", "▼ Downgrade" by the slot's score) and the deltas
+against the fitted, dropped from the right past the buttons; under them the item's own line, or a hint
+when something stops a button. The right column is words where there is nothing to lay the same (a med's
+rig, a part's bench, a paper's drawer, "Nothing fitted as armour"). Buttons at the right: on a run Equip
+and Ditch (a med or rounds: Take into the rig, Ditch), in the Lock-up Equip and Bench, Unequip and Bench
+for a fitted piece, Take or Leave for a med; a paper has none there. `sim.equip_from_pack` fits gear found
+on a run, what comes off going into the pack, so it needs the cells the swap frees plus any more the fitted
+piece takes; otherwise Equip greys and the hint says "No room in the pack for what comes off (12 cells)".
+Also from the playtest: the run's rig showed a two-pouch kit as one pouch, so a full rig read as having
+room; it lays items by their size now like the Lock-up's. Smoke: the two heads side by side, the kickers
+with the cells, the tags, the verdict and deltas, Equip and Ditch, the swap into the pack, the full pack's
+hint, the Lock-up's frame without Sell, everything fitted; the rig's pouches add up to the rig. Reviewer: a
+smaller backpack or rig found is measured with it on (what's carried must still fit); the rig's row-end skip
+only when the cap allows it, so a full rig of kits and meds shows every item and no free pouch; Bench on a
+fitted piece keeps the slot picked.
+
 ## On them, on you: the dots as chips (6 Oct)
 
 Matt: "on you: poisoned - the poisoned etc should be in the chip format. also add an 'on them:' line under

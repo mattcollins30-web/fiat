@@ -3194,6 +3194,51 @@ func take(id: int) -> bool:
 	return _take_from(stash, id)
 
 
+## Gear found out there, fitted while the run's on (Matt, 6 Oct): what comes
+## off goes into the pack in its place, so it needs the cells the swap frees
+## plus any more the fitted piece takes.
+func can_equip_from_pack(id: int) -> bool:
+	if mission == null:
+		return false
+	for it in mission["found"]:
+		if it["id"] == id:
+			var slot: String = it["slot"]
+			if not equipped.has(slot) or Items.is_deeds(it):
+				return false
+			# the room is read with the found piece on: a smaller backpack or rig found must still hold what's carried
+			var was = equipped[slot]
+			equipped[slot] = it
+			_dry_memo.clear()
+			var ok: bool = pack_used(mission) - Items.size(it) + (Items.size(was) if was != null else 0) <= capacity() and rig_used() <= med_capacity()
+			equipped[slot] = was
+			_dry_memo.clear()
+			return ok
+	return false
+
+
+func equip_from_pack(id: int) -> bool:
+	if not can_equip_from_pack(id):
+		return false
+	var m: Dictionary = mission
+	for k in range(m["found"].size()):
+		var it: Dictionary = m["found"][k]
+		if it["id"] == id:
+			var slot: String = it["slot"]
+			m["found"].remove_at(k)
+			if equipped[slot] != null:
+				m["found"].append(equipped[slot])
+				log_event("%s on, %s into the pack" % [it["base"], equipped[slot]["base"].to_lower()])
+			else:
+				log_event("%s on" % it["base"])
+			equipped[slot] = it
+			_read(it)
+			_dry_memo.clear()
+			if hp > max_hp():
+				hp = max_hp()
+			return true
+	return false
+
+
 ## A med or rounds found out there, into the rig while the run's on.
 func take_from_pack(id: int) -> bool:
 	if mission == null:

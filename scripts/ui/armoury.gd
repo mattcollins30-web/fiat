@@ -21,7 +21,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const Containers := preload("res://scripts/ui/containers.gd")
 const Body := preload("res://scripts/ui/body.gd")
-const ItemHead := preload("res://scripts/ui/item_head.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 
 const BODY_W := Body.WIDTH                                    # 420
 const CONTAINERS_Y := Body.HEIGHT + 8                         # 568: the body, then the rig and the pack (to 864)
@@ -30,7 +30,7 @@ const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 904
 const GRID_H := Inventory.HEIGHT                               # 588
 const PANEL_Y := GRID_H + GAP                                 # 612
-const PANEL_H := Pal.ROOM_H - PANEL_Y                         # 252
+const PANEL_H := Pal.ROOM_H - PANEL_Y                         # 304
 const PANEL_PAD := 20
 const PANEL_LINES := 6             # figure, what it takes, three affixes with their tiers, the swap word
 const LINE_H := 26
@@ -41,19 +41,8 @@ var selected := {}                 # {"kind": "stash", "id": n} or {"kind": "slo
 var _body                          # the slots as boxes to drop on
 var _inv                           # the stash grid
 var _containers                    # the rig and the pack
-var _panel: Panel
-var _left_title: Label             # "Select an item" with nothing picked; the head carries a pick's name
-var _left_lines: Array[Label] = []
-var _head                          # the pick's name, chips, headline and affix rows (item_head.gd)
-var _right_title: Label
-var _right_lines: Array[Label] = []
-var _chips: Array[Label] = []      # the swap's changes, one each, green up and red down
-var _overall: Label                # the swap in one word, at the right of the panel's title row
-var _buttons: Array[Button] = []
-var _actions: Array = []
-var _toggles: Array[Button] = []   # idle: equip if better, sell the junk - shown with nothing selected
-var _hint: Label
-var _words: Array[Label] = []      # the item's own line, two rows under the figures
+var _pick                          # the pick panel (pick_panel.gd): the pick against the fitted, the buttons
+var _actions: Array = []           # what the panel's buttons do, by index; _press follows the item after
 var _shown := ""                   # what the screen last drew, so a refresh that changes nothing redraws nothing
 
 
@@ -81,39 +70,23 @@ func _init() -> void:
 	_inv.acted.connect(_on_inv_acted)
 	_inv.dropped.connect(_on_stash_drop)
 	add_child(_inv)
-	_panel = UI.panel(self, Rect2(GRID_X, PANEL_Y, GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_left_title = UI.label(_panel, Rect2(PANEL_PAD, 10, COL_W, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_right_title = UI.label(_panel, Rect2(PANEL_PAD * 2 + COL_W, 14, COL_W, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for i in range(PANEL_LINES):
-		_left_lines.append(UI.label(_panel, Rect2(PANEL_PAD, 48 + i * LINE_H, COL_W, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-		_right_lines.append(UI.label(_panel, Rect2(PANEL_PAD * 2 + COL_W, 48 + i * LINE_H, COL_W, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	for i in range(8):
-		var c := UI.label(_panel, Rect2(0, 0, 10, 30), "", "SemiBold", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
-		c.visible = false
-		_chips.append(c)
-	# the swap in one word, on the left column's fourth line - its own label so
-	# it can be coloured without touching the lines above it
-	_overall = UI.label(_panel, Rect2(PANEL_PAD, 228, COL_W, 20), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_head = ItemHead.new(COL_W, true)
-	_head.position = Vector2(PANEL_PAD, 10)
-	_head.visible = false
-	_panel.add_child(_head)
-	_hint = UI.label(_panel, Rect2(PANEL_PAD, PANEL_H - 6 - 44, GRID_W - 2 * PANEL_PAD, 44), "",
-			"Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for i in range(2):
-		_words.append(UI.label(_panel, Rect2(PANEL_PAD, 228 + i * 20, COL_W + 60, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	_words[1].visible = false                 # under the head there's one row for the flavour
-	for i in range(3):
-		var b := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 240, 44), i == 0)
-		b.pressed.connect(_press.bind(i))
-		b.visible = false
-		_buttons.append(b)
+	_pick = PickPanel.new(GRID_W, PANEL_H)
+	_pick.position = Vector2(GRID_X, PANEL_Y)
+	add_child(_pick)
+	for i in range(PickPanel.BUTTONS):
 		_actions.append(Callable())
-	for i in range(2):
-		var tb := UI.button(_panel, Rect2(0, PANEL_H - 6 - 44, 240, 44), false)
-		tb.pressed.connect(_toggle.bind(i))
-		tb.visible = false
-		_toggles.append(tb)
+
+
+## For the tests: the panel's buttons, and the idle toggles (the same buttons, with nothing picked).
+var _buttons: Array:
+	get:
+		return _pick._buttons
+var _toggles: Array:
+	get:
+		return [_pick._buttons[0], _pick._buttons[1]]
+var _head:
+	get:
+		return _pick._heads[0]
 
 
 ## "Bandage ×5, Medkit" - items by name with counts.
@@ -181,57 +154,29 @@ func _affix_words(it: Dictionary) -> String:
 	return ", ".join(a)
 
 
-## The compare panel: the selection on the left, what's fitted in its slot on
-## the right with the deltas, the buttons for what can be done with it.
+## The compare panel (Pick-A): the pick on the left, what's fitted in its slot
+## on the right laid the same, the verdict and the deltas at the foot, the
+## buttons for what can be done with it. Sell is the fence's.
 func _show_panel() -> void:
-	for b in _buttons:
-		b.visible = false
-	for c in _chips:
-		c.visible = false
-	_overall.text = ""
 	var it := _selected_item()
-	_say(it)
-	for l in _left_lines:
-		l.text = ""
-	for l in _right_lines:
-		l.text = ""
-		l.add_theme_color_override("font_color", Pal.TEXT_2)
-	for tb in _toggles:
-		tb.visible = false
-	_head.visible = not it.is_empty()
-	_left_title.visible = it.is_empty()
 	if it.is_empty():
-		_left_title.text = "Select an item"
-		_right_title.text = ""
-		_hint.text = "A slot on the left, or a stash item on the right"
-		# the idle toggles live here, where the buttons would be
-		_toggles[0].visible = true
-		_toggles[0].text = "Equip if better ✓" if sim.auto_equip else "Equip if better"
-		_toggles[1].visible = true
-		_toggles[1].text = "Sell the junk on return ✓" if sim.auto_sell else "Sell the junk on return"
-		var x := GRID_W - PANEL_PAD
-		for k in [1, 0]:
-			var tb: Button = _toggles[k]
-			tb.size.x = ceilf(UI.text_width(tb, tb.text)) + 48
-			x -= tb.size.x
-			tb.position.x = x
-			x -= 12
-			UI.style_button(tb, false, "good" if (sim.auto_equip if k == 0 else sim.auto_sell) else "")
-		_lay_buttons()                       # none showing: the hint gets the strip up to the toggles
-		_hint.size.x = maxf(80.0, x - PANEL_PAD)
-		if UI.text_width(_hint, _hint.text) > _hint.size.x:
-			UI.fit(_hint, [_hint.text, _hint.text.get_slice(",", 0)])
+		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right"])
+		# the idle toggles live where the buttons would be
+		_pick.set_buttons([
+			{"text": "Equip if better ✓" if sim.auto_equip else "Equip if better", "action": _toggle.bind(0), "enabled": true, "primary": false, "tone": "good" if sim.auto_equip else ""},
+			{"text": "Sell the junk on return ✓" if sim.auto_sell else "Sell the junk on return", "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.auto_sell else ""}])
 		return
-	_hint.text = ""
-	# the left column is the head: name, chips, the headline figure, the affix rows
+	var buttons := []
 	var tail = ""
-	var extra := ""
+	var extra = ""
 	if Items.is_gun(it):
 		tail = [Items.fitted_words(it), _rounds_clause(it)]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
 	elif Items.is_ammo(it):
 		tail = "feeds %s" % ("the " + Items.base_of(it)["type"] if Items.base_of(it)["type"] != "smg" else "the SMG")
+	elif Items.is_paper(it):
+		tail = "from before" if not Items.is_deeds(it) else "what the bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -241,140 +186,79 @@ func _show_panel() -> void:
 			if int(k) > n and next_words == "":
 				next_words = st["bonuses"][k]["words"]
 		var line: String = "%s · %d of %d worn" % [it["set"], n, st["pieces"].size()]
-		extra = ("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line
-		if UI.text_width(_left_lines[0], extra) > COL_W:
-			extra = line
-	_head.show_item(it, sim, tail, extra)
-	_right_lines[3].text = ""
+		extra = [("%s · next: %s" % [line, next_words.to_lower()]) if next_words != "" else "%s · the full set" % line, line, "%d of %d worn" % [n, st["pieces"].size()]]
+	var where: String = {"stash": "in the stash", "rig": "in the rig", "slot": "fitted"}.get(selected["kind"], "")
+	_pick.show_pick(it, sim, "The pick · " + where, tail, extra)
 	if Items.is_medical(it) or Items.is_ammo(it):
-		_show_medical(it)
-		_lay_buttons()
-		return
-	if Items.is_paper(it):
-		_show_paper(it)
-		_lay_buttons()
-		return
-	if Items.is_attachment(it):
+		buttons = _show_medical(it)
+	elif Items.is_paper(it):
+		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the caravan's drawer" if it["base"] in sim.book else "Not read yet"),
+			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The fence buys papers"])
+	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
-			UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
-			UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
+			_pick.show_right_words("The bench", "Fitted at the bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
-			_right_title.text = "Fitted at the bench"
-			_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
-		_right_lines[1].text = ""
-		_right_lines[2].text = ""
-		_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)
-		_button(0, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-		_lay_buttons()
-		return
-	var fitted = sim.equipped[it["slot"]]
-	var from_stash: bool = selected["kind"] == "stash"
-	if from_stash:
-		if fitted == null:
-			_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
-			_right_lines[0].text = "Equipping adds everything above"
-			_right_lines[1].text = ""
-			_right_lines[2].text = ""
-		else:
-			var fh := Items.headline(fitted)
-			_right_title.text = "Fitted: " + fitted["base"]
-			_right_lines[0].text = "%s %s · %s T%d" % [fh[0], fh[1], Items.rarity_name(fitted), fitted["tier"]]
-			var flines: Array = Items.affix_lines(fitted, false, true)
-			var fshort: Array = Items.affix_lines(fitted, true, true)
-			for k in range(3):
-				if k < flines.size():
-					UI.fit(_right_lines[1 + k], [flines[k], fshort[k]])
-					_right_lines[1 + k].add_theme_color_override("font_color", Pal.tier_color(Items.affix_tier(fitted, k)))
-				else:
-					_right_lines[1 + k].text = "No affixes" if k == 0 else ""
-					_right_lines[1 + k].add_theme_color_override("font_color", Pal.TEXT_2)
-			_right_lines[4].text = ""
-			_show_swap(it, fitted)
-		_button(0, "Equip", sim.equip_item.bind(it["id"]), sim.can_equip_item(it["id"]))
-		if not sim.can_equip_item(it["id"]) and not sim.on_mission():
-			_hint.text = "No room in the stash for what comes off"
-		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-		if sim.workshop >= 1 and not it.has("unique"):
-			_button(2, "Bench", func(): bench.emit(it["id"]), not sim.on_mission())
+			_pick.show_right_words("The bench", "Fitted at the bench", ["Goes on %s" % Items.mount_words(it["mount"])])
+		if sim.workshop >= 1:
+			buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})
 	else:
-		_right_title.text = "Fitted"
-		if sim.workshop >= 1 and not it.has("unique"):
-			_button(1, "Bench", func(): bench.emit(it["id"]), not sim.on_mission())
-		# a gun's parts, each with its figures; the rest of the column for the stash
-		var row := 0
-		for mount in it.get("attachments", {}):
-			var a = it["attachments"][mount]
-			if a == null or row >= 4:
-				continue
-			var figures: String = Items.att_words(a, true) if not Items.is_socketable(a) else Items.socket_words(a).get_slice(": ", 1)
-			UI.fit(_right_lines[row], ["%s · %s" % [a["base"], figures], a["base"]])
-			_right_lines[row].add_theme_color_override("font_color", Pal.TEXT)
-			row += 1
-		if row == 0:
-			_right_lines[0].text = "Unequip to put it in the stash"
-			_right_lines[1].text = "Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]
+		var fitted = sim.equipped[it["slot"]]
+		var from_stash: bool = selected["kind"] == "stash"
+		if from_stash:
+			if fitted == null:
+				_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
+			else:
+				var ftail = ""
+				if Items.is_gun(fitted):
+					ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
+				_pick.show_fitted(fitted, sim, "Fitted now", ftail)
+				var v: Array = PickPanel.verdict_of(it, fitted)
+				_pick.set_verdict(v[0], v[1], PickPanel.deltas_of(it, fitted))
+			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
+			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
+				_pick.set_hint("No room in the stash for what comes off")
+			if sim.workshop >= 1 and not it.has("unique"):
+				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 		else:
-			_right_lines[row].text = "Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]
-			_right_lines[row].add_theme_color_override("font_color", Pal.TEXT_2)
-		_button(0, "Unequip", sim.unequip.bind(it["slot"]), not sim.on_mission() and sim.stash_room(Items.size(it)))
-	_lay_buttons()
+			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
+			var lines := []
+			for mount in it.get("attachments", {}):
+				var a = it["attachments"][mount]
+				if a == null or lines.size() >= 3:
+					continue
+				var figures: String = Items.att_words(a, true) if not Items.is_socketable(a) else Items.socket_words(a).get_slice(": ", 1)
+				lines.append(["%s · %s" % [a["base"], figures], a["base"]])
+			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
+			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
+			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_room(Items.size(it)), "primary": true})
+			if sim.workshop >= 1 and not it.has("unique"):
+				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
+	_set_buttons(buttons)
 
 
-## The item's own line, under the figures: who it was, where it came from.
-func _say(it: Dictionary) -> void:
-	UI.wrap(_words, "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+## The panel's buttons, each through _press so the selection follows the item after.
+func _set_buttons(buttons: Array) -> void:
+	var items := []
+	for i in range(buttons.size()):
+		_actions[i] = buttons[i]["action"]
+		var d: Dictionary = buttons[i].duplicate()
+		d["action"] = _press.bind(i)
+		items.append(d)
+	_pick.set_buttons(items)
 
 
 ## "takes SMG rounds, 600 in the rig", shorter forms after it.
 func _rounds_clause(gun: Dictionary) -> Array:
 	var takes: String = Items.ammo_words(gun).to_lower().replace("smg", "SMG")
-	if Items.ammo_type(gun) == "none" or Items.ammo_type(gun) == "":
-		return [takes]
 	var n: int = sim.rounds_for(gun)
-	return ["%s, %d in the rig" % [takes, n], "%d %s rounds" % [n, Items.type_word(gun)], takes]
+	if Items.ammo_type(gun) == "":
+		return [takes]
+	return ["%s, %d in the rig" % [takes, n], "%s, %d" % [takes, n], takes]
 
 
-func _lay_buttons() -> void:
-	var x := GRID_W - PANEL_PAD
-	for i in range(_buttons.size() - 1, -1, -1):
-		if _buttons[i].visible:
-			x -= _buttons[i].size.x
-			_buttons[i].position.x = x
-			x -= 12
-	# one row under the head: the swap's verdict when there is one, else the flavour, shortened by sentence
-	var whole: String = _words[0].text + (" " + _words[1].text if _words[1].text != "" else "")
-	_words[1].text = ""
-	if _overall.text != "" or whole == "":
-		_words[0].text = ""
-	else:
-		UI.fit_sentences(_words[0], whole)
-	# the hint shares the strip with the buttons: it stops where they start
-	_hint.size.x = maxf(80.0, x - PANEL_PAD)
-	if _hint.text != "" and UI.text_width(_hint, _hint.text) > _hint.size.x:
-		UI.fit(_hint, [_hint.text, _hint.text.get_slice(";", 0), _hint.text.get_slice(",", 0), _hint.text.get_slice(" for ", 0)])
-
-
-## A med: in the stash it can be taken; in the rig it can be left behind.
-## A paper: read already, in the drawer; worth pennies to the fence; the deeds are their own matter.
-func _show_paper(it: Dictionary) -> void:
-	_head.show_item(it, sim, "from before" if not Items.is_deeds(it) else "what the bank was holding")
-	_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
-	if Items.is_deeds(it):
-		UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
-	elif it["base"] in sim.book:
-		UI.fit(_right_lines[0], ["Read, and kept in the caravan's drawer", "Read; in the caravan's drawer", "In the drawer"])
-	else:
-		_right_lines[0].text = "Not read yet"
-	_right_lines[1].text = ""
-	_right_lines[2].text = ""
-	_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)
-	_button(0, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-
-
-func _show_medical(it: Dictionary) -> void:
-	_right_title.text = "The rig"
-	_right_lines[0].text = "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()]
-	_right_lines[1].text = ("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else "Used under fire, over a few seconds"
+## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
+func _show_medical(it: Dictionary) -> Array:
+	var lines := [("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else "Used under fire, over a few seconds"]
 	if Items.is_ammo(it):
 		var gun = sim.equipped["Primary"]
 		var sec = sim.equipped["Secondary"]
@@ -382,81 +266,17 @@ func _show_medical(it: Dictionary) -> void:
 		for g in [gun, sec]:
 			if g != null and Items.ammo_type(g) == Items.base_of(it)["type"]:
 				feeds.append(g["base"])
-		_right_lines[1].text = ("Feeds the %s" % " and the ".join(feeds).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"
-	_right_lines[2].text = ""
-	_right_lines[2].add_theme_color_override("font_color", Pal.TEXT_2)
+		lines[0] = ("Feeds the %s" % " and the ".join(feeds).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"
+	var buttons := []
 	if selected["kind"] == "rig":
-		_button(0, "Leave in stash", sim.leave.bind(it["id"]), not sim.on_mission() and sim.stash_room(1))
+		buttons.append({"text": "Leave in stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and sim.stash_room(1), "primary": true})
 	else:
 		var room: bool = sim.rig_room(Items.size(it))
-		_right_lines[2].text = "" if room else ("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
-		_button(0, "Take", sim.take.bind(it["id"]), not sim.on_mission() and room)
-		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-
-
-## What fitting the selection changes: [[delta, words], ...], the headline
-## figure first, then each affix that differs.
-func _deltas(it: Dictionary, fitted: Dictionary) -> Array:
-	var out: Array = []
-	var a := Items.headline(it)
-	var b := Items.headline(fitted)
-	var d := float(a[0]) - float(b[0])
-	if absf(d) >= 0.5:
-		out.append([d, "%.0f %s" % [absf(d), {"damage/s": "dmg/s", "armour": "arm", "capacity": "cap"}.get(a[1], a[1])]])
-	for ax in Data.AFFIXES:
-		var da := Items.affix_total(it, ax["stat"]) - Items.affix_total(fitted, ax["stat"])
-		if absf(da) >= 0.5:
-			out.append([da, "%.0f%s %s" % [absf(da), "%" if ax["stat"].ends_with("_pct") else "", ax["short"]]])
-	return out
-
-
-## The swap as chips - "▲ 9 dmg/s" green, "▼ 3 arm" red - flowed over the right
-## column's last two lines, and one word for the whole thing by the slot's score.
-func _show_swap(it: Dictionary, fitted: Dictionary) -> void:
-	var deltas := _deltas(it, fitted)
-	var x0 := PANEL_PAD * 2 + COL_W
-	var x := x0
-	var row := 0
-	var shown := 0
-	for d in deltas:
-		if shown >= _chips.size():
-			break
-		var c := _chips[shown]
-		var up: bool = d[0] > 0
-		c.text = "%s %s" % ["▲" if up else "▼", d[1]]
-		c.add_theme_color_override("font_color", Pal.GOOD if up else Pal.BAD)
-		var w := ceilf(UI.text_width(c, c.text)) + 2
-		if x + w > x0 + COL_W and x > x0:
-			row += 1
-			x = x0
-		if row >= 2:
-			break
-		c.position = Vector2(x, 48 + (4 + row) * LINE_H)
-		c.size = Vector2(w, LINE_H)
-		c.visible = true
-		x += w + 18
-		shown += 1
-	if deltas.is_empty():
-		_right_lines[4].text = "No change"
-	var gain := Items.score(it) - Items.score(fitted)
-	if absf(gain) < 0.05:
-		_overall.text = "Sidegrade for this slot"
-		_overall.add_theme_color_override("font_color", Pal.WARN)
-	elif gain > 0:
-		_overall.text = "▲ Upgrade for this slot"
-		_overall.add_theme_color_override("font_color", Pal.GOOD)
-	else:
-		_overall.text = "▼ Downgrade for this slot"
-		_overall.add_theme_color_override("font_color", Pal.BAD)
-
-
-func _button(i: int, text: String, action: Callable, enabled: bool) -> void:
-	var b := _buttons[i]
-	b.visible = true
-	b.text = text
-	b.disabled = not enabled
-	b.size.x = ceilf(UI.text_width(b, text)) + 48
-	_actions[i] = action
+		if not room:
+			lines.append("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
+		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.on_mission() and room, "primary": true})
+	_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
+	return buttons
 
 
 func _toggle(i: int) -> void:
@@ -571,37 +391,25 @@ func _press(i: int) -> void:
 			and sim.equipped[it["slot"]] != null and sim.equipped[it["slot"]]["id"] == it["id"]:
 		selected = {"kind": "slot", "slot": it["slot"]}
 	elif was.get("kind", "") == "slot" and not it.is_empty():
-		selected = {"kind": "stash", "id": it["id"]}
-		if _selected_item().is_empty():
-			selected = {}
+		if sim.equipped.get(it["slot"], null) != null and sim.equipped[it["slot"]]["id"] == it["id"]:
+			selected = was                   # still fitted (the bench, say): the slot stays picked
+		else:
+			selected = {"kind": "stash", "id": it["id"]}
+			if _selected_item().is_empty():
+				selected = {}
 	elif _selected_item().is_empty():
 		selected = {}
 	acted.emit()
 
 
 ## For the tests: every label with text.
-## The head's figure and unit share a row.
 func line_pairs() -> Array:
-	return _head.line_pairs() if _head.visible else []
+	return _pick.line_pairs()
 
 
 func text_nodes() -> Array:
-	var out: Array = [_left_title, _right_title, _hint, _overall]
-	out.append_array(_words)
-	out.append_array(_left_lines)
-	if _head.visible:
-		out.append_array(_head.text_nodes())
-	out.append_array(_right_lines)
-	for c in _chips:
-		if c.visible:
-			out.append(c)
+	var out: Array = _pick.text_nodes()
 	out.append_array(_containers.text_nodes())
 	out.append_array(_body.text_nodes())
 	out.append_array(_inv.text_nodes())
-	for b in _buttons:
-		if b.visible:
-			out.append(b)
-	for tb in _toggles:
-		if tb.visible:
-			out.append(tb)
 	return out

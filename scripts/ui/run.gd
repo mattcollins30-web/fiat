@@ -18,7 +18,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const People := preload("res://scripts/ui/people.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
-const ItemHead := preload("res://scripts/ui/item_head.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 
@@ -70,19 +70,11 @@ var _note: Label                   # the run's own line: leaving keeps the loot,
 var _button: Button                # Get out now
 var _button2: Button               # Stop auto, or Fill up then go
 var _inv
-var _pick: Panel
-var _pick_title: Label             # the pack's state with nothing picked; a pick shows the head
-var _pick_head                     # the pick's name, chips, headline and affix rows (item_head.gd)
-var _pick_right: Array[Label] = [] # the right column: what's fitted, what the fence pays
-var _pick_lines: Array[Label] = []
-var _ditch: Button
-var _hint: Label
-var _words: Array[Label] = []      # the item's own line, two rows under the figures
+var _pick                          # the pick panel (pick_panel.gd): the pick against the fitted, the buttons
 var _shown := ""
 var _head_face: TextureRect        # the crew's head, while he's out
 var _rig_cells: Array = []         # ItemCells, one a pouch, in the Runner panel
 var _rig_outlines: Array = []
-var _take: Button                  # a med or rounds from the pack into the rig
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
 var _dealt_seen_by := {}           # and by type, for the coloured numbers
@@ -150,26 +142,10 @@ func _init() -> void:
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
-	_pick = UI.panel(self, Rect2(GRID_X, PICK_Y, GRID_W, PICK_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_pick_title = UI.label(_pick, Rect2(PAD, 10, GRID_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for i in range(4):
-		_pick_lines.append(UI.label(_pick, Rect2(PAD, 48 + i * 28, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	var col_w: int = (GRID_W - 3 * PAD) / 2
-	_pick_head = ItemHead.new(col_w, true)
-	_pick_head.position = Vector2(PAD, 10)
-	_pick_head.visible = false
-	_pick.add_child(_pick_head)
-	for i in range(3):
-		_pick_right.append(UI.label(_pick, Rect2(PAD * 2 + col_w, 14 + i * 28, col_w, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	_hint = UI.label(_pick, Rect2(PAD, PICK_H - 6 - 44, GRID_W - 2 * PAD - 260, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for i in range(2):
-		_words.append(UI.label(_pick, Rect2(PAD, 228 + i * 20, (GRID_W - 3 * PAD) / 2, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	_ditch = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), false)
-	_ditch.pressed.connect(_ditch_pick)
-	_ditch.visible = false
-	_take = UI.button(_pick, Rect2(GRID_W - PAD - 240, PICK_H - 6 - 44, 240, 44), true)
-	_take.pressed.connect(_take_pick)
-	_take.visible = false
+	_pick = PickPanel.new(GRID_W, PICK_H)
+	_pick.position = Vector2(GRID_X, PICK_Y)
+	_pick.acted.connect(_on_pick_acted)
+	add_child(_pick)
 
 
 # ------------------------------------------------------------------ showing
@@ -309,58 +285,51 @@ func _tiles(tiles: Array, rows: Array) -> void:
 
 func _show_pick(m: Dictionary) -> void:
 	var it := _picked_item(m)
-	_say(it)
-	_ditch.visible = not it.is_empty()
-	_take.visible = false
-	for l in _pick_lines:
-		l.text = ""
-	for l in _pick_right:
-		l.text = ""
-	_pick_head.visible = not it.is_empty()
-	_pick_title.visible = it.is_empty()
 	if it.is_empty():
-		_pick_title.text = "The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()]
-		_pick_lines[0].text = "A rifle is four cells by one, armour three by three, a med or a part one"
+		var lines := ["A rifle is four cells by one, armour three by three, a med or a part one"]
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
-			_pick_lines[1].text = "Full: a better find swaps out the cheapest thing at least its size"
-			_pick_lines[2].text = "Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else ""
+			lines.append("Full: a better find swaps out the cheapest thing at least its size")
+			lines.append("Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
 		else:
-			_pick_lines[1].text = "%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"]
-		_hint.text = "Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet"
-		_hint.size.x = GRID_W - 2 * PAD
+			lines.append("%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"])
+		lines.append("Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet")
+		_pick.show_empty("The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()], lines)
+		_pick.set_buttons([])
 		return
 	var tail = ""
 	if Items.is_gun(it):
 		tail = [Items.fitted_words(it), Items.ammo_words(it).to_lower().replace("smg", "SMG")]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
-	_pick_head.show_item(it, sim, tail)
-	# the right column: the fence's price, and what's fitted in its slot
-	_pick_right[0].text = "The fence pays %s" % Fmt.money(sim.sell_price(it))
-	var fitted = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
-	if fitted != null:
-		UI.fit(_pick_right[1], ["Fitted now: %s, %s %s" % [Items.full_name(fitted), Items.headline(fitted)[0], Items.headline(fitted)[1]],
-			"Fitted now: %s, %s %s" % [fitted["base"], Items.headline(fitted)[0], Items.headline(fitted)[1]], "Fitted now: %s" % fitted["base"]])
-		UI.fit(_pick_right[2], Items.affix_options(fitted))
-	elif it["slot"] in Data.SLOTS:
-		_pick_right[1].text = "Nothing fitted as %s" % it["slot"].to_lower()
-	var cells_words := "%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]
-	_ditch.text = "Ditch %s" % it["base"].to_lower()
-	_ditch.size.x = ceilf(UI.text_width(_ditch, _ditch.text)) + 48
-	_ditch.position.x = GRID_W - PAD - _ditch.size.x
-	var left_edge: float = _ditch.position.x
-	# a med or rounds found out there can go in the rig now, if there's a pouch
-	_take.visible = Items.is_medical(it) or Items.is_ammo(it)
-	if _take.visible:
+	_pick.show_pick(it, sim, "The pick · in the pack", tail)
+	var buttons := []
+	if Items.is_medical(it) or Items.is_ammo(it):
+		# a med or rounds: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
-		_take.text = "Take into the rig" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")
-		_take.disabled = not room
-		_take.size.x = ceilf(UI.text_width(_take, _take.text)) + 48
-		_take.position.x = _ditch.position.x - 12 - _take.size.x
-		left_edge = _take.position.x
-	_hint.size.x = left_edge - PAD - 12
-	UI.fit(_hint, ["Ditched is gone; it frees %s" % cells_words, "Ditched frees %s" % cells_words, "Frees %s" % cells_words])
+		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
+			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else "Used under fire, over a few seconds",
+			"" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")])
+		buttons.append({"text": "Take into the rig", "action": _take_pick, "enabled": room, "primary": true})
+	elif it["slot"] in Data.SLOTS:
+		var fitted = sim.equipped.get(it["slot"], null)
+		if fitted != null:
+			var ftail = ""
+			if Items.is_gun(fitted):
+				ftail = [Items.fitted_words(fitted), Items.ammo_words(fitted).to_lower().replace("smg", "SMG")]
+			_pick.show_fitted(fitted, sim, "Fitted now", ftail)
+			var v: Array = PickPanel.verdict_of(it, fitted)
+			_pick.set_verdict(v[0], v[1], PickPanel.deltas_of(it, fitted))
+		else:
+			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
+		var can: bool = sim.can_equip_from_pack(it["id"])
+		if not can and fitted != null:
+			_pick.set_hint("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
+		buttons.append({"text": "Equip", "action": _equip_pick, "enabled": can, "primary": true})
+	else:
+		_pick.show_right_words("", "", [])
+	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": true, "primary": buttons.is_empty()})
+	_pick.set_buttons(buttons)
 
 
 func _picked_item(m: Dictionary) -> Dictionary:
@@ -445,22 +414,32 @@ func _show_rig() -> void:
 	var rows: int = 1 if cap <= 12 else 2
 	var per_row: int = ceili(float(cap) / rows)
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (pos / per_row) * (cell + Pal.CELL_GAP))
+	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
+	var pos := 0
 	var k := 0
+	var taken := {}
 	for it in sim.rig:
-		if k >= cap:
+		var w: int = mini(Items.size(it), per_row)
+		if pos % per_row + w > per_row and pos + (per_row - pos % per_row) + w <= cap:
+			pos += per_row - pos % per_row      # to the next row when the row's end would split it, and the cap allows
+		if k >= RIG_MAX or pos + w > cap:
 			break
 		var c = _rig_cells[k]
-		c.position = Vector2(PAD + (k % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (k / per_row) * (cell + Pal.CELL_GAP))
+		c.position = at.call(pos)
 		var lit: bool = Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null
-		c.show_item(it, lit, Vector2(cell, cell))
+		c.show_item(it, lit, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		c.visible = true
+		for j in range(w):
+			taken[pos + j] = true
+		pos += w
 		k += 1
-	var filled := k
+	for i in range(k, RIG_MAX):
+		_rig_cells[i].visible = false
 	for i in range(RIG_MAX):
-		_rig_cells[i].visible = i < filled
 		var o = _rig_outlines[i]
-		o.visible = i >= filled and i < cap
-		o.position = Vector2(PAD + (i % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (i / per_row) * (cell + Pal.CELL_GAP))
+		o.visible = i < cap and not taken.has(i)
+		o.position = at.call(i)
 		o.size = Vector2(cell, cell)
 
 
@@ -476,7 +455,6 @@ func _take_pick() -> void:
 	var it := _picked_item(sim.mission)
 	if not it.is_empty() and sim.take_from_pack(it["id"]):
 		_inv.selected = -1
-		acted.emit()
 
 
 func _get_out() -> void:
@@ -500,6 +478,14 @@ func _stop_auto() -> void:
 func _ditch_pick() -> void:
 	if _inv.selected >= 0 and sim.ditch(_inv.selected):
 		_inv.selected = -1
+
+
+func _equip_pick() -> void:
+	if _inv.selected >= 0 and sim.equip_from_pack(_inv.selected):
+		_inv.selected = -1
+
+
+func _on_pick_acted() -> void:
 	acted.emit()
 
 
@@ -512,23 +498,8 @@ func _on_inv_acted() -> void:
 
 
 ## For the tests: every label and visible button with text.
-## The item's own line, under the figures: who it was, where it came from.
-func _say(it: Dictionary) -> void:
-	UI.fit_sentences(_words[0], "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
-	_words[1].text = ""
-
-
 func text_nodes() -> Array:
-	var out: Array = [_pick_title, _hint]
-	out.append_array(_words)
-	out.append_array(_pick_lines)
-	out.append_array(_pick_right)
-	if _pick_head.visible:
-		out.append_array(_pick_head.text_nodes())
-	if _ditch.visible:
-		out.append(_ditch)
-	if _take.visible:
-		out.append(_take)
+	var out: Array = _pick.text_nodes()
 	out.append_array(_band.text_nodes())
 	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _runner["bar_text"], _rig_head, _take_head, _note])
 	if _runner["note"].visible:
@@ -548,8 +519,6 @@ func text_nodes() -> Array:
 
 ## Label + value pairs that share a line, and the headline + unit, for the fit check.
 func line_pairs() -> Array:
-	var out := []
-	if _pick_head.visible:
-		out.append_array(_pick_head.line_pairs())
+	var out: Array = _pick.line_pairs()
 	out.append([_band.headline, _band.unit])
 	return out
