@@ -1621,6 +1621,17 @@ not wound (no double punishment on the save). Smoke:
 through the fight a hair over the quarter; one stat cut and the other two whole; a second still one; the
 run, yard and clinic words fit; the price by level; Treat clears it; saved, loaded, gone with the dead.
 
+## On them, on you: the dots as chips (6 Oct)
+
+Matt: "on you: poisoned - the poisoned etc should be in the chip format. also add an 'on them:' line under
+the enemy". The run's fight box has a row under their HP bar, a muted "On them" key and chips in the
+elements' tones (Burning, Poisoned, Bleeding, Chilled, Shocked; `sim.dots_on_them()`, nothing while no one is
+there), and the runner's note line becomes an "On you" key and chips when their fire has left something on
+the runner, the med in use riding beside them as a muted chip with its seconds; with nothing on you the note
+reads as before. The fight box grew a row (`FIGHT_THEM_Y`, `KEY_W` 88) and everything under it moved down;
+twenty pixels stay above the buttons. Smoke: four chips on them in order, two on you, the med as a third, the
+row gone with no one there, everything cleared, each fitted and inside its box.
+
 ## Chips everywhere: the word and the affixes (2026-10-06)
 
 Matt's call: the radio's words as chips on the Runs card and the radio alike, and gear affixes as chips

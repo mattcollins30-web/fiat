@@ -420,6 +420,22 @@ func dots_on_you() -> Array:
 	return out
 
 
+## What's on them, as [words, tone] pairs for the chips: burning, poisoned, bleeding, chilled, shocked.
+func dots_on_them() -> Array:
+	var out := []
+	if mission == null or mission["remaining"] <= 0:
+		return out
+	var dots: Dictionary = mission.get("dots", {})
+	for ty in ["fire", "poison", "bleed"]:
+		if float(dots.get(ty, 0.0)) > 0.5:
+			out.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
+	if float(mission.get("chill_t", 0.0)) > 0.0:
+		out.append(["Chilled", "frost"])
+	if float(mission.get("shock_t", 0.0)) > 0.0:
+		out.append(["Shocked", "shock"])
+	return out
+
+
 ## Loot the pack can bring back.
 func capacity() -> int:
 	var extra := (6 if has_node("pack_mule") else 0) + int(tree_sum("pack_cells"))

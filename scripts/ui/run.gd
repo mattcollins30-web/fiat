@@ -20,6 +20,7 @@ const People := preload("res://scripts/ui/people.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const ItemHead := preload("res://scripts/ui/item_head.gd")
 const Band := preload("res://scripts/ui/band.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -41,7 +42,9 @@ const FIGHT_BOX_Y := BAND_H + 14
 const FIGHT_Y := FIGHT_BOX_Y + BOX_PAD
 const FIGHT_TILES_Y := FIGHT_Y + UI.HEAD_H + 16                 # room over the tiles for the crew head's face
 const FIGHT_BAR_Y := FIGHT_TILES_Y + UI.TILE_H + 6
-const FIGHT_BOX_H := FIGHT_BAR_Y + BAR_H + BOX_PAD - FIGHT_BOX_Y
+const FIGHT_THEM_Y := FIGHT_BAR_Y + BAR_H + 8                   # "On them": what your fire has left on them, as chips
+const KEY_W := 88                                              # the "On them" / "On you" key before the chips
+const FIGHT_BOX_H := FIGHT_THEM_Y + Chips.CHIP_H + BOX_PAD - FIGHT_BOX_Y
 const RUNNER_BOX_Y := FIGHT_BOX_Y + FIGHT_BOX_H + SECTION_GAP
 const RUNNER_Y := RUNNER_BOX_Y + BOX_PAD
 const RUNNER_BAR_Y := RUNNER_Y + UI.HEAD_H + 2
@@ -58,8 +61,8 @@ const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 var sim
 var _left: Panel                   # the column: the band and the sections
 var _band: Band
-var _fight := {}                   # {box, head, tiles[4], track, fill, bar_text}
-var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note}
+var _fight := {}                   # {box, head, tiles[4], track, fill, bar_text, key, chips}
+var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note, key, chips}
 var _rig_head: Label
 var _take_head: Label
 var _take_tiles: Array = []
@@ -104,12 +107,21 @@ func _init() -> void:
 	_fight["head"] = UI.head(_left, Rect2(PAD, FIGHT_Y, INNER - 80, UI.HEAD_H), "The fight")
 	_fight["tiles"] = UI.tile_row(_left, PAD, FIGHT_TILES_Y, INNER, 4)
 	_bar_make(_fight, FIGHT_BAR_Y)
+	_fight["key"] = UI.label(_left, Rect2(PAD, FIGHT_THEM_Y, KEY_W - 8, Chips.CHIP_H), "On them", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
+	_fight["chips"] = Chips.new(INNER - KEY_W)
+	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_THEM_Y)
+	_left.add_child(_fight["chips"])
 	_head_face = People.rect(_left, Vector2(BODY_W - PAD - 48, FIGHT_Y - 12), 0.375)     # 48 px, between the band and the tiles
 	# the runner: the head, your HP as the bar, four tiles, a note
 	_runner["head"] = UI.head(_left, Rect2(PAD, RUNNER_Y, INNER, UI.HEAD_H), "The runner")
 	_bar_make(_runner, RUNNER_BAR_Y)
 	_runner["tiles"] = UI.tile_row(_left, PAD, RUNNER_TILES_Y, INNER, 4)
 	_runner["note"] = UI.label(_left, Rect2(PAD, RUNNER_NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# "On you": what their fire has left on you, as chips in the elements' tones, with the med in use as a muted one
+	_runner["key"] = UI.label(_left, Rect2(PAD, RUNNER_NOTE_Y + 2, KEY_W - 8, Chips.CHIP_H), "On you", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
+	_runner["chips"] = Chips.new(INNER - KEY_W)
+	_runner["chips"].position = Vector2(PAD + KEY_W, RUNNER_NOTE_Y + 2)
+	_left.add_child(_runner["chips"])
 	# the rig's pouches: what's carried, a cell a pouch; a med's cell uses that med
 	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · a pouch is a button")
 	for k in range(RIG_MAX):
@@ -220,14 +232,28 @@ func show_state(s) -> void:
 	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
 		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("dry" if gun != null else "no gun")]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 else Pal.TEXT)
-	var on_you_words: Array = sim.dots_on_you()
+	# on them: the chips under their bar; nothing while there's no one to be on
+	var them: Array = sim.dots_on_them()
+	_fight["key"].visible = not them.is_empty()
+	_fight["chips"].visible = not them.is_empty()
+	if not them.is_empty():
+		_fight["chips"].show_chips(them)
+	# on you: the chips in place of the note, the med in use as a muted chip beside them
+	var on_you: Array = []
+	for ty in ["fire", "poison", "bleed"]:
+		if float(m.get("my_dots", {}).get(ty, 0.0)) > 0.5:
+			on_you.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
 	var med_sig := ""
+	_runner["key"].visible = not on_you.is_empty()
+	_runner["chips"].visible = not on_you.is_empty()
+	_runner["note"].visible = on_you.is_empty()
+	if not on_you.is_empty():
+		if m["using"] != null:
+			on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
+		_runner["chips"].show_chips(on_you)
 	if m["using"] != null:
 		_runner["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]
 		med_sig = "using"
-	elif not on_you_words.is_empty():
-		UI.fit(_runner["note"], ["On you: " + ", ".join(on_you_words), "On you: " + str(on_you_words[0])])
-		med_sig = "dots"
 	elif sim.first_med().is_empty():
 		_runner["note"].text = "No meds in the rig"
 		med_sig = "none"
@@ -510,7 +536,13 @@ func text_nodes() -> Array:
 	if _take.visible:
 		out.append(_take)
 	out.append_array(_band.text_nodes())
-	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _runner["bar_text"], _runner["note"], _rig_head, _take_head, _note])
+	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _runner["bar_text"], _rig_head, _take_head, _note])
+	if _runner["note"].visible:
+		out.append(_runner["note"])
+	for d in [_fight, _runner]:
+		if d["chips"].visible:
+			out.append(d["key"])
+			out.append_array(d["chips"].text_nodes())
 	for t in _fight["tiles"] + _runner["tiles"] + _take_tiles:
 		out.append_array([t["key"], t["value"]])
 	for b in [_button, _button2]:

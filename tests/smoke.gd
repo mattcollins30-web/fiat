@@ -4542,6 +4542,52 @@ func _loot_roll_checks(main) -> void:
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_thinning_checks(main)
 	_wound_checks(main)
+	_dots_chip_checks(main)
+
+
+## What's on them and on you as chips (Matt, 6 Oct): "On them" under their bar, "On you" in place of the runner's note.
+func _dots_chip_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 3
+	m["target_hp"] = 1e9
+	m["dots"] = {"fire": 20.0, "poison": 20.0}
+	m["chill_t"] = 1.0
+	m["shock_t"] = 1.0
+	m["my_dots"] = {"poison": 20.0, "bleed": 20.0}
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var rn = main._run
+	_check(rn._fight["chips"].visible and rn._fight["chips"].shown() == 4 and rn._fight["chips"].words(0) == "Burning" and rn._fight["chips"].words(2) == "Chilled" and rn._fight["chips"].words(3) == "Shocked", "On them reads %d chips: %s" % [rn._fight["chips"].shown(), rn._fight["chips"].words(0)])
+	_check(rn._runner["chips"].visible and not rn._runner["note"].visible and rn._runner["chips"].shown() == 2 and rn._runner["chips"].words(0) == "Poisoned" and rn._runner["chips"].words(1) == "Bleeding", "On you reads %d chips" % rn._runner["chips"].shown())
+	_check(rn._fight["chips"].position.y + Chips.CHIP_H <= rn._fight["box"].position.y + rn._fight["box"].size.y and rn._runner["chips"].position.y + Chips.CHIP_H <= rn._runner["box"].position.y + rn._runner["box"].size.y, "the chips sit out of their boxes")
+	_check_fit(main, "Run (on them, on you)")
+	# a med in use rides beside the chips as a muted one; nothing on you brings the note back
+	m["using"] = {"name": "Bandage", "heal": 10.0, "left": 4.0}      # a med in use, by hand: the chip beside what's on you
+	main.refresh()
+	_check(rn._runner["chips"].shown() == 3 and rn._runner["chips"].words(2).contains(" s"), "the med in use is not a chip beside what's on you: %d" % rn._runner["chips"].shown())
+	_check_fit(main, "Run (on you, med)")
+	m["using"] = null
+	# no one left to be on: the row goes even with dots in the record
+	m["remaining"] = 0
+	main.refresh()
+	_check(not rn._fight["chips"].visible, "On them shows with no one there")
+	m["remaining"] = 3
+	m["my_dots"] = {}
+	m["dots"] = {}
+	m["chill_t"] = 0.0
+	m["shock_t"] = 0.0
+	main.refresh()
+	_check(not rn._fight["chips"].visible and not rn._fight["key"].visible and rn._runner["note"].visible and not rn._runner["chips"].visible, "the chips did not clear with nothing on anyone")
+	_check_fit(main, "Run (nothing on anyone)")
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the dots as chips ok: on them, on you, the med beside them, cleared")
 
 
 ## 30: wounds. A hit that takes the runner under a quarter leaves one stat cut a tenth until the clinic treats

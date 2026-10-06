@@ -31,11 +31,18 @@ func _next() -> void:
 		quit()
 		return
 	var r: String = _rooms[_k]
-	if r == "run":
+	if r == "run" or r == "dots":
 		if not main.sim.on_mission():
 			main.sim.deploy(0)
 		for i in range(12):
 			main.sim.advance(1.0)
+		if r == "dots":
+			var m: Dictionary = main.sim.mission
+			m["remaining"] = maxi(m["remaining"], 3)
+			m["target_hp"] = maxf(m["target_hp"], 400.0)
+			m["dots"] = {"fire": 20.0, "poison": 20.0}
+			m["chill_t"] = 1.0
+			m["my_dots"] = {"poison": 20.0, "bleed": 20.0}
 		main.show_room(main.MISSIONS)
 	elif r == "pick":
 		# the Lock-up with the stash's best-affixed piece picked
