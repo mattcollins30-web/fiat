@@ -123,7 +123,7 @@ func _init() -> void:
 	_runner["chips"].position = Vector2(PAD + KEY_W, RUNNER_NOTE_Y + 2)
 	_left.add_child(_runner["chips"])
 	# the rig's pouches: what's carried, a cell a pouch; a med's cell uses that med
-	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · a pouch is a button")
+	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · use an item in the rig")
 	for k in range(RIG_MAX):
 		var o := UI.panel(_left, Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
 		o.visible = false
@@ -238,28 +238,19 @@ func show_state(s) -> void:
 	_fight["chips"].visible = not them.is_empty()
 	if not them.is_empty():
 		_fight["chips"].show_chips(them)
-	# on you: the chips in place of the note, the med in use as a muted chip beside them
+	# on you: the line is the chips' alone (Matt, 6 Oct): what their fire has left on you, and the med in use as a muted one
 	var on_you: Array = []
 	for ty in ["fire", "poison", "bleed"]:
 		if float(m.get("my_dots", {}).get(ty, 0.0)) > 0.5:
 			on_you.append([{"fire": "Burning", "poison": "Poisoned", "bleed": "Bleeding"}[ty], ty])
-	var med_sig := ""
+	if m["using"] != null:
+		on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
+	var med_sig: String = ("using" if m["using"] != null else ("none" if sim.first_med().is_empty() else "use:" + sim.first_med()["base"]))
 	_runner["key"].visible = not on_you.is_empty()
 	_runner["chips"].visible = not on_you.is_empty()
-	_runner["note"].visible = on_you.is_empty()
+	_runner["note"].visible = false
 	if not on_you.is_empty():
-		if m["using"] != null:
-			on_you.append(["%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])], "%s, %.0f s" % [m["using"]["name"], ceilf(m["using"]["left"])], Pal.TEXT_2])
 		_runner["chips"].show_chips(on_you)
-	if m["using"] != null:
-		_runner["note"].text = "%s, %.0f s to go" % [m["using"]["name"], ceilf(m["using"]["left"])]
-		med_sig = "using"
-	elif sim.first_med().is_empty():
-		_runner["note"].text = "No meds in the rig"
-		med_sig = "none"
-	else:
-		_runner["note"].text = "Press a pouch to use its med"
-		med_sig = "use:" + sim.first_med()["base"]
 	_show_rig()
 	# the take
 	_tiles(_take_tiles, [["Cash", [Fmt.money(m["cash"])]], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])

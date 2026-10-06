@@ -4571,6 +4571,10 @@ func _dots_chip_checks(main) -> void:
 	main.refresh()
 	_check(rn._runner["chips"].shown() == 3 and rn._runner["chips"].words(2).contains(" s"), "the med in use is not a chip beside what's on you: %d" % rn._runner["chips"].shown())
 	_check_fit(main, "Run (on you, med)")
+	m["my_dots"] = {}
+	main.refresh()
+	_check(rn._runner["chips"].visible and rn._runner["chips"].shown() == 1 and not rn._runner["note"].visible, "the med in use alone is not a chip: %d" % rn._runner["chips"].shown())
+	m["my_dots"] = {"poison": 20.0, "bleed": 20.0}
 	m["using"] = null
 	# no one left to be on: the row goes even with dots in the record
 	m["remaining"] = 0
@@ -4582,7 +4586,7 @@ func _dots_chip_checks(main) -> void:
 	m["chill_t"] = 0.0
 	m["shock_t"] = 0.0
 	main.refresh()
-	_check(not rn._fight["chips"].visible and not rn._fight["key"].visible and rn._runner["note"].visible and not rn._runner["chips"].visible, "the chips did not clear with nothing on anyone")
+	_check(not rn._fight["chips"].visible and not rn._fight["key"].visible and not rn._runner["note"].visible and not rn._runner["chips"].visible, "the chips did not clear with nothing on anyone (the line is the chips' alone)")
 	_check_fit(main, "Run (nothing on anyone)")
 	sim.extract_now()
 	sim.load_dict(saved)
