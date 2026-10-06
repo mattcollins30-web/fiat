@@ -316,7 +316,8 @@ pass. In build order; the economy items last so the reader runs once over all of
 
 Measured by `tools\balance.bat` on the Legion (eleven reads at once: the five classes keystones-first,
 the five element builds, the loot probe; `tests/balance.gd -- 8 gate <Class> [element]` each, then
-`tools/balance_summary.py` writes `docs/balance/summary.md` with the table below read red or green) before
+`tools/balance_summary.gd` writes `docs/balance/summary.md` with the table below read red or green;
+`tools\read.bat <hours> <Class> [element]` for one build) before
 any value moves, and again after each change; the pass ends when every row is green. Figures to be set
 with Matt's death count from the playtest; the rest are defaults to overrule. Known before the first read:
 +35% quality scales every non-common rarity weight alike, so the Elite share goes 2.0% → 2.4%, not 3%; the

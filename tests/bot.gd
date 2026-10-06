@@ -14,6 +14,7 @@ const CLIMB := 0.9
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
 var element := ""              # a build: its tree to the keystone first, its gear held, the bench aimed at it
+var last_tier := -1            # the tier of the last run, the one the climb reads
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
@@ -22,13 +23,19 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 func step(sim) -> int:
 	# patched up first, then the pick: the odds read at full strength, so a
 	# boss gets armed when the runner can take him, not refused because he's hurt
+	# whole before the pick: treated when the cash is there three times over,
+	# rested otherwise; under 70% it waits. Whole every time, the odds read once
+	# a kit rather than once a mission (the reader's key carries the HP)
 	if sim.hp < sim.max_hp() * 0.7:
 		if not (sim.cash > sim.treat_cost() * 3.0 and sim.treat()):
 			sim.advance(60.0)
 			return -1
-	elif sim.wound != "" and sim.cash > sim.treat_cost() * 3.0:
+	elif sim.needs_treating() and sim.cash > sim.treat_cost() * 3.0:
 		sim.treat()                       # the wound seen to on return, when the cash is there (30)
+	elif sim.hp < sim.max_hp():
+		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	var t := pick_tier(sim)
+	last_tier = t
 	sim.deploy(t)
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
@@ -251,9 +258,11 @@ func _hold_the_type(sim, type: String) -> void:
 
 
 func pick_tier(sim) -> int:
+	# from the top down, stopping at the first tier that reads PUSH: each read
+	# is the lookout's dry runs, so the tiers under the one it will run go unread
 	var best := -1
 	var best_odds := -1.0
-	for i in range(Data.TIERS.size()):
+	for i in range(Data.TIERS.size() - 1, -1, -1):
 		if not sim.tier_open(i):
 			continue
 		while sim.depth[i] > 1 and sim.survival(i) < PUSH:
@@ -261,8 +270,9 @@ func pick_tier(sim) -> int:
 		var odds: float = sim.survival(i)
 		if odds >= PUSH:
 			best = i
-		elif best < 0 and odds > best_odds:
-			best_odds = odds
+			break
+		if odds >= best_odds:
+			best_odds = odds                  # ties to the lower tier: the old fallback was the lowest open tier
 			best = i
 	best = maxi(best, 0)
 	# the zone's boss, once its last site is cleared and the crew's head still
@@ -280,11 +290,13 @@ func pick_tier(sim) -> int:
 	return best
 
 
-## Climb: when a tier reads safe, go a depth deeper on it.
+## Climb: when the tier just run reads safe, go a depth deeper on it. The
+## tier just run alone: a player digs where they play, and every tier read
+## costs the lookout's dry runs.
 func _climb(sim) -> void:
-	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i] and sim.survival(i) >= CLIMB:
-			sim.set_depth(i, sim.depth[i] + 1)
+	var i := last_tier
+	if i >= 0 and sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i] and sim.survival(i) >= CLIMB:
+		sim.set_depth(i, sim.depth[i] + 1)
 
 
 func _train_tree(sim) -> void:
@@ -331,29 +343,51 @@ func _restock_meds(sim) -> void:
 			return
 
 
-## Rounds for the primary: a stack in the rig, two when there's room; bought
-## by the box when the stash has none. Spare stacks for other types are sold with the spares.
+## Rounds for both guns: two runs' worth for the primary, one for the
+## secondary; bought by the box when the stash has none. A stack in the rig
+## for a type neither gun fires goes back to the stash first (a gun swapped
+## leaves its old rounds behind), and sells with the spares.
 func _restock_rounds(sim) -> void:
-	var gun = sim.equipped["Primary"]
-	if gun == null:
-		return
-	var type: String = Items.ammo_type(gun)
-	# rounds for two runs: the gun's rate over two minutes, twice
-	var want: int = int(Items.base_of(gun)["rof"] * 120.0 * 2.0)
-	if sim.rounds_for(gun) == 0 and not sim.rig_room(1) and sim.med_capacity() > 0:
-		sim.leave(sim.rig.back()["id"])     # a dry gun beats a third bandage
-	var guard := 0
-	while sim.rounds_for(gun) < want and sim.rig_room(1) and guard < 6:
-		guard += 1
-		var took := false
-		for it in sim.stash:
-			if Items.is_ammo(it) and Items.base_of(it)["type"] == type:
-				took = sim.take(it["id"])
-				break
-		if took:
+	var types: Array = []
+	for s in ["Primary", "Secondary"]:
+		if sim.equipped[s] != null:
+			types.append(Items.ammo_type(sim.equipped[s]))
+	for it in sim.rig.duplicate():
+		if Items.is_ammo(it) and not (Items.base_of(it)["type"] in types):
+			sim.leave(it["id"])
+	for pair in [["Primary", 2.0], ["Secondary", 1.0]]:
+		var gun = sim.equipped[pair[0]]
+		if gun == null or Items.ammo_type(gun) == "none":
 			continue
-		if not sim.buy_ammo(type):
-			return
+		var type: String = Items.ammo_type(gun)
+		# rounds for a run: the gun's rate over two minutes
+		var want: int = int(Items.base_of(gun)["rof"] * 120.0 * pair[1])
+		if pair[0] == "Primary" and sim.rounds_for(gun) == 0 and not sim.rig_room(1) and sim.med_capacity() > 0:
+			sim.leave(sim.rig.back()["id"])     # a dry primary beats a third bandage
+		var guard := 0
+		while sim.rounds_for(gun) < want and sim.rig_room(1) and guard < 6:
+			guard += 1
+			var took := false
+			for it in sim.stash:
+				if Items.is_ammo(it) and Items.base_of(it)["type"] == type:
+					took = sim.take(it["id"])
+					break
+			if took:
+				continue
+			if not sim.buy_ammo(type):
+				if sim.stash_room(1):
+					break
+				# no room for the box: the cheapest spare goes
+				var worst := {}
+				for it in sim.stash:
+					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it):
+						continue
+					if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
+						continue
+					if worst.is_empty() or it["value"] < worst["value"]:
+						worst = it
+				if worst.is_empty() or not sim.sell(worst):
+					break
 
 
 func _sell_spares(sim) -> void:
@@ -370,12 +404,14 @@ func _sell_spares(sim) -> void:
 		if Items.is_medical(it):
 			continue
 		if Items.is_ammo(it):
-			var gun = sim.equipped["Primary"]
-			if gun == null or Items.base_of(it)["type"] != Items.ammo_type(gun):
+			var fired := false
+			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:
+				fired = fired or (g != null and Items.base_of(it)["type"] == Items.ammo_type(g))
+			if not fired:
 				sim.sell(it)
 			continue
-		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type:
-			continue
+		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and _best_of_type(sim, keep_type) == it:
+			continue                      # the best spare of the class's type stays; the rest of them go
 		if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
 			continue
 		if element != "" and it["slot"] == "Primary":
@@ -391,6 +427,15 @@ func _sell_spares(sim) -> void:
 		var best: Dictionary = sim.best_in_stash(it["slot"])
 		if best.is_empty() or best["id"] != it["id"]:
 			sim.sell(it)
+
+
+## The best primary of a type in the stash, by score; {} when none.
+func _best_of_type(sim, type: String) -> Dictionary:
+	var best := {}
+	for it in sim.stash:
+		if it["slot"] == "Primary" and Items.base_of(it).get("type", "") == type and (best.is_empty() or Items.score(it) > Items.score(best)):
+			best = it
+	return best
 
 
 func _buy_upgrade(sim) -> void:

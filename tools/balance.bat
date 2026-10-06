@@ -43,7 +43,7 @@ echo   %DONE% of %N% finished
 if %DONE% lss %N% goto wait
 del /q docs\balance\*.done 2>nul
 
-python tools\balance_summary.py
+"%GODOT%" --headless --path . -s tools/balance_summary.gd
 if errorlevel 1 (
 	echo The summary failed; the raw reads are in docs\balance\*.txt all the same.
 	exit /b 1

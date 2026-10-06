@@ -1750,6 +1750,27 @@ tuned: `_roll_rarity` scales every non-common weight by the quality bonus alike,
 Elite share from 2.0% to 2.4% - the "Loot quality visible" gate (3.0% boosted) can't go green on the
 current weights, which is what the pass is for.
 
+**The first full read, and the bot fixed (6 Oct).** Matt ran the pass on the Legion: eleven reads in 7 to
+27 minutes of wall, `docs/balance/summary.md` nine of eleven red. The summary is GDScript now
+(`tools/balance_summary.gd`, run by Godot like the reads; the Legion has no Python), and `tools\read.bat
+<hours> <Class> [element]` does one read for a quick look - Matt: "just create something for me to run
+these and I'll run them in 2/3 mins instead of the 10+ it's taking you". Three of the reds were the bot,
+not the game, and are fixed before any number moves: (1) the wall time was the odds reader - sixty dry
+runs a tier - read on every open tier every mission; the pick now scans from the top tier down and stops
+at the first that reads PUSH, the climb reads only the tier just run, and the runner is made whole
+(treated or rested) before each pick; four hours of the shock Drifter went from 398 s to 201 s with the
+same progress. (2) The Scrapper never reached the bank because the bot went dry at hour 4.4: it swapped to
+a Workshop carbine with Nails and Rifle rounds still in the rig and a stash full of hoarded improvised
+guns (every primary of the class's type was kept), so `buy_ammo` had no room for a box and it fought
+unarmed at 5.9 dps for four hours. The bot keeps only the best spare of its type, leaves rig stacks
+neither gun fires, restocks the secondary too, and sells its cheapest spare (never a paper or the
+build's socketable) when a box has no room; the Scrapper now banks at 3.6 h with its capstone at 4.4 h.
+(3) The 0% odds on tiers a build had just cleared (Poacher T3 to T6) are the same dry gun. Reviewer:
+the pick's fallback ties go to the lower tier as before; spare ammo of the secondary's type is kept now
+that it's bought; the "dry gun beats a bandage" leave is the primary's alone. Still the bot's, not
+measured yet: deaths and wounds, since the bot bails at a quarter HP, and depth pace, since the bot
+climbs tiers before it digs; the dig rule is next.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are
