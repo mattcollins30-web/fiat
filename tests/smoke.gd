@@ -4569,6 +4569,7 @@ func _loot_roll_checks(main) -> void:
 	_contract_material_checks(main)
 	_retire_checks(main)
 	_last_add_checks(main)
+	_dig_checks(main)
 
 
 ## The pool's last add (6 Oct): the top of each slot, resist gear with the resist in the base, the elements' five
@@ -5738,3 +5739,50 @@ func _fill_up_checks(main) -> void:
 	sim.advance(0.5)
 	_check(not sim.on_mission(), "fill up then go did not leave with the pack full")
 	print("fill up, then go ok")
+
+
+## The bot's dig rule: past the campaign it keeps to the site it has dug
+## deepest while that reads PUSH at its depth, and digs it a depth when it
+## reads CLIMB; a weak runner falls back to the ordinary pick.
+func _dig_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.candidates = []
+	sim.auto_equip = false
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = 1
+	for z in range(Data.ZONES.size()):
+		sim.bosses_beaten[z] = true
+	sim.best_depth[5] = 3
+	sim.depth[5] = 3
+	sim.xp = Data.xp_for_level(90)
+	for s in ["Primary", "Armour", "Helmet"]:
+		sim.equipped[s] = sim._plain(s, Data.BASES[s].back()["name"])
+	sim.equipped["Primary"]["affixes"] = [{"stat": "damage_pct", "value": 3000.0, "tier": 6}]
+	sim.equipped["Secondary"] = null
+	sim.wound = ""
+	sim.cash = 100000.0
+	sim.rig = [sim._plain(Data.AMMO, sim.ammo_box("smg")["name"])]
+	var bot = Bot.new()
+	sim.hp = sim.max_hp()
+	_check(sim.campaign_done(), "the dig check did not finish the campaign")
+	_check(sim.has_rounds(sim.equipped["Primary"]), "the dig check's gun is dry")
+	var t: int = bot.pick_tier(sim)
+	_check(t == 5 and sim.depth[5] == 3, "past the campaign the bot did not keep to the site dug deepest: T%d at depth %d (odds %.2f)" % [t, sim.depth[t], sim.survival(t)])
+	bot.last_tier = t
+	bot._climb(sim)
+	_check(sim.depth[5] == 4, "the bot did not dig its site a depth at CLIMB: depth %d, odds %.2f" % [sim.depth[5], sim.survival(5)])
+	# a runner that can't hold the depth steps back and picks as before: no
+	# armour, no meds, level 3 - under at T5 whatever the tree
+	sim.equipped["Primary"]["affixes"] = []
+	sim.equipped["Armour"] = null
+	sim.equipped["Helmet"] = null
+	sim.xp = Data.xp_for_level(3)
+	sim.hp = sim.max_hp()
+	t = bot.pick_tier(sim)
+	_check(sim.depth[5] == 1 and (t != 5) == (sim.survival(5) < Bot.PUSH), "a weak runner past the campaign did not step its site back and pick by the odds: T%d, site depth %d, odds %.2f" % [t, sim.depth[5], sim.survival(5)])
+	sim.boss_armed.clear()
+	sim.load_dict(saved)
+	print("the dig rule ok")

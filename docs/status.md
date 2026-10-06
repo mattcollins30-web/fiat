@@ -1771,6 +1771,17 @@ that it's bought; the "dry gun beats a bandage" leave is the primary's alone. St
 measured yet: deaths and wounds, since the bot bails at a quarter HP, and depth pace, since the bot
 climbs tiers before it digs; the dig rule is next.
 
+**The dig rule (6 Oct).** Depth is clamped to 1 until the campaign is done (`set_depth`), and past it every
+site at a depth is the same fight (`Data.CURVE`), the sites differing by what they drop - so a player digs
+one site. The bot now does: past the campaign `pick_tier` keeps to the site it has dug deepest while it
+reads PUSH at its depth (stepping back a depth at a time when it doesn't), and the climb digs it a depth
+at CLIMB; a runner that can't hold any depth falls back to the top-down pick. Before this the pick took
+the highest tier at PUSH, so a build left a 100% site for a 76% one and never dug. The depth-pace gate
+(a depth an hour from hour 4) assumes the campaign is done by hour 4, which the first read says it isn't
+for most builds - the bank at 2.8 to 7.4 h - so that row stays with the pass. Smoke: `_dig_checks` - a
+strong runner past the campaign keeps to its deepest site and digs it; a weak one steps back and picks by
+the odds. `tools\smoke.bat` runs the smoke on the Legion and prints the failures and the verdict.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

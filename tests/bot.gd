@@ -239,7 +239,8 @@ func _second_past_for(sim) -> void:
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back
 ## down first where it has climbed past that - a player would. If nothing
-## reads PUSH, the tier with the best odds, and a full rest before it.
+## reads PUSH, the tier with the best odds, and a full rest before it. Past
+## the campaign, the site dug deepest, while it reads PUSH at its depth.
 ## A build keeps its gun type: the best primary of the class's type from the
 ## stash goes in if it's within 70% of whatever's fitted, so the typed
 ## notables and the keystone count.
@@ -262,18 +263,32 @@ func pick_tier(sim) -> int:
 	# is the lookout's dry runs, so the tiers under the one it will run go unread
 	var best := -1
 	var best_odds := -1.0
-	for i in range(Data.TIERS.size() - 1, -1, -1):
-		if not sim.tier_open(i):
-			continue
-		while sim.depth[i] > 1 and sim.survival(i) < PUSH:
-			sim.set_depth(i, sim.depth[i] - 1)
-		var odds: float = sim.survival(i)
-		if odds >= PUSH:
-			best = i
-			break
-		if odds >= best_odds:
-			best_odds = odds                  # ties to the lower tier: the old fallback was the lowest open tier
-			best = i
+	# the endgame: past the campaign every site at a depth is the same fight
+	# (the curve), the sites differing by what they drop, so a player digs
+	# one site; the bot keeps to the one it has dug deepest while it reads PUSH
+	if sim.campaign_done():
+		var site := -1
+		for i in range(Data.TIERS.size()):
+			if sim.tier_open(i) and (site < 0 or sim.best_depth[i] >= sim.best_depth[site]):
+				site = i
+		if site >= 0:
+			while sim.depth[site] > 1 and sim.survival(site) < PUSH:
+				sim.set_depth(site, sim.depth[site] - 1)
+			if sim.survival(site) >= PUSH:
+				best = site
+	if best < 0:
+		for i in range(Data.TIERS.size() - 1, -1, -1):
+			if not sim.tier_open(i):
+				continue
+			while sim.depth[i] > 1 and sim.survival(i) < PUSH:
+				sim.set_depth(i, sim.depth[i] - 1)
+			var odds: float = sim.survival(i)
+			if odds >= PUSH:
+				best = i
+				break
+			if odds >= best_odds:
+				best_odds = odds                  # ties to the lower tier: the old fallback was the lowest open tier
+				best = i
 	best = maxi(best, 0)
 	# the zone's boss, once its last site is cleared and the crew's head still
 	# stands: armed when the odds hold with them in; past the campaign, when
