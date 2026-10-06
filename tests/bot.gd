@@ -148,15 +148,16 @@ func _endgame(sim) -> void:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()
 		bought.append([sim.elapsed, "the mate: %s" % name])
-	# the cash sinks past the campaign: a word called in on the tier it'll run, and
-	# the kit insured, while there's ten times the price in hand
+	# the cash sinks past the campaign: a word called in on the tier it'll run (the
+	# words go with the run, so it's a sink every run), and the kit insured, while
+	# there's three times the price in hand - a flush player's reserve, not a miser's
 	if sim.campaign_done():
 		var t: int = pick_tier(sim)
-		while sim.can_add_word(t) and sim.cash >= sim.juice_cost(t) * 10:
+		while sim.can_add_word(t) and sim.cash >= sim.juice_cost(t) * 3:
 			var cost: int = sim.juice_cost(t)
 			sim.add_word(t, sim.juice_options(t)[0])
 			bought.append([sim.elapsed, "word on tier %d for £%d" % [t, cost]])
-		if sim.can_insure(t) and sim.cash >= sim.insure_cost(t) * 10 and sim.survival(t) < 0.95:
+		if sim.can_insure(t) and sim.cash >= sim.insure_cost(t) * 3 and sim.survival(t) < 0.95:
 			sim.set_insure(true)
 	# the bench: an affix on what's worn, while the notes stay above the next boss's price
 	var floor_notes: int = 0
