@@ -45,6 +45,17 @@ func _next() -> void:
 		main._workshop.sel_id = -1
 		main.refresh()
 		main._workshop._pick_cell(main._workshop._inv.cell_of(dot["id"]))
+	elif r == "word":
+		# the fence's word: the offer, and the last thing it got you
+		if main.sim.on_mission():
+			main.sim.extract_now()
+		main.sim.cash = maxf(main.sim.cash, 50000.0)
+		main.show_room(main.MARKET)
+		main._fence._show("word")
+		main.refresh()
+		if not main.sim.gamble.is_empty():
+			main._fence._gamble(0)
+		main.refresh()
 	elif r == "runpick":
 		# a live run with an armour in the pack picked, against the one worn
 		if not main.sim.on_mission():

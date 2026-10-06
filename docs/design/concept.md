@@ -312,6 +312,27 @@ pass. In build order; the economy items last so the reader runs once over all of
     helmet, breathing set: fire resist +40% at two, all resists +15% and regen at three). Art for every one
     in the manifests.
 
+39. **The fence's word: the gamble** (Matt, 6 Oct, during the pass: "lets just design a late game cash
+    spend now - may as well ... the mechanics of it need to copy diablo 2 - each item rotated in a new
+    stash tab at the fence. A base image of a rifle for example which then rolls you a random rifle.
+    Not all items available at a time so you have to do a run or two to get a refresh you want to
+    gamble on. Also need to include uniques at any stage so you could always gamble a unique on a
+    fresh save with some immense luck."). The endgame's sink that scales: every other sink is bought
+    once (the works, the bench, the mate) or priced off the depth rather than the pay (the word, until
+    the pass). *Built the same day:* the fence's fourth tab, "A word in the right ear". Eleven kinds -
+    the five gun types, a sidearm, a helmet, body armour, a rig, a pack, a charm - of which five are on
+    offer at a time, rotated with every restock (so after every run) and only those the fence can source
+    at the tier opened (a fresh yard sees nine; no rifle or SMG at tier 1). One price for every kind,
+    two runs' pay on the top open tier (`run_pay`: the tier's cash × its pool, at its depth), never
+    under £300 at the day's prices. Pay and a random one of the kind lands in the stash: rolled at the
+    loot tier opened, at the best depth there, with the fence's quality on it (+50%, which compounds up
+    the rarity ladder), never Common, of the kind's type; and one in fifty is a unique of the kind, from
+    the first restock on. The kind leaves the offer until the next run. The screen: five tiles with a
+    base's picture, the kind, "sealed · any rarity" and Pay; a bought kind reads Taken; under them the
+    last thing the word got you, as the item head. The bot gambles its primary's kind, else armour or a
+    helmet, one a run, at three times the price in hand. The figures (two runs, £300, +50%, one in
+    fifty) are the pass's to move.
+
 ### The gates
 
 Measured by `tools\balance.bat` on the Legion (eleven reads at once: the five classes keystones-first,

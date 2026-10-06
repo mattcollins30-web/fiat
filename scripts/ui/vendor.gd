@@ -39,12 +39,25 @@ const FACE := 116                                             # the portrait in 
 const TOP := BAND_H + 36                                      # the sections under the band and the vendor's line
 const TILE_GAP := 8
 const SIDE_TILES := 11            # five rarities, five boxes, the shelf (the pass, 6 Oct)
+const WORD_Y := PAD + 38 + 28 + 12 + UI.HEAD_H + 4                # the offer row's top, under the title, the line and its head
+const OFFER_W := (GRID_W - 2 * PAD - 4 * TILE_GAP) / 5
+const OFFER_H := 180
+const LAST_Y := WORD_Y + OFFER_H + 16 + UI.HEAD_H + 4             # the last word's item head
 
 var kind := "fence"                # "fence" or "clinic"
 var sim
 var showing := "shelf"             # which grid: "shelf" or "stash"
 var selected := {}                 # {"kind": "shelf"|"stash", "id": n}, or {}
 var _tabs: Array[Button] = []
+var _word: Panel                   # the fence's word: the gamble
+var _word_title: Label
+var _word_line: Label
+var _word_head: Label
+var _word_note: Label
+var _offers: Array = []            # {panel, art, kind, sub, pay} a kind on offer
+var _last_head: Label
+var _last                          # the last thing the word got you (item_head.gd)
+var _last_none: Label
 var _deals: Panel                  # the fence's contracts and the mate, in the grid's place
 var _deal_rows: Array = []         # per contract: {title, pay, have, hand, pass}
 var _mate_title: Label
@@ -96,11 +109,42 @@ func _init() -> void:
 	_face = People.rect(_band, Vector2(PAD, 16), FACE / 128.0)
 	_band.portrait_width(FACE)
 	_said.append(UI.label(_side, Rect2(PAD, BAND_H + 4, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
-	for k in range(3):
+	for k in range(4):
 		var b := UI.button(_side, Rect2(PAD + k * ((INNER - 8) / 2 + 8), BAND_H - 14 - TAB_H, (INNER - 8) / 2, TAB_H), k == 0)
-		b.pressed.connect(_show.bind(["shelf", "stash", "contracts"][k]))
+		b.pressed.connect(_show.bind(["shelf", "stash", "contracts", "word"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
+	# the fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
+	_word = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_word.visible = false
+	_word_title = UI.label(_word, Rect2(PAD, PAD, GRID_W - 2 * PAD, 36), "A word in the right ear", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_word_line = UI.label(_word, Rect2(PAD, PAD + 38, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_word_head = UI.head(_word, Rect2(PAD, WORD_Y - UI.HEAD_H - 4, GRID_W - 2 * PAD, UI.HEAD_H), "On offer · five kinds · new ones after every run")
+	for k in range(Data.GAMBLE_SHOWN):
+		var x := PAD + k * (OFFER_W + TILE_GAP)
+		var o := {}
+		o["panel"] = UI.panel(_word, Rect2(x, WORD_Y, OFFER_W, OFFER_H), UI.box(Pal.BG, 6))
+		o["art"] = TextureRect.new()
+		o["art"].position = Vector2(8, 8)
+		o["art"].size = Vector2(OFFER_W - 16, 64)
+		o["art"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		o["art"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		o["art"].texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		o["art"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+		o["panel"].add_child(o["art"])
+		o["kind"] = UI.label(o["panel"], Rect2(8, 76, OFFER_W - 16, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		o["sub"] = UI.label(o["panel"], Rect2(8, 102, OFFER_W - 16, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		o["pay"] = UI.button(o["panel"], Rect2(8, OFFER_H - 8 - 40, OFFER_W - 16, 40), true)
+		o["pay"].add_theme_font_size_override("font_size", 18)
+		o["pay"].pressed.connect(_gamble.bind(k))
+		_offers.append(o)
+	_last_head = UI.head(_word, Rect2(PAD, LAST_Y - UI.HEAD_H - 4, GRID_W - 2 * PAD, UI.HEAD_H), "The last word")
+	_last = ItemHead.new(GRID_W - 2 * PAD, true)
+	_last.position = Vector2(PAD, LAST_Y)
+	_last.visible = false
+	_word.add_child(_last)
+	_last_none = UI.label(_word, Rect2(PAD, LAST_Y, GRID_W - 2 * PAD, 28), "Nothing yet. Pay, and whatever he gets you lands in the stash.", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_word_note = UI.label(_word, Rect2(PAD, GRID_H - PAD - 28, GRID_W - 2 * PAD, 28), "Rolled at the best tier you have opened, never Common. One in fifty is a unique of the kind.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the contracts: three cards and the mate's, where the grid would be
 	_deals = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_deals.visible = false
@@ -195,12 +239,12 @@ func _init() -> void:
 func setup(k: String) -> void:
 	kind = k
 	if kind == "fence":
-		var tw := (INNER - 16) / 3
-		for i in range(3):
-			_tabs[i].position.x = PAD + i * (tw + 8)
+		var tw := (BODY_W - 16 - 24) / 4            # four across the band's foot, from its edge
+		for i in range(4):
+			_tabs[i].position.x = 8 + i * (tw + 8)
 			_tabs[i].size.x = tw
 			_tabs[i].visible = true
-			_tabs[i].add_theme_font_size_override("font_size", 22)
+			_tabs[i].add_theme_font_size_override("font_size", 16)     # four across: "Contracts ✓1" wants 146 at 18
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
@@ -233,6 +277,7 @@ func show_state(s) -> void:
 	_shelf.visible = showing == "shelf"
 	_stash.visible = showing == "stash"
 	_deals.visible = showing == "contracts"
+	_word.visible = showing == "word"
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 		for t in _side_tiles_c:
@@ -243,8 +288,8 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
-	_tabs[0].text = "Shelf (%d)" % stock.size()
-	_tabs[1].text = ("Stash (%d)" % sim.stash.size()) if kind == "fence" else ("Your meds (%d)" % _stash_meds())
+	_tab_text(_tabs[0], ["Shelf (%d)" % stock.size(), "Shelf"])
+	_tab_text(_tabs[1], [("Stash (%d)" % sim.stash.size()) if kind == "fence" else ("Your meds (%d)" % _stash_meds()), "Stash" if kind == "fence" else "Meds"])
 	UI.style_button(_tabs[0], showing == "shelf")
 	UI.style_button(_tabs[1], showing == "stash")
 	if kind == "fence":
@@ -255,9 +300,17 @@ func show_state(s) -> void:
 				ready += 1
 			elif sim.contracts[k].get("pay", "") == "unique":
 				unique_pay += 1
-		_tabs[2].text = ("Contracts ✓%d" % ready) if ready > 0 else (("Contracts ★") if unique_pay > 0 else "Contracts (%d)" % sim.contracts.size())
+		if ready > 0:
+			_tabs[2].text = "Contracts ✓%d" % ready
+		elif unique_pay > 0:
+			_tabs[2].text = "Contracts ★"
+		else:
+			_tab_text(_tabs[2], ["Contracts (%d)" % sim.contracts.size(), "Contracts"])
 		UI.style_button(_tabs[2], showing == "contracts", "good" if (ready > 0 and showing != "contracts") else "")
+		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
+		UI.style_button(_tabs[3], showing == "word")
 		_show_deals()
+		_show_word()
 	_show_side()
 	_show_panel()
 
@@ -289,6 +342,71 @@ func _show_deals() -> void:
 		_mate_buy.visible = true
 		_mate_buy.text = "Buy for %d notes" % int(sim.mate["notes"])
 		_mate_buy.disabled = not sim.can_buy_mate()
+
+
+## A tab's text: the first form that fits its width.
+func _tab_text(b: Button, forms: Array) -> void:
+	for f in forms:
+		if UI.text_width(b, str(f)) + 32.0 <= b.size.x:
+			b.text = str(f)
+			return
+	b.text = str(forms.back())
+
+
+## The fence's word: the kinds on offer, each with a picture of one of its bases, the kind's
+## words and Pay with the price; a kind bought is gone until the next run; the last thing it got you.
+func _show_word() -> void:
+	var price: int = sim.gamble_price(sim.gamble[0]) if not sim.gamble.is_empty() else sim._inf(Data.GAMBLE_FLOOR)
+	UI.fit(_word_line, ["He knows a man. %s a word, whatever it turns out to be; the kinds change after every run." % Fmt.money(price), "%s a word; the kinds change after every run." % Fmt.money(price), "%s a word." % Fmt.money(price)])
+	var kinds: Array = sim.gamble.duplicate()
+	for k in range(Data.GAMBLE_SHOWN):
+		var o: Dictionary = _offers[k]
+		var on: bool = k < kinds.size()
+		o["panel"].visible = true
+		if on:
+			var kd: Dictionary = sim.gamble_kind(kinds[k])
+			o["art"].texture = _kind_art(kd)
+			o["art"].visible = o["art"].texture != null
+			UI.fit(o["kind"], [kd["words"], kd.get("short", kd["words"])])
+			o["sub"].text = "sealed · any rarity"
+			o["pay"].visible = true
+			o["pay"].text = "Pay %s" % Fmt.money(sim.gamble_price(kinds[k]))
+			o["pay"].disabled = not sim.can_gamble(kinds[k])
+			o["kind"].add_theme_color_override("font_color", Pal.TEXT)
+		else:
+			o["art"].visible = false
+			o["kind"].text = "Taken"
+			o["sub"].text = "back after a run"
+			o["pay"].visible = false
+			o["kind"].add_theme_color_override("font_color", Pal.TEXT_3)
+	var last: Dictionary = {}
+	if sim.last_craft.get("kind", "") == "gamble":
+		last = sim.item_by_id(int(sim.last_craft.get("id", -1)))
+	_last.visible = not last.is_empty()
+	_last_none.visible = last.is_empty()
+	if not last.is_empty():
+		_last.show_item(last, sim, "", "", true)
+
+
+## A picture for a kind: the first base of it the fence can source that has art; null for the words alone.
+func _kind_art(kd: Dictionary) -> Texture2D:
+	for b in Data.BASES[kd["slot"]]:
+		if b.get("start", false) or (kd["type"] != "" and b.get("type", "") != kd["type"]):
+			continue
+		var tex := Items.art({"base": b["name"], "slot": kd["slot"]})
+		if tex != null:
+			return tex
+	return null
+
+
+func _gamble(k: int) -> void:
+	if k >= sim.gamble.size():
+		return
+	var it: Dictionary = sim.gamble_buy(sim.gamble[k])
+	if not it.is_empty():
+		_says("gamble")
+		acted.emit()
+	show_state(sim)
 
 
 static func _cap(s: String) -> String:
@@ -326,7 +444,7 @@ func _stash_meds() -> int:
 
 
 func _signature() -> String:
-	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.market_level), str(sim.medic_level),
+	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.market_level), str(sim.medic_level), str(sim.gamble), str(sim.last_craft),
 		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), sim.wound,
 		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
@@ -774,6 +892,17 @@ func text_nodes() -> Array:
 	for t in _tabs:
 		if t.visible:
 			out.append(t)
+	if showing == "word":
+		out.append_array([_word_title, _word_line, _word_head, _last_head, _word_note])
+		for o in _offers:
+			if o["panel"].visible:
+				out.append_array([o["kind"], o["sub"]])
+				if o["pay"].visible:
+					out.append(o["pay"])
+		if _last.visible:
+			out.append_array(_last.text_nodes())
+		else:
+			out.append(_last_none)
 	if showing == "contracts":
 		out.append_array([_mate_title, _mate_line, _mate_note])
 		if _mate_buy.visible:
@@ -788,7 +917,7 @@ func text_nodes() -> Array:
 	for b in _buttons:
 		if b.visible:
 			out.append(b)
-	if showing != "contracts":
+	if showing != "contracts" and showing != "word":
 		out.append_array((_shelf if showing == "shelf" else _stash).text_nodes())
 	return out
 

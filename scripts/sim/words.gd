@@ -23,6 +23,7 @@ const FENCE := {
 	"bought": ["It's yours. It was someone's.", "No returns.", "Mind how you go with that."],
 	"shelf": "More shelf. Same stock, more of it.",
 	"contract": ["That's what I asked for. Here's what I said.", "Good. Someone's waiting on these.", "Done. I'll have another for you."],
+	"gamble": ["He had one. Don't ask where.", "That's what came. No returns.", "Sealed when I got it. Sealed when you did."],
 	"insured": "I'll hold the paper on it. If they don't come back, you do.",
 	"paid_out": "Insured. The fence held the paper; the kit's back in the yard. The runner isn't.",
 	"mate": ["He doesn't come in. He sends them with me. Don't ask.", "Notes. He still thinks they're money. So do the crews."],
