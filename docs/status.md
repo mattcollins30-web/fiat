@@ -1729,6 +1729,27 @@ keeps its plain figures; a blue plaque silences base resists too; the arsonist's
 like a throw does; the odds' cache key carries the kit's ids, so a swap that moves only a resist or a rule
 reads the odds again.
 
+**The balance runner (6 Oct).** Matt: "is that something I can run here locally with my i9 ... just tell me
+exactly what to run ... ideally I just have a single command." `tools\balance.bat [hours]` from the repo
+root runs eleven Godot reads side by side (the five classes keystones-first, the five element builds on
+their affinity class - fire and shock as the Drifter, frost and poison as the Poacher, bleed as the
+Doorman - and the loot probe), each `tests/balance.gd -- <hours> gate <Class> [element]` into
+`docs\balance\<build>.txt`, waits on `.done` sentinels, then `python tools\balance_summary.py` writes
+`docs\balance\summary.md`: the concept's gates table with each row read RED or GREEN from the `GATES`
+JSON line every read ends on (the firsts in hours, the odds at every open tier in the kit as it stands,
+the depth clears as [hour, tier, depth], runs, deaths, wounded runs, cash against the top bench, scrap
+against the dearest craft, the kit) and a line a build under it. Godot's path comes from `tools\godot.txt`
+(the `_console.exe`, so the output reaches the files; the file is local and ignored) or `godot` on the
+PATH. Eight hours a build is about three minutes of wall here, so the whole pass is a coffee's worth on
+the i9; the wall cap is thirty minutes a read. The probe reads the Elite share at +35% quality and
+finds a search at +25% quantity from a fresh Doorman (no class loot share; reviewer: the Scrapper's +15%
+was in the plain read). Reviewer's other catches: the firsts were seconds where the summary read hours;
+depth pace is scored over the hours actually run, not the hours asked for; a quoted or trailing-space
+path in godot.txt is trimmed and a missing exe stops the run with its name. A finding for the pass, not
+tuned: `_roll_rarity` scales every non-common weight by the quality bonus alike, so +35% quality moves the
+Elite share from 2.0% to 2.4% - the "Loot quality visible" gate (3.0% boosted) can't go green on the
+current weights, which is what the pass is for.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

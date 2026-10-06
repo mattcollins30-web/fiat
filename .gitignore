@@ -4,6 +4,7 @@
 
 # secrets and scratch
 tools/pixellab_secret.txt
+tools/godot.txt
 _to_delete/
 *_response.json
 docs/_review.diff

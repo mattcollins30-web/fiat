@@ -314,9 +314,13 @@ pass. In build order; the economy items last so the reader runs once over all of
 
 ### The gates
 
-Measured by `tests/balance.gd` (the five element builds and the plain Scrapper, eight minutes of
-wall-clock a build) before any value moves, and again after each change; the pass ends when every row is
-green. Figures to be set with Matt's death count from the playtest; the rest are defaults to overrule.
+Measured by `tools\balance.bat` on the Legion (eleven reads at once: the five classes keystones-first,
+the five element builds, the loot probe; `tests/balance.gd -- 8 gate <Class> [element]` each, then
+`tools/balance_summary.py` writes `docs/balance/summary.md` with the table below read red or green) before
+any value moves, and again after each change; the pass ends when every row is green. Figures to be set
+with Matt's death count from the playtest; the rest are defaults to overrule. Known before the first read:
++35% quality scales every non-common rarity weight alike, so the Elite share goes 2.0% → 2.4%, not 3%; the
+weights or the gate's figure move in the pass.
 
 | Gate | Read by | Green when |
 | --- | --- | --- |

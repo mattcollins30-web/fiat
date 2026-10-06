@@ -36,6 +36,13 @@ func _init() -> void:
 	if cls == "elements":
 		_elements(hours, args[2] if args.size() > 2 else "")
 		return
+	if cls == "gate":
+		# `-- 8 gate Doorman` or `-- 8 gate Poacher fire`: one build, every gate read, a GATES line at the end
+		_gate(hours, args[2] if args.size() > 2 else "Doorman", args[3] if args.size() > 3 else "")
+		return
+	if cls == "probe":
+		_probe()
+		return
 	var sim = Sim.new()
 	sim.start()
 	sim.set_class(cls)
@@ -174,6 +181,134 @@ func _elements(hours: float, forced: String) -> void:
 		for b in bot.bought:
 			if str(b[1]).begins_with("bench") or str(b[1]).begins_with("the second past"):
 				print("    %s at %s" % [b[1], _hm(b[0])])
+	quit(0)
+
+
+## The one-build read the pass runs eleven of at once (tools/balance.bat): the half-hour lines as the plain
+## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
+## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
+## depths cleared by the hour, the odds at every open tier at the end.
+func _gate(hours: float, cls: String, element: String) -> void:
+	var sim = Sim.new()
+	sim.start()
+	sim.set_class(cls)
+	var bot = Bot.new()
+	bot.element = element
+	bot.keystones_first = element == ""
+	var build: String = cls + ((" as " + element) if element != "" else "")
+	print("Fiat gate read: %.0f h, %s" % [hours, build])
+	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
+	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
+		"runs": 0, "deaths": 0, "wounded_runs": 0, "depth_clears": [], "bought_bench": -1.0}
+	var next_mark := 1800.0
+	var mark_runs := 0
+	var mark_cash := 0.0
+	var mark_items := 0
+	var depth_seen: Dictionary = {}
+	var t0 := Time.get_ticks_msec()
+	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 1800000:
+		var items_before: int = sim.stash.size()
+		var lost_before: int = sim.operators_lost
+		var t: int = bot.step(sim)
+		if t >= 0:
+			g["runs"] += 1
+			mark_runs += 1
+			var r = sim.last_report
+			if sim.operators_lost > lost_before:
+				g["deaths"] += 1
+			elif bool(r.get("wounded", false)):
+				g["wounded_runs"] += 1
+			mark_cash += float(r.get("cash", 0.0))
+			mark_items += sim.stash.size() - items_before
+			if float(g["bank_at"]) < 0.0 and sim.best_depth[Data.BANK] > 0:
+				g["bank_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+			for i in range(Data.TIERS.size()):
+				var key := "%d/%d" % [i, sim.best_depth[i]]
+				if sim.best_depth[i] > 0 and not depth_seen.has(key):
+					depth_seen[key] = true
+					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
+			bot.tidy(sim)
+		if float(g["keystone_at"]) < 0.0 or float(g["capstone_at"]) < 0.0:
+			for id in sim.tree:
+				var nd: Dictionary = sim.node(id)
+				if float(g["keystone_at"]) < 0.0 and nd.get("keystone", false):
+					g["keystone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
+					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+		if sim.elapsed >= next_mark:
+			var tt: int = maxi(t, 0)
+			print("%s | %d (%d) %2d%% | %2d | £%6d | %2d/%d | £%5d | %4.1f | %3.0f/%3.0f | %3d %d | %2d, £%5d, %d" % [_hm(sim.elapsed), tt, sim.depth[tt], int(round(sim.survival(tt) * 100)),
+					sim.level(), int(sim.cash), sim.stash.size(), sim.stash_cap(), int(sim.loadout_value()), sim.dps(), sim.hp, sim.max_hp(), g["runs"], g["deaths"], mark_runs, int(mark_cash), mark_items])
+			next_mark += 1800.0
+			mark_runs = 0
+			mark_cash = 0.0
+			mark_items = 0
+	# the end: the odds at every open tier, in the kit as it stands
+	var odds := []
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i):
+			odds.append([i, snappedf(sim.survival(i), 0.001)])
+	g["odds"] = odds
+	g["cash_end"] = int(sim.cash)
+	g["notes_end"] = int(sim.notes)
+	g["scrap_end"] = int(sim.scrap)
+	g["level"] = sim.level()
+	g["best_tier"] = sim.best_tier
+	g["best_depth"] = sim.best_depth
+	g["bench"] = sim.workshop
+	g["top_bench"] = int(Data.WORKSHOP.back()["cost"])
+	g["dearest_build"] = Data.BUILD_GUN * 3
+	g["elapsed_h"] = snappedf(sim.elapsed / 3600.0, 0.01)
+	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
+	g["kit"] = _kit(sim)
+	for b in bot.bought:
+		print("  %s at %s" % [b[1], _hm(b[0])])
+	print("GATES " + JSON.stringify(g))
+	quit(0)
+
+
+## The loot gates, build-free: the Elite share at +35% quality, finds a search at +25% quantity, from a
+## fresh yard with a big sample. One process, seconds.
+func _probe() -> void:
+	var sim = Sim.new()
+	sim.start()
+	sim.set_class("Doorman")                 # no class loot share: the plain read is plain
+	var g := {"build": "probe"}
+	# the Elite share at +35% quality (and unboosted), tier 3 gear, 20000 rolls
+	for pair in [["elite_share", 0.35], ["elite_share_plain", 0.0]]:
+		var elites := 0
+		for k in range(20000):
+			var it: Dictionary = Items.roll("Primary", 3, sim.rng, pair[1])
+			if int(it["rarity"]) == Data.RARITIES.size() - 1:
+				elites += 1
+		g[pair[0]] = snappedf(elites / 20000.0, 0.0001)
+	# finds a search at +25% quantity against the plain, over 400 searches each
+	var per := {}
+	for pair in [["finds_plain", 0.0], ["finds_boosted", 0.25]]:
+		var pack: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"].back()["name"])
+		pack["affixes"] = [] if pair[1] == 0.0 else [{"stat": "loot_pct", "value": int(pair[1] * 100), "tier": 5}]
+		sim.equipped["Backpack"] = pack
+		sim.tree = []
+		sim.deploy(0)
+		var m: Dictionary = sim.mission
+		m["remaining"] = 0
+		m["cleared"] = true
+		m["patrol_timer"] = -1e9
+		m["event_at"] = -1.0
+		var f0: int = int(m.get("finds", 0))
+		var s0: int = m["searches"]
+		while m["searches"] - s0 < 400 and sim.on_mission():
+			sim.hp = sim.max_hp()
+			m["remaining"] = 0
+			m["searches"] = mini(m["searches"], s0 + 400)
+			m["thin_after"] = 100000          # the searches in full: the quantity read, not the thinning
+			sim.advance(1.0)
+		per[pair[0]] = float(int(m.get("finds", 0)) - f0) / maxf(1.0, float(m["searches"] - s0))
+		sim.extract_now()
+	g["finds_plain"] = snappedf(per["finds_plain"], 0.01)
+	g["finds_boosted"] = snappedf(per["finds_boosted"], 0.01)
+	g["finds_ratio"] = snappedf(per["finds_boosted"] / maxf(0.01, per["finds_plain"]), 0.01)
+	print("GATES " + JSON.stringify(g))
 	quit(0)
 
 
