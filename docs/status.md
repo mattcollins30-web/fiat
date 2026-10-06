@@ -1850,6 +1850,24 @@ match-rounds check reads the class's first-shot share (a Poacher's +40% is on bo
 check asserts the rule (the deepest depth that reads PUSH, a dig at CLIMB), not the depths, since the
 odds read by the night, the weather and the tree.
 
+## The pass: the first moves (6 Oct)
+
+Each move one commit, the summary line before and after in this entry as the reads come in. The fourth
+read is the before: the bank 1.4–4.2 h; the capstone 4.2–5.9 h on five; cash red on the two Poachers
+(£108k, £43k); scrap half a craft an hour; the keystone late on the Scrapper (2.1 h).
+
+**Cash (lever 1), as a reader:** the bench is already dear - a lock on a T8 gun is £7k, seven runs' pay -
+and the bot spends one job a run; what a flush player buys every run is a word (the words go with the
+run: `reroll_intel` after each, so a word is a sink every run) and insurance, which the bot bought only
+at ten times the price. The reserve is three times now (`_endgame`). No price moved; the read says
+whether one needs to.
+**Scrap (lever 2):** `SCRAP_SEARCH` 0.2 → 0.4, `SCRAP_HANDFUL` [3, 6] → [4, 8]: a handful every two and a
+half searches rather than five, and a bigger one - search scrap ×3. The ladder's prices stay.
+**The band (lever 3, the classes):** the Paramedic's −10% damage and the Scrapper's −5% went (their
+words with them); they were the two slowest to the bank, at 6.0 h and 4.4 h on the third read against
+1.5 h for the fastest, and the only classes with a damage figure under one. Everything else about them
+stays (the heal, the auto-med, the search pace, the loot share).
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

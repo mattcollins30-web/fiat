@@ -1117,8 +1117,8 @@ const BUMP_CAP := 20
 ## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap
 ## plus the element's socketable. Costs are untuned until the pass.
 const SCRAP_PER_POUND := 20
-const SCRAP_SEARCH := 0.2
-const SCRAP_HANDFUL := [3, 6]
+const SCRAP_SEARCH := 0.4           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build
+const SCRAP_HANDFUL := [4, 8]       # the pass (6 Oct): was [3, 6]
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
 const BUILD_MED := 8                # a med, times its tier, with the one below (painkillers and a bandage: scrap alone)
@@ -1186,10 +1186,10 @@ const CLASSES := [
 		"first_pct": 40, "patrol": 1.25, "hp": 0.9},
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
-	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP; −10% damage",
-		"heal": 1.5, "auto_med": true, "damage": 0.9},
-	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity; −5% damage",
-		"search": 0.7, "loot": 0.15, "damage": 0.95},
+	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP",
+		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the bank by two hours
+	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity",
+		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the bank
 	{"name": "Drifter", "words": "One fewer on you at a time; +10% pace; −15% max HP",
 		"contact": -1, "pace": 1.1, "hp": 0.85},
 ]
