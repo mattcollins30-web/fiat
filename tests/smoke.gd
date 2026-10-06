@@ -1870,8 +1870,9 @@ func _melee_checks(main) -> void:
 	main.refresh()
 	main._workshop._pick_cell(main._workshop._inv.cell_of(lead["id"]))
 	main.refresh()
-	_check(main._workshop._left_lines[0].text.begins_with("Melee part · business end"), "a bat part's line is '%s'" % main._workshop._left_lines[0].text)
-	_check(not main._workshop._right_title.text.contains("gun"), "a bat part's panel talks of a gun: '%s'" % main._workshop._right_title.text)
+	var lead_chips: Array = main._workshop._pick._heads[0]._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
+	_check(lead_chips.size() >= 2 and lead_chips[0] == "Melee part" and lead_chips[1] == "Business end", "a bat part's chips are %s" % str(lead_chips))
+	_check(not main._workshop._pick._kickers[1].text.to_lower().contains("gun") and not main._workshop._pick._right_title.text.contains("gun"), "a bat part's panel talks of a gun: '%s' / '%s'" % [main._workshop._pick._kickers[1].text, main._workshop._pick._right_title.text])
 	_check_fit(main, "Workshop (a bat part)")
 	# a part with a long kind line and an affix in the Lock-up: fits, the part's own figures first, the affix banded
 	var bipod: Dictionary = sim._plain(Data.ATTACHMENT, "Bipod")
@@ -4090,7 +4091,7 @@ func _bench(sim) -> void:
 		for mount in gun["attachments"]:
 			if not sim.mount_open(mount):
 				continue
-			var best: Array = sim.attachments_for(mount)
+			var best: Array = sim.attachments_for(mount, str(Items.base_of(gun).get("type", "")))
 			if best.is_empty():
 				continue
 			var cur = gun["attachments"][mount]
@@ -4553,6 +4554,61 @@ func _loot_roll_checks(main) -> void:
 	_dots_chip_checks(main)
 	_top_works_checks(main)
 	_pick_panel_checks(main)
+	_bench_pick_checks(main)
+
+
+## The bench's panel on the pick frame (Matt, 6 Oct), and a typed part refused on the wrong gun.
+func _bench_pick_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.workshop = maxi(sim.workshop, 1)
+	var rifle: Dictionary = sim._plain("Primary", "Garage-built rifle")
+	sim.equipped["Primary"] = rifle
+	var choke: Dictionary = sim._plain(Data.ATTACHMENT, "Choke")
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(choke)
+	_check(Items.base_of(choke).get("type", "") == "shotgun" and rifle["attachments"].has("muzzle"), "the choke is not a shotgun's muzzle part")
+	_check(not sim.can_fit("Primary", choke["id"]) and sim.fit_refusal("Primary", choke["id"]) == "Shotguns only", "a shotgun-only choke was not refused on a rifle: '%s'" % sim.fit_refusal("Primary", choke["id"]))
+	_check(not sim.attachments_for("muzzle", "improvised").has(choke) and sim.attachments_for("muzzle").has(choke), "attachments_for does not leave a typed part off another gun's list")
+	var stock: Dictionary = sim._plain(Data.ATTACHMENT, "Wire stock")
+	_check(Items.only_words(stock) == "Improvised guns only", "the wire stock's words read '%s'" % Items.only_words(stock))
+	_check(not sim.fit("Primary", choke["id"]) and rifle["attachments"]["muzzle"] == null, "the choke went on the rifle")
+	main.show_room(main.WORKSHOP)
+	main._workshop._set_view("guns")
+	main._workshop.sel_slot = ""
+	main._workshop.sel_mount = ""
+	main.refresh()
+	main._workshop._pick_cell(main._workshop._inv.cell_of(choke["id"]))
+	main.refresh()
+	var pk = main._workshop._pick
+	_check(pk.visible and pk._heads[0].visible and pk._heads[0]._title.text == "Choke" and pk._tag_labels[0].visible, "the bench's part pick is not on the pick frame: '%s'" % pk._heads[0]._title.text)
+	_check(pk.button_texts() == ["Fit"] and pk._buttons[0].disabled and pk._words.visible and pk._words.text == "Shotguns only", "the bench did not grey Fit with the reason: %s / '%s'" % [str(pk.button_texts()), pk._words.text])
+	_check(not pk.button_texts().any(func(t): return t.begins_with("Sell")), "Sell is on the bench")
+	_check_fit(main, "Workshop (a refused part)")
+	# a part that fits: the verdict and the swap read, Fit goes through the frame
+	var dot: Dictionary = sim._plain(Data.ATTACHMENT, "Red dot")
+	sim.stash.append(dot)
+	main._workshop.sel_slot = ""
+	main._workshop.sel_mount = ""
+	main._workshop.sel_id = -1
+	main.refresh()
+	main._workshop._pick_cell(main._workshop._inv.cell_of(dot["id"]))
+	main.refresh()
+	_check(pk.button_texts() == ["Fit"] and not pk._buttons[0].disabled and pk._verdict.visible, "a fitting part's panel is off: %s / '%s' / pick %s, slot %s mount %s, title '%s', right '%s' '%s'" % [str(pk.button_texts()), pk._verdict.text, str(main._workshop.sel_id), main._workshop.sel_slot, main._workshop.sel_mount, pk._heads[0]._title.text, pk._kickers[1].text, pk._right_title.text])
+	_check_fit(main, "Workshop (a part that fits)")
+	pk.press(0)
+	main.refresh()
+	_check(rifle["attachments"]["optic"] != null and rifle["attachments"]["optic"]["base"] == "Red dot", "Fit through the frame did not fit the red dot")
+	main._workshop._pick_mount("Primary", "optic")
+	main.refresh()
+	_check(pk._heads[0].visible and pk._heads[0]._title.text == "Red dot" and pk.button_texts() == ["Strip"], "a fitted part's panel is off: %s" % str(pk.button_texts()))
+	_check_fit(main, "Workshop (a fitted part picked)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the bench's pick frame ok: the part, the refusal, the fit, the fitted")
 
 
 ## Pick-A (Matt, 6 Oct): the pick and the fitted laid the same on the run and in the Lock-up; a price tag, no fence

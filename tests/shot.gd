@@ -31,7 +31,21 @@ func _next() -> void:
 		quit()
 		return
 	var r: String = _rooms[_k]
-	if r == "runpick":
+	if r == "benchpick":
+		# the bench with a part in the stash picked against the one on the mount
+		if main.sim.on_mission():
+			main.sim.extract_now()
+		var dot: Dictionary = main.sim._plain("Attachment", "Red dot")
+		dot["affixes"] = [{"stat": "damage_pct", "value": 4, "tier": 2}]
+		main.sim.stash.append(dot)
+		main.show_room(main.WORKSHOP)
+		main._workshop._set_view("guns")
+		main._workshop.sel_slot = ""
+		main._workshop.sel_mount = ""
+		main._workshop.sel_id = -1
+		main.refresh()
+		main._workshop._pick_cell(main._workshop._inv.cell_of(dot["id"]))
+	elif r == "runpick":
 		# a live run with an armour in the pack picked, against the one worn
 		if not main.sim.on_mission():
 			main.sim.deploy(0)

@@ -74,7 +74,7 @@ func tidy(sim) -> void:
 		for mount in gun["attachments"]:
 			if not sim.mount_open(mount):
 				continue
-			var best: Array = sim.attachments_for(mount)
+			var best: Array = sim.attachments_for(mount, str(Items.base_of(gun).get("type", "")))     # the parts that go on this gun
 			if best.is_empty():
 				continue
 			var cur = gun["attachments"][mount]

@@ -1722,9 +1722,35 @@ func mount_open(mount: String) -> bool:
 	return mount in Data.WORKSHOP[workshop]["mounts"]
 
 
+## Why a stash attachment cannot go on a fitted gun's mount: "" when it can.
+## A part made for a type (a choke, a bipod) is refused on any other gun (Matt, 6 Oct), not fitted for nothing.
+func fit_refusal(slot: String, id: int) -> String:
+	if mission != null:
+		return "The runner is out"
+	if equipped[slot] == null:
+		return "Nothing fitted as %s" % slot.to_lower()
+	var gun: Dictionary = equipped[slot]
+	for it in stash:
+		if it["id"] == id and Items.is_attachment(it):
+			if it["mount"] == "socket":
+				return ""
+			if not gun["attachments"].has(it["mount"]):
+				return "The %s has no %s mount" % [gun["base"].to_lower(), it["mount"]]
+			if not mount_open(it["mount"]):
+				return "Needs a bigger bench"
+			if not Items.att_fits(it, str(Items.base_of(gun).get("type", ""))):
+				return Items.only_words(it)
+			return ""
+	return "Not in the stash"
+
+
+func can_fit(slot: String, id: int) -> bool:
+	return fit_refusal(slot, id) == ""
+
+
 ## A stash attachment onto a fitted gun's mount. What was there goes to the stash.
 func fit(slot: String, id: int) -> bool:
-	if mission != null or equipped[slot] == null:
+	if not can_fit(slot, id):
 		return false
 	var gun: Dictionary = equipped[slot]
 	for it in stash:
@@ -1790,11 +1816,13 @@ func strip(slot: String, mount: String) -> bool:
 
 
 ## The stash's attachments that go on this mount, best first.
-func attachments_for(mount: String) -> Array:
+## The stash's parts for a mount, best first; `gun_type` given, only the ones that go on that type of gun.
+func attachments_for(mount: String, gun_type := "") -> Array:
 	var out: Array = []
 	for it in stash:
 		if Items.is_attachment(it) and (it["mount"] == mount or (mount.begins_with("socket") and it["mount"] == "socket")):
-			out.append(it)
+			if gun_type == "" or Items.att_fits(it, gun_type):
+				out.append(it)
 	out.sort_custom(func(a, b): return Items.score(a) > Items.score(b))
 	return out
 

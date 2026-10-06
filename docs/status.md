@@ -1635,6 +1635,21 @@ deeds carried home count as held; the report's "left" leaves the carried one out
 cap, a 24-pouch rig inside its box on the run and in the Lock-up, the held clock, the tile, the full pack's
 call, the second gang unheld, the dog's carry and the report, the deeds held, the card fitted.
 
+## The bench on the pick frame; a typed part refused (6 Oct)
+
+Matt: "Gun attachments need the same chips treatment as everything else - also I can still attach a shotgun
+only part to a rifle." The bench's Guns and Sockets views use the pick panel now: the part at the left
+("THE PICK · IN THE STASH"), the one on the mount at the right ("ON THE PRIMARY · OPTIC") laid the same, or
+"Empty" with what fitting it does to the gun's damage; the verdict and the deltas (the gun's damage a
+second, then each stat the part moves); Fit at the right, Strip for a fitted part picked. Sell is gone from
+the bench, the craft view's too. A part made for a type is refused on any other gun: `sim.fit_refusal`
+says why ("Shotguns only", "SMGs only", "Improvised guns only"; `Items.only_words`), `can_fit` gates
+`fit`, the panel greys Fit with the reason, and `attachments_for(mount, gun_type)` leaves such parts off
+the lists the bots fit from, so a choke never outranks a part that goes on. The craft view keeps its own
+panel until crafting (34) rebuilds it. Smoke: the choke refused on a rifle and left in the stash, Fit greyed
+with the reason, a red dot's verdict and fit through the frame, the fitted part's Strip, the lists by type,
+the words.
+
 ## The pick panel, Pick-A (6 Oct)
 
 Matt: "the display on the left should be exactly the same as on the right so you can clearly compare both

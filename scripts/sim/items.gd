@@ -208,6 +208,12 @@ static func fitted_sum(gun: Dictionary, stat: String) -> float:
 	return t
 
 
+## "Shotguns only", "SMGs only", "Improvised guns only": what a typed part goes on.
+static func only_words(a: Dictionary) -> String:
+	var t: String = base_of(a).get("type", "")
+	return {"smg": "SMGs only", "improvised": "Improvised guns only"}.get(t, "%ss only" % t.capitalize())
+
+
 ## Whether an attachment's effects count on a gun of this type.
 static func att_fits(a: Dictionary, gun_type: String) -> bool:
 	var need: String = base_of(a).get("type", "")

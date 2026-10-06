@@ -1,7 +1,7 @@
 extends Control
 ## The Workshop's screen: the fitted guns and their mounts down the left, the
 ## stash's attachments for the selected mount as a grid on the right, and a
-## compare panel under the grid with Fit, Strip and Sell. The Workshop's own
+## compare panel under the grid with Fit and Strip (Sell is the fence's). The Workshop's own
 ## level - which mounts the bench can work on - is bought here too; it's the
 ## camp's cash sink. The Armoury's shape, so it reads the same way.
 ## Two views of the left column: Guns (the five mounts of each gun) and
@@ -20,6 +20,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -69,6 +70,8 @@ var _buttons: Array[Button] = []
 var _actions: Array = []
 var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
+var _pick                          # the pick panel (pick_panel.gd) for the Guns and Sockets views: a part against the one in the mount
+var _pick_actions: Array = []
 var _shown := ""
 
 
@@ -173,6 +176,12 @@ func _init() -> void:
 		b.visible = false
 		_buttons.append(b)
 		_actions.append(Callable())
+	_pick = PickPanel.new(GRID_W, PANEL_H)
+	_pick.position = Vector2(GRID_X, PANEL_Y)
+	_pick.acted.connect(func(): acted.emit())
+	add_child(_pick)
+	for i in range(PickPanel.BUTTONS):
+		_pick_actions.append(Callable())
 
 
 func _style(b: Button, on: bool, tone := "", dim := false) -> void:
@@ -439,72 +448,93 @@ func _show_panel() -> void:
 		l.text = ""
 	for l in _right_lines:
 		l.text = ""
+	_panel.visible = view == "craft"
+	_pick.visible = view != "craft"
 	if view == "craft":
 		_show_craft(it)
 		return
+	# the Guns and Sockets views: the pick panel, a part against the one in the mount (Pick-A)
 	if sel_mount == "" and it.is_empty():
-		_left_title.text = "Select a socket" if view == "sockets" else "Select a mount"
-		_right_title.text = ""
-		_hint.text = "A socket on the left, or a socketable on the right" if view == "sockets" else "A gun's mount on the left, or an attachment on the right"
+		_pick.show_empty("Select a socket" if view == "sockets" else "Select a mount",
+			["A socket on the left, or a socketable on the right" if view == "sockets" else "A gun's mount on the left, or an attachment on the right"])
+		_set_pick_buttons([])
 		return
-	# the left: the selection, or the mount's fitted attachment
-	var shown := it if not it.is_empty() else fitted
-	if shown.is_empty():
-		UI.fit(_left_title, ["%s · %s: empty" % [sel_slot, Items.mount_name(sel_mount)], "%s: empty" % Items.mount_name(sel_mount)])
-		_left_lines[0].text = "Nothing in the stash fits" if sim.attachments_for(sel_mount).is_empty() else "Pick one on the right"
-	else:
-		_left_title.text = shown["base"]
-		UI.fit(_left_lines[0], ["%s · %s T%d · %s" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"], Fmt.money(shown["value"])],
-				"%s · %s T%d" % [Items.kind_words(shown), Items.rarity_name(shown), shown["tier"]],
-				"%s · T%d" % [Items.kind_words(shown), shown["tier"]]])
-		# the part's figures over two lines when four stats need them
-		if UI.text_width(_left_lines[1], Items.att_words(shown)) <= _left_lines[1].size.x:
-			_left_lines[1].text = Items.att_words(shown)
-			_left_lines[2].text = ""
-		else:
-			UI.wrap([_left_lines[1], _left_lines[2]], Items.att_words(shown, true))
-		_left_lines[3].text = "In the stash" if not it.is_empty() else "Fitted on the %s" % sel_slot.to_lower()
-	# the right: what's on the mount now, and the swap
-	if not it.is_empty() and Items.is_socketable(it):
+	var buttons := []
+	if it.is_empty():
+		# a mount picked: what's on it, or that it's empty
+		if fitted.is_empty():
+			_pick.show_empty("%s · %s: empty" % [sel_slot, Items.mount_name(sel_mount)],
+				["Nothing in the stash fits" if sim.attachments_for(sel_mount).is_empty() else "Pick one on the right"])
+			_set_pick_buttons([])
+			return
+		_pick.show_pick(fitted, sim, "Fitted · %s %s" % [sel_slot.to_lower(), Items.mount_name(fitted["mount"]).to_lower()])
+		_pick.show_right_words("The stash", "Strip it back to the stash", ["Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]])
+		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_room(1), "primary": true})
+		_set_pick_buttons(buttons)
+		return
+	_pick.show_pick(it, sim, "The pick · in the stash")
+	if Items.is_socketable(it):
 		var target_slot := sel_slot if sel_slot != "" else _slot_for("socket")
 		var key := sel_mount if sel_mount.begins_with("socket") else _socket_for(target_slot)
 		if target_slot == "" or key == "":
-			_right_title.text = "Nothing fitted has a socket"
+			_pick.show_right_words("The socket", "Nothing fitted has a socket", [])
 		elif not sim.mount_open(key):
-			_right_title.text = "Needs a bench"
+			_pick.show_right_words("The socket", "Needs a bench", [])
 		else:
 			var gear: Dictionary = sim.equipped[target_slot]
 			var cur = gear["attachments"].get(key, null)
-			_right_title.text = "Now: %s" % (cur["base"] if cur != null else "empty")
-			UI.wrap([_right_lines[0], _right_lines[2]], Items.att_words(cur, true) if cur != null else "")
-			_right_lines[1].text = "Into the %s's %s" % [target_slot.to_lower(), key]
-			_button(0, "Fit", sim.fit_socket.bind(target_slot, key, it["id"]), not sim.on_mission())
-		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-	elif not it.is_empty():
+			if cur != null:
+				_pick.show_fitted(cur, sim, "On the %s · %s" % [target_slot.to_lower(), key])
+			else:
+				_pick.show_right_words("On the %s · %s" % [target_slot.to_lower(), key], "Empty", ["Fitting it fills the socket"])
+			buttons.append({"text": "Fit", "action": sim.fit_socket.bind(target_slot, key, it["id"]), "enabled": not sim.on_mission(), "primary": true})
+	else:
 		var target_slot := sel_slot if sel_slot != "" else _slot_for(it["mount"])
 		if target_slot == "":
-			UI.fit(_right_title, ["No %s with a %s mount" % ["bat or blade" if Items.is_melee_mount(it["mount"]) else "gun", it["mount"]],
-					"Nothing fitted takes a %s" % it["mount"]])
-		elif not sim.mount_open(it["mount"]):
-			_right_title.text = "Needs bench level %d" % _level_for(it["mount"])
+			_pick.show_right_words("The mount", "Nothing fitted takes a %s" % it["mount"], [["No %s with a %s mount" % ["bat or blade" if Items.is_melee_mount(it["mount"]) else "gun", it["mount"]], ""]])
 		else:
 			var gun: Dictionary = sim.equipped[target_slot]
 			var cur = gun["attachments"].get(it["mount"], null)
-			_right_title.text = "Now: %s" % (cur["base"] if cur != null else "empty")
-			UI.wrap([_right_lines[0], _right_lines[2]], Items.att_words(cur, true) if cur != null else "")
-			_right_lines[1].text = "Fitting it: %.0f → %.0f dmg/s" % [Items.dps(gun), _dps_with(gun, it)]
-			_button(0, "Fit", sim.fit.bind(target_slot, it["id"]), not sim.on_mission())
-		_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
-	elif not fitted.is_empty():
-		_right_title.text = "Fitted"
-		_right_lines[0].text = "Strip it back to the stash"
-		_button(0, "Strip", sim.strip.bind(sel_slot, sel_mount), not sim.on_mission() and sim.stash_room(1))
-	var x := GRID_W - PAD
-	for i in range(_buttons.size() - 1, -1, -1):
-		if _buttons[i].visible:
-			x -= _buttons[i].size.x
-			_buttons[i].position.x = x
-			x -= 12
+			var why: String = sim.fit_refusal(target_slot, it["id"])
+			var kicker: String = "On the %s · %s" % [target_slot.to_lower(), Items.mount_name(it["mount"]).to_lower()]
+			if cur != null:
+				_pick.show_fitted(cur, sim, kicker)
+			else:
+				_pick.show_right_words(kicker, "Empty", ["Fitting it: %.0f → %.0f dmg/s" % [Items.dps(gun), _dps_with(gun, it)]] if why == "" else [])
+			if why == "":
+				# the swap, as the gun's damage and each stat the part moves
+				var deltas := []
+				var d_dps: float = _dps_with(gun, it) - Items.dps(gun)
+				if absf(d_dps) >= 0.5:
+					deltas.append([d_dps, "%.0f dmg/s" % absf(d_dps)])
+				for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% cash"]]:
+					var dv: float = Items.att_stat(it, pair[0]) - (Items.att_stat(cur, pair[0]) if cur != null else 0.0)
+					if absf(dv) >= 0.5:
+						deltas.append([dv, "%.0f%s" % [absf(dv), pair[1]]])
+				var tone: String = "good" if d_dps > 0.5 else ("bad" if d_dps < -0.5 else "warn")
+				_pick.set_verdict(("▲ Upgrade" if tone == "good" else ("▼ Downgrade" if tone == "bad" else "Sidegrade")) if cur != null else ("▲ Fits" if d_dps >= -0.5 else "▼ Costs damage"), tone, deltas)
+			else:
+				_pick.set_hint(why)
+			buttons.append({"text": "Fit", "action": sim.fit.bind(target_slot, it["id"]), "enabled": why == "", "primary": true})
+	_set_pick_buttons(buttons)
+
+
+## The pick panel's buttons, each through _press_pick so the selection follows.
+func _set_pick_buttons(buttons: Array) -> void:
+	var items := []
+	for i in range(buttons.size()):
+		_pick_actions[i] = buttons[i]["action"]
+		var d: Dictionary = buttons[i].duplicate()
+		d["action"] = _press_pick.bind(i)
+		items.append(d)
+	_pick.set_buttons(items)
+
+
+func _press_pick(i: int) -> void:
+	if _pick_actions[i].is_valid():
+		_pick_actions[i].call()
+	if _selected_item().is_empty():
+		sel_id = -1
 
 
 ## The gun this attachment would go on: the selected gun, else the primary
@@ -593,7 +623,6 @@ func _show_craft(it: Dictionary) -> void:
 	_right_title.text = "In hand"
 	_right_lines[0].text = "%s and %d notes" % [Fmt.money(sim.cash), sim.notes]
 	_button(0, "Bench", func(): bench.emit(it["id"]), sim.workshop >= 1 and not sim.on_mission())
-	_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
 	var x := GRID_W - PAD
 	for i in range(_buttons.size() - 1, -1, -1):
 		if _buttons[i].visible:
@@ -690,6 +719,9 @@ func _pick_cell(k: int) -> void:
 
 
 func _press(i: int) -> void:
+	if view != "craft":
+		_pick.press(i)                     # the pick panel's button: its action, then the shell's refresh
+		return
 	if _actions[i].is_valid():
 		_actions[i].call()
 	if _selected_item().is_empty():
@@ -710,13 +742,17 @@ func _say(it: Dictionary) -> void:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_left_title, _right_title, _hint]
+	var out: Array = []
+	if view == "craft":
+		out.append_array([_left_title, _right_title, _hint])
+		out.append_array(_words)
+		out.append_array(_left_lines)
+		out.append_array(_right_lines)
+	else:
+		out.append_array(_pick.text_nodes())
 	out.append_array(_band.text_nodes())
-	out.append_array(_words)
 	if _upgrade.visible:
 		out.append(_upgrade)
-	out.append_array(_left_lines)
-	out.append_array(_right_lines)
 	out.append_array(_views)
 	if view == "craft":
 		out.append(_craft_title)
@@ -738,16 +774,17 @@ func text_nodes() -> Array:
 				var r: Dictionary = g["rows"][mount]
 				out.append_array([r["mount"], r["fitted"]])
 	out.append_array(_inv.text_nodes())
-	for b in _buttons:
-		if b.visible:
-			out.append(b)
+	if view == "craft":
+		for b in _buttons:
+			if b.visible:
+				out.append(b)
 	return out
 
 
 ## A mount tile's name sits over its fitted part now, so no pair shares a line;
 ## the gun's head keeps its slot and figure on one.
 func line_pairs() -> Array:
-	var out: Array = []
+	var out: Array = _pick.line_pairs() if view != "craft" else []
 	if view == "guns":
 		for slot in GUNS:
 			out.append([_guns[slot]["label"], _guns[slot]["figure"]])
