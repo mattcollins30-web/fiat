@@ -292,7 +292,8 @@ pass. In build order; the economy items last so the reader runs once over all of
 36. **Retirement.** A runner at level 30 can be retired to the wall: the yard keeps a sliver of their
     trait for good (a third, stacking to a cap of three retired), the class and its trees refund as a
     death does, the Caravan's wall shows them as retired not dead. A death is not the only way a runner
-    ends, and the trait pool gets a cumulative side without touching the refund rule.
+    ends, and the trait pool gets a cumulative side without touching the refund rule. *Built (6 Oct):*
+    level 30, a third a trait, three on the wall with the oldest making way, the kit kept in the stash.
 37. ~~Manual placement in the bag~~ - *to the backlog (Matt, 6 Oct): "essentially a UI item and doesn't
     add anything to the game as it stands". The pass starts once 34, 35 and 36 are in.*
 

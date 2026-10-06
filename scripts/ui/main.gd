@@ -165,6 +165,7 @@ func _build() -> void:
 	_barracks = Barracks.new()
 	_barracks.acted.connect(refresh)
 	_barracks.ascend.connect(_choose_second)
+	_barracks.retire.connect(_confirm_retire)
 	_barracks.visible = false
 	add_child(_barracks)
 	_missions = Missions.new()
@@ -710,7 +711,7 @@ func _camp_cards() -> Array:
 		"chips": who,
 		"lines": [["Damage", "%.0f/s" % sim.dps()], ["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]],
 			["Pace", "×%.2f" % sim.pace()], ["Pack · rig", "%d cells · %d" % [sim.capacity(), sim.med_capacity()]]],
-		"status": "Runners lost: %d" % sim.operators_lost,
+		"status": ("Wall: %s" % ", ".join(sim.retired)) if not sim.retired.is_empty() else "Runners lost: %d" % sim.operators_lost,     # the wall (36) takes the line once anyone is on it: a third of each one's trait stays
 		"note": [sim.next_words(true), sim.next_words(true).replace(" on Runs", "")],     # "Arm the quartermaster on Runs" is the long one
 	})
 	# the elements: what you deal as each, what you resist of each
@@ -985,9 +986,27 @@ func _pick_runner(k: int) -> void:
 
 
 ## Moving the yard: asked twice, since everything but the uniques goes.
+## Retirement (36): the runner to the wall, a third of their trait kept, their kit to the stash, two new to pick from.
+func _confirm_retire() -> void:
+	var td: Dictionary = sim.trait_data()
+	var kept: String = ("a third of %s kept" % td["name"].to_lower()) if not td.is_empty() else "no trait to keep"
+	var items := [
+		{"name": "Retire %s" % sim.cls.to_lower(), "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
+		{"name": "Not yet", "detail": "", "action": _menu.close},
+	]
+	_menu.open("Retire to the wall?", "A runner who retires is not a runner who died: the wall keeps a little of what they were, up to three.", items, _menu.close)
+
+
+func _retire() -> void:
+	if sim.retire():
+		_menu.close()
+		_asked_runner = false
+		refresh()
+
+
 func _confirm_move() -> void:
 	var items := [
-		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list, half the notes and the yard's trade come. Nothing else.", "action": _pick_trade},
+		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list, the wall, half the notes and the yard's trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
 	_menu.open("Move the yard?", "A yard that's moved finds rarer things, and more cash: +%d%% each a move, and %d points to start." % [Data.MOVE_FIND, Data.MOVE_POINTS], items, _menu.close)

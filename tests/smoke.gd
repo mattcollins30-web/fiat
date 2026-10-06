@@ -3545,11 +3545,15 @@ func _playtest_checks(main) -> void:
 	# and the same paper picked at the fence's stash tab (it crashed there too)
 	main.show_room(main.MARKET)
 	main._fence._show("stash")
+	main._fence._stash.kind = 6               # the Paper tab: the paper is on the page whatever the stash holds
+	main._fence._stash.page = 0
+	main._fence._shown = ""
 	main.refresh()
 	main._fence._stash._pick(main._fence._stash.cell_of(paper["id"]))
 	main.refresh()
 	_check(main._fence._right_title.text == "The drawer" and main._fence._right_lines[0].text.begins_with("Read") or main._fence._right_lines[0].text == "In the drawer", "a paper at the fence: %s / %s" % [main._fence._right_title.text, main._fence._right_lines[0].text])
 	_check_fit(main, "Fence (a paper)")
+	main._fence._stash.kind = 0
 	main._fence._show("shelf")
 	main.show_room(main.ARMOURY)
 	main.refresh()
@@ -4562,6 +4566,72 @@ func _loot_roll_checks(main) -> void:
 	_grade_checks(main)
 	_build_checks(main)
 	_contract_material_checks(main)
+	_retire_checks(main)
+
+
+## 36: retirement. At level 30 a runner goes to the wall: kit to the stash, trees refunded, a third of the trait kept
+## (three at most, the oldest making way), two new to pick from; the wall says retired, not dead.
+func _retire_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.candidates = []
+	sim.retired = []
+	sim.set_class("Doorman")
+	sim.runner_trait = "Tough"
+	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL - 1)
+	_check(not sim.can_retire(), "a runner under level %d could retire" % Data.RETIRE_LEVEL)
+	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
+	_check(sim.can_retire(), "a level %d runner cannot retire" % Data.RETIRE_LEVEL)
+	var hp_full: float = sim.max_hp()
+	var worn = sim.equipped["Armour"]
+	var past_n: int = sim.past.size()
+	var stash_n: int = sim.stash.size()
+	_check(sim.retire(), "retire() refused")
+	_check(sim.past.size() == past_n + 1 and sim.past.back()["end"] == "retired" and sim.past.back()["class"] == "Doorman", "the wall does not say retired: %s" % str(sim.past.back()))
+	_check(sim.retired == ["Tough"] and sim.cls == "" and sim.candidates.size() == 2 and sim.xp == 0.0, "retirement did not reset the runner and keep the trait: %s / %s / %s" % [str(sim.retired), sim.cls, str(sim.candidates)])
+	_check(worn == null or sim.stash.any(func(it): return it["id"] == worn["id"]), "the retired runner's armour did not go to the stash")
+	# a third of Tough stays: with a plain new runner, max HP carries a third of +15%
+	sim.choose_runner(0)
+	sim.runner_trait = "Nosy"
+	sim._dry_memo.clear()
+	_check(is_equal_approx(sim.trait_mult("hp"), 1.0 + 0.15 / 3.0), "the wall's third of Tough reads ×%.3f" % sim.trait_mult("hp"))
+	sim.retired = ["Lucky", "Lucky"]
+	_check(is_equal_approx(sim.trait_add("rarity"), 0.1 * 2.0 / 3.0), "two retired Lucky ones do not stack their thirds: %.3f" % sim.trait_add("rarity"))
+	# three at most: the oldest makes way
+	sim.retired = ["Lucky", "Wary", "Light"]
+	sim.set_class("Poacher")
+	sim.runner_trait = "Greedy"
+	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
+	sim.candidates = []
+	_check(sim.retire() and sim.retired == ["Wary", "Light", "Greedy"], "the wall did not make way for the fourth: %s" % str(sim.retired))
+	sim.choose_runner(0)
+	sim.runner_trait = "Greedy"           # the same trait as one on the wall: its cut is the runner's alone
+	# the Caravan's button and the yard's chips say so, and fit; saved and loaded
+	sim.set_class("Scrapper")
+	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
+	main.show_room(main.BARRACKS)
+	main._barracks._shown = ""
+	main.refresh()
+	_check(main._barracks._retire.visible and not main._barracks._retire.disabled, "the Caravan does not offer retirement at level 30")
+	_check_fit(main, "Caravan (retire)")
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	var card_chips: Array = main._cards[0]._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
+	_check(card_chips.any(func(t): return t.begins_with("Greedy")) and card_chips.has("Scrapper") and main._cards[0]._status.text == "Wall: Wary, Light, Greedy", "the Runner card does not show the wall under the runner's own trait: %s / '%s'" % [str(card_chips), main._cards[0]._status.text])
+	_check_fit(main, "Yard (the wall)")
+	# the bad side of a trait does not retire: Greedy's HP cut stays with the runner who had it
+	_check(is_equal_approx(sim.trait_mult("hp"), 0.9), "the wall's Greedy cut the yard's HP: ×%.3f" % sim.trait_mult("hp"))
+	main._confirm_retire()
+	_check(main._menu.visible and main._menu._items[0]["name"].begins_with("Retire"), "the retire menu did not open")
+	_check_fit(main, "Caravan (retire menu)")
+	main._menu.close()
+	var d: Dictionary = sim.to_dict()
+	_check(d.get("retired", []) == ["Wary", "Light", "Greedy"], "the wall is not saved: %s" % str(d.get("retired", [])))
+	sim.load_dict(saved)
+	main.refresh()
+	print("retirement ok: the level, the wall's line, the kit, the trait's third, the stack, the cap, the button, the chips, the menu, the save")
 
 
 ## 35: contracts paying in craft materials: scrap by the handful, a socketable of the zone's element, a graded box for a gun held.
@@ -4782,8 +4852,9 @@ func _grade_checks(main) -> void:
 		m["fresh"] = true
 		sim._fight(m, m["t"], 0.5)
 		drops.append(1e6 - m["target_hp"])
+		drops.append("%s rig %s rounds %s grade %.0f first %.0f melee %s rules %s" % [sim.equipped["Primary"]["base"], str(sim.rig.map(func(x): return x["base"])), str(sim.has_rounds(sim.equipped["Primary"])), sim.grade_bonus(sim.equipped["Primary"]), sim.grade_stat(sim.equipped["Primary"], "first_pct"), str(sim.melee()), str(sim.has_rule("qm_rifle"))])
 		sim.extract_now()
-	_check(drops[1] > drops[0] * 1.2, "match rounds' first shot did not land heavier: %.1f against %.1f" % [drops[1], drops[0]])
+	_check(drops[2] > drops[0] * 1.2, "match rounds' first shot did not land heavier: %.1f against %.1f (%s / %s)" % [drops[2], drops[0], drops[1], drops[3]])
 	# no gun in hand: the odds read without a grade, not a crash
 	sim.equipped["Primary"] = null
 	sim.rig = []

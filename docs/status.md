@@ -1701,6 +1701,19 @@ to scrap; one held type is picked before the grades are filtered. Two flakes fix
 workshop test picks the optic mount only when the primary has one, and the resists card's "deal · res"
 line has a shorter form.
 
+**36 · Retirement.** At `RETIRE_LEVEL` 30 (the second past's level) the Caravan offers "Retire to the
+wall", the owner asks, and `sim.retire()` sends the runner off as a death would without the dying: the
+wall's line reads "retired", their kit comes off into the stash whatever the room, the rig with it, the
+class and its trees refund (`_refund_runner_trees`, as a death), two new runners turn up to pick from, and
+the yard keeps `RETIRE_SHARE` a third of their trait for good (`retired`, up to `RETIRED_MAX` 3, the oldest
+making way; two of the same stack). `trait_mult` and the new `trait_add` (the Lucky one's loot quality)
+read the runner's trait whole and each retired one's good third (a Greedy one's HP cut stays with the
+runner who had it). The Runner card's status line reads "Wall: Tough, Lucky" once anyone is on it (a chip
+would push the runner's own trait off the row); the wall moves with the yard, the move's menu says so;
+the arrival line logs as a death's does; saved as `retired`. Smoke: the level gate, the
+wall's line and class, the kit to the stash, the reset and the candidates, Tough's third on max HP, two
+Lucky ones' thirds, the cap making way, the button, the chip, the menu, the save.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are

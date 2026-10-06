@@ -7,6 +7,7 @@ extends Control
 
 signal acted
 signal ascend                      # the Second past button: the owner offers the classes
+signal retire                      # the Retire button (36): the owner asks, then the runner goes to the wall
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -64,6 +65,7 @@ var _wall: Array = []              # their faces, newest first, small
 const WALL := 6
 const WALL_S := 64
 var _ascend: Button                # the second past, from level 30
+var _retire: Button                # retire to the wall, from level 30 (36)
 var _swap: Button                  # over the middle column's head, right: the next of the yard's tree, the second past's, the elements', the drawer, the shelf
 var _back: Button                  # its left: the one before, so an overshoot is one press back
 var mid := 0                       # which of the middle trees shows
@@ -148,6 +150,9 @@ func _init() -> void:
 	_ascend = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 240, Pal.BUTTON_H), false)
 	_ascend.pressed.connect(func(): ascend.emit())
 	_ascend.visible = false
+	_retire = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 240, Pal.BUTTON_H), false)
+	_retire.pressed.connect(func(): retire.emit())
+	_retire.visible = false
 	_swap = UI.button(self, Rect2(COL_W + COL_GAP + COL_W - SWAP_W, TREE_Y, SWAP_W, HEAD_H), false)
 	_swap.pressed.connect(_on_swap)
 	_swap.visible = false
@@ -504,6 +509,13 @@ func _show_panel() -> void:
 		_ascend.size.x = ceilf(UI.text_width(_ascend, _ascend.text)) + 48
 		x -= 12 + _ascend.size.x
 		_ascend.position.x = x
+	_retire.visible = sim.cls != "" and sim.level() >= Data.RETIRE_LEVEL
+	if _retire.visible:
+		_retire.text = "Retire to the wall"
+		_retire.disabled = not sim.can_retire()
+		_retire.size.x = ceilf(UI.text_width(_retire, _retire.text)) + 48
+		x -= 12 + _retire.size.x
+		_retire.position.x = x
 	if _train.visible:
 		x -= 12 + _train.size.x
 		_train.position.x = x
@@ -773,6 +785,8 @@ func text_nodes() -> Array:
 			out.append_array([r["top"], r["bottom"]])
 	if _ascend.visible:
 		out.append(_ascend)
+	if _retire.visible:
+		out.append(_retire)
 	if _swap.visible:
 		out.append_array([_swap, _back])
 	if _train.visible:

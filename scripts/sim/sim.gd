@@ -46,6 +46,7 @@ var last_craft := {}               # the bench's last job: {id, kind, words}, fo
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
+var retired: Array = []            # the traits on the wall (36): a third of each stays with the yard, newest last
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the caravan
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the caravan
@@ -479,7 +480,7 @@ func loot_bonus() -> float:
 
 ## Rarer finds: the tree's and the class's, as a bonus the roll reads.
 func rarity_bonus() -> float:
-	var r := tree_sum("rarity") / 100.0 + float(trait_data().get("rarity", 0.0)) + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
+	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
 		+ float(Data.KENNEL_LEVELS[kennel_level].get("quality", 0.0)) / 100.0       # the dog knows what's worth carrying (27)
 	return r * (2.0 if has_rule("bookies_pencil") else 1.0)
 
@@ -568,12 +569,72 @@ func can_trade(element: String) -> bool:
 	return element in Data.ELEMENTS and not (element in trades)
 
 
-## The runner's trait, as a multiplier on a figure (1.0 when it has none).
+## The runner's trait, as a multiplier on a figure (1.0 when it has none), and
+## a third of every retired runner's with it (36).
 func trait_mult(key: String) -> float:
+	var m := 1.0
 	for t in Data.TRAITS:
 		if t["name"] == runner_trait:
-			return float(t.get(key, 1.0))
-	return 1.0
+			m *= float(t.get(key, 1.0))
+		if t["name"] in retired:
+			m *= 1.0 + maxf(0.0, float(t.get(key, 1.0)) - 1.0) * Data.RETIRE_SHARE * retired.count(t["name"])     # the good third only: the wall keeps what they were good at
+	return m
+
+
+## A trait's additive figure (the Lucky one's loot quality), the runner's and the wall's third.
+func trait_add(key: String) -> float:
+	var a := 0.0
+	for t in Data.TRAITS:
+		if t["name"] == runner_trait:
+			a += float(t.get(key, 0.0))
+		if t["name"] in retired:
+			a += float(t.get(key, 0.0)) * Data.RETIRE_SHARE * retired.count(t["name"])
+	return a
+
+
+## Retirement (36): at RETIRE_LEVEL the runner can go to the wall instead of dying on a run. Their kit comes
+## off into the stash, their trees refund as a death's do, the yard keeps a third of their trait, and two
+## new runners turn up to pick from.
+func can_retire() -> bool:
+	return level() >= Data.RETIRE_LEVEL and cls != "" and mission == null
+
+
+func retire() -> bool:
+	if not can_retire():
+		return false
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired"})
+	if runner_trait != "":
+		retired.append(runner_trait)
+		while retired.size() > Data.RETIRED_MAX:
+			retired.pop_front()              # the oldest makes way
+	log_event("%s retires to the wall at level %d. The yard keeps a little of what they were." % [cls, level()])
+	runner_runs = 0
+	for s in Data.SLOTS:
+		if equipped[s] != null:
+			stash.append(equipped[s])        # theirs stays: whatever the room
+			equipped[s] = null
+	for it in rig:
+		if not stash_put(it):
+			stash.append(it)
+	rig = []
+	xp = 0.0
+	wound = ""
+	hp = Data.BASE_HP
+	auto_tier = -1
+	_starter_loadout()
+	var pool: Array = []
+	for tr in Data.TRAITS:
+		pool.append(tr["name"])
+	pool.shuffle()
+	candidates = [pool[0], pool[1]]
+	if promised != "":
+		candidates[1] = promised
+		promised = ""
+	runner_trait = candidates[0]
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the yard with their own kit.")
+	_refund_runner_trees()
+	_dry_memo.clear()
+	return true
 
 
 # ------------------------------------------------------------------ the fence's contracts
@@ -774,7 +835,7 @@ func move_yard(trade := "") -> bool:
 	for id in tree:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
-	var keep := {"past": past, "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
+	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate()}
 	if trade != "":
 		keep["trades"].append(trade)
@@ -782,6 +843,7 @@ func move_yard(trade := "") -> bool:
 	fresh.start()
 	load_dict(fresh.to_dict())
 	past = keep["past"]
+	retired = keep["retired"]             # the wall moves with the yard (36)
 	ending = keep["ending"]
 	hardcore = keep["hardcore"]
 	notes = keep["notes"]
@@ -3962,7 +4024,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
@@ -4047,6 +4109,9 @@ func load_dict(d: Dictionary) -> void:
 	ending = str(d.get("ending", ""))
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))
+	retired = []
+	for r in d.get("retired", []):
+		retired.append(str(r))
 	atlas = {}
 	for k in d.get("atlas", {}):
 		atlas[str(k)] = int(d["atlas"][k])

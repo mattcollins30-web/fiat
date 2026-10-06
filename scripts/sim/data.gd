@@ -1025,6 +1025,11 @@ const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
 const ASCEND_LEVEL := 30
+## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the yard keeps RETIRE_SHARE of their
+## trait for good, up to RETIRED_MAX retired (the oldest makes way), their kit stays, their trees refund.
+const RETIRE_LEVEL := 30
+const RETIRE_SHARE := 1.0 / 3.0
+const RETIRED_MAX := 3
 
 ## Insurance: the fence holds the paper on the kit for a run. Dies, and the
 ## kit comes back to the yard's stash. A share of what's worn, by depth.
