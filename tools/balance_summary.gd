@@ -25,6 +25,7 @@ const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
 const SCRAP := [1.0, 3.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy)
+const DEATH_HOURS := [1.0, 4.0]   # hours a death at Matt's risk: his save read one every 1.9 h (seven lost in 13 h); the bot's bail-outs under a quarter stand for them
 
 
 func _init() -> void:
@@ -162,7 +163,18 @@ func _init() -> void:
 		else:
 			rows.append(["Depth pace", "at least one depth an hour from hour %.0f" % DEPTH_FROM, "; ".join(slow) if not slow.is_empty() else "every build at a depth an hour or better", slow.is_empty()])
 
-	rows.append(["Deaths", "one every N hours at Matt's risk", "from the playtest save, not the bot; Matt's count", null])
+	# deaths: the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on)
+	if not full.is_empty() and full.any(func(b): return b.has("bails_per_h")):
+		var off: Array = []
+		for b in full:
+			var per_h := float(b.get("bails_per_h", 0.0))
+			var every: float = (1.0 / per_h) if per_h > 0.0 else 999.0
+			b["_every"] = every
+			if every < DEATH_HOURS[0] or every > DEATH_HOURS[1]:
+				off.append("%s one every %s" % [b["build"], ("%.1f h" % every) if every < 999.0 else "never"])
+		rows.append(["Deaths", "a bail-out under a quarter every %.0f to %.0f hours (Matt's save: one death every 1.9 h)" % [DEATH_HOURS[0], DEATH_HOURS[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+	else:
+		rows.append(["Deaths", "a bail-out under a quarter every %.0f to %.0f hours" % [DEATH_HOURS[0], DEATH_HOURS[1]], "no bails in these reads (an older balance.gd)", null])
 
 	# wounds
 	if not full.is_empty():
@@ -262,12 +274,14 @@ func _merged(gs: Array) -> Dictionary:
 		var vals: Array = gs.map(func(g): return (float(g[key]) if float(g[key]) >= 0.0 else 999.0))
 		var med := _median(vals)
 		m[key] = -1.0 if med >= 999.0 else snappedf(med, 0.01)
-	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "elapsed_h", "wall_s"]:
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
+		if not gs[0].has(key):
+			continue                      # an older read without the key keeps lacking it (the rows read the lack)
 		var total := 0.0
 		for g in gs:
 			total += float(g.get(key, 0))
 		m[key] = snappedf(total / gs.size(), 0.01)
-	for key in ["runs", "deaths", "wounded_runs"]:
+	for key in ["runs", "deaths", "wounded_runs", "bails"]:
 		var n := 0
 		for g in gs:
 			n += int(g.get(key, 0))

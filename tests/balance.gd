@@ -255,8 +255,14 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
 			var d0: int = sim.depth[i]
+			var intel0: Array = sim.intel[i].duplicate()
 			sim.set_depth(i, 1)
-			odds.append([i, snappedf(sim.survival(i), 0.001)])
+			sim.intel[i] = []                 # the plain site: the words on it are the ladder's business (a Resistant word reads any kit red)
+			var s: float = sim.survival(i)
+			odds.append([i, snappedf(s, 0.001)])
+			if s < 0.6:
+				_odds_detail(sim, i, s)
+			sim.intel[i] = intel0
 			sim.set_depth(i, d0)
 	sim.hp = hp0
 	g["odds"] = odds
@@ -275,6 +281,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["elapsed_h"] = snappedf(sim.elapsed / 3600.0, 0.01)
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	g["kit"] = _kit(sim)
+	g["bails"] = bot.bails
+	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	print("GATES " + JSON.stringify(g))
@@ -324,6 +332,19 @@ func _probe() -> void:
 	g["finds_ratio"] = snappedf(per["finds_boosted"] / maxf(0.01, per["finds_plain"]), 0.01)
 	print("GATES " + JSON.stringify(g))
 	quit(0)
+
+
+## What the dry run saw, for a tier that reads red at the end: the runner's figures against the site's.
+func _odds_detail(sim, i: int, s: float) -> void:
+	var t: Dictionary = sim.effective(i)
+	var gun = sim.equipped["Primary"]
+	var meds := 0
+	for it in sim.rig:
+		if Items.is_medical(it):
+			meds += 1
+	print("  odds T%d %.0f%% at depth 1: hp %.0f/%.0f dps %.1f (gun %s, rounds %s %d, grade %.0f) armour %.0f mitigation %.2f pace %.2f contact %d meds %d wound '%s' night %s weather '%s' intel %s | site hp %.0f dps %.1f pool %d res %s" % [
+		i, s * 100.0, sim.hp, sim.max_hp(), sim.dps(), Items.full_name(gun) if gun != null else "none", str(sim.has_rounds(gun)) if gun != null else "-", sim.rounds_for(gun) if gun != null else 0, sim.grade_bonus(gun) if gun != null else 0.0,
+		sim.armour(), sim.mitigation(), sim.pace(), sim.contact(t), meds, sim.wound, str(sim.is_night()), sim.weather_of(i), str(sim.intel[i]), float(t["hp"]), float(t["dps"]), int(t["pool"]), str(t.get("res", {}))])
 
 
 func _kit(sim) -> String:
