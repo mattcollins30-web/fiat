@@ -2100,6 +2100,22 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The endgame playtest ends; what depth is for (7 Oct)
+
+Matt stopped the playtest at 3.8 h with the campaign done, the map seven of fourteen ranks spent and the
+ransacked streets dug to depth 8: "what am I climbing depths for? Classic ARPG issue but we need to solve
+it somehow." The save shows why: past the campaign every site at a depth is the same fight and drops the
+same pool at the same item level, so the easiest site's depth 8 is worth the hardest's and one site dug
+is every site dug; the stations that exist (the heads at full strength at 10, the lorry at 12) are
+unreached and unnamed; the map is an afternoon; the move is offered as a way out, not a reason. The
+answer is written up as "The endgame (7 Oct 2026): what depth is for" in concept.md, four parts in
+order: a site's level (tier + depth) driving the curve and the item level, so the ladder is nine
+ladders; the lorry as the ending and the move as a compounding loop (the ladder's floor by move, a free
+yard node a move, the wall as the score); one deep-only unique a site as the chase; the map at
+thirty-six nodes as the long tail. Mocked first: Runs-D on the canvas (the level as a badge on the
+band, the finds' item level, the ladder as twelve rungs with the stations marked and named). Map-B and
+Yard-E follow once the spine is agreed. The balance pass stays paused until all four parts are in.
+
 ## The rarities' colours (7 Oct)
 
 Matt: "the rig is legendary, post bag unique and helmet rare - they all look the same. uniques could be

@@ -546,3 +546,95 @@ layers that multiply, not add. Built in this order, each step leaving the game g
 9. The rest of the uniques (all thirty-five carry rules - done); prestige's "yard's trade" (a move
    opens one element's keystone to every class, permanently - done, 4 Oct: picked at the move, one
    of the five a move); balance last, from the element read.
+
+## The endgame (7 Oct 2026): what depth is for
+
+Matt, ending the first endgame playtest at 3.8 h, level 29, the campaign done, the map seven of fourteen
+ranks spent and the ransacked streets dug to depth 8: "I can see that one zone only to depth 8 and I've
+already completed most of what the map has to offer. That alone needs expanding but also we now need to
+think about actual endgame, because even moving yard or retiring a runner doesn't solve the issue: what
+am I climbing depths for? Classic ARPG issue but we need to solve it somehow."
+
+What the save shows. Past the campaign every site at a depth is the same fight bent by its shape, and
+drops from the whole pool at an item level of the base's tier plus the depth ("the sites differ by what
+they drop, not how hard they are"). So the easiest site's depth 8 is worth exactly the hardest site's
+depth 8, and the odds reader steers a player to the easiest; one site dug is every site dug. The
+stations that exist - the crews' heads at full strength at depth 10 with their charms, the convoy at
+depth 12 on the services with the lorry's load - were never reached, because the streets have no crew's
+head, and nothing names them as the point. The map is fourteen ranks, filled in an afternoon. The move
+is offered "when you've had enough", a reason to stop rather than a reason to go.
+
+The answer is the classic one, in four parts, built in this order.
+
+### 1. A site's level: the ladder is nine ladders
+
+A site's depth d is fought at **level L = tier + d** (the streets: depth 1 is level 1, depth 8 is level
+8; the barracks: depth 1 is level 9, depth 8 is level 16). The endgame curve runs by L, not by d
+(`CURVE` scaled by `grow` to the power L − 9, never under the site's own campaign curve), so the streets'
+ladder is gentle and long and the barracks' is steep and short. Everything the fight pays is by L too:
+an item's level is L, not the base's tier plus the depth (the streets at depth 8 give item level 8, the
+barracks at depth 8 give 16; the affix tier floors follow); the rarity bonus and the notes a kill by L;
+the map's point a new depth stays a point, so the easy ladders feed the map and the hard ones feed the
+kit. The Runs card says it: "Depth 8 · level 8" on the streets, "Depth 2 · level 10" on the barracks,
+and the item level a find will carry. The gate for this part: the barracks at depth 8 reads harder than
+the streets at depth 15 and drops better; a player who wants the best kit digs the city.
+
+### 2. The ending, and the loop
+
+**The lorry is the ending.** The deeds were the campaign's; the convoy at depth 12 on the services -
+all three crews' heads at full strength, one after another, the lorry's load for beating them - is the
+endgame's. It is named from the first depth: the map's band says "The lorry runs the services at depth
+12", the Runs card on the services counts down to it, and the crews' heads at full strength at depth 10
+of their own sites are the stations on the way, each with the charm only they carry. Beating the lorry
+is recorded (`ending` "the lorry"), the yard says so, and nothing past depth 12 needs to exist yet: the
+ladder has a top and the player is told where it is.
+
+**The move is the loop, and it compounds.** Moving the yard is what you do because you beat the lorry,
+not because you are bored: the Move button lights at the lorry (it stays available before, as now, for
+anyone who wants out early). Each move keeps what it keeps (the uniques, the shelf, the wall, the
+trades, half the notes and scrap) and adds a permanent layer the next yard starts from:
+- the ladder's floor: every site opens at depth min(1 + moves, 4), so a second yard starts its ladders
+  at 2, a fourth at 4, and a loop is shorter and goes deeper;
+- the yard's tree grows a rank a move: one free node of the yard's tree, the player's pick, kept
+  through every runner;
+- the find and the cash by move as now (`MOVE_FIND`, `MOVE_CASH` 5% a move), and the trade.
+**The wall is the score.** A retired runner's line records the deepest site and depth they held ("a
+scrapper, 17 runs, the bank at depth 9, retired"), the past keeps it across moves, and the Yard's
+"town and purse" card shows the yard's best (site, depth, which yard). That is the leaderboard across
+yards without a leaderboard.
+
+### 3. The chase: what only depth gives
+
+Each of the nine sites gets **one deep-only unique**, dropped only past a depth that scales with how
+gentle its ladder is: the estate's sites at depth 12, the town's at 9, the city's at 6 (so the streets'
+is the deepest dig in the game, and the barracks' the hardest fight). The shelf shows the nine as gaps
+until found, beside the crews' charms (depth 10 of their sites) and the lorry's load (depth 12 of the
+services): twelve things the shelf is empty of until the ladders are climbed, each a rule. The sets
+stay as they are (past depth 2, by share); a set's full bonus is the mid-depth chase.
+
+### 4. The map as the long tail
+
+Fourteen ranks become **thirty-six nodes**, the caravan's shape and size: three columns of twelve -
+the sites, the crews, the air - each a chain with four notables and a keystone, fed by the same point
+a new depth. The six passives there now become the first rank of their columns. The spine, to be
+written out fully before building:
+- *The sites*: Picked over (3), Deeper pockets (3), Quiet roads (3), Night work for every site (1,
+  notable), Second look (a search after the clear finds twice, 1), Worn in (a picked-over site recovers
+  twice as fast, 2), keystone *The lie of the land*: the first depth of every site is free.
+- *The crews*: Paid in notes (3), Two of everything (1), Heads up (a crew's head's charm drops twice as
+  often, 2), Full strength (the pinnacle from depth 8, 1, notable), Bounties (a head's notes by depth
+  doubled, 2), keystone *The lorry's route*: the convoy from depth 10.
+- *The air*: Word travels (1), Pinned twice (two pins, 1), The forecast (the weather known a day ahead,
+  1), Long wave (the radio hears one more word a site, 2, notable), Clear air (a bought word never
+  comes Resistant, 1), keystone *Open channel*: every word costs notes, never cash.
+
+### Order, and what it costs the balance
+
+Part 1 is numbers and a card (a day): it fixes what the playtest felt most. Part 2 is the design that
+makes depth a question with an answer (two days: the ending, the move's floor and free node, the
+wall's record, the words). Parts 3 and 4 are content (the nine uniques' rules, thirty nodes' effects).
+Every part moves numbers, so the balance pass stays paused until all four are in (Matt's rule: the
+features first, then one pass), and the pass's gates gain two rows: the lorry by hour N on every build,
+and the ladders' spread (the streets' depth 15 against the barracks' depth 8 at the same odds).
+Mocked before building: the Runs card with the level and the stations (Runs-D), the map at thirty-six
+(Map-B), the wall's line and the yard's best (Yard-E).
