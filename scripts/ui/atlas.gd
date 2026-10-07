@@ -1,12 +1,14 @@
 extends Control
-## The map (Map-A, 7 Oct): the endgame's tree in the caravan's shape, in the
-## Runs room where the columns stand. A band (the points free, what earns one,
-## the zones' depths as chips); the six passives as tiles in three columns by
-## what they touch - the sites, the crews, the air - each with its ranks as
-## pips and lined in the accent once one is taken; the sum strip as chips; and
-## the panel under: the pick's name and rank, its figure as a chip with the next
-## rank's beside, one sentence, Take a rank and Start the map again. Picking a
-## tile fills the panel, as the caravan does.
+## The map (Map-A then Map-B, 7 Oct): the endgame's tree in the caravan's
+## shape, in the Runs room where the columns stand. A band (the points free,
+## what earns one, the zones' depths as chips); thirty-six nodes as the
+## caravan's tiles, two across, in three columns by what they touch - the
+## sites, the crews, the air - each column a chain from the top (a node opens
+## when the one before it has a rank), four notables (★) and a keystone (◆)
+## the width, the ranks as pips, a taken tile lined in the accent; the sum
+## strip as the taken nodes' figures; and the panel under: the pick's name and
+## rank (and what it needs when locked), its figure as a chip with the next
+## rank's beside, one sentence, Take a rank and Start the map again.
 
 signal acted
 
@@ -15,6 +17,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const W := Pal.GRID_W
 const PAD := 20
@@ -23,38 +26,18 @@ const COL_GAP := 16
 const COL_W := (W - 2 * COL_GAP) / 3                           # 501
 const COLS_Y := BAND_H + 14
 const HEAD_H := 34
-const TILE_H := 64
-const TILE_GAP := 8
+const TILE_H := 52                 # a node: a tile, two across, the keystone the width (the caravan's, Map-B)
+const TILE_GAP := 6
+const TILE_W := (COL_W - TILE_GAP) / 2                                # 247
 const TILES_Y := COLS_Y + HEAD_H + 6
-const TILE_ROWS := 3
+const TILE_ROWS := 7               # eleven two across and the keystone under
 const SUM_Y := TILES_Y + TILE_ROWS * (TILE_H + TILE_GAP) - TILE_GAP + 12
 const SUM_H := 10 + Chips.CHIP_H + 10
 const SUM_HEAD_W := 150
+const SUM_CHIPS := 7               # the taken nodes' figures, so many and a count
 const PANEL_Y := SUM_Y + SUM_H + 12
 const PIP := 10
 const PIP_GAP := 4
-
-## The columns: what each passive touches.
-const GROUPS := [
-	{"name": "The sites", "keys": ["picked_over", "deeper_pockets", "quiet_roads"]},
-	{"name": "The crews", "keys": ["paid_in_notes", "two_of_everything"]},
-	{"name": "The air", "keys": ["word_travels"]},
-]
-## A passive's figure at a rank (0: nothing yet), its sentence, and the sum strip's key for it.
-const FIGURES := {
-	"picked_over": {"ranks": ["", "a third of finds", "half of finds", "two-thirds of finds"], "sum": "Own finds", "sum_ranks": ["as they come", "a third", "half", "two-thirds"],
-		"sentence": "A site's own things turn up more of the time."},
-	"paid_in_notes": {"ranks": ["", "+1 note a kill", "+2 notes a kill", "+3 notes a kill"], "sum": "Notes", "sum_ranks": ["as they come", "+1 a kill", "+2 a kill", "+3 a kill"],
-		"sentence": "Every kill carries a note more."},
-	"two_of_everything": {"ranks": ["", "two of theirs"], "sum": "Heads", "sum_ranks": ["drop one", "drop two"],
-		"sentence": "A crew's head drops two of theirs."},
-	"deeper_pockets": {"ranks": ["", "searches 10% quicker", "searches 20% quicker", "searches 30% quicker"], "sum": "Searches", "sum_ranks": ["as they come", "10% quicker", "20% quicker", "30% quicker"],
-		"sentence": "The picking-over goes quicker, on every site."},
-	"word_travels": {"ranks": ["", "the word at half price"], "sum": "The word", "sum_ranks": ["full price", "half price"],
-		"sentence": "Calling in a word on the radio costs half."},
-	"quiet_roads": {"ranks": ["", "gangs 10% later", "gangs 20% later", "gangs 30% later"], "sum": "Gangs", "sum_ranks": ["as they come", "10% later", "20% later", "30% later"],
-		"sentence": "The next gang takes longer to arrive, on every site."},
-}
 
 var sim
 var selected := ""                 # a passive's key, or ""
@@ -80,31 +63,36 @@ func _init(h: float) -> void:
 	_band = Band.new(W, BAND_H, 3)
 	_band.set_site("the map")
 	top.add_child(_band)
-	for c in range(GROUPS.size()):
+	for c in range(Data.ATLAS_COLUMNS.size()):
 		var x: int = c * (COL_W + COL_GAP)
-		var g: Dictionary = GROUPS[c]
 		var head := {}
-		head["name"] = UI.label(self, Rect2(x + 4, COLS_Y, COL_W - 8, HEAD_H), g["name"], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		head["name"] = UI.label(self, Rect2(x + 4, COLS_Y, COL_W - 8, HEAD_H), Data.ATLAS_COLUMNS[c], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		head["count"] = UI.label(self, Rect2(x + 4, COLS_Y, COL_W - 8, HEAD_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
 		_heads.append(head)
-		for r in range(g["keys"].size()):
-			var key: String = g["keys"][r]
-			var a: Dictionary = _passive(key)
+		var rects: Array = _tile_rects(c)
+		var k := 0
+		for a in Data.ATLAS:
+			if int(a["column"]) != c:
+				continue
+			var key: String = a["key"]
+			var rc: Rect2 = rects[k]
+			k += 1
 			var t := {}
 			var b := Button.new()
-			b.position = Vector2(x, TILES_Y + r * (TILE_H + TILE_GAP))
-			b.size = Vector2(COL_W, TILE_H)
+			b.position = Vector2(x + rc.position.x, TILES_Y + rc.position.y)
+			b.size = rc.size
 			b.pressed.connect(_pick.bind(key))
 			add_child(b)
 			t["button"] = b
-			t["name"] = UI.label(b, Rect2(12, 8, COL_W - 24, 26), a["name"], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["words"] = UI.label(b, Rect2(12, 34, COL_W - 24, 24), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var big: bool = a.get("notable", false) or a.get("keystone", false)
+			t["name"] = UI.label(b, Rect2(10, 3, rc.size.x - 20, 22), ("◆ " if a.get("keystone", false) else ("★ " if big else "")) + str(a["name"]), "SemiBold" if big else "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["words"] = UI.label(b, Rect2(10, 26, rc.size.x - 20, 22), "", "Regular", Pal.CELL_TEXT_BIG - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			var pips: Array = []
-			for k in range(int(a["max"])):
-				var p := UI.panel(b, Rect2(COL_W - 12 - (int(a["max"]) - k) * (PIP + PIP_GAP) + PIP_GAP, 16, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE))
+			for j in range(int(a["max"])):
+				var p := UI.panel(b, Rect2(rc.size.x - 10 - (int(a["max"]) - j) * (PIP + PIP_GAP) + PIP_GAP, 9, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE))
 				pips.append(p)
 			t["pips"] = pips
-			t["name"].size.x = COL_W - 24 - int(a["max"]) * (PIP + PIP_GAP) - 8
+			t["name"].size.x = rc.size.x - 20 - int(a["max"]) * (PIP + PIP_GAP) - 6
 			_tiles[key] = t
 			_style(b, "open")
 	var sum := UI.panel(self, Rect2(0, SUM_Y, W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -128,10 +116,31 @@ func _init(h: float) -> void:
 
 
 static func _passive(key: String) -> Dictionary:
+	return Data.atlas_of(key)
+
+
+## Where a column's nodes sit: two across in chain order, the keystone across both, in the column's own space.
+static func _tile_rects(c: int) -> Array:
+	var out: Array = []
+	var row := 0
+	var col := 0
 	for a in Data.ATLAS:
-		if a["key"] == key:
-			return a
-	return {}
+		if int(a["column"]) != c:
+			continue
+		var wide: bool = a.get("keystone", false)
+		if wide and col == 1:
+			row += 1
+			col = 0
+		out.append(Rect2(col * (TILE_W + TILE_GAP), row * (TILE_H + TILE_GAP), (2 * TILE_W + TILE_GAP) if wide else TILE_W, TILE_H))
+		if wide:
+			row += 1
+			col = 0
+		else:
+			col += 1
+			if col == 2:
+				col = 0
+				row += 1
+	return out
 
 
 func _style(b: Button, look: String) -> void:
@@ -142,8 +151,10 @@ func _style(b: Button, look: String) -> void:
 				sb = UI.box(Pal.SELECT, 8)
 				sb.border_width_left = 6
 				sb.border_color = Pal.ACCENT
+			"locked":
+				sb = UI.box(Pal.PANEL, 8)
 			_:
-				sb = UI.box(Pal.CARD if state == "hover" else Pal.PANEL, 8)
+				sb = UI.box(Pal.CARD if state == "hover" else Pal.PANEL, 8, 1, Pal.CARD_LINE)
 		if look == "selected":
 			sb = UI.box(Pal.SELECT, 8)
 			sb.set_border_width_all(2)
@@ -170,28 +181,37 @@ func show_state(s) -> void:
 			deepest = maxi(deepest, sim.best_depth[i])
 		zones.append({"forms": ["%s · depth %d" % [Data.ZONES[z]["name"], deepest], "depth %d" % deepest], "colour": Pal.TEXT_2})
 	_band.set_chips(zones)
-	for c in range(GROUPS.size()):
-		var g: Dictionary = GROUPS[c]
-		var taken := 0
-		var of := 0
-		for key in g["keys"]:
-			var a: Dictionary = _passive(key)
-			var rank: int = sim.atlas_rank(key)
-			taken += rank
-			of += int(a["max"])
-			var t: Dictionary = _tiles[key]
-			var f: Dictionary = FIGURES[key]
-			UI.fit(t["words"], [f["ranks"][rank] if rank > 0 else str(a["words"]), str(a["words"]).get_slice(":", 0)])
-			for k in range(t["pips"].size()):
-				t["pips"][k].add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < rank else Color.TRANSPARENT, PIP / 2, 1, Pal.ACCENT if k < rank else Pal.CARD_LINE))
-			_style(t["button"], "selected" if key == selected else ("taken" if rank > 0 else "open"))
-		_heads[c]["count"].text = "%d of %d rank%s" % [taken, of, "" if of == 1 else "s"]
-	# the sum strip
+	var taken_of: Array = [[0, 0], [0, 0], [0, 0]]
 	var items := []
-	for key in FIGURES:
-		var f: Dictionary = FIGURES[key]
+	var more := 0
+	for a in Data.ATLAS:
+		var key: String = a["key"]
+		var c: int = int(a["column"])
 		var rank: int = sim.atlas_rank(key)
-		items.append({"tag": f["sum"], "forms": [f["sum_ranks"][rank]], "colour": Pal.GOOD if rank > 0 else Pal.TEXT_2})
+		taken_of[c][0] += rank
+		taken_of[c][1] += int(a["max"])
+		var t: Dictionary = _tiles[key]
+		var open: bool = sim.atlas_open(key)
+		var figs: Array = a["figures"]
+		var words: String = str(figs[rank]) if rank > 0 else str(a["words"])
+		UI.fit(t["words"], [words, words.get_slice(":", 0).get_slice(";", 0), words.get_slice(", ", 0), str(figs[maxi(rank, 1)]), str(a["sum"])])
+		for k in range(t["pips"].size()):
+			t["pips"][k].add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < rank else Color.TRANSPARENT, PIP / 2, 1, Pal.ACCENT if k < rank else Pal.CARD_LINE))
+		_style(t["button"], "selected" if key == selected else ("taken" if rank > 0 else ("open" if open else "locked")))
+		t["name"].add_theme_color_override("font_color", Pal.TEXT if (rank > 0 or open) else Pal.TEXT_3)
+		t["words"].add_theme_color_override("font_color", Pal.TEXT_2 if (rank > 0 or open) else Pal.TEXT_3)
+		if rank > 0:
+			if items.size() < SUM_CHIPS:
+				items.append({"tag": str(a["sum"]), "forms": [str(figs[rank])], "colour": Pal.GOOD})
+			else:
+				more += 1
+	for c in range(Data.ATLAS_COLUMNS.size()):
+		_heads[c]["count"].text = Words.MAP["column_count"] % [taken_of[c][0], taken_of[c][1]]
+	# the sum strip: the taken nodes' figures, so many and a count; nothing taken, the point's worth
+	if more > 0:
+		items.append({"tag": "and", "forms": ["%d more" % more], "colour": Pal.TEXT_2})
+	if items.is_empty():
+		items.append({"forms": ["Nothing taken yet: a point a new depth, spent here"], "colour": Pal.TEXT_2})
 	_sum_chips.show_chips(items)
 	_show_panel()
 
@@ -204,20 +224,23 @@ func _show_panel() -> void:
 		_title.text = "The map"
 		_words.position.x = PAD
 		_words.size.x = W - 2 * PAD
-		UI.fit(_words, ["Pick a passive above. The lorry runs the services at depth %d; the crews' heads come at full strength at depth %d." % [Data.CONVOY_DEPTH, Data.PINNACLE_DEPTH], "The lorry runs the services at depth %d." % Data.CONVOY_DEPTH, "Pick a passive above."])
+		UI.fit(_words, [Words.MAP["empty"] % [sim.convoy_depth(), sim.pinnacle_depth()], Words.MAP["empty_short"] % sim.convoy_depth(), "Pick a node above."])
 	else:
 		var rank: int = sim.atlas_rank(selected)
-		var f: Dictionary = FIGURES[selected]
-		_title.text = "%s · rank %d of %d" % [a["name"], rank, int(a["max"])]
+		var figs: Array = a["figures"]
+		var needs: String = ""
+		if not sim.atlas_open(selected):
+			needs = Words.MAP["needs"] % _before(selected)["name"]
+		UI.fit(_title, ["%s · rank %d of %d%s" % [a["name"], rank, int(a["max"]), (" · " + needs) if needs != "" else ""], "%s · rank %d of %d" % [a["name"], rank, int(a["max"])], str(a["name"])])
 		var items := []
 		if rank > 0:
-			items.append({"forms": [f["ranks"][rank]], "colour": Pal.GOOD})
+			items.append({"forms": [str(figs[rank])], "colour": Pal.GOOD})
 		if rank < int(a["max"]):
-			items.append({"forms": [("next: " if rank > 0 else "") + str(f["ranks"][rank + 1])], "colour": Pal.TEXT_2 if rank > 0 else Pal.ACCENT})
+			items.append({"forms": [("next: " if rank > 0 else "") + str(figs[rank + 1])], "colour": Pal.TEXT_2 if rank > 0 else Pal.ACCENT})
 		_chips.show_chips(items)
 		_words.position.x = PAD + _chips.used_width() + 10
 		_words.size.x = W - PAD - _words.position.x
-		UI.fit(_words, [f["sentence"], ""])
+		UI.fit(_words, [str(a["sentence"]), str(a["words"]), ""])
 		_take.text = "Take a rank (1 point)" if rank < int(a["max"]) else "At its top"
 		_take.disabled = not sim.can_rank_atlas(selected)
 		_take.size.x = ceilf(UI.text_width(_take, _take.text)) + 48
@@ -228,6 +251,17 @@ func _show_panel() -> void:
 	if _take.visible:
 		x -= 12 + _take.size.x
 		_take.position.x = x
+
+
+## The node before one in its column, or {} for the first.
+static func _before(key: String) -> Dictionary:
+	var prev := {}
+	for a in Data.ATLAS:
+		if a["key"] == key:
+			return prev
+		if int(a["column"]) == int(Data.atlas_of(key)["column"]):
+			prev = a
+	return {}
 
 
 # ------------------------------------------------------------------ acting

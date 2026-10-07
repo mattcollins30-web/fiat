@@ -195,6 +195,15 @@ const BOOK := {
 	"count": "%d of %d found",
 	"deep": "The rest are deeper than you've been.",
 }
+## The map at thirty-six (7 Oct).
+const MAP := {
+	"head_start": "%s at full strength: the map gains a point.",
+	"empty": "Pick a node above. The lorry runs the services at depth %d; the crews' heads come at full strength at depth %d.",
+	"empty_short": "The lorry runs the services at depth %d.",
+	"needs": "Needs %s first",
+	"column_count": "%d of %d ranks",
+}
+
 const SHELF := {
 	"empty": "Nothing on the shelf yet. The heads carry them.",
 	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is

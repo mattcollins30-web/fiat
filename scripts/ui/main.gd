@@ -975,7 +975,7 @@ func _comms_cards() -> Array:
 			"unit_forms": ["%s to clear, D%d" % [Fmt.pct(odds), t["depth"]], "%s, D%d" % [Fmt.pct(odds), t["depth"]], Fmt.pct(odds)] if sim.odds_settled(i) else ["reading the odds", "reading"],
 			"band": {"site": t["name"], "tone": zone_i, "kicker": "%s · depth %d" % [Data.ZONES[zone_i]["name"], t["depth"]], "colour": Pal.tone_color(odds_tone) if sim.odds_settled(i) else Pal.TEXT_3},
 			"lines": lines, "word_rows": _missions.word_rows(sim, words), "tone": "good" if sim.pinned[i] else ""}
-		var buttons := [{"text": "New word (%s)" % Fmt.money(sim.intel_cost(i)), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
+		var buttons := [{"text": "New word (%s)" % _word_price(i, false), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
 		if sim.can_pin():
 			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
 				"tone": "good" if sim.pinned[i] else ""})
@@ -1003,7 +1003,7 @@ func _choose_word(i: int, page: int) -> void:
 		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Call in a word on %s" % sim.tier(i)["name"].to_lower(), "%s, and the site carries it until a run spends it" % Fmt.money(sim.juice_cost(i)), items, _menu.close)
+	_menu.open("Call in a word on %s" % sim.tier(i)["name"].to_lower(), "%s, and the site carries it until a run spends it" % _word_price(i, true), items, _menu.close)
 
 
 func _add_word(i: int, name: String) -> void:
@@ -1017,7 +1017,14 @@ func _choose_hold(i: int) -> void:
 	for name in sim.intel[i]:
 		items.append({"name": name, "detail": "Keep this; the rest re-roll", "action": _hold_word.bind(i, name)})
 	items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Hold a word on %s" % sim.tier(i)["name"].to_lower(), "%s" % Fmt.money(sim.intel_cost(i) * 2), items, _menu.close)
+	_menu.open("Hold a word on %s" % sim.tier(i)["name"].to_lower(), "%s" % (Fmt.count(sim.intel_notes(i) * 2, "note") if sim.words_in_notes() else Fmt.money(sim.intel_cost(i) * 2)), items, _menu.close)
+
+
+## A word's price as the card says it: cash, or notes under the map's Open channel.
+func _word_price(i: int, called: bool) -> String:
+	if sim.words_in_notes():
+		return Fmt.count(sim.juice_notes(i) if called else sim.intel_notes(i), "note")
+	return Fmt.money(sim.juice_cost(i) if called else sim.intel_cost(i))
 
 
 ## After a death, two turn up: pick who stays.

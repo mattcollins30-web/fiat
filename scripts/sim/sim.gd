@@ -70,6 +70,7 @@ var takings := 0.0                 # what the yard takes a run, averaged over th
 var _takings_run := 0.0            # the cash in since the last run came home
 var cash_in := 0.0                 # every pound in since the game began (runs, sales, contracts); not saved: the readers' figure
 var atlas := {}                    # the map's passives: key -> rank
+var boss_paid: Array = []          # per tier: the depths a head's price has been paid at (Long memory: once a depth)
 var atlas_points := 0              # earned: one a new depth cleared past the first
 var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
 var mate := {}                     # the fence's mate's offer: {unique, notes}
@@ -95,6 +96,7 @@ func _init() -> void:
 		pinned.append(false)
 		worn.append(-1.0)
 		worn_depth.append(1)
+		boss_paid.append([])
 	for z in range(Data.ZONES.size()):
 		bosses_beaten.append(false)
 		weather.append("")
@@ -896,7 +898,11 @@ func move_yard(trade := "") -> bool:
 			yard_tree.append(id)
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
-		"lorries": lorries, "best_dig": best_dig.duplicate()}
+		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points}
+	if atlas_rank("held_word") > 0:
+		for i in range(pinned.size()):
+			if pinned[i]:
+				keep["held"][i] = intel[i].duplicate()     # Held word: what's pinned at the radio moves with the yard
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
@@ -911,6 +917,11 @@ func move_yard(trade := "") -> bool:
 	yard_moves = keep["moves"]
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
+	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the yard
+	atlas_points = keep["atlas_points"]
+	for i in keep["held"]:
+		pinned[i] = true
+		intel[i] = keep["held"][i]
 	elapsed = keep["elapsed"]
 	events = keep["events"]
 	operators_lost = keep["operators_lost"]
@@ -1006,7 +1017,12 @@ func weather_of(i: int) -> String:
 func wear(i: int) -> float:
 	if worn[i] < 0.0 or int(worn_depth[i]) != depth[i]:
 		return 0.0
-	return clampf(1.0 - (elapsed - worn[i]) / (Data.RECOVER_H * 3600.0), 0.0, 1.0)
+	return clampf(1.0 - (elapsed - worn[i]) / recover_s(), 0.0, 1.0)
+
+
+## How long a picked-over site takes to come back: RECOVER_H, half again as fast a rank of Worn in.
+func recover_s() -> float:
+	return Data.RECOVER_H * 3600.0 / (1.0 + 0.5 * atlas_rank("worn_in"))
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
@@ -1014,7 +1030,7 @@ func site_state(i: int) -> String:
 	var w := wear(i)
 	if w <= 0.0:
 		return Words.SKY["fresh"]
-	var back: float = Data.RECOVER_H * 3600.0 - (elapsed - float(worn[i]))
+	var back: float = recover_s() - (elapsed - float(worn[i]))
 	var mins: int = int(ceil(back / 60.0))
 	var when := ("%dh%02d" % [mins / 60, mins % 60]) if mins >= 60 else ("%d min" % mins)
 	return (Words.SKY["worn"] if w > 0.5 else Words.SKY["settling"]) % when
@@ -1414,7 +1430,18 @@ func can_rank_atlas(key: String) -> bool:
 		return false
 	for a in Data.ATLAS:
 		if a["key"] == key:
-			return atlas_rank(key) < int(a["max"])
+			return atlas_rank(key) < int(a["max"]) and atlas_open(key)
+	return false
+
+
+## A node is open when the one before it in its column has a rank (the map at thirty-six, 7 Oct: each column a chain).
+func atlas_open(key: String) -> bool:
+	var before: String = ""
+	for a in Data.ATLAS:
+		if a["key"] == key:
+			return before == "" or atlas_rank(before) > 0
+		if int(a["column"]) == Data.atlas_of(key).get("column", -1):
+			before = a["key"]
 	return false
 
 
@@ -1839,8 +1866,8 @@ func shelf_chase() -> Array:
 		if u.has("pinnacle"):
 			for b in Data.BOSSES:
 				if int(b["zone"]) == int(u["pinnacle"]):
-					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], Data.PINNACLE_DEPTH]})
-	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"] % [Data.CONVOY_DEPTH, Data.TIERS[Data.CONVOY_TIER]["name"].to_lower()]})
+					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], pinnacle_depth()]})
+	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"] % [convoy_depth(), Data.TIERS[Data.CONVOY_TIER]["name"].to_lower()]})
 	return out
 
 
@@ -1981,17 +2008,35 @@ func upgrade_comms() -> bool:
 
 ## Fresh intel on one tier, for cash - the tower's first job.
 func intel_cost(i: int) -> int:
-	return Data.INTEL_CASH[i]
+	return int(round(Data.INTEL_CASH[i] * (1.0 - 0.25 * atlas_rank("good_reception"))))
+
+
+## Open channel (the map's keystone, 7 Oct): every word costs notes, never cash.
+func words_in_notes() -> bool:
+	return atlas_rank("open_channel") > 0
+
+
+## A fresh word's price in notes, under Open channel: by the zone.
+func intel_notes(i: int) -> int:
+	return int(Data.OPEN_CHANNEL_NOTES[0]) * (int(Data.TIERS[i]["zone"]) + 1)
+
+
+## A called-in word's price in notes, under Open channel.
+func juice_notes(i: int) -> int:
+	return int(Data.OPEN_CHANNEL_NOTES[1]) * (int(Data.TIERS[i]["zone"]) + 1)
 
 
 func can_buy_intel(i: int) -> bool:
-	return comms_level >= 1 and mission == null and tier_open(i) and cash >= intel_cost(i)
+	return comms_level >= 1 and mission == null and tier_open(i) and (notes >= intel_notes(i) if words_in_notes() else cash >= intel_cost(i))
 
 
 func buy_intel(i: int) -> bool:
 	if not can_buy_intel(i):
 		return false
-	cash -= intel_cost(i)
+	if words_in_notes():
+		notes -= intel_notes(i)
+	else:
+		cash -= intel_cost(i)
 	_roll_tier_intel(i)
 	_surv_cache.erase(i)
 	log_event("Fresh word on %s: %s" % [tier(i)["name"].to_lower(), ", ".join(intel[i]).to_lower()])
@@ -2038,7 +2083,7 @@ func a_runs_takings() -> float:
 ## which at depth 15 was £70k against a run paying £5k, and the pile sat under it.
 func juice_cost(i: int) -> int:
 	var base: float = maxf(_inf(Data.INTEL_CASH[i] * JUICE_COST), a_runs_takings() * JUICE_SHARE) * (1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
-	return int(round(base / (2 if atlas_rank("word_travels") > 0 else 1)))
+	return int(round(base * (1.0 - 0.25 * atlas_rank("early_word")) / (2 if atlas_rank("word_travels") > 0 else 1)))
 
 
 ## Insurance: a share of the kit's worth, by the depth of the run.
@@ -2065,14 +2110,22 @@ func juice_options(i: int) -> Array:
 	return out
 
 
+## How many words a site carries: MAX_WORDS, one more with Long wave.
+func max_words() -> int:
+	return MAX_WORDS + atlas_rank("long_wave")
+
+
 func can_add_word(i: int) -> bool:
-	return can_juice() and mission == null and tier_open(i) and intel[i].size() < MAX_WORDS and cash >= juice_cost(i)
+	return can_juice() and mission == null and tier_open(i) and intel[i].size() < max_words() and (notes >= juice_notes(i) if words_in_notes() else cash >= juice_cost(i))
 
 
 func add_word(i: int, name: String) -> bool:
 	if not can_add_word(i) or not (name in juice_options(i)):
 		return false
-	cash -= juice_cost(i)
+	if words_in_notes():
+		notes -= juice_notes(i)
+	else:
+		cash -= juice_cost(i)
 	intel[i].append(name)
 	_surv_cache.erase(i)
 	log_event("Called in on %s: %s" % [tier(i)["name"].to_lower(), name.to_lower()])
@@ -2080,18 +2133,21 @@ func add_word(i: int, name: String) -> bool:
 
 
 func can_lock_word(i: int) -> bool:
-	return can_juice() and mission == null and tier_open(i) and intel[i].size() >= 2 and cash >= intel_cost(i) * 2
+	return can_juice() and mission == null and tier_open(i) and intel[i].size() >= 2 and (notes >= intel_notes(i) * 2 if words_in_notes() else cash >= intel_cost(i) * 2)
 
 
 ## Keep one word, re-roll the others.
 func lock_word(i: int, name: String) -> bool:
 	if not can_lock_word(i) or not (name in intel[i]):
 		return false
-	cash -= intel_cost(i) * 2
+	if words_in_notes():
+		notes -= intel_notes(i) * 2
+	else:
+		cash -= intel_cost(i) * 2
 	var keep := [name]
 	_roll_tier_intel(i)
 	for w in intel[i]:
-		if w != name and keep.size() < MAX_WORDS and not (w in keep):
+		if w != name and keep.size() < max_words() and not (w in keep):
 			keep.append(w)
 	intel[i] = keep
 	_surv_cache.erase(i)
@@ -2375,17 +2431,42 @@ func boss_cost(i: int) -> int:
 	var b := boss_of(i)
 	if b.is_empty() or not bosses_beaten[int(b["zone"])]:
 		return 0
-	return int(b["notes"]) * depth[i] * (Data.PINNACLE_COST if is_pinnacle(i) else 1)
+	if atlas_rank("long_memory") > 0 and i < boss_paid.size() and (depth[i] in boss_paid[i]):
+		return 0                              # Long memory: paid once at this depth
+	return int(round(int(b["notes"]) * depth[i] * (Data.PINNACLE_COST if is_pinnacle(i) else 1) * (1.0 - atlas_rank("heads_up") / 3.0)))
 
 
-## From PINNACLE_DEPTH a crew's head comes at full strength.
+## A word with its bite scaled toward nothing: a multiplier m becomes 1 + (m - 1) × f, a contact rounded.
+static func _softened(m: Dictionary, f: float) -> Dictionary:
+	var out: Dictionary = m.duplicate()
+	for k in ["hp", "dps", "xp", "cash", "drop", "pace", "patrol", "search"]:
+		if out.has(k):
+			out[k] = 1.0 + (float(out[k]) - 1.0) * f
+	if out.has("contact"):
+		out["contact"] = int(float(out["contact"]) * f)       # toward nothing: half of one on you is none
+	if out.has("rarity"):
+		out["rarity"] = float(out["rarity"]) * f
+	return out
+
+
+## The depth a crew's head comes at full strength from: PINNACLE_DEPTH, two sooner with Full strength on the map.
+func pinnacle_depth() -> int:
+	return Data.PINNACLE_DEPTH - 2 * atlas_rank("full_strength")
+
+
+## The depth the lorry runs the services from: CONVOY_DEPTH, two sooner with The lorry's route on the map.
+func convoy_depth() -> int:
+	return Data.CONVOY_DEPTH - 2 * atlas_rank("lorrys_route")
+
+
+## From pinnacle_depth() a crew's head comes at full strength.
 func is_pinnacle(i: int) -> bool:
-	return depth[i] >= Data.PINNACLE_DEPTH
+	return depth[i] >= pinnacle_depth()
 
 
 ## The services, deep enough: the convoy, all three crews.
 func is_convoy(i: int) -> bool:
-	return i == Data.CONVOY_TIER and depth[i] >= Data.CONVOY_DEPTH and campaign_done()
+	return i == Data.CONVOY_TIER and depth[i] >= convoy_depth() and campaign_done()
 
 
 ## A boss as they come at this tier and depth: the crew's head, or at full strength.
@@ -2473,14 +2554,28 @@ func effective(i: int) -> Dictionary:
 		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
-	if (has_node("night_work") or is_night()) and not ("Night" in intel[i]):
+	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night() or ("Night" in intel[i])
+	if night_run and not ("Night" in intel[i]):
 		var night := modifier("Night")
-		e["pace"] *= night.get("pace", 1.0)
-		e["rarity"] += night.get("rarity", 0.0)
+		e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # Night eyes: the slower feet halved a rank
+		e["rarity"] += night.get("rarity", 0.0) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
 		e["intel"].append("Night")
+	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
+	e["drop"] *= 1.0 + 0.1 * atlas_rank("easy_pickings")
+	e["cash"] *= (1.0 + 0.1 * atlas_rank("every_penny")) * (1.5 if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["xp"] *= (1.0 + 0.1 * atlas_rank("wages")) * (1.5 if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["pace"] *= 1.0 + 0.05 * atlas_rank("short_cuts")
+	e["contact"] += (1 if atlas_rank("heavy_crews") > 0 else 0) - (1 if atlas_rank("open_ground") > 0 else 0)
+	e["rarity"] += 0.05 * atlas_rank("tip_offs")
+	if atlas_rank("local_knowledge") > 0:
+		e["loot_tier"] = mini(Data.MAX_TIER, int(e["loot_tier"]) + 1)
+	if night_run and atlas_rank("dead_air") > 0:
+		e["patrol"] *= 1.25
 	var sky: String = weather_of(i)
-	if sky != "" and not (sky in intel[i]):
-		e["intel"].append(sky)               # applied with the words below
+	if sky != "" and not (sky in intel[i]) and atlas_rank("fair_weather") < 2:
+		e["intel"].append(sky)               # applied with the words below, softened by Fair weather
+	if sky != "" and atlas_rank("forecast") > 0:
+		e["cash"] *= 1.2                     # The forecast: a run under the weather pays
 	var w := wear(i)
 	if w > 0.0:
 		e["drop"] *= 1.0 - Data.WORN_DROP * w
@@ -2500,6 +2595,12 @@ func effective(i: int) -> Dictionary:
 		if name == "Night" and not ("Night" in intel[i]):
 			continue                              # the clock's night is applied above
 		var m := modifier(name)
+		if m.get("sky", false) and atlas_rank("fair_weather") > 0:
+			m = _softened(m, 0.5)               # Fair weather: the sky's word bites half as hard
+		if name == "Night" and atlas_rank("night_eyes") > 0:
+			m = m.duplicate()
+			m["pace"] = 1.0 - (1.0 - float(m.get("pace", 1.0))) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # the rolled word, the same eyes
+			m["rarity"] = float(m.get("rarity", 0.0)) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)
 		e["hp"] *= m.get("hp", 1.0)
 		e["dps"] *= m.get("dps", 1.0)
 		e["xp"] *= m.get("xp", 1.0)
@@ -2563,8 +2664,10 @@ func _roll_tier_intel(i: int) -> void:
 	var n := 1 if (i == 0 and depth[i] < 3) else 2
 	if Data.TIERS[i]["zone"] >= 1:
 		n = 2
+	n += atlas_rank("long_wave")              # Long wave: one more word a site
 	var names := []
-	var pool: Array = Data.MODIFIERS.filter(func(m): return not m.get("sky", false))   # the sky's words come from the clock, not the radio
+	var clear: bool = atlas_rank("clear_air") > 0
+	var pool: Array = Data.MODIFIERS.filter(func(m): return not m.get("sky", false) and not (clear and m["name"] == "Resistant"))   # the sky's words come from the clock, not the radio; Clear air never hears Resistant
 	pool.shuffle()
 	for k in range(n):
 		names.append(pool[k]["name"])
@@ -2577,6 +2680,8 @@ func set_depth(i: int, d: int) -> void:
 	if mission == null:
 		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
 		var top: int = maxi(best_depth[i] + 1, (ladder_floor() + 1) if best_depth[i] > 0 else 1) if campaign_done() else 1
+		if campaign_done() and best_depth[i] > 0 and atlas_rank("lie_of_the_land") > 0:
+			top += 1                          # The lie of the land: one past the deepest cleared
 		depth[i] = clampi(d, 1, top)
 
 
@@ -2749,6 +2854,8 @@ func deploy(i: int) -> void:
 		if notes < cost:
 			return
 		notes -= cost
+		if cost > 0 and i < boss_paid.size() and not (depth[i] in boss_paid[i]):
+			boss_paid[i].append(depth[i]) # Long memory reads it: paid once a depth
 		boss_armed[i] = false             # one run, like the insurance: the fight is this run's, and the notes are the run's too; arm him again to go back
 		_surv_cache.erase(i)
 	var insured := false
@@ -2951,6 +3058,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if m["fresh"]:
 		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
+	if m["fresh"] and atlas_rank("marked_men") > 0:
+		headshot += 0.25
 	if m["fresh"] and has_rule("grandads"):
 		headshot += 2.0
 	if m["fresh"] and (has_node("one_shot") or has_rule("lollipop")):
@@ -3242,7 +3351,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
 	if has_node("quiet_hands"):
 		return
-	if has_node("nothing_wasted") or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * pay:
+	if has_node("nothing_wasted") or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
 			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)     # signed for: a tier up
@@ -3268,7 +3377,10 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	xp += t["xp"] * 10.0
 	_earn_points(before)
 	m["cash"] += t["cash"] * 10.0 * inflation()
-	m["notes"] = int(m.get("notes", 0)) + Data.NOTES_BOSS * int(t["depth"])
+	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + 0.5 * atlas_rank("bounties"))))
+	if b.get("pinnacle", false) and atlas_rank("head_start") > 0:
+		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
+		log_event(Words.MAP["head_start"] % b["name"])
 	var first: bool = not bosses_beaten[int(b["zone"])]
 	bosses_beaten[int(b["zone"])] = true
 	var pool: Array = []
@@ -3491,6 +3603,8 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		# every find this search is one of the share still there (29): past thin_after, each is a roll
 		var thin := thinning(m, t)
 		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[kennel_level]["finds"]) + (1 if has_rule("postman") else 0)
+		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
+			finds += 1                        # Second look: one more every other search, then every search
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
 		m["extra"] = float(m.get("extra", 0.0)) + maxf(0.0, loot_bonus())
 		while m["extra"] >= 1.0:
@@ -4392,7 +4506,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(),
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
@@ -4495,6 +4609,14 @@ func load_dict(d: Dictionary) -> void:
 	for k in d.get("atlas", {}):
 		atlas[str(k)] = int(d["atlas"][k])
 	atlas_points = int(d.get("atlas_points", 0))
+	boss_paid = []
+	var paid: Array = d.get("boss_paid", [])
+	for i in range(Data.TIERS.size()):
+		var at: Array = []
+		if i < paid.size() and paid[i] is Array:
+			for x in paid[i]:
+				at.append(int(x))
+		boss_paid.append(at)
 	contracts = []
 	for c in d.get("contracts", []):
 		contracts.append({"slot": str(c["slot"]), "rarity": int(c["rarity"]), "count": int(c["count"]), "pay": str(c["pay"]), "amount": int(c["amount"]), "unique": str(c.get("unique", "")), "what": str(c.get("what", ""))})

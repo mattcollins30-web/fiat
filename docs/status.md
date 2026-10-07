@@ -2100,6 +2100,41 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The endgame, part 4: the map at thirty-six (7 Oct)
+
+Built as concept.md's part 4, mocked as Map-B. `Data.ATLAS` is thirty-six nodes in three columns of
+twelve (`column`, in chain order; `max`, `notable`, `keystone`, `figures` a rank, `sum` for the strip,
+`sentence` for the panel), each column a chain: a node opens when the one before it has a rank
+(`atlas_open`), fifty-nine ranks in all, fed by the same point a new depth. The six passives are the
+first ranks of their columns. The sites: Picked over, Deeper pockets, Quiet roads, ★ After dark (every
+site is Night, the dark's rarer finds half again), Second look (a search finds one more, every other then every), Worn in (recovery half
+again as fast a rank, `recover_s`), Easy pickings (drops +10% a rank), ★ Local knowledge (the bases a
+gear tier up), Short cuts (pace +5% a rank), ★ Open ground (one fewer on you), Every penny (cash
++10% a rank), ◆ The lie of the land (every ladder opens one past the deepest cleared, in `set_depth`).
+The crews: Paid in notes, Two of everything, Heads up (a head's price a third less a rank), ★ Full
+strength (the pinnacle from depth 8: `pinnacle_depth()`), Bounties (a head's notes half again a rank),
+Wages (XP +10% a rank), ★ Heavy crews (one more on you, kills pay half again in cash and XP), Their
+own kit (a kill drops 10% more often a rank), ★ Marked men (+25% on the first of a gang), Long memory
+(a crew's head's price paid once a depth: `boss_paid`, the depths paid, saved), ★ Head start (a head at full strength pays a
+map point), ◆ The lorry's route (the convoy from depth 10: `convoy_depth()`). The air: Word travels,
+Good reception (fresh word a quarter cheaper a rank), Clear air (the radio never hears Resistant), ★
+Long wave (one more word a site, `max_words()`), Fair weather (Rain and Fog half as hard a rank,
+`_softened`; lifted at two), Night eyes (Night's pace halved a rank, the rolled word too), ★ The forecast (+20% cash under
+Rain or Fog), Early word (a called-in word a quarter cheaper a rank), Tip-offs (+5% loot quality a
+rank), ★ Dead air (gangs a quarter later at night), Held word (a pinned word holds through a move), ◆
+Open channel (every word costs notes, never cash: `words_in_notes`, `intel_notes`, `juice_notes`,
+`OPEN_CHANNEL_NOTES` by zone; the radio's buttons and menus say the price in notes). The map moves with
+the yard (its ranks and points are kept: it is the long tail). The screen (`atlas.gd`): the caravan's
+tiles two across, the keystone the width, ★ and ◆ on the names, a locked tile dim, the column head
+counting its ranks, the sum strip as the taken nodes' figures (seven and a count), the panel naming what
+a locked node needs. `shot.gd`'s map mode takes sixteen ranks. Smoke: the chain (open from the top only,
+in order), every column twelve ending in a keystone the width, the strip's count, a locked node's panel,
+and every new node's effect read through the sim: After dark, Worn in, Easy pickings, Local knowledge,
+Short cuts, Open ground, Every penny, The lie of the land, Heads up, Full strength, Wages, Heavy
+crews, Long memory, Head start, Bounties, The lorry's route, Good reception, Clear air, Long wave, Fair
+weather at one and two ranks, Night eyes, The forecast, Early word, Tip-offs, Dead air, Open channel
+paying in notes, the ranks adding to fifty-nine, Held word and the map through a move.
+
 ## A log line of one long sentence (7 Oct)
 
 Matt's smoke: "One of them is in the last doorman's station helmet, visored." needed 696 px of the log

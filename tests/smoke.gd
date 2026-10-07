@@ -2272,7 +2272,7 @@ func _set_checks(main) -> void:
 	_atlas_checks(main)
 
 
-## The map: a point a new depth past the first, six passives, their effects.
+## The map: a point a new depth past the first, the passives, their effects.
 func _atlas_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -2306,11 +2306,14 @@ func _atlas_checks(main) -> void:
 	var search0: float = sim.search_s(t2)
 	var cost0: int = sim.juice_cost(0)
 	var notes0: int = sim.notes_a_kill(t2)
-	_check(sim.rank_atlas("quiet_roads") and sim.atlas_rank("quiet_roads") == 1, "a rank did not take")
-	_check(not sim.rank_atlas("quiet_roads"), "a rank took with no point free")
-	_check(sim.patrol_s(t2) > patrol0 * 1.09, "Quiet roads did not slow the gangs")
+	# the chain (the map at thirty-six, 7 Oct): a node opens when the one before it in its column has a rank
+	_check(sim.atlas_open("picked_over") and not sim.atlas_open("deeper_pockets") and not sim.can_rank_atlas("quiet_roads"), "the chain is open from the middle")
+	_check(sim.rank_atlas("picked_over") and sim.atlas_rank("picked_over") == 1, "a rank did not take")
+	_check(not sim.rank_atlas("deeper_pockets"), "a rank took with no point free")
 	sim.atlas_points += 10
-	for i in range(3):
+	_check(sim.rank_atlas("deeper_pockets") and sim.rank_atlas("quiet_roads") and sim.atlas_rank("quiet_roads") == 1, "the chain did not open in order")
+	_check(sim.patrol_s(t2) > patrol0 * 1.09, "Quiet roads did not slow the gangs")
+	for i in range(2):
 		sim.rank_atlas("deeper_pockets")
 	_check(sim.atlas_rank("deeper_pockets") == 3 and not sim.can_rank_atlas("deeper_pockets"), "Deeper pockets went past its max")
 	_check(sim.search_s(t2) < search0 * 0.75, "Deeper pockets did not quicken searches")
@@ -2337,10 +2340,11 @@ func _atlas_checks(main) -> void:
 	_check(sim.atlas_spent() == 0 and sim.atlas_free() == sim.atlas_points, "starting the map again did not refund")
 	main._missions._pick_zone(0)
 	# the round trip keeps it
-	sim.rank_atlas("quiet_roads")
+	sim.rank_atlas("picked_over")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
-	_check(sim.atlas_rank("quiet_roads") == 1 and sim.atlas_points == 11, "the map did not survive a save")
+	_check(sim.atlas_rank("picked_over") == 1 and sim.atlas_points == 11, "the map did not survive a save")
+	_map_nodes_checks(main)
 	sim.load_dict(saved)
 	print("the map ok: points, ranks, effects, two of everything, reset")
 	_contracts_checks(main)
@@ -5920,6 +5924,7 @@ func _endgame_move_checks(main) -> void:
 	# the move: the lorries and the best dig come, lorry_done clears, the first yard node is free, the ladders start at the floor
 	var lorries0: int = sim.lorries
 	var dig0: Dictionary = sim.best_dig.duplicate()
+	var points_kept: int = sim.atlas_points        # the map moves with the yard (part 4)
 	_check(sim.can_move_yard() and sim.move_yard(), "the yard could not move after the lorry")
 	_check(sim.yard_moves == 1 and sim.lorries == lorries0 and sim.best_dig == dig0 and not sim.lorry_done, "the move lost the score: moves %d, lorries %d, dig %s, lorry %s" % [sim.yard_moves, sim.lorries, str(sim.best_dig), str(sim.lorry_done)])
 	_check(sim.ladder_floor() == 1 and sim.free_yard_nodes() == 1, "the move's floor and free nodes are off: %d / %d" % [sim.ladder_floor(), sim.free_yard_nodes()])
@@ -5940,7 +5945,7 @@ func _endgame_move_checks(main) -> void:
 	sim.deploy(0)
 	sim._clear(sim.mission, t0)
 	sim.extract_now()
-	_check(sim.best_depth[0] == 1 and sim.atlas_points == 0, "the first clear on a moved yard is off: best %d, points %d" % [sim.best_depth[0], sim.atlas_points])
+	_check(sim.best_depth[0] == 1 and sim.atlas_points == points_kept, "the first clear on a moved yard is off: best %d, points %d of %d kept" % [sim.best_depth[0], sim.atlas_points, points_kept])
 	_check(sim.events.any(func(e): return str(e[1]).contains("ladders start at depth 2")), "the ladder's floor was not said")
 	# the floor opens the depth without faking the clear: depth 2 opens on the streets, depth 3 does not; the wall reads depth 1
 	_finish_campaign(sim)
@@ -6066,7 +6071,152 @@ func _site_unique_checks(main) -> void:
 	sim.stash = hold_stash
 
 
-## The map in the caravan's shape (Map-A, 7 Oct): six tiles in three columns, the pips as the ranks, the taken
+## The map at thirty-six (endgame part 4, 7 Oct): the new nodes' effects, each read through the sim.
+func _map_nodes_checks(main) -> void:
+	var sim = main.sim
+	var hold: Dictionary = sim.to_dict()
+	sim.atlas = {}
+	sim.atlas_points = 100
+	sim.intel[0] = []
+	sim.pinned[0] = true                  # the streets' words held: the figures below are read against each other
+	var take := func(keys: Array):
+		for k in keys:
+			_check(sim.rank_atlas(k), "%s did not take" % k)
+	sim.set_depth(0, 2)
+	var e0: Dictionary = sim.effective(0)
+	# the sites' column, down the chain
+	take.call(["picked_over", "deeper_pockets", "quiet_roads", "after_dark"])
+	var e1: Dictionary = sim.effective(0)
+	_check("Night" in e1["intel"] and float(e1["rarity"]) - float(e0["rarity"]) >= 0.5 * 1.5 - 0.001, "After dark did not make the run a night run with the dark's half again: %.2f" % (float(e1["rarity"]) - float(e0["rarity"])))
+	take.call(["second_look", "second_look", "worn_in", "worn_in"])
+	_check(is_equal_approx(sim.recover_s(), Data.RECOVER_H * 3600.0 / 2.0), "Worn in did not halve the recovery: %.0f" % sim.recover_s())
+	take.call(["easy_pickings", "easy_pickings", "local_knowledge", "short_cuts", "short_cuts", "open_ground", "every_penny", "every_penny"])
+	var e2: Dictionary = sim.effective(0)
+	_check(is_equal_approx(float(e2["drop"]) / float(e1["drop"]), 1.2), "Easy pickings is off: %.2f" % (float(e2["drop"]) / float(e1["drop"])))
+	_check(int(e2["loot_tier"]) == int(e1["loot_tier"]) + 1, "Local knowledge did not add a gear tier")
+	_check(is_equal_approx(float(e2["pace"]) / float(e1["pace"]), 1.1), "Short cuts is off")
+	_check(int(e2["contact"]) == int(e1["contact"]) - 1, "Open ground did not take one off")
+	_check(is_equal_approx(float(e2["cash"]) / float(e1["cash"]), 1.2), "Every penny is off")
+	var best0: int = sim.best_depth[0]
+	sim.best_depth[0] = 3
+	sim.set_depth(0, 6)
+	_check(sim.depth[0] == 4, "without the keystone the ladder opened past the deepest plus one: %d" % sim.depth[0])
+	take.call(["lie_of_the_land"])
+	sim.set_depth(0, 6)
+	_check(sim.depth[0] == 5, "The lie of the land did not open one past: %d" % sim.depth[0])
+	sim.set_depth(0, 2)
+	sim.best_depth[0] = best0
+	# the crews' column
+	take.call(["paid_in_notes", "two_of_everything", "heads_up", "heads_up"])
+	sim.boss_paid[2] = []                 # the runs above paid him: Long memory reads from here
+	sim.bosses_beaten[0] = true
+	sim.set_depth(2, 3)
+	var full: int = int(sim.boss_of(2)["notes"]) * 3
+	_check(sim.boss_cost(2) == int(round(full / 3.0)), "Heads up is off: %d of %d" % [sim.boss_cost(2), full])
+	_check(sim.pinnacle_depth() == Data.PINNACLE_DEPTH, "the pinnacle moved before Full strength")
+	take.call(["full_strength"])
+	_check(sim.pinnacle_depth() == Data.PINNACLE_DEPTH - 2, "Full strength did not bring the pinnacle two sooner")
+	take.call(["bounties", "bounties", "wages", "wages", "wages", "heavy_crews"])
+	var e3: Dictionary = sim.effective(0)
+	_check(is_equal_approx(float(e3["xp"]) / float(e2["xp"]), 1.3 * 1.5) and is_equal_approx(float(e3["cash"]) / float(e2["cash"]), 1.5) and int(e3["contact"]) == int(e2["contact"]) + 1, "Wages and Heavy crews are off")
+	take.call(["their_own_kit", "their_own_kit", "marked_men", "long_memory"])
+	sim.notes += 10000
+	sim.arm_boss(2, true)
+	sim.deploy(2)
+	var paid_at: Array = sim.boss_paid[2].duplicate()
+	sim.extract_now()
+	_check(paid_at == [3] and sim.boss_cost(2) == 0, "Long memory did not make the next run at that depth free: %d, %s" % [sim.boss_cost(2), str(paid_at)])
+	sim.set_depth(2, 2)
+	_check(sim.boss_cost(2) > 0, "Long memory made another depth free")
+	sim.arm_boss(2, true)
+	sim.deploy(2)
+	sim.extract_now()
+	_check(sim.boss_paid[2] == [3, 2] and sim.boss_cost(2) == 0, "Long memory forgot a depth: %s" % str(sim.boss_paid[2]))
+	sim.set_depth(2, 3)
+	_check(sim.boss_cost(2) == 0, "Long memory forgot the first depth paid")
+	take.call(["head_start"])
+	var pts: int = sim.atlas_points
+	sim.deploy(2)
+	var m: Dictionary = sim.mission
+	m["boss"] = {"name": sim.boss_of(2)["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true, "pinnacle": true}
+	sim._boss_down(m, sim.effective(2))
+	sim.extract_now()
+	_check(sim.atlas_points == pts + 1, "Head start did not pay a point for a head at full strength")
+	_check(int(m.get("notes", 0)) >= Data.NOTES_BOSS * 3 * 2, "Bounties did not double the head's notes: %d" % int(m.get("notes", 0)))
+	_check(sim.convoy_depth() == Data.CONVOY_DEPTH, "the lorry moved before its route")
+	take.call(["lorrys_route"])
+	_check(sim.convoy_depth() == Data.CONVOY_DEPTH - 2, "The lorry's route did not bring the lorry two sooner")
+	# the air's column
+	var intel0: int = Data.INTEL_CASH[4]
+	take.call(["word_travels", "good_reception", "good_reception"])
+	_check(sim.intel_cost(4) == int(round(intel0 * 0.5)), "Good reception is off: %d of %d" % [sim.intel_cost(4), intel0])
+	take.call(["clear_air", "long_wave"])
+	var resistant := false
+	var three := true
+	for k in range(40):
+		sim._roll_tier_intel(8)
+		resistant = resistant or ("Resistant" in sim.intel[8])
+		three = three and sim.intel[8].size() == 3
+	_check(not resistant and three, "Clear air or Long wave is off: resistant %s, three %s" % [str(resistant), str(three)])
+	_check(sim.max_words() == sim.MAX_WORDS + 1, "Long wave did not raise the words a site")
+	var hold_weather: Array = sim.weather.duplicate()
+	sim.weather[0] = ""
+	var eb: Dictionary = sim.effective(0)          # the baseline, read now: a run above re-rolled the words
+	take.call(["fair_weather"])
+	sim.weather[0] = "Fog"
+	var ef: Dictionary = sim.effective(0)
+	_check(int(ef["contact"]) == int(eb["contact"]) and is_equal_approx(float(ef["drop"]) / float(eb["drop"]), 0.95), "Fair weather at one rank did not halve the fog: contact %d of %d, drop %.2f" % [int(ef["contact"]), int(eb["contact"]), float(ef["drop"]) / float(eb["drop"])])
+	take.call(["fair_weather"])
+	ef = sim.effective(0)
+	_check(int(ef["contact"]) == int(eb["contact"]) and not ("Fog" in ef["intel"]), "Fair weather at two ranks did not lift the fog")
+	take.call(["night_eyes", "night_eyes"])
+	ef = sim.effective(0)
+	_check(is_equal_approx(float(ef["pace"]) / float(eb["pace"]), 1.0 / 0.8), "Night eyes did not give Night's pace back: %.2f" % (float(ef["pace"]) / float(eb["pace"])))
+	sim.intel[0] = ["Night"]
+	var en: Dictionary = sim.effective(0)
+	_check(is_equal_approx(float(en["pace"]) / float(eb["pace"]), 1.0 / 0.8), "Night eyes did not read the rolled Night word: %.2f" % (float(en["pace"]) / float(eb["pace"])))
+	sim.intel[0] = []
+	take.call(["forecast"])
+	_check(is_equal_approx(float(sim.effective(0)["cash"]) / float(ef["cash"]), 1.2), "The forecast did not pay under the fog")
+	sim.weather = hold_weather
+	var juice0: int = sim.juice_cost(0)
+	take.call(["early_word", "early_word"])
+	_check(absi(sim.juice_cost(0) - juice0 / 2) <= 1, "Early word is off: %d of %d" % [sim.juice_cost(0), juice0])
+	take.call(["tip_offs", "tip_offs", "dead_air"])
+	var ed: Dictionary = sim.effective(0)
+	_check(is_equal_approx(float(ed["patrol"]) / float(ef["patrol"]), 1.25) and is_equal_approx(float(ed["rarity"]) - float(ef["rarity"]), 0.1), "Dead air or Tip-offs is off")
+	take.call(["held_word", "open_channel"])
+	_check(sim.words_in_notes() and sim.intel_notes(0) == int(Data.OPEN_CHANNEL_NOTES[0]) and sim.juice_notes(8) == int(Data.OPEN_CHANNEL_NOTES[1]) * 3, "Open channel's prices are off")
+	var cash0: float = sim.cash
+	var notes0: int = sim.notes
+	sim.comms_level = maxi(sim.comms_level, 1)
+	_check(sim.buy_intel(0) and sim.cash == cash0 and sim.notes == notes0 - sim.intel_notes(0), "Open channel did not pay in notes")
+	var ranks := 0
+	for a in Data.ATLAS:
+		ranks += int(a["max"])
+	_check(ranks == 59 and sim.atlas_free() == 100 + 1 - sim.atlas_spent(), "the map's ranks do not add to fifty-nine: %d, %d free" % [ranks, sim.atlas_free()])
+	var spent: int = sim.atlas_spent()
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(main._missions.MAP)
+	main._missions._atlas._shown = ""
+	main.refresh()
+	_check_fit(main, "Runs (the map, full)")
+	main._missions._pick_zone(0)
+	# a pinned word holds through the move (Held word), the rest of the map with it
+	sim.pinned[0] = true
+	sim.intel[0] = ["Cash about"]
+	sim.pinned[1] = false
+	sim.intel[1] = ["Cash about"]
+	if sim.can_move_yard():
+		sim.move_yard()
+		_check(sim.pinned[0] and sim.intel[0] == ["Cash about"] and not sim.pinned[1] and sim.intel[1] != ["Cash about"], "Held word did not hold the pinned word through the move: %s / %s" % [str(sim.intel[0]), str(sim.pinned[0])])
+		_check(sim.atlas_rank("open_channel") == 1 and sim.atlas_spent() == spent, "the map did not move with the yard: %d spent" % sim.atlas_spent())
+	else:
+		_check(false, "the map checks could not move the yard to read Held word")
+	sim.load_dict(hold)
+
+
+## The map in the caravan's shape (Map-A, 7 Oct): the tiles in three columns, the pips as the ranks, the taken
 ## tiles lined, the sum strip, and the panel filled by a pick with a rank taken through it.
 func _map_screen_checks(main) -> void:
 	var sim = main.sim
@@ -6089,7 +6239,24 @@ func _map_screen_checks(main) -> void:
 			if (p.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Pal.ACCENT:
 				lit += 1
 		_check(lit == sim.atlas_rank(key), "%s shows %d pips lit for rank %d" % [key, lit, sim.atlas_rank(key)])
-	_check(at._sum_chips.shown() == Data.ATLAS.size(), "the map's sum strip shows %d chips" % at._sum_chips.shown())
+	var taken := 0
+	for key in sim.atlas:
+		if sim.atlas_rank(key) > 0:
+			taken += 1
+	_check(at._sum_chips.shown() == mini(taken, at.SUM_CHIPS) + (1 if taken > at.SUM_CHIPS else 0), "the map's sum strip shows %d chips for %d taken" % [at._sum_chips.shown(), taken])
+	# the columns: twelve a column, the keystone the width and last, a locked tile dim and its panel saying what it needs
+	for c in range(3):
+		var n := 0
+		var last := {}
+		for a in Data.ATLAS:
+			if int(a["column"]) == c:
+				n += 1
+				last = a
+		_check(n == 12 and last.get("keystone", false), "column %d is not twelve nodes ending in a keystone" % c)
+		var kb: Button = at._tiles[last["key"]]["button"]
+		_check(kb.size.x > at.TILE_W * 1.5, "the keystone tile is not the column's width")
+	at._pick("lie_of_the_land")
+	_check(at._title.text.contains("Needs Every penny first") and at._take.disabled, "a locked node's panel does not say what it needs: '%s'" % at._title.text)
 	# a pick fills the panel; a rank through it takes; the pips follow
 	var rank0: int = sim.atlas_rank("quiet_roads")
 	sim.atlas_points += 1
@@ -6479,7 +6646,7 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	for kk in sim.gamble:
 		var kd: Dictionary = sim.gamble_kind(kk)
-		var fits: bool = Data.UNIQUES.any(func(u): return u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]))
+		var fits: bool = Data.UNIQUES.any(func(u): return not u.has("site") and not u.get("boss", false) and u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]))   # the chase is never the fence's (part 3)
 		var u: Dictionary = sim.gamble_buy(kk, 0.0)
 		_check(not u.is_empty() and (u.has("unique") == fits) and u["slot"] == kd["slot"], "the unique roll on %s gave %s (a unique fits: %s)" % [kk, str(u.get("unique", u.get("base", "nothing"))), str(fits)])
 		break

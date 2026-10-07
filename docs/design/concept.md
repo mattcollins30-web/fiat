@@ -642,6 +642,25 @@ written out fully before building:
   1), Long wave (the radio hears one more word a site, 2, notable), Clear air (a bought word never
   comes Resistant, 1), keystone *Open channel*: every word costs notes, never cash.
 
+Built 7 Oct, filled out to twelve a column and fifty-nine ranks (the first drafts above were seven a
+column; pins were never limited, so Pinned twice became Held word, and the forecast became a pay-out
+under the weather rather than a display):
+- *The sites*: Picked over (3), Deeper pockets (3), Quiet roads (3), ★ After dark (every site is Night, the dark's rarer finds half again), Second look (2: a
+  search finds one more, every other then every), Worn in (2), Easy pickings (2: drops), ★ Local
+  knowledge (the bases a gear tier up), Short cuts (2: pace), ★ Open ground (one fewer on you), Every
+  penny (2: cash), ◆ The lie of the land: every ladder opens one depth past the deepest cleared.
+- *The crews*: Paid in notes (3), Two of everything, Heads up (2: a head's price a third less a rank),
+  ★ Full strength (the pinnacle from depth 8), Bounties (2: a head's notes half again a rank), Wages (3:
+  XP), ★ Heavy crews (one more on you; kills pay half again), Their own kit (2: kill drops), ★ Marked
+  men (+25% on the first of a gang), Long memory (a head's price paid once a depth), ★ Head start (a head
+  at full strength pays a map point), ◆ The lorry's route: the convoy from depth 10.
+- *The air*: Word travels, Good reception (2: fresh word cheaper), Clear air, ★ Long wave (one more word a
+  site), Fair weather (2: Rain and Fog half as hard, then not at all), Night eyes (2: Night's pace back),
+  ★ The forecast (+20% cash under the weather), Early word (2: a called-in word cheaper), Tip-offs (2:
+  loot quality), ★ Dead air (gangs a quarter later at night), Held word (a pinned word holds through a
+  move), ◆ Open channel: every word costs notes, never cash.
+The map moves with the yard: its ranks and points are kept, so the loop's long tail is the map filling.
+
 ### Order, and what it costs the balance
 
 Part 1 is numbers and a card (a day): it fixes what the playtest felt most. Part 2 is the design that

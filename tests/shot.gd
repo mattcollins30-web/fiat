@@ -91,12 +91,10 @@ func _next() -> void:
 		main._missions.zone = main._missions.MAP
 		main._missions._shown = ""
 		main.refresh()
-		if main.sim.atlas_points < 3:
-			main.sim.atlas_points = 5
-			main.sim.rank_atlas("deeper_pockets")
-			main.sim.rank_atlas("deeper_pockets")
-			main.sim.rank_atlas("picked_over")
-		main._missions._atlas._pick("deeper_pockets")
+		main.sim.atlas_points = maxi(main.sim.atlas_points, 18)
+		for k in ["picked_over", "picked_over", "deeper_pockets", "deeper_pockets", "deeper_pockets", "quiet_roads", "after_dark", "second_look", "paid_in_notes", "paid_in_notes", "paid_in_notes", "two_of_everything", "heads_up", "word_travels", "good_reception", "good_reception"]:
+			main.sim.rank_atlas(k)
+		main._missions._atlas._pick("worn_in")
 		main.refresh()
 	elif r == "node":
 		# the Caravan with a notable picked: the chip and the sentence

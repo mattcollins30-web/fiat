@@ -1167,14 +1167,98 @@ const MATE_NOTES := 400            # a unique from the mate, times the tier
 
 ## The map: the endgame's own tree. A point for every new depth cleared on
 ## any site past the first; spent on how the sites run, for every site.
+## The map at thirty-six (endgame part 4, 7 Oct): three columns of twelve - the
+## sites, the crews, the air - each a chain (a node needs the one before it
+## taken) with four notables and a keystone, fed by the same point a new depth.
+## `column` 0-2, in chain order; `max` the ranks; `notable`; `keystone`;
+## `figures` the panel's and the strip's figure at each rank (rank 0 first).
 const ATLAS := [
-	{"key": "picked_over", "name": "Picked over", "max": 3, "words": "A site's own things turn up more: a third of finds, then half, then two-thirds"},
-	{"key": "paid_in_notes", "name": "Paid in notes", "max": 3, "words": "Every kill carries a note more a rank"},
-	{"key": "two_of_everything", "name": "Two of everything", "max": 1, "words": "A crew's head drops two of theirs"},
-	{"key": "deeper_pockets", "name": "Deeper pockets", "max": 3, "words": "Searches 10% quicker a rank"},
-	{"key": "word_travels", "name": "Word travels", "max": 1, "words": "Calling in a word on the radio costs half"},
-	{"key": "quiet_roads", "name": "Quiet roads", "max": 3, "words": "Gangs come 10% later a rank"},
+	# the sites
+	{"key": "picked_over", "column": 0, "name": "Picked over", "max": 3, "words": "A site's own things turn up more: a third of finds, then half, then two-thirds",
+		"sum": "Own finds", "figures": ["as they come", "a third of finds", "half of finds", "two-thirds of finds"], "sentence": "A site's own things turn up more of the time."},
+	{"key": "deeper_pockets", "column": 0, "name": "Deeper pockets", "max": 3, "words": "Searches 10% quicker a rank",
+		"sum": "Searches", "figures": ["as they come", "10% quicker", "20% quicker", "30% quicker"], "sentence": "The picking-over goes quicker, on every site."},
+	{"key": "quiet_roads", "column": 0, "name": "Quiet roads", "max": 3, "words": "Gangs come 10% later a rank",
+		"sum": "Gangs", "figures": ["as they come", "10% later", "20% later", "30% later"], "sentence": "The next gang takes longer to arrive, on every site."},
+	{"key": "after_dark", "column": 0, "name": "After dark", "max": 1, "notable": true, "words": "Every site is Night, and Night's rarer finds half again",
+		"sum": "Night", "figures": ["by the clock", "every site, rarer"], "sentence": "Every run is a night run - rarer finds, slower feet - and the dark gives half again as much."},
+	{"key": "second_look", "column": 0, "name": "Second look", "max": 2, "words": "A search finds one more, every other search a rank",
+		"sum": "Searches find", "figures": ["as they come", "+1 every other", "+1 every search"], "sentence": "The picking-over finds more: another every other search, then every search."},
+	{"key": "worn_in", "column": 0, "name": "Worn in", "max": 2, "words": "A picked-over site comes back half again as fast a rank",
+		"sum": "Sites recover", "figures": ["in two hours", "in 80 minutes", "in an hour"], "sentence": "A picked-over site is fresh again sooner."},
+	{"key": "easy_pickings", "column": 0, "name": "Easy pickings", "max": 2, "words": "Drops +10% a rank",
+		"sum": "Drops", "figures": ["as they come", "+10%", "+20%"], "sentence": "More of what they carry comes off them, on every site."},
+	{"key": "local_knowledge", "column": 0, "name": "Local knowledge", "max": 1, "notable": true, "words": "Finds draw from the bases a gear tier up",
+		"sum": "Bases", "figures": ["by the level", "a tier up"], "sentence": "You know where the good stuff is: finds draw from the bases a gear tier up, on every site."},
+	{"key": "short_cuts", "column": 0, "name": "Short cuts", "max": 2, "words": "Pace +5% a rank",
+		"sum": "Pace", "figures": ["as it is", "+5%", "+10%"], "sentence": "The runner knows the way: quicker on every site."},
+	{"key": "open_ground", "column": 0, "name": "Open ground", "max": 1, "notable": true, "words": "One fewer on you at a time",
+		"sum": "On you", "figures": ["as they come", "one fewer"], "sentence": "One fewer on you at a time, on every site."},
+	{"key": "every_penny", "column": 0, "name": "Every penny", "max": 2, "words": "Cash +10% a rank",
+		"sum": "Cash", "figures": ["as it comes", "+10%", "+20%"], "sentence": "Every run brings a little more home."},
+	{"key": "lie_of_the_land", "column": 0, "name": "The lie of the land", "max": 1, "keystone": true, "words": "Every ladder opens one depth past the deepest cleared",
+		"sum": "Ladders", "figures": ["to the deepest cleared", "one past it"], "sentence": "You know the ground: every site's ladder opens one depth past the deepest you've cleared on it."},
+	# the crews
+	{"key": "paid_in_notes", "column": 1, "name": "Paid in notes", "max": 3, "words": "Every kill carries a note more a rank",
+		"sum": "Notes", "figures": ["as they come", "+1 a kill", "+2 a kill", "+3 a kill"], "sentence": "Every kill carries a note more."},
+	{"key": "two_of_everything", "column": 1, "name": "Two of everything", "max": 1, "words": "A crew's head drops two of theirs",
+		"sum": "Heads", "figures": ["drop one", "drop two"], "sentence": "A crew's head drops two of theirs."},
+	{"key": "heads_up", "column": 1, "name": "Heads up", "max": 2, "words": "A crew's head's price in notes a third less a rank",
+		"sum": "Heads cost", "figures": ["full price", "a third less", "two-thirds less"], "sentence": "The crews' heads come cheaper."},
+	{"key": "full_strength", "column": 1, "name": "Full strength", "max": 1, "notable": true, "words": "A head comes at full strength from depth 8, not 10",
+		"sum": "Full strength", "figures": ["from depth 10", "from depth 8"], "sentence": "The heads come at full strength two depths sooner, their charms with them."},
+	{"key": "bounties", "column": 1, "name": "Bounties", "max": 2, "words": "The notes a head holds, half again a rank",
+		"sum": "Head's notes", "figures": ["as they come", "half again", "doubled"], "sentence": "The crews' heads hold more of the old paper."},
+	{"key": "wages", "column": 1, "name": "Wages", "max": 3, "words": "XP +10% a rank",
+		"sum": "XP", "figures": ["as it comes", "+10%", "+20%", "+30%"], "sentence": "Every kill teaches a little more."},
+	{"key": "heavy_crews", "column": 1, "name": "Heavy crews", "max": 1, "notable": true, "words": "One more on you at a time; kills pay half again in cash and XP",
+		"sum": "Crews", "figures": ["as they come", "heavy, pay half again"], "sentence": "The gangs come one bigger, and every kill pays half again in cash and XP."},
+	{"key": "their_own_kit", "column": 1, "name": "Their own kit", "max": 2, "words": "A kill drops something 10% more often a rank",
+		"sum": "Kill drops", "figures": ["as they come", "+10%", "+20%"], "sentence": "More of them are carrying something when they go down."},
+	{"key": "marked_men", "column": 1, "name": "Marked men", "max": 1, "notable": true, "words": "+25% damage to the first of every gang",
+		"sum": "The first", "figures": ["as they come", "+25% damage"], "sentence": "The first of every gang is marked: a quarter more damage to him."},
+	{"key": "long_memory", "column": 1, "name": "Long memory", "max": 1, "words": "A crew's head's price is paid once a depth: every run back at that depth is free",
+		"sum": "Head's price", "figures": ["every run", "once a depth"], "sentence": "Pay a head's price at a depth once; he comes out for nothing at that depth after."},
+	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a map point",
+		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the map gains a point."},
+	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the services from depth 10, not 12",
+		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the services two depths sooner."},
+	# the air
+	{"key": "word_travels", "column": 2, "name": "Word travels", "max": 1, "words": "Calling in a word on the radio costs half",
+		"sum": "The word", "figures": ["full price", "half price"], "sentence": "Calling in a word on the radio costs half."},
+	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Fresh word on a site a quarter cheaper a rank",
+		"sum": "Fresh word", "figures": ["full price", "a quarter less", "half price"], "sentence": "Fresh word on a site comes cheaper."},
+	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "The radio never hears Resistant",
+		"sum": "Resistant", "figures": ["can come up", "never"], "sentence": "The radio never hears Resistant: the words are the good ones."},
+	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "The radio hears one more word a site",
+		"sum": "Words a site", "figures": ["as they come", "one more"], "sentence": "The radio hears one more word on every site."},
+	{"key": "fair_weather", "column": 2, "name": "Fair weather", "max": 2, "words": "Rain and Fog bite half as hard a rank",
+		"sum": "Weather", "figures": ["as it comes", "half as hard", "not at all"], "sentence": "The rain and the fog bite less; at the second rank, not at all."},
+	{"key": "night_eyes", "column": 2, "name": "Night eyes", "max": 2, "words": "Night's slower feet halved a rank",
+		"sum": "Night feet", "figures": ["−20% pace", "−10% pace", "full pace"], "sentence": "The runner sees in the dark: Night costs less pace, then none."},
+	{"key": "forecast", "column": 2, "name": "The forecast", "max": 1, "notable": true, "words": "Rain and Fog pay: +20% cash under either",
+		"sum": "Sky pays", "figures": ["nothing", "+20% cash"], "sentence": "You know when to go out: a run in the rain or the fog brings a fifth more cash home."},
+	{"key": "early_word", "column": 2, "name": "Early word", "max": 2, "words": "A called-in word a quarter cheaper a rank",
+		"sum": "Called word", "figures": ["full price", "a quarter less", "half price"], "sentence": "Calling a word in on a site comes cheaper."},
+	{"key": "tip_offs", "column": 2, "name": "Tip-offs", "max": 2, "words": "Rarer finds: +5% loot quality a rank",
+		"sum": "Quality", "figures": ["as it comes", "+5%", "+10%"], "sentence": "Word of what's where: rarer finds on every site."},
+	{"key": "dead_air", "column": 2, "name": "Dead air", "max": 1, "notable": true, "words": "At Night the gangs come a quarter later",
+		"sum": "Night gangs", "figures": ["as they come", "a quarter later"], "sentence": "Nobody's about at night: the gangs come a quarter later on a night run."},
+	{"key": "held_word", "column": 2, "name": "Held word", "max": 1, "words": "A pinned word holds through a move",
+		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the radio stays pinned when the yard moves."},
+	{"key": "open_channel", "column": 2, "name": "Open channel", "max": 1, "keystone": true, "words": "Every word costs notes, never cash",
+		"sum": "Words cost", "figures": ["cash", "notes"], "sentence": "The channel's open: fresh word and a called-in word cost notes, never cash."},
 ]
+const ATLAS_COLUMNS := ["The sites", "The crews", "The air"]
+
+
+## A map node by key, or {}.
+static func atlas_of(key: String) -> Dictionary:
+	for a in ATLAS:
+		if a["key"] == key:
+			return a
+	return {}
+const OPEN_CHANNEL_NOTES := [2, 4]     # Open channel: a fresh word, a called-in word, in notes, times the zone and one
 
 ## Traits: what a runner turns up with. Two turn up when one dies; you pick.
 const TRAITS := [
