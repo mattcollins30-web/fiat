@@ -1800,12 +1800,47 @@ func has_rule(rule: String) -> bool:
 	return false
 
 
-## The loose uniques that can turn up at a depth: the ones gated at it or shallower.
+## The loose uniques that can turn up at a depth: the ones gated at it or
+## shallower. A site's own is never loose.
 func loose_uniques(at_depth: int) -> Array:
 	var out: Array = []
 	for u in Data.UNIQUES:
-		if not u.get("boss", false) and int(u.get("depth", 0)) <= at_depth:
+		if not u.get("boss", false) and not u.has("site") and int(u.get("depth", 0)) <= at_depth:
 			out.append(u)
+	return out
+
+
+## A site's own unique (endgame part 3): one a site, found there only, past
+## `site_unique_depth`. Empty for a site without one.
+func site_unique(i: int) -> Dictionary:
+	for u in Data.UNIQUES:
+		if int(u.get("site", -1)) == i:
+			return u
+	return {}
+
+
+## The depth a site's own drops from: by the site's zone, the gentler the
+## ladder the deeper (the streets at 12, the barracks at 6).
+func site_unique_depth(i: int) -> int:
+	return int(Data.SITE_UNIQUE_DEPTH[int(Data.TIERS[i]["zone"])])
+
+
+## The shelf's chase (endgame part 3): the thirteen the shelf is empty of until
+## the ladders are climbed - the nine sites' own, the three heads' charms, the
+## lorry's load - each {name, found, where}, `where` the words for the gap.
+func shelf_chase() -> Array:
+	var out: Array = []
+	for i in range(Data.TIERS.size()):
+		var u := site_unique(i)
+		if u.is_empty():
+			continue
+		out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["own_gap"] % [Data.TIERS[i]["name"], site_unique_depth(i)]})
+	for u in Data.UNIQUES:
+		if u.has("pinnacle"):
+			for b in Data.BOSSES:
+				if int(b["zone"]) == int(u["pinnacle"]):
+					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], Data.PINNACLE_DEPTH]})
+	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"] % [Data.CONVOY_DEPTH, Data.TIERS[Data.CONVOY_TIER]["name"].to_lower()]})
 	return out
 
 
@@ -3306,7 +3341,12 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	var it: Dictionary
 	var loose: Array = loose_uniques(int(t["depth"]))
 	var pieces: Array = set_pieces_at(int(t["depth"]))
-	if t["depth"] >= 2 and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
+	var own: Dictionary = site_unique(int(t["tier"]))
+	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
+	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
+		it = Items.roll_unique(own, rng)              # the site's own, only here and only this deep (endgame part 3)
+		log_event("Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]])
+	elif t["depth"] >= 2 and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
 		it = Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng)
 		log_event("Found: %s" % it["unique"])
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
@@ -3990,6 +4030,8 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 	if x < Data.GAMBLE_UNIQUE:
 		var fits: Array = []
 		for u in Data.UNIQUES:
+			if u.has("site") or u.get("boss", false):
+				continue                                  # the chase is the ladders', never the fence's (endgame part 3)
 			if u["slot"] == k["slot"] and (k["type"] == "" or Items.base_named(k["slot"], u["base"]).get("type", "") == k["type"]):
 				fits.append(u)
 		if not fits.is_empty():

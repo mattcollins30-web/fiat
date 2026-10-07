@@ -703,9 +703,26 @@ func _drawer_branch() -> Dictionary:
 	return _pages_branch("The drawer", sim.book, sim.book_pages().size(), Words.BOOK["empty"], func(name): return Words.item_words(name), 2)
 
 
-## The shelf: the uniques found, the same way, their three lines under each.
+## The shelf: the chase first (endgame part 3) - the nine sites' own, the
+## heads' charms, the lorry's load, a gap each until found, with where it is
+## under the gap - then the rest found, in the order found, their words under.
 func _shelf_branch() -> Dictionary:
-	return _pages_branch("The shelf", sim.shelf, Data.UNIQUES.size(), Words.SHELF["empty"], func(name): return Words.UNIQUES.get(name, ""), 3)
+	var chase: Array = sim.shelf_chase()
+	var names: Array = []
+	var gaps := {}
+	for c in chase:
+		names.append(c["name"])
+		if not c["found"]:
+			gaps[c["name"]] = c["where"]
+	for name in sim.shelf:
+		if not (name in names):
+			names.append(name)
+	var branch := _pages_branch("The shelf", names, Data.UNIQUES.size(), Words.SHELF["empty"],
+		func(name): return gaps[name] if gaps.has(name) else Words.UNIQUES.get(name, ""), 3)
+	for nd in branch["nodes"]:
+		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
+	branch["found"] = sim.shelf.size()
+	return branch
 
 
 ## A page of a list: a row a name with `lines` of words under it, as many rows as the column takes.
@@ -749,7 +766,7 @@ func _show_drawer(b: int, branch: Dictionary) -> void:
 		n["id"] = "drawer/%d" % i
 		n["name"].position = Vector2(PAD, 4)
 		n["name"].size = Vector2(COL_W - 2 * PAD, NODE_H - 4)
-		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" else "Regular", false))
+		n["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" and not nd.get("gap", false) else "Regular", false))
 		var word_labels: Array = [n["effect"], n["more"], n["more2"]]
 		for k in range(3):
 			var l: Label = word_labels[k]
@@ -764,8 +781,8 @@ func _show_drawer(b: int, branch: Dictionary) -> void:
 		else:
 			UI.fit(n["name"], [nd["name"]])
 			UI.wrap(word_labels.slice(0, lines), nd["words"])
-		_style(btn, "taken" if nd["words"] != "" else "locked")
-		n["name"].add_theme_color_override("font_color", Pal.TEXT)
+		_style(btn, "taken" if nd["words"] != "" and not nd.get("gap", false) else "locked")
+		n["name"].add_theme_color_override("font_color", Pal.TEXT_3 if nd.get("gap", false) else Pal.TEXT)
 
 
 ## A paper's words cut to the column: up to the last full stop that fits.

@@ -197,6 +197,12 @@ const BOOK := {
 }
 const SHELF := {
 	"empty": "Nothing on the shelf yet. The heads carry them.",
+	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is
+	"own_gap": "%s, depth %d and past. A rule only that depth gives.",
+	"head_gap": "%s at full strength, depth %d of his site. The charm only he carries.",
+	"lorry_gap": "The lorry at depth %d of %s. The pack it comes home with.",
+	"own_found": "Only %s has it. It drops nowhere else.",
+	"own_note": "Depth %d: its own, %s",
 }
 
 ## The deeds: what the bank was holding. Dropped once, when the bank is

@@ -617,8 +617,14 @@ Each of the nine sites gets **one deep-only unique**, dropped only past a depth 
 gentle its ladder is: the estate's sites at depth 12, the town's at 9, the city's at 6 (so the streets'
 is the deepest dig in the game, and the barracks' the hardest fight). The shelf shows the nine as gaps
 until found, beside the crews' charms (depth 10 of their sites) and the lorry's load (depth 12 of the
-services): twelve things the shelf is empty of until the ladders are climbed, each a rule. The sets
+services): thirteen things the shelf is empty of until the ladders are climbed, each a rule. The sets
 stay as they are (past depth 2, by share); a set's full bonus is the mid-depth chase.
+Built 7 Oct: the nine are the nine uniques that were gated at depth 25 (never reached, their rules
+already in the sim), one to a site by its flavour - the streets' the gritter's hopper, the parade's the
+sergeant's whistle, the retail park's the sparky's gloves, the pleasure park's the gamekeeper's flask, the
+shopping centre's the float, the bank's a blue plaque, the services' the lorry driver's log, the
+hospital's the vicar's thermos, the barracks' the quartermaster's manual - at 3% a find past the gate,
+and the Runs card's note names a site's own until it is found.
 
 ### 4. The map as the long tail
 

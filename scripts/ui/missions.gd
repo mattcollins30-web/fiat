@@ -277,6 +277,9 @@ func _station_words(i: int) -> String:
 		out.append("Depth %d: %s at full strength" % [Data.PINNACLE_DEPTH, b["name"]])
 	if i == Data.CONVOY_TIER and sim.depth[i] < Data.CONVOY_DEPTH:
 		out.append("Depth %d: the lorry" % Data.CONVOY_DEPTH)
+	var own: Dictionary = sim.site_unique(i)
+	if not own.is_empty() and not (own["name"] in sim.shelf):
+		out.append(Words.SHELF["own_note"] % [sim.site_unique_depth(i), own["name"]])
 	return " · ".join(out)
 
 

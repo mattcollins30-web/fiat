@@ -513,6 +513,9 @@ const ATTACHMENTS := [
 ## at depth (UNIQUE_DROP a find, times the depth past the first). The things a
 ## build is found around. `rule` is a flag the sim reads like a keystone's.
 const UNIQUE_DROP := 0.01
+const SITE_UNIQUE_DEPTH := [12, 9, 6]   # a site's own unique, by zone: the depth it drops from
+const SITE_UNIQUE_DROP := 0.03          # a find past that depth, on that site, until it is on the shelf
+const SITE_UNIQUE_AGAIN := 0.25         # of that, once it is: a second is for the fence, not the chase
 const UNIQUES := [
 	{"name": "Grandad's shotgun", "slot": "Primary", "base": "Farmer's shotgun", "rule": "grandads",
 		"words": "The first of every gang takes triple", "affixes": [{"stat": "damage_pct", "value": 10}, {"stat": "first_lot_pct", "value": 20}]},
@@ -545,7 +548,10 @@ const UNIQUES := [
 	# the convoy's
 	{"name": "The lorry's load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "boss": true, "convoy": true,
 		"words": "The pack comes home full: every empty cell is notes", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "loot_pct", "value": 15}, {"stat": "cash_per_cell", "value": 3}]},
-	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep
+	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep;
+	# nine of them are a site's own (`site`, endgame part 3, 7 Oct): found only on that site, past SITE_UNIQUE_DEPTH for its
+	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
+	# in the game and the barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
 	{"name": "The council's weed burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "depth": 12,
 		"words": "A flamethrower: all fire, fire hits everyone on you, takes nothing", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
 	{"name": "Jump leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "depth": 12,
@@ -554,19 +560,19 @@ const UNIQUES := [
 		"words": "Poison never caps and carries to the next of them", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
 	{"name": "The butcher's steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "depth": 12,
 		"words": "Bleed does double, and a bleed carries to the next of them", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
-	{"name": "The gritter's hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "depth": 25,
+	{"name": "The gritter's hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "site": 0,
 		"words": "Everyone on you is chilled, always; chilled gangs come one at a time", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "armour", "value": 30}, {"stat": "frost_res", "value": 30}]},
-	{"name": "The sparky's gloves", "slot": "Charm", "base": "Horseshoe nail", "rule": "sparkys_gloves", "depth": 25,
+	{"name": "The sparky's gloves", "slot": "Charm", "base": "Horseshoe nail", "rule": "sparkys_gloves", "site": 2,
 		"words": "Their shock resist counts for nothing; shock costs you no armour", "affixes": [{"stat": "shock_pct", "value": 30}, {"stat": "shock_res", "value": 40}]},
-	{"name": "The quartermaster's manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "depth": 25,
+	{"name": "The quartermaster's manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "site": 8,
 		"words": "Every element counts as the runner's: no doubled tree, every keystone open", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
-	{"name": "A blue plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "depth": 25,
+	{"name": "A blue plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "site": 5,
 		"words": "All resists +40%; nothing else on anything you wear counts", "affixes": [{"stat": "all_res", "value": 40}]},
 	{"name": "The lollipop lady's sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "depth": 12,
 		"words": "Stop: the first of every gang drops where it stands; gangs come half as often", "affixes": [{"stat": "first_pct", "value": 30}, {"stat": "patrol_pct", "value": 15}]},
 	{"name": "The bookie's pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "depth": 12,
 		"words": "Loot quality doubled; cash halved", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "depth": 25,
+	{"name": "The float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "site": 4,
 		"words": "Pace +40% and the pack half again; you carry no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
 	{"name": "Nan's cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "depth": 12,
 		"words": "3% of your HP back a second; no armour at all", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
@@ -574,19 +580,19 @@ const UNIQUES := [
 		"words": "Every kill is a tenth of your HP back; meds do nothing", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "attack_pct", "value": 15}]},
 	{"name": "A traffic warden's hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "depth": 12,
 		"words": "Every gang arrives one short; every kill's notes doubled", "affixes": [{"stat": "notes_pct", "value": 25}, {"stat": "armour", "value": 10}]},
-	{"name": "The vicar's thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "depth": 25,
+	{"name": "The vicar's thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "site": 7,
 		"words": "A burn on you heals you instead; your fire resist is nothing", "affixes": [{"stat": "regen", "value": 3}, {"stat": "fire_pct", "value": 20}]},
 	{"name": "The scout leader's whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "depth": 12,
 		"words": "Every gang after the first is one", "affixes": [{"stat": "patrol_pct", "value": 10}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The sergeant's whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "depth": 25,
+	{"name": "The sergeant's whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "site": 1,
 		"words": "Two more on you at once; everything you do does 60% more", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 30}, {"stat": "crowd_less_pct", "value": 10}]},
 	{"name": "The electrician's tester", "slot": "Secondary", "base": "Compact pistol", "rule": "tester", "depth": 12,
 		"words": "Shocked stays shocked until they're down; shock does half", "affixes": [{"stat": "conv_shock_pct", "value": 25}, {"stat": "shock_pct", "value": 20}]},
-	{"name": "The gamekeeper's flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "depth": 25,
+	{"name": "The gamekeeper's flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "site": 3,
 		"words": "Poison on you poisons them back", "affixes": [{"stat": "poison_res", "value": 30}, {"stat": "poison_pct", "value": 30}]},
 	{"name": "The caretaker's keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "depth": 12,
 		"words": "Something happens on every run, and every cache opens", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
-	{"name": "The lorry driver's log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "depth": 25,
+	{"name": "The lorry driver's log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "site": 6,
 		"words": "Notes found doubled; insurance is free", "affixes": [{"stat": "notes_pct", "value": 50}]},
 	# the elements' own (6 Oct): one a type, each leaning the whole way into it, for the builds that break the game
 	{"name": "The arsonist's rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "depth": 14,

@@ -2100,6 +2100,32 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## A log line of one long sentence (7 Oct)
+
+Matt's smoke: "One of them is in the last doorman's station helmet, visored." needed 696 px of the log
+line's 688 - one sentence, no semicolon or colon, so `_by_sentence` had no shorter form. It now ends
+with the line cut at its last comma, with a full stop, as the last resort. Smoke reads the forms.
+
+## The endgame, part 3: a site's own unique, the shelf's gaps (7 Oct)
+
+Built as concept.md's part 3. The nine uniques gated at depth 25 - never reached by anyone, and the
+rules already in the sim - are now the sites' own: a `site` on each in `Data.UNIQUES` (the streets' is
+the gritter's hopper, the parade's the sergeant's whistle, the retail park's the sparky's gloves, the
+pleasure park's the gamekeeper's flask, the shopping centre's the float, the bank's a blue plaque, the
+services' the lorry driver's log, the hospital's the vicar's thermos, the barracks' the quartermaster's
+manual). One drops only on its site, past `SITE_UNIQUE_DEPTH` for the zone (the estate's at 12, the
+town's at 9, the city's at 6: the streets' is the deepest dig in the game and the barracks' the hardest
+fight), `SITE_UNIQUE_DROP` 3% a find there until it is on the shelf and a quarter of that after (`SITE_UNIQUE_AGAIN`); never loose, never the mate's or a contract's
+(`loose_uniques` leaves them out; `site_unique`, `site_unique_depth`). The caravan's shelf shows the
+chase first (`shelf_chase`): thirteen rows - the nine sites' own, the three heads' charms, the lorry's load -
+each a gap in the quiet grey until found, with where it is under it ("Ransacked streets, depth 12 and
+past. A rule only that depth gives."; "The carpet man at full strength, depth 10 of his site. The charm
+only he carries."), then the rest found in the order found. The Runs card's note names a site's own
+until it is on the shelf ("Depth 6: its own, The quartermaster's manual"), after the stations. The fence's gamble no longer hands out a site's own or a head's (it could roll any unique of the kind before): the chase is the ladders' only.
+Nothing new saved: the shelf is by name as before. Smoke: none of the nine loose; the gates by zone; the
+barracks' own never at depth 5 and within 400 finds at depth 6; the note names it and stops once found;
+the shelf's thirteen gaps, their order, the first gap's words and colour, a found one filling its gap.
+
 ## The endgame, part 2: the lorry as the ending, the move as the loop, the wall as the score (7 Oct)
 
 Built as concept.md's part 2, mocked as Yard-E. *The ending*: the convoy's last head down writes

@@ -646,6 +646,11 @@ static func _by_sentence(line: String) -> Array:
 	var clause := line.get_slice(";", 0).get_slice(":", 0)
 	if clause != line and not (clause in out):
 		out.append(clause)
+	# one long sentence with a comma in it: up to the last comma, with its full stop (a runner's long name in a long base's)
+	var first := out.back() as String
+	var comma := first.rfind(", ")
+	if comma > 0:
+		out.append(first.substr(0, comma) + ".")
 	return out
 
 

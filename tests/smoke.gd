@@ -3045,8 +3045,27 @@ func _book_checks(main) -> void:
 	main._barracks._shown = ""
 	main.refresh()
 	_check(main._barracks._heads[1]["name"].text.contains("2 of %d" % Data.UNIQUES.size()) or main._barracks._heads[1]["name"].text.contains("2/%d" % Data.UNIQUES.size()), "the shelf's head is off: %s" % main._barracks._heads[1]["name"].text)
-	_check(main._barracks._rows[1][0]["name"].text == "1. Lucky cap" and main._barracks._rows[1][0]["effect"].text != "" and main._barracks._rows[1][1]["name"].text == "2. Jump leads", "the shelf's rows are off: %s" % main._barracks._rows[1][0]["name"].text)
+	# the chase first (endgame part 3): thirteen gaps in TEXT_3, where each is under it; then the rest found, in order
+	var chase: Array = sim.shelf_chase()
+	_check(chase.size() == 13 and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked streets, depth 12"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
+	var row0: Dictionary = main._barracks._rows[1][0]
+	_check(row0["name"].text == "1. %s" % chase[0]["name"] and row0["effect"].text.begins_with("Ransacked streets") and row0["name"].get_theme_color("font_color") == Pal.TEXT_3, "the shelf's first gap is off: '%s' / '%s'" % [row0["name"].text, row0["effect"].text])
+	var shelf_branch: Dictionary = main._barracks._shelf_branch()
+	var all_names: Array = []
+	for pg in range(int(shelf_branch["pages"])):
+		main._barracks.drawer_page = pg
+		for nd in main._barracks._shelf_branch()["nodes"]:
+			all_names.append(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
+	_check(all_names.size() == 15 and all_names[13] == "Lucky cap" and all_names[14] == "Jump leads" and all_names[12] == Data.CONVOY_UNIQUE, "the shelf's order is off: %s" % str(all_names))
+	main._barracks.drawer_page = 0
 	_check_fit(main, "Caravan (the shelf)")
+	# a site's own found fills its gap
+	sim._read(Items.roll_unique(sim._unique_named("The float"), sim.rng))
+	chase = sim.shelf_chase()
+	_check(chase[4]["found"] and chase[4]["name"] == "The float" and not chase[3]["found"], "the float on the shelf did not fill the shopping centre's gap")
+	main._barracks._shown = ""
+	main.refresh()
+	_check_fit(main, "Caravan (the shelf, one filled)")
 	main._barracks.mid = 0
 	main._barracks._shown = ""
 	main.refresh()
@@ -3649,6 +3668,10 @@ func _playtest_checks(main) -> void:
 	_check(shown.ends_with(".") and long.begins_with(shown) and UI.text_width(main._event_labels[0], shown) <= main._event_labels[0].size.x, "the long line trails off or does not fit: '%s'" % shown)
 	var forms: Array = main._by_sentence(long)
 	_check(forms.size() >= 4 and forms[1] == "A convoy comes through. Lorries, and a crew riding on them. They stop. They were carrying notes." and forms[-1] == "A convoy comes through.", "the sentence forms are off: %s" % str(forms))
+	# one long sentence: cut at its last comma, never trailing off (the lost runner's long name in a long base's)
+	var one := "One of them is in the last doorman's station helmet, visored and with the strap on."
+	var one_forms: Array = main._by_sentence(one)
+	_check(one_forms.size() == 2 and one_forms[1] == "One of them is in the last doorman's station helmet.", "the one-sentence forms are off: %s" % str(one_forms))
 	# a paper picked in the Lock-up
 	var paper: Dictionary = sim._plain(Data.PAPER, "A P45")
 	while not sim.stash_room(2) and not sim.stash.is_empty():
@@ -5979,11 +6002,68 @@ func _site_level_checks(main) -> void:
 	_check(c6["note"].text.contains("the lorry") or sim.hp < sim.max_hp() * 0.5, "the services' card does not name the lorry: '%s'" % c6["note"].text)
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(0)
+	_site_unique_checks(main)
 	sim.intel[0] = hold_intel[0]
 	sim.intel[8] = hold_intel[1]
 	sim.depth = hold_depth
 	sim.best_depth = hold_best
 	sim._surv_cache = {}
+
+
+## A site's own unique (endgame part 3): never loose, gated by zone (the streets at 12, the barracks at 6),
+## found on its site past the gate and nowhere shallower; the Runs card names it until it is on the shelf.
+func _site_unique_checks(main) -> void:
+	var sim = main.sim
+	for u in sim.loose_uniques(99):
+		_check(not u.has("site"), "%s is a site's own and loose" % u["name"])
+	_check(sim.site_unique_depth(0) == 12 and sim.site_unique_depth(4) == 9 and sim.site_unique_depth(8) == 6, "the sites' own depths are off: %d %d %d" % [sim.site_unique_depth(0), sim.site_unique_depth(4), sim.site_unique_depth(8)])
+	_check(sim.site_unique(8)["name"] == "The quartermaster's manual" and sim.site_unique(0)["name"] == "The gritter's hopper", "the sites' own are off")
+	var hold_shelf: Array = sim.shelf.duplicate()
+	var hold_stash: Array = sim.stash.duplicate()
+	sim.shelf = []
+	# the barracks at depth 5: never; at depth 6: within a few hundred finds
+	var own := 0
+	for d in [5, 6]:
+		own = 0
+		sim.set_depth(8, d)
+		sim.deploy(8)
+		var m: Dictionary = sim.mission
+		var eff: Dictionary = sim.effective(8)
+		for k in range(400):
+			m["found"] = []
+			sim._find(m, eff)
+			if not m["found"].is_empty() and m["found"][0].get("unique", "") == "The quartermaster's manual":
+				own += 1
+		sim.extract_now()
+		if d == 5:
+			_check(own == 0, "the barracks' own dropped at depth 5")
+		else:
+			_check(own > 0 and own < 60, "the barracks' own is %d of 400 finds at depth 6; 3%% was the aim" % own)
+	# the Runs card names it until it is found
+	sim.shelf = []
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(2)
+	main._missions._shown = ""
+	main.refresh()
+	var c8: Dictionary = main._missions._cols[2]
+	_check(main._missions._station_words(8).contains("Depth 6: its own, The quartermaster's manual"), "the barracks' station words do not name its own: '%s'" % main._missions._station_words(8))
+	_check(c8["note"].text != "" or sim.hp < sim.max_hp() * 0.5, "the barracks' note is empty with its own unfound")
+	_check_fit(main, "Runs (a site's own)")
+	sim.shelf = ["The quartermaster's manual"]
+	_check(not main._missions._station_words(8).contains("its own"), "the barracks' station words still name its own once found")
+	# the fence's gamble never hands out the chase
+	var chase_names: Array = []
+	for c in sim.shelf_chase():
+		chase_names.append(c["name"])
+	var leaked := ""
+	for k in range(300):
+		var g: Dictionary = sim.roll_gamble({"slot": "Charm", "type": ""}, 0.0)
+		if g.get("unique", "") in chase_names:
+			leaked = g["unique"]
+	_check(leaked == "", "the gamble handed out the chase: %s" % leaked)
+	main._missions._pick_zone(0)
+	sim.shelf = hold_shelf
+	sim.stash = hold_stash
 
 
 ## The map in the caravan's shape (Map-A, 7 Oct): six tiles in three columns, the pips as the ranks, the taken
