@@ -845,7 +845,7 @@ const PINNACLE_DEPTH := 10
 const PINNACLE_HP := 2.5
 const PINNACLE_DPS := 1.6
 const PINNACLE_COST := 2
-const CONVOY_DEPTH := 12
+const CONVOY_DEPTH := 10          # the fifteenth read (7 Oct): sixteen hours of every build lands at level 16-17 on the services; 12 (level 18) was never reached
 const CONVOY_TIER := 6             # the services
 const CONVOY_UNIQUE := "The lorry's load"
 const BOSS_HP_MULT := 1.0          # boss HP = site hp × boss "hp"; scales with the curve past the campaign
@@ -1421,7 +1421,7 @@ const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
-const WOUND_AT := 0.35            # the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
+const WOUND_AT := 0.30            # the fifteenth read (7 Oct): at 0.35 the bot read 31-44% wounded and one bail in 31-69 - its close calls end between a quarter and a third; the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
 const WOUND_CASH := 20

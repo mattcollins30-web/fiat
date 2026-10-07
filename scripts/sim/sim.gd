@@ -954,7 +954,7 @@ func next_words(short := false) -> String:
 	if lorry_done:
 		return w["lorry"]
 	if campaign_done():
-		return w["done"]
+		return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
 	for k in range(contracts.size()):
 		if can_hand_in(k) and mission == null:
 			return w["contract"]
@@ -969,7 +969,7 @@ func next_words(short := false) -> String:
 		for b in Data.BOSSES:
 			if int(b["zone"]) == z and not bosses_beaten[z]:
 				return (w["head"] % [b["name"].to_lower() if short else b["name"], Data.TIERS[int(b["tier"])]["name"].to_lower()]) if not short else (w["head"] % b["name"].to_lower())
-	return w["done"]
+	return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
 
 
 ## Say it once, when it changes; the yard's set line says it first.

@@ -574,7 +574,7 @@ const NEXT := {
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
-	"done": "The town's yours. Depth is the game now; the lorry runs the services at depth 12.",
+	"done": "The town's yours. Depth is the game now; the lorry runs the services at depth %d.",
 	"lorry": "The lorry's beaten. Move the yard when you're ready: the next starts its ladders higher, with a free node on the yard's tree.",
 	"moved": "A new yard, the same list on the wall. Start at the streets.",
 }

@@ -3359,7 +3359,7 @@ func _next_checks(main) -> void:
 	fresh.extract_now()
 	_check(not fresh.events.slice(n1).any(func(ev): return str(ev[1]).begins_with("The pleasure park hasn't")), "the log said the same thing twice")
 	_finish_campaign(sim)
-	_check(sim.next_words() == Words.NEXT["done"], "the campaign done has no line: %s" % sim.next_words())
+	_check(sim.next_words() == Words.NEXT["done"] % sim.convoy_depth() and sim.next_words().contains("depth %d" % Data.CONVOY_DEPTH), "the campaign done has no line, or the lorry's depth is not the figure: %s" % sim.next_words())
 	main.show_room(main.OVERVIEW)
 	_check_fit(main, "The Yard (what's next)")
 	sim.load_dict(saved)

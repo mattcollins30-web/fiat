@@ -2100,6 +2100,11 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The four moved (7 Oct, Matt: "make the changes and I'll run the balance after before playing").**
+`CONVOY_DEPTH` 10 (the lorry at level 16, where sixteen hours lands; the map's keystone runs it from
+8; the yard's "done" line and the map's empty panel read the figure); `WOUND_AT` 0.30; the spread
+band 7-11; the scrap band's top 7. The sixteenth read is the first with them.
+
 **The fifteenth read (the Legion, 7 Oct, twenty reads of ten builds, sixteen hours each: the SMG line
 and walking fire in).** Six red; No reds and depth pace back to green, the probe, the keystone, the
 capstone and cash green. *The SMG line is in the game:* the armoured car gun on a bleed Doorman, a

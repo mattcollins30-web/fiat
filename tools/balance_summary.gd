@@ -24,9 +24,9 @@ const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against p
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
-const SCRAP := [0.5, 5.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
+const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
 const LORRY_BY := 16.0          # hour: the lorry beaten on every build (the endgame's ending; Matt, 7 Oct: "16 hours would be right given the type of game")
-const SPREAD := [5, 9]          # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the streets' shape is gentler)
+const SPREAD := [7, 11]         # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the shapes read 7-12 on the fifteenth read, the band re-stated from it)
 const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk: his save read one in seventeen (seven lost in 116 runs); the bot's bail-outs under a quarter stand for them (an hour's reading depended on how many runs an hour a build makes)
 
 
