@@ -87,11 +87,6 @@ func show_data(d: Dictionary) -> void:
 			UI.fit(_notes[k], note)
 		else:
 			_notes[k].text = str(note)
-	var status: Variant = d.get("status", "")
-	if status is Array:
-		UI.fit(_status, status)
-	else:
-		_status.text = str(status)
 	var b: Dictionary = d.get("button", {})
 	_button.visible = not b.is_empty()
 	if _button.visible:
@@ -99,7 +94,12 @@ func show_data(d: Dictionary) -> void:
 		_button.disabled = not bool(b.get("enabled", true))
 		_action = b["action"]
 		UI.style_button(_button, bool(b.get("primary", false)))
-	_status.size.x = INNER - (BUTTON_W + 16 if _button.visible else 0)
+	_status.size.x = INNER - (BUTTON_W + 16 if _button.visible else 0)     # the room first, then the fit
+	var status: Variant = d.get("status", "")
+	if status is Array:
+		UI.fit(_status, status)
+	else:
+		_status.text = str(status)
 
 
 func _press() -> void:
