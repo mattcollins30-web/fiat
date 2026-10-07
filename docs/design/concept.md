@@ -150,7 +150,9 @@ with them on a death, refunded as points, and the next runner picks a past from 
 19. ~~The City, the campaign and the endgame~~ — built (2 Oct): three zones, a zone opens on the boss of the
     one before; the depth ladder and call-in open when all three are done; at depth every site fights the
     same curve bent by its shape and differs by what it drops (exclusives); one boss a zone with their own
-    uniques, free once, then notes - the second currency, dropped everywhere.
+    uniques, free once, then notes - the second currency, dropped everywhere. Arming a boss is one
+    run, like the insurance: the deploy takes the tick off, so the notes are paid once a choice and a
+    tick left on never spends them quietly run after run (7 Oct; a default taken for Matt).
 20. ~~The endgame built out~~ — built (2 Oct, "do it all now and balance after"): trees as webs with a
     branch to the keystone and a branch to a rule; the second past at 30; traits and the two who turn
     up; rules for the bosses' uniques; the charm (magic find and cash); sockets and six socketables;
@@ -349,10 +351,10 @@ weights or the gate's figure move in the pass.
 | The bank's band | time to the bank, six builds | slowest within 1.5× the fastest |
 | The keystone | hour each build takes its keystone | by hour 2, every build |
 | The capstone | hour each build takes its capstone | by hour 5, every build (4 until the tenth read: with the bot playing to Matt's risk four builds took it at 4.0–4.7 h) |
-| No reds | the odds reader at every tier held (up to the best cleared) at depth 1, in the kit at the end, armed and whole, the site's words off | no tier under 60% |
+| No reds | the odds reader at every tier held (up to the best cleared) at depth 1, in the kit at the end, armed and whole, the site's words off, no boss left armed | no tier under 60% |
 | Loot quality visible | Legendary share at +35% quality | at least 2.0% (0.8% unboosted) |
 | Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
-| Cash sink | cash in hand at the end, in hours of the build's takings | no more than two hours' takings (was 3× the top bench: the wrong shape for a ladder that pays by depth) |
+| Cash sink | cash in hand at the end, in hours of the build's income (every pound in: the runs, the fence's sales, contracts - what the sinks are priced off) | no more than two hours' income (was 3× the top bench: the wrong shape for a ladder that pays by depth; and the runs' cash alone until the twelfth read, which missed the sales that make the piles) |
 | Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
 | Deaths | the bot's bail-outs under a quarter HP, one run in N (the runs that kill a player who pushes on) | one run in 10 to 30; Matt's save read one death in seventeen runs (seven in 116) |
 | Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |

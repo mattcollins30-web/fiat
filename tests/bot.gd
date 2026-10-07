@@ -354,6 +354,7 @@ func pick_tier(sim) -> int:
 	# is the lookout's dry runs, so the tiers under the one it will run go unread
 	var best := -1
 	var best_odds := -1.0
+	_disarm_stale(sim)
 	# the endgame: past the campaign every site at a depth is the same fight
 	# (the curve), the sites differing by what they drop, so a player digs
 	# one site; the bot keeps to the one it has dug deepest while it reads PUSH
@@ -394,6 +395,15 @@ func pick_tier(sim) -> int:
 	if sim.survival(best) < PUSH:
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best
+
+
+## A boss left armed on a tier the bot moved on from would read that tier red
+## for the rest of the run (the sim keeps the toggle on until it is turned off):
+## every pick reads the plain sites, and arms the one it picks below.
+func _disarm_stale(sim) -> void:
+	for i in range(Data.TIERS.size()):
+		if sim.boss_armed.get(i, false):
+			sim.arm_boss(i, false)
 
 
 ## Climb: when the tier just run reads safe, go a depth deeper on it. The

@@ -21,7 +21,7 @@ const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it s
 const TOP_SHARE := 0.02         # the top rarity (Legendary) at +35% quality (the weights give 2.5%; the probe's noise is ±0.1); the plain share is the weights' own
 const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against plain
-const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's takings (the ladder pays by depth, so a fixed figure says nothing at depth 15)
+const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
 const SCRAP := [0.5, 5.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
@@ -138,7 +138,7 @@ func _init() -> void:
 		rows.append(["Loot quality visible", "", "no probe read", false])
 		rows.append(["Quantity honest", "", "no probe read", false])
 
-	# cash sink: hours of takings in hand (older reads carry no cash_per_h: read against 3x the top bench)
+	# cash sink: hours of income in hand (every pound in: runs, sales, contracts) (older reads carry no cash_per_h: read against 3x the top bench)
 	if not full.is_empty():
 		var over: Array = []
 		var most := 0.0
@@ -148,9 +148,9 @@ func _init() -> void:
 			b["_held"] = held
 			most = maxf(most, held)
 			if held > CASH_HOURS:
-				over.append("%s holds £%d, %.1f hours' takings" % [b["build"], int(b["cash_end"]), held])
-		var text: String = "; ".join(over) if not over.is_empty() else "every build under %.0f hours' takings (most %.1f)" % [CASH_HOURS, most]
-		rows.append(["Cash sink", "cash in hand at the end no more than %.0f hours' takings" % CASH_HOURS, text, over.is_empty()])
+				over.append("%s holds £%d, %.1f hours' income" % [b["build"], int(b["cash_end"]), held])
+		var text: String = "; ".join(over) if not over.is_empty() else "every build under %.0f hours' income (most %.1f)" % [CASH_HOURS, most]
+		rows.append(["Cash sink", "cash in hand at the end no more than %.0f hours' income" % CASH_HOURS, text, over.is_empty()])
 
 	# depth pace, over the hours actually run
 	if not full.is_empty():

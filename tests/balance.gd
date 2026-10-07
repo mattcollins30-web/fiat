@@ -203,6 +203,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	var next_mark := 1800.0
 	var mark_runs := 0
 	var mark_cash := 0.0
+	var mark_cash_from := 0.0
 	var mark_items := 0
 	var depth_seen: Dictionary = {}
 	var t0 := Time.get_ticks_msec()
@@ -218,8 +219,6 @@ func _gate(hours: float, cls: String, element: String) -> void:
 				g["deaths"] += 1
 			elif bool(r.get("wounded", false)):
 				g["wounded_runs"] += 1
-			mark_cash += float(r.get("cash", 0.0))
-			g["cash_earned"] = float(g.get("cash_earned", 0.0)) + float(r.get("cash", 0.0))     # the runs' takings, for the cash row (hours of takings in hand)
 			mark_items += sim.stash.size() - items_before
 			if float(g["bank_at"]) < 0.0 and sim.best_depth[Data.BANK] > 0:
 				g["bank_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
@@ -241,14 +240,16 @@ func _gate(hours: float, cls: String, element: String) -> void:
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		if sim.elapsed >= next_mark:
 			var tt: int = maxi(t, 0)
+			mark_cash = sim.cash_in - mark_cash_from     # every pound in since the last mark: the runs' cash and the fence's money (read here, after the tidy's sales)
 			print("%s | %d (%d) %2d%% | %2d | £%6d | %2d/%d | £%5d | %4.1f | %3.0f/%3.0f | %3d %d | %2d, £%5d, %d" % [_hm(sim.elapsed), tt, sim.depth[tt], int(round(sim.survival(tt) * 100)),
 					sim.level(), int(sim.cash), sim.stash.size(), sim.stash_cap(), int(sim.loadout_value()), sim.dps(), sim.hp, sim.max_hp(), g["runs"], g["deaths"], mark_runs, int(mark_cash), mark_items])
 			next_mark += 1800.0
 			mark_runs = 0
-			mark_cash = 0.0
+			mark_cash_from = sim.cash_in
 			mark_items = 0
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
+	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
 	var odds := []
 	var hp0: float = sim.hp
 	sim.hp = sim.max_hp()                 # read whole: the last run may have left it hurt, and the reader keys on the HP
@@ -266,6 +267,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			var intel0: Array = sim.intel[i].duplicate()
 			sim.set_depth(i, 1)
 			sim.intel[i] = []                 # the plain site: the words on it are the ladder's business (a Resistant word reads any kit red)
+			if sim.boss_armed.get(i, false):
+				sim.arm_boss(i, false)        # and no boss left armed from an earlier pick: the campaign's odds are the site's
 			var s: float = sim.survival(i)
 			odds.append([i, snappedf(s, 0.001)])
 			if s < 0.6:

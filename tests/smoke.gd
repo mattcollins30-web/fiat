@@ -800,6 +800,7 @@ func _campaign_checks(main) -> void:
 	_check(t.has("boss") and t["boss"]["hp"] > t["hp"], "arming the boss did not put them in the fight")
 	sim.deploy(2)
 	_check(sim.on_mission() and sim.mission.has("boss"), "the boss did not come on the run")
+	_check(not sim.boss_armed.get(2, false), "the boss stayed armed past the deploy: arming is one run, like the insurance")
 	# through the pool with a big gun, then the boss
 	var guard := 0
 	while sim.on_mission() and sim.mission["remaining"] > 0 and guard < 20000:
@@ -5858,6 +5859,13 @@ func _dig_checks(main) -> void:
 	var climbs: bool = sim.survival(5) >= Bot.CLIMB
 	bot._climb(sim)
 	_check(sim.depth[5] == (d0 + 1 if climbs else d0), "the bot's climb did not follow CLIMB: depth %d from %d, odds %.2f" % [sim.depth[5], d0, sim.survival(5)])
+	# a boss left armed on another tier is turned off by the next pick: the sim
+	# keeps the toggle on after a run, and a tier read with a boss in reads red
+	# for the rest of a run (the twelfth read's T8 at 0% with 700 dps against 4.8)
+	sim.boss_armed[8] = true
+	t = bot.pick_tier(sim)
+	_check(not sim.boss_armed.get(8, false), "the bot's pick left the quartermaster armed on T8 (picked T%d)" % t)
+	bot.last_tier = t
 	# a runner that can't hold the depth steps back and picks as before: no
 	# armour, no meds, level 3 - under at T5 whatever the tree
 	sim.equipped["Primary"]["affixes"] = []

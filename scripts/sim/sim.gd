@@ -67,6 +67,7 @@ var notes := 0                     # the old paper money: the crews still take i
 var scrap := 0                     # the bench's material (34): found, stripped, ditched for
 var takings := 0.0                 # what the yard takes a run, averaged over the last few: the run's cash and the fence's money (the pass, 6 Oct)
 var _takings_run := 0.0            # the cash in since the last run came home
+var cash_in := 0.0                 # every pound in since the game began (runs, sales, contracts); not saved: the readers' figure
 var atlas := {}                    # the map's passives: key -> rank
 var atlas_points := 0              # earned: one a new depth cleared past the first
 var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
@@ -1932,6 +1933,7 @@ func can_juice() -> bool:
 func _earn(x: float) -> void:
 	cash += x
 	_takings_run += x
+	cash_in += x
 
 
 ## What a run on the tier pays in kills, at its depth, before the day's prices.
@@ -2316,6 +2318,7 @@ func can_arm_boss(i: int) -> bool:
 	return (not boss_of(i).is_empty() or is_convoy(i)) and mission == null and tier_open(i) and notes >= boss_cost(i)
 
 
+## Armed for the next run, and only that run: the deploy takes it off, so the notes are paid once a choice (7 Oct).
 func arm_boss(i: int, on: bool) -> void:
 	if on and not can_arm_boss(i):
 		return
@@ -2612,6 +2615,8 @@ func deploy(i: int) -> void:
 		if notes < cost:
 			return
 		notes -= cost
+		boss_armed[i] = false             # one run, like the insurance: the fight is this run's, and the notes are the run's too; arm him again to go back
+		_surv_cache.erase(i)
 	var insured := false
 	if insure_next and can_insure(i):
 		cash -= insure_cost(i)

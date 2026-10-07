@@ -2038,7 +2038,44 @@ Doorman at 0.6-0.9 and a poison Poacher at 4.8 is tenfold, and both are the game
 band reads within the classes (0.7 to 2.8 h: the Drifter banked at 0.7 h this read and 1.8-2.9 h in
 others) and within the element builds (1.3 to 2.1 h) now - the element builds are meant to be ahead -
 and at one read a build it cannot be judged; the Legion's double read is the one to read it on. A
-twelfth read runs with these; the morning entry carries it.
+twelfth read ran overnight here and died with the box six minutes in (a background job does not keep
+the box awake); Matt ran it on the Legion in the morning.
+
+**The twelfth read (the Legion, 7 Oct morning: twenty reads of ten builds).** Five red, and depth pace
+green with the rest (every build a depth an hour or better from hour 4). Two of the five reds are the
+reader's, and both come from the same thing. *The odds*: the Drifter's and the Poacher's T8 at 50%,
+each one read at 100% and one at 0% - and the 0% reads are a runner whole, with 350-700 dps, against a
+site doing 4.8, which is no fight lost. `boss_armed` is never cleared after a run: the bot arms a
+tier's boss when the odds hold with them in, runs it, and when it picks another tier next the old one
+keeps its boss, reads red for the rest of the run (both 0% reads cleared T8 once and sat on T7 and T6
+after), and the end-of-read odds read it armed too. The bot turns off every stale boss before a pick
+(`_disarm_stale`; the one it picks is armed again below as before), the reader before the end read, and
+the smoke arms the quartermaster on T8 and checks a pick turns him off. The sim's toggle staying on is
+the game's (a player who leaves it ticked pays the notes every run): recorded for Matt, not moved. *Cash*:
+the Doorman, the frost Poacher and the Scrapper at 2.6-4.1 hours' takings - measured against the runs'
+cash alone, when the piles form on deep digs where the fence's sales of what came up bring in more than
+the runs do (the Doorman went £4.5k to £56k in one half hour with £15k of run cash). The sim counts every
+pound in now (`cash_in`: runs, sales, contracts - what `takings` is made of), the reader's cash row and
+its half-hour column read that, and the sinks were working where the piles formed (words on tier 8 at
+£39-50k each in the last quarter hour). The bot gambled 0-1 times in eight hours: its rule holds six to
+twelve runs' takings before it spends, and at depth a run takes £20k; the bot being tight, not the price.
+The three real reds: deaths too safe on four strong builds (bleed Doorman one in 51, Drifter one in 34,
+fire one in 50, shock one in 45; the Doorman, Paramedic and Poacher in band at PUSH 0.88); wounds 8-40%
+(Paramedic 8%, Poacher 40%, Scrapper 37%) - the builds that never bail are the ones with the margin, and
+the ones that bail most are wounded most, a spread between classes a single `PUSH` cannot close; and
+the band, where every build is 1.3-2.4 h but the plain Poacher, at the bank 3.1 and 3.5 h on both
+reads, sat on T3-T4 from hour 2 to 3 with odds reading 0-21% at full HP (the same smell as the odds
+row: a mid-run read with the rifle's rounds low, or something else stale) - for a closer look before a
+number moves. The thirteenth read goes on these fixes alone, so deaths, wounds and the Poacher are
+judged on a read that is not contaminated.
+
+**Defaults taken (7 Oct, morning).** The boss's arm is one run: `deploy` takes the tick off when the
+run goes out (the mission carries its own boss), so the notes are paid once a choice, like the
+insurance, and a player who leaves it ticked is not quietly charged every run; arm him again to go
+back. Smoke: the tick is off past the deploy. `PUSH` stays at 0.88 (the lower band is the strong
+four's margin, not the bot's appetite: a lower PUSH would push the Scrapper and Poacher, at one in
+12-16, past the floor) and `WOUND_AT` stays at 0.35 (a figure that moves everyone cannot close a
+spread between classes): both judged on the thirteenth read.
 
 ## The dots as the end of the bar (6 Oct)
 
