@@ -319,9 +319,9 @@ func _merged(gs: Array) -> Dictionary:
 	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at"]:
 		if not gs[0].has(key):
 			continue
-		var vals: Array = gs.map(func(g): return (float(g.get(key, -1.0)) if float(g.get(key, -1.0)) >= 0.0 else 999.0))
-		var med := _median(vals)
-		m[key] = -1.0 if med >= 999.0 else snappedf(med, 0.01)
+		# the reads that got there, by their median; never only when none did (two reads averaged a never into 505 h)
+		var vals: Array = gs.map(func(g): return float(g.get(key, -1.0))).filter(func(v): return v >= 0.0)
+		m[key] = -1.0 if vals.is_empty() else snappedf(_median(vals), 0.01)
 	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
 		if not gs[0].has(key):
 			continue                      # an older read without the key keeps lacking it (the rows read the lack)

@@ -11,6 +11,8 @@ const Items := preload("res://scripts/sim/items.gd")
 const PUSH := 0.88             # the pass (6-7 Oct): at 0.75 the bot bailed under a quarter one run in four, at 0.85 one in eight, at 0.9 one in 33-47 on four builds, against Matt's one in seventeen
 const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four builds
 const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
+const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
+var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
@@ -386,21 +388,20 @@ func pick_tier(sim) -> int:
 		# the sites as they stand first (a read each) - a site climbed past its clear that no longer reads PUSH steps
 		# back to the clear, or it would sit unread for the rest of the run - then, when none holds, the ladders
 		# stepped back, the highest level first
-		var best_level := -1
+		# (the highest level first and the first that holds taken: a read is the lookout's dry runs, and past level
+		# 14 a fight is minutes long, so nine reads a pick ran the seventeenth read at a third of the pace)
+		var order: Array = []
 		for i in range(Data.TIERS.size()):
-			if sim.tier_open(i) and sim.depth[i] > sim.best_depth[i] and sim.depth[i] > 1 and sim.survival(i) < PUSH:
+			if sim.tier_open(i):
+				order.append(i)
+		order.sort_custom(func(a, b): return _aim_level(sim, a) > _aim_level(sim, b))
+		for i in order:
+			if sim.depth[i] > sim.best_depth[i] and sim.depth[i] > 1 and sim.survival(i) < PUSH:
 				sim.set_depth(i, maxi(1, sim.best_depth[i]))
-			if sim.tier_open(i) and sim.survival(i) >= PUSH:
-				var level: int = _aim_level(sim, i)
-				if level > best_level:
-					best_level = level
-					best = i
+			if sim.survival(i) >= PUSH:
+				best = i
+				break
 		if best < 0:
-			var order: Array = []
-			for i in range(Data.TIERS.size()):
-				if sim.tier_open(i):
-					order.append(i)
-			order.sort_custom(func(a, b): return _aim_level(sim, a) > _aim_level(sim, b))
 			for i in order:
 				while sim.depth[i] > 1 and sim.survival(i) < PUSH:
 					sim.set_depth(i, sim.depth[i] - 1)
@@ -434,7 +435,8 @@ func pick_tier(sim) -> int:
 	# the lorry: armed on the services at its depth when the notes are there and the odds hold with the convoy in
 	# (the price and the convoy grow with the depth: when the armed read fails, the services step back toward
 	# convoy_depth() and read again, so the bot does not dig past the lorry it cannot take)
-	if best == Data.CONVOY_TIER and sim.is_convoy(best) and not sim.lorry_done:
+	if best == Data.CONVOY_TIER and sim.is_convoy(best) and not sim.lorry_done and sim.notes >= sim.boss_cost(best) and sim.elapsed - lorry_read_at >= LORRY_EVERY:
+		lorry_read_at = sim.elapsed
 		while true:
 			sim.arm_boss(best, false)
 			if sim.notes >= sim.boss_cost(best):

@@ -2100,6 +2100,30 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The seventeenth read (the Legion, 7 Oct, twenty reads of ten builds, thirty-two hours asked: the
+engine's first).** Every read was cut by the gate's wall limit (an hour) at 9-23 simulated hours, so
+the rows read against sixteen are not comparable - but the lorry row is the finding. *The loop works
+and compounds:* the bleed Doorman beat the lorry at 7.3 h and 7.6 h and went on to eight and seven
+moves in 22 hours, its ladders at 22-23 against 14-15 (the first yard's 16/7); the shock Drifter at
+5.0 h (five moves) and 9.7 h (three); the poison Poacher at 11.5 h (three). The others had the
+services at 7-8 when they were cut at 9-15 hours, where the sixteenth read had them at 8-10 by
+sixteen. *The pace:* past level 14 a fight is minutes of the yard's time, and the odds reader runs
+twenty-four of them a read; the bot read every open site a pick (nine) and the convoy (three heads)
+every run, so an hour of the yard cost 400 s of wall against 115 before. Fixed in the bot: the sites
+are read in level order and the first that holds is taken (one read a pick most of the time); the
+lorry's odds are read once in twenty minutes of the yard's time; the summary's median of a lorry hour
+left the reads that never got there out (two reads had averaged a never into "505 h"). *The rest* as
+the sixteenth: deaths one in 35-72 on five builds and wounds 4-8% on six (0.30 over-corrects; 0.33
+proposed), the bank's band the drop's luck, one Poacher's T8 at 50%, the fire Drifter's depth pace at
+exactly one an hour. The second leg's figure - whether ×1.25 a lorry and 6% an item level keep pace
+with +14% a level - needs a read that reaches it. *The convoy, re-sized from two saved yards:* the
+hour-16 bleed Doorman of a local read (1,316 dps, 577 HP, 382 armour, stronger than the Poacher the
+first sizing came from) read the convoy at 35% HP and full fire at 0.00 where the Poacher read 0.80 -
+the Poacher's +40% on the first of a gang counts on every head, so the same heads are two different
+fights by class. At 25% HP and 0.75 fire the Doorman reads 0.93 and the Poacher 1.00: `CONVOY_HP`
+0.25, `CONVOY_DPS` 0.75 ("they come light and tired"). The same read showed the bot's rig with no
+meds at hour 16 and the stash over its cap (264 of 234), to be looked at.
+
 ## The engine: the first leg sized, and what grows without end (7 Oct)
 
 Matt, on the sixteenth read: "infinite scaling is kinda the point - we want players to be having and

@@ -2595,7 +2595,8 @@ func _pinnacle_checks(main) -> void:
 	var ec: Dictionary = sim.effective(Data.CONVOY_TIER)
 	_check(ec.get("convoy", false) and ec["boss_queue"].size() == 2 and not ec["boss"]["pinnacle"], "the convoy is not three in a row, come light")
 	var cm_hp: float = float(ec["hp"]) * float(Data.BOSSES[0]["hp"]) * Data.CONVOY_HP
-	_check(is_equal_approx(float(ec["boss"]["hp"]), cm_hp), "the convoy's first head is not light: %.0f against %.0f" % [float(ec["boss"]["hp"]), cm_hp])
+	var cm_dps: float = float(ec["dps"]) * float(Data.BOSSES[0]["dps"]) * Data.CONVOY_DPS
+	_check(is_equal_approx(float(ec["boss"]["hp"]), cm_hp) and is_equal_approx(float(ec["boss"]["dps"]), cm_dps), "the convoy's first head is not light and tired: %.0f/%.1f against %.0f/%.1f" % [float(ec["boss"]["hp"]), float(ec["boss"]["dps"]), cm_hp, cm_dps])
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(2)
 	_check_fit(main, "Runs (convoy armed)")
@@ -6769,7 +6770,7 @@ func _gamble_checks(main) -> void:
 	_check(bot.bought.is_empty(), "the bot gambled under three times the price")
 	sim.cash = sim.gamble_price("rifle") * 3
 	bot._gamble_one(sim)
-	_check(bot.bought.size() == 1 and "rifle" in str(bot.bought[0][1]) and not ("rifle" in sim.gamble), "the bot did not gamble a rifle when flush: %s" % str(bot.bought))
+	_check(bot.bought.size() == 1 and "rifle" in str(bot.bought[0][1]) and not ("rifle" in sim.gamble), "the bot did not gamble a rifle when flush: %s (cash %.0f, price %d, reserve %.0f, can %s, room %s)" % [str(bot.bought), sim.cash, sim.gamble_price("rifle"), bot._reserve(sim), str(sim.can_gamble("rifle")), str(sim.stash_room(4))])
 	# the takings: a run's cash and the fence's money, averaged over the last few runs
 	var tk0: float = sim.takings
 	sim.deploy(0)

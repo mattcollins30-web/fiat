@@ -2497,7 +2497,7 @@ func is_convoy(i: int) -> bool:
 ## A boss as they come at this tier and depth: the crew's head, or at full strength.
 func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool, convoy := false) -> Dictionary:
 	var hp: float = e["hp"] * float(b["hp"]) * (Data.PINNACLE_HP if pinnacle else 1.0) * (Data.CONVOY_HP if convoy else 1.0)
-	var dps: float = e["dps"] * float(b["dps"]) * (Data.PINNACLE_DPS if pinnacle else 1.0)
+	var dps: float = e["dps"] * float(b["dps"]) * (Data.PINNACLE_DPS if pinnacle else 1.0) * (Data.CONVOY_DPS if convoy else 1.0)
 	return {"name": b["name"], "hp": hp, "dps": dps, "zone": int(b["zone"]), "pinnacle": pinnacle}
 
 
