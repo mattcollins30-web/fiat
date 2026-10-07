@@ -194,6 +194,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	sim.set_class(cls)
 	var bot = Bot.new()
 	bot.element = element
+	bot.cls = cls
 	bot.keystones_first = element == ""
 	var build: String = cls + ((" as " + element) if element != "" else "")
 	print("Fiat gate read: %.0f h, %s" % [hours, build])
@@ -295,6 +296,36 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	g["kit"] = _kit(sim)
 	g["bails"] = bot.bails
+	# the endgame's two (7 Oct): the lorry's hour and the moves, and the ladders' spread - the deepest depth the
+	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
+	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
+	g["lorries"] = sim.lorries
+	g["moves"] = bot.moves
+	g["services_depth"] = int(sim.best_depth[Data.CONVOY_TIER])
+	var ladder := {}
+	if sim.campaign_done():
+		sim.hp = sim.max_hp()
+		for box in boxes:
+			sim.rig.append(box)
+		for i in [0, 8]:
+			var d0: int = sim.depth[i]
+			var intel0: Array = sim.intel[i].duplicate()
+			sim.intel[i] = []
+			var held := 0
+			for d in range(1, 31):
+				sim.depth[i] = d
+				sim._surv_cache.erase(i)
+				if sim.survival(i) < bot.PUSH:
+					break
+				held = d
+			ladder[str(i)] = held
+			sim.depth[i] = d0
+			sim.intel[i] = intel0
+			sim._surv_cache.erase(i)
+		for box in boxes:
+			sim.rig.erase(box)
+		sim.hp = hp0
+	g["ladder"] = ladder
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
 	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
 	for b in bot.bought:

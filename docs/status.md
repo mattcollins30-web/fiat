@@ -2100,6 +2100,22 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The pass resumes: the endgame's two gates and the bot's loop (7 Oct)
+
+All four parts in, the balance pass gains the two rows concept.md named. *The lorry*: beaten by hour
+`LORRY_BY` (8) on every build; the read is the hour of the first lorry (`lorry_at`), the moves made and
+the services' deepest clear when it never came. *The ladders' spread*: at the end, in the kit as it
+stands, the deepest depth the streets and the barracks read `PUSH` (the depth set past the ladder for
+the read, the plain site), the streets' less the barracks' in `SPREAD` [5, 9] (by level they sit eight
+apart; the streets' shape is gentler). The bot plays the endgame as designed: past the campaign it runs
+the site that reads PUSH at the highest level (the better kit) except that the services come first
+while the lorry stands, and the climb digs them toward it; the convoy is armed at its depth when the
+notes are there and the odds hold with it in; the lorry beaten, the yard moves on (`moves`, the class
+put back, the campaign again from the floor); the map's points go a rank each, the columns in turn,
+each down its chain. The summary's builds table gains Lorry (moves) and Ladders S/B. The pass's
+baseline is now a different game from the thirteenth read (the ladders by level, the lorry, the move,
+the map): the first read after the parts is the fourteenth and starts the sheet again.
+
 ## The endgame, part 4: the map at thirty-six (7 Oct)
 
 Built as concept.md's part 4, mocked as Map-B. `Data.ATLAS` is thirty-six nodes in three columns of

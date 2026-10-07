@@ -6474,23 +6474,42 @@ func _dig_checks(main) -> void:
 	sim.odds_budget = 0                   # the odds in full: the shell reads them a few dry runs a frame, and two reads a moment apart differ
 	_check(sim.campaign_done(), "the dig check did not finish the campaign")
 	_check(sim.has_rounds(sim.equipped["Primary"]), "the dig check's gun is dry")
+	# the rule (the endgame, 7 Oct): while the lorry stands the services come first when they read PUSH;
+	# the lorry beaten, the site that reads PUSH at the highest level (the barracks at depth 1 over the bank at 3)
+	sim.lorry_done = false
 	var t: int = bot.pick_tier(sim)
-	# the rule, not the state: the site it dug deepest, at the deepest depth that reads PUSH
-	# (the odds read by the night, the weather and the tree, so the depth itself may differ)
-	var at_push: bool = sim.survival(5) >= Bot.PUSH
-	var deepest: bool = sim.depth[5] == 3 or not _reads_push_deeper(sim, 5)
-	_check(t == 5 and at_push and deepest, "past the campaign the bot did not keep to the site dug deepest at a depth that reads PUSH: T%d at depth %d (odds %.2f)" % [t, sim.depth[t], sim.survival(t)])
+	_check(t == Data.CONVOY_TIER and sim.survival(t) >= Bot.PUSH, "past the campaign the bot did not go for the services while the lorry stands: T%d (odds %.2f)" % [t, sim.survival(t)])
+	sim.lorry_done = true
+	t = bot.pick_tier(sim)
+	# the rule, not the state: no site that reads PUSH as it stands sits at a higher level (the odds read by the night, the weather and the words)
+	var higher := -1
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i) and sim.site_level(i) > sim.site_level(t) and sim.survival(i) >= Bot.PUSH:
+			higher = i
+	_check(sim.survival(t) >= Bot.PUSH and higher < 0, "with the lorry beaten the bot did not run the highest level that reads PUSH: T%d at depth %d (odds %.2f), T%d reads PUSH higher" % [t, sim.depth[t], sim.survival(t), higher])
 	bot.last_tier = t
-	var d0: int = sim.depth[5]
-	var climbs: bool = sim.survival(5) >= Bot.CLIMB
+	var d0: int = sim.depth[t]
+	var climbs: bool = sim.survival(t) >= Bot.CLIMB
 	bot._climb(sim)
-	_check(sim.depth[5] == (d0 + 1 if climbs else d0), "the bot's climb did not follow CLIMB: depth %d from %d, odds %.2f" % [sim.depth[5], d0, sim.survival(5)])
+	_check(sim.depth[t] == (d0 + 1 if climbs else d0), "the bot's climb did not follow CLIMB: depth %d from %d, odds %.2f" % [sim.depth[t], d0, sim.survival(t)])
+	# at the lorry's depth the climb waits for the lorry
+	sim.best_depth[Data.CONVOY_TIER] = Data.CONVOY_DEPTH + 1
+	sim.depth[Data.CONVOY_TIER] = Data.CONVOY_DEPTH
+	sim.lorry_done = false
+	bot.last_tier = Data.CONVOY_TIER
+	bot._climb(sim)
+	_check(sim.depth[Data.CONVOY_TIER] == Data.CONVOY_DEPTH, "the bot dug past the lorry it had not beaten")
+	sim.best_depth[Data.CONVOY_TIER] = 1
+	sim.depth[Data.CONVOY_TIER] = 1
+	sim.lorry_done = true
 	# a boss left armed on another tier is turned off by the next pick: the sim
 	# keeps the toggle on after a run, and a tier read with a boss in reads red
 	# for the rest of a run (the twelfth read's T8 at 0% with 700 dps against 4.8)
 	sim.boss_armed[8] = true
+	sim.lorry_done = false                # the pick is the services: the barracks' head must come off
 	t = bot.pick_tier(sim)
-	_check(not sim.boss_armed.get(8, false), "the bot's pick left the quartermaster armed on T8 (picked T%d)" % t)
+	_check(t != 8 and not sim.boss_armed.get(8, false), "the bot's pick left the quartermaster armed on T8 (picked T%d)" % t)
+	sim.lorry_done = true
 	bot.last_tier = t
 	# a runner that can't hold the depth steps back and picks as before: no
 	# armour, no meds, level 3 - under at T5 whatever the tree
@@ -6500,23 +6519,13 @@ func _dig_checks(main) -> void:
 	sim.xp = Data.xp_for_level(3)
 	sim.hp = sim.max_hp()
 	t = bot.pick_tier(sim)
-	_check(sim.depth[5] == 1 and (t != 5) == (sim.survival(5) < Bot.PUSH), "a weak runner past the campaign did not step its site back and pick by the odds: T%d, site depth %d, odds %.2f" % [t, sim.depth[5], sim.survival(5)])
+	_check(sim.survival(t) >= Bot.PUSH and (t != 5 or sim.depth[5] == 1), "a weak runner past the campaign did not pick a site that reads PUSH: T%d, site depth %d, odds %.2f" % [t, sim.depth[t], sim.survival(t)])
+	sim.lorry_done = false
 	sim.boss_armed.clear()
 	sim.odds_budget = budget0
 	sim.load_dict(saved)
 	print("the dig rule ok")
 	_leave_checks(main)
-
-
-## Whether the site one depth deeper than it stands reads PUSH; the depth is put back after.
-func _reads_push_deeper(sim, i: int) -> bool:
-	var d0: int = sim.depth[i]
-	sim.set_depth(i, d0 + 1)
-	if sim.depth[i] == d0:
-		return false
-	var ok: bool = sim.survival(i) >= Bot.PUSH
-	sim.set_depth(i, d0)
-	return ok
 
 
 ## The bot leaves a picked-over site: a runner no gang moves on (Never

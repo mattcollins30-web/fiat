@@ -25,6 +25,8 @@ const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
 const SCRAP := [0.5, 5.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
+const LORRY_BY := 8.0           # hour: the lorry beaten on every build (the endgame's ending, 7 Oct)
+const SPREAD := [5, 9]          # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the streets' shape is gentler)
 const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk: his save read one in seventeen (seven lost in 116 runs); the bot's bail-outs under a quarter stand for them (an hour's reading depended on how many runs an hour a build makes)
 
 
@@ -186,6 +188,37 @@ func _init() -> void:
 	else:
 		rows.append(["Deaths", "a bail-out under a quarter one run in %.0f to %.0f" % [DEATH_RUNS[0], DEATH_RUNS[1]], "no bails in these reads (an older balance.gd)", null])
 
+	# the endgame's two (7 Oct): the lorry by the hour on every build; the ladders' spread
+	if not full.is_empty() and full.any(func(b): return b.has("lorry_at")):
+		var late: Array = []
+		var hit: Array = []
+		for b in full:
+			var h := float(b.get("lorry_at", -1.0))
+			if h < 0.0 or h > LORRY_BY:
+				late.append("%s %s (services at depth %d)" % [b["build"], _hours(h), int(b.get("services_depth", 0))])
+			else:
+				hit.append(h)
+		var text: String = ("every build by %s (latest %s)" % [_hours(LORRY_BY), _hours(hit.max())]) if late.is_empty() else "late: " + ", ".join(late)
+		rows.append(["The lorry", "beaten by hour %.0f, every build" % LORRY_BY, text, late.is_empty()])
+		var off: Array = []
+		var unread: Array = []
+		for b in full:
+			var l: Dictionary = b.get("ladder", {})
+			if not l.has("0") or not l.has("8"):
+				unread.append(b["build"])
+				continue
+			var spread: int = int(l["0"]) - int(l["8"])
+			b["_spread"] = "%d/%d" % [int(l["0"]), int(l["8"])]
+			if spread < SPREAD[0] or spread > SPREAD[1]:
+				off.append("%s streets %d, barracks %d" % [b["build"], int(l["0"]), int(l["8"])])
+		var t2: String = "; ".join(off) if not off.is_empty() else "every build in the band"
+		if not unread.is_empty():
+			t2 += " (campaign not done: " + ", ".join(unread) + ")"
+		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], t2, null if (off.is_empty() and not unread.is_empty()) else off.is_empty()])
+	else:
+		rows.append(["The lorry", "beaten by hour %.0f, every build" % LORRY_BY, "no lorry in these reads (an older balance.gd)", null])
+		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], "not read", null])
+
 	# wounds
 	if not full.is_empty():
 		var off: Array = []
@@ -234,8 +267,8 @@ func _init() -> void:
 	out.append("")
 	out.append("## The builds")
 	out.append("")
-	out.append("| Build | Hours | Bank | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap in hand (crafts earned/h) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
-	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	out.append("| Build | Hours | Bank | Lorry (moves) | Ladders S/B | Keystone | Capstone | Level | Best tier (depth) | Runs | Deaths | Wounded | Cash | Top bench | Scrap in hand (crafts earned/h) | Depths/h after %.0f | Odds by tier | Kit |" % DEPTH_FROM)
+	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for b in reads:
 		b["_wounds"] = (float(b["wounded_runs"]) / float(b["runs"])) if int(b["runs"]) > 0 else 0.0
 		var dearest_b := float(b.get("dearest_build", 0))
@@ -252,8 +285,11 @@ func _init() -> void:
 		var odds: Array = []
 		for o in b.get("odds", []):
 			odds.append("T%d %.0f%%" % [int(o[0]), float(o[1]) * 100.0])
-		out.append("| %s | %.1f (%.0f s wall) | %s | %s | %s | %d | %d (%d) | %d | %d | %.0f%% | £%d | £%d | %d (%.1f) | %.1f | %s | %s |" % [
-			b["build"], float(b.get("elapsed_h", b["hours"])), float(b.get("wall_s", 0)), _hours(float(b["bank_at"])), _hours(float(b["keystone_at"])), _hours(float(b["capstone_at"])),
+		var lad: Dictionary = b.get("ladder", {})
+		out.append("| %s | %.1f (%.0f s wall) | %s | %s (%d) | %s | %s | %s | %d | %d (%d) | %d | %d | %.0f%% | £%d | £%d | %d (%.1f) | %.1f | %s | %s |" % [
+			b["build"], float(b.get("elapsed_h", b["hours"])), float(b.get("wall_s", 0)), _hours(float(b["bank_at"])),
+			_hours(float(b.get("lorry_at", -1.0))), int(b.get("moves", 0)), ("%d/%d" % [int(lad["0"]), int(lad["8"])]) if lad.has("0") and lad.has("8") else "—",
+			_hours(float(b["keystone_at"])), _hours(float(b["capstone_at"])),
 			int(b.get("level", 0)), bt, depth, int(b["runs"]), int(b["deaths"]), float(b.get("_wounds", 0.0)) * 100.0,
 			int(b["cash_end"]), int(b["top_bench"]), int(b["scrap_end"]), float(b.get("_crafts", 0.0)), float(b.get("_pace", 0.0)), " ".join(odds), str(b.get("kit", ""))])
 	out.append("")
@@ -280,8 +316,10 @@ func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
-	for key in ["bank_at", "keystone_at", "capstone_at"]:
-		var vals: Array = gs.map(func(g): return (float(g[key]) if float(g[key]) >= 0.0 else 999.0))
+	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at"]:
+		if not gs[0].has(key):
+			continue
+		var vals: Array = gs.map(func(g): return (float(g.get(key, -1.0)) if float(g.get(key, -1.0)) >= 0.0 else 999.0))
 		var med := _median(vals)
 		m[key] = -1.0 if med >= 999.0 else snappedf(med, 0.01)
 	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
@@ -291,11 +329,21 @@ func _merged(gs: Array) -> Dictionary:
 		for g in gs:
 			total += float(g.get(key, 0))
 		m[key] = snappedf(total / gs.size(), 0.01)
-	for key in ["runs", "deaths", "wounded_runs", "bails"]:
+	for key in ["runs", "deaths", "wounded_runs", "bails", "moves", "lorries"]:
 		var n := 0
 		for g in gs:
 			n += int(g.get(key, 0))
 		m[key] = n
+	m["services_depth"] = gs.map(func(g): return int(g.get("services_depth", 0))).max()
+	var ladder := {}
+	for i in ["0", "8"]:
+		var vals: Array = []
+		for g in gs:
+			if g.get("ladder", {}).has(i):
+				vals.append(float(g["ladder"][i]))
+		if not vals.is_empty():
+			ladder[i] = int(_median(vals))
+	m["ladder"] = ladder
 	var per_tier: Dictionary = {}
 	for g in gs:
 		for o in g.get("odds", []):

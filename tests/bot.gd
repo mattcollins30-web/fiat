@@ -15,6 +15,9 @@ var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
 var element := ""              # a build: its tree to the keystone first, its gear held, the bench aimed at it
 var last_tier := -1            # the tier of the last run, the one the climb reads
+var cls := ""                  # the class the gate set: put back on the runner after a move (the move unpicks it)
+var moves := 0                 # yards moved on after the lorry (the endgame's loop, 7 Oct)
+var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
@@ -138,15 +141,34 @@ func _endgame(sim) -> void:
 				var pay: String = sim.contract_pay_words(c)
 				sim.hand_in(k)
 				bought.append([sim.elapsed, "contract: %s" % pay])
+	# the map at thirty-six (7 Oct): a rank a point, the columns in turn, each down its chain
+	var col := 0
 	while sim.atlas_free() > 0:
 		var took := false
-		for key in ["picked_over", "paid_in_notes", "quiet_roads", "deeper_pockets", "two_of_everything", "word_travels"]:
-			if sim.can_rank_atlas(key):
-				sim.rank_atlas(key)
-				took = true
+		for k in range(3):
+			var c: int = (col + k) % 3
+			for a in Data.ATLAS:
+				if int(a["column"]) == c and sim.can_rank_atlas(a["key"]):
+					sim.rank_atlas(a["key"])
+					took = true
+					break
+			if took:
+				col = (c + 1) % 3
 				break
 		if not took:
 			break
+	# the lorry beaten: the yard moves on (the loop), the class put back, and the campaign again from the floor
+	if sim.lorry_done and lorry_at < 0.0:
+		lorry_at = sim.elapsed / 3600.0
+	if sim.lorry_done and sim.can_move_yard():
+		if cls == "":
+			cls = sim.cls                  # the plain reads never set it: remember the class the move unpicks
+		if sim.move_yard():
+			moves += 1
+			last_tier = -1
+			if sim.cls == "" and cls != "":
+				sim.set_class(cls)
+			bought.append([sim.elapsed, "moved the yard (%d)" % moves])
 	if sim.can_buy_mate() and sim.notes >= int(sim.mate["notes"]) * 3:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()
@@ -355,19 +377,31 @@ func pick_tier(sim) -> int:
 	var best := -1
 	var best_odds := -1.0
 	_disarm_stale(sim)
-	# the endgame: past the campaign every site at a depth is the same fight
-	# (the curve), the sites differing by what they drop, so a player digs
-	# one site; the bot keeps to the one it has dug deepest while it reads PUSH
+	# the endgame (7 Oct): a site's depth is fought at its level, so the bot runs the site that reads
+	# PUSH at the highest level (the barracks at depth 2 over the streets at depth 8: the better kit),
+	# except that the lorry is the ending - while it isn't beaten, the services come first when they read
+	# PUSH at their depth, and the climb digs them toward it
 	if sim.campaign_done():
-		var site := -1
+		# the sites as they stand first (a read each); only when none holds, step the ladders back, the highest level first
+		var best_level := -1
 		for i in range(Data.TIERS.size()):
-			if sim.tier_open(i) and (site < 0 or sim.best_depth[i] >= sim.best_depth[site]):
-				site = i
-		if site >= 0:
-			while sim.depth[site] > 1 and sim.survival(site) < PUSH:
-				sim.set_depth(site, sim.depth[site] - 1)
-			if sim.survival(site) >= PUSH:
-				best = site
+			if sim.tier_open(i) and sim.survival(i) >= PUSH:
+				var level: int = _aim_level(sim, i)
+				if level > best_level:
+					best_level = level
+					best = i
+		if best < 0:
+			var order: Array = []
+			for i in range(Data.TIERS.size()):
+				if sim.tier_open(i):
+					order.append(i)
+			order.sort_custom(func(a, b): return _aim_level(sim, a) > _aim_level(sim, b))
+			for i in order:
+				while sim.depth[i] > 1 and sim.survival(i) < PUSH:
+					sim.set_depth(i, sim.depth[i] - 1)
+				if sim.survival(i) >= PUSH:
+					best = i
+					break
 	if best < 0:
 		for i in range(Data.TIERS.size() - 1, -1, -1):
 			if not sim.tier_open(i):
@@ -392,9 +426,28 @@ func pick_tier(sim) -> int:
 			sim.arm_boss(best, false)
 	elif not b.is_empty():
 		sim.arm_boss(best, false)
+	# the lorry: armed on the services at its depth when the notes are there and the odds hold with the convoy in
+	# (the price and the convoy grow with the depth: when the armed read fails, the services step back toward
+	# convoy_depth() and read again, so the bot does not dig past the lorry it cannot take)
+	if best == Data.CONVOY_TIER and sim.is_convoy(best) and not sim.lorry_done:
+		while true:
+			sim.arm_boss(best, false)
+			if sim.notes >= sim.boss_cost(best):
+				sim.arm_boss(best, true)
+				if sim.survival(best) >= PUSH:
+					break
+				sim.arm_boss(best, false)
+			if sim.depth[best] <= sim.convoy_depth():
+				break
+			sim.set_depth(best, sim.depth[best] - 1)
 	if sim.survival(best) < PUSH:
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best
+
+
+## What a site is worth running past the campaign: its level, and the services first while the lorry stands.
+func _aim_level(sim, i: int) -> int:
+	return sim.site_level(i) + (100 if (i == Data.CONVOY_TIER and not sim.lorry_done) else 0)
 
 
 ## A boss left armed on a tier the bot moved on from would read that tier red
@@ -411,6 +464,8 @@ func _disarm_stale(sim) -> void:
 ## costs the lookout's dry runs.
 func _climb(sim) -> void:
 	var i := last_tier
+	if i == Data.CONVOY_TIER and sim.is_convoy(i) and not sim.lorry_done:
+		return                                # at the lorry's depth: beat it before digging past it
 	if i >= 0 and sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i] and sim.survival(i) >= CLIMB:
 		sim.set_depth(i, sim.depth[i] + 1)
 
