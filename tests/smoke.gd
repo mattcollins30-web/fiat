@@ -2610,7 +2610,13 @@ func _pinnacle_checks(main) -> void:
 	for it in m["found"]:
 		load = load or it.get("unique", "") == Data.CONVOY_UNIQUE
 	_check(load and m["found"].size() >= found0 + 4, "the lorry's load did not come with the three drops: %d found" % (m["found"].size() - found0))
+	# the ending (7 Oct): the lorry beaten is written, the yard says to move, the move lights
+	_check(sim.lorry_done and sim.lorries == 1 and sim.next_words() == Words.NEXT["lorry"] and sim.events.any(func(e): return str(e[1]).begins_with("The lorry's load is yours")), "the lorry beaten was not written: done %s, lorries %d, next '%s'" % [str(sim.lorry_done), sim.lorries, sim.next_words()])
 	sim.extract_now()
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	_check(main._yard_town._button.visible and main._yard_town._notes[0].text.begins_with("The lorry's beaten"), "the Yard does not light the move at the lorry: button %s, note '%s'" % [str(main._yard_town._button.visible), main._yard_town._notes[0].text])
+	_endgame_move_checks(main)
 	# the rules: the keys drive, the pen doubles the notes, the ledger a tier up, the load fills the pack
 	var pace0: float = sim.pace()
 	var was_charm = sim.equipped["Charm"]
@@ -2631,7 +2637,7 @@ func _pinnacle_checks(main) -> void:
 	sim.mission["found"] = []
 	sim.mission["notes"] = 0
 	sim.extract_now()
-	_check(sim.notes == n0 + sim.capacity() * 3, "the lorry's load did not fill the empty pack with notes: +%d of %d" % [sim.notes - n0, sim.capacity() * 3])
+	_check(sim.notes == n0 + sim.capacity() * 3, "the lorry's load did not fill the empty pack with notes: +%d of %d (depth %d, best %d, campaign %s)" % [sim.notes - n0, sim.capacity() * 3, sim.depth[0], sim.best_depth[0], str(sim.campaign_done())])
 	sim.equipped["Backpack"] = was_pack
 	for name in ["The van keys", "The manager's pen", "The quartermaster's ledger", "The lorry's load"]:
 		_check(Words.UNIQUES.has(name), "%s has no line" % name)
@@ -5868,6 +5874,66 @@ func _settle_odds(main) -> void:
 			return
 
 
+## The move's compounding and the wall's score (the endgame, part 2, 7 Oct): a moved yard's ladders start at the
+## floor on a site's first clear, its first node of the yard's tree is free, the lorries and the best dig survive
+## the move, and a retired runner's line names the deepest they held.
+func _endgame_move_checks(main) -> void:
+	var sim = main.sim
+	var before: Dictionary = sim.to_dict()
+	# the best dig recorded: the deepest clear so far, with its yard
+	_check(not sim.best_dig.is_empty() and int(sim.best_dig["depth"]) >= Data.CONVOY_DEPTH and int(sim.best_dig["yard"]) == 1, "the best dig is off: %s" % str(sim.best_dig))
+	# the wall's line names the deepest held
+	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
+	_check(sim.can_retire() and sim.retire(), "the runner could not retire for the wall check")
+	var r: Dictionary = sim.past.back()
+	_check(str(r.get("site", "")) != "" and int(r.get("depth", 0)) >= Data.CONVOY_DEPTH, "the wall's record has no deepest held: %s" % str(r))
+	sim.set_class("Doorman")
+	main.show_room(main.BARRACKS)
+	main._barracks.selected = ""
+	main._barracks._shown = ""
+	main.refresh()
+	_check(main._barracks._past.text.contains("at depth"), "the wall's line does not name the depth: '%s'" % main._barracks._past.text)
+	_check_fit(main, "Caravan (the wall's depth)")
+	# the move: the lorries and the best dig come, lorry_done clears, the first yard node is free, the ladders start at the floor
+	var lorries0: int = sim.lorries
+	var dig0: Dictionary = sim.best_dig.duplicate()
+	_check(sim.can_move_yard() and sim.move_yard(), "the yard could not move after the lorry")
+	_check(sim.yard_moves == 1 and sim.lorries == lorries0 and sim.best_dig == dig0 and not sim.lorry_done, "the move lost the score: moves %d, lorries %d, dig %s, lorry %s" % [sim.yard_moves, sim.lorries, str(sim.best_dig), str(sim.lorry_done)])
+	_check(sim.ladder_floor() == 1 and sim.free_yard_nodes() == 1, "the move's floor and free nodes are off: %d / %d" % [sim.ladder_floor(), sim.free_yard_nodes()])
+	var yard_ids: Array = []
+	for k in range(Data.tree_named(Data.COMMON_TREE)["nodes"].size()):
+		yard_ids.append("%s/%d" % [Data.COMMON_TREE, k])
+	var taken_yard: Array = sim._yard_nodes_taken()
+	if taken_yard.size() >= 1:
+		_check(sim.node_cost(taken_yard[0]) == 0, "the first yard node taken is not free after a move: %d" % sim.node_cost(taken_yard[0]))
+		if taken_yard.size() >= 2:
+			_check(sim.node_cost(taken_yard[1]) > 0, "the second yard node is free too: %d" % sim.node_cost(taken_yard[1]))
+	else:
+		_check(sim.node_cost(yard_ids[0]) == 0, "a fresh yard's first node is not free after a move: %d" % sim.node_cost(yard_ids[0]))
+		sim.train_node(yard_ids[0])
+		_check(sim.tree.has(yard_ids[0]) and sim.node_cost(yard_ids[0]) == 0 and sim.node_cost(yard_ids[1]) > 0, "after the free node the next is free too: %d / %d" % [sim.node_cost(yard_ids[0]), sim.node_cost(yard_ids[1])])
+	sim.set_class("Doorman")
+	var t0: Dictionary = sim.effective(0)
+	sim.deploy(0)
+	sim._clear(sim.mission, t0)
+	sim.extract_now()
+	_check(sim.best_depth[0] == 1 and sim.atlas_points == 0, "the first clear on a moved yard is off: best %d, points %d" % [sim.best_depth[0], sim.atlas_points])
+	_check(sim.events.any(func(e): return str(e[1]).contains("ladders start at depth 2")), "the ladder's floor was not said")
+	# the floor opens the depth without faking the clear: depth 2 opens on the streets, depth 3 does not; the wall reads depth 1
+	_finish_campaign(sim)
+	sim.set_depth(0, 3)
+	_check(sim.depth[0] == 2 and sim.best_depth[0] == 1, "the floor did not open depth 2 alone: depth %d, best %d" % [sim.depth[0], sim.best_depth[0]])
+	_check(sim._deepest_held()[1] == 1, "the wall counts the floor as held: %s" % str(sim._deepest_held()))
+	sim.set_depth(0, 1)
+	# saved and loaded
+	var d: Dictionary = sim.to_dict()
+	var fresh = Sim.new()
+	fresh.start()
+	fresh.load_dict(d)
+	_check(fresh.lorries == lorries0 and fresh.best_dig == dig0 and fresh.yard_moves == 1, "the score did not survive a save")
+	sim.load_dict(before)
+
+
 ## A site's level (the endgame, 7 Oct): tier plus depth drives the curve, the bases and the item level, so the
 ## streets' ladder is gentle and long and the barracks' steep and short; the Runs card says the level.
 func _site_level_checks(main) -> void:
@@ -5879,6 +5945,9 @@ func _site_level_checks(main) -> void:
 	_check(sim.loot_tier_at(1) == 1 and sim.loot_tier_at(8) == 5 and sim.loot_tier_at(9) == Data.MAX_TIER and sim.loot_tier_at(30) == Data.MAX_TIER, "the gear tier by level is off: %d %d %d" % [sim.loot_tier_at(1), sim.loot_tier_at(8), sim.loot_tier_at(9)])
 	sim.set_depth(0, 8)
 	sim.set_depth(8, 2)
+	var hold_intel: Array = [sim.intel[0].duplicate(), sim.intel[8].duplicate()]
+	sim.intel[0] = []                     # the plain sites: a word on the air can add a gear tier
+	sim.intel[8] = []
 	var streets: Dictionary = sim.effective(0)
 	var barracks: Dictionary = sim.effective(8)
 	_check(int(streets["level"]) == 8 and int(barracks["level"]) == 10 and sim.site_level(0) == 8, "the sites' levels are off: %d / %d" % [int(streets["level"]), int(barracks["level"])])
@@ -5910,6 +5979,8 @@ func _site_level_checks(main) -> void:
 	_check(c6["note"].text.contains("the lorry") or sim.hp < sim.max_hp() * 0.5, "the services' card does not name the lorry: '%s'" % c6["note"].text)
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(0)
+	sim.intel[0] = hold_intel[0]
+	sim.intel[8] = hold_intel[1]
 	sim.depth = hold_depth
 	sim.best_depth = hold_best
 	sim._surv_cache = {}

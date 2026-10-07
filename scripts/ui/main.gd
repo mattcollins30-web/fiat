@@ -895,18 +895,25 @@ func _town_purse() -> Dictionary:
 		for el in sim.trades:
 			names.append(Data.tree_of_element(el)["name"])
 		zlines.append(["Yard's trade", ", ".join(names)])
+	if not sim.best_dig.is_empty():
+		# the yard's best dig, the score across yards (the endgame, 7 Oct)
+		var site: String = str(sim.best_dig["site"]).to_lower().trim_prefix("the ")
+		zlines.append(["Best dig", ["%s, depth %d · yard %d" % [site, int(sim.best_dig["depth"]), int(sim.best_dig["yard"])], "%s, depth %d" % [site, int(sim.best_dig["depth"])], "%s D%d" % [site, int(sim.best_dig["depth"])], "depth %d" % int(sim.best_dig["depth"])], "accent"])
+	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
+	if sim.lorry_done:
+		town_note = ["The lorry's beaten: move the yard when you're ready", "The lorry's beaten"]
 	var d := {
 		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · yard %d" % (sim.yard_moves + 1),
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d zones open" % [open_zones, Data.ZONES.size()], "lines": zlines,
-			"note": [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]},
+			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
 		"right": {"kicker": "The purse", "lines": [["Cash", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
 			"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
-		d["button"] = {"text": "Move the yard", "action": _confirm_move, "enabled": true}
+		d["button"] = {"text": "Move the yard", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
 	return d
 
 
@@ -1051,7 +1058,8 @@ func _confirm_move() -> void:
 		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list, the wall, half the notes and the yard's trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
-	_menu.open("Move the yard?", "A yard that's moved finds rarer things, and more cash: +%d%% each a move, and %d points to start." % [Data.MOVE_FIND, Data.MOVE_POINTS], items, _menu.close)
+	var floor_next: int = mini(sim.yard_moves + 1, Data.LADDER_FLOOR_MAX)
+	_menu.open("Move the yard?", "A yard that's moved finds rarer things and more cash (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
 
 
 ## The yard's trade: one element comes with the move, and every class after

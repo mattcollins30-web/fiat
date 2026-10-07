@@ -1099,6 +1099,7 @@ const MOVE_FIND := 5               # percent magic find a move
 const MOVE_CASH := 5               # percent cash a move
 const MOVE_POINTS := 2             # training points a move, free at the start
 const MOVE_NOTES_KEPT := 0.5
+const LADDER_FLOOR_MAX := 3        # a moved yard's ladders start this many depths up at most (the endgame, 7 Oct): the fourth yard opens every site at depth 4
 
 ## The bench's crafting, paid in notes: times the item's tier and its rarity + 1.
 ## The bench's crafting, in cash: a price × the item's level × (rarity + 1).

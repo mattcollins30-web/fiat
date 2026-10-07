@@ -601,6 +601,11 @@ trades, half the notes and scrap) and adds a permanent layer the next yard start
 - the yard's tree grows a rank a move: one free node of the yard's tree, the player's pick, kept
   through every runner;
 - the find and the cash by move as now (`MOVE_FIND`, `MOVE_CASH` 5% a move), and the trade.
+Built 7 Oct: the floor is `min(moves, 3)`, and it opens the depths (a cleared site's ladder runs to the
+floor plus one) without counting as a clear, so the wall and the map read only what was actually dug;
+the campaign of a moved yard is still played. The free node is "the first `moves` nodes of the yard's
+tree cost nothing", in the order taken.
+
 **The wall is the score.** A retired runner's line records the deepest site and depth they held ("a
 scrapper, 17 runs, the bank at depth 9, retired"), the past keeps it across moves, and the Yard's
 "town and purse" card shows the yard's best (site, depth, which yard). That is the leaderboard across

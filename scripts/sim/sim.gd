@@ -75,6 +75,9 @@ var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amo
 var mate := {}                     # the fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var yard_moves := 0                # how many times the yard has moved (the prestige)
+var lorry_done := false            # the convoy beaten in this yard: the endgame's ending (7 Oct); the move lights on it
+var lorries := 0                   # across every yard: how many times
+var best_dig := {}                 # the yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the fence holds the paper on the kit
 var elapsed := 0.0
@@ -628,7 +631,7 @@ func can_retire() -> bool:
 func retire() -> bool:
 	if not can_retire():
 		return false
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired"})
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired", "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	if runner_trait != "":
 		retired.append(runner_trait)
 		while retired.size() > Data.RETIRED_MAX:
@@ -845,6 +848,36 @@ func can_move_yard() -> bool:
 	return campaign_done() and mission == null and not camp_lost
 
 
+## The move's compounding (7 Oct): a moved yard's ladders start at this depth past the first (to LADDER_FLOOR_MAX),
+## and its first `yard_moves` nodes of the yard's tree are free.
+func ladder_floor() -> int:
+	return mini(yard_moves, Data.LADDER_FLOOR_MAX)
+
+
+func free_yard_nodes() -> int:
+	return yard_moves
+
+
+## The deepest site and depth held in this yard, for the wall: [site name, depth], ["", 0] with nothing cleared.
+func _deepest_held() -> Array:
+	var best := -1
+	var at := 0
+	for i in range(Data.TIERS.size()):
+		if best_depth[i] > at or (best_depth[i] == at and at > 0 and i > best):
+			at = best_depth[i]
+			best = i
+	return [Data.TIERS[best]["name"] if best >= 0 else "", at]
+
+
+## The yard's tree nodes taken, in the order they were taken.
+func _yard_nodes_taken() -> Array:
+	var out: Array = []
+	for id in tree:
+		if str(id).begins_with(Data.COMMON_TREE + "/"):
+			out.append(id)
+	return out
+
+
 ## Start again somewhere else. The uniques come, worn or stashed; the yard's
 ## own tree; the runners before; half the notes; the move's own bonus.
 func move_yard(trade := "") -> bool:
@@ -862,7 +895,8 @@ func move_yard(trade := "") -> bool:
 		if str(id).begins_with("The yard/"):
 			yard_tree.append(id)
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate()}
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
+		"lorries": lorries, "best_dig": best_dig.duplicate()}
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
@@ -875,6 +909,8 @@ func move_yard(trade := "") -> bool:
 	notes = keep["notes"]
 	scrap = keep["scrap"]                 # scrap moves with the yard the way notes do (34)
 	yard_moves = keep["moves"]
+	lorries = keep["lorries"]
+	best_dig = keep["best_dig"]
 	elapsed = keep["elapsed"]
 	events = keep["events"]
 	operators_lost = keep["operators_lost"]
@@ -904,6 +940,8 @@ func next_words(short := false) -> String:
 		return w["past"]
 	if runs_total == 0:
 		return w["first"]
+	if lorry_done:
+		return w["lorry"]
 	if campaign_done():
 		return w["done"]
 	for k in range(contracts.size()):
@@ -1512,6 +1550,12 @@ func _snapshot_rules() -> Dictionary:
 
 func node_cost(id: String) -> int:
 	var parts := id.split("/")
+	if parts[0] == Data.COMMON_TREE:
+		# a move's free node: the first free_yard_nodes() of the yard's tree cost nothing (7 Oct)
+		var taken := _yard_nodes_taken()
+		var k: int = taken.find(id)
+		if (k >= 0 and k < free_yard_nodes()) or (k < 0 and taken.size() < free_yard_nodes()):
+			return 0
 	var n := node(id)
 	var cost := Data.node_cost(int(parts[1]), n.get("notable", false), n.get("keystone", false))
 	if n.get("capstone", false):
@@ -2390,7 +2434,7 @@ func effective(i: int) -> Dictionary:
 		e["dps"] = maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
 		e["xp"] = maxf(float(e["xp"]), float(c["xp"]) * r)
 		e["cash"] = maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
-		e["drop"] = float(c["drop"]) + Data.DEPTH_DROP * (d - 2)
+		e["drop"] = maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))
 		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
@@ -2496,7 +2540,9 @@ func _roll_tier_intel(i: int) -> void:
 ## after a run, so it can't be re-rolled by stepping the depth back and forth.
 func set_depth(i: int, d: int) -> void:
 	if mission == null:
-		depth[i] = clampi(d, 1, (best_depth[i] + 1) if campaign_done() else 1)   # the ladder is the endgame's
+		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
+		var top: int = maxi(best_depth[i] + 1, (ladder_floor() + 1) if best_depth[i] > 0 else 1) if campaign_done() else 1
+		depth[i] = clampi(d, 1, top)
 
 
 func on_mission() -> bool:
@@ -3201,11 +3247,15 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		elif b.get("pinnacle", false) and int(u.get("pinnacle", -1)) == int(b["zone"]):
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
-		# the last of the convoy: the lorry's load comes home too
+		# the last of the convoy: the lorry's load comes home too, and the yard's ending is written (7 Oct)
 		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng)
 		m["found"].append(load)
 		_read(load)
 		log_event("The convoy's done. Found: %s" % load["unique"])
+		if not lorry_done:
+			lorry_done = true
+			lorries += 1
+			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
@@ -3341,12 +3391,16 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	xp += bonus
 	_earn_points(before)
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
+	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
+		log_event("%s cleared; this yard's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
 	if t["depth"] > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = t["depth"]
 		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
 		if t["depth"] >= 2:
 			atlas_points += 1
 			log_event("A point on the map.")
+	if t["depth"] >= 2 and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
+		best_dig = {"site": t["name"], "tier": m["tier"], "depth": t["depth"], "yard": yard_moves + 1}     # the ladder's, not the campaign's
 	if m["tier"] == 2 and not depot_cleared:
 		depot_cleared = true
 	if not seen.has("cleared/%d" % m["tier"]):
@@ -3539,7 +3593,7 @@ func _kia() -> void:
 		"left": m["found"].size() + m["left"], "cash": 0.0, "xp": 0.0, "hp_lost": m["hp_start"], "time": m["elapsed"],
 		"lost_value": lost, "searches": m["searches"], "patrols": m["patrols"],
 	}
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % t["name"].to_lower()})
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % t["name"].to_lower(), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	runner_runs = 0
 	if m.get("insured", false):
 		# the fence held the paper: what was worn and carried comes back to the stash, whatever the room
@@ -4295,7 +4349,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -4386,6 +4440,9 @@ func load_dict(d: Dictionary) -> void:
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))
 	ending = str(d.get("ending", ""))
+	lorry_done = bool(d.get("lorry_done", false))
+	lorries = int(d.get("lorries", 0))
+	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))
 	takings = float(d.get("takings", 0.0))

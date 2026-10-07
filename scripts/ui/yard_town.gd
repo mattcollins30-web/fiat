@@ -79,7 +79,13 @@ func show_data(d: Dictionary) -> void:
 		for i in range(LINES):
 			var on: bool = i < lines.size()
 			_labels[k][i].text = str(lines[i][0]) if on else ""
-			_values[k][i].text = str(lines[i][1]) if on else ""
+			if on and lines[i][1] is Array:
+				# forms, longest first, fitted to what the label leaves of the line (the pair rule the tests read)
+				_values[k][i].size.x = COL_W - 16 - ceilf(UI.text_width(_labels[k][i], _labels[k][i].text))
+				UI.fit(_values[k][i], lines[i][1])
+				_values[k][i].size.x = COL_W
+			else:
+				_values[k][i].text = str(lines[i][1]) if on else ""
 			var tone: String = str(lines[i][2]) if on and lines[i].size() > 2 else ""
 			_values[k][i].add_theme_color_override("font_color", Pal.ACCENT if tone == "accent" else (Pal.tone_color(tone) if tone != "" else Pal.TEXT))
 		var note: Variant = col.get("note", "")
@@ -87,6 +93,8 @@ func show_data(d: Dictionary) -> void:
 			UI.fit(_notes[k], note)
 		else:
 			_notes[k].text = str(note)
+		var nt: String = str(col.get("note_tone", ""))
+		_notes[k].add_theme_color_override("font_color", Pal.tone_color(nt) if nt != "" else Pal.TEXT_2)
 	var b: Dictionary = d.get("button", {})
 	_button.visible = not b.is_empty()
 	if _button.visible:

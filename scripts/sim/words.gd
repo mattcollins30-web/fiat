@@ -555,7 +555,8 @@ const NEXT := {
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
-	"done": "The town's yours. Depth is the game now; the yard can move when you've had enough.",
+	"done": "The town's yours. Depth is the game now; the lorry runs the services at depth 12.",
+	"lorry": "The lorry's beaten. Move the yard when you're ready: the next starts its ladders higher, with a free node on the yard's tree.",
 	"moved": "A new yard, the same list on the wall. Start at the streets.",
 }
 const NEXT_SHORT := {
@@ -565,6 +566,7 @@ const NEXT_SHORT := {
 	"site": "Next: %s",
 	"head": "Arm %s on Runs",
 	"done": "Depth is the game now",
+	"lorry": "The lorry's beaten: move the yard",
 }
 const NOTES := {
 	"zones": "Heads down open the next",
@@ -590,6 +592,7 @@ const YARD := {
 	"hardcore_lost": "Hardcore: the yard goes with the runner. Someone else will have the lock-up by morning.",
 	"campaign": "The estate, the town, the city. The yard's name is known in all three. Now it's a question of how far in you go.",
 	"moved": "The yard moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
+	"lorry": "The lorry's load is yours. There's nothing left in this town that's worth the drive; the yard can move on whenever you like.",
 	"trade": "The yard's trade came too: %s, and anyone who runs for the yard learns the lot of it.",
 }
 

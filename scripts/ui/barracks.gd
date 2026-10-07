@@ -579,7 +579,8 @@ func _show_past() -> void:
 	var short := []
 	for k in range(sim.past.size() - 1, -1, -1):
 		var r: Dictionary = sim.past[k]
-		long.append("a %s, %d run%s, %s" % [str(r["class"]).to_lower(), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", r["end"]])
+		var held: String = (", %s at depth %d" % [str(r["site"]).to_lower(), int(r["depth"])]) if int(r.get("depth", 0)) > 0 else ""     # the deepest they held (the wall as the score, 7 Oct)
+		long.append("a %s, %d run%s%s, %s" % [str(r["class"]).to_lower(), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
 		short.append("%s %d" % [str(r["class"]).to_lower(), int(r["runs"])])
 	# the wall: their faces, newest first, and the line beside it in what's left
 	var x: float = _past.position.x

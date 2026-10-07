@@ -2100,6 +2100,23 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The endgame, part 2: the lorry as the ending, the move as the loop, the wall as the score (7 Oct)
+
+Built as concept.md's part 2, mocked as Yard-E. *The ending*: the convoy's last head down writes
+`lorry_done` (this yard) and counts `lorries` (across yards); the log says the lorry's load is yours and the
+yard can move on; the yard's next line reads "The lorry's beaten: move the yard"; the town card's note
+turns green with it and Move the yard becomes the primary button. *The move compounds*: a moved yard's
+ladders start at `ladder_floor()` (the moves made, to `LADDER_FLOOR_MAX` 3) - a site's first clear opens it
+to the floor, said in the log, no map point for it - and its first `yard_moves` nodes of the yard's tree
+cost nothing (`node_cost`: the first taken, in the order taken, or the next when fewer are taken); the
+move's menu says what the next yard starts with. *The score*: `best_dig` (site, depth, which yard) is
+kept on every clear and across moves and shown on the town card in the accent; a retired or dead runner's
+record carries the deepest site and depth they held, and the caravan's line reads "a scrapper, 17 runs,
+the bank at depth 9, retired". Saved: `lorry_done`, `lorries`, `best_dig`; the past's `site` and `depth`.
+Smoke: the lorry written and said; the Yard lit; the best dig and the wall's record; the move keeps the
+lorries and the dig, clears `lorry_done`, frees the first yard node and not the second, and a site's first
+clear opens to the floor without a map point; the round trip.
+
 ## The endgame, part 1: a site's level (7 Oct)
 
 Matt: "the loot part of this needs to work - the barracks should drop high level top tier stuff with the
