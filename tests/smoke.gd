@@ -854,19 +854,23 @@ func _campaign_checks(main) -> void:
 	_check(sim.notes > notes_before, "the notes did not come home")
 	_check(sim.zone_open(1), "the Town did not open with the Estate's boss down")
 	_check(sim.boss_cost(2) > 0, "the second boss fight is free")
-	# the endgame: campaign done, depth 2 everywhere, every site in a band
+	# the endgame: campaign done, depth 2 everywhere; the sites are nine ladders now (7 Oct): each site's
+	# depth 2 harder than the one before it in the campaign's order, the city's a good deal harder than the estate's
 	_finish_campaign(sim)
-	var band_lo := 1e9
-	var band_hi := 0.0
+	var last_work := 0.0
+	var work_lo := 1e9
+	var work_hi := 0.0
 	for i in range(Data.TIERS.size()):
 		sim.set_depth(i, 2)
 		_check(sim.depth[i] == 2, "depth 2 did not open at %s after the campaign" % Data.TIERS[i]["name"])
 		sim.intel[i] = []                       # the shape alone, without the word on it
 		var e: Dictionary = sim.effective(i)
-		var work: float = e["hp"] * e["pool"] * e["dps"]        # how hard the fight is, roughly
-		band_lo = minf(band_lo, work)
-		band_hi = maxf(band_hi, work)
-	_check(band_hi / band_lo < 3.0, "at depth 2 the sites' fights differ by ×%.1f; the endgame is a ladder again" % (band_hi / band_lo))
+		var work: float = e["hp"] * e["dps"]       # how hard one of them is: the level's curve, bent by the shape
+		_check(work >= last_work * 0.8, "at depth 2 %s reads easier than the site before it: %.0f after %.0f" % [Data.TIERS[i]["name"], work, last_work])
+		last_work = work
+		work_lo = minf(work_lo, work)
+		work_hi = maxf(work_hi, work)
+	_check(work_hi / work_lo > 3.0, "at depth 2 the sites' fights differ by only ×%.1f; the ladders are not nine" % (work_hi / work_lo))
 	# the boss costs notes now
 	sim.notes = 0
 	_check(not sim.can_arm_boss(2), "a boss was armed with no notes")
@@ -2328,6 +2332,7 @@ func _atlas_checks(main) -> void:
 	main._missions._pick_zone(main._missions.MAP)
 	_check_fit(main, "Runs (the map, ranked)")
 	_map_screen_checks(main)
+	_site_level_checks(main)
 	main._missions._reset_map()
 	_check(sim.atlas_spent() == 0 and sim.atlas_free() == sim.atlas_points, "starting the map again did not refund")
 	main._missions._pick_zone(0)
@@ -5861,6 +5866,53 @@ func _settle_odds(main) -> void:
 				done = false
 		if done:
 			return
+
+
+## A site's level (the endgame, 7 Oct): tier plus depth drives the curve, the bases and the item level, so the
+## streets' ladder is gentle and long and the barracks' steep and short; the Runs card says the level.
+func _site_level_checks(main) -> void:
+	var sim = main.sim
+	var hold_depth: Array = sim.depth.duplicate()
+	var hold_best: Array = sim.best_depth.duplicate()
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = 20
+	_check(sim.loot_tier_at(1) == 1 and sim.loot_tier_at(8) == 5 and sim.loot_tier_at(9) == Data.MAX_TIER and sim.loot_tier_at(30) == Data.MAX_TIER, "the gear tier by level is off: %d %d %d" % [sim.loot_tier_at(1), sim.loot_tier_at(8), sim.loot_tier_at(9)])
+	sim.set_depth(0, 8)
+	sim.set_depth(8, 2)
+	var streets: Dictionary = sim.effective(0)
+	var barracks: Dictionary = sim.effective(8)
+	_check(int(streets["level"]) == 8 and int(barracks["level"]) == 10 and sim.site_level(0) == 8, "the sites' levels are off: %d / %d" % [int(streets["level"]), int(barracks["level"])])
+	_check(float(barracks["hp"]) > float(streets["hp"]) and float(barracks["dps"]) > float(streets["dps"]), "the barracks at depth 2 is no harder than the streets at depth 8: %.0f vs %.0f HP" % [float(barracks["hp"]), float(streets["hp"])])
+	_check(int(streets["loot_tier"]) == 5 and int(barracks["loot_tier"]) == Data.MAX_TIER, "the bases by level are off: streets tier %d, barracks tier %d" % [int(streets["loot_tier"]), int(barracks["loot_tier"])])
+	# a find carries the site's level
+	var f0: Dictionary = Items.roll("Primary", int(streets["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 8, int(streets["level"]))
+	var f8: Dictionary = Items.roll("Primary", int(barracks["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 2, int(barracks["level"]))
+	_check(int(f0["ilvl"]) == 8 and int(f8["ilvl"]) == 10, "a find's item level is not the site's: %d / %d" % [int(f0["ilvl"]), int(f8["ilvl"])])
+	# never under the site's own campaign curve: the barracks at depth 2 keeps the campaign's climb
+	var camp_d2: float = float(Data.TIERS[8]["hp"]) * (1.0 + Data.DEPTH_HOSTILE)
+	_check(float(barracks["hp"]) >= camp_d2 - 0.01, "the barracks at depth 2 fell under its campaign curve: %.0f < %.0f" % [float(barracks["hp"]), camp_d2])
+	# the Runs card says it: the level on the kicker, the finds' level on a tile, the stations on the note
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(0)
+	main._missions._shown = ""
+	main.refresh()
+	var c0: Dictionary = main._missions._cols[0]
+	_check(c0["band"].kicker.text.ends_with("level 8"), "the streets' kicker does not say its level: '%s'" % c0["band"].kicker.text)
+	var finds := -1
+	for r in range(6):
+		if c0["tiles"][r]["key"].text == "Finds":
+			finds = r
+	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with("level 8"), "the streets' Finds tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Finds tile"))
+	main._missions._pick_zone(2)
+	main._missions._shown = ""
+	main.refresh()
+	var c6: Dictionary = main._missions._cols[0]       # the services, the city's first
+	_check(c6["note"].text.contains("the lorry") or sim.hp < sim.max_hp() * 0.5, "the services' card does not name the lorry: '%s'" % c6["note"].text)
+	_check_fit(main, "Runs (levels)")
+	main._missions._pick_zone(0)
+	sim.depth = hold_depth
+	sim.best_depth = hold_best
+	sim._surv_cache = {}
 
 
 ## The map in the caravan's shape (Map-A, 7 Oct): six tiles in three columns, the pips as the ranks, the taken

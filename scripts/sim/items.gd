@@ -14,7 +14,7 @@ static var _next_id := 1
 ## A new item of this slot, from the bases a zone tier can drop, at a rarity
 ## rolled from the table. `rng` so the tests can replay a run.
 static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity_bonus := 0.0, no_commons := false, fewer_commons := false,
-		site := "", prefer := "", own_share := 0.33, depth := 0) -> Dictionary:
+		site := "", prefer := "", own_share := 0.33, depth := 0, level := -1) -> Dictionary:
 	# the site's own: a base found only there drops only there, and a third of
 	# the time the roll is one of them; a site that leans to a gun type leans
 	var pool: Array = []
@@ -49,7 +49,9 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		r = _roll_rarity(rng, rarity_bonus)
 	# the item's level: its base's tier and the depth it dropped at; it sets the floor under the tiers its
 	# affixes roll, and the rarity sets the cap (a Legendary from the first site is five T5s on a tier-1 base)
-	var ilvl: int = int(base["tier"]) + maxi(0, depth)
+	# the item's level: the site's (its tier and depth: the endgame, 7 Oct) when the find is a site's, else the
+	# base's tier and the depth as before (the shelf, the gamble, the clinic)
+	var ilvl: int = level if level >= 0 else int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
 	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
 	for a in picked:

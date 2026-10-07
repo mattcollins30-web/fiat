@@ -573,9 +573,12 @@ A site's depth d is fought at **level L = tier + d** (the streets: depth 1 is le
 (`CURVE` scaled by `grow` to the power L − 9, never under the site's own campaign curve), so the streets'
 ladder is gentle and long and the barracks' is steep and short. Everything the fight pays is by L too:
 an item's level is L, not the base's tier plus the depth (the streets at depth 8 give item level 8, the
-barracks at depth 8 give 16; the affix tier floors follow); the rarity bonus and the notes a kill by L;
-the map's point a new depth stays a point, so the easy ladders feed the map and the hard ones feed the
-kit. The Runs card says it: "Depth 8 · level 8" on the streets, "Depth 2 · level 10" on the barracks,
+barracks at depth 8 give 16; the affix tier floors follow) and the bases a find draws from are by L
+too (the gear tier is L × 6 / 9, floored: the streets reach the city's bases at depth 9, the barracks
+from depth 1 - Matt: "the barracks should drop high level top tier stuff with the streets dropping
+lower tier gear"). The rarity bonus and the notes a kill stay by depth (the player's effort either
+way; built 7 Oct, a change from the first draft, which had them by L); the map's point a new depth
+stays a point, so the easy ladders feed the map and the hard ones feed the kit. The Runs card says it: "Depth 8 · level 8" on the streets, "Depth 2 · level 10" on the barracks,
 and the item level a find will carry. The gate for this part: the barracks at depth 8 reads harder than
 the streets at depth 15 and drops better; a player who wants the best kit digs the city.
 

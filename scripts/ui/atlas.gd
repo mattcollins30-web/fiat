@@ -204,7 +204,7 @@ func _show_panel() -> void:
 		_title.text = "The map"
 		_words.position.x = PAD
 		_words.size.x = W - 2 * PAD
-		UI.fit(_words, ["Pick a passive above. A point for every new depth cleared past the first; what is taken here holds on every site.", "Pick a passive above."])
+		UI.fit(_words, ["Pick a passive above. The lorry runs the services at depth %d; the crews' heads come at full strength at depth %d." % [Data.CONVOY_DEPTH, Data.PINNACLE_DEPTH], "The lorry runs the services at depth %d." % Data.CONVOY_DEPTH, "Pick a passive above."])
 	else:
 		var rank: int = sim.atlas_rank(selected)
 		var f: Dictionary = FIGURES[selected]

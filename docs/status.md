@@ -2100,6 +2100,25 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The endgame, part 1: a site's level (7 Oct)
+
+Matt: "the loot part of this needs to work - the barracks should drop high level top tier stuff with the
+streets dropping lower tier gear. On the UI it just needs to be clear that you increase the site and the
+depth you get better stuff - Diablo 4 handles this well with the torment scaling. Start building with
+that in mind." Built: `Sim.site_level(i)` is the tier and the depth (the streets at depth 8 is 8, the
+barracks at depth 1 is 9); past the campaign `effective()` runs the curve by the level (`CURVE` by
+`grow` and `reward` to the power level − 9), never under the site's own campaign curve, so the streets'
+ladder is gentle and long and the barracks' steep and short; the bases a find draws from are by level
+(`loot_tier_at`: level × 6 / 9 floored - the streets reach the city's bases at depth 9, the barracks from
+depth 1); a site's find carries the site's level as its item level (`Items.roll` takes a `level`; the
+shelf, the gamble and the clinic roll as before). The rarity bonus and the notes a kill stay by depth.
+The Runs card: the kicker reads "Tier 1 · The Estate · level 8" past the campaign, the Drops tile is
+Finds ("level 8 · tier 5 gear"), and the note line names the stations ahead when nothing else needs it
+("Depth 10: the quartermaster at full strength · Depth 12: the lorry"); the map's empty panel says
+where the lorry runs. Smoke: the gear tier by level, the two sites' levels, the barracks at depth 2
+harder than the streets at depth 8 and never under its campaign curve, a find's item level the site's,
+the kicker, the Finds tile, the services' note. Parts 2-4 follow; the balance pass stays paused.
+
 ## The endgame playtest ends; what depth is for (7 Oct)
 
 Matt stopped the playtest at 3.8 h with the campaign done, the map seven of fourteen ranks spent and the

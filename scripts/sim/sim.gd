@@ -2349,13 +2349,26 @@ func zone_name(i: int) -> String:
 	return Data.ZONES[Data.TIERS[i]["zone"]]["name"]
 
 
+## A site's level: its tier and the depth it stands at (the endgame, 7 Oct: the ladder is nine ladders).
+## The streets at depth 8 is level 8; the barracks at depth 1 is level 9, at depth 8 level 16. The endgame's
+## curve, the bases a find draws from and the item level a find carries all run by it.
+func site_level(i: int) -> int:
+	return i + depth[i]
+
+
+## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the barracks from depth 1.
+static func loot_tier_at(level: int) -> int:
+	return clampi(int(floor(level * Data.MAX_TIER / 9.0)), 1, Data.MAX_TIER)
+
+
 ## The tier as it will be fought: depth and intel applied. Every multiplier
 ## the fight and the search read comes from this, not the base table.
 func effective(i: int) -> Dictionary:
 	var base: Dictionary = Data.TIERS[i]
 	var d: int = depth[i]
+	var lv: int = i + d
 	var e := {
-		"name": base["name"], "tier": i, "depth": d, "pool": int(base["pool"]),
+		"name": base["name"], "tier": i, "depth": d, "level": lv, "pool": int(base["pool"]),
 		"hp": base["hp"] * pow(1.0 + Data.DEPTH_HOSTILE, d - 1),
 		"dps": base["dps"] * pow(1.0 + Data.DEPTH_HOSTILE, d - 1),
 		"xp": base["xp"] * pow(1.0 + Data.DEPTH_REWARD, d - 1),
@@ -2365,19 +2378,20 @@ func effective(i: int) -> Dictionary:
 		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": intel[i].duplicate(),
 	}
 	if d >= 2 and campaign_done():
-		# the endgame: the depth's numbers, bent by the site's shape; every
-		# base in the pool, so the sites differ by what they drop, not how hard they are
+		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
+		# campaign curve - so the streets' ladder is gentle and long and the barracks' steep and short; the
+		# bases a find draws from and its item level follow the level too (the sites were the same fight before)
 		var shape: Dictionary = base["shape"]
 		var c: Dictionary = Data.CURVE
-		var g: float = pow(1.0 + float(c["grow"]), d - 2)
-		var r: float = pow(1.0 + float(c["reward"]), d - 2)
+		var g: float = pow(1.0 + float(c["grow"]), lv - 9)
+		var r: float = pow(1.0 + float(c["reward"]), lv - 9)
 		e["pool"] = int(shape["pool"])
-		e["hp"] = float(c["hp"]) * g * float(shape["hp"])
-		e["dps"] = float(c["dps"]) * g * float(shape["dps"])
-		e["xp"] = float(c["xp"]) * r
-		e["cash"] = float(c["cash"]) * r * float(shape.get("cash", 1.0))
+		e["hp"] = maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
+		e["dps"] = maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
+		e["xp"] = maxf(float(e["xp"]), float(c["xp"]) * r)
+		e["cash"] = maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
 		e["drop"] = float(c["drop"]) + Data.DEPTH_DROP * (d - 2)
-		e["loot_tier"] = Data.MAX_TIER
+		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
 	if (has_node("night_work") or is_night()) and not ("Night" in intel[i]):
@@ -3252,7 +3266,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
 			var mine := Items.ammo_type(equipped["Primary"])
@@ -3264,7 +3278,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
 		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	if Items.stacks(it):

@@ -183,7 +183,9 @@ func show_state(s) -> void:
 		band.title.add_theme_color_override("font_color", Pal.TEXT if is_open else Pal.TEXT_3)
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
-			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], Words.odds_words(odds),
+			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
+			var kicker: String = ("Tier %d · %s · level %d" % [k + 1, Data.ZONES[zone]["name"], int(t["level"])]) if sim.campaign_done() else ("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]])
+			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 		else:
 			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "clear tier %d first" % k, Pal.TEXT_3)
@@ -197,7 +199,7 @@ func show_state(s) -> void:
 			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight", [Fmt.mss(sim.estimate(i))]],
-			["Drops", ["tier %d gear" % t["loot_tier"], "tier %d" % t["loot_tier"]]],
+			["Finds" if endgame else "Drops", (["level %d · tier %d gear" % [t["level"], t["loot_tier"]], "level %d gear" % t["level"], "level %d" % t["level"]]) if endgame else ["tier %d gear" % t["loot_tier"], "tier %d" % t["loot_tier"]]],
 			["Depth", [("%d of %d" % [t["depth"], sim.best_depth[i] + 1]), "%d/%d" % [t["depth"], sim.best_depth[i] + 1]] if endgame else ["Locked"]],
 			["Rewards", ["×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)]],
 		]
@@ -259,9 +261,23 @@ func show_state(s) -> void:
 			UI.fit(c["note"], ["%s wants %d notes; you have %d" % [boss["name"], sim.boss_cost(i), sim.notes], "%s: %d notes" % [boss["name"], sim.boss_cost(i)], "Not enough notes"])
 		elif auto:
 			c["note"].text = "Rests to 95%, leaves when the next gang comes"
+		elif endgame and _station_words(i) != "":
+			UI.fit(c["note"], [_station_words(i), _station_words(i).get_slice(" · ", 0), _station_words(i).get_slice(" · ", 0).replace(" at full strength", ", full strength"), _station_words(i).get_slice(":", 0)])
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
+
+
+## The ladder's stations ahead on a site (the endgame, 7 Oct): the crew's head at full strength at PINNACLE_DEPTH
+## on the zone's last site, the lorry at CONVOY_DEPTH on the services; "" once past them or where there are none.
+func _station_words(i: int) -> String:
+	var out: Array = []
+	var b: Dictionary = sim.boss_of(i)
+	if not b.is_empty() and sim.depth[i] < Data.PINNACLE_DEPTH:
+		out.append("Depth %d: %s at full strength" % [Data.PINNACLE_DEPTH, b["name"]])
+	if i == Data.CONVOY_TIER and sim.depth[i] < Data.CONVOY_DEPTH:
+		out.append("Depth %d: the lorry" % Data.CONVOY_DEPTH)
+	return " · ".join(out)
 
 
 # ------------------------------------------------------------------ acting
