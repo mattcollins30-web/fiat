@@ -1115,6 +1115,7 @@ func _run_screen(main) -> void:
 	_check_fit(main, "Run (pick)")
 	var rh = main._run._pick._heads[0]
 	_check(rh.visible and not main._run._pick._empty_title.visible and rh._title.text != "" and rh._chips[0].visible and main._run._pick._tag_labels[0].text.begins_with("£"), "the run's pick has no head or price tag: %s / %s" % [rh._title.text, main._run._pick._tag_labels[0].text])
+	_pick_boxes_check(main._run._pick, "the run's pick")
 	main._run._ditch_pick()
 	_check(sim.mission["found"].size() == n_before - 1, "Ditch did not drop the find")
 	if sim.mission["found"].size() > 0:
@@ -1938,6 +1939,7 @@ func _melee_checks(main) -> void:
 	var khead = main._armoury._head
 	_check(khead._tail.text.contains("Red dot") or khead._tail.text.contains("part"), "a kitted gun's head does not say what's on it: '%s'" % khead._tail.text)
 	_check(main._armoury._pick._right_lines[0].text.begins_with("Red dot"), "the fitted gun's column does not list its parts: '%s'" % main._armoury._pick._right_lines[0].text)
+	_pick_boxes_check(main._armoury._pick, "the Lock-up's pick")
 	_check(main._armoury._pick._right_lines.any(func(l): return l.text.begins_with("Lighter fluid")), "the socketable is not listed with the parts")
 	_check_fit(main, "Armoury (a kitted gun)")
 	sim.equipped["Primary"] = held_primary
@@ -4383,6 +4385,9 @@ func _check_fit(main, where: String) -> void:
 			for b in Data.SLOTS:
 				if a < b:
 					_check(not ra.intersects(body.box_rect(b)), "%s: the %s and %s boxes overlap" % [where, a, b])
+	if main.room == main.OVERVIEW and main._yard_works.visible:
+		bad += _check_nodes(main._yard_works.text_nodes(), main._yard_works.line_pairs(), where + " yard jobs")
+		bad += _check_nodes(main._yard_town.text_nodes(), main._yard_town.line_pairs(), where + " town and purse")
 	var rail_nodes := []
 	for name in main.ROOMS:
 		var b = main._rail_buttons[name]
@@ -5159,6 +5164,32 @@ func _grenade_checks(main) -> void:
 
 
 ## The bench's panel on the pick frame (Matt, 6 Oct), and a typed part refused on the wrong gun.
+## Each piece on the pick panel in its own box (Pick-B, 7 Oct): a box a column
+## shown, every one of the column's text nodes inside it, the two boxes apart,
+## and both above the foot.
+func _pick_boxes_check(pick, where: String) -> void:
+	var boxes: Array = pick._boxes
+	_check(boxes[0].visible, "%s: the pick's box is not shown" % where)
+	var r0: Rect2 = Rect2(boxes[0].position, boxes[0].size)
+	var r1: Rect2 = Rect2(boxes[1].position, boxes[1].size)
+	_check(not r0.intersects(r1) and r1.position.x - r0.end.x >= 2.0, "%s: the two boxes touch or overlap (%s, %s)" % [where, str(r0), str(r1)])
+	_check(r0.position.x >= 0.0 and r1.end.x <= pick.w, "%s: a box runs off the panel (%s, %s against %d)" % [where, str(r0), str(r1), pick.w])
+	_check(r0.end.y <= pick.foot_y and r1.end.y <= pick.foot_y, "%s: a box runs into the foot (%s / %s against %d)" % [where, str(r0), str(r1), pick.foot_y])
+	for k in range(2):
+		if not boxes[k].visible:
+			continue
+		var r: Rect2 = Rect2(boxes[k].position, boxes[k].size).grow(-1)
+		var nodes: Array = [pick._kickers[k], pick._heads[k]] if k == 0 else [pick._kickers[k], pick._heads[k], pick._right_title]
+		for n in nodes:
+			if not n.visible:
+				continue
+			var nr: Rect2 = Rect2(n.position, n.size)
+			_check(r.encloses(nr), "%s: %s sits outside its box: %s against %s" % [where, n.name if n.name != "" else "a node", str(nr), str(r)])
+		if pick._tags[k].visible:
+			var tr: Rect2 = Rect2(pick._tags[k].position, pick._tags[k].size)
+			_check(r.encloses(tr), "%s: the price tag sits outside its box: %s against %s" % [where, str(tr), str(r)])
+
+
 func _bench_pick_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -5648,6 +5679,47 @@ func _thinning_checks(main) -> void:
 	print("thinning ok: the searches in full, the fifth a search, the floor, the bar, depth and quantity")
 
 
+## The Yard's right half (Yard-C/D, 7 Oct): the yard's jobs on one card, a row a job with its own Build button,
+## the town and the purse under; the rail's Upgrade badge when a job is affordable.
+func _yard_wide_checks(main) -> void:
+	var sim = main.sim
+	var w = main._yard_works
+	var t = main._yard_town
+	_check(w.visible and t.visible, "the Yard's wide pair is not shown")
+	_check(w.position.x == 2 * (Pal.CARD_W + Pal.CARD_GAP) and t.position.y == Pal.CARD_H + Pal.CARD_GAP, "the wide pair is not in the right two columns: %s / %s" % [str(w.position), str(t.position)])
+	_check(not Rect2(w.position, w.size).intersects(Rect2(t.position, t.size)), "the yard's two wide cards overlap")
+	var names: Array = w._names.filter(func(l): return l.visible).map(func(l): return l.text)
+	_check(names == ["Generator", "Lookout", "Kennel", "Stash", "Bench"], "the yard's jobs are off: %s" % str(names))
+	# every row's button follows the sim: Build (£) when there is a next level, on when affordable; the works' row words
+	var cash0: float = sim.cash
+	sim.cash = 0.0
+	main.refresh()
+	for i in range(5):
+		var b = w._buttons[i]
+		var j: Dictionary = main._yard_jobs()[i]
+		if int(j["cost"]) > 0:
+			_check(b.text.contains(Fmt.money(int(j["cost"]))) and b.disabled, "%s with no cash: '%s' %s" % [j["name"], b.text, "off" if b.disabled else "on"])
+			_check(w._nexts[i].text.begins_with("Next: ") and w._nows[i].text.begins_with("Now: "), "%s's row words are off: '%s' / '%s'" % [j["name"], w._nows[i].text, w._nexts[i].text])
+		else:
+			_check(b.text in ["As good as it gets", "Built"] and b.disabled and w._nexts[i].text == "", "%s at the top reads '%s'" % [j["name"], b.text])
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "", "the rail's Upgrade badge is lit with no cash")
+	sim.cash = 1000000.0
+	main.refresh()
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "the rail's Upgrade badge is not lit with every job affordable")
+	var lv0: int = sim.kennel_level
+	if sim.kennel_cost() > 0:
+		_check(not w._buttons[2].disabled, "the kennel's Build is off with the cash in hand")
+		w.press(2)
+		_check(sim.kennel_level == lv0 + 1, "the kennel's Build did not build: level %d from %d" % [sim.kennel_level, lv0])
+		sim.kennel_level = lv0
+	sim.cash = cash0
+	main.refresh()
+	_check(t._title.text.begins_with("The town and the purse") and t._kickers[0].text.begins_with("THE TOWN") and t._kickers[1].text == "THE PURSE", "the town and the purse card is off: '%s' / '%s' / '%s'" % [t._title.text, t._kickers[0].text, t._kickers[1].text])
+	_check(t._labels[1][0].text == "Cash" and t._values[1][0].text == Fmt.money(sim.cash), "the purse's cash line is off: %s %s" % [t._labels[1][0].text, t._values[1][0].text])
+	_check(t._button.visible == sim.can_move_yard(), "Move the yard shows %s when the yard %s move" % ["on" if t._button.visible else "off", "can" if sim.can_move_yard() else "cannot"])
+	_check_fit(main, "Yard (wide)")
+
+
 func _yard_checks(main) -> void:
 	var sim = main.sim
 	_loot_roll_checks(main)
@@ -5656,8 +5728,12 @@ func _yard_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	var titles: Array = main._cards.map(func(c): return c._title.text if c.visible else "")
-	for want in ["Runner", "Elements", "Finds", "The town", "Cash", "The yard's works", "Last run", "The log"]:
+	for want in ["Runner", "Elements", "Finds", "Last run"]:
 		_check(titles.has(want), "the Yard has no %s card: %s" % [want, str(titles)])
+	_check(titles.count("") == 4, "the Yard's left two columns do not hold exactly four cards: %s" % str(titles))
+	for k in [2, 3, 6, 7]:
+		_check(not main._cards[k].visible, "a card sits under the Yard's wide pair at slot %d" % k)
+	_yard_wide_checks(main)
 	var elements = main._cards[titles.find("Elements")]
 	var fire_row := -1
 	for k in range(elements._labels.size()):

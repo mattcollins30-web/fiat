@@ -5,7 +5,10 @@ extends Control
 ## the affixes as chips). The foot: the verdict and the deltas against the
 ## fitted, the item's own line under them (or a hint, when there is one), and
 ## the buttons at the right. The run's pack and the Lock-up's stash share it,
-## so the two read the same.
+## so the two read the same. Each column sits in its own box on the run
+## screen's line (7 Oct, Pick-B), the pick's in the accent, so two pieces of
+## gear read as two pieces side by side; the box runs BOX_OUT past the column
+## each side, so the column's words keep their width.
 
 signal acted
 
@@ -26,12 +29,15 @@ const BUTTONS := 3
 const DELTAS := 4
 const LINES := 4                                              # the right column's lines when nothing is fitted (a med, a part, a paper)
 const TAG_PAD := 8
+const BOX_OUT := 8                                            # each piece in its own box (7 Oct): the run screen's line, drawn this far outside the column, so the column keeps its width (the words were cut for it at first)
+const BOX_Y := 2
 
 var w: int
 var h: int
 var col_w: int
 var foot_y: int
 var _panel: Panel
+var _boxes: Array[Panel] = []                                 # one a column: the pick's lined in the accent, the fitted's in the card line
 var _kickers: Array[Label] = []
 var _tags: Array[Panel] = []
 var _tag_labels: Array[Label] = []
@@ -58,19 +64,25 @@ func _init(width: int, height: int) -> void:
 	_panel = UI.panel(self, Rect2(0, 0, w, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	for k in range(2):
 		var x: int = PAD + k * (col_w + PAD)
-		_kickers.append(UI.head(_panel, Rect2(x, KICK_Y, col_w - 100, KICK_H), ""))
-		var tag := UI.panel(_panel, Rect2(x + col_w - 10, KICK_Y + 1, 10, KICK_H - 2), UI.box(Pal.BG, 6, 1, Pal.CARD_LINE))
+		var box := UI.panel(_panel, Rect2(x - BOX_OUT, BOX_Y, col_w + 2 * BOX_OUT, foot_y - 8 - BOX_Y), UI.box(Color.TRANSPARENT, 8, 1, Pal.ACCENT if k == 0 else Pal.CARD_LINE))
+		box.visible = false
+		_boxes.append(box)
+		var cx: int = x
+		var cw: int = col_w
+		_kickers.append(UI.head(_panel, Rect2(cx, KICK_Y, cw - 100, KICK_H), ""))
+		var tag := UI.panel(_panel, Rect2(cx + cw - 10, KICK_Y + 1, 10, KICK_H - 2), UI.box(Pal.BG, 6, 1, Pal.CARD_LINE))
 		_tags.append(tag)
 		_tag_labels.append(UI.label(tag, Rect2(TAG_PAD, 0, 10, KICK_H - 2), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT))
-		var head := ItemHead.new(col_w, true)
-		head.position = Vector2(x, HEAD_Y)
+		var head := ItemHead.new(cw, true)
+		head.position = Vector2(cx, HEAD_Y)
 		head.visible = false
 		_panel.add_child(head)
 		_heads.append(head)
 	var rx: int = PAD * 2 + col_w
-	_right_title = UI.label(_panel, Rect2(rx, HEAD_Y, col_w, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var rw: int = col_w
+	_right_title = UI.label(_panel, Rect2(rx, HEAD_Y, rw, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(LINES):
-		_right_lines.append(UI.label(_panel, Rect2(rx, HEAD_Y + 40 + i * 28, col_w, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		_right_lines.append(UI.label(_panel, Rect2(rx, HEAD_Y + 40 + i * 28, rw, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_empty_title = UI.label(_panel, Rect2(PAD, 10, w - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(LINES):
 		_empty_lines.append(UI.label(_panel, Rect2(PAD, 48 + i * 28, w - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
@@ -102,6 +114,7 @@ func show_empty(title: String, lines: Array) -> void:
 ## the cells are added; `tail` is the head's tail (what it takes).
 func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> void:
 	_clear()
+	_boxes[0].visible = true
 	_kickers[0].visible = true
 	_kickers[0].text = (kicker + " · " + _cells(it)).to_upper()
 	_tag(0, Fmt.money(sim.sell_price(it)))
@@ -112,6 +125,7 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 
 ## The right column as the fitted item, laid the same as the pick.
 func show_fitted(fitted: Dictionary, sim, kicker := "Fitted now", tail = "", extra = "") -> void:
+	_boxes[1].visible = true
 	_kickers[1].visible = true
 	_kickers[1].text = (kicker + " · " + _cells(fitted)).to_upper()
 	_tag(1, Fmt.money(sim.sell_price(fitted)))
@@ -121,6 +135,7 @@ func show_fitted(fitted: Dictionary, sim, kicker := "Fitted now", tail = "", ext
 
 ## The right column as words: a kicker, a title and lines (a med's rig, a part's bench, nothing fitted).
 func show_right_words(kicker: String, title: String, lines: Array) -> void:
+	_boxes[1].visible = kicker != "" or title != "" or not lines.is_empty()     # no box round nothing
 	_kickers[1].visible = kicker != ""
 	_kickers[1].text = kicker.to_upper()
 	_kickers[1].size.x = col_w
@@ -219,6 +234,7 @@ func _lay_foot() -> void:
 
 func _clear() -> void:
 	for k in range(2):
+		_boxes[k].visible = false
 		_kickers[k].visible = false
 		_tags[k].visible = false
 		_heads[k].visible = false

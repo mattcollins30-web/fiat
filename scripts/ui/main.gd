@@ -14,6 +14,8 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Card := preload("res://scripts/ui/card.gd")
+const YardWorks := preload("res://scripts/ui/yard_works.gd")
+const YardTown := preload("res://scripts/ui/yard_town.gd")
 const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
@@ -79,6 +81,9 @@ var _rail: Control
 var _rail_buttons := {}
 var _grid: Control
 var _cards: Array = []
+var _yard_works                    # the Yard's right half (7 Oct): the yard's jobs on one card two wide
+var _yard_town                     # and under it the town and the purse
+const YARD_SLOTS := [0, 1, 4, 5]   # the Yard's four cards: the left two columns; the wide pair takes the right
 var _armoury
 var _barracks
 var _missions
@@ -157,6 +162,14 @@ func _build() -> void:
 		c.acted.connect(refresh)
 		_grid.add_child(c)
 		_cards.append(c)
+	_yard_works = YardWorks.new()
+	_yard_works.position = Vector2(2 * (Pal.CARD_W + Pal.CARD_GAP), 0)
+	_yard_works.acted.connect(refresh)
+	_grid.add_child(_yard_works)
+	_yard_town = YardTown.new()
+	_yard_town.position = Vector2(2 * (Pal.CARD_W + Pal.CARD_GAP), Pal.CARD_H + Pal.CARD_GAP)
+	_yard_town.acted.connect(refresh)
+	_grid.add_child(_yard_town)
 	_armoury = Armoury.new()
 	_armoury.acted.connect(refresh)
 	_armoury.bench.connect(_open_bench)
@@ -573,11 +586,18 @@ func refresh() -> void:
 			cards = _comms_cards()
 		_:
 			cards = _camp_cards()
-	for i in range(Pal.MAX_CARDS):
-		var c = _cards[i]
-		c.visible = i < cards.size()
-		if c.visible:
-			c.show_data(cards[i])
+	var slots: Array = YARD_SLOTS if room == OVERVIEW else range(Pal.MAX_CARDS)
+	for c in _cards:
+		c.visible = false
+	for i in range(mini(cards.size(), slots.size())):
+		var c = _cards[slots[i]]
+		c.visible = true
+		c.show_data(cards[i])
+	_yard_works.visible = room == OVERVIEW
+	_yard_town.visible = room == OVERVIEW
+	if room == OVERVIEW:
+		_show_yard_works()
+		_yard_town.show_data(_town_purse())
 	var ev: Array = sim.events
 	for i in range(Pal.EVENT_LINES):
 		var j := ev.size() - 1 - i
@@ -621,7 +641,13 @@ func _time_of_day(stamp: float) -> String:
 func _rail_status(name: String) -> Dictionary:
 	match name:
 		OVERVIEW:
-			return {"status1": "Level %d runner" % sim.level(), "status2": Fmt.money(sim.cash)}
+			# the yard's jobs were easy to miss: the rail says when one is affordable, as the fence's does for a contract
+			var can := false
+			for j in _yard_jobs():
+				if int(j["cost"]) > 0 and bool(j["can"]):
+					can = true
+			return {"status1": "Level %d runner" % sim.level(), "status2": Fmt.money(sim.cash),
+					"badge": "Upgrade" if can else "", "badge_tone": "good"}
 		MISSIONS:
 			if sim.on_mission():
 				var m: Dictionary = sim.mission
@@ -750,71 +776,6 @@ func _camp_cards() -> Array:
 		"note": "Quality: rarer. Quantity: more",
 		"status": "A dog finds +%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"] if sim.kennel_level > 0 else "No dog yet",
 	})
-	# the town
-	var zlines := []
-	for z in range(Data.ZONES.size()):
-		var deepest := 0
-		for i in Data.ZONES[z]["tiers"]:
-			deepest = maxi(deepest, sim.best_depth[i])
-		zlines.append([Data.ZONES[z]["name"], ("depth %d" % deepest) if deepest > 0 else ("open" if sim.zone_open(z) else "locked")])
-	var open_zones := 0
-	for z in range(Data.ZONES.size()):
-		if sim.zone_open(z):
-			open_zones += 1
-	var town := {
-		"title": "The town" if sim.yard_moves == 0 else "The town · yard %d" % (sim.yard_moves + 1), "headline": "%d" % open_zones, "unit": "of %d zones open" % Data.ZONES.size(),
-		"lines": zlines,
-		"note": Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"],
-		"tone": "good" if sim.campaign_done() else "",
-		"status": Words.NOTES["patch"],
-	}
-	if not sim.trades.is_empty():
-		var names := []
-		for el in sim.trades:
-			names.append(Data.tree_of_element(el)["name"])
-		town["lines"].append(["Yard's trade", ", ".join(names)])
-	if sim.can_move_yard():
-		town["buttons"] = [{"text": "Move the yard", "action": _confirm_move, "enabled": true, "primary": false}]
-	out.append(town)
-	# the cash, and the stash
-	var cash_card := {
-		"title": "Cash", "headline": Fmt.money(sim.cash), "unit": "",
-		"lines": [["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())], ["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]],
-			["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
-		"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays",
-	}
-	if sim.stash_cost() > 0:
-		cash_card["buttons"] = [{"text": "Bigger stash (%s)" % Fmt.money(sim.stash_cost()), "action": sim.upgrade_stash, "enabled": sim.can_upgrade_stash(), "primary": false}]
-	else:
-		cash_card["status"] = "The stash is as big as it gets"
-	out.append(cash_card)
-	# the yard's works: the generator, the lookout and the kennel on one card
-	var built: int = sim.generator_level + sim.lookout_level + sim.kennel_level
-	var of: int = Data.GENERATOR_LEVELS.size() + Data.LOOKOUT_LEVELS.size() + Data.KENNEL_LEVELS.size() - 3
-	var works := {
-		"title": "The yard's works", "headline": "%d" % built, "unit": "of %d levels built" % of,
-		"lines": [["Generator %d" % sim.generator_level, "a rig row" if Data.GENERATOR_LEVELS[sim.generator_level].get("rig_row", false) else "%d h away" % Data.GENERATOR_LEVELS[sim.generator_level]["hours"]],
-			["Lookout %d" % sim.lookout_level, "the call" if Data.LOOKOUT_LEVELS[sim.lookout_level].get("call", false) else "first ×%.1f" % Data.LOOKOUT_LEVELS[sim.lookout_level]["first"]],
-			["Kennel %d" % sim.kennel_level, "carries home" if Data.KENNEL_LEVELS[sim.kennel_level].get("carries", false) else "+%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"]]],
-	}
-	# one button: the cheapest next job; the note names the others
-	var jobs := []
-	for job in [["generator", sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator], ["lookout", sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout],
-			["kennel", sim.kennel_cost(), sim.can_upgrade_kennel(), sim.upgrade_kennel]]:
-		if int(job[1]) > 0:
-			jobs.append(job)
-	jobs.sort_custom(func(a, b): return int(a[1]) < int(b[1]))
-	if jobs.is_empty():
-		works["status"] = "As good as it gets"
-		works["note"] = ""
-	else:
-		var first_job: Array = jobs[0]
-		works["buttons"] = [{"text": "%s (%s)" % [str(first_job[0]).capitalize(), Fmt.money(int(first_job[1]))], "action": first_job[3], "enabled": first_job[2], "primary": false}]
-		var rest := []
-		for j in jobs.slice(1):
-			rest.append(str(j[0]))
-		works["note"] = ("Then: %s" % ", ".join(rest)) if not rest.is_empty() else "The last of the works"
-	out.append(works)
 	# the last run
 	var r = sim.last_report
 	if r != null:
@@ -828,43 +789,93 @@ func _camp_cards() -> Array:
 		})
 	else:
 		out.append({"title": "Last run", "headline": "None yet", "unit": "", "lines": [], "note": "The first run writes here", "status": ""})
-	# the log: the clock, and the last few lines
-	var llines := []
-	var recent: Array = sim.events.slice(maxi(0, sim.events.size() - 5))
-	recent.reverse()
-	for e in recent:
-		llines.append([_short_line(str(e[1]), Pal.INNER), ""])
-	out.append({
-		"title": "The log", "headline": Fmt.clock(sim.elapsed), "unit": "played",
-		"lines": llines,
-		"note": "",
-		"status": "Autosaves every 30 s",
-	})
 	return out
 
 
-## A log line cut to a width for a card's value column: the first sentence, then the first clause.
-func _short_line(line: String, width: float) -> String:
-	var probe: Label = _cards[0]._labels[0] if not _cards.is_empty() else _top_labels["where"]
-	var options := [line, line.get_slice(". ", 0) + ("." if line.contains(". ") else ""), line.get_slice(": ", 0), line.get_slice(",", 0), line.get_slice(";", 0)]
-	var words: PackedStringArray = line.split(" ", false)
-	for n in range(mini(6, words.size()), 0, -1):
-		options.append(" ".join(words.slice(0, n)))
-	for option in options:
-		if option != "" and UI.text_width(probe, option) <= width:
-			return option
-	return str(words[0]) if words.size() > 0 else ""
+## The yard's jobs for the wide card (7 Oct): the works, the stash and the bench, each with its level, what it
+## does now and next (forms longest first), its price and its action. The fence, the clinic and the radio are
+## upgraded in their own rooms.
+func _yard_jobs() -> Array:
+	var g: Array = Data.GENERATOR_LEVELS
+	var lk: Array = Data.LOOKOUT_LEVELS
+	var kn: Array = Data.KENNEL_LEVELS
+	var st: Array = Data.STASH_LEVELS
+	var ws: Array = Data.WORKSHOP
+	var gen_words := func(lv: int) -> Array:
+		return ["a second rig row", "a rig row"] if g[lv].get("rig_row", false) else ["%d hours away count" % g[lv]["hours"], "%d h away" % g[lv]["hours"]]
+	var look_words := func(lv: int) -> Array:
+		if lk[lv].get("call", false):
+			return ["the call, a full pack", "the call"]
+		if lv == 0:
+			return ["the odds a guess", "a guess"]
+		return ["first gang ×%.1f%s" % [lk[lv]["first"], ", good odds" if int(lk[lv]["runs"]) > int(lk[0]["runs"]) else ""], "first ×%.1f" % lk[lv]["first"]]
+	var dog_words := func(lv: int) -> Array:
+		if lv == 0:
+			return ["no dog"]
+		if kn[lv].get("carries", false):
+			return ["carries the best home", "carries home"]
+		if float(kn[lv]["patrol"]) > 1.0:
+			return ["gangs %d%% later, +%d%% quality" % [int(round((float(kn[lv]["patrol"]) - 1.0) * 100.0)), int(kn[lv]["quality"])], "gangs %d%% later" % int(round((float(kn[lv]["patrol"]) - 1.0) * 100.0))]
+		return ["+%d a search, +%d%% quality" % [int(kn[lv]["finds"]), int(kn[lv]["quality"])], "+%d a search" % int(kn[lv]["finds"])]
+	var stash_words := func(lv: int) -> Array:
+		return ["%d cells" % int(st[lv]["cells"])]
+	var bench_words := func(lv: int) -> Array:
+		var parts: PackedStringArray = str(ws[lv]["words"]).split(": ")
+		return [parts[1] if parts.size() > 1 else parts[0], parts[0]]
+	var out := []
+	for job in [
+			["Generator", sim.generator_level, g.size() - 1, gen_words, sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator],
+			["Lookout", sim.lookout_level, lk.size() - 1, look_words, sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout],
+			["Kennel", sim.kennel_level, kn.size() - 1, dog_words, sim.kennel_cost(), sim.can_upgrade_kennel(), sim.upgrade_kennel],
+			["Stash", sim.stash_level, st.size() - 1, stash_words, sim.stash_cost(), sim.can_upgrade_stash(), sim.upgrade_stash],
+			["Bench", sim.workshop, ws.size() - 1, bench_words, sim.workshop_cost(), sim.can_upgrade_workshop(), sim.upgrade_workshop]]:
+		var lv: int = int(job[1])
+		var words: Callable = job[3]
+		out.append({"name": job[0], "level": lv, "of": int(job[2]), "now": words.call(lv), "next": words.call(mini(lv + 1, int(job[2]))) if int(job[4]) > 0 else [],
+				"cost": int(job[4]), "can": bool(job[5]), "action": job[6]})
+	return out
 
 
-## A yard upgrade as a card: its level, what it does now, what the next costs.
-func _upgrade_card(title: String, line: String, figure: String, levels: Array, level: int, cost: int, can: bool, action: Callable, status: String) -> Dictionary:
-	var d := {"title": title, "headline": "Level %d" % level, "unit": "of %d" % (levels.size() - 1),
-		"lines": [[line, figure]], "note": levels[level]["words"].split(":")[0], "status": status}
-	if cost > 0:
-		d["lines"].append(["Next", Fmt.money(cost)])
-		d["buttons"] = [{"text": "Build (%s)" % Fmt.money(cost), "action": action, "enabled": can, "primary": false}]
-	else:
-		d["status"] = "As good as it gets"
+func _show_yard_works() -> void:
+	var jobs := _yard_jobs()
+	var built := 0
+	var of := 0
+	for j in jobs:
+		built += int(j["level"])
+		of += int(j["of"])
+	_yard_works.show_jobs("The yard", "%d" % built, "of %d levels built" % of, jobs, "The fence, the clinic and the radio are upgraded in their rooms; the stash holds what comes home")
+
+
+## The town and the purse on one card (7 Oct): the zones with their depths, the trade, what opens the next
+## zone; cash, notes and scrap, kit worth, prices. The clock and the autosave in the foot; Move the yard when it can.
+func _town_purse() -> Dictionary:
+	var zlines := []
+	for z in range(Data.ZONES.size()):
+		var deepest := 0
+		for i in Data.ZONES[z]["tiers"]:
+			deepest = maxi(deepest, sim.best_depth[i])
+		zlines.append([Data.ZONES[z]["name"], ("depth %d" % deepest) if deepest > 0 else ("open" if sim.zone_open(z) else "locked")])
+	var open_zones := 0
+	for z in range(Data.ZONES.size()):
+		if sim.zone_open(z):
+			open_zones += 1
+	if not sim.trades.is_empty():
+		var names := []
+		for el in sim.trades:
+			names.append(Data.tree_of_element(el)["name"])
+		zlines.append(["Yard's trade", ", ".join(names)])
+	var d := {
+		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · yard %d" % (sim.yard_moves + 1),
+		"headline": Fmt.money(sim.cash), "unit": "in hand",
+		"left": {"kicker": "The town · %d of %d zones open" % [open_zones, Data.ZONES.size()], "lines": zlines,
+			"note": [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]},
+		"right": {"kicker": "The purse", "lines": [["Cash", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
+			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
+			"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays"},
+		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
+	}
+	if sim.can_move_yard():
+		d["button"] = {"text": "Move the yard", "action": _confirm_move, "enabled": true}
 	return d
 
 

@@ -2077,6 +2077,72 @@ four's margin, not the bot's appetite: a lower PUSH would push the Scrapper and 
 12-16, past the floor) and `WOUND_AT` stays at 0.35 (a figure that moves everyone cannot close a
 spread between classes): both judged on the thirteenth read.
 
+**The thirteenth read (the Legion, 7 Oct, twenty reads of ten builds).** Four red, and cash green for the
+first time (every build under two hours' income, most 0.6: the measure was the problem, the sinks were
+not). The four reds are two kinds of thing. *Noise between two reads of the same build:* the band is
+red on the classes (2.1-3.9 h) because the plain Poacher banked at 2.2 h in one read and 5.6 h in the
+other, the Drifter at 1.7 and 4.3, the Scrapper at 1.9 and 3.8 - the slow read of each sat three hours
+on T2-T3 with its loadout's worth flat (the Poacher: £8.8k from 2:00 to 5:30, dps 90-190 against the
+quick read's 260 at the same level): no better gun came, from the sites or the shelf. The sites lean
+to a gun type half their rolls (improvised, pistol, improvised, shotgun, pistol, SMG, SMG, none, rifle
+by tier) so a rifle class is on the other half until T8, but the slow reads come to every class; it is
+the luck of the drop, and a read of two cannot band it. The Scrapper's T8 at 26% is the same thing
+read at the end: one read with a 728-dps shotgun at 52%, one with a 472-dps one at 0%, both whole, no
+boss, no wound - T8 at full strength takes 700 dps or more to hold, and the kit at hour 8 is what the
+run turned up. *The spread between classes:* deaths out of band on two builds only now (bleed Doorman
+one in 42, shock Drifter one in 32; the rest 9-29), wounds 10-40% - the fire Drifter 50 wounded runs
+in one read and 100 in the other, the stat is how often a hit takes the runner under a third, and it
+swings with the push. No number moved: Matt's call (7 Oct) is no further number decisions until he has
+played the campaign through and put ten to twelve hours into a save, and the four reds left are the
+kind his save will read better than the bot - whether a gun drought at T2-T3 is a real wall or a bot
+that will not buy, and how often a player who plays to his own risk is wounded. The pass pauses here,
+reds recorded with their causes, not accepted: it resumes on his save with the levers named (the drop
+lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
+builds' top-end margin, `WOUND_AT`).
+
+## The Yard, again: the works on one card, and the rail says so (7 Oct)
+
+Matt: "the character stats are good but there's a whole load of cards there that either duplicate info or just
+don't need to exist - the glaring issue is yard upgrades live there and nothing ever tells the player to go
+look there." Mocked as Yard-C and Yard-D on the canvas; built as C's bottom with D's bench row (Matt: "I'll
+go with your pick"). The left two columns keep the four cards that are the run and the runner: Runner,
+Elements, Finds, Last run (`YARD_SLOTS`). The right two columns are two cards two wide. *The yard*
+(`yard_works.gd`): a row a job - Generator, Lookout, Kennel, Stash, Bench - with its level, what it does
+now over what the next does (`_yard_jobs` gives the forms, longest first), and its own Build button
+(the price in it, the price alone when the long form will not fit; "Built" at the top), so no job hides
+behind "the cheapest first, the rest in a note". The Bench room keeps its own button. *The town and the
+purse* (`yard_town.gd`): the zones with their depths, the trade and what opens the next zone on the
+left; cash, notes and scrap, kit worth, the stash's cells and prices on the right; the clock and the
+autosave in the foot, Move the yard at its right when the yard can move. The town, cash, works and log
+cards go (the log sits under every room). The rail's Yard button carries an "Upgrade" badge whenever a
+job on the card is affordable, as the fence's "Ready" does for a contract, and clears when it is built
+or the cash drops under it. Smoke (`_yard_wide_checks`): the four cards in the left columns and nothing
+under the wide pair, the pair apart and in the right columns, the five rows in order, every button off
+with no cash and reading its price, the badge off with no cash and on with every job affordable, a
+press builds the kennel, the purse's cash line, Move the yard shown only when it can; the fit check
+reads both cards' text.
+
+## Two pieces, two boxes (7 Oct)
+
+Matt: "each piece of gear needs an outline similar to everywhere else so the runs you and them have a
+border - the gear needs that too so its easy to see side by side you're looking at two pieces of gear."
+Mocked as Pick-B on the canvas (each column in its own box on the run screen's line, the pick's in the
+accent; a third panel with both on the plain line) and built as the first: `pick_panel.gd` puts a box a
+column (transparent, 1 px, radius 8, `BOX_PAD` 12 inside; `Pal.ACCENT` for the pick, `Pal.CARD_LINE`
+for the fitted or the right column's words), the kicker, tag, head and the right column's lines inset to
+it, the box shown with its column and off when the panel is empty. The run's pack, the Lock-up and the
+Workshop share the panel, so all three have it. Smoke: `_pick_boxes_check` on the run's pick and the
+Lock-up's - a box a column shown, every text node and the price tag inside its box, the two apart, both
+above the foot.
+
+Art, the gaps (checked on the Legion against the manifests and the code's hooks): the items are all
+there but the deeds (every other paper draws `paper.png`; the deeds are kept out of that on purpose and
+have no picture: `art/items/the_deeds.png`, 128 × 128); the three bosses' heads have a manifest and no
+pictures (`art/people/the_carpet_man.png`, `the_manager.png`, `the_quartermaster.png`, 128 × 128; the run
+screen looks for them when a boss is on); `art/studio.png`, the intro card, optional. Matt reuses
+Greenhorn's. Zone art waits for a design pass (the run view, concept item 3). Matt: no further number or
+heavy art decisions until he has played the campaign through and put ten to twelve hours into a save.
+
 ## The dots as the end of the bar (6 Oct)
 
 Matt: "health bars need to show dot damage as part of the bar so you can see how much of each type you are
