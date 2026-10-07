@@ -39,7 +39,8 @@ const SLOTS := 3
 const SAVE_VERSION := 1
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
-const ODDS_BUDGET := 3              # dry runs a tier a refresh on the Runs screen: nine tiers settle in about a second
+const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
+const ODDS_MS := 5.0                # of odds work a frame on the Runs screen: the screen stays smooth, the tiers settle over a second or two
 const OVERVIEW := "The Yard"
 const MISSIONS := "Runs"
 const ARMOURY := "Lock-up"
@@ -270,10 +271,32 @@ func _process(delta: float) -> void:
 	_since_save += delta
 	if _since_save >= AUTOSAVE_S:
 		save_game()
+	_read_odds()
 	_since_refresh += delta
 	if _since_refresh >= REFRESH_S:
 		_since_refresh = 0.0
 		refresh()
+
+
+## The Runs screen's odds, a few milliseconds a frame (7 Oct: three dry runs a tier a refresh was half a second
+## of stall at the top of the ladder): the zone on screen first, then the rest, until every open tier has settled.
+func _read_odds() -> void:
+	if not (room == MISSIONS or room == COMMS) or sim.on_mission():
+		return
+	sim.odds_time_ms = ODDS_MS
+	sim.odds_frame_start()
+	var order: Array = []
+	for i in Data.ZONES[_missions.zone]["tiers"] if _missions.zone < Data.ZONES.size() else []:
+		order.append(i)
+	for i in range(Data.TIERS.size()):
+		if not (i in order):
+			order.append(i)
+	for i in order:
+		if sim._odds_time_up():
+			break
+		if sim.tier_open(i) and not sim.odds_settled(i):
+			sim.survival(i)
+	sim.odds_time_ms = 0.0
 
 
 ## The log's best lines as toasts: what was found, who's out and who's down,
@@ -922,7 +945,7 @@ func _comms_cards() -> Array:
 		var lines := []
 		if words.is_empty():
 			lines.append(["Nothing on the air for it", ""])
-		var odds: float = sim.survival(i)
+		var odds: float = sim.odds_now(i)         # as read so far (the shell reads them a few ms a frame on this room too)
 		var zone_i := 0
 		for z in range(Data.ZONES.size()):
 			if i in Data.ZONES[z]["tiers"]:

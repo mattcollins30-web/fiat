@@ -14,6 +14,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const Atlas := preload("res://scripts/ui/atlas.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
@@ -33,13 +34,8 @@ var zone := 0                      # the zone whose tiers the columns show
 var _zone_buttons: Array = []
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
-var _map: Panel                    # the map: the endgame's tree, in place of the columns
-var _map_title: Label
-var _map_words: Label
-var _map_rows: Array = []          # per passive: {name, words, rank, button}
-var _map_reset: Button
+var _atlas                         # the map (atlas.gd): the endgame's tree in the caravan's shape, in place of the columns
 const MAP := 3                     # the fourth button on the zone row
-const MAP_ROW_H := 72
 const ZONE_H := 56
 const TOP := ZONE_H + 16
 
@@ -54,25 +50,12 @@ func _init() -> void:
 		b.text = Data.ZONES[z]["name"] if z < Data.ZONES.size() else "The map"
 		b.pressed.connect(_pick_zone.bind(z))
 		_zone_buttons.append(b)
-	# the map: one panel, a row a passive, its rank and a button to take one
-	_map = UI.panel(self, Rect2(0, TOP, Pal.GRID_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_map.visible = false
-	_map_title = UI.label(_map, Rect2(PAD, 16, Pal.GRID_W - 2 * PAD, 40), "The map", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_map_words = UI.label(_map, Rect2(PAD, 58, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	var my := 110
-	for a in Data.ATLAS:
-		var r := {}
-		r["name"] = UI.label(_map, Rect2(PAD, my, 300, 30), a["name"], "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["words"] = UI.label(_map, Rect2(PAD, my + 30, Pal.GRID_W - 2 * PAD - 400, 28), a["words"], "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["rank"] = UI.label(_map, Rect2(Pal.GRID_W - PAD - 410, my, 200, 30), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-		r["button"] = UI.button(_map, Rect2(Pal.GRID_W - PAD - 190, my - 4, 190, Pal.BUTTON_H), false)
-		r["button"].text = "Take a rank"
-		r["button"].pressed.connect(_rank.bind(a["key"]))
-		_map_rows.append(r)
-		my += MAP_ROW_H
-	_map_reset = UI.button(_map, Rect2(PAD, Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H, 290, Pal.BUTTON_H), false)
-	_map_reset.text = "Start the map again"
-	_map_reset.pressed.connect(_reset_map)
+	# the map: the endgame's tree in the caravan's shape (Map-A, 7 Oct)
+	_atlas = Atlas.new(Pal.ROOM_H - TOP)
+	_atlas.position = Vector2(0, TOP)
+	_atlas.visible = false
+	_atlas.acted.connect(func(): acted.emit())
+	add_child(_atlas)
 	for col in range(3):
 		var x := col * (COL_W + COL_GAP)
 		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -158,11 +141,9 @@ func _init() -> void:
 
 func show_state(s) -> void:
 	sim = s
-	# the odds read a few dry runs a refresh (the shell's budget) until every open tier has settled
+	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
 	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i) and not sim.odds_settled(i):
-			sim.survival(i)
 		settled += "1" if sim.odds_settled(i) else "0"
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
@@ -179,7 +160,7 @@ func show_state(s) -> void:
 	mb.text = "The map" if sim.campaign_done() else "The map · locked"
 	mb.disabled = not sim.campaign_done()
 	UI.style_button(mb, zone == MAP)
-	_map.visible = zone == MAP
+	_atlas.visible = zone == MAP
 	for c in _cols:
 		c["panel"].visible = zone != MAP
 		c["edge"].visible = zone != MAP
@@ -192,7 +173,7 @@ func show_state(s) -> void:
 		var c: Dictionary = _cols[k]
 		var t: Dictionary = sim.effective(i)
 		var is_open: bool = sim.tier_open(i)
-		var odds: float = sim.survival(i) if is_open else 0.0
+		var odds: float = sim.odds_now(i) if is_open else 0.0     # as read so far: the shell reads them a few ms a frame
 		var tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
 		c["edge"].visible = is_open
 		(c["edge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(tone)
@@ -296,31 +277,17 @@ func _pick_zone(z: int) -> void:
 
 
 func _show_map() -> void:
-	var free: int = sim.atlas_free()
-	_map_words.text = "%d point%s free of %d. A point for every new depth cleared past the first, on any site. What's taken here holds on every site." % [free, "" if free == 1 else "s", sim.atlas_points]
-	for k in range(Data.ATLAS.size()):
-		var a: Dictionary = Data.ATLAS[k]
-		var r: Dictionary = _map_rows[k]
-		var rank: int = sim.atlas_rank(a["key"])
-		r["rank"].text = "%d of %d" % [rank, a["max"]]
-		r["rank"].add_theme_color_override("font_color", Pal.TEXT if rank > 0 else Pal.TEXT_3)
-		r["button"].disabled = not sim.can_rank_atlas(a["key"])
-		UI.style_button(r["button"], rank > 0)
-	_map_reset.disabled = sim.atlas_spent() == 0 or sim.on_mission()
+	_atlas.show_state(sim)
 
 
+## The tests' hands on the map: a rank of a passive, and the map started again.
 func _rank(key: String) -> void:
-	if sim.rank_atlas(key):
-		acted.emit()
-	_shown = ""
-	show_state(sim)
+	_atlas.selected = key
+	_atlas._on_take()
 
 
 func _reset_map() -> void:
-	sim.reset_atlas()
-	acted.emit()
-	_shown = ""
-	show_state(sim)
+	_atlas._on_reset()
 
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
@@ -399,9 +366,7 @@ func text_nodes() -> Array:
 	for zb in _zone_buttons:
 		out.append(zb)
 	if zone == MAP:
-		out.append_array([_map_title, _map_words, _map_reset])
-		for r in _map_rows:
-			out.append_array([r["name"], r["words"], r["rank"], r["button"]])
+		out.append_array(_atlas.text_nodes())
 		return out
 	for c in _cols:
 		out.append_array(c["band"].text_nodes())

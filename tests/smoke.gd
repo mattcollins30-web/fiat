@@ -337,12 +337,13 @@ func _init() -> void:
 	_check_fit(main, "Barracks (pick)")
 	# the points read "N of M points free" top right, the panel says whose the node is, and no node's words are the old "for every runner the yard sends"
 	_check(main._barracks._points.text.begins_with("%d of %d" % [sim.points_free(), sim.training_points]), "the points line reads '%s'" % main._barracks._points.text)
-	_check(main._barracks._scope.text.begins_with("The yard's"), "the yard's node does not say it's the yard's: '%s'" % main._barracks._scope.text)
+	_check(main._barracks._scope.text == "" and not main._barracks._past.visible, "a plain node carries the lines that went: '%s' / past %s" % [main._barracks._scope.text, str(main._barracks._past.visible)])
+	_sum_strip_check(main)
 	_check(not main._barracks._words.text.contains("the yard sends"), "a plain node still says 'for every runner the yard sends'")
 	if sim.cls != "":
 		var first_class_tree: Dictionary = sim.trees()[0]
 		main._barracks._pick("%s/0" % first_class_tree["name"])
-		_check(main._barracks._scope.text.begins_with("The runner's"), "a class node does not say it's the runner's: '%s'" % main._barracks._scope.text)
+		_check(main._barracks._scope.text == "", "a class node carries the line that went: '%s'" % main._barracks._scope.text)
 		_check_fit(main, "Barracks (class node)")
 	for t in Data.TREES:
 		for nd in t["nodes"]:
@@ -944,8 +945,9 @@ func _narrative_checks(main) -> void:
 	_check(fresh2.next_words() == Words.NEXT["past"], "after a death the yard does not say to pick a past: '%s'" % fresh2.next_words())
 	_check(str(fresh2.events.back()[1]).contains("point") or str(fresh2.events[-2][1]).contains("point"), "the refund was not logged")
 	main.show_room(main.BARRACKS)
+	main._barracks.selected = ""
 	main.refresh()
-	_check(main._barracks._past.text != "", "the Caravan does not show the runners before")
+	_check(main._barracks._past.visible and main._barracks._past.text != "", "the Caravan does not show the runners before")
 	_check_fit(main, "Caravan (past)")
 	# papers: enough looks find one
 	sim.hp = sim.max_hp()
@@ -988,7 +990,7 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "The medic" and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Treatment" and cv._side_tiles_c[2]["key"].text == "Clinic", "the clinic's treatment tiles are off")
+	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Heal" and cv._side_tiles_c[2]["key"].text == "The wound" and cv._side_tiles_c[3]["key"].text == "Clinic", "the clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the clinic has no YOUR MEDS head")
 	var med_kinds := {}
 	for it in sim.stash:
@@ -1660,7 +1662,7 @@ func _element_checks(main) -> void:
 			full_col = col
 	if full_col >= 0:
 		_check(is_equal_approx(bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y), "a fully taken tree's rail is not full: %.0f of %.0f" % [bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y])
-	_check(bk.SUM_Y >= bk.NODES_Y + bk.COLUMN_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk._sum_tiles[0]["key"].text == "Damage" and bk._sum_tiles[7]["key"].text == "Notables", "the sum strip is off: %s" % str(bk._sum_tiles.map(func(t): return t["key"].text + " " + t["value"].text)))
+	_check(bk.SUM_Y >= bk.NODES_Y + bk.COLUMN_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk._sum_chips._tags[0].text == "Damage" and bk._sum_chips._tags[7].text == "Notables" and bk._sum_chips.shown() == 8, "the sum strip is off: %s" % str(bk._sum_chips.text_nodes().map(func(l): return l.text)))
 	# a keystone's or a capstone's tile spans both columns of tiles; a plain node's one
 	for n in bk._rows[0]:
 		if n["button"].visible and n["id"] != "":
@@ -2298,6 +2300,7 @@ func _atlas_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(main._missions.MAP)
 	_check_fit(main, "Runs (the map, ranked)")
+	_map_screen_checks(main)
 	main._missions._reset_map()
 	_check(sim.atlas_spent() == 0 and sim.atlas_free() == sim.atlas_points, "starting the map again did not refund")
 	main._missions._pick_zone(0)
@@ -3038,6 +3041,19 @@ func _places_checks(main) -> void:
 	_check(sim.wear(0) > 0.99 and sim.site_state(0).begins_with("Picked over"), "the clear did not pick the site over: %.2f %s" % [sim.wear(0), sim.site_state(0)])
 	var picked: Dictionary = sim.effective(0)
 	_check(absf(picked["drop"] - fresh["drop"] * (1.0 - Data.WORN_DROP)) < 0.01 and absf(picked["cash"] - fresh["cash"] * (1.0 - Data.WORN_CASH)) < 0.1, "picked over did not thin the drops and cash: %.2f / %.2f against %.2f / %.2f" % [picked["drop"], picked["cash"], fresh["drop"], fresh["cash"]])
+	# another depth is another site: fresh; back at the depth it was cleared at, still picked over (7 Oct)
+	var hold_done: Array = sim.bosses_beaten.duplicate()
+	var hold_best: Array = sim.best_depth.duplicate()
+	for z in range(Data.ZONES.size()):
+		sim.bosses_beaten[z] = true
+	for k in range(Data.TIERS.size()):
+		sim.best_depth[k] = maxi(sim.best_depth[k], 1)
+	sim.set_depth(0, 2)
+	_check(sim.depth[0] == 2 and sim.wear(0) == 0.0 and sim.site_state(0) == Words.SKY["fresh"], "a depth deeper did not read fresh: %.2f %s" % [sim.wear(0), sim.site_state(0)])
+	sim.set_depth(0, 1)
+	_check(sim.wear(0) > 0.99, "back at depth 1 the site is not still picked over: %.2f" % sim.wear(0))
+	sim.bosses_beaten = hold_done
+	sim.best_depth = hold_best
 	sim.elapsed += Data.RECOVER_H * 3600.0 * 0.6
 	_check(sim.wear(0) > 0.3 and sim.wear(0) < 0.5 and sim.site_state(0).begins_with("Settling"), "the site is not settling at 60%%: %.2f %s" % [sim.wear(0), sim.site_state(0)])
 	sim.elapsed += Data.RECOVER_H * 3600.0
@@ -3130,6 +3146,7 @@ func _faces_checks(main) -> void:
 	sim.past = [{"class": "Doorman", "level": 9, "runs": 12, "end": "died in the parade"}, {"class": "Poacher", "level": 14, "runs": 30, "end": "moved on"}, {"class": "Scrapper", "level": 4, "runs": 3, "end": "died in ransacked streets"}]
 	main.show_room(main.BARRACKS)
 	main._barracks._shown = ""
+	main._barracks.selected = ""
 	main.refresh()
 	var shown := 0
 	for t in main._barracks._wall:
@@ -3673,12 +3690,15 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	boss_toasts = main._juice.lines().filter(func(l): return str(l).begins_with("The carpet man: ")).size()
 	_check(boss_toasts == 1, "toggling off and on again toasted again while the first still showed: %d" % boss_toasts)
-	# the odds read over a few refreshes with a budget, and settle; without one, all at once
+	# the odds read a few milliseconds a frame (main._read_odds, 7 Oct) and settle; a refresh never runs one;
+	# without the shell's brake, all at once
 	sim._surv_cache = {}
-	sim.odds_budget = 3
+	sim.odds_budget = main.ODDS_BUDGET
 	main.show_room(main.MISSIONS)
 	main._missions._shown = ""
+	var odds_t0 := Time.get_ticks_usec()
 	main.refresh()
+	var refresh_ms := (Time.get_ticks_usec() - odds_t0) / 1000.0
 	var open_tiers := 0
 	var settled_at_once := 0
 	for i in range(Data.TIERS.size()):
@@ -3686,17 +3706,41 @@ func _playtest_checks(main) -> void:
 			open_tiers += 1
 			if sim.odds_settled(i):
 				settled_at_once += 1
-	_check(settled_at_once < open_tiers or Data.LOOKOUT_LEVELS[sim.lookout_level]["runs"] <= 3, "a budget of three read every tier in one go")
-	for k in range(40):
-		main._missions._shown = ""
-		main.refresh()
+	_check(settled_at_once == 0, "a refresh of the Runs screen read the odds itself (%d settled)" % settled_at_once)
+	odds_t0 = Time.get_ticks_usec()
+	main._read_odds()
+	var frame_ms := (Time.get_ticks_usec() - odds_t0) / 1000.0
+	_check(frame_ms < main.ODDS_MS + 150.0, "one frame's odds took %.0f ms (the brake is %.0f ms and one dry run)" % [frame_ms, main.ODDS_MS])
+	var frames := 0
+	while frames < 2000:
+		main._read_odds()
+		frames += 1
+		var all_settled := true
+		for i in range(Data.TIERS.size()):
+			if sim.tier_open(i) and not sim.odds_settled(i):
+				all_settled = false
+		if all_settled:
+			break
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
-			_check(sim.odds_settled(i), "tier %d's odds never settled" % i)
+			_check(sim.odds_settled(i), "tier %d's odds never settled in %d frames" % [i, frames])
+	main._missions._shown = ""
+	main.refresh()
 	_check_fit(main, "Runs (odds settled)")
+	print("the odds settled in %d frames; a refresh took %.0f ms" % [frames, refresh_ms])
 	sim.odds_budget = 0
 	sim._surv_cache = {}
 	_check(sim.survival(0) >= 0.0 and sim.odds_settled(0), "without a budget the odds did not read at once")
+	# a read that is plainly settled settles early: a runner nothing can touch reads 100% after EARLY_RUNS
+	var hold_hp: float = sim.hp
+	var hold_x: float = sim.xp
+	sim.xp = Data.xp_for_level(90)
+	sim.hp = sim.max_hp()
+	sim._surv_cache = {}
+	_check(sim.survival(0) >= 0.999 and sim._surv_cache[0][2] == Data.LOOKOUT_LEVELS[sim.lookout_level]["runs"], "a level-90 runner on the first site did not read as settled 100%%: %.2f" % sim.survival(0))
+	sim.xp = hold_x
+	sim.hp = hold_hp
+	sim._surv_cache = {}
 	print("the playtest's five ok: HP, Locked, the toasts, the log line, a paper in the Lock-up; the odds settle over refreshes")
 
 
@@ -5568,6 +5612,7 @@ func _wound_checks(main) -> void:
 	_check(runner_card._title.text == "Runner" and runner_card._chips[0].visible and runner_card._chip_labels[0].text.begins_with("Wounded:"), "the Runner card does not carry the wound chip: '%s'" % runner_card._chip_labels[0].text)
 	_check_fit(main, "Yard (wounded)")
 	# the clinic: the band says so, Treat costs the wound's price by level at full HP, and clears it
+	sim.wound = "pace"                    # a wound that leaves the max HP alone: the checks below read HP against it
 	sim.hp = sim.max_hp()
 	sim.cash += 5000.0
 	var lv: int = sim.level()
@@ -5577,13 +5622,28 @@ func _wound_checks(main) -> void:
 	main._clinic._shown = ""
 	main.refresh()
 	_check(main._clinic._band.unit.text.contains("wounded"), "the clinic's band does not say wounded: '%s'" % main._clinic._band.unit.text)
-	_check(main._clinic._side_buttons[0].text.begins_with("See to the wound") and not main._clinic._side_buttons[0].disabled, "the clinic's button is off: '%s'" % main._clinic._side_buttons[0].text)
+	# the two jobs apart (Clinic-B): at full HP the wound's button is the primary, Heal reads Fit
+	_check(main._clinic._side_buttons[1].text.begins_with("The wound (") and not main._clinic._side_buttons[1].disabled, "the clinic's wound button is off: '%s'" % main._clinic._side_buttons[1].text)
+	_check(main._clinic._side_buttons[0].text == "Fit" and main._clinic._side_buttons[0].disabled, "the clinic's heal button at full HP reads '%s'" % main._clinic._side_buttons[0].text)
+	_check(main._clinic._side_buttons[0].position.x + main._clinic._side_buttons[0].size.x <= main._clinic._side_buttons[1].position.x, "the clinic's two buttons overlap")
+	_check(main._clinic._side_bar_text.text.contains("wounded"), "the clinic's bar does not name the wound: '%s'" % main._clinic._side_bar_text.text)
 	_check_fit(main, "Clinic (wounded)")
+	# hurt and wounded: heal alone costs the HP's price and leaves the wound; the wound alone costs its price and leaves the HP
+	sim.hp = sim.max_hp() * 0.5
+	main.refresh()
+	var heal_expect: int = sim.heal_cost()
+	_check(heal_expect > 0 and sim.wound_cost() == expect and sim.treat_cost() == heal_expect + expect, "the clinic's prices do not add up: heal %d, wound %d, both %d" % [heal_expect, sim.wound_cost(), sim.treat_cost()])
+	_check(main._clinic._side_buttons[0].text.begins_with("Heal (") and not main._clinic._side_buttons[0].disabled, "the clinic's heal button is off hurt: '%s'" % main._clinic._side_buttons[0].text)
 	var cash0: float = sim.cash
 	main._clinic._side_press(0)
-	_check(sim.wound == "" and is_equal_approx(cash0 - sim.cash, float(expect)) and not sim.needs_treating(), "Treat did not see to the wound: '%s', %.0f paid" % [sim.wound, cash0 - sim.cash])
+	_check(sim.hp >= sim.max_hp() - 0.5 and sim.wound != "" and is_equal_approx(cash0 - sim.cash, float(heal_expect)), "Heal did not heal alone: hp %.0f of %.0f, wound '%s', %.0f paid" % [sim.hp, sim.max_hp(), sim.wound, cash0 - sim.cash])
 	main.refresh()
-	_check(main._clinic._side_buttons[0].text == "Fit for duty", "the clinic's button after treatment: '%s'" % main._clinic._side_buttons[0].text)
+	cash0 = sim.cash
+	main._clinic._side_press(1)
+	_check(sim.wound == "" and is_equal_approx(cash0 - sim.cash, float(expect)) and not sim.needs_treating(), "The wound did not see to the wound: '%s', %.0f paid" % [sim.wound, cash0 - sim.cash])
+	main.refresh()
+	_check(main._clinic._side_buttons[0].text == "Fit for duty" and main._clinic._side_buttons[1].text == "No wound", "the clinic's buttons after treatment: '%s' / '%s'" % [main._clinic._side_buttons[0].text, main._clinic._side_buttons[1].text])
+	_check_fit(main, "Clinic (fit)")
 	# saved and loaded; gone with a dead runner
 	sim.wound = "pace"
 	var d: Dictionary = sim.to_dict()
@@ -5720,6 +5780,71 @@ func _yard_wide_checks(main) -> void:
 	_check_fit(main, "Yard (wide)")
 
 
+## The sum strip's tiles sit inside their panel (7 Oct: the strip was sized by the node tile's height, four
+## pixels short, and the tiles' feet were cut off).
+func _sum_strip_check(main) -> void:
+	var bk = main._barracks
+	var inside := Rect2(Vector2.ZERO, bk._sum.size)
+	_check(bk._sum_chips.shown() == 8, "the sum strip shows %d of its eight chips" % bk._sum_chips.shown())
+	for k in range(bk._sum_chips.shown()):
+		var pnl = bk._sum_chips._panels[k]
+		var r := Rect2(bk._sum_chips.position + pnl.position, pnl.size)
+		_check(inside.encloses(r), "a sum chip runs out of its strip: %s in %s" % [str(r), str(inside)])
+	# a node's panel: the figure as a chip, the sentence after it, apart
+	if bk.selected != "" and bk._chips.visible:
+		_check(bk._words.position.x >= bk._chips.position.x + bk._chips.used_width() and bk._words.text != "" and bk._words.text.ends_with("."), "the node's chip and sentence are off: words at %.0f, chips to %.0f, '%s'" % [bk._words.position.x, bk._chips.position.x + bk._chips.used_width(), bk._words.text])
+	_check(bk._panel.position.y >= bk._sum.position.y + bk._sum.size.y + 8, "the node panel sits on the sum strip")
+
+
+## The shell's odds, settled: frames of main._read_odds until every open tier has read (the Runs and Radio
+## screens show "reading the odds" until then).
+func _settle_odds(main) -> void:
+	for k in range(4000):
+		main._read_odds()
+		var done := true
+		for i in range(Data.TIERS.size()):
+			if main.sim.tier_open(i) and not main.sim.odds_settled(i):
+				done = false
+		if done:
+			return
+
+
+## The map in the caravan's shape (Map-A, 7 Oct): six tiles in three columns, the pips as the ranks, the taken
+## tiles lined, the sum strip, and the panel filled by a pick with a rank taken through it.
+func _map_screen_checks(main) -> void:
+	var sim = main.sim
+	var at = main._missions._atlas
+	_check(at.visible and at._tiles.size() == Data.ATLAS.size(), "the map shows %d tiles of %d" % [at._tiles.size(), Data.ATLAS.size()])
+	# every passive on a tile, in a column, inside the room; tiles apart
+	var rects: Array = []
+	for key in at._tiles:
+		var b: Button = at._tiles[key]["button"]
+		var r := Rect2(b.position, b.size)
+		_check(Rect2(Vector2.ZERO, at.size).encloses(r), "the %s tile runs out of the map: %s" % [key, str(r)])
+		for other in rects:
+			_check(not r.intersects(other), "two map tiles overlap: %s and %s" % [str(r), str(other)])
+		rects.append(r)
+		var pips: Array = at._tiles[key]["pips"]
+		var a: Dictionary = at._passive(key)
+		_check(pips.size() == int(a["max"]), "%s has %d pips for %d ranks" % [key, pips.size(), int(a["max"])])
+		var lit := 0
+		for p in pips:
+			if (p.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Pal.ACCENT:
+				lit += 1
+		_check(lit == sim.atlas_rank(key), "%s shows %d pips lit for rank %d" % [key, lit, sim.atlas_rank(key)])
+	_check(at._sum_chips.shown() == Data.ATLAS.size(), "the map's sum strip shows %d chips" % at._sum_chips.shown())
+	# a pick fills the panel; a rank through it takes; the pips follow
+	var rank0: int = sim.atlas_rank("quiet_roads")
+	sim.atlas_points += 1
+	at._pick("quiet_roads")
+	_check(at._title.text.begins_with("Quiet roads · rank %d of 3" % rank0) and at._take.visible and not at._take.disabled and at._words.text.ends_with("."), "the map's panel after a pick is off: '%s' / '%s'" % [at._title.text, at._words.text])
+	_check(at._words.position.x >= at._chips.position.x + at._chips.used_width(), "the map panel's sentence sits on its chips")
+	at._on_take()
+	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.begins_with("Quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
+	_check_fit(main, "Runs (the map, picked)")
+	sim.atlas_points -= 1                 # the point lent above goes back: the save check after counts them
+
+
 func _yard_checks(main) -> void:
 	var sim = main.sim
 	_loot_roll_checks(main)
@@ -5806,6 +5931,7 @@ func _yard_checks(main) -> void:
 	# the Radio: the words as chips, the odds as the headline
 	if sim.comms_level > 0:
 		main.show_room(main.COMMS)
+		_settle_odds(main)                  # the shell reads them a few ms a frame (7 Oct); the card shows "reading the odds" until then
 		main.refresh()
 		var site_card = null
 		for c in main._cards:

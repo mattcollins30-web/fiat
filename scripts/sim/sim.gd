@@ -52,6 +52,7 @@ var loose_kit: Array = []          # out on the estate: {item, who, from, run} -
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the caravan
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the caravan
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
+var worn_depth: Array = []         # and the depth it was cleared at: another depth is another site, fresh (Matt, 7 Oct: "depth needs to reset the site being picked over"); the worn depth stays worn until it recovers
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
 var last_next := ""                # the last "what's next" line the log carried
@@ -90,6 +91,7 @@ func _init() -> void:
 		best_depth.append(0)
 		pinned.append(false)
 		worn.append(-1.0)
+		worn_depth.append(1)
 	for z in range(Data.ZONES.size()):
 		bosses_beaten.append(false)
 		weather.append("")
@@ -964,7 +966,7 @@ func weather_of(i: int) -> String:
 
 ## How picked over a site is, 0 to 1: full on the clear, gone RECOVER_H later.
 func wear(i: int) -> float:
-	if worn[i] < 0.0:
+	if worn[i] < 0.0 or int(worn_depth[i]) != depth[i]:
 		return 0.0
 	return clampf(1.0 - (elapsed - worn[i]) / (Data.RECOVER_H * 3600.0), 0.0, 1.0)
 
@@ -2511,6 +2513,22 @@ func estimate(i: int) -> float:
 ## calls, so the Runs screen settles over a few frames rather than hanging
 ## while nine tiers read at once. The bots and the tests leave it at 0: all at once.
 var odds_budget := 0
+## The shell's other brake (7 Oct, the Runs screen's lag): no new dry run starts once `odds_time_ms` has gone
+## since `odds_frame_start()`; one always runs, so a read never stalls. 0, no brake. And a read that is
+## plainly settled settles early: EARLY_RUNS all alive with HP never under half, or all dead, reads as
+## the whole lookout's.
+var odds_time_ms := 0.0
+var _odds_t0 := 0
+const EARLY_RUNS := 8
+var _dry_min_hp := 1.0               # the last dry run's lowest HP, as a share of the max
+
+
+func odds_frame_start() -> void:
+	_odds_t0 = Time.get_ticks_usec()
+
+
+func _odds_time_up() -> bool:
+	return odds_time_ms > 0.0 and (Time.get_ticks_usec() - _odds_t0) / 1000.0 >= odds_time_ms
 
 ## What's worn, by id: a swap that moves only a resist or a rule still reads the odds again.
 func _kit_ids() -> Array:
@@ -2520,9 +2538,21 @@ func _kit_ids() -> Array:
 	return out
 
 
-func survival(i: int) -> float:
+func _odds_key(i: int) -> Array:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second
-	var key := [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+	return [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+
+
+## The odds as read so far, without running any: what a screen shows while the shell reads them a few
+## milliseconds a frame. 0 until the first dry run of a fresh read.
+func odds_now(i: int) -> float:
+	if _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i):
+		return _surv_cache[i][1]
+	return 0.0
+
+
+func survival(i: int) -> float:
+	var key := _odds_key(i)
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
 	var c: Array
 	if _surv_cache.has(i) and _surv_cache[i][0] == key:
@@ -2532,20 +2562,27 @@ func survival(i: int) -> float:
 	else:
 		var r := RandomNumberGenerator.new()
 		r.seed = hash(key) + i
-		c = [key, 0.0, 0, 0, r]              # key, odds so far, runs done, alive, the dice
+		c = [key, 0.0, 0, 0, r, 1.0]         # key, odds so far, runs done, alive, the dice, the lowest HP share seen
 		_surv_cache[i] = c
 	var to_do: int = runs - c[2] if odds_budget <= 0 else mini(odds_budget, runs - c[2])
 	for k in range(to_do):
+		if k > 0 and _odds_time_up():
+			break
 		if _dry_run(i, c[4]):
 			c[3] += 1
 		c[2] += 1
+		c[5] = minf(float(c[5]), _dry_min_hp)
+		if c[2] == EARLY_RUNS and (c[3] == EARLY_RUNS and float(c[5]) >= 0.5 or c[3] == 0):
+			c[3] = runs if c[3] > 0 else 0   # plainly settled: the rest of the lookout's runs would say the same
+			c[2] = runs
+			break
 	c[1] = float(c[3]) / maxf(1.0, c[2])
 	return c[1]
 
 
 ## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).
 func odds_settled(i: int) -> bool:
-	return _surv_cache.has(i) and _surv_cache[i][2] >= int(Data.LOOKOUT_LEVELS[lookout_level]["runs"])
+	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= int(Data.LOOKOUT_LEVELS[lookout_level]["runs"])
 
 
 ## The fight alone, run through the real fight code on a scratch mission with
@@ -2577,8 +2614,10 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_dry_memo = {}
 	_dry_on = true
 	var guard := 0
+	_dry_min_hp = 1.0
 	while guard < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
 		_tick(DRY_STEP)
+		_dry_min_hp = minf(_dry_min_hp, hp / maxf(max_hp(), 1.0))
 		if hp < max_hp() * BAIL:
 			m["dead"] = true                 # a quarter left is where anyone sensible gets out: that run's lost too
 		if m.get("dead", false):
@@ -3281,6 +3320,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		return
 	_wearing_off(m)
 	worn[m["tier"]] = elapsed
+	worn_depth[m["tier"]] = depth[m["tier"]]
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (2.0 if has_node("stand") else 1.0)
 	m["xp"] += bonus
 	var before := level()
@@ -4149,13 +4189,53 @@ func upgrade_kennel() -> bool:
 
 
 ## The HP back, and the wound seen to: WOUND_CASH a level, the clinic's discount on both.
+## The clinic's two jobs, priced apart (Matt, 7 Oct: "heal my HP and treat the wound separately"): the HP back
+## at TREAT_CASH_PER_HP a point, the wound at WOUND_CASH a level; the clinic's discount on both.
+func _treat_rate() -> float:
+	return inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)
+
+
+func heal_cost() -> int:
+	return int(ceil(maxf(0.0, max_hp() - hp) * Data.TREAT_CASH_PER_HP * _treat_rate()))
+
+
+func wound_cost() -> int:
+	return int(ceil(Data.WOUND_CASH * level() * _treat_rate())) if wound != "" else 0
+
+
+## Both at once: what the bot pays, and the old button.
 func treat_cost() -> int:
-	var wound_cash: float = Data.WOUND_CASH * level() if wound != "" else 0.0
-	return int(ceil(((max_hp() - hp) * Data.TREAT_CASH_PER_HP + wound_cash) * inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)))
+	return heal_cost() + wound_cost()
 
 
 func needs_treating() -> bool:
 	return hp < max_hp() or wound != ""
+
+
+func can_heal() -> bool:
+	return mission == null and hp < max_hp() - 0.5 and cash >= heal_cost()
+
+
+func can_treat_wound() -> bool:
+	return mission == null and wound != "" and cash >= wound_cost()
+
+
+func heal() -> bool:
+	if not can_heal():
+		return false
+	cash -= heal_cost()
+	hp = max_hp()
+	return true
+
+
+func treat_wound() -> bool:
+	if not can_treat_wound():
+		return false
+	cash -= wound_cost()
+	log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
+	wound = ""
+	_dry_memo.clear()
+	return true
 
 
 func treat() -> bool:
@@ -4201,7 +4281,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -4276,6 +4356,12 @@ func load_dict(d: Dictionary) -> void:
 	if d.has("worn"):
 		for i in range(mini(worn.size(), d["worn"].size())):
 			worn[i] = float(d["worn"][i])
+	if d.has("worn_depth"):
+		for i in range(mini(worn_depth.size(), d["worn_depth"].size())):
+			worn_depth[i] = int(d["worn_depth"][i])
+	else:
+		for i in range(worn_depth.size()):
+			worn_depth[i] = depth[i] if i < depth.size() else 1     # a save from before: the worn site is the depth it stands at
 	if d.has("weather"):
 		for z in range(mini(weather.size(), d["weather"].size())):
 			weather[z] = str(d["weather"][z])

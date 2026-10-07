@@ -16,6 +16,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Band := preload("res://scripts/ui/band.gd")
+const Chips := preload("res://scripts/ui/chips.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
@@ -35,7 +36,8 @@ const TILE_W := (COL_W - RAIL_W - NODE_GAP) / 2
 const TILE_ROWS := 7                                           # the yard's twelve nodes two across, and the capstone under
 const COLUMN_H := TILE_ROWS * (TILE_H + NODE_GAP) - NODE_GAP   # what a tree takes: a drawer page fits in it too (400)
 const SUM_Y := NODES_Y + COLUMN_H + 12                         # what the trees add up to
-const SUM_H := UI.HEAD_H + 4 + TILE_H + 10
+const SUM_H := 10 + Chips.CHIP_H + 10                            # one line: the head at the left, the eight sums as chips (Caravan-E, 7 Oct; the tiles before were cut at the foot)
+const SUM_HEAD_W := 150
 const PANEL_Y := SUM_Y + SUM_H + 12
 const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
@@ -52,7 +54,8 @@ const TICKS := 5
 var _band: Band
 var _sum: Panel                    # what the small nodes add up to, under the trees
 var _sum_head: Label
-var _sum_tiles: Array = []
+var _sum_chips: Chips              # the eight sums, key-value chips, muted at zero
+var _chips: Chips                  # the node's figure as a chip, and its type
 var _shown_trees := ""
 var _panel: Panel
 var _face: TextureRect             # the class's portrait, in the band, when there is one
@@ -134,10 +137,16 @@ func _init() -> void:
 		_rows.append(col)
 	# what the trees add up to: the small nodes' figures, summed
 	_sum = UI.panel(self, Rect2(0, SUM_Y, Pal.GRID_W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_sum_head = UI.head(_sum, Rect2(PAD, 6, Pal.GRID_W - 2 * PAD, UI.HEAD_H), "What the trees add up to · the small nodes, summed")
-	_sum_tiles = UI.tile_row(_sum, PAD, 6 + UI.HEAD_H + 4, Pal.GRID_W - 2 * PAD, 8)
+	_sum_head = UI.head(_sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
+	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_sum_chips = Chips.new(Pal.GRID_W - 2 * PAD - SUM_HEAD_W - 10, 8)
+	_sum_chips.position = Vector2(PAD + SUM_HEAD_W + 10, 10)
+	_sum.add_child(_sum_chips)
 	_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_title = UI.label(_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_chips = Chips.new(600)
+	_chips.position = Vector2(PAD, 47)
+	_panel.add_child(_chips)
 	_words = UI.label(_panel, Rect2(PAD, 46, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_scope = UI.label(_panel, Rect2(PAD, 74, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_past = UI.label(_panel, Rect2(PAD, 108, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -174,29 +183,49 @@ const EFFECT_WORDS := {
 	"dot_pct": "+%d%% dots",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
-## The panel's fuller words for a plain node, where the row's short form isn't enough.
+## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
 const PANEL_WORDS := {
-	"damage_pct": "+%d%% damage, whatever's in hand", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity: more comes out of every search",
-	"search_pct": "Searches go %d%% faster", "first_pct": "Your first shot on every gang does %d%% more", "patrol_pct": "Gangs come %d%% later",
-	"armour_pct": "+%d%% armour", "heal_pct": "Meds heal %d%% more", "med_speed_pct": "Meds work %d%% quicker", "med_cap": "+%d pouch on the rig",
-	"rest_pct": "Resting at the yard heals %d%% faster", "treat_pct": "The clinic's treatment costs %d%% less", "att_share": "Gun parts count %d%% more",
-	"sell_pct": "The fence pays %d%% more for what you sell", "cash_pct": "+%d%% cash on every run's take", "rarity": "+%d%% loot quality: rarer finds",
-	"pace_pct": "+%d%% pace: the fight and the search, quicker", "damage_low_pct": "+%d%% damage while under half HP",
-	"conv_fire_pct": "%d%% of your damage dealt as fire", "conv_frost_pct": "%d%% of your damage dealt as frost", "conv_poison_pct": "%d%% of your damage dealt as poison",
-	"conv_shock_pct": "%d%% of your damage dealt as shock", "conv_bleed_pct": "%d%% of your damage dealt as bleed",
-	"fire_pct": "+%d%% fire damage", "frost_pct": "+%d%% frost damage", "poison_pct": "+%d%% poison damage", "shock_pct": "+%d%% shock damage",
-	"bleed_pct": "+%d%% bleed damage", "physical_pct": "+%d%% physical damage", "dot_pct": "+%d%% to burns, poison and bleeds",
+	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More to lose before a bail-out.", "loot_pct": "Every search turns up a little more.",
+	"search_pct": "The picking-over goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
+	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
+	"rest_pct": "Resting at the yard heals faster.", "treat_pct": "The clinic charges less.", "att_share": "Gun parts count for more.",
+	"sell_pct": "The fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
+	"pace_pct": "The fight and the search go quicker.", "damage_low_pct": "Under half HP, every shot hits harder.",
+	"conv_fire_pct": "A share of every hit lands as fire and keeps burning.", "conv_frost_pct": "A share of every hit lands as frost and slows them.", "conv_poison_pct": "A share of every hit lands as poison and keeps working.",
+	"conv_shock_pct": "A share of every hit lands as shock.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",
+	"fire_pct": "Fire hits harder.", "frost_pct": "Frost hits harder.", "poison_pct": "Poison hits harder.", "shock_pct": "Shock hits harder.",
+	"bleed_pct": "Bleed hits harder.", "physical_pct": "Plain shot hits harder.", "dot_pct": "Burns, poison and bleeds all do more.",
 }
+## The chip's tone for a node's figure: an element's colour for its damage or conversion, the accent for a
+## notable, keystone or capstone, green for a plain bonus.
+static func _effect_tone(nd: Dictionary) -> Color:
+	if nd.get("capstone", false) or nd.get("keystone", false) or nd.get("notable", false):
+		return Pal.ACCENT
+	var e: String = str(nd.get("effect", ""))
+	for el in Pal.ELEMENT_COLOURS:
+		if e.begins_with("conv_" + el) or e.begins_with(el + "_pct"):
+			return Pal.ELEMENT_COLOURS[el]
+	return Pal.GOOD
 
 
-## The panel's words for a plain node: the fuller form, "with rifles" when typed.
-static func _panel_words(nd: Dictionary) -> String:
-	if not PANEL_WORDS.has(nd["effect"]):
-		return _effect_words(nd)
-	var w: String = PANEL_WORDS[nd["effect"]] % nd.get("value", 0)
-	if nd.has("type"):
-		w += ", with %s" % TYPE_WORDS[nd["type"]]
-	return w
+## The sentence under a node: its own words for a notable, keystone or capstone; the effect's for a plain one.
+static func _sentence(nd: Dictionary) -> String:
+	if nd.has("words"):
+		var w: String = str(nd["words"])
+		return w if w.ends_with(".") or w.ends_with("!") else w + "."
+	return str(PANEL_WORDS.get(nd["effect"], ""))
+
+
+## The panel's chip: a notable with a figure shows the figure (Rifleman: "First shot +100%"); a keystone or
+## capstone its kind; a plain node its figure.
+static func _chip_words(nd: Dictionary) -> String:
+	if nd.get("capstone", false):
+		return "Capstone"
+	if nd.get("keystone", false):
+		return "Keystone"
+	if EFFECT_WORDS.has(nd.get("effect", "")) and nd.has("value"):
+		return EFFECT_WORDS[nd["effect"]] % nd.get("value", 0)
+	return "Notable"
 
 
 static func _effect_words(nd: Dictionary) -> String:
@@ -442,16 +471,19 @@ func _show_sum(cols: Array) -> void:
 	var figures := [
 		["Damage", "+%.0f%%" % sums.get("damage_pct", 0.0)], ["Max HP", "+%.0f" % sums.get("hp", 0.0)], ["First shot", "+%.0f%%" % sums.get("first_pct", 0.0)],
 		["Search", "%.0f%% faster" % sums.get("search_pct", 0.0)], ["Gangs", "%.0f%% later" % sums.get("patrol_pct", 0.0)],
-		["Loot quality", "+%.0f%%" % sums.get("rarity", 0.0)], ["Loot quantity", "+%.0f%%" % sums.get("loot_pct", 0.0)],
-		["Notables", "%d taken · %d open" % [notables_taken, notables_open], "%d of %d" % [notables_taken, notables_taken + notables_open]],
+		["Quality", "+%.0f%%" % sums.get("rarity", 0.0)], ["Quantity", "+%.0f%%" % sums.get("loot_pct", 0.0)],
+		["Notables", "%d of %d" % [notables_taken, notables_taken + notables_open]],
 	]
-	for k in range(_sum_tiles.size()):
-		var zero: bool = figures[k][1].begins_with("+0") or figures[k][1].begins_with("0%")
-		UI.set_tile(_sum_tiles[k], figures[k][0], figures[k].slice(1), Pal.TEXT_3 if zero else Pal.TEXT)
+	var items := []
+	for f in figures:
+		var zero: bool = f[1].begins_with("+0") or f[1].begins_with("0%")
+		items.append({"tag": f[0], "forms": [f[1]], "colour": Pal.ACCENT if f[0] == "Notables" else (Pal.TEXT_2 if zero else Pal.GOOD)})
+	_sum_chips.show_chips(items)
 
 
 func _show_panel() -> void:
 	_train.visible = false
+	_chips.visible = false
 	for l in [_title, _words, _scope]:
 		l.position.x = PAD
 		l.size.x = Pal.GRID_W - 2 * PAD
@@ -475,19 +507,23 @@ func _show_panel() -> void:
 			_show_panel()
 			return
 		_title.text = nd["name"] + (" · capstone" if nd.get("capstone", false) else (" · keystone" if nd.get("keystone", false) else (" · notable" if nd.get("notable", false) else "")))
-		UI.fit(_words, [nd["words"] if nd.has("words") else _panel_words(nd), _effect_words(nd)])
-		# whose it is: the yard's tree and the elements' stay through every runner; a class's goes with them
+		# the figure as a chip in its tone, the type as a muted one, and one sentence after them (Caravan-E)
+		var items := [{"forms": [_chip_words(nd)], "colour": _effect_tone(nd)}]
+		if nd.has("type"):
+			items.append({"forms": [TYPE_WORDS[nd["type"]]], "colour": Pal.TEXT_2})
+		_chips.visible = true
+		_chips.show_chips(items)
+		_words.position.x = PAD + _chips.used_width() + 10
+		_words.size.x = Pal.GRID_W - PAD - _words.position.x
+		UI.fit(_words, [_sentence(nd), ""])
+		# the capstone's wants; whose the node is went (Matt, 7 Oct: the same two lines under every node, useless)
 		var branch: String = str(selected).get_slice("/", 0)
-		var yards: bool = branch == Data.COMMON_TREE
 		if nd.get("capstone", false) and not sim.tree.has(selected):
 			var has_key: bool = Data.tree_named(branch)["nodes"].any(func(x): return x.get("keystone", false))
 			if has_key:
 				UI.fit(_scope, ["The capstone: wants the keystone and every notable of the tree, and a quarter of the tree's points again", "Wants the keystone and every notable first", "Wants the whole tree first"])
 			else:
 				UI.fit(_scope, ["The capstone: wants every notable of the tree, and a quarter of the tree's points again", "Wants every notable first", "Wants the whole tree first"])
-		else:
-			UI.fit(_scope, ["The yard's: trained once, kept through every runner" if yards else "The runner's: goes with them when they go; a new past starts it over",
-				"The yard's: kept through every runner" if yards else "The runner's: goes with them"])
 		if sim.tree.has(selected):
 			_title.text += " · trained" if sim._active(nd) else " · trained, idle without the gun for it"
 		else:
@@ -519,9 +555,14 @@ func _show_panel() -> void:
 	if _train.visible:
 		x -= 12 + _train.size.x
 		_train.position.x = x
-	# the runners before, in what's left beside the buttons
+	# the runners before, in what's left beside the buttons: on the class's panel, not under a node
 	_past.size.x = x - 12 - _past.position.x
-	_show_past()
+	_past.visible = selected == ""
+	if selected == "":
+		_show_past()
+	else:
+		for t in _wall:
+			t.visible = false
 
 
 # ------------------------------------------------------------------ acting
@@ -777,9 +818,10 @@ func _on_respec() -> void:
 ## For the tests: every label with text.
 func text_nodes() -> Array:
 	var out: Array = [_title, _words, _scope, _past, _respec, _sum_head]
+	if _chips.visible:
+		out.append_array(_chips.text_nodes())
+	out.append_array(_sum_chips.text_nodes())
 	out.append_array(_band.text_nodes())
-	for t in _sum_tiles:
-		out.append_array([t["key"], t["value"]])
 	for r in _rails:
 		if r["track"].visible:
 			out.append_array([r["top"], r["bottom"]])

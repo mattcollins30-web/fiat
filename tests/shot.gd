@@ -84,6 +84,29 @@ func _next() -> void:
 			m["my_dots"] = {"poison": main.sim.max_hp() * 0.08, "bleed": main.sim.max_hp() * 0.12}
 			main.sim.hp = main.sim.max_hp() * 0.6
 		main.show_room(main.MISSIONS)
+	elif r == "map":
+		main.show_room(main.MISSIONS)
+		main._missions.zone = main._missions.MAP
+		main._missions._shown = ""
+		main.refresh()
+		if main.sim.atlas_points < 3:
+			main.sim.atlas_points = 5
+			main.sim.rank_atlas("deeper_pockets")
+			main.sim.rank_atlas("deeper_pockets")
+			main.sim.rank_atlas("picked_over")
+		main._missions._atlas._pick("deeper_pockets")
+		main.refresh()
+	elif r == "node":
+		# the Caravan with a notable picked: the chip and the sentence
+		main.show_room(main.BARRACKS)
+		main.refresh()
+		var picked := ""
+		for t in main.sim.trees():
+			for i in range(t["nodes"].size()):
+				if t["nodes"][i].get("notable", false) and picked == "":
+					picked = "%s/%d" % [t["name"], i]
+		if picked != "":
+			main._barracks._pick(picked)
 	elif r == "pick":
 		# the Lock-up with the stash's best-affixed piece picked
 		main.show_room(main.ARMOURY)

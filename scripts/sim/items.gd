@@ -128,11 +128,17 @@ static func base_named(slot: String, name: String) -> Dictionary:
 	return {}
 
 
+static var _base_index := {}      # slot -> name -> base: the tables are read a few hundred times a tick in a dry run (7 Oct, the Runs screen's lag)
+
+
 static func base_of(it: Dictionary) -> Dictionary:
-	for b in (Data.ATTACHMENTS if it["slot"] == Data.ATTACHMENT else Data.BASES[it["slot"]]):
-		if b["name"] == it["base"]:
-			return b
-	return {}
+	var slot: String = it["slot"]
+	var by_name: Dictionary = _base_index.get(slot, {})
+	if by_name.is_empty():
+		for b in (Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]):
+			by_name[b["name"]] = b
+		_base_index[slot] = by_name
+	return by_name.get(it["base"], {})
 
 
 ## The item's footprint, W x H in cells: the base's own, or its slot's default.

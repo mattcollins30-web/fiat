@@ -2100,6 +2100,73 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The map in the caravan's shape (7 Oct)
+
+Matt, reaching the map for the first time: "needs to look similar to the caravan for point selection - it
+looks out of place against everything else." It was a list, a row a passive with a button each. Mocked as
+Map-A and built as `scripts/ui/atlas.gd`, in the Runs room where the columns stand: a band (the points
+free as the headline, what earns one at the right, the zones' depths as chips; 170 tall so the chips sit
+under the headline), the six passives as tiles in three columns by what they touch - the sites (Picked
+over, Deeper pockets, Quiet roads), the crews (Paid in notes, Two of everything), the air (Word travels)
+- each with its ranks as pips, lined in the accent once a rank is taken, the column head counting its
+ranks; the sum strip as chips (own finds, notes, heads, searches, the word, gangs; muted where nothing is
+taken); and the panel: the pick's name and rank, its figure as a chip with the next rank's beside it,
+one sentence (`FIGURES` in atlas.gd), Take a rank and Start the map again at the right. Picking a tile
+fills the panel; the per-row buttons went. `tests/shot.gd` has a `map` mode. Smoke: six tiles inside
+the room and apart, the pips a passive's max and lit to its rank, the six sum chips, a pick fills the
+panel and a rank through it takes.
+
+## The Runs screen's lag, and a depth as a fresh site (7 Oct)
+
+Matt: "there's still lag on run selection when odds are calculated - enough to annoy me ... now I'm
+selecting depth it's really noticeable." On his save a dry run cost 20-90 ms (T8 at depth 1: 92 ms), and
+the Runs screen ran three a tier for nine tiers every 0.1 s refresh: half a second of stall a refresh,
+and a depth change re-read its tier the same way. Three things: `Items.base_of` was a scan of the base
+table and is called a few hundred times a tick - an index by slot and name halves a dry run; a read
+that is plainly settled settles early (`EARLY_RUNS` 8 all alive with HP never under half, or all dead,
+reads as the lookout's full count - the safe tiers, most of them, read in a third of the time); and
+the shell reads the odds a few milliseconds a frame rather than a count a refresh (`main._read_odds`
+from `_process`, `ODDS_MS` 5, the zone on screen first, then the rest; `sim.odds_time_ms` and
+`odds_frame_start` are the brake: no new dry run starts past it, one always runs). The screens show
+`odds_now` (the read so far, never running one) and say "reading the odds" until a tier settles; the
+radio reads the same way. Smoke: a refresh settles nothing itself, one frame's odds take under the
+brake plus a dry run, every tier settles, and a level-90 runner on the first site reads a settled 100%.
+
+Matt: "depth needs to reset the site being picked over - otherwise where's the incentive." A site's
+wear is kept with the depth it was cleared at (`worn_depth`, saved; an older save takes the depth it
+stands at): another depth is another site, fresh; back at the worn depth it is still picked over until
+it recovers, so flipping depth is no way round the wear. Smoke: a depth deeper reads fresh, back at
+depth 1 still picked over.
+
+## The clinic's two jobs; the caravan's sum as chips, a node as a chip and a sentence (7 Oct)
+
+Matt, from the first play of the morning: "I should be able to heal my HP and treat the wound separately -
+two separate buttons"; the sum strip's tiles clipped; "the two lines under what the skill point does are
+repeated on every single skill point and are completely useless"; the node words need a language pass and
+"the stats can be better displayed in the chip style across the board". Mocked as Clinic-B and Caravan-E;
+built as mocked.
+
+*The clinic.* Treatment is two jobs priced apart: `heal_cost` (the HP back at TREAT_CASH_PER_HP a point),
+`wound_cost` (WOUND_CASH a level), the clinic's discount on both; `heal()`, `treat_wound()`, `can_heal`,
+`can_treat_wound`; `treat()` and `treat_cost()` stay as both (the bot, the old tests). Four tiles (Resting,
+Heal, The wound, Clinic) and two buttons side by side under them: Heal and The wound, each with its price,
+the one that applies the primary, the other reading what it is (Fit, Fit for duty, No wound, The runner is
+out); the bar names the wound. Smoke: at full HP the wound's button is the primary and Heal reads Fit; hurt
+and wounded the prices add up to the old one, Heal heals alone and leaves the wound, The wound clears it
+alone; the two buttons apart; the bar's words.
+
+*The caravan.* The sum strip is one line - "Add up to" and eight key-value chips (`Chips` takes a count
+now; the key as the chip's small tag, green, muted at zero, the notables in the accent) - 46 px tall where
+the tiles took 100 and were cut off at the foot. The node panel: the node's figure as a chip in its tone
+(`_chip_words`: a plain node's figure, a notable's figure where it has one, Keystone, Capstone;
+`_effect_tone`: an element's colour for its damage or conversion, the accent for the notables, green
+otherwise), the type as a muted chip, and one sentence after them (`_sentence`: the node's own words, or
+`PANEL_WORDS`, rewritten as what happens rather than the figure again: "The fight and the search go
+quicker."). The capstone's wants line stays. The notables' words that restated their chip were rewritten
+in `data.gd` (the five conversions, Rifleman, Shotgunner, Spray, Bodger, Through the lot, Night work);
+every other notable's words already said what happens. `tests/shot.gd` has a `node` mode. Smoke: the
+eight chips shown and inside the strip, the node's sentence after its chips and ending in a full stop.
+
 ## The Yard, again: the works on one card, and the rail says so (7 Oct)
 
 Matt: "the character stats are good but there's a whole load of cards there that either duplicate info or just

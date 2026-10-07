@@ -26,12 +26,14 @@ var _tags: Array[Label] = []
 var _tails: Array[Label] = []
 var _shown := 0
 var _rows_used := 1
+var _n := MAX                      # chips this row can hold (the Caravan's sum wants eight)
 
 
-func _init(w: float) -> void:
+func _init(w: float, n := MAX) -> void:
+	_n = n
 	size = Vector2(w, CHIP_H)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for k in range(MAX):
+	for k in range(_n):
 		var p := UI.panel(self, Rect2(0, 0, 10, CHIP_H), UI.box(Pal.BUTTON, 6))
 		p.visible = false
 		_panels.append(p)
@@ -65,7 +67,7 @@ func show_chips(items: Array, rows := 1) -> void:
 	var row := 0
 	_shown = 0
 	_rows_used = 1
-	for k in range(MAX):
+	for k in range(_n):
 		var on: bool = k < items.size()
 		_panels[k].visible = on
 		if not on:
@@ -77,7 +79,7 @@ func show_chips(items: Array, rows := 1) -> void:
 			x = 0.0
 			w = _lay(k, d, size.x)
 		if w > size.x - x:
-			for j in range(k, MAX):
+			for j in range(k, _n):
 				_panels[j].visible = false
 			break
 		_panels[k].position = Vector2(x, row * (CHIP_H + ROW_GAP))
@@ -91,7 +93,7 @@ func show_chips(items: Array, rows := 1) -> void:
 ## beside it; `rows` at most, the rest dropped from the end.
 func show_rows(items: Array, rows := MAX) -> void:
 	_shown = 0
-	for k in range(MAX):
+	for k in range(_n):
 		var on: bool = k < items.size() and k < rows
 		_panels[k].visible = on
 		if not on:
@@ -146,6 +148,16 @@ func _lay(k: int, d: Dictionary, room: float) -> float:
 	tl.size.x = maxf(1.0, ceilf(UI.text_width(tl, tl.text)))
 	_panels[k].size = Vector2(w, CHIP_H)
 	return w
+
+
+## The width the chips showing take, to lay something after them.
+func used_width() -> float:
+	if _shown == 0:
+		return 0.0
+	var right := 0.0
+	for k in range(_shown):
+		right = maxf(right, _panels[k].position.x + _panels[k].size.x)
+	return right
 
 
 ## How many chips are showing.

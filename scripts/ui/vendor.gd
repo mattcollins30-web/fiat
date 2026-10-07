@@ -75,7 +75,7 @@ var _said: Array[Label] = []       # what they said: one line under the band
 var _heads: Array[Label] = []      # the section heads under the band
 var _side_tiles: Array = []        # the fence's tile buttons: {button, key, value}
 var _med_tiles: Array = []         # the clinic's: your meds by kind
-var _side_tiles_c: Array = []      # the clinic's figures: resting, treatment, the clinic's level
+var _side_tiles_c: Array = []      # the clinic's figures: resting, heal, the wound, the clinic's level
 var _visits := 0
 var _said_n := 0
 var _line := ""
@@ -188,17 +188,17 @@ func _init() -> void:
 	_side_track = UI.panel(_side, Rect2(PAD, TOP + UI.HEAD_H + 2, INNER, 24), UI.box(Pal.BG, 6))
 	_side_fill = UI.panel(_side_track, Rect2(0, 0, 0, 24), UI.box(Pal.GOOD, 6))
 	_side_bar_text = UI.label(_side_track, Rect2(0, 0, INNER, 24), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	_side_tiles_c = UI.tile_row(_side, PAD, TOP + UI.HEAD_H + 2 + 24 + 6, INNER, 3)
+	_side_tiles_c = UI.tile_row(_side, PAD, TOP + UI.HEAD_H + 2 + 24 + 6, INNER, 4)
 	_med_tiles = UI.tile_row(_side, PAD, 0, INNER, 2) + UI.tile_row(_side, PAD, 0, INNER, 2)
 	for t in _side_tiles_c + _med_tiles:
 		t["panel"].visible = false
-	for i in range(2):
+	for i in range(3):
 		var b := UI.button(_side, Rect2(PAD, 0, INNER, 48), false)
 		b.add_theme_font_size_override("font_size", 22)
 		b.pressed.connect(_side_press.bind(i))
 		b.visible = false
 		_side_buttons.append(b)
-	for i in range(SIDE_TILES + 2):
+	for i in range(SIDE_TILES + 3):
 		_side_actions.append(Callable())
 	# the fence: tile-shaped buttons, five rarities then the boxes and the bigger shelf
 	for i in range(SIDE_TILES):
@@ -281,9 +281,9 @@ func show_state(s) -> void:
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 		for t in _side_tiles_c:
-			if t["panel"].visible and t["key"].text == "Treatment":
-				var full_now: bool = sim.hp >= sim.max_hp() - 0.5 and sim.wound == ""
-				UI.set_tile(t, "Treatment", ["not needed" if full_now else Fmt.money(sim.treat_cost())], Pal.TEXT_2 if full_now else Pal.TEXT)
+			if t["panel"].visible and t["key"].text == "Heal":
+				var hurt_now: bool = sim.hp < sim.max_hp() - 0.5
+				UI.set_tile(t, "Heal", [Fmt.money(sim.heal_cost())] if hurt_now else ["not needed", "fit"], Pal.TEXT if hurt_now else Pal.TEXT_2)
 	var sig := _signature()
 	if sig == _shown:
 		return
@@ -470,14 +470,15 @@ func _show_treatment() -> void:
 	var fill: float = clampf(sim.hp / sim.max_hp(), 0.0, 1.0)
 	_side_fill.size.x = roundf(INNER * fill)
 	(_side_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if fill > 0.5 else Pal.WARN
-	_side_bar_text.text = "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
+	UI.fit(_side_bar_text, ["Your HP %d / %d · %s" % [sim.hp_shown(), sim.max_hp_shown(), state] if sim.wound != "" else "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]])
 	_side_track.visible = true
 
 
-func _side_button(i: int, y: float, text: String, action: Callable, enabled: bool, tone := "", primary := false) -> void:
+func _side_button(i: int, y: float, text: String, action: Callable, enabled: bool, tone := "", primary := false, x := float(PAD), w := float(INNER)) -> void:
 	var b := _side_buttons[i]
 	b.visible = true
-	b.position.y = y
+	b.position = Vector2(x, y)
+	b.size.x = w
 	b.text = text
 	b.disabled = not enabled
 	UI.style_button(b, primary, tone)
@@ -521,19 +522,26 @@ func _show_side() -> void:
 		var y: float = TOP + UI.HEAD_H + 2 + 24 + 6
 		for t in _side_tiles_c:
 			t["panel"].visible = true
+		var hurt: bool = sim.hp < sim.max_hp() - 0.5
 		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
-		UI.set_tile(_side_tiles_c[1], "Treatment", ["not needed" if full else Fmt.money(sim.treat_cost())], Pal.TEXT_2 if full else Pal.TEXT)
+		UI.set_tile(_side_tiles_c[1], "Heal", [Fmt.money(sim.heal_cost())] if hurt else ["not needed", "fit"], Pal.TEXT if hurt else Pal.TEXT_2)
+		UI.set_tile(_side_tiles_c[2], "The wound", [Fmt.money(sim.wound_cost()) if sim.wound != "" else "none"], Pal.TEXT if sim.wound != "" else Pal.TEXT_2)
 		if sim.medic_cost() > 0:
-			UI.set_tile(_side_tiles_c[2], "Clinic", ["level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "level %d" % sim.medic_level])
+			UI.set_tile(_side_tiles_c[3], "Clinic", ["level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "level %d" % sim.medic_level])
 		else:
-			UI.set_tile(_side_tiles_c[2], "Clinic", ["fully kitted", "level %d" % sim.medic_level], Pal.GOOD)
+			UI.set_tile(_side_tiles_c[3], "Clinic", ["fully kitted", "level %d" % sim.medic_level], Pal.GOOD)
 		y += UI.TILE_H + 10
-		_side_button(0, y, "Fit for duty" if full else ("The runner is out" if sim.on_mission() else (("See to the wound (%s)" if sim.hp >= sim.max_hp() - 0.5 else "Treat (%s)") % Fmt.money(sim.treat_cost()))),
-			sim.treat, not full and not sim.on_mission() and sim.cash >= sim.treat_cost(), "", not full)
+		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
+		var half: float = (INNER - 10) / 2.0
+		var out: bool = sim.on_mission()
+		_side_button(0, y, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Fit"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
+		_side_button(1, y, "The runner is out" if out else ("The wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
+		if full and not out:
+			_side_buttons[0].text = "Fit for duty"
 		y += 48 + 8
 		if sim.medic_cost() > 0:
 			var nxt: Dictionary = Data.MEDIC_LEVELS[sim.medic_level + 1]
-			_side_button(1, y, "Upgrade (%s): +%.1f HP/s, %d meds" % [Fmt.money(sim.medic_cost()), nxt["rest"], nxt["stock"]], sim.upgrade_medic, sim.can_upgrade_medic())
+			_side_button(2, y, "Upgrade (%s): +%.1f HP/s, %d meds" % [Fmt.money(sim.medic_cost()), nxt["rest"], nxt["stock"]], sim.upgrade_medic, sim.can_upgrade_medic())
 			y += 48 + 8
 		# your meds, by kind: what each heals for you, and how many there are
 		y += 8
@@ -816,12 +824,13 @@ func _show_said() -> void:
 
 func _side_press(i: int) -> void:
 	var was_hp: float = sim.hp
+	var was_wound: String = sim.wound
 	var was_level: int = sim.medic_level + sim.market_level
 	var was_n: int = sim.stash.size()
 	if _side_actions[i].is_valid():
 		_side_actions[i].call()
-	if kind == "clinic" and sim.hp > was_hp:
-		_says("fit" if sim.hp >= sim.max_hp() else "treated")
+	if kind == "clinic" and (sim.hp > was_hp or (was_wound != "" and sim.wound == "")):
+		_says("fit" if sim.hp >= sim.max_hp() and sim.wound == "" else "treated")
 	elif sim.medic_level + sim.market_level > was_level:
 		_says("shelf")
 	elif sim.stash.size() < was_n:
