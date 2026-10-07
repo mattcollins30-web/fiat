@@ -348,15 +348,15 @@ weights or the gate's figure move in the pass.
 | --- | --- | --- |
 | The bank's band | time to the bank, six builds | slowest within 1.5× the fastest |
 | The keystone | hour each build takes its keystone | by hour 2, every build |
-| The capstone | hour each build takes its capstone | by hour 4, every build |
-| No reds | the odds reader at every open tier at depth 1, in the kit at the end | no tier under 60% |
+| The capstone | hour each build takes its capstone | by hour 5, every build (4 until the tenth read: with the bot playing to Matt's risk four builds took it at 4.0–4.7 h) |
+| No reds | the odds reader at every tier held (up to the best cleared) at depth 1, in the kit at the end, armed and whole, the site's words off | no tier under 60% |
 | Loot quality visible | Legendary share at +35% quality | at least 2.0% (0.8% unboosted) |
 | Quantity honest | finds a search at +25% quantity | 1.25 ± 0.05 |
 | Cash sink | cash in hand at the end, in hours of the build's takings | no more than two hours' takings (was 3× the top bench: the wrong shape for a ladder that pays by depth) |
 | Depth pace | depths cleared an hour on the grind site, hour 4 to 8 | at least one |
-| Deaths | the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on) | one every 1 to 4 hours; Matt's save read one death every 1.9 h |
+| Deaths | the bot's bail-outs under a quarter HP, one run in N (the runs that kill a player who pushes on) | one run in 10 to 30; Matt's save read one death in seventeen runs (seven in 116) |
 | Wounds | share of runs ending wounded, the bot at its threshold | 10–25% |
-| Scrap economy | scrap in hand against the dearest craft, hour 4 | between one and three crafts' worth |
+| Scrap economy | scrap earned an hour, in the dearest craft's worth | between half a craft and four an hour (the builds that run most search most: an eightfold spread between a melee Doorman and a fire Drifter) |
 
 **On the list for the pass, to discuss before it starts (Matt, 6 Oct):** rarity as quality in itself. Today
 a rarity is only its affix count (Uncommon one, Rare two, Elite three) and its fence value; the base figures

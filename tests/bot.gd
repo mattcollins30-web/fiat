@@ -8,8 +8,8 @@ extends RefCounted
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
-const PUSH := 0.85             # the pass (6 Oct): at 0.75 the bot bailed under a quarter every 0.5-0.8 h on the pushy builds against Matt's one death every 1.9 h
-const CLIMB := 0.92
+const PUSH := 0.88             # the pass (6-7 Oct): at 0.75 the bot bailed under a quarter one run in four, at 0.85 one in eight, at 0.9 one in 33-47 on four builds, against Matt's one in seventeen
+const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four builds
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
@@ -190,6 +190,14 @@ func _gamble_one(sim) -> void:
 	want.append_array(["armour", "helmet"])
 	for kind in want:
 		if kind in sim.gamble and sim.cash >= sim.gamble_price(kind) * 3 and sim.can_gamble(kind):
+			var cost: int = sim.gamble_price(kind)
+			var it: Dictionary = sim.gamble_buy(kind)
+			if not it.is_empty():
+				bought.append([sim.elapsed, "gambled %s for £%d: %s" % [kind, cost, Items.full_name(it).to_lower()]])
+			return
+	# nothing it wanted on offer and the cash piling: whatever he has, at six times the price in hand
+	for kind in sim.gamble.duplicate():
+		if sim.cash >= sim.gamble_price(kind) * 6 and sim.can_gamble(kind):
 			var cost: int = sim.gamble_price(kind)
 			var it: Dictionary = sim.gamble_buy(kind)
 			if not it.is_empty():

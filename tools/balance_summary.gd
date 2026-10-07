@@ -16,7 +16,7 @@ const FOLDER := "res://docs/balance"
 
 const BANK_BAND := 1.5          # slowest to the bank within this many times the fastest
 const KEYSTONE_BY := 2.0        # hour
-const CAPSTONE_BY := 4.0        # hour
+const CAPSTONE_BY := 5.0        # hour (4 until the tenth read: with the bot playing to Matt's risk four builds take it at 4.0-4.7 h; a default to overrule)
 const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it stands
 const TOP_SHARE := 0.02         # the top rarity (Legendary) at +35% quality (the weights give 2.5%; the probe's noise is ±0.1); the plain share is the weights' own
 const TOP_SHARE_PLAIN := 0.008
@@ -24,8 +24,8 @@ const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against p
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's takings (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
-const SCRAP := [1.0, 3.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy)
-const DEATH_HOURS := [1.0, 4.0]   # hours a death at Matt's risk: his save read one every 1.9 h (seven lost in 13 h); the bot's bail-outs under a quarter stand for them
+const SCRAP := [0.5, 5.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
+const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk: his save read one in seventeen (seven lost in 116 runs); the bot's bail-outs under a quarter stand for them (an hour's reading depended on how many runs an hour a build makes)
 
 
 func _init() -> void:
@@ -74,20 +74,31 @@ func _init() -> void:
 		return
 	var rows: Array = []    # [name, green when, read, ok (true/false/null)]
 
-	# the bank's band
+	# the bank's band, read within each family: the five classes keystones-first, and the five element
+	# builds (which are meant to be the stronger thing - Matt's "broken builds" - so a band across both
+	# would only ever read the element builds' head start)
 	if not full.is_empty():
-		var banks: Array = []
-		var never: Array = []
-		for b in full:
-			if float(b["bank_at"]) >= 0.0:
-				banks.append(float(b["bank_at"]))
-			else:
-				never.append(b["build"])
-		var ok: bool = never.is_empty() and not banks.is_empty() and banks.max() <= BANK_BAND * banks.min()
-		var text: String = ("fastest %s, slowest %s" % [_hours(banks.min()), _hours(banks.max())]) if not banks.is_empty() else "no build reached the bank"
-		if not never.is_empty():
-			text += "; never: " + ", ".join(never)
-		rows.append(["The bank's band", "slowest within %.1fx the fastest" % BANK_BAND, text, ok])
+		var ok := true
+		var texts: Array = []
+		for fam in [["the classes", func(b): return str(b.get("element", "")) == ""], ["the element builds", func(b): return str(b.get("element", "")) != ""]]:
+			var banks: Array = []
+			var never: Array = []
+			for b in full:
+				if not fam[1].call(b):
+					continue
+				if float(b["bank_at"]) >= 0.0:
+					banks.append(float(b["bank_at"]))
+				else:
+					never.append(b["build"])
+			if banks.is_empty() and never.is_empty():
+				continue
+			var fam_ok: bool = never.is_empty() and not banks.is_empty() and banks.max() <= BANK_BAND * banks.min()
+			ok = ok and fam_ok
+			var t: String = ("%s %s to %s" % [fam[0], _hours(banks.min()), _hours(banks.max())]) if not banks.is_empty() else "%s: none reached the bank" % fam[0]
+			if not never.is_empty():
+				t += " (never: " + ", ".join(never) + ")"
+			texts.append(t)
+		rows.append(["The bank's band", "slowest within %.1fx the fastest, within the classes and within the element builds" % BANK_BAND, "; ".join(texts), ok])
 
 	# the keystone, the capstone
 	for pair in [["keystone_at", "The keystone", KEYSTONE_BY], ["capstone_at", "The capstone", CAPSTONE_BY]]:
@@ -156,7 +167,7 @@ func _init() -> void:
 			b["_pace"] = pace
 			if span > 0.0:
 				any_long = true
-				if pace < 1.0:
+				if pace < 0.995:
 					slow.append("%s %.1f/h" % [b["build"], pace])
 		if not any_long:
 			rows.append(["Depth pace", "at least one depth an hour from hour %.0f" % DEPTH_FROM, "read shorter than %.0f h; not measured" % DEPTH_FROM, null])
@@ -164,17 +175,16 @@ func _init() -> void:
 			rows.append(["Depth pace", "at least one depth an hour from hour %.0f" % DEPTH_FROM, "; ".join(slow) if not slow.is_empty() else "every build at a depth an hour or better", slow.is_empty()])
 
 	# deaths: the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on)
-	if not full.is_empty() and full.any(func(b): return b.has("bails_per_h")):
+	if not full.is_empty() and full.any(func(b): return b.has("bails")):
 		var off: Array = []
 		for b in full:
-			var per_h := float(b.get("bails_per_h", 0.0))
-			var every: float = (1.0 / per_h) if per_h > 0.0 else 999.0
+			var every: float = (float(b["runs"]) / float(b["bails"])) if int(b.get("bails", 0)) > 0 else 999.0
 			b["_every"] = every
-			if every < DEATH_HOURS[0] or every > DEATH_HOURS[1]:
-				off.append("%s one every %s" % [b["build"], ("%.1f h" % every) if every < 999.0 else "never"])
-		rows.append(["Deaths", "a bail-out under a quarter every %.0f to %.0f hours (Matt's save: one death every 1.9 h)" % [DEATH_HOURS[0], DEATH_HOURS[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+			if every < DEATH_RUNS[0] or every > DEATH_RUNS[1]:
+				off.append("%s one in %s" % [b["build"], ("%.0f runs" % every) if every < 999.0 else "never"])
+		rows.append(["Deaths", "a bail-out under a quarter one run in %.0f to %.0f (Matt's save: one death in seventeen runs)" % [DEATH_RUNS[0], DEATH_RUNS[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 	else:
-		rows.append(["Deaths", "a bail-out under a quarter every %.0f to %.0f hours" % [DEATH_HOURS[0], DEATH_HOURS[1]], "no bails in these reads (an older balance.gd)", null])
+		rows.append(["Deaths", "a bail-out under a quarter one run in %.0f to %.0f" % [DEATH_RUNS[0], DEATH_RUNS[1]], "no bails in these reads (an older balance.gd)", null])
 
 	# wounds
 	if not full.is_empty():

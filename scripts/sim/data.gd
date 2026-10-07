@@ -1125,7 +1125,7 @@ const BUMP_CAP := 20
 ## plus the element's socketable. Costs are untuned until the pass.
 const SCRAP_PER_POUND := 20
 const SCRAP_SEARCH := 0.5           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
-const SCRAP_HANDFUL := [6, 12]      # the pass (6 Oct): was [3, 6], then [4, 8]; the builds that search least (a melee Doorman) read a fifth of a craft an hour
+const SCRAP_HANDFUL := [5, 10]      # the pass (6 Oct): [3, 6], [4, 8], then [6, 12] which read 3-5 crafts an hour on the builds that run most
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
 const BUILD_MED := 8                # a med, times its tier, with the one below (painkillers and a bandage: scrap alone)

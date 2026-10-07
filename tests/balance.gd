@@ -261,7 +261,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			sim.rig.append(box)
 			boxes.append(box)
 	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i):
+		if sim.tier_open(i) and i <= sim.best_tier:      # the tiers held: the one just opened reads what it reads until the kit catches up
 			var d0: int = sim.depth[i]
 			var intel0: Array = sim.intel[i].duplicate()
 			sim.set_depth(i, 1)
@@ -293,6 +293,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["kit"] = _kit(sim)
 	g["bails"] = bot.bails
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
+	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	print("GATES " + JSON.stringify(g))

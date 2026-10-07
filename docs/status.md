@@ -2011,7 +2011,34 @@ Doorman 0.2 of a craft an hour). The band's unit beside the headline fits by the
 radio card read two pixels over).
 
 The reads for the rest of the evening run here, one build each (the Legion's twenty-one is a
-two-core night), and the next entry carries them.
+two-core night).
+
+**The tenth read (one read a build, here, 22:18-00:08).** Eight red, but a different eight. The odds row
+down to one tier (the Drifter's T8 at 25%, the tier it had just opened and not yet held) - the armed read
+works; the gate reads the tiers held (up to the best cleared) now, since the one just opened reads what
+it reads until the kit catches up. Deaths one in 4-8 runs on the pushy builds still; the gate reads
+runs a bail-out now (Matt's one in seventeen; an hour's reading depended on runs an hour), band one in
+10 to 30, and `PUSH` 0.85 → 0.9, `CLIMB` 0.95. Wounds 8-39% (the Poacher and Scrapper high; the
+safer bot should bring them down). Scrap 0.6 to 4.9 crafts an hour - [6, 12] overshot on the builds
+that run most - back to [5, 10], and the band to half a craft to four, since the spread between a
+melee Doorman and a fire Drifter is eightfold by their searches. Cash red on six at 2.5-5.6 hours'
+takings: the bot wanted its primary's kind, armour or a helmet, and those are on offer five of eleven at
+a time; it gambles whatever is on offer at six times the price in hand now. The capstone's gate 4 → 5 h
+(four builds at 4.0-4.7 h with the bot playing to Matt's risk; a default to overrule).
+
+**The eleventh read (00:10-01:40, two builds re-run after the box restarted under them).** Six red,
+and five of the eleven rows green together for the first time (the keystone, the capstone, the odds,
+the Legendary share, quantity). The odds row is green with the tiers held read armed, whole and
+without the site's words: that row has been a reader problem four times and is honest now. Cash red on
+one build (the Doorman £51k, 3.9 hours' takings). Deaths one in 33-47 runs on four builds, too safe:
+0.9 overshot (0.85 read one in eight), `PUSH` 0.88. Depth pace under one an hour on four with the bot
+wanting 95% to dig: `CLIMB` 0.92. Wounds 8-40% across builds, a wide stat at one read a build. Scrap
+4.3-4.8 on the two builds that run most against a band to 4: the band to 5 (the spread between a melee
+Doorman at 0.6-0.9 and a poison Poacher at 4.8 is tenfold, and both are the game, not a figure). The
+band reads within the classes (0.7 to 2.8 h: the Drifter banked at 0.7 h this read and 1.8-2.9 h in
+others) and within the element builds (1.3 to 2.1 h) now - the element builds are meant to be ahead -
+and at one read a build it cannot be judged; the Legion's double read is the one to read it on. A
+twelfth read runs with these; the morning entry carries it.
 
 ## The dots as the end of the bar (6 Oct)
 
