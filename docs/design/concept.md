@@ -671,3 +671,42 @@ features first, then one pass), and the pass's gates gain two rows: the lorry by
 and the ladders' spread (the streets' depth 15 against the barracks' depth 8 at the same odds).
 Mocked before building: the Runs card with the level and the stations (Runs-D), the map at thirty-six
 (Map-B), the wall's line and the yard's best (Yard-E).
+
+## The SMG line (7 Oct 2026): a proposal, not built
+
+The fourteenth balance read put both plain Drifters and a Scrapper on a belt-fed SMG at 380-480 dps
+for eight hours while the shotgun and rifle builds sat at 700-900. The bot had a part (fixed), the
+rest is the line. Matt: "the solution is more guns and better SMGs at the top end."
+
+**What the tables say.** Primaries by type: ten rifles (T2-T6), nine shotguns (T1-T6), five SMGs
+(Workshop SMG T2, Police carbine T3, Army SMG T4, Belt-fed SMG T5, Section gun T6). A Drifter sees an
+upgrade of its type half as often as anyone else, and the one T6 reads 109 base dps against the
+assault shotgun's 115, the riot squad's 114 and the police marksman's 112. Two of the nine sites lean
+SMG (the bank and the services); the Drifter's secondaries are SMG-typed too (the automatic pistol,
+the army machine pistol), so the two guns share one box of rounds.
+
+**What the sim does and does not have.** There is no critical hit. Damage is a stream a tick, never a
+shot: `first_pct` ("headshots", the Poacher's +40, match rounds, Marked men) multiplies the stream
+while the first of a gang is up, the conversions and the elements are shares of the stream, the swing
+is ±25% a tick. So a gun's rate of fire changes nothing but its rounds; a type's identity in the fight
+is its dps and its ammo grades (SMG hollow point: bleed 20%; incendiary SMG rounds: fire 30%). A crit
+would be a new stat read as an expected value (chance × bonus on the stream) with affixes and nodes to
+feed it; it is a mechanic for a later pass, not a fix for the SMG.
+
+**The proposal.** Four bases and a lift at the top, so the line runs a gun a tier from T2 to T6 with
+two at T6 like the shotguns, and its top sits a shade over theirs - the SMG pays for it in rounds:
+- *Security guard's carbine*, T3, 18 × 3.0 (54 dps), value 190 - the shopping centre's.
+- *Courier's SMG*, T4, 21 × 3.6 (76 dps), value 310 - the bank's lean.
+- *Armoured car gun*, T5, 25 × 4.0 (100 dps), value 520 - the services' lean, beside the belt-fed.
+- *Riot squad's SMG*, T6, 28 × 4.4 (123 dps), value 760 - the barracks', named with the shotgun.
+- The *Section gun* lifted to 27 × 4.4 (119 dps).
+With these the SMG line reads T3 54 / T4 76 / T5 91-100 / T6 119-123 against the shotguns' T5 92 /
+T6 114-115 and the rifles' T5 94 / T6 99-112. The hospital's lean (none) could take SMG as a third
+site, or stay. Art: four PNGs in `art/items/` by slug (`security_guard_s_carbine.png`,
+`courier_s_smg.png`, `armoured_car_gun.png`, `riot_squad_s_smg.png`).
+
+**An identity, if wanted.** The one cheap mechanic that would make the SMG its own gun rather than a
+shotgun with a different box: *walking fire* - the stream grows the longer the gun fires on one gang
+(say +4% a second to +40%), reset when the gang drops. It rewards the SMG's long fights on big pools
+and does nothing for a rifle's first shot, and it is one stat on the base (`sustain_pct`) read in
+`_fight`. Not in the proposal's numbers; a decision for the same sitting.
