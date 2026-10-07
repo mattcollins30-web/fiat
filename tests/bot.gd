@@ -382,9 +382,13 @@ func pick_tier(sim) -> int:
 	# except that the lorry is the ending - while it isn't beaten, the services come first when they read
 	# PUSH at their depth, and the climb digs them toward it
 	if sim.campaign_done():
-		# the sites as they stand first (a read each); only when none holds, step the ladders back, the highest level first
+		# the sites as they stand first (a read each) - a site climbed past its clear that no longer reads PUSH steps
+		# back to the clear, or it would sit unread for the rest of the run - then, when none holds, the ladders
+		# stepped back, the highest level first
 		var best_level := -1
 		for i in range(Data.TIERS.size()):
+			if sim.tier_open(i) and sim.depth[i] > sim.best_depth[i] and sim.depth[i] > 1 and sim.survival(i) < PUSH:
+				sim.set_depth(i, maxi(1, sim.best_depth[i]))
 			if sim.tier_open(i) and sim.survival(i) >= PUSH:
 				var level: int = _aim_level(sim, i)
 				if level > best_level:

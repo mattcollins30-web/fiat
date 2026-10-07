@@ -2112,9 +2112,44 @@ the site that reads PUSH at the highest level (the better kit) except that the s
 while the lorry stands, and the climb digs them toward it; the convoy is armed at its depth when the
 notes are there and the odds hold with it in; the lorry beaten, the yard moves on (`moves`, the class
 put back, the campaign again from the floor); the map's points go a rank each, the columns in turn,
-each down its chain. The summary's builds table gains Lorry (moves) and Ladders S/B. The pass's
+each down its chain; a site climbed past its clear that no longer reads PUSH steps back to the clear
+(the fourteenth read: three builds sat at depth 1 for eight hours with every site's depth 2 unread).
+The summary's builds table gains Lorry (moves) and Ladders S/B. The pass's
 baseline is now a different game from the thirteenth read (the ladders by level, the lorry, the move,
 the map): the first read after the parts is the fourteenth and starts the sheet again.
+
+**The fourteenth read (the Legion, 7 Oct, twenty reads of ten builds, twelve hours each: the first after
+the four parts).** Eight red; the probe, the keystone, the capstone and cash green. Read with the new
+game in mind, not against the thirteenth. *The lorry: no build.* The services' ladder is now by level
+(6 + depth), so depth 12 is level 18, the hardest fight in the game, and the convoy on top of it. The
+fastest dig had the services at 12 at 11.7 h (the frost Poacher, both reads 12 and 10), the plain
+classes at 8-10 by hour 12; nobody armed it. By the bot, the lorry is a 14-16 hour thing. Levers, all
+Matt's: the gate's hour (16 and sixteen-hour reads), `CONVOY_DEPTH` (10 is level 16; the map's
+keystone would then make it 8), or the services' shape. *The ladders' spread: 10-11 on most builds*
+(the streets 16-19 at PUSH, the barracks 6-7; the band 5-9 was the design's "streets 15 against
+barracks 8"). By level the two sit eight apart; the shapes make the streets about two depths gentler
+than the design said and the barracks one steeper. Lever: the sites' `shape` (hp, dps) or the band.
+The Poacher reads 13-16 against 3-6 (the same spread, lower on both: the rifle). *Three reads stuck at
+depth 1 for eight hours* (both plain Drifters, one Scrapper): a belt-fed SMG in hand, dps flat at
+380-485 from hour 4, level 34-35 at 12 h against the others' 50, 100-110 runs against 200-350, cash
+under £500 at every mark while the half-hour earned £6-28k, the stash 130-148 of 182. The first
+guess - the SMG's rounds - was wrong: a read with every pound out tallied by what took it (an
+eight-hour Drifter, a scratch setter on `cash`) put rounds at £724 of £850k earned (the rounds come
+off the bench for scrap), the bench's affixes and re-rolls at £378k (44%), called-in words at £118k,
+the fence's buys at £37k, the yard's upgrades at £250k. The wall is the SMG's damage line: the type's
+top bases (the Section gun 26 × 4.2, the belt-fed 24 × 3.8) are the lowest dps of the types, the
+Drifter has no damage of its own (−15% HP, a man fewer on it) and the bot holds the class to its
+type, so there is nothing better of its kind to buy and the cash goes on re-rolling what it has. The
+bot had the larger part, fixed below: a site climbed to depth 2 that did not read PUSH sat there
+unread and the pick never came back to it, so the three reads ran depth 1 everywhere; the same build
+with the fix dug to depths 3-5 and held £57k by hour 8, still level 32 against the others' 50. The
+Drifter's T8 at 50% (No reds) and the depth pace 0.0 are the same reads. *Deaths one in 31-42 on four builds* (the band 10-30): the bot's bail-outs are rarer
+with the level-based pick, which runs the barracks at depth 1 at 100% rather than a site at its
+edge; whether that is too safe is Matt's save's to say. *Wounds 26-41% on five builds* (the band
+10-25) and *the bank's band* (1.4-2.7 h, the slow reads 2.6-2.9 h, the drop's luck as before) are the
+thirteenth read's causes unchanged. *Scrap 5.0 crafts/h on the poison Poacher* is the band's edge.
+No number moved: the two new gates' figures (8 h, 5-9) were defaults for a first read and the read
+says what they should be if the design stands; the shape and the convoy's depth are design.
 
 ## The endgame, part 4: the map at thirty-six (7 Oct)
 
