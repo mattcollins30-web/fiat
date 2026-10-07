@@ -191,7 +191,7 @@ func _style(b: Button, on: bool, tone := "", dim := false) -> void:
 		var sb := UI.box(bg if state != "hover" or on or dim else Pal.CARD, 8)
 		if on:
 			sb.set_border_width_all(2)
-			sb.border_color = Pal.ACCENT
+			sb.border_color = Pal.PICK
 		elif tone != "":
 			sb.border_width_left = 6
 			sb.border_color = Pal.tone_color(tone)
@@ -200,9 +200,7 @@ func _style(b: Button, on: bool, tone := "", dim := false) -> void:
 
 
 static func rarity_tone(it: Dictionary) -> String:
-	if it.has("set"):
-		return "set"
-	return Pal.rarity_tone(int(it["rarity"]))
+	return Pal.item_tone(it)
 
 
 # ------------------------------------------------------------------ showing

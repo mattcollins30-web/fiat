@@ -27,9 +27,15 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
-const EPIC := Color("b58cf0")         # the two rarities above Rare (the pass, 6 Oct)
-const LEGENDARY := Color("f08a4b")
-const RARITY_TONES := ["", "good", "warn", "epic", "legendary"]   # Common .. Legendary
+## The rarities' own colours (Rarity-A, 7 Oct: Rare, Legendary and a unique all read as one orange before, and the
+## pick ring was the same amber): none, green, blue, purple, gold; a unique pink; the pick ring white, so gold
+## only ever means a legendary.
+const RARE := Color("5aa0e6")
+const EPIC := Color("b58cf0")
+const LEGENDARY := Color("f2c94c")
+const UNIQUE := Color("ee6fb5")
+const PICK := TEXT                    # the ring round a picked cell or tile
+const RARITY_TONES := ["", "good", "rare", "epic", "legendary"]   # Common .. Legendary
 # a damage type's colour, for the numbers off a hit: physical white, fire
 # orange-red, frost ice, poison green, shock yellow, bleed crimson
 const ELEMENT_COLOURS := {"physical": TEXT, "fire": Color("ff6b3d"), "frost": Color("8ad4ff"), "poison": Color("8be05a"),
@@ -107,6 +113,15 @@ static func rarity_tone(r: int) -> String:
 	return RARITY_TONES[clampi(r, 0, RARITY_TONES.size() - 1)]
 
 
+## An item's tone: a set's, a unique's, else its rarity's - the one rule for every cell, chip and tile.
+static func item_tone(it: Dictionary) -> String:
+	if it.has("set"):
+		return "set"
+	if it.has("unique"):
+		return "unique"
+	return rarity_tone(int(it.get("rarity", 0)))
+
+
 static func tone_color(tone: String) -> Color:
 	match tone:
 		"good":
@@ -117,10 +132,14 @@ static func tone_color(tone: String) -> Color:
 			return BAD
 		"set":
 			return SET
+		"rare":
+			return RARE
 		"epic":
 			return EPIC
 		"legendary":
 			return LEGENDARY
+		"unique":
+			return UNIQUE
 	if ELEMENT_COLOURS.has(tone):
 		return ELEMENT_COLOURS[tone]
 	return TEXT_2

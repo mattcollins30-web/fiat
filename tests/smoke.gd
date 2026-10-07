@@ -58,6 +58,7 @@ func _init() -> void:
 	_check(sim.cls == "Doorman", "sim.cls == 'Doorman'")
 	_check(sim.cash == float(Data.STARTING_CASH), "sim.cash == float(Data.STARTING_CASH)")
 	_check(sim.equipped["Primary"] != null, "sim.equipped['Primary'] != null")
+	_rarity_tone_checks(sim)
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, r + " (start)")
@@ -5820,6 +5821,33 @@ func _sum_strip_check(main) -> void:
 	if bk.selected != "" and bk._chips.visible:
 		_check(bk._words.position.x >= bk._chips.position.x + bk._chips.used_width() and bk._words.text != "" and bk._words.text.ends_with("."), "the node's chip and sentence are off: words at %.0f, chips to %.0f, '%s'" % [bk._words.position.x, bk._chips.position.x + bk._chips.used_width(), bk._words.text])
 	_check(bk._panel.position.y >= bk._sum.position.y + bk._sum.size.y + 8, "the node panel sits on the sum strip")
+
+
+## The rarities' colours (Rarity-A, 7 Oct): seven tones a cell can wear, every one its own, none the pick ring's;
+## a unique pink, a legendary gold, a rare blue, on the cell and on the head's chip.
+func _rarity_tone_checks(sim) -> void:
+	var tones := ["good", "rare", "epic", "legendary", "unique", "set"]
+	var seen := []
+	for t in tones:
+		var c: Color = Pal.tone_color(t)
+		_check(c != Pal.PICK and c != Pal.TEXT_2, "the %s tone is the pick ring's or the plain text's" % t)
+		_check(not seen.has(c), "the %s tone is another rarity's colour" % t)
+		seen.append(c)
+	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
+	rare["rarity"] = 2
+	var leg: Dictionary = sim._plain("Helmet", "Hard hat")
+	leg["rarity"] = 4
+	var uniq: Dictionary = sim._plain("Helmet", "Hard hat")
+	uniq["rarity"] = 4
+	uniq["unique"] = "Test"
+	_check(Pal.item_tone(rare) == "rare" and Pal.item_tone(leg) == "legendary" and Pal.item_tone(uniq) == "unique", "an item's tone is off: %s / %s / %s" % [Pal.item_tone(rare), Pal.item_tone(leg), Pal.item_tone(uniq)])
+	var Cell = load("res://scripts/ui/item_cell.gd")
+	var cell = Cell.new()
+	cell.show_item(uniq, false)
+	_check((cell.get_theme_stylebox("normal") as StyleBoxFlat).border_color == Pal.UNIQUE, "a unique's cell is not pink")
+	cell.show_item(leg, true)
+	_check((cell.get_theme_stylebox("normal") as StyleBoxFlat).border_color == Pal.PICK, "a picked cell's ring is not the pick ring")
+	cell.queue_free()
 
 
 ## The shell's odds, settled: frames of main._read_odds until every open tier has read (the Runs and Radio

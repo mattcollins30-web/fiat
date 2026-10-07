@@ -2100,6 +2100,19 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The rarities' colours (7 Oct)
+
+Matt: "the rig is legendary, post bag unique and helmet rare - they all look the same. uniques could be
+pink? legendary should stay gold. not sure about rare? do we use blue?" Rare wore the amber warn tone,
+Legendary an orange a shade off it, a unique the legendary's, and the pick ring was the same amber.
+Mocked as Rarity-A; built as B: Common none, Uncommon green, Rare blue (`Pal.RARE`), Epic purple,
+Legendary gold (`LEGENDARY` f2c94c), Unique pink (`UNIQUE`), Set teal, and the ring round a picked cell or
+bench tile white (`Pal.PICK`), so gold only ever means a legendary. One rule for every cell, chip and
+tile: `Pal.item_tone(it)` (a set's, a unique's, else its rarity's), used by the cells, the bench, the
+Lock-up and the item head. The caravan's and the map's tiles keep their amber ring: those are trees, not
+items. Smoke: the six tones each their own and none the ring's or the plain text's; a unique's cell
+pink; a picked cell's ring the pick ring.
+
 ## The smoke wrote over the player's saves (7 Oct)
 
 Matt: "you wiped fiat_slot1.save?" Yes - the smoke did, every run: its slot round-trip saved to

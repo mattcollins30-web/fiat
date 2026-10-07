@@ -45,9 +45,7 @@ static func px(cells: int) -> int:
 
 
 static func rarity_tone(it: Dictionary) -> String:
-	if it.has("set"):
-		return "set"
-	return Pal.rarity_tone(int(it["rarity"]))
+	return Pal.item_tone(it)
 
 
 ## The item, drawn: the cell takes the footprint's size, or `box` when given
@@ -127,7 +125,7 @@ func _style(on: bool, tone: String) -> void:
 		var sb := UI.box(Pal.SELECT if on else (Pal.CARD if state == "hover" else Pal.PANEL), 6)
 		if on:
 			sb.set_border_width_all(2)
-			sb.border_color = Pal.ACCENT
+			sb.border_color = Pal.PICK
 		elif tone != "":
 			sb.set_border_width_all(2)
 			sb.border_color = Pal.tone_color(tone)

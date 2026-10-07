@@ -196,7 +196,7 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 			out.append(["Melee", ""])
 		elif tw != "":
 			out.append([tw.capitalize() if tw != "SMG" else tw, ""])
-	var rarity_tone: String = "set" if it.has("set") else ("warn" if it.has("unique") else Pal.rarity_tone(int(it["rarity"])))
+	var rarity_tone: String = Pal.item_tone(it)
 	if slot == Data.ATTACHMENT and Items.base_of(it).has("type"):
 		out.append([Items.only_words(it), ""])
 	var plain: bool = slot == Data.AMMO or slot == Data.PAPER or slot == Data.MEDICAL or slot == Data.GRENADE
