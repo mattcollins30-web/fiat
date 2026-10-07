@@ -2100,6 +2100,29 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The fifteenth read (the Legion, 7 Oct, twenty reads of ten builds, sixteen hours each: the SMG line
+and walking fire in).** Six red; No reds and depth pace back to green, the probe, the keystone, the
+capstone and cash green. *The SMG line is in the game:* the armoured car gun on a bleed Doorman, a
+Paramedic, a shock Drifter and a poison Poacher at hour 16, the riot squad's SMG on a Poacher, the
+courier's on a frost Poacher; no read sat at depth 1 - both plain Drifters dug to 8-9 (one took until
+hour 10 to leave depth 1 and 380 dps, then went 379 → 770 dps and £500k a half hour by 14), level 45
+against the others' 50. *The lorry: still no build at sixteen hours*, the services at 8-11 on every
+build, the convoy never armed. Every build sits at level 16-17 on the services (depth 10-11) at hour
+16; depth 12 is level 18. The read says: the lorry at hour 16 is the services at depth 10
+(`CONVOY_DEPTH` 10, level 16; the map's keystone would then run it from 8), or the growth past the
+campaign is too slow for depth 12 by 16 - Matt's call, and I would move the depth, since level 16 is
+where sixteen hours of every build lands. *The ladders' spread 7-12*, half the reads in the band
+(Doorman 16/9, 16/8, Drifter 18/9), half over (Drifter 17/6, the fire Drifter 20/8, 19/7); the
+streets 14-20 at PUSH, the barracks 4-13. The design's figure (7) was written before any read; the
+shapes were set a site at a time and read as meant; I would re-state the band as 7-11 from the read
+rather than move the shapes. *Deaths one in 31-69 on five builds and wounds 31-44% on six*: the pair
+again, and now plainly one thing - the bot's runs end between a quarter and a third of HP often
+(`WOUND_AT` 0.35 counts them wounded) and under a quarter rarely (a bail). One figure fixes both
+rows: `WOUND_AT` at 0.30 or the wound band at 20-40%. *Scrap 5.3-6.3 crafts an hour on four builds*
+over a band of 1-5 set on eight-hour reads: the late game is richer in scrap; the band's top to 7, or
+scrap's late sources read. *The bank's band* (the element builds 1.0-1.8 h) is the drop's luck, as
+every read. No number moved; four decisions on the sheet, each with a figure proposed.
+
 ## The SMG line, walking fire, the lorry's hour (7 Oct)
 
 Matt, on the fourteenth read's Drifters: "the solution is more guns and better SMGs at the top end",

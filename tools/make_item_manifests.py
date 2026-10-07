@@ -77,6 +77,25 @@ GUN_WORDS = {
 }
 
 
+# the SMG line (7 Oct): each its own gun, or the four draw as the same carbine; "SMG" kept upper-case for the prompt
+SMG_WORDS = {
+    "Workshop SMG": "a crude workshop-made submachine gun, square steel tube receiver, a welded grip and a wire stock",
+    "Police carbine": "a police carbine, short and compact, black polymer gone grey, a folding stock",
+    "Security guard's carbine": "a cheap security-firm carbine, a long slim barrel and a plastic foregrip, a shoulder strap, never fired",
+    "Courier's SMG": "a compact submachine gun with a short barrel and a folded stock, small enough to go under a van seat, scuffed finish",
+    "Army SMG": "an army-issue submachine gun, a side-loading magazine and a collapsing stock, worn green paint",
+    "Armoured car gun": "a stubby heavy-framed submachine gun with a thick barrel shroud and a vertical foregrip, depot-issue, dull grey",
+    "Belt-fed SMG": "an improvised belt-fed submachine gun, a canvas ammunition bag hung off the side, a strap, oily",
+    "Riot squad's SMG": "a long riot-squad submachine gun with a full stock, a fore-end rail and a scratched-off number on the receiver, black polymer",
+    "Section gun": "a light machine gun with a bipod folded under the barrel and a belt box, army green worn to bare metal",
+}
+
+
+def gun_name(base):
+    """The base as the prompt says it: lower-case, except SMG."""
+    return base.lower().replace("smg", "SMG")
+
+
 def gun_type(base):
     m = re.search(r'\{"name": "%s", "type": "(\w+)"' % re.escape(base), src)
     return m.group(1) if m else ""
@@ -85,7 +104,7 @@ def gun_type(base):
 def long_gun(base):
     return ("A realistic painted pixel-art still-life of a single %s, seen exactly side-on with the muzzle pointing left, "
             "laid level and filling the frame left to right, as it might be found in post-collapse Britain - %s."
-            % (base.lower(), GUN_WORDS[gun_type(base)]))
+            % (gun_name(base), SMG_WORDS.get(base, GUN_WORDS[gun_type(base)])))
 
 
 def handgun(base):
@@ -131,18 +150,7 @@ def armour(base):
             "been hit. Clothing or a vest, never crockery." % what)
 
 
-BAG_WORDS = {
-    # no zips or buckles on these, so the whole line is their own
-    "Plastic bag": ("A realistic painted pixel-art still-life of a single thin white supermarket carrier bag, the cheap "
-                    "crinkled plastic kind with two loop handles, standing upright as if set down on the floor, seen from the "
-                    "front, filling the frame, half full and sagging, the plastic stretched thin and translucent, a split "
-                    "patched with a strip of brown parcel tape."),
-}
-
-
 def bag(base):
-    if base in BAG_WORDS:
-        return BAG_WORDS[base]
     return ("A realistic painted pixel-art still-life of a single %s standing upright as if set down on the floor, seen "
             "from the front, filling the frame, half full, zips and buckles worn, repaired with tape and stitching." % base.lower())
 
