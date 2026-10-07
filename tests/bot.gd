@@ -10,6 +10,7 @@ const Items := preload("res://scripts/sim/items.gd")
 
 const PUSH := 0.88             # the pass (6-7 Oct): at 0.75 the bot bailed under a quarter one run in four, at 0.85 one in eight, at 0.9 one in 33-47 on four builds, against Matt's one in seventeen
 const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four builds
+const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
@@ -178,7 +179,7 @@ func _endgame(sim) -> void:
 	# there's twice the price in hand - a flush player's reserve, not a miser's
 	if sim.campaign_done():
 		var t: int = pick_tier(sim)
-		while sim.can_add_word(t) and sim.cash >= sim.juice_cost(t) * 2:     # twice: at depth 15 a word is £70k and the pile sat under three of them
+		while sim.can_add_word(t) and sim.cash - sim.juice_cost(t) * 2 >= _reserve(sim):     # twice: at depth 15 a word is £70k and the pile sat under three of them
 			var cost: int = sim.juice_cost(t)
 			sim.add_word(t, sim.juice_options(t)[0])
 			bought.append([sim.elapsed, "word on tier %d for £%d" % [t, cost]])
@@ -195,7 +196,7 @@ func _endgame(sim) -> void:
 		if it == null:
 			continue
 		var cost: int = sim.craft_cost(it, "add")
-		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "add"):
+		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "add"):
 			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
 	_bench_worn(sim)
 	_build_one(sim)
@@ -211,7 +212,7 @@ func _gamble_one(sim) -> void:
 		want.append(str(Items.base_of(gun).get("type", "")))
 	want.append_array(["armour", "helmet"])
 	for kind in want:
-		if kind in sim.gamble and sim.cash >= sim.gamble_price(kind) * 3 and sim.can_gamble(kind):
+		if kind in sim.gamble and sim.cash - sim.gamble_price(kind) * 3 >= _reserve(sim) and sim.can_gamble(kind):
 			var cost: int = sim.gamble_price(kind)
 			var it: Dictionary = sim.gamble_buy(kind)
 			if not it.is_empty():
@@ -219,7 +220,7 @@ func _gamble_one(sim) -> void:
 			return
 	# nothing it wanted on offer and the cash piling: whatever he has, at six times the price in hand
 	for kind in sim.gamble.duplicate():
-		if sim.cash >= sim.gamble_price(kind) * 6 and sim.can_gamble(kind):
+		if sim.cash - sim.gamble_price(kind) * 6 >= _reserve(sim) and sim.can_gamble(kind):
 			var cost: int = sim.gamble_price(kind)
 			var it: Dictionary = sim.gamble_buy(kind)
 			if not it.is_empty():
@@ -265,7 +266,7 @@ func _bench_worn(sim) -> void:
 		if weakest.is_empty():
 			continue
 		var cost: int = sim.craft_cost(it, "one", weakest["stat"])
-		if cost >= 0 and sim.cash - cost >= 2000.0 and sim.craft(it["id"], "one", weakest["stat"]):
+		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "one", weakest["stat"]):
 			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d" % [s.to_lower(), weakest["stat"], cost]])
 			return
 
@@ -282,7 +283,7 @@ func _craft_toward(sim) -> void:
 	var inc := "%s_pct" % element
 	if Items.sockets(it) == 0:
 		var c: int = sim.craft_cost(it, "socket")
-		if c >= 0 and sim.cash - c >= 2000.0 and sim.craft(it["id"], "socket"):
+		if c >= 0 and sim.cash - c >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "socket"):
 			bought.append([sim.elapsed, "bench: a socket on the primary for £%d" % c])
 	var has_conv := false
 	var has_inc := false
@@ -301,7 +302,7 @@ func _craft_toward(sim) -> void:
 			kind = "lock" if (has_conv or has_inc) and sim.craft_cost(it, "lock", conv if has_conv else inc) >= 0 else "reroll"
 			stat = (conv if has_conv else inc) if kind == "lock" else ""
 		var cost: int = sim.craft_cost(it, kind, stat)
-		if cost < 0 or sim.cash - cost < 2000.0 or not sim.craft(it["id"], kind, stat):
+		if cost < 0 or sim.cash - cost < maxf(2000.0, _reserve(sim)) or not sim.craft(it["id"], kind, stat):
 			return
 		bought.append([sim.elapsed, "bench: %s on the primary for £%d, after %s" % [Data.CRAFT[kind]["name"].to_lower(), cost, element]])
 		has_conv = false
@@ -438,8 +439,10 @@ func pick_tier(sim) -> int:
 			sim.arm_boss(best, false)
 			if sim.notes >= sim.boss_cost(best):
 				sim.arm_boss(best, true)
-				if sim.survival(best) >= PUSH:
-					break
+				if sim.survival(best) >= LORRY_ODDS:
+					if sim.can_insure(best):
+						sim.set_insure(true)     # the ending, insured
+					return best
 				sim.arm_boss(best, false)
 			if sim.depth[best] <= sim.convoy_depth():
 				break
@@ -447,6 +450,13 @@ func pick_tier(sim) -> int:
 	if sim.survival(best) < PUSH:
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best
+
+
+## What the bot keeps back from the bench, the gamble and the words: the clinic's price three times over (the
+## sixteenth read: a wounded Poacher spent every run's take on affixes, never had the treatment's price when
+## the next run came, and ran the services hurt and wounded for seven hours at £3k a run), and £2,000.
+func _reserve(sim) -> float:
+	return sim.treat_cost() * 3.0            # nothing when whole: the bench keeps its own £2,000 floor
 
 
 ## What a site is worth running past the campaign: its level, and the services first while the lorry stands.

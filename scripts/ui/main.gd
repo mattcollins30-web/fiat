@@ -62,10 +62,10 @@ const TOP_KEYS := ["level", "hp", "dps", "xp", "where", "notes", "cash"]
 const TOP_WORST := {
 	"cash": "£9,999,999",
 	"notes": "999,999 notes",
-	"level": "Level 50",
+	"level": "Level 50 +999",
 	"hp": "HP 999 / 999",
 	"dps": "9,999 dmg/s",
-	"xp": "XP 999,999 / 999,999",
+	"xp": "XP 9,999,999 / 9,999,999",
 	"where": "Out: Ransacked streets",
 }
 const TOP_GAP := 28
@@ -573,7 +573,7 @@ func refresh() -> void:
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.money(sim.cash)
 	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
-	_top_labels["level"].text = "Level %d" % sim.level()
+	_top_labels["level"].text = ("Level %d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("Level %d" % sim.level())
 	_top_labels["hp"].text = "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
 	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
 	_top_labels["xp"].text = _xp_words()
@@ -656,9 +656,7 @@ static func _by_sentence(line: String) -> Array:
 
 ## "XP 1,234 / 2,345": into this level, of what the next takes; "XP 101,333" at the top.
 func _xp_words() -> String:
-	var lv: int = sim.level()
-	if lv >= Data.MAX_LEVEL:
-		return "XP %s" % Fmt.num(sim.xp)
+	var lv: int = sim.level() + sim.paragon()          # past the cap the paragon levels count on, on the same curve (7 Oct)
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
 	return "XP %s / %s" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp)]

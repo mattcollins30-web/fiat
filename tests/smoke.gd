@@ -2538,16 +2538,20 @@ func _pinnacle_checks(main) -> void:
 	sim.notes += 100000
 	for i in range(Data.TIERS.size()):
 		sim.best_depth[i] = 20
-	# the carpet man at depth 9 and at depth 10
-	sim.set_depth(2, 9)
+	# the carpet man a depth short of full strength and at it (the retail park's at 12, the bank's at 9, the barracks' at 6: level 14 on each)
+	var pd: int = sim.pinnacle_depth(2)
+	_check(pd == 12 and sim.pinnacle_depth(5) == 9 and sim.pinnacle_depth(8) == 6, "the stations' depths are off: %d %d %d" % [pd, sim.pinnacle_depth(5), sim.pinnacle_depth(8)])
+	sim.set_depth(2, pd - 1)
 	sim.arm_boss(2, true)
 	var cost9: int = sim.boss_cost(2)
 	var e9: Dictionary = sim.effective(2)
-	sim.set_depth(2, Data.PINNACLE_DEPTH)
-	_check(sim.is_pinnacle(2) and not sim.is_pinnacle(1), "depth %d is not a pinnacle" % Data.PINNACLE_DEPTH)
+	sim.set_depth(2, pd)
+	_check(sim.is_pinnacle(2) and not sim.is_pinnacle(1), "depth %d is not a pinnacle" % pd)
 	var e10: Dictionary = sim.effective(2)
-	_check(e10["boss"]["pinnacle"] and not e9["boss"].get("pinnacle", false), "the boss at depth 10 is not at full strength")
-	_check(e10["boss"]["hp"] > e9["boss"]["hp"] * 2.0 and e10["boss"]["dps"] > e9["boss"]["dps"] * 1.4, "the pinnacle is no harder")
+	_check(e10["boss"]["pinnacle"] and not e9["boss"].get("pinnacle", false), "the boss at depth %d is not at full strength" % pd)
+	# full strength is twice the crew at the same fire (the sixteenth read: a fire multiplier reads 0.00 whatever the HP)
+	var site_step: float = float(e10["dps"]) / float(e9["dps"])        # the depth's own step, the only change in the fire
+	_check(e10["boss"]["hp"] > e9["boss"]["hp"] * 1.8 * site_step * 0.95 and is_equal_approx(e10["boss"]["dps"] / e9["boss"]["dps"], site_step), "the pinnacle is not twice the crew at the same fire: hp ×%.2f, dps ×%.2f against the site's ×%.2f" % [e10["boss"]["hp"] / e9["boss"]["hp"], e10["boss"]["dps"] / e9["boss"]["dps"], site_step])
 	_check(sim.boss_cost(2) > cost9 * 1.8, "the pinnacle costs no more: %d vs %d" % [sim.boss_cost(2), cost9])
 	# their charm comes from the pinnacle and never from the ordinary fight
 	var charms := 0
@@ -2576,7 +2580,7 @@ func _pinnacle_checks(main) -> void:
 				charms += 1
 		sim.extract_now()
 	_check(charms == 0, "the van keys came from the carpet man under full strength")
-	# the convoy: the services at depth 12
+	# the convoy: the services at convoy_depth() (8 on the first yard, a depth deeper a move)
 	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH - 1)
 	_check(not sim.is_convoy(Data.CONVOY_TIER) and not sim.can_arm_boss(Data.CONVOY_TIER), "the convoy came before depth %d" % Data.CONVOY_DEPTH)
 	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH)
@@ -2587,8 +2591,11 @@ func _pinnacle_checks(main) -> void:
 		three += int(b["notes"]) * Data.CONVOY_DEPTH * Data.PINNACLE_COST
 	_check(convoy_cost == three, "the convoy's price is %d, not the three heads' %d" % [convoy_cost, three])
 	sim.arm_boss(Data.CONVOY_TIER, true)
+	sim.intel[Data.CONVOY_TIER] = []      # the plain site: the heads are formed before the words multiply the site
 	var ec: Dictionary = sim.effective(Data.CONVOY_TIER)
-	_check(ec.get("convoy", false) and ec["boss_queue"].size() == 2 and ec["boss"]["pinnacle"], "the convoy is not three at full strength")
+	_check(ec.get("convoy", false) and ec["boss_queue"].size() == 2 and not ec["boss"]["pinnacle"], "the convoy is not three in a row, come light")
+	var cm_hp: float = float(ec["hp"]) * float(Data.BOSSES[0]["hp"]) * Data.CONVOY_HP
+	_check(is_equal_approx(float(ec["boss"]["hp"]), cm_hp), "the convoy's first head is not light: %.0f against %.0f" % [float(ec["boss"]["hp"]), cm_hp])
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(2)
 	_check_fit(main, "Runs (convoy armed)")
@@ -5928,6 +5935,8 @@ func _endgame_move_checks(main) -> void:
 	_check(sim.can_move_yard() and sim.move_yard(), "the yard could not move after the lorry")
 	_check(sim.yard_moves == 1 and sim.lorries == lorries0 and sim.best_dig == dig0 and not sim.lorry_done, "the move lost the score: moves %d, lorries %d, dig %s, lorry %s" % [sim.yard_moves, sim.lorries, str(sim.best_dig), str(sim.lorry_done)])
 	_check(sim.ladder_floor() == 1 and sim.free_yard_nodes() == 1, "the move's floor and free nodes are off: %d / %d" % [sim.ladder_floor(), sim.free_yard_nodes()])
+	_check(sim.convoy_depth() == Data.CONVOY_DEPTH + 1 and sim.pinnacle_depth(8) == int(Data.PINNACLE_DEPTH[2]) + 1, "the ending did not climb a depth with the move: lorry %d, barracks' head %d" % [sim.convoy_depth(), sim.pinnacle_depth(8)])
+	_check(is_equal_approx(sim.lorry_mult(), pow(Data.LORRY_MULT, sim.lorries)) and sim.lorries >= 1, "the lorry's multiplier is off: %.2f for %d" % [sim.lorry_mult(), sim.lorries])
 	var yard_ids: Array = []
 	for k in range(Data.tree_named(Data.COMMON_TREE)["nodes"].size()):
 		yard_ids.append("%s/%d" % [Data.COMMON_TREE, k])
@@ -6009,11 +6018,51 @@ func _site_level_checks(main) -> void:
 	main._missions._pick_zone(0)
 	_site_unique_checks(main)
 	_smg_line_checks(main)
+	_growth_checks(main)
 	sim.intel[0] = hold_intel[0]
 	sim.intel[8] = hold_intel[1]
 	sim.depth = hold_depth
 	sim.best_depth = hold_best
 	sim._surv_cache = {}
+
+
+## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's
+## value by item level - so the second leg reaches further than the first and a deep drop beats a shallow one.
+func _growth_checks(main) -> void:
+	var sim = main.sim
+	var hold: Dictionary = sim.to_dict()
+	sim.lorries = 0
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	var hp50: float = sim.max_hp()
+	var dps50: float = sim.dps()
+	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 0 and is_equal_approx(sim.growth_mult(), 1.0), "at the cap the growth reads %.2f with %d paragon" % [sim.growth_mult(), sim.paragon()])
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL + 10)
+	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 10, "ten levels past the cap read level %d, paragon %d" % [sim.level(), sim.paragon()])
+	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0), "ten paragon levels did not pay: hp ×%.2f dps ×%.2f" % [sim.max_hp() / hp50, sim.dps() / dps50])
+	_check(Data.xp_for_level(Data.MAX_LEVEL + 11) > Data.xp_for_level(Data.MAX_LEVEL + 10) and Data.xp_for_level(Data.MAX_LEVEL + 10) > Data.xp_for_level(Data.MAX_LEVEL), "the XP curve stops at the cap")
+	main.refresh()
+	_check(main._top_labels["level"].text == "Level %d +10" % Data.MAX_LEVEL and main._top_labels["xp"].text.contains(" / "), "the top bar does not say the paragon: '%s' / '%s'" % [main._top_labels["level"].text, main._top_labels["xp"].text])
+	_check_fit(main, "Top bar (paragon)")
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	sim.lorries = 3
+	_check(is_equal_approx(sim.max_hp() / hp50, pow(Data.LORRY_MULT, 3)) and is_equal_approx(sim.dps() / dps50, pow(Data.LORRY_MULT, 3)), "three lorries did not multiply the yard: hp ×%.2f" % (sim.max_hp() / hp50))
+	# an affix's value by item level: nothing to ILVL_FROM, a fifth more at five past, the same tier
+	var a := {"stat": "hp", "min": 10, "max": 50}
+	var at15 := Items.roll_affix(a, Data.ILVL_FROM, sim.rng, 5)
+	var at25 := Items.roll_affix(a, Data.ILVL_FROM + 10, sim.rng, 5)
+	_check(int(at15["value"]) <= 50 and int(at25["value"]) >= int(round(Items.tier_range(a, 5)[0] * Items.ilvl_mult(Data.ILVL_FROM + 10))) and int(at25["tier"]) == 5, "the deep affix did not grow: %d at %d, %d at %d" % [int(at15["value"]), Data.ILVL_FROM, int(at25["value"]), Data.ILVL_FROM + 10])
+	_check(is_equal_approx(Items.ilvl_mult(Data.ILVL_FROM + 10), 1.0 + Data.ILVL_SCALE * 10.0) and is_equal_approx(Items.ilvl_mult(5), 1.0), "the item level's multiplier is off")
+	var u_shallow: Dictionary = Items.roll_unique(sim._unique_named("Lucky cap"), sim.rng, 5)
+	var u_deep: Dictionary = Items.roll_unique(sim._unique_named("Lucky cap"), sim.rng, Data.ILVL_FROM + 20)
+	_check(Items.ilvl(u_deep) == Data.ILVL_FROM + 20 and int(u_deep["affixes"][0]["value"]) == int(round(20 * Items.ilvl_mult(Data.ILVL_FROM + 20))) and int(u_shallow["affixes"][0]["value"]) == 20, "a unique found deep does not carry the depth: %d / %d" % [int(u_shallow["affixes"][0]["value"]), int(u_deep["affixes"][0]["value"])])
+	# the find carries the site's level into a unique
+	sim.best_depth[8] = 30
+	sim.set_depth(8, 25)
+	var t: Dictionary = sim.effective(8)
+	var found: Dictionary = Items.roll_unique(sim.site_unique(8), sim.rng, int(t["level"]))
+	_check(Items.ilvl(found) == 33, "the barracks at depth 25 did not give a level-33 unique: %d" % Items.ilvl(found))
+	sim.load_dict(hold)
+	print("the growth ok: paragon, the lorries, the deep affix")
 
 
 ## The SMG line (7 Oct): a gun a tier from T2 to T6, two at T6, the top over the shotguns'; every SMG primary
@@ -6158,9 +6207,9 @@ func _map_nodes_checks(main) -> void:
 	sim.set_depth(2, 3)
 	var full: int = int(sim.boss_of(2)["notes"]) * 3
 	_check(sim.boss_cost(2) == int(round(full / 3.0)), "Heads up is off: %d of %d" % [sim.boss_cost(2), full])
-	_check(sim.pinnacle_depth() == Data.PINNACLE_DEPTH, "the pinnacle moved before Full strength")
+	_check(sim.pinnacle_depth(8) == int(Data.PINNACLE_DEPTH[2]), "the pinnacle moved before Full strength")
 	take.call(["full_strength"])
-	_check(sim.pinnacle_depth() == Data.PINNACLE_DEPTH - 2, "Full strength did not bring the pinnacle two sooner")
+	_check(sim.pinnacle_depth(8) == int(Data.PINNACLE_DEPTH[2]) - 2, "Full strength did not bring the pinnacle two sooner")
 	take.call(["bounties", "bounties", "wages", "wages", "wages", "heavy_crews"])
 	var e3: Dictionary = sim.effective(0)
 	_check(is_equal_approx(float(e3["xp"]) / float(e2["xp"]), 1.3 * 1.5) and is_equal_approx(float(e3["cash"]) / float(e2["cash"]), 1.5) and int(e3["contact"]) == int(e2["contact"]) + 1, "Wages and Heavy crews are off")
@@ -6713,6 +6762,8 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.gamble = ["rifle", "charm", "rig", "pistol", "melee"]
+	sim.hp = sim.max_hp()
+	sim.wound = ""                     # whole: the bot keeps the clinic's price back from the gamble when there is one to pay
 	sim.cash = sim.gamble_price("rifle") * 3 - 1
 	bot._gamble_one(sim)
 	_check(bot.bought.is_empty(), "the bot gambled under three times the price")

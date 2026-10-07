@@ -330,6 +330,13 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
+	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
+	var save_path := "res://docs/balance/%s.save" % build.replace(" as ", "-")
+	var sf := FileAccess.open(save_path, FileAccess.WRITE)
+	if sf != null:
+		sf.store_string(JSON.stringify({"sim": sim.to_dict()}))
+		sf.close()
+		g["end_save"] = save_path
 	print("GATES " + JSON.stringify(g))
 	quit(0)
 

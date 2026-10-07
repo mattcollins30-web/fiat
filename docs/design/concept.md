@@ -716,3 +716,29 @@ reached; the map's keystone runs it from 8. The ending is the hardest thing sixt
 Built 7 Oct, all of it (Matt: "I'd actually argue these go in before I play - SMG was the one thing I
 really enjoyed playing"): the four bases, the lift, walking fire at +4% a second to +40% on every SMG
 primary; the hospital's lean left as it was.
+
+## The engine (7 Oct 2026): what grows without end
+
+Matt, on the sixteenth balance read, which found every build at level 50 by hour 8 and walled at
+level 14-15 of every ladder with nothing past hour 8 moving it: "infinite scaling is kinda the point -
+we want players to be having and dealing millions of HP/damage ... getting past the first leg and then
+scaling compounds", and "if you can play the whole game with kit you've had for the last 40+ hours the
+loot loop of the ARPG has failed. The point is fight things to get gear to fight things to get gear."
+
+**The first leg is sized to the end kit of hour 16.** The stations are level 14 on each head's own
+site (the retail park at 12, the bank at 9, the barracks at 6), full strength is twice the crew at the
+same fire, and the lorry runs the services at depth 8 (level 14) with its three heads come light, at a
+third of their HP each, the crews left with the load. A fight in Fiat is attrition, incoming fire
+against HP, so the ending's heads are long, not hard-hitting; the probe read three heads in a row at
+35% of their HP at 0.80 for the strongest hour-16 build and 0.17 at 50%.
+
+**Then four things compound.** The lorries beaten multiply the yard's damage and HP by 1.25 each, kept
+across moves (the prestige: ten lorries is ×9). The ending climbs a depth a move, so each yard's
+stations and lorry are ×1.14 harder than the last and the yard is ×1.25 stronger: winnable, and always
+a step further. Paragon levels run past 50 on the same XP curve, +2% damage and HP each with no top, so
+a long session keeps moving before its lorry. And an affix's value grows 6% an item level past 15, in
+the drop and at the bench, a unique or set piece found deep carrying the site's level - so a depth-25
+find is twice the depth-15 one of the same tier and the chase has no end. The enemy curve is +14% a
+level; the player's growth is the four together, and the pass reads whether they keep pace over two
+legs (thirty-two hours) rather than one.
+

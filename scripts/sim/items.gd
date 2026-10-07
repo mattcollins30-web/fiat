@@ -394,7 +394,21 @@ static func tier_range(a: Dictionary, tier: int) -> Array:
 static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0, rarity_cap := 0) -> Dictionary:
 	var t := tier if tier > 0 else roll_tier(ilvl, rng, rarity_cap)
 	var r := tier_range(a, t)
-	return {"stat": a["stat"], "value": rng.randi_range(r[0], r[1]), "tier": t}
+	return {"stat": a["stat"], "value": int(round(rng.randi_range(r[0], r[1]) * ilvl_mult(ilvl))), "tier": t}
+
+
+## The deep drop's edge (7 Oct): an affix's value times this at an item level - nothing to ILVL_FROM, ILVL_SCALE a level
+## past it, no top - so a depth-20 find of a tier beats a depth-10 one, and the chase never ends.
+static func ilvl_mult(ilvl: int) -> float:
+	return 1.0 + Data.ILVL_SCALE * maxi(0, ilvl - Data.ILVL_FROM)
+
+
+## A fixed affix list (a unique's, a set piece's) at an item level: the values scaled as a drop's would be.
+static func _scaled(affixes: Array, ilvl: int) -> Array:
+	var out: Array = affixes.duplicate(true)
+	for a in out:
+		a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl)))
+	return out
 
 
 static func ilvl(it: Dictionary) -> int:
@@ -479,12 +493,12 @@ static func add_socket(it: Dictionary) -> bool:
 
 
 ## A set piece, rolled: its base, its fixed affixes, the set's name on it.
-static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var it := roll(piece["slot"], Data.MAX_TIER, rng)
+static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
+	var it := roll(piece["slot"], Data.MAX_TIER, rng, 0.0, false, false, "", "", 0.33, 0, level)
 	it["base"] = piece["base"]
 	it["tier"] = base_of(it)["tier"]
 	it["rarity"] = 2
-	it["affixes"] = piece["affixes"].duplicate(true)
+	it["affixes"] = _scaled(piece["affixes"], ilvl(it))
 	it["set"] = set_name
 	it["piece"] = piece["name"]
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[2]["value"] * 1.5))
@@ -503,12 +517,12 @@ static func set_named(name: String) -> Dictionary:
 
 
 ## A unique, rolled: its base, its fixed affixes, its name, its rule.
-static func roll_unique(u: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var it := roll(u["slot"], Data.MAX_TIER, rng)
+static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
+	var it := roll(u["slot"], Data.MAX_TIER, rng, 0.0, false, false, "", "", 0.33, 0, level)
 	it["base"] = u["base"]
 	it["tier"] = base_of(it)["tier"]
 	it["rarity"] = Data.RARITIES.size() - 1
-	it["affixes"] = u["affixes"].duplicate(true)
+	it["affixes"] = _scaled(u["affixes"], ilvl(it))          # found deep, it carries the depth (7 Oct)
 	it["unique"] = u["name"]
 	it["rule"] = u["rule"]
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[Data.RARITIES.size() - 1]["value"] * 1.5))

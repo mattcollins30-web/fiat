@@ -273,8 +273,8 @@ func show_state(s) -> void:
 func _station_words(i: int) -> String:
 	var out: Array = []
 	var b: Dictionary = sim.boss_of(i)
-	if not b.is_empty() and sim.depth[i] < sim.pinnacle_depth():
-		out.append("Depth %d: %s at full strength" % [sim.pinnacle_depth(), b["name"]])
+	if not b.is_empty() and sim.depth[i] < sim.pinnacle_depth(i):
+		out.append("Depth %d: %s at full strength" % [sim.pinnacle_depth(i), b["name"]])
 	if i == Data.CONVOY_TIER and sim.depth[i] < sim.convoy_depth():
 		out.append("Depth %d: the lorry" % sim.convoy_depth())
 	var own: Dictionary = sim.site_unique(i)

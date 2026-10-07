@@ -841,11 +841,20 @@ const BOSSES := [
 ## The convoy: the services at CONVOY_DEPTH and up can take on all three
 ## crews at once, one head after another, for all three prices; what comes
 ## home is the lorry's load.
-const PINNACLE_DEPTH := 10
-const PINNACLE_HP := 2.5
-const PINNACLE_DPS := 1.6
+const PINNACLE_DEPTH := [12, 9, 6]  # by zone: level 14 on the head's own site (the retail park at 12, the bank at 9, the barracks at 6), plus the moves made
+## The first leg (7 Oct, the sixteenth read): the stations and the lorry sized to the end kit of hour 16, which stands at
+## level 14-15 on every ladder - full strength is twice the crew at the same fire (the fight is attrition, a fire multiplier
+## reads 0.00 whatever the HP), at level 14 on each head's own site; the lorry's three come light. The ending climbs a depth a
+## move (the loop), and the lorries beaten multiply the yard (LORRY_MULT), so the second leg reaches further than the first.
+const PINNACLE_HP := 2.0
+const PINNACLE_DPS := 1.0
 const PINNACLE_COST := 2
-const CONVOY_DEPTH := 10          # the fifteenth read (7 Oct): sixteen hours of every build lands at level 16-17 on the services; 12 (level 18) was never reached
+const CONVOY_DEPTH := 8           # level 14 on the services, plus the moves made (the sixteenth read: the end kit holds level 14, not 16)
+const CONVOY_HP := 0.35           # the convoy's heads at plain strength and this much of their HP each: they come light, the crews left with the load (three in a row at 35% read 0.80 for the end kit, at 50% 0.17)
+const LORRY_MULT := 1.25          # the yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
+const PARAGON_PCT := 2.0          # past MAX_LEVEL: damage and HP +this% a paragon level, uncapped, on the same XP curve
+const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
+const ILVL_FROM := 15
 const CONVOY_TIER := 6             # the services
 const CONVOY_UNIQUE := "The lorry's load"
 const BOSS_HP_MULT := 1.0          # boss HP = site hp × boss "hp"; scales with the curve past the campaign
@@ -1502,12 +1511,11 @@ static var _xp_table: Array = []
 
 static func xp_for_level(level: int) -> float:
 	if _xp_table.is_empty():
-		var total := 0.0
 		_xp_table.append(0.0)
-		for l in range(1, MAX_LEVEL):
-			total += floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0)
-			_xp_table.append(total)
-	return _xp_table[clampi(level, 1, MAX_LEVEL) - 1]
+	while _xp_table.size() < maxi(level, MAX_LEVEL):        # the curve runs on past the cap: the paragon levels (7 Oct)
+		var l: int = _xp_table.size()
+		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0))
+	return _xp_table[maxi(level, 1) - 1]
 
 
 static func level_for_xp(xp: float) -> int:
@@ -1515,3 +1523,17 @@ static func level_for_xp(xp: float) -> int:
 	while l < MAX_LEVEL and xp >= xp_for_level(l + 1):
 		l += 1
 	return l
+
+
+## Levels past the cap, on the same curve: nothing until MAX_LEVEL, then one a step.
+static var _paragon_memo: Array = [-1.0, 0]
+static func paragon_for_xp(xp: float) -> int:
+	if not is_finite(xp):
+		return 0
+	if _paragon_memo[0] == xp:
+		return _paragon_memo[1]                  # read many times a tick from the HP and the damage
+	var l := MAX_LEVEL
+	while l < 10000 and xp >= xp_for_level(l + 1):
+		l += 1
+	_paragon_memo = [xp, l - MAX_LEVEL]
+	return l - MAX_LEVEL

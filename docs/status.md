@@ -2100,6 +2100,69 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The engine: the first leg sized, and what grows without end (7 Oct)
+
+Matt, on the sixteenth read: "infinite scaling is kinda the point - we want players to be having and
+dealing millions of HP/damage ... getting past the first leg and then scaling compounds", and "if you
+can play the whole game with kit you've had for the last 40+ hours the loot loop of the ARPG has
+failed." The read had shown the player side did not compound at all: `MAX_LEVEL` 50 by hour 8, HP and
+damage linear in the level, the kit capped at T6 with capped affix tiers, against a curve at +14% a
+level for ever - a wall at level 14-15 of every ladder for every build. Built, all in one batch:
+*The first leg.* The stations at level 14 on each head's own site: `PINNACLE_DEPTH` by zone [12, 9, 6]
+(`pinnacle_depth(i)`); full strength is twice the crew at the same fire (`PINNACLE_HP` 2.0,
+`PINNACLE_DPS` 1.0 - the probe read a fire multiplier at 0.00 whatever the HP); the lorry at depth 8
+(`CONVOY_DEPTH` 8, level 14) with its three heads at plain strength and `CONVOY_HP` 0.35 of their HP
+each ("they come light, the crews left with the load": three in a row at 35% read 0.80 for the hour-16
+kit, at 50% 0.17); the bot arms the lorry at `LORRY_ODDS` 0.6 with the kit insured, the ending taken
+at better than even. *The ending climbs.* `pinnacle_depth` and `convoy_depth` add `yard_moves`: each
+yard's stations and lorry are a depth (×1.14) deeper than the last. *The prestige.* `LORRY_MULT` 1.25
+on damage and HP a lorry beaten (`lorry_mult`, the lorries kept across moves): ten lorries is ×9.
+*Paragon.* `Data.xp_for_level` runs past the cap on the same curve (the table grows as asked);
+`paragon()` is the levels past 50, `PARAGON_PCT` 2 on damage and HP each, no top; the top bar reads
+"Level 50 +12" and the XP line keeps counting to the next. `growth_mult()` is the two together, in
+`max_hp` and the damage. *The deep drop.* `Items.ilvl_mult`: an affix's rolled value times
+1 + `ILVL_SCALE` 0.06 a level past `ILVL_FROM` 15 (nothing before: the campaign's drops are as they
+were), in `roll_affix` so the bench's rolls grow with the item's level too; a unique or a set piece
+found deep carries the site's level (`roll_unique` and `roll_set_piece` take `level`; every find and
+head's drop passes it) and its fixed affixes scale the same - a depth-25 barracks find is level 33 at
+×2.08. Smoke: the stations' depths by zone, full strength twice the HP at the same fire, the convoy
+three in a row and light, the ending a depth deeper after a move and the multiplier by the lorries;
+paragon at ten levels on HP, damage and the top bar, the curve past the cap, three lorries ×1.95, the
+deep affix at the same tier, a unique carrying its depth, the barracks at depth 25 giving level 33.
+The pass now needs two legs to read: `balance.bat 32`.
+
+**The sixteenth read (the Legion, 7 Oct, twenty reads of ten builds, sixteen hours, the four in).** Five
+red; the spread and scrap bands green as re-stated, No reds back to red on one Poacher. *The lorry: no
+build, again*, the services at 8-10 on every build, the convoy never armed - and this time with the
+depth at 10 and a poison Poacher holding 15,800 notes against the 2,400 the convoy asks. So it is the
+odds, not the depth or the price. Read offline from a gate's end save (`balance.gd` now writes
+`docs/balance/<build>.save` at the end of a read; a scratch probe arms the convoy and reads
+`survival`): the hour-16 poison Poacher - level 50, 906 dps, 439 HP, 270 armour, as strong as any read
+ends - reads the services plain at depth 8 (level 14) 1.00 and at 9 (level 15) 0.00; the barracks' plain
+quartermaster at depth 6 (level 14) 1.00, at 7 0.28-0.32, at 9 0.00; the quartermaster at full strength
+at depth 10 (level 18: 469k HP, 143 dps against the runner's 439 HP) 0.00; the convoy at depth 10
+(1.36M HP across the three, 95-134 dps each) 0.00, and 0.00 at depth 8 whatever the heads' HP, until
+their fire comes down. Every build caps at level 50 by hour 8, so the hour-16 kit is the end kit, and
+its edge is level 14-15 on every ladder: the stations (full strength at depth 10, the lorry at 10-12)
+sit two to four levels past where the end kit can stand at all, and `PINNACLE_HP` 2.5 × `PINNACLE_DPS`
+1.6 on top. Varying the figures on the probe: the fight is attrition, incoming fire against HP, so the
+dps multiplier is what kills - at ×1.25 fire the convoy reads 0.00 even with the heads at a quarter of
+their HP; at plain fire a single head at twice its HP reads 1.00, three heads in a row read 0.80 at 35%
+of their HP each (9.8 site-HP units in all), 0.17 at 50% (14 units), 0.00 past that. *Proposed, not
+moved:* the stations at level 14 on their own sites (`PINNACLE_DEPTH` by zone [12, 9, 6], as the sites'
+own uniques; the map's Full strength two sooner), full strength as twice the crew and the same fire
+(`PINNACLE_HP` 2.0, `PINNACLE_DPS` 1.0: "he's brought the whole warehouse"), the lorry at depth 8
+(`CONVOY_DEPTH` 8, level 14; the keystone from 6) with its three heads at plain strength and 35% of
+their HP each (`CONVOY_HP` 0.35: they come light, the crews left with the load), and the bot arming the
+lorry at 0.6 odds with the kit insured - the ending taken at better than even, not at PUSH. *The rest:*
+wounds 2-9% on four builds under the band's floor (0.30 over-corrected from 0.35's 31-44%: 0.33
+proposed); deaths one in 32-82 on six builds - the bot's bail rate at PUSH 0.88 is the bot's appetite,
+not the game's, and the row should read Matt's save, not the bot (proposed: the row stays, read from
+the save's count, the bot's figure shown beside); the one Poacher read at T7/T8 50% ran the services
+hurt and wounded for seven hours at £3k a run with the stash filling, because every run's take went on
+the bench before the clinic's price was there - the bot now keeps the treatment's price three times
+over back from the bench, the gamble and the words (`_reserve`); the bank's band is the drop's luck.
+
 **The four moved (7 Oct, Matt: "make the changes and I'll run the balance after before playing").**
 `CONVOY_DEPTH` 10 (the lorry at level 16, where sixteen hours lands; the map's keystone runs it from
 8; the yard's "done" line and the map's empty panel read the figure); `WOUND_AT` 0.30; the spread
@@ -2212,7 +2275,7 @@ again as fast a rank, `recover_s`), Easy pickings (drops +10% a rank), ★ Local
 gear tier up), Short cuts (pace +5% a rank), ★ Open ground (one fewer on you), Every penny (cash
 +10% a rank), ◆ The lie of the land (every ladder opens one past the deepest cleared, in `set_depth`).
 The crews: Paid in notes, Two of everything, Heads up (a head's price a third less a rank), ★ Full
-strength (the pinnacle from depth 8: `pinnacle_depth()`), Bounties (a head's notes half again a rank),
+strength (the pinnacle two depths sooner: `pinnacle_depth(i)`, by zone since the engine), Bounties (a head's notes half again a rank),
 Wages (XP +10% a rank), ★ Heavy crews (one more on you, kills pay half again in cash and XP), Their
 own kit (a kill drops 10% more often a rank), ★ Marked men (+25% on the first of a gang), Long memory
 (a crew's head's price paid once a depth: `boss_paid`, the depths paid, saved), ★ Head start (a head at full strength pays a

@@ -150,6 +150,21 @@ func level() -> int:
 	return Data.level_for_xp(xp)
 
 
+## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top.
+func paragon() -> int:
+	return Data.paragon_for_xp(xp)
+
+
+## The yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
+func lorry_mult() -> float:
+	return pow(Data.LORRY_MULT, lorries)
+
+
+## What grows without end: the paragon levels and the lorries, as one multiplier on damage and HP.
+func growth_mult() -> float:
+	return (1.0 + Data.PARAGON_PCT * paragon() / 100.0) * lorry_mult()
+
+
 func max_hp() -> float:
 	return _memo("max_hp", _max_hp_raw)
 
@@ -159,7 +174,7 @@ func _max_hp_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			m += Items.affix_total(equipped[s], "hp")
-	return m * cm("hp") * trait_mult("hp") * wound_mult("hp")
+	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult()
 
 
 ## Damage a second: the primary, a third of the secondary, the level, the affixes.
@@ -189,7 +204,7 @@ func dps() -> float:
 		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (40.0 if has_node("walking_wounded") else 0.0)
 	if mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)):
 		pct += _affix_sum("first_lot_pct")
-	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage")
+	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage") * growth_mult()
 
 
 func armour() -> float:
@@ -1875,7 +1890,7 @@ func shelf_chase() -> Array:
 		if u.has("pinnacle"):
 			for b in Data.BOSSES:
 				if int(b["zone"]) == int(u["pinnacle"]):
-					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], pinnacle_depth()]})
+					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], pinnacle_depth(int(b["tier"]))]})
 	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"] % [convoy_depth(), Data.TIERS[Data.CONVOY_TIER]["name"].to_lower()]})
 	return out
 
@@ -2458,19 +2473,20 @@ static func _softened(m: Dictionary, f: float) -> Dictionary:
 	return out
 
 
-## The depth a crew's head comes at full strength from: PINNACLE_DEPTH, two sooner with Full strength on the map.
-func pinnacle_depth() -> int:
-	return Data.PINNACLE_DEPTH - 2 * atlas_rank("full_strength")
+## The depth a crew's head comes at full strength from on a site: PINNACLE_DEPTH for the site's zone (level 14 on his
+## own site), a depth deeper for every move made (the ending climbs with the loop), two sooner with Full strength.
+func pinnacle_depth(i: int) -> int:
+	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - 2 * atlas_rank("full_strength")
 
 
-## The depth the lorry runs the services from: CONVOY_DEPTH, two sooner with The lorry's route on the map.
+## The depth the lorry runs the services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
 func convoy_depth() -> int:
-	return Data.CONVOY_DEPTH - 2 * atlas_rank("lorrys_route")
+	return Data.CONVOY_DEPTH + yard_moves - 2 * atlas_rank("lorrys_route")
 
 
-## From pinnacle_depth() a crew's head comes at full strength.
+## From pinnacle_depth(i) a crew's head comes at full strength.
 func is_pinnacle(i: int) -> bool:
-	return depth[i] >= pinnacle_depth()
+	return depth[i] >= pinnacle_depth(i)
 
 
 ## The services, deep enough: the convoy, all three crews.
@@ -2479,8 +2495,8 @@ func is_convoy(i: int) -> bool:
 
 
 ## A boss as they come at this tier and depth: the crew's head, or at full strength.
-func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool) -> Dictionary:
-	var hp: float = e["hp"] * float(b["hp"]) * (Data.PINNACLE_HP if pinnacle else 1.0)
+func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool, convoy := false) -> Dictionary:
+	var hp: float = e["hp"] * float(b["hp"]) * (Data.PINNACLE_HP if pinnacle else 1.0) * (Data.CONVOY_HP if convoy else 1.0)
 	var dps: float = e["dps"] * float(b["dps"]) * (Data.PINNACLE_DPS if pinnacle else 1.0)
 	return {"name": b["name"], "hp": hp, "dps": dps, "zone": int(b["zone"]), "pinnacle": pinnacle}
 
@@ -2591,10 +2607,10 @@ func effective(i: int) -> Dictionary:
 		e["cash"] *= 1.0 - Data.WORN_CASH * w
 	var b := boss_of(i)
 	if boss_armed.get(i, false) and is_convoy(i):
-		# the convoy: all three, one after another, at full strength
+		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, plain fire): the crews stayed with the load
 		var queue: Array = []
 		for cb in Data.BOSSES:
-			queue.append(boss_form(cb, e, true))
+			queue.append(boss_form(cb, e, false, true))
 		e["boss"] = queue[0]
 		e["boss_queue"] = queue.slice(1)
 		e["convoy"] = true
@@ -3409,7 +3425,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
 		# the last of the convoy: the lorry's load comes home too, and the yard's ending is written (7 Oct)
-		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng)
+		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)))
 		m["found"].append(load)
 		_read(load)
 		log_event("The convoy's done. Found: %s" % load["unique"])
@@ -3418,12 +3434,12 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			lorries += 1
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
-		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng)
+		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)))
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
 		_read(it)
 		log_event("%s is down. %s Found: %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
-			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng)
+			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)))
 			m["found"].append(it2)
 			_read(it2)
 			log_event("And a second: %s." % it2["unique"])
@@ -3470,14 +3486,14 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	var own: Dictionary = site_unique(int(t["tier"]))
 	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
 	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
-		it = Items.roll_unique(own, rng)              # the site's own, only here and only this deep (endgame part 3)
+		it = Items.roll_unique(own, rng, int(t.get("level", -1)))     # the site's own, only here and only this deep (endgame part 3)
 		log_event("Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]])
 	elif t["depth"] >= 2 and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
-		it = Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng)
+		it = Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng, int(t.get("level", -1)))
 		log_event("Found: %s" % it["unique"])
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
-		it = Items.roll_set_piece(pick[0], pick[1], rng)
+		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)))
 		log_event("Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()])
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
