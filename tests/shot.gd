@@ -16,6 +16,8 @@ func _init() -> void:
 	_out = args[2] if args.size() > 2 else "res://shots"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_out))
 	main = load("res://scripts/ui/main.gd").new()
+	main.save_file = "user://shot_autosave.save"     # never the player's
+	main.slot_file = "user://shot_slot%d.save"
 	main.intro = false
 	root.add_child(main)
 	main.new_game()

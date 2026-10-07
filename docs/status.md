@@ -2100,6 +2100,17 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The smoke wrote over the player's saves (7 Oct)
+
+Matt: "you wiped fiat_slot1.save?" Yes - the smoke did, every run: its slot round-trip saved to
+`user://fiat_slot1.save` and its lost-camp check wrote and removed `user://fiat.save`, the real autosave
+and slot 1 on the Legion. The shell's save paths are instance variables now (`save_file`, `slot_file`,
+the old constants their defaults); the smoke and the shots point them at files of their own
+(`smoke_autosave.save`, `smoke_slot%d.save`, `shot_*`) and remove them at the end, and the smoke records
+the size and time of every player save at the start and checks them unchanged at the end, so it cannot
+happen again without the run failing. The slot Matt sent that morning is in `saves/fiat_slot1.save`
+(gitignored) to copy back to `%APPDATA%\Godot\app_userdata\Fiat\`.
+
 ## The map in the caravan's shape (7 Oct)
 
 Matt, reaching the map for the first time: "needs to look similar to the caravan for point selection - it

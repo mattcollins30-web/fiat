@@ -9,6 +9,23 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
+const SMOKE_SAVE := "user://smoke_autosave.save"
+const SMOKE_SLOT := "user://smoke_slot%d.save"
+var _player_saves_before := {}
+
+
+## The player's own save files on this machine, by size and time: the smoke must leave every one as it found it.
+static func _player_saves() -> Dictionary:
+	var out := {}
+	var Main = load("res://scripts/ui/main.gd")
+	var paths: Array = [Main.SAVE_FILE]
+	for k in range(Main.SLOTS):
+		paths.append(Main.SLOT_FILE % (k + 1))
+	for path in paths:
+		if FileAccess.file_exists(path):
+			var f := FileAccess.open(path, FileAccess.READ)
+			out[path] = [f.get_length(), FileAccess.get_modified_time(path)]
+	return out
 const Sim := preload("res://scripts/sim/sim.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
@@ -30,6 +47,10 @@ func _check(ok: bool, msg: String) -> void:
 func _init() -> void:
 	var main = load("res://scripts/ui/main.gd").new()
 	main.intro = false
+	# the smoke saves to its own files, never the player's (7 Oct: it wrote slot 1 and took the autosave on the Legion)
+	main.save_file = SMOKE_SAVE
+	main.slot_file = SMOKE_SLOT
+	_player_saves_before = _player_saves()
 	root.add_child(main)
 	main.new_game()
 	var sim = main.sim
@@ -409,6 +430,11 @@ func _init() -> void:
 	# every screen with the worst items there are: elites of every base, every affix at its top roll
 	_worst_case(main)
 	_slots_offline_hardcore(main)
+	# the player's own saves are as they were, and the smoke's are gone
+	_check(_player_saves() == _player_saves_before, "the smoke touched the player's saves: %s -> %s" % [str(_player_saves_before), str(_player_saves())])
+	for path in [SMOKE_SAVE, SMOKE_SLOT % 1, SMOKE_SLOT % 2, SMOKE_SLOT % 3]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
 	if _misfits > 0 or _fails > 0:
 		print("FAIL: %d labels do not fit their boxes, %d checks failed" % [_misfits, _fails])
 		quit(1)
@@ -421,7 +447,7 @@ func _init() -> void:
 func _slots_offline_hardcore(main) -> void:
 	var sim = main.sim
 	# a slot round-trip, and the title/slot menus' words
-	var slot: String = main.SLOT_FILE % 1
+	var slot: String = main.slot_file % 1
 	main.save_game(slot)
 	_check(FileAccess.file_exists(slot), "save to a slot wrote nothing")
 	_check(main._slots_words().begins_with("1 of"), "slots words: " + main._slots_words())
@@ -473,7 +499,7 @@ func _slots_offline_hardcore(main) -> void:
 	_check_fit(main, "Back, then (worst)")
 	main._menu.close()
 	# a saved stamp two hours old goes through the away screen on load
-	var f := FileAccess.open(main.SAVE_FILE, FileAccess.WRITE)
+	var f := FileAccess.open(main.save_file, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"version": main.SAVE_VERSION, "saved": Time.get_unix_time_from_system() - 7200.0, "sim": sim.to_dict()}))
 	f.close()
 	main.load_game()
@@ -493,13 +519,13 @@ func _slots_offline_hardcore(main) -> void:
 	std.deploy(0)
 	std._kia()
 	_check(std.equipped["Primary"] != null and std.equipped["Armour"] != null, "a new operator reports without kit")
-	var stamp_before: Dictionary = main._read_save(main.SAVE_FILE)
+	var stamp_before: Dictionary = main._read_save(main.save_file)
 	main.save_game()
-	_check(main._read_save(main.SAVE_FILE).get("saved", 0.0) == stamp_before.get("saved", 0.0), "a lost camp still saved")
+	_check(main._read_save(main.save_file).get("saved", 0.0) == stamp_before.get("saved", 0.0), "a lost camp still saved")
 	main.refresh()
 	_check_fit(main, "Camp (lost)")
 	main.show_camp_lost()
-	_check(not FileAccess.file_exists(main.SAVE_FILE), "the lost camp's autosave was not removed")
+	_check(not FileAccess.file_exists(main.save_file), "the lost camp's autosave was not removed")
 	_check(FileAccess.file_exists(slot), "the slots did not survive the lost camp")
 	main._to_title_no_save()
 	_check(main.sim == null, "the title after a lost camp still has a sim")

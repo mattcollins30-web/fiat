@@ -35,6 +35,10 @@ const Vendor := preload("res://scripts/ui/vendor.gd")
 
 const SAVE_FILE := "user://fiat.save"           # the autosave: the game in progress
 const SLOT_FILE := "user://fiat_slot%d.save"    # saves the player makes
+## Where this shell saves: the files above, unless a test points it elsewhere (7 Oct: the smoke wrote the
+## player's own autosave and slot 1 on the Legion, and took the autosave with its lost-camp check).
+var save_file := SAVE_FILE
+var slot_file := SLOT_FILE
 const SLOTS := 3
 const SAVE_VERSION := 1
 const AUTOSAVE_S := 30.0
@@ -340,9 +344,9 @@ func _notification(what: int) -> void:
 
 func show_title() -> void:
 	var items := []
-	var saved := FileAccess.file_exists(SAVE_FILE)
-	items.append({"name": "Continue", "detail": _save_words(SAVE_FILE) if saved else "No camp in progress",
-			"action": load_game.bind(SAVE_FILE), "enabled": saved})
+	var saved := FileAccess.file_exists(save_file)
+	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
+			"action": load_game.bind(save_file), "enabled": saved})
 	items.append({"name": "New camp", "detail": "One runner, a nail gun, £150",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else ""})
 	items.append({"name": "New camp, hardcore", "detail": "A death ends the yard: stash, cash, everything",
@@ -366,7 +370,7 @@ func _save_words(path: String) -> String:
 func _slots_words() -> String:
 	var n := 0
 	for k in range(SLOTS):
-		if FileAccess.file_exists(SLOT_FILE % (k + 1)):
+		if FileAccess.file_exists(slot_file % (k + 1)):
 			n += 1
 	return "%d of %d slots used" % [n, SLOTS]
 
@@ -386,7 +390,7 @@ func _read_save(path: String) -> Dictionary:
 func show_slots(saving: bool, back: Callable) -> void:
 	var items := []
 	for k in range(SLOTS):
-		var path := SLOT_FILE % (k + 1)
+		var path := slot_file % (k + 1)
 		var used := FileAccess.file_exists(path)
 		var words := _save_words(path) if used else "Empty"
 		if saving:
@@ -461,7 +465,9 @@ func new_game(hardcore := false) -> void:
 	refresh()
 
 
-func save_game(path := SAVE_FILE) -> void:
+func save_game(path := "") -> void:
+	if path == "":
+		path = save_file
 	if sim == null or sim.camp_lost:
 		return
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -469,11 +475,13 @@ func save_game(path := SAVE_FILE) -> void:
 		return
 	f.store_string(JSON.stringify({"version": SAVE_VERSION, "saved": Time.get_unix_time_from_system(), "sim": sim.to_dict()}))
 	f.close()
-	if path == SAVE_FILE:
+	if path == save_file:
 		_since_save = 0.0
 
 
-func load_game(path := SAVE_FILE) -> void:
+func load_game(path := "") -> void:
+	if path == "":
+		path = save_file
 	var d := _read_save(path)
 	if d.is_empty():
 		return
@@ -533,7 +541,7 @@ func show_camp_lost() -> void:
 	var words := "The yard is gone with the runner."
 	if r != null and r.has("lost_value"):
 		words = "Dead in %s with %s of kit on. The yard is gone with the runner." % [sim.tier(r["tier"])["name"].to_lower(), Fmt.money(r["lost_value"])]
-	DirAccess.remove_absolute(SAVE_FILE)
+	DirAccess.remove_absolute(save_file)
 	_menu.open("The yard is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
 
 
