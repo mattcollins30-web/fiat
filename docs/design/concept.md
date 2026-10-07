@@ -710,3 +710,6 @@ shotgun with a different box: *walking fire* - the stream grows the longer the g
 (say +4% a second to +40%), reset when the gang drops. It rewards the SMG's long fights on big pools
 and does nothing for a rifle's first shot, and it is one stat on the base (`sustain_pct`) read in
 `_fight`. Not in the proposal's numbers; a decision for the same sitting.
+Built 7 Oct, all of it (Matt: "I'd actually argue these go in before I play - SMG was the one thing I
+really enjoyed playing"): the four bases, the lift, walking fire at +4% a second to +40% on every SMG
+primary; the hospital's lean left as it was.

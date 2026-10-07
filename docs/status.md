@@ -2100,6 +2100,27 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+## The SMG line, walking fire, the lorry's hour (7 Oct)
+
+Matt, on the fourteenth read's Drifters: "the solution is more guns and better SMGs at the top end",
+and "SMG was the one thing I really enjoyed playing", so it goes in before the save. Built from
+concept.md's proposal: four bases - Security guard's carbine (T3, 18 × 3.0), Courier's SMG (T4,
+21 × 3.6), Armoured car gun (T5, 25 × 4.0), Riot squad's SMG (T6, 28 × 4.4, the slot's four-cell
+footprint) - and the Section gun lifted to 27 × 4.4, so the line runs a gun a tier from T2 to T6 with
+two at T6 like the shotguns and its top at 123 against their 115. Their words in `Words.ITEMS`. *Walking
+fire*: every SMG primary carries `sustain` [4, 40] - the fight's stream grows 4% a second on one gang
+to +40% (`sustain_mult`, read in `_fight` with the headshot; `sustain_t` on the mission, reset when a
+gang arrives, the convoy comes or a head comes out) - the long fight's gun, nothing for a rifle's first
+shot; the panel's tail says "walking fire +4%/s to +40%" (`Items.base_res_words`). The odds reader
+runs the same fight, so it is in the odds. The art: four jobs in `tools/pixellab_items_new_manifest.json`
+(`security_guard_s_carbine`, `courier_s_smg`, `armoured_car_gun` at 192 × 64, `riot_squad_s_smg` at
+256 × 64), the manifests regenerated on the Legion (the seeds after the insertion shift; existing files
+are skipped). *The gates*: `LORRY_BY` 16 (Matt: "16 hours would be right given the type of game"),
+`balance.bat` sixteen hours by default, the gate read's wall limit an hour. The ladders' spread band
+stays at 5-9 until Matt says whether the design's spread or the shapes move. Smoke: the line's tiers
+and count, the top a shade over the others', walking fire on every SMG, its figures at nought, five and
+thirty seconds and not on a shotgun, the tail's words.
+
 ## The pass resumes: the endgame's two gates and the bot's loop (7 Oct)
 
 All four parts in, the balance pass gains the two rows concept.md named. *The lorry*: beaten by hour

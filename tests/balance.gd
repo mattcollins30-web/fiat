@@ -208,7 +208,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	var mark_items := 0
 	var depth_seen: Dictionary = {}
 	var t0 := Time.get_ticks_msec()
-	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 1800000:
+	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 3600000:     # an hour of wall: sixteen simulated hours run twenty minutes
 		var items_before: int = sim.stash.size()
 		var lost_before: int = sim.operators_lost
 		var t: int = bot.step(sim)

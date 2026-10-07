@@ -1814,6 +1814,15 @@ func meds_carried() -> int:
 	return n
 
 
+## Walking fire: the primary's `sustain` [a second, cap] as the stream's multiplier after `sustain_t` seconds on one gang.
+func sustain_mult(m: Dictionary) -> float:
+	var gun = equipped["Primary"]
+	if gun == null or not Items.base_of(gun).has("sustain"):
+		return 1.0
+	var su: Array = Items.base_of(gun)["sustain"]
+	return 1.0 + minf(float(su[1]), float(su[0]) * float(m.get("sustain_t", 0.0))) / 100.0
+
+
 ## A unique's rule, by its flag, when one is worn.
 func has_rule(rule: String) -> bool:
 	if _dry_on:
@@ -2974,6 +2983,7 @@ func _tick(dt: float) -> void:
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1
 			m["fresh"] = true
+			m["sustain_t"] = 0.0
 			var grown: int = 0 if has_node("cap_dead_quiet") else m["patrols"] - 1      # Dead quiet: every gang the size of the first
 			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
@@ -3032,6 +3042,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
 			m["fresh"] = true
+			m["sustain_t"] = 0.0
 			m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t) * size
 			log_event("%s %s" % [Words.EVENTS["convoy"], Words.EVENTS["convoy_notes"]])
 		"trapped":
@@ -3077,7 +3088,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["shock_t"] = maxf(0.0, float(m.get("shock_t", 0.0)) - dt)
 	# the hit, by type: each share cut by their resist to it; shocked, more of everything
 	var shocked: bool = float(m.get("shock_t", 0.0)) > 0.0
-	var mult: float = pace() * t["pace"] * swing * headshot * dt
+	# walking fire (the SMG line, 7 Oct): the stream grows the longer the gun fires on one gang
+	m["sustain_t"] = float(m.get("sustain_t", 0.0)) + dt
+	var mult: float = pace() * t["pace"] * swing * headshot * sustain_mult(m) * dt
 	var res: Dictionary = t.get("res", {})
 	var per_type := type_dps()
 	var landed_total := 0.0
@@ -3161,6 +3174,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["remaining"] = 1
 			m["target_hp"] = float(m["boss"]["hp"])
 			m["fresh"] = true
+			m["sustain_t"] = 0.0
 			log_event("%s comes out%s. %s" % [m["boss"]["name"], ", at full strength" if m["boss"].get("pinnacle", false) else "", Words.BOSSES.get(m["boss"]["name"], {}).get("out", "")])
 			return
 		m["target_hp"] = 0.0

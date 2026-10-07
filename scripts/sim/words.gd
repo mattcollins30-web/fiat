@@ -321,6 +321,10 @@ const ITEMS := {
 	"Police carbine": "An armed-response carbine, from a response that never arrived.",
 	"Army SMG": "A soldier's close-quarters gun. Compact, quick, and someone's unit patch is still on the sling.",
 	"Belt-fed SMG": "Someone's idea of a joke that worked. A belt in a bag, a gun on a strap, and nothing left standing.",
+	"Security guard's carbine": "Issued to the shopping centre's night man, who was told he would never need it. He left it in the office.",
+	"Courier's SMG": "Under the seat of a van that did the bank run. The courier kept the van.",
+	"Armoured car gun": "The gun the armoured car's guard was meant to have and never got, found in the depot it came from.",
+	"Riot squad's SMG": "The riot squad's own, with the squad's number scratched off. Kept in the same cupboard as their shotguns.",
 	# secondaries
 	"Converted blank-firer": "A starting pistol with the barrel drilled out. It fires. Roughly where you point it.",
 	"Flare pistol": "From a lifeboat station. One shot, very bright, and whatever it hits stays lit.",

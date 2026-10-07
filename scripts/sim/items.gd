@@ -752,6 +752,9 @@ static func base_res_words(it: Dictionary) -> String:
 	for ty in Data.ELEMENTS:
 		if res.has(ty):
 			out.append("%s res %d" % [ty, int(res[ty])])
+	if base_of(it).has("sustain"):
+		var su: Array = base_of(it)["sustain"]
+		out.append("walking fire +%d%%/s to +%d%%" % [int(su[0]), int(su[1])])     # the SMG line (7 Oct)
 	return " · ".join(out)
 
 

@@ -6008,11 +6008,56 @@ func _site_level_checks(main) -> void:
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(0)
 	_site_unique_checks(main)
+	_smg_line_checks(main)
 	sim.intel[0] = hold_intel[0]
 	sim.intel[8] = hold_intel[1]
 	sim.depth = hold_depth
 	sim.best_depth = hold_best
 	sim._surv_cache = {}
+
+
+## The SMG line (7 Oct): a gun a tier from T2 to T6, two at T6, the top over the shotguns'; every SMG primary
+## carries walking fire, read in the fight's stream and said on the panel's tail.
+func _smg_line_checks(main) -> void:
+	var sim = main.sim
+	var smgs: Array = []
+	for b in Data.BASES["Primary"]:
+		if b.get("type", "") == "smg":
+			smgs.append(b)
+	var tiers: Array = smgs.map(func(b): return int(b["tier"]))
+	for t in range(2, 7):
+		_check(t in tiers, "the SMG line has no T%d" % t)
+	_check(tiers.count(6) == 2 and smgs.size() == 9, "the SMG line is %d guns with %d at T6" % [smgs.size(), tiers.count(6)])
+	var top_smg := 0.0
+	var top_other := 0.0
+	for b in Data.BASES["Primary"]:
+		if not b.has("rof"):
+			continue
+		var dps: float = float(b["damage"]) * float(b["rof"])
+		if b.get("type", "") == "smg":
+			top_smg = maxf(top_smg, dps)
+		elif int(b["tier"]) == 6:
+			top_other = maxf(top_other, dps)
+	_check(top_smg > top_other and top_smg < top_other * 1.15, "the SMG top is %.0f against the others' %.0f: a shade over was the aim" % [top_smg, top_other])
+	for b in smgs:
+		_check(b.has("sustain"), "%s has no walking fire" % b["name"])
+		_check(Words.item_words(b["name"]) != "", "%s has no words" % b["name"])
+	# walking fire in the stream: nothing at the gang's first tick, the cap after ten seconds, reset by the next gang
+	var hold = sim.equipped["Primary"]
+	sim.equipped["Primary"] = sim._plain("Primary", "Riot squad's SMG")
+	var m := {"sustain_t": 0.0}
+	_check(is_equal_approx(sim.sustain_mult(m), 1.0), "walking fire starts above nothing")
+	m["sustain_t"] = 5.0
+	_check(is_equal_approx(sim.sustain_mult(m), 1.2), "walking fire at five seconds reads %.2f, not 1.20" % sim.sustain_mult(m))
+	m["sustain_t"] = 30.0
+	_check(is_equal_approx(sim.sustain_mult(m), 1.4), "walking fire did not cap at +40%%: %.2f" % sim.sustain_mult(m))
+	sim.equipped["Primary"] = sim._plain("Primary", "Riot squad's shotgun")
+	_check(is_equal_approx(sim.sustain_mult(m), 1.0), "a shotgun walks its fire")
+	sim.equipped["Primary"] = hold
+	# the panel's tail says it
+	var gun: Dictionary = sim._plain("Primary", "Courier's SMG")
+	_check(Items.base_res_words(gun).contains("walking fire +4%/s to +40%"), "the SMG's tail does not say walking fire: '%s'" % Items.base_res_words(gun))
+	print("the SMG line ok: nine guns, walking fire")
 
 
 ## A site's own unique (endgame part 3): never loose, gated by zone (the streets at 12, the barracks at 6),

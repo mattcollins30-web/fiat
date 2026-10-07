@@ -46,6 +46,7 @@ const FOOTPRINTS := {
 	# short long guns
 	"Hand-me-down nail gun": [3, 1], "Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
 	"Police carbine": [3, 1], "Army SMG": [3, 1], "Belt-fed SMG": [3, 1], "Army bullpup": [3, 1], "Workshop carbine": [3, 1],
+	"Security guard's carbine": [3, 1], "Courier's SMG": [3, 1], "Armoured car gun": [3, 1],      # the SMG line (7 Oct); the riot squad's SMG is the slot's four
 	# scoped long guns
 	"Old .303": [5, 1], "Scoped .308": [5, 1], "Sniper rifle": [5, 1], "Marksman rifle": [5, 1], "Section gun": [5, 1], "Police marksman's rifle": [5, 1],
 	# heavy armour
@@ -170,10 +171,20 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Battle rifle", "type": "rifle", "tier": 3, "damage": 36.0, "rof": 1.4, "value": 190,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		# SMGs - the Drifter's
-		{"name": "Workshop SMG", "type": "smg", "tier": 2, "damage": 15.0, "rof": 2.3, "value": 100,
+		# SMGs - the Drifter's. The line (7 Oct): a gun a tier from T2 to T6, two at T6 like the shotguns, the top a shade
+		# over theirs and paid for in rounds; every SMG primary carries walking fire (`sustain`: the stream grows so much a
+		# second on one gang, to the cap), the long fight's gun
+		{"name": "Workshop SMG", "type": "smg", "tier": 2, "damage": 15.0, "rof": 2.3, "value": 100, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Police carbine", "type": "smg", "tier": 3, "damage": 17.0, "rof": 2.8, "value": 175,
+		{"name": "Police carbine", "type": "smg", "tier": 3, "damage": 17.0, "rof": 2.8, "value": 175, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Security guard's carbine", "type": "smg", "tier": 3, "damage": 18.0, "rof": 3.0, "value": 190, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Courier's SMG", "type": "smg", "tier": 4, "damage": 21.0, "rof": 3.6, "value": 310, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Armoured car gun", "type": "smg", "tier": 5, "damage": 25.0, "rof": 4.0, "value": 520, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Riot squad's SMG", "type": "smg", "tier": 6, "damage": 28.0, "rof": 4.4, "value": 760, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		# tiers 4 and 5: the town's, and past it
 		{"name": "Workshop carbine", "type": "improvised", "ammo": "smg", "tier": 4, "damage": 34.0, "rof": 1.9, "value": 260,
@@ -182,7 +193,7 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
 		{"name": "Scoped .308", "type": "rifle", "tier": 4, "damage": 80.0, "rof": 0.85, "value": 300,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
-		{"name": "Army SMG", "type": "smg", "tier": 4, "damage": 20.0, "rof": 3.4, "value": 290,
+		{"name": "Army SMG", "type": "smg", "tier": 4, "damage": 20.0, "rof": 3.4, "value": 290, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Tooled-up garage rifle", "type": "improvised", "ammo": "rifle", "tier": 5, "damage": 40.0, "rof": 2.3, "value": 420,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
@@ -218,9 +229,9 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Marksman rifle", "type": "rifle", "tier": 6, "damage": 90.0, "rof": 1.1, "value": 720,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Section gun", "type": "smg", "tier": 6, "damage": 26.0, "rof": 4.2, "value": 700,
+		{"name": "Section gun", "type": "smg", "tier": 6, "damage": 27.0, "rof": 4.4, "value": 700, "sustain": [4, 40],     # lifted (7 Oct): 26 × 4.2 read 109 against the shotguns' 115
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470,
+		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 	],
 	"Secondary": [

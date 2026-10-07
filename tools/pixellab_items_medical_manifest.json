@@ -15,7 +15,7 @@
       "width": 64,
       "height": 64,
       "no_background": true,
-      "seed": 70096,
+      "seed": 70100,
       "single": true,
       "style_image": "res://art/reference/items/ref_01.png",
       "style_options": {
@@ -32,7 +32,7 @@
       "width": 64,
       "height": 64,
       "no_background": true,
-      "seed": 70097,
+      "seed": 70101,
       "single": true,
       "style_image": "res://art/reference/items/ref_02.png",
       "style_options": {
@@ -49,7 +49,7 @@
       "width": 128,
       "height": 64,
       "no_background": true,
-      "seed": 70098,
+      "seed": 70102,
       "single": true,
       "style_image": "res://art/reference/items/ref_03.png",
       "style_options": {
@@ -66,7 +66,7 @@
       "width": 64,
       "height": 64,
       "no_background": true,
-      "seed": 70099,
+      "seed": 70103,
       "single": true,
       "style_image": "res://art/reference/items/ref_04.png",
       "style_options": {
@@ -83,7 +83,7 @@
       "width": 128,
       "height": 64,
       "no_background": true,
-      "seed": 70100,
+      "seed": 70104,
       "single": true,
       "style_image": "res://art/reference/items/ref_01.png",
       "style_options": {
@@ -100,7 +100,7 @@
       "width": 128,
       "height": 128,
       "no_background": true,
-      "seed": 70101,
+      "seed": 70105,
       "single": true,
       "style_image": "res://art/reference/items/ref_02.png",
       "style_options": {
@@ -117,7 +117,7 @@
       "width": 128,
       "height": 128,
       "no_background": true,
-      "seed": 70102,
+      "seed": 70106,
       "single": true,
       "style_image": "res://art/reference/items/ref_03.png",
       "style_options": {

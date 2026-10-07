@@ -1,53 +1,49 @@
 {
   "_readme": [
-    "FIAT GEAR - the new items, in one go: the builds pass's uniques, the five sets' pieces, the melee weapons, the small melee and the melee parts (grips and heads), the grenades, the scrap icon and the new ammo grades - every job from long_guns, handguns, helmets, armour, rigs, bags, medical, ammo, parts, uniques, sockets, charms, melee, melee_small, melee_parts, grenades, misc, sets whose art/items/<slug>.png was not on disk when this was generated. 3 jobs.",
+    "FIAT GEAR - the new items, in one go: the builds pass's uniques, the five sets' pieces, the melee weapons, the small melee and the melee parts (grips and heads), the grenades, the scrap icon and the new ammo grades - every job from long_guns, handguns, helmets, armour, rigs, bags, medical, ammo, parts, uniques, sockets, charms, melee, melee_small, melee_parts, grenades, misc, sets whose art/items/<slug>.png was not on disk when this was generated. 4 jobs.",
     "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_new_manifest.json   (++ --dry-run to list). Rides art/reference/items/ref_01..04.png as style like the rest of the pool. A job whose file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force.",
     "Regenerate with python3 tools/make_item_manifests.py on the machine that holds the art, so the 'exists' test sees the real folder; the per-group manifests are the same jobs grouped."
   ],
   "jobs": [
     {
-      "out": "art/items/hand_me_down_nail_gun.png",
+      "out": "art/items/security_guard_s_carbine.png",
       "endpoint": "generate-image-v2",
-      "description": "A realistic painted pixel-art still-life of a single hand-me-down nail gun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - cobbled together from hardware-shop parts, pipe, tape and timber. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "description": "A realistic painted pixel-art still-life of a single security guard's carbine, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a police or workshop-made carbine, black polymer gone grey. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
       "width": 192,
       "height": 64,
       "no_background": true,
-      "seed": 70000,
+      "seed": 70019,
       "single": true
     },
     {
-      "out": "art/items/work_jacket.png",
+      "out": "art/items/courier_s_smg.png",
       "endpoint": "generate-image-v2",
-      "description": "A realistic painted pixel-art still-life of a single piece of body armour - an old navy donkey jacket with a worn leather shoulder patch, no armour in it at all, the starting kit - hung flat as if on a hook, seen from the front, filling the frame top to bottom, straps loose, stained fabric, dented where it has been hit. Clothing or a vest, never crockery. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "description": "A realistic painted pixel-art still-life of a single courier's smg, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a police or workshop-made carbine, black polymer gone grey. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
       "width": 192,
-      "height": 192,
+      "height": 64,
       "no_background": true,
-      "seed": 70058,
-      "single": true,
-      "style_image": "res://art/reference/items/ref_03.png",
-      "style_options": {
-        "color_palette": true,
-        "outline": true,
-        "detail": true,
-        "shading": true
-      }
+      "seed": 70020,
+      "single": true
     },
     {
-      "out": "art/items/plastic_bag.png",
+      "out": "art/items/armoured_car_gun.png",
       "endpoint": "generate-image-v2",
-      "description": "A realistic painted pixel-art still-life of a single thin white supermarket carrier bag, the cheap crinkled plastic kind with two loop handles, standing upright as if set down on the floor, seen from the front, filling the frame, half full and sagging, the plastic stretched thin and translucent, a split patched with a strip of brown parcel tape. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-      "width": 128,
-      "height": 128,
+      "description": "A realistic painted pixel-art still-life of a single armoured car gun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a police or workshop-made carbine, black polymer gone grey. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 192,
+      "height": 64,
       "no_background": true,
-      "seed": 70085,
-      "single": true,
-      "style_image": "res://art/reference/items/ref_02.png",
-      "style_options": {
-        "color_palette": true,
-        "outline": true,
-        "detail": true,
-        "shading": true
-      }
+      "seed": 70021,
+      "single": true
+    },
+    {
+      "out": "art/items/riot_squad_s_smg.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single riot squad's smg, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a police or workshop-made carbine, black polymer gone grey. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70022,
+      "single": true
     }
   ]
 }

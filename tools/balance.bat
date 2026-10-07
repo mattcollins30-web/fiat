@@ -1,7 +1,7 @@
 @echo off
 rem The balance pass, in one command: every gate read at once, then the summary.
-rem   tools\balance.bat           eight simulated hours a build (about three minutes of wall each)
-rem   tools\balance.bat 4         four hours a build
+rem   tools\balance.bat           sixteen simulated hours a build (the lorry's gate; twenty minutes of wall each)
+rem   tools\balance.bat 8         eight hours a build
 rem Runs twenty-one Godot jobs side by side: the five classes keystones-first and
 rem the five element builds on their affinity class, twice each (one eight-hour run
 rem is a noisy read of when the bank falls; the summary takes the median), and the
@@ -12,7 +12,7 @@ rem _console.exe so the output reaches the files), else "godot" on the PATH.
 setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 set HOURS=%1
-if "%HOURS%"=="" set HOURS=8
+if "%HOURS%"=="" set HOURS=16
 set GODOT=godot
 if exist tools\godot.txt for /f "usebackq delims=" %%G in ("tools\godot.txt") do set "GODOT=%%~G"
 if not "%GODOT%"=="godot" if not exist "%GODOT%" (
