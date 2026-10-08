@@ -123,8 +123,7 @@ func _init() -> void:
 	_foot_right.visible = false
 	_dim = ColorRect.new()
 	_dim.color = Pal.DIM
-	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE          # sized in layout(): a full-rect preset set before the node is in the tree left it at nothing
 	add_child(_dim)
 	_panel = UI.panel(self, Rect2(0, 0, PANEL_W, PANEL_H), UI.box(Pal.CARD, 12, 1, Pal.CARD_LINE))
 	_title = UI.label(_panel, Rect2(PAD, 40, ROW_W, 72), "", "Bold", 56, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -173,16 +172,16 @@ static func _build_words() -> String:
 
 ## items: [{name, detail, action: Callable, enabled (true), confirm (""), color (the name's), glyph ("")}].
 ## With `confirm` set, the first press arms the row and shows it; the second acts. `opaque` hides
-## the game behind (the title screen); otherwise it dims it. `dock` (a Rect2 in the viewport, the
-## rail's) makes the drawer. `title` is a String, or an Array of forms, long to short, the first that fits shown.
-func open(title, sub: String, items: Array, back := Callable(), opaque := false, dock := Rect2()) -> void:
+## the game behind (the title screen, the lost camp); otherwise it dims it. `dock` (a Rect2 in the
+## viewport, the rail's) makes the drawer; `picture` puts the title's painting behind (the title shape). `title` is a String, or an Array of forms, long to short, the first that fits shown.
+func open(title, sub: String, items: Array, back := Callable(), opaque := false, dock := Rect2(), picture := false) -> void:
 	assert(items.size() <= ROWS, "a menu holds five rows")
 	_items = items
 	_armed = -1
 	_back = back
 	_dock = dock
 	_backdrop.visible = opaque
-	_picture.visible = opaque and _picture.texture != null
+	_picture.visible = opaque and picture and _picture.texture != null     # the title alone stands on the painting; the lost camp's card is on the plain ground, its words up
 	_shape = "title" if _picture.visible else ("drawer" if dock.size.x > 0.0 else "card")
 	_column.visible = _shape == "title"
 	_wordmark.visible = _shape == "title" and _wordmark.texture != null
@@ -296,7 +295,7 @@ func layout(s: Vector2) -> void:
 	_backdrop.size = s
 	_picture.size = s
 	_dim.position = Vector2.ZERO
-	_dim.size = s                      # sized by hand: a full-rect preset set before the node is in the tree leaves it at nothing
+	_dim.size = s
 	var x0 := floorf((s.x - 1920.0) / 2.0)
 	match _shape:
 		"title":

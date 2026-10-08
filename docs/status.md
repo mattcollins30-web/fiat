@@ -2260,6 +2260,34 @@ with its kicker up and no details, the card with its heading; the add-words test
 own grid cell (`cell_of`) rather than `_craftable()`'s index, which could point at another piece of
 the same value (a flake seen once). Local smoke clean twice.
 
+**The Steam Deck's screen (8 Oct, Matt: "the lower part of the screen is unclickable - anything from
+fence down").** The project asks for a 1920 × 1080 window, "maximized"; the Deck under gamescope has a
+1280 × 800 screen and no window manager to maximize into, so the window stayed 1920 × 1080: the picture
+is scaled to fit (everything renders), but the pointer stops at the screen's 800 px, which is canvas
+y 800 of 1080 - the rail from the Fence (864) down. Reproduced here under a 1280 × 800 X screen with
+the window forced to 1920 × 1080 (`tests/deck.gd`: Clinic, Fence and Radio past the window). The fix
+(`main._fit_window_to_screen`, at `_ready`): a window bigger than its screen's usable rect is sized to
+it through the Window node (so the canvas follows at once; `DisplayServer.window_set_size` left the
+stretch at 1080 until an event that never came), and placed at the screen's origin; fullscreen modes
+are left alone. The canvas then stretches to 1920 × 1200 as on any 16:10 screen and every rail row
+ends inside the window. `tests/deck.gd` needs a display (a window to size): `xvfb-run -s "-screen 0
+1280x800x24" godot --path . -s tests/deck.gd`, exit 1 on a row past the window; it is not in the
+headless smoke. Also: the menu's dim is a plain ColorRect sized in `layout` (the anchored one warned
+and sat at nothing); the add-words test pins its piece to the grid's first page by value (the flake
+again - it had packed onto page two). Local smoke clean three times.
+
+*The Legion's smoke on the pass (8 Oct):* one sweep misfit, the log's line before holding "One of them is
+in the last Doorman's station helmet, visored." ten pixels over its box, which the explicit line-before
+check in the same `_check_fit` did not flag; not reproduced here under a display or headless, nor by a
+probe of that line against forty current-line widths. Two things done rather than guessed: the line
+before is checked after its fit and blanked if the fitted form still does not fit (never trails off);
+and a sweep error now names the label's chain (`_chain`: script and node names up five parents) so the
+next one says which label it was. Found on the way: `show_camp_lost` opened its menu `opaque`, which
+the new shapes read as the title (the column and the wordmark, the heading and the words hidden) - the
+old menu hid them over the painting too. `open` takes `picture` now; the title alone passes it, the
+lost camp is the card on the plain ground with "The Yard is lost" and its words up; the smoke opens it
+and checks.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

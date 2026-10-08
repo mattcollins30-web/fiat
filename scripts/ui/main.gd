@@ -128,6 +128,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fit_window_to_screen()
 	get_viewport().size_changed.connect(_on_resize)
 	_on_resize()
 	if intro:
@@ -270,6 +271,23 @@ func _build() -> void:
 
 
 # ------------------------------------------------------------------ layout
+
+## A window taller than the screen (the Steam Deck, 8 Oct: the 1920 x 1080 window
+## on a 1280 x 800 screen under gamescope - "maximized" means nothing there, the
+## picture is scaled to fit but the pointer stops at the screen's edge, so the
+## rail from the Fence down could not be clicked) is sized to the screen; the
+## canvas stretches to it (canvas_items, expand) as on any other screen.
+func _fit_window_to_screen() -> void:
+	var win := get_window()
+	if win == null or win.mode in [Window.MODE_FULLSCREEN, Window.MODE_EXCLUSIVE_FULLSCREEN]:
+		return
+	var screen: Rect2i = DisplayServer.screen_get_usable_rect(win.current_screen)
+	var w: Vector2i = win.size
+	if screen.size.x <= 0 or screen.size.y <= 0 or (w.x <= screen.size.x and w.y <= screen.size.y):
+		return
+	win.size = Vector2i(mini(w.x, screen.size.x), mini(w.y, screen.size.y))     # through the Window, so the canvas follows at once
+	win.position = screen.position
+
 
 func _on_resize() -> void:
 	layout(get_viewport_rect().size)
@@ -419,7 +437,7 @@ func show_title() -> void:
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
-	_menu.open("Fiat", "Let it be done", items, Callable(), true)
+	_menu.open("Fiat", "Let it be done", items, Callable(), true, Rect2(), true)
 
 
 ## "Level 22, £14,437, 2 h 10 m played · 1 Oct, 11:04" for a save file, or "".
@@ -723,9 +741,9 @@ func refresh() -> void:
 	_prev_label.position.x = px
 	_prev_label.size.x = Pal.GRID_W - 20 - px - (_speed_label.size.x + 20 if _speed_label.visible else 0.0)
 	var forms: Array = _by_sentence(str(ev[jp][1])) if jp >= 0 else [""]
-	if forms.any(func(f): return UI.text_width(_prev_label, str(f)) <= _prev_label.size.x):
-		UI.fit(_prev_label, forms)
-	else:
+	UI.fit(_prev_label, forms)
+	if UI.text_width(_prev_label, _prev_label.text) > _prev_label.size.x:
+		# no form fits whole (the Legion's smoke caught one that slipped the fit by ten pixels): it goes rather than trails off
 		_prev_label.text = ""
 		_prev_time.text = ""
 

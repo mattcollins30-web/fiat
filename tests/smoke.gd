@@ -536,6 +536,12 @@ func _slots_offline_hardcore(main) -> void:
 	_check(main._read_save(main.save_file).get("saved", 0.0) == stamp_before.get("saved", 0.0), "a lost camp still saved")
 	main.refresh()
 	_check_fit(main, "Camp (lost)")
+	# the lost camp's screen: the card on the plain ground with its heading and words up (not the title's column, 8 Oct)
+	main.show_camp_lost()
+	_check(main._menu.visible and main._menu.shape() == "card" and main._menu._title.text == "The Yard is lost" and main._menu.sub().ends_with("gone with the runner."), "the lost camp's words are not up: %s / '%s' / '%s'" % [main._menu.shape(), main._menu._title.text, main._menu.sub()])
+	_check(not main._menu._picture.visible and main._menu._backdrop.visible, "the lost camp's card is not on the plain ground")
+	_check_fit(main, "Camp (lost, the screen)")
+	main._menu.close()
 	main.show_camp_lost()
 	_check(not FileAccess.file_exists(main.save_file), "the lost camp's autosave was not removed")
 	_check(FileAccess.file_exists(slot), "the slots did not survive the lost camp")
@@ -2851,6 +2857,10 @@ func _craft_checks(main) -> void:
 	main.show_room(main.WORKSHOP)
 	main._workshop._set_view("craft")
 	_check(main._workshop._craftable().any(func(c): return c["id"] == it["id"]), "the added-to piece is not in the Craft view")
+	var hold_value = it["value"]
+	it["value"] = 9999999                                        # the dearest, so it sorts to the first page whatever the stash holds (a flake: it had landed on page two)
+	main._workshop._shown = ""
+	main.refresh()
 	var kc: int = main._workshop._inv.cell_of(it["id"])        # the grid's own cell (two pieces of one value can sort either way)
 	_check(kc >= 0, "the added-to piece has no cell in the Craft view's grid")
 	if kc >= 0:
@@ -2858,6 +2868,7 @@ func _craft_checks(main) -> void:
 	main.refresh()
 	_check(main._workshop._foot.text.begins_with("Added"), "the jobs' foot does not say what the Bench did: '%s'" % main._workshop._foot.text)
 	_check_fit(main, "Workshop (craft, after an add)")
+	it["value"] = hold_value
 	# every kind has words: re-roll says before and after, bump the levels, one the swap
 	var words_seen := {}
 	sim.cash = 999999.0
@@ -4712,9 +4723,20 @@ func _check_widths(nodes: Array, where: String) -> int:
 	for n in nodes:
 		var w: float = UI.text_width(n, n.text) + (32.0 if n is Button else 0.0)
 		if w > n.size.x + 0.5:
-			push_error("%s: '%s' needs %.0f px, has %.0f" % [where, n.text, w, n.size.x])
+			push_error("%s: '%s' needs %.0f px, has %.0f (%s)" % [where, n.text, w, n.size.x, _chain(n)])
 			bad += 1
 	return bad
+
+
+## A node's parents' scripts and names, for a sweep error to say which label it was.
+static func _chain(n: Node) -> String:
+	var parts := []
+	var q = n
+	while q != null and parts.size() < 5:
+		var sc = q.get_script()
+		parts.append((sc.resource_path.get_file().get_basename() if sc != null else q.get_class()) + ("" if q.name.begins_with("@") else ":" + q.name))
+		q = q.get_parent()
+	return " < ".join(parts)
 
 
 ## Every single-line Label under n that's showing, with text.
