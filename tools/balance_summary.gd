@@ -27,7 +27,8 @@ const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
 const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
 const LORRY_BY := 16.0          # hour: the lorry beaten on every build (the endgame's ending; Matt, 7 Oct: "16 hours would be right given the type of game")
 const SPREAD := [7, 11]         # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the shapes read 7-12 on the fifteenth read, the band re-stated from it)
-const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk: his save read one in seventeen (seven lost in 116 runs); the bot's bail-outs under a quarter stand for them (an hour's reading depended on how many runs an hour a build makes)
+const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk; read from his save (MATT_DEATHS), the bot's bail-outs shown beside and not judged (Matt, 8 Oct: the bot at 0.88 with a kit past its sites is never wounded and never bails)
+const MATT_DEATHS := [7, 116]     # Matt's save: seven lost in 116 runs. Update from the next save.
 
 
 func _init() -> void:
@@ -177,16 +178,17 @@ func _init() -> void:
 			rows.append(["Depth pace", "at least one depth an hour from hour %.0f" % DEPTH_FROM, "; ".join(slow) if not slow.is_empty() else "every build at a depth an hour or better", slow.is_empty()])
 
 	# deaths: the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on)
-	if not full.is_empty() and full.any(func(b): return b.has("bails")):
-		var off: Array = []
+	if true:
+		var matt_every: float = float(MATT_DEATHS[1]) / maxf(1.0, float(MATT_DEATHS[0]))
+		var bots: Array = []
 		for b in full:
 			var every: float = (float(b["runs"]) / float(b["bails"])) if int(b.get("bails", 0)) > 0 else 999.0
 			b["_every"] = every
-			if every < DEATH_RUNS[0] or every > DEATH_RUNS[1]:
-				off.append("%s one in %s" % [b["build"], ("%.0f runs" % every) if every < 999.0 else "never"])
-		rows.append(["Deaths", "a bail-out under a quarter one run in %.0f to %.0f (Matt's save: one death in seventeen runs)" % [DEATH_RUNS[0], DEATH_RUNS[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
-	else:
-		rows.append(["Deaths", "a bail-out under a quarter one run in %.0f to %.0f" % [DEATH_RUNS[0], DEATH_RUNS[1]], "no bails in these reads (an older balance.gd)", null])
+			bots.append("%s one in %s" % [b["build"], ("%.0f" % every) if every < 999.0 else "never"])
+		var text: String = "Matt's save: one in %.1f runs (%d lost in %d)" % [matt_every, MATT_DEATHS[0], MATT_DEATHS[1]]
+		if not bots.is_empty():
+			text += "; the bot's bail-outs, not judged: " + ", ".join(bots)
+		rows.append(["Deaths", "a death one run in %.0f to %.0f on Matt's save" % [DEATH_RUNS[0], DEATH_RUNS[1]], text, matt_every >= DEATH_RUNS[0] and matt_every <= DEATH_RUNS[1]])
 
 	# the endgame's two (7 Oct): the lorry by the hour on every build; the ladders' spread
 	if not full.is_empty() and full.any(func(b): return b.has("lorry_at")):
@@ -214,7 +216,7 @@ func _init() -> void:
 		var t2: String = "; ".join(off) if not off.is_empty() else "every build in the band"
 		if not unread.is_empty():
 			t2 += " (campaign not done: " + ", ".join(unread) + ")"
-		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], t2, null if (off.is_empty() and not unread.is_empty()) else off.is_empty()])
+		rows.append(["The ladders' spread", "at the first lorry, the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], t2, null if (off.is_empty() and not unread.is_empty()) else off.is_empty()])
 	else:
 		rows.append(["The lorry", "beaten by hour %.0f, every build" % LORRY_BY, "no lorry in these reads (an older balance.gd)", null])
 		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], "not read", null])
@@ -239,7 +241,7 @@ func _init() -> void:
 			b["_crafts"] = crafts
 			if crafts < SCRAP[0] or crafts > SCRAP[1]:
 				off.append("%s %.1f crafts/h" % [b["build"], crafts])
-		rows.append(["Scrap economy", "scrap earned an hour worth %.0f to %.0f of the dearest craft" % [SCRAP[0], SCRAP[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+		rows.append(["Scrap economy", "scrap earned an hour over the first sixteen worth %.0f to %.0f of the dearest craft" % [SCRAP[0], SCRAP[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
 	var reds := 0
 	for r in rows:

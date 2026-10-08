@@ -1431,7 +1431,7 @@ const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
-const WOUND_AT := 0.30            # the fifteenth read (7 Oct): at 0.35 the bot read 31-44% wounded and one bail in 31-69 - its close calls end between a quarter and a third; the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
+const WOUND_AT := 0.33            # 0.35 read 31-44% wounded and 0.30 2-9% (Matt, 8 Oct); the fifteenth read (7 Oct): at 0.35 the bot read 31-44% wounded and one bail in 31-69 - its close calls end between a quarter and a third; the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
 const WOUND_CASH := 20

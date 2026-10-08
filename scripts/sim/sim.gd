@@ -2459,7 +2459,7 @@ func boss_cost(i: int) -> int:
 	if is_convoy(i):
 		var total := 0
 		for b in Data.BOSSES:
-			total += int(b["notes"]) * depth[i] * Data.PINNACLE_COST
+			total += int(b["notes"]) * depth[i]       # the plain three: they come light (Matt, 8 Oct; it was the full-strength rate, 2,160 at depth 8)
 		return total
 	var b := boss_of(i)
 	if b.is_empty() or not bosses_beaten[int(b["zone"])]:

@@ -2100,6 +2100,32 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The six decided (8 Oct, Matt: "yeah ok do it").** The lorry's price is the plain three heads' (960 notes
+at depth 8; it was the full-strength rate, 2,160). The ladders' spread is read at the first lorry (the
+first yard's ladders, before the move; at the end only when it never fell) against the same band. The
+scrap row reads the first sixteen hours. The deaths row reads Matt's save (`MATT_DEATHS`, seven lost
+in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOUND_AT` 0.33. The plain
+Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
+then three reads a build.
+
+**The twentieth read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours; the six landed
+while it ran, so the sim is the nineteenth's - the old price, 0.30 - and the rows are the new ones).**
+Five red, deaths green on Matt's save. *The lorry on nineteen reads of twenty* (the nineteenth's
+seventeen), the first at 5.9-28.2 h, the bleed Doorman moved sixteen times in thirty-two hours (a
+leg every two hours), the poison Poacher fourteen and thirteen, the Paramedic ten, the shock Drifter
+ten; the one never a Doorman at level 50 with the services at depth 7, its notes short of the old
+price. The plain Drifter took it on both reads (14.7 h and 27.1 h at 2,160 notes), so the +10%
+waits on the twenty-first at 960 before it is wanted. *The late three* (Drifter 20.9 h, Poacher
+19.7 h, Scrapper 19.0 h merged) are the old price again: every one stands with the services at
+depth 8-10 by hour 14 and pays at 2,160. *The spread at the first lorry* reads 15/5 to 27/16 across
+the reads and 21/9 on a Doorman - the band 7-11 holds on fourteen of the sixteen reads that lorried
+with a ladder; the two campaign-not-done (the bleed Doorman and the fire Drifter, level 1 and 5 at
+the end, on the T0-T2 ladders the whole way) are the bot's cheap-run habit on those builds, to read
+again. *Scrap* 1.4-6.8 crafts an hour on the first sixteen with the Scrapper's second read at 7.7,
+just over the band's top. *Wounds* 1-17% at 0.30 (the Scrapper 17% both reads; the rest 1-12%),
+the 0.33 reads on the twenty-first. The bank's band 0.6-2.2 h, luck as labelled. Smoke clean on the
+six after it. Nothing moved; the twenty-first is the six's first read.
+
 **The nineteenth read (the Legion, 8 Oct morning, twenty reads of ten builds, thirty-two hours).** Six red,
 No reds and depth pace green. *The loop runs:* the lorry on seventeen reads of twenty, the first at
 6.0-24.9 h; the bleed Doorman moved ten and twelve times in thirty-two hours (a leg every two and a half

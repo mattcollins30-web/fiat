@@ -2588,7 +2588,7 @@ func _pinnacle_checks(main) -> void:
 	var convoy_cost: int = sim.boss_cost(Data.CONVOY_TIER)
 	var three := 0
 	for b in Data.BOSSES:
-		three += int(b["notes"]) * Data.CONVOY_DEPTH * Data.PINNACLE_COST
+		three += int(b["notes"]) * Data.CONVOY_DEPTH                # the plain three (8 Oct)
 	_check(convoy_cost == three, "the convoy's price is %d, not the three heads' %d" % [convoy_cost, three])
 	sim.arm_boss(Data.CONVOY_TIER, true)
 	sim.intel[Data.CONVOY_TIER] = []      # the plain site: the heads are formed before the words multiply the site

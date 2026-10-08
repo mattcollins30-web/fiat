@@ -207,6 +207,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	var mark_cash_from := 0.0
 	var mark_items := 0
 	var depth_seen: Dictionary = {}
+	var first_ladder := {}
+	var scrap_16 := -1.0
 	var t0 := Time.get_ticks_msec()
 	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 7200000:     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
 		var items_before: int = sim.stash.size()
@@ -228,6 +230,11 @@ func _gate(hours: float, cls: String, element: String) -> void:
 				if sim.best_depth[i] > 0 and not depth_seen.has(key):
 					depth_seen[key] = true
 					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
+			if sim.lorry_done and first_ladder.is_empty():
+				var hp_now: float = sim.hp
+				sim.hp = sim.max_hp()
+				first_ladder = _ladder_read(sim, bot.PUSH)   # the first yard's ladders, as the lorry fell and before the move
+				sim.hp = hp_now
 			var scrap_before: int = int(sim.scrap)
 			bot.tidy(sim)
 			if int(sim.scrap) < scrap_before:
@@ -239,6 +246,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 					g["keystone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+		if scrap_16 < 0.0 and sim.elapsed >= 16.0 * 3600.0:
+			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
 		if sim.elapsed >= next_mark:
 			var tt: int = maxi(t, 0)
 			mark_cash = sim.cash_in - mark_cash_from     # every pound in since the last mark: the runs' cash and the fence's money (read here, after the tidy's sales)
@@ -248,6 +257,8 @@ func _gate(hours: float, cls: String, element: String) -> void:
 			mark_runs = 0
 			mark_cash_from = sim.cash_in
 			mark_items = 0
+	if scrap_16 < 0.0:
+		scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
 	# the end: the odds at every open tier at depth 1 - the campaign's odds - in the kit as it stands;
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
@@ -285,7 +296,6 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["notes_end"] = int(sim.notes)
 	g["scrap_end"] = int(sim.scrap)
 	g["scrap_spent"] = int(g.get("scrap_spent", 0))
-	g["scrap_per_h"] = snappedf((int(sim.scrap) + int(g["scrap_spent"])) / maxf(0.01, sim.elapsed / 3600.0), 0.1)
 	g["level"] = sim.level()
 	g["best_tier"] = sim.best_tier
 	g["best_depth"] = sim.best_depth
@@ -302,30 +312,18 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	g["lorries"] = sim.lorries
 	g["moves"] = bot.moves
 	g["services_depth"] = int(sim.best_depth[Data.CONVOY_TIER])
-	var ladder := {}
-	if sim.campaign_done():
+	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
+	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
+	if first_ladder.is_empty() and sim.campaign_done():
 		sim.hp = sim.max_hp()
 		for box in boxes:
 			sim.rig.append(box)
-		for i in [0, 8]:
-			var d0: int = sim.depth[i]
-			var intel0: Array = sim.intel[i].duplicate()
-			sim.intel[i] = []
-			var held := 0
-			for d in range(1, 31):
-				sim.depth[i] = d
-				sim._surv_cache.erase(i)
-				if sim.survival(i) < bot.PUSH:
-					break
-				held = d
-			ladder[str(i)] = held
-			sim.depth[i] = d0
-			sim.intel[i] = intel0
-			sim._surv_cache.erase(i)
+		first_ladder = _ladder_read(sim, bot.PUSH)
 		for box in boxes:
 			sim.rig.erase(box)
 		sim.hp = hp0
-	g["ladder"] = ladder
+	g["ladder"] = first_ladder
+	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
 	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
 	for b in bot.bought:
@@ -339,6 +337,28 @@ func _gate(hours: float, cls: String, element: String) -> void:
 		g["end_save"] = save_path
 	print("GATES " + JSON.stringify(g))
 	quit(0)
+
+
+## The deepest depth the streets and the barracks read `push` in the kit as it stands: the depth set past the ladder for
+## the read, the plain site, the words put back after.
+func _ladder_read(sim, push: float) -> Dictionary:
+	var ladder := {}
+	for i in [0, 8]:
+		var d0: int = sim.depth[i]
+		var intel0: Array = sim.intel[i].duplicate()
+		sim.intel[i] = []
+		var held := 0
+		for d in range(1, 31):
+			sim.depth[i] = d
+			sim._surv_cache.erase(i)
+			if sim.survival(i) < push:
+				break
+			held = d
+		ladder[str(i)] = held
+		sim.depth[i] = d0
+		sim.intel[i] = intel0
+		sim._surv_cache.erase(i)
+	return ladder
 
 
 ## The loot gates, build-free: the Legendary share at +35% quality, finds a search at +25% quantity, from a
