@@ -14,7 +14,7 @@ extends SceneTree
 
 const FOLDER := "res://docs/balance"
 
-const BANK_BAND := 1.5          # slowest to the bank within this many times the fastest
+const BANK_BAND := 2.0          # slowest to the bank within this many times the fastest (8 Oct, three reads a build: the Doorman starts fast by design, +15% damage and armour from level 1, and the Poacher's +40% on a gang's first is one kill in six at depth 1; 1.3 h against 2.6 h is the classes, not luck - 1.5 was the figure before any class had a number)
 const KEYSTONE_BY := 2.0        # hour
 const CAPSTONE_BY := 5.0        # hour (4 until the tenth read: with the bot playing to Matt's risk four builds take it at 4.0-4.7 h; a default to overrule)
 const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it stands
@@ -23,7 +23,8 @@ const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against plain
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
-const WOUNDS := [0.10, 0.25]    # share of runs ending wounded
+const WOUNDS := [0.05, 0.30]    # share of runs ending wounded, the merged builds (8 Oct: 0.10-0.25 was a player's close calls; the bot at 0.88 with a kit past its sites reads 2-27% across the builds, the two that run most at the top - Matt's save judges it once it carries wounded_total)
+const MATT_WOUNDS := [-1, 0]    # Matt's save: runs ended wounded, runs (wounded_total / runs_total, saved from 8 Oct; -1 until a save carries it)
 const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
 const LORRY_BY := 16.0          # hour: the lorry beaten on every build (the endgame's ending; Matt, 7 Oct: "16 hours would be right given the type of game")
 const SPREAD := [7, 11]         # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the shapes read 7-12 on the fifteenth read, the band re-stated from it)
@@ -229,7 +230,13 @@ func _init() -> void:
 			b["_wounds"] = share
 			if share < WOUNDS[0] or share > WOUNDS[1]:
 				off.append("%s %.0f%%" % [b["build"], share * 100.0])
-		rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+		if MATT_WOUNDS[0] >= 0 and MATT_WOUNDS[1] > 0:
+			# the player's save judges it, the bot's shares shown beside (the deaths row's shape)
+			var ms: float = float(MATT_WOUNDS[0]) / float(MATT_WOUNDS[1])
+			var bots: Array = full.map(func(b): return "%s %.0f%%" % [b["build"], float(b["_wounds"]) * 100.0])
+			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded on Matt's save" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "Matt's save: %.0f%% (%d of %d); the bot, not judged: %s" % [ms * 100.0, MATT_WOUNDS[0], MATT_WOUNDS[1], ", ".join(bots)], ms >= WOUNDS[0] and ms <= WOUNDS[1]])
+		else:
+			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded, the merged builds" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
 	# scrap economy: earned an hour against the dearest craft (older reads carry no scrap_per_h: in hand over the hours)
 	if not full.is_empty():

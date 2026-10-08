@@ -2,10 +2,11 @@
 rem The balance pass, in one command: every gate read at once, then the summary.
 rem   tools\balance.bat           sixteen simulated hours a build (the lorry's gate; twenty minutes of wall each)
 rem   tools\balance.bat 8         eight hours a build
+rem   tools\balance.bat 32 3      thirty-two hours, three reads a build (the final pass, 8 Oct)
 rem Runs twenty-one Godot jobs side by side: the five classes keystones-first and
 rem the five element builds on their affinity class, twice each (one eight-hour run
 rem is a noisy read of when the bank falls; the summary takes the median), and the
-rem loot probe. Each writes docs\balance\<build>[-2].txt; the summary lands in
+rem loot probe. Each writes docs\balance\<build>-N.txt; the summary lands in
 rem docs\balance\summary.md.
 rem Godot: the path in tools\godot.txt if that file exists (point it at the
 rem _console.exe so the output reaches the files), else "godot" on the PATH.
@@ -13,6 +14,8 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 set HOURS=%1
 if "%HOURS%"=="" set HOURS=16
+set READS=%2
+if "%READS%"=="" set READS=2
 set GODOT=godot
 if exist tools\godot.txt for /f "usebackq delims=" %%G in ("tools\godot.txt") do set "GODOT=%%~G"
 if not "%GODOT%"=="godot" if not exist "%GODOT%" (
@@ -23,7 +26,7 @@ if not exist docs\balance mkdir docs\balance
 del /q docs\balance\*.txt docs\balance\*.done 2>nul
 
 set N=0
-for %%S in (1 2) do (
+for /l %%S in (1,1,%READS%) do (
 	for %%C in (Doorman Drifter Poacher Scrapper Paramedic) do (
 		set /a N+=1
 		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%C > docs\balance\%%C-%%S.txt 2>&1 & echo done > docs\balance\%%C-%%S.done"
@@ -38,7 +41,7 @@ for %%S in (1 2) do (
 set /a N+=1
 start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- 0 probe > docs\balance\probe.txt 2>&1 & echo done > docs\balance\probe.done"
 
-echo %N% reads running, %HOURS% simulated hours a build. Waiting.
+echo %N% reads running, %HOURS% simulated hours a build, %READS% reads each. Waiting.
 :wait
 timeout /t 10 /nobreak >nul
 set DONE=0

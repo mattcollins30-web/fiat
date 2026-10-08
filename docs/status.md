@@ -2108,6 +2108,51 @@ in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOU
 Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
 then three reads a build.
 
+**The twenty-third read, the final pass (the Legion, 8 Oct, thirty reads of ten builds, three a build,
+thirty-two hours; the Drifter's +10%, wounds at 5-30 on the merged builds).** Twenty minutes for
+thirty-one jobs. Three red. *The lorry* on every build but the plain
+Drifter, 16.1 h merged (24.3, 16.1, 15.8) against the gate's 16 - the +10% took it from 24.1; the
+rest 4.0-15.5 h, the Paramedic 7.6 (one read 19.3), the Poacher 12.2. *Wounds* 5-30 on every build
+but the Drifter 3% and the frost Poacher 4%, the two built to be hit least (one fewer on you; the
+slows). *The bank's band*: the Doorman 1.3 h median, the Poacher 2.6 h (1.8, 3.2, 2.6), the Paramedic
+2.0 (2.0, 4.0, 1.7) - twice the fastest against the band's 1.5. Read against the cuts: a seeded Poacher
+here with and without the read cap banked 2.2 against 1.5 h and 2.5 against 3.4 - no direction, so the
+cuts didn't slow it; its bank hour is noisy on the same start. Spread, scrap, deaths, depth pace, cash,
+no reds green. *Decided (Matt: "go for it"):* the Drifter to +15% damage, the Doorman's figure,
+confirmed on a pass while Matt's away from the machine; `BANK_BAND` 2.0 - the Doorman starts fast by
+design (+15% damage and armour from level 1) and the Poacher's +40% on a gang's first is one kill in
+six at depth 1, so 1.3 h against 2.6 h is the classes, not luck, and 1.5 was the figure before any
+class had a number; wounds on the Drifter and the frost Poacher stand as the bot's until Matt's save
+carries `wounded_total`, which the playtest supplies - the row then reads him. *Matt playtests from
+here.*
+
+**The rail as a ledger (8 Oct, Matt: the room buttons "look very AI made in Godot - whereas the rest of
+the game and its menus look pretty custom").** Mocked on the design canvas (Rail-A: now and three ways -
+tabs cut into the wall, plates with a stamp, the ledger); Matt took the ledger with the tabs' join.
+Built: the rail is one panel (`PANEL`, the cards' line, a "ROOMS" heading at the floor size) with the
+eight rooms as rows of 96 under hairlines (`RAIL_BTN_H` 96, `RAIL_GAP` 0, `RAIL_HEAD_H` 40,
+`RAIL_RULE`, `RAIL_HOVER`); a row is the name with its figure at the right in the cards' number style
+(the yard's levels built "10/15", Runs "T8", the Lock-up's slots "6/7", the bench's level, the
+caravan's points spent, the clinic "Fit" or the HP share, the fence's items for sale, the set's
+level) or the badge in the figure's place, and one status line under (the second line's words moved
+into the first where they were the better ones: the stash count, "Upgrade affordable", the contracts,
+the pins). The lit row takes the cards' colour, the gold edge and the name in gold, and a tongue
+(`_tongue`) reaches across the margin to meet the room's first card, so the rail and the room read as
+one piece. `badge_gap()` reads the figure as it read the badge, so the fit check proves the figure
+clears the name; the smoke also checks the join is lit on the lit row alone and lands on the room's
+edge. Shot here on the Yard and Runs; the smoke runs on the Legion after the final pass.
+
+**Before the final pass (8 Oct, Matt: "ok thats my save - make the changes and run balance").** Three.
+*The plain Drifter +10% damage* (`CLASSES`, `"damage": 1.1`, the words "+10% damage; one fewer on you at
+a time; +10% pace; −15% max HP"): last to the lorry on every read since the engine, 24.1 h merged on the
+twenty-second against 4-13 h for the rest. *Wounds:* Matt's save carries runs and deaths (116, 7) but
+no wounded count, so the row can't read it yet - the sim now counts `wounded_total` (saved, every
+runner) and the summary reads `MATT_WOUNDS` as the deaths row reads `MATT_DEATHS` once a save carries
+it; until then the row judges the merged builds against 5-30% (it was 10-25, a player's close calls;
+the bot at 0.88 reads 2-27% across the builds, the two that run most at the top). *The final pass at
+three reads a build:* `tools\balance.bat <hours> <reads>`, the flag "32 3", thirty-one jobs; the
+bank's band read on three medians rather than two.
+
 **The twenty-second read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours: the cuts' first,
 the climb fix in).** Two red. *The pass in fifteen minutes* (flagged 10:01, done 10:16 UTC), the reads
 309-862 s against the twenty-first's 795-2,992 - three and a half to one on the slowest, under Matt's

@@ -420,7 +420,8 @@ between. Each move is one commit with its before-and-after summary lines in stat
    slot on its own figures. **Built 6 Oct** (three: the gun, the jacket, a Plastic bag; in status.md). The classes (`CLASSES`, data.gd ~1173): Poacher +40% on a gang's first,
    gangs ×1.25 later, HP ×0.9; Doorman damage ×1.15, armour ×1.2, pace ×0.9; Paramedic heal ×1.5, meds
    by themselves, damage ×0.9; Scrapper search ×0.7, +15% quantity, damage ×0.95; Drifter one fewer on
-   you, pace ×1.1, HP ×0.85. The late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the two with no
+   you, pace ×1.1, HP ×0.85 (and damage ×1.15 from 8 Oct: last to the lorry on every read since the
+   engine, 24 h merged at ×1.0 and 16.1 h at ×1.1; the Paramedic's and Scrapper's damage cuts went on 6 Oct). The late bankers (Paramedic 5.0 h, Poacher 3.8 h) are the two with no
    damage or armour in their figures, so their hour-2 dps is the kit's alone; the move there is a class
    figure each, read against the band. Moves: the bank's band, the capstone (which follows the bank:
    it needs the level). Can break: nothing else reads before hour 2.

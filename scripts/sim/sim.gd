@@ -75,6 +75,7 @@ var atlas_points := 0              # earned: one a new depth cleared past the fi
 var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
 var mate := {}                     # the fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
+var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
 var yard_moves := 0                # how many times the yard has moved (the prestige)
 var lorry_done := false            # the convoy beaten in this yard: the endgame's ending (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
@@ -237,6 +238,8 @@ func wound_words() -> String:
 func _wound(m: Dictionary) -> void:
 	var was := wound
 	wound = Data.WOUND_STATS[rng.randi_range(0, Data.WOUND_STATS.size() - 1)]
+	if not m.get("wounded", false):
+		wounded_total += 1                # runs that ended wounded, every runner (the wounds row reads Matt's save by it, 8 Oct)
 	m["wounded"] = true
 	_dry_memo.clear()
 	if wound == "hp":
@@ -4594,7 +4597,7 @@ func _state() -> Dictionary:
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
+		"contracts": contracts, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
 
@@ -4716,6 +4719,7 @@ func load_dict(d: Dictionary) -> void:
 	if mate.is_empty():
 		mate = roll_mate()
 	runs_total = int(d.get("runs_total", 0))
+	wounded_total = int(d.get("wounded_total", 0))
 	yard_moves = int(d.get("yard_moves", 0))
 	trades = Array(d.get("trades", []))
 	insure_next = bool(d.get("insure_next", false))

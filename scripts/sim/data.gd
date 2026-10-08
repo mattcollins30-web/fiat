@@ -1309,8 +1309,8 @@ const CLASSES := [
 		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the bank by two hours
 	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity",
 		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the bank
-	{"name": "Drifter", "words": "One fewer on you at a time; +10% pace; −15% max HP",
-		"contact": -1, "pace": 1.1, "hp": 0.85},
+	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace; −15% max HP",
+		"damage": 1.15, "contact": -1, "pace": 1.1, "hp": 0.85},     # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]
 
 
