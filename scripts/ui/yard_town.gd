@@ -1,9 +1,9 @@
 extends Control
 ## The town and the purse on one card two wide (Yard-C, 7 Oct): the cards that
 ## were pure information, side by side. Left, the town: the zones with their
-## depths, the yard's trade, what opens the next zone. Right, the purse: cash,
+## depths, the Yard's trade, what opens the next zone. Right, the purse: cash,
 ## notes and scrap, kit worth, prices. The foot: the clock and the autosave at
-## the left, Move the yard at the right when the yard can move. The owner
+## the left, Move the Yard at the right when the Yard can move. The owner
 ## fills it (`show_data`): {title, headline, unit, left: {kicker, lines, note},
 ## right: {kicker, lines, note}, status, button: {text, action, enabled}}.
 

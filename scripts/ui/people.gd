@@ -1,6 +1,6 @@
 extends RefCounted
 ## Portraits: res://art/people/<slug>.png, 128 x 128, Greenhorn's faces -
-## one a class (poacher, doorman, paramedic, scrapper, drifter), the fence,
+## one a class (poacher, doorman, paramedic, scrapper, drifter), the Fence,
 ## the medic. Looked for once; a screen that has one draws it at 1x or 2x
 ## (never between), and shows nothing where there is none.
 

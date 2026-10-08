@@ -49,7 +49,7 @@ const MISSIONS := "Runs"
 const ARMOURY := "Lock-up"
 const MEDIC := "Clinic"
 const MARKET := "The Fence"
-const BARRACKS := "Training"       # the caravan's room (8 Oct, Matt: "caravan doesn't make any sense when it displays perk points/skill trees"); the caravan stays as the place on its screen
+const BARRACKS := "Training"       # the Caravan's room (8 Oct, Matt: "caravan doesn't make any sense when it displays perk points/skill trees"); the Caravan stays as the place on its screen
 const WORKSHOP := "Bench"
 const COMMS := "Radio"
 const RUNNER := "Runner"           # the runner's own room (8 Oct): the sheet, attack, defence, the record - what was the Yard's left half
@@ -66,7 +66,7 @@ const TOP_WORST := {
 	"hp": "999 / 999",
 	"dps": "9,999 dmg/s",
 	"xp": "99,999 / 99,999",         # _short reads a hundred thousand up as 123k, so this is the widest
-	"where": "Out: Ransacked streets",
+	"where": "Out: Ransacked Streets",
 	"class": "Paramedic",
 }
 const TOP_GAP := 28
@@ -112,6 +112,10 @@ var _clinic
 var _events: Panel
 var _event_times: Array[Label] = []
 var _event_labels: Array[Label] = []
+var _prev_time: Label             # the line before the latest, dimmer, at the log's right
+var _prev_label: Label
+const PREV_X := 1000              # the latest line's widest: the line before starts where it ends
+const PREV_GAP := 48
 var _speed_label: Label
 var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
@@ -249,6 +253,9 @@ func _build() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT))       # left-justified (8 Oct, Matt: "the log sits oddly"); the line follows the time's width on refresh
 		_event_labels.append(UI.label(_events, Rect2(20 + tw + 20, 4 + i * 27, Pal.GRID_W - 40 - tw - 20 - sw - 20, 27), "",
 				"Regular", Pal.FLOOR, tones[i], HORIZONTAL_ALIGNMENT_LEFT, false))
+	# the line before, dimmer, to the right (8 Oct, Matt: the dead space; a line you missed stays on screen a run)
+	_prev_time = UI.label(_events, Rect2(PREV_X, 4, tw, 27), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT)
+	_prev_label = UI.label(_events, Rect2(PREV_X + tw + 16, 4, Pal.GRID_W - 20 - PREV_X - tw - 16 - sw - 20, 27), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_speed_label = UI.label(_events, Rect2(Pal.GRID_W - 20 - sw, 4, sw, 27), SPEED_TEXT, "SemiBold", Pal.FLOOR, Pal.WARN,
 			HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_speed_label.visible = false
@@ -324,7 +331,7 @@ func _process(delta: float) -> void:
 
 ## The damage line moves with the fight (Matt, 8 Oct: "a static bar looks weird"): on a run it shows what's
 ## landing a second against what the kit can put out, so it swings with the spread, spikes on a first shot,
-## climbs with walking fire, drops under a resist and falls away while the runner searches; in the yard it
+## climbs with walking fire, drops under a resist and falls away while the runner searches; in the Yard it
 ## settles to the kit's share. Eased, a few frames behind.
 var _dps_shown := -1.0
 func _move_dps_line(delta: float) -> void:
@@ -408,7 +415,7 @@ func show_title() -> void:
 			"action": load_game.bind(save_file), "enabled": saved})
 	items.append({"name": "New camp", "detail": "One runner, a nail gun, £150",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else ""})
-	items.append({"name": "New camp, hardcore", "detail": "A death ends the yard: stash, cash, everything",
+	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, cash, everything",
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else ""})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title)})
 	items.append({"name": "Quit", "detail": "", "action": _quit})
@@ -469,7 +476,7 @@ func _save_to_slot(path: String) -> void:
 func show_pause() -> void:
 	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close},
-		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The yard's ambient, the gun, the gangs, the door", "action": _toggle_sound},
+		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The Yard's ambient, the gun, the gangs, the door", "action": _toggle_sound},
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause)},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title},
@@ -575,7 +582,7 @@ func _settle_away(away: float) -> void:
 	var words := ""
 	var runs: int = int(after.get("runs", 0)) - int(before.get("runs", 0))
 	if sim.auto_tier >= 0 or runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
-		var where: String = sim.tier(sim.auto_tier)["name"].to_lower() if sim.auto_tier >= 0 else "the estate"
+		var where: String = Words.mid(sim.tier(sim.auto_tier)["name"]) if sim.auto_tier >= 0 else "the Estate"
 		var things: int = after["stash"] - before["stash"]
 		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
 				things, "" if things == 1 else "s", before["level"], after["level"]]
@@ -597,11 +604,11 @@ func _settle_away(away: float) -> void:
 ## Hardcore: the KIA that ended the camp. The autosave goes; the slots stay.
 func show_camp_lost() -> void:
 	var r = sim.last_report
-	var words := "The yard is gone with the runner."
+	var words := "The Yard is gone with the runner."
 	if r != null and r.has("lost_value"):
-		words = "Dead in %s with %s of kit on. The yard is gone with the runner." % [sim.tier(r["tier"])["name"].to_lower(), Fmt.money(r["lost_value"])]
+		words = "Dead in %s with %s of kit on. The Yard is gone with the runner." % [Words.mid(sim.tier(r["tier"])["name"]), Fmt.money(r["lost_value"])]
 	DirAccess.remove_absolute(save_file)
-	_menu.open("The yard is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
+	_menu.open("The Yard is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
 
 
 func _quit() -> void:
@@ -640,7 +647,7 @@ func refresh() -> void:
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
-	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the yard"
+	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the Yard"
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	# the right group's glyphs before their right-aligned figures
@@ -702,9 +709,24 @@ func refresh() -> void:
 		var j := ev.size() - 1 - i
 		_event_times[i].text = _time_of_day(ev[j][0]) if j >= 0 else ""
 		var lx: float = 20 + ceilf(UI.text_width(_event_times[i], _event_times[i].text)) + 16
-		_event_labels[i].size.x += _event_labels[i].position.x - lx
 		_event_labels[i].position.x = lx
+		_event_labels[i].size.x = PREV_X - 20 - lx
 		UI.fit(_event_labels[i], _by_sentence(str(ev[j][1])) if j >= 0 else [""])
+	# the line before starts where the latest ends (PREV_X at the latest's widest), and goes when it can't fit whole
+	var jp := ev.size() - 2
+	var cur: Label = _event_labels[0]
+	var tx: float = cur.position.x + ceilf(UI.text_width(cur, cur.text)) + PREV_GAP
+	_prev_time.text = _time_of_day(ev[jp][0]) if jp >= 0 else ""
+	_prev_time.position.x = tx
+	var px: float = tx + ceilf(UI.text_width(_prev_time, _prev_time.text)) + 16
+	_prev_label.position.x = px
+	_prev_label.size.x = Pal.GRID_W - 20 - px - (_speed_label.size.x + 20 if _speed_label.visible else 0.0)
+	var forms: Array = _by_sentence(str(ev[jp][1])) if jp >= 0 else [""]
+	if forms.any(func(f): return UI.text_width(_prev_label, str(f)) <= _prev_label.size.x):
+		UI.fit(_prev_label, forms)
+	else:
+		_prev_label.text = ""
+		_prev_time.text = ""
 
 
 ## A line's shorter forms: the whole, then fewer sentences, then the first clause - never trailing off.
@@ -773,7 +795,7 @@ func _rail_status(name: String) -> Dictionary:
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
 	match name:
 		OVERVIEW:
-			# the yard's jobs were easy to miss: the rail says when one is affordable, as the fence's does for a contract
+			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
 			var can := false
 			for j in _yard_jobs():
 				if int(j["cost"]) > 0 and bool(j["can"]):
@@ -830,7 +852,7 @@ func _runner_cards() -> Array:
 		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
 		"chips": who,
 		"lines": [["Pace", "×%.2f" % sim.pace()], ["Pack · rig", "%d cells · %d" % [sim.capacity(), sim.med_capacity()]],
-			["Runs", "%d" % sim.runner_runs], ["In the yard", Fmt.clock(alive)]],
+			["Runs", "%d" % sim.runner_runs], ["In the Yard", Fmt.clock(alive)]],
 		"status": ("Wall: %s" % ", ".join(sim.retired)) if not sim.retired.is_empty() else "Runners lost: %d" % sim.operators_lost,
 		"note": [sim.next_words(true), sim.next_words(true).replace(" on Runs", "")],
 	})
@@ -854,7 +876,7 @@ func _runner_cards() -> Array:
 			["Affixes · tree", _signed_pct(affix_pct)], ["Past", ("×%.2f" % sim.cm("damage")) if sim.cls != "" else "—"],
 			["First shot", _signed_pct(first_pct)]],
 		"note": ("Growth ×%.2f past the cap" % sim.growth_mult()) if sim.growth_mult() > 1.001 else (["The elements: a share of every hit", "Elements in every hit"] if not deal_chips.is_empty() else "All of it physical"),
-		"status": ("Walking fire: %s" % sim.gun_type()) if sim.gun_type() == "smg" else ("Firing %s" % sim.gun_type() if sim.gun_type() != "" else "Nothing in hand"),
+		"status": "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand"),
 	})
 	# defence: HP, armour, the resists
 	var dlines := [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]]]
@@ -906,7 +928,7 @@ func _runner_cards() -> Array:
 	out.append({
 		"title": "Kit", "headline": Fmt.money(sim.loadout_value()), "unit": "worth",
 		"lines": klines,
-		"note": "What the fence would pay",
+		"note": "What the Fence would pay",
 		"status": "Fit it in the Lock-up",
 	})
 	# the last run
@@ -936,8 +958,8 @@ func _runner_cards() -> Array:
 	return out
 
 
-## The yard's works for the tree (8 Oct): each with its level, every level's name and words (forms longest
-## first for the fit; index 0 the start), the prices from the first built, its action. The clinic, the fence
+## The Yard's works for the tree (8 Oct): each with its level, every level's name and words (forms longest
+## first for the fit; index 0 the start), the prices from the first built, its action. The Clinic, the Fence
 ## and the radio are built here too and run in their rooms.
 func _yard_jobs() -> Array:
 	var g: Array = Data.GENERATOR_LEVELS
@@ -1010,7 +1032,7 @@ func _yard_jobs() -> Array:
 
 
 ## The town and the purse on one card (7 Oct): the zones with their depths, the trade, what opens the next
-## zone; cash, notes and scrap, kit worth, prices. The clock and the autosave in the foot; Move the yard when it can.
+## zone; cash, notes and scrap, kit worth, prices. The clock and the autosave in the foot; Move the Yard when it can.
 func _town_purse() -> Dictionary:
 	var zlines := []
 	for z in range(Data.ZONES.size()):
@@ -1028,12 +1050,12 @@ func _town_purse() -> Dictionary:
 			names.append(Data.tree_of_element(el)["name"])
 		zlines.append(["Yard's trade", ", ".join(names)])
 	if not sim.best_dig.is_empty():
-		# the yard's best dig, the score across yards (the endgame, 7 Oct)
-		var site: String = str(sim.best_dig["site"]).to_lower().trim_prefix("the ")
+		# the Yard's best dig, the score across yards (the endgame, 7 Oct)
+		var site: String = str(sim.best_dig["site"]).trim_prefix("The ")
 		zlines.append(["Best dig", ["%s, depth %d · yard %d" % [site, int(sim.best_dig["depth"]), int(sim.best_dig["yard"])], "%s, depth %d" % [site, int(sim.best_dig["depth"])], "%s D%d" % [site, int(sim.best_dig["depth"])], "depth %d" % int(sim.best_dig["depth"])], "accent"])
 	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
 	if sim.lorry_done:
-		town_note = ["The lorry's beaten: move the yard when you're ready", "The lorry's beaten"]
+		town_note = ["The lorry's beaten: move the Yard when you're ready", "The lorry's beaten"]
 	var d := {
 		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · yard %d" % (sim.yard_moves + 1),
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
@@ -1041,11 +1063,11 @@ func _town_purse() -> Dictionary:
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
 		"right": {"kicker": "The purse", "lines": [["Cash", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
-			"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the fence pays"},
+			"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
-		d["button"] = {"text": "Move the yard", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
+		d["button"] = {"text": "Move the Yard", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
 	return d
 
 
@@ -1054,11 +1076,11 @@ func _town_purse() -> Dictionary:
 
 # ------------------------------------------------------------------ armoury
 
-# ------------------------------------------------------------------ the clinic
+# ------------------------------------------------------------------ the Clinic
 # (a screen of its own: scripts/ui/clinic.gd - treatment, the shelf, the stash's meds and the rig)
 
 
-# ------------------------------------------------------------------ the fence
+# ------------------------------------------------------------------ the Fence
 # (a screen of its own: scripts/ui/fence.gd - the shelf and the stash grid)
 
 
@@ -1163,7 +1185,7 @@ func _choose_runner() -> void:
 			if t["name"] == sim.candidates[k]:
 				tr = t
 		items.append({"name": tr.get("name", sim.candidates[k]), "detail": tr.get("words", ""), "action": _pick_runner.bind(k)})
-	_menu.open("Two turn up at the yard", "One stays. The other moves on.", items, Callable())
+	_menu.open("Two turn up at the Yard", "One stays. The other moves on.", items, Callable())
 
 
 func _pick_runner(k: int) -> void:
@@ -1173,7 +1195,7 @@ func _pick_runner(k: int) -> void:
 	refresh()
 
 
-## Moving the yard: asked twice, since everything but the uniques goes.
+## Moving the Yard: asked twice, since everything but the uniques goes.
 ## Retirement (36): the runner to the wall, a third of their trait kept, their kit to the stash, two new to pick from.
 func _confirm_retire() -> void:
 	var td: Dictionary = sim.trait_data()
@@ -1194,14 +1216,14 @@ func _retire() -> void:
 
 func _confirm_move() -> void:
 	var items := [
-		{"name": "Move the yard", "detail": "Start again. The uniques, the yard's tree, the list, the wall, half the notes and the yard's trade come. Nothing else.", "action": _pick_trade},
+		{"name": "Move the Yard", "detail": "Start again. The uniques, the Yard's tree, the list, the wall, half the notes and the Yard's trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
 	var floor_next: int = mini(sim.yard_moves + 1, Data.LADDER_FLOOR_MAX)
-	_menu.open("Move the yard?", "A yard that's moved finds rarer things and more cash (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
+	_menu.open("Move the Yard?", "A yard that's moved finds rarer things and more cash (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
 
 
-## The yard's trade: one element comes with the move, and every class after
+## The Yard's trade: one element comes with the move, and every class after
 ## takes its keystone at the class's own price. Five to pick from, one a move.
 func _pick_trade() -> void:
 	var items := []
@@ -1213,7 +1235,7 @@ func _pick_trade() -> void:
 	if items.is_empty():
 		_move_yard("")
 		return
-	_menu.open("The yard's trade", "Which trade comes with the yard?", items, _menu.close)
+	_menu.open("The Yard's trade", "Which trade comes with the Yard?", items, _menu.close)
 
 
 func _move_yard(trade: String) -> void:

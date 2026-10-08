@@ -1,6 +1,6 @@
 extends Control
 ## The Caravan's screen: what the runner was, and training. Three trees as
-## three columns - the class's first, the yard's, the class's second - a chain
+## three columns - the class's first, the Yard's, the class's second - a chain
 ## each, read top down; a node lit when taken, open when it's next, dim when
 ## it isn't. Under them a panel for the selected node and the Train and
 ## Respec buttons. Fixed geometry inside the card grid's 1536 x 864.
@@ -33,7 +33,7 @@ const NODES_Y := TREE_Y + HEAD_H + 6
 const TILE_H := 62                                             # a node: a tile, two across, the keystone and the capstone the width (52 until the last pass, 8 Oct: the detail panel's height went to the trees and the band)
 const RAIL_W := 22                                             # the rail down a tree's left: filled as far as it's taken
 const TILE_W := (COL_W - RAIL_W - NODE_GAP) / 2
-const TILE_ROWS := 7                                           # the yard's twelve nodes two across, and the capstone under
+const TILE_ROWS := 7                                           # the Yard's twelve nodes two across, and the capstone under
 const COLUMN_H := TILE_ROWS * (TILE_H + NODE_GAP) - NODE_GAP   # what a tree takes: a drawer page fits in it too (400)
 const SUM_Y := NODES_Y + COLUMN_H + 12                         # what the trees add up to
 const SUM_H := 10 + Chips.CHIP_H + 10                            # one line: the head at the left, the eight sums as chips (Caravan-E, 7 Oct; the tiles before were cut at the foot)
@@ -47,7 +47,7 @@ var selected := ""                 # a node id, or ""
 var _class_buttons: Array = []
 var _class_words: Label
 var _class_line: Label             # the class's own rule, under the points
-const ROWS := 13                   # the yard's twelve nodes and its capstone; a class tree's ten or eleven and its capstone
+const ROWS := 13                   # the Yard's twelve nodes and its capstone; a class tree's ten or eleven and its capstone
 var _heads: Array = []             # a column each: {name, count}
 var _rows: Array = []              # [column][row] -> {button, name, effect, more (the cost), id}
 var _rails: Array = []             # a column each: {track, fill, ticks[], top, bottom}
@@ -63,14 +63,14 @@ var _face: TextureRect             # the class's portrait, in the band, when the
 var _title: Label
 var _words: Label
 var _points: Label                 # "3 of 29" points free: the band's headline
-var _scope: Label                  # whose a node is: the yard's, kept, or the runner's, gone with them
+var _scope: Label                  # whose a node is: the Yard's, kept, or the runner's, gone with them
 var _past: Label                   # the runners before this one
 var _wall: Array = []              # their faces, newest first, small
 const WALL := 6
 const WALL_S := 64
 var _ascend: Button                # the second past, from level 30
 var _retire: Button                # retire to the wall, from level 30 (36)
-var _swap: Button                  # over the middle column's head, right: the next of the yard's tree, the second past's, the elements', the drawer, the shelf
+var _swap: Button                  # over the middle column's head, right: the next of the Yard's tree, the second past's, the elements', the drawer, the shelf
 var _back: Button                  # its left: the one before, so an overshoot is one press back
 var mid := 0                       # which of the middle trees shows
 var drawer_page := 0               # the drawer's page: PAGE papers at a time
@@ -195,8 +195,8 @@ const PANEL_WORDS := {
 	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More to lose before a bail-out.", "loot_pct": "Every search turns up a little more.",
 	"search_pct": "The picking-over goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
 	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
-	"rest_pct": "Resting at the yard heals faster.", "treat_pct": "The clinic charges less.", "att_share": "Gun parts count for more.",
-	"sell_pct": "The fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
+	"rest_pct": "Resting at the Yard heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
+	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
 	"pace_pct": "The fight and the search go quicker.", "damage_low_pct": "Under half HP, every shot hits harder.",
 	"conv_fire_pct": "A share of every hit lands as fire and keeps burning.", "conv_frost_pct": "A share of every hit lands as frost and slows them.", "conv_poison_pct": "A share of every hit lands as poison and keeps working.",
 	"conv_shock_pct": "A share of every hit lands as shock.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",
@@ -296,7 +296,7 @@ func show_state(s) -> void:
 	_band.portrait_width(FACE if faced else 0)
 	var free0: int = sim.points_free()
 	var who0: String = str(cd0.get("name", "No past yet"))
-	_band.set_words(("%s · %s" % [who0, td0["name"]]) if not td0.is_empty() else who0, "The caravan",
+	_band.set_words(("%s · %s" % [who0, td0["name"]]) if not td0.is_empty() else who0, "The Caravan",
 		"%d of %d" % [free0, sim.training_points], ["point%s free" % ("" if sim.training_points == 1 else "s"), "free"], Pal.ACCENT if free0 > 0 else Pal.TEXT_2)
 	_band.headline_under_title(true)
 	if not td0.is_empty():
@@ -306,8 +306,8 @@ func show_state(s) -> void:
 		_band.set_right([])
 	UI.fit(_class_line, [str(cd0.get("words", "")), ""] if not cd0.is_empty() else ["Pick a past above: what the runner was, and how they fight now", "Pick a past above"])
 	var trees: Array = sim.trees()
-	# the class's two trees either side; the middle cycles the yard's, the
-	# second past's and the five elements'. With no class, the yard's alone.
+	# the class's two trees either side; the middle cycles the Yard's, the
+	# second past's and the five elements'. With no class, the Yard's alone.
 	var mids := _mid_trees(trees)
 	mid = mid % maxi(1, mids.size())
 	var cols := [null, null, null]
@@ -506,7 +506,7 @@ func _show_panel() -> void:
 		if cd.is_empty():
 			_title.text = "No past yet"
 			after_title.call()
-			UI.fit(_words, ["Pick one above: what the runner was, and how they fight now. Free to change in the yard", "Pick one above"])
+			UI.fit(_words, ["Pick one above: what the runner was, and how they fight now. Free to change in the Yard", "Pick one above"])
 		else:
 			var td: Dictionary = sim.trait_data()
 			_title.text = ("%s · %s" % [cd["name"], td["name"]]) if not td.is_empty() else "%s" % cd["name"]
@@ -595,9 +595,9 @@ func _show_past() -> void:
 	var short := []
 	for k in range(sim.past.size() - 1, -1, -1):
 		var r: Dictionary = sim.past[k]
-		var held: String = (", %s at depth %d" % [str(r["site"]).to_lower(), int(r["depth"])]) if int(r.get("depth", 0)) > 0 else ""     # the deepest they held (the wall as the score, 7 Oct)
-		long.append("a %s, %d run%s%s, %s" % [str(r["class"]).to_lower(), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
-		short.append("%s %d" % [str(r["class"]).to_lower(), int(r["runs"])])
+		var held: String = (", %s at depth %d" % [Words.mid(str(r["site"])), int(r["depth"])]) if int(r.get("depth", 0)) > 0 else ""     # the deepest they held (the wall as the score, 7 Oct)
+		long.append("a %s, %d run%s%s, %s" % [str(r["class"]), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
+		short.append("%s %d" % [str(r["class"]), int(r["runs"])])
 	# the line in what's left beside the buttons (the faces went with the strip, 8 Oct: the wall is a card in the Runner room)
 	for t in _wall:
 		t.visible = false
@@ -685,7 +685,7 @@ static func _in_branch(branch: Dictionary, i: int) -> bool:
 	return false
 
 
-## The middle column's trees: the yard's, the second past's first, the elements'.
+## The middle column's trees: the Yard's, the second past's first, the elements'.
 func _mid_trees(trees: Array) -> Array:
 	var out: Array = []
 	if sim.cls == "":
@@ -705,7 +705,7 @@ func _drawer_branch() -> Dictionary:
 
 
 ## The shelf: the chase first (endgame part 3) - the nine sites' own, the
-## heads' charms, the lorry's load, a gap each until found, with where it is
+## heads' charms, the Lorry's Load, a gap each until found, with where it is
 ## under the gap - then the rest found, in the order found, their words under.
 func _shelf_branch() -> Dictionary:
 	var chase: Array = sim.shelf_chase()

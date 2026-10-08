@@ -3,8 +3,8 @@ extends Control
 ## name, a row of chips for what it is (slot, type, rarity, level, cells), and
 ## the headline figure big with its unit and a tail ("takes SMG rounds · 600
 ## carried"). Under it, the affixes as chips in the tier's colour with a T-tag
-## inside, over two rows, and a muted "open" line when the bench could add
-## one. Every screen with an item panel (the Lock-up, the fence, the clinic,
+## inside, over two rows, and a muted "open" line when the Bench could add
+## one. Every screen with an item panel (the Lock-up, the Fence, the Clinic,
 ## the run's pick) mounts one in its left column; the right column stays the
 ## screen's own (the compare, the shelf's price, the pack's room).
 
@@ -156,7 +156,7 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
-	# after them, as muted chips: the open slots ("1 open at the bench"), a set's words in the set's tone, or "No affixes"
+	# after them, as muted chips: the open slots ("1 open at the Bench"), a set's words in the set's tone, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
 	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it)
 	var has_extra: bool = (not extra.is_empty()) if extra is Array else (str(extra) != "")
@@ -164,7 +164,7 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
 	elif open:
 		var left: int = Data.RARITIES.size() - 1 - int(it["rarity"])
-		chips_a.append({"forms": ["%d open at the bench" % left, "%d open" % left], "colour": Pal.TEXT_2})
+		chips_a.append({"forms": ["%d open at the Bench" % left, "%d open" % left], "colour": Pal.TEXT_2})
 	elif n == 0 and not plain:
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
 	_affixes.show_chips(chips_a, AFFIX_ROWS)

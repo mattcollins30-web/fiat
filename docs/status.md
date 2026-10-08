@@ -2186,6 +2186,24 @@ right-aligned in a "99:59:59" box, so a "15:15" sat forty pixels in). The dead s
 is open - a question for Matt. *The caps pass* Matt asked for ("the entire game needs a caps pass -
 there's too much to list"): the rule to apply, proposed below in the conversation, then the sweep.
 
+**The caps pass and the log's line before (8 Oct).** The rule, agreed with Matt: a name is capitalised
+wherever it stands - the rooms (the Yard, the Fence, the Clinic, the Bench), the zones and sites (The
+Parade, The Retail Park, Shopping Centre, The Bank, The Services, The Hospital, The Barracks), the
+classes, the trees, the bosses (The Carpet Man, The Manager, The Quartermaster), the uniques and the
+sets; everything else is sentence case; acronyms stay upper; nodes and base items stay sentence case.
+Mid-sentence a name's own "The" drops to "the" through `Words.mid` ("Arm the Carpet Man", "the Parade
+is outside"), never `to_lower` on the whole. The sweep (`/tmp/caps.py` over a 59-entry mapping) ran
+across `scripts/sim` and `scripts/ui` and the smoke; the balance tools and tests were swept too and
+restored, since their text is the readers' and not the player's. Old names in a save migrate on load:
+`Data.RENAMES` (old → new) and `_rename_old`/`_renamed` in `load_dict` walk the tiers, the atlas, the
+items and the record, with "The yard/N" nodes to "The Yard/N". *The line before:* the dead space at
+the log's right now holds the previous line, dim (`TEXT_3`), starting `PREV_GAP` after the latest
+line's text ends; the latest line is fitted to `PREV_X` (1000) at most so there is usually room, and
+when the line before cannot fit whole in what is left - no `_by_sentence` form does - it goes rather
+than trails off. The smoke checks the pair fit, that the line before starts after the latest, and the
+capitalised classes and names in the lines it reads ("Before: a Scrapper, 3 runs"). Local smoke
+clean; on the Legion as the caps pass.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

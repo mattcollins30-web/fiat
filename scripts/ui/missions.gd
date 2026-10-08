@@ -34,7 +34,7 @@ var zone := 0                      # the zone whose tiers the columns show
 var _zone_buttons: Array = []
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
-var _atlas                         # the map (atlas.gd): the endgame's tree in the caravan's shape, in place of the columns
+var _atlas                         # the map (atlas.gd): the endgame's tree in the Caravan's shape, in place of the columns
 const MAP := 3                     # the fourth button on the zone row
 const ZONE_H := 56
 const TOP := ZONE_H + 16
@@ -50,7 +50,7 @@ func _init() -> void:
 		b.text = Data.ZONES[z]["name"] if z < Data.ZONES.size() else "The map"
 		b.pressed.connect(_pick_zone.bind(z))
 		_zone_buttons.append(b)
-	# the map: the endgame's tree in the caravan's shape (Map-A, 7 Oct)
+	# the map: the endgame's tree in the Caravan's shape (Map-A, 7 Oct)
 	_atlas = Atlas.new(Pal.ROOM_H - TOP)
 	_atlas.position = Vector2(0, TOP)
 	_atlas.visible = false
@@ -122,7 +122,7 @@ func _init() -> void:
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
 		c["auto"] = UI.button(panel, Rect2(PAD, fy, INNER - BOSS_W - 8, Pal.BUTTON_H), false)
 		c["auto"].pressed.connect(_auto.bind(col))
-		# insurance: the fence holds the paper on the kit for the next run
+		# insurance: the Fence holds the paper on the kit for the next run
 		c["insure"] = UI.button(panel, Rect2(PAD + INNER - BOSS_W, fy, BOSS_W, Pal.BUTTON_H), false)
 		c["insure"].pressed.connect(_insure.bind(col))
 		fy -= Pal.BUTTON_H + 12
@@ -269,7 +269,7 @@ func show_state(s) -> void:
 
 
 ## The ladder's stations ahead on a site (the endgame, 7 Oct): the crew's head at full strength at PINNACLE_DEPTH
-## on the zone's last site, the lorry at CONVOY_DEPTH on the services; "" once past them or where there are none.
+## on the zone's last site, the lorry at CONVOY_DEPTH on the Services; "" once past them or where there are none.
 func _station_words(i: int) -> String:
 	var out: Array = []
 	var b: Dictionary = sim.boss_of(i)

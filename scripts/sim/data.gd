@@ -28,7 +28,7 @@ const GRENADE := "Grenade"        # thrown from a pouch (32): damage to everyone
 ## and runs dry without them: then the secondary, then fists.
 const AMMO := "Ammo"
 ## Papers: a line of the before, found lying about, a cell each, pennies at
-## the fence. Their words live in words.gd; the deeds are the one that matters.
+## the Fence. Their words live in words.gd; the deeds are the one that matters.
 const PAPER := "Paper"
 const PAPER_DROP := 0.06           # the share of a site's finds that are papers
 const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle rounds", "smg": "SMG rounds", "pistol": "Pistol rounds", "none": ""}
@@ -91,7 +91,7 @@ const COMMS_LEVELS := [
 ]
 const INTEL_CASH := [0, 60, 150, 250, 400, 650, 900, 1200, 1600]       # fresh word on a tier, by tier index
 
-## The yard's own upgrades, cash, late: the generator runs the yard while
+## The Yard's own upgrades, cash, late: the generator runs the Yard while
 ## you're away for longer; the lookout sees the first lot coming; the kennel
 ## is a dog.
 const GENERATOR_LEVELS := [
@@ -201,10 +201,10 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Sniper rifle", "type": "rifle", "tier": 5, "damage": 110.0, "rof": 0.85, "value": 480,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
-		# tier 6: the city's - the services, the hospital, the barracks
+		# tier 6: the city's - the Services, the Hospital, the Barracks
 		{"name": "Armourer's carbine", "type": "improvised", "ammo": "smg", "tier": 6, "damage": 44.0, "rof": 2.6, "value": 650,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		## the top of the pool (6 Oct): the firearms squad's and the barracks' own
+		## the top of the pool (6 Oct): the firearms squad's and the Barracks' own
 		{"name": "Police marksman's rifle", "type": "rifle", "tier": 6, "damage": 125.0, "rof": 0.9, "value": 820,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Riot squad's shotgun", "type": "shotgun", "tier": 6, "damage": 52.0, "rof": 2.2, "value": 760,
@@ -345,8 +345,8 @@ const BASES := {
 		{"name": "Bank's own pen", "tier": 6, "find": 20, "cash": 20, "value": 800},
 		{"name": "Mayor's chain", "tier": 6, "find": 24, "cash": 24, "value": 1100},
 	],
-	## Papers: the before, on paper. Worth their value to the fence and nothing
-	## else; the deeds are dropped by the bank once and are the ending.
+	## Papers: the before, on paper. Worth their value to the Fence and nothing
+	## else; the deeds are dropped by the Bank once and are the ending.
 	"Paper": [
 		{"name": "A council tax reminder", "tier": 1, "value": 2},
 		{"name": "A P45", "tier": 1, "value": 2},
@@ -366,9 +366,9 @@ const BASES := {
 		{"name": "A ration book", "tier": 1, "value": 4, "depth": 12},
 		{"name": "A council minute", "tier": 1, "value": 4, "depth": 18},
 		{"name": "A bus timetable, amended", "tier": 1, "value": 4, "depth": 24},
-		{"name": "A letter to the bank", "tier": 1, "value": 5, "depth": 30},
+		{"name": "A letter to the Bank", "tier": 1, "value": 5, "depth": 30},
 		{"name": "A list of names", "tier": 1, "value": 5, "depth": 40},
-		{"name": "The manager's note", "tier": 1, "value": 6, "depth": 50},
+		{"name": "The Manager's note", "tier": 1, "value": 6, "depth": 50},
 		{"name": "The deeds", "tier": 5, "value": 5000},
 	],
 	## Medical: heals `heal` HP over `use` seconds, under fire the whole time.
@@ -390,7 +390,7 @@ const BASES := {
 		{"name": "Wired battery", "tier": 3, "damage": 100.0, "type": "shock", "value": 60, "from": "Car battery"},
 	],
 	## Ammo: a stack of `rounds` for a gun `type`, standard or a better grade
-	## (damage_pct). Standard is always at the fence by the box; the better
+	## (damage_pct). Standard is always at the Fence by the box; the better
 	## grades are found, or on its shelf.
 	"Ammo": [
 		# a stack is a bag of rounds, sized so a run takes about a third of one at the type's rate
@@ -412,14 +412,14 @@ const BASES := {
 		{"name": "Salted rounds", "type": "rifle", "tier": 3, "rounds": 220, "value": 150, "damage_pct": 10, "conv_frost_pct": 30, "from": "Match rounds"},
 	],
 }
-const AMMO_PRICE := 1.5             # the fence's markup on a standard box
+const AMMO_PRICE := 1.5             # the Fence's markup on a standard box
 const AMMO_DROP := 0.22             # the share of a kill's drops that are rounds; a look's is half that
 ## Where loot comes from. A kill drops what they carried; a look over the
 ## site turns up what's lying there. Meds are rare either way; attachments
 ## are the site's. The weights are the lists: a slot listed twice is twice as likely.
 const KILL_SLOTS := ["Primary", "Primary", "Secondary", "Helmet", "Armour", "Armour", "Rig"]
 const SITE_SLOTS := ["Backpack", "Rig", "Secondary", "Helmet", "Primary", "Armour"]
-const MED_PRICE := 1.5            # the clinic's markup on a common med
+const MED_PRICE := 1.5            # the Clinic's markup on a common med
 const MED_DROP := 0.08            # the share of finds that are medical
 const GRENADE_DROP := 0.04        # the share of a look's finds that are grenades (32)
 const ATT_DROP := 0.30            # the share of a look's finds that are attachments
@@ -510,7 +510,7 @@ const ATTACHMENTS := [
 	{"name": "Hundred-round drum", "mount": "magazine", "tier": 5, "value": 460, "damage_pct": 25, "speed_pct": -15},
 	{"name": "Precision stock", "mount": "stock", "tier": 5, "value": 420, "first_pct": 15, "damage_pct": 8},
 	{"name": "Laser module", "mount": "optic", "tier": 6, "value": 520, "first_pct": 20, "damage_pct": 6},
-	# socketables: the six things that go in a socket, found and fitted at the bench
+	# socketables: the six things that go in a socket, found and fitted at the Bench
 	{"name": "Lighter fluid", "mount": "socket", "tier": 1, "value": 120, "conv_fire_pct": 15},
 	{"name": "Antifreeze", "mount": "socket", "tier": 1, "value": 120, "conv_frost_pct": 15},
 	{"name": "Rat poison", "mount": "socket", "tier": 2, "value": 160, "conv_poison_pct": 15},
@@ -526,95 +526,95 @@ const ATTACHMENTS := [
 const UNIQUE_DROP := 0.01
 const SITE_UNIQUE_DEPTH := [12, 9, 6]   # a site's own unique, by zone: the depth it drops from
 const SITE_UNIQUE_DROP := 0.03          # a find past that depth, on that site, until it is on the shelf
-const SITE_UNIQUE_AGAIN := 0.25         # of that, once it is: a second is for the fence, not the chase
+const SITE_UNIQUE_AGAIN := 0.25         # of that, once it is: a second is for the Fence, not the chase
 const UNIQUES := [
-	{"name": "Grandad's shotgun", "slot": "Primary", "base": "Farmer's shotgun", "rule": "grandads",
+	{"name": "Grandad's Shotgun", "slot": "Primary", "base": "Farmer's shotgun", "rule": "grandads",
 		"words": "The first of every gang takes triple", "affixes": [{"stat": "damage_pct", "value": 10}, {"stat": "first_lot_pct", "value": 20}]},
-	{"name": "The Postman's bag", "slot": "Backpack", "base": "Hiking pack", "rule": "postman",
+	{"name": "The Postman's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "postman",
 		"words": "Every search finds one more", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "loot_pct", "value": 15}]},
-	{"name": "The Doorman's jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans",
+	{"name": "The Doorman's Jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans",
 		"words": "With three on you, take a quarter less", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 20}]},
-	{"name": "Lucky cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap",
+	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap",
 		"words": "Finds are half as likely to be common", "affixes": [{"stat": "loot_pct", "value": 20}, {"stat": "cash_per_kill", "value": 6}]},
 	# the bosses' - only from them; their rules are the affixes, for now
-	{"name": "The van's spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "boss": true,
+	{"name": "The Van's Spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "boss": true,
 		"words": "The secondary fires at full damage, always", "affixes": [{"stat": "damage_pct", "value": 18}, {"stat": "first_lot_pct", "value": 25}, {"stat": "cash_per_kill", "value": 4}]},
 	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "boss": true,
 		"words": "The first two seconds of every gang land on the underlay", "affixes": [{"stat": "armour", "value": 30}, {"stat": "hp", "value": 25}, {"stat": "speed_pct", "value": 6}]},
-	{"name": "The manager's coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "boss": true,
+	{"name": "The Manager's Coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "boss": true,
 		"words": "Cash half again; no notes - he doesn't take paper", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_per_kill", "value": 8}, {"stat": "hp", "value": 20}]},
-	{"name": "The branch pistol", "slot": "Secondary", "base": "Tactical pistol", "rule": "branch_pistol", "boss": true,
+	{"name": "The Branch Pistol", "slot": "Secondary", "base": "Tactical pistol", "rule": "branch_pistol", "boss": true,
 		"words": "Under half HP the secondary fires twice as fast", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "damage_low_pct", "value": 25}, {"stat": "speed_pct", "value": 6}]},
-	{"name": "The quartermaster's rifle", "slot": "Primary", "base": "Marksman rifle", "rule": "qm_rifle", "boss": true,
+	{"name": "The Quartermaster's Rifle", "slot": "Primary", "base": "Marksman rifle", "rule": "qm_rifle", "boss": true,
 		"words": "Never runs dry; he signed for the rounds", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_lot_pct", "value": 30}, {"stat": "damage_per_att", "value": 5}]},
-	{"name": "Issue webbing", "slot": "Rig", "base": "Assault rig", "rule": "issue_webbing", "boss": true,
+	{"name": "Issue Webbing", "slot": "Rig", "base": "Assault rig", "rule": "issue_webbing", "boss": true,
 		"words": "Every pouch holds two", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "armour", "value": 15}, {"stat": "loot_per_med", "value": 5}]},
 	# the pinnacles' - a charm each, from a crew's head at full strength
-	{"name": "The van keys", "slot": "Charm", "base": "Horseshoe nail", "rule": "van_keys", "boss": true, "pinnacle": 0,
+	{"name": "The Van Keys", "slot": "Charm", "base": "Horseshoe nail", "rule": "van_keys", "boss": true, "pinnacle": 0,
 		"words": "You drive: pace +25%", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "cash_pct", "value": 10}, {"stat": "loot_pct", "value": 8}]},
-	{"name": "The manager's pen", "slot": "Charm", "base": "Bank's own pen", "rule": "managers_pen", "boss": true, "pinnacle": 1,
+	{"name": "The Manager's Pen", "slot": "Charm", "base": "Bank's own pen", "rule": "managers_pen", "boss": true, "pinnacle": 1,
 		"words": "Notes come in twos: every note found is two", "affixes": [{"stat": "rarity_pct", "value": 12}, {"stat": "cash_pct", "value": 15}, {"stat": "loot_pct", "value": 5}]},
-	{"name": "The quartermaster's ledger", "slot": "Charm", "base": "Dog tag", "rule": "qm_ledger", "boss": true, "pinnacle": 2,
+	{"name": "The Quartermaster's Ledger", "slot": "Charm", "base": "Dog tag", "rule": "qm_ledger", "boss": true, "pinnacle": 2,
 		"words": "Signed for: what a kill drops is a tier up", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "cash_pct", "value": 8}, {"stat": "loot_pct", "value": 10}]},
 	# the convoy's
-	{"name": "The lorry's load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "boss": true, "convoy": true,
+	{"name": "The Lorry's Load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "boss": true, "convoy": true,
 		"words": "The pack comes home full: every empty cell is notes", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "loot_pct", "value": 15}, {"stat": "cash_per_cell", "value": 3}]},
 	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep;
 	# nine of them are a site's own (`site`, endgame part 3, 7 Oct): found only on that site, past SITE_UNIQUE_DEPTH for its
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
-	# in the game and the barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
-	{"name": "The council's weed burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "depth": 12,
+	# in the game and the Barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
+	{"name": "The Council's Weed Burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "depth": 12,
 		"words": "A flamethrower: all fire, fire hits everyone on you, takes nothing", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
-	{"name": "Jump leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "depth": 12,
+	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "depth": 12,
 		"words": "A third of your damage as shock; shock on one of them is shock on all of them", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
-	{"name": "The rat man's bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "depth": 12,
+	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "depth": 12,
 		"words": "Poison never caps and carries to the next of them", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
-	{"name": "The butcher's steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "depth": 12,
+	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "depth": 12,
 		"words": "Bleed does double, and a bleed carries to the next of them", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
-	{"name": "The gritter's hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "site": 0,
+	{"name": "The Gritter's Hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "site": 0,
 		"words": "Everyone on you is chilled, always; chilled gangs come one at a time", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "armour", "value": 30}, {"stat": "frost_res", "value": 30}]},
-	{"name": "The sparky's gloves", "slot": "Charm", "base": "Horseshoe nail", "rule": "sparkys_gloves", "site": 2,
+	{"name": "The Sparky's Gloves", "slot": "Charm", "base": "Horseshoe nail", "rule": "sparkys_gloves", "site": 2,
 		"words": "Their shock resist counts for nothing; shock costs you no armour", "affixes": [{"stat": "shock_pct", "value": 30}, {"stat": "shock_res", "value": 40}]},
-	{"name": "The quartermaster's manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "site": 8,
+	{"name": "The Quartermaster's Manual", "slot": "Charm", "base": "Dog tag", "rule": "qm_manual", "site": 8,
 		"words": "Every element counts as the runner's: no doubled tree, every keystone open", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "all_res", "value": 8}]},
-	{"name": "A blue plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "site": 5,
+	{"name": "A Blue Plaque", "slot": "Charm", "base": "St Christopher", "rule": "blue_plaque", "site": 5,
 		"words": "All resists +40%; nothing else on anything you wear counts", "affixes": [{"stat": "all_res", "value": 40}]},
-	{"name": "The lollipop lady's sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "depth": 12,
+	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "depth": 12,
 		"words": "Stop: the first of every gang drops where it stands; gangs come half as often", "affixes": [{"stat": "first_pct", "value": 30}, {"stat": "patrol_pct", "value": 15}]},
-	{"name": "The bookie's pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "depth": 12,
+	{"name": "The Bookie's Pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "depth": 12,
 		"words": "Loot quality doubled; cash halved", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "site": 4,
+	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "site": 4,
 		"words": "Pace +40% and the pack half again; you carry no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
-	{"name": "Nan's cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "depth": 12,
+	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "depth": 12,
 		"words": "3% of your HP back a second; no armour at all", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
-	{"name": "The dinner lady's ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "depth": 12,
+	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "depth": 12,
 		"words": "Every kill is a tenth of your HP back; meds do nothing", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "attack_pct", "value": 15}]},
-	{"name": "A traffic warden's hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "depth": 12,
+	{"name": "A Traffic Warden's Hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "depth": 12,
 		"words": "Every gang arrives one short; every kill's notes doubled", "affixes": [{"stat": "notes_pct", "value": 25}, {"stat": "armour", "value": 10}]},
-	{"name": "The vicar's thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "site": 7,
+	{"name": "The Vicar's Thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "site": 7,
 		"words": "A burn on you heals you instead; your fire resist is nothing", "affixes": [{"stat": "regen", "value": 3}, {"stat": "fire_pct", "value": 20}]},
-	{"name": "The scout leader's whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "depth": 12,
+	{"name": "The Scout Leader's Whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "depth": 12,
 		"words": "Every gang after the first is one", "affixes": [{"stat": "patrol_pct", "value": 10}, {"stat": "loot_pct", "value": 10}]},
-	{"name": "The sergeant's whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "site": 1,
+	{"name": "The Sergeant's Whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "site": 1,
 		"words": "Two more on you at once; everything you do does 60% more", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 30}, {"stat": "crowd_less_pct", "value": 10}]},
-	{"name": "The electrician's tester", "slot": "Secondary", "base": "Compact pistol", "rule": "tester", "depth": 12,
+	{"name": "The Electrician's Tester", "slot": "Secondary", "base": "Compact pistol", "rule": "tester", "depth": 12,
 		"words": "Shocked stays shocked until they're down; shock does half", "affixes": [{"stat": "conv_shock_pct", "value": 25}, {"stat": "shock_pct", "value": 20}]},
-	{"name": "The gamekeeper's flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "site": 3,
+	{"name": "The Gamekeeper's Flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "site": 3,
 		"words": "Poison on you poisons them back", "affixes": [{"stat": "poison_res", "value": 30}, {"stat": "poison_pct", "value": 30}]},
-	{"name": "The caretaker's keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "depth": 12,
+	{"name": "The Caretaker's Keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "depth": 12,
 		"words": "Something happens on every run, and every cache opens", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
-	{"name": "The lorry driver's log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "site": 6,
+	{"name": "The Lorry Driver's Log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "site": 6,
 		"words": "Notes found doubled; insurance is free", "affixes": [{"stat": "notes_pct", "value": 50}]},
 	# the elements' own (6 Oct): one a type, each leaning the whole way into it, for the builds that break the game
-	{"name": "The arsonist's rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "depth": 14,
+	{"name": "The Arsonist's Rig", "slot": "Rig", "base": "Assault rig", "rule": "arsonists_rig", "depth": 14,
 		"words": "Every med used sets everyone on you alight", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "med_cap", "value": 2}, {"stat": "conv_fire_pct", "value": 20}]},
-	{"name": "The gritter's keys", "slot": "Charm", "base": "Wedding ring", "rule": "gritters_keys", "depth": 14,
+	{"name": "The Gritter's Keys", "slot": "Charm", "base": "Wedding ring", "rule": "gritters_keys", "depth": 14,
 		"words": "A chill holds as long as you fire; chilled, they take double frost", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "conv_frost_pct", "value": 25}]},
-	{"name": "The rat man's overalls", "slot": "Armour", "base": "Motorbike leathers", "rule": "rat_mans_overalls", "depth": 14,
+	{"name": "The Rat Man's Overalls", "slot": "Armour", "base": "Motorbike leathers", "rule": "rat_mans_overalls", "depth": 14,
 		"words": "Poison stacks without end and ticks twice as fast", "affixes": [{"stat": "poison_pct", "value": 50}, {"stat": "poison_res", "value": 35}, {"stat": "armour", "value": 20}]},
-	{"name": "The substation key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "depth": 14,
+	{"name": "The Substation Key", "slot": "Charm", "base": "Horseshoe nail", "rule": "substation_key", "depth": 14,
 		"words": "Shock on one of them is shock on all; shocked, they take 60% more", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "conv_shock_pct", "value": 20}]},
-	{"name": "The butcher's apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "depth": 14,
+	{"name": "The Butcher's Apron", "slot": "Armour", "base": "Butcher's chainmail", "rule": "butchers_apron", "depth": 14,
 		"words": "A bleed carries to the next of them and cuts three deep", "affixes": [{"stat": "bleed_pct", "value": 50}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "armour", "value": 25}]},
 ]
 ## Sets: whose gear it was. A piece is a fixed base with its own name and a
@@ -623,7 +623,7 @@ const UNIQUES := [
 ## added to what's worn, and a rule at the top. Found loose from `depth` on.
 const SET_DROP := 0.004            # a share of finds a depth past the first
 const SETS := [
-	{"name": "The fire crew's", "depth": 9, "words": "Breathing kit and a tunic from the station that answered the last call",
+	{"name": "The Fire Crew's", "depth": 9, "words": "Breathing kit and a tunic from the station that answered the last call",
 		"pieces": [
 			{"name": "Station tunic", "slot": "Armour", "base": "Fireman's tunic", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 20}]},
 			{"name": "Station helmet", "slot": "Helmet", "base": "Station helmet, visored", "affixes": [{"stat": "armour", "value": 12}, {"stat": "fire_res", "value": 15}]},
@@ -631,7 +631,7 @@ const SETS := [
 		],
 		"bonuses": {2: {"stats": {"fire_res": 40}, "words": "Fire resist +40%"},
 			3: {"stats": {"all_res": 15, "regen": 2}, "words": "All resists +15%, +2 HP a second"}}},
-	{"name": "The council's", "depth": 5, "words": "Parks, highways, pest control: the council's gear, orange and stamped",
+	{"name": "The Council's", "depth": 5, "words": "Parks, highways, pest control: the Council's gear, orange and stamped",
 		"pieces": [
 			{"name": "Council hi-vis", "slot": "Armour", "base": "Stab vest", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 12}]},
 			{"name": "Council hard hat", "slot": "Helmet", "base": "Hard hat", "affixes": [{"stat": "armour", "value": 8}, {"stat": "search_pct", "value": 8}]},
@@ -640,7 +640,7 @@ const SETS := [
 		],
 		"bonuses": {2: {"stats": {"all_res": 20}, "words": "All resists +20%"}, 3: {"stats": {"regen": 4}, "words": "+4 HP a second"},
 			4: {"stats": {"search_pct": 30, "notes_pct": 50}, "rule": "council", "words": "Searches 30% quicker, notes +50%, every cache opens"}}},
-	{"name": "The ambulance's", "depth": 8, "words": "A crew's kit from the one ambulance that kept going",
+	{"name": "The Ambulance's", "depth": 8, "words": "A crew's kit from the one ambulance that kept going",
 		"pieces": [
 			{"name": "Ambulance rig", "slot": "Rig", "base": "Paramedic's rig", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "med_speed_pct", "value": 15}]},
 			{"name": "Green overalls", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "hp", "value": 25}, {"stat": "regen", "value": 2}]},
@@ -648,15 +648,15 @@ const SETS := [
 		],
 		"bonuses": {2: {"stats": {"med_speed_pct": 50}, "words": "Meds 50% quicker"},
 			3: {"rule": "ambulance", "words": "The first med of a run isn't spent; meds heal double"}}},
-	{"name": "The bank's", "depth": 10, "words": "Staff, they called themselves. The blazers say so",
+	{"name": "The Bank's", "depth": 10, "words": "Staff, they called themselves. The blazers say so",
 		"pieces": [
 			{"name": "Branch blazer", "slot": "Armour", "base": "Ballistic vest", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_pct", "value": 15}]},
 			{"name": "Cashier's pen", "slot": "Charm", "base": "Bank's own pen", "affixes": [{"stat": "cash_pct", "value": 20}, {"stat": "rarity_pct", "value": 8}]},
 			{"name": "Branch holdall", "slot": "Backpack", "base": "Hiking pack", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "cash_per_cell", "value": 4}]},
 		],
 		"bonuses": {2: {"stats": {"cash_pct": 30}, "words": "Cash +30%"},
-			3: {"stats": {"sell_pct": 25}, "rule": "bank", "words": "Cash from kills doubled; the fence pays +25%"}}},
-	{"name": "The army's", "depth": 15, "words": "Issue kit, the lot of it, off the one lorry that got through",
+			3: {"stats": {"sell_pct": 25}, "rule": "bank", "words": "Cash from kills doubled; the Fence pays +25%"}}},
+	{"name": "The Army's", "depth": 15, "words": "Issue kit, the lot of it, off the one lorry that got through",
 		"pieces": [
 			{"name": "Issue helmet", "slot": "Helmet", "base": "Composite helmet", "affixes": [{"stat": "armour", "value": 20}, {"stat": "hp", "value": 15}]},
 			{"name": "Issue carrier", "slot": "Armour", "base": "Full plate carrier", "affixes": [{"stat": "armour", "value": 30}, {"stat": "all_res", "value": 8}]},
@@ -665,7 +665,7 @@ const SETS := [
 		],
 		"bonuses": {2: {"stats": {"armour_pct": 15}, "words": "Armour +15%"}, 3: {"stats": {"first_pct": 40}, "words": "First shot +40%"},
 			4: {"rule": "army", "words": "One fewer on you at once; everything you do does 30% more"}}},
-	{"name": "The carpet man's", "depth": 5, "words": "A fitter's kit: the knife, the knee pads",
+	{"name": "The Carpet Man's", "depth": 5, "words": "A fitter's kit: the knife, the knee pads",
 		"pieces": [
 			{"name": "Carpet knife", "slot": "Secondary", "base": "Knife", "affixes": [{"stat": "bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
 			{"name": "Fitter's knee pads", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "armour", "value": 12}, {"stat": "bleed_res", "value": 20}]},
@@ -703,7 +703,7 @@ const RARITY_SHORT := ["Com", "Unc", "Rare", "Epic", "Leg"]
 ## comes from its level (its base's tier plus the depth it dropped at:
 ## `Items.tier_cap`). `weight` is its share of a roll (1 if absent).
 const AFFIX_TIERS := 5
-const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5: the old rule, a fallback in roll_tier only; the cap is the rarity's, on a drop and at the bench
+const TIER_CAP := [0, 3, 6, 10, 15]  # the item level that opens T1, T2, T3, T4, T5: the old rule, a fallback in roll_tier only; the cap is the rarity's, on a drop and at the Bench
 const TIER_FLOOR := [0, 6, 10, 14, 99]  # the item level from which an affix rolls no lower than T1, T2, T3, T4 (T5 never a floor): deep finds roll no T1s
 const TIER_WEIGHT := [8.0, 5.0, 3.0, 2.0, 1.0]  # T1 .. T5: the better, the rarer
 const AFFIXES := [
@@ -776,9 +776,9 @@ const AFFIXES := [
 ## complete: its three sites cleared and its boss beaten. All three complete
 ## is the campaign; then the depth ladder and the radio's call-in open.
 const ZONES := [
-	{"name": "The Estate", "words": "Ransacked streets, a parade of shops, the retail park", "tiers": [0, 1, 2]},
-	{"name": "The Town", "words": "A dead theme park, the shopping centre, the bank - held by a crew", "tiers": [3, 4, 5]},
-	{"name": "The City", "words": "The services on the motorway, the hospital, the barracks the lorries never reached", "tiers": [6, 7, 8]},
+	{"name": "The Estate", "words": "Ransacked Streets, a parade of shops, the Retail Park", "tiers": [0, 1, 2]},
+	{"name": "The Town", "words": "A dead theme park, the Shopping Centre, the Bank - held by a crew", "tiers": [3, 4, 5]},
+	{"name": "The City", "words": "The Services on the motorway, the Hospital, the Barracks the lorries never reached", "tiers": [6, 7, 8]},
 ]
 const ZONE := "The Estate"
 ## A site: its campaign numbers (depth 1), its shape at the endgame (how the
@@ -786,31 +786,31 @@ const ZONE := "The Estate"
 ## or rarely; cash-heavy), and its drops: which slots its finds favour, a gun
 ## type it leans to, and the bases found there and nowhere else.
 const TIERS := [
-	{"name": "Ransacked streets", "zone": 0, "pool": 6, "hp": 200.0, "dps": 0.4, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 6,
+	{"name": "Ransacked Streets", "zone": 0, "pool": 6, "hp": 200.0, "dps": 0.4, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 6,
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
-	{"name": "The parade", "zone": 0, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 2, "xp": 3, "cash": 9,
+	{"name": "The Parade", "zone": 0, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 2, "xp": 3, "cash": 9,
 		"shape": {"pool": 12, "hp": 0.9, "dps": 0.8, "patrol": 1.0, "cash": 1.2},
 		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
-	{"name": "The retail park", "zone": 0, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 6, "cash": 14,
+	{"name": "The Retail Park", "zone": 0, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 6, "cash": 14,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 1.0, "cash": 1.0, "att": 2.0},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Drum magazine", "Wire stock"]}},
-	{"name": "The pleasure park", "zone": 1, "pool": 12, "hp": 1100.0, "dps": 1.4, "drop": 0.45, "loot_tier": 3, "xp": 10, "cash": 22,
+	{"name": "The Pleasure Park", "zone": 1, "pool": 12, "hp": 1100.0, "dps": 1.4, "drop": 0.45, "loot_tier": 3, "xp": 10, "cash": 22,
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
-	{"name": "Shopping centre", "zone": 1, "pool": 16, "hp": 1300.0, "dps": 1.8, "drop": 0.5, "loot_tier": 4, "xp": 15, "cash": 24,
+	{"name": "Shopping Centre", "zone": 1, "pool": 16, "hp": 1300.0, "dps": 1.8, "drop": 0.5, "loot_tier": 4, "xp": 15, "cash": 24,
 		"shape": {"pool": 11, "hp": 1.1, "dps": 1.0, "patrol": 0.9, "cash": 1.1},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
-	{"name": "The bank", "zone": 1, "pool": 20, "hp": 1500.0, "dps": 2.4, "drop": 0.5, "loot_tier": 5, "xp": 20, "cash": 30,
+	{"name": "The Bank", "zone": 1, "pool": 20, "hp": 1500.0, "dps": 2.4, "drop": 0.5, "loot_tier": 5, "xp": 20, "cash": 30,
 		"shape": {"pool": 7, "hp": 1.4, "dps": 1.3, "patrol": 1.5, "cash": 1.6, "paper": 3.0},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
-	{"name": "The services", "zone": 2, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 30, "cash": 40,
+	{"name": "The Services", "zone": 2, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 30, "cash": 40,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "smg", "only": ["Belt links", "Depot rounds", "Cargo frame"]}},
-	{"name": "The hospital", "zone": 2, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 36, "cash": 44,
+	{"name": "The Hospital", "zone": 2, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 36, "cash": 44,
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["Hospital kit", "Surgeon's kit", "Medic's harness"]}},
-	{"name": "The barracks", "zone": 2, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 46, "cash": 50,
+	{"name": "The Barracks", "zone": 2, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 46, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["Section gun", "Issue plates", "Night optic"]}},
 ]
@@ -826,53 +826,118 @@ const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5,
 ## after its pool is down. Free the first time (the campaign); after that
 ## the crew's price in notes, by depth. Each has their own drops.
 const BOSSES := [
-	{"zone": 0, "name": "The carpet man", "tier": 2, "hp": 10.0, "dps": 3.0, "notes": 20,
+	{"zone": 0, "name": "The Carpet Man", "tier": 2, "hp": 10.0, "dps": 3.0, "notes": 20,
 		"words": "The crew in the carpet warehouse have a leader. He had a van and a lock-up before; he has the car park now.",
-		"uniques": ["The van's spare", "Underlay"]},
-	{"zone": 1, "name": "The manager", "tier": 5, "hp": 12.0, "dps": 3.5, "notes": 40,
-		"words": "The bank's crew call themselves staff. He was. He's behind the vault, and he's not coming out for you.",
-		"uniques": ["The manager's coat", "The branch pistol"]},
-	{"zone": 2, "name": "The quartermaster", "tier": 8, "hp": 6.0, "dps": 2.5, "notes": 60,     # the barracks went up; he came down to match: the pool before him is the fight
-		"words": "The lorry that never reached the barracks reached him. He's been issuing it ever since, to people he chooses.",
-		"uniques": ["The quartermaster's rifle", "Issue webbing"]},
+		"uniques": ["The Van's Spare", "Underlay"]},
+	{"zone": 1, "name": "The Manager", "tier": 5, "hp": 12.0, "dps": 3.5, "notes": 40,
+		"words": "The Bank's crew call themselves staff. He was. He's behind the vault, and he's not coming out for you.",
+		"uniques": ["The Manager's Coat", "The Branch Pistol"]},
+	{"zone": 2, "name": "The Quartermaster", "tier": 8, "hp": 6.0, "dps": 2.5, "notes": 60,     # the Barracks went up; he came down to match: the pool before him is the fight
+		"words": "The lorry that never reached the Barracks reached him. He's been issuing it ever since, to people he chooses.",
+		"uniques": ["The Quartermaster's Rifle", "Issue Webbing"]},
 ]
 ## Pinnacles: from PINNACLE_DEPTH a crew's head comes at full strength -
 ## harder, dearer, and with one more thing of theirs (a charm) in the pool.
-## The convoy: the services at CONVOY_DEPTH and up can take on all three
+## The convoy: the Services at CONVOY_DEPTH and up can take on all three
 ## crews at once, one head after another, for all three prices; what comes
-## home is the lorry's load.
-const PINNACLE_DEPTH := [12, 9, 6]  # by zone: level 14 on the head's own site (the retail park at 12, the bank at 9, the barracks at 6), plus the moves made
+## home is the Lorry's Load.
+const PINNACLE_DEPTH := [12, 9, 6]  # by zone: level 14 on the head's own site (the Retail Park at 12, the Bank at 9, the Barracks at 6), plus the moves made
 ## The first leg (7 Oct, the sixteenth read): the stations and the lorry sized to the end kit of hour 16, which stands at
 ## level 14-15 on every ladder - full strength is twice the crew at the same fire (the fight is attrition, a fire multiplier
 ## reads 0.00 whatever the HP), at level 14 on each head's own site; the lorry's three come light. The ending climbs a depth a
-## move (the loop), and the lorries beaten multiply the yard (LORRY_MULT), so the second leg reaches further than the first.
+## move (the loop), and the lorries beaten multiply the Yard (LORRY_MULT), so the second leg reaches further than the first.
 const PINNACLE_HP := 2.0
 const PINNACLE_DPS := 1.0
 const PINNACLE_COST := 2
-const CONVOY_DEPTH := 8           # level 14 on the services, plus the moves made (the sixteenth read: the end kit holds level 14, not 16)
+const CONVOY_DEPTH := 8           # level 14 on the Services, plus the moves made (the sixteenth read: the end kit holds level 14, not 16)
 const CONVOY_HP := 0.25           # the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load (the probe, 7 Oct: at 35%/full fire a Poacher read 0.80 and a stronger Doorman 0.00 - the Poacher's first-of-the-gang bonus counts on every head; at 25%/0.75 both read 0.93-1.00)
 const CONVOY_DPS := 0.75
-const LORRY_MULT := 1.25          # the yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
+const LORRY_MULT := 1.25          # the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
 const PARAGON_PCT := 2.0          # past MAX_LEVEL: damage and HP +this% a paragon level, uncapped, on the same XP curve
 const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
 const ILVL_FROM := 15
-const CONVOY_TIER := 6             # the services
-const CONVOY_UNIQUE := "The lorry's load"
+const CONVOY_TIER := 6             # the Services
+const CONVOY_UNIQUE := "The Lorry's Load"
 const BOSS_HP_MULT := 1.0          # boss HP = site hp × boss "hp"; scales with the curve past the campaign
 const NOTES_KILL := 1              # notes a kill, times the depth factor
 const NOTES_SEARCH := 0.3          # chance a search turns up a note or two
 const NOTES_BOSS := 5              # notes a boss kill, times depth
 
-## Training - the yard's, kept across runners. One common tree, and two for
+## Training - the Yard's, kept across runners. One common tree, and two for
 ## what the runner was (the class). Each tree is a chain: a node needs the one
 ## before it. Small nodes add a number; a notable (every fourth) changes a
 ## rule; a class tree's last node is a keystone that breaks one outright.
 ## A node with a "type" only counts while the primary is a gun of that type.
 ## A point a level; respec costs RESPEC_CASH a point spent; changing class
 ## refunds its two trees for nothing.
-const COMMON_TREE := "The yard"
+## The caps pass (8 Oct): names are capitalised wherever they stand - rooms, zones, sites, classes, trees, the
+## heads, uniques, sets; everything else is sentence case; acronyms upper. A save from before carries the old
+## names: `load_dict` reads them through this.
+const RENAMES := {
+	"A blue plaque": "A Blue Plaque",
+	"A traffic warden's hat": "A Traffic Warden's Hat",
+	"At the bench": "At the Bench",
+	"Grandad's shotgun": "Grandad's Shotgun",
+	"Issue webbing": "Issue Webbing",
+	"Jump leads": "Jump Leads",
+	"Lucky cap": "Lucky Cap",
+	"Nan's cardigan": "Nan's Cardigan",
+	"Ransacked streets": "Ransacked Streets",
+	"Shopping centre": "Shopping Centre",
+	"The Doorman's jacket": "The Doorman's Jacket",
+	"The Postman's bag": "The Postman's Bag",
+	"The ambulance's": "The Ambulance's",
+	"The army's": "The Army's",
+	"The arsonist's rig": "The Arsonist's Rig",
+	"The bank": "The Bank",
+	"The bank's": "The Bank's",
+	"The barracks": "The Barracks",
+	"The bookie's pencil": "The Bookie's Pencil",
+	"The branch pistol": "The Branch Pistol",
+	"The butcher's apron": "The Butcher's Apron",
+	"The butcher's steel": "The Butcher's Steel",
+	"The caretaker's keys": "The Caretaker's Keys",
+	"The carpet man": "The Carpet Man",
+	"The carpet man's": "The Carpet Man's",
+	"The council's": "The Council's",
+	"The council's weed burner": "The Council's Weed Burner",
+	"The dinner lady's ladle": "The Dinner Lady's Ladle",
+	"The electrician's tester": "The Electrician's Tester",
+	"The fire crew's": "The Fire Crew's",
+	"The float": "The Float",
+	"The gamekeeper's flask": "The Gamekeeper's Flask",
+	"The gritter's hopper": "The Gritter's Hopper",
+	"The gritter's keys": "The Gritter's Keys",
+	"The hospital": "The Hospital",
+	"The lollipop lady's sign": "The Lollipop Lady's Sign",
+	"The lorry driver's log": "The Lorry Driver's Log",
+	"The lorry's load": "The Lorry's Load",
+	"The manager": "The Manager",
+	"The manager's coat": "The Manager's Coat",
+	"The manager's pen": "The Manager's Pen",
+	"The parade": "The Parade",
+	"The pleasure park": "The Pleasure Park",
+	"The quartermaster": "The Quartermaster",
+	"The quartermaster's ledger": "The Quartermaster's Ledger",
+	"The quartermaster's manual": "The Quartermaster's Manual",
+	"The quartermaster's rifle": "The Quartermaster's Rifle",
+	"The rat man's bag": "The Rat Man's Bag",
+	"The rat man's overalls": "The Rat Man's Overalls",
+	"The retail park": "The Retail Park",
+	"The scout leader's whistle": "The Scout Leader's Whistle",
+	"The sergeant's whistle": "The Sergeant's Whistle",
+	"The services": "The Services",
+	"The sparky's gloves": "The Sparky's Gloves",
+	"The substation key": "The Substation Key",
+	"The van keys": "The Van Keys",
+	"The van's spare": "The Van's Spare",
+	"The vicar's thermos": "The Vicar's Thermos",
+	"The yard": "The Yard",
+}
+
+const COMMON_TREE := "The Yard"
 const TREES := [
-	{"name": "The yard", "nodes": [
+	{"name": "The Yard", "nodes": [
 		{"name": "Dry fire", "effect": "damage_pct", "value": 3},
 		{"name": "Long walks", "effect": "hp", "value": 4},
 		{"name": "Knowing the streets", "effect": "loot_pct", "value": 3},
@@ -880,7 +945,7 @@ const TREES := [
 		{"name": "Zeroing", "effect": "damage_pct", "value": 3},
 		{"name": "Circuits", "effect": "hp", "value": 4},
 		{"name": "Keen eyes", "effect": "search_pct", "value": 15},
-		{"name": "Second wind", "effect": "second_wind", "notable": true, "words": "Rest at the yard twice as fast"},
+		{"name": "Second wind", "effect": "second_wind", "notable": true, "words": "Rest at the Yard twice as fast"},
 		{"name": "Practice", "effect": "damage_pct", "value": 4},
 		{"name": "Sleeping rough", "effect": "hp", "value": 5},
 		{"name": "Stashing", "effect": "loot_pct", "value": 4},
@@ -994,7 +1059,7 @@ const TREES := [
 		{"name": "Magpie", "effect": "scavenger", "notable": true, "words": "Every search finds two things"},
 		{"name": "Known face", "effect": "cash_pct", "value": 10, "needs": 3},
 		{"name": "Fair price", "effect": "sell_pct", "value": 10},
-		{"name": "Buyer's market", "effect": "buyers_market", "keystone": true, "words": "The fence pays double; buying costs double"},
+		{"name": "Buyer's market", "effect": "buyers_market", "keystone": true, "words": "The Fence pays double; buying costs double"},
 		{"name": "Lucky find", "effect": "rarity", "value": 20, "needs": 3},
 		{"name": "Blowtorch", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "A share of every hit lands as fire and keeps burning"},
 		{"name": "Hoarder", "effect": "hoarder", "notable": true, "words": "The pack carries double; −30% pace"},
@@ -1076,7 +1141,7 @@ const ELEMENT_TREES := [
 		{"name": "Lingers", "effect": "cap_lingers", "capstone": true, "needs": 6, "words": "The poison on one of them carries to the next"},
 	]},
 	{"name": "Live", "element": "shock", "nodes": [
-		{"name": "Jump leads", "effect": "conv_shock_pct", "value": 10},
+		{"name": "Jump Leads", "effect": "conv_shock_pct", "value": 10},
 		{"name": "Charge", "effect": "shock_pct", "value": 10},
 		{"name": "Off the mains", "effect": "conv_shock_pct", "value": 15},
 		{"name": "Live", "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 40% more, not 25"},
@@ -1106,21 +1171,21 @@ const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
 const ASCEND_LEVEL := 30
-## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the yard keeps RETIRE_SHARE of their
+## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the Yard keeps RETIRE_SHARE of their
 ## trait for good, up to RETIRED_MAX retired (the oldest makes way), their kit stays, their trees refund.
 const RETIRE_LEVEL := 30
 const RETIRE_SHARE := 1.0 / 3.0
 const RETIRED_MAX := 3
 
-## Insurance: the fence holds the paper on the kit for a run. Dies, and the
-## kit comes back to the yard's stash. A share of what's worn, by depth.
+## Insurance: the Fence holds the paper on the kit for a run. Dies, and the
+## kit comes back to the Yard's stash. A share of what's worn, by depth.
 const INSURE_RATE := 0.15
 ## Calling in a word costs by depth and by the words already on the site:
 ## the endgame's cash sink (JUICE_COST × INTEL_CASH × depth × (1 + words)).
 const JUICE_WORDS_MULT := 1.0
 
-## Moving the yard: after the campaign, start again somewhere else. What
-## comes: the uniques, the yard's own tree, the list of runners before, half
+## Moving the Yard: after the campaign, start again somewhere else. What
+## comes: the uniques, the Yard's own tree, the list of runners before, half
 ## the notes, and a yard whose name travels - magic find and cash a move.
 const MOVE_FIND := 5               # percent magic find a move
 const MOVE_CASH := 5               # percent cash a move
@@ -1131,7 +1196,7 @@ const LADDER_FLOOR_MAX := 3        # a moved yard's ladders start this many dept
 ## The bench's crafting, paid in notes: times the item's tier and its rarity + 1.
 ## The bench's crafting, in cash: a price × the item's level × (rarity + 1).
 ## Perfection is dear and bottomless; that's the late game's cash sink.
-## "bump" is in notes: the crews' thing, not the fence's.
+## "bump" is in notes: the crews' thing, not the Fence's.
 const CRAFT := {
 	"reroll": {"name": "Re-roll the affixes", "cash": 40, "words": "The same number, rolled again, tiers and all"},
 	"lock": {"name": "Lock one, re-roll the rest", "cash": 120, "words": "The one you pick stays as it is", "pick": true},
@@ -1145,7 +1210,7 @@ const BUMP_LEVELS := 3
 const BUMP_CAP := 20
 
 ## Crafting (34): one material, scrap, a count in hand. Found on a search
-## (SCRAP_SEARCH of them a handful), made by scrapping an item at the bench or
+## (SCRAP_SEARCH of them a handful), made by scrapping an item at the Bench or
 ## ditching it on a run (its value over SCRAP_PER_POUND). The Build column:
 ## a standard box of rounds for scrap; the grades, scrap plus the box below
 ## ("from"); a med, scrap plus the one below; an improvised gun of a type for
@@ -1162,17 +1227,17 @@ const BUILD_GRENADE := 12           # with the element's socketable; the nail bo
 
 ## Events: something happens on a run, once at most, EVENT_ODDS of runs,
 ## some way in. A convoy passes (a bigger gang, and they carry notes); a
-## runner trapped under something (freed, they turn up at the yard next:
-## `promised`); a locked cache (the bench's tools open it for a find
+## runner trapped under something (freed, they turn up at the Yard next:
+## `promised`); a locked cache (the Bench's tools open it for a find
 ## a tier up, or it stays shut).
 const EVENT_ODDS := 0.3
 const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
-const EVENT_CACHE_BENCH := 2        # the bench level that opens a cache
+const EVENT_CACHE_BENCH := 2        # the Bench level that opens a cache
 const EVENTS := ["convoy", "trapped", "cache"]
 
-## Contracts: the fence wants so many of a slot at a rarity, and pays in
+## Contracts: the Fence wants so many of a slot at a rarity, and pays in
 ## cash, in notes, or - now and then - with one of the loose uniques. Three
-## open at a time; a handed-in one is replaced. The fence's mate sells a
+## open at a time; a handed-in one is replaced. The Fence's mate sells a
 ## loose unique for notes, a different one every MATE_RUNS runs.
 const CONTRACTS_OPEN := 3
 const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Attachment"]
@@ -1242,8 +1307,8 @@ const ATLAS := [
 		"sum": "Head's price", "figures": ["every run", "once a depth"], "sentence": "Pay a head's price at a depth once; he comes out for nothing at that depth after."},
 	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a map point",
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the map gains a point."},
-	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the services from depth 10, not 12",
-		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the services two depths sooner."},
+	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the Services from depth 10, not 12",
+		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the Services two depths sooner."},
 	# the air
 	{"key": "word_travels", "column": 2, "name": "Word travels", "max": 1, "words": "Calling in a word on the radio costs half",
 		"sum": "The word", "figures": ["full price", "half price"], "sentence": "Calling in a word on the radio costs half."},
@@ -1266,7 +1331,7 @@ const ATLAS := [
 	{"key": "dead_air", "column": 2, "name": "Dead air", "max": 1, "notable": true, "words": "At Night the gangs come a quarter later",
 		"sum": "Night gangs", "figures": ["as they come", "a quarter later"], "sentence": "Nobody's about at night: the gangs come a quarter later on a night run."},
 	{"key": "held_word", "column": 2, "name": "Held word", "max": 1, "words": "A pinned word holds through a move",
-		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the radio stays pinned when the yard moves."},
+		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the radio stays pinned when the Yard moves."},
 	{"key": "open_channel", "column": 2, "name": "Open channel", "max": 1, "keystone": true, "words": "Every word costs notes, never cash",
 		"sum": "Words cost", "figures": ["cash", "notes"], "sentence": "The channel's open: fresh word and a called-in word cost notes, never cash."},
 ]
@@ -1296,7 +1361,7 @@ const TRAIT_WORDS := {"Lucky": "a lucky one", "Heavy-handed": "heavy-handed", "W
 	"Tough": "a tough one", "Light": "light on their feet", "Careful": "careful with the kit", "Nosy": "nosy"}
 const RESPEC_CASH := 50
 
-## Classes - what the runner was, before: chosen in the caravan, changed in the yard for free.
+## Classes - what the runner was, before: chosen in the Caravan, changed in the Yard for free.
 ## Each is a set of rules on how the sim plays - what a weapon does, not what
 ## can be fitted - with a cost to go with it. Numbers are multipliers the sim
 ## reads by key; "words" is what the Barracks says.
@@ -1306,9 +1371,9 @@ const CLASSES := [
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP",
-		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the bank by two hours
+		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
 	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity",
-		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the bank
+		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace; −15% max HP",
 		"damage": 1.15, "contact": -1, "pace": 1.1, "hp": 0.85},     # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]
@@ -1429,7 +1494,7 @@ const UNARMED_DPS := 3.0          # fists; a mission with no gun is a bad idea
 const REST_HP_PER_S := 0.5        # the Medic Tent, for free, slowly
 const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
-## wound, one of WOUND_STATS cut by WOUND_PCT until the clinic treats it for
+## wound, one of WOUND_STATS cut by WOUND_PCT until the Clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
 const WOUND_AT := 0.33            # 0.35 read 31-44% wounded and 0.30 2-9% (Matt, 8 Oct); the fifteenth read (7 Oct): at 0.35 the bot read 31-44% wounded and one bail in 31-69 - its close calls end between a quarter and a third; the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
 const WOUND_PCT := 10
@@ -1439,9 +1504,9 @@ const STASH_CAP := 40
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling
 
-## The fence's gamble (Matt, 6 Oct; the endgame's cash sink): a handful of kinds on offer, a picture
-## each - a rifle, a helmet - rotated with the fence's restock; pay and get a random one of the kind,
-## rolled at the top tier opened with the fence's quality on it, never Common; and any gamble can be a
+## The Fence's gamble (Matt, 6 Oct; the endgame's cash sink): a handful of kinds on offer, a picture
+## each - a rifle, a helmet - rotated with the Fence's restock; pay and get a random one of the kind,
+## rolled at the top tier opened with the Fence's quality on it, never Common; and any gamble can be a
 ## unique of the kind, from the first save on. The price is GAMBLE_RUNS of what a run on the top open
 ## tier pays, never under GAMBLE_FLOOR. Untuned until the pass reads it.
 const GAMBLE_KINDS := [
@@ -1460,10 +1525,10 @@ const GAMBLE_KINDS := [
 const GAMBLE_SHOWN := 5             # kinds on offer at once, of the eleven
 const GAMBLE_RUNS := 2.0            # the price, in runs' pay on the top open tier
 const GAMBLE_FLOOR := 300           # and never under this, at the opening day's prices
-const GAMBLE_QUALITY := 0.5         # the fence's quality on the roll (+50%: the rarity weights compound by rank)
+const GAMBLE_QUALITY := 0.5         # the Fence's quality on the roll (+50%: the rarity weights compound by rank)
 const GAMBLE_UNIQUE := 0.02         # the chance any gamble is a unique of the kind
 const STARTING_CASH := 150
-## Money that goes off. The fence's prices rise with the yard's hours - every
+## Money that goes off. The Fence's prices rise with the Yard's hours - every
 ## cash price and every cash the gangs carry - so cash held loses, cash earned
 ## keeps pace, and the notes (the crews' own prices) don't move. A grace hour
 ## for the first run; linear after it; a ceiling where the new normal settles.
@@ -1471,7 +1536,7 @@ const INFLATION_GRACE_H := 1.0
 const INFLATION_RATE := 0.07        # a hour, of the opening price
 const INFLATION_CAP := 12.0
 ## The estate recycles. Nothing on it is new; it's all off someone. A dead
-## runner's worn kit, and a unique sold to the fence, go on the list, and a
+## runner's worn kit, and a unique sold to the Fence, go on the list, and a
 ## few runs later one of a gang is wearing it; it comes off him when the
 ## site's cleared. RECYCLE_RUNS runs before it can turn up, RECYCLE_ODDS a
 ## run after that; the list holds RECYCLE_KEEP pieces, the oldest first.
@@ -1479,7 +1544,7 @@ const RECYCLE_RUNS := 3
 const RECYCLE_ODDS := 0.3
 const RECYCLE_KEEP := 12
 ## The places changing. A cleared site is picked over for a while: its drops
-## and cash thin and come back over RECOVER_H yard hours. The clock: the yard
+## and cash thin and come back over RECOVER_H yard hours. The clock: the Yard
 ## opens at CLOCK_START; from NIGHT_FROM to NIGHT_TO every site is Night. The
 ## weather by zone, re-rolled every WEATHER_H: the odds of rain, then fog.
 const RECOVER_H := 2.0

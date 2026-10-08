@@ -3,7 +3,7 @@ extends Control
 ## right is either the vendor's shelf (what they have, so many, and no more
 ## until a run restocks it) or your stash, switched by two buttons at the top
 ## of the left column. Pick a cell on the shelf for its figures and Buy; pick
-## one in the stash to Sell (or, at the clinic, Take into the rig). Under the
+## one in the stash to Sell (or, at the Clinic, Take into the rig). Under the
 ## grid the panel for the pick; with nothing picked, the vendor's own
 ## business: the Fence's sell-by-rarity and its bigger shelf, the Clinic's
 ## treatment and level. Fixed geometry inside the card grid's 1536 x 864.
@@ -49,7 +49,7 @@ var sim
 var showing := "shelf"             # which grid: "shelf" or "stash"
 var selected := {}                 # {"kind": "shelf"|"stash", "id": n}, or {}
 var _tabs: Array[Button] = []
-var _word: Panel                   # the fence's word: the gamble
+var _word: Panel                   # the Fence's word: the gamble
 var _word_title: Label
 var _word_line: Label
 var _word_head: Label
@@ -58,7 +58,7 @@ var _offers: Array = []            # {panel, art, kind, sub, pay} a kind on offe
 var _last_head: Label
 var _last                          # the last thing the word got you (item_head.gd)
 var _last_none: Label
-var _deals: Panel                  # the fence's contracts and the mate, in the grid's place
+var _deals: Panel                  # the Fence's contracts and the mate, in the grid's place
 var _deal_rows: Array = []         # per contract: {title, pay, have, hand, pass}
 var _mate_title: Label
 var _mate_line: Label
@@ -73,21 +73,21 @@ var _side_title: Label             # the first section's head
 var _face: TextureRect             # the vendor, in the band
 var _said: Array[Label] = []       # what they said: one line under the band
 var _heads: Array[Label] = []      # the section heads under the band
-var _side_tiles: Array = []        # the fence's tile buttons: {button, key, value}
-var _med_tiles: Array = []         # the clinic's: your meds by kind
-var _side_tiles_c: Array = []      # the clinic's figures: resting, heal, the wound, the clinic's level
+var _side_tiles: Array = []        # the Fence's tile buttons: {button, key, value}
+var _med_tiles: Array = []         # the Clinic's: your meds by kind
+var _side_tiles_c: Array = []      # the Clinic's figures: resting, heal, the wound, the Clinic's level
 var _visits := 0
 var _said_n := 0
 var _line := ""
 var _lost_seen := -1               # the medic notices a new runner
-var _town_said := false            # the fence, once, when the town opens
+var _town_said := false            # the Fence, once, when the town opens
 var _side_track: Panel
 var _side_fill: Panel
 var _side_bar_text: Label
 var _side_buttons: Array[Button] = []
 var _side_actions: Array = []
 var _panel: Panel
-var _left_title: Label             # the fence's or the rig's line with nothing picked; a pick shows the head
+var _left_title: Label             # the Fence's or the rig's line with nothing picked; a pick shows the head
 var _head                          # the pick's name, chips, headline and affix rows (item_head.gd)
 var _left_lines: Array[Label] = []
 var _right_title: Label
@@ -114,7 +114,7 @@ func _init() -> void:
 		b.pressed.connect(_show.bind(["shelf", "stash", "contracts", "word"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
-	# the fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
+	# the Fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
 	_word = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_word.visible = false
 	_word_title = UI.label(_word, Rect2(PAD, PAD, GRID_W - 2 * PAD, 36), "A word in the right ear", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -162,7 +162,7 @@ func _init() -> void:
 		r["pass"].pressed.connect(_pass.bind(k))
 		_deal_rows.append(r)
 	var my := PAD + Data.CONTRACTS_OPEN * DEAL_H
-	_mate_title = UI.label(_deals, Rect2(PAD, my, GRID_W - 2 * PAD, 36), "The fence's mate", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_mate_title = UI.label(_deals, Rect2(PAD, my, GRID_W - 2 * PAD, 36), "The Fence's mate", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_mate_line = UI.label(_deals, Rect2(PAD, my + 38, GRID_W - 2 * PAD - 270, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_mate_note = UI.label(_deals, Rect2(PAD, my + 66, GRID_W - 2 * PAD - 270, 28), "A different one every %d runs. Notes, not cash." % Data.MATE_RUNS, "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_mate_buy = UI.button(_deals, Rect2(GRID_W - PAD - 250, my + 38, 250, Pal.BUTTON_H), true)
@@ -184,7 +184,7 @@ func _init() -> void:
 		h.visible = false
 		_heads.append(h)
 	_side_title = _heads[0]
-	# the clinic: the HP bar, three figures, your meds by kind
+	# the Clinic: the HP bar, three figures, your meds by kind
 	_side_track = UI.panel(_side, Rect2(PAD, TOP + UI.HEAD_H + 2, INNER, 24), UI.box(Pal.BG, 6))
 	_side_fill = UI.panel(_side_track, Rect2(0, 0, 0, 24), UI.box(Pal.GOOD, 6))
 	_side_bar_text = UI.label(_side_track, Rect2(0, 0, INNER, 24), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
@@ -200,7 +200,7 @@ func _init() -> void:
 		_side_buttons.append(b)
 	for i in range(SIDE_TILES + 3):
 		_side_actions.append(Callable())
-	# the fence: tile-shaped buttons, five rarities then the boxes and the bigger shelf
+	# the Fence: tile-shaped buttons, five rarities then the boxes and the bigger shelf
 	for i in range(SIDE_TILES):
 		var b := Button.new()
 		b.position = Vector2(PAD, 0)
@@ -315,7 +315,7 @@ func show_state(s) -> void:
 	_show_panel()
 
 
-## The fence's contracts: what's wanted, what it pays, what you have.
+## The Fence's contracts: what's wanted, what it pays, what you have.
 func _show_deals() -> void:
 	for k in range(Data.CONTRACTS_OPEN):
 		var r: Dictionary = _deal_rows[k]
@@ -353,7 +353,7 @@ func _tab_text(b: Button, forms: Array) -> void:
 	b.text = str(forms.back())
 
 
-## The fence's word: the kinds on offer, each with a picture of one of its bases, the kind's
+## The Fence's word: the kinds on offer, each with a picture of one of its bases, the kind's
 ## words and Pay with the price; a kind bought is gone until the next run; the last thing it got you.
 func _show_word() -> void:
 	var price: int = sim.gamble_price(sim.gamble[0]) if not sim.gamble.is_empty() else sim._inf(Data.GAMBLE_FLOOR)
@@ -388,7 +388,7 @@ func _show_word() -> void:
 		_last.show_item(last, sim, "", "", true)
 
 
-## A picture for a kind: the first base of it the fence can source that has art; null for the words alone.
+## A picture for a kind: the first base of it the Fence can source that has art; null for the words alone.
 func _kind_art(kd: Dictionary) -> Texture2D:
 	for b in Data.BASES[kd["slot"]]:
 		if b.get("start", false) or (kd["type"] != "" and b.get("type", "") != kd["type"]):
@@ -458,11 +458,11 @@ func _signature() -> String:
 	return "|".join(parts)
 
 
-## The clinic's treatment block, at the top of the side panel.
+## The Clinic's treatment block, at the top of the side panel.
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
 	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), Data.WOUND_PCT]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
-	_band.set_words("The clinic · level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "The medic", "%d" % sim.hp_shown(),
+	_band.set_words("The Clinic · level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "The medic", "%d" % sim.hp_shown(),
 		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
 	_band.headline_under_title(true)
 	_side_title.text = "TREATMENT"
@@ -569,11 +569,11 @@ func _show_side() -> void:
 				t["panel"].visible = true
 				UI.set_tile(t, "The rig", ["%d of %d pouches" % [sim.rig_used(), sim.med_capacity()], "%d of %d" % [sim.rig_used(), sim.med_capacity()]] if sim.med_capacity() > 0 else ["no rig fitted"], Pal.TEXT if sim.med_capacity() > 0 else Pal.TEXT_3)
 		return
-	# the fence: the band, then sell by rarity, the boxes and the shelf, the contracts
+	# the Fence: the band, then sell by rarity, the boxes and the shelf, the contracts
 	var worth_all := 0
 	for it in sim.stash:
 		worth_all += sim.sell_price(it)
-	_band.set_words("The fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "The fence",
+	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "The Fence",
 		Fmt.money(worth_all), ["for the lot · %d in the stash" % sim.stash.size(), "for the lot of %d" % sim.stash.size(), "for the lot"], Pal.ACCENT)
 	_band.headline_under_title(true)
 	_side_title.text = "SELL BY RARITY"
@@ -636,7 +636,7 @@ func _show_panel() -> void:
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 			if sim.med_capacity() == 0:
-				_left_lines[0].text = "No rig fitted - fit one in the lock-up to carry meds"
+				_left_lines[0].text = "No rig fitted - fit one in the Lock-up to carry meds"
 			elif sim.rig.is_empty():
 				UI.fit(_left_lines[0], ["Nothing carried: take from Your meds", "Nothing carried: take from the grid", "Nothing carried"])
 			else:
@@ -656,9 +656,9 @@ func _show_panel() -> void:
 			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), Data.MEDIC_LEVELS[sim.medic_level]["stock"]]
 			_right_lines[0].text = "No more until the next run"
 		else:
-			_left_title.text = "The fence"
+			_left_title.text = "The Fence"
 			if sim.inflation_pct() > 0:
-				UI.fit(_left_lines[0], ["Prices up %d%% since the yard opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
+				UI.fit(_left_lines[0], ["Prices up %d%% since the Yard opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
 			else:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
 			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), Data.MARKET_LEVELS[sim.market_level]["stock"]]
@@ -690,18 +690,18 @@ func _show_panel() -> void:
 	elif Items.rig_item(it):
 		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 	elif Items.is_socketable(it):
-		UI.fit(_right_title, ["Fitted at the bench, Sockets view", "Fitted at the bench"])
+		UI.fit(_right_title, ["Fitted at the Bench, Sockets view", "Fitted at the Bench"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
 	elif Items.is_paper(it):
 		_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
 		if Items.is_deeds(it):
 			UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
 		elif it["base"] in sim.book:
-			UI.fit(_right_lines[0], ["Read, and kept in the caravan's drawer", "Read; in the caravan's drawer", "In the drawer"])
+			UI.fit(_right_lines[0], ["Read, and kept in the Caravan's drawer", "Read; in the Caravan's drawer", "In the drawer"])
 		else:
 			_right_lines[0].text = "Not read yet"
 	elif it.has("mount"):
-		_right_title.text = "Fitted at the bench"
+		_right_title.text = "Fitted at the Bench"
 		_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
 	else:
 		_right_title.text = ""
@@ -784,7 +784,7 @@ func _on_acted() -> void:
 	acted.emit()
 
 
-## What the fence or the medic says: a visit line when the screen opens,
+## What the Fence or the medic says: a visit line when the screen opens,
 ## a word on a buy, a sell, a treatment, the town opening, a new runner.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and visible and sim != null:
@@ -860,7 +860,7 @@ func _press(i: int) -> void:
 
 
 ## For the tests: the vendor's face sits clear of everything else showing in
-## the side panel (the fence's ammo buttons reach down towards it).
+## the side panel (the Fence's ammo buttons reach down towards it).
 func face_clear() -> bool:
 	if not _face.visible:
 		return true

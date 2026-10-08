@@ -10,7 +10,7 @@ extends Control
 ## shape an icon will drop into later.
 
 signal acted
-signal bench(id)                   # the bench's menu for this item
+signal bench(id)                   # the Bench's menu for this item
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -137,7 +137,7 @@ func _signature() -> String:
 	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.workshop), str(sim.auto_equip), str(sim.auto_sell)]
 	var sel := _selected_item()
 	if not sel.is_empty():
-		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the bench changes these in place
+		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
 	for slot in Data.SLOTS:
 		parts.append(str(sim.equipped[slot]["id"]) if sim.equipped[slot] != null else "-")
 	for it in sim.rig:
@@ -156,7 +156,7 @@ func _affix_words(it: Dictionary) -> String:
 
 ## The compare panel (Pick-A): the pick on the left, what's fitted in its slot
 ## on the right laid the same, the verdict and the deltas at the foot, the
-## buttons for what can be done with it. Sell is the fence's.
+## buttons for what can be done with it. Sell is the Fence's.
 func _show_panel() -> void:
 	var it := _selected_item()
 	if it.is_empty():
@@ -176,7 +176,7 @@ func _show_panel() -> void:
 	elif Items.is_ammo(it):
 		tail = "feeds %s" % ("the " + Items.base_of(it)["type"] if Items.base_of(it)["type"] != "smg" else "the SMG")
 	elif Items.is_paper(it):
-		tail = "from before" if not Items.is_deeds(it) else "what the bank was holding"
+		tail = "from before" if not Items.is_deeds(it) else "what the Bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -192,13 +192,13 @@ func _show_panel() -> void:
 	if Items.rig_item(it):
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
-		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the caravan's drawer" if it["base"] in sim.book else "Not read yet"),
-			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The fence buys papers"])
+		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the Caravan's drawer" if it["base"] in sim.book else "Not read yet"),
+			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The Fence buys papers"])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
-			_pick.show_right_words("The bench", "Fitted at the bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
+			_pick.show_right_words("The bench", "Fitted at the Bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
-			_pick.show_right_words("The bench", "Fitted at the bench", ["Goes on %s" % Items.mount_words(it["mount"])])
+			_pick.show_right_words("The bench", "Fitted at the Bench", ["Goes on %s" % Items.mount_words(it["mount"])])
 		if sim.workshop >= 1:
 			buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})
 	else:
@@ -392,7 +392,7 @@ func _press(i: int) -> void:
 		selected = {"kind": "slot", "slot": it["slot"]}
 	elif was.get("kind", "") == "slot" and not it.is_empty():
 		if sim.equipped.get(it["slot"], null) != null and sim.equipped[it["slot"]]["id"] == it["id"]:
-			selected = was                   # still fitted (the bench, say): the slot stays picked
+			selected = was                   # still fitted (the Bench, say): the slot stays picked
 		else:
 			selected = {"kind": "stash", "id": it["id"]}
 			if _selected_item().is_empty():

@@ -1,7 +1,7 @@
 extends Control
-## The yard's jobs on one card two wide (Yard-C/D, 7 Oct): a row a job - its
+## The Yard's jobs on one card two wide (Yard-C/D, 7 Oct): a row a job - its
 ## name and level, what it does now, what the next level does, and its own
-## Build button - so the room reads as the place the yard is built, and no
+## Build button - so the room reads as the place the Yard is built, and no
 ## job hides behind "the cheapest first". The rows come from the owner
 ## (`show_jobs`): [{name, level, of, now: [forms], next: [forms], cost, can,
 ## action}], the forms longest first for the fit.

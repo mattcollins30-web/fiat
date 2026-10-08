@@ -50,7 +50,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 	# the item's level: its base's tier and the depth it dropped at; it sets the floor under the tiers its
 	# affixes roll, and the rarity sets the cap (a Legendary from the first site is five T5s on a tier-1 base)
 	# the item's level: the site's (its tier and depth: the endgame, 7 Oct) when the find is a site's, else the
-	# base's tier and the depth as before (the shelf, the gamble, the clinic)
+	# base's tier and the depth as before (the shelf, the gamble, the Clinic)
 	var ilvl: int = level if level >= 0 else int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
 	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
@@ -363,7 +363,7 @@ static func tier_floor(ilvl: int) -> int:
 
 ## A tier from the ones open, the better the rarer.
 ## A tier between the level's floor and the cap, by weight. The cap is the rarity's on a drop
-## (`rarity_cap` > 0), the level's at the bench.
+## (`rarity_cap` > 0), the level's at the Bench.
 static func roll_tier(ilvl: int, rng: RandomNumberGenerator, rarity_cap := 0) -> int:
 	var cap := rarity_cap if rarity_cap > 0 else tier_cap(ilvl)
 	var lo := mini(tier_floor(ilvl), cap)
@@ -429,7 +429,7 @@ static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: Str
 		have.append(a["stat"])
 	it["affixes"] = kept
 	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
-		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it)))     # the bench works as a drop does: the rarity's cap, the level's floor
+		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it)))     # the Bench works as a drop does: the rarity's cap, the level's floor
 
 
 ## One affix rolled again. Returns the new tier, or 0 if the stat isn't on it.
@@ -440,7 +440,7 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator)
 			continue
 		var d := affix_def(stat)
 		var t: int = int(a.get("tier", 1))
-		var cap := maxi(rarity_cap(it), t)                     # one rule at the bench (the pass, 6 Oct): the rarity's cap, the level's floor; a tier already past the cap (an old save) is left where it is
+		var cap := maxi(rarity_cap(it), t)                     # one rule at the Bench (the pass, 6 Oct): the rarity's cap, the level's floor; a tier already past the cap (an old save) is left where it is
 		var lo := mini(tier_floor(ilvl(it)), cap)
 		var up := 0.25 / float(t)                              # T1 → T2 one in four; T4 → T5 one in sixteen
 		var x := rng.randf()
@@ -454,7 +454,7 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator)
 	return 0
 
 
-## The best tier an item's rarity allows its affixes: the drop's cap, and the bench's.
+## The best tier an item's rarity allows its affixes: the drop's cap, and the Bench's.
 static func rarity_cap(it: Dictionary) -> int:
 	return int(Data.RARITIES[clampi(int(it.get("rarity", 0)), 0, Data.RARITIES.size() - 1)]["tier"])
 
@@ -589,7 +589,7 @@ static func rig_item(it: Dictionary) -> bool:
 ## The ammo type a gun fires, "" for anything that isn't a gun.
 static func ammo_type(gun: Dictionary) -> String:
 	if gun.get("nails", false):
-		return "improvised"               # built at the bench (34): fires nails whatever it is
+		return "improvised"               # built at the Bench (34): fires nails whatever it is
 	var b := base_of(gun)
 	return str(b.get("ammo", b.get("type", "")))
 
@@ -797,7 +797,7 @@ static func headline(it: Dictionary) -> Array:
 		var lead := att_lead(it)
 		return [lead[0], lead[1]]
 	if it["slot"] == Data.PAPER:
-		return ["£%d" % int(it["value"]), "to the fence"]
+		return ["£%d" % int(it["value"]), "to the Fence"]
 	if it["slot"] == Data.CHARM:
 		return ["+%.0f%%" % find(it), "loot quality"]
 	return ["%d" % capacity(it), "capacity"]
@@ -852,7 +852,7 @@ static func socket_words(it: Dictionary) -> String:
 	for ty in ["fire", "frost", "poison", "shock"]:
 		if b.has("conv_%s_pct" % ty):
 			return "A socketable: in any socket, %d%% of your hits land as %s" % [int(b["conv_%s_pct" % ty]), ty]
-	return "A socketable: goes in a socket at the bench"
+	return "A socketable: goes in a socket at the Bench"
 
 
 ## Stacks: how many a stack of this can hold, and how many it holds.

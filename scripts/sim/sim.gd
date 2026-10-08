@@ -16,16 +16,16 @@ var equipped := {}                 # slot -> item or null
 var rig: Array = []                # medical items carried, in the rig's slots
 var stash: Array = []              # items
 var market: Array = []
-var gamble: Array = []             # the fence's gamble: the kinds on offer, rotated with the restock (GAMBLE_KINDS keys)
-var clinic: Array = []             # the clinic's shelf: meds, so many a level, restocked after a run             # items for sale
+var gamble: Array = []             # the Fence's gamble: the kinds on offer, rotated with the restock (GAMBLE_KINDS keys)
+var clinic: Array = []             # the Clinic's shelf: meds, so many a level, restocked after a run             # items for sale
 var mission = null                 # null, or the mission in progress (a Dictionary)
 var last_report = null             # the last mission's outcome, for Mission Control
 var operators_lost := 0
-var generator_level := 0           # the yard's: hours away that count
+var generator_level := 0           # the Yard's: hours away that count
 var lookout_level := 0             # the first lot later; better odds
 var kennel_level := 0              # a dog
-var hardcore := false              # a death ends the yard, stash and all
-var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the clinic treats it; "" for none
+var hardcore := false              # a death ends the Yard, stash and all
+var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the Clinic treats it; "" for none
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
 var cls := ""                      # the operator's class, by name; "" is none yet
@@ -43,14 +43,14 @@ var intel: Array = []              # per tier: the modifier names on offer now
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
 var training_points := 0           # earned, one a level, across operators
-var last_craft := {}               # the bench's last job: {id, kind, words}, for the toast and the craft panel
+var last_craft := {}               # the Bench's last job: {id, kind, words}, for the toast and the craft panel
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
-var retired: Array = []            # the traits on the wall (36): a third of each stays with the yard, newest last
-var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the fence moved on
-var book: Array = []               # the papers found, by name, in the order found: the drawer in the caravan
-var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the caravan
+var retired: Array = []            # the traits on the wall (36): a third of each stays with the Yard, newest last
+var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
+var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
+var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
 var worn_depth: Array = []         # and the depth it was cleared at: another depth is another site, fresh (Matt, 7 Oct: "depth needs to reset the site being picked over"); the worn depth stays worn until it recovers
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
@@ -59,33 +59,33 @@ var last_next := ""                # the last "what's next" line the log carried
 var auto_equip := false            # idle: the best of each slot goes on when a run comes home
 var auto_sell := false             # idle: the common gear is sold when a run comes home
 var runner_runs := 0               # this runner's runs so far
-## This runner's record (8 Oct, the Runner room): the yard's clock when they arrived, their best run by kills,
+## This runner's record (8 Oct, the Runner room): the Yard's clock when they arrived, their best run by kills,
 ## by damage dealt and by cash, the dearest thing they found, the deepest site they held. Reset with the runner.
 var record := {"since": 0.0, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": 0}
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
-var deeds_found := false           # the bank's vault, opened once
+var deeds_found := false           # the Bank's vault, opened once
 var ending := ""                   # what became of the deeds: burned, sold, held
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
 var notes := 0                     # the old paper money: the crews still take it
-var scrap := 0                     # the bench's material (34): found, stripped, ditched for
-var takings := 0.0                 # what the yard takes a run, averaged over the last few: the run's cash and the fence's money (the pass, 6 Oct)
+var scrap := 0                     # the Bench's material (34): found, stripped, ditched for
+var takings := 0.0                 # what the Yard takes a run, averaged over the last few: the run's cash and the Fence's money (the pass, 6 Oct)
 var _takings_run := 0.0            # the cash in since the last run came home
 var cash_in := 0.0                 # every pound in since the game began (runs, sales, contracts); not saved: the readers' figure
 var atlas := {}                    # the map's passives: key -> rank
 var boss_paid: Array = []          # per tier: the depths a head's price has been paid at (Long memory: once a depth)
 var atlas_points := 0              # earned: one a new depth cleared past the first
-var contracts: Array = []          # the fence's: {slot, rarity, count, pay, amount, unique}
-var mate := {}                     # the fence's mate's offer: {unique, notes}
+var contracts: Array = []          # the Fence's: {slot, rarity, count, pay, amount, unique}
+var mate := {}                     # the Fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
-var yard_moves := 0                # how many times the yard has moved (the prestige)
+var yard_moves := 0                # how many times the Yard has moved (the prestige)
 var lorry_done := false            # the convoy beaten in this yard: the endgame's ending (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
 var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
-var best_dig := {}                 # the yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
-var trades: Array = []             # the yard's trade: elements whose keystone every class may take, one a move, for good
-var insure_next := false           # the next run is insured: the fence holds the paper on the kit
+var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
+var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
+var insure_next := false           # the next run is insured: the Fence holds the paper on the kit
 var elapsed := 0.0
 var events: Array = []
 var rng := RandomNumberGenerator.new()
@@ -155,14 +155,14 @@ func level() -> int:
 	return Data.level_for_xp(xp)
 
 
-## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top. The yard's, not the runner's:
+## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top. The Yard's, not the runner's:
 ## a move banks the runner's paragon levels and the next runner adds to them (the eighteenth read: a fresh yard's runner
 ## at level 44 read the stations at 0.00 that the last one held at 1.00, with every paragon level gone).
 func paragon() -> int:
 	return paragon_banked + Data.paragon_for_xp(xp)
 
 
-## The yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
+## The Yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
 func lorry_mult() -> float:
 	return pow(Data.LORRY_MULT, lorries)
 
@@ -365,7 +365,7 @@ func chill_amount() -> float:
 
 func shock_amount() -> float:
 	if has_rule("substation_key"):
-		return 0.6                               # the substation key: shocked, they take 60% more
+		return 0.6                               # the Substation Key: shocked, they take 60% more
 	return 0.4 if tree.has("Live/3") else Data.SHOCK
 
 
@@ -590,13 +590,13 @@ func set_class(name: String) -> bool:
 	for c in Data.CLASSES:
 		if c["name"] == name:
 			cls = name
-			# the old class's trees come back as points; the yard's tree stays
+			# the old class's trees come back as points; the Yard's tree stays
 			var kept := []
 			for id in tree:
 				if _on_show(str(id).get_slice("/", 0)):
 					kept.append(id)
 			tree = kept
-			log_event("The runner was a %s, before" % name.to_lower())
+			log_event("The runner was a %s, before" % name)
 			_say_next()
 			return true
 	return false
@@ -604,8 +604,8 @@ func set_class(name: String) -> bool:
 
 # ------------------------------------------------------------------ the tree
 
-## The three trees on show: the class's first, the yard's, the class's second.
-## The trees on show: the class's, the yard's, the second past's, and every element's.
+## The three trees on show: the class's first, the Yard's, the class's second.
+## The trees on show: the class's, the Yard's, the second past's, and every element's.
 func trees() -> Array:
 	var out: Array = Data.trees_for(cls, cls2)
 	out.append_array(Data.ELEMENT_TREES)
@@ -619,7 +619,7 @@ func affinity(element: String) -> bool:
 	return element in Data.AFFINITY.get(cls, []) or element in Data.AFFINITY.get(cls2, [])
 
 
-## The yard's trade: an element the move brings with it. Any of the five not taken already.
+## The Yard's trade: an element the move brings with it. Any of the five not taken already.
 func can_trade(element: String) -> bool:
 	return element in Data.ELEMENTS and not (element in trades)
 
@@ -648,7 +648,7 @@ func trait_add(key: String) -> float:
 
 
 ## Retirement (36): at RETIRE_LEVEL the runner can go to the wall instead of dying on a run. Their kit comes
-## off into the stash, their trees refund as a death's do, the yard keeps a third of their trait, and two
+## off into the stash, their trees refund as a death's do, the Yard keeps a third of their trait, and two
 ## new runners turn up to pick from.
 func can_retire() -> bool:
 	return level() >= Data.RETIRE_LEVEL and cls != "" and mission == null
@@ -662,7 +662,7 @@ func retire() -> bool:
 		retired.append(runner_trait)
 		while retired.size() > Data.RETIRED_MAX:
 			retired.pop_front()              # the oldest makes way
-	log_event("%s retires to the wall at level %d. The yard keeps a little of what they were." % [cls, level()])
+	log_event("%s retires to the wall at level %d. The Yard keeps a little of what they were." % [cls, level()])
 	runner_runs = 0
 	_record_reset()
 	for s in Data.SLOTS:
@@ -687,20 +687,20 @@ func retire() -> bool:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the yard with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Yard with their own kit.")
 	_refund_runner_trees()
 	_dry_memo.clear()
 	return true
 
 
-# ------------------------------------------------------------------ the fence's contracts
+# ------------------------------------------------------------------ the Fence's contracts
 
 ## One contract: a slot, a rarity, a count, what it pays.
 func roll_contract() -> Dictionary:
 	var slot: String = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 1)]
 	var c := {"slot": slot, "rarity": rng.randi_range(1, 2), "count": rng.randi_range(1, 3), "pay": "cash", "amount": 0, "unique": ""}
 	if rng.randf() < Data.CONTRACT_UNIQUE_ODDS:
-		var loose: Array = loose_uniques(0)            # the fence's contracts pay with the common ones only
+		var loose: Array = loose_uniques(0)            # the Fence's contracts pay with the common ones only
 		c["rarity"] = 2
 		c["count"] = 3
 		c["pay"] = "unique"
@@ -737,7 +737,7 @@ func roll_contract() -> Dictionary:
 		# worth: the slot's bases' middle value at the rarity, a piece
 		var bases: Array = Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]
 		var mid: float = float(bases[bases.size() / 2]["value"]) * float(Data.RARITIES[c["rarity"]]["value"])
-		c["amount"] = int(round(mid * inflation() * Data.CONTRACT_CASH * c["count"] / 10.0)) * 10   # the fence quotes today's price
+		c["amount"] = int(round(mid * inflation() * Data.CONTRACT_CASH * c["count"] / 10.0)) * 10   # the Fence quotes today's price
 	return c
 
 
@@ -842,7 +842,7 @@ func _unique_named(name: String) -> Dictionary:
 	return {}
 
 
-## The fence's mate: one of the loose uniques, for notes.
+## The Fence's mate: one of the loose uniques, for notes.
 func roll_mate() -> Dictionary:
 	var loose: Array = loose_uniques(deepest())    # his deep stock opens as you go deeper
 	var u: Dictionary = loose[rng.randi_range(0, loose.size() - 1)]
@@ -864,19 +864,19 @@ func buy_mate() -> bool:
 	var it := Items.roll_unique(_unique_named(mate["unique"]), rng)
 	stash.append(it)
 	_read(it)
-	log_event("From the fence's mate, for %d notes: %s." % [int(mate["notes"]), it["unique"]])
+	log_event("From the Fence's mate, for %d notes: %s." % [int(mate["notes"]), it["unique"]])
 	mate = roll_mate()
 	return true
 
 
-# ------------------------------------------------------------------ moving the yard
+# ------------------------------------------------------------------ moving the Yard
 
 func can_move_yard() -> bool:
 	return campaign_done() and mission == null and not camp_lost
 
 
 ## The move's compounding (7 Oct): a moved yard's ladders start at this depth past the first (to LADDER_FLOOR_MAX),
-## and its first `yard_moves` nodes of the yard's tree are free.
+## and its first `yard_moves` nodes of the Yard's tree are free.
 func ladder_floor() -> int:
 	return mini(yard_moves, Data.LADDER_FLOOR_MAX)
 
@@ -896,7 +896,7 @@ func _deepest_held() -> Array:
 	return [Data.TIERS[best]["name"] if best >= 0 else "", at]
 
 
-## The yard's tree nodes taken, in the order they were taken.
+## The Yard's tree nodes taken, in the order they were taken.
 func _yard_nodes_taken() -> Array:
 	var out: Array = []
 	for id in tree:
@@ -905,7 +905,7 @@ func _yard_nodes_taken() -> Array:
 	return out
 
 
-## Start again somewhere else. The uniques come, worn or stashed; the yard's
+## Start again somewhere else. The uniques come, worn or stashed; the Yard's
 ## own tree; the runners before; half the notes; the move's own bonus.
 func move_yard(trade := "") -> bool:
 	if not can_move_yard() or (trade != "" and not can_trade(trade)):
@@ -919,7 +919,7 @@ func move_yard(trade := "") -> bool:
 			uniques.append(equipped[s])
 	var yard_tree: Array = []
 	for id in tree:
-		if str(id).begins_with("The yard/"):
+		if str(id).begins_with("The Yard/"):
 			yard_tree.append(id)
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
@@ -928,23 +928,23 @@ func move_yard(trade := "") -> bool:
 	if atlas_rank("held_word") > 0:
 		for i in range(pinned.size()):
 			if pinned[i]:
-				keep["held"][i] = intel[i].duplicate()     # Held word: what's pinned at the radio moves with the yard
+				keep["held"][i] = intel[i].duplicate()     # Held word: what's pinned at the radio moves with the Yard
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
 	fresh.start()
 	load_dict(fresh.to_dict())
 	past = keep["past"]
-	retired = keep["retired"]             # the wall moves with the yard (36)
+	retired = keep["retired"]             # the wall moves with the Yard (36)
 	ending = keep["ending"]
 	hardcore = keep["hardcore"]
 	notes = keep["notes"]
-	scrap = keep["scrap"]                 # scrap moves with the yard the way notes do (34)
+	scrap = keep["scrap"]                 # scrap moves with the Yard the way notes do (34)
 	yard_moves = keep["moves"]
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
 	paragon_banked = keep["paragon_banked"]
-	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the yard
+	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the Yard
 	atlas_points = keep["atlas_points"]
 	for i in keep["held"]:
 		pinned[i] = true
@@ -970,7 +970,7 @@ func move_yard(trade := "") -> bool:
 
 # ------------------------------------------------------------------ what's next
 
-## The first ten minutes, and every minute after: what the yard would say to
+## The first ten minutes, and every minute after: what the Yard would say to
 ## do next, from where the campaign stands. The log carries it when it changes.
 func next_words(short := false) -> String:
 	var w: Dictionary = Words.NEXT_SHORT if short else Words.NEXT
@@ -995,11 +995,11 @@ func next_words(short := false) -> String:
 				return w["site"] % Data.TIERS[i]["name"]
 		for b in Data.BOSSES:
 			if int(b["zone"]) == z and not bosses_beaten[z]:
-				return (w["head"] % [b["name"].to_lower() if short else b["name"], Data.TIERS[int(b["tier"])]["name"].to_lower()]) if not short else (w["head"] % b["name"].to_lower())
+				return (w["head"] % [b["name"], Words.mid(Data.TIERS[int(b["tier"])]["name"])]) if not short else (w["head"] % Words.mid(b["name"]))
 	return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
 
 
-## Say it once, when it changes; the yard's set line says it first.
+## Say it once, when it changes; the Yard's set line says it first.
 func _say_next() -> void:
 	var w := next_words()
 	if w != last_next:
@@ -1009,7 +1009,7 @@ func _say_next() -> void:
 
 # ------------------------------------------------------------------ the places changing
 
-## The yard's clock: hours on the 24, from the morning the yard opened.
+## The Yard's clock: hours on the 24, from the morning the Yard opened.
 func hour_of_day() -> float:
 	return fmod(Data.CLOCK_START + elapsed / 3600.0, 24.0)
 
@@ -1024,7 +1024,7 @@ func clock_words() -> String:
 	return "%02d:%02d" % [int(h), int(fmod(h, 1.0) * 60.0)]
 
 
-## The weather by zone, rolled once an hour of the yard's time.
+## The weather by zone, rolled once an hour of the Yard's time.
 func _roll_weather() -> void:
 	var hour := int(elapsed / (Data.WEATHER_H * 3600.0))
 	if hour == weather_at:
@@ -1133,7 +1133,7 @@ func _wearing_off(m: Dictionary) -> void:
 		log_event(Words.RECYCLE["off"] % [it["base"], who.substr(0, 1).to_upper() + who.substr(1)])
 
 
-# ------------------------------------------------------------------ the bench's crafting
+# ------------------------------------------------------------------ the Bench's crafting
 
 ## An item of yours by id: worn, or in the stash.
 func item_by_id(id: int) -> Dictionary:
@@ -1146,7 +1146,7 @@ func item_by_id(id: int) -> Dictionary:
 	return {}
 
 
-## What the bench can do to this item: the price, in cash (notes for a bump);
+## What the Bench can do to this item: the price, in cash (notes for a bump);
 ## -1 for can't. `stat` is the affix picked, for lock and one.
 func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 	if it.is_empty() or it.has("unique") or it.has("set") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
@@ -1195,7 +1195,7 @@ func scrap_of(it: Dictionary) -> int:
 	return int(float(it["value"]) / Data.SCRAP_PER_POUND)
 
 
-## A stash item broken down at the bench for its scrap. Gone for good.
+## A stash item broken down at the Bench for its scrap. Gone for good.
 func scrap_item(id: int) -> bool:
 	if mission != null or workshop < 1:
 		return false
@@ -1325,7 +1325,7 @@ func build(kind: String, name: String) -> bool:
 	if not stash_put(made):
 		stash.append(made)                   # whatever the room: it was paid for
 	last_craft = {"id": made["id"], "kind": "build", "words": "Built %s for %d scrap" % [name.to_lower(), int(o["scrap"])]}
-	log_event("At the bench, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
+	log_event("At the Bench, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
 	_dry_memo.clear()
 	return true
 
@@ -1391,15 +1391,15 @@ func craft(id: int, kind: String, stat := "") -> bool:
 			Items.strip_affixes(it)
 		"bump":
 			it["ilvl"] = mini(int(it["tier"]) + Data.BUMP_CAP, Items.ilvl(it) + Data.BUMP_LEVELS)
-	# what the bench did, in words the player can check against the piece
+	# what the Bench did, in words the player can check against the piece
 	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
 	last_craft = {"id": id, "kind": kind, "words": words}
 	if craft_in_notes(kind):
 		notes -= cost
-		log_event("At the bench, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
+		log_event("At the Bench, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
 	else:
 		cash -= float(cost)
-		log_event("At the bench, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
+		log_event("At the Bench, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
 	return true
 
 
@@ -1522,7 +1522,7 @@ func set_second(name: String) -> bool:
 				if _on_show(str(id).get_slice("/", 0)):
 					kept.append(id)
 			tree = kept
-			log_event("The runner was a %s too, once" % name.to_lower())
+			log_event("The runner was a %s too, once" % name)
 			return true
 	return false
 
@@ -1617,7 +1617,7 @@ func _snapshot_rules() -> Dictionary:
 func node_cost(id: String) -> int:
 	var parts := id.split("/")
 	if parts[0] == Data.COMMON_TREE:
-		# a move's free node: the first free_yard_nodes() of the yard's tree cost nothing (7 Oct)
+		# a move's free node: the first free_yard_nodes() of the Yard's tree cost nothing (7 Oct)
 		var taken := _yard_nodes_taken()
 		var k: int = taken.find(id)
 		if (k >= 0 and k < free_yard_nodes()) or (k < 0 and taken.size() < free_yard_nodes()):
@@ -1815,7 +1815,7 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 				log_event("%s: dry" % gun["base"])
 
 
-## The fence sells standard boxes of every type without end: a box a type.
+## The Fence sells standard boxes of every type without end: a box a type.
 func ammo_box(type: String) -> Dictionary:
 	for b in Data.BASES[Data.AMMO]:
 		if b["type"] == type and not b.has("damage_pct"):
@@ -1895,7 +1895,7 @@ func site_unique(i: int) -> Dictionary:
 
 
 ## The depth a site's own drops from: by the site's zone, the gentler the
-## ladder the deeper (the streets at 12, the barracks at 6).
+## ladder the deeper (the streets at 12, the Barracks at 6).
 func site_unique_depth(i: int) -> int:
 	return int(Data.SITE_UNIQUE_DEPTH[int(Data.TIERS[i]["zone"])])
 
@@ -1919,7 +1919,7 @@ func shelf_chase() -> Array:
 	return out
 
 
-## The deepest the yard has been, on any site.
+## The deepest the Yard has been, on any site.
 func deepest() -> int:
 	var d := 1
 	for i in range(best_depth.size()):
@@ -2015,7 +2015,7 @@ func upgrade_medic() -> bool:
 		return false
 	cash -= medic_cost()
 	medic_level += 1
-	log_event("The clinic is better kitted: resting heals %.1f HP a second" % Data.MEDIC_LEVELS[medic_level]["rest"])
+	log_event("The Clinic is better kitted: resting heals %.1f HP a second" % Data.MEDIC_LEVELS[medic_level]["rest"])
 	return true
 
 
@@ -2032,7 +2032,7 @@ func upgrade_market() -> bool:
 		return false
 	cash -= market_cost()
 	market_level += 1
-	log_event("The fence carries more: %d on the shelf" % Data.MARKET_LEVELS[market_level]["stock"])
+	log_event("The Fence carries more: %d on the shelf" % Data.MARKET_LEVELS[market_level]["stock"])
 	restock()
 	return true
 
@@ -2087,7 +2087,7 @@ func buy_intel(i: int) -> bool:
 		cash -= intel_cost(i)
 	_roll_tier_intel(i)
 	_surv_cache.erase(i)
-	log_event("Fresh word on %s: %s" % [tier(i)["name"].to_lower(), ", ".join(intel[i]).to_lower()])
+	log_event("Fresh word on %s: %s" % [Words.mid(tier(i)["name"]), ", ".join(intel[i]).to_lower()])
 	return true
 
 
@@ -2103,7 +2103,7 @@ func can_juice() -> bool:
 	return comms_level >= 3 and campaign_done()
 
 
-## Cash in, counted: the sinks are priced off what the yard takes a run.
+## Cash in, counted: the sinks are priced off what the Yard takes a run.
 func _earn(x: float) -> void:
 	cash += x
 	_takings_run += x
@@ -2116,7 +2116,7 @@ func run_pay(i: int) -> float:
 	return float(t["cash"]) * float(t["pool"])
 
 
-## What a run brings in, as the yard has found it lately: the run's cash and the fence's money for
+## What a run brings in, as the Yard has found it lately: the run's cash and the Fence's money for
 ## its loot, averaged over the last few runs, at the day's prices already. The base the endgame's sinks
 ## are priced off (the pass, 6 Oct): the kills' cash alone was a tenth of it, the loot is the money.
 ## Before any run has come home, the top open tier's kills.
@@ -2176,7 +2176,7 @@ func add_word(i: int, name: String) -> bool:
 		cash -= juice_cost(i)
 	intel[i].append(name)
 	_surv_cache.erase(i)
-	log_event("Called in on %s: %s" % [tier(i)["name"].to_lower(), name.to_lower()])
+	log_event("Called in on %s: %s" % [Words.mid(tier(i)["name"]), name.to_lower()])
 	return true
 
 
@@ -2199,7 +2199,7 @@ func lock_word(i: int, name: String) -> bool:
 			keep.append(w)
 	intel[i] = keep
 	_surv_cache.erase(i)
-	log_event("Held %s on %s; the rest re-rolled: %s" % [name.to_lower(), tier(i)["name"].to_lower(), ", ".join(intel[i]).to_lower()])
+	log_event("Held %s on %s; the rest re-rolled: %s" % [name.to_lower(), Words.mid(tier(i)["name"]), ", ".join(intel[i]).to_lower()])
 	return true
 
 
@@ -2356,7 +2356,7 @@ func __affix_sum_raw(stat: String) -> float:
 			t += Items.affix_total(equipped[s], stat)
 	t += set_stat(stat)
 	if stat != "all_res" and has_rule("blue_plaque"):
-		return 0.0                               # a blue plaque: nothing else on you counts
+		return 0.0                               # a Blue Plaque: nothing else on you counts
 	return t
 
 
@@ -2503,7 +2503,7 @@ func pinnacle_depth(i: int) -> int:
 	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - 2 * atlas_rank("full_strength")
 
 
-## The depth the lorry runs the services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
+## The depth the lorry runs the Services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
 func convoy_depth() -> int:
 	return Data.CONVOY_DEPTH + yard_moves - 2 * atlas_rank("lorrys_route")
 
@@ -2513,7 +2513,7 @@ func is_pinnacle(i: int) -> bool:
 	return depth[i] >= pinnacle_depth(i)
 
 
-## The services, deep enough: the convoy, all three crews.
+## The Services, deep enough: the convoy, all three crews.
 func is_convoy(i: int) -> bool:
 	return i == Data.CONVOY_TIER and depth[i] >= convoy_depth() and campaign_done()
 
@@ -2559,13 +2559,13 @@ func zone_name(i: int) -> String:
 
 
 ## A site's level: its tier and the depth it stands at (the endgame, 7 Oct: the ladder is nine ladders).
-## The streets at depth 8 is level 8; the barracks at depth 1 is level 9, at depth 8 level 16. The endgame's
+## The streets at depth 8 is level 8; the Barracks at depth 1 is level 9, at depth 8 level 16. The endgame's
 ## curve, the bases a find draws from and the item level a find carries all run by it.
 func site_level(i: int) -> int:
 	return i + depth[i]
 
 
-## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the barracks from depth 1.
+## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the Barracks from depth 1.
 static func loot_tier_at(level: int) -> int:
 	return clampi(int(floor(level * Data.MAX_TIER / 9.0)), 1, Data.MAX_TIER)
 
@@ -2588,7 +2588,7 @@ func effective(i: int) -> Dictionary:
 	}
 	if d >= 2 and campaign_done():
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
-		# campaign curve - so the streets' ladder is gentle and long and the barracks' steep and short; the
+		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
 		# bases a find draws from and its item level follow the level too (the sites were the same fight before)
 		var shape: Dictionary = base["shape"]
 		var c: Dictionary = Data.CURVE
@@ -2974,7 +2974,7 @@ func deploy(i: int) -> void:
 	runs_total += 1
 	if runs_total % Data.MATE_RUNS == 0:
 		mate = roll_mate()
-	log_event("Out to %s, %s, depth %d: %s" % [t["name"], zone_name(i), t["depth"], ", ".join(t["intel"]).to_lower()])
+	log_event("Out to %s, %s, depth %d: %s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), t["depth"], ", ".join(t["intel"]).to_lower()])
 	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
@@ -3180,7 +3180,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
 			landed *= 2.0                             # Shatter: a chilled target takes double from the physical
 		if ty == "frost" and has_rule("gritters_keys") and float(m.get("chill_t", 0.0)) > 0.0:
-			landed *= 2.0                             # the gritter's keys: chilled, they take double frost
+			landed *= 2.0                             # the Gritter's Keys: chilled, they take double frost
 		if ty == "bleed" and has_node("cap_bleed_out"):
 			landed *= 1.5                             # Bleed out: bleeds half again as hard
 		var single := landed                      # what one of them takes, before a spread
@@ -3201,7 +3201,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["dots"] = {}
 			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
 			if ty == "frost":
-				m["chill_t"] = 999.0 if has_rule("gritters_keys") else 1.0    # the gritter's keys: a chill holds as long as you fire
+				m["chill_t"] = 999.0 if has_rule("gritters_keys") else 1.0    # the Gritter's Keys: a chill holds as long as you fire
 			if ty == "shock":
 				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 1.0     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
@@ -3239,7 +3239,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["target_hp"] += t["hp"]
 		var carried := {}
 		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
-			carried["poison"] = m["dots"]["poison"]  # the rat man's bag, or Lingers: poison carries to the next
+			carried["poison"] = m["dots"]["poison"]  # the Rat Man's Bag, or Lingers: poison carries to the next
 		if (has_rule("butchers_steel") or has_rule("butchers_apron") or has_node("cap_bleed_out")) and m.get("dots", {}).has("bleed"):
 			carried["bleed"] = m["dots"]["bleed"]
 		if has_node("cap_spread") and m.get("dots", {}).has("fire"):
@@ -3322,7 +3322,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
 		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
 		if auto_tier >= 0:
-			auto_tier = -1                   # auto-run stops on a wound: the clinic is a decision, not a silent tax
+			auto_tier = -1                   # auto-run stops on a wound: the Clinic is a decision, not a silent tax
 			log_event("Auto-run stopped: wounded")
 	if hp <= 0.0:
 		if has_node("not_today") and not m.get("saved", false):
@@ -3350,7 +3350,7 @@ func use_med(id: int) -> bool:
 	return false
 
 
-## The arsonist's rig: a petrol bomb's worth of fire on everyone on you, through the model.
+## The Arsonist's Rig: a petrol bomb's worth of fire on everyone on you, through the model.
 func _alight(m: Dictionary) -> void:
 	var t: Dictionary = m["t"]
 	var r := float(t.get("res", {}).get("fire", 0.0))
@@ -3423,7 +3423,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 			m["my_dots"] = {}                # Clean hands: everything on you cleared, and a grace
 			m["immune_t"] = 3.0
 		if has_rule("arsonists_rig") and m["remaining"] > 0:
-			_alight(m)                       # the arsonist's rig: the med's a petrol bomb's worth on everyone on you
+			_alight(m)                       # the Arsonist's Rig: the med's a petrol bomb's worth on everyone on you
 		m["meds_used"] += 1
 		log_event("%s used: HP %d" % [m["using"]["name"], ceili(hp)])
 		m["using"] = null
@@ -3489,7 +3489,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		elif b.get("pinnacle", false) and int(u.get("pinnacle", -1)) == int(b["zone"]):
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
-		# the last of the convoy: the lorry's load comes home too, and the yard's ending is written (7 Oct)
+		# the last of the convoy: the Lorry's Load comes home too, and the Yard's ending is written (7 Oct)
 		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)))
 		m["found"].append(load)
 		_read(load)
@@ -3780,12 +3780,12 @@ func _extract() -> void:
 	if m.get("ghost_pending", false) and pack_used(m) >= capacity():
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
-		log_event("Ghost: the pack full, and %s counts as cleared" % t["name"].to_lower())
+		log_event("Ghost: the pack full, and %s counts as cleared" % Words.mid(t["name"]))
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity():
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
 	_earn(float(m["cash"]))
-	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the fence's money since the last
+	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
 	_takings_run = 0.0
 	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
 	var run_notes: int = int(m.get("notes", 0))
@@ -3816,7 +3816,7 @@ func _extract() -> void:
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
 		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)),
 	}
-	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
+	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])
 	_record_run(m)
 	mission = null
@@ -3841,6 +3841,33 @@ func _record_reset() -> void:
 	record = {"since": elapsed, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": operators_lost}
 
 
+## The caps pass (8 Oct): every string in a save that is an old name becomes the new one, wherever it sits -
+## an item's unique, the shelf, the mate, a contract, a tree's node id ("The yard/3" to "The Yard/3").
+static func _rename_old(v: Variant) -> void:
+	if v is Dictionary:
+		for k in v.keys():
+			var x = v[k]
+			if x is String:
+				v[k] = _renamed(x)
+			else:
+				_rename_old(x)
+	elif v is Array:
+		for i in range(v.size()):
+			var x = v[i]
+			if x is String:
+				v[i] = _renamed(x)
+			else:
+				_rename_old(x)
+
+
+static func _renamed(x: String) -> String:
+	if Data.RENAMES.has(x):
+		return Data.RENAMES[x]
+	if x.begins_with("The yard/"):
+		return "The Yard/" + x.trim_prefix("The yard/")
+	return x
+
+
 ## KIA: the loadout and what was found are gone; the stash and cash stay. A
 ## fresh operator takes over at level 1. Auto-run stops.
 func _kia() -> void:
@@ -3859,23 +3886,23 @@ func _kia() -> void:
 		"left": m["found"].size() + m["left"], "cash": 0.0, "xp": 0.0, "hp_lost": m["hp_start"], "time": m["elapsed"],
 		"lost_value": lost, "searches": m["searches"], "patrols": m["patrols"],
 	}
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % t["name"].to_lower(), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	runner_runs = 0
 	_record_reset()
 	if m.get("insured", false):
-		# the fence held the paper: what was worn and carried comes back to the stash, whatever the room
+		# the Fence held the paper: what was worn and carried comes back to the stash, whatever the room
 		last_report["lost_value"] = 0
 		for s in Data.SLOTS:
 			if equipped[s] != null:
 				stash.append(equipped[s])
 		for it in rig:
 			stash.append(it)
-		log_event("Dead in %s. %s" % [t["name"].to_lower(), Words.FENCE["paid_out"]])
+		log_event("Dead in %s. %s" % [Words.mid(t["name"]), Words.FENCE["paid_out"]])
 	else:
-		log_event("Dead in %s. Kit lost (%s). %s" % [t["name"].to_lower(), _cash_words(lost), Words.RECYCLE["listed"]])
+		log_event("Dead in %s. Kit lost (%s). %s" % [Words.mid(t["name"]), _cash_words(lost), Words.RECYCLE["listed"]])
 		for s in Data.SLOTS:
 			if equipped[s] != null:
-				_lose(equipped[s], "the last %s" % cls.to_lower(), "runner")
+				_lose(equipped[s], "the last %s" % cls, "runner")
 		if dogs_share:
 			for it in rig:
 				stash.append(it)                 # the dog's share: the rig comes home
@@ -3889,7 +3916,7 @@ func _kia() -> void:
 		stash.append(best)
 		last_report["carried"] = Items.full_name(best)
 		last_report["left"] = int(last_report["left"]) - 1
-		log_event("The dog came home with %s" % Items.full_name(best).to_lower())
+		log_event("The dog came home with %s" % (Items.full_name(best) if best.has("unique") else Items.full_name(best).to_lower()))
 		if Items.is_deeds(best) and ending == "":
 			ending = "held"                  # the deeds, carried home: held all the same
 			log_event(Words.DEEDS["held"])
@@ -3920,16 +3947,16 @@ func _kia() -> void:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the yard with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Yard with their own kit.")
 	# the dead runner's past goes with them: their class and its trees come
 	# back as points for the next to spend from the start, with a past of their
-	# own to pick. The yard's tree and the elements' are the yard's and stay.
+	# own to pick. The Yard's tree and the elements' are the Yard's and stay.
 	_refund_runner_trees()
 
 
 ## The runner's own trees - the class's, the second past's, and the elements'
-## (a fire build is the runner's, not the yard's) - back to points; the class
-## unpicked. Only the yard's tree stays taken.
+## (a fire build is the runner's, not the Yard's) - back to points; the class
+## unpicked. Only the Yard's tree stays taken.
 func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
 	cls = ""
@@ -4151,7 +4178,7 @@ func unequip(slot: String) -> bool:
 
 # ------------------------------------------------------------------ the black market
 
-## The best gear tier any open site drops: what the fence and the clinic stock.
+## The best gear tier any open site drops: what the Fence and the Clinic stock.
 func gear_tier() -> int:
 	var t := 1
 	for i in range(Data.TIERS.size()):
@@ -4186,12 +4213,12 @@ func restock() -> void:
 		market.append(it)
 
 
-## The fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
+## The Fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
 func _restock_gamble() -> void:
 	var kinds: Array = []
 	for k in Data.GAMBLE_KINDS:
 		if _gamble_has_base(k):
-			kinds.append(k["kind"])        # only a kind the fence can source at the tier opened
+			kinds.append(k["kind"])        # only a kind the Fence can source at the tier opened
 	kinds.shuffle()
 	gamble = kinds.slice(0, Data.GAMBLE_SHOWN)
 
@@ -4211,7 +4238,7 @@ static func gamble_kind(kind: String) -> Dictionary:
 	return {}
 
 
-## The top open tier: what the fence rolls a gamble at, and what its price is read off.
+## The top open tier: what the Fence rolls a gamble at, and what its price is read off.
 func top_tier() -> int:
 	var top := 0
 	for i in range(Data.TIERS.size()):
@@ -4232,7 +4259,7 @@ func can_gamble(kind: String) -> bool:
 
 
 ## Pay, and the thing turns up in the stash: a random one of the kind, rolled at the top tier opened
-## with the fence's quality, never Common; or, one time in fifty, a unique of the kind. The kind leaves
+## with the Fence's quality, never Common; or, one time in fifty, a unique of the kind. The kind leaves
 ## the offer; the next restock brings five more. `unique_roll` is the tests' dice.
 func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 	if not can_gamble(kind):
@@ -4244,13 +4271,13 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 	cash -= gamble_price(kind)
 	gamble.erase(kind)
 	stash_put(it)
-	last_craft = {"id": it["id"], "kind": "gamble", "words": "The fence's word: %s" % Items.full_name(it).to_lower()}
+	last_craft = {"id": it["id"], "kind": "gamble", "words": "The Fence's word: %s" % Items.full_name(it).to_lower()}
 	log_event("A word in the right ear: %s" % Items.full_name(it).to_lower())
 	return it
 
 
 ## The roll behind a gamble, for the kind: a unique of the kind on GAMBLE_UNIQUE, else a drop of the
-## slot at the top open tier's loot tier with the fence's quality on it, never Common, of the type
+## slot at the top open tier's loot tier with the Fence's quality on it, never Common, of the type
 ## when the kind has one.
 func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 	var x: float = unique_roll if unique_roll >= 0.0 else rng.randf()
@@ -4258,7 +4285,7 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 		var fits: Array = []
 		for u in Data.UNIQUES:
 			if u.has("site") or u.get("boss", false):
-				continue                                  # the chase is the ladders', never the fence's (endgame part 3)
+				continue                                  # the chase is the ladders', never the Fence's (endgame part 3)
 			if u["slot"] == k["slot"] and (k["type"] == "" or Items.base_named(k["slot"], u["base"]).get("type", "") == k["type"]):
 				fits.append(u)
 		if not fits.is_empty():
@@ -4368,7 +4395,7 @@ func sell_junk() -> int:
 			sell(it)
 			n += 1
 	if n > 0:
-		log_event("The fence took the junk: %d thing%s, %s." % [n, "" if n == 1 else "s", _cash_words(got)])
+		log_event("The Fence took the junk: %d thing%s, %s." % [n, "" if n == 1 else "s", _cash_words(got)])
 	return n
 
 
@@ -4396,7 +4423,7 @@ func stash_by_value() -> Array:
 # ------------------------------------------------------------------ the medic tent
 
 ## The Medic Tent's shelf: every common med up to the next tier, at its markup.
-## The clinic's shelf: MEDIC_LEVELS[level]["stock"] meds, rolled from the
+## The Clinic's shelf: MEDIC_LEVELS[level]["stock"] meds, rolled from the
 ## bases it carries, cheaper ones more often. Finite until the next run.
 func _restock_clinic() -> void:
 	clinic = []
@@ -4429,7 +4456,7 @@ func buy_clinic(id: int) -> bool:
 	return false
 
 
-## Buy off the fence's shelf by the item's id.
+## Buy off the Fence's shelf by the item's id.
 func buy_id(id: int) -> bool:
 	for k in range(market.size()):
 		if market[k]["id"] == id:
@@ -4467,7 +4494,7 @@ func buy_med(name: String) -> bool:
 	return false
 
 
-# ------------------------------------------------------------------ the yard's upgrades
+# ------------------------------------------------------------------ the Yard's upgrades
 
 func away_cap_s() -> float:
 	return Data.GENERATOR_LEVELS[generator_level]["hours"] * 3600.0
@@ -4525,9 +4552,9 @@ func upgrade_kennel() -> bool:
 	return true
 
 
-## The HP back, and the wound seen to: WOUND_CASH a level, the clinic's discount on both.
-## The clinic's two jobs, priced apart (Matt, 7 Oct: "heal my HP and treat the wound separately"): the HP back
-## at TREAT_CASH_PER_HP a point, the wound at WOUND_CASH a level; the clinic's discount on both.
+## The HP back, and the wound seen to: WOUND_CASH a level, the Clinic's discount on both.
+## The Clinic's two jobs, priced apart (Matt, 7 Oct: "heal my HP and treat the wound separately"): the HP back
+## at TREAT_CASH_PER_HP a point, the wound at WOUND_CASH a level; the Clinic's discount on both.
 func _treat_rate() -> float:
 	return inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)
 
@@ -4627,6 +4654,7 @@ func _state() -> Dictionary:
 
 func load_dict(d: Dictionary) -> void:
 	d = d.duplicate(true)                # the save's items stay the save's; the live ones are copies
+	_rename_old(d)                       # a save from before the caps pass (8 Oct) carries the old names
 	cash = float(d.get("cash", Data.STARTING_CASH))
 	xp = float(d.get("xp", 0.0))
 	hp = float(d.get("hp", Data.BASE_HP))
@@ -4785,7 +4813,7 @@ func load_dict(d: Dictionary) -> void:
 	if market.is_empty():
 		restock()
 	if not d.has("gamble"):
-		_restock_gamble()                 # a save from before the fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
+		_restock_gamble()                 # a save from before the Fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
 
 
 func _all_items() -> Array:

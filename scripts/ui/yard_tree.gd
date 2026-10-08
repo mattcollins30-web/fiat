@@ -3,10 +3,10 @@ extends Control
 ## caravan and the map in terms of skill point layout - except cash is the
 ## cost"). A column a work, a level a tile top to bottom: the built ones edged
 ## gold, the next one its own Build button carrying its price, the later ones
-## dim with theirs. The clinic, the fence and the radio are built here too
+## dim with theirs. The Clinic, the Fence and the radio are built here too
 ## (they were "upgraded in their rooms" and easy to miss) and run in their
 ## rooms. The heading: the levels built, the purse and the town as chips, Move
-## the yard when it can, the clock in the foot.
+## the Yard when it can, the clock in the foot.
 ##
 ## `show_state(sim, jobs, purse)`: jobs from main._yard_jobs(), each
 ## {name, level, of, levels: [{name, forms} a level, index 0 the start], costs:
@@ -51,14 +51,14 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_kicker = UI.label(head, Rect2(PAD, 12, 400, 26), "The yard", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kicker = UI.label(head, Rect2(PAD, 12, 400, 26), "The Yard", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 38, 300, 48), "", "SemiBold", Pal.HEADLINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 44, 400, 40), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_chips = Chips.new(Pal.GRID_W - 2 * PAD - 420 - MOVE_W - 16, 9)
 	_chips.position = Vector2(PAD + 420, 14)
 	head.add_child(_chips)
 	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, HEAD_H - 16 - Pal.BUTTON_H, MOVE_W, Pal.BUTTON_H), true)
-	_move.text = "Move the yard"
+	_move.text = "Move the Yard"
 	_move.visible = false
 	_move.pressed.connect(func(): if _move_action.is_valid(): _move_action.call())
 	for c in range(COLS):

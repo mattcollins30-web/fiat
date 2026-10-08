@@ -1,15 +1,15 @@
 extends Control
 ## The Workshop's screen: the fitted guns and their mounts down the left, the
 ## stash's attachments for the selected mount as a grid on the right, and a
-## compare panel under the grid with Fit and Strip (Sell is the fence's). The Workshop's own
-## level - which mounts the bench can work on - is bought here too; it's the
+## compare panel under the grid with Fit and Strip (Sell is the Fence's). The Workshop's own
+## level - which mounts the Bench can work on - is bought here too; it's the
 ## camp's cash sink. The Armoury's shape, so it reads the same way.
 ## Two views of the left column: Guns (the five mounts of each gun) and
 ## Sockets (the sockets of the guns, the helmet and the armour, and the
 ## socketables that go in them). The grid follows the view.
 
 signal acted
-signal bench(id)                   # the bench's menu for an item, from the Craft view
+signal bench(id)                   # the Bench's menu for an item, from the Craft view
 signal build                       # the Build column's menu (34): rounds, meds, a gun, a grenade for scrap
 
 const Pal := preload("res://scripts/ui/palette.gd")
@@ -34,7 +34,7 @@ const VIEW_H := 36                 # the Guns / Sockets / Craft toggle, along th
 const VIEW_W := 140
 const UPGRADE_W := 270             # the upgrade button at the band's top right
 const SOCK_HEAD_H := 44
-const BAND_H := 200                # the bench's band: its level, what it fits, what the next level adds
+const BAND_H := 200                # the Bench's band: its level, what it fits, what the next level adds
 const TOP := BAND_H + 14           # the column under the band
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
@@ -79,7 +79,7 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the band: the bench's level as the headline, the views and the upgrade along its foot
+	# the band: the Bench's level as the headline, the views and the upgrade along its foot
 	_band = Band.new(BODY_W, BAND_H, 3)
 	add_child(_band)
 	_bench_words = _band.unit
@@ -313,12 +313,12 @@ func show_state(s) -> void:
 				r["fitted"].text = a["base"]
 				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))
 				_style(r["button"], on, rarity_tone(a))
-	# the bench
+	# the Bench
 	# the level and what it fits; under it, what the next level adds, so the
 	# upgrade's price buys something the player can read
 	var level: Dictionary = Data.WORKSHOP[sim.workshop]
 	var fits: String = ", ".join(level["mounts"].map(func(m): return m + "s"))
-	_band.set_words("The yard's works", "The bench", "Level %d" % sim.workshop, "", Pal.ACCENT)
+	_band.set_words("The Yard's works", "The bench", "Level %d" % sim.workshop, "", Pal.ACCENT)
 	_band.headline_under_title(true)
 	UI.fit(_bench_words, [("fits %s" % fits) if fits != "" else str(level["words"]).to_lower(), str(level["words"]).to_lower(), "fits %d mounts" % level["mounts"].size()])
 	if sim.workshop >= Data.WORKSHOP.size() - 1:
@@ -361,7 +361,7 @@ static func _and(words: Array) -> String:
 	return ", ".join(words.slice(0, words.size() - 1)) + " and " + str(words.back())
 
 
-## The gun's own mounts, in the bench's order, sockets apart.
+## The gun's own mounts, in the Bench's order, sockets apart.
 func _mounts_of(gun) -> Array:
 	var out: Array = []
 	if gun == null:
@@ -400,7 +400,7 @@ func _all_attachments(socketables: bool) -> Array:
 func _signature() -> String:
 	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sim.on_mission()), str(sim.workshop), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.last_craft.get("id", -1))]
-	# the craft view's piece changes under the bench: its level, affixes and sockets are in the signature too
+	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
 	if not picked.is_empty():
 		parts.append(str(hash([picked.get("ilvl", 0), picked.get("affixes", []), picked.get("attachments", {}).keys()])))
@@ -571,7 +571,7 @@ func _socket_for(slot: String, only_empty := false) -> String:
 	return "" if only_empty else first
 
 
-## The stash's gear the bench can work on.
+## The stash's gear the Bench can work on.
 func _craftable() -> Array:
 	var out: Array = []
 	for it in sim.stash:
@@ -582,14 +582,14 @@ func _craftable() -> Array:
 
 
 ## The Craft view's left column and panel: the piece, its affixes and tiers,
-## what the bench would charge; the Bench button opens the menu.
+## what the Bench would charge; the Bench button opens the menu.
 func _show_craft(it: Dictionary) -> void:
 	for l in _craft_lines:
 		l.text = ""
 	if it.is_empty():
 		_craft_title.text = "Pick a piece, or build"
 		_craft_lines[0].text = "Stash gear only; not parts, meds, uniques or sets"
-		_craft_lines[1].text = "Worn gear goes to the bench from the Lock-up"
+		_craft_lines[1].text = "Worn gear goes to the Bench from the Lock-up"
 		_craft_lines[2].text = "Or build for scrap: rounds, meds, guns, grenades"
 		_left_title.text = "The bench"
 		_right_title.text = "In hand"
@@ -607,7 +607,7 @@ func _show_craft(it: Dictionary) -> void:
 			_hint.add_theme_color_override("font_color", Pal.TEXT_3)
 		return
 	UI.fit(_craft_title, [Items.full_name(it), it["base"]])
-	# the bench's last job on this piece stays on the hint until the next
+	# the Bench's last job on this piece stays on the hint until the next
 	_hint.add_theme_color_override("font_color", Pal.GOOD if sim.last_craft.get("id", -1) == it["id"] else Pal.TEXT_3)
 	UI.fit(_craft_lines[0], Items.figure_options(it))
 	_craft_lines[1].text = "Level %d · T%d to T%d roll" % [Items.ilvl(it), mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it)), Items.rarity_cap(it)]     # the level's floor, the rarity's cap

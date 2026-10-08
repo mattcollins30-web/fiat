@@ -126,7 +126,7 @@ func portrait_width(w: float) -> void:
 	headline_under_title(_under)
 
 
-## Where the right-hand lines start: lower when something sits over them (the bench's upgrade button).
+## Where the right-hand lines start: lower when something sits over them (the Bench's upgrade button).
 func right_from(y: float) -> void:
 	for k in range(RIGHT_LINES):
 		right[k].position.y = y + k * 24

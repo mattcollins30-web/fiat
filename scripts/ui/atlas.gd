@@ -1,5 +1,5 @@
 extends Control
-## The map (Map-A then Map-B, 7 Oct): the endgame's tree in the caravan's
+## The map (Map-A then Map-B, 7 Oct): the endgame's tree in the Caravan's
 ## shape, in the Runs room where the columns stand. A band (the points free,
 ## what earns one, the zones' depths as chips); thirty-six nodes as the
 ## caravan's tiles, two across, in three columns by what they touch - the
@@ -26,7 +26,7 @@ const COL_GAP := 16
 const COL_W := (W - 2 * COL_GAP) / 3                           # 501
 const COLS_Y := BAND_H + 14
 const HEAD_H := 34
-const TILE_H := 52                 # a node: a tile, two across, the keystone the width (the caravan's, Map-B)
+const TILE_H := 52                 # a node: a tile, two across, the keystone the width (the Caravan's, Map-B)
 const TILE_GAP := 6
 const TILE_W := (COL_W - TILE_GAP) / 2                                # 247
 const TILES_Y := COLS_Y + HEAD_H + 6
