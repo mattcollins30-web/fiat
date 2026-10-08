@@ -4654,6 +4654,8 @@ func _check_fit(main, where: String) -> void:
 				_check(not mn._wordmark.visible or mn._wordmark.position.x + mn._wordmark.size.x <= x0 + mn.COLUMN_W + 0.5, "%s menu: the wordmark leaves the column" % where)
 				_check(mn._foot_left.visible and mn._foot_left.position.y >= pr.end.y, "%s menu: the foot runs into the rows" % where)
 				_check(not mn._title.visible and mn._stamps[0].visible, "%s menu: the title shows its heading, or no stamps" % where)
+				# the wordmark loads wherever the file is (the editor, a pack): the Deck's builds had none (8 Oct)
+				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size() == Vector2(154, 72)), "%s menu: the wordmark did not load from %s (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
 			"drawer":
 				# the drawer is the rail's rect exactly, its kicker up, names only
 				var rail := Rect2(main._rail.position, main._rail_panel.size)

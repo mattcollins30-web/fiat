@@ -52,3 +52,10 @@ display, so it is not in the headless smoke, and it cannot imitate gamescope —
 A Linux export that wants the `.pck` beside the binary has Embed PCK off
 (`binary_format/embed_pck=false` in `export_presets.cfg`, untracked). Greenhorn's presets have it on,
 which is why Greenhorn runs as one file. Tick it in the editor's export dialog.
+
+## Art in a pack
+
+`Image.load_from_file(ProjectSettings.globalize_path("res://..."))` finds nothing inside a `.pck`:
+the wordmark was missing on the Deck's builds (desktop and game mode) while the editor run had it.
+Read a file's bytes through `FileAccess.get_file_as_bytes` (which reads from a pack) and
+`Image.load_png_from_buffer`, then fall back to `load()` for the imported resource. `menu._load_art`.

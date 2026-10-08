@@ -155,8 +155,16 @@ func _init() -> void:
 	visible = false
 
 
+## A painting from res://: the file's own bytes first when asked (the wordmark: a stale import of the
+## old lettering ran it out of the column on the Legion), read through FileAccess so a packed export
+## can serve them too - Image.load_from_file on a globalized res:// path finds nothing in a .pck, which
+## is why the Deck's builds had no wordmark (8 Oct) - then the imported resource.
 static func _load_art(path: String, from_file := false) -> Texture2D:
-	if ResourceLoader.exists(path) and not from_file:
+	if from_file and FileAccess.file_exists(path):
+		var img := Image.new()
+		if img.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) == OK and not img.is_empty():
+			return ImageTexture.create_from_image(img)
+	if ResourceLoader.exists(path):
 		return load(path)
 	if FileAccess.file_exists(path):
 		var img := Image.load_from_file(ProjectSettings.globalize_path(path))
