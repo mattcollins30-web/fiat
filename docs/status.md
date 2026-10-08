@@ -2117,14 +2117,17 @@ ten; the one never a Doorman at level 50 with the services at depth 7, its notes
 price. The plain Drifter took it on both reads (14.7 h and 27.1 h at 2,160 notes), so the +10%
 waits on the twenty-first at 960 before it is wanted. *The late three* (Drifter 20.9 h, Poacher
 19.7 h, Scrapper 19.0 h merged) are the old price again: every one stands with the services at
-depth 8-10 by hour 14 and pays at 2,160. *The spread at the first lorry* reads 15/5 to 27/16 across
-the reads and 21/9 on a Doorman - the band 7-11 holds on fourteen of the sixteen reads that lorried
-with a ladder; the two campaign-not-done (the bleed Doorman and the fire Drifter, level 1 and 5 at
-the end, on the T0-T2 ladders the whole way) are the bot's cheap-run habit on those builds, to read
-again. *Scrap* 1.4-6.8 crafts an hour on the first sixteen with the Scrapper's second read at 7.7,
+depth 8-10 by hour 14 and pays at 2,160. *The spread at the first lorry* holds the band 7-11 on every read that
+lorried with a ladder but one, a Doorman at 21/9 (twelve); five reads never left the T0-T2 ladders
+(both bleed Doormans and both fire Drifters at level 1-5 at the end, a frost Poacher at level 1) -
+the lorry at depth 8 falls to a cheap run on those builds and the bot never climbs, which the row
+cannot read; to watch on the twenty-first, a bot fault if it holds. *Scrap* 1.4-6.8 crafts an hour on the first sixteen with the Scrapper's second read at 7.7,
 just over the band's top. *Wounds* 1-17% at 0.30 (the Scrapper 17% both reads; the rest 1-12%),
 the 0.33 reads on the twenty-first. The bank's band 0.6-2.2 h, luck as labelled. Smoke clean on the
-six after it. Nothing moved; the twenty-first is the six's first read.
+six after it. Nothing moved; the twenty-first is the six's first read. *One gate fault found after it
+was flagged:* the first-lorry ladder read went without the end read's full ammo box, and a gun with
+a few rounds left reads 0% - the lorry's fight leaves few. `_ladder_read` now arms and heals the
+runner itself for both reads (from the twenty-second; a 0/0 spread on the twenty-first is this).
 
 **The nineteenth read (the Legion, 8 Oct morning, twenty reads of ten builds, thirty-two hours).** Six red,
 No reds and depth pace green. *The loop runs:* the lorry on seventeen reads of twenty, the first at

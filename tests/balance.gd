@@ -231,10 +231,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 					depth_seen[key] = true
 					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
 			if sim.lorry_done and first_ladder.is_empty():
-				var hp_now: float = sim.hp
-				sim.hp = sim.max_hp()
 				first_ladder = _ladder_read(sim, bot.PUSH)   # the first yard's ladders, as the lorry fell and before the move
-				sim.hp = hp_now
 			var scrap_before: int = int(sim.scrap)
 			bot.tidy(sim)
 			if int(sim.scrap) < scrap_before:
@@ -315,13 +312,7 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
 	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
 	if first_ladder.is_empty() and sim.campaign_done():
-		sim.hp = sim.max_hp()
-		for box in boxes:
-			sim.rig.append(box)
 		first_ladder = _ladder_read(sim, bot.PUSH)
-		for box in boxes:
-			sim.rig.erase(box)
-		sim.hp = hp0
 	g["ladder"] = first_ladder
 	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
@@ -339,10 +330,21 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	quit(0)
 
 
-## The deepest depth the streets and the barracks read `push` in the kit as it stands: the depth set past the ladder for
-## the read, the plain site, the words put back after.
+## The deepest depth the streets and the barracks read `push` in the kit as it stands: the runner whole and armed (a
+## gun with a few rounds left reads 0%, and the lorry's fight leaves few), the depth set past the ladder for the read,
+## the plain site, the words and the HP put back after.
 func _ladder_read(sim, push: float) -> Dictionary:
 	var ladder := {}
+	var hp0: float = sim.hp
+	sim.hp = sim.max_hp()
+	var boxes: Array = []
+	for s in ["Primary", "Secondary"]:
+		var gun = sim.equipped[s]
+		if gun != null and Items.ammo_type(gun) != "none" and not sim.ammo_box(Items.ammo_type(gun)).is_empty():
+			var box: Dictionary = sim._plain(Data.AMMO, sim.ammo_box(Items.ammo_type(gun))["name"])
+			box["rounds"] = 100000
+			sim.rig.append(box)
+			boxes.append(box)
 	for i in [0, 8]:
 		var d0: int = sim.depth[i]
 		var intel0: Array = sim.intel[i].duplicate()
@@ -358,6 +360,9 @@ func _ladder_read(sim, push: float) -> Dictionary:
 		sim.depth[i] = d0
 		sim.intel[i] = intel0
 		sim._surv_cache.erase(i)
+	for box in boxes:
+		sim.rig.erase(box)
+	sim.hp = hp0
 	return ladder
 
 
