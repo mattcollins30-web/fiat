@@ -2177,6 +2177,15 @@ with the cash, the later ones priced), a column's next tile builds, the Upgrade 
 the yard; Training's class line up and the trait's figures on the strip; the wall card's order; the yard
 tiles' words inside their tiles; the top bar's order. Run clean here before it goes to the Legion.
 
+**From play on the last pass (8 Oct, Matt).** "DMG needs to be next to XP": the slots step by the line's
+width now (`TOP_LINE_W` 180), not by the widest text, so the three sit at one gap, and the XP figures read
+123k from a hundred thousand up (`_short`) so the widest XP is "99,999 / 99,999" and fits its line. The
+Attack card's headline is "115 dmg/s" with no unit ("damage a second" clipped). The log line is
+left-justified: the time at the left and the line right after it, re-placed on every refresh (the time was
+right-aligned in a "99:59:59" box, so a "15:15" sat forty pixels in). The dead space at the log's right
+is open - a question for Matt. *The caps pass* Matt asked for ("the entire game needs a caps pass -
+there's too much to list"): the rule to apply, proposed below in the conversation, then the sweep.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

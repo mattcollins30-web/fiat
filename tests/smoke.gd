@@ -4561,6 +4561,11 @@ func _check_fit(main, where: String) -> void:
 		push_error("%s: the rail ends at %.0f, the log at %.0f" % [where, rail_end, log_end])
 		bad += 1
 	bad += _check_nodes(main._top_labels.values(), [], where + " top bar")
+	# the log line starts just after its time (8 Oct: left-justified)
+	var et: Label = main._event_times[0]
+	if et.text != "" and absf(main._event_labels[0].position.x - (20 + ceilf(UI.text_width(et, et.text)) + 16)) > 0.5:
+		push_error("%s: the log line sits apart from its time" % where)
+		bad += 1
 	bad += _check_nodes([main._top_caption], [], where + " top bar caption")
 	for k in main._top_glyphs:
 		if main._top_glyphs[k].texture == null:
@@ -6464,7 +6469,7 @@ func _yard_checks(main) -> void:
 	var fire_share: int = int(round(float(sim.conversion().get("fire", 0.0)) * 100.0))
 	var attack_chips: Array = attack._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
 	_check(fire_share >= 20 and attack_chips.has("Fire %d%%" % fire_share), "with %d%% as fire the Attack card's chips read %s" % [fire_share, str(attack_chips)])
-	_check(attack._headline.text == "%.0f/s" % sim.dps(), "the Attack headline is '%s', not the damage a second" % attack._headline.text)
+	_check(attack._headline.text == "%.0f dmg/s" % sim.dps(), "the Attack headline is '%s', not the damage a second" % attack._headline.text)
 	sim.equipped["Primary"] = hold_gun
 	# the runner's trait reads as a stat: a chip with its figures on the Runner card, a line on the Caravan
 	var runner_card = main._cards[titles.find("Runner")]

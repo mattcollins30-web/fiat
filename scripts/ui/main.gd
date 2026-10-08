@@ -65,14 +65,14 @@ const TOP_WORST := {
 	"level": "50 +999",
 	"hp": "999 / 999",
 	"dps": "9,999 dmg/s",
-	"xp": "9,999,999 / 9,999,999",
+	"xp": "99,999 / 99,999",         # _short reads a hundred thousand up as 123k, so this is the widest
 	"where": "Out: Ransacked streets",
 	"class": "Paramedic",
 }
 const TOP_GAP := 28
 const TOP_GLYPH := 26            # the glyph before a figure (8 Oct)
 const TOP_GLYPH_GAP := 8
-const TOP_LINE_W := 150          # the line under the HP and XP figures
+const TOP_LINE_W := 180          # the line under the HP, XP and damage figures: the slots step by it, so the three sit at one gap (8 Oct)
 const TOP_CAPTION_W := 94        # "LEVEL" before the level's figure
 const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "cash"}
 const EVENT_TIME_WORST := "99:59:59"
@@ -169,7 +169,7 @@ func _build() -> void:
 		_top_labels[k] = UI.label(_top_row, Rect2(x, 8, widths[k], 34), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 		_top_lines[k] = [UI.panel(_top_row, Rect2(x, 46, TOP_LINE_W, 4), UI.box(Pal.TRACK, 2)),
 				UI.panel(_top_row, Rect2(x, 46, TOP_LINE_W, 4), UI.box({"hp": Pal.GOOD, "xp": Pal.ACCENT, "dps": Pal.TEXT_2}[k], 2))]
-		x += maxf(widths[k], TOP_LINE_W) + TOP_GAP
+		x += TOP_LINE_W + TOP_GAP
 	# the right group, right-justified: the place, notes, cash
 	x = inner
 	for k in ["cash", "notes", "where"]:
@@ -246,7 +246,7 @@ func _build() -> void:
 	var sw := ceilf(UI.font("SemiBold", false).get_string_size(SPEED_TEXT, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x)
 	for i in range(Pal.EVENT_LINES):
 		_event_times.append(UI.label(_events, Rect2(20, 4 + i * 27, tw, 27), "", "Regular", Pal.FLOOR, tones[i],
-				HORIZONTAL_ALIGNMENT_RIGHT))
+				HORIZONTAL_ALIGNMENT_LEFT))       # left-justified (8 Oct, Matt: "the log sits oddly"); the line follows the time's width on refresh
 		_event_labels.append(UI.label(_events, Rect2(20 + tw + 20, 4 + i * 27, Pal.GRID_W - 40 - tw - 20 - sw - 20, 27), "",
 				"Regular", Pal.FLOOR, tones[i], HORIZONTAL_ALIGNMENT_LEFT, false))
 	_speed_label = UI.label(_events, Rect2(Pal.GRID_W - 20 - sw, 4, sw, 27), SPEED_TEXT, "SemiBold", Pal.FLOOR, Pal.WARN,
@@ -701,6 +701,9 @@ func refresh() -> void:
 	for i in range(Pal.EVENT_LINES):
 		var j := ev.size() - 1 - i
 		_event_times[i].text = _time_of_day(ev[j][0]) if j >= 0 else ""
+		var lx: float = 20 + ceilf(UI.text_width(_event_times[i], _event_times[i].text)) + 16
+		_event_labels[i].size.x += _event_labels[i].position.x - lx
+		_event_labels[i].position.x = lx
 		UI.fit(_event_labels[i], _by_sentence(str(ev[j][1])) if j >= 0 else [""])
 
 
@@ -727,7 +730,16 @@ func _xp_words() -> String:
 	var lv: int = sim.level() + sim.paragon()          # past the cap the paragon levels count on, on the same curve (7 Oct)
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
-	return "%s / %s" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp)]
+	return "%s / %s" % [_short(sim.xp - this_xp), _short(next_xp - this_xp)]
+
+
+## A figure for the top bar: 12,345 · 123k · 1.2M, so the XP slot stays narrow past the cap.
+static func _short(x: float) -> String:
+	if x >= 1e6:
+		return "%.1fM" % (x / 1e6)
+	if x >= 1e5:
+		return "%.0fk" % (x / 1e3)
+	return Fmt.num(x)
 
 
 ## The damage line's fill, 0 to 1: a minute's fire against the best open site's first gang at its depth
@@ -836,7 +848,7 @@ func _runner_cards() -> Array:
 	var affix_pct: float = sim._affix_sum("damage_pct") + sim.tree_sum("damage_pct") + sim._affix_sum("attack_pct")
 	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
 	out.append({
-		"title": "Attack", "headline": "%.0f/s" % sim.dps(), "unit": "damage a second",
+		"title": "Attack", "headline": "%.0f dmg/s" % sim.dps(), "unit": "",
 		"chips": deal_chips,
 		"lines": [["Guns", "%.0f/s" % maxf(guns, Data.UNARMED_DPS)], ["Level", "+%.0f%%" % (Data.DMG_PER_LEVEL * (lv - 1) * 100.0)],
 			["Affixes · tree", _signed_pct(affix_pct)], ["Past", ("×%.2f" % sim.cm("damage")) if sim.cls != "" else "—"],
