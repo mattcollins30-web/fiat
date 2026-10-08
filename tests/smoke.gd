@@ -6766,8 +6766,8 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.gamble = ["rifle", "charm", "rig", "pistol", "melee"]
-	sim.hp = sim.max_hp()
 	sim.wound = ""                     # whole: the bot keeps the clinic's price back from the gamble when there is one to pay
+	sim.hp = sim.max_hp()              # (the wound first: an HP wound lifts the maximum when it goes)
 	sim.cash = sim.gamble_price("rifle") * 3 - 1
 	bot._gamble_one(sim)
 	_check(bot.bought.is_empty(), "the bot gambled under three times the price")

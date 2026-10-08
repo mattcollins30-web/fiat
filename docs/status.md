@@ -2100,6 +2100,26 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The nineteenth read (the Legion, 8 Oct morning, twenty reads of ten builds, thirty-two hours).** Six red,
+No reds and depth pace green. *The loop runs:* the lorry on seventeen reads of twenty, the first at
+6.0-24.9 h; the bleed Doorman moved ten and twelve times in thirty-two hours (a leg every two and a half
+hours), the poison Poacher ten and eight, the fire and shock Drifters six and seven; the ladders on the
+tenth yard at 29/19 and 30/20 against the first yard's 16/6, so the growth outruns the curve - the
+second leg's figure, answered: ×1.25 a lorry with the paragon banked keeps pace and then some. *The
+three that never, and the two late:* every saved yard reads the convoy at its depth at 1.00 again, and
+sits short of its price - the plain Drifter at 1,679 notes against 1,680, the Paramedic at 844 and the
+Poacher at 1,355 against 2,160 - the notes gone on the mate's uniques and the heads re-armed at twice
+their price. Fixed in the bot: once the services stand within a depth of the lorry, the lorry's price is
+kept back from the mate, the heads and the words in notes (`_notes_kept`). A number for Matt beside
+it: the convoy's price is still the three heads at full-strength rate (`PINNACLE_COST` ×2, 2,160 notes
+at depth 8) though the heads now come light; the plain three would be 960. *The rest:* the ladders'
+spread on the fire Drifter's seventh yard 26/14 (the spread widens as the yards compound: the band was
+set on first yards; proposed: the row reads the first yard, or the band is 7-13); scrap 8.7 crafts an
+hour on a Scrapper (the loop's late game is richer still; the band's top to 10, or the row reads the
+first sixteen hours); deaths one in 48-232 and wounds 2-7%, the pair as before - a bot playing to 0.88
+with a kit that outruns the sites it runs is never wounded; the bank's band 1.7-3.3 h on the classes,
+the drop's luck. Nothing moved but the bot.
+
 **The eighteenth read (the Legion, overnight 7-8 Oct, twenty reads of ten builds, thirty-two hours, every
 read to the end in 20-50 minutes of wall).** Seven red. *The lorry on eleven reads of twenty* (8.9 h
 to 29.4 h), the loop run to seven moves on a poison Poacher (its ladders 24/13 against the first

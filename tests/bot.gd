@@ -175,7 +175,7 @@ func _endgame(sim) -> void:
 			if sim.cls == "" and cls != "":
 				sim.set_class(cls)
 			bought.append([sim.elapsed, "moved the yard (%d)" % moves])
-	if sim.can_buy_mate() and sim.notes >= int(sim.mate["notes"]) * 3:
+	if sim.can_buy_mate() and sim.notes - int(sim.mate["notes"]) >= _notes_kept(sim) and sim.notes >= int(sim.mate["notes"]) * 3:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()
 		bought.append([sim.elapsed, "the mate: %s" % name])
@@ -184,7 +184,7 @@ func _endgame(sim) -> void:
 	# there's twice the price in hand - a flush player's reserve, not a miser's
 	if sim.campaign_done():
 		var t: int = pick_tier(sim)
-		while sim.can_add_word(t) and sim.cash - sim.juice_cost(t) * 2 >= _reserve(sim):     # twice: at depth 15 a word is £70k and the pile sat under three of them
+		while sim.can_add_word(t) and sim.cash - sim.juice_cost(t) * 2 >= _reserve(sim) and (not sim.words_in_notes() or sim.notes - sim.juice_notes(t) >= _notes_kept(sim)):     # twice: at depth 15 a word is £70k and the pile sat under three of them
 			var cost: int = sim.juice_cost(t)
 			sim.add_word(t, sim.juice_options(t)[0])
 			bought.append([sim.elapsed, "word on tier %d for £%d" % [t, cost]])
@@ -435,7 +435,7 @@ func pick_tier(sim) -> int:
 	# stands: armed when the odds hold with them in; past the campaign, when
 	# the notes are there
 	var b: Dictionary = sim.boss_of(best)
-	if not b.is_empty() and sim.best_depth[best] > 0 and (not sim.bosses_beaten[int(b["zone"])] or sim.notes >= sim.boss_cost(best) * 2):
+	if not b.is_empty() and sim.best_depth[best] > 0 and (not sim.bosses_beaten[int(b["zone"])] or (sim.notes >= sim.boss_cost(best) * 2 and sim.notes - sim.boss_cost(best) >= _notes_kept(sim))):
 		sim.arm_boss(best, true)
 		if sim.survival(best) < PUSH:
 			sim.arm_boss(best, false)
@@ -474,6 +474,18 @@ func pick_tier(sim) -> int:
 ## the next run came, and ran the services hurt and wounded for seven hours at £3k a run), and £2,000.
 func _reserve(sim) -> float:
 	return sim.treat_cost() * 3.0            # nothing when whole: the bench keeps its own £2,000 floor
+
+
+## The notes kept back for the lorry once the services stand at its depth (the nineteenth read: three yards read the
+## convoy at 1.00 and sat at 844-1,679 notes against its 1,680-2,160, the rest gone on the mate and the heads).
+func _notes_kept(sim) -> int:
+	if sim.lorry_done or not sim.campaign_done() or sim.best_depth[Data.CONVOY_TIER] < sim.convoy_depth() - 1:
+		return 0
+	var hold: int = sim.depth[Data.CONVOY_TIER]
+	sim.depth[Data.CONVOY_TIER] = maxi(hold, sim.convoy_depth())
+	var cost: int = sim.boss_cost(Data.CONVOY_TIER)
+	sim.depth[Data.CONVOY_TIER] = hold
+	return cost
 
 
 ## What a site is worth running past the campaign: its level, and the services first while the lorry stands.
