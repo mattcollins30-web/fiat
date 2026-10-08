@@ -2231,6 +2231,35 @@ rows, the tiles priced or hollow, the affix jobs inside the card, a re-roll from
 count and the foot saying so, the Next words clear of the tabs, the chips inside the heading, the
 bat's third tile a hollow slot. Local smoke clean.
 
+**The menus in the rail's shape (8 Oct, Matt: "looks like a default godot project - same changes need
+to be made for the in game escape key menu"; Menu-A on the canvas, Title A and Pause B picked).** What
+read as the default was the box in a box: five equal grey rows, each its own button, inside a dark glass
+panel. `menu.gd` now has three shapes on one component. The rows are a ledger everywhere: ruled by
+hairlines, no boxes, the lit row (the focus) on the card ground with a gold bar at its left, a stamp
+with a line-drawing glyph where the item brings one (`glyph` on the item: `art/ui/menu_*.png`, eight,
+rendered as the rail's were - mine, not Matt's), names at 30 over details at 20, a plain row 72 tall
+and one with a detail 92. *The title* (`opaque` over the painting): a column down the painting's left
+(`COLUMN_W` 650, a `GradientTexture2D` from the ground's dark to nothing), the wordmark at its head,
+the rows under it 570 wide, MUNDANE STUDIOS and FIAT (with `application/config/version` when the
+project sets one) at the foot; no panel, no heading - the wordmark is the heading. *The pause*
+(`dock`: main passes the rail's rect): a drawer in the rail's place over the dimmed game, the rail's
+panel edged gold, "PAUSED · HARDCORE CAMP" as a kicker strip, names only (the rail's width), the
+column's empty foot left as Matt chose it. *The card* (everything else: the slots, the builds, the
+Bench on worn gear, Move the Yard, the away report): heading and sub as before, the rows ruled. The
+dim is sized by hand in `layout` (a full-rect preset set before the node is in the tree left it at
+nothing - the pause had been drawing over an undimmed room). *The wordmark:* Matt took the mock's
+lettering over a pixellab job - `art/wordmark.png` is now the mock's FIAT / LET IT BE DONE (DejaVu
+Sans Bold, off-white with a 2 px charcoal offset) rendered at 200 × 80 by chromium
+(`mock/menu_glyphs.py`), cropped to its 154 × 72 of lettering, drawn at the painting's 3× so it sits on
+the same pixel grid. The save's words read "Level 24 · £25,161 · 10 h 37 m · 8 Oct, 16:37" (middle
+dots, no "played") so they fit the column's row on one line. The smoke: every menu's rows inside the
+panel (the card keeps its PAD under them, the column and the drawer end at their rows), a row with a
+glyph has its stamp and texture and its name clear of the stamp, the title's rows and wordmark inside
+the column with the wordmark above the rows and the foot below, the drawer's rect the rail's exactly
+with its kicker up and no details, the card with its heading; the add-words test picks the piece's
+own grid cell (`cell_of`) rather than `_craftable()`'s index, which could point at another piece of
+the same value (a flake seen once). Local smoke clean twice.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

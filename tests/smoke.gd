@@ -468,6 +468,8 @@ func _slots_offline_hardcore(main) -> void:
 	main.show_slots(false, main.show_title)
 	main.show_slots(true, main.show_pause)
 	main.show_title()
+	_check(main._menu.shape() == ("title" if main._menu._picture.texture != null else "card"), "the title's shape is %s" % main._menu.shape())
+	_check_fit(main, "Title")
 	main._menu.close()
 	sim = main.sim
 	# away three hours with auto-run on: missions ran, the log moved, the clock moved
@@ -2848,12 +2850,9 @@ func _craft_checks(main) -> void:
 	_check(str(sim.events.back()[1]).ends_with(sim.last_craft["words"]), "the log line does not carry the Bench's words: '%s'" % str(sim.events.back()[1]))
 	main.show_room(main.WORKSHOP)
 	main._workshop._set_view("craft")
-	var craftable: Array = main._workshop._craftable()
-	var kc := -1
-	for i in range(craftable.size()):
-		if craftable[i]["id"] == it["id"]:
-			kc = i
-	_check(kc >= 0, "the added-to piece is not in the Craft view")
+	_check(main._workshop._craftable().any(func(c): return c["id"] == it["id"]), "the added-to piece is not in the Craft view")
+	var kc: int = main._workshop._inv.cell_of(it["id"])        # the grid's own cell (two pieces of one value can sort either way)
+	_check(kc >= 0, "the added-to piece has no cell in the Craft view's grid")
 	if kc >= 0:
 		main._workshop._pick_cell(kc)
 	main.refresh()
@@ -3614,6 +3613,7 @@ func _sound_checks(main) -> void:
 	sim.extract_now()
 	main.show_pause()
 	_check(main._menu._items.any(func(i): return str(i["name"]).begins_with("Sound: ")), "the pause menu has no sound toggle")
+	_check(main._menu.shape() == "drawer", "the pause is not the drawer: %s" % main._menu.shape())
 	_check_fit(main, "Paused (sound)")
 	main._menu.close()
 	sim.load_dict(saved)
@@ -4622,10 +4622,35 @@ func _check_fit(main, where: String) -> void:
 	if main._menu.visible:
 		bad += _check_nodes(main._menu.text_nodes(), [], where + " menu")
 		var pr: Rect2 = main._menu.panel_rect()
-		for i in range(main._menu._items.size()):
-			var b = main._menu._rows[i]
-			_check(b.position.y + b.size.y + main._menu.PAD <= main._menu._panel.size.y + 0.5, "%s menu: row %d runs off the panel" % [where, i])
+		var mn = main._menu
+		var foot: float = mn.PAD if mn.shape() == "card" else 0.0
+		for i in range(mn._items.size()):
+			var b = mn._rows[i]
+			_check(b.position.y + b.size.y + foot <= mn._panel.size.y + 0.5, "%s menu: row %d runs off the panel" % [where, i])
+			_check(b.position.x + b.size.x <= mn._panel.size.x + 0.5, "%s menu: row %d runs off the panel's side" % [where, i])
+			# a row's stamp carries a glyph that exists when the item brings one (the menus' line drawings, 8 Oct)
+			if str(mn._items[i].get("glyph", "")) != "":
+				_check(mn._glyphs[i].visible and mn._glyphs[i].texture != null and mn._stamps[i].visible, "%s menu: row %d's glyph %s is missing" % [where, i, mn._items[i]["glyph"]])
+				_check(mn._names[i].position.x >= mn.STAMP_X + mn.STAMP, "%s menu: row %d's name sits on its stamp" % [where, i])
 		_check(pr.position.y >= 0.0 and pr.end.y <= 1080.0, "%s menu: the panel leaves the screen (%s)" % [where, pr])
+		match mn.shape():
+			"title":
+				# the column: the wordmark at its head, the rows under it, the foot under them, all inside the column
+				var vs: Vector2 = mn.get_viewport_rect().size if mn.is_inside_tree() else Vector2(1920, 1080)      # as the menu lays itself out
+				var x0: float = floorf((vs.x - 1920.0) / 2.0)
+				_check(pr.position.x >= x0 + mn.COLUMN_X - 0.5 and pr.end.x <= x0 + mn.COLUMN_W + 0.5, "%s menu: the title's rows leave the column (%s)" % [where, pr])
+				_check(not mn._wordmark.visible or mn._wordmark.position.y + mn._wordmark.size.y <= pr.position.y, "%s menu: the wordmark runs into the rows" % where)
+				_check(not mn._wordmark.visible or mn._wordmark.position.x + mn._wordmark.size.x <= x0 + mn.COLUMN_W + 0.5, "%s menu: the wordmark leaves the column" % where)
+				_check(mn._foot_left.visible and mn._foot_left.position.y >= pr.end.y, "%s menu: the foot runs into the rows" % where)
+				_check(not mn._title.visible and mn._stamps[0].visible, "%s menu: the title shows its heading, or no stamps" % where)
+			"drawer":
+				# the drawer is the rail's rect exactly, its kicker up, names only
+				var rail := Rect2(main._rail.position, main._rail_panel.size)
+				_check(pr.is_equal_approx(rail), "%s menu: the drawer is not the rail's rect (%s vs %s)" % [where, pr, rail])
+				_check(mn._kicker.visible and mn._kicker.text.begins_with("PAUSED"), "%s menu: the drawer's kicker is '%s'" % [where, mn._kicker.text])
+				_check(mn._items.all(func(it): return true) and mn._details[0].text == "" and mn._details[1].text == "", "%s menu: the drawer's rows carry details" % where)
+			_:
+				_check(mn._title.visible, "%s menu: the card has no heading" % where)
 	bad += _check_nodes(main._juice.text_nodes(), [], where + " toasts")
 	# and the sweep: every label showing anywhere, whether or not its screen
 	# lists it - a label the lists miss is the one that trails off in play

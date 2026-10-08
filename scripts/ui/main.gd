@@ -412,13 +412,13 @@ func show_title() -> void:
 	var items := []
 	var saved := FileAccess.file_exists(save_file)
 	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
-			"action": load_game.bind(save_file), "enabled": saved})
+			"action": load_game.bind(save_file), "enabled": saved, "glyph": "menu_continue"})
 	items.append({"name": "New camp", "detail": "One runner, a nail gun, £150",
-			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else ""})
+			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
 	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, cash, everything",
-			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else ""})
-	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title)})
-	items.append({"name": "Quit", "detail": "", "action": _quit})
+			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
+	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
+	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
 	_menu.open("Fiat", "Let it be done", items, Callable(), true)
 
 
@@ -429,7 +429,7 @@ func _save_words(path: String) -> String:
 		return ""
 	var sd: Dictionary = d["sim"]
 	var played: float = float(sd.get("elapsed", 0.0))
-	return "Level %d, %s, %s played · %s%s" % [Data.level_for_xp(float(sd.get("xp", 0.0))), Fmt.money(float(sd.get("cash", 0.0))),
+	return "Level %d · %s · %s · %s%s" % [Data.level_for_xp(float(sd.get("xp", 0.0))), Fmt.money(float(sd.get("cash", 0.0))),
 			Fmt.away(played), Fmt.when(float(d.get("saved", 0.0))), " · hardcore" if sd.get("hardcore", false) else ""]
 
 
@@ -473,14 +473,15 @@ func _save_to_slot(path: String) -> void:
 	_menu.close()
 
 
+## The pause as a drawer over the rail (Pause B, 8 Oct): the rooms' column becomes the menu's.
 func show_pause() -> void:
 	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
-		{"name": "Resume", "detail": "", "action": _menu.close},
-		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The Yard's ambient, the gun, the gangs, the door", "action": _toggle_sound},
-		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume},
-		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause)},
-		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title},
-	], _menu.close)
+		{"name": "Resume", "detail": "", "action": _menu.close, "glyph": "menu_continue"},
+		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The Yard's ambient, the gun, the gangs, the door", "action": _toggle_sound, "glyph": "menu_sound"},
+		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
+		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause), "glyph": "menu_slots"},
+		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title, "glyph": "menu_title"},
+	], _menu.close, false, Rect2(_rail.position, _rail_panel.size))
 
 
 func _toggle_sound() -> void:
