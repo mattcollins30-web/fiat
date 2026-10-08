@@ -2497,6 +2497,15 @@ func _events_checks(main) -> void:
 	var notes0: int = int(m.get("notes", 0))
 	sim.advance(0.1)
 	_check(m["remaining"] == sim.PATROL_BASE + 2 and int(m["notes"]) > notes0 and m["event_done"] == "convoy" and m["event_at"] < 0.0, "the convoy did not come: %d left, %d notes" % [m["remaining"], int(m["notes"])])
+	# and the run screen counts them (8 Oct, Matt: "11 of 10 down"): the bar's "of" is the pool as it stands, with the
+	# convoy's crew in, and the band says a convoy came
+	m["cleared"] = false
+	m["kills"] = int(sim.tier(0)["pool"])
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var bar_words: String = main._run._band._bar_label.text
+	_check(bar_words == "%d of %d down" % [m["kills"], m["kills"] + m["remaining"]], "the run's bar reads the site's pool with a convoy's crew in: '%s'" % bar_words)
+	_check(main._run._band.right[1].text.contains("convoy"), "the band does not say a convoy came: '%s'" % main._run._band.right[1].text)
 	sim.extract_now()
 	# someone trapped: a trait promised to the next arrival
 	sim.promised = ""

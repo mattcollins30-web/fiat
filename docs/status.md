@@ -2177,6 +2177,14 @@ The line past the Radio was the last row's hairline: `last` was set after the ro
 it once, at build - a setter now. Smoke: a fight five seconds in has landed something, and the eased line
 sits off the yard's share mid-fight; the hairline is off on the last row and on the rest.
 
+**From the playtest: "11 of 10 down" (8 Oct, Matt: "no search happened and the count continued over -
+it went to 12 out of 10 before I had to bail. level doesn't count as complete").** A convoy event (30% of
+runs, 15-70 s in: four more on the pool, notes a kill, "A convoy comes through" in the log) had put four on
+the parade's ten, and the run screen's bar read the site's pool, not the pool as it stood - so the run was
+right and the screen was wrong. The bar's "of" is kills + remaining now, and the band's gang line says "a
+convoy's crew in" (or "a convoy and N gangs so far"). Smoke: with a convoy in, the bar reads the grown
+pool and the band says so.
+
 **The twenty-third read, the final pass (the Legion, 8 Oct, thirty reads of ten builds, three a build,
 thirty-two hours; the Drifter's +10%, wounds at 5-30 on the merged builds).** Twenty minutes for
 thirty-one jobs. Three red. *The lorry* on every build but the plain

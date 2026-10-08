@@ -178,8 +178,15 @@ func show_state(s) -> void:
 	var cap_line: String = ("◆◆ " + ", ".join(caps)) if not caps.is_empty() else ""
 	if cap_line != "" and UI.text_width(_band.right[2], cap_line) > _band.RIGHT_W:
 		cap_line = "◆◆ %d capstones" % caps.size()
-	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"], cap_line])
-	_band.set_bar((float(m["kills"]) / float(t["pool"])) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], t["pool"]]))
+	# the pool as it stands: the site's, and whatever came after - a convoy's crew counts (8 Oct, Matt: "11 of 10
+	# down ... level doesn't count as complete"; the convoy event had put four on the pool and the bar read the site's)
+	var convoy_in: bool = str(m.get("event_done", "")) == "convoy"
+	var gangs: String = "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]
+	if convoy_in:
+		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
+	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), gangs, cap_line])
+	var of: int = maxi(1, int(m["kills"]) + int(m["remaining"])) if not m["cleared"] else int(t["pool"])
+	_band.set_bar((float(m["kills"]) / float(of)) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], of]))
 	# them
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	People.show(_head_face, m["boss"]["name"] if boss_on else "")
