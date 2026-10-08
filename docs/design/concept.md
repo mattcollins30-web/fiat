@@ -741,4 +741,7 @@ the drop and at the bench, a unique or set piece found deep carrying the site's 
 find is twice the depth-15 one of the same tier and the chase has no end. The enemy curve is +14% a
 level; the player's growth is the four together, and the pass reads whether they keep pace over two
 legs (thirty-two hours) rather than one.
+Built 8 Oct, from the first thirty-two-hour read: the paragon levels are the yard's, not the
+runner's - a move banks them and the next runner adds to them - or every yard's runner started the
+climb from nothing and the second leg read the stations the first had held at 0.00.
 

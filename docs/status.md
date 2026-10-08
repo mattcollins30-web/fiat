@@ -2100,6 +2100,31 @@ reds recorded with their causes, not accepted: it resumes on his save with the l
 lean by tier against the classes' types, a gun on the shelf when the loadout stalls, the strong
 builds' top-end margin, `WOUND_AT`).
 
+**The eighteenth read (the Legion, overnight 7-8 Oct, twenty reads of ten builds, thirty-two hours, every
+read to the end in 20-50 minutes of wall).** Seven red. *The lorry on eleven reads of twenty* (8.9 h
+to 29.4 h), the loop run to seven moves on a poison Poacher (its ladders 24/13 against the first
+yard's 16/6), to three on a Scrapper; nine reads never, with the services at depth 8 and the yard
+flush (a shock Drifter with 50,900 notes, a Doorman with 28,600). Read from the saved yards: *every
+one of them reads the convoy at its depth at 1.00* - the bot was not taking it. Three bot faults,
+all fixed: it left the run when the site read picked over, which with the pool half down and the
+heads still to come meant walking out on the convoy at 12 of 16 (`should_leave` stays while a head or
+the lorry stands); a pick disarms everything first and the lorry was only re-armed when its odds were
+read again, twenty minutes apart, so the run after a good read went out plain (`lorry_ok` keeps the
+read's verdict and arms on it); and it built a box of rounds a run for thirty hours - `build` lands
+the thing "whatever the room" - until the stash sat at 327 of 234 (291 boxes) and every find was
+dropped, the kit stood still and the services were run at depth 8 for fifteen hours at 0 items (the
+sim's `build_options` now want room for what they make, "No room in the stash"; the bot builds rounds
+only under three boxes of its type). On the shock Drifter's saved yard the lorry falls in 74 seconds
+once the bot stays. *The second leg's shape:* a move starts a new runner at level 1, and the paragon
+levels went with the old one, so a fresh yard's runner at level 44 read the stations the last one held
+at 1.00 at 0.00 (the Scrapper on its fourth yard, the lorry at depth 11 and the services' depth 8
+plain at 0.00) - the paragon is now the yard's, banked by the move (`paragon_banked`, saved) and added
+to by every runner since, so the loop carries its growth. *The rest:* deaths one in 30-162 (the bot's
+appetite at PUSH 0.88 and now a kit far past the sites it runs), wounds 1-9% (0.30 over-corrects),
+the Scrapper's second read at T8 50% and the fire Drifter's depth pace at 0.7 an hour are the stash
+wall. Nothing moved but the bot and the stash's room; the nineteenth read is the first that can read
+the second leg.
+
 **The seventeenth read (the Legion, 7 Oct, twenty reads of ten builds, thirty-two hours asked: the
 engine's first).** Every read was cut by the gate's wall limit (an hour) at 9-23 simulated hours, so
 the rows read against sixteen are not comparable - but the lorry row is the finding. *The loop works

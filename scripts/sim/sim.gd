@@ -78,6 +78,7 @@ var runs_total := 0                # every run, every runner: the mate's clock
 var yard_moves := 0                # how many times the yard has moved (the prestige)
 var lorry_done := false            # the convoy beaten in this yard: the endgame's ending (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
+var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
 var best_dig := {}                 # the yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the fence holds the paper on the kit
@@ -150,9 +151,11 @@ func level() -> int:
 	return Data.level_for_xp(xp)
 
 
-## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top.
+## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top. The yard's, not the runner's:
+## a move banks the runner's paragon levels and the next runner adds to them (the eighteenth read: a fresh yard's runner
+## at level 44 read the stations at 0.00 that the last one held at 1.00, with every paragon level gone).
 func paragon() -> int:
-	return Data.paragon_for_xp(xp)
+	return paragon_banked + Data.paragon_for_xp(xp)
 
 
 ## The yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
@@ -913,7 +916,8 @@ func move_yard(trade := "") -> bool:
 			yard_tree.append(id)
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
-		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points}
+		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
+		"paragon_banked": paragon()}
 	if atlas_rank("held_word") > 0:
 		for i in range(pinned.size()):
 			if pinned[i]:
@@ -932,6 +936,7 @@ func move_yard(trade := "") -> bool:
 	yard_moves = keep["moves"]
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
+	paragon_banked = keep["paragon_banked"]
 	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the yard
 	atlas_points = keep["atlas_points"]
 	for i in keep["held"]:
@@ -1267,9 +1272,13 @@ func build_options(kind: String) -> Array:
 
 
 func _build_entry(kind: String, name: String, cost: int, from: String, from_n: int, has_from: bool, why: String, tier: int) -> Dictionary:
-	var ok: bool = has_from and scrap >= cost and mission == null and workshop >= 1
+	# room for what it makes (the eighteenth read, 8 Oct: a bot built a box a run for thirty hours and the stash sat at
+	# 327 of 234 with every find dropped): a box or a grade needs a stack with room or a cell, a med or a grenade a cell
+	var made_slot: String = Data.AMMO if (kind == "box" or kind == "grade") else (Data.MEDICAL if kind == "med" else (Data.GRENADE if kind == "grenade" else "Primary"))
+	var room: bool = stash_room(1) or (made_slot == Data.AMMO and _stack_room(_plain(Data.AMMO, name)))
+	var ok: bool = has_from and scrap >= cost and mission == null and workshop >= 1 and room
 	if why == "" and not ok:
-		why = "The runner is out" if mission != null else ("Needs a bench" if workshop < 1 else "Short of scrap")
+		why = "The runner is out" if mission != null else ("Needs a bench" if workshop < 1 else ("No room in the stash" if not room else "Short of scrap"))
 	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier}
 
 
@@ -4535,7 +4544,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -4628,6 +4637,7 @@ func load_dict(d: Dictionary) -> void:
 	ending = str(d.get("ending", ""))
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
+	paragon_banked = int(d.get("paragon_banked", 0))
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))

@@ -13,6 +13,7 @@ const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four 
 const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
 var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
+var lorry_ok := false          # what that read said: the lorry is armed on it without reading again (a pick disarms everything first)
 
 var bought: Array = []    # [sim seconds, what]
 var keystones_first := false   # train the class trees to their keystones before the yard's
@@ -70,6 +71,8 @@ func should_leave(sim) -> bool:
 	if not sim.searching():
 		return false
 	var m: Dictionary = sim.mission
+	if m.has("boss") and m["boss"]["alive"]:
+		return false                      # a head or the lorry still standing: the run is for him, picked over or not (the eighteenth read left the convoy at 12 of 16 with the pack "full")
 	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.thinning(m, m["t"]) <= Data.THIN_FLOOR
 
 
@@ -238,8 +241,14 @@ func _build_one(sim) -> void:
 	var gun = sim.equipped["Primary"]
 	var type: String = Items.ammo_type(gun) if gun != null else ""
 	var picks: Array = []
+	# rounds only while the stash holds under three boxes of the gun's type: a box a run for thirty hours filled the
+	# stash to 327 of 234 and dropped every find (the eighteenth read)
+	var boxes := 0
+	for it in sim.stash:
+		if Items.is_ammo(it) and Items.base_of(it).get("type", "") == type:
+			boxes += 1
 	for o in sim.build_options("grade"):
-		if o["ok"] and Items.base_named(Data.AMMO, o["name"]).get("type", "") == type:
+		if o["ok"] and boxes < 3 and Items.base_named(Data.AMMO, o["name"]).get("type", "") == type:
 			picks.append(o)
 	if picks.is_empty():
 		for o in sim.build_options("med"):
@@ -435,20 +444,26 @@ func pick_tier(sim) -> int:
 	# the lorry: armed on the services at its depth when the notes are there and the odds hold with the convoy in
 	# (the price and the convoy grow with the depth: when the armed read fails, the services step back toward
 	# convoy_depth() and read again, so the bot does not dig past the lorry it cannot take)
-	if best == Data.CONVOY_TIER and sim.is_convoy(best) and not sim.lorry_done and sim.notes >= sim.boss_cost(best) and sim.elapsed - lorry_read_at >= LORRY_EVERY:
-		lorry_read_at = sim.elapsed
-		while true:
-			sim.arm_boss(best, false)
-			if sim.notes >= sim.boss_cost(best):
-				sim.arm_boss(best, true)
-				if sim.survival(best) >= LORRY_ODDS:
-					if sim.can_insure(best):
-						sim.set_insure(true)     # the ending, insured
-					return best
+	if best == Data.CONVOY_TIER and sim.is_convoy(best) and not sim.lorry_done and sim.notes >= sim.boss_cost(best):
+		if sim.elapsed - lorry_read_at >= LORRY_EVERY:
+			lorry_read_at = sim.elapsed
+			lorry_ok = false
+			while true:
 				sim.arm_boss(best, false)
-			if sim.depth[best] <= sim.convoy_depth():
-				break
-			sim.set_depth(best, sim.depth[best] - 1)
+				if sim.notes >= sim.boss_cost(best):
+					sim.arm_boss(best, true)
+					if sim.survival(best) >= LORRY_ODDS:
+						lorry_ok = true
+						break
+					sim.arm_boss(best, false)
+				if sim.depth[best] <= sim.convoy_depth():
+					break
+				sim.set_depth(best, sim.depth[best] - 1)
+		if lorry_ok and sim.notes >= sim.boss_cost(best):
+			sim.arm_boss(best, true)
+			if sim.can_insure(best):
+				sim.set_insure(true)         # the ending, insured
+			return best
 	if sim.survival(best) < PUSH:
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best

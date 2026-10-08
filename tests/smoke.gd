@@ -5933,11 +5933,14 @@ func _endgame_move_checks(main) -> void:
 	var lorries0: int = sim.lorries
 	var dig0: Dictionary = sim.best_dig.duplicate()
 	var points_kept: int = sim.atlas_points        # the map moves with the yard (part 4)
+	sim.xp = maxf(sim.xp, Data.xp_for_level(Data.MAX_LEVEL + 5))
+	var paragon_before: int = sim.paragon()        # the paragon is the yard's: banked by the move (8 Oct)
 	_check(sim.can_move_yard() and sim.move_yard(), "the yard could not move after the lorry")
 	_check(sim.yard_moves == 1 and sim.lorries == lorries0 and sim.best_dig == dig0 and not sim.lorry_done, "the move lost the score: moves %d, lorries %d, dig %s, lorry %s" % [sim.yard_moves, sim.lorries, str(sim.best_dig), str(sim.lorry_done)])
 	_check(sim.ladder_floor() == 1 and sim.free_yard_nodes() == 1, "the move's floor and free nodes are off: %d / %d" % [sim.ladder_floor(), sim.free_yard_nodes()])
 	_check(sim.convoy_depth() == Data.CONVOY_DEPTH + 1 and sim.pinnacle_depth(8) == int(Data.PINNACLE_DEPTH[2]) + 1, "the ending did not climb a depth with the move: lorry %d, barracks' head %d" % [sim.convoy_depth(), sim.pinnacle_depth(8)])
 	_check(is_equal_approx(sim.lorry_mult(), pow(Data.LORRY_MULT, sim.lorries)) and sim.lorries >= 1, "the lorry's multiplier is off: %.2f for %d" % [sim.lorry_mult(), sim.lorries])
+	_check(sim.paragon_banked == paragon_before and sim.paragon() == paragon_before and sim.level() == 1, "the move did not bank the paragon: banked %d of %d, runner level %d" % [sim.paragon_banked, paragon_before, sim.level()])
 	var yard_ids: Array = []
 	for k in range(Data.tree_named(Data.COMMON_TREE)["nodes"].size()):
 		yard_ids.append("%s/%d" % [Data.COMMON_TREE, k])
