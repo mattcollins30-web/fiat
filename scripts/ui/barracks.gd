@@ -20,7 +20,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
-const BAND_H := 150                                            # the band: the runner, the points free, the classes along its foot
+const BAND_H := 180                                            # the band: the runner, the points free, the class's line under them (150 until the last pass, 8 Oct), the classes across its top right
 const FACE := 116                                              # the runner's portrait in the band
 const CLASS_H := 40                                            # the class buttons, across the band's top right
 const CLASS_W := 176
@@ -30,7 +30,7 @@ const SWAP_W := 160                                            # the middle head
 const NODE_H := 40                                             # a drawer row's name line
 const NODE_GAP := 6
 const NODES_Y := TREE_Y + HEAD_H + 6
-const TILE_H := 52                                             # a node: a tile, two across, the keystone and the capstone the width
+const TILE_H := 62                                             # a node: a tile, two across, the keystone and the capstone the width (52 until the last pass, 8 Oct: the detail panel's height went to the trees and the band)
 const RAIL_W := 22                                             # the rail down a tree's left: filled as far as it's taken
 const TILE_W := (COL_W - RAIL_W - NODE_GAP) / 2
 const TILE_ROWS := 7                                           # the yard's twelve nodes two across, and the capstone under
@@ -46,6 +46,7 @@ var sim
 var selected := ""                 # a node id, or ""
 var _class_buttons: Array = []
 var _class_words: Label
+var _class_line: Label             # the class's own rule, under the points
 const ROWS := 13                   # the yard's twelve nodes and its capstone; a class tree's ten or eleven and its capstone
 var _heads: Array = []             # a column each: {name, count}
 var _rows: Array = []              # [column][row] -> {button, name, effect, more (the cost), id}
@@ -89,6 +90,8 @@ func _init() -> void:
 	_face = People.rect(_band, Vector2(PAD, 16), FACE / 128.0)
 	_points = _band.headline
 	_band.right_from(64)
+	# the class's line, always up under the points (8 Oct, Matt: "move the class specific traits to always be visible under N of N points free")
+	_class_line = UI.label(band_panel, Rect2(PAD + FACE + 20, BAND_H - 42, Pal.GRID_W - 2 * PAD - FACE - 20, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the classes: five buttons across the band's top right; the trait's lines sit under them
 	var cw := CLASS_W
 	var cx0: float = Pal.GRID_W - PAD - Data.CLASSES.size() * cw - 8 * (Data.CLASSES.size() - 1)
@@ -143,15 +146,19 @@ func _init() -> void:
 	_sum_chips.position = Vector2(PAD + SUM_HEAD_W + 10, 10)
 	_sum.add_child(_sum_chips)
 	_panel = UI.panel(self, Rect2(0, PANEL_Y, Pal.GRID_W, PANEL_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_title = UI.label(_panel, Rect2(PAD, 10, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the detail as a strip (8 Oct, Matt: "free up space when selecting a perk"): the title, its chip and its
+	# sentence on one line, the buttons and the runners before on the second
+	_title = UI.label(_panel, Rect2(PAD, 12, Pal.GRID_W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_chips = Chips.new(600)
-	_chips.position = Vector2(PAD, 47)
+	_chips.position = Vector2(PAD, 16)
 	_panel.add_child(_chips)
-	_words = UI.label(_panel, Rect2(PAD, 46, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_scope = UI.label(_panel, Rect2(PAD, 74, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_past = UI.label(_panel, Rect2(PAD, 108, Pal.GRID_W - 2 * PAD - 520, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words = UI.label(_panel, Rect2(PAD, 15, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_scope = UI.label(_panel, Rect2(PAD, 15, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_scope.visible = false         # the capstone's wants ride in the sentence's forms now
+	_past = UI.label(_panel, Rect2(PAD, PANEL_H - PAD - Pal.BUTTON_H, Pal.GRID_W - 2 * PAD - 520, Pal.BUTTON_H), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(WALL):
 		_wall.append(People.rect(_panel, Vector2(PAD, PANEL_H - WALL_S - 10), 0.5))
+		_wall[k].visible = false
 	_train = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 200, Pal.BUTTON_H), true)
 	_train.pressed.connect(_on_train)
 	_respec = UI.button(_panel, Rect2(0, PANEL_H - PAD - Pal.BUTTON_H, 240, Pal.BUTTON_H), false)
@@ -297,6 +304,7 @@ func show_state(s) -> void:
 		_band.set_right([trait_line if UI.text_width(_band.right[0], trait_line) <= _band.RIGHT_W else td0["name"], "one a runner, theirs"])
 	else:
 		_band.set_right([])
+	UI.fit(_class_line, [str(cd0.get("words", "")), ""] if not cd0.is_empty() else ["Pick a past above: what the runner was, and how they fight now", "Pick a past above"])
 	var trees: Array = sim.trees()
 	# the class's two trees either side; the middle cycles the yard's, the
 	# second past's and the five elements'. With no class, the yard's alone.
@@ -489,17 +497,24 @@ func _show_panel() -> void:
 		l.size.x = Pal.GRID_W - 2 * PAD
 	_past.position.x = PAD
 	_scope.text = ""
+	var after_title := func() -> void:
+		# the sentence after the title on the one line (the strip, 8 Oct)
+		_words.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
+		_words.size.x = Pal.GRID_W - PAD - _words.position.x
 	if selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
 			_title.text = "No past yet"
-			_words.text = "Pick one above: what the runner was, and how they fight now. Free to change in the yard"
+			after_title.call()
+			UI.fit(_words, ["Pick one above: what the runner was, and how they fight now. Free to change in the yard", "Pick one above"])
 		else:
 			var td: Dictionary = sim.trait_data()
 			_title.text = ("%s · %s" % [cd["name"], td["name"]]) if not td.is_empty() else "%s" % cd["name"]
-			UI.fit(_words, [cd["words"]])
+			after_title.call()
 			if not td.is_empty():
-				UI.fit(_scope, ["%s: %s · the runner's trait, one each, goes with them" % [td["name"], td["words"]], "%s: %s · one a runner" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]]])
+				UI.fit(_words, ["%s: %s · the runner's trait, one each, goes with them" % [td["name"], td["words"]], "%s: %s · one a runner" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]], ""])
+			else:
+				_words.text = ""
 	else:
 		var nd: Dictionary = sim.node(selected)
 		if nd.is_empty():
@@ -511,22 +526,23 @@ func _show_panel() -> void:
 		var items := [{"forms": [_chip_words(nd)], "colour": _effect_tone(nd)}]
 		if nd.has("type"):
 			items.append({"forms": [TYPE_WORDS[nd["type"]]], "colour": Pal.TEXT_2})
-		_chips.visible = true
-		_chips.show_chips(items)
-		_words.position.x = PAD + _chips.used_width() + 10
-		_words.size.x = Pal.GRID_W - PAD - _words.position.x
-		UI.fit(_words, [_sentence(nd), ""])
-		# the capstone's wants; whose the node is went (Matt, 7 Oct: the same two lines under every node, useless)
-		var branch: String = str(selected).get_slice("/", 0)
-		if nd.get("capstone", false) and not sim.tree.has(selected):
-			var has_key: bool = Data.tree_named(branch)["nodes"].any(func(x): return x.get("keystone", false))
-			if has_key:
-				UI.fit(_scope, ["The capstone: wants the keystone and every notable of the tree, and a quarter of the tree's points again", "Wants the keystone and every notable first", "Wants the whole tree first"])
-			else:
-				UI.fit(_scope, ["The capstone: wants every notable of the tree, and a quarter of the tree's points again", "Wants every notable first", "Wants the whole tree first"])
 		if sim.tree.has(selected):
 			_title.text += " · trained" if sim._active(nd) else " · trained, idle without the gun for it"
-		else:
+		_chips.visible = true
+		_chips.show_chips(items)
+		_chips.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
+		_words.position.x = _chips.position.x + _chips.used_width() + 10
+		_words.size.x = Pal.GRID_W - PAD - _words.position.x
+		# the capstone's wants ride after its sentence (Matt, 7 Oct: whose the node is went - the same two lines under every node, useless)
+		var branch: String = str(selected).get_slice("/", 0)
+		var sentence: String = _sentence(nd)
+		var forms: Array = [sentence, ""]
+		if nd.get("capstone", false) and not sim.tree.has(selected):
+			var has_key: bool = Data.tree_named(branch)["nodes"].any(func(x): return x.get("keystone", false))
+			var wants: String = "wants the keystone and every notable of the tree, and a quarter of its points again" if has_key else "wants every notable of the tree, and a quarter of its points again"
+			forms = ["%s · %s" % [sentence, wants], "%s · wants the %snotables first" % [sentence, "keystone and the " if has_key else ""], sentence, ""]
+		UI.fit(_words, forms)
+		if not sim.tree.has(selected):
 			_train.visible = true
 			var cost: int = sim.node_cost(selected)
 			_train.text = "Train (%d point%s)" % [cost, "" if cost == 1 else "s"]
@@ -582,27 +598,12 @@ func _show_past() -> void:
 		var held: String = (", %s at depth %d" % [str(r["site"]).to_lower(), int(r["depth"])]) if int(r.get("depth", 0)) > 0 else ""     # the deepest they held (the wall as the score, 7 Oct)
 		long.append("a %s, %d run%s%s, %s" % [str(r["class"]).to_lower(), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
 		short.append("%s %d" % [str(r["class"]).to_lower(), int(r["runs"])])
-	# the wall: their faces, newest first, and the line beside it in what's left
-	var x: float = _past.position.x
+	# the line in what's left beside the buttons (the faces went with the strip, 8 Oct: the wall is a card in the Runner room)
+	for t in _wall:
+		t.visible = false
 	var faces := 0
-	for k in range(WALL):
-		var t: TextureRect = _wall[k]
-		var shown := false
-		if k < sim.past.size():
-			shown = People.show(t, str(sim.past[sim.past.size() - 1 - k]["class"]))
-		else:
-			t.visible = false
-		if shown:
-			t.position = Vector2(x, PANEL_H - WALL_S - 10)
-			x += WALL_S + 8
-			faces += 1
-	var right: float = _past.position.x + _past.size.x
-	if faces > 0:
-		x += 8
-		_past.position.x = x
-		_past.size.x = maxf(60.0, right - x)
 	var more: int = sim.past.size() - faces
-	var tail := (" and %d more" % more) if faces > 0 and more > 0 else ""
+	var tail := ""
 	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + ("; ".join(long.slice(0, 2)) + tail if faces > 0 else "; ".join(long)), "Before: " + ", ".join(short), long[0] + tail, "%d runner%s before this one" % [sim.past.size(), "" if sim.past.size() == 1 else "s"]])
 
 

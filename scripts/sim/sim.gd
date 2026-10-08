@@ -59,6 +59,9 @@ var last_next := ""                # the last "what's next" line the log carried
 var auto_equip := false            # idle: the best of each slot goes on when a run comes home
 var auto_sell := false             # idle: the common gear is sold when a run comes home
 var runner_runs := 0               # this runner's runs so far
+## This runner's record (8 Oct, the Runner room): the yard's clock when they arrived, their best run by kills,
+## by damage dealt and by cash, the dearest thing they found, the deepest site they held. Reset with the runner.
+var record := {"since": 0.0, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": 0}
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the bank's vault, opened once
 var ending := ""                   # what became of the deeds: burned, sold, held
@@ -661,6 +664,7 @@ func retire() -> bool:
 			retired.pop_front()              # the oldest makes way
 	log_event("%s retires to the wall at level %d. The yard keeps a little of what they were." % [cls, level()])
 	runner_runs = 0
+	_record_reset()
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			stash.append(equipped[s])        # theirs stays: whatever the room
@@ -3814,10 +3818,27 @@ func _extract() -> void:
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, t["name"].to_lower(), m["kills"], stashed,
 			_cash_words(m["cash"])])
+	_record_run(m)
 	mission = null
 	_idle_tidy()
 	_say_next()
 	restock()
+
+
+## The runner's record, from a run that came back (8 Oct).
+func _record_run(m: Dictionary) -> void:
+	record["runs"] = int(record.get("runs", 0)) + 1
+	record["kills"] = maxi(int(record.get("kills", 0)), int(m["kills"]))
+	record["dealt"] = maxf(float(record.get("dealt", 0.0)), float(m.get("dealt", 0.0)))
+	record["cash"] = maxf(float(record.get("cash", 0.0)), float(m["cash"]))
+	for it in m["found"]:
+		if int(it.get("value", 0)) > int(record.get("find_value", 0)):
+			record["find_value"] = int(it["value"])
+			record["find"] = Items.full_name(it)
+
+
+func _record_reset() -> void:
+	record = {"since": elapsed, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": operators_lost}
 
 
 ## KIA: the loadout and what was found are gone; the stash and cash stay. A
@@ -3840,6 +3861,7 @@ func _kia() -> void:
 	}
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % t["name"].to_lower(), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	runner_runs = 0
+	_record_reset()
 	if m.get("insured", false):
 		# the fence held the paper: what was worn and carried comes back to the stash, whatever the room
 		last_report["lost_value"] = 0
@@ -4596,7 +4618,7 @@ func _state() -> Dictionary:
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -4684,6 +4706,8 @@ func load_dict(d: Dictionary) -> void:
 	last_next = str(d.get("last_next", ""))
 	events_total = int(d.get("events_total", events.size()))
 	runner_runs = int(d.get("runner_runs", 0))
+	if d.has("record"):
+		record = d["record"].duplicate()
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))
 	ending = str(d.get("ending", ""))

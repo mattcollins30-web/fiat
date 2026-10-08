@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tools/pixellab_ui_manifest.json: the fourteen UI glyphs (8 Oct) as
+"""Writes tools/pixellab_ui_manifest.json: the fifteen UI glyphs (8 Oct) as
 painted pixel-art still-lifes in the items' house style, one job each, written
 straight to art/ui/<name>.png over the line drawings there now. The shell tells
 a painting from a line drawing by its colour (UI.glyph_mono) and shows a
@@ -41,6 +41,7 @@ GLYPHS = {
     "xp": ("the top bar: XP", "A realistic painted pixel-art still-life of a small brass five-pointed star badge, tarnished, seen front on."),
     "dps": ("the top bar: damage a second", "A realistic painted pixel-art still-life of a single brass rifle cartridge standing upright, dull and fingerprinted, seen from the side and slightly above."),
     "where": ("the top bar: where the runner is", "A realistic painted pixel-art still-life of a brass pocket compass, lid open, the glass scratched, seen from above."),
+    "runner": ("the rail: Runner", "A realistic painted pixel-art still-life of a worn tweed flat cap, the peak frayed, resting on its crown, seen from the front and slightly above."),
 }
 
 
@@ -63,7 +64,7 @@ def main():
         })
     manifest = {
         "_readme": [
-            "FIAT UI GLYPHS - the fourteen marks on the rail and the top bar (8 Oct), one job each, written straight to the LIVE name art/ui/<name>.png over the white line drawings there now ('single': one file, no _NN, no sheet). 64 x 64: the shell draws them at 38 px on the rail's stamps and 26 px on the top bar with mipmaps, so each is one bold silhouette.",
+            "FIAT UI GLYPHS - the fifteen marks on the rail and the top bar (8 Oct), one job each, written straight to the LIVE name art/ui/<name>.png over the white line drawings there now ('single': one file, no _NN, no sheet). 64 x 64: the shell draws them at 38 px on the rail's stamps and 26 px on the top bar with mipmaps, so each is one bold silhouette.",
             "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_ui_manifest.json ++ --force   (--force because the line drawings exist under the same names; ++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force).",
             "The shell tells a painting from a line drawing by its colour (UI.glyph_mono): a painting shows as it is, a line drawing is tinted grey, gold or dark by where it sits. So the set can be swapped one at a time, and a glyph that doesn't read can go back to its line drawing (git checkout art/ui/<name>.png).",
             "The stamps on the rail are dark grey, gold when the room is lit; the top bar is the panel's dark. A painting with a plain dark background cut away (no_background) sits on both.",

@@ -1,9 +1,9 @@
 extends Button
 ## One room on the rail, as a row of the ledger (8 Oct, round two: F on the
-## design canvas). A stamped square at the left with the room's glyph, the
-## name beside it and one status line under - or, when the room wants a
-## decision, the badge in the status line's place (the row is 312 wide and the
-## stamp takes 72: a badge beside the status overran it). The lit row takes the cards' colour and its
+## design canvas; the last pass: names only). A stamped square at the left with
+## the room's glyph and the name beside it, centred in the row - and, when the
+## room wants a decision, the badge under the name (the row is 312 wide and
+## the stamp takes 72: a badge beside the name overran it). The lit row takes the cards' colour and its
 ## stamp goes gold (the reach across the margin to the card went, 8 Oct, Matt:
 ## "just keep the button as the button").
 ## The rows share the rail's height: `set_row_height` from the layout. The
@@ -16,12 +16,11 @@ const BADGE_PAD := 10           # each side of the badge's word
 const STAMP := 56               # the stamped square
 const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
-const GLYPH_OF := {"The Yard": "yard", "Runs": "runs", "Lock-up": "lockup", "Bench": "bench", "Caravan": "caravan",
+const GLYPH_OF := {"The Yard": "yard", "Runner": "runner", "Runs": "runs", "Lock-up": "lockup", "Bench": "bench", "Training": "caravan",
 	"Clinic": "clinic", "The Fence": "fence", "Radio": "radio"}
 
 var room: String
 var _name: Label
-var _status: Array[Label] = []
 var _stamp: Panel
 var _glyph: TextureRect
 var _badge: Panel
@@ -44,7 +43,6 @@ func _init(room_name: String) -> void:
 	_stamp = UI.panel(self, Rect2(STAMP_X, 0, STAMP, STAMP), UI.box(Pal.STAMP, 8, 1, Pal.CARD_LINE))
 	_glyph = UI.glyph(_stamp, Rect2(9, 9, STAMP - 18, STAMP - 18), GLYPH_OF.get(room_name, "yard"), Pal.TEXT_2)
 	_name = UI.label(self, Rect2(TEXT_X, 0, Pal.RAIL_W - TEXT_X - 18, 36), room_name, "SemiBold", Pal.NAME, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_status.append(UI.label(self, Rect2(TEXT_X, 36, Pal.RAIL_W - TEXT_X - 18, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2))
 	_badge = UI.panel(self, Rect2(TEXT_X, 36, 96, 30), UI.box(Pal.WARN, 15))
 	_badge_label = UI.label(_badge, Rect2(0, 0, 96, 30), "", "SemiBold", Pal.FLOOR, Pal.ACCENT_TEXT,
 			HORIZONTAL_ALIGNMENT_CENTER, false)
@@ -60,11 +58,19 @@ func set_row_height(h: float) -> void:
 	size.y = h
 	custom_minimum_size.y = h
 	_stamp.position.y = floorf((h - STAMP) / 2.0)
-	var top := floorf((h - 66) / 2.0)
-	_name.position.y = top
-	_status[0].position.y = top + 36
-	_badge.position.y = top + 36
 	_rule.position.y = h - 1
+	_place()
+
+
+## The name centred in the row; with a badge, the name up and the badge under it.
+func _place() -> void:
+	var h: float = size.y
+	if _badge.visible:
+		var top := floorf((h - 66) / 2.0)
+		_name.position.y = top
+		_badge.position.y = top + 36
+	else:
+		_name.position.y = floorf((h - 36) / 2.0)
 
 
 func set_selected(on: bool) -> void:
@@ -74,17 +80,16 @@ func set_selected(on: bool) -> void:
 
 
 func show_status(d: Dictionary) -> void:
-	_status[0].text = d.get("status1", "")
 	var word: String = d.get("badge", "")
 	_badge.visible = word != ""
-	_status[0].visible = word == ""
 	_badge_label.text = word
 	if word != "":
-		# the pill hugs its word, in the status line's place
+		# the pill hugs its word, under the name
 		var w := ceilf(UI.text_width(_badge_label, word)) + 2 * BADGE_PAD
 		_badge.size.x = w
 		_badge_label.size.x = w
 		(_badge.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(d.get("badge_tone", "warn"))
+	_place()
 
 
 func _style(on: bool) -> void:
@@ -101,7 +106,7 @@ func _style(on: bool) -> void:
 
 
 ## Pixels between the badge and the row's right edge, or INF with no badge (the
-## badge stands in the status line's place, so it never meets the name).
+## badge sits under the name, so it never meets it).
 func badge_gap() -> float:
 	if not _badge.visible:
 		return INF
@@ -109,6 +114,4 @@ func badge_gap() -> float:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_name, _badge_label]
-	out.append_array(_status)
-	return out
+	return [_name, _badge_label]

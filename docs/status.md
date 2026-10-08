@@ -2143,6 +2143,40 @@ line drawings with `--force`. The shell tells a painting from a line drawing by 
 (`UI.glyph_mono`): a painting shows as it is, a line drawing is tinted, so the set swaps one at a time
 and a glyph that doesn't read goes back to its line (`git checkout art/ui/<name>.png`).
 
+**The last pass of refinement (8 Oct, Matt: the status bar, the rooms, the Yard "looks like a total mess - we
+are combining runner stats and yard upgrades", the works "need the same treatment as the caravan and the map
+... except cash is the cost", "the yard and runner stats need their own menus", "caravan doesn't make any
+sense when it displays perk points/skill trees", the class traits "always visible under N of N points free",
+"free up space when selecting a perk"; and on the Runner, "split out attack and defence into their own cards
+... which then leaves one card for the runner's current stats - time alive, best loot, most damage, most
+kills").** Mocked on the canvas (Refine-A), Matt: "ok on everything but just build and smoke the lot in one".
+Built. *The top bar:* LEVEL, the figure and the class as one group ("LEVEL 9 Poacher"); HP, XP then damage at
+one gap with one line under each; the place, notes and cash right-justified at the same gap, their glyphs
+set before the text on every refresh. *The rail:* names only, nine rooms - the status lines went (a room's
+state is in the room; a badge still says when it wants a decision, under the name) - and Runner joined; the
+caravan's room is Training (the caravan stays as the place on its screen); a `runner` glyph drawn and added
+to the pixellab manifest (fifteen). *The Runner room* (`_runner_cards`): eight cards - Runner (level, the
+XP bar, the past and trait chips, pace, pack, runs, time in the yard), Attack (the damage a second and what
+makes it: guns, level, affixes and tree, the past, first shot; the elements dealt as chips; growth in the
+note past the cap), Defence (max HP, armour and the five resists in their colours, what the open sites fire
+in the foot), Finds, The record (the best run by kills, the most damage and cash in a run, the dearest find,
+runs back, alive - `Sim.record`, kept per runner and saved, reset with them), Kit (what's worn, its worth),
+Last run, The wall (the runners before, newest first, the retired). *The Yard* (`yard_tree.gd`): the works
+as a tree - a column a work, a level a tile top to bottom, the built ones edged gold, the next one its own
+Build carrying its price (on when affordable), the later ones dim with theirs; the clinic, the fence and the
+radio are built here too (`_yard_jobs` carries all eight with every level's name and words) and run in
+their rooms; the purse and the town as chips in the heading with Move the yard at its right; the town's
+note and the clock in the foot. `yard_works.gd` and `yard_town.gd` are no longer used. *Training:* the
+band 180 tall with the class's line always up under the points (`_class_line`), the classes across its top
+right as before; the detail a strip - the title, its chip and its sentence on one line (a capstone's wants
+after the sentence), the buttons and the runners-before line on the second; the faces went (the wall is a
+card in the Runner room); the trees' tiles 62 tall from 52. *Smoke:* the Runner room's eight cards by
+title, the Defence card's resist line in its colour and its headline the max HP, a torch's share as an
+Attack chip; the yard tree's works in order, every tile's state against the sim (built, the next on only
+with the cash, the later ones priced), a column's next tile builds, the Upgrade badge, the purse chips, Move
+the yard; Training's class line up and the trait's figures on the strip; the wall card's order; the yard
+tiles' words inside their tiles; the top bar's order. Run clean here before it goes to the Legion.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

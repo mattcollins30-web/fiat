@@ -2442,7 +2442,7 @@ func _contracts_checks(main) -> void:
 			sim.stash.erase(it)              # nothing in the stash to hand in: the unique is on offer, not ready
 	main.refresh()
 	var fence_status: Dictionary = main._rail_status(main.MARKET) if main.has_method("_rail_status") else {}
-	_check(fence_status.get("badge", "") == "Unique" and (str(fence_status.get("status1", "")) + str(fence_status.get("status2", ""))).contains("contract"), "the rail does not flag a contract that pays a unique: %s" % str(fence_status))   # the contracts on the first line since the ledger (8 Oct)
+	_check(fence_status.get("badge", "") == "Unique", "the rail does not flag a contract that pays a unique: %s" % str(fence_status))   # the badge alone since the names-only rail (8 Oct)
 	main.show_room(main.MARKET)
 	main.refresh()
 	_check(main._fence._tabs[2].text == "Contracts ★", "the contracts tab reads '%s'" % main._fence._tabs[2].text)
@@ -2645,7 +2645,7 @@ func _pinnacle_checks(main) -> void:
 	sim.extract_now()
 	main.show_room(main.OVERVIEW)
 	main.refresh()
-	_check(main._yard_town._button.visible and main._yard_town._notes[0].text.begins_with("The lorry's beaten"), "the Yard does not light the move at the lorry: button %s, note '%s'" % [str(main._yard_town._button.visible), main._yard_town._notes[0].text])
+	_check(main._yard_tree._move.visible and main._yard_tree._foot.text.begins_with("The lorry's beaten"), "the Yard does not light the move at the lorry: button %s, note '%s'" % [str(main._yard_tree._move.visible), main._yard_tree._foot.text])
 	_endgame_move_checks(main)
 	# the rules: the keys drive, the pen doubles the notes, the ledger a tier up, the load fills the pack
 	var pace0: float = sim.pace()
@@ -3235,14 +3235,15 @@ func _faces_checks(main) -> void:
 	main._barracks._shown = ""
 	main._barracks.selected = ""
 	main.refresh()
-	var shown := 0
-	for t in main._barracks._wall:
-		if t.visible:
-			shown += 1
-	_check(shown == 3 and main._barracks._wall[0].texture == People.portrait("Scrapper"), "the wall does not show the three, newest first: %d" % shown)
+	# the faces went with the strip (8 Oct): the line alone, newest first; the wall is a card in the Runner room
+	_check(main._barracks._wall.all(func(t): return not t.visible), "the strip shows faces")
 	_check(main._barracks._past.text.begins_with("Before: a scrapper, 3 runs") or main._barracks._past.text.begins_with("a scrapper, 3 runs") or main._barracks._past.text.begins_with("Before: scrapper"), "the line beside the wall is off: %s" % main._barracks._past.text)
-	_check(main._barracks._past.position.x >= main._barracks._wall[2].position.x + 64, "the line runs under the faces")
 	_check_fit(main, "Caravan (the wall)")
+	main.show_room(main.RUNNER)
+	main.refresh()
+	var wall_card = main._cards[7]
+	_check(wall_card._title.text == "The wall" and wall_card._labels[0].text == "Scrapper L4" and wall_card._labels[1].text == "Poacher L14", "the wall card is off: '%s' %s / %s" % [wall_card._title.text, wall_card._labels[0].text, wall_card._labels[1].text])
+	_check_fit(main, "Runner (the wall card)")
 	sim.past = []
 	main._barracks._shown = ""
 	main.refresh()
@@ -4527,9 +4528,17 @@ func _check_fit(main, where: String) -> void:
 			for b in Data.SLOTS:
 				if a < b:
 					_check(not ra.intersects(body.box_rect(b)), "%s: the %s and %s boxes overlap" % [where, a, b])
-	if main.room == main.OVERVIEW and main._yard_works.visible:
-		bad += _check_nodes(main._yard_works.text_nodes(), main._yard_works.line_pairs(), where + " yard jobs")
-		bad += _check_nodes(main._yard_town.text_nodes(), main._yard_town.line_pairs(), where + " town and purse")
+	if main.room == main.OVERVIEW and main._yard_tree.visible:
+		bad += _check_nodes(main._yard_tree.text_nodes(), main._yard_tree.line_pairs(), where + " yard tree")
+		# a tile's words stay inside their tile, and the move button clears the chips
+		var yt = main._yard_tree
+		for col in yt._tiles:
+			for t in col:
+				if t["button"].visible:
+					for l in [t["cost"]] + t["name"] + t["words"]:
+						if l.text != "" and l.position.y + l.size.y > t["button"].size.y + 0.5:
+							push_error("%s: a yard tile's words leave the tile: '%s'" % [where, l.text])
+							bad += 1
 	var rail_nodes := []
 	for name in main.ROOMS:
 		var b = main._rail_buttons[name]
@@ -4567,7 +4576,7 @@ func _check_fit(main, where: String) -> void:
 		if not main._top_lines.has(k) or main._top_lines[k][0].size.x != main._top_lines["hp"][0].size.x or main._top_lines[k][0].position.y != main._top_lines["hp"][0].position.y:
 			push_error("%s: the top bar's %s line is not the HP line's" % [where, k])
 			bad += 1
-	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["dps"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x < main._top_labels["xp"].position.x,
+	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["xp"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x > main._top_labels["xp"].position.x,     # HP, XP, then damage (8 Oct)
 			"%s: the top bar's dmg/s is off: '%s'" % [where, main._top_labels["dps"].text])
 	if main._menu.visible:
 		bad += _check_nodes(main._menu.text_nodes(), [], where + " menu")
@@ -4959,11 +4968,11 @@ func _retire_checks(main) -> void:
 	main.refresh()
 	_check(main._barracks._retire.visible and not main._barracks._retire.disabled, "the Caravan does not offer retirement at level 30")
 	_check_fit(main, "Caravan (retire)")
-	main.show_room(main.OVERVIEW)
+	main.show_room(main.RUNNER)
 	main.refresh()
 	var card_chips: Array = main._cards[0]._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
 	_check(card_chips.any(func(t): return t.begins_with("Greedy")) and card_chips.has("Scrapper") and main._cards[0]._status.text == "Wall: Wary, Light, Greedy", "the Runner card does not show the wall under the runner's own trait: %s / '%s'" % [str(card_chips), main._cards[0]._status.text])
-	_check_fit(main, "Yard (the wall)")
+	_check_fit(main, "Runner (the wall)")
 	# the bad side of a trait does not retire: Greedy's HP cut stays with the runner who had it
 	_check(is_equal_approx(sim.trait_mult("hp"), 0.9), "the wall's Greedy cut the yard's HP: ×%.3f" % sim.trait_mult("hp"))
 	main._confirm_retire()
@@ -5731,12 +5740,12 @@ func _wound_checks(main) -> void:
 	_check_fit(main, "Run (wounded)")
 	sim.extract_now()
 	_check(sim.last_report.get("wounded", false), "the report does not carry the wound")
-	# the yard's Runner card and the last run say so
-	main.show_room(main.OVERVIEW)
+	# the Runner room's card and the last run say so
+	main.show_room(main.RUNNER)
 	main.refresh()
 	var runner_card = main._cards[0]
 	_check(runner_card._title.text == "Runner" and runner_card._chips[0].visible and runner_card._chip_labels[0].text.begins_with("Wounded:"), "the Runner card does not carry the wound chip: '%s'" % runner_card._chip_labels[0].text)
-	_check_fit(main, "Yard (wounded)")
+	_check_fit(main, "Runner (wounded)")
 	# the clinic: the band says so, Treat costs the wound's price by level at full HP, and clears it
 	sim.wound = "pace"                    # a wound that leaves the max HP alone: the checks below read HP against it
 	sim.hp = sim.max_hp()
@@ -5865,45 +5874,47 @@ func _thinning_checks(main) -> void:
 	print("thinning ok: the searches in full, the fifth a search, the floor, the bar, depth and quantity")
 
 
-## The Yard's right half (Yard-C/D, 7 Oct): the yard's jobs on one card, a row a job with its own Build button,
-## the town and the purse under; the rail's Upgrade badge when a job is affordable.
+## The Yard as a tree (8 Oct): a column a work, a level a tile; the next level's tile is its Build, on when
+## affordable; the rail's Upgrade badge when a job is affordable; the purse chips and Move the yard in the heading.
 func _yard_wide_checks(main) -> void:
 	var sim = main.sim
-	var w = main._yard_works
-	var t = main._yard_town
-	_check(w.visible and t.visible, "the Yard's wide pair is not shown")
-	_check(w.position.x == 2 * (Pal.CARD_W + Pal.CARD_GAP) and t.position.y == Pal.CARD_H + Pal.CARD_GAP, "the wide pair is not in the right two columns: %s / %s" % [str(w.position), str(t.position)])
-	_check(not Rect2(w.position, w.size).intersects(Rect2(t.position, t.size)), "the yard's two wide cards overlap")
-	var names: Array = w._names.filter(func(l): return l.visible).map(func(l): return l.text)
-	_check(names == ["Generator", "Lookout", "Kennel", "Stash", "Bench"], "the yard's jobs are off: %s" % str(names))
-	# every row's button follows the sim: Build (£) when there is a next level, on when affordable; the works' row words
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	var yt = main._yard_tree
+	_check(yt.visible and not main._grid.visible, "the Yard is not the tree alone")
+	var names: Array = yt._heads.filter(func(h): return h["name"].visible).map(func(h): return h["name"].text)
+	_check(names == ["Generator", "Lookout", "Kennel", "Stash", "Bench", "Clinic", "The Fence", "Radio"], "the yard's works are off: %s" % str(names))
 	var cash0: float = sim.cash
 	sim.cash = 0.0
 	main.refresh()
-	for i in range(5):
-		var b = w._buttons[i]
-		var j: Dictionary = main._yard_jobs()[i]
-		if int(j["cost"]) > 0:
-			_check(b.text.contains(Fmt.money(int(j["cost"]))) and b.disabled, "%s with no cash: '%s' %s" % [j["name"], b.text, "off" if b.disabled else "on"])
-			_check(w._nexts[i].text.begins_with("Next: ") and w._nows[i].text.begins_with("Now: "), "%s's row words are off: '%s' / '%s'" % [j["name"], w._nows[i].text, w._nexts[i].text])
-		else:
-			_check(b.text in ["As good as it gets", "Built"] and b.disabled and w._nexts[i].text == "", "%s at the top reads '%s'" % [j["name"], b.text])
+	var jobs: Array = main._yard_jobs()
+	for c in range(jobs.size()):
+		var j: Dictionary = jobs[c]
+		var lv: int = int(j["level"])
+		for r in range(mini(yt.TILES, int(j["of"]))):
+			var t: Dictionary = yt._tiles[c][r]
+			if r + 1 <= lv:
+				_check(t["cost"].text == "Built" and t["edge"].visible and t["button"].disabled, "%s level %d is not shown built: '%s'" % [j["name"], r + 1, t["cost"].text])
+			elif r + 1 == lv + 1:
+				_check(t["cost"].text == "Build · %s" % Fmt.money(int(j["costs"][r])) and t["button"].disabled, "%s's next tile with no cash: '%s' %s" % [j["name"], t["cost"].text, "off" if t["button"].disabled else "on"])
+			else:
+				_check(t["cost"].text == Fmt.money(int(j["costs"][r])) and t["button"].disabled and not t["edge"].visible, "%s's later tile is off: '%s'" % [j["name"], t["cost"].text])
 	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "", "the rail's Upgrade badge is lit with no cash")
 	sim.cash = 1000000.0
 	main.refresh()
 	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "the rail's Upgrade badge is not lit with every job affordable")
 	var lv0: int = sim.kennel_level
 	if sim.kennel_cost() > 0:
-		_check(not w._buttons[2].disabled, "the kennel's Build is off with the cash in hand")
-		w.press(2)
-		_check(sim.kennel_level == lv0 + 1, "the kennel's Build did not build: level %d from %d" % [sim.kennel_level, lv0])
+		_check(not yt._tiles[2][lv0]["button"].disabled, "the kennel's next tile is off with the cash in hand")
+		yt.press_next(2)
+		_check(sim.kennel_level == lv0 + 1, "the kennel's tile did not build: level %d from %d" % [sim.kennel_level, lv0])
 		sim.kennel_level = lv0
 	sim.cash = cash0
 	main.refresh()
-	_check(t._title.text.begins_with("The town and the purse") and t._kickers[0].text.begins_with("THE TOWN") and t._kickers[1].text == "THE PURSE", "the town and the purse card is off: '%s' / '%s' / '%s'" % [t._title.text, t._kickers[0].text, t._kickers[1].text])
-	_check(t._labels[1][0].text == "Cash" and t._values[1][0].text == Fmt.money(sim.cash), "the purse's cash line is off: %s %s" % [t._labels[1][0].text, t._values[1][0].text])
-	_check(t._button.visible == sim.can_move_yard(), "Move the yard shows %s when the yard %s move" % ["on" if t._button.visible else "off", "can" if sim.can_move_yard() else "cannot"])
-	_check_fit(main, "Yard (wide)")
+	_check(yt._headline.text.contains(" of ") and yt._unit.text == "levels built", "the yard's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
+	_check(yt._chips.shown() >= 6 and yt._chips._labels[0].text.begins_with(Fmt.money(sim.cash)), "the yard's purse chips are off: %d shown, first '%s'" % [yt._chips.shown(), yt._chips._labels[0].text])
+	_check(yt._move.visible == sim.can_move_yard(), "Move the yard shows %s when the yard %s move" % ["on" if yt._move.visible else "off", "can" if sim.can_move_yard() else "cannot"])
+	_check_fit(main, "Yard (tree)")
 
 
 ## The sum strip's tiles sit inside their panel (7 Oct: the strip was sized by the node tile's height, four
@@ -6425,34 +6436,35 @@ func _yard_checks(main) -> void:
 	_loot_roll_checks(main)
 	if sim.on_mission():
 		sim.extract_now()
-	main.show_room(main.OVERVIEW)
+	# the Runner room (8 Oct): eight cards, the Yard's left half with attack and defence apart and the record
+	main.show_room(main.RUNNER)
 	main.refresh()
 	var titles: Array = main._cards.map(func(c): return c._title.text if c.visible else "")
-	for want in ["Runner", "Elements", "Finds", "Last run"]:
-		_check(titles.has(want), "the Yard has no %s card: %s" % [want, str(titles)])
-	_check(titles.count("") == 4, "the Yard's left two columns do not hold exactly four cards: %s" % str(titles))
-	for k in [2, 3, 6, 7]:
-		_check(not main._cards[k].visible, "a card sits under the Yard's wide pair at slot %d" % k)
+	for want in ["Runner", "Attack", "Defence", "Finds", "The record", "Kit", "Last run", "The wall"]:
+		_check(titles.has(want), "the Runner room has no %s card: %s" % [want, str(titles)])
+	_check(titles.count("") == 0, "the Runner room does not fill its eight slots: %s" % str(titles))
+	_check_fit(main, "Runner")
 	_yard_wide_checks(main)
-	var elements = main._cards[titles.find("Elements")]
+	main.show_room(main.RUNNER)
+	main.refresh()
+	var defence = main._cards[titles.find("Defence")]
 	var fire_row := -1
-	for k in range(elements._labels.size()):
-		if elements._labels[k].text == "Fire":
+	for k in range(defence._labels.size()):
+		if defence._labels[k].text == "Fire res":
 			fire_row = k
-	_check(fire_row >= 0 and elements._values[fire_row].text.contains("res ") and elements._values[fire_row].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["fire"], "the Elements card's fire line is off: %s" % (elements._values[fire_row].text if fire_row >= 0 else "none"))
-	# a torch makes the deal share show
+	_check(fire_row >= 0 and defence._values[fire_row].text.ends_with("%") and defence._values[fire_row].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["fire"], "the Defence card's fire line is off: %s" % (defence._values[fire_row].text if fire_row >= 0 else "none"))
+	_check(defence._headline.text == "%d" % sim.max_hp_shown() and defence._unit.text == "max HP", "the Defence card's headline is not the max HP: '%s'" % defence._headline.text)
+	# a torch makes the deal share show on Attack, as a chip
 	var hold_gun = sim.equipped["Primary"]
 	var torch: Dictionary = sim._plain("Primary", "Nail gun")
 	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 20, "tier": 2}]
 	sim.equipped["Primary"] = torch
 	main.refresh()
-	# the card reads the whole conversion: the torch's 20 and whatever the tree adds
+	var attack = main._cards[titles.find("Attack")]
 	var fire_share: int = int(round(float(sim.conversion().get("fire", 0.0)) * 100.0))
-	_check(fire_share >= 20 and elements._values[fire_row].text.begins_with("deal %d%%" % fire_share), "with %d%% as fire the Elements card reads '%s'" % [fire_share, elements._values[fire_row].text])
-	var total_share: int = 0
-	for ty in Data.ELEMENTS:
-		total_share += int(round(float(sim.conversion().get(ty, 0.0)) * 100.0))
-	_check(elements._headline.text == "%d%%" % total_share or elements._headline.text == "%d%%" % fire_share, "the Elements headline is '%s', not %d%%" % [elements._headline.text, total_share])
+	var attack_chips: Array = attack._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
+	_check(fire_share >= 20 and attack_chips.has("Fire %d%%" % fire_share), "with %d%% as fire the Attack card's chips read %s" % [fire_share, str(attack_chips)])
+	_check(attack._headline.text == "%.0f/s" % sim.dps(), "the Attack headline is '%s', not the damage a second" % attack._headline.text)
 	sim.equipped["Primary"] = hold_gun
 	# the runner's trait reads as a stat: a chip with its figures on the Runner card, a line on the Caravan
 	var runner_card = main._cards[titles.find("Runner")]
@@ -6466,7 +6478,8 @@ func _yard_checks(main) -> void:
 		main.show_room(main.BARRACKS)
 		main._barracks.selected = ""
 		main.refresh()
-		_check(main._barracks._scope.text.begins_with(tdata["name"] + ": "), "the Caravan does not give the trait's figures: '%s'" % main._barracks._scope.text)
+		_check(main._barracks._words.text.begins_with(tdata["name"] + ": "), "Training does not give the trait's figures: '%s'" % main._barracks._words.text)
+		_check(main._barracks._class_line.text != "" and main._barracks._class_line.visible, "Training does not keep the class's line up")
 		_check_fit(main, "Caravan (trait)")
 		main.show_room(main.OVERVIEW)
 		main.refresh()
