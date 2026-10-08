@@ -1,0 +1,263 @@
+{
+ "_readme": [
+  "FIAT UI GLYPHS - the fourteen marks on the rail and the top bar (8 Oct), one job each, written straight to the LIVE name art/ui/<name>.png over the white line drawings there now ('single': one file, no _NN, no sheet). 64 x 64: the shell draws them at 38 px on the rail's stamps and 26 px on the top bar with mipmaps, so each is one bold silhouette.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_ui_manifest.json ++ --force   (--force because the line drawings exist under the same names; ++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force).",
+  "The shell tells a painting from a line drawing by its colour (UI.glyph_mono): a painting shows as it is, a line drawing is tinted grey, gold or dark by where it sits. So the set can be swapped one at a time, and a glyph that doesn't read can go back to its line drawing (git checkout art/ui/<name>.png).",
+  "The stamps on the rail are dark grey, gold when the room is lit; the top bar is the panel's dark. A painting with a plain dark background cut away (no_background) sits on both.",
+  "Regenerate this manifest with python3 tools/make_ui_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/ui/yard.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small corrugated-iron shed, front on, a padlock on the hasp of its door, rust at the edges, a weed at the step. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91000,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: The Yard"
+  },
+  {
+   "out": "art/ui/runs.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a pair of worn black work boots side by side, laces undone, dried mud on the soles, seen from the front and slightly above. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91001,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Runs"
+  },
+  {
+   "out": "art/ui/lockup.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a heavy steel padlock, closed, scratched and dulled, its shackle thick, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91002,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Lock-up"
+  },
+  {
+   "out": "art/ui/bench.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an adjustable spanner, worn steel with oil on the jaws, lying at a slight diagonal. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91003,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Bench"
+  },
+  {
+   "out": "art/ui/caravan.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small two-berth touring caravan, cream with a green stripe, moss on the roof, one window, side on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91004,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Caravan"
+  },
+  {
+   "out": "art/ui/clinic.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a green first-aid tin with a plain white cross on its dented lid, seen from above at a slight angle. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91005,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Clinic"
+  },
+  {
+   "out": "art/ui/fence.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a brown cardboard luggage tag on a loop of string, blank, creased at one corner. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91006,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: The Fence"
+  },
+  {
+   "out": "art/ui/radio.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a battered CB radio handset on a short coiled lead, black plastic worn grey at the grip. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91007,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Radio"
+  },
+  {
+   "out": "art/ui/cash.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a folded wad of worn banknotes held by a perished rubber band, no readable print, seen from above at a slight angle. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91008,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: cash"
+  },
+  {
+   "out": "art/ui/notes.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small bundle of folded handwritten paper slips held by a paperclip, the writing an illegible scrawl, seen from above. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91009,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: notes"
+  },
+  {
+   "out": "art/ui/hp.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of an old red enamel heart-shaped pin badge, chipped at one edge, the brass showing through, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91010,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_03.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: HP"
+  },
+  {
+   "out": "art/ui/xp.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a small brass five-pointed star badge, tarnished, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91011,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_04.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: XP"
+  },
+  {
+   "out": "art/ui/dps.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a single brass rifle cartridge standing upright, dull and fingerprinted, seen from the side and slightly above. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91012,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: damage a second"
+  },
+  {
+   "out": "art/ui/where.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a brass pocket compass, lid open, the glass scratched, seen from above. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91013,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_02.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the top bar: where the runner is"
+  }
+ ]
+}

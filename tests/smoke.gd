@@ -4523,6 +4523,9 @@ func _check_fit(main, where: String) -> void:
 		if b._tongue.visible != (name == main.room):
 			push_error("rail %s: the join is %s on the %s row" % [name, "lit" if b._tongue.visible else "dark", "lit" if name == main.room else "dark"])
 			bad += 1
+		if b._glyph.texture == null:
+			push_error("rail %s: no glyph" % name)
+			bad += 1
 		if name == main.room:
 			# the room's screens sit at RAIL_W + MARGIN from the rail (layout); the join ends on that edge
 			var reach: float = b._tongue.position.x + b._tongue.size.x
@@ -4530,7 +4533,23 @@ func _check_fit(main, where: String) -> void:
 				push_error("%s: the rail's join ends at %.0f, the room starts at %d" % [where, reach, Pal.RAIL_W + Pal.MARGIN])
 				bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
+	# the rail runs to the log's bottom (8 Oct, Matt: "the rail should span to the bottom of the log bar")
+	var rail_end: float = main._rail.position.y + main._rail_panel.size.y
+	var log_end: float = main._events.position.y + Pal.EVENTS_H
+	if main._events.position.y > 0.0 and absf(rail_end - log_end) > 1.0:      # once laid out (the smoke's shell never is: the log sits at 0)
+		push_error("%s: the rail ends at %.0f, the log at %.0f" % [where, rail_end, log_end])
+		bad += 1
 	bad += _check_nodes(main._top_labels.values(), [], where + " top bar")
+	bad += _check_nodes([main._top_caption], [], where + " top bar caption")
+	for k in main._top_glyphs:
+		if main._top_glyphs[k].texture == null:
+			push_error("%s: the top bar's %s glyph is missing" % [where, k])
+			bad += 1
+	# the caption follows the level's figure, the purse's glyphs sit before their figures
+	var lvl: Label = main._top_labels["level"]
+	if main._top_caption.position.x < lvl.position.x + UI.text_width(lvl, lvl.text) + 4.0:
+		push_error("%s: LEVEL sits on the level's figure" % where)
+		bad += 1
 	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["dps"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x < main._top_labels["xp"].position.x,
 			"%s: the top bar's dmg/s is off: '%s'" % [where, main._top_labels["dps"].text])
 	if main._menu.visible:
@@ -6062,7 +6081,7 @@ func _growth_checks(main) -> void:
 	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0), "ten paragon levels did not pay: hp ×%.2f dps ×%.2f" % [sim.max_hp() / hp50, sim.dps() / dps50])
 	_check(Data.xp_for_level(Data.MAX_LEVEL + 11) > Data.xp_for_level(Data.MAX_LEVEL + 10) and Data.xp_for_level(Data.MAX_LEVEL + 10) > Data.xp_for_level(Data.MAX_LEVEL), "the XP curve stops at the cap")
 	main.refresh()
-	_check(main._top_labels["level"].text == "Level %d +10" % Data.MAX_LEVEL and main._top_labels["xp"].text.contains(" / "), "the top bar does not say the paragon: '%s' / '%s'" % [main._top_labels["level"].text, main._top_labels["xp"].text])
+	_check(main._top_labels["level"].text == "%d +10" % Data.MAX_LEVEL and main._top_labels["xp"].text.contains(" / "), "the top bar does not say the paragon: '%s' / '%s'" % [main._top_labels["level"].text, main._top_labels["xp"].text])   # the figure with LEVEL beside it since the sheet (8 Oct)
 	_check_fit(main, "Top bar (paragon)")
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
 	sim.lorries = 3

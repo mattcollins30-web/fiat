@@ -2108,6 +2108,41 @@ in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOU
 Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
 then three reads a build.
 
+**The rail and the top bar, round two (8 Oct, Matt on the ledger as built: "this doesn't read at all -
+the rail should span to the bottom of the log bar"; the status bar "could use some love - icons for the
+cash and notes, a bar for XP and HP, anything else that would read as not default godot").** Mocked on
+the canvas (Rail-B: the top bar now, B boxes, C lines; the rail D full-height ledger with a glyph a
+row, E tiles, F stamps); Matt: "Rail should F, Bar is C". Built. *The glyphs:* fourteen line
+drawings, white on transparent at 64 px, `art/ui/<name>.png` (yard, runs, lockup, bench, caravan,
+clinic, fence, radio, cash, notes, hp, xp, dps, where), drawn in `mock/glyphs.py` and loaded by
+`UI.glyph_texture` like the portraits - imported if Godot has, from the file if not - and placed by
+`UI.glyph` as a tinted TextureRect. *The rail (F):* the panel runs from the band's top to the log's
+bottom (`_rail_panel`, the layout), the rows sharing what's under the heading (`set_row_height`); a
+row is a stamped square (`STAMP`, 56) with the room's glyph, the name beside it and one status line
+under, or the badge in the status line's place when the room wants a decision (the row is 312 wide and
+the stamp takes 72: a badge beside the status overran it, so the badge is the status); the lit row in
+the cards' colour with the stamp gold and the glyph dark on it, the tongue to the card kept; the
+figures of the first build gone (zeros said nothing). *The top bar (C):* the level a figure at the
+title size with LEVEL after it (the caption placed after the figure on every refresh), HP and XP as
+figures with a 150 px line under each (`TRACK` under `GOOD` and `ACCENT`, the fill the share), a
+glyph before every figure, the place with its pin centred in the room between the runner's figures
+and the purse (so the widest XP never meets it), notes and cash with their glyphs set before the
+right-aligned figures on every refresh, cash in gold. `TOP_WORST` re-stated without the words the
+glyphs now carry. *Assertions:* the rail ends where the log does; every row and every top-bar key has
+its glyph; LEVEL clears the level's figure; the join and the badge checks kept; the paragon test reads
+the new words. Shot here on the Yard and Runs. *The first smoke on it* caught two faults of mine: the
+rail-ends-at-the-log check read the log's place in a shell the smoke never lays out (it runs once laid
+out now), and "Upgrade affordable" was 221 px in the 206 the status line has ("Upgrade ready"). The
+layout also floors the rows at 72 on a screen too short for them. *The glyphs in the house style
+(Matt: "create a manifest for the items that need art in the house style and I'll generate"):*
+`tools/make_ui_manifest.py` writes `tools/pixellab_ui_manifest.json`, fourteen jobs, each a painted
+still-life of one bold object (a padlocked shed, work boots, a padlock, a spanner, a caravan, a
+first-aid tin, a luggage tag, a CB handset; a wad of notes, a bundle of slips, an enamel heart badge, a
+brass star, a cartridge, a pocket compass) in the items' voice with their style refs, written over the
+line drawings with `--force`. The shell tells a painting from a line drawing by its colour
+(`UI.glyph_mono`): a painting shows as it is, a line drawing is tinted, so the set swaps one at a time
+and a glyph that doesn't read goes back to its line (`git checkout art/ui/<name>.png`).
+
 **The twenty-third read, the final pass (the Legion, 8 Oct, thirty reads of ten builds, three a build,
 thirty-two hours; the Drifter's +10%, wounds at 5-30 on the merged builds).** Twenty minutes for
 thirty-one jobs. Three red. *The lorry* on every build but the plain

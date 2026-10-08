@@ -54,6 +54,68 @@ static func box(color: Color, radius := 6, border := 0, border_color := Color.TR
 	return sb
 
 
+## The UI glyphs (8 Oct): res://art/ui/<name>.png, line drawings white on
+## transparent at 64 px, tinted by `color`, one set for the rail and the top bar
+## (yard, runs, lockup, bench, caravan, clinic, fence, radio, cash, notes, hp,
+## xp, dps, where). Loaded like the portraits: imported if Godot has, from the
+## file if not, so a headless run without the import step still draws them.
+## A white line drawing is tinted by the shell; a painted one (the house style,
+## from the pixellab manifest tools/pixellab_ui_manifest.json) is shown as it
+## is - `glyph_mono` tells them apart by the picture's colour.
+static var _glyphs := {}
+static var _glyph_mono := {}
+static func glyph_texture(name: String) -> Texture2D:
+	if _glyphs.has(name):
+		return _glyphs[name]
+	var path := "res://art/ui/%s.png" % name
+	var tex: Texture2D = null
+	var img: Image = null
+	if ResourceLoader.exists(path):
+		tex = load(path)
+		img = tex.get_image() if tex != null else null
+	elif FileAccess.file_exists(path):
+		img = Image.load_from_file(ProjectSettings.globalize_path(path))
+		if img != null:
+			img.generate_mipmaps()
+			tex = ImageTexture.create_from_image(img)
+	_glyphs[name] = tex
+	_glyph_mono[name] = img != null and _is_mono(img)
+	return tex
+
+
+## White wherever it isn't clear: a line drawing to tint, not a painting.
+static func _is_mono(img: Image) -> bool:
+	if img.is_compressed():
+		img = img.duplicate()
+		img.decompress()
+	var step: int = maxi(1, img.get_width() / 16)
+	for y in range(0, img.get_height(), step):
+		for x in range(0, img.get_width(), step):
+			var c := img.get_pixel(x, y)
+			if c.a > 0.5 and (c.r < 0.85 or c.g < 0.85 or c.b < 0.85):
+				return false
+	return true
+
+
+static func glyph_mono(name: String) -> bool:
+	glyph_texture(name)
+	return bool(_glyph_mono.get(name, true))
+
+
+static func glyph(parent: Node, rect: Rect2, name: String, color: Color) -> TextureRect:
+	var t := TextureRect.new()
+	t.position = rect.position
+	t.size = rect.size
+	t.texture = glyph_texture(name)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	t.modulate = color if glyph_mono(name) else Color.WHITE
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(t)
+	return t
+
+
 static func panel(parent: Node, rect: Rect2, style: StyleBox) -> Panel:
 	var p := Panel.new()
 	p.position = rect.position

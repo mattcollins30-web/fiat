@@ -61,14 +61,19 @@ const ROOMS := [OVERVIEW, MISSIONS, ARMOURY, WORKSHOP, BARRACKS, MEDIC, MARKET, 
 const TOP_KEYS := ["level", "hp", "dps", "xp", "where", "notes", "cash"]
 const TOP_WORST := {
 	"cash": "£9,999,999",
-	"notes": "999,999 notes",
-	"level": "Level 50 +999",
-	"hp": "HP 999 / 999",
+	"notes": "999,999",
+	"level": "50 +999",
+	"hp": "999 / 999",
 	"dps": "9,999 dmg/s",
-	"xp": "XP 9,999,999 / 9,999,999",
+	"xp": "9,999,999 / 9,999,999",
 	"where": "Out: Ransacked streets",
 }
 const TOP_GAP := 28
+const TOP_GLYPH := 26            # the glyph before a figure (8 Oct)
+const TOP_GLYPH_GAP := 8
+const TOP_LINE_W := 150          # the line under the HP and XP figures
+const TOP_CAPTION_W := 86        # "LEVEL" after the level's figure
+const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "cash"}
 const EVENT_TIME_WORST := "99:59:59"
 const SPEED_TEXT := "×10 speed (F8)"
 
@@ -82,7 +87,11 @@ var _bg: Panel
 var _top: Panel
 var _top_row: Control
 var _top_labels := {}
+var _top_glyphs := {}
+var _top_lines := {}             # hp, xp: [track, fill]
+var _top_caption: Label
 var _rail: Control
+var _rail_panel: Panel
 var _rail_head: Label
 var _rail_buttons := {}
 var _grid: Control
@@ -133,29 +142,58 @@ func _build() -> void:
 	_top_row = Control.new()
 	_top_row.size = Vector2(1920 - 2 * Pal.MARGIN, Pal.TOP_H)
 	_top.add_child(_top_row)
+	# the top bar as a sheet (8 Oct, round two: C on the design canvas): the level a figure with LEVEL beside it,
+	# HP and XP as figures with a thin line under each, a glyph before every figure, the place with its pin in the
+	# middle, notes and cash with theirs at the right, cash in gold. Each slot as wide as the widest text it can
+	# hold, so nothing shifts as figures change.
 	var x := 0.0
+	var inner: float = 1920.0 - 2 * Pal.MARGIN
+	var widths := {}
 	for k in TOP_KEYS:
-		var w := ceilf(UI.font("Medium", k != "where").get_string_size(TOP_WORST[k], HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x) + 4
+		var weight: String = "SemiBold" if k in ["level", "cash"] else "Medium"
+		var size: int = Pal.TITLE if k == "level" else Pal.FLOOR
+		widths[k] = ceilf(UI.font(weight, k != "where").get_string_size(TOP_WORST[k], HORIZONTAL_ALIGNMENT_LEFT, -1, size).x) + 4
+	var slot_w := func(k: String) -> float:
+		return float(widths[k]) + (TOP_GLYPH + TOP_GLYPH_GAP if TOP_GLYPH_OF.has(k) else 0.0) + (TOP_CAPTION_W if k == "level" else 0.0)
+	for k in TOP_KEYS:
+		var w: float = widths[k]
 		var align := HORIZONTAL_ALIGNMENT_LEFT
 		match k:
 			"where":
-				x = (1920.0 - 2 * Pal.MARGIN - w) / 2.0
-				align = HORIZONTAL_ALIGNMENT_CENTER
+				# centred in the room between the runner's figures and the purse, so the widest XP never meets it
+				var purse: float = slot_w.call("notes") + TOP_GAP + slot_w.call("cash")
+				x = x + (inner - purse - TOP_GAP - x - slot_w.call(k)) / 2.0
 			"notes":
-				var cw := ceilf(UI.font("Medium").get_string_size(TOP_WORST["cash"], HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x) + 4
-				x = 1920.0 - 2 * Pal.MARGIN - cw - TOP_GAP - w
-				align = HORIZONTAL_ALIGNMENT_RIGHT
+				x = inner - slot_w.call("cash") - TOP_GAP - slot_w.call(k)
 			"cash":
-				x = 1920.0 - 2 * Pal.MARGIN - w
-				align = HORIZONTAL_ALIGNMENT_RIGHT
-		_top_labels[k] = UI.label(_top_row, Rect2(x, 0, w, Pal.TOP_H), "", "Medium" if k != "cash" else "SemiBold", Pal.FLOOR,
-				Pal.TEXT if k == "cash" else Pal.TEXT_2, align, k != "where")
-		x += w + TOP_GAP
-	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines
+				x = inner - slot_w.call(k)
+		var gx := x
+		if TOP_GLYPH_OF.has(k):
+			var tint: Color = Pal.ACCENT if k == "cash" else Pal.TEXT_3
+			_top_glyphs[k] = UI.glyph(_top_row, Rect2(gx, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), TOP_GLYPH_OF[k], tint)
+			x += TOP_GLYPH + TOP_GLYPH_GAP
+		if k in ["notes", "cash"]:
+			align = HORIZONTAL_ALIGNMENT_RIGHT
+		var weight: String = "SemiBold" if k in ["level", "cash"] else "Medium"
+		var color: Color = Pal.ACCENT if k == "cash" else (Pal.TEXT if k in ["level", "hp", "xp"] else Pal.TEXT_2)
+		if k in ["hp", "xp"]:
+			# the figure sits up, its line under it
+			_top_labels[k] = UI.label(_top_row, Rect2(x, 8, w, 34), "", weight, Pal.FLOOR, color, align, true)
+			var lw: float = minf(w, TOP_LINE_W)       # the line is the progress, not an underline: one width, the figure may run past it
+			_top_lines[k] = [UI.panel(_top_row, Rect2(x, 46, lw, 4), UI.box(Pal.TRACK, 2)),
+					UI.panel(_top_row, Rect2(x, 46, lw, 4), UI.box(Pal.GOOD if k == "hp" else Pal.ACCENT, 2))]
+		else:
+			_top_labels[k] = UI.label(_top_row, Rect2(x, 0, w, Pal.TOP_H), "", weight, Pal.TITLE if k == "level" else Pal.FLOOR, color, align, k != "where")
+		x += w
+		if k == "level":
+			_top_caption = UI.label(_top_row, Rect2(x + 8, 0, TOP_CAPTION_W - 8, Pal.TOP_H), "LEVEL", "Medium", Pal.FLOOR, Pal.TEXT_3)
+			x += TOP_CAPTION_W
+		x += TOP_GAP
+	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines; its height is the
+	# layout's (to the log's bottom), the rows sharing it
 	_rail = Control.new()
 	add_child(_rail)
-	var rail_h: float = Pal.RAIL_HEAD_H + ROOMS.size() * (Pal.RAIL_BTN_H + Pal.RAIL_GAP) - Pal.RAIL_GAP
-	UI.panel(_rail, Rect2(0, 0, Pal.RAIL_W, rail_h), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_rail_panel = UI.panel(_rail, Rect2(0, 0, Pal.RAIL_W, Pal.RAIL_HEAD_H + ROOMS.size() * Pal.RAIL_BTN_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_rail_head = UI.label(_rail, Rect2(22, 0, Pal.RAIL_W - 44, Pal.RAIL_HEAD_H), "ROOMS", "Medium", Pal.FLOOR, Pal.TEXT_3)
 	UI.panel(_rail, Rect2(0, Pal.RAIL_HEAD_H - 1, Pal.RAIL_W, 1), UI.box(Pal.CARD_LINE, 0))
 	for i in range(ROOMS.size()):
@@ -257,6 +295,14 @@ func layout(s: Vector2) -> void:
 	var free := s.y - Pal.TOP_H - Pal.MARGIN - Pal.CARD_GAP - Pal.EVENTS_H - Pal.MARGIN - Pal.ROOM_H
 	var band_y := Pal.TOP_H + Pal.MARGIN + floorf(maxf(0.0, free) / 2.0)
 	_rail.position = Vector2(x0, band_y)
+	# the rail runs from the band's top to the log's bottom, the rows sharing what's under the heading (8 Oct)
+	var rail_h: float = maxf(s.y - Pal.MARGIN - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * 72.0)     # a screen too short for the rows gets rows of 72 and a rail that runs under
+	_rail_panel.size.y = rail_h
+	var row_h: float = floorf((rail_h - Pal.RAIL_HEAD_H) / ROOMS.size())
+	for i in range(ROOMS.size()):
+		var b = _rail_buttons[ROOMS[i]]
+		b.position.y = Pal.RAIL_HEAD_H + i * row_h
+		b.set_row_height(row_h)
 	_grid.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, band_y)
 	_armoury.position = _grid.position
 	_barracks.position = _grid.position
@@ -579,11 +625,18 @@ func refresh() -> void:
 	_toast_new_lines()
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.money(sim.cash)
-	_top_labels["notes"].text = Fmt.count(sim.notes, "note")
-	_top_labels["level"].text = ("Level %d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("Level %d" % sim.level())
-	_top_labels["hp"].text = "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
+	_top_labels["notes"].text = Fmt.num(sim.notes)
+	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
+	_top_labels["hp"].text = "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
 	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
 	_top_labels["xp"].text = _xp_words()
+	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
+	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
+	# the caption after the level's figure, and the purse's glyphs before their right-aligned figures
+	_top_caption.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 8
+	for k in ["notes", "cash"]:
+		var l: Label = _top_labels[k]
+		_top_glyphs[k].position.x = l.position.x + l.size.x - ceilf(UI.text_width(l, l.text)) - TOP_GLYPH_GAP - TOP_GLYPH
 	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the yard"
 	for name in ROOMS:
 		var b = _rail_buttons[name]
@@ -666,7 +719,15 @@ func _xp_words() -> String:
 	var lv: int = sim.level() + sim.paragon()          # past the cap the paragon levels count on, on the same curve (7 Oct)
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
-	return "XP %s / %s" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp)]
+	return "%s / %s" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp)]
+
+
+## The level's progress, 0 to 1, for the line under the XP figure.
+func _xp_share() -> float:
+	var lv: int = sim.level() + sim.paragon()
+	var this_xp := Data.xp_for_level(lv)
+	var next_xp := Data.xp_for_level(lv + 1)
+	return clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
 
 
 ## "11:04", local. An event from a save before the log kept the time of day
@@ -720,7 +781,7 @@ func _rail_status(name: String) -> Dictionary:
 			for it in sim.stash:
 				if Items.is_attachment(it):
 					atts += 1
-			return {"status1": "Upgrade affordable" if sim.can_upgrade_workshop() else "%d fitted, %d spare" % [fitted, atts],
+			return {"status1": "Upgrade ready" if sim.can_upgrade_workshop() else "%d fitted, %d spare" % [fitted, atts],     # "Upgrade affordable" was 221 px in a 206 line (8 Oct)
 					"status2": "Level %d bench" % sim.workshop, "figure": "%d" % sim.workshop}
 		BARRACKS:
 			var free: int = sim.points_free()
