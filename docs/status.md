@@ -2143,6 +2143,32 @@ line drawings with `--force`. The shell tells a painting from a line drawing by 
 (`UI.glyph_mono`): a painting shows as it is, a line drawing is tinted, so the set swaps one at a time
 and a glyph that doesn't read goes back to its line (`git checkout art/ui/<name>.png`).
 
+**The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
+2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
+builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
+hundredth's tolerance now. *Wounds:* the Drifter 4%, the frost Poacher 4%, waiting on Matt's save.
+*The lorry:* the plain Drifter 31.7, 12.4, 17.4 h, median 17.4 - the +15% moved nothing because the
+problem is variance: one read in three stalls. Read on four seeded fourteen-hour Drifters here, one
+stalled (seed 22: tier 6 depth 1-4 from hour 2.6 to 7.6, damage 356 to 478, cash under £8k while the
+quick read had 1,100 damage and £32k by hour 8), and its bought list says why: *the bot re-rolled its
+gun's fire_pct eighteen times at £7-8k a go* - a plain Drifter fires no fire, so the affix does nothing
+whatever its tier, the re-roll never lifts the weakest tier it keys on, and a run's whole take went to
+the bench for five hours (`_bench_worn`: the weakest affix under the cap, one a run, while £2k stays).
+Two bot fixes: an element's damage share the build has no conversion to is skipped (`_dead_stat`), and
+an affix is re-rolled three times at most (`REROLLS_MAX`). The same seed again: the lorry at 13.0 h,
+damage 773 by hour 6.5; the twenty-fourth's quick reads were never the problem. A player wouldn't do
+this eighteen times, which is the point: the Drifter's late lorry was the bot's bench habit on the one
+build with no element to lock. *To confirm on a pass when Matt is next off the machine.*
+
+**The rail and the top bar, round three (8 Oct, Matt on the art: "the art reads ok - only change is to
+remove the rail's extension into the menu - just keep the button as the button"; "top left reads 1
+level and should be level 1"; "a bar under dmg/s so it reads the same as HP and XP").** The tongue
+went (and its smoke check); LEVEL sits before the figure (the smoke reads the figure clears it); the
+damage figure has the same line as HP and XP, filled by a minute's fire against the best open site's
+first gang at its depth (`_dps_share`: full when the gang falls inside the minute, so it grows with the
+kit and drops back as a harder site opens), in the figure's grey; the smoke proves the three lines
+share one width and one row.
+
 **The twenty-third read, the final pass (the Legion, 8 Oct, thirty reads of ten builds, three a build,
 thirty-two hours; the Drifter's +10%, wounds at 5-30 on the merged builds).** Twenty minutes for
 thirty-one jobs. Three red. *The lorry* on every build but the plain

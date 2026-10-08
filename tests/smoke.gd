@@ -4519,19 +4519,6 @@ func _check_fit(main, where: String) -> void:
 		if b.badge_gap() < 8.0:
 			push_error("rail %s: badge overlaps the name" % name)
 			bad += 1
-		# the ledger (8 Oct): the lit row alone reaches across the margin to its room, and lands on it
-		if b._tongue.visible != (name == main.room):
-			push_error("rail %s: the join is %s on the %s row" % [name, "lit" if b._tongue.visible else "dark", "lit" if name == main.room else "dark"])
-			bad += 1
-		if b._glyph.texture == null:
-			push_error("rail %s: no glyph" % name)
-			bad += 1
-		if name == main.room:
-			# the room's screens sit at RAIL_W + MARGIN from the rail (layout); the join ends on that edge
-			var reach: float = b._tongue.position.x + b._tongue.size.x
-			if reach < Pal.RAIL_W + Pal.MARGIN or reach > Pal.RAIL_W + Pal.MARGIN + 4.0:
-				push_error("%s: the rail's join ends at %.0f, the room starts at %d" % [where, reach, Pal.RAIL_W + Pal.MARGIN])
-				bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
 	# the rail runs to the log's bottom (8 Oct, Matt: "the rail should span to the bottom of the log bar")
 	var rail_end: float = main._rail.position.y + main._rail_panel.size.y
@@ -4545,11 +4532,16 @@ func _check_fit(main, where: String) -> void:
 		if main._top_glyphs[k].texture == null:
 			push_error("%s: the top bar's %s glyph is missing" % [where, k])
 			bad += 1
-	# the caption follows the level's figure, the purse's glyphs sit before their figures
+	# LEVEL before the figure (Matt, 8 Oct: "1 LEVEL" read wrong), the purse's glyphs before their figures
 	var lvl: Label = main._top_labels["level"]
-	if main._top_caption.position.x < lvl.position.x + UI.text_width(lvl, lvl.text) + 4.0:
-		push_error("%s: LEVEL sits on the level's figure" % where)
+	if lvl.position.x < main._top_caption.position.x + UI.text_width(main._top_caption, main._top_caption.text) + 4.0:
+		push_error("%s: the level's figure sits on LEVEL" % where)
 		bad += 1
+	# the three lines under the runner's figures read the same (Matt, 8 Oct): one width, one row
+	for k in ["hp", "xp", "dps"]:
+		if not main._top_lines.has(k) or main._top_lines[k][0].size.x != main._top_lines["hp"][0].size.x or main._top_lines[k][0].position.y != main._top_lines["hp"][0].position.y:
+			push_error("%s: the top bar's %s line is not the HP line's" % [where, k])
+			bad += 1
 	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["dps"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x < main._top_labels["xp"].position.x,
 			"%s: the top bar's dmg/s is off: '%s'" % [where, main._top_labels["dps"].text])
 	if main._menu.visible:

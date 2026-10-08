@@ -23,6 +23,8 @@ var cls := ""                  # the class the gate set: put back on the runner 
 var moves := 0                 # yards moved on after the lorry (the endgame's loop, 7 Oct)
 var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
+var _rerolls := {}             # "item id/stat" -> re-rolls bought at the bench (capped: REROLLS_MAX)
+const REROLLS_MAX := 3
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
@@ -274,14 +276,29 @@ func _bench_worn(sim) -> void:
 			continue                      # a set piece's affixes are the set's, no tier on them
 		var weakest := {}
 		for a in it["affixes"]:
+			if _dead_stat(sim, str(a.get("stat", ""))):
+				continue                  # an element's share the build doesn't fire does nothing whatever its tier (the twenty-fourth read: a plain Drifter re-rolled its gun's fire_pct eighteen times, £140k, its damage flat for five hours)
+			if int(_rerolls.get("%d/%s" % [int(it["id"]), a.get("stat", "")], 0)) >= REROLLS_MAX:
+				continue                  # three goes at one affix and a player moves on
 			if int(a.get("tier", 1)) < Items.rarity_cap(it) and (weakest.is_empty() or int(a.get("tier", 1)) < int(weakest.get("tier", 1))):     # under the rarity's cap: at it, there is nothing to roll for
 				weakest = a
 		if weakest.is_empty():
 			continue
 		var cost: int = sim.craft_cost(it, "one", weakest["stat"])
 		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "one", weakest["stat"]):
+			var key := "%d/%s" % [int(it["id"]), weakest["stat"]]
+			_rerolls[key] = int(_rerolls.get(key, 0)) + 1
 			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d" % [s.to_lower(), weakest["stat"], cost]])
 			return
+
+
+## An affix that does nothing for this build: an element's damage share with no
+## conversion to it (a plain build fires nothing; an element build fires its own).
+func _dead_stat(sim, stat: String) -> bool:
+	for el in Data.ELEMENTS:
+		if stat == el + "_pct" and el != element and float(sim.conversion().get(el, 0.0)) <= 0.0:
+			return true
+	return false
 
 
 ## The build's bench work on the primary: a socket for the element's

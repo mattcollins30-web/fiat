@@ -72,7 +72,7 @@ const TOP_GAP := 28
 const TOP_GLYPH := 26            # the glyph before a figure (8 Oct)
 const TOP_GLYPH_GAP := 8
 const TOP_LINE_W := 150          # the line under the HP and XP figures
-const TOP_CAPTION_W := 86        # "LEVEL" after the level's figure
+const TOP_CAPTION_W := 94        # "LEVEL" before the level's figure
 const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "cash"}
 const EVENT_TIME_WORST := "99:59:59"
 const SPEED_TEXT := "×10 speed (F8)"
@@ -172,22 +172,23 @@ func _build() -> void:
 			var tint: Color = Pal.ACCENT if k == "cash" else Pal.TEXT_3
 			_top_glyphs[k] = UI.glyph(_top_row, Rect2(gx, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), TOP_GLYPH_OF[k], tint)
 			x += TOP_GLYPH + TOP_GLYPH_GAP
+		if k == "level":
+			# LEVEL before the figure (8 Oct, Matt: "1 LEVEL" read wrong)
+			_top_caption = UI.label(_top_row, Rect2(x, 0, TOP_CAPTION_W - 8, Pal.TOP_H), "LEVEL", "Medium", Pal.FLOOR, Pal.TEXT_3)
+			x += TOP_CAPTION_W
 		if k in ["notes", "cash"]:
 			align = HORIZONTAL_ALIGNMENT_RIGHT
 		var weight: String = "SemiBold" if k in ["level", "cash"] else "Medium"
-		var color: Color = Pal.ACCENT if k == "cash" else (Pal.TEXT if k in ["level", "hp", "xp"] else Pal.TEXT_2)
-		if k in ["hp", "xp"]:
-			# the figure sits up, its line under it
+		var color: Color = Pal.ACCENT if k == "cash" else (Pal.TEXT if k in ["level", "hp", "xp", "dps"] else Pal.TEXT_2)
+		if k in ["hp", "xp", "dps"]:
+			# the figure sits up, its line under it (dmg/s too, Matt, 8 Oct: "so it reads the same as HP and XP")
 			_top_labels[k] = UI.label(_top_row, Rect2(x, 8, w, 34), "", weight, Pal.FLOOR, color, align, true)
-			var lw: float = minf(w, TOP_LINE_W)       # the line is the progress, not an underline: one width, the figure may run past it
+			var lw: float = TOP_LINE_W                # the line is the progress, not an underline: one width, the figure may run past it
 			_top_lines[k] = [UI.panel(_top_row, Rect2(x, 46, lw, 4), UI.box(Pal.TRACK, 2)),
-					UI.panel(_top_row, Rect2(x, 46, lw, 4), UI.box(Pal.GOOD if k == "hp" else Pal.ACCENT, 2))]
+					UI.panel(_top_row, Rect2(x, 46, lw, 4), UI.box({"hp": Pal.GOOD, "xp": Pal.ACCENT, "dps": Pal.TEXT_2}[k], 2))]
 		else:
 			_top_labels[k] = UI.label(_top_row, Rect2(x, 0, w, Pal.TOP_H), "", weight, Pal.TITLE if k == "level" else Pal.FLOOR, color, align, k != "where")
 		x += w
-		if k == "level":
-			_top_caption = UI.label(_top_row, Rect2(x + 8, 0, TOP_CAPTION_W - 8, Pal.TOP_H), "LEVEL", "Medium", Pal.FLOOR, Pal.TEXT_3)
-			x += TOP_CAPTION_W
 		x += TOP_GAP
 	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines; its height is the
 	# layout's (to the log's bottom), the rows sharing it
@@ -632,8 +633,8 @@ func refresh() -> void:
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
-	# the caption after the level's figure, and the purse's glyphs before their right-aligned figures
-	_top_caption.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 8
+	_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()
+	# the purse's glyphs before their right-aligned figures
 	for k in ["notes", "cash"]:
 		var l: Label = _top_labels[k]
 		_top_glyphs[k].position.x = l.position.x + l.size.x - ceilf(UI.text_width(l, l.text)) - TOP_GLYPH_GAP - TOP_GLYPH
@@ -720,6 +721,15 @@ func _xp_words() -> String:
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
 	return "%s / %s" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp)]
+
+
+## The damage line's fill, 0 to 1: a minute's fire against the best open site's first gang at its depth
+## - full when the gang falls inside the minute. It grows with the kit and drops back as a harder site opens.
+func _dps_share() -> float:
+	var i: int = clampi(sim.best_tier, 0, Data.TIERS.size() - 1)
+	var t: Dictionary = sim.effective(i)
+	var gang: float = float(t.get("pool", 1)) * float(t.get("hp", 1.0))
+	return clampf(sim.dps() * 60.0 / maxf(gang, 1.0), 0.0, 1.0)
 
 
 ## The level's progress, 0 to 1, for the line under the XP figure.

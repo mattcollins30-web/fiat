@@ -96,7 +96,7 @@ func _init() -> void:
 					never.append(b["build"])
 			if banks.is_empty() and never.is_empty():
 				continue
-			var fam_ok: bool = never.is_empty() and not banks.is_empty() and banks.max() <= BANK_BAND * banks.min()
+			var fam_ok: bool = never.is_empty() and not banks.is_empty() and banks.max() <= BANK_BAND * banks.min() + 0.001     # the medians are read to a hundredth: 2.2 against 1.1 is within 2.0x, not over it by a float
 			ok = ok and fam_ok
 			var t: String = ("%s %s to %s" % [fam[0], _hours(banks.min()), _hours(banks.max())]) if not banks.is_empty() else "%s: none reached the bank" % fam[0]
 			if not never.is_empty():

@@ -3,8 +3,9 @@ extends Button
 ## design canvas). A stamped square at the left with the room's glyph, the
 ## name beside it and one status line under - or, when the room wants a
 ## decision, the badge in the status line's place (the row is 312 wide and the
-## stamp takes 72: a badge beside the status overran it). The lit row takes the cards' colour, its
-## stamp goes gold, and it reaches across the margin to join the room's card.
+## stamp takes 72: a badge beside the status overran it). The lit row takes the cards' colour and its
+## stamp goes gold (the reach across the margin to the card went, 8 Oct, Matt:
+## "just keep the button as the button").
 ## The rows share the rail's height: `set_row_height` from the layout. The
 ## badge carries a word as well as a colour, so colour is never the only signal.
 
@@ -26,7 +27,6 @@ var _glyph: TextureRect
 var _badge: Panel
 var _badge_label: Label
 var _rule: Panel                # the hairline under the row
-var _tongue: Panel              # the lit row's reach across the margin to the card
 var _selected := false
 var last := false               # the last row: no hairline under it
 
@@ -46,8 +46,6 @@ func _init(room_name: String) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, false)
 	_badge.visible = false
 	_rule = UI.panel(self, Rect2(0, Pal.RAIL_BTN_H - 1, Pal.RAIL_W, 1), UI.box(Pal.RAIL_RULE, 0))
-	_tongue = UI.panel(self, Rect2(Pal.RAIL_W - 2, 0, Pal.MARGIN + 3, Pal.RAIL_BTN_H), UI.box(Pal.CARD, 0))
-	_tongue.visible = false
 	set_row_height(Pal.RAIL_BTN_H)
 	_style(false)
 
@@ -63,7 +61,6 @@ func set_row_height(h: float) -> void:
 	_status[0].position.y = top + 36
 	_badge.position.y = top + 36
 	_rule.position.y = h - 1
-	_tongue.size.y = h
 
 
 func set_selected(on: bool) -> void:
@@ -96,7 +93,6 @@ func _style(on: bool) -> void:
 	sb.border_color = Pal.ACCENT if on else Pal.CARD_LINE
 	if UI.glyph_mono(GLYPH_OF.get(room, "yard")):
 		_glyph.modulate = Pal.ACCENT_TEXT if on else Pal.TEXT_2       # a line drawing takes the stamp's ink; a painting is itself
-	_tongue.visible = on
 	_rule.visible = not last
 
 
