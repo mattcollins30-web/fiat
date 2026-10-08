@@ -37,8 +37,9 @@ func _init() -> void:
 		_elements(hours, args[2] if args.size() > 2 else "")
 		return
 	if cls == "gate":
-		# `-- 8 gate Doorman` or `-- 8 gate Poacher fire`: one build, every gate read, a GATES line at the end
-		_gate(hours, args[2] if args.size() > 2 else "Doorman", args[3] if args.size() > 3 else "")
+		# `-- 8 gate Doorman` or `-- 8 gate Poacher fire`: one build, every gate read, a GATES line at the end;
+		# a fifth argument seeds the yard's dice (`-- 8 gate Scrapper "" 7`), for reading a change against the same start
+		_gate(hours, args[2] if args.size() > 2 else "Doorman", args[3] if args.size() > 3 else "", int(args[4]) if args.size() > 4 else 0)
 		return
 	if cls == "probe":
 		_probe()
@@ -188,10 +189,14 @@ func _elements(hours: float, forced: String) -> void:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String) -> void:
+func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	var sim = Sim.new()
 	sim.start()
+	if seed != 0:
+		sim.rng.seed = seed
 	sim.set_class(cls)
+	sim.fast_memo = true                  # the run reads its kit once in thirty seconds, as a dry run does (8 Oct)
+	sim.odds_runs_max = 24                # and the odds at twenty-four dry runs a read, glasses or not (the verdict at PUSH is the same; the number shown is the player's)
 	var bot = Bot.new()
 	bot.element = element
 	bot.cls = cls
@@ -369,14 +374,19 @@ func _ladder_read(sim, push: float) -> Dictionary:
 		var d0: int = sim.depth[i]
 		var intel0: Array = sim.intel[i].duplicate()
 		sim.intel[i] = []
-		var held := 0
-		for d in range(1, 31):
+		# the deepest depth that holds, by halving (8 Oct, the pass at an hour: thirty reads a site stepped; the
+		# odds fall with the depth, so five or six reads find the edge) - lo holds, hi doesn't
+		var lo := 0
+		var hi := 31
+		while hi - lo > 1:
+			var d: int = (lo + hi) / 2
 			sim.depth[i] = d
 			sim._surv_cache.erase(i)
-			if sim.survival(i) < push:
-				break
-			held = d
-		ladder[str(i)] = held
+			if sim.survival(i) >= push:
+				lo = d
+			else:
+				hi = d
+		ladder[str(i)] = lo
 		sim.depth[i] = d0
 		sim.intel[i] = intel0
 		sim._surv_cache.erase(i)

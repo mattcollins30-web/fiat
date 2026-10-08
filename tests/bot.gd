@@ -183,7 +183,9 @@ func _endgame(sim) -> void:
 	# words go with the run, so it's a sink every run), and the kit insured, while
 	# there's twice the price in hand - a flush player's reserve, not a miser's
 	if sim.campaign_done():
-		var t: int = pick_tier(sim)
+		# the tier it'll run: the one just run (8 Oct, the pass at an hour: a full pick here, every site read, and
+		# the word it put on changed that site's key so the step's pick read it all again - two picks a run)
+		var t: int = last_tier if last_tier >= 0 and sim.tier_open(last_tier) else pick_tier(sim)
 		while sim.can_add_word(t) and sim.cash - sim.juice_cost(t) * 2 >= _reserve(sim) and (not sim.words_in_notes() or sim.notes - sim.juice_notes(t) >= _notes_kept(sim)):     # twice: at depth 15 a word is £70k and the pile sat under three of them
 			var cost: int = sim.juice_cost(t)
 			sim.add_word(t, sim.juice_options(t)[0])
@@ -509,8 +511,15 @@ func _climb(sim) -> void:
 	var i := last_tier
 	if i == Data.CONVOY_TIER and sim.is_convoy(i) and not sim.lorry_done:
 		return                                # at the lorry's depth: beat it before digging past it
-	if i >= 0 and sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i] and sim.survival(i) >= CLIMB:
-		sim.set_depth(i, sim.depth[i] + 1)
+	if i >= 0 and sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i]:
+		# read whole, as the pick reads (8 Oct: read hurt, straight off the run, it was a fresh read every run at
+		# odds the pick never sees - and the reader's key carries the HP, so the pick read it all again)
+		var hp0: float = sim.hp
+		sim.hp = sim.max_hp()
+		var climb: bool = sim.survival(i) >= CLIMB
+		sim.hp = hp0
+		if climb:
+			sim.set_depth(i, sim.depth[i] + 1)
 
 
 func _train_tree(sim) -> void:

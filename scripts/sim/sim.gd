@@ -1023,6 +1023,7 @@ func _roll_weather() -> void:
 	if hour == weather_at:
 		return
 	weather_at = hour
+	_dry_memo.clear()                     # the weather is in the figures (fast_memo)
 	for z in range(Data.ZONES.size()):
 		var odds: Array = Data.WEATHER_ODDS[mini(z, Data.WEATHER_ODDS.size() - 1)]
 		var r := rng.randf()
@@ -1580,8 +1581,15 @@ func _nodes_for(effect: String) -> Array:
 var _dry_on := false
 var _dry_rules := {}
 var _dry_memo := {}
+## The balance gate's brake (8 Oct, the pass at an hour): the memo stays on through a real run too, cleared
+## every FAST_MEMO_S of the run's time and wherever the kit changes, so a tick reads the kit once in thirty
+## seconds rather than thirty times a second. A dry run already reads the kit once in fifteen minutes; the
+## shell leaves this off and reads fresh every call.
+var fast_memo := false
+const FAST_MEMO_S := 30.0
+var _memo_age := 0.0
 func _memo(key: String, f: Callable) -> Variant:
-	if not _dry_on:
+	if not (_dry_on or (fast_memo and mission != null)):
 		return f.call()
 	if _dry_memo.has(key):
 		return _dry_memo[key]
@@ -2747,6 +2755,9 @@ func estimate(i: int) -> float:
 ## calls, so the Runs screen settles over a few frames rather than hanging
 ## while nine tiers read at once. The bots and the tests leave it at 0: all at once.
 var odds_budget := 0
+## The balance gate's cap on a read's dry runs (8 Oct, the pass at an hour): the lookout's glasses read sixty
+## a site for the player's number, and the bot's verdict at PUSH is the same at twenty-four. 0, no cap.
+var odds_runs_max := 0
 ## The shell's other brake (7 Oct, the Runs screen's lag): no new dry run starts once `odds_time_ms` has gone
 ## since `odds_frame_start()`; one always runs, so a read never stalls. 0, no brake. And a read that is
 ## plainly settled settles early: EARLY_RUNS all alive with HP never under half, or all dead, reads as
@@ -2776,8 +2787,15 @@ func _kit_ids() -> Array:
 
 
 func _odds_key(i: int) -> Array:
-	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second
-	return [int(hp * 10.0 / maxf(max_hp(), 1.0)), int(max_hp()), int(dps() * 10.0), int(armour()), int(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second (rounded: a rest to full that
+	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
+	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
+	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+
+
+## A figure in steps of 2%: the odds don't move for less.
+func _odds_bucket(x: float) -> int:
+	return int(log(maxf(x, 1.0)) / log(1.02))
 
 
 ## The odds as read so far, without running any: what a screen shows while the shell reads them a few
@@ -2793,6 +2811,8 @@ func survival(i: int) -> float:
 	prof["surv_calls"] += 1
 	var key := _odds_key(i)
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
+	if odds_runs_max > 0:
+		runs = mini(runs, odds_runs_max)
 	var c: Array
 	if _surv_cache.has(i) and _surv_cache[i][0] == key:
 		c = _surv_cache[i]
@@ -2815,6 +2835,12 @@ func survival(i: int) -> float:
 		c[5] = minf(float(c[5]), _dry_min_hp)
 		if c[2] == EARLY_RUNS and (c[3] == EARLY_RUNS and float(c[5]) >= 0.5 or c[3] == 0):
 			c[3] = runs if c[3] > 0 else 0   # plainly settled: the rest of the lookout's runs would say the same
+			c[2] = runs
+			break
+		if odds_runs_max > 0 and c[2] >= EARLY_RUNS and c[2] - c[3] >= 3 and not boss_armed.get(i, false):
+			# the gate's read (8 Oct): three down by the eighth can't reach the bot's PUSH over twenty-four, so the
+			# read stands as it is; a boss's read runs on, the lorry is taken at better than even
+			c[3] = int(round(float(c[3]) / float(c[2]) * runs))     # the share so far, as the lookout's count
 			c[2] = runs
 			break
 	c[1] = float(c[3]) / maxf(1.0, c[2])
@@ -2894,6 +2920,8 @@ func deploy(i: int) -> void:
 		return
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
+	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
+	_memo_age = 0.0
 	var t := effective(i)
 	if t.has("boss"):
 		var cost := boss_cost(i)
@@ -2966,6 +2994,11 @@ func advance(seconds: float) -> void:
 		if mission != null:
 			var step := minf(1.0, left)
 			var p0 := Time.get_ticks_usec()
+			if fast_memo:
+				_memo_age += step
+				if _memo_age >= FAST_MEMO_S:
+					_memo_age = 0.0
+					_dry_memo.clear()
 			_tick(step)
 			prof["real_ticks"] += 1
 			prof["real_us"] += Time.get_ticks_usec() - p0

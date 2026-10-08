@@ -2108,6 +2108,23 @@ in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOU
 Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
 then three reads a build.
 
+**The twenty-first read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours: the six's first).**
+Three red (the twentieth's five). *The spread at the first lorry green, scrap green, deaths green.* *The
+lorry on eighteen of twenty* (the twentieth's nineteen at the old price), the first at 4.0-29.9 h, the
+bleed Doorman seventeen moves, the poison Poacher fifteen, the shock Drifter thirteen; late merged: the
+plain Drifter 25.5 h (21.1 h and 29.9 h), the Paramedic 19.7 h (one read never), the Scrapper 16.8 h.
+The two nevers: a Paramedic at level 50 with the services at depth 7 and 11,273 notes in hand - a depth
+short of the lorry and never dug the last one; a fire Drifter at depth 8 with 44,590 notes. The
+Paramedic's is a bot fault found in the wall work below: the climb read the odds hurt, straight off the
+run, so a 0.92 read that the pick (read whole) would pass failed every run; fixed with the cuts, so the
+twenty-second reads it. The plain Drifter took the lorry on both reads again at 960 - late, not never;
+the +10% stays on hold until the climb fix has read. *Wounds* 4-27%: `WOUND_AT` 0.33 put the Poacher
+and the Scrapper at 25-27% (the band's top 25) and left the rest at 4-9% - a spread between builds,
+not a level; the Poacher and Scrapper are the two that run the most and search the longest (973-1,006
+runs), so they take the most close calls. To think on, not to tune blind: the row might read the merged
+builds, or the band's top might be 30. The bank's band red as luck (1.9-2.2 h on the classes). Wall
+795-2,992 s a read, the pass fifty minutes.
+
 **Where the wall goes (8 Oct, Matt: the pass at an hour and "only going to get longer").** Counters, not
 cuts: `Sim.prof` counts the odds reads (`survival` calls and the reads the cache misses, the dry runs
 and their ticks, the snapshot's time) and the real run's ticks, the gate times the bot's step, its
@@ -2116,8 +2133,32 @@ tidy and the ladder reads, prints a `wall` line and a `prof` key in GATES, and t
 in the odds reads (2,312 dry runs, 96,000 dry ticks against 5,800 real), 17 s the run, 5 s the tidy,
 the snapshots nothing - so the dry runs are the cost, sixteen ticks to one, and the snapshot copy is
 not. The cuts to pick from once the twenty-second has read it on every build: the bot reading at a
-budget of its own, the ladder read halving rather than stepping, a coarser dry step. Discussed, not
-built.
+budget of its own, the ladder read halving rather than stepping, a coarser dry step.
+
+*The cuts (8 Oct, Matt: "build the cuts now ... can you find time elsewhere to get it sub 20").* Six,
+none touching what the game does for a player: (1) `Sim.fast_memo` - the gate keeps the dry run's
+kit memo on through a real run too, cleared every thirty seconds of the run, at the gate and wherever
+the kit changes, so a tick reads the kit once rather than thirty times a second (the run's ticks 17 s
+to 3 s on a two-hour read; the shell leaves it off); (2) the odds key rounds the HP tenth (a rest to
+full that landed a hair under read as nine tenths and re-read every pick) and takes the figures in
+steps of 2% (`_odds_bucket`), so a paragon level or an affix's hair doesn't re-read - this one the
+shell shares: the Runs screen re-reads when a figure moves 2%, not for any change; (3)
+`Sim.odds_runs_max` - the gate caps a read at twenty-four dry runs, glasses or not (the player's
+number is sixty; the bot's verdict at PUSH is the same), and under the cap a read three down by the
+eighth stands as it is, since it can't reach PUSH over twenty-four (a boss's read runs on - the lorry
+is taken at better than even); (4) the ladder read halves rather than steps (five or six reads a site
+for thirty); (5) a bot fault: `_endgame` ran a full site-pick every run to choose the tier for a word,
+and the word it put on changed that site's key, so the step's pick read it all again - two picks a
+run; it uses the tier just run now; (6) a bot fault with a balance edge: `_climb` read the odds hurt,
+straight off the run, where the pick reads whole - a fresh read every run at odds the pick never sees,
+and a 0.92 that a whole runner would pass failed, so the services stuck a depth short of the lorry
+(the twenty-first's Paramedic at depth 7 with 11,273 notes); it reads whole now. Read here on a
+seeded twelve-hour Scrapper (`-- 12 gate Scrapper "" 7`, the fifth argument the yard's seed, new):
+434 s against 1,250+ s before the cuts, about three to one, the odds reads still 374 s of the 434 -
+1,109 reads of 1,387 calls, and the misses are real changes (a level, a word bought, a depth stepped
+back), not the key. The dry tick itself is the floor now, 0.6 ms a tick of `_fight` in GDScript; the
+next cut is in the fight, not around it. Expected on the Legion: the slowest read from 50 to
+15-20 minutes.
 
 **The twentieth read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours; the six landed
 while it ran, so the sim is the nineteenth's - the old price, 0.30 - and the rows are the new ones).**

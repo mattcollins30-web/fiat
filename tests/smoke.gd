@@ -3814,6 +3814,13 @@ func _playtest_checks(main) -> void:
 	sim.xp = hold_x
 	sim.hp = hold_hp
 	sim._surv_cache = {}
+	# the balance gate's brakes stay off in the shell (8 Oct): the player's read is the lookout's full count, read fresh
+	_check(not sim.fast_memo and sim.odds_runs_max == 0, "the shell's sim has the gate's brakes on: fast_memo %s, odds_runs_max %d" % [sim.fast_memo, sim.odds_runs_max])
+	# and the odds key rounds the HP tenth: a rest to full that lands a hair under reads as the full one
+	sim.hp = sim.max_hp() - 0.01
+	var k_near: Array = sim._odds_key(0)
+	sim.hp = sim.max_hp()
+	_check(k_near == sim._odds_key(0), "a hair under full HP re-reads the odds")
 	print("the playtest's five ok: HP, Locked, the toasts, the log line, a paper in the Lock-up; the odds settle over refreshes")
 
 
