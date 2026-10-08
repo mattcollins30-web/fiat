@@ -272,21 +272,34 @@ func _build() -> void:
 
 # ------------------------------------------------------------------ layout
 
-## A window taller than the screen (the Steam Deck, 8 Oct: the 1920 x 1080 window
-## on a 1280 x 800 screen under gamescope - "maximized" means nothing there, the
-## picture is scaled to fit but the pointer stops at the screen's edge, so the
-## rail from the Fence down could not be clicked) is sized to the screen; the
-## canvas stretches to it (canvas_items, expand) as on any other screen.
+## The Steam Deck (8 Oct, Matt: "the lower part of the screen is unclickable -
+## anything from fence down"). Greenhorn met the same and its notes carry the
+## mechanism (game_manager.gd, _apply_native_window_size): gamescope places
+## whatever pixel size the game's window asks for on the real panel, scaling
+## it, and reports the pointer back in PANEL pixels, which the engine's own
+## content-scale transform then reads as if they were already in the window's
+## space. Zero error at the origin, growing with distance - the rows low on the
+## screen go out of reach. The fix is the same as Greenhorn's: ask for the
+## window at the screen's own size, unconditionally, and let the stretch
+## (canvas_items, expand) do all the scaling as on any other screen. The first
+## cut here gated it on "the window is bigger than the screen", which gamescope
+## never reports, so it did nothing on the Deck.
+##
+## Linux only, as Greenhorn's is: on an exported Windows build under the GL
+## Compatibility renderer, any window-geometry change from script segfaults
+## (Greenhorn's isolated it over ten export cycles), and Windows never had the
+## bug - a plain window manager shows the requested window at its size.
 func _fit_window_to_screen() -> void:
+	if DisplayServer.get_name() == "headless" or OS.get_name() != "Linux":
+		return
 	var win := get_window()
 	if win == null or win.mode in [Window.MODE_FULLSCREEN, Window.MODE_EXCLUSIVE_FULLSCREEN]:
 		return
-	var screen: Rect2i = DisplayServer.screen_get_usable_rect(win.current_screen)
-	var w: Vector2i = win.size
-	if screen.size.x <= 0 or screen.size.y <= 0 or (w.x <= screen.size.x and w.y <= screen.size.y):
+	var screen: Vector2i = DisplayServer.screen_get_size(win.current_screen)
+	if screen.x <= 0 or screen.y <= 0:
 		return
-	win.size = Vector2i(mini(w.x, screen.size.x), mini(w.y, screen.size.y))     # through the Window, so the canvas follows at once
-	win.position = screen.position
+	win.size = screen                      # through the Window, so the canvas follows at once
+	win.position = DisplayServer.screen_get_position(win.current_screen)
 
 
 func _on_resize() -> void:

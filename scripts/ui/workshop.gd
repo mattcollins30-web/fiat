@@ -757,7 +757,8 @@ func _show_craft(it: Dictionary) -> void:
 	_build.disabled = not on_bench
 	_foot.size.x = _build.position.x - 12 - PAD
 	if not sim.last_craft.is_empty() and (sim.last_craft.get("kind", "") in ["build", "scrap"] or sim.last_craft.get("id", -1) == it.get("id", -2)):
-		UI.fit(_foot, [str(sim.last_craft["words"]), str(sim.last_craft["words"]).get_slice(":", 0), Data.CRAFT.get(sim.last_craft["kind"], {}).get("name", "Built")])
+		var w: String = str(sim.last_craft["words"])
+		UI.fit(_foot, [w, w.get_slice(":", 0), w.get_slice(" · ", 0), w.get_slice(" ", 0)])     # down to its first word ("Added", "Re-rolled"): what was done, if not what to
 		_foot.add_theme_color_override("font_color", Pal.GOOD)
 	else:
 		UI.fit(_foot, ["Nothing on the Bench yet" if it.is_empty() else "Bench level %d · %d scrap in hand" % [sim.workshop, sim.scrap], "%d scrap in hand" % sim.scrap])

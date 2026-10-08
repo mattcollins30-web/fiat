@@ -2288,6 +2288,20 @@ old menu hid them over the painting too. `open` takes `picture` now; the title a
 lost camp is the card on the plain ground with "The Yard is lost" and its words up; the smoke opens it
 and checks.
 
+*The Deck, second cut (8 Oct, Matt: "still exactly the same").* The first cut's gate - "the window is
+bigger than the screen" - never fires under gamescope, which reports no such thing. Greenhorn met this
+and wrote it down (`game_manager.gd`, `_apply_native_window_size`): gamescope places the window at the
+size it asks for, scales it to the panel, and reports the pointer in panel pixels, which the engine's
+content-scale transform reads as the window's; the error is nil at the origin and grows down the
+screen. Greenhorn's fix, now Fiat's: on Linux, ask for the window at `screen_get_size` unconditionally
+and let the stretch do the rest. Linux only, as Greenhorn's is - its notes record an exported Windows
+build under GL Compatibility segfaulting on any window-geometry change from script, and Windows never
+has the bug. The Bench's jobs foot falls back through its words to their first word ("Added",
+"Re-rolled") rather than the job's name, so it always says what was done. *The pck:* Fiat's Linux
+export preset has Embed PCK off (`binary_format/embed_pck=false` in `export_presets.cfg`, untracked);
+Greenhorn's has it on, which is why Greenhorn runs as one file on the Deck and Fiat wants the .pck
+beside it.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
