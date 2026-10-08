@@ -300,9 +300,10 @@ func _fit_window_to_screen() -> void:
 	var screen: Vector2i = DisplayServer.screen_get_size(win.current_screen)
 	if screen.x <= 0 or screen.y <= 0:
 		return
-	# the project opens the window maximized (window/size/mode=2); the X11 display server ignores a
-	# resize of a maximized window, which is why the second cut did nothing on the Deck either -
-	# Greenhorn's project has no mode set. Windowed first, then the screen's size.
+	# the project opens the window maximized on Windows only (window/size/mode.windows=2, 8 Oct): on
+	# the Deck a maximized 1920 x 1080 window had gamescope set its own screen to 1920 x 1080 (the
+	# foot read "1920×1080 → 1920×1080" in game mode), so there was no smaller screen to size to;
+	# windowed, as Greenhorn's is, the screen stays the panel's 1280 x 800. Windowed here too, in case.
 	win.mode = Window.MODE_WINDOWED
 	win.size = screen                      # through the Window, so the canvas follows at once
 	win.position = DisplayServer.screen_get_position(win.current_screen)

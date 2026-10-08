@@ -2311,6 +2311,15 @@ screen's size. Desktop mode was fine both times because a window manager fitted 
 manager, that is not the proof the Deck is; the title's foot now reads the window and the canvas as
 the game sees them - "FIAT · 1280×800 → 1920×1200" - so the Deck can say what it got).
 
+*The Deck, fourth cut (8 Oct, the foot in game mode: "1920×1080 → 1920×1080").* So the window was
+never resized because the screen the game was shown was already 1920 × 1080: gamescope follows a
+window's requested mode, and the project's maximized 1920 × 1080 window had it set its own screen to
+that; `screen_get_size` then equals the window and the fix has nothing to size to. Greenhorn's window
+opens windowed, so its screen stays the panel's 1280 × 800 and the resize takes. `project.godot`:
+`window/size/mode=2` → `window/size/mode.windows=2` (a feature override: Windows still opens
+maximized; Linux opens windowed, the Greenhorn path, and `_fit_window_to_screen` sizes it to the
+panel). Not provable here (no gamescope); the foot's line says what the Deck gets.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
