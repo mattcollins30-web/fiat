@@ -2302,6 +2302,15 @@ export preset has Embed PCK off (`binary_format/embed_pck=false` in `export_pres
 Greenhorn's has it on, which is why Greenhorn runs as one file on the Deck and Fiat wants the .pck
 beside it.
 
+*The Deck, third cut (8 Oct, Matt: still the same in game mode, fine in desktop mode - exactly as
+Greenhorn was).* The second cut resized the window, but the project opens it maximized
+(`window/size/mode=2`) and the X11 display server ignores a resize of a maximized window; Greenhorn's
+project sets no mode, so its resize took. Now: on Linux the window goes windowed first, then to the
+screen's size. Desktop mode was fine both times because a window manager fitted the window itself.
+`tests/deck.gd` asks for the window maximized first, as the project does (under Xvfb, with no window
+manager, that is not the proof the Deck is; the title's foot now reads the window and the canvas as
+the game sees them - "FIAT · 1280×800 → 1920×1200" - so the Deck can say what it got).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

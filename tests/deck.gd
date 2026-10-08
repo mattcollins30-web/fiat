@@ -8,6 +8,8 @@ extends SceneTree
 ## (headless has no window to size). Exit 1 on a row past the window.
 func _init() -> void:
 	DisplayServer.window_set_size(Vector2i(1920, 1080))         # as the Deck gets it
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED)     # and as the project asks (window/size/mode=2)
+	await process_frame
 	await process_frame
 	var main = load("res://scripts/ui/main.gd").new()
 	main.intro = false

@@ -289,6 +289,8 @@ func _build() -> void:
 ## Compatibility renderer, any window-geometry change from script segfaults
 ## (Greenhorn's isolated it over ten export cycles), and Windows never had the
 ## bug - a plain window manager shows the requested window at its size.
+## Desktop mode on the Deck (a window manager, the window fitted by it) was
+## fine both times; game mode (gamescope alone) was not.
 func _fit_window_to_screen() -> void:
 	if DisplayServer.get_name() == "headless" or OS.get_name() != "Linux":
 		return
@@ -298,6 +300,10 @@ func _fit_window_to_screen() -> void:
 	var screen: Vector2i = DisplayServer.screen_get_size(win.current_screen)
 	if screen.x <= 0 or screen.y <= 0:
 		return
+	# the project opens the window maximized (window/size/mode=2); the X11 display server ignores a
+	# resize of a maximized window, which is why the second cut did nothing on the Deck either -
+	# Greenhorn's project has no mode set. Windowed first, then the screen's size.
+	win.mode = Window.MODE_WINDOWED
 	win.size = screen                      # through the Window, so the canvas follows at once
 	win.position = DisplayServer.screen_get_position(win.current_screen)
 
