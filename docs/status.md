@@ -2167,7 +2167,15 @@ went (and its smoke check); LEVEL sits before the figure (the smoke reads the fi
 damage figure has the same line as HP and XP, filled by a minute's fire against the best open site's
 first gang at its depth (`_dps_share`: full when the gang falls inside the minute, so it grows with the
 kit and drops back as a harder site opens), in the figure's grey; the smoke proves the three lines
-share one width and one row.
+share one width and one row. *From play (Matt):* "the DPS bar should fluctuate based on damage dealt, even
+if it's only cosmetic - a static bar looks weird", and a line showing past the Radio. The line moves now:
+the sim keeps what landed this tick a second on the mission (`landed_rate`), and on a run the top bar
+eases the damage line toward the kit's share scaled by what's landing against what it can put out
+(`_move_dps_line`, every frame), so it swings with the spread, spikes on a first shot, climbs with walking
+fire, drops under a resist and falls away while the runner searches; in the yard it settles to the share.
+The line past the Radio was the last row's hairline: `last` was set after the row built and the rule read
+it once, at build - a setter now. Smoke: a fight five seconds in has landed something, and the eased line
+sits off the yard's share mid-fight; the hairline is off on the last row and on the rest.
 
 **The twenty-third read, the final pass (the Legion, 8 Oct, thirty reads of ten builds, three a build,
 thirty-two hours; the Drifter's +10%, wounds at 5-30 on the merged builds).** Twenty minutes for

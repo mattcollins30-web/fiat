@@ -84,6 +84,15 @@ func _init() -> void:
 			if guard == 20 or (sim.searching() and guard % 7 == 0 and runs % 5 == 0):
 				main.show_room(main.MISSIONS)
 				_check_fit(main, "Missions (live, run %d)" % runs)
+			if guard == 5 and runs == 0 and sim.on_mission() and not sim.searching():
+				# the damage line moves with the fight (8 Oct): what landed this second is on the mission, and the
+				# line eased toward it sits somewhere other than the yard's share
+				_check(float(sim.mission.get("landed_rate", 0.0)) > 0.0, "a fight five seconds in has landed nothing a second")
+				var at_rest: float = main._dps_share()
+				for k in range(30):
+					main._move_dps_line(0.1)
+				var shown: float = main._top_lines["dps"][1].size.x / main._top_lines["dps"][0].size.x
+				_check(absf(shown - at_rest) > 0.01 or absf(float(sim.mission["landed_rate"]) / maxf(sim.dps(), 1.0) - 1.0) < 0.01, "the damage line sits at the yard's share (%.2f) mid-fight with %.0f landing a second against %.0f" % [at_rest, float(sim.mission["landed_rate"]), sim.dps()])
 			# the bot bails at a quarter HP, like a player would
 			if sim.on_mission() and (sim.hp < sim.max_hp() * 0.25 or (sim.searching() and sim.pack_used(sim.mission) >= sim.capacity()) or guard > 1200):
 				sim.extract_now()
@@ -4518,6 +4527,13 @@ func _check_fit(main, where: String) -> void:
 		rail_nodes.append_array(b.text_nodes())
 		if b.badge_gap() < 8.0:
 			push_error("rail %s: badge overlaps the name" % name)
+			bad += 1
+		if b._glyph.texture == null:
+			push_error("rail %s: no glyph" % name)
+			bad += 1
+		if b._rule.visible == b.last:
+			# the last row has no hairline under it (8 Oct, Matt: a line past the Radio); the rest have one
+			push_error("rail %s: the hairline is %s on the %s row" % [name, "on" if b._rule.visible else "off", "last" if b.last else "a middle"])
 			bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
 	# the rail runs to the log's bottom (8 Oct, Matt: "the rail should span to the bottom of the log bar")

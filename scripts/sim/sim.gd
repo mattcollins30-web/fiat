@@ -3210,6 +3210,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		ticked_on_them = _dot_tick(m["dots"], dt, m["dealt_by"])
 		m["target_hp"] -= ticked_on_them
 	m["dealt"] = float(m.get("dealt", 0.0)) + landed_total + ticked_on_them    # for the numbers on the run screen
+	m["landed_rate"] = landed_total / maxf(dt, 0.001)                            # what landed this tick, a second: the top bar's damage line moves on it (8 Oct)
 	# the rounds behind that: the primary's rate while it's live, the secondary's when it fires
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	if primary_live and not has_rule("qm_rifle"):

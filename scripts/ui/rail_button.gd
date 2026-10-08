@@ -28,7 +28,11 @@ var _badge: Panel
 var _badge_label: Label
 var _rule: Panel                # the hairline under the row
 var _selected := false
-var last := false               # the last row: no hairline under it
+var last := false:              # the last row: no hairline under it (set after the row is built, so the rule follows it)
+	set(v):
+		last = v
+		if _rule != null:
+			_rule.visible = not v
 
 
 func _init(room_name: String) -> void:

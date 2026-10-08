@@ -330,10 +330,30 @@ func _process(delta: float) -> void:
 	if _since_save >= AUTOSAVE_S:
 		save_game()
 	_read_odds()
+	_move_dps_line(delta)
 	_since_refresh += delta
 	if _since_refresh >= REFRESH_S:
 		_since_refresh = 0.0
 		refresh()
+
+
+## The damage line moves with the fight (Matt, 8 Oct: "a static bar looks weird"): on a run it shows what's
+## landing a second against what the kit can put out, so it swings with the spread, spikes on a first shot,
+## climbs with walking fire, drops under a resist and falls away while the runner searches; in the yard it
+## settles to the kit's share. Eased, a few frames behind.
+var _dps_shown := -1.0
+func _move_dps_line(delta: float) -> void:
+	if not _top_lines.has("dps"):
+		return
+	var target: float = _dps_share()
+	if sim.on_mission():
+		var m: Dictionary = sim.mission
+		target *= clampf(float(m.get("landed_rate", 0.0)) / maxf(sim.dps(), 1.0), 0.0, 1.6)
+		target = minf(target, 1.0)
+	if _dps_shown < 0.0:
+		_dps_shown = target
+	_dps_shown = lerpf(_dps_shown, target, clampf(delta * 8.0, 0.0, 1.0))
+	_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_shown
 
 
 ## The Runs screen's odds, a few milliseconds a frame (7 Oct: three dry runs a tier a refresh was half a second
@@ -633,7 +653,8 @@ func refresh() -> void:
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
-	_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()
+	if _dps_shown < 0.0:
+		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
 	# the purse's glyphs before their right-aligned figures
 	for k in ["notes", "cash"]:
 		var l: Label = _top_labels[k]
