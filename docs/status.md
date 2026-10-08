@@ -2108,6 +2108,22 @@ in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOU
 Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
 then three reads a build.
 
+**The twenty-second read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours: the cuts' first,
+the climb fix in).** Two red. *The pass in fifteen minutes* (flagged 10:01, done 10:16 UTC), the reads
+309-862 s against the twenty-first's 795-2,992 - three and a half to one on the slowest, under Matt's
+twenty; the wall table reads the odds reads at 75-90% of every read still (the Doorman 773 of 862 s,
+two million dry ticks), the tidy 100-220 s, the run 30-90 s, the ladders nothing. *The lorry on twenty of
+twenty* for the first time, the first at 3.3-31.8 h; the Paramedic 9.4 h and 7.2 h (the twenty-first's
+19.7 and never: the climb fix), the Scrapper 10.8 and 9.5 (16.8), the bleed Doorman eighteen moves, the
+poison Poacher seventeen, the shock Drifter fourteen and thirteen. *The one late: the plain Drifter*, 31.8 h
+and 16.3 h, merged 24.1 - last on every read since the engine; the first read sat at level 9 at hour 4
+and level 50 only by hour 24, its cash flat at £41k from hour 20. Spread green, scrap green, deaths
+green, depth pace green. *Wounds* 2-27%: the Poacher 20/26% and the Scrapper 27/23% at the band's top,
+five builds under 10% (frost Poacher 2%, Drifter 4%, Paramedic 7%, bleed Doorman and shock Drifter 8%) -
+the spread again; the band was set for a player's close calls, and the bot at 0.88 with a kit past its
+sites has few. The bank's band 1.1-3.4 h on the classes (the Poacher's two reads 3.3 and 3.5 h, the
+Scrapper's 0.9), luck as labelled. A real KIA on a Doorman read, the first the bot has taken.
+
 **The twenty-first read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours: the six's first).**
 Three red (the twentieth's five). *The spread at the first lorry green, scrap green, deaths green.* *The
 lorry on eighteen of twenty* (the twentieth's nineteen at the old price), the first at 4.0-29.9 h, the
