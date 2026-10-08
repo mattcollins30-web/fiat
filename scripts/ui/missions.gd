@@ -225,7 +225,7 @@ func show_state(s) -> void:
 		c["resist"].show_chips(res_chips if is_open else [])
 		# four rows: the radio's words first, the sky's after; a fifth (three called in, at night, in weather) is left off the end
 		c["intel"].show_rows(word_rows(sim, t["intel"]) if is_open else [], WORD_ROWS)
-		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), "pinned at the radio" if sim.pinned[i] else "new word after every run"], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
+		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), "pinned at the Radio" if sim.pinned[i] else "new word after every run"], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and sim.notes < sim.boss_cost(i))

@@ -1397,10 +1397,16 @@ func _craft_view_checks(main) -> void:
 	sim.stash.append(piece)
 	main.show_room(main.WORKSHOP)
 	main._workshop._set_view("craft")
-	_check(main._workshop._craft.visible, "the Craft view's panel is hidden")
-	_check(main._workshop._craft_title.text.begins_with("Pick a piece"), "the Craft view does not ask for a piece first: %s" % main._workshop._craft_title.text)
+	var ws = main._workshop
+	_check(ws._piece.visible and ws._jobs.visible, "the Craft view's piece card or jobs are hidden")
+	# the view buttons read white whichever is on (Guns started as a primary button and kept its dark text, 8 Oct)
+	for v in ws._views:
+		_check(v.get_theme_color("font_color") == Pal.TEXT, "the %s view button's text is not white" % v.text)
+	_check(ws._piece_title.text.begins_with("Pick a piece"), "the Craft view does not ask for a piece first: %s" % ws._piece_title.text)
+	_check(ws._job_tiles.all(func(t): return t["price"].text == "" and t["button"].disabled), "the job tiles carry prices with nothing picked")
+	_check(ws._build.visible and ws._build.text == "Build for scrap" and not ws._build.disabled, "Build for scrap is not up with nothing picked")
 	_check_fit(main, "Workshop (craft, nothing picked)")
-	var shown: Array = main._workshop._craftable()
+	var shown: Array = ws._craftable()
 	_check(not shown.is_empty() and shown.all(func(it): return not Items.is_attachment(it) and not Items.is_medical(it) and not it.has("unique")), "the Craft view's grid shows parts, meds or uniques")
 	var k: int = shown.find(piece)
 	if k < 0:
@@ -1408,20 +1414,41 @@ func _craft_view_checks(main) -> void:
 			if is_same(shown[i], piece):
 				k = i
 	_check(k >= 0, "the rolled piece is not in the Craft view's grid")
-	main._workshop._pick_cell(k)
-	_check(main._workshop._craft_title.text != "Pick a piece", "picking a piece did not fill the Craft panel")
-	_check(main._workshop._craft_lines[1].text.begins_with("Level %d" % Items.ilvl(piece)), "the Craft panel's level line is wrong: %s" % main._workshop._craft_lines[1].text)
-	_check(main._workshop._craft_lines[2].text.contains("T2"), "the Craft panel does not show the affix's tier: %s" % main._workshop._craft_lines[2].text)
-	_check(main._workshop._craft_lines[5].text.contains("£"), "the Craft panel has no priced job: %s" % main._workshop._craft_lines[5].text)
+	ws._pick_cell(k)
+	_check(ws._piece_title.text != "Pick a piece", "picking a piece did not fill the piece card")
+	_check(ws._piece_chips.words(1) == "Level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
+	_check(ws._affix_rows[0]["tag"].text == "T2" and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
+	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
+	_check(ws._job_tiles[0]["price"].text.begins_with("£") and not ws._job_tiles[0]["button"].disabled, "the re-roll tile is not priced and live: %s" % ws._job_tiles[0]["price"].text)
+	_check(ws._job_tiles[4]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[4]["price"].text)
+	_check(ws._job_tiles[5]["price"].text.begins_with("+") and ws._job_tiles[5]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[5]["price"].text)
+	_check(ws._affix_buttons.all(func(b): return not b.visible), "the affix jobs are up with no affix picked")
 	_check_fit(main, "Workshop (craft, piece picked)")
-	main._workshop._press(0)              # Bench
-	_check(main._menu.visible, "Bench did not open the Bench's menu")
-	_check_fit(main, "Workshop (craft, bench menu)")
-	main._menu.close()
-	main._workshop._set_view("guns")
-	_check(not main._workshop._craft.visible, "the Craft panel stayed up on the Guns view")
+	# an affix picked: its two jobs along the card's foot, inside the card
+	ws._pick_affix(0)
+	_check(ws.sel_stat == "hp" and ws._affix_buttons[0].visible and ws._affix_buttons[1].visible, "picking the first affix did not show its two jobs")
+	_check(ws._affix_buttons[1].position.x + ws._affix_buttons[1].size.x <= ws.BODY_W - ws.PAD + 0.5, "the affix jobs run off the piece card")
+	_check(ws._affix_buttons[0].text.contains("£") and ws._affix_buttons[1].text.contains("£"), "the affix jobs carry no price")
+	_check_fit(main, "Workshop (craft, affix picked)")
+	# the job runs in the room: a re-roll keeps the count, the foot says what was done
+	var before_affixes: int = piece["affixes"].size()
+	ws._press_job(0)
+	var after: Dictionary = sim.item_by_id(piece["id"])
+	_check(after.get("affixes", []).size() == before_affixes, "the re-roll in the room changed the affix count")
+	_check(ws._foot.text.begins_with("Re-rolled") or ws._foot.get_theme_color("font_color") == Pal.GOOD, "the jobs' foot does not say what the Bench did: %s" % ws._foot.text)
+	_check(not main._menu.visible, "a job in the room opened the menu")
+	_check_fit(main, "Workshop (craft, after a job)")
+	# scrap from the room: the piece goes, the foot says what it gave, nothing stays picked
+	var scrap_before: int = sim.scrap
+	var gave: int = sim.scrap_of(after)
+	ws._press_job(5)
+	_check(sim.item_by_id(piece["id"]).is_empty() and sim.scrap == scrap_before + gave, "the scrap tile did not scrap the piece for %d" % gave)
+	_check(ws.sel_id == -1 and ws._piece_title.text.begins_with("Pick a piece") and ws._foot.text.begins_with("Scrapped"), "after scrapping: picked %d, title '%s', foot '%s'" % [ws.sel_id, ws._piece_title.text, ws._foot.text])
+	_check_fit(main, "Workshop (craft, after scrapping)")
+	ws._set_view("guns")
+	_check(not ws._piece.visible and not ws._jobs.visible, "the piece card stayed up on the Guns view")
 	sim.load_dict(saved)
-	print("craft view ok: stash gear only, tiers and prices read, Bench opens the menu")
+	print("craft view ok: stash gear only, the piece card, the priced tiles, an affix's jobs, a job in the room")
 
 
 ## The trees as webs: a fork at the notable, a branch each way; the second
@@ -1925,7 +1952,7 @@ func _melee_checks(main) -> void:
 	var labels := []
 	for r in main._workshop._guns["Primary"]["rows"]:
 		labels.append(r["mount"].text)
-	_check(labels[0] == "Grip" and labels[1] == "Business end" and labels[2] == "—", "the bat's rows are %s" % str(labels))
+	_check(labels[0] == "Grip" and labels[1] == "Business end" and labels[2] == "" and main._workshop._guns["Primary"]["rows"][2]["button"].visible and not main._workshop._guns["Primary"]["rows"][3]["button"].visible, "the bat's rows are %s (the third a hollow slot, no second row)" % str(labels))
 	_check_fit(main, "Workshop (a bat)")
 	main._workshop._pick_row("Primary", 0)
 	_check(main._workshop.sel_mount == "grip", "picking the first row did not pick the grip")
@@ -1994,14 +2021,18 @@ func _melee_checks(main) -> void:
 	for lv in range(Data.WORKSHOP.size()):
 		sim.workshop = lv
 		main.refresh()
-		var words: String = main._workshop._band.right[1].text
-		_check(main._workshop._band.headline.text == "Level %d" % lv and main._workshop._bench_words.text != "", "bench level %d's band reads '%s' / '%s'" % [lv, main._workshop._band.headline.text, main._workshop._bench_words.text])
+		var words: String = main._workshop._next.text
+		_check(main._workshop._headline.text == "Level %d" % lv and main._workshop._unit.text != "", "Bench level %d's heading reads '%s' / '%s'" % [lv, main._workshop._headline.text, main._workshop._unit.text])
 		if lv < Data.WORKSHOP.size() - 1:
-			_check(words.begins_with("Next: ") and words.ends_with("s"), "bench level %d's words don't say what the upgrade adds: '%s'" % [lv, words])
-			_check(main._workshop._upgrade.visible and main._workshop._upgrade.text.begins_with("Upgrade"), "bench level %d has no upgrade button" % lv)
-			_check(main._workshop._upgrade.position.y + main._workshop._upgrade.size.y <= main._workshop.BAND_H, "the upgrade button leaves the band")
+			_check(words.begins_with("Next: ") and words.ends_with("s"), "Bench level %d's words don't say what the upgrade adds: '%s'" % [lv, words])
+			_check(main._workshop._upgrade.visible and main._workshop._upgrade.text.begins_with("Upgrade"), "Bench level %d has no upgrade button" % lv)
+			_check(main._workshop._upgrade.position.y + main._workshop._upgrade.size.y <= main._workshop.HEAD_H, "the upgrade button leaves the heading")
+			_check(main._workshop._next.position.x >= main._workshop._views[2].position.x + main._workshop._views[2].size.x, "the Next words run into the view tabs")
 		else:
-			_check(not main._workshop._upgrade.visible, "the top bench still offers an upgrade")
+			_check(not main._workshop._upgrade.visible, "the top Bench still offers an upgrade")
+		# the purse chips sit inside the heading, right of the tabs
+		var chips = main._workshop._chips
+		_check(chips.position.x >= main._workshop._views[2].position.x + main._workshop._views[2].size.x and chips.position.x + chips.used_width() <= main._workshop.size.x - main._workshop.PAD + 0.5, "the purse chips are off their place in the heading")
 		# a fitted part's tile carries its name in its tier's colour
 		var prim = sim.equipped["Primary"]
 		if prim != null:
@@ -2020,11 +2051,11 @@ func _melee_checks(main) -> void:
 		if kc >= 0:
 			main._workshop._pick_cell(kc)
 			main.refresh()
-			var before_words: String = main._workshop._craft_lines[1].text
+			var before_words: String = main._workshop._piece_chips.words(1)
 			sim.notes += 1000
 			sim.craft(ws_piece["id"], "bump")
 			main.refresh()
-			_check(main._workshop._craft_lines[1].text != before_words or main._workshop._hint.get_theme_color("font_color") == Pal.GOOD, "the craft view did not refresh after a bump: '%s'" % main._workshop._craft_lines[1].text)
+			_check(main._workshop._piece_chips.words(1) != before_words or main._workshop._foot.get_theme_color("font_color") == Pal.GOOD, "the craft view did not refresh after a bump: '%s'" % main._workshop._piece_chips.words(1))
 		sim.stash.erase(ws_piece)
 		main._workshop._set_view("guns")
 		main.refresh()
@@ -2826,7 +2857,7 @@ func _craft_checks(main) -> void:
 	if kc >= 0:
 		main._workshop._pick_cell(kc)
 	main.refresh()
-	_check(main._workshop._hint.text.begins_with("Added"), "the craft panel's line does not say what the Bench did: '%s'" % main._workshop._hint.text)
+	_check(main._workshop._foot.text.begins_with("Added"), "the jobs' foot does not say what the Bench did: '%s'" % main._workshop._foot.text)
 	_check_fit(main, "Workshop (craft, after an add)")
 	# every kind has words: re-roll says before and after, bump the levels, one the swap
 	var words_seen := {}
@@ -5147,7 +5178,7 @@ func _build_checks(main) -> void:
 	main._workshop.sel_id = -1
 	main._workshop._shown = ""
 	main.refresh()
-	_check(main._workshop._buttons[0].visible and main._workshop._buttons[0].text == "Build for scrap", "the craft view has no Build button: '%s'" % main._workshop._buttons[0].text)
+	_check(main._workshop._build.visible and main._workshop._build.text == "Build for scrap", "the craft view has no Build button: '%s'" % main._workshop._build.text)
 	_check_fit(main, "Workshop (craft, build)")
 	main._open_builds(0)
 	_check(main._menu.visible and main._menu._items.size() == 5, "the build menu did not open with its kinds")
@@ -6554,7 +6585,7 @@ func _yard_checks(main) -> void:
 				_check(wr._labels[0].get_theme_color("font_color") == (Pal.tone_color(want_tone) if want_tone != "" else Pal.TEXT_2), "the word's name is not in its tone")
 				_check(wr.position.y + wr.size.y <= site_card._buttons[0].position.y, "the word rows run into the buttons")
 			var set_card = main._cards[0]
-			_check(set_card.visible and set_card._band.visible and set_card._band.kicker.text == "The radio" and set_card._headline.text.begins_with("Level "), "the set's card band is off: '%s' / '%s'" % [set_card._band.kicker.text, set_card._headline.text])
+			_check(set_card.visible and set_card._band.visible and set_card._band.kicker.text == "The Radio" and set_card._headline.text.begins_with("Level "), "the set's card band is off: '%s' / '%s'" % [set_card._band.kicker.text, set_card._headline.text])
 		_check_fit(main, "Radio (bands)")
 	print("the Yard as option A ok: Elements, Finds, the works; the Runs cards' chips; the Radio's chips")
 	_fill_up_checks(main)

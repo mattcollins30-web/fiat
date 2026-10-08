@@ -2204,6 +2204,33 @@ than trails off. The smoke checks the pair fit, that the line before starts afte
 capitalised classes and names in the lines it reads ("Before: a Scrapper, 3 runs"). Local smoke
 clean; on the Legion as the caps pass.
 
+**The Bench's treatment (8 Oct, Matt: "last UI we haven't touched since it was introduced - needs
+similar treatment to the rest"; mocked as Bench-B on the canvas, built as drawn).** The band goes. The
+heading takes the Yard tree's shape across the top: "The Bench / Level 2 · fits optics, muzzles and
+magazines", the three views as a tab row beside it (off the art; all three plain buttons now - Guns
+had been made as a primary and kept its dark text when `_style` re-skinned it, which was Matt's "Guns
+needs to be white"), the purse as chips at the top right, "Next: handguards, stocks" and Upgrade under
+them. The grid under the heading runs five rows a page (`set_rows(5)`); the pick panel keeps the foot.
+*Guns:* a gun's head is a card (`GUN_CARD_H` 250): slot and figure on the first line, the name, its
+chips, the mounts as tiles - a fitted part edged in its tier's colour, an empty mount plain, a locked
+one dim with 🔒 and "Bench 3", a mount the gun hasn't a hollow slot (only to square the last row).
+Sockets the same, an uncut socket hollow. *Craft:* the piece as a card - name and figure, chips for
+rarity, level, "Rolls T2 to T5" and the sockets, its affixes as rows with a tier dot and T-number
+(the missing ones "No third affix"); pressing an affix row puts its two jobs along the card's foot
+("Re-roll it · £179", "Re-roll the rest · £537", the longest forms that fit side by side). Under it
+THE JOBS: six tiles - re-roll, add an affix, cut a socket, strip, raise the level, scrap it - each
+with its words and price, gold when it can be paid, grey when short, hollow with no price when the
+piece can't take it or nothing is picked; the last job's words (green) and Build for scrap along the
+foot. The jobs run in the room through `craft(id, kind, stat)` → main's `_craft` (the toast, the
+refresh); the three-page menu stays only for the Lock-up's Bench button on worn gear. The pick panel
+shows the piece with its figures and no buttons (Sell is the Fence's). *Caps, the slips the sweep
+missed:* "Needs a bench" / "a bigger bench" / "bench level" → Bench; the Radio wherever it stands
+(the lookout's and the trees' words, the Runs card's "pinned at the Radio", the set card's kicker);
+the cache's "Bench's tools". The smoke: the view buttons' text white, the piece card's chips and
+rows, the tiles priced or hollow, the affix jobs inside the card, a re-roll from the room keeping the
+count and the foot saying so, the Next words clear of the tabs, the chips inside the heading, the
+bat's third tile a hollow slot. Local smoke clean.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

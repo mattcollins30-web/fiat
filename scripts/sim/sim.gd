@@ -1204,7 +1204,8 @@ func scrap_item(id: int) -> bool:
 			var bits: int = scrap_of(it)
 			_remove(it)
 			scrap += bits
-			log_event("Scrapped %s: %d scrap" % [it["base"].to_lower(), bits])
+			last_craft = {"id": -1, "kind": "scrap", "words": "Scrapped %s: %d scrap" % [it["base"].to_lower(), bits]}     # the Bench's foot and the toast read it (8 Oct)
+			log_event(last_craft["words"])
 			return true
 	return false
 
@@ -1286,7 +1287,7 @@ func _build_entry(kind: String, name: String, cost: int, from: String, from_n: i
 	var room: bool = stash_room(1) or (made_slot == Data.AMMO and _stack_room(_plain(Data.AMMO, name)))
 	var ok: bool = has_from and scrap >= cost and mission == null and workshop >= 1 and room
 	if why == "" and not ok:
-		why = "The runner is out" if mission != null else ("Needs a bench" if workshop < 1 else ("No room in the stash" if not room else "Short of scrap"))
+		why = "The runner is out" if mission != null else ("Needs a Bench" if workshop < 1 else ("No room in the stash" if not room else "Short of scrap"))
 	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier}
 
 
@@ -2255,7 +2256,7 @@ func fit_refusal(slot: String, id: int) -> String:
 			if not gun["attachments"].has(it["mount"]):
 				return "The %s has no %s mount" % [gun["base"].to_lower(), it["mount"]]
 			if not mount_open(it["mount"]):
-				return "Needs a bigger bench"
+				return "Needs a bigger Bench"
 			if not Items.att_fits(it, str(Items.base_of(gun).get("type", ""))):
 				return Items.only_words(it)
 			return ""
@@ -3639,7 +3640,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	_earn_points(before)
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
-		log_event("%s cleared; this yard's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
+		log_event("%s cleared; this Yard's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
 	if t["depth"] > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = t["depth"]
 		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])

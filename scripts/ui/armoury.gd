@@ -196,9 +196,9 @@ func _show_panel() -> void:
 			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The Fence buys papers"])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
-			_pick.show_right_words("The bench", "Fitted at the Bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
+			_pick.show_right_words("The Bench", "Fitted at the Bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
-			_pick.show_right_words("The bench", "Fitted at the Bench", ["Goes on %s" % Items.mount_words(it["mount"])])
+			_pick.show_right_words("The Bench", "Fitted at the Bench", ["Goes on %s" % Items.mount_words(it["mount"])])
 		if sim.workshop >= 1:
 			buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})
 	else:

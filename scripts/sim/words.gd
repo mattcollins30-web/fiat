@@ -537,7 +537,7 @@ const EVENTS := {
 	"convoy": "A convoy comes through. Lorries, and a crew riding on them. They stop.",
 	"convoy_notes": "They were carrying notes. They were, anyway.",
 	"trapped": "Someone under a fallen ceiling, alive. You get them out. They say they know a yard.",
-	"cache": "A locked cabinet, council green. The bench's tools open it.",
+	"cache": "A locked cabinet, council green. The Bench's tools open it.",
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
 

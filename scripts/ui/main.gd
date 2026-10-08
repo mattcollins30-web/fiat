@@ -226,7 +226,7 @@ func _build() -> void:
 	add_child(_missions)
 	_workshop = Workshop.new()
 	_workshop.acted.connect(refresh)
-	_workshop.bench.connect(_open_bench)
+	_workshop.craft.connect(_craft)                # the Bench's jobs, done in the room (8 Oct); the Lock-up's Bench button keeps the menu for worn gear
 	_workshop.build.connect(_open_builds)
 	_workshop.visible = false
 	add_child(_workshop)
@@ -1090,7 +1090,7 @@ func _comms_cards() -> Array:
 	var out := []
 	var set_words: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level]["words"].split(": ")
 	var tower := {"title": set_words[0], "headline": "Level %d" % sim.comms_level, "unit": "of %d" % (Data.COMMS_LEVELS.size() - 1),
-		"band": {"site": "the radio", "tone": 3, "kicker": "The radio"},
+		"band": {"site": "the Radio", "tone": 3, "kicker": "The Radio"},
 		"lines": [["Hears", [set_words[1] if set_words.size() > 1 else "", "the word"]]]}
 	if sim.comms_cost() > 0:
 		var nxt: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level + 1]["words"].split(": ")
@@ -1258,7 +1258,7 @@ func _open_builds(page := 0) -> void:
 		items.append({"name": "More …", "detail": "", "action": _open_builds.bind(page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Build for scrap", "%d scrap in hand · bench level %d" % [sim.scrap, sim.workshop], items.slice(0, 5), _menu.close)
+	_menu.open("Build for scrap", "%d scrap in hand · Bench level %d" % [sim.scrap, sim.workshop], items.slice(0, 5), _menu.close)
 
 
 func _open_build_kind(kind: String, page: int) -> void:
@@ -1357,7 +1357,8 @@ func _purse() -> String:
 
 
 func _craft(id: int, kind: String, stat: String) -> void:
-	if sim.craft(id, kind, stat) and _juice != null:
+	var done: bool = sim.scrap_item(id) if kind == "scrap" else sim.craft(id, kind, stat)     # the Bench's scrap tile comes through here too (8 Oct)
+	if done and _juice != null:
 		_juice.toast(sim.last_craft["words"], "good")
 	_menu.close()
 	refresh()

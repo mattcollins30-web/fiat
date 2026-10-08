@@ -104,7 +104,7 @@ const LOOKOUT_LEVELS := [
 	{"first": 1.0, "runs": 24, "cost": 0, "words": "No lookout: odds are a guess"},
 	{"first": 1.5, "runs": 24, "cost": 3000, "words": "A lookout: the first gang takes half as long again to arrive"},
 	{"first": 2.0, "runs": 60, "cost": 9000, "words": "A lookout with glasses: the first gang takes twice as long to arrive, and the odds shown are good ones"},
-	{"first": 2.0, "runs": 60, "cost": 24000, "call": true, "words": "A lookout on the radio: the first gang after the clear waits for the call, and the call is a full pack"},
+	{"first": 2.0, "runs": 60, "cost": 24000, "call": true, "words": "A lookout on the Radio: the first gang after the clear waits for the call, and the call is a full pack"},
 ]
 const KENNEL_LEVELS := [
 	{"finds": 0, "patrol": 1.0, "cost": 0, "words": "No dog"},
@@ -1310,14 +1310,14 @@ const ATLAS := [
 	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the Services from depth 10, not 12",
 		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the Services two depths sooner."},
 	# the air
-	{"key": "word_travels", "column": 2, "name": "Word travels", "max": 1, "words": "Calling in a word on the radio costs half",
-		"sum": "The word", "figures": ["full price", "half price"], "sentence": "Calling in a word on the radio costs half."},
+	{"key": "word_travels", "column": 2, "name": "Word travels", "max": 1, "words": "Calling in a word on the Radio costs half",
+		"sum": "The word", "figures": ["full price", "half price"], "sentence": "Calling in a word on the Radio costs half."},
 	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Fresh word on a site a quarter cheaper a rank",
 		"sum": "Fresh word", "figures": ["full price", "a quarter less", "half price"], "sentence": "Fresh word on a site comes cheaper."},
-	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "The radio never hears Resistant",
-		"sum": "Resistant", "figures": ["can come up", "never"], "sentence": "The radio never hears Resistant: the words are the good ones."},
-	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "The radio hears one more word a site",
-		"sum": "Words a site", "figures": ["as they come", "one more"], "sentence": "The radio hears one more word on every site."},
+	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "The Radio never hears Resistant",
+		"sum": "Resistant", "figures": ["can come up", "never"], "sentence": "The Radio never hears Resistant: the words are the good ones."},
+	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "The Radio hears one more word a site",
+		"sum": "Words a site", "figures": ["as they come", "one more"], "sentence": "The Radio hears one more word on every site."},
 	{"key": "fair_weather", "column": 2, "name": "Fair weather", "max": 2, "words": "Rain and Fog bite half as hard a rank",
 		"sum": "Weather", "figures": ["as it comes", "half as hard", "not at all"], "sentence": "The rain and the fog bite less; at the second rank, not at all."},
 	{"key": "night_eyes", "column": 2, "name": "Night eyes", "max": 2, "words": "Night's slower feet halved a rank",
@@ -1331,7 +1331,7 @@ const ATLAS := [
 	{"key": "dead_air", "column": 2, "name": "Dead air", "max": 1, "notable": true, "words": "At Night the gangs come a quarter later",
 		"sum": "Night gangs", "figures": ["as they come", "a quarter later"], "sentence": "Nobody's about at night: the gangs come a quarter later on a night run."},
 	{"key": "held_word", "column": 2, "name": "Held word", "max": 1, "words": "A pinned word holds through a move",
-		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the radio stays pinned when the Yard moves."},
+		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the Radio stays pinned when the Yard moves."},
 	{"key": "open_channel", "column": 2, "name": "Open channel", "max": 1, "keystone": true, "words": "Every word costs notes, never cash",
 		"sum": "Words cost", "figures": ["cash", "notes"], "sentence": "The channel's open: fresh word and a called-in word cost notes, never cash."},
 ]
