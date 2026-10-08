@@ -2319,6 +2319,8 @@ opens windowed, so its screen stays the panel's 1280 × 800 and the resize takes
 `window/size/mode=2` → `window/size/mode.windows=2` (a feature override: Windows still opens
 maximized; Linux opens windowed, the Greenhorn path, and `_fit_window_to_screen` sizes it to the
 panel). Not provable here (no gamescope); the foot's line says what the Deck gets.
+Confirmed on the Deck (Matt: "job done"). The whole of it - symptom, mechanism, fix, the four traps,
+the test, the pck - is `docs/deck.md`, so it is not chased again.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
