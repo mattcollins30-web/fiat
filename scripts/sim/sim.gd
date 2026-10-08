@@ -2755,6 +2755,9 @@ var odds_time_ms := 0.0
 var _odds_t0 := 0
 const EARLY_RUNS := 8
 var _dry_min_hp := 1.0               # the last dry run's lowest HP, as a share of the max
+## Where the time goes (8 Oct, the pass at an hour): counts and microseconds the balance gate prints. Cheap
+## enough to leave on: a few adds a tick.
+var prof := {"surv_calls": 0, "surv_reads": 0, "surv_us": 0, "dry_runs": 0, "dry_ticks": 0, "snap_us": 0, "real_ticks": 0, "real_us": 0}
 
 
 func odds_frame_start() -> void:
@@ -2786,14 +2789,18 @@ func odds_now(i: int) -> float:
 
 
 func survival(i: int) -> float:
+	var p0 := Time.get_ticks_usec()
+	prof["surv_calls"] += 1
 	var key := _odds_key(i)
 	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
 	var c: Array
 	if _surv_cache.has(i) and _surv_cache[i][0] == key:
 		c = _surv_cache[i]
 		if c[2] >= runs:
+			prof["surv_us"] += Time.get_ticks_usec() - p0
 			return c[1]
 	else:
+		prof["surv_reads"] += 1
 		var r := RandomNumberGenerator.new()
 		r.seed = hash(key) + i
 		c = [key, 0.0, 0, 0, r, 1.0]         # key, odds so far, runs done, alive, the dice, the lowest HP share seen
@@ -2811,6 +2818,7 @@ func survival(i: int) -> float:
 			c[2] = runs
 			break
 	c[1] = float(c[3]) / maxf(1.0, c[2])
+	prof["surv_us"] += Time.get_ticks_usec() - p0
 	return c[1]
 
 
@@ -2826,9 +2834,12 @@ func odds_settled(i: int) -> bool:
 const DRY_STEP := 2.0
 const BAIL := 0.25                   # the HP a player (and the bots) get out at: the odds count that as lost
 func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
+	var p0 := Time.get_ticks_usec()
+	prof["dry_runs"] += 1
 	var t := effective(i)
 	var keep := {"hp": hp, "xp": xp, "rig": rig.duplicate(true), "events": events.duplicate(true), "mission": mission,
 		"rng": rng, "promised": promised, "training_points": training_points, "insure_next": insure_next}
+	prof["snap_us"] += Time.get_ticks_usec() - p0
 	rng = r
 	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0)
 	var m := {
@@ -2851,6 +2862,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_dry_min_hp = 1.0
 	while guard < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
 		_tick(DRY_STEP)
+		prof["dry_ticks"] += 1
 		_dry_min_hp = minf(_dry_min_hp, hp / maxf(max_hp(), 1.0))
 		if hp < max_hp() * BAIL:
 			m["dead"] = true                 # a quarter left is where anyone sensible gets out: that run's lost too
@@ -2953,7 +2965,10 @@ func advance(seconds: float) -> void:
 	while left > 0.0:
 		if mission != null:
 			var step := minf(1.0, left)
+			var p0 := Time.get_ticks_usec()
 			_tick(step)
+			prof["real_ticks"] += 1
+			prof["real_us"] += Time.get_ticks_usec() - p0
 			left -= step
 			continue
 		var ready := max_hp() * AUTO_REST

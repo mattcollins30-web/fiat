@@ -209,11 +209,16 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	var depth_seen: Dictionary = {}
 	var first_ladder := {}
 	var scrap_16 := -1.0
+	var step_us := 0         # where the wall goes (8 Oct): the bot's step (the odds reads and the run), its tidy, the ladder reads
+	var tidy_us := 0
+	var ladder_us := 0
 	var t0 := Time.get_ticks_msec()
 	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 7200000:     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
 		var items_before: int = sim.stash.size()
 		var lost_before: int = sim.operators_lost
+		var p0 := Time.get_ticks_usec()
 		var t: int = bot.step(sim)
+		step_us += Time.get_ticks_usec() - p0
 		if t >= 0:
 			g["runs"] += 1
 			mark_runs += 1
@@ -231,9 +236,13 @@ func _gate(hours: float, cls: String, element: String) -> void:
 					depth_seen[key] = true
 					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
 			if sim.lorry_done and first_ladder.is_empty():
+				var l0 := Time.get_ticks_usec()
 				first_ladder = _ladder_read(sim, bot.PUSH)   # the first yard's ladders, as the lorry fell and before the move
+				ladder_us += Time.get_ticks_usec() - l0
 			var scrap_before: int = int(sim.scrap)
+			var y0 := Time.get_ticks_usec()
 			bot.tidy(sim)
+			tidy_us += Time.get_ticks_usec() - y0
 			if int(sim.scrap) < scrap_before:
 				g["scrap_spent"] = int(g.get("scrap_spent", 0)) + scrap_before - int(sim.scrap)     # the bench's builds: earned = in hand + spent
 		if float(g["keystone_at"]) < 0.0 or float(g["capstone_at"]) < 0.0:
@@ -312,8 +321,19 @@ func _gate(hours: float, cls: String, element: String) -> void:
 	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
 	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
 	if first_ladder.is_empty() and sim.campaign_done():
+		var l0 := Time.get_ticks_usec()
 		first_ladder = _ladder_read(sim, bot.PUSH)
+		ladder_us += Time.get_ticks_usec() - l0
 	g["ladder"] = first_ladder
+	# where the wall went, in seconds: the bot's step holds the odds reads (survival: the dry runs, their snapshots)
+	# and the real run's ticks; the tidy is the fitting, selling and building; the ladder reads are their own
+	var pr: Dictionary = sim.prof
+	g["prof"] = {"step_s": step_us / 1000000, "tidy_s": tidy_us / 1000000, "ladder_s": ladder_us / 1000000,
+		"surv_s": int(pr["surv_us"]) / 1000000, "surv_calls": pr["surv_calls"], "surv_reads": pr["surv_reads"],
+		"dry_runs": pr["dry_runs"], "dry_ticks": pr["dry_ticks"], "snap_s": int(pr["snap_us"]) / 1000000,
+		"real_ticks": pr["real_ticks"], "real_s": int(pr["real_us"]) / 1000000}
+	print("  wall %ds: step %ds (odds %ds on %d reads of %d calls, %d dry runs, %d dry ticks, snapshots %ds; the run %d ticks %ds), tidy %ds, ladders %ds" % [g["wall_s"],
+		g["prof"]["step_s"], g["prof"]["surv_s"], pr["surv_reads"], pr["surv_calls"], pr["dry_runs"], pr["dry_ticks"], g["prof"]["snap_s"], pr["real_ticks"], g["prof"]["real_s"], g["prof"]["tidy_s"], g["prof"]["ladder_s"]])
 	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
 	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0

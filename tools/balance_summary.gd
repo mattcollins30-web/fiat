@@ -303,6 +303,23 @@ func _init() -> void:
 			clears.append("%.1f T%d d%d" % [float(c[0]), int(c[1]), int(c[2])])
 		out.append("- %s: %s" % [b["build"], ", ".join(clears) if not clears.is_empty() else "none"])
 	out.append("")
+	# where the wall went (8 Oct, the pass at an hour): a read's seconds split between the odds reads (the dry
+	# runs), the real run's ticks, the tidy and the ladder reads; the slowest read is the pass's wall
+	if reads.any(func(b): return b.has("prof")):
+		out.append("## Where the wall went")
+		out.append("")
+		out.append("| Read | Wall | Odds reads (dry runs, dry ticks, snapshots) | The run (ticks) | Tidy | Ladders | Unaccounted |")
+		out.append("| --- | --- | --- | --- | --- | --- | --- |")
+		var sorted: Array = reads.filter(func(b): return b.has("prof"))
+		sorted.sort_custom(func(a, b): return float(a.get("wall_s", 0)) > float(b.get("wall_s", 0)))
+		for b in sorted:
+			var p: Dictionary = b["prof"]
+			var wall: int = int(b.get("wall_s", 0))
+			var rest: int = wall - int(p["step_s"]) - int(p["tidy_s"]) - int(p["ladder_s"])
+			out.append("| %s | %d s | %d s (%d reads of %d calls: %d dry runs, %s dry ticks, snapshots %d s) | %d s (%s) | %d s | %d s | %d s |" % [
+				b["build"], wall, int(p["surv_s"]) - int(p["ladder_s"]), int(p["surv_reads"]), int(p["surv_calls"]), int(p["dry_runs"]), _thousands(int(p["dry_ticks"])), int(p["snap_s"]),
+				int(p["real_s"]), _thousands(int(p["real_ticks"])), int(p["tidy_s"]), int(p["ladder_s"]), rest])
+		out.append("")
 	var f := FileAccess.open(FOLDER + "/summary.md", FileAccess.WRITE)
 	f.store_string("\n".join(out))
 	f.close()
@@ -310,6 +327,16 @@ func _init() -> void:
 		print(out[k])
 	print("-> docs/balance/summary.md")
 	quit(0)
+
+
+## 1234567 as "1,234,567".
+func _thousands(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
 
 
 ## One build's reads as one: the firsts by their median (never counts as late), the odds by the median a

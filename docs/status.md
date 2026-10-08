@@ -2108,6 +2108,17 @@ in 116 runs, one in 16.6) and shows the bot's bail-outs beside, not judged. `WOU
 Drifter waits on the twentieth; the bank's band stays red and labelled luck until the rest is green,
 then three reads a build.
 
+**Where the wall goes (8 Oct, Matt: the pass at an hour and "only going to get longer").** Counters, not
+cuts: `Sim.prof` counts the odds reads (`survival` calls and the reads the cache misses, the dry runs
+and their ticks, the snapshot's time) and the real run's ticks, the gate times the bot's step, its
+tidy and the ladder reads, prints a `wall` line and a `prof` key in GATES, and the summary ends with
+"Where the wall went", a table a read, slowest first. A two-hour Scrapper here: 61 s of wall, 42 s
+in the odds reads (2,312 dry runs, 96,000 dry ticks against 5,800 real), 17 s the run, 5 s the tidy,
+the snapshots nothing - so the dry runs are the cost, sixteen ticks to one, and the snapshot copy is
+not. The cuts to pick from once the twenty-second has read it on every build: the bot reading at a
+budget of its own, the ladder read halving rather than stepping, a coarser dry step. Discussed, not
+built.
+
 **The twentieth read (the Legion, 8 Oct, twenty reads of ten builds, thirty-two hours; the six landed
 while it ran, so the sim is the nineteenth's - the old price, 0.30 - and the rows are the new ones).**
 Five red, deaths green on Matt's save. *The lorry on nineteen reads of twenty* (the nineteenth's
