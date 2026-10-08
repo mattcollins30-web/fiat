@@ -83,6 +83,7 @@ var _top: Panel
 var _top_row: Control
 var _top_labels := {}
 var _rail: Control
+var _rail_head: Label
 var _rail_buttons := {}
 var _grid: Control
 var _cards: Array = []
@@ -150,12 +151,18 @@ func _build() -> void:
 		_top_labels[k] = UI.label(_top_row, Rect2(x, 0, w, Pal.TOP_H), "", "Medium" if k != "cash" else "SemiBold", Pal.FLOOR,
 				Pal.TEXT if k == "cash" else Pal.TEXT_2, align, k != "where")
 		x += w + TOP_GAP
+	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines
 	_rail = Control.new()
 	add_child(_rail)
+	var rail_h: float = Pal.RAIL_HEAD_H + ROOMS.size() * (Pal.RAIL_BTN_H + Pal.RAIL_GAP) - Pal.RAIL_GAP
+	UI.panel(_rail, Rect2(0, 0, Pal.RAIL_W, rail_h), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_rail_head = UI.label(_rail, Rect2(22, 0, Pal.RAIL_W - 44, Pal.RAIL_HEAD_H), "ROOMS", "Medium", Pal.FLOOR, Pal.TEXT_3)
+	UI.panel(_rail, Rect2(0, Pal.RAIL_HEAD_H - 1, Pal.RAIL_W, 1), UI.box(Pal.CARD_LINE, 0))
 	for i in range(ROOMS.size()):
 		var name: String = ROOMS[i]
 		var b = RailButton.new(name)
-		b.position = Vector2(0, i * (Pal.RAIL_BTN_H + Pal.RAIL_GAP))
+		b.position = Vector2(0, Pal.RAIL_HEAD_H + i * (Pal.RAIL_BTN_H + Pal.RAIL_GAP))
+		b.last = i == ROOMS.size() - 1
 		b.pressed.connect(show_room.bind(name))
 		_rail.add_child(b)
 		_rail_buttons[name] = b
@@ -680,7 +687,12 @@ func _rail_status(name: String) -> Dictionary:
 			for j in _yard_jobs():
 				if int(j["cost"]) > 0 and bool(j["can"]):
 					can = true
-			return {"status1": "Level %d runner" % sim.level(), "status2": Fmt.money(sim.cash),
+			var built := 0
+			var of := 0
+			for j in _yard_jobs():
+				built += int(j["level"])
+				of += int(j["of"])
+			return {"status1": "Level %d runner" % sim.level(), "status2": Fmt.money(sim.cash), "figure": "%d/%d" % [built, of],
 					"badge": "Upgrade" if can else "", "badge_tone": "good"}
 		MISSIONS:
 			if sim.on_mission():
@@ -691,13 +703,14 @@ func _rail_status(name: String) -> Dictionary:
 			for z in range(Data.ZONES.size()):
 				if sim.zone_open(z):
 					open_zones += 1
-			return {"status1": "%d zone%s open" % [open_zones, "" if open_zones == 1 else "s"], "status2": "Best: tier %d" % sim.best_tier if sim.best_tier > 0 else "Nothing cleared yet"}
+			return {"status1": "%d zone%s open" % [open_zones, "" if open_zones == 1 else "s"], "status2": "Best: tier %d" % sim.best_tier if sim.best_tier > 0 else "Nothing cleared yet",
+					"figure": ("T%d" % sim.best_tier) if sim.best_tier > 0 else ""}
 		ARMOURY:
 			var n := 0
 			for s in Data.SLOTS:
 				if sim.equipped[s] != null:
 					n += 1
-			return {"status1": "%d of %d slots" % [n, Data.SLOTS.size()], "status2": "%d in the stash" % sim.stash.size()}
+			return {"status1": "%d in the stash" % sim.stash.size(), "status2": "%d of %d slots" % [n, Data.SLOTS.size()], "figure": "%d/%d" % [n, Data.SLOTS.size()]}
 		WORKSHOP:
 			var fitted := 0
 			var atts := 0
@@ -707,17 +720,17 @@ func _rail_status(name: String) -> Dictionary:
 			for it in sim.stash:
 				if Items.is_attachment(it):
 					atts += 1
-			return {"status1": "Level %d bench" % sim.workshop,
-					"status2": "Upgrade affordable" if sim.can_upgrade_workshop() else "%d fitted, %d spare" % [fitted, atts]}
+			return {"status1": "Upgrade affordable" if sim.can_upgrade_workshop() else "%d fitted, %d spare" % [fitted, atts],
+					"status2": "Level %d bench" % sim.workshop, "figure": "%d" % sim.workshop}
 		BARRACKS:
 			var free: int = sim.points_free()
-			return {"status1": sim.cls if sim.cls != "" else "No past", "status2": "%d pts spent" % sim.points_spent(),
+			return {"status1": sim.cls if sim.cls != "" else "No past", "status2": "%d pts spent" % sim.points_spent(), "figure": "%d" % sim.points_spent(),
 					"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}
 		MEDIC:
 			var full: bool = sim.hp >= sim.max_hp() - 0.5
 			return {"status1": "HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()],
-					"status2": "Fit" if full else "Resting", "badge": "" if full or sim.on_mission() else "Hurt",
-					"badge_tone": "warn"}
+					"status2": "Fit" if full else "Resting", "figure": "Fit" if full else "%d%%" % int(round(100.0 * sim.hp / maxf(sim.max_hp(), 1.0))),
+					"badge": "" if full or sim.on_mission() else "Hurt", "badge_tone": "warn"}
 		MARKET:
 			# the contracts were easy to miss as a tab: the rail says when one's ready, or pays a unique
 			var ready := 0
@@ -728,14 +741,14 @@ func _rail_status(name: String) -> Dictionary:
 				elif sim.contracts[k].get("pay", "") == "unique":
 					unique_pay += 1
 			var badge: String = "Ready" if ready > 0 else ("Unique" if unique_pay > 0 else "")
-			return {"status1": "%d for sale" % sim.market.size(), "status2": ("%d contract%s" % [sim.contracts.size(), "" if sim.contracts.size() == 1 else "s"]) if not sim.contracts.is_empty() else "%d to sell" % sim.stash.size(),
-					"badge": badge, "badge_tone": "good" if ready > 0 else "warn"}
+			return {"status1": ("%d contract%s" % [sim.contracts.size(), "" if sim.contracts.size() == 1 else "s"]) if not sim.contracts.is_empty() else "%d to sell" % sim.stash.size(), "status2": "%d for sale" % sim.market.size(),
+					"figure": "%d" % sim.market.size(), "badge": badge, "badge_tone": "good" if ready > 0 else "warn"}
 		COMMS:
 			var pins := 0
 			for p in sim.pinned:
 				if p:
 					pins += 1
-			return {"status1": "Level %d set" % sim.comms_level, "status2": ("%d pinned" % pins) if pins > 0 else ("Word for cash" if sim.comms_level > 0 else "No set yet")}
+			return {"status1": ("%d pinned" % pins) if pins > 0 else ("Word for cash" if sim.comms_level > 0 else "No set yet"), "status2": "Level %d set" % sim.comms_level, "figure": "%d" % sim.comms_level}
 	return {}
 
 

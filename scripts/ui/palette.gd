@@ -74,8 +74,11 @@ const CELL_GAP := 6
 const MARGIN := 24
 const TOP_H := 64
 const RAIL_W := 312
-const RAIL_BTN_H := 112              # seven rooms (Pithole's menu_shell.md §16)
-const RAIL_GAP := 8                  # eight rooms: 8 × 112 + 7 × 8 = 952, inside the 1080 with the top bar and a margin
+const RAIL_BTN_H := 96               # a row of the ledger (8 Oct): the name with its figure, one status line (it was 112 with two)
+const RAIL_GAP := 0                  # rows under a hairline, one panel: 40 + 8 × 96 = 808, inside the 1080 with the top bar and a margin
+const RAIL_HEAD_H := 40              # the ledger's heading strip
+const RAIL_RULE := Color("2b3036")   # the hairline between rows
+const RAIL_HOVER := Color("1f2327")  # a row under the mouse
 const CARD_W := 372
 const CARD_H := 424
 const CARD_GAP := 16

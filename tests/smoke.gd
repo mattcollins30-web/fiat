@@ -2433,7 +2433,7 @@ func _contracts_checks(main) -> void:
 			sim.stash.erase(it)              # nothing in the stash to hand in: the unique is on offer, not ready
 	main.refresh()
 	var fence_status: Dictionary = main._rail_status(main.MARKET) if main.has_method("_rail_status") else {}
-	_check(fence_status.get("badge", "") == "Unique" and str(fence_status.get("status2", "")).contains("contract"), "the rail does not flag a contract that pays a unique: %s" % str(fence_status))
+	_check(fence_status.get("badge", "") == "Unique" and (str(fence_status.get("status1", "")) + str(fence_status.get("status2", ""))).contains("contract"), "the rail does not flag a contract that pays a unique: %s" % str(fence_status))   # the contracts on the first line since the ledger (8 Oct)
 	main.show_room(main.MARKET)
 	main.refresh()
 	_check(main._fence._tabs[2].text == "Contracts ★", "the contracts tab reads '%s'" % main._fence._tabs[2].text)
@@ -4519,6 +4519,16 @@ func _check_fit(main, where: String) -> void:
 		if b.badge_gap() < 8.0:
 			push_error("rail %s: badge overlaps the name" % name)
 			bad += 1
+		# the ledger (8 Oct): the lit row alone reaches across the margin to its room, and lands on it
+		if b._tongue.visible != (name == main.room):
+			push_error("rail %s: the join is %s on the %s row" % [name, "lit" if b._tongue.visible else "dark", "lit" if name == main.room else "dark"])
+			bad += 1
+		if name == main.room:
+			# the room's screens sit at RAIL_W + MARGIN from the rail (layout); the join ends on that edge
+			var reach: float = b._tongue.position.x + b._tongue.size.x
+			if reach < Pal.RAIL_W + Pal.MARGIN or reach > Pal.RAIL_W + Pal.MARGIN + 4.0:
+				push_error("%s: the rail's join ends at %.0f, the room starts at %d" % [where, reach, Pal.RAIL_W + Pal.MARGIN])
+				bad += 1
 	bad += _check_nodes(rail_nodes, [], where + " rail")
 	bad += _check_nodes(main._top_labels.values(), [], where + " top bar")
 	_check(main._top_labels["dps"].text.ends_with(" dmg/s") and main._top_labels["dps"].position.x > main._top_labels["hp"].position.x and main._top_labels["dps"].position.x < main._top_labels["xp"].position.x,
