@@ -938,237 +938,282 @@ const RENAMES := {
 const COMMON_TREE := "The Yard"
 const TREES := [
 	{"name": "The Yard", "nodes": [
-		{"name": "Dry fire", "effect": "damage_pct", "value": 3},
-		{"name": "Long walks", "effect": "hp", "value": 4},
-		{"name": "Knowing the streets", "effect": "loot_pct", "value": 3},
-		{"name": "Double tap", "effect": "double_tap", "notable": true, "words": "The secondary fires at full damage, not a third"},
-		{"name": "Zeroing", "effect": "damage_pct", "value": 3},
-		{"name": "Circuits", "effect": "hp", "value": 4},
-		{"name": "Keen eyes", "effect": "search_pct", "value": 15},
-		{"name": "Second wind", "effect": "second_wind", "notable": true, "words": "Rest at the Yard twice as fast"},
-		{"name": "Practice", "effect": "damage_pct", "value": 4},
-		{"name": "Sleeping rough", "effect": "hp", "value": 5},
-		{"name": "Stashing", "effect": "loot_pct", "value": 4},
-		{"name": "Pack horse", "effect": "pack_mule", "notable": true, "words": "The pack carries six cells more"},
-		{"name": "The dog's share", "effect": "cap_dogs_share", "capstone": true, "needs": 11, "words": "A dead runner's rig comes home: the dog carries it"},
+		{"name": "Dry fire", "col": 0, "row": 0, "effect": "damage_pct", "value": 3},
+		{"name": "Long walks", "col": 0, "row": 1, "effect": "hp", "value": 4},
+		{"name": "Knowing the streets", "col": 1, "row": 0, "effect": "loot_pct", "value": 3},
+		{"name": "Double tap", "col": 2, "row": 0, "effect": "double_tap", "notable": true, "words": "The secondary fires at full damage, not a third"},
+		{"name": "Zeroing", "col": 1, "row": 1, "effect": "damage_pct", "value": 7},
+		{"name": "Circuits", "col": 2, "row": 1, "effect": "hp", "value": 9},
+		{"name": "Keen eyes", "col": 3, "row": 0, "effect": "search_pct", "value": 15},
+		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Rest at the Yard twice as fast"},
+		{"name": "Stashing", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Pack horse", "col": 4, "row": 1, "effect": "pack_mule", "notable": true, "words": "The pack carries six cells more"},
+		{"name": "The dog's share", "col": 5, "row": 0, "effect": "cap_dogs_share", "capstone": true, "words": "A dead runner's rig comes home: the dog carries it"},
 	]},
-	# A class tree is a web: a spine of four to its notable, then two branches
-	# off it - one to the keystone, one to a rule of its own - so a tree is a
-	# choice of which way to go, not a ladder. `needs` is the node before.
+	# A tree is a lane (9 Oct, docs/design/trees.md): six columns of two, read left to right, "col" and "row"
+	# on every node. A node wants only its column open - points spent in that tree, Data.gate - so a deep
+	# node can't be bought with a dip. A class tree's conversion notable is its half of a joint (column 4).
 	# Poacher
 	{"name": "Stalking", "class": "Poacher", "nodes": [
-		{"name": "Still hands", "effect": "first_pct", "value": 5},
-		{"name": "Breathing", "effect": "damage_pct", "value": 3},
-		{"name": "Patience", "effect": "patrol_pct", "value": 10},
-		{"name": "Rifleman", "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Your first shot on every gang does double"},
-		{"name": "Wind reading", "effect": "first_pct", "value": 10, "needs": 3},
-		{"name": "Long shot", "effect": "damage_pct", "value": 4},
-		{"name": "One shot", "effect": "one_shot", "keystone": true, "words": "The first of every gang drops to your first shot"},
-		{"name": "Lying up", "effect": "patrol_pct", "value": 10, "needs": 3},
-		{"name": "Rat bait", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "A share of every hit lands as poison and keeps working"},
-		{"name": "Night work", "effect": "night_work", "notable": true, "words": "Every site you run is Night: rarer finds, slower feet"},
-		{"name": "Dead quiet", "effect": "cap_dead_quiet", "capstone": true, "needs": 6, "words": "Every gang is the size of the first: they never grow"},
+		{"name": "Still hands", "col": 0, "row": 0, "effect": "first_pct", "value": 5},
+		{"name": "Breathing", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
+		{"name": "Patience", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
+		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Your first shot on every gang does double"},
+		{"name": "Wind reading", "col": 1, "row": 1, "effect": "first_pct", "value": 10},
+		{"name": "Long shot", "col": 2, "row": 1, "effect": "damage_pct", "value": 4},
+		{"name": "One shot", "col": 4, "row": 0, "effect": "one_shot", "keystone": true, "words": "The first of every gang drops to your first shot"},
+		{"name": "Lying up", "col": 3, "row": 1, "effect": "patrol_pct", "value": 10},
+		{"name": "Rat bait", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "poacher_poison", "words": "A share of every hit lands as poison and keeps working"},
+		{"name": "Night work", "col": 4, "row": 1, "effect": "night_work", "notable": true, "words": "Every site you run is Night: rarer finds, slower feet"},
+		{"name": "Dead quiet", "col": 5, "row": 0, "effect": "cap_dead_quiet", "capstone": true, "words": "Every gang is the size of the first: they never grow"},
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
-		{"name": "Quick hands", "effect": "search_pct", "value": 15},
-		{"name": "Hedgerows", "effect": "loot_pct", "value": 3},
-		{"name": "Soft ground", "effect": "patrol_pct", "value": 10},
-		{"name": "Quiet feet", "effect": "quiet_feet", "notable": true, "words": "The next gang comes every 30 seconds, not 20"},
-		{"name": "Night eyes", "effect": "rarity", "value": 20, "needs": 3},
-		{"name": "Snare lines", "effect": "loot_pct", "value": 4},
-		{"name": "Trapline", "effect": "trapline", "keystone": true, "words": "Every gang arrives one head short, the first included"},
-		{"name": "Knowing the land", "effect": "loot_pct", "value": 5, "needs": 3},
-		{"name": "Cold snap", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "A share of every hit lands as frost and slows them"},
-		{"name": "Early doors", "effect": "early_doors", "notable": true, "words": "The first gang takes twice as long to come"},
-		{"name": "Poached", "effect": "cap_poached", "capstone": true, "needs": 6, "words": "Every gang arrives already light: a find is yours the moment they come"},
+		{"name": "Quick hands", "col": 0, "row": 0, "effect": "search_pct", "value": 15},
+		{"name": "Hedgerows", "col": 0, "row": 1, "effect": "loot_pct", "value": 3},
+		{"name": "Soft ground", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
+		{"name": "Quiet feet", "col": 2, "row": 0, "effect": "quiet_feet", "notable": true, "words": "The next gang comes every 30 seconds, not 20"},
+		{"name": "Night eyes", "col": 1, "row": 1, "effect": "rarity", "value": 20},
+		{"name": "Snare lines", "col": 2, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Trapline", "col": 4, "row": 0, "effect": "trapline", "keystone": true, "words": "Every gang arrives one head short, the first included"},
+		{"name": "Knowing the land", "col": 3, "row": 1, "effect": "loot_pct", "value": 5},
+		{"name": "Cold snap", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "poacher_frost", "words": "A share of every hit lands as frost and slows them"},
+		{"name": "Early doors", "col": 4, "row": 1, "effect": "early_doors", "notable": true, "words": "The first gang takes twice as long to come"},
+		{"name": "Poached", "col": 5, "row": 0, "effect": "cap_poached", "capstone": true, "words": "Every gang arrives already light: a find is yours the moment they come"},
 	]},
 	# Doorman
 	{"name": "Muscle", "class": "Doorman", "nodes": [
-		{"name": "Heavy hands", "effect": "damage_pct", "value": 4},
-		{"name": "Gym", "effect": "hp", "value": 4},
-		{"name": "Broad shoulders", "effect": "armour_pct", "value": 5},
-		{"name": "Shotgunner", "effect": "damage_pct", "value": 25, "type": "shotgun", "notable": true, "words": "Every shell hits a quarter harder"},
-		{"name": "Weights", "effect": "damage_pct", "value": 5, "needs": 3},
-		{"name": "Thick skin", "effect": "armour_pct", "value": 8},
-		{"name": "Bodyline", "effect": "bodyline", "keystone": true, "words": "With three on you, you take half the damage"},
-		{"name": "Big frame", "effect": "hp", "value": 6, "needs": 3},
-		{"name": "Glassing", "effect": "conv_bleed_pct", "value": 15, "notable": true, "words": "A share of every hit lands as bleed and keeps bleeding"},
-		{"name": "Loud", "effect": "loud", "notable": true, "words": "Gangs come sooner and one head bigger; +30% drops"},
-		{"name": "Spoils", "effect": "rarity", "value": 15, "needs": 3},
-		{"name": "Iron", "effect": "cap_iron", "capstone": true, "needs": 6, "words": "Under half HP, every kill heals a tenth of you"},
+		{"name": "Heavy hands", "col": 0, "row": 0, "effect": "damage_pct", "value": 4},
+		{"name": "Gym", "col": 0, "row": 1, "effect": "hp", "value": 4},
+		{"name": "Broad shoulders", "col": 1, "row": 0, "effect": "armour_pct", "value": 5},
+		{"name": "Shotgunner", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "shotgun", "notable": true, "words": "Every shell hits a quarter harder"},
+		{"name": "Weights", "col": 1, "row": 1, "effect": "damage_pct", "value": 5},
+		{"name": "Thick skin", "col": 2, "row": 1, "effect": "armour_pct", "value": 8},
+		{"name": "Bodyline", "col": 4, "row": 0, "effect": "bodyline", "keystone": true, "words": "With three on you, you take half the damage"},
+		{"name": "Big frame", "col": 3, "row": 1, "effect": "hp", "value": 6},
+		{"name": "Glassing", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "doorman_bleed", "words": "A share of every hit lands as bleed and keeps bleeding"},
+		{"name": "Loud", "col": 4, "row": 1, "effect": "loud", "notable": true, "words": "Gangs come sooner and one head bigger; +30% drops"},
+		{"name": "Spoils", "col": 5, "row": 1, "effect": "rarity", "value": 15},
+		{"name": "Iron", "col": 5, "row": 0, "effect": "cap_iron", "capstone": true, "words": "Under half HP, every kill heals a tenth of you"},
 	]},
 	{"name": "The door", "class": "Doorman", "nodes": [
-		{"name": "Stance", "effect": "hp", "value": 5},
-		{"name": "Heads down", "effect": "damage_pct", "value": 3},
-		{"name": "Eye contact", "effect": "armour_pct", "value": 5},
-		{"name": "Chokepoints", "effect": "overwatch", "notable": true, "words": "Only two of a gang can fire on you at once, not three"},
-		{"name": "Bouncing", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Keep back", "effect": "armour_pct", "value": 5},
-		{"name": "One at a time", "effect": "one_at_a_time", "keystone": true, "words": "Only one of a gang can ever fire on you at once; pace −25%"},
-		{"name": "Composure", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Through the lot", "effect": "melee_sweep", "type": "melee", "notable": true, "words": "A swing hits everyone on you"},
-		{"name": "Stand and fight", "effect": "stand", "notable": true, "words": "No leaving before the fight is won; the bonus for winning it is doubled"},
-		{"name": "Held", "effect": "cap_held", "capstone": true, "needs": 6, "words": "No second of their fire takes more than a tenth of you"},
+		{"name": "Stance", "col": 0, "row": 0, "effect": "hp", "value": 10},
+		{"name": "Heads down", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
+		{"name": "Eye contact", "col": 1, "row": 0, "effect": "armour_pct", "value": 5},
+		{"name": "Chokepoints", "col": 2, "row": 0, "effect": "overwatch", "notable": true, "words": "Only two of a gang can fire on you at once, not three"},
+		{"name": "Bouncing", "col": 1, "row": 1, "effect": "hp", "value": 5},
+		{"name": "Keep back", "col": 2, "row": 1, "effect": "armour_pct", "value": 5},
+		{"name": "One at a time", "col": 4, "row": 0, "effect": "one_at_a_time", "keystone": true, "words": "Only one of a gang can ever fire on you at once; pace −25%"},
+		{"name": "Hands on", "col": 3, "row": 0, "effect": "physical_pct", "value": 20, "type": ["shotgun", "melee"], "notable": true, "joint": "doorman_physical", "words": "Shotguns and melee hit 20% harder in the plain"},
+		{"name": "Through the lot", "col": 3, "row": 1, "effect": "melee_sweep", "type": "melee", "notable": true, "words": "A swing hits everyone on you"},
+		{"name": "Stand and fight", "col": 4, "row": 1, "effect": "stand", "notable": true, "words": "No leaving before the fight is won; the bonus for winning it is doubled"},
+		{"name": "Held", "col": 5, "row": 0, "effect": "cap_held", "capstone": true, "words": "No second of their fire takes more than a tenth of you"},
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
-		{"name": "Steady hands", "effect": "heal_pct", "value": 10},
-		{"name": "Fast hands", "effect": "med_speed_pct", "value": 15},
-		{"name": "Kit bag", "effect": "heal_pct", "value": 10},
-		{"name": "Triage", "effect": "triage", "notable": true, "words": "Meds take half the time"},
-		{"name": "Good veins", "effect": "heal_pct", "value": 15, "needs": 3},
-		{"name": "Stock take", "effect": "med_cap", "value": 1},
-		{"name": "Field surgery", "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
-		{"name": "Pressure", "effect": "heal_pct", "value": 15, "needs": 3},
-		{"name": "Syringe", "effect": "conv_poison_pct", "value": 15, "notable": true, "words": "A share of every hit lands as poison and keeps working"},
-		{"name": "Walking wounded", "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
-		{"name": "Pockets checked", "effect": "rarity", "value": 15, "needs": 3},
-		{"name": "Clean hands", "effect": "cap_clean_hands", "capstone": true, "needs": 6, "words": "A med clears everything on you, and nothing lands for three seconds"},
+		{"name": "Steady hands", "col": 0, "row": 0, "effect": "heal_pct", "value": 10},
+		{"name": "Fast hands", "col": 0, "row": 1, "effect": "med_speed_pct", "value": 15},
+		{"name": "Kit bag", "col": 1, "row": 0, "effect": "heal_pct", "value": 10},
+		{"name": "Triage", "col": 2, "row": 0, "effect": "triage", "notable": true, "words": "Meds take half the time"},
+		{"name": "Good veins", "col": 1, "row": 1, "effect": "heal_pct", "value": 15},
+		{"name": "Stock take", "col": 2, "row": 1, "effect": "med_cap", "value": 1},
+		{"name": "Field surgery", "col": 4, "row": 0, "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
+		{"name": "Pressure", "col": 3, "row": 1, "effect": "heal_pct", "value": 15},
+		{"name": "Syringe", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "paramedic_poison", "words": "A share of every hit lands as poison and keeps working"},
+		{"name": "Walking wounded", "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
+		{"name": "Pockets checked", "col": 5, "row": 1, "effect": "rarity", "value": 15},
+		{"name": "Clean hands", "col": 5, "row": 0, "effect": "cap_clean_hands", "capstone": true, "words": "A med clears everything on you, and nothing lands for three seconds"},
 	]},
 	{"name": "Shifts", "class": "Paramedic", "nodes": [
-		{"name": "Night shift", "effect": "hp", "value": 5},
-		{"name": "Rest easy", "effect": "rest_pct", "value": 25},
-		{"name": "Mates' rates", "effect": "treat_pct", "value": 20},
-		{"name": "Walk it off", "effect": "walk_it_off", "notable": true, "words": "1 HP a second comes back while a site is being searched"},
-		{"name": "Long shift", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Cold tea", "effect": "rest_pct", "value": 25},
-		{"name": "Not today", "effect": "not_today", "keystone": true, "words": "The first hit on a run that would kill you leaves you on half HP instead"},
-		{"name": "Discount", "effect": "treat_pct", "value": 20, "needs": 3},
-		{"name": "Ice pack", "effect": "conv_frost_pct", "value": 15, "notable": true, "words": "A share of every hit lands as frost and slows them"},
-		{"name": "Second shift", "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
-		{"name": "Transfusion", "effect": "cap_transfusion", "capstone": true, "needs": 6, "words": "Healing past full becomes armour for the run, two HP to one"},
+		{"name": "Night shift", "col": 0, "row": 0, "effect": "hp", "value": 5},
+		{"name": "Rest easy", "col": 0, "row": 1, "effect": "rest_pct", "value": 25},
+		{"name": "Mates' rates", "col": 1, "row": 0, "effect": "treat_pct", "value": 20},
+		{"name": "Walk it off", "col": 2, "row": 0, "effect": "walk_it_off", "notable": true, "words": "1 HP a second comes back while a site is being searched"},
+		{"name": "Long shift", "col": 1, "row": 1, "effect": "hp", "value": 5},
+		{"name": "Cold tea", "col": 2, "row": 1, "effect": "rest_pct", "value": 25},
+		{"name": "Not today", "col": 4, "row": 0, "effect": "not_today", "keystone": true, "words": "The first hit on a run that would kill you leaves you on half HP instead"},
+		{"name": "Discount", "col": 3, "row": 1, "effect": "treat_pct", "value": 20},
+		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "A share of every hit lands as frost and slows them"},
+		{"name": "Second shift", "col": 4, "row": 1, "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
+		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Healing past full becomes armour for the run, two HP to one"},
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
-		{"name": "Nose for parts", "effect": "att_share", "value": 5},
-		{"name": "Quick hands", "effect": "search_pct", "value": 15},
-		{"name": "Tools", "effect": "damage_pct", "value": 3},
-		{"name": "Bodger", "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Whatever you cobbled together hits harder"},
-		{"name": "Spare parts", "effect": "att_share", "value": 5, "needs": 3},
-		{"name": "Fast strip", "effect": "search_pct", "value": 15},
-		{"name": "Nothing wasted", "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
-		{"name": "Magpie eye", "effect": "loot_pct", "value": 4, "needs": 3},
-		{"name": "Live wire", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "A share of every hit lands as shock"},
-		{"name": "Quiet hands", "effect": "quiet_hands", "notable": true, "words": "Every search finds two things, and kills drop nothing"},
-		{"name": "Jerry-rigged", "effect": "cap_jerry", "capstone": true, "needs": 6, "words": "Something improvised hits half again as hard"},
+		{"name": "Nose for parts", "col": 0, "row": 0, "effect": "att_share", "value": 5},
+		{"name": "Quick hands", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
+		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
+		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Whatever you cobbled together hits harder"},
+		{"name": "Spare parts", "col": 1, "row": 1, "effect": "att_share", "value": 5},
+		{"name": "Fast strip", "col": 2, "row": 1, "effect": "search_pct", "value": 15},
+		{"name": "Nothing wasted", "col": 4, "row": 0, "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
+		{"name": "Magpie eye", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Live wire", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "scrapper_shock", "words": "A share of every hit lands as shock"},
+		{"name": "Quiet hands", "col": 4, "row": 1, "effect": "quiet_hands", "notable": true, "words": "Every search finds two things, and kills drop nothing"},
+		{"name": "Jerry-rigged", "col": 5, "row": 0, "effect": "cap_jerry", "capstone": true, "words": "Something improvised hits half again as hard"},
 	]},
 	{"name": "Fencing", "class": "Scrapper", "nodes": [
-		{"name": "Haggling", "effect": "sell_pct", "value": 10},
-		{"name": "Contacts", "effect": "cash_pct", "value": 10},
-		{"name": "Weighing it up", "effect": "sell_pct", "value": 10},
-		{"name": "Magpie", "effect": "scavenger", "notable": true, "words": "Every search finds two things"},
-		{"name": "Known face", "effect": "cash_pct", "value": 10, "needs": 3},
-		{"name": "Fair price", "effect": "sell_pct", "value": 10},
-		{"name": "Buyer's market", "effect": "buyers_market", "keystone": true, "words": "The Fence pays double; buying costs double"},
-		{"name": "Lucky find", "effect": "rarity", "value": 20, "needs": 3},
-		{"name": "Blowtorch", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "A share of every hit lands as fire and keeps burning"},
-		{"name": "Hoarder", "effect": "hoarder", "notable": true, "words": "The pack carries double; −30% pace"},
-		{"name": "The lot", "effect": "cap_the_lot", "capstone": true, "needs": 6, "words": "A pack that comes home full pays double cash"},
+		{"name": "Haggling", "col": 0, "row": 0, "effect": "sell_pct", "value": 10},
+		{"name": "Contacts", "col": 0, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "Weighing it up", "col": 1, "row": 0, "effect": "sell_pct", "value": 10},
+		{"name": "Magpie", "col": 2, "row": 0, "effect": "scavenger", "notable": true, "words": "Every search finds two things"},
+		{"name": "Known face", "col": 1, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "Fair price", "col": 2, "row": 1, "effect": "sell_pct", "value": 10},
+		{"name": "Buyer's market", "col": 4, "row": 0, "effect": "buyers_market", "keystone": true, "words": "The Fence pays double; buying costs double"},
+		{"name": "Lucky find", "col": 3, "row": 1, "effect": "rarity", "value": 20},
+		{"name": "Blowtorch", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "scrapper_fire", "words": "A share of every hit lands as fire and keeps burning"},
+		{"name": "Hoarder", "col": 4, "row": 1, "effect": "hoarder", "notable": true, "words": "The pack carries double; −30% pace"},
+		{"name": "The lot", "col": 5, "row": 0, "effect": "cap_the_lot", "capstone": true, "words": "A pack that comes home full pays double cash"},
 	]},
 	# Drifter
 	{"name": "Moving on", "class": "Drifter", "nodes": [
-		{"name": "Light feet", "effect": "pace_pct", "value": 5},
-		{"name": "Road legs", "effect": "hp", "value": 5},
-		{"name": "Head start", "effect": "patrol_pct", "value": 10},
-		{"name": "Spray", "effect": "damage_pct", "value": 25, "type": "smg", "notable": true, "words": "Every burst hits a quarter harder"},
-		{"name": "Keep moving", "effect": "pace_pct", "value": 5, "needs": 3},
-		{"name": "Never still", "effect": "patrol_pct", "value": 10},
-		{"name": "Never there", "effect": "never_there", "keystone": true, "words": "No gang ever comes; searching takes twice as long"},
-		{"name": "Wiry", "effect": "hp", "value": 5, "needs": 3},
-		{"name": "Petrol bomb", "effect": "conv_fire_pct", "value": 15, "notable": true, "words": "A share of every hit lands as fire and keeps burning"},
-		{"name": "Hit and run", "effect": "hit_and_run", "notable": true, "words": "Leaves as the first gang arrives, the loot kept; every kill pays 50% more"},
-		{"name": "Ghost", "effect": "cap_ghost", "capstone": true, "needs": 6, "words": "The first gang never comes: a run starts at the search, and a full pack brought home is the clear"},
+		{"name": "Light feet", "col": 0, "row": 0, "effect": "pace_pct", "value": 5},
+		{"name": "Road legs", "col": 0, "row": 1, "effect": "hp", "value": 5},
+		{"name": "Head start", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
+		{"name": "Spray", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "smg", "notable": true, "words": "Every burst hits a quarter harder"},
+		{"name": "Keep moving", "col": 1, "row": 1, "effect": "pace_pct", "value": 5},
+		{"name": "Never still", "col": 2, "row": 1, "effect": "patrol_pct", "value": 10},
+		{"name": "Never there", "col": 4, "row": 0, "effect": "never_there", "keystone": true, "words": "No gang ever comes; searching takes twice as long"},
+		{"name": "Wiry", "col": 3, "row": 1, "effect": "hp", "value": 5},
+		{"name": "Petrol bomb", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "drifter_fire", "words": "A share of every hit lands as fire and keeps burning"},
+		{"name": "Hit and run", "col": 4, "row": 1, "effect": "hit_and_run", "notable": true, "words": "Leaves as the first gang arrives, the loot kept; every kill pays 50% more"},
+		{"name": "Ghost", "col": 5, "row": 0, "effect": "cap_ghost", "capstone": true, "words": "The first gang never comes: a run starts at the search, and a full pack brought home is the clear"},
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
-		{"name": "Lucky", "effect": "rarity", "value": 10},
-		{"name": "Found money", "effect": "cash_pct", "value": 10},
-		{"name": "Charmed", "effect": "loot_pct", "value": 3},
-		{"name": "Dead man's shoes", "effect": "damage_low_pct", "value": 20, "notable": true, "words": "Under half HP: +20% damage"},
-		{"name": "Rabbit's foot", "effect": "rarity", "value": 15, "needs": 3},
-		{"name": "Pockets", "effect": "cash_pct", "value": 10},
-		{"name": "All or nothing", "effect": "all_or_nothing", "keystone": true, "words": "Nothing common is ever found, and half as many things are"},
-		{"name": "Four-leaf", "effect": "loot_pct", "value": 4, "needs": 3},
-		{"name": "Jump start", "effect": "conv_shock_pct", "value": 15, "notable": true, "words": "A share of every hit lands as shock"},
-		{"name": "Light fingers", "effect": "light_fingers", "notable": true, "words": "Papers three times as often; cash −20%"},
-		{"name": "Loaded dice", "effect": "cap_loaded_dice", "capstone": true, "needs": 6, "words": "A Rare or better find rolls twice and keeps the better"},
+		{"name": "Lucky", "col": 0, "row": 0, "effect": "rarity", "value": 10},
+		{"name": "Found money", "col": 0, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "Charmed", "col": 1, "row": 0, "effect": "loot_pct", "value": 3},
+		{"name": "Dead man's shoes", "col": 2, "row": 0, "effect": "damage_low_pct", "value": 20, "notable": true, "words": "Under half HP: +20% damage"},
+		{"name": "Rabbit's foot", "col": 1, "row": 1, "effect": "rarity", "value": 15},
+		{"name": "Pockets", "col": 2, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "All or nothing", "col": 4, "row": 0, "effect": "all_or_nothing", "keystone": true, "words": "Nothing common is ever found, and half as many things are"},
+		{"name": "Four-leaf", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Jump start", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "drifter_shock", "words": "A share of every hit lands as shock"},
+		{"name": "Light fingers", "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers three times as often; cash −20%"},
+		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice and keeps the better"},
 	]},
 ]
 ## The second past: at ASCEND_LEVEL the runner takes a second class, whose
 ## first tree opens beside the first's. Its keystone and rule are theirs too.
-## The element trees: one a type, a web like the class ones - a spine of
-## conversion and increased to a notable, a branch to a keystone that breaks
-## the element's rule, a branch to a notable with a cost. Any class can walk
-## any of them; its two affinities (AFFINITY) come at the normal price, the
-## others cost double and their keystone needs the second past.
+## The element trees: one a type, lanes like the class ones - conversion and increased to a notable, then
+## column 4's halves of the joints (a class's alone: "class"), then a keystone that breaks the element's rule
+## and a notable with a cost, which want a closed joint in the tree (JOINTS), then the capstone. Any class
+## can walk any of them; its two affinities (AFFINITY) come at the normal price, the others cost double and
+## stop at column 4 - a dip, not a build. Knuckles is the physical: the share of a hit that isn't converted.
 const ELEMENT_TREES := [
 	{"name": "Petrol", "element": "fire", "nodes": [
-		{"name": "A can of it", "effect": "conv_fire_pct", "value": 10},
-		{"name": "Rags", "effect": "fire_pct", "value": 10},
-		{"name": "Siphoned", "effect": "conv_fire_pct", "value": 15},
-		{"name": "Lit", "effect": "fire_pct", "value": 30, "notable": true, "words": "+30% fire; burns last twice as long"},
-		{"name": "Wick", "effect": "fire_pct", "value": 12, "needs": 3},
-		{"name": "Splash", "effect": "conv_fire_pct", "value": 20},
-		{"name": "Spreads", "effect": "fire_spread", "keystone": true, "words": "Fire hits everyone on you"},
-		{"name": "Fumes", "effect": "dot_pct", "value": 20, "needs": 3},
-		{"name": "Jerry can", "effect": "conv_fire_pct", "value": 20},
-		{"name": "On your hands", "effect": "fire_more", "notable": true, "words": "Fire does 40% more; every hit of it burns you for 2% of it"},
-		{"name": "Spread", "effect": "cap_spread", "capstone": true, "needs": 6, "words": "The burn on one of them carries to the next"},
+		{"name": "A can of it", "col": 0, "row": 0, "effect": "conv_fire_pct", "value": 30},
+		{"name": "Rags", "col": 0, "row": 1, "effect": "fire_pct", "value": 10},
+		{"name": "Siphoned", "col": 1, "row": 0, "effect": "conv_fire_pct", "value": 35},
+		{"name": "Lit", "col": 2, "row": 0, "effect": "fire_pct", "value": 30, "notable": true, "words": "+30% fire; burns last twice as long"},
+		{"name": "Wick", "col": 1, "row": 1, "effect": "fire_pct", "value": 12},
+		{"name": "Drifter's can", "col": 3, "row": 0, "effect": "fire_pct", "value": 25, "type": "smg", "class": "Drifter", "notable": true, "joint": "drifter_fire", "words": "SMGs do 25% more fire"},
+		{"name": "Spreads", "col": 4, "row": 0, "effect": "fire_spread", "keystone": true, "words": "Fire hits everyone on you"},
+		{"name": "Fumes", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
+		{"name": "Scrapper's torch", "col": 3, "row": 1, "effect": "fire_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_fire", "words": "Improvised guns do 25% more fire"},
+		{"name": "On your hands", "col": 4, "row": 1, "effect": "fire_more", "notable": true, "words": "Fire does 40% more; every hit of it burns you for 2% of it"},
+		{"name": "Spread", "col": 5, "row": 0, "effect": "cap_spread", "capstone": true, "words": "The burn on one of them carries to the next"},
 	]},
 	{"name": "The cold", "element": "frost", "nodes": [
-		{"name": "Antifreeze", "effect": "conv_frost_pct", "value": 10},
-		{"name": "Frost", "effect": "frost_pct", "value": 10},
-		{"name": "A hard winter", "effect": "conv_frost_pct", "value": 15},
-		{"name": "Chill", "effect": "frost_pct", "value": 30, "notable": true, "words": "+30% frost; chilled gangs fire 40% slower, not 20"},
-		{"name": "Numb", "effect": "frost_pct", "value": 12, "needs": 3},
-		{"name": "Black ice", "effect": "conv_frost_pct", "value": 20},
-		{"name": "Frozen solid", "effect": "frost_freeze", "keystone": true, "words": "Chilled gangs fire at 15%; your frost does half damage"},
-		{"name": "Wind chill", "effect": "frost_pct", "value": 15, "needs": 3},
-		{"name": "Deep freeze", "effect": "conv_frost_pct", "value": 20},
-		{"name": "Cold hands", "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
-		{"name": "Shatter", "effect": "cap_shatter", "capstone": true, "needs": 6, "words": "A chilled target takes double from the physical"},
+		{"name": "Antifreeze", "col": 0, "row": 0, "effect": "conv_frost_pct", "value": 30},
+		{"name": "Frost", "col": 0, "row": 1, "effect": "frost_pct", "value": 10},
+		{"name": "A hard winter", "col": 1, "row": 0, "effect": "conv_frost_pct", "value": 35},
+		{"name": "Chill", "col": 2, "row": 0, "effect": "frost_pct", "value": 30, "notable": true, "words": "+30% frost; chilled gangs fire 40% slower, not 20"},
+		{"name": "Numb", "col": 1, "row": 1, "effect": "frost_pct", "value": 12},
+		{"name": "Poacher's snare", "col": 3, "row": 0, "effect": "frost_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Poacher", "notable": true, "joint": "poacher_frost", "words": "+25% frost; gangs come 10% later"},
+		{"name": "Frozen solid", "col": 4, "row": 0, "effect": "frost_freeze", "keystone": true, "words": "Chilled gangs fire at 15%; your frost does half damage"},
+		{"name": "Wind chill", "col": 2, "row": 1, "effect": "frost_pct", "value": 15},
+		{"name": "Paramedic's ice", "col": 3, "row": 1, "effect": "frost_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_frost", "words": "+25% frost"},
+		{"name": "Cold hands", "col": 4, "row": 1, "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
+		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true, "words": "A chilled target takes double from the physical"},
 	]},
 	{"name": "The rat man", "element": "poison", "nodes": [
-		{"name": "Under the sink", "effect": "conv_poison_pct", "value": 10},
-		{"name": "Bait", "effect": "poison_pct", "value": 10},
-		{"name": "Council issue", "effect": "conv_poison_pct", "value": 15},
-		{"name": "Dosed", "effect": "poison_pct", "value": 30, "notable": true, "words": "+30% poison; poison lasts twice as long"},
-		{"name": "Cumulative", "effect": "dot_pct", "value": 15, "needs": 3},
-		{"name": "Blue pellets", "effect": "conv_poison_pct", "value": 20},
-		{"name": "Builds", "effect": "poison_stacks", "keystone": true, "words": "Poison stacks to fifteen, not five"},
-		{"name": "Slow acting", "effect": "poison_pct", "value": 15, "needs": 3},
-		{"name": "The whole tin", "effect": "conv_poison_pct", "value": 20},
-		{"name": "Rat's share", "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot quantity −20%"},
-		{"name": "Lingers", "effect": "cap_lingers", "capstone": true, "needs": 6, "words": "The poison on one of them carries to the next"},
+		{"name": "Under the sink", "col": 0, "row": 0, "effect": "conv_poison_pct", "value": 30},
+		{"name": "Bait", "col": 0, "row": 1, "effect": "poison_pct", "value": 10},
+		{"name": "Council issue", "col": 1, "row": 0, "effect": "conv_poison_pct", "value": 35},
+		{"name": "Dosed", "col": 2, "row": 0, "effect": "poison_pct", "value": 30, "notable": true, "words": "+30% poison; poison lasts twice as long"},
+		{"name": "Cumulative", "col": 1, "row": 1, "effect": "dot_pct", "value": 15},
+		{"name": "Poacher's bait", "col": 3, "row": 0, "effect": "poison_pct", "value": 25, "type": "rifle", "class": "Poacher", "notable": true, "joint": "poacher_poison", "words": "Rifles do 25% more poison"},
+		{"name": "Builds", "col": 4, "row": 0, "effect": "poison_stacks", "keystone": true, "words": "Poison stacks to fifteen, not five"},
+		{"name": "Slow acting", "col": 2, "row": 1, "effect": "poison_pct", "value": 15},
+		{"name": "Paramedic's dose", "col": 3, "row": 1, "effect": "poison_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_poison", "words": "+25% poison"},
+		{"name": "Rat's share", "col": 4, "row": 1, "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot quantity −20%"},
+		{"name": "Lingers", "col": 5, "row": 0, "effect": "cap_lingers", "capstone": true, "words": "The poison on one of them carries to the next"},
 	]},
 	{"name": "Live", "element": "shock", "nodes": [
-		{"name": "Jump Leads", "effect": "conv_shock_pct", "value": 10},
-		{"name": "Charge", "effect": "shock_pct", "value": 10},
-		{"name": "Off the mains", "effect": "conv_shock_pct", "value": 15},
-		{"name": "Live", "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 40% more, not 25"},
-		{"name": "Amps", "effect": "shock_pct", "value": 12, "needs": 3},
-		{"name": "Bare wire", "effect": "conv_shock_pct", "value": 20},
-		{"name": "Live wire", "effect": "shock_chain", "keystone": true, "words": "Shock on one of them is shock on all of them"},
-		{"name": "Volts", "effect": "shock_pct", "value": 15, "needs": 3},
-		{"name": "Substation", "effect": "conv_shock_pct", "value": 20},
-		{"name": "Earthed", "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
-		{"name": "Arc", "effect": "cap_arc", "capstone": true, "needs": 6, "words": "A shock holds as long as you fire"},
+		{"name": "Jump Leads", "col": 0, "row": 0, "effect": "conv_shock_pct", "value": 30},
+		{"name": "Charge", "col": 0, "row": 1, "effect": "shock_pct", "value": 10},
+		{"name": "Off the mains", "col": 1, "row": 0, "effect": "conv_shock_pct", "value": 35},
+		{"name": "Live", "col": 2, "row": 0, "effect": "shock_pct", "value": 30, "notable": true, "words": "+30% shock; shocked gangs take 40% more, not 25"},
+		{"name": "Amps", "col": 1, "row": 1, "effect": "shock_pct", "value": 12},
+		{"name": "Drifter's leads", "col": 3, "row": 0, "effect": "shock_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_shock", "words": "+25% shock; gangs come 10% later"},
+		{"name": "Live wire", "col": 4, "row": 0, "effect": "shock_chain", "keystone": true, "words": "Shock on one of them is shock on all of them"},
+		{"name": "Volts", "col": 2, "row": 1, "effect": "shock_pct", "value": 15},
+		{"name": "Scrapper's mains", "col": 3, "row": 1, "effect": "shock_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_shock", "words": "Improvised guns do 25% more shock"},
+		{"name": "Earthed", "col": 4, "row": 1, "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
+		{"name": "Arc", "col": 5, "row": 0, "effect": "cap_arc", "capstone": true, "words": "A shock holds as long as you fire"},
 	]},
 	{"name": "Blades", "element": "bleed", "nodes": [
-		{"name": "Stanley knife", "effect": "conv_bleed_pct", "value": 10},
-		{"name": "An edge", "effect": "bleed_pct", "value": 10},
-		{"name": "Sharpened", "effect": "conv_bleed_pct", "value": 15},
-		{"name": "Opened up", "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
-		{"name": "Deep", "effect": "bleed_pct", "value": 12, "needs": 3},
-		{"name": "Serrated", "effect": "conv_bleed_pct", "value": 20},
-		{"name": "Won't stop", "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down, and stack to three"},
-		{"name": "Nicked", "effect": "dot_pct", "value": 20, "needs": 3},
-		{"name": "Butcher's", "effect": "conv_bleed_pct", "value": 20},
-		{"name": "Blood up", "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
-		{"name": "Bleed out", "effect": "cap_bleed_out", "capstone": true, "needs": 6, "words": "A bleed carries to the next, and bleeds half again as hard"},
+		{"name": "Stanley knife", "col": 0, "row": 0, "effect": "conv_bleed_pct", "value": 30},
+		{"name": "An edge", "col": 0, "row": 1, "effect": "bleed_pct", "value": 10},
+		{"name": "Sharpened", "col": 1, "row": 0, "effect": "conv_bleed_pct", "value": 15},
+		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
+		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 12},
+		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed"},
+		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down, and stack to three"},
+		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
+		{"name": "Butcher's", "col": 3, "row": 1, "effect": "conv_bleed_pct", "value": 20},
+		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
+		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "words": "A bleed carries to the next, and bleeds half again as hard"},
+	]},
+	{"name": "Knuckles", "element": "physical", "nodes": [
+		{"name": "Bare hands", "col": 0, "row": 0, "effect": "physical_pct", "value": 10},
+		{"name": "Wraps", "col": 0, "row": 1, "effect": "armour_pct", "value": 5},
+		{"name": "Half a brick", "col": 1, "row": 0, "effect": "physical_pct", "value": 15},
+		{"name": "Stagger", "col": 2, "row": 0, "effect": "physical_pct", "value": 30, "also": {"stagger": 10}, "notable": true, "words": "+30% physical; your hits slow their fire 10%"},
+		{"name": "Thick skull", "col": 1, "row": 1, "effect": "armour_pct", "value": 5},
+		{"name": "Doorman's knuckles", "col": 3, "row": 0, "effect": "phys_pen", "value": 20, "class": "Doorman", "notable": true, "joint": "doorman_physical", "words": "Physical ignores 20% of their resist"},
+		{"name": "Bust them up", "col": 4, "row": 0, "effect": "bust_them_up", "keystone": true, "words": "Physical ignores their armour and resist; nothing you fire converts"},
+		{"name": "Weight behind it", "col": 2, "row": 1, "effect": "physical_pct", "value": 12},
+		{"name": "Knuckle-duster", "col": 3, "row": 1, "effect": "physical_pct", "value": 20},
+		{"name": "Heavy", "col": 4, "row": 1, "effect": "physical_more", "notable": true, "words": "Physical does 40% more; pace −15%"},
+		{"name": "Flattened", "col": 5, "row": 0, "effect": "cap_flattened", "capstone": true, "words": "A kill with the plain staggers the next gang: they fire at half for two seconds"},
 	]},
 ]
 const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
+
+## The joints (9 Oct, docs/design/trees.md): one notable split across a class tree and an element tree of the
+## class's pair, in column 4 of both. Each half works alone; both trained, the joint closes and its payoff
+## holds. An element tree's last two columns want a closed joint in that tree. `lane` is the class tree's
+## place on the Training screen: the first tree joins lane 2's element, the second lane 4's.
+const JOINTS := [
+	{"key": "drifter_fire", "class": "Drifter", "tree": "Moving on", "element_tree": "Petrol", "words": "Your bursts ignite: burning gangs take 25% more from SMGs"},
+	{"key": "drifter_shock", "class": "Drifter", "tree": "Luck", "element_tree": "Live", "words": "A shocked kill's drop rolls its rarity twice"},
+	{"key": "scrapper_shock", "class": "Scrapper", "tree": "Stripping", "element_tree": "Live", "words": "Every hit from an improvised gun shocks"},
+	{"key": "scrapper_fire", "class": "Scrapper", "tree": "Fencing", "element_tree": "Petrol", "words": "A kill while it burns always drops something; finds sell for 20% more"},
+	{"key": "poacher_poison", "class": "Poacher", "tree": "Stalking", "element_tree": "The rat man", "words": "Your first shot on a gang lands its poison at full stacks"},
+	{"key": "poacher_frost", "class": "Poacher", "tree": "Snares", "element_tree": "The cold", "words": "Every gang arrives chilled, and one head short"},
+	{"key": "paramedic_poison", "class": "Paramedic", "tree": "Triage", "element_tree": "The rat man", "words": "Every med you use doses them with a full stack of poison"},
+	{"key": "paramedic_frost", "class": "Paramedic", "tree": "Shifts", "element_tree": "The cold", "words": "Chilled gangs do 30% less to you; meds heal 20% more while one is"},
+	{"key": "doorman_bleed", "class": "Doorman", "tree": "Muscle", "element_tree": "Blades", "words": "Every shell and swing opens a bleed; bleeding gangs do 20% less to you"},
+	{"key": "doorman_physical", "class": "Doorman", "tree": "The door", "element_tree": "Knuckles", "words": "Every shell and swing staggers: the gangs on you fire 25% slower"},
+]
+const JOINT_COL := 3               # the column both halves sit in (the fourth)
+const ELEMENT_GATED_COL := 4       # an element tree's columns from here want a closed joint
+
+
+static func joint(key: String) -> Dictionary:
+	for j in JOINTS:
+		if j["key"] == key:
+			return j
+	return {}
+
+
+## A class's joint in a tree: the class tree's ("Moving on") or the element tree's ("Petrol"), or {}.
+static func joint_in(cls: String, tree_name: String) -> Dictionary:
+	for j in JOINTS:
+		if j["class"] == cls and (j["tree"] == tree_name or j["element_tree"] == tree_name):
+			return j
+	return {}
 
 const ASCEND_LEVEL := 30
 ## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the Yard keeps RETIRE_SHARE of their
@@ -1379,22 +1424,54 @@ const CLASSES := [
 ]
 
 
-## A node's cost in points: 1 for the first four of a tree, 2 for the next
-## four, 3 for the last four; a notable one more, a keystone two more. The
-## common tree is 27, a class tree 15: 57 for the three on show, against 49
-## points by level 50.
-static func node_cost(i: int, notable: bool, keystone := false) -> int:
-	return 1 + i / 4 + (2 if keystone else (1 if notable else 0))
+## A node's cost in points by its column (the lanes, 9 Oct): 1, 1, 2, 2, 3, 3 across; a notable one more,
+## a keystone two more. The capstone's is its own (capstone_cost).
+const COLUMN_COST := [1, 1, 2, 2, 3, 3]
+const COLUMNS := 6
+const GATE_SHARE := 0.6            # a column opens on this share of what the columns before it cost, in that tree
 
 
-## A capstone costs a third of what the rest of its tree does, rounded up.
+static func node_cost(col: int, notable: bool, keystone := false) -> int:
+	return int(COLUMN_COST[clampi(col, 0, COLUMNS - 1)]) + (2 if keystone else (1 if notable else 0))
+
+
+## A node's base cost from its data, the capstone's included: what a gate counts (a move's free node and
+## an off-pair element's doubling are the runner's price, not the tree's shape).
+static func base_cost(t: Dictionary, nd: Dictionary) -> int:
+	if nd.get("capstone", false):
+		return capstone_cost(t)
+	return node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
+
+
+## Whether a node is for these classes: a class's half in an element tree is that class's alone.
+static func for_classes(nd: Dictionary, classes: Array) -> bool:
+	return not nd.has("class") or nd["class"] in classes
+
+
+## The points spent in a tree that open column `col`: GATE_SHARE of what every node before it costs - the
+## nodes these classes could train (another class's half doesn't count) - rounded up. Column 0 is open.
+static func gate(t: Dictionary, col: int, classes: Array) -> int:
+	if col <= 0:
+		return 0
+	var before := 0
+	for nd in t["nodes"]:
+		if int(nd.get("col", 0)) < col and not nd.get("capstone", false) and for_classes(nd, classes):
+			before += base_cost(t, nd)
+	return ceili(before * GATE_SHARE)
+
+
 static func capstone_cost(t: Dictionary) -> int:
 	var total := 0
-	for i in range(t["nodes"].size()):
-		var n: Dictionary = t["nodes"][i]
-		if not n.get("capstone", false):
-			total += node_cost(i, n.get("notable", false), n.get("keystone", false))
-	return maxi(1, ceili(total / 4.0))     # the pass (6 Oct): a third left three builds at 4.3-4.6 h against the 4 h gate
+	var half := 0                                      # a class's half counts once: one class trains one of them
+	for nd in t["nodes"]:
+		if nd.get("capstone", false):
+			continue
+		var c := node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
+		if nd.has("class"):
+			half = maxi(half, c)
+		else:
+			total += c
+	return maxi(1, ceili((total + half) / 4.0))     # the pass (6 Oct): a third left three builds at 4.3-4.6 h against the 4 h gate
 
 
 ## The trees a class sees: its first, the common one, its second - and the
@@ -1416,13 +1493,6 @@ static func trees_for(cls: String, cls2 := "") -> Array:
 				out.append(t)
 				break
 	return out
-
-
-## The node a node needs trained first: the one before it, or the fork it hangs off.
-static func node_needs(t: Dictionary, i: int) -> int:
-	if i == 0:
-		return -1
-	return int(t["nodes"][i].get("needs", i - 1))
 
 
 static func element_tree(name: String) -> Dictionary:

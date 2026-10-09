@@ -43,6 +43,7 @@ var intel: Array = []              # per tier: the modifier names on offer now
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
 var training_points := 0           # earned, one a level, across operators
+var best_level := 1                # the camp's best level (9 Oct): a level earns a point only past it, so a new runner re-levels for nothing
 var last_craft := {}               # the Bench's last job: {id, kind, words}, for the toast and the craft panel
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
@@ -286,6 +287,10 @@ func _conversion_raw() -> Dictionary:
 	if has_rule("jump_leads"):
 		out["shock"] += 0.33
 		total += 0.33
+	if has_node("bust_them_up"):
+		for ty in Data.ELEMENTS:
+			out[ty] = 0.0                    # Bust them up: nothing you fire converts
+		total = 0.0
 	if has_rule("weed_burner"):
 		for ty in Data.ELEMENTS:
 			out[ty] = 0.0
@@ -541,7 +546,7 @@ func rarity_bonus() -> float:
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct")) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (20.0 if has_joint("scrapper_fire") else 0.0)) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -585,21 +590,53 @@ func cm(key: String) -> float:
 
 
 func set_class(name: String) -> bool:
-	if mission != null:
-		return false
+	if mission != null or name == cls or name == cls2:
+		return false                       # the second past's class is taken already: a change to it would lose the second past
 	for c in Data.CLASSES:
 		if c["name"] == name:
+			# a change costs the respec of what it gives back (9 Oct: clicking a class was a free respec); a new runner picks free
+			var cost := class_change_cost(name)
+			if cost > 0 and cash < cost:
+				return false
+			var drops: Array = _change_drops(name)
+			cash -= cost
 			cls = name
-			# the old class's trees come back as points; the Yard's tree stays
-			var kept := []
-			for id in tree:
-				if _on_show(str(id).get_slice("/", 0)):
-					kept.append(id)
-			tree = kept
+			# the old class's trees come back as points, and what the new class can't keep: another class's half, an
+			# element off its pair (it would cost double now); the Yard's and the pair's elements stay
+			tree = tree.filter(func(id): return not (id in drops))
 			log_event("The runner was a %s, before" % name)
 			_say_next()
 			return true
 	return false
+
+
+## What a class change to `to` costs: the respec price of what it gives back (_change_drops) - those points at
+## the respec rate, at today's prices. Nothing with no class yet, or nothing to give back.
+func class_change_cost(to := "") -> int:
+	if cls == "":
+		return 0
+	var pts := 0
+	for id in _change_drops(to):
+		pts += node_cost(id)
+	return _inf(pts * Data.RESPEC_CASH)
+
+
+## The nodes a change to `to` gives back: the old class's trees; and, when `to` is named, another class's half
+## in an element tree and an element off `to`'s pair (the second past's affinities still count).
+func _change_drops(to := "") -> Array:
+	var out: Array = []
+	var keep_classes: Array = [to, cls2].filter(func(c): return c != "")
+	for id in tree:
+		var tn: String = str(id).get_slice("/", 0)
+		var t := Data.tree_named(tn)
+		if cls != "" and t.get("class", "") == cls:
+			out.append(id)                 # (a runner with no class has no class trees: the Yard's has no "class" either)
+		elif to != "" and t.has("element"):
+			var el: String = t["element"]
+			var paired: bool = has_rule("qm_manual") or el in trades or keep_classes.any(func(c): return el in Data.AFFINITY.get(c, []))
+			if not paired or not Data.for_classes(node(id), keep_classes):
+				out.append(id)
+	return out
 
 
 # ------------------------------------------------------------------ the tree
@@ -1543,45 +1580,100 @@ func gun_type() -> String:
 	return Items.base_of(equipped["Primary"]).get("type", "")
 
 
-## A trained node counts unless it's typed for a gun that isn't in hand.
+## A trained node counts unless it's typed for a gun that isn't in hand ("type" is one gun type, or a
+## list of them), or it's the top of an element tree - column 5 or 6 - with no closed joint there: a class
+## change reopened it, so it stays trained and does nothing until a joint there closes again (9 Oct).
+## `_active` reads the type alone; `node_active` (by id) reads both - the screen's and the tests'.
 func _active(n: Dictionary) -> bool:
-	return not n.has("type") or n["type"] == gun_type()
+	if not n.has("type"):
+		return true
+	var ty = n["type"]
+	return (gun_type() in ty) if ty is Array else ty == gun_type()
+
+
+func node_active(id: String) -> bool:
+	var n := node(id)
+	if n.is_empty() or not _active(n):
+		return false
+	var tname: String = id.get_slice("/", 0)
+	return not (not Data.element_tree(tname).is_empty() and int(n.get("col", 0)) >= Data.ELEMENT_GATED_COL and not _tops_open(tname))
 
 
 func has_node(effect: String) -> bool:
-	for n in _nodes_for(effect):
-		if _active(n):
+	for e in _nodes_for(effect):
+		if _active(e[0]) and (e[2] == "" or _tops_open(e[2])):
 			return true
 	return false
 
 
-## The small nodes' numbers for an effect, added up.
+## The small nodes' numbers for an effect, added up: a node's own value, or its "also" figure for a second effect.
 func tree_sum(effect: String) -> float:
 	var t := 0.0
-	for n in _nodes_for(effect):
-		if _active(n):
-			t += n.get("value", 0)
+	for e in _nodes_for(effect):
+		if _active(e[0]) and (e[2] == "" or _tops_open(e[2])):
+			t += float(e[1])
 	return t
 
 
-## The trained nodes by effect, built once per shape of the tree: the fight
-## asks for effects every tick, and splitting ids each time was the cost.
+## The trained nodes by effect - [node, its figure for that effect, the element tree it waits on or ""], a node
+## under its "also" effects too - built once per shape of the tree and the runner's classes: the fight asks for
+## effects every tick. The joints closed and the element tops open are worked out with it.
 var _eff_cache := {}
 var _eff_hash := 0
+var _closed := {}                  # joint key -> true, closed
+var _open_tops := {}               # element tree name -> true: its columns 5 and 6 work (a joint closed there, or a trade)
 func _nodes_for(effect: String) -> Array:
-	var h := hash(tree)
+	var h := hash([tree, cls, cls2, trades])
 	if h != _eff_hash or _eff_cache.is_empty():
-		_eff_cache = {}
+		_eff_cache = {"": []}
+		_closed = {}
+		_open_tops = {}
+		for j in Data.JOINTS:
+			if (j["class"] == cls or j["class"] == cls2) and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]):
+				_closed[j["key"]] = true
+				_open_tops[j["element_tree"]] = true
+		for el in trades:
+			var et := Data.tree_of_element(el)
+			if not et.is_empty():
+				_open_tops[et["name"]] = true
 		for id in tree:
 			var n := node(id)
 			if n.is_empty():
 				continue
+			var tname: String = str(id).get_slice("/", 0)
+			var waits: String = tname if (not Data.element_tree(tname).is_empty() and int(n.get("col", 0)) >= Data.ELEMENT_GATED_COL) else ""
 			var e: String = n.get("effect", "")
 			if not _eff_cache.has(e):
 				_eff_cache[e] = []
-			_eff_cache[e].append(n)
+			_eff_cache[e].append([n, n.get("value", 0), waits])
+			for k in n.get("also", {}):
+				if not _eff_cache.has(k):
+					_eff_cache[k] = []
+				_eff_cache[k].append([n, n["also"][k], waits])
 		_eff_hash = h
 	return _eff_cache.get(effect, [])
+
+
+## Whether a joint's half in a tree is trained: the node in that tree carrying the joint's key.
+func _half_trained(j: Dictionary, tree_name: String) -> bool:
+	var t := Data.tree_named(tree_name)
+	for i in range(t.get("nodes", []).size()):
+		if str(t["nodes"][i].get("joint", "")) == j["key"] and tree.has("%s/%d" % [tree_name, i]):
+			return true
+	return false
+
+
+## A joint closed: both halves trained by a runner of its class (or a second past of it).
+func has_joint(key: String) -> bool:
+	_nodes_for("")
+	return _closed.has(key)
+
+
+## An element tree's top columns open: a joint closed there, the Yard's trade of its element, or the
+## Quartermaster's Manual ("every keystone open").
+func _tops_open(tree_name: String) -> bool:
+	_nodes_for("")
+	return _open_tops.has(tree_name) or has_rule("qm_manual")
 
 
 ## A dry run reads the rules once: nothing worn or stashed changes while it runs.
@@ -1624,9 +1716,7 @@ func node_cost(id: String) -> int:
 		if (k >= 0 and k < free_yard_nodes()) or (k < 0 and taken.size() < free_yard_nodes()):
 			return 0
 	var n := node(id)
-	var cost := Data.node_cost(int(parts[1]), n.get("notable", false), n.get("keystone", false))
-	if n.get("capstone", false):
-		cost = Data.capstone_cost(Data.tree_named(parts[0]))     # a third of the tree, on top of the tree
+	var cost := Data.base_cost(Data.tree_named(parts[0]), n)
 	var t := Data.element_tree(parts[0])
 	if not t.is_empty() and not affinity(t["element"]):
 		cost *= Data.OFF_AFFINITY_COST       # off the class's pair: double
@@ -1644,26 +1734,65 @@ func points_free() -> int:
 	return training_points - points_spent()
 
 
-## A node can be trained with a point free and the one before it taken.
-func can_train(id: String) -> bool:
-	if tree.has(id) or node(id).is_empty() or points_free() < node_cost(id):
-		return false
+## The classes whose halves this runner can train: theirs and the second past's.
+func my_classes() -> Array:
+	var out: Array = []
+	for c in [cls, cls2]:
+		if c != "":
+			out.append(c)
+	return out
+
+
+## What's been spent in a tree, at the tree's own prices: what its gates count.
+func points_in(tree_name: String) -> int:
+	var t := Data.tree_named(tree_name)
+	var n := 0
+	for id in tree:
+		if str(id).get_slice("/", 0) == tree_name:
+			n += Data.base_cost(t, node(id))
+	return n
+
+
+## A tree's column is open: what's spent in the tree has reached its gate.
+func column_open(tree_name: String, col: int) -> bool:
+	return points_in(tree_name) >= Data.gate(Data.tree_named(tree_name), col, my_classes())
+
+
+## Why a node can't be trained now, in words, or "" when it can (the Training screen's line, the tests').
+## `ignore_points`: everything but the points free - the screen draws a node it could reach with more points as open.
+func train_block(id: String, ignore_points := false) -> String:
+	if tree.has(id):
+		return "trained"
+	var n := node(id)
+	if n.is_empty():
+		return "no such node"
 	var parts := id.split("/")
 	if not _on_show(parts[0]):
-		return false
-	var i := int(parts[1])
+		return "not one of this runner's trees"
+	if not Data.for_classes(n, my_classes()):
+		return "%s only" % n["class"]
 	var t := Data.tree_named(parts[0])
-	if t.has("element") and not affinity(t["element"]) and t["nodes"][i].get("keystone", false):
-		return false                         # an element's keystone needs its affinity: the class's, or the second past's
-	if t["nodes"][i].get("capstone", false):
-		# the capstone wants the whole tree's shape behind it: the keystone and every notable
+	var col: int = int(n.get("col", 0))
+	var g: int = Data.gate(t, col, my_classes())
+	if points_in(parts[0]) < g:
+		return "opens at %d in %s (%d now)" % [g, parts[0], points_in(parts[0])]
+	if t.has("element") and col >= Data.ELEMENT_GATED_COL and not _tops_open(parts[0]):
+		return "wants a joint closed in %s" % parts[0]
+	if n.get("capstone", false):
+		# the capstone wants the tree's shape behind it: the keystone and every notable this runner can train
 		for k in range(t["nodes"].size()):
 			var nd: Dictionary = t["nodes"][k]
-			if (nd.get("keystone", false) or nd.get("notable", false)) and not tree.has("%s/%d" % [parts[0], k]):
-				return false
-		return true
-	var need := Data.node_needs(t, i)
-	return need < 0 or tree.has("%s/%d" % [parts[0], need])
+			if (nd.get("keystone", false) or nd.get("notable", false)) and Data.for_classes(nd, my_classes()) and not tree.has("%s/%d" % [parts[0], k]):
+				return "wants the keystone and every notable first"
+	if not ignore_points and points_free() < node_cost(id):
+		return "wants %d point%s" % [node_cost(id), "" if node_cost(id) == 1 else "s"]
+	return ""
+
+
+## A node can be trained: its column open in its tree, a point free for it, and for an element tree's top
+## a closed joint there; a class's half is that class's alone.
+func can_train(id: String) -> bool:
+	return train_block(id) == ""
 
 
 func train_node(id: String) -> bool:
@@ -1694,12 +1823,17 @@ func respec() -> bool:
 	return true
 
 
-## Levels earn points for the camp, whatever happens to the operator.
+## Levels earn points for the camp, whatever happens to the operator - but only past the camp's best
+## (9 Oct): dying and re-levelling a new runner earned the same points again, without end.
 func _earn_points(before: int) -> void:
 	var after := level()
-	if after > before:
-		training_points += after - before
-		log_event("Level %d: %d training point%s" % [after, after - before, "" if after - before == 1 else "s"])
+	if after > best_level:
+		var gained: int = after - maxi(before, best_level)
+		best_level = after
+		training_points += gained
+		log_event("Level %d: %d training point%s" % [after, gained, "" if gained == 1 else "s"])
+	elif after > before:
+		log_event("Level %d: no point - the camp's had a runner at level %d" % [after, best_level])
 
 
 func contact(t: Dictionary) -> int:
@@ -1747,7 +1881,7 @@ func _pace_raw() -> float:
 		if equipped[s] != null:
 			worn += Items.base_pace(equipped[s])
 	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
-		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0) * wound_mult("pace")
+		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (0.85 if has_node("physical_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0) * wound_mult("pace")
 
 
 # ------------------------------------------------------------------ ammo
@@ -2866,21 +3000,22 @@ func odds_settled(i: int) -> bool:
 ## DRY_STEP seconds at a time: true if it ends with HP left. The state goes
 ## back as it was: HP, XP, the rig, the log, the dice.
 const DRY_STEP := 2.0
+const TREE_V := 2                    # the trees' layout: 2, the lanes (9 Oct); a save before has its tree refunded
 const BAIL := 0.25                   # the HP a player (and the bots) get out at: the odds count that as lost
 func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	var p0 := Time.get_ticks_usec()
 	prof["dry_runs"] += 1
 	var t := effective(i)
 	var keep := {"hp": hp, "xp": xp, "rig": rig.duplicate(true), "events": events.duplicate(true), "mission": mission,
-		"rng": rng, "promised": promised, "training_points": training_points, "insure_next": insure_next}
+		"rng": rng, "promised": promised, "training_points": training_points, "best_level": best_level, "insure_next": insure_next}
 	prof["snap_us"] += Time.get_ticks_usec() - p0
 	rng = r
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0)
+	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0)
 	var m := {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false,
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
-		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "event": "", "event_at": -1.0, "dry": true,
+		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
 	}
 	if t.has("boss"):
 		m["boss"] = _boss_entry(t["boss"])
@@ -2919,6 +3054,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	rng = keep["rng"]
 	promised = keep["promised"]
 	training_points = keep["training_points"]
+	best_level = keep["best_level"]
 	insure_next = keep["insure_next"]
 	return alive
 
@@ -2946,12 +3082,12 @@ func deploy(i: int) -> void:
 		insured = true
 		log_event("Insured for %s. %s" % [_cash_words(insure_cost(i)), Words.FENCE["insured"]])
 	insure_next = false
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0)
+	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0)
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured,
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
-		"using": null, "meds_used": 0, "fresh": true, "swapped": 0,
+		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0,
 	}
 	if has_node("cap_ghost") and not t.has("boss"):
 		mission["remaining"] = 0              # Ghost: the first gang never comes; the run starts at the search
@@ -3069,6 +3205,9 @@ func _tick(dt: float) -> void:
 			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
 				size = 1
+			if has_joint("poacher_frost"):
+				size = maxi(1, size - 1)     # the Poacher's snare, joined: every gang one head short, and chilled
+				m["chill_t"] = 2.0
 			if has_node("cap_poached"):
 				_find(m, t)                  # Poached: they arrive already light
 			if has_node("hit_and_run"):
@@ -3176,8 +3315,13 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var per_type := type_dps()
 	var landed_total := 0.0
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
+	var held := gun_type()
+	mult *= _joint_hit_mult(m, held)
 	for ty in Data.TYPES:
-		var landed: float = float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
+		var r_ty: float = float(res.get(ty, 0.0))
+		if ty == "physical":
+			r_ty = phys_resist(r_ty)                  # Knuckles: the Doorman's knuckles and Bust them up get through their jackets
+		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
 		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
 			landed *= 2.0                             # Shatter: a chilled target takes double from the physical
 		if ty == "frost" and has_rule("gritters_keys") and float(m.get("chill_t", 0.0)) > 0.0:
@@ -3200,13 +3344,14 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["dealt_by"][ty] = float(m["dealt_by"].get(ty, 0.0)) + landed
 			if not m.has("dots"):
 				m["dots"] = {}
-			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - float(res.get(ty, 0.0))) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
+			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - r_ty) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
 			if ty == "frost":
 				m["chill_t"] = 999.0 if has_rule("gritters_keys") else 1.0    # the Gritter's Keys: a chill holds as long as you fire
 			if ty == "shock":
 				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 1.0     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
 		m["chill_t"] = 1.0                        # everyone on you is chilled, always
+	_joints_on_hit(m, t, landed_total, held, dt)
 	m["target_hp"] -= landed_total
 	var ticked_on_them := 0.0
 	if m.has("dots"):
@@ -3238,6 +3383,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["remaining"] = 0                           # comes out below
 			break
 		m["target_hp"] += t["hp"]
+		m["kill_shocked"] = float(m.get("shock_t", 0.0)) > 0.0
+		m["kill_burning"] = float(m.get("dots", {}).get("fire", 0.0)) > 0.0
+		if has_node("cap_flattened") and float(type_dps().get("physical", 0.0)) > 0.0:
+			m["flat_t"] = 2.0                        # Flattened: the plain put them down; the next of them fire at half for two seconds
+		m.erase("full_dose")
 		var carried := {}
 		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
 			carried["poison"] = m["dots"]["poison"]  # the Rat Man's Bag, or Lingers: poison carries to the next
@@ -3284,6 +3434,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
 	if on_you >= 3 and has_rule("doormans"):
 		incoming *= 0.75
+	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
 	# what their fire leaves on you: a share of the elemental part burns, poisons, bleeds, and ticks while the fight's on
@@ -3332,6 +3483,85 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			log_event("Not today: back up on half HP")
 			return
 		_kia()
+
+
+## Their physical resist after Knuckles: the Doorman's knuckles' share ignored, all of it with Bust them up.
+func phys_resist(r: float) -> float:
+	if has_node("bust_them_up"):
+		return 0.0
+	return r * maxf(0.0, 1.0 - tree_sum("phys_pen") / 100.0)
+
+
+## The joints' payoffs on your hit (9 Oct, docs/design/trees.md §3): what a closed joint adds to a tick of
+## your fire, after the hit's types have landed.
+func _joints_on_hit(m: Dictionary, t: Dictionary, landed_total: float, held: String, dt: float) -> void:
+	if landed_total <= 0.0:
+		return
+	if not m.has("dots"):
+		m["dots"] = {}
+	var rate: float = landed_total / maxf(dt, 0.001)
+	if has_joint("drifter_fire") and held == "smg":
+		_dot_top_up(m["dots"], "fire", landed_total * 0.1, rate * 0.1)       # the bursts ignite
+	if has_joint("doorman_bleed") and (held == "shotgun" or held == "melee"):
+		_dot_top_up(m["dots"], "bleed", landed_total * 0.1, rate * 0.1)      # every shell and swing opens a bleed
+	if has_joint("scrapper_shock") and held == "improvised":
+		m["shock_t"] = maxf(float(m.get("shock_t", 0.0)), 1.0)               # every hit from an improvised gun shocks
+	if has_joint("poacher_poison") and m["fresh"] and not m.has("full_dose") and float(m["dots"].get("poison", 0.0)) > 0.0:
+		m["full_dose"] = true
+		_dot_fill(m, "poison")                                                 # the first shot on a gang: its poison at full stacks
+
+
+## A joint's dot on top of what the gun's conversion built: never less than was there (the reviewer's catch: a
+## small cap of its own would have clamped a big burn down).
+func _dot_top_up(dots: Dictionary, ty: String, add: float, rate_cap: float) -> void:
+	var was := float(dots.get(ty, 0.0))
+	_dot_add(dots, ty, add, rate_cap)
+	dots[ty] = maxf(float(dots.get(ty, 0.0)), was)
+
+
+## The joints' share on your hit this tick: the Drifter's petrol, joined - a burning gang takes a quarter
+## more from the SMG.
+func _joint_hit_mult(m: Dictionary, held: String) -> float:
+	if has_joint("drifter_fire") and held == "smg" and float(m.get("dots", {}).get("fire", 0.0)) > 0.0:
+		return 1.25
+	return 1.0
+
+
+## Their fire on you after the joints and Knuckles: a share, 1.0 with none. Runs Flattened's clock down.
+func _joints_on_incoming(m: Dictionary, chilled: bool, dt: float) -> float:
+	var f := 1.0
+	var held := gun_type()
+	if has_joint("paramedic_frost") and chilled:
+		f *= 0.7                                  # chilled gangs do 30% less to you
+	if has_joint("doorman_bleed") and float(m.get("dots", {}).get("bleed", 0.0)) > 0.0:
+		f *= 0.8                                  # bleeding gangs do 20% less
+	if has_joint("doorman_physical") and (held == "shotgun" or held == "melee"):
+		f *= 0.75                                 # every shell and swing staggers: they fire 25% slower
+	var stagger := tree_sum("stagger")
+	if stagger > 0.0 and float(type_dps().get("physical", 0.0)) > 0.0:
+		f *= maxf(0.0, 1.0 - stagger / 100.0)     # Stagger: your hits slow their fire
+	if float(m.get("flat_t", 0.0)) > 0.0:
+		m["flat_t"] = maxf(0.0, float(m["flat_t"]) - dt)
+		f *= 0.5                                  # Flattened: the next of them fire at half
+	return f
+
+
+## A dot on them filled to its cap: every stack, at the gun's rate for the type.
+func _dot_fill(m: Dictionary, ty: String) -> void:
+	if not Data.DOTS.has(ty):
+		return
+	if not m.has("dots"):
+		m["dots"] = {}
+	var t: Dictionary = m["t"]
+	var rate: float = float(type_dps()[ty]) * (1.0 - float(t.get("res", {}).get(ty, 0.0))) * pace() * float(t["pace"])
+	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_stacks(ty, true)
+	m["dots"][ty] = maxf(float(m["dots"].get(ty, 0.0)), cap)
+
+
+## The Paramedic's dose, joined: a med used is a full stack of poison on the gang.
+func _dose(m: Dictionary) -> void:
+	_dot_fill(m, "poison")
+	m["dosed"] = int(m.get("dosed", 0)) + 1
 
 
 ## Using a med: the seconds run down under whatever fire there is, then it heals.
@@ -3417,7 +3647,9 @@ func _patch(m: Dictionary, dt: float) -> void:
 		return
 	m["using"]["left"] -= dt
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
-		_heal(m, m["using"]["heal"], true)
+		_heal(m, m["using"]["heal"] * (1.2 if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true)
+		if has_joint("paramedic_poison") and m["remaining"] > 0:
+			_dose(m)                         # the Paramedic's dose, joined: the med's a full stack of poison on them
 		if m.has("my_dots"):
 			m["my_dots"].erase("bleed")      # a dressing stops the bleeding
 		if has_node("cap_clean_hands"):
@@ -3447,7 +3679,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
 	if has_node("quiet_hands"):
 		return
-	if has_node("nothing_wasted") or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
+	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
 			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)     # signed for: a tier up
@@ -3574,6 +3806,11 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 					fits.append(b)
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
+	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
+		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
+		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
+			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
 		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
@@ -4641,7 +4878,7 @@ func _state() -> Dictionary:
 		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
-		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "training_points": training_points,
+		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
 		"intel": intel, "depth": depth, "best_depth": best_depth, "workshop": workshop, "class": cls, "stash_level": stash_level,
 		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
@@ -4714,6 +4951,10 @@ func load_dict(d: Dictionary) -> void:
 	else:
 		reroll_intel()
 	training_points = int(d.get("training_points", maxi(0, level() - 1)))
+	best_level = int(d.get("best_level", level()))
+	if int(d.get("tree_v", 1)) < TREE_V and not tree.is_empty():
+		tree = []                          # the lanes (9 Oct) moved the nodes: a tree from before comes back as points, once
+		log_event("The trees are laid out again: every point is free to spend")
 	depot_cleared = bool(d.get("depot_cleared", false))
 	past = d.get("past", [])
 	loose_kit = Array(d.get("loose_kit", []))

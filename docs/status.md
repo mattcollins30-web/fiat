@@ -2344,6 +2344,48 @@ own guard, "the Radio showed 0 card buttons", failed it on the Legion). Under th
 fails on the old loop (the Runner's card button, the Radio's Build and New word) and passes on the fix;
 it puts the room back after.
 
+**The trees as lanes, the joints, a class change that costs, the camp's high-water mark (9 Oct, the playtest
+list, item two; the spec is `docs/design/trees.md`, layout A on the canvas).** Matt: the element trees sat
+behind one arrow under the core tree and "there's no real cohesion between skill points for the classes and
+then the elemental ones"; a class click was a free respec; dying and re-levelling grew the points without end.
+*Data:* every tree is six columns of two (`col`, `row` on each node; ids stay `Tree/index`); the `needs`
+chains are gone. A column opens on the points spent in that tree, ⌈0.6 × the base cost of the columns before
+it⌉ (`Data.gate`, `sim.points_in`); cost by column 1, 1, 2, 2, 3, a notable +1, a keystone +2; the capstone a
+quarter of the rest, a class's half counted once. Ten joints (`Data.JOINTS`): a class tree's fourth-column
+notable and a class-only notable in its element's tree; both trained by a runner of that class (or the second
+past) close it; an element tree's last two columns work and train only with a joint closed there, the Yard's
+trade of it, or the Quartermaster's Manual. The Doorman's physical half is new ("Hands on" in The door), and so
+is Knuckles, the physical tree (Bust them up, Heavy, Flattened). *The payoffs* (`_joints_on_hit`,
+`_joints_on_incoming`, `_joint_hit_mult`, `_dot_fill`, `_dose`, `phys_resist`, the kill's flags): the
+Drifter's bursts ignite and a burning gang takes a quarter more from the SMG; a shocked kill's drop rolls its
+rarity twice; every improvised hit shocks; a kill while it burns always drops and the Fence pays a fifth more;
+the Poacher's first shot lands full poison, and every gang comes chilled and a head short; a med doses them
+with poison; chilled, they do 30% less and meds heal a fifth more; a bleeding gang does a fifth less; shells
+and swings stagger them 25% slower. *A class change* costs the respec of what it gives back - the old class's
+trees, another class's half, an element off the new pair - and takes two presses ("Change to Poacher: £1,240
+— press again"); free for a new runner; refused to the second past's class. *Points:* a level earns one only
+above the camp's `best_level` (saved); this replaces level-locking gear. *Saves:* `tree_v`; an older save's
+tree comes back as points once, its best level its runner's. *The Training screen* (`barracks.gd`, rewritten):
+a header (the face, the class and trait, the points, the classes top right); five lanes - the class's first
+tree, the element it joins, its second, that one's element, the Yard's - each a label block (name, whose, points
+in and the next gate, trained) and the tiles by column, the capstone the lane's height; a link between a class
+lane and its element in the fourth column, "⇄ JOINED · ..." or "⇄ OPEN · Petrol bomb and Drifter's can, one
+half each"; the Also row (the off-pair elements, the second past's tree, the drawer and the shelf with their
+counts) swaps the Yard's lane, the drawer and the shelf take the lanes' area as cards; the sum strip ends on
+"Joints 1 of 2"; the strip under it gives the node's sentence, its joint and why it won't train yet. *The bot*
+trains left to right, skips other classes' halves, takes the joint's class tree straight after its element,
+and a second past whose first tree holds that element's half. *The smoke:* the gates by formula, points in one
+tree opening nothing in another, every joint open on one half and closed on both for its class alone, every
+payoff where it lives (the ignite never shrinks a burn already there - the reviewer's catch), off-pair
+elements stopped at their joint, the second past closing its own, the lanes against the table for every
+class, the Also chips each swapping the fifth lane and back, a change's price and presses and what it gives
+back, the high-water mark, the old save refunded once. The reviewer also caught a change leaving an off-pair
+element at double (points free below nothing), the physical bot crafting for a conversion that doesn't exist,
+an armed change outliving a death, and the Joints count including a joint that can't close; its second
+read caught the first of those fixes giving back the Yard's tree on a new runner's pick (a runner with no class
+read every classless tree as theirs), and the second past's class offered as a change it would refuse. All
+fixed, each with a check.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

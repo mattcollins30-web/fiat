@@ -44,6 +44,35 @@ func _check(ok: bool, msg: String) -> void:
 		_fails += 1
 
 
+## A primary base of a gun type: the first in the list.
+func _base_of_type(ty: String) -> String:
+	for b in Data.BASES["Primary"]:
+		if b.get("type", "") == ty:
+			return b["name"]
+	return ""
+
+
+## A class change for a check that isn't about its price (9 Oct: a change costs the respec of the class
+## trees): the price handed over first, so the cash after is what it was.
+func _set_cls(s, name: String) -> void:
+	var c: int = s.class_change_cost(name)
+	s.cash += c
+	if not s.set_class(name):
+		s.cash -= c
+
+
+## A class through the Training screen: two presses when the change costs, one when it's free.
+func _press_class(main, name: String) -> void:
+	var s = main.sim
+	var c: int = s.class_change_cost(name)
+	s.cash += c
+	main._barracks._pick_class(name)
+	if main._barracks._armed == name:
+		main._barracks._pick_class(name)
+	if s.cls != name:
+		s.cash -= c
+
+
 func _init() -> void:
 	var main = load("res://scripts/ui/main.gd").new()
 	main.intro = false
@@ -54,7 +83,7 @@ func _init() -> void:
 	root.add_child(main)
 	main.new_game()
 	var sim = main.sim
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	_check(sim.cls == "Doorman", "sim.cls == 'Doorman'")
 	_check(sim.cash == float(Data.STARTING_CASH), "sim.cash == float(Data.STARTING_CASH)")
 	_check(sim.equipped["Primary"] != null, "sim.equipped['Primary'] != null")
@@ -368,19 +397,18 @@ func _init() -> void:
 	_check_fit(main, "Barracks (pick)")
 	# the points read "N of M points free" top right, the panel says whose the node is, and no node's words are the old "for every runner the Yard sends"
 	_check(main._barracks._points.text.begins_with("%d of %d" % [sim.points_free(), sim.training_points]), "the points line reads '%s'" % main._barracks._points.text)
-	_check(main._barracks._scope.text == "" and not main._barracks._past.visible, "a plain node carries the lines that went: '%s' / past %s" % [main._barracks._scope.text, str(main._barracks._past.visible)])
+	_check(not main._barracks._past.visible, "a node's strip still carries the runners before")
 	_sum_strip_check(main)
 	_check(not main._barracks._words.text.contains("the Yard sends"), "a plain node still says 'for every runner the Yard sends'")
 	if sim.cls != "":
 		var first_class_tree: Dictionary = sim.trees()[0]
 		main._barracks._pick("%s/0" % first_class_tree["name"])
-		_check(main._barracks._scope.text == "", "a class node carries the line that went: '%s'" % main._barracks._scope.text)
 		_check_fit(main, "Barracks (class node)")
 	for t in Data.TREES:
 		for nd in t["nodes"]:
 			if nd.has("words"):
 				_check(not str(nd["words"]).contains("Out when") and not str(nd["words"]).contains("picking over"), "a node's words still read oddly: '%s'" % nd["words"])
-	main._barracks._pick_class("Paramedic")
+	_press_class(main, "Paramedic")
 	_check(sim.cls == "Paramedic", "class through the screen")
 	_check_fit(main, "Barracks (class)")
 	# the Medic's rule: a med goes by itself under 40%
@@ -398,7 +426,7 @@ func _init() -> void:
 		if sim.on_mission():
 			sim.extract_now()
 		print("medic auto-use ok")
-	main._barracks._pick_class("Doorman")
+	_press_class(main, "Doorman")
 	if sim.cash >= sim.respec_cost() and not sim.tree.is_empty():
 		main._barracks._on_respec()
 		_check(sim.tree.is_empty(), "respec did not clear the tree")
@@ -981,7 +1009,7 @@ func _narrative_checks(main) -> void:
 	# a death takes the runner's past with them: the class unpicked, its trees back as points, the Yard's tree kept
 	var fresh2 = load("res://scripts/sim/sim.gd").new()
 	fresh2.start()
-	fresh2.set_class("Doorman")
+	_set_cls(fresh2, "Doorman")
 	fresh2.training_points = 8
 	var elem_tree: String = Data.ELEMENT_TREES[0]["name"]
 	_check(fresh2.train_node("Muscle/0") and fresh2.train_node("Muscle/1") and fresh2.train_node("The Yard/0") and fresh2.train_node("%s/0" % elem_tree), "the death test could not train")
@@ -1188,7 +1216,7 @@ func _run_screen(main) -> void:
 ## upgrades buy.
 func _class_trees(main) -> void:
 	var sim = main.sim
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	sim.training_points += 20
 	_check(sim.trees().size() == 3 + Data.ELEMENT_TREES.size() and sim.trees()[1]["name"] == "The Yard", "a Doorman does not see three trees with the Yard's in the middle, and the elements'")
 	_check(sim.train_node("Muscle/0") and sim.train_node("Muscle/1") and sim.train_node("Muscle/2") and sim.train_node("Muscle/3"), "the Muscle tree did not train")
@@ -1211,7 +1239,7 @@ func _class_trees(main) -> void:
 	if not sim.tree.has("The Yard/0"):
 		sim.training_points += 1
 		sim.train_node("The Yard/0")
-	sim.set_class("Drifter")
+	_set_cls(sim, "Drifter")
 	_check(not sim.tree.has("Muscle/0") and sim.tree.has("The Yard/0"), "changing class did not refund the class trees and keep the Yard's")
 	_check(sim.points_spent() < spent_before, "the refund did not free the points")
 	main.show_room(main.BARRACKS)
@@ -1219,13 +1247,13 @@ func _class_trees(main) -> void:
 	# a keystone: Never there - no lot ever comes
 	for i in range(8):
 		sim.train_node("Moving on/%d" % i)
-	_check(sim.tree.has("Moving on/7"), "the Drifter's keystone did not train: %d points free" % sim.points_free())
+	_check(sim.tree.has("Moving on/6"), "the Drifter's keystone did not train: %d points free" % sim.points_free())
 	_check(sim.patrol_s(sim.effective(0)) == INF, "Never there still has lots coming")
 	main.show_room(main.BARRACKS)
-	main._barracks._pick("Moving on/7")
+	main._barracks._pick("Moving on/6")
 	_check_fit(main, "Caravan (keystone)")
 	sim.respec()
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	# juicing at the radio: call in a word, hold one and re-roll the rest, three at most -
 	# and none of it until the campaign's done
 	sim.cash += 40000.0
@@ -1259,11 +1287,12 @@ func _class_trees(main) -> void:
 	_check_fit(main, "The Yard (upgrades)")
 	# every class's trees on the screen, for the fit check
 	for c in Data.CLASSES:
-		sim.set_class(c["name"])
+		_set_cls(sim, c["name"])
 		main.show_room(main.BARRACKS)
 		_check_fit(main, "Caravan (%s)" % c["name"])
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	print("class trees, keystone and yard upgrades ok")
+	_tree_rules_checks(main)
 	_webs_traits(main)
 	_pool_checks(sim)
 
@@ -1519,24 +1548,304 @@ func _craft_view_checks(main) -> void:
 	print("craft view ok: stash gear only, the piece card, the priced tiles, an affix's jobs, a job in the room")
 
 
+## The trees' rules (9 Oct, docs/design/trees.md §8): the lanes match the table; every joint's two halves in
+## the fourth column, open on one, closed on both, for its class alone; a class change's price and its two
+## presses, free for a new runner; the camp's high-water mark; an old save's trees back as points, once.
+func _tree_rules_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var bk = main._barracks
+	var table := {"Drifter": ["Moving on", "Petrol", "Luck", "Live", "The Yard"], "Scrapper": ["Stripping", "Live", "Fencing", "Petrol", "The Yard"],
+		"Poacher": ["Stalking", "The rat man", "Snares", "The cold", "The Yard"], "Paramedic": ["Triage", "The rat man", "Shifts", "The cold", "The Yard"],
+		"Doorman": ["Muscle", "Blades", "The door", "Knuckles", "The Yard"]}
+	main.show_room(main.BARRACKS)
+	for c in table:
+		_set_cls(sim, c)
+		bk.alt = ""
+		bk._shown = ""
+		main.refresh()
+		var names: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
+		_check(names == table[c], "the %s's lanes are %s, not the table's" % [c, str(names)])
+		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text.begins_with("⇄ OPEN"), "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
+	# a runner with no class: the Yard's lane alone, and the Also row
+	sim.cls = ""
+	sim.cls2 = ""
+	sim.tree = []
+	bk._shown = ""
+	main.refresh()
+	var bare: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
+	_check(bare == ["The Yard", "", "", "", ""] and not bk._links[0]["chip"].visible and bk.also_names().has("Petrol"), "a runner with no past sees %s" % str(bare))
+	_check_fit(main, "Caravan (no past)")
+	# every joint
+	for j in Data.JOINTS:
+		var halves := []
+		for tn in [j["tree"], j["element_tree"]]:
+			var t: Dictionary = Data.tree_named(tn)
+			var found := -1
+			for i in range(t["nodes"].size()):
+				if str(t["nodes"][i].get("joint", "")) == j["key"]:
+					_check(found < 0, "%s holds two halves of %s" % [tn, j["key"]])
+					found = i
+			_check(found >= 0 and int(t["nodes"][found]["col"]) == Data.JOINT_COL and t["nodes"][found].get("notable", false), "%s's half of %s is not a fourth-column notable" % [tn, j["key"]])
+			halves.append("%s/%d" % [tn, found])
+		_check(Data.tree_named(j["tree"]).get("class", "") == j["class"] and str(sim.node(halves[1]).get("class", "")) == j["class"], "%s's halves are not the %s's" % [j["key"], j["class"]])
+		sim.cls2 = ""
+		sim.cls = j["class"]
+		sim.tree = [halves[0]]
+		_check(not sim.has_joint(j["key"]), "%s closed on its class half alone" % j["key"])
+		sim.tree = [halves[1]]
+		_check(not sim.has_joint(j["key"]), "%s closed on its element half alone" % j["key"])
+		sim.tree = [halves[0], halves[1], "%s/6" % j["element_tree"]]
+		_check(sim.has_joint(j["key"]) and sim.node_active("%s/6" % j["element_tree"]), "%s did not close with both halves, or its keystone did not work" % j["key"])
+		for c in table:
+			if c != j["class"]:
+				sim.cls = c
+				_check(not sim.has_joint(j["key"]) and not sim.node_active("%s/6" % j["element_tree"]), "%s closed for a %s" % [j["key"], c])
+				break
+	# a class change: free for a new runner; two presses and the class trees' respec for one with them trained
+	sim.load_dict(saved)
+	sim.cls = ""
+	sim.cls2 = ""
+	sim.tree = []
+	sim.training_points = maxi(sim.training_points, 20)
+	var cash0: float = sim.cash
+	bk._shown = ""
+	main.refresh()
+	_check(sim.class_change_cost() == 0, "a new runner's pick has a price")
+	# a new runner's pick keeps the Yard's tree and an element in the class's pair (the reviewer's catch: it threw them away)
+	sim.tree = ["The Yard/0", "The rat man/0"]
+	bk._pick_class("Poacher")
+	_check(sim.cls == "Poacher" and is_equal_approx(sim.cash, cash0), "a new runner's pick took two presses or cost: %s, £%.0f" % [sim.cls, cash0 - sim.cash])
+	_check(sim.tree.has("The Yard/0") and sim.tree.has("The rat man/0"), "a new runner's pick gave back the Yard's or the pair's nodes: %s" % str(sim.tree))
+	sim.tree = []
+	_check(sim.train_node("Stalking/0") and sim.train_node("Stalking/1") and sim.train_node("The Yard/0"), "the Poacher's first nodes did not train")
+	var price: int = sim.class_change_cost("Doorman")
+	_check(price > 0 and price == sim._inf((sim.node_cost("Stalking/0") + sim.node_cost("Stalking/1")) * Data.RESPEC_CASH), "the change's price is not the class trees' respec: £%d" % price)
+	sim.cash = float(price + 100)
+	bk._pick_class("Doorman")
+	_check(sim.cls == "Poacher" and bk._armed == "Doorman" and bk._notice.text.contains("press again") and bk._notice.text.contains(Fmt.money(price)), "the first press changed the class or did not name the price: '%s'" % bk._notice.text)
+	_check_fit(main, "Caravan (a change armed)")
+	bk._pick_class("Doorman")
+	_check(sim.cls == "Doorman" and is_equal_approx(sim.cash, 100.0) and not sim.tree.has("Stalking/0") and sim.tree.has("The Yard/0"), "the second press did not change for the price: %s, £%.0f, %s" % [sim.cls, sim.cash, str(sim.tree)])
+	_check(sim.train_node("Muscle/0"), "the Doorman's first node did not train")
+	sim.cash = 0.0
+	bk._pick_class("Scrapper")
+	_check(bk._notice.text.contains("short") and bk._notice.get_theme_color("font_color") == Pal.BAD, "a change the cash won't cover does not say so: '%s'" % bk._notice.text)
+	_check_fit(main, "Caravan (a change short)")
+	bk._pick_class("Scrapper")
+	_check(sim.cls == "Doorman" and sim.tree.has("Muscle/0"), "a change went through without the cash")
+	bk._pick(Data.COMMON_TREE + "/0")
+	_check(bk._armed == "", "picking a node did not disarm the change")
+	bk._pick_class("Scrapper")
+	_set_cls(sim, "Paramedic")              # a change made elsewhere (a death, a move, the tests) disarms the screen's
+	bk._shown = ""
+	main.refresh()
+	_check(bk._armed == "" and not bk._notice.text.contains("press again"), "an armed change outlived the class it was armed from: '%s'" % bk._notice.text)
+	# what a change gives back: the class's trees, another class's half, an element off the new pair - never a debt
+	sim.cash = 1e6
+	_set_cls(sim, "Drifter")
+	sim.training_points = maxi(sim.training_points, 80)
+	for i in [0, 1, 2, 4, 3, 7, 5]:
+		sim.train_node("Petrol/%d" % i)
+	for i in [0, 1]:
+		sim.train_node("Live/%d" % i)
+	_check(sim.tree.has("Petrol/5"), "the Drifter's can did not train")
+	var drops: Array = sim._change_drops("Poacher")
+	_check(drops.has("Petrol/0") and drops.has("Live/0") and sim.class_change_cost("Poacher") > sim.class_change_cost(), "a change to a Poacher does not give back the Drifter's elements: %s" % str(drops))
+	_check(sim._change_drops("Scrapper").has("Petrol/5") and not sim._change_drops("Scrapper").has("Petrol/0"), "a change to a Scrapper keeps the Drifter's half, or gives back the pair's element")
+	_set_cls(sim, "Scrapper")
+	_check(not sim.tree.has("Petrol/5") and sim.tree.has("Petrol/0") and sim.points_free() >= 0, "after the change: %s, %d free" % [str(sim.tree), sim.points_free()])
+	_set_cls(sim, "Poacher")
+	_check(not sim.tree.has("Petrol/0") and not sim.tree.has("Live/0") and sim.points_free() >= 0, "an element off the new pair stayed at double: %s, %d free" % [str(sim.tree), sim.points_free()])
+	sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
+	_check(sim.set_second("Doorman") and not sim.set_class("Doorman") and sim.cls == "Poacher" and sim.cls2 == "Doorman", "a change to the second past's class went through")
+	bk._shown = ""
+	main.refresh()
+	bk._pick_class("Doorman")
+	_check(bk._armed == "" and bk._class_buttons[Data.CLASSES.map(func(c): return c["name"]).find("Doorman")].disabled, "the second past's class is offered as a change")
+	# the camp's high-water mark: levels under the best earn nothing; past it, a point a level
+	sim.load_dict(saved)
+	sim.best_level = 10
+	sim.xp = Data.xp_for_level(3)
+	var pts0: int = sim.training_points
+	var before: int = sim.level()
+	sim.xp = Data.xp_for_level(9)
+	sim._earn_points(before)
+	_check(sim.training_points == pts0 and sim.best_level == 10, "a runner re-levelling under the camp's best earned %d points" % (sim.training_points - pts0))
+	before = sim.level()
+	sim.xp = Data.xp_for_level(12)
+	sim._earn_points(before)
+	_check(sim.training_points == pts0 + 2 and sim.best_level == 12, "past the camp's best a level did not earn a point: %d, best %d" % [sim.training_points - pts0, sim.best_level])
+	# saves: the layout version and the best level go in; an old save's tree comes back as points, once
+	sim.load_dict(saved)
+	sim.tree = ["The Yard/0"]
+	var d: Dictionary = sim.to_dict()
+	_check(int(d.get("tree_v", 0)) == sim.TREE_V and d.has("best_level"), "the save has no layout version or best level")
+	d["tree_v"] = 1
+	sim.load_dict(d)
+	_check(sim.tree.is_empty() and sim.points_free() == sim.training_points, "an old save's tree did not come back as points: %s" % str(sim.tree))
+	sim.tree = ["The Yard/0"]
+	sim.load_dict(sim.to_dict())
+	_check(sim.tree == ["The Yard/0"], "a save from this layout was refunded again")
+	d.erase("tree_v")
+	d.erase("best_level")
+	sim.load_dict(d)
+	_check(sim.best_level == sim.level(), "an old save's best level is not its runner's: %d" % sim.best_level)
+	sim.load_dict(saved)
+	bk.alt = ""
+	bk._armed = ""
+	bk._shown = ""
+	main.refresh()
+	print("tree rules ok: the lanes, ten joints, a class change's price and presses, the high-water mark, the old saves")
+	_joint_payoff_checks(main)
+
+
+## Every joint's payoff (trees.md §3), read at the function it lives in, both halves trained straight into the
+## tree; with the joint open each reads plain.
+func _joint_payoff_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.cls2 = ""
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	var close := func(key: String) -> void:
+		var j: Dictionary = Data.joint(key)
+		sim.cls = j["class"]
+		sim.tree = []
+		for tn in [j["tree"], j["element_tree"]]:
+			var t: Dictionary = Data.tree_named(tn)
+			for i in range(t["nodes"].size()):
+				if str(t["nodes"][i].get("joint", "")) == key:
+					sim.tree.append("%s/%d" % [tn, i])
+	var fresh_run := func() -> Dictionary:
+		if sim.on_mission():
+			sim.extract_now()
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		sim.mission["dots"] = {}
+		return sim.mission
+	# the Drifter's fire: an SMG's hit lights them, a burn already there never shrinks, and a burning gang takes a quarter more
+	close.call("drifter_fire")
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	var m: Dictionary = fresh_run.call()
+	_check(is_equal_approx(sim._joint_hit_mult(m, "smg"), 1.0), "the Drifter's joint added to a gang not burning")
+	m["dots"]["fire"] = 500.0
+	sim._joints_on_hit(m, m["t"], 10.0, "smg", 0.1)
+	_check(float(m["dots"]["fire"]) >= 500.0 and is_equal_approx(sim._joint_hit_mult(m, "smg"), 1.25) and is_equal_approx(sim._joint_hit_mult(m, "rifle"), 1.0), "the Drifter's joint shrank the burn or missed the quarter: %.1f" % float(m["dots"]["fire"]))
+	# the Drifter's shock: a shocked kill's drop rolls its rarity twice - more rare things over many kills
+	close.call("drifter_shock")
+	m = fresh_run.call()
+	var counts := [0, 0]
+	for shocked in [false, true]:
+		sim.rng.seed = 4242
+		for k in range(400):
+			m["found"] = []
+			m["kill_shocked"] = shocked
+			sim._find(m, m["t"], true)
+			for it in m["found"]:
+				if it["slot"] in Data.SLOTS and int(it.get("rarity", 0)) >= 1:
+					counts[1 if shocked else 0] += 1
+	_check(counts[1] > counts[0], "a shocked kill's drops are no rarer: %d against %d" % [counts[1], counts[0]])
+	# the Scrapper's shock: every improvised hit shocks
+	close.call("scrapper_shock")
+	m = fresh_run.call()
+	m["shock_t"] = 0.0
+	sim._joints_on_hit(m, m["t"], 10.0, "improvised", 0.1)
+	_check(float(m["shock_t"]) >= 1.0, "an improvised hit did not shock with the Scrapper's joint")
+	# the Scrapper's fire: a kill while it burns drops something, and the Fence pays a fifth more
+	var piece: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim.tree = []
+	var plain_price: int = sim.sell_price(piece)
+	close.call("scrapper_fire")
+	_check(sim.sell_price(piece) >= int(plain_price * 1.19), "the Scrapper's joint did not lift the Fence's price: %d to %d" % [plain_price, sim.sell_price(piece)])
+	m = fresh_run.call()
+	var t_dry: Dictionary = m["t"].duplicate()
+	t_dry["drop"] = 0.0
+	var finds0: int = int(m.get("finds", 0))
+	m["kill_burning"] = true
+	sim._kill(m, t_dry)
+	_check(int(m.get("finds", 0)) == finds0 + 1, "a kill while it burned dropped nothing with the Scrapper's joint")
+	# the Poacher's poison: the first shot on a gang lands its poison at full stacks
+	close.call("poacher_poison")
+	m = fresh_run.call()
+	m["fresh"] = true
+	m["dots"]["poison"] = 0.01
+	sim._joints_on_hit(m, m["t"], 10.0, "rifle", 0.1)
+	var full: float = float(m["dots"]["poison"])
+	_check(full > 1.0 and m.has("full_dose"), "the first shot's poison is not at full stacks: %.2f" % full)
+	m["dots"]["poison"] = 0.01
+	sim._joints_on_hit(m, m["t"], 10.0, "rifle", 0.1)
+	_check(float(m["dots"]["poison"]) < full, "the full dose landed twice on one gang")
+	# the Paramedic's poison: a med is a full stack on them; the Paramedic's frost: chilled, they do 30% less and meds heal a fifth more
+	close.call("paramedic_poison")
+	m = fresh_run.call()
+	m["using"] = {"name": "Bandage", "left": 0.0, "heal": 10.0}
+	sim._patch(m, 0.1)
+	_check(float(m["dots"].get("poison", 0.0)) > 0.0 and int(m.get("dosed", 0)) == 1, "a med did not dose them with the Paramedic's joint")
+	close.call("paramedic_frost")
+	m = fresh_run.call()
+	_check(is_equal_approx(sim._joints_on_incoming(m, true, 0.1), 0.7) and is_equal_approx(sim._joints_on_incoming(m, false, 0.1), 1.0), "chilled gangs do not do 30%% less with the Paramedic's joint")
+	sim.hp = sim.max_hp() * 0.2
+	var hp0: float = sim.hp
+	m["chill_t"] = 1.0
+	m["using"] = {"name": "Bandage", "left": 0.0, "heal": 10.0}
+	sim._patch(m, 0.1)
+	_check(is_equal_approx(sim.hp - hp0, 12.0), "a med did not heal a fifth more while they were chilled: %.1f" % (sim.hp - hp0))
+	# Flattened: a kill with the plain staggers the next of them, half their fire for two seconds
+	sim.cls = "Doorman"
+	sim.tree = ["Knuckles/10"]
+	sim.trades = ["physical"]
+	m = fresh_run.call()
+	m["target_hp"] = 0.0
+	sim._fight(m, m["t"], 0.05)
+	_check(float(m.get("flat_t", 0.0)) > 0.0, "a kill with the plain did not flatten the next")
+	_check(sim._joints_on_incoming(m, false, 0.1) <= 0.5 + 0.001, "Flattened did not halve their fire")
+	if sim.on_mission():
+		sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("joint payoffs ok: the ten joints and Flattened, each where it lives")
+
+
 ## The trees as webs: a fork at the notable, a branch each way; the second
 ## past from level 30; two runners turn up when one dies.
 func _webs_traits(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
-	sim.set_class("Poacher")
+	_set_cls(sim, "Poacher")
 	sim.respec()
 	sim.training_points += 30
 	var t: Dictionary = Data.tree_named("Stalking")
-	_check(Data.node_needs(t, 4) == 3 and Data.node_needs(t, 7) == 3 and Data.node_needs(t, 5) == 4 and Data.node_needs(t, 0) == -1, "Stalking's web does not fork at its notable")
-	for i in range(4):
+	# the gates (9 Oct): a column opens at ⌈0.6 × the cost of every column before it⌉, counted in that tree alone
+	for c in range(1, Data.COLUMNS):
+		var before := 0
+		for nd in t["nodes"]:
+			if int(nd.get("col", 0)) < c and Data.for_classes(nd, ["Poacher"]):
+				before += Data.base_cost(t, nd)
+		_check(Data.gate(t, c, ["Poacher"]) == ceili(Data.GATE_SHARE * before), "Stalking's gate %d is %d, not the share of %d" % [c, Data.gate(t, c, ["Poacher"]), before])
+	_check(sim.train_node("Stalking/0"), "Stalking's first node did not train")
+	_check(not sim.can_train("Stalking/2") and sim.train_block("Stalking/2").begins_with("opens at"), "the second column opened on one point: '%s'" % sim.train_block("Stalking/2"))
+	_check(not sim.can_train("Stalking/6") and not sim.can_train("Stalking/10"), "a deep node trained on a dip")
+	# points in another tree open nothing here
+	var yard_in: int = sim.points_in("The Yard")
+	for i in range(3):
+		sim.train_node("The Yard/%d" % i)
+	_check(sim.points_in("The Yard") > yard_in and not sim.can_train("Stalking/2"), "the Yard's points opened Stalking's columns")
+	sim.train_node("Stalking/1")
+	_check(sim.can_train("Stalking/2") and sim.can_train("Stalking/4"), "the second column did not open at its gate")
+	for i in [2, 4, 3]:
 		sim.train_node("Stalking/%d" % i)
-	_check(sim.can_train("Stalking/4") and sim.can_train("Stalking/7"), "both branches did not open off the notable")
-	_check(not sim.can_train("Stalking/6") and not sim.can_train("Stalking/9"), "a branch's end trained before its start")
-	_check(sim.train_node("Stalking/7") and sim.train_node("Stalking/8") and sim.train_node("Stalking/9"), "the second branch did not train to its notable")
+	_check(sim.points_in("Stalking") < Data.gate(t, 4, ["Poacher"]) and not sim.can_train("Stalking/6"), "the keystone trained under its gate: %d in, gate %d" % [sim.points_in("Stalking"), Data.gate(t, 4, ["Poacher"])])
+	_check(sim.train_node("Stalking/7") and sim.train_node("Stalking/8"), "the fourth column did not train")
+	_check(sim.points_in("Stalking") >= Data.gate(t, 4, ["Poacher"]) and sim.train_node("Stalking/9"), "the fifth column did not open at its gate")
 	_check(sim.has_node("night_work"), "Night work did not take")
 	_check(sim.effective(0)["rarity"] > 0.0 and sim.effective(0)["pace"] < 1.0, "Night work did not make the site Night")
-	_check(sim.train_node("Stalking/4") and sim.train_node("Stalking/5") and sim.train_node("Stalking/6"), "the keystone branch did not train after the other")
+	_check(not sim.can_train("Stalking/10") and sim.train_block("Stalking/10").begins_with("wants the keystone"), "the capstone trained before the keystone: '%s'" % sim.train_block("Stalking/10"))
+	_check(sim.train_node("Stalking/5") and sim.train_node("Stalking/6"), "the keystone did not train once its column opened")
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (web)")
 	# the second past: not before 30, then any other class's first tree opens
@@ -1596,7 +1905,7 @@ func _element_bot_checks(main) -> void:
 	for t in Data.ELEMENT_TREES:
 		var el: String = t["element"]
 		sim.load_dict(saved)
-		sim.set_class("Doorman")          # bleed and physical: four of the five are off-affinity
+		_set_cls(sim, "Doorman")          # bleed and physical: four of the five are off-affinity
 		sim.respec()
 		sim.workshop = maxi(sim.workshop, 1)
 		sim.cash = 400000.0
@@ -1616,7 +1925,18 @@ func _element_bot_checks(main) -> void:
 			_check(sim.cls2 != "" and sim.affinity(el), "the %s bot did not take a second past with the affinity: %s" % [el, sim.cls2])
 		sim.training_points += 40
 		bot._train_tree(sim)
-		_check(sim.tree.has("%s/6" % t["name"]), "the %s bot did not reach its keystone: %s" % [el, sim.tree])
+		# the keystone wants a joint closed there: a class half on show for it (the runner's, or the second past's first tree's)
+		var closable := false
+		var on_show: Array = sim.trees().map(func(x): return x["name"])
+		for c in sim.my_classes():
+			var j: Dictionary = Data.joint_in(c, t["name"])
+			closable = closable or (not j.is_empty() and j["tree"] in on_show)
+		if closable:
+			_check(sim.tree.has("%s/6" % t["name"]) and sim.has_joint(Data.joint_in(sim.cls if Data.joint_in(sim.cls, t["name"]).size() > 0 else sim.cls2, t["name"])["key"]), "the %s bot did not close its joint and reach its keystone: %s" % [el, sim.tree])
+		else:
+			_check(not sim.tree.has("%s/6" % t["name"]) and sim.train_block("%s/6" % t["name"], true).begins_with("wants a joint"), "the %s keystone opened with no joint to close: %s" % [el, sim.tree])
+		if el == "physical":
+			continue                      # Knuckles scales what isn't converted: no element gun, socketable or affix to chase
 		# the gun: a plain better one in the stash loses to the one carrying the element
 		var top := {}
 		for b in Data.BASES["Primary"]:
@@ -1699,28 +2019,49 @@ func _element_bot_checks(main) -> void:
 func _element_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
-	sim.set_class("Drifter")
+	_set_cls(sim, "Drifter")
 	sim.respec()
-	sim.training_points += 60
+	sim.training_points += 80
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")     # nothing worn converts: the trees are read alone
 	sim.equipped["Secondary"] = null
 	_check(sim.affinity("fire") and sim.affinity("shock") and not sim.affinity("poison"), "the Drifter's affinities are not fire and shock")
 	_check(sim.node_cost("Petrol/0") == 1 and sim.node_cost("The rat man/0") == 2, "an off-affinity node does not cost double: %d / %d" % [sim.node_cost("Petrol/0"), sim.node_cost("The rat man/0")])
-	for i in range(7):
-		_check(sim.train_node("Petrol/%d" % i), "Petrol/%d did not train" % i)
-	_check(sim.has_node("fire_spread"), "Spreads did not take")
-	_check(is_equal_approx(sim.conversion()["fire"], 0.45), "the spine and keystone branch did not convert 45%%: %s" % str(sim.conversion()))
+	# Petrol to its fourth column: the Drifter's half trains, the Scrapper's doesn't
+	for i in [0, 1, 2, 4, 3, 7, 5]:
+		_check(sim.train_node("Petrol/%d" % i), "Petrol/%d did not train: %s" % [i, sim.train_block("Petrol/%d" % i)])
+	_check(sim.train_block("Petrol/8") == "Scrapper only", "another class's half trained for a Drifter: '%s'" % sim.train_block("Petrol/8"))
+	# the joint (9 Oct): one half alone gives its own figure and not the payoff; the element's top waits on it
+	_check(not sim.has_joint("drifter_fire") and sim.train_block("Petrol/6").begins_with("wants a joint"), "the keystone opened on one half: '%s'" % sim.train_block("Petrol/6"))
+	for i in [0, 1, 2, 4, 3, 5, 8]:
+		_check(sim.train_node("Moving on/%d" % i), "Moving on/%d did not train: %s" % [i, sim.train_block("Moving on/%d" % i)])
+	_check(sim.has_joint("drifter_fire") and not sim.has_joint("drifter_shock"), "both halves trained and the joint did not close")
+	_check(sim.train_node("Petrol/6") and sim.has_node("fire_spread"), "Spreads did not train once the joint closed")
+	_check(is_equal_approx(sim.conversion()["fire"], 0.80), "the fire conversions do not add to 80%%: %s" % str(sim.conversion()))
 	_check(is_equal_approx(sim.dot_seconds("fire"), 8.0) and is_equal_approx(sim.dot_seconds("poison"), 8.0), "Lit did not double the burn")
-	# the other branch's cost: 40% more fire
-	_check(sim.train_node("Petrol/7") and sim.train_node("Petrol/8") and sim.train_node("Petrol/9"), "the costly branch did not train")
-	_check(is_equal_approx(sim.more("fire"), 1.4), "Petrol on your hands is not ×1.4")
-	# off-affinity: the rat man's keystone refuses; the second past opens it
-	for i in range(6):
+	_check(sim.train_node("Petrol/9") and is_equal_approx(sim.more("fire"), 1.4), "Petrol on your hands is not ×1.4")
+	# the payoff: an SMG's hit lights them, and a burning gang takes a quarter more from it
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	sim.intel[0] = []
+	sim.set_depth(0, 1)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var jm: Dictionary = sim.mission
+	jm["dots"] = {}
+	sim._joints_on_hit(jm, jm["t"], 100.0, "smg", 0.1)
+	_check(float(jm["dots"].get("fire", 0.0)) > 0.0, "the Drifter's joined bursts did not ignite")
+	sim.extract_now()
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	# off the pair: the rat man stops at column 4 - no joint of the Drifter's is in it
+	for i in [0, 1, 2, 4, 3, 7]:
 		sim.train_node("The rat man/%d" % i)
-	_check(not sim.can_train("The rat man/6"), "an off-affinity keystone trained")
+	_check(sim.points_in("The rat man") >= Data.gate(Data.tree_named("The rat man"), 4, ["Drifter"]) and sim.train_block("The rat man/6", true).begins_with("wants a joint"), "an off-pair keystone was not stopped at column 4: '%s'" % sim.train_block("The rat man/6", true))
+	# the second past brings its first tree's half: a Poacher's past closes the poison joint and opens the keystone
 	sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
 	_check(sim.set_second("Poacher") and sim.affinity("poison") and sim.node_cost("The rat man/0") == 1, "the second past did not bring its affinities")
-	_check(sim.can_train("The rat man/6"), "the second past's affinity did not open the keystone")
+	for i in [0, 1, 2, 4, 3, 5, 8]:
+		sim.train_node("Stalking/%d" % i)
+	_check(sim.train_node("The rat man/5") and sim.has_joint("poacher_poison"), "the second past's halves did not close its joint: %s" % sim.train_block("The rat man/5"))
+	_check(sim.can_train("The rat man/6"), "the second past's joint did not open the keystone: '%s'" % sim.train_block("The rat man/6"))
 	# the fight: Spreads multiplies fire by those on you; a shocked gang takes more under Live
 	sim.intel[0] = []
 	sim.set_depth(0, 1)
@@ -1734,78 +2075,104 @@ func _element_checks(main) -> void:
 	var fire_only: float = sim.type_dps()["fire"] * (1.0 - float(t["res"].get("fire", 0.0))) * sim.pace() * t["pace"] * 0.1
 	_check(before - m["target_hp"] > fire_only * on_you * 0.6 or m["remaining"] < sim.mission["t"]["pool"], "Spreads did not multiply the fire by the %d on you" % on_you)
 	sim.extract_now()
-	# frost: Frozen solid stops their fire while chilled and halves frost; the cold's notable deepens the chill
+	# frost: Frozen solid stops their fire while chilled and halves frost; the Poacher's frost joint closes on Snares
 	sim.respec()
-	sim.set_class("Poacher")
-	sim.training_points += 60
-	for i in range(7):
+	sim.cls2 = ""                       # the Poacher's past goes: a class change to the second past's class is refused
+	_set_cls(sim, "Poacher")
+	sim.training_points += 80
+	for i in [0, 1, 2, 4, 3, 7, 5]:
 		sim.train_node("The cold/%d" % i)
+	for i in [0, 1, 2, 4, 3, 5, 8]:
+		sim.train_node("Snares/%d" % i)
+	_check(sim.has_joint("poacher_frost") and sim.train_node("The cold/6"), "the Poacher's frost joint did not open Frozen solid: '%s'" % sim.train_block("The cold/6"))
 	_check(sim.has_node("frost_freeze") and is_equal_approx(sim.chill_amount(), Data.FREEZE) and is_equal_approx(sim.more("frost"), 0.5), "Frozen solid did not take: chill %.2f more %.2f" % [sim.chill_amount(), sim.more("frost")])
 	_check(is_equal_approx(sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true), 10.0 * (1.0 - Data.FREEZE) * (1.0 - sim.mitigation())), "a frozen gang fires more than a sliver: %.2f" % sim.incoming_rate({"dps": 10.0, "types": {"physical": 1.0}}, 1, true))
-	for i in range(7):
+	# the payoff: every gang arrives chilled, and one head short
+	sim.hp = sim.max_hp()
+	var pool0: int = int(sim.effective(0)["pool"]) - (1 if sim.has_node("trapline") else 0)
+	sim.deploy(0)
+	_check(float(sim.mission.get("chill_t", 0.0)) > 0.0 and int(sim.mission["remaining"]) == maxi(1, pool0 - 1), "the Poacher's snare, joined, did not chill the first gang and take a head: %d of %d" % [int(sim.mission["remaining"]), pool0])
+	sim.extract_now()
+	for i in [0, 1, 2, 4, 3, 7, 5]:
 		sim.train_node("The rat man/%d" % i)
-	_check(sim.dot_stacks("poison") == 15, "Builds did not raise the stacks")
+	for i in [0, 1, 2, 4, 3, 5, 8]:
+		sim.train_node("Stalking/%d" % i)
+	_check(sim.train_node("The rat man/6") and sim.dot_stacks("poison") == 15, "Builds did not raise the stacks: '%s'" % sim.train_block("The rat man/6"))
+	# bleed: Blades to both ends through the Doorman's joint; Glassing's 15% on the conversions
 	sim.respec()
-	sim.set_class("Doorman")
-	sim.training_points += 60
-	for i in range(10):
+	_set_cls(sim, "Doorman")
+	sim.training_points += 80
+	var held = sim.equipped["Primary"]
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
+	for i in [0, 1, 2, 4, 3, 7, 5, 8]:
 		sim.train_node("Blades/%d" % i)
+	for i in [0, 1, 2, 4, 3, 5, 8]:
+		_check(sim.train_node("Muscle/%d" % i), "Muscle/%d did not train: %s" % [i, sim.train_block("Muscle/%d" % i)])
+	_check(sim.train_node("Blades/6") and sim.train_node("Blades/9"), "Blades did not train past its joint: '%s' / '%s'" % [sim.train_block("Blades/6"), sim.train_block("Blades/9")])
 	_check(sim.has_node("bleed_forever") and is_equal_approx(sim.more("bleed"), 1.4), "Blades did not train to both ends")
+	_check(is_equal_approx(sim.conversion()["bleed"], 0.15 + 0.65), "Glassing did not add 15%% bleed: %s" % str(sim.conversion()))
 	sim.deploy(0)
 	m = sim.mission
 	m["dots"] = {"bleed": 60.0}
 	var dealt: float = sim._dot_tick(m["dots"], 1.0, {})
 	_check(dealt > 0.0 and is_equal_approx(m["dots"]["bleed"], 60.0), "Won't stop let the bleed fade: %s" % str(m["dots"]))
+	# the payoff: a bleeding gang does a fifth less to you; the physical joint not closed, nothing more
+	_check(sim.has_joint("doorman_bleed") and not sim.has_joint("doorman_physical") and is_equal_approx(sim._joints_on_incoming(m, false, 0.1), 0.8), "the Doorman's bleed joint does not take a fifth off: %.2f" % sim._joints_on_incoming(m, false, 0.1))
 	sim.extract_now()
-	# the class webs' element notables, read with a plain gun on
-	var held = sim.equipped["Primary"]
-	sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")
-	_check(sim.train_node("Muscle/0") and sim.train_node("Muscle/1") and sim.train_node("Muscle/2") and sim.train_node("Muscle/3") and sim.train_node("Muscle/7") and sim.train_node("Muscle/8"), "Muscle's branch to Glassing did not train")
-	_check(is_equal_approx(sim.conversion()["bleed"], 0.15 + 0.65), "Glassing did not add 15%% bleed: %s" % str(sim.conversion()))
+	# Knuckles, the physical: the Doorman's half is the Knuckles' notable; both close the stagger
+	for i in [0, 1, 2, 4, 3, 5, 7]:
+		sim.train_node("The door/%d" % i)
+	_check(sim.tree.has("The door/7") and not sim.has_joint("doorman_physical"), "Hands on alone closed the physical joint, or did not train: '%s'" % sim.train_block("The door/7"))
+	for i in [0, 1, 2, 4, 3, 7, 5]:
+		_check(sim.train_node("Knuckles/%d" % i), "Knuckles/%d did not train: %s" % [i, sim.train_block("Knuckles/%d" % i)])
+	_check(sim.has_joint("doorman_physical") and sim.train_node("Knuckles/6"), "the Doorman's physical joint did not open Bust them up: '%s'" % sim.train_block("Knuckles/6"))
+	_check(is_equal_approx(sim.conversion()["physical"], 1.0) and is_equal_approx(sim.phys_resist(0.2), 0.0), "Bust them up did not end the conversions and their armour: %s" % str(sim.conversion()))
+	sim.deploy(0)
+	_check(is_equal_approx(sim._joints_on_incoming(sim.mission, false, 0.1), 0.75 * 0.9), "the Doorman's physical joint and Stagger do not cut their fire to %.3f: %.3f" % [0.75 * 0.9, sim._joints_on_incoming(sim.mission, false, 0.1)])
+	sim.extract_now()
 	sim.equipped["Primary"] = held
-	# the Caravan cycles the middle column through the elements
+	# the Caravan: every lane, the joints' links, the Also row's chips each swapping the fifth lane and back
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (elements, yard)")
-	for k in range(6):
-		main._barracks._on_swap()
-		_check_fit(main, "Caravan (elements, %d)" % k)
-	# the D layout: the band with the runner and the points, the classes in its top right; tiles two across
-	# with the keystone the width, none overlapping, every one inside its column; the rail filled as far as
-	# the tree is taken; the sum strip under the trees and the panel under that
 	var bk = main._barracks
-	_check(bk._band.title.text == "The Caravan" and bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the Caravan's band is off: '%s' / '%s'" % [bk._band.title.text, bk._points.text])
+	_check(bk.lane_trees().map(func(x): return x["name"] if x != null else "") == ["Muscle", "Blades", "The door", "Knuckles", "The Yard"], "the Doorman's lanes are not the table's row: %s" % str(bk.lane_trees().map(func(x): return x["name"] if x != null else "")))
+	_check(bk._links[0]["chip"].visible and bk._links[0]["label"].text.begins_with("⇄ JOINED") and bk._links[1]["label"].text.begins_with("⇄ JOINED"), "the closed joints' links do not say so: '%s' / '%s'" % [bk._links[0]["label"].text, bk._links[1]["label"].text])
+	for name in bk.also_names():
+		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
+		bk.also_button(name).pressed.emit()
+		_check_fit(main, "Caravan (also: %s)" % name)
+		if name == "The drawer" or name == "The shelf":
+			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
+		else:
+			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
+		bk.also_button(name).pressed.emit()
+		_check(bk.alt == "" and bk.lane_trees()[4]["name"] == "The Yard", "the %s chip pressed again did not put the Yard back" % name)
+	# the layout: the header with the points and the classes in its top right; every tile inside its lane, in
+	# its column, none overlapping; the Also row, the sum strip and the panel under the lanes
+	_check(bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the Caravan's points read '%s'" % bk._points.text)
 	for cb in bk._class_buttons:
-		_check(cb.position.y + cb.size.y <= bk.BAND_H and cb.position.x >= bk._band.kicker.position.x, "a class button is not in the band's top right")
-	for col in range(3):
+		_check(cb.position.y + cb.size.y <= bk.HEAD_H and cb.position.x >= bk._kicker.position.x + bk._kicker.size.x, "a class button is not in the header's top right")
+	for k in range(bk.LANES):
+		var lane: Dictionary = bk._lanes[k]
+		if not lane["panel"].visible:
+			continue
+		var box := Rect2(lane["panel"].position, lane["panel"].size)
 		var rects := []
-		for n in bk._rows[col]:
-			if n["button"].visible:
-				var rc := Rect2(n["button"].position, n["button"].size)
-				_check(rc.position.x >= col * (bk.COL_W + bk.COL_GAP) + bk.RAIL_W - 0.5 and rc.end.x <= (col + 1) * bk.COL_W + col * bk.COL_GAP + 0.5 and rc.position.y >= bk.NODES_Y and rc.end.y <= bk.NODES_Y + bk.COLUMN_H + 0.5, "a tile leaves its column: %s in column %d" % [str(rc), col])
-				for other in rects:
-					_check(not rc.intersects(other), "tiles overlap in column %d: %s and %s" % [col, str(rc), str(other)])
-				rects.append(rc)
-		var r: Dictionary = bk._rails[col]
-		if r["track"].visible:
-			_check(r["fill"].size.y <= r["track"].size.y + 0.5 and r["fill"].size.y >= 0.0, "the rail's fill leaves its track in column %d" % col)
-			_check(r["top"].text != "" and r["bottom"].text != "" and int(r["top"].text) <= int(r["bottom"].text), "the rail's counts are off: %s of %s" % [r["top"].text, r["bottom"].text])
-	# a fully taken tree fills its rail; the Yard's, part taken, part fills it
-	var full_col := -1
-	for col in range(3):
-		var r: Dictionary = bk._rails[col]
-		if r["track"].visible and r["top"].text == r["bottom"].text and int(r["top"].text) > 0:
-			full_col = col
-	if full_col >= 0:
-		_check(is_equal_approx(bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y), "a fully taken tree's rail is not full: %.0f of %.0f" % [bk._rails[full_col]["fill"].size.y, bk._rails[full_col]["track"].size.y])
-	_check(bk.SUM_Y >= bk.NODES_Y + bk.COLUMN_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk._sum_chips._tags[0].text == "Damage" and bk._sum_chips._tags[7].text == "Notables" and bk._sum_chips.shown() == 8, "the sum strip is off: %s" % str(bk._sum_chips.text_nodes().map(func(l): return l.text)))
-	# a keystone's or a capstone's tile spans both columns of tiles; a plain node's one
-	for n in bk._rows[0]:
-		if n["button"].visible and n["id"] != "":
-			var nd: Dictionary = sim.node(n["id"])
-			if nd.get("keystone", false) or nd.get("capstone", false):
-				_check(n["button"].size.x > bk.TILE_W * 1.5, "the keystone's tile is not the width")
-			else:
-				_check(is_equal_approx(n["button"].size.x, bk.TILE_W), "a node's tile is not one across")
+		for tile in lane["tiles"]:
+			if not tile["button"].visible:
+				continue
+			var rc := Rect2(tile["button"].position, tile["button"].size)
+			var nd: Dictionary = sim.node(tile["id"])
+			_check(box.encloses(rc) and rc.position.x >= bk.TILES_X - 0.5, "a tile leaves its lane: %s in %s" % [str(rc), str(box)])
+			_check(is_equal_approx(rc.position.x, bk.TILES_X + int(nd.get("col", 0)) * (bk.TILE_W + bk.TILE_GAP)), "%s is not in its column" % tile["id"])
+			for other in rects:
+				_check(not rc.intersects(other), "tiles overlap in lane %d: %s and %s" % [k, str(rc), str(other)])
+			rects.append(rc)
+	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.SUM_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H, "the Caravan's strips overlap")
+	_check(bk._sum_chips._tags[0].text == "Damage" and bk._sum_chips._tags[7].text == "Joints" and bk._sum_chips.shown() == 8 and bk._sum_chips._labels[7].text.begins_with("2 of "), "the sum strip is off: %s" % str(bk._sum_chips.text_nodes().map(func(l): return l.text)))
+	# a node alone in its column (the capstone, most trees) spans both rows
+	var cap_tile: Button = bk.tile_for("The door/10")
+	_check(cap_tile != null and cap_tile.size.y > bk.TILE_H * 1.5, "the capstone's tile does not span the lane")
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
 	for b in Data.TREES:
@@ -1833,24 +2200,8 @@ func _element_checks(main) -> void:
 		sim.equipped["Primary"] = hold_gun
 		main.refresh()
 		_check(bk._shown.contains(sim.gun_type()), "the Caravan's signature does not carry the gun in hand")
-	# the middle head: the name centred between a back and a next, and back undoes next
-	var mid_name: Label = bk._heads[1]["name"]
-	_check(bk._back.visible and bk._swap.visible and bk._back.text.begins_with("◂ ") and bk._swap.text.ends_with(" ▸"), "the middle head's back/next read '%s' / '%s'" % [bk._back.text, bk._swap.text])
-	_check(mid_name.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER and mid_name.position.x >= bk.SWAP_W and mid_name.position.x + mid_name.size.x <= bk.COL_W - bk.SWAP_W, "the middle head's name is not centred between the buttons: x %d w %d" % [mid_name.position.x, mid_name.size.x])
-	_check(mid_name.get_theme_font("font").get_string_size(mid_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, mid_name.get_theme_font_size("font_size")).x <= mid_name.size.x, "the middle head's name '%s' does not fit between the buttons" % mid_name.text)
-	var here: int = bk.mid
-	var was: String = mid_name.text
-	bk._on_swap()
-	_check(bk.mid != here and mid_name.text != was, "next did not move the middle tree")
-	_check(bk._back.text == "◂ " + was or bk._back.text == "◂ Back", "back does not name the tree just left: '%s' for %s" % [bk._back.text, was])
-	bk._on_back()
-	_check(bk.mid == here and mid_name.text == was, "back did not return to %s: %s" % [was, mid_name.text])
-	bk._on_back()
-	_check(bk.mid == (here - 1 + bk._mid_trees(sim.trees()).size()) % bk._mid_trees(sim.trees()).size(), "back from the first tree did not wrap to the last")
-	_check_fit(main, "Caravan (back)")
-	bk._on_swap()
 	sim.load_dict(saved)
-	print("the elements ok: affinities, double cost, the locked keystone and the second past, Spreads, Frozen solid, Builds, Won't stop, the class notables, the Caravan")
+	print("the elements ok: affinities, double cost, the gates, the joints and their payoffs, the second past's joint, Spreads, Frozen solid, Builds, Won't stop, Knuckles, the Caravan's lanes")
 	_capstone_checks(main)
 	_melee_checks(main)
 
@@ -1867,12 +2218,20 @@ func _capstone_checks(main) -> void:
 		var last: Dictionary = b["nodes"].back()
 		_check(last.get("capstone", false) and last.has("words") and last["effect"].begins_with("cap_"), "%s has no capstone at its end" % b["name"])
 		_check(b["nodes"].filter(func(n): return n.get("capstone", false)).size() == 1, "%s has more than one capstone" % b["name"])
+		# a quarter of the rest of the tree, rounded up; the two classes' halves in an element tree count once
 		var others := 0
+		var half := 0
 		for i in range(b["nodes"].size() - 1):
-			others += Data.node_cost(i, b["nodes"][i].get("notable", false), b["nodes"][i].get("keystone", false))
-		_check(Data.capstone_cost(b) == ceili(others / 4.0), "%s's capstone costs %d, not a quarter of %d" % [b["name"], Data.capstone_cost(b), others])
+			var nd: Dictionary = b["nodes"][i]
+			var c: int = Data.node_cost(int(nd["col"]), nd.get("notable", false), nd.get("keystone", false))
+			if nd.has("class"):
+				half = maxi(half, c)
+			else:
+				others += c
+		_check(Data.capstone_cost(b) == ceili((others + half) / 4.0), "%s's capstone costs %d, not a quarter of %d" % [b["name"], Data.capstone_cost(b), others + half])
+		_check(int(last["col"]) == Data.COLUMNS - 1, "%s's capstone is not in the last column" % b["name"])
 	# it opens only once the keystone and every notable are taken
-	sim.set_class("Poacher")
+	_set_cls(sim, "Poacher")
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Snares/"))
 	sim.training_points = 200
 	var snares: Dictionary = Data.tree_named("Snares")
@@ -1905,17 +2264,17 @@ func _capstone_checks(main) -> void:
 	sim.advance(0.5)
 	_check(m["patrols"] >= 1 and m["found"].size() + int(m["left"]) > found_before, "Poached did not bring a find when the gang came")
 	sim.extract_now()
-	# the Caravan shows it as a wide ◆◆ tile under the keystone, and the run band names it
+	# the Caravan shows it as a ◆◆ tile the lane's height at its end, and the run band names it
 	main.show_room(main.BARRACKS)
 	main._barracks.selected = ""
 	main._barracks._shown = ""
 	main.refresh()
 	var cap_tile = null
-	for col in main._barracks._rows:
-		for n in col:
+	for lane in main._barracks._lanes:
+		for n in lane["tiles"]:
 			if n["button"].visible and n["id"] == cap_id:
 				cap_tile = n
-	_check(cap_tile != null and cap_tile["name"].text.begins_with("◆◆ ") and cap_tile["button"].size.x > main._barracks.TILE_W * 1.5 and cap_tile["effect"].text != "", "the capstone's tile is off: %s" % (cap_tile["name"].text if cap_tile != null else "none"))
+	_check(cap_tile != null and cap_tile["name"].text.begins_with("◆◆ ") and cap_tile["button"].size.y > main._barracks.TILE_H * 1.5 and cap_tile["effect"].text != "", "the capstone's tile is off: %s" % (cap_tile["name"].text if cap_tile != null else "none"))
 	_check_fit(main, "Caravan (capstone)")
 	main._barracks._pick(cap_id)
 	main.refresh()
@@ -1939,7 +2298,7 @@ func _capstone_checks(main) -> void:
 	_check(m["remaining"] == sim.PATROL_BASE - (1 if sim.has_node("trapline") else 0), "Dead quiet let the fifth gang grow: %d" % m["remaining"])
 	sim.extract_now()
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Stalking/"))
-	sim.set_class("Drifter")
+	_set_cls(sim, "Drifter")
 	sim.tree.append("Moving on/%d" % (Data.tree_named("Moving on")["nodes"].size() - 1))
 	var best_before: int = sim.best_tier
 	sim.deploy(0)
@@ -1975,8 +2334,9 @@ func _capstone_checks(main) -> void:
 	m = sim.mission
 	sim.hp = sim.max_hp() * 0.3
 	var hp_before: float = sim.hp
+	var max_before: float = sim.max_hp()       # the kill's xp can bring a level, and the level more max HP: the tenth is of the max as it heals
 	sim._kill(m, m["t"])
-	_check(sim.hp >= hp_before + sim.max_hp() * 0.1 - 0.01, "Iron did not heal on the kill: %.1f to %.1f" % [hp_before, sim.hp])
+	_check(sim.hp >= hp_before + max_before * 0.1 - 0.01, "Iron did not heal on the kill: %.1f to %.1f" % [hp_before, sim.hp])
 	sim.extract_now()
 	sim.load_dict(saved)
 	main.refresh()
@@ -2143,7 +2503,7 @@ func _melee_checks(main) -> void:
 	main.refresh()
 	sim.stash.erase(lead)
 	# Through the lot: a Doorman's swing hits everyone on you
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	sim.respec()
 	sim.training_points += 30
 	for i in [0, 1, 2, 3, 7, 8]:
@@ -3029,7 +3389,7 @@ func _move_checks(main) -> void:
 	_check(main._menu.visible and main._menu._items.size() == Data.ELEMENTS.size(), "the trade's menu did not open with the five")
 	_check_fit(main, "The Yard (trade menu)")
 	# a Doorman: poison is off his pair; the trade brings it
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	_check(not sim.affinity("poison") and sim.can_trade("poison") and not sim.can_trade("physical"), "the trade offers the wrong things")
 	main._move_yard("poison")
 	_check(sim.yard_moves == 1, "the Yard did not move")
@@ -3122,38 +3482,32 @@ func _book_checks(main) -> void:
 	sim._read(sim._plain(Data.PAPER, "The deeds"))
 	_check(sim.book.size() == 2, "the deeds went in the drawer")
 	sim.extract_now()
-	# the Caravan's drawer
+	# the Caravan's drawer: an Also chip, over the lanes when pressed, three columns of cards
 	main.show_room(main.BARRACKS)
-	var mids: Array = main._barracks._mid_trees(sim.trees())
-	var drawer_at := -1
-	for i in range(mids.size()):
-		if mids[i].get("name", "") == "The drawer":
-			drawer_at = i
-	_check(drawer_at >= 0, "the drawer is not among the middle columns")
-	main._barracks.mid = drawer_at
-	main._barracks._shown = ""
+	var bk = main._barracks
+	_check(bk.also_names().has("The drawer") and bk.also_button("The drawer") != null, "the drawer is not in the Also row")
+	bk.pick_also("The drawer")
 	main.refresh()
-	_check(main._barracks._heads[1]["name"].text.contains("2 of 20") or main._barracks._heads[1]["name"].text.contains("2/20"), "the drawer's head is off: %s" % main._barracks._heads[1]["name"].text)
-	_check(main._barracks._rows[1][0]["name"].text == "1. A P45" and main._barracks._rows[1][1]["name"].text == "2. A betting slip" and not main._barracks._rows[1][2]["button"].visible, "the drawer's rows are off: %s / %s" % [main._barracks._rows[1][0]["name"].text, main._barracks._rows[1][1]["name"].text])
-	_check(main._barracks._rows[1][0]["effect"].text != "", "the paper's words are not under its name")
+	_check(bk.also_button("The drawer").text.contains("2 of 20"), "the drawer's chip is off: %s" % bk.also_button("The drawer").text)
+	_check(bk._cells[0]["name"].text == "1. A P45" and bk._cells[1]["name"].text == "2. A betting slip" and not bk._cells[2]["button"].visible, "the drawer's cards are off: %s / %s" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text])
+	_check(bk._cells[0]["lines"][0].text != "", "the paper's words are not under its name")
 	_check_fit(main, "Caravan (the drawer, two)")
 	for name in pages:
 		sim._read(sim._plain(Data.PAPER, name))
 	_check(sim.book.size() == 20, "the full book is not twenty")
-	main._barracks._shown = ""
+	bk._shown = ""
 	main.refresh()
-	# a page holds what the column takes; twenty papers are that many pages
-	var per_page: int = main._barracks._rows[1].filter(func(n): return n["button"].visible).size()
+	# a page holds what the lanes' area takes; twenty papers are that many pages
+	var per_page: int = bk._cells.filter(func(n): return n["button"].visible).size()
 	var n_pages: int = ceili(20.0 / per_page)
-	_check(per_page >= 3 and (main._barracks._heads[1]["name"].text.contains("page 1 of %d" % n_pages) or main._barracks._heads[1]["name"].text.contains("p1/%d" % n_pages)), "a full drawer has no pages: %s (%d a page)" % [main._barracks._heads[1]["name"].text, per_page])
+	_check(per_page >= 3 and (n_pages == 1 or bk.also_button("The drawer").text.contains("page 1 of %d" % n_pages)), "a full drawer's pages are off: %s (%d a page)" % [bk.also_button("The drawer").text, per_page])
 	_check_fit(main, "Caravan (the drawer, full)")
-	main._barracks._pick("drawer/0")
-	_check(main._barracks.drawer_page == 1 and main._barracks._rows[1][0]["name"].text.begins_with("%d. " % (per_page + 1)), "a click did not turn the page: %d, %s" % [main._barracks.drawer_page, main._barracks._rows[1][0]["name"].text])
+	bk._turn_page()
+	_check(bk.drawer_page == 1 and (n_pages == 1 or bk._cells[0]["name"].text.begins_with("%d. " % (per_page + 1))), "a click did not turn the page: %d, %s" % [bk.drawer_page, bk._cells[0]["name"].text])
 	_check_fit(main, "Caravan (the drawer, page 2)")
-	main._barracks.mid = 0
-	main._barracks.drawer_page = 0
-	main._barracks._shown = ""
+	bk.pick_also("The drawer")
 	main.refresh()
+	_check(bk.alt == "" and bk._lanes[0]["panel"].visible and not bk._cells[0]["button"].visible, "the drawer pressed again did not give the lanes back")
 	_check_fit(main, "Caravan (back from the drawer)")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
@@ -3165,22 +3519,14 @@ func _book_checks(main) -> void:
 	sim._read(Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng))
 	sim._read(Items.roll_unique(sim._unique_named("Jump Leads"), sim.rng))
 	_check(sim.shelf == ["Lucky Cap", "Jump Leads"], "the shelf is not the uniques in the order found: %s" % str(sim.shelf))
-	var shelf_at := -1
-	mids = main._barracks._mid_trees(sim.trees())
-	for i in range(mids.size()):
-		if mids[i].get("name", "") == "The shelf":
-			shelf_at = i
-	_check(shelf_at >= 0, "the shelf is not among the middle columns")
-	main._barracks.mid = shelf_at
-	main._barracks.drawer_page = 0
-	main._barracks._shown = ""
+	bk.pick_also("The shelf")
 	main.refresh()
-	_check(main._barracks._heads[1]["name"].text.contains("2 of %d" % Data.UNIQUES.size()) or main._barracks._heads[1]["name"].text.contains("2/%d" % Data.UNIQUES.size()), "the shelf's head is off: %s" % main._barracks._heads[1]["name"].text)
+	_check(bk.also_button("The shelf").text.contains("2 of %d" % Data.UNIQUES.size()), "the shelf's chip is off: %s" % bk.also_button("The shelf").text)
 	# the chase first (endgame part 3): thirteen gaps in TEXT_3, where each is under it; then the rest found, in order
 	var chase: Array = sim.shelf_chase()
 	_check(chase.size() == 13 and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked Streets, depth 12"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
-	var row0: Dictionary = main._barracks._rows[1][0]
-	_check(row0["name"].text == "1. %s" % chase[0]["name"] and row0["effect"].text.begins_with("Ransacked Streets") and row0["name"].get_theme_color("font_color") == Pal.TEXT_3, "the shelf's first gap is off: '%s' / '%s'" % [row0["name"].text, row0["effect"].text])
+	var row0: Dictionary = bk._cells[0]
+	_check(row0["name"].text == "1. %s" % chase[0]["name"] and row0["lines"][0].text.begins_with("Ransacked Streets") and row0["name"].get_theme_color("font_color") == Pal.TEXT_3, "the shelf's first gap is off: '%s' / '%s'" % [row0["name"].text, row0["lines"][0].text])
 	var shelf_branch: Dictionary = main._barracks._shelf_branch()
 	var all_names: Array = []
 	for pg in range(int(shelf_branch["pages"])):
@@ -3197,8 +3543,7 @@ func _book_checks(main) -> void:
 	main._barracks._shown = ""
 	main.refresh()
 	_check_fit(main, "Caravan (the shelf, one filled)")
-	main._barracks.mid = 0
-	main._barracks._shown = ""
+	bk.pick_also("The shelf")
 	main.refresh()
 	sim.load_dict(saved)
 	print("the book ok: twenty pages, the deep ones gated, read once in order, the drawer, its pages, saved; the shelf of uniques")
@@ -3337,7 +3682,6 @@ func _faces_checks(main) -> void:
 	main._barracks.selected = ""
 	main.refresh()
 	# the faces went with the strip (8 Oct): the line alone, newest first; the wall is a card in the Runner room
-	_check(main._barracks._wall.all(func(t): return not t.visible), "the strip shows faces")
 	_check(main._barracks._past.text.begins_with("Before: a Scrapper, 3 runs") or main._barracks._past.text.begins_with("a Scrapper, 3 runs") or main._barracks._past.text.begins_with("Before: Scrapper"), "the line beside the wall is off: %s" % main._barracks._past.text)
 	_check_fit(main, "Caravan (the wall)")
 	main.show_room(main.RUNNER)
@@ -3346,9 +3690,10 @@ func _faces_checks(main) -> void:
 	_check(wall_card._title.text == "The wall" and wall_card._labels[0].text == "Scrapper L4" and wall_card._labels[1].text == "Poacher L14", "the wall card is off: '%s' %s / %s" % [wall_card._title.text, wall_card._labels[0].text, wall_card._labels[1].text])
 	_check_fit(main, "Runner (the wall card)")
 	sim.past = []
+	main.show_room(main.BARRACKS)
 	main._barracks._shown = ""
 	main.refresh()
-	_check(not main._barracks._wall[0].visible, "the wall shows with nobody before")
+	_check(not main._barracks._past.text.begins_with("Before"), "the strip names runners before with nobody before: '%s'" % main._barracks._past.text)
 	sim.load_dict(saved)
 	print("faces ok: the heads' armed lines, the face slot on the run, the wall of runners before")
 
@@ -3463,7 +3808,7 @@ func _next_checks(main) -> void:
 	var fresh = load("res://scripts/sim/sim.gd").new()
 	fresh.start()
 	_check(fresh.next_words() == Words.NEXT["past"] and fresh.events.any(func(ev): return str(ev[1]) == Words.NEXT["past"]), "a new yard does not say to pick a past: %s" % fresh.next_words())
-	fresh.set_class("Doorman")
+	_set_cls(fresh, "Doorman")
 	_check(fresh.next_words() == Words.NEXT["first"] and str(fresh.events.back()[1]) == Words.NEXT["first"], "a runner with a past is not sent out: %s" % str(fresh.events.back()))
 	_check(fresh.next_words(true) == Words.NEXT_SHORT["first"], "the short form is off: %s" % fresh.next_words(true))
 	# after the first run: the next site; then the head; then the next lot
@@ -4603,12 +4948,7 @@ func _check_fit(main, where: String) -> void:
 	elif main.room == main.WORKSHOP:
 		bad += _check_nodes(main._workshop.text_nodes(), main._workshop.line_pairs(), where + " screen")
 	elif main.room == main.BARRACKS:
-		var pairs := []
-		for col in main._barracks._rows:
-			for n in col:
-				if n["button"].visible and n["more"].visible and n["name"].position.y == n["more"].position.y:   # a tile's name and its cost share the row
-					pairs.append([n["name"], n["more"]])
-		bad += _check_nodes(main._barracks.text_nodes(), pairs, where + " screen")
+		bad += _check_nodes(main._barracks.text_nodes(), main._barracks.line_pairs(), where + " screen")
 	elif main.room == main.MARKET:
 		bad += _check_nodes(main._fence.text_nodes(), main._fence.line_pairs(), where + " screen")
 		_check(main._fence.face_clear(), where + ": the Fence's face is under something")
@@ -4949,7 +5289,11 @@ func _loot_roll_checks(main) -> void:
 	var rar_before: float = sim.rarity_bonus()
 	if not sim.tree.has(rat):
 		sim.tree.append(rat)
+	var trades0: Array = sim.trades.duplicate()
+	if not ("poison" in sim.trades):
+		sim.trades.append("poison")         # an element's top works with a joint closed there, or the Yard's trade of it (9 Oct)
 	_check(is_equal_approx(sim.rarity_bonus(), rar_before) and sim.loot_bonus() < q, "Rat's share moved quality (%.3f → %.3f) or not quantity" % [rar_before, sim.rarity_bonus()])
+	sim.trades = trades0
 	# a rarity node a class: the Doorman's and the Paramedic's trees carry one now
 	for t in ["Muscle", "Triage"]:
 		_check(Data.tree_named(t)["nodes"].any(func(n): return n.get("effect", "") == "rarity"), "%s has no loot quality node" % t)
@@ -5080,7 +5424,7 @@ func _retire_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.candidates = []
 	sim.retired = []
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	sim.runner_trait = "Tough"
 	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL - 1)
 	_check(not sim.can_retire(), "a runner under level %d could retire" % Data.RETIRE_LEVEL)
@@ -5103,7 +5447,7 @@ func _retire_checks(main) -> void:
 	_check(is_equal_approx(sim.trait_add("rarity"), 0.1 * 2.0 / 3.0), "two retired Lucky ones do not stack their thirds: %.3f" % sim.trait_add("rarity"))
 	# three at most: the oldest makes way
 	sim.retired = ["Lucky", "Wary", "Light"]
-	sim.set_class("Poacher")
+	_set_cls(sim, "Poacher")
 	sim.runner_trait = "Greedy"
 	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
 	sim.candidates = []
@@ -5111,7 +5455,7 @@ func _retire_checks(main) -> void:
 	sim.choose_runner(0)
 	sim.runner_trait = "Greedy"           # the same trait as one on the wall: its cut is the runner's alone
 	# the Caravan's button and the Yard's chips say so, and fit; saved and loaded
-	sim.set_class("Scrapper")
+	_set_cls(sim, "Scrapper")
 	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
 	main.show_room(main.BARRACKS)
 	main._barracks._shown = ""
@@ -6136,7 +6480,7 @@ func _endgame_move_checks(main) -> void:
 	_check(sim.can_retire() and sim.retire(), "the runner could not retire for the wall check")
 	var r: Dictionary = sim.past.back()
 	_check(str(r.get("site", "")) != "" and int(r.get("depth", 0)) >= Data.CONVOY_DEPTH, "the wall's record has no deepest held: %s" % str(r))
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	main.show_room(main.BARRACKS)
 	main._barracks.selected = ""
 	main._barracks._shown = ""
@@ -6167,7 +6511,7 @@ func _endgame_move_checks(main) -> void:
 		_check(sim.node_cost(yard_ids[0]) == 0, "a fresh yard's first node is not free after a move: %d" % sim.node_cost(yard_ids[0]))
 		sim.train_node(yard_ids[0])
 		_check(sim.tree.has(yard_ids[0]) and sim.node_cost(yard_ids[0]) == 0 and sim.node_cost(yard_ids[1]) > 0, "after the free node the next is free too: %d / %d" % [sim.node_cost(yard_ids[0]), sim.node_cost(yard_ids[1])])
-	sim.set_class("Doorman")
+	_set_cls(sim, "Doorman")
 	var t0: Dictionary = sim.effective(0)
 	sim.deploy(0)
 	sim._clear(sim.mission, t0)

@@ -307,8 +307,8 @@ func _dead_stat(sim, stat: String) -> bool:
 ## element's affix locked, or all of it re-rolled - while two grand stays.
 func _craft_toward(sim) -> void:
 	var it = sim.equipped["Primary"]
-	if it == null or it.has("unique"):
-		return
+	if it == null or it.has("unique") or element == "physical":
+		return                            # the physical build has no conversion or socketable to chase (the reviewer's catch: it re-rolled for one forever)
 	var conv := "conv_%s_pct" % element
 	var inc := "%s_pct" % element
 	if Items.sockets(it) == 0:
@@ -346,6 +346,13 @@ func _craft_toward(sim) -> void:
 ## behind it - the base's share, its affixes, what's fitted - weighed with its
 ## score; a plain gun needs to be well ahead to displace one that carries the element.
 func _elem_share(it: Dictionary) -> float:
+	if element == "physical":
+		# the physical build (Knuckles, 9 Oct): the share of the gun's hit that isn't converted
+		var conv := 0.0
+		for el in Data.ELEMENTS:
+			var st := "conv_%s_pct" % el
+			conv += float(Items.base_of(it).get(st, 0)) + Items.affix_total(it, st) + Items.fitted_sum(it, st)
+		return maxf(0.0, 1.0 - conv / 100.0)
 	var stat := "conv_%s_pct" % element
 	var s := float(Items.base_of(it).get(stat, 0))
 	s += Items.affix_total(it, stat)
@@ -374,11 +381,20 @@ func _hold_the_element(sim) -> void:
 func _second_past_for(sim) -> void:
 	if not sim.can_ascend() or sim.cls2 != "" or sim.affinity(element):
 		return
+	# a class whose first tree holds its half of the element's joint first (9 Oct): the second past brings only
+	# that tree, so only then can the element's keystone open; any class with the affinity after
+	var picks: Array = []
+	var et: Dictionary = Data.tree_of_element(element)
 	for c in Data.CLASSES:
 		if c["name"] != sim.cls and element in Data.AFFINITY.get(c["name"], []):
-			if sim.set_second(c["name"]):
-				bought.append([sim.elapsed, "the second past: %s, for %s" % [c["name"].to_lower(), element]])
-			return
+			var first: Array = Data.trees_for(c["name"])
+			var j: Dictionary = Data.joint_in(c["name"], et.get("name", ""))
+			if not j.is_empty() and not first.is_empty() and first[0]["name"] == j["tree"]:
+				picks.push_front(c["name"])
+			else:
+				picks.append(c["name"])
+	if not picks.is_empty() and sim.set_second(picks[0]):
+		bought.append([sim.elapsed, "the second past: %s, for %s" % [picks[0].to_lower(), element]])
 
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back
@@ -547,16 +563,18 @@ func _train_tree(sim) -> void:
 	if element != "":
 		# the build's tree first, to its keystone and past it; the class's after
 		var mine: Array = order.filter(func(t): return t.get("element", "") == element)
-		order = mine + order.filter(func(t): return not t.has("element"))
+		# then the class tree holding the runner's half of that element's joint: its keystone wants the joint closed
+		var joined: Array = []
+		for c in sim.my_classes():
+			var j: Dictionary = Data.joint_in(c, mine[0]["name"]) if not mine.is_empty() else {}
+			if not j.is_empty():
+				joined.append(j["tree"])
+		var halves: Array = order.filter(func(t): return t["name"] in joined)
+		order = mine + halves + order.filter(func(t): return not t.has("element") and not (t["name"] in joined))
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:
-			var next_id := ""
-			for i in range(b["nodes"].size()):
-				var id := "%s/%d" % [b["name"], i]
-				if not sim.tree.has(id):
-					next_id = id
-					break
+			var next_id := _next_in(sim, b)
 			if next_id == "":
 				continue                  # this tree is done; the next
 			if sim.can_train(next_id):
@@ -567,6 +585,27 @@ func _train_tree(sim) -> void:
 				return                    # save up for it rather than spend elsewhere
 			if element != "" and b.get("element", "") == element and sim.points_free() < sim.node_cost(next_id):
 				return                    # an off-affinity node at double: save for it
+
+
+## A tree's next node for this runner, left to right (the lanes, 9 Oct): the lowest column's untaken node it
+## could train with the points - never another class's half, an element's top with no joint closed there,
+## or a capstone before its tree's shape. "" when there's none now.
+func _next_in(sim, b: Dictionary) -> String:
+	var best := ""
+	var best_key := 1 << 20
+	for i in range(b["nodes"].size()):
+		var id := "%s/%d" % [b["name"], i]
+		if sim.tree.has(id):
+			continue
+		var why: String = sim.train_block(id, true)
+		if why != "" and not why.begins_with("opens at"):
+			continue
+		var nd: Dictionary = b["nodes"][i]
+		var key: int = int(nd.get("col", 0)) * 10 + int(nd.get("row", 0))
+		if key < best_key:
+			best_key = key
+			best = id
+	return best
 
 
 func _restock_meds(sim) -> void:
