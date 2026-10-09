@@ -2025,7 +2025,7 @@ func _element_checks(main) -> void:
 		_check(sim.train_node("Moving on/%d" % i), "Moving on/%d did not train: %s" % [i, sim.train_block("Moving on/%d" % i)])
 	_check(sim.has_joint("drifter_fire") and not sim.has_joint("drifter_shock"), "both halves trained and the joint did not close")
 	_check(sim.train_node("Petrol/6") and sim.has_node("fire_spread"), "Spreads did not train once the joint closed")
-	_check(is_equal_approx(sim.conversion()["fire"], 0.80), "the fire conversions do not add to 80%%: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["fire"], 0.70), "the fire conversions do not add to 70%%: %s" % str(sim.conversion()))     # A can of it 20 (9 Oct), Siphoned 35, Petrol bomb 15
 	_check(is_equal_approx(sim.dot_seconds("fire"), 8.0) and is_equal_approx(sim.dot_seconds("poison"), 8.0), "Lit did not double the burn")
 	_check(sim.train_node("Petrol/9") and is_equal_approx(sim.more("fire"), 1.4), "Petrol on your hands is not ×1.4")
 	# the payoff: an SMG's hit lights them, and a burning gang takes a quarter more from it

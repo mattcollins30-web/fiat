@@ -1190,7 +1190,7 @@ const TREES := [
 ## stop at column 4 - a dip, not a build. Knuckles is the physical: the share of a hit that isn't converted.
 const ELEMENT_TREES := [
 	{"name": "Petrol", "element": "fire", "nodes": [
-		{"name": "A can of it", "col": 0, "row": 0, "effect": "conv_fire_pct", "value": 30},
+		{"name": "A can of it", "col": 0, "row": 0, "effect": "conv_fire_pct", "value": 20},     # 30 to 20 (the twenty-seventh read: the fire Drifter to the Bank in 0.3-0.8 h, the next element build 1.0)
 		{"name": "Rags", "col": 0, "row": 1, "effect": "fire_pct", "value": 10},
 		{"name": "Siphoned", "col": 1, "row": 0, "effect": "conv_fire_pct", "value": 35},
 		{"name": "Lit", "col": 2, "row": 0, "effect": "fire_pct", "value": 30, "notable": true, "words": "+30% fire; burns last twice as long"},
@@ -1248,11 +1248,13 @@ const ELEMENT_TREES := [
 		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
 		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 20},             # 12 to 20, the same
 		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed"},
-		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down, and stack to three"},
+		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 1,     # a point under (the twenty-seventh read: bleed's keystone 3.1 h against the 2 h gate)
+		 "words": "Bleeds don't fade until they're down, and stack to three"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
 		{"name": "Butcher's", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20},          # was conv 20: the conversion moved up the tree to Sharpened
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
-		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "words": "A bleed carries to the next, and bleeds half again as hard"},
+		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 1,     # a point under (its capstone 8.9 h against 5)
+		 "words": "A bleed carries to the next, and bleeds half again as hard"},
 	]},
 	{"name": "Knuckles", "element": "physical", "nodes": [
 		{"name": "Bare hands", "col": 0, "row": 0, "effect": "physical_pct", "value": 10},
@@ -1530,9 +1532,10 @@ static func node_cost(col: int, notable: bool, keystone := false) -> int:
 ## A node's base cost from its data, the capstone's included: what a gate counts (a move's free node and
 ## an off-pair element's doubling are the runner's price, not the tree's shape).
 static func base_cost(t: Dictionary, nd: Dictionary) -> int:
+	var less: int = int(nd.get("cost_less", 0))        # a node priced under its column (bleed's keystone and capstone, 9 Oct)
 	if nd.get("capstone", false):
-		return capstone_cost(t)
-	return node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
+		return maxi(1, capstone_cost(t) - less)
+	return maxi(1, node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false)) - less)
 
 
 ## Whether a node is for these classes: a class's half in an element tree is that class's alone.
