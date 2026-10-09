@@ -3882,6 +3882,7 @@ func _idle_checks(main) -> void:
 	# a run home: the junk goes, the better piece goes on, the rest stays
 	while not sim.stash_room(12) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
+	sim.stash = sim.stash.filter(func(x): return x.get("slot", "") != "Armour")     # no armour of the run's own better than the one put in (a 1-in-7 flake, 9 Oct)
 	var junk: Dictionary = sim._plain("Helmet", "Hard hat")
 	var keep_ammo: Dictionary = sim._plain(Data.AMMO, "Nails")
 	var keep_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
