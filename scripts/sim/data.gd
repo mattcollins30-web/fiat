@@ -1213,7 +1213,8 @@ const ELEMENT_TREES := [
 		{"name": "Wind chill", "col": 2, "row": 1, "effect": "frost_pct", "value": 15},
 		{"name": "Paramedic's ice", "col": 3, "row": 1, "effect": "frost_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_frost", "words": "+25% frost"},
 		{"name": "Cold hands", "col": 4, "row": 1, "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
-		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true, "words": "A chilled target takes double from the physical"},
+		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true, "cost_less": 1,     # a point under (the twenty-eighth read: the frost Poacher's capstone 5.6 h against 5)
+		  "words": "A chilled target takes double from the physical"},
 	]},
 	{"name": "The rat man", "element": "poison", "nodes": [
 		{"name": "Under the sink", "col": 0, "row": 0, "effect": "conv_poison_pct", "value": 30},
@@ -1248,12 +1249,12 @@ const ELEMENT_TREES := [
 		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
 		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 20},             # 12 to 20, the same
 		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed"},
-		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 1,     # a point under (the twenty-seventh read: bleed's keystone 3.1 h against the 2 h gate)
+		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 2,     # two under (the twenty-seventh read 3.1 h, the twenty-eighth 2.9, against the 2 h gate)
 		 "words": "Bleeds don't fade until they're down, and stack to three"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
 		{"name": "Butcher's", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20},          # was conv 20: the conversion moved up the tree to Sharpened
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
-		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 1,     # a point under (its capstone 8.9 h against 5)
+		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 2,     # two under (its capstone 8.9 h, then 5.8, against 5)
 		 "words": "A bleed carries to the next, and bleeds half again as hard"},
 	]},
 	{"name": "Knuckles", "element": "physical", "nodes": [
@@ -1509,12 +1510,13 @@ const CLASSES := [
 		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
-	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP",
-		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
+	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP",
+		"damage": 1.1, "heal": 1.5, "auto_med": true},     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
 	{"name": "Scrapper", "words": "Searches 30% faster; +10% loot quantity",
 		"search": 0.7, "loot": 0.10},              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
-	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace",
-		"damage": 1.15, "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
+	{"name": "Drifter", "words": "+5% damage; one fewer on you at a time; +10% pace",
+		"damage": 1.05,     # +15% to +5% (Matt, 9 Oct, the twenty-eighth read: with its HP back, the fastest to the Bank at 0.6 h)
+		 "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]
 
 

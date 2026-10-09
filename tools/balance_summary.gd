@@ -31,7 +31,7 @@ const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's w
 const LORRY_BY := 16.0          # hour: the lorry beaten on every build (the endgame's ending; Matt, 7 Oct: "16 hours would be right given the type of game")
 const SPREAD := [7, 11]         # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the shapes read 7-12 on the fifteenth read, the band re-stated from it)
 const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk; read from his save (MATT_DEATHS), the bot's bail-outs shown beside and not judged (Matt, 8 Oct: the bot at 0.88 with a kit past its sites is never wounded and never bails)
-const MATT_DEATHS := [7, 116]     # Matt's save: seven lost in 116 runs. Update from the next save.
+const MATT_DEATHS := [-1, 0]     # Matt's save: -1 until the playtest of the 9 Oct build (Matt: "so much has changed that it's not worth looking at my previous save"; the old 7 in 116 retired). An accepted red till then.
 
 
 func _init() -> void:
@@ -181,7 +181,13 @@ func _init() -> void:
 			rows.append(["Depth pace", "at least one depth an hour from hour %.0f" % DEPTH_FROM, "; ".join(slow) if not slow.is_empty() else "every build at a depth an hour or better", slow.is_empty()])
 
 	# deaths: the bot's bail-outs under a quarter HP an hour (the runs that kill a player who pushes on)
-	if true:
+	if MATT_DEATHS[0] < 0:
+		var bots0: Array = []
+		for b in full:
+			var every0: float = (float(b["runs"]) / float(b["bails"])) if int(b.get("bails", 0)) > 0 else 999.0
+			bots0.append("%s one in %s" % [b["build"], ("%.0f" % every0) if every0 < 999.0 else "never"])
+		rows.append(["Deaths", "a death one run in %.0f to %.0f on Matt's save" % [DEATH_RUNS[0], DEATH_RUNS[1]], "waiting on Matt's playtest of this build (accepted red); the bot's bail-outs, not judged: " + ", ".join(bots0), false])
+	else:
 		var matt_every: float = float(MATT_DEATHS[1]) / maxf(1.0, float(MATT_DEATHS[0]))
 		var bots: Array = []
 		for b in full:
@@ -238,7 +244,8 @@ func _init() -> void:
 			var bots: Array = full.map(func(b): return "%s %.0f%%" % [b["build"], float(b["_wounds"]) * 100.0])
 			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded on Matt's save" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "Matt's save: %.0f%% (%d of %d); the bot, not judged: %s" % [ms * 100.0, MATT_WOUNDS[0], MATT_WOUNDS[1], ", ".join(bots)], ms >= WOUNDS[0] and ms <= WOUNDS[1]])
 		else:
-			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded, the merged builds" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+			var bots1: Array = full.map(func(b): return "%s %.0f%%" % [b["build"], float(b["_wounds"]) * 100.0])
+			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded on Matt's save" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "waiting on Matt's playtest of this build (accepted red); the bot, not judged: " + ", ".join(bots1), false])
 
 	# the clock: runs out of time at the sites the bot picks (reads before 9 Oct carry no timeouts)
 	if not full.is_empty() and full.all(func(b): return b.has("timeouts")):
