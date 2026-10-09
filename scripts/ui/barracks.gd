@@ -18,6 +18,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const PAD := 20
 # the header: the face, the class and trait, the points free, the class's line; the classes top right
@@ -40,6 +41,14 @@ const ROW_GAP := 4
 const TILE_W := (Pal.GRID_W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS     # 219
 const TILE_H := (LANE_H - 12 - ROW_GAP) / 2                                    # 44
 const LANE_NODES := 12                                         # tiles a lane holds (a tree has eleven)
+## A node as a glyph (9 Oct, Tree-G A): a square tile, a notable round, a keystone a diamond, the capstone a bigger
+## diamond alone in its column; centred in its column's cell; the cost a chip on its corner, a tick once trained.
+const NODE := 44
+const DIAMOND := 32                                            # turned 45°: 45 across, a row's height
+const DIAMOND_BIG := 40                                        # the capstone, the lane's height to itself
+const GLYPH := 26
+const COST_W := 26
+const YARD_TONE := Color("8fb3d9")                             # the Yard's tree: its glyphs' tone (its lane's line is the card's)
 const LANES_H := LANES * LANE_H + 2 * LINK_H + 2 * PAIR_GAP    # 576
 const ALSO_Y := LANES_Y + LANES_H + 8
 const ALSO_H := 40
@@ -145,6 +154,14 @@ static func tile_rect(c: int, r: int, span := false) -> Rect2:
 	return Rect2(TILES_X + c * (TILE_W + TILE_GAP), 6 + (0 if span else r * (TILE_H + ROW_GAP)), TILE_W, (2 * TILE_H + ROW_GAP) if span else TILE_H)
 
 
+## A node's tile in its lane: centred in its column's cell (tile_rect), square; a keystone's diamond smaller (it
+## turns), the capstone's bigger and centred on the lane when it's alone in its column.
+static func node_rect(c: int, r: int, span: bool, kind: String) -> Rect2:
+	var cell := tile_rect(c, r, span)
+	var n: float = DIAMOND_BIG if (kind == "capstone" and span) else (DIAMOND if kind in ["keystone", "capstone"] else NODE)
+	return Rect2(cell.position + (cell.size - Vector2(n, n)) / 2.0, Vector2(n, n))
+
+
 ## The joint's link's x: the fourth column's middle.
 static func link_x() -> float:
 	return TILES_X + Data.JOINT_COL * (TILE_W + TILE_GAP) + TILE_W / 2.0
@@ -160,18 +177,43 @@ func _build_lanes() -> void:
 		lane["tag"] = UI.label(p, Rect2(14, 32, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		lane["gates"] = UI.label(p, Rect2(14, 54, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		lane["count"] = UI.label(p, Rect2(14, 76, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		# two faint rails, a row's tiles strung along each (Tree-G A)
+		var x0: float = TILES_X + TILE_W / 2.0
+		var x1: float = TILES_X + (COLS - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0
+		lane["rails"] = []
+		for r in range(2):
+			var rr := tile_rect(0, r)
+			lane["rails"].append(UI.panel(p, Rect2(x0, rr.position.y + rr.size.y / 2.0 - 1.0, x1 - x0, 2), UI.box(Pal.CARD_LINE, 1)))
 		for i in range(LANE_NODES):
 			var btn := Button.new()
 			btn.text = ""
 			btn.focus_mode = Control.FOCUS_ALL
 			btn.position = Vector2(TILES_X, y + 6)
-			btn.size = Vector2(TILE_W, TILE_H)
+			btn.size = Vector2(NODE, NODE)
 			btn.pressed.connect(_pick_at.bind(k, i))
 			add_child(btn)
-			var t := {"button": btn, "id": ""}
-			t["name"] = UI.label(btn, Rect2(8, 1, TILE_W - 16, 22), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["more"] = UI.label(btn, Rect2(8, 1, TILE_W - 16, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
-			t["effect"] = UI.label(btn, Rect2(8, 22, TILE_W - 16, 20), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			var t := {"button": btn, "id": "", "kind": ""}
+			var g := TextureRect.new()
+			g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			g.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			g.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+			g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			g.size = Vector2(GLYPH, GLYPH)
+			g.pivot_offset = g.size / 2.0
+			btn.add_child(g)
+			t["glyph"] = g
+			# the cost on the tile's corner and a joint's half mark under it: beside the tile, not on it (a diamond turns)
+			t["more"] = UI.label(self, Rect2(0, 0, COST_W, 23), "", "SemiBold", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
+			t["more"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 9, 1, Pal.CARD_LINE))
+			t["more"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+			t["joint"] = UI.label(self, Rect2(0, 0, 22, 23), "⇄", "SemiBold", 15, Pal.BAD, HORIZONTAL_ALIGNMENT_CENTER, false)
+			t["joint"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+			t["joint"].visible = false
+			# the old tile's words, kept empty: the node's words are the panel's (9 Oct)
+			t["name"] = UI.label(btn, Rect2(0, 0, 1, 23), "", "Regular", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["effect"] = UI.label(btn, Rect2(0, 0, 1, 23), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["name"].visible = false
+			t["effect"].visible = false
 			lane["tiles"].append(t)
 		_lanes.append(lane)
 	for k in [0, 2]:
@@ -325,39 +367,55 @@ static func joint_colour(j: Dictionary) -> Color:
 	return lane_colour(Data.tree_named(j["element_tree"]))
 
 
-func _style(b: Button, look: String, edge := Color.TRANSPARENT) -> void:
-	# "taken": lit with the accent; "idle": taken, not working; "open": trainable or nearly; "locked": dim;
-	# "selected": ringed. `edge`: a joint half's colour, a ring of it
+## The drawer's and the shelf's cards: as the tiles were before the glyphs (a found one lit with the accent's bar).
+func _style_card(b: Button, look: String) -> void:
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		var sb: StyleBoxFlat
-		match look:
-			"taken":
-				sb = UI.box(Pal.SELECT, 6)
-				sb.border_width_left = 5
-				sb.border_color = Pal.ACCENT
-			"idle":
-				sb = UI.box(Pal.SELECT, 6)
-				sb.border_width_left = 5
-				sb.border_color = Pal.TEXT_3
-			"open":
-				sb = UI.box(Pal.BUTTON if state == "hover" else Pal.CARD, 6)
-			"selected":
-				sb = UI.box(Pal.SELECT, 6)
-				sb.set_border_width_all(2)
-				sb.border_color = Pal.ACCENT
-			_:
-				sb = UI.box(Pal.BG, 6)
-		if edge != Color.TRANSPARENT and look != "selected":
-			sb.border_width_top = 2
-			sb.border_width_right = 2
-			sb.border_width_bottom = 2
-			if look != "taken" and look != "idle":
-				sb.border_width_left = 2
-				sb.border_color = Color(edge, 0.55)
-			else:
-				sb.border_color = edge
+		if look == "taken":
+			sb = UI.box(Pal.SELECT, 6)
+			sb.border_width_left = 5
+			sb.border_color = Pal.ACCENT
+		else:
+			sb = UI.box(Pal.BG, 6)
 		b.add_theme_stylebox_override(state, sb)
 	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 6, 2, Pal.TEXT))
+
+
+func _style(b: Button, look: String, edge := Color.TRANSPARENT, kind := "node", tone := Pal.ACCENT, picked := false) -> void:
+	# "taken": filled in the tree's tone, edged with it; "idle": taken, not working, edged grey; "open": trainable,
+	# a light edge; "locked": dim. A notable is round, a keystone or capstone a diamond (the button turned), a
+	# plain node square; a notable or keystone carries its tree's tone on its edge; a joint's half its joint's;
+	# the picked one is ringed white (9 Oct, Tree-G A)
+	var radius: int = int(b.size.x / 2.0) if kind == "notable" else (5 if kind in ["keystone", "capstone"] else 8)
+	var big: bool = kind != "node"
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var bg: Color
+		var line: Color
+		var w := 1
+		match look:
+			"taken":
+				bg = Pal.CARD.lerp(tone, 0.22)
+				line = tone
+				w = 2
+			"idle":
+				bg = Pal.CARD
+				line = Pal.TEXT_3
+				w = 2
+			"open":
+				bg = Pal.BUTTON if state in ["hover", "hover_pressed"] else Pal.CARD
+				line = tone if big else Pal.TEXT_2
+				w = 2 if big else 1
+			_:
+				bg = Pal.BG
+				line = Color(tone, 0.45) if big else Pal.CARD_LINE
+		if edge != Color.TRANSPARENT and look != "taken":
+			line = edge
+			w = 2
+		if picked:
+			line = Pal.TEXT
+			w = 3
+		b.add_theme_stylebox_override(state, UI.box(bg, radius, w, line))
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, radius, 2, Pal.TEXT))
 
 
 # ------------------------------------------------------------------ the trees on show
@@ -479,6 +537,8 @@ func _show_lane(k: int, t) -> void:
 	lane["panel"].visible = t != null
 	for tile in lane["tiles"]:
 		tile["button"].visible = false
+		tile["more"].visible = false
+		tile["joint"].visible = false
 		tile["id"] = ""
 	if t == null:
 		return
@@ -519,13 +579,20 @@ func _show_lane(k: int, t) -> void:
 		var tile: Dictionary = lane["tiles"][i]
 		var b: Button = tile["button"]
 		var c: int = int(nd.get("col", 0))
-		var rc := tile_rect(c, int(nd.get("row", 0)), int(per_col.get(c, 0)) == 1)
+		var span: bool = int(per_col.get(c, 0)) == 1
+		var kind: String = "capstone" if nd.get("capstone", false) else ("keystone" if nd.get("keystone", false) else ("notable" if nd.get("notable", false) else "node"))
+		var rc := node_rect(c, int(nd.get("row", 0)), span, kind)
 		b.position = Vector2(rc.position.x, y + rc.position.y)
 		b.size = rc.size
+		b.pivot_offset = rc.size / 2.0
+		b.rotation_degrees = 45.0 if kind in ["keystone", "capstone"] else 0.0
 		b.visible = true
 		tile["id"] = id
-		for l in [tile["name"], tile["more"], tile["effect"]]:
-			l.size.x = rc.size.x - 16
+		tile["kind"] = kind
+		var g: TextureRect = tile["glyph"]
+		g.texture = NodeGlyphs.texture(NodeGlyphs.of(nd))
+		g.position = (rc.size - g.size) / 2.0
+		g.rotation_degrees = -b.rotation_degrees
 		var is_taken: bool = sim.tree.has(id)
 		if is_taken:
 			taken += 1
@@ -533,44 +600,26 @@ func _show_lane(k: int, t) -> void:
 		var block: String = sim.train_block(id, true)
 		var reach: bool = not is_taken and block == ""
 		var look := ("taken" if sim.node_active(id) else "idle") if is_taken else ("open" if reach else "locked")
-		if id == selected:
-			look = "selected"
 		var j_key: String = str(nd.get("joint", ""))
 		var edge := Color.TRANSPARENT
 		if j_key != "" and not theirs:
 			edge = joint_colour(Data.joint(j_key))
-		_style(b, look, edge)
-		# the tile: the mark, the name, the cost at the right; the figure under
+		var tone: Color = colour if colour != Pal.CARD_LINE else YARD_TONE
+		_style(b, look, edge, kind, tone, id == selected)
+		g.modulate = tone if look == "taken" else (Pal.TEXT if look == "open" else Pal.TEXT_3)
+		# the cost on the corner (a tick once trained); another class's half says nothing - the panel names it
 		var cost: int = sim.node_cost(id)
-		var cost_words := "%d pt%s" % [cost, "" if cost == 1 else "s"]
-		tile["more"].text = cost_words
-		tile["more"].visible = not is_taken
-		var tall: bool = rc.size.y > TILE_H                 # alone in its column (the capstone): the cost on a line of its own under the figure
-		tile["more"].position.y = 44.0 if tall else 1.0
-		tile["more"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if tall else HORIZONTAL_ALIGNMENT_RIGHT
-		var big: bool = nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false)
-		tile["name"].add_theme_font_override("font", UI.font("SemiBold" if big else "Regular", false))
-		var mark: String = "◆◆ " if nd.get("capstone", false) else ("◆ " if nd.get("keystone", false) else (("⇄ " if (j_key != "" and not theirs) else "★ ") if nd.get("notable", false) else ""))
-		var room: float = tile["name"].size.x - (UI.text_width(tile["more"], cost_words) + 16.0 if not (is_taken or tall) else 0.0)
-		var nm: String = mark + nd["name"]
-		if UI.text_width(tile["name"], nm) > room:
-			nm = mark + _short_name(nd["name"])
-		if UI.text_width(tile["name"], nm) > room:
-			nm = _short_name(nd["name"])
-		tile["name"].text = nm
-		if theirs:
-			UI.fit(tile["effect"], ["the %s's half" % str(nd.get("class", "")).to_lower(), str(nd.get("class", ""))])
-		elif big and nd.has("words"):
-			var first: String = str(nd["words"])
-			for sep in ["; ", ": ", ", "]:
-				first = first.get_slice(sep, 0)
-			UI.fit(tile["effect"], [str(nd["words"]), first, _effect_words(nd), _chip_words(nd)])
-		else:
-			var eff := _effect_words(nd)
-			UI.fit(tile["effect"], [eff, eff.get_slice(", ", 0)])
-		var lit: bool = is_taken or reach
-		tile["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_3)
-		tile["effect"].add_theme_color_override("font_color", Pal.TEXT_2 if lit else Pal.TEXT_3)
+		var more: Label = tile["more"]
+		more.text = "✓" if is_taken else str(cost)
+		more.add_theme_color_override("font_color", Pal.GOOD if is_taken else (Pal.ACCENT if reach else Pal.TEXT_3))
+		var half: float = rc.size.x * (0.71 if kind in ["keystone", "capstone"] else 0.5)     # a diamond's half-width is its half-diagonal
+		more.position = Vector2(b.position.x + rc.size.x / 2.0 + half + 3.0, b.position.y + rc.size.y / 2.0 - half - 2.0)     # beside the tile's top right, never on a tile
+		more.visible = true
+		tile["joint"].visible = edge != Color.TRANSPARENT
+		tile["joint"].position = Vector2(b.position.x + rc.size.x / 2.0 - half - 24.0, b.position.y + rc.size.y / 2.0 - 11.5)     # at its left, clear of the tile
+		tile["joint"].add_theme_color_override("font_color", edge if edge != Color.TRANSPARENT else Pal.BAD)
+		tile["name"].text = ""
+		tile["effect"].text = ""
 	UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
 
 
@@ -701,7 +750,7 @@ func _show_pages(on: bool) -> void:
 		else:
 			UI.fit(c["name"], [nd["name"]])
 			UI.wrap(c["lines"].slice(0, lines), nd["words"])
-		_style(b, "taken" if nd["words"] != "" and not nd.get("gap", false) else "locked")
+		_style_card(b, "taken" if nd["words"] != "" and not nd.get("gap", false) else "locked")
 		c["name"].add_theme_color_override("font_color", Pal.TEXT_3 if nd.get("gap", false) else Pal.TEXT)
 
 
@@ -1089,12 +1138,7 @@ func _on_respec() -> void:
 ## For the tests: the labels that share a line and must not run into each other - a tile's name and its cost,
 ## and the points and their unit.
 func line_pairs() -> Array:
-	var out: Array = [[_points, _unit]]
-	for lane in _lanes:
-		for t in lane["tiles"]:
-			if t["button"].visible and t["more"].visible and t["name"].position.y == t["more"].position.y:
-				out.append([t["name"], t["more"]])
-	return out
+	return [[_points, _unit]]
 
 
 ## For the tests: every label with text on show.
@@ -1111,10 +1155,10 @@ func text_nodes() -> Array:
 		if lane["panel"].visible:
 			out.append_array([lane["name"], lane["tag"], lane["gates"], lane["count"]])
 		for t in lane["tiles"]:
-			if t["button"].visible:
-				out.append_array([t["name"], t["effect"]])
-				if t["more"].visible:
-					out.append(t["more"])
+			if t["button"].visible and t["more"].visible:
+				out.append(t["more"])
+			if t["button"].visible and t["joint"].visible:
+				out.append(t["joint"])
 	for l in _links:
 		if l["chip"].visible:
 			out.append(l["label"])

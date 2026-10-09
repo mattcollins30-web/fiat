@@ -261,6 +261,7 @@ func setup(k: String) -> void:
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
+	_band.set_site("The Clinic" if kind == "clinic" else "The Fence")     # art/places/the_clinic.png, the_fence.png when painted (9 Oct); the skyline till then
 	if not People.show(_face, "medic" if kind == "clinic" else "fence"):
 		_band.portrait_width(0)           # no art yet: the words take the band
 
@@ -907,7 +908,7 @@ func face_clear() -> bool:
 		return true
 	var mine := Rect2(_face.position, _face.size)
 	for c in _band.get_children():
-		if c == _face or not (c is Control) or not c.visible or (c is Label and c.text == ""):
+		if c == _face or not (c is Control) or not c.visible or (c is Label and c.text == "") or _band.is_backdrop(c):
 			continue
 		if mine.intersects(Rect2(c.position, c.size)):
 			return false

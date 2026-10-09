@@ -1,6 +1,6 @@
 {
  "_readme": [
-  "FIAT PLACES AND GAPS (9 Oct): the deeds (128x128, art/items/the_deeds.png), the Stats rail glyph (64x64, art/ui/stats.png), the three zones' tabs and the nine sites' bands (688x296, art/places/<slug>.png, UI.place_slug of the name). One file a job, written straight to its live name ('single').",
+  "FIAT PLACES AND GAPS (9 Oct): the deeds (128x128, art/items/the_deeds.png), the Stats rail glyph (64x64, art/ui/stats.png), the three zones' tabs, the nine sites' bands, and the Clinic's, the Fence's and the Map's bands (9 Oct) (688x296, art/places/<slug>.png, UI.place_slug of the name). One file a job, written straight to its live name ('single').",
   "Places follow Matt's two first pieces: the zones take art/places/the_estate.png as their style image, the sites art/places/ransacked_streets.png. Those two exist, so their jobs are skipped (a job whose file exists is skipped); --force would redo them - don't.",
   "The game shows a place's art covering its box from the centre (cut top and bottom), shaded under the words; a zone tab is a thin strip from the middle. A missing place keeps the drawn skyline.",
   "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_places_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <slug> ++ --force)."
@@ -257,6 +257,60 @@
     "shading": true
    },
    "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_clinic.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view inside a makeshift clinic in a closed-down British high-street chemist after a collapse: shelves of mismatched medicine boxes and bandage rolls, a camp bed with a grey blanket, a drip stand made from a coat stand, a paraffin lamp on the counter, a hand-written price board with no readable words, the shop's metal shutter half down behind, rain on the window. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95000,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Clinic's band (608x200)"
+  },
+  {
+   "out": "art/places/the_fence.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view inside a fence's back room in a British lock-up garage after a collapse: a long trestle table of guns, body armour and boxed rounds under a bare bulb, a battered cash box, crates stacked to the roof, a ledger and a set of scales, a car under a tarp at the back, the roller door half open onto a wet yard. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95001,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Fence's band (608x200, the four tabs along its foot)"
+  },
+  {
+   "out": "art/places/the_map.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, very wide aerial panorama at dusk looking across a dead British region from the edge of an estate: tower blocks in the foreground left, a market town with a church spire and a big wheel in the middle distance, a motorway on stilts and a hospital tower and army barracks on the far right horizon, roads between them picked out by a few working streetlights. Muted blue-grey and slate palette with sparse warm orange lights. Quiet, not busy; no people, no text. It is shown as a very wide, thin strip cut from the middle of the frame, so the interest sits in a band across the middle, even detail side to side, darker at the bottom edge.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95002,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Map's band (the full grid's width x 170, cut from the middle)"
   }
  ]
 }

@@ -2151,9 +2151,17 @@ func _element_checks(main) -> void:
 			if not tile["button"].visible:
 				continue
 			var rc := Rect2(tile["button"].position, tile["button"].size)
+			if not is_zero_approx(tile["button"].rotation):
+				var d: float = tile["button"].size.x * sqrt(2.0)     # a diamond's true extent: its diagonal, about its centre
+				rc = Rect2(rc.get_center() - Vector2(d, d) / 2.0, Vector2(d, d))
 			var nd: Dictionary = sim.node(tile["id"])
 			_check(box.encloses(rc) and rc.position.x >= bk.TILES_X - 0.5, "a tile leaves its lane: %s in %s" % [str(rc), str(box)])
-			_check(is_equal_approx(rc.position.x, bk.TILES_X + int(nd.get("col", 0)) * (bk.TILE_W + bk.TILE_GAP)), "%s is not in its column" % tile["id"])
+			var cell: Rect2 = bk.tile_rect(int(nd.get("col", 0)), int(nd.get("row", 0)), false)
+			_check(absf(rc.position.x + rc.size.x / 2.0 - (cell.position.x + cell.size.x / 2.0)) < 0.5, "%s is not centred in its column" % tile["id"])
+			# a glyph, not words (Tree-G A, 9 Oct): the glyph drawn, the cost chip on the lane, no words on the tile
+			_check(tile["glyph"].texture != null and tile["name"].text == "" and not tile["name"].visible, "%s shows words, or no glyph" % tile["id"])
+			var chip := Rect2(tile["more"].position, tile["more"].size)
+			_check(tile["more"].visible and box.grow(10).encloses(chip) and tile["more"].text != "", "%s's cost chip is off its lane: %s" % [tile["id"], str(chip)])
 			for other in rects:
 				_check(not rc.intersects(other), "tiles overlap in lane %d: %s and %s" % [k, str(rc), str(other)])
 			rects.append(rc)
@@ -2194,7 +2202,8 @@ func _element_checks(main) -> void:
 	main.refresh()
 	# a node alone in its column (the capstone, most trees) spans both rows
 	var cap_tile: Button = bk.tile_for("The door/10")
-	_check(cap_tile != null and cap_tile.size.y > bk.TILE_H * 1.5, "the capstone's tile does not span the lane")
+	var lane_mid: float = bk.lane_y(2) + bk.LANE_H / 2.0
+	_check(cap_tile != null and is_equal_approx(cap_tile.rotation_degrees, 45.0) and absf(cap_tile.position.y + cap_tile.size.y / 2.0 - lane_mid) < 1.0, "the capstone's diamond is not centred on its lane")
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
 	for b in Data.TREES:
@@ -2296,7 +2305,7 @@ func _capstone_checks(main) -> void:
 		for n in lane["tiles"]:
 			if n["button"].visible and n["id"] == cap_id:
 				cap_tile = n
-	_check(cap_tile != null and cap_tile["name"].text.begins_with("◆◆ ") and cap_tile["button"].size.y > main._barracks.TILE_H * 1.5 and cap_tile["effect"].text != "", "the capstone's tile is off: %s" % (cap_tile["name"].text if cap_tile != null else "none"))
+	_check(cap_tile != null and cap_tile["kind"] == "capstone" and is_equal_approx(cap_tile["button"].rotation_degrees, 45.0) and cap_tile["glyph"].texture != null, "the capstone's tile is off: %s" % (cap_tile["kind"] if cap_tile != null else "none"))
 	_check_fit(main, "Caravan (capstone)")
 	main._barracks._pick(cap_id)
 	main.refresh()
@@ -7427,6 +7436,23 @@ func _place_art_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	_check(zb.get_theme_constant("outline_size") == 0 or zart.visible, "a tab without art keeps the art tab's outline")
+	# the Clinic's and the Fence's bands read their own places (art/places/the_clinic.png, the_fence.png), the Map's its own
+	_check(main._fence._band._seed == hash("The Fence") and main._clinic._band._seed == hash("The Clinic"), "the Fence's or the Clinic's band does not name its place for its art")
+	_check(main._missions._atlas._band._seed == hash("the map"), "the Map's band does not name its place for its art")
+	# with the Fence's art painted, its face still reads clear (the backdrop sits under it, 9 Oct: the Legion's first run with the art)
+	var had_fence = UI._places.get("the_fence", null)
+	UI._places["the_fence"] = tex
+	main._fence._band._seed = 0
+	main._fence._band.set_site("The Fence")
+	main.show_room(main.MARKET)
+	main.refresh()
+	_check(main._fence._band.has_art() and main._fence.face_clear() and main._fence._band.get_child(0) == main._fence._band._art, "the Fence's painted band sits over its face, or isn't shown")
+	if had_fence == null:
+		UI._places.erase("the_fence")
+	else:
+		UI._places["the_fence"] = had_fence
+	main._fence._band._seed = 0
+	main._fence._band.set_site("The Fence")
 
 
 func _yard_checks(main) -> void:

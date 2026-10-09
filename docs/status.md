@@ -2542,6 +2542,41 @@ Bench. *The first place art* (Matt, 688×296, the generator's limit): `art/place
 crisp when scaled up. Seen once locally and not since (two clean runs after): the Manager's Pen and the
 Lorry's Load notes checks reading double or single - a notes-doubling flake to chase in the balance pass.
 
+**The balance pass (9 Oct, the twenty-fifth to twenty-ninth reads, five a build from the twenty-eighth).** Seven
+red on the twenty-fifth; Matt's calls, a pass each: the bot saves for the Radio's Lorry watch and stops
+re-broadcasting a site whose words it cleared (a plain Drifter looped 270 times, never bought the pick, never
+beat the lorry); the Drifter's −15% max HP went, then its +15% damage to +5% (with its HP back it was first to the
+Bank at 0.6 h); the Poacher's −10% max HP went; the Paramedic +10% damage; the Scrapper's loot +15% to +10% and
+its scrap band to 8; bleed's early tree lifted (Sharpened conv 35, Butcher's to +20% bleed, An edge 25, Deep 20)
+and its keystone and capstone two points under their column (`cost_less`, Data.base_cost); frost's capstone
+one under; fire's A can of it 30 to 20 (the smoke's fire total 70%). The summary: time-outs merge only where
+read, the Clock row green on every pass (every build under 1%). *The twenty-ninth (the last before the
+playtest):* green on loot, quantity, cash, depth pace, the ladders, the clock, scrap, no reds; the element
+builds' band 1.1-1.7 h. Red: the classes' band 1.3-3.0 h (the plain Poacher's median 3.0, its five reads
+1.4-4.1); the keystone (the bleed Doorman 3.1 h, the poison Poacher 2.2); the capstone (the frost Poacher 5.5);
+the lorry (the plain Poacher 21.7 h, never on two of five; the plain Drifter never on two of five at +5%).
+The Poacher was not touched on the last pass and read 1.8 h and green on the lorry the pass before: the plain
+builds swing more than the changes move them. *Wounds and deaths* wait on Matt's playtest of this build
+(Matt: "so much has changed that it's not worth looking at my previous save"): the old save's 7 in 116 is
+retired and both rows read "waiting on the playtest", an accepted red till then. *Open for the pass after the
+playtest:* the plain Poacher's and Drifter's lorry and the bank band, the element keystones; the playtest's
+save fills wounds and deaths. Passes kept in `docs/balance/pass25`-`pass29`.
+
+**Training as glyphs, and the Clinic's, the Fence's and the Map's art (9 Oct, Tree-G A on the canvas).** Matt: the
+tree "is displaying boxes of text rather than small boxes with a glyph". A node is a 44 px tile with a line glyph
+for its effect (`node_glyphs.gd`: SVG drawn by the engine, cached, tinted; damage, armour, HP, each element, a
+bag, a search, the clock...; a star where none fits), centred in its column (`node_rect`): a notable round, a
+keystone a diamond (the button turned 45°), the capstone a bigger diamond on its lane; trained filled in the
+tree's tone, trainable white, locked dim, the picked one ringed white; the cost a chip beside its corner (a tick
+once trained), a joint's half ⇄ at its left; two faint rails a lane. The words are the panel's. The drawer's and
+the shelf's cards keep their look (`_style_card`). The Clinic's and the Fence's bands read `the_clinic.png` and
+`the_fence.png`, the Map's `the_map.png` (all painted, the manifest's last three jobs); the face's check skips
+the band's backdrop. *The smoke:* a glyph and no words on every node, centred in its column, its cost chip on
+the lane, the diamonds' true extent in the overlap check, the capstone centred on its lane; the bands' places
+and the Fence's face clear over painted art. The reviewer's catches: the drawer's cards had changed look, the ⇄
+mark and the diamonds' extent weren't in the checks; fixed. The Legion's first run with the art caught the face
+check counting the backdrop; fixed with a check.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

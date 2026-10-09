@@ -204,6 +204,11 @@ func set_site(site: String) -> void:
 		queue_redraw()
 
 
+## The painted art and its shade: the band's backdrop, under everything (a face, the words) - not something on it.
+func is_backdrop(c: Node) -> bool:
+	return c == _art or c == _art_fade
+
+
 ## For the tests: the painted art showing, or the skyline.
 func has_art() -> bool:
 	return _art.visible
