@@ -1243,14 +1243,14 @@ const ELEMENT_TREES := [
 	]},
 	{"name": "Blades", "element": "bleed", "nodes": [
 		{"name": "Stanley knife", "col": 0, "row": 0, "effect": "conv_bleed_pct", "value": 30},
-		{"name": "An edge", "col": 0, "row": 1, "effect": "bleed_pct", "value": 10},
-		{"name": "Sharpened", "col": 1, "row": 0, "effect": "conv_bleed_pct", "value": 15},
+		{"name": "An edge", "col": 0, "row": 1, "effect": "bleed_pct", "value": 25},          # 10 to 25 (the twenty-fifth read): bleed meets the town's 20% resist on the way to the Bank, fire and poison don't
+		{"name": "Sharpened", "col": 1, "row": 0, "effect": "conv_bleed_pct", "value": 35},     # 15 to 35, as every element's second conversion (the twenty-fifth read: bleed the slowest to the Bank, 2.6 h against fire's 0.7)
 		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "+30% bleed; bleeds last twice as long"},
-		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 12},
+		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 20},             # 12 to 20, the same
 		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed"},
 		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "words": "Bleeds don't fade until they're down, and stack to three"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
-		{"name": "Butcher's", "col": 3, "row": 1, "effect": "conv_bleed_pct", "value": 20},
+		{"name": "Butcher's", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20},          # was conv 20: the conversion moved up the tree to Sharpened
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
 		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "words": "A bleed carries to the next, and bleeds half again as hard"},
 	]},
@@ -1511,8 +1511,8 @@ const CLASSES := [
 		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
 	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity",
 		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
-	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace; −15% max HP",
-		"damage": 1.15, "contact": -1, "pace": 1.1, "hp": 0.85},     # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
+	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace",
+		"damage": 1.15, "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]
 
 

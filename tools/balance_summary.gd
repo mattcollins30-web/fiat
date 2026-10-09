@@ -24,6 +24,7 @@ const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against p
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
 const TIMEOUTS := 0.05            # runs out of time, the merged builds (9 Oct, docs/design/timers.md): under one in twenty at the sites the bot picks
+const SCRAP_TOP_OF := {"Scrapper": 8.0}   # the Scrapper earns scrap by design (Matt, 9 Oct: "raise its band to 8"); every other class tops at SCRAP[1]
 const WOUNDS := [0.05, 0.30]    # share of runs ending wounded, the merged builds (8 Oct: 0.10-0.25 was a player's close calls; the bot at 0.88 with a kit past its sites reads 2-27% across the builds, the two that run most at the top - Matt's save judges it once it carries wounded_total)
 const MATT_WOUNDS := [-1, 0]    # Matt's save: runs ended wounded, runs (wounded_total / runs_total, saved from 8 Oct; -1 until a save carries it)
 const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
@@ -240,7 +241,7 @@ func _init() -> void:
 			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded, the merged builds" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
 	# the clock: runs out of time at the sites the bot picks (reads before 9 Oct carry no timeouts)
-	if not full.is_empty() and full[0].has("timeouts"):
+	if not full.is_empty() and full.all(func(b): return b.has("timeouts")):
 		var off: Array = []
 		var shares: Array = []
 		for b in full:
@@ -258,9 +259,9 @@ func _init() -> void:
 			var per_h: float = float(b.get("scrap_per_h", float(b["scrap_end"]) / maxf(0.01, float(b.get("elapsed_h", b["hours"])))))
 			var crafts: float = (per_h / dearest) if dearest > 0.0 else 0.0
 			b["_crafts"] = crafts
-			if crafts < SCRAP[0] or crafts > SCRAP[1]:
+			if crafts < SCRAP[0] or crafts > float(SCRAP_TOP_OF.get(str(b.get("class", "")), SCRAP[1])):
 				off.append("%s %.1f crafts/h" % [b["build"], crafts])
-		rows.append(["Scrap economy", "scrap earned an hour over the first sixteen worth %.0f to %.0f of the dearest craft" % [SCRAP[0], SCRAP[1]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+		rows.append(["Scrap economy", "scrap earned an hour over the first sixteen worth %.1f to %.0f of the dearest craft (the Scrapper to %.0f)" % [SCRAP[0], SCRAP[1], SCRAP_TOP_OF["Scrapper"]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
 	var reds := 0
 	for r in rows:
@@ -378,6 +379,8 @@ func _merged(gs: Array) -> Dictionary:
 			total += float(g.get(key, 0))
 		m[key] = snappedf(total / gs.size(), 0.01)
 	for key in ["runs", "deaths", "wounded_runs", "timeouts", "dry_timeouts", "bails", "moves", "lorries"]:
+		if not gs[0].has(key) and key in ["timeouts", "dry_timeouts"]:
+			continue                      # a read from before the clock (9 Oct) lacks them: the Clock row reads the lack
 		var n := 0
 		for g in gs:
 			n += int(g.get(key, 0))

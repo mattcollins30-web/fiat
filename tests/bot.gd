@@ -25,6 +25,7 @@ var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 var _rerolls := {}             # "item id/stat" -> re-rolls bought at the bench (capped: REROLLS_MAX)
 const REROLLS_MAX := 3
+var _cleared_at := {}           # tier -> the depth its words were last cleared at: none put back there
 const AWAY_SHARE := 1.0 / 3.0  # the share of the yard's time the bot counts as away (Overtime, the Generator's rank)
 const AWAY_EVERY := 3.0 * 3600.0
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
@@ -211,12 +212,15 @@ func _endgame(sim) -> void:
 		# the word it put on changed that site's key so the step's pick read it all again - two picks a run)
 		var t: int = last_tier if last_tier >= 0 and sim.tier_open(last_tier) else pick_tier(sim)
 		for key in ["broadcast", "tune"]:
+			if _cleared_at.get(t, -1) == sim.depth[t] or sim.survival(t) < PUSH:
+				break                     # words that had to be cleared at this depth aren't put back on it (the twenty-fifth read: a plain Drifter broadcast, cleared and broadcast again on the services 270 times)
 			if sim.can_word_craft(t, key) and sim.notes - sim.word_craft_cost(t, key) * 2 >= _notes_kept(sim):
 				var cost: int = sim.word_craft_cost(t, key)
 				sim.word_craft(t, key)
 				bought.append([sim.elapsed, "%s on tier %d for %d notes" % [key, t, cost]])
 		if not sim.words[t].is_empty() and sim.can_word_craft(t, "clear") and sim.survival(t) < 0.5:
 			sim.word_craft(t, "clear")
+			_cleared_at[t] = sim.depth[t]
 			bought.append([sim.elapsed, "cleared tier %d" % t])
 		if sim.can_insure(t) and sim.cash >= sim.insure_cost(t) * 3 and sim.survival(t) < 0.95:
 			sim.set_insure(true)
@@ -534,7 +538,18 @@ func pick_tier(sim) -> int:
 ## sixteenth read: a wounded Poacher spent every run's take on affixes, never had the treatment's price when
 ## the next run came, and ran the services hurt and wounded for seven hours at £3k a run), and £2,000.
 func _reserve(sim) -> float:
-	return sim.treat_cost() * 3.0            # nothing when whole: the bench keeps its own £2,000 floor
+	return sim.treat_cost() * 3.0 + _lorry_watch_saving(sim)     # nothing when whole: the bench keeps its own £2,000 floor
+
+
+## The Radio's Lorry watch (the convoy two depths shallower) saved for while the lorry stands and its column is
+## open (the twenty-fifth read, 9 Oct: every build that beat the lorry bought it first, at £45-85k; the plain
+## Drifter's bench spent every run's take as it came, never held the price, never bought it, and sat under the
+## convoy's depth for 32 hours). A player who knows the lorry is the ending saves for the pick that brings it near.
+const LORRY_WATCH_COL := 3
+func _lorry_watch_saving(sim) -> float:
+	if sim.lorry_done or not sim.campaign_done() or LORRY_WATCH_COL >= sim.yard_cols() or sim.yard_side("radio", LORRY_WATCH_COL) != "":
+		return 0.0
+	return float(sim.yard_pick_cost("radio", LORRY_WATCH_COL)) + 500.0
 
 
 ## The notes kept back for the lorry once the services stand at its depth (the nineteenth read: three yards read the
@@ -617,6 +632,11 @@ func _train_tree(sim) -> void:
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
 const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [2], "lookout": [], "kennel": [3]}   # Overtime over Battery: away a third of the time, it's ~8% on cash
 func _build_yard(sim) -> void:
+	if _lorry_watch_saving(sim) > 0.0 and sim.cash >= _lorry_watch_saving(sim) and sim.can_yard_pick("radio", LORRY_WATCH_COL, "a"):
+		var cost: int = sim.yard_pick_cost("radio", LORRY_WATCH_COL)
+		if sim.yard_pick("radio", LORRY_WATCH_COL, "a"):
+			bought.append([sim.elapsed, "radio lorry_watch for £%d" % cost])
+		return
 	var best_key := ""
 	var best_col := -1
 	var best_cost := 1 << 40
@@ -629,13 +649,13 @@ func _build_yard(sim) -> void:
 				best_key = b["key"]
 				best_col = c
 				best_cost = sim.yard_pick_cost(b["key"], c)
-	if best_key != "" and sim.cash >= best_cost + 500:
+	if best_key != "" and sim.cash >= best_cost + 500 and sim.cash - best_cost >= _lorry_watch_saving(sim):
 		var side: String = "b" if best_col in PICK_B.get(best_key, []) else "a"
 		if sim.yard_pick(best_key, best_col, side):
 			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if side == "a" else 1]["id"], best_cost]])
 		return
 	for b in Data.YARD:
-		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5:
+		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5 and sim.cash - sim.yard_rank_cost(b["key"]) >= _lorry_watch_saving(sim):
 			var cost: int = sim.yard_rank_cost(b["key"])
 			if sim.buy_yard_rank(b["key"]):
 				bought.append([sim.elapsed, "%s rank %d for £%d" % [b["key"], sim.yard_rank(b["key"]), cost]])
