@@ -205,7 +205,7 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	print("Fiat gate read: %.0f h, %s" % [hours, build])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
-		"runs": 0, "deaths": 0, "wounded_runs": 0, "depth_clears": [], "bought_bench": -1.0}
+		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0}
 	var next_mark := 1800.0
 	var mark_runs := 0
 	var mark_cash := 0.0
@@ -228,6 +228,8 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 			g["runs"] += 1
 			mark_runs += 1
 			var r = sim.last_report
+			if bool(r.get("timed_out", false)):
+				g["timeouts"] += 1                # out of time (9 Oct): the clock's gate
 			if sim.operators_lost > lost_before:
 				g["deaths"] += 1
 			elif bool(r.get("wounded", false)):
@@ -321,6 +323,7 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	g["kit"] = _kit(sim)
 	g["bails"] = bot.bails
+	g["dry_timeouts"] = int(sim.prof.get("dry_timeouts", 0))     # the odds' runs lost to the clock, for the read
 	# the endgame's two (7 Oct): the lorry's hour and the moves, and the ladders' spread - the deepest depth the
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0

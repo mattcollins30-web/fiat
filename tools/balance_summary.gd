@@ -23,6 +23,7 @@ const TOP_SHARE_PLAIN := 0.008
 const FINDS_RATIO := [1.20, 1.30]   # finds a search at +25% quantity, against plain
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income (the ladder pays by depth, so a fixed figure says nothing at depth 15)
 const DEPTH_FROM := 4.0         # depths an hour from this hour to the end: at least one
+const TIMEOUTS := 0.05            # runs out of time, the merged builds (9 Oct, docs/design/timers.md): under one in twenty at the sites the bot picks
 const WOUNDS := [0.05, 0.30]    # share of runs ending wounded, the merged builds (8 Oct: 0.10-0.25 was a player's close calls; the bot at 0.88 with a kit past its sites reads 2-27% across the builds, the two that run most at the top - Matt's save judges it once it carries wounded_total)
 const MATT_WOUNDS := [-1, 0]    # Matt's save: runs ended wounded, runs (wounded_total / runs_total, saved from 8 Oct; -1 until a save carries it)
 const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth (in hand is the bot's reserve, not the economy); the builds that run most search most, a tenfold spread (a melee Doorman at 0.6-0.9, a poison Poacher at 4.8)
@@ -238,6 +239,17 @@ func _init() -> void:
 		else:
 			rows.append(["Wounds", "%.0f to %.0f%% of runs end wounded, the merged builds" % [WOUNDS[0] * 100.0, WOUNDS[1] * 100.0], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
 
+	# the clock: runs out of time at the sites the bot picks (reads before 9 Oct carry no timeouts)
+	if not full.is_empty() and full[0].has("timeouts"):
+		var off: Array = []
+		var shares: Array = []
+		for b in full:
+			var share: float = (float(b["timeouts"]) / float(b["runs"])) if int(b["runs"]) > 0 else 0.0
+			shares.append("%s %.1f%%" % [b["build"], share * 100.0])
+			if share >= TIMEOUTS:
+				off.append("%s %.1f%% (%d of %d)" % [b["build"], share * 100.0, int(b["timeouts"]), int(b["runs"])])
+		rows.append(["Clock", "under %.0f%% of runs out of time, the merged builds" % (TIMEOUTS * 100.0), "; ".join(off) if not off.is_empty() else "every build under: " + ", ".join(shares), off.is_empty()])
+
 	# scrap economy: earned an hour against the dearest craft (older reads carry no scrap_per_h: in hand over the hours)
 	if not full.is_empty():
 		var off: Array = []
@@ -365,7 +377,7 @@ func _merged(gs: Array) -> Dictionary:
 		for g in gs:
 			total += float(g.get(key, 0))
 		m[key] = snappedf(total / gs.size(), 0.01)
-	for key in ["runs", "deaths", "wounded_runs", "bails", "moves", "lorries"]:
+	for key in ["runs", "deaths", "wounded_runs", "timeouts", "dry_timeouts", "bails", "moves", "lorries"]:
 		var n := 0
 		for g in gs:
 			n += int(g.get(key, 0))

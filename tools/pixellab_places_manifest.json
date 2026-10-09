@@ -1,0 +1,262 @@
+{
+ "_readme": [
+  "FIAT PLACES AND GAPS (9 Oct): the deeds (128x128, art/items/the_deeds.png), the Stats rail glyph (64x64, art/ui/stats.png), the three zones' tabs and the nine sites' bands (688x296, art/places/<slug>.png, UI.place_slug of the name). One file a job, written straight to its live name ('single').",
+  "Places follow Matt's two first pieces: the zones take art/places/the_estate.png as their style image, the sites art/places/ransacked_streets.png. Those two exist, so their jobs are skipped (a job whose file exists is skipped); --force would redo them - don't.",
+  "The game shows a place's art covering its box from the centre (cut top and bottom), shaded under the words; a zone tab is a thin strip from the middle. A missing place keeps the drawn skyline.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_places_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <slug> ++ --force)."
+ ],
+ "jobs": [
+  {
+   "out": "art/items/the_deeds.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a bundle of old property deeds: thick folded parchment documents tied with faded pink legal ribbon, a red wax seal cracked at the edge, a council stamp in blue ink, corners dog-eared and water-stained, a rusted paperclip holding a typed schedule to the front, seen from above at a slight angle. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette with the ribbon and the seal the only warm colour, worn and handled, nothing new. Nothing else in the frame, no hands, no person, no readable text, no logos, a plain dark neutral background.",
+   "width": 128,
+   "height": 128,
+   "no_background": true,
+   "seed": 75100,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the deeds, a paper 2x2 cells"
+  },
+  {
+   "out": "art/ui/stats.png",
+   "endpoint": "generate-image-v2",
+   "description": "A realistic painted pixel-art still-life of a battered clipboard with a dog-eared record sheet clipped to it, a hand-drawn bar chart and a column of tally marks in pencil, a chewed pencil tucked under the clip, a coffee ring on the corner, front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and handled, nothing new. Nothing else in the frame, no hands, no person, no readable text, no logos, a plain dark neutral background.",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 91100,
+   "single": true,
+   "style_image": "res://art/reference/items/ref_01.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the rail: Stats"
+  },
+  {
+   "out": "art/places/the_estate.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama of a run-down 1970s British council estate at dusk: three grey concrete tower blocks with deck-access walkways, rows of pebble-dashed terraces in front, a burnt-out car, sodium streetlights just coming on, a few lit windows. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet, not busy; no people, no text. The skyline's interest sits in a band across the middle of the frame (it is shown as a thin strip cut from the middle); flat, even detail side to side, darker at the bottom edge.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 93002,
+   "single": true,
+   "style_image": "res://art/places/the_estate.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the zone tab (372x56, cut from the middle)"
+  },
+  {
+   "out": "art/places/the_town.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama of a dead British market town at dusk: a Victorian high street of brick and stone shopfronts with dark windows, a church spire, a 1980s shopping centre's flat concrete roof and car-park ramp, the frame of a big wheel from a closed pleasure park on the edge of town, a stone-fronted bank on the corner with steel shutters, a few lit windows. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet, not busy; no people, no text. The skyline's interest sits in a band across the middle of the frame (it is shown as a thin strip cut from the middle); flat, even detail side to side, darker at the bottom edge.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 93003,
+   "single": true,
+   "style_image": "res://art/places/the_estate.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the zone tab (372x56, cut from the middle)"
+  },
+  {
+   "out": "art/places/the_city.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide side-on panorama of the edge of a dead British city at dusk: a motorway on concrete stilts with stopped lorries along it, a services building with a flat canopy, a big 1970s hospital tower block with a few lit windows, an army barracks behind a chain-link fence and a watchtower, cranes standing still over the skyline beyond. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet, not busy; no people, no text. The skyline's interest sits in a band across the middle of the frame (it is shown as a thin strip cut from the middle); flat, even detail side to side, darker at the bottom edge.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 93004,
+   "single": true,
+   "style_image": "res://art/places/the_estate.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the zone tab (372x56, cut from the middle)"
+  },
+  {
+   "out": "art/places/ransacked_streets.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide street-level view down a ransacked British terraced street after a collapse: front doors kicked in, curtains torn out, a mattress and bin bags in the road, a looted corner shop with its shutter half-up, a car on its rims, a council tower block behind the rooftops, overcast evening sky. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94005,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_parade.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide street-level view of a small 1960s British shopping parade after a collapse: a row of six shops under a run of flats, a chip shop with its windows boarded, a bookmaker with its shutter still down, a launderette with a mattress and blankets behind the glass, an off-licence emptied and open, a post office with its safe door hanging, a bus shelter with no glass, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94006,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_retail_park.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view across an empty British out-of-town retail park after a collapse: big corrugated sheds with faded colour bands where the signs were, a DIY warehouse with its roller door forced, a carpet warehouse with rolls of carpet stacked in the loading bay and a crew's van parked outside, a supermarket with dark freezer-lit windows, a petrol station forecourt with stalls under the canopy, an empty car park with trolleys on their sides, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94007,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_pleasure_park.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view of an abandoned British seaside-style pleasure park after a collapse: a big wheel standing against the sky with one car lit, a ghost train facade with its painted front peeling, an arcade lit from inside by a generator, a log flume full of still dark water with barrels around it, a fence of corrugated sheets around the edge, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94008,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/shopping_centre.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide interior view of a 1980s British two-floor shopping centre after a collapse: dead escalators used as stairs, a food court of upturned tables, a jeweller's with its glass smashed, an upper-floor gallery hung with washing and tarpaulins where people camp, skylights grey with dusk, a security office window glowing faintly, one or two lamps. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94009,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_bank.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide street-level view of a stone-fronted British high-street bank branch after a collapse, held by a crew: steel shutters down over the windows, a cash machine with its screen smashed, sandbags and a pallet barricade at the door, a generator humming in the side alley with a cable running inside, one lit window upstairs behind the shutters, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94010,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_services.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view of a British motorway services after a collapse: a long flat-roofed services building with its canopy, a lorry park turned into a town with trailers made into houses and cabs into stalls, washing lines between trailers, oil drums burning low, CB aerials on the cabs, the motorway's empty carriageway behind on its embankment, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94011,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_hospital.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view of a big 1970s British general hospital after a collapse: a concrete tower block with most windows dark and a few lit on the third floor, the A&E entrance turned into a gate with a barrier and sandbags, ambulances parked in a row with their lights off, a helipad on the roof with a tarp over it, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94012,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  },
+  {
+   "out": "art/places/the_barracks.png",
+   "endpoint": "generate-image-v2",
+   "description": "Pixel art, wide view of a British army depot after a collapse: a gatehouse with its barrier up and its windows dark, a parade ground with painted lines, low brick barrack blocks, a big storage shed with its doors half open and a military lorry inside with its engine running and exhaust in the cold air, chain-link and razor wire, a watchtower, overcast evening. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange windows or lamps. The left third and the bottom quarter stay darker and lower in detail (the title and the timer sit there); the interest is in the centre. No people, no text, no readable signage or lettering.",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94013,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the site's band: the Runs card (501x200) and behind the run's clock (608x200)"
+  }
+ ]
+}
