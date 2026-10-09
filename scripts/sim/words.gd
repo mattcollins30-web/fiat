@@ -563,6 +563,7 @@ const AWAY := {
 	"lost": " One runner didn't come back.",
 	"prices": " The Fence's prices are up %d%% on when the Yard opened.",
 }
+const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay.", "Don't ask who for."]
 const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
 const SKY := {
 	"night": "night", "day": "day", "rain": "raining", "fog": "fog down", "clear": "clear",

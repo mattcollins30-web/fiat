@@ -59,12 +59,17 @@ var _last_head: Label
 var _last                          # the last thing the word got you (item_head.gd)
 var _last_none: Label
 var _deals: Panel                  # the Fence's contracts and the mate, in the grid's place
-var _deal_rows: Array = []         # per contract: {title, pay, have, hand, pass}
+var _deal_rows: Array = []         # per contract: {panel, tag, title, have, chip, pay, pass, hand}
+var _deal_head: Label
+var _deal_pass: Label
 var _mate_title: Label
 var _mate_line: Label
-var _mate_note: Label
 var _mate_buy: Button
-const DEAL_H := 150
+const DEALS_Y := 50
+const DEAL_H := 86
+const DEAL_GAP := 6
+const DEAL_PAY_W := 190
+const DEAL_TEXT_W := 470
 var _shelf                         # the vendor's grid
 var _stash                         # your grid
 var _side: Panel
@@ -145,27 +150,35 @@ func _init() -> void:
 	_word.add_child(_last)
 	_last_none = UI.label(_word, Rect2(PAD, LAST_Y, GRID_W - 2 * PAD, 28), "Nothing yet. Pay, and whatever he gets you lands in the stash.", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_word_note = UI.label(_word, Rect2(PAD, GRID_H - PAD - 28, GRID_W - 2 * PAD, 28), "Rolled at the best tier you have opened, never Common. One in fifty is a unique of the kind.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	# the contracts: three cards and the mate's, where the grid would be
+	# the contracts (Deals-A, 9 Oct): a strip, a row a contract - five with the Fence's Orders - and the mate's
 	_deals = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_deals.visible = false
-	for k in range(Data.CONTRACTS_OPEN):
-		var y := PAD + k * DEAL_H
+	_deal_head = UI.label(_deals, Rect2(PAD, 10, 360, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_deal_pass = UI.label(_deals, Rect2(PAD + 370, 10, GRID_W - 2 * PAD - 370, 32), "", "Regular", Pal.CELL_TEXT, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	for k in range(Data.CONTRACTS_MAX):
+		var y: float = DEALS_Y + k * (DEAL_H + DEAL_GAP)
 		var r := {}
-		r["title"] = UI.label(_deals, Rect2(PAD, y, GRID_W - 2 * PAD, 36), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["pay"] = UI.label(_deals, Rect2(PAD, y + 38, GRID_W - 2 * PAD - 420, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["have"] = UI.label(_deals, Rect2(PAD, y + 66, GRID_W - 2 * PAD - 420, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["hand"] = UI.button(_deals, Rect2(GRID_W - PAD - 200, y + 38, 200, Pal.BUTTON_H), true)
-		r["hand"].text = "Hand in"
-		r["hand"].pressed.connect(_hand_in.bind(k))
-		r["pass"] = UI.button(_deals, Rect2(GRID_W - PAD - 200 - 12 - 180, y + 38, 180, Pal.BUTTON_H), false)
+		r["panel"] = UI.panel(_deals, Rect2(PAD - 8, y, GRID_W - 2 * PAD + 16, DEAL_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+		var p: Panel = r["panel"]
+		r["tag"] = UI.label(p, Rect2(10, 4, DEAL_TEXT_W, 23), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["title"] = UI.label(p, Rect2(10, 24, DEAL_TEXT_W, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["have"] = UI.label(p, Rect2(10, 54, DEAL_TEXT_W, 24), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["chip"] = UI.panel(p, Rect2(DEAL_TEXT_W + 20, 8, DEAL_PAY_W, 34), UI.box(Pal.BUTTON, 6, 1, Pal.CARD_LINE))
+		r["pay"] = UI.label(r["chip"], Rect2(6, 4, DEAL_PAY_W - 12, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
+		r["pass"] = UI.button(p, Rect2(DEAL_TEXT_W + 20, 46, DEAL_PAY_W, 34), false)
+		r["pass"].add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
 		r["pass"].text = "Turn it down"
 		r["pass"].pressed.connect(_pass.bind(k))
+		r["hand"] = UI.button(p, Rect2(DEAL_TEXT_W + 28 + DEAL_PAY_W, 8, GRID_W - 2 * PAD + 16 - DEAL_TEXT_W - 38 - DEAL_PAY_W, DEAL_H - 16), true)
+		r["hand"].add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+		r["hand"].text = "Hand in"
+		r["hand"].pressed.connect(_hand_in.bind(k))
 		_deal_rows.append(r)
-	var my := PAD + Data.CONTRACTS_OPEN * DEAL_H
-	_mate_title = UI.label(_deals, Rect2(PAD, my, GRID_W - 2 * PAD, 36), "The Fence's mate", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_mate_line = UI.label(_deals, Rect2(PAD, my + 38, GRID_W - 2 * PAD - 270, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_mate_note = UI.label(_deals, Rect2(PAD, my + 66, GRID_W - 2 * PAD - 270, 28), "A different one every %d runs. Notes, not cash." % Data.MATE_RUNS, "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_mate_buy = UI.button(_deals, Rect2(GRID_W - PAD - 250, my + 38, 250, Pal.BUTTON_H), true)
+	var my: float = DEALS_Y + Data.CONTRACTS_MAX * (DEAL_H + DEAL_GAP)
+	_mate_title = UI.label(_deals, Rect2(PAD, my + 4, 220, 30), "The Fence's mate", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_mate_line = UI.label(_deals, Rect2(PAD + 226, my + 7, GRID_W - 2 * PAD - 226 - 230, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_mate_buy = UI.button(_deals, Rect2(GRID_W - PAD - 220, my, 220, 40), true)
+	_mate_buy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
 	_mate_buy.pressed.connect(_buy_mate)
 	_shelf = Inventory.new()
 	_shelf.position = Vector2(GRID_X, 0)
@@ -294,16 +307,11 @@ func show_state(s) -> void:
 	UI.style_button(_tabs[1], showing == "stash")
 	if kind == "fence":
 		var ready := 0
-		var unique_pay := 0
 		for k in range(sim.contracts.size()):
 			if sim.can_hand_in(k):
 				ready += 1
-			elif sim.contracts[k].get("pay", "") == "unique":
-				unique_pay += 1
 		if ready > 0:
 			_tabs[2].text = "Contracts ✓%d" % ready
-		elif unique_pay > 0:
-			_tabs[2].text = "Contracts ★"
 		else:
 			_tab_text(_tabs[2], ["Contracts (%d)" % sim.contracts.size(), "Contracts"])
 		UI.style_button(_tabs[2], showing == "contracts", "good" if (ready > 0 and showing != "contracts") else "")
@@ -315,33 +323,71 @@ func show_state(s) -> void:
 	_show_panel()
 
 
-## The Fence's contracts: what's wanted, what it pays, what you have.
+## The Fence's contracts: what's wanted, what it pays, what you have, what turning one down costs.
 func _show_deals() -> void:
-	for k in range(Data.CONTRACTS_OPEN):
+	var ready := 0
+	for k in range(sim.contracts.size()):
+		if sim.can_hand_in(k):
+			ready += 1
+	UI.fit(_deal_head, ["%d open · %d ready" % [sim.contracts.size(), ready], "%d · %d ready" % [sim.contracts.size(), ready]])
+	var pc: int = sim.pass_cost()
+	UI.fit(_deal_pass, ["A turn-down this run: free; then %d, %d, %d notes" % [Data.CONTRACT_PASS_NOTES, Data.CONTRACT_PASS_NOTES * 2, Data.CONTRACT_PASS_NOTES * 4], "A turn-down: free", "free"] if pc == 0 else ["The next turn-down: %d notes; free again after a run" % pc, "Next turn-down: %d notes" % pc, "%d notes" % pc])
+	_deal_pass.add_theme_color_override("font_color", Pal.GOOD if pc == 0 else Pal.TEXT_2)
+	for k in range(Data.CONTRACTS_MAX):
 		var r: Dictionary = _deal_rows[k]
-		if k >= sim.contracts.size():
-			for key in ["title", "pay", "have"]:
-				r[key].text = ""
-			r["hand"].visible = false
-			r["pass"].visible = false
+		var on: bool = k < sim.contracts.size()
+		r["panel"].visible = on
+		if not on:
 			continue
 		var c: Dictionary = sim.contracts[k]
-		UI.fit(r["title"], [_cap(Words.CONTRACT_ASKS[(k + sim.runs_total) % Words.CONTRACT_ASKS.size()] % sim.contract_words(c)), _cap(sim.contract_words(c))])
-		r["pay"].text = "Pays %s" % sim.contract_pay_words(c) if c["pay"] != "unique" else "Pays with %s" % c["unique"]
+		var can: bool = sim.can_hand_in(k)
+		(r["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if can else Pal.CARD_LINE
+		var kind_n: String = str(Data.CONTRACT_KIND_NAMES.get(c.get("kind", "gear"), "Gear")).to_upper()
 		var have: int = sim.contract_items(c).size()
-		r["have"].text = "You have %d of %d in the stash" % [have, int(c["count"])] if have < int(c["count"]) else "Ready: the cheapest %d that fit go" % int(c["count"])
-		r["hand"].visible = true
-		r["hand"].disabled = not sim.can_hand_in(k)
-		r["pass"].visible = true
-		r["pass"].disabled = sim.on_mission()
+		var line: String = ("you have %d of %d" % [have, int(c["count"])]) if not can else "ready: the cheapest %d that fit go" % int(c["count"])
+		UI.fit(r["tag"], ["%s · %s" % [kind_n, line.to_upper()], kind_n])
+		r["tag"].add_theme_color_override("font_color", Pal.GOOD if can else Pal.TEXT_3)
+		var short_t: String = _cap(sim.contract_words(c))
+		if c.get("kind", "") == "affix":
+			var slot_n: String = "Gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"])
+			short_t = "%s · %s" % [slot_n, str(Items.affix_def(c["stat"]).get("short", c["stat"]))]
+		UI.fit(r["title"], [_cap(sim.contract_words(c)), short_t])
+		var said: String = Words.CONTRACT_ASKS[(k + sim.runs_total) % Words.CONTRACT_ASKS.size()] % sim.contract_words(c)
+		var forms: Array = [_cap(said)]
+		for t in Words.CONTRACT_ASKS:
+			forms.append(_cap(t % sim.contract_words(c)))      # a shorter line of his, whole, before none
+		for t in Words.CONTRACT_ASKS_SHORT:
+			forms.append(t)
+		UI.fit(r["have"], forms)
+		var colour: Color = _pay_colour(c)
+		UI.fit(r["pay"], [sim.contract_pay_words(c), sim.contract_pay_words(c).get_slice(" ", 0)])
+		r["pay"].add_theme_color_override("font_color", colour)
+		var sb := r["chip"].get_theme_stylebox("panel") as StyleBoxFlat
+		sb.bg_color = Color(colour, 0.13)
+		sb.border_color = Color(colour, 0.4)
+		r["hand"].disabled = not can
+		r["pass"].text = "Turn it down · free" if pc == 0 else "Turn it down · %d n" % pc
+		r["pass"].disabled = not sim.can_pass_contract(k)
 	if sim.mate.is_empty():
 		_mate_line.text = "Not about."
 		_mate_buy.visible = false
 	else:
-		UI.fit(_mate_line, ["%s, for %d notes. You have %d." % [sim.mate["unique"], int(sim.mate["notes"]), sim.notes], "%s: %d notes, you have %d" % [sim.mate["unique"], int(sim.mate["notes"]), sim.notes]])
+		UI.fit(_mate_line, ["%s, for %d notes. A new one every %d runs." % [sim.mate["unique"], int(sim.mate["notes"]), Data.MATE_RUNS], "%s, %d notes" % [sim.mate["unique"], int(sim.mate["notes"])], str(sim.mate["unique"])])
 		_mate_buy.visible = true
 		_mate_buy.text = "Buy for %d notes" % int(sim.mate["notes"])
 		_mate_buy.disabled = not sim.can_buy_mate()
+
+
+## A pay's colour: cash in gold, notes in the paper's, scrap grey, a salvage in its own.
+static func _pay_colour(c: Dictionary) -> Color:
+	match str(c["pay"]):
+		"cash":
+			return Pal.ACCENT
+		"notes":
+			return Color("c9b98f")
+		"salvage":
+			return {"copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}.get(str(c["salvage"]), Pal.TEXT_2)
+	return Pal.TEXT_2
 
 
 ## A tab's text: the first form that fits its width.
@@ -422,7 +468,8 @@ func _hand_in(k: int) -> void:
 
 
 func _pass(k: int) -> void:
-	sim.pass_contract(k)
+	if sim.pass_contract(k):
+		acted.emit()
 	_shown = ""
 	show_state(sim)
 
@@ -907,14 +954,12 @@ func text_nodes() -> Array:
 		else:
 			out.append(_last_none)
 	if showing == "contracts":
-		out.append_array([_mate_title, _mate_line, _mate_note])
+		out.append_array([_mate_title, _mate_line, _deal_head, _deal_pass])
 		if _mate_buy.visible:
 			out.append(_mate_buy)
 		for r in _deal_rows:
-			out.append_array([r["title"], r["pay"], r["have"]])
-			for b in [r["hand"], r["pass"]]:
-				if b.visible:
-					out.append(b)
+			if r["panel"].visible:
+				out.append_array([r["tag"], r["title"], r["pay"], r["have"], r["hand"], r["pass"]])
 	out.append_array(_left_lines)
 	out.append_array(_right_lines)
 	for b in _buttons:

@@ -1367,19 +1367,24 @@ const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
 const EVENT_CACHE_BENCH := 2        # the Bench level that opens a cache
 const EVENTS := ["convoy", "trapped", "cache"]
 
-## Contracts: the Fence wants so many of a slot at a rarity, and pays in
-## cash, in notes, or - now and then - with one of the loose uniques. Three
-## open at a time; a handed-in one is replaced. The Fence's mate sells a
-## loose unique for notes, a different one every MATE_RUNS runs.
+## Contracts (9 Oct, docs/design/contracts.md): the Fence wants gear - so many of a slot at a rarity, a deep
+## piece, one carrying a named affix - or papers or meds, and pays in currency only: cash sized to a run's
+## takings, notes and scrap by the deepest depth, or a salvage from a zone dug to SALVAGE_DEPTH. Three open
+## (five with the Fence's Orders); a handed-in one is replaced. The first turn-down after a run home is free,
+## then CONTRACT_PASS_NOTES doubling. The Fence's mate sells a loose unique for notes, a new one every MATE_RUNS.
 const CONTRACTS_OPEN := 3
+const CONTRACTS_MAX := 5
 const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Attachment"]
-const CONTRACT_CASH := 2.5         # times the items' sell price
-const CONTRACT_NOTES := 4          # a note a rarity a piece, times this
-const CONTRACT_UNIQUE_ODDS := 0.2  # a contract paying a unique: three rares
-## Contracts paying in craft materials (35): a third of the rest pay scrap by the handful, a socketable of
-## the zone's element, or a graded box of rounds for a gun you hold.
-const CONTRACT_SCRAP := 6          # scrap a rarity a piece, times this
-const CONTRACT_MATERIAL_ODDS := 0.34
+const CONTRACT_KINDS := {"gear": 0.5, "deep": 0.125, "affix": 0.125, "papers": 0.125, "meds": 0.125}
+const CONTRACT_KIND_NAMES := {"gear": "Gear", "deep": "Deep gear", "affix": "An affix", "papers": "Papers", "meds": "Meds"}
+const CONTRACT_PAYS := {"cash": 0.4, "notes": 0.25, "scrap": 0.2, "salvage": 0.15}
+const CONTRACT_CASH := 0.5         # a run's takings, times the ask's weight
+const CONTRACT_CASH_WEIGHT_MAX := 4.0   # a cash contract pays two runs' takings at most
+const CONTRACT_NOTES := 4          # notes, times the weight and (1 + the deepest depth / 5)
+const CONTRACT_SCRAP := 6          # scrap, the same
+const CONTRACT_DEEP_LESS := 3      # a deep piece: from the deepest site's level less this
+const CONTRACT_DEEP_FROM := 6      # and asked for only once that's this level or more
+const CONTRACT_PASS_NOTES := 5     # the second turn-down in a run; doubling after
 const MATE_RUNS := 5
 const MATE_NOTES := 400            # a unique from the mate, times the tier
 

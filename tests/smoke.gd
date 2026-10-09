@@ -2836,11 +2836,10 @@ func _contracts_checks(main) -> void:
 	_check(not sim.mate.is_empty() and sim.mate["notes"] > 0, "the Fence's mate has nothing: %s" % str(sim.mate))
 	for i in range(60):
 		var c: Dictionary = sim.roll_contract()
-		_check(c["count"] >= 1 and c["count"] <= 3 and c["rarity"] >= 1 and c["rarity"] <= 2, "a contract rolled outside its bounds: %s" % str(c))
-		_check(c["pay"] != "unique" or (c["count"] == 3 and c["rarity"] == 2 and c["unique"] != ""), "a unique contract is not three rares: %s" % str(c))
-		_check(c["pay"] == "unique" or c["amount"] > 0, "a contract pays nothing: %s" % str(c))
+		_check(c["count"] >= 1 and c["count"] <= 5 and c["rarity"] >= 1 and c["rarity"] <= 2, "a contract rolled outside its bounds: %s" % str(c))
+		_check(c["pay"] in Data.CONTRACT_PAYS and c["amount"] > 0, "a contract pays nothing, or not in currency: %s" % str(c))
 	# a cash contract: two uncommon helmets, hand in through the screen
-	sim.contracts[0] = {"slot": "Helmet", "rarity": 1, "count": 2, "pay": "cash", "amount": 500, "unique": ""}
+	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 500, "salvage": ""}
 	var cheap: Dictionary = sim._plain("Helmet", "Hard hat")
 	cheap["rarity"] = 1
 	cheap["value"] = 1
@@ -2868,25 +2867,14 @@ func _contracts_checks(main) -> void:
 	_check(sim.cash == cash0 + 500.0, "handing in did not pay £500")
 	_check(not sim.stash.has(cheap) and not sim.stash.has(mid) and sim.stash.has(common), "the wrong helmets went")
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN, "the handed-in contract was not replaced")
-	# notes, a unique, and the mate
-	sim.contracts[1] = {"slot": "Helmet", "rarity": 2, "count": 1, "pay": "notes", "amount": 12, "unique": ""}
+	# notes, and the mate
+	sim.contracts[1] = {"kind": "gear", "slot": "Helmet", "rarity": 2, "count": 1, "level": 0, "stat": "", "pay": "notes", "amount": 12, "salvage": ""}
 	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
 	rare["rarity"] = 2
 	sim.stash.append(rare)
 	var notes0: int = sim.notes
-	_check(sim.hand_in(1) and sim.notes == notes0 + 12, "a notes contract did not pay")
-	var loose := ""
-	for u in Data.UNIQUES:
-		if not u.get("boss", false):
-			loose = u["name"]
-			break
-	sim.contracts[2] = {"slot": "Armour", "rarity": 2, "count": 3, "pay": "unique", "amount": 0, "unique": loose}
-	for i in range(3):
-		var a: Dictionary = sim._plain("Armour", "Stab vest")
-		a["rarity"] = 2
-		sim.stash.append(a)
-	var n0: int = sim.stash.size()
-	_check(sim.hand_in(2) and sim.stash.size() == n0 - 2 and sim.stash.back().get("unique", "") == loose, "a unique contract did not pay with %s" % loose)
+	_check(sim.hand_in(1) and sim.notes == notes0 + 12 * (2 if sim.yard_has("fixer") else 1), "a notes contract did not pay")
+	sim.passes = 0
 	_check(sim.pass_contract(0) and sim.contracts.size() == Data.CONTRACTS_OPEN, "turning one down did not replace it")
 	sim.notes = int(sim.mate["notes"]) - 1
 	_check(not sim.can_buy_mate(), "the mate sold with a note short")
@@ -2903,17 +2891,16 @@ func _contracts_checks(main) -> void:
 	_check(sim.runs_total == runs0 + Data.MATE_RUNS, "runs_total did not count the runs")
 	main._fence._show("contracts")
 	_check_fit(main, "Fence (contracts, after)")
-	# the contracts show from the rail and the tab: a unique on offer, a contract ready; what's next says so
-	sim.contracts = [{"amount": 0, "count": 3, "pay": "unique", "rarity": 2, "slot": "Attachment", "unique": "The Doorman's Jacket"}]
+	# the contracts show from the rail and the tab when one's ready; what's next says so
+	sim.contracts = [{"kind": "gear", "amount": 400, "count": 3, "pay": "cash", "rarity": 2, "slot": "Attachment", "level": 0, "stat": "", "salvage": ""}]
 	for it in sim.stash.duplicate():
 		if sim.contract_fits(sim.contracts[0], it):
-			sim.stash.erase(it)              # nothing in the stash to hand in: the unique is on offer, not ready
+			sim.stash.erase(it)              # nothing in the stash to hand in: open, not ready
 	main.refresh()
 	var fence_status: Dictionary = main._rail_status(main.MARKET) if main.has_method("_rail_status") else {}
-	_check(fence_status.get("badge", "") == "Unique", "the rail does not flag a contract that pays a unique: %s" % str(fence_status))   # the badge alone since the names-only rail (8 Oct)
+	_check(fence_status.get("badge", "") == "", "the rail flags a contract that isn't ready: %s" % str(fence_status))
 	main.show_room(main.MARKET)
 	main.refresh()
-	_check(main._fence._tabs[2].text == "Contracts ★", "the contracts tab reads '%s'" % main._fence._tabs[2].text)
 	while not sim.stash_room(1) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	for k in range(3):
@@ -2936,10 +2923,25 @@ func _contracts_checks(main) -> void:
 	main._fence.selected = {}
 	main.refresh()
 	if not sim.contracts.is_empty():
-		var t0: String = main._fence._deal_rows[0]["title"].text
-		_check((t0.ends_with(".") and (t0.begins_with("Wants") or t0.begins_with("Could") or t0.begins_with("Someone") or t0.contains("wanted") or t0.begins_with("Looking"))) or t0 == main._fence._cap(sim.contract_words(sim.contracts[0])), "the Fence's contract is not in his voice: '%s'" % t0)
+		sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 20, "salvage": ""}
+		main._fence._show("contracts")
+		main._fence._shown = ""
+		main.refresh()
+		var t0: String = main._fence._deal_rows[0]["have"].text
+		_check(t0.begins_with("Wants") or t0.begins_with("Could") or t0.begins_with("Someone") or t0.contains("wanted") or t0.begins_with("Looking"), "the Fence's line is not in his voice: '%s'" % t0)
+		_check(main._fence._deal_rows[0]["title"].text == "Two uncommon helmets", "the ask is not the row's title: '%s'" % main._fence._deal_rows[0]["title"].text)
+		# every affix the Fence can ask for is named on the row, whole or short
+		for slot in Data.CONTRACT_SLOTS.slice(0, Data.CONTRACT_SLOTS.size() - 1):
+			for a in Items.allowed_affixes(slot):
+				sim.contracts[0] = {"kind": "affix", "slot": slot, "rarity": 1, "count": 1, "level": 0, "stat": a["stat"], "pay": "notes", "amount": 5, "salvage": ""}
+				main._fence._shown = ""
+				main.refresh()
+				var tt: String = main._fence._deal_rows[0]["title"].text
+				_check(tt.contains(sim.contract_affix_phrase(a["stat"])) or tt.ends_with(str(a["short"])), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
+				_check(main._fence._deal_rows[0]["have"].text != "", "the Fence's line went blank for %s on a %s" % [a["stat"], slot])
+		_check(sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}) == "an armour with fire conversion", "the affix ask reads '%s'" % sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}))
 		_check_fit(main, "Fence (contracts in the voice)")
-	print("contracts and the mate ok: three open, the cheapest that fit, cash, notes, a unique, the mate")
+	print("contracts and the mate ok: three open, the cheapest that fit, cash, notes, the mate")
 	_events_checks(main)
 
 
@@ -5478,49 +5480,97 @@ func _contract_material_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	sim.equipped["Primary"] = sim._plain("Primary", "Sawn-off")
+	# the contracts (9 Oct, docs/design/contracts.md): five kinds of ask, four currencies, no uniques, no items
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = mini(sim.best_depth[i], 3)
 	var kinds := {}
-	for k in range(300):
+	var pays := {}
+	for k in range(400):
 		var c: Dictionary = sim.roll_contract()
-		kinds[c["pay"]] = kinds.get(c["pay"], 0) + 1
+		kinds[c["kind"]] = kinds.get(c["kind"], 0) + 1
+		pays[c["pay"]] = pays.get(c["pay"], 0) + 1
+		_check(c["pay"] in ["cash", "notes", "scrap"] and int(c["amount"]) > 0 and sim.contract_pay_words(c) != "" and sim.contract_words(c) != "", "a contract before any salvage drops is off: %s" % str(c))
 		if c["pay"] == "scrap":
-			_check(int(c["amount"]) == int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_SCRAP, "a scrap contract's amount is off: %s" % str(c))
-		elif c["pay"] == "socketable":
-			var a: Dictionary = Items.base_named(Data.ATTACHMENT, str(c["what"]))
-			_check(not a.is_empty() and a.get("mount", "") == "socket", "a socketable contract names %s" % str(c.get("what", "")))
-		elif c["pay"] == "rounds":
-			var b: Dictionary = Items.base_named(Data.AMMO, str(c["what"]))
-			_check(not b.is_empty() and b.has("from") and b["type"] in sim.gun_types_held(), "a rounds contract names %s" % str(c.get("what", "")))
-		_check(sim.contract_pay_words(c) != "", "a contract has no pay words: %s" % str(c))
-	_check(kinds.has("scrap") and kinds.has("socketable") and kinds.has("rounds") and kinds.has("cash") and kinds.has("notes"), "three hundred contracts did not cover every pay: %s" % str(kinds))
-	# handing in pays what it says
-	for pay in ["scrap", "socketable", "rounds"]:
-		var c: Dictionary = {}
-		for k in range(400):
-			c = sim.roll_contract()
-			if c["pay"] == pay:
-				break
-		_check(c["pay"] == pay, "four hundred rolls gave no %s contract" % pay)
-		if c["pay"] != pay:
-			continue
-		sim.contracts[0] = c
-		for it in sim.stash.duplicate():
-			if sim.contract_fits(c, it):
-				sim.stash.erase(it)
-		for k in range(int(c["count"])):
-			var piece: Dictionary = sim._plain(c["slot"], (Data.ATTACHMENTS if c["slot"] == Data.ATTACHMENT else Data.BASES[c["slot"]])[0]["name"])
-			piece["rarity"] = int(c["rarity"])
-			sim.stash.append(piece)
-		var scrap0: int = sim.scrap
-		var stash_n: int = sim.stash.size()
-		_check(sim.can_hand_in(0) and sim.hand_in(0), "a %s contract could not be handed in" % pay)
-		match pay:
-			"scrap":
-				_check(sim.scrap == scrap0 + int(c["amount"]), "the scrap contract paid %d" % (sim.scrap - scrap0))
-			"socketable":
-				_check(sim.stash.any(func(it): return it["base"] == c["what"]), "the socketable contract did not pay %s" % str(c["what"]))
-			"rounds":
-				_check(sim.stash.any(func(it): return Items.is_ammo(it) and it["base"] == c["what"]), "the rounds contract did not pay %s" % str(c["what"]))
+			_check(int(c["amount"]) == maxi(1, int(ceil(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0)))), "a scrap contract's amount is off: %s" % str(c))
+		_check(not (c["kind"] == "meds" and c["pay"] == "cash"), "a meds ask pays cash: %s" % str(c))
+		if c["pay"] == "cash":
+			_check(absi(int(c["amount"]) - int(round(sim.a_runs_takings() * Data.CONTRACT_CASH * minf(sim.contract_weight(c), Data.CONTRACT_CASH_WEIGHT_MAX)))) <= 10 or int(c["amount"]) == 10, "a cash contract is not half a run's takings by its weight: %s" % str(c))
+	_check(kinds.size() == (5 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 4) and pays.size() == 3, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
+	# every slot pays alike at a rarity: no rare primary worth fishing for
+	var takings: float = sim.a_runs_takings()
+	var prim := {"kind": "gear", "slot": "Primary", "rarity": 2, "count": 2, "level": 0, "stat": "", "pay": "", "amount": 0, "salvage": ""}
+	var helm: Dictionary = prim.duplicate()
+	helm["slot"] = "Helmet"
+	_check(sim.contract_weight(prim) == sim.contract_weight(helm) and sim.contract_weight(prim) == 4.0, "two rares weigh %.1f / %.1f" % [sim.contract_weight(prim), sim.contract_weight(helm)])
+	# salvage once a zone's site is dug to its depth
+	sim.best_depth[3] = Data.SALVAGE_DEPTH
+	_check(sim.salvage_kinds() == ["steel"], "the salvage on offer is off: %s" % str(sim.salvage_kinds()))
+	var sv: Dictionary = {}
+	for k in range(400):
+		var c: Dictionary = sim.roll_contract()
+		if c["pay"] == "salvage":
+			sv = c
+			break
+	_check(not sv.is_empty() and sv["salvage"] == "steel" and int(sv["amount"]) == maxi(1, int(ceil(sim.contract_weight(sv)))), "no salvage contract, or the wrong kind: %s" % str(sv))
+	# each kind of ask takes what it says, and pays
+	var deep := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 12, "stat": "", "pay": "salvage", "amount": 3, "salvage": "steel"}
+	var helmet: Dictionary = sim._plain("Helmet", "Hard hat")
+	helmet["ilvl"] = 11
+	_check(not sim.contract_fits(deep, helmet), "a level-11 helmet fits a level-12 ask")
+	helmet["ilvl"] = 14
+	_check(sim.contract_fits(deep, helmet) and Items.ilvl(helmet) == 14, "a level-14 helmet does not fit a level-12 ask")
+	var affix := {"kind": "affix", "slot": "Helmet", "rarity": 1, "count": 1, "level": 0, "stat": "armour_pct", "pay": "notes", "amount": 5, "salvage": ""}
+	var plain_h: Dictionary = sim._plain("Helmet", "Hard hat")
+	var arm_h: Dictionary = sim._plain("Helmet", "Hard hat")
+	arm_h["rarity"] = 1
+	arm_h["affixes"] = [{"stat": "armour_pct", "value": 5, "tier": 1}]
+	_check(not sim.contract_fits(affix, plain_h) and sim.contract_fits(affix, arm_h) and sim.contract_words(affix).contains("% armour"), "the affix ask is off: '%s'" % sim.contract_words(affix))
+	var papers := {"kind": "papers", "slot": "", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 9, "salvage": ""}
+	var meds := {"kind": "meds", "slot": "", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 50, "salvage": ""}
+	_check(sim.contract_fits(papers, sim._plain(Data.PAPER, "A P45")) and not sim.contract_fits(papers, sim._plain(Data.PAPER, "The deeds")) and sim.contract_fits(meds, sim._plain(Data.MEDICAL, "Bandage")) and not sim.contract_fits(meds, helmet), "papers or meds asks take the wrong things")
+	for it in sim.stash.duplicate():
+		if sim.contract_fits(deep, it):
+			sim.stash.erase(it)
+	sim.stash.append(helmet)
+	sim.contracts[0] = deep
+	var st0: int = int(sim.salvage.get("steel", 0))
+	_check(sim.can_hand_in(0) and sim.hand_in(0) and int(sim.salvage["steel"]) == st0 + 3 and not sim.stash.has(helmet), "a deep ask paying safe steel did not pay")
+	var u: Dictionary = Items.roll_unique(Data.UNIQUES[0], sim.rng)
+	_check(not sim.contract_fits(deep, u), "a unique fits a contract")
+	# turning one down: free once a run, then notes doubling, free again after a run
+	sim.passes = 0
+	sim.notes = 100
+	_check(sim.pass_cost() == 0 and sim.pass_contract(1) and sim.notes == 100, "the first turn-down cost notes")
+	_check(sim.pass_cost() == Data.CONTRACT_PASS_NOTES and sim.pass_contract(1) and sim.notes == 100 - Data.CONTRACT_PASS_NOTES, "the second turn-down did not cost %d notes" % Data.CONTRACT_PASS_NOTES)
+	_check(sim.pass_cost() == Data.CONTRACT_PASS_NOTES * 2, "the third turn-down does not double: %d" % sim.pass_cost())
+	sim.notes = sim.pass_cost() - 1
+	_check(not sim.can_pass_contract(1) and not sim.pass_contract(1), "a turn-down took without the notes")
+	sim.notes = 100
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.extract_now()
+	if sim.on_mission():
+		sim._extract()
+	_check(sim.pass_cost() == 0, "a run home did not make the next turn-down free: %d" % sim.pass_cost())
+	# a save keeps them; a save from before has its unique, socketable and rounds pays rolled again
+	sim.passes = 2
+	var rt: Dictionary = sim.to_dict()
+	sim.load_dict(rt)
+	_check(sim.passes == 2 and sim.contracts[0]["kind"] == rt["contracts"][0]["kind"], "the contracts or the turn-downs did not survive a save")
+	var old: Dictionary = sim.to_dict()
+	old["contracts"] = [{"slot": "Armour", "rarity": 2, "count": 3, "pay": "unique", "amount": 0, "unique": "x"}, {"slot": "Helmet", "rarity": 1, "count": 1, "pay": "socketable", "amount": 1, "what": "Road salt"}]
+	sim.load_dict(old)
+	_check(sim.contracts.all(func(c): return c["pay"] in Data.CONTRACT_PAYS and c.has("kind")), "an old save kept a unique or an item pay: %s" % str(sim.contracts))
+	# five open with Orders: five rows on the tab
+	_yard_set(sim, "fence", 1, "b")
+	_check(sim.contracts.size() == Data.CONTRACTS_MAX, "Orders did not open five: %d" % sim.contracts.size())
+	main.show_room(main.MARKET)
+	main._fence._show("contracts")
+	main._fence._shown = ""
+	main.refresh()
+	_check(main._fence._deal_rows.filter(func(r): return r["panel"].visible).size() == Data.CONTRACTS_MAX, "the tab does not show five rows with Orders")
+	_check(main._fence._deal_rows[0]["pass"].text.begins_with("Turn it down ·") and main._fence._deal_rows[0]["tag"].text != "", "a row's turn-down or its tag is off: '%s'" % main._fence._deal_rows[0]["pass"].text)
+	_check_fit(main, "Fence (five contracts)")
 	# the Fence's contracts tab reads them and fits
 	main.show_room(main.MARKET)
 	main._fence._show("contracts")
@@ -5530,7 +5580,7 @@ func _contract_material_checks(main) -> void:
 	main._fence._show("shelf")
 	sim.load_dict(saved)
 	main.refresh()
-	print("the material contracts ok: the three pays rolled and worded, each paid on the hand-in, the tab fitted")
+	print("the contracts ok: five kinds of ask, four currencies, salvage from its depth, the turn-down's price, the old saves, five rows")
 
 
 ## 34: crafting at the Bench. Scrap in hand from searches, scrapping and ditching; the Build column: a box of rounds,

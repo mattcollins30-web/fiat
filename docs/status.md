@@ -2471,6 +2471,28 @@ head, meds lit under Rationed, and the walking head scaled by the words; all fix
 the change exposed (a test deploying to `best_tier` with its zone shut, the band's tone with zone 1 shut) are
 guarded.
 
+**The Fence's contracts (9 Oct, the playtest list, item five; the spec is `docs/design/contracts.md`, Deals-A on
+the canvas).** Matt: turning contracts down until "20k cash for a rare primary" turns up is the abuse; the same
+four uniques get old; "remove unique from the pool and keep it to currency only". Agreed: one free turn-down a
+run then notes doubling, cash/notes/scrap/salvage only, pay sized by income, new kinds of ask. *Data:*
+`CONTRACT_KINDS` (gear 50%, deep gear, an affix, papers, meds 12.5% each), `CONTRACT_PAYS` (cash 40, notes 25,
+scrap 20, salvage 15), `CONTRACT_PASS_NOTES` 5, `CONTRACTS_MAX` 5; the unique and material odds gone. *Sim:*
+`roll_contract` by kind, `contract_weight` (gear count × rarity, deep 3 a piece, an affix 3, papers 1, meds ½),
+`_price_contract` (cash half a run's takings × the weight held to 4 - two runs at most - never for meds; notes
+and scrap × (1 + the deepest depth / 5); salvage only from zones dug to depth 4), `contract_fits` by kind (never a
+unique or set piece), `pass_cost`/`can_pass_contract` (`passes`, saved, reset on a run home), contract cash paid
+straight in so it doesn't feed the takings that price the next; an old save's contracts rolled again. A deep ask
+only once the deepest site's level allows one. *The tab* (`vendor.gd`): a strip (open, ready, the next
+turn-down's price), a row a contract - five with Orders, where only three rows were ever drawn - the kind and
+what you have, the ask, the Fence's line (shorter lines of his before none), the pay as a chip in its
+currency's colour, Turn it down with its price, Hand in; the mate under. The rail's Unique badge goes. *The
+bot* hands in meds and papers asks. *The smoke:* the kinds and pays rolled, the amounts by formula, every slot
+alike, salvage from its depth, each kind's fit, the turn-down's price and its reset, the save and an old save,
+five rows, every slot × affix named on its row with the Fence's line never blank. The reviewer caught contract
+cash compounding through the takings, affix asks unreadable (two armours, "of damage as fire"), a reload
+resetting the turn-downs, the bot skipping meds and papers, and the Fence's line going blank; all fixed, with
+checks.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

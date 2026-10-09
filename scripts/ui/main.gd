@@ -860,16 +860,12 @@ func _rail_status(name: String) -> Dictionary:
 			var full: bool = sim.hp >= sim.max_hp() - 0.5
 			return {"badge": "" if full or sim.on_mission() else "Hurt", "badge_tone": "warn"}
 		MARKET:
-			# the contracts were easy to miss as a tab: the rail says when one's ready, or pays a unique
+			# the contracts were easy to miss as a tab: the rail says when one's ready (they pay currency only, 9 Oct)
 			var ready := 0
-			var unique_pay := 0
 			for k in range(sim.contracts.size()):
 				if sim.can_hand_in(k):
 					ready += 1
-				elif sim.contracts[k].get("pay", "") == "unique":
-					unique_pay += 1
-			var badge: String = "Ready" if ready > 0 else ("Unique" if unique_pay > 0 else "")
-			return {"badge": badge, "badge_tone": "good" if ready > 0 else "warn"}
+			return {"badge": "Ready" if ready > 0 else "", "badge_tone": "good"}
 	return {}
 
 

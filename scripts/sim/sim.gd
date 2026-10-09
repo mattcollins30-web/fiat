@@ -77,7 +77,8 @@ var cash_in := 0.0                 # every pound in since the game began (runs, 
 var atlas := {}                    # the map's passives: key -> rank
 var boss_paid: Array = []          # per tier: the depths a head's price has been paid at (Long memory: once a depth)
 var atlas_points := 0              # earned: one a new depth cleared past the first
-var contracts: Array = []          # the Fence's: {slot, rarity, count, pay, amount, unique}
+var contracts: Array = []          # the Fence's: {kind, slot, rarity, count, level, stat, pay, amount, salvage}
+var passes := 0                    # contracts turned down since the last run home: the first is free (9 Oct)
 var mate := {}                     # the Fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
@@ -747,54 +748,112 @@ func retire() -> bool:
 
 # ------------------------------------------------------------------ the Fence's contracts
 
-## One contract: a slot, a rarity, a count, what it pays.
+## One contract (9 Oct): a kind of ask and what it pays, in currency.
 func roll_contract() -> Dictionary:
-	var slot: String = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 1)]
-	var c := {"slot": slot, "rarity": rng.randi_range(1, 2), "count": rng.randi_range(1, 3), "pay": "cash", "amount": 0, "unique": ""}
-	if rng.randf() < Data.CONTRACT_UNIQUE_ODDS:
-		var loose: Array = loose_uniques(0)            # the Fence's contracts pay with the common ones only
-		c["rarity"] = 2
-		c["count"] = 3
-		c["pay"] = "unique"
-		c["unique"] = loose[rng.randi_range(0, loose.size() - 1)]["name"]
-	elif rng.randf() < Data.CONTRACT_MATERIAL_ODDS:
-		# craft materials (35): scrap, a socketable of the zone's element, or a graded box for a gun held
-		var kind: int = rng.randi_range(0, 2)
-		var types: Array = gun_types_held()
-		if kind == 2 and not types.is_empty():
-			var held: String = types[rng.randi_range(0, types.size() - 1)]
-			var grades: Array = Data.BASES[Data.AMMO].filter(func(b): return b.has("from") and b["type"] == held)
-			if not grades.is_empty():
-				c["pay"] = "rounds"
-				c["what"] = grades[rng.randi_range(0, grades.size() - 1)]["name"]
-				c["amount"] = 1
-		if kind == 1 and c["pay"] == "cash":
-			var zone: int = int(Data.TIERS[best_tier]["zone"])
-			var els: Array = Data.ZONE_TYPES[zone]["types"].keys()
-			var el: String = els[rng.randi_range(0, els.size() - 1)] if not els.is_empty() else "fire"
-			var socks: Array = Data.ATTACHMENTS.filter(func(a): return a.get("mount", "") == "socket" and a.has("conv_%s_pct" % el))
-			if socks.is_empty():
-				socks = Data.ATTACHMENTS.filter(func(a): return a["name"] == "Road salt")     # the estate's blades have no bottle: the salt instead
-			if not socks.is_empty():
-				c["pay"] = "socketable"
-				c["what"] = socks[0]["name"]
-				c["amount"] = 1
-		if c["pay"] == "cash":
-			c["pay"] = "scrap"
-			c["amount"] = int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_SCRAP
-	elif rng.randf() < 0.5:
-		c["pay"] = "notes"
-		c["amount"] = int(c["count"]) * int(c["rarity"]) * Data.CONTRACT_NOTES
-	else:
-		# worth: the slot's bases' middle value at the rarity, a piece
-		var bases: Array = Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]
-		var mid: float = float(bases[bases.size() / 2]["value"]) * float(Data.RARITIES[c["rarity"]]["value"])
-		c["amount"] = int(round(mid * inflation() * Data.CONTRACT_CASH * c["count"] / 10.0)) * 10   # the Fence quotes today's price
+	var kind: String = _weighted(Data.CONTRACT_KINDS)
+	if kind == "deep" and deepest_site_level() - Data.CONTRACT_DEEP_LESS < Data.CONTRACT_DEEP_FROM:
+		kind = "gear"                             # a deep ask wants a deep site first: early, any piece would do
+	var c := {"kind": kind, "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+	match kind:
+		"gear":
+			c["slot"] = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 1)]
+			c["rarity"] = rng.randi_range(1, 2)
+			c["count"] = rng.randi_range(1, 3)
+		"deep":
+			c["count"] = rng.randi_range(1, 2)
+			c["level"] = maxi(2, deepest_site_level() - Data.CONTRACT_DEEP_LESS)
+		"affix":
+			c["slot"] = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 2)]     # gear with affixes: not the gun parts
+			var allowed: Array = Items.allowed_affixes(c["slot"])
+			if allowed.is_empty():
+				c["kind"] = "gear"
+				c["rarity"] = 1
+			else:
+				c["stat"] = allowed[rng.randi_range(0, allowed.size() - 1)]["stat"]
+		"papers":
+			c["count"] = rng.randi_range(2, 4)
+		"meds":
+			c["count"] = rng.randi_range(2, 5)
+	_price_contract(c)
 	return c
 
 
+## A key by its weight: {"a": 0.5, "b": 0.25, ...}.
+func _weighted(w: Dictionary) -> String:
+	var total := 0.0
+	for k in w:
+		total += float(w[k])
+	var r := rng.randf() * total
+	for k in w:
+		r -= float(w[k])
+		if r <= 0.0:
+			return k
+	return w.keys().back()
+
+
+## How much an ask is worth: the count × the rarity for gear, three a deep piece, three an affix, a paper apiece,
+## a med a half.
+func contract_weight(c: Dictionary) -> float:
+	match str(c.get("kind", "gear")):
+		"deep":
+			return 3.0 * int(c["count"])
+		"affix":
+			return 3.0
+		"papers":
+			return float(int(c["count"]))
+		"meds":
+			return int(c["count"]) / 2.0
+	return float(int(c["count"]) * int(c["rarity"]))
+
+
+## The zones whose salvage drops: a site of it dug to SALVAGE_DEPTH.
+func salvage_kinds() -> Array:
+	var out: Array = []
+	for z in range(Data.ZONES.size()):
+		for i in Data.ZONES[z]["tiers"]:
+			if int(best_depth[i]) >= Data.SALVAGE_DEPTH:
+				out.append(Data.SALVAGE[z])
+				break
+	return out
+
+
+## What it pays: cash a share of a run's takings (today's prices), notes and scrap by the deepest depth, salvage by
+## the weight - never a salvage no site drops yet.
+func _price_contract(c: Dictionary) -> void:
+	var pays: Dictionary = Data.CONTRACT_PAYS.duplicate()
+	var kinds := salvage_kinds()
+	if kinds.is_empty():
+		pays.erase("salvage")
+	if c["kind"] == "meds":
+		pays.erase("cash")                        # meds the Clinic sells for pennies: never a cash pump
+	c["pay"] = _weighted(pays)
+	var w := contract_weight(c)
+	var deep: float = 1.0 + deepest() / 5.0
+	match c["pay"]:
+		"cash":
+			c["amount"] = maxi(10, int(round(a_runs_takings() * Data.CONTRACT_CASH * minf(w, Data.CONTRACT_CASH_WEIGHT_MAX) / 10.0)) * 10)     # two runs' takings at most
+		"notes":
+			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_NOTES * w * deep)))
+		"scrap":
+			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_SCRAP * w * deep)))
+		"salvage":
+			c["salvage"] = kinds[rng.randi_range(0, kinds.size() - 1)]
+			c["amount"] = maxi(1, int(ceil(w)))
+
+
 func contract_fits(c: Dictionary, it: Dictionary) -> bool:
-	return it["slot"] == c["slot"] and int(it["rarity"]) >= int(c["rarity"]) and not it.has("unique") and not Items.is_deeds(it)
+	if it.has("unique") or it.has("set") or Items.is_deeds(it):
+		return false
+	match str(c.get("kind", "gear")):
+		"deep":
+			return str(it["slot"]) in Data.CONTRACT_SLOTS and Items.ilvl(it) >= int(c["level"])
+		"affix":
+			return it["slot"] == c["slot"] and it.get("affixes", []).any(func(a): return a["stat"] == c["stat"])
+		"papers":
+			return Items.is_paper(it)
+		"meds":
+			return Items.is_medical(it)
+	return it["slot"] == c["slot"] and int(it["rarity"]) >= int(c["rarity"])
 
 
 ## What in the stash would go to this contract: the cheapest that fit, up to its count.
@@ -811,16 +870,7 @@ func can_hand_in(k: int) -> bool:
 	if mission != null or k < 0 or k >= contracts.size():
 		return false
 	var c: Dictionary = contracts[k]
-	var items := contract_items(c)
-	if items.size() < int(c["count"]):
-		return false
-	if c["pay"] == "unique":
-		var freed := 0
-		for it in items:
-			freed += Items.size(it)
-		var u_it: Dictionary = Items.roll_unique(_unique_named(c["unique"]), rng)
-		return stash_free(u_it) or stash_room(Items.size(u_it) - freed)
-	return true
+	return contract_items(c).size() >= int(c["count"])
 
 
 func hand_in(k: int) -> bool:
@@ -832,46 +882,77 @@ func hand_in(k: int) -> bool:
 	var paid := ""
 	match c["pay"]:
 		"cash":
-			_earn(float(c["amount"]))
+			cash += float(c["amount"])          # not through _earn: a run's takings price the contracts, and this would feed them
+			cash_in += float(c["amount"])
 			paid = _cash_words(float(c["amount"]))
 		"notes":
 			var n_paid: int = int(c["amount"]) * (2 if yard_has("fixer") else 1)     # the Fence's Fixer
 			notes += n_paid
 			paid = "%d notes" % n_paid
-		"unique":
-			var it := Items.roll_unique(_unique_named(c["unique"]), rng)
-			stash.append(it)
-			paid = it["unique"]
 		"scrap":
 			scrap += int(c["amount"])
 			paid = "%d scrap" % int(c["amount"])
-		"socketable":
-			var sock: Dictionary = _plain(Data.ATTACHMENT, str(c["what"]))
-			if not stash_put(sock):
-				stash.append(sock)           # paid for: whatever the room, like a unique
-			paid = str(c["what"])
-		"rounds":
-			var box: Dictionary = _plain(Data.AMMO, str(c["what"]))
-			if not stash_put(box):
-				stash.append(box)
-			paid = "a box of %s" % str(c["what"]).to_lower()
+		"salvage":
+			salvage[c["salvage"]] = int(salvage.get(c["salvage"], 0)) + int(c["amount"])
+			paid = contract_pay_words(c)
 	log_event("Handed in: %s. %s" % [contract_words(c), paid])
 	contracts[k] = roll_contract()
 	return true
 
 
-## Turn one down: it's replaced, for nothing.
+## The price of turning one down now: the first after a run home free, then notes, doubling.
+func pass_cost() -> int:
+	if passes == 0:
+		return 0
+	return Data.CONTRACT_PASS_NOTES * int(pow(2, passes - 1))
+
+
+func can_pass_contract(k: int) -> bool:
+	return mission == null and k >= 0 and k < contracts.size() and notes >= pass_cost()
+
+
+## Turn one down: another in its place, the price paid.
 func pass_contract(k: int) -> bool:
-	if mission != null or k < 0 or k >= contracts.size():
+	if not can_pass_contract(k):
 		return false
+	notes -= pass_cost()
+	passes += 1
 	contracts[k] = roll_contract()
 	return true
 
 
 func contract_words(c: Dictionary) -> String:
-	var what: String = ("%s %s" % [Data.RARITIES[c["rarity"]]["name"].to_lower(), ("gun part" if c["slot"] == Data.ATTACHMENT else c["slot"].to_lower()) + ("" if int(c["count"]) == 1 else "s")])
 	var n: int = int(c["count"])
-	return "%s %s" % [["", "one", "two", "three", "four", "five", "six"][n] if n <= 6 else str(n), what]
+	var num: String = ["", "one", "two", "three", "four", "five", "six"][n] if n <= 6 else str(n)
+	match str(c.get("kind", "gear")):
+		"deep":
+			return "%s piece%s from level %d up" % [num, "" if n == 1 else "s", int(c["level"])]
+		"affix":
+			var slot: String = "gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"]).to_lower()
+			return "%s %s with %s" % ["an" if slot.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", slot, contract_affix_phrase(str(c["stat"]))]
+		"papers":
+			return "%s paper%s, any" % [num, "" if n == 1 else "s"]
+		"meds":
+			return "%s med%s, any" % [num, "" if n == 1 else "s"]
+	var noun: String = "gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"]).to_lower()
+	if n != 1:
+		noun = noun.trim_suffix("y") + "ies" if noun.ends_with("ry") else noun + "s"     # primaries, not primarys
+	var what: String = "%s %s" % [Data.RARITIES[c["rarity"]]["name"].to_lower(), noun]
+	return "%s %s" % [num, what]
+
+
+## An affix as a contract names it: a conversion as such, the two armours apart, a long label to its first clause.
+func contract_affix_phrase(stat: String) -> String:
+	if stat.begins_with("conv_"):
+		return "%s conversion" % stat.trim_prefix("conv_").trim_suffix("_pct")
+	if stat == "armour_pct":
+		return "% armour"
+	if stat == "armour":
+		return "flat armour"
+	if stat == "dot_pct":
+		return "damage over time"
+	var a: Dictionary = Items.affix_def(stat)
+	return str(a.get("label", stat)).get_slice(",", 0)
 
 
 func contract_pay_words(c: Dictionary) -> String:
@@ -879,14 +960,12 @@ func contract_pay_words(c: Dictionary) -> String:
 		"cash":
 			return _cash_words(float(c["amount"]))
 		"notes":
-			return "%d notes" % int(c["amount"])
+			return "%d notes" % (int(c["amount"]) * (2 if yard_has("fixer") else 1))     # what the hand-in pays, the Fixer's double with it
 		"scrap":
 			return "%d scrap" % int(c["amount"])
-		"socketable":
-			return str(c.get("what", ""))
-		"rounds":
-			return "a box of %s" % str(c.get("what", "")).to_lower()
-	return str(c["unique"])
+		"salvage":
+			return "%d %s" % [int(c["amount"]), str(Data.SALVAGE_NAMES.get(c["salvage"], c["salvage"])).to_lower()]
+	return ""
 
 
 func _unique_named(name: String) -> Dictionary:
@@ -5191,6 +5270,7 @@ func gear_tier() -> int:
 
 
 func restock() -> void:
+	passes = 0                                # a run home: the next contract turned down is free again (9 Oct)
 	_restock_clinic()
 	_restock_gamble()
 	_restock_market()
@@ -5630,7 +5710,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
+		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 	}
 
@@ -5752,7 +5832,12 @@ func load_dict(d: Dictionary) -> void:
 		boss_paid.append(at)
 	contracts = []
 	for c in d.get("contracts", []):
-		contracts.append({"slot": str(c["slot"]), "rarity": int(c["rarity"]), "count": int(c["count"]), "pay": str(c["pay"]), "amount": int(c["amount"]), "unique": str(c.get("unique", "")), "what": str(c.get("what", ""))})
+		if not (str(c.get("pay", "")) in Data.CONTRACT_PAYS) or not c.has("kind"):
+			contracts.append(roll_contract())    # a save from before (9 Oct): a unique, a socketable or rounds, rolled again
+			continue
+		contracts.append({"kind": str(c["kind"]), "slot": str(c.get("slot", "")), "rarity": int(c.get("rarity", 1)), "count": int(c.get("count", 1)), "level": int(c.get("level", 0)),
+			"stat": str(c.get("stat", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0)), "salvage": str(c.get("salvage", ""))})
+	passes = int(d.get("passes", 0))
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = {}
@@ -5801,6 +5886,7 @@ func load_dict(d: Dictionary) -> void:
 			it["rounds"] = int(it["rounds"])
 	if market.is_empty():
 		restock()
+		passes = int(d.get("passes", 0))     # the restock is the shelf's; the turn-downs stay as saved
 	if not d.has("gamble"):
 		_restock_gamble()                 # a save from before the Fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
 

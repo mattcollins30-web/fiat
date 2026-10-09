@@ -139,6 +139,8 @@ func _endgame(sim) -> void:
 			# only when the items that go aren't what's worn or the best spare
 			var ok := true
 			for it in sim.contract_items(c):
+				if not (it["slot"] in Data.SLOTS):
+					continue                      # meds and papers: nothing worn to keep
 				var best: Dictionary = sim.best_in_stash(it["slot"])
 				if not best.is_empty() and best["id"] == it["id"] and sim.equipped.get(it["slot"], null) == null:
 					ok = false
