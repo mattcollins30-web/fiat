@@ -1503,14 +1503,14 @@ const RESPEC_CASH := 50
 ## can be fitted - with a cost to go with it. Numbers are multipliers the sim
 ## reads by key; "words" is what the Barracks says.
 const CLASSES := [
-	{"name": "Poacher", "words": "+40% damage to the first of every gang; the next gang 25% slower to arrive; −10% max HP",
-		"first_pct": 40, "patrol": 1.25, "hp": 0.9},
+	{"name": "Poacher", "words": "+40% damage to the first of every gang; the next gang 25% slower to arrive",
+		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "Meds heal 50% more and are used by themselves under 40% HP",
 		"heal": 1.5, "auto_med": true},            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
-	{"name": "Scrapper", "words": "Searches 30% faster; +15% loot quantity",
-		"search": 0.7, "loot": 0.15},              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
+	{"name": "Scrapper", "words": "Searches 30% faster; +10% loot quantity",
+		"search": 0.7, "loot": 0.10},              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+15% damage; one fewer on you at a time; +10% pace",
 		"damage": 1.15, "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]
