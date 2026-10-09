@@ -1806,6 +1806,11 @@ func _joint_payoff_checks(main) -> void:
 	_check(sim._joints_on_incoming(m, false, 0.1) <= 0.5 + 0.001, "Flattened did not halve their fire")
 	if sim.on_mission():
 		sim.extract_now()
+	# the sum strip's Physical chip, the Doorman's knuckles alone: what it ignores, never a "+0%"
+	sim.cls = "Doorman"
+	sim.tree = ["Knuckles/5"]
+	var phys: Array = main._barracks.sum_items([]).filter(func(it): return str(it.get("tag", "")) == "Physical")
+	_check(phys.size() == 1 and phys[0]["forms"].all(func(f): return str(f) != "" and not str(f).contains("+0%")) and str(phys[0]["forms"].back()).begins_with("ignores"), "the pen-only Physical chip reads a nothing: %s" % str(phys))
 	sim.load_dict(saved)
 	main.refresh()
 	print("joint payoffs ok: the ten joints and Flattened, each where it lives")
@@ -2169,7 +2174,36 @@ func _element_checks(main) -> void:
 				_check(not rc.intersects(other), "tiles overlap in lane %d: %s and %s" % [k, str(rc), str(other)])
 			rects.append(rc)
 	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.SUM_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H, "the Caravan's strips overlap")
-	_check(bk._sum_chips._tags[0].text == "Damage" and bk._sum_chips._tags[7].text == "Joints" and bk._sum_chips.shown() == 8 and bk._sum_chips._labels[7].text.begins_with("2 of "), "the sum strip is off: %s" % str(bk._sum_chips.text_nodes().map(func(l): return l.text)))
+	# the sum strip (option A, 9 Oct): the elements in play in their colours, the dots, the joints last; no zeros
+	var sum_tags: Array = []
+	for k in range(bk._sum_chips.shown()):
+		sum_tags.append(bk._sum_chips._tags[k].text)
+	var last: int = maxi(0, bk._sum_chips.shown() - 1)
+	_check(not sum_tags.is_empty() and sum_tags.has("Bleed") and sum_tags.has("Physical") and sum_tags.has("Dots") and sum_tags[last] == "Joints" and bk._sum_chips._labels[last].text.begins_with("2 of "), "the sum strip is off: %s" % str(bk._sum_chips.text_nodes().map(func(l): return l.text)))
+	_check(bk._sum_chips._tags[sum_tags.find("Bleed")].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["bleed"], "the Bleed chip is not in bleed's colour")
+	for k in range(bk._sum_chips.shown()):
+		_check(not bk._sum_chips._labels[k].text.begins_with("+0") and not bk._sum_chips._labels[k].text.begins_with("0%"), "the sum strip shows a figure at nothing: %s %s" % [sum_tags[k], bk._sum_chips._labels[k].text])
+	# a crowded strip: every plain figure and four elements at once - the short forms, then the plain figures go
+	var crowd_tree: Array = sim.tree.duplicate()
+	var crowd_trades: Array = sim.trades.duplicate()
+	for tn in ["The Yard", "Petrol", "The cold", "Live", "The rat man"]:
+		for i in range(Data.tree_named(tn)["nodes"].size() - 1):
+			if not sim.tree.has("%s/%d" % [tn, i]):
+				sim.tree.append("%s/%d" % [tn, i])
+	sim.trades = ["fire", "frost", "shock", "poison"]
+	bk._shown = ""
+	main.refresh()
+	var crowd_tags: Array = []
+	for k in range(bk._sum_chips.shown()):
+		crowd_tags.append(bk._sum_chips._tags[k].text)
+	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Dots"].all(func(t): return crowd_tags.has(t)) and crowd_tags.back() == "Joints", "the crowded strip lost an element, Damage or the Joints: %s" % str(crowd_tags))
+	_check(bk.SUM_DROP.any(func(t): return not crowd_tags.has(t)) or bk._sum_chips._labels[crowd_tags.find("Fire")].text.find("of hits") < 0, "the crowded strip did not need its fallbacks - the check is not crowded: %s" % str(crowd_tags))
+	_sum_strip_check(main)
+	_check_fit(main, "Caravan (a crowded sum strip)")
+	sim.tree = crowd_tree
+	sim.trades = crowd_trades
+	bk._shown = ""
+	main.refresh()
 	# a node alone in its column (the capstone, most trees) spans both rows
 	var cap_tile: Button = bk.tile_for("The door/10")
 	_check(cap_tile != null and cap_tile.size.y > bk.TILE_H * 1.5, "the capstone's tile does not span the lane")
@@ -6416,7 +6450,17 @@ func _yard_wide_checks(main) -> void:
 func _sum_strip_check(main) -> void:
 	var bk = main._barracks
 	var inside := Rect2(Vector2.ZERO, bk._sum.size)
-	_check(bk._sum_chips.shown() == 8, "the sum strip shows %d of its eight chips" % bk._sum_chips.shown())
+	# every chip the trees call for is on the row, and none the trees convert to or increase was dropped to fit -
+	# read off the screen before anything re-lays it
+	var shown_tags: Array = []
+	for k in range(bk._sum_chips.shown()):
+		shown_tags.append(bk._sum_chips._tags[k].text)
+	var want: Array = bk.sum_items(bk.lane_trees() if bk.alt == "" or not bk._is_pages(bk.alt) else [])
+	_check(shown_tags.size() == want.size(), "the sum strip shows %d of its %d chips" % [shown_tags.size(), want.size()])
+	_check(not shown_tags.has("Joints") or shown_tags.back() == "Joints", "the Joints chip is not last: %s" % str(shown_tags))
+	for el in Data.ELEMENTS:
+		if bk.sim.tree_sum("conv_%s_pct" % el) > 0.0 or bk.sim.tree_sum("%s_pct" % el) > 0.0:
+			_check(shown_tags.has(el.capitalize()), "the %s the trees give is not on the sum strip: %s" % [el, str(shown_tags)])
 	for k in range(bk._sum_chips.shown()):
 		var pnl = bk._sum_chips._panels[k]
 		var r := Rect2(bk._sum_chips.position + pnl.position, pnl.size)

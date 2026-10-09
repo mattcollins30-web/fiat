@@ -2384,7 +2384,17 @@ element at double (points free below nothing), the physical bot crafting for a c
 an armed change outliving a death, and the Joints count including a joint that can't close; its second
 read caught the first of those fixes giving back the Yard's tree on a new runner's pick (a runner with no class
 read every classless tree as theirs), and the second past's class offered as a change it would refuse. All
-fixed, each with a check.
+fixed, each with a check. *The sum strip after Matt's first look (option A):* the elements in play as chips
+in their colours - the share of the hit the trees convert and the increase ("Fire 80% of hits · +52%"), cut
+back together past the whole hit as the fight does - Physical when Knuckles or Hands on is in, and Dots (their
+increase, a burn lasting twice as long, poison to fifteen, bleeds that don't fade); a plain figure at nothing
+is left off. Too long for the row, the middle forms come first, then the plain figures but Damage and Max HP
+go, then the shortest forms; an element's chip and the Joints are never dropped. The smoke checks no zero is
+shown, every element the trees give is on the row (read off the screen), and a crowded strip (the Yard and
+four elements at once) needs its fallbacks and keeps Damage, the four elements, Dots and the Joints last. The
+reviewer caught a Physical chip reading "+0%" on a build with only the Doorman's knuckles, the nothing-fits
+case dropping the Joints, the dots' "×2 long" reading the kit as well as the trees, and the first cut of the
+checks reading the strip back from what they'd just laid themselves; all fixed.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element

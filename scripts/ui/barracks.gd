@@ -103,7 +103,7 @@ func _init() -> void:
 	_sum = UI.panel(self, Rect2(0, SUM_Y, Pal.GRID_W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_sum_head = UI.head(_sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
 	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_sum_chips = Chips.new(Pal.GRID_W - 2 * PAD - SUM_HEAD_W - 10, 8)
+	_sum_chips = Chips.new(Pal.GRID_W - 2 * PAD - SUM_HEAD_W - 10, 16)
 	_sum_chips.position = Vector2(PAD + SUM_HEAD_W + 10, 10)
 	_sum.add_child(_sum_chips)
 	_build_panel()
@@ -747,8 +747,16 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 	return {"name": title, "drawer": true, "nodes": nodes, "pages": pages, "page": page, "found": list.size(), "total": total, "lines": lines, "row_h": row_h, "rows": rows}
 
 
-## What the small nodes add up to over the lanes, and the joints closed of the runner's.
+## What the trees add up to (9 Oct, option A): the small nodes' figures over the lanes; the elements in play -
+## each the share of the hit the trees convert to it and the increase they give it, notables included, in its
+## colour; the dots; the joints closed of the runner's. A plain figure at nothing is left off; when the row is
+## still too long the plain figures go from the least telling up (SUM_DROP), never an element's or the joints'.
+const SUM_DROP := ["Search", "Quantity", "First shot", "Quality", "Gangs", "Max HP", "Damage"]
 func _show_sum(lanes: Array) -> void:
+	_sum_chips.show_chips(sum_items(lanes))
+
+
+func sum_items(lanes: Array) -> Array:
 	var sums := {}
 	for t in lanes:
 		if t == null:
@@ -758,6 +766,70 @@ func _show_sum(lanes: Array) -> void:
 			var id := "%s/%d" % [t["name"], i]
 			if not (nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false)) and sim.tree.has(id) and sim.node_active(id):
 				sums[nd["effect"]] = float(sums.get(nd["effect"], 0.0)) + float(nd.get("value", 0))
+	var items := []
+	var plain := func(tag: String, value: float, words: String) -> void:
+		if value > 0.0:
+			items.append({"tag": tag, "forms": [words % value], "colour": Pal.GOOD})
+	plain.call("Damage", sums.get("damage_pct", 0.0), "+%.0f%%")
+	# the elements, in the order the trees list them, then the physical
+	var converted := 0.0
+	for el in Data.ELEMENTS:
+		converted += sim.tree_sum("conv_%s_pct" % el)
+	var scale: float = 100.0 / converted if converted > 100.0 else 1.0     # past the whole hit the shares are cut back together, as the fight does
+	for el in Data.ELEMENTS:
+		var conv: float = sim.tree_sum("conv_%s_pct" % el) * scale
+		var inc: float = sim.tree_sum("%s_pct" % el)
+		if conv <= 0.0 and inc <= 0.0:
+			continue
+		var forms: Array = []
+		if conv > 0.0 and inc > 0.0:
+			forms = ["%.0f%% of hits · +%.0f%%" % [conv, inc], "%.0f%% · +%.0f%%" % [conv, inc], "+%.0f%%" % inc]
+		elif conv > 0.0:
+			forms = ["%.0f%% of hits" % conv, "%.0f%%" % conv]
+		else:
+			forms = ["+%.0f%%" % inc]
+		items.append({"tag": el.capitalize(), "forms": forms, "colour": Pal.ELEMENT_COLOURS.get(el, Pal.TEXT)})
+	var phys_inc: float = sim.tree_sum("physical_pct")
+	var pen: float = sim.tree_sum("phys_pen")
+	var bust: bool = sim.has_node("bust_them_up")
+	if phys_inc > 0.0 or pen > 0.0 or bust:
+		var share: float = 100.0 if bust else maxf(0.0, 100.0 - converted * scale)
+		var ignores: String = "ignores their armour" if bust else ("ignores %.0f%%" % pen if pen > 0.0 else "")
+		# only the parts that are something (the reviewer's catch: a pen-only build read "+0%")
+		var long: Array = []
+		var mid: Array = []
+		if share > 0.0:
+			long.append("%.0f%% of hits" % share)
+			mid.append("%.0f%%" % share)
+		if phys_inc > 0.0:
+			long.append("+%.0f%%" % phys_inc)
+			mid.append("+%.0f%%" % phys_inc)
+		if ignores != "":
+			long.append(ignores)
+		var short: String = ("+%.0f%%" % phys_inc) if phys_inc > 0.0 else (ignores if ignores != "" else str(mid[0]) if not mid.is_empty() else "")
+		if short != "":
+			items.append({"tag": "Physical", "forms": [" · ".join(long), " · ".join(mid) if not mid.is_empty() else short, short],
+				"colour": Pal.ELEMENT_COLOURS.get("physical", Pal.TEXT)})
+	# the dots: their increase, and what the notables do to them
+	var dot_inc: float = sim.tree_sum("dot_pct")
+	var extras: Array = []
+	for pair in [["Petrol/3", "burns"], ["The rat man/3", "poison"], ["Blades/3", "bleeds"]]:
+		if sim.tree.has(pair[0]):
+			extras.append("%s ×2 long" % pair[1])          # Lit, Dosed, Opened up: the trees' own, not the kit's (dot_seconds reads both)
+	if sim.has_node("poison_stacks"):
+		extras.append("poison to 15")
+	if sim.has_node("bleed_forever"):
+		extras.append("bleeds don't fade")
+	if dot_inc > 0.0 or not extras.is_empty():
+		var head: String = ("+%.0f%%" % dot_inc) if dot_inc > 0.0 else ""
+		var long: Array = ([head] if head != "" else []) + extras
+		items.append({"tag": "Dots", "forms": [" · ".join(long), " · ".join(long.slice(0, 2)), long[0]], "colour": Pal.TEXT})
+	plain.call("Max HP", sums.get("hp", 0.0), "+%.0f")
+	plain.call("First shot", sums.get("first_pct", 0.0), "+%.0f%%")
+	plain.call("Search", sums.get("search_pct", 0.0), "%.0f%% faster")
+	plain.call("Gangs", sums.get("patrol_pct", 0.0), "%.0f%% later")
+	plain.call("Quality", sums.get("rarity", 0.0), "+%.0f%%")
+	plain.call("Quantity", sums.get("loot_pct", 0.0), "+%.0f%%")
 	var joints := 0
 	var closed := 0
 	var on_show: Array = sim.trees().map(func(x): return x["name"])
@@ -766,17 +838,39 @@ func _show_sum(lanes: Array) -> void:
 			joints += 1
 			if sim.has_joint(j["key"]):
 				closed += 1
-	var figures := [
-		["Damage", "+%.0f%%" % sums.get("damage_pct", 0.0)], ["Max HP", "+%.0f" % sums.get("hp", 0.0)], ["First shot", "+%.0f%%" % sums.get("first_pct", 0.0)],
-		["Search", "%.0f%% faster" % sums.get("search_pct", 0.0)], ["Gangs", "%.0f%% later" % sums.get("patrol_pct", 0.0)],
-		["Quality", "+%.0f%%" % sums.get("rarity", 0.0)], ["Quantity", "+%.0f%%" % sums.get("loot_pct", 0.0)],
-		["Joints", "%d of %d" % [closed, joints]],
-	]
-	var items := []
-	for f in figures:
-		var zero: bool = f[1].begins_with("+0") or f[1].begins_with("0%") or f[1].begins_with("0 of")
-		items.append({"tag": f[0], "forms": [f[1]], "colour": Pal.ACCENT if f[0] == "Joints" else (Pal.TEXT_2 if zero else Pal.GOOD)})
+	if joints > 0:
+		items.append({"tag": "Joints", "forms": ["%d of %d" % [closed, joints]], "colour": Pal.ACCENT})
+	if items.is_empty():
+		items.append({"forms": ["Nothing trained yet"], "colour": Pal.TEXT_2})
+	# too long for the row: the middle forms ("80% · +52%"), then the plain figures but Damage and Max HP go to
+	# keep them - the elements are what the strip is for; then the shortest forms, the plain going least telling first
+	var tries: Array = [[0, 0]]
+	for dropped in range(6):
+		tries.append([1, dropped])
+	for dropped in range(SUM_DROP.size() + 1):
+		tries.append([2, dropped])
+	var last_cut: Array = items
+	for tr in tries:
+		var level: int = tr[0]
+		var gone: Array = SUM_DROP.slice(0, tr[1])
+		var cut: Array = []
+		for it in items:
+			if str(it.get("tag", "")) in gone:
+				continue
+			var d: Dictionary = it.duplicate()
+			var forms: Array = d["forms"]
+			d["forms"] = forms.slice(mini(level, forms.size() - 1))
+			cut.append(d)
+		if _fits(cut):
+			return cut
+		last_cut = cut
+	return last_cut                           # nothing fits: the shortest, plain figures gone - the elements and Joints go last
+
+
+## Whether the items fit the strip's one row (the chips laid, then read back).
+func _fits(items: Array) -> bool:
 	_sum_chips.show_chips(items)
+	return _sum_chips.shown() == items.size()
 
 
 func _show_panel() -> void:
