@@ -197,6 +197,8 @@ func set_site(site: String) -> void:
 		_seed = s
 		var tex := UI.place_texture(site)
 		_art.texture = tex
+		if tex != null:                       # pixel art scaled up stays crisp; scaled down (688 into 608 or 501), smoothed
+			_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if tex.get_width() <= size.x else CanvasItem.TEXTURE_FILTER_LINEAR
 		_art.visible = tex != null
 		_art_fade.visible = tex != null
 		queue_redraw()

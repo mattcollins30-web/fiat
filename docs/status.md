@@ -2535,8 +2535,12 @@ there's none; a zone's tab shows its art under a dark glass, ringed in the accen
 the Estate and Ransacked Streets first. *The smoke:* the rail's names, order and rooms; the Workshop button on
 a stash piece, a worn gun (a job on it takes, no scrap) and a part; place art in a band and behind a tab, and
 the tab back to plain without it. The reviewer caught the button sending a part to Craft; fixed, with a check.
-Raised, not fixed: a job on a worn piece doesn't clear the odds' cache when only a resist moves (the old menu
-had the same gap).
+Raised, then fixed on Matt's word: a job on a worn piece clears the odds' cache (a resist-only re-roll had kept
+the old odds), with a check; the Workshop's foot and the craft and build log lines say the Workshop, not the
+Bench. *The first place art* (Matt, 688×296, the generator's limit): `art/places/the_estate.png` and
+`ransacked_streets.png` - covering the 608 and 501 bands and the 372×56 tab, smoothed when scaled down,
+crisp when scaled up. Seen once locally and not since (two clean runs after): the Manager's Pen and the
+Lorry's Load notes checks reading double or single - a notes-doubling flake to chase in the balance pass.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element

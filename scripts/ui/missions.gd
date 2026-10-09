@@ -80,6 +80,8 @@ func _init() -> void:
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art.texture = UI.place_texture(Data.ZONES[z]["name"]) if z < Data.ZONES.size() else null
 		art.visible = art.texture != null
+		if art.texture != null and art.texture.get_width() > zw:
+			art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR     # scaled down into the tab: smoothed
 		add_child(art)
 		_zone_art.append(art)
 		var b := UI.button(self, Rect2(z * (zw + COL_GAP), 0, zw, ZONE_H), false)

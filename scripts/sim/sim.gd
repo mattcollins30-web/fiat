@@ -1480,7 +1480,7 @@ func build(kind: String, name: String) -> bool:
 	if not stash_put(made):
 		stash.append(made)                   # whatever the room: it was paid for
 	last_craft = {"id": made["id"], "kind": "build", "words": "Built %s for %d scrap" % [name.to_lower(), int(o["scrap"])]}
-	log_event("At the Bench, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
+	log_event("In the Workshop, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
 	_dry_memo.clear()
 	return true
 
@@ -1549,12 +1549,15 @@ func craft(id: int, kind: String, stat := "") -> bool:
 	# what the Bench did, in words the player can check against the piece
 	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
 	last_craft = {"id": id, "kind": kind, "words": words}
+	if not stash.has(it):
+		_surv_cache = {}                       # a job on worn kit (the Workshop, 9 Oct): the odds read it again, the id is the same
+		_dry_memo.clear()
 	if craft_in_notes(kind):
 		notes -= cost
-		log_event("At the Bench, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
+		log_event("In the Workshop, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
 	else:
 		cash -= float(cost)
-		log_event("At the Bench, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
+		log_event("In the Workshop, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
 	return true
 
 

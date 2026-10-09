@@ -3321,8 +3321,11 @@ func _craft_checks(main) -> void:
 		_check_fit(main, "Workshop (a worn piece)")
 		var r0: int = int(worn_gun["rarity"])
 		sim.cash = 999999.0
+		_check(sim.craft_cost(worn_gun, "add") >= 0, "the worn gun can't take an affix: the job checks below would skip")
 		if sim.craft_cost(worn_gun, "add") >= 0:
+			sim._surv_cache[0] = ["held", 0.5]           # odds read before the job
 			main._craft(worn_gun["id"], "add", "")
+			_check(not sim._surv_cache.has(0), "a job on a worn gun left the odds as they were read before it")
 			_check(sim.equipped["Primary"] == worn_gun and int(worn_gun["rarity"]) >= r0 and sim.last_craft.get("id", -1) == worn_gun["id"], "the Workshop's job on a worn gun did not take")
 		main._workshop.sel_id = -1
 	# a part: the Workshop button opens the Guns view with its mount picked, not Craft (the review, 9 Oct)
