@@ -430,6 +430,7 @@ func _init() -> void:
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, r + " (end)")
+	_refresh_toggle_checks(main)
 	main.save_game()
 	var before: Dictionary = sim.to_dict()
 	main.load_game()
@@ -1391,6 +1392,65 @@ func _charm_sockets(main) -> void:
 	sim.equipped["Primary"] = old_gun
 	sim.load_dict(saved)
 	print("charm and sockets ok: magic find, cash, finds, two sockets, fit/strip, the Sockets view")
+
+
+## A refresh leaves every showing button showing (9 Oct): the card grid hid all eight cards and showed
+## the used ones again ten times a second, and a hidden control drops its hover and any press in
+## progress - the Radio's buttons flickered and took a click only now and then. Every room, the Radio
+## with a tier open and its buttons up: one refresh, and no showing button - nor any control above it -
+## may have lost and regained its visibility. Watched up the chain, not on the button alone: the smoke
+## runs before the tree has drawn, where nothing reports visible in the tree and a hidden parent does
+## not pass the change on to its buttons; `_showing` walks the flags the same way.
+func _refresh_toggle_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var saved_room: String = main.room
+	sim.comms_level = maxi(sim.comms_level, 1)            # the Radio's tier cards, with their buttons
+	sim.cash = maxf(sim.cash, 100000.0)
+	var items: Array = []
+	_all_items_under(main, items)
+	var toggled := {}
+	var counter := func(n): toggled[n] = true
+	for n in items:
+		n.visibility_changed.connect(counter.bind(n))
+	# the watcher itself: a card hidden and shown must reach the counter here, or every room would pass on nothing
+	var probe = main._cards[0]
+	var was: bool = probe.visible
+	probe.visible = not was
+	probe.visible = was
+	_check(toggled.has(probe), "the toggle watcher heard nothing from a card hidden and shown: the check would pass on nothing")
+	toggled.clear()
+	var radio_buttons := 0
+	for r in main.ROOMS:
+		main.show_room(r)
+		main.refresh()
+		toggled.clear()
+		main.refresh()
+		for n in items:
+			if not (n is BaseButton) or not _showing(n):
+				continue
+			var q = n
+			while q is CanvasItem and q != main:
+				if toggled.has(q):
+					_check(false, "%s: a refresh hid and showed '%s'%s (it drops the hover and a press in progress)" % [r, str(n.get("text")) if n.get("text") != null else str(n.name), "" if q == n else " by way of a %s above it" % q.get_class()])
+					break
+				q = q.get_parent()
+		if r == main.COMMS:
+			radio_buttons = items.filter(func(n): return n is BaseButton and _showing(n) and n.get_parent() in main._cards).size()
+	for n in items:
+		n.visibility_changed.disconnect(counter)
+	_check(radio_buttons >= 2, "the Radio showed %d card buttons: the check had nothing to look at" % radio_buttons)
+	sim.load_dict(saved)
+	main.show_room(saved_room)
+	print("refresh toggles ok: every room, no showing button (or anything above it) hidden and shown again by a refresh")
+
+
+## Every CanvasItem under n, shown or not (the toggle check connects them all before it changes room).
+static func _all_items_under(n: Node, out: Array) -> void:
+	if n is CanvasItem:
+		out.append(n)
+	for c in n.get_children():
+		_all_items_under(c, out)
 
 
 ## The Workshop's Craft view: the stash's gear only, the panel reads the

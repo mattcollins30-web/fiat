@@ -2327,6 +2327,23 @@ which finds nothing inside a `.pck`; it reads the bytes through `FileAccess` now
 those) and falls back to the imported resource. The smoke checks the wordmark loaded at 154 × 72
 whenever the file exists. Noted in `docs/deck.md`.
 
+**The Radio's buttons (9 Oct, the playtest list, item one: "the buttons flicker and sometimes catch a
+click ... on hover the buttons flicker on/off consistently", on the Windows and Linux exports and in
+the editor).** The Radio is the one room still drawn on the card grid, and `refresh` - ten times a
+second - hid all eight cards and showed the used ones again. A hidden control drops its hover and any
+press in progress, and a shown one gets no hover back until the mouse moves: a still pointer saw the
+button flicker at the refresh rate, and a click landed only when its press and release fell between
+two refreshes. The rail's Radio button is not on a card, which is why it worked. A probe across every
+room found the Radio's buttons and the Runner room's one card button toggled; nothing else. The fix:
+each card's visibility set once to where it ends up. The smoke (`_refresh_toggle_checks`): every room,
+the Radio with a tier open and its buttons up, one refresh, and no showing button - nor any control
+above it - may lose and regain its visibility. Watched up the chain because the smoke runs before the
+tree has drawn: nothing reports visible in the tree there, and a hidden parent does not pass
+`visibility_changed` on to its buttons (the first cut watched the buttons alone and saw nothing - its
+own guard, "the Radio showed 0 card buttons", failed it on the Legion). Under that same condition it
+fails on the old loop (the Runner's card button, the Radio's Build and New word) and passes on the fix;
+it puts the room back after.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

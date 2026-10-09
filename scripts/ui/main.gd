@@ -732,13 +732,14 @@ func refresh() -> void:
 			cards = _comms_cards()
 		_:
 			cards = _runner_cards()
-	var slots: Array = range(Pal.MAX_CARDS)
-	for c in _cards:
-		c.visible = false
-	for i in range(mini(cards.size(), slots.size())):
-		var c = _cards[slots[i]]
-		c.visible = true
-		c.show_data(cards[i])
+	# each card set once to where it ends up: hiding them all and showing the used ones again, ten
+	# times a second, dropped a button's hover and any press in progress - the Radio's buttons flickered
+	# and took a click only now and then (9 Oct)
+	for i in range(_cards.size()):
+		var on: bool = i < cards.size()
+		_cards[i].visible = on
+		if on:
+			_cards[i].show_data(cards[i])
 	# the Yard: the works as a tree (8 Oct), with the town and the purse in its heading
 	_yard_tree.visible = room == OVERVIEW
 	if room == OVERVIEW:
