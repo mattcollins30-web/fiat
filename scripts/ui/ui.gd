@@ -64,6 +64,40 @@ static func box(color: Color, radius := 6, border := 0, border_color := Color.TR
 ## is - `glyph_mono` tells them apart by the picture's colour.
 static var _glyphs := {}
 static var _glyph_mono := {}
+## A place's painted art (9 Oct): art/places/<slug>.png - a zone for its tab, a site for its band (the Runs card
+## and behind the run's clock). Any size; shown to cover its box from the centre. Null when not painted yet:
+## the band draws its skyline instead. Loaded like the glyphs: imported, or from the file when not yet.
+static var _places := {}
+static func place_slug(name: String) -> String:
+	var out := ""
+	var gap := false
+	for ch in name.to_lower():
+		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
+			if gap and out != "":
+				out += "_"
+			out += ch
+			gap = false
+		else:
+			gap = true
+	return out
+
+
+static func place_texture(name: String) -> Texture2D:
+	var s := place_slug(name)
+	if _places.has(s):
+		return _places[s]
+	var path := "res://art/places/%s.png" % s
+	var tex: Texture2D = null
+	if s != "" and ResourceLoader.exists(path):
+		tex = load(path)
+	elif s != "" and FileAccess.file_exists(path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+		if img != null:
+			tex = ImageTexture.create_from_image(img)
+	_places[s] = tex
+	return tex
+
+
 static func glyph_texture(name: String) -> Texture2D:
 	if _glyphs.has(name):
 		return _glyphs[name]

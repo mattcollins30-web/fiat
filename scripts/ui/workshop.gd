@@ -468,7 +468,37 @@ func _selected_item() -> Dictionary:
 	for it in sim.stash:
 		if it["id"] == sel_id:
 			return it
+	for slot in Data.SLOTS:
+		if sim.equipped[slot] != null and sim.equipped[slot]["id"] == sel_id:
+			return sim.equipped[slot]            # a worn piece, sent from the Runner room (9 Oct)
 	return {}
+
+
+## Worn, not in the stash: picked from the Runner room's Workshop button.
+func _worn(it: Dictionary) -> bool:
+	return not it.is_empty() and not sim.stash.has(it)
+
+
+## The Runner room's Workshop button (9 Oct): the Craft view with this piece picked.
+func open_piece(id: int) -> void:
+	if view != "craft":
+		_set_view("craft")
+	sel_slot = ""
+	sel_mount = ""
+	sel_stat = ""
+	sel_id = id
+	_shown = ""
+	var it := _selected_item()
+	if not it.is_empty() and Items.is_attachment(it):
+		_set_view("sockets" if Items.is_socketable(it) else "guns")     # a part or a socketable is fitted, not crafted: its view, its mount picked
+		sel_id = id
+		if Items.is_socketable(it):
+			sel_slot = _slot_for("socket")
+			sel_mount = _socket_for(sel_slot)
+		else:
+			sel_mount = it["mount"]
+			sel_slot = _slot_for(sel_mount)
+		_shown = ""
 
 
 func _fitted() -> Dictionary:
@@ -629,7 +659,7 @@ func _show_craft(it: Dictionary) -> void:
 		sel_stat = ""
 		_piece_title.text = "Pick a piece"
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets."
-		_piece_words[1].text = "Worn gear comes here through the Lock-up."
+		_piece_words[1].text = "Worn gear: Workshop on it in the Runner room."
 		_piece_words[2].text = "The jobs below price up once a piece is picked."
 		_pick.show_empty("Nothing picked", ["In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "Scrap: searched up, scrapped here, ditched"])
 		_set_pick_buttons([])
@@ -691,7 +721,7 @@ func _show_craft(it: Dictionary) -> void:
 					_affix_actions[i] = _do_craft.bind(it["id"], ["one", "lock"][i], sel_stat)
 				if x - 8 <= BODY_W - PAD:
 					break
-		_pick.show_pick(it, sim, "The piece · in the stash")
+		_pick.show_pick(it, sim, "The piece · worn" if _worn(it) else "The piece · in the stash")
 		_set_pick_buttons([])
 	# THE JOBS
 	for k in range(JOBS.size()):
@@ -702,7 +732,7 @@ func _show_craft(it: Dictionary) -> void:
 		UI.wrap(t["words"], JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", "")))
 		var cost: int = -1
 		if not it.is_empty():
-			cost = sim.scrap_of(it) if kind == "scrap" else sim.craft_cost(it, kind)
+			cost = ((-1 if _worn(it) else sim.scrap_of(it)) if kind == "scrap" else sim.craft_cost(it, kind))     # a worn piece isn't scrapped off the runner
 		var can: bool = false
 		if cost >= 0:
 			can = on_bench and (true if kind == "scrap" else sim.can_craft(it["id"], kind))

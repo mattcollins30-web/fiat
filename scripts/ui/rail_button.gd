@@ -16,7 +16,7 @@ const BADGE_PAD := 10           # each side of the badge's word
 const STAMP := 56               # the stamped square
 const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
-const GLYPH_OF := {"The Yard": "yard", "Runner": "runner", "Runs": "runs", "Lock-up": "lockup", "Bench": "bench", "Training": "caravan",
+const GLYPH_OF := {"The Yard": "yard", "Stats": "stats", "Runner": "runner", "Runs": "runs", "Workshop": "bench", "Training": "caravan",
 	"Clinic": "clinic", "The Fence": "fence", "Radio": "radio"}
 
 var room: String

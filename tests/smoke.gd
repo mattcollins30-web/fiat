@@ -1256,6 +1256,8 @@ func _class_trees(main) -> void:
 	_set_cls(sim, "Doorman")
 	_radio_juice_checks(main)
 	_clock_checks(main)
+	_rail_order_checks(main)
+	_place_art_checks(main)
 	# the Yard's upgrades
 	sim.cash += 1000000.0                       # whatever inflation has done by now
 	for k in ["generator", "lookout", "kennel"]:
@@ -3261,9 +3263,19 @@ func _craft_checks(main) -> void:
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
 	main.refresh()
 	_check_fit(main, "Armoury (bench button)")
-	main._open_bench(it["id"])
-	_check(main._menu.visible, "the Bench menu did not open")
-	_check_fit(main, "Armoury (bench menu)")
+	# the Workshop button opens the Workshop on the piece (9 Oct): the old menu is gone
+	_check(not main.has_method("_open_bench") and not main.has_method("_open_bench_picks"), "the old Bench menu is still in the shell")
+	var wb: int = -1
+	for k in range(main._armoury._pick._buttons.size()):
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Workshop":
+			wb = k
+	_check(wb >= 0, "the Runner room has no Workshop button on a stash piece")
+	main._menu.close()                   # a Yard arrival's popup can be up from the run before: not the Workshop's
+	if wb >= 0:
+		main._armoury._pick.press(wb)
+	main.refresh()
+	_check(main.room == main.WORKSHOP and main._workshop.view == "craft" and main._workshop._selected_item() == it and not main._menu.visible, "the Workshop button did not open the Workshop's Craft view on the piece (%s, %s, %s, %s)" % [main.room, main._workshop.view, str(main._workshop.sel_id), str(main._menu.visible)])
+	_check_fit(main, "Workshop (from the Runner room)")
 	main._craft(it["id"], "add", "")
 	_check(it["rarity"] == 1 and not main._menu.visible, "the menu's Add did not take")
 	# the Bench says what it did: a toast with the affix added, the same on the craft panel's line, and in the log
@@ -3299,15 +3311,37 @@ func _craft_checks(main) -> void:
 		var was_line: String = Items.affix_lines(it, false, true)[0]
 		if sim.craft(it["id"], "one", it["affixes"][0]["stat"]):
 			_check(str(sim.last_craft["words"]).begins_with(was_line + " → ") or str(sim.last_craft["words"]) == "Re-rolled one: no change", "one's words: '%s'" % str(sim.last_craft["words"]))
+	# a worn piece: the Workshop works on it in place, and won't scrap it off the runner
+	var worn_gun = sim.equipped["Primary"]
+	if worn_gun != null and not worn_gun.has("unique") and not worn_gun.has("set"):
+		main._open_workshop(worn_gun["id"])
+		_check(main.room == main.WORKSHOP and main._workshop._selected_item() == worn_gun, "the Workshop did not pick the worn gun")
+		var sk: int = main._workshop.JOBS.find("scrap")
+		_check(main._workshop._job_tiles[sk]["button"].disabled and main._workshop._job_tiles[sk]["price"].text == "", "the Workshop offers to scrap a worn gun")
+		_check_fit(main, "Workshop (a worn piece)")
+		var r0: int = int(worn_gun["rarity"])
+		sim.cash = 999999.0
+		if sim.craft_cost(worn_gun, "add") >= 0:
+			main._craft(worn_gun["id"], "add", "")
+			_check(sim.equipped["Primary"] == worn_gun and int(worn_gun["rarity"]) >= r0 and sim.last_craft.get("id", -1) == worn_gun["id"], "the Workshop's job on a worn gun did not take")
+		main._workshop.sel_id = -1
+	# a part: the Workshop button opens the Guns view with its mount picked, not Craft (the review, 9 Oct)
+	var part_base: Dictionary = {}
+	for a in Data.ATTACHMENTS:
+		if not str(a.get("mount", "")).begins_with("socket") and a.get("mount", "") != "":
+			part_base = a
+			break
+	if not part_base.is_empty():
+		var part: Dictionary = sim._plain(Data.ATTACHMENT, part_base["name"])
+		sim.stash.append(part)
+		main._open_workshop(part["id"])
+		_check(main.room == main.WORKSHOP and main._workshop.view == "guns" and main._workshop.sel_mount == part["mount"] and main._workshop._selected_item() == part, "the Workshop button on a part did not open the Guns view on its mount (%s, '%s')" % [main._workshop.view, main._workshop.sel_mount])
+		_check_fit(main, "Workshop (a part from the Runner room)")
+		sim.stash.erase(part)
+		main._workshop.sel_id = -1
+		main._workshop.sel_mount = ""
+		main._workshop.sel_slot = ""
 	main.show_room(main.ARMOURY)
-	main._armoury.selected = {"kind": "stash", "id": it["id"]}
-	main.refresh()
-	main._open_bench_picks(it["id"])
-	_check(main._menu.visible, "the picks page did not open")
-	_check_fit(main, "Armoury (bench picks)")
-	main._open_bench_one(it["id"], it["affixes"][0]["stat"])
-	_check_fit(main, "Armoury (bench one)")
-	main._menu.close()
 	# the affix list on the panel, with tiers
 	main._armoury.selected = {"kind": "stash", "id": it["id"]}
 	main.refresh()
@@ -4987,8 +5021,10 @@ func _check_fit(main, where: String) -> void:
 			push_error("rail %s: badge overlaps the name" % name)
 			bad += 1
 		if b._glyph.texture == null:
-			push_error("rail %s: no glyph" % name)
-			bad += 1
+			var gname: String = b.GLYPH_OF.get(name, "")
+			if gname == "" or FileAccess.file_exists("res://art/ui/%s.png" % gname):
+				push_error("rail %s: no glyph" % name)
+				bad += 1                         # a glyph named and painted but not shown is a bug; one not yet painted is an art gap (stats.png, 9 Oct)
 		if b._rule.visible == b.last:
 			# the last row has no hairline under it (8 Oct, Matt: a line past the Radio); the rest have one
 			push_error("rail %s: the hairline is %s on the %s row" % [name, "on" if b._rule.visible else "off", "last" if b.last else "a middle"])
@@ -7324,6 +7360,70 @@ func _map_screen_checks(main) -> void:
 	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.begins_with("Quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
 	_check_fit(main, "Runs (the map, picked)")
 	sim.atlas_points -= 1                 # the point lent above goes back: the save check after counts them
+
+
+## The rail (9 Oct, Matt's order and names): the loadout is Runner, the sheet is Stats, the Bench is the Workshop.
+func _rail_order_checks(main) -> void:
+	var want := ["The Yard", "Stats", "Runner", "Runs", "Training", "Workshop", "Clinic", "The Fence", "Radio"]
+	_check(main.ROOMS == want, "the rail's rooms are %s" % str(main.ROOMS))
+	var ys := []
+	for name in want:
+		var b = main._rail_buttons[name]
+		ys.append(b.position.y)
+		_check(b._name.text == name, "the rail's %s row reads '%s'" % [name, b._name.text])
+	for k in range(1, ys.size()):
+		_check(ys[k] > ys[k - 1], "the rail's %s row is not under %s" % [want[k], want[k - 1]])
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	_check(main._armoury.visible and main.ARMOURY == "Runner", "Runner does not open the loadout")
+	main.show_room(main.RUNNER)
+	main.refresh()
+	_check(main.RUNNER == "Stats" and main._cards.size() > 0 and main._cards[0].visible, "Stats does not open the runner's sheet")
+	_check(main._rail_buttons["Workshop"]._glyph.texture != null and main._rail_buttons["Runner"]._glyph.texture != null, "Workshop or Runner lost its glyph")
+
+
+## Place art (9 Oct): a painted site shows in its band, a painted zone behind its tab; none painted, the skyline.
+func _place_art_checks(main) -> void:
+	var sim = main.sim
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(0)
+	main._missions._shown = ""
+	main.refresh()
+	var band = main._missions._cols[0]["band"]
+	var site: String = Data.TIERS[Data.ZONES[0]["tiers"][0]]["name"]
+	_check(band.has_art() == (UI.place_texture(site) != null), "the site band's art does not follow art/places/%s.png" % UI.place_slug(site))
+	var img := Image.create(64, 21, false, Image.FORMAT_RGBA8)
+	img.fill(Color("8899aa"))
+	var tex := ImageTexture.create_from_image(img)
+	var had_site = UI._places.get(UI.place_slug(site), null)
+	UI._places[UI.place_slug(site)] = tex
+	band._seed = 0
+	band.set_site(site)
+	_check(band.has_art() and band._art.texture == tex and band._art_fade.visible, "a painted site does not show in its band")
+	_check(band.get_child(0) == band._art and band._art.get_index() < band.title.get_index(), "the site art sits over the band's words")
+	main._missions._shown = ""
+	main.refresh()
+	_check_fit(main, "Runs (site art)")
+	var zart: TextureRect = main._missions._zone_art[0]
+	var had_zone = zart.texture
+	zart.texture = tex
+	zart.visible = true
+	main._missions._shown = ""
+	main.refresh()
+	var zb: Button = main._missions._zone_buttons[0]
+	_check(zart.get_index() < zb.get_index() and zb.get_theme_stylebox("normal").bg_color.a < 0.5 and zb.get_theme_color("font_color") == Pal.TEXT, "the zone tab does not show its art under a glass")
+	_check_fit(main, "Runs (zone art)")
+	zart.texture = had_zone
+	zart.visible = had_zone != null
+	if had_site == null:
+		UI._places.erase(UI.place_slug(site))
+	else:
+		UI._places[UI.place_slug(site)] = had_site
+	band._seed = 0
+	band.set_site(site)
+	main._missions._shown = ""
+	main.refresh()
+	_check(zb.get_theme_constant("outline_size") == 0 or zart.visible, "a tab without art keeps the art tab's outline")
 
 
 func _yard_checks(main) -> void:

@@ -36,6 +36,8 @@ var _fade_to := Pal.CARD
 var _left := PAD                      # where the words start: past a portrait when one sits at the left
 var _under := false                   # the headline under the title, the unit beside it
 var _right_any := false               # right-hand lines showing: the unit keeps clear of them
+var _art: TextureRect                 # the site's painted art (9 Oct), over the skyline when there is one
+var _art_fade: TextureRect            # its shade: a touch at the top for the title, the fade into the card at the foot
 
 
 ## `w` × `h` at the parent's top left; `tone` picks the sky; `fade_to` is the panel colour under it.
@@ -45,6 +47,31 @@ func _init(w: float, h: float, tone := 0, fade_to := Pal.CARD) -> void:
 	clip_contents = true
 	_tone = clampi(tone, 0, SKY.size() - 1)
 	_fade_to = fade_to
+	_art = TextureRect.new()
+	_art.size = size
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST      # pixel art, scaled whole
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art.visible = false
+	add_child(_art)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.3, 0.5, 1.0])
+	g.colors = PackedColorArray([Color(0, 0, 0, 0.45), Color(0, 0, 0, 0.15), Color(fade_to, 0.25), Color(fade_to, 0.97)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	gt.width = 4
+	gt.height = 64
+	_art_fade = TextureRect.new()
+	_art_fade.texture = gt
+	_art_fade.size = size
+	_art_fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art_fade.stretch_mode = TextureRect.STRETCH_SCALE
+	_art_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art_fade.visible = false
+	add_child(_art_fade)
 	kicker = UI.label(self, Rect2(PAD, 12, w - 2 * PAD, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	title = UI.label(self, Rect2(PAD, 36, w - 2 * PAD, 40), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	headline = UI.label(self, Rect2(PAD, h - 60, w - 2 * PAD, 48), "", "SemiBold", Pal.HEADLINE, Pal.ACCENT)
@@ -168,7 +195,16 @@ func set_site(site: String) -> void:
 	var s := hash(site)
 	if s != _seed:
 		_seed = s
+		var tex := UI.place_texture(site)
+		_art.texture = tex
+		_art.visible = tex != null
+		_art_fade.visible = tex != null
 		queue_redraw()
+
+
+## For the tests: the painted art showing, or the skyline.
+func has_art() -> bool:
+	return _art.visible
 
 
 ## The sky's tone: a zone's number, or the rooms' own past the zones.
@@ -182,6 +218,8 @@ func set_tone(tone: int) -> void:
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
+	if _art.visible:
+		return                                # the painted art and its shade are children: nothing under them
 	var sky: Color = SKY[_tone]
 	var ground: Color = GROUND[_tone]
 	# the sky, as strips from the zone's tone down to its ground; the top corners rounded like the card's

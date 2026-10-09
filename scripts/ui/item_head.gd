@@ -164,7 +164,7 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 		chips_a.append({"forms": extra if extra is Array else [str(extra)], "colour": Pal.SET if not plain else Pal.TEXT_2})
 	elif open:
 		var left: int = Data.RARITIES.size() - 1 - int(it["rarity"])
-		chips_a.append({"forms": ["%d open at the Bench" % left, "%d open" % left], "colour": Pal.TEXT_2})
+		chips_a.append({"forms": ["%d open in the Workshop" % left, "%d open" % left], "colour": Pal.TEXT_2})
 	elif n == 0 and not plain:
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
 	_affixes.show_chips(chips_a, AFFIX_ROWS)

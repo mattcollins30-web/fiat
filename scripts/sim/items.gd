@@ -861,7 +861,7 @@ static func socket_words(it: Dictionary) -> String:
 	for ty in ["fire", "frost", "poison", "shock"]:
 		if b.has("conv_%s_pct" % ty):
 			return "A socketable: in any socket, %d%% of your hits land as %s" % [int(b["conv_%s_pct" % ty]), ty]
-	return "A socketable: goes in a socket at the Bench"
+	return "A socketable: goes in a socket in the Workshop"
 
 
 ## Stacks: how many a stack of this can hold, and how many it holds.

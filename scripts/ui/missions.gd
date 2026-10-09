@@ -32,6 +32,7 @@ const WORD_ROWS := 4               # the radio's two words and the sky's two, a 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
 var _zone_buttons: Array = []
+var _zone_art: Array = []                 # a TextureRect a tab, behind it
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
 var _atlas                         # the map (atlas.gd): the endgame's tree in the Caravan's shape, in place of the columns
@@ -40,12 +41,47 @@ const ZONE_H := 56
 const TOP := ZONE_H + 16
 
 
+## A tab over its zone's art: a dark glass over the picture so the name reads, the picked one ringed in the
+## accent instead of filled with it, a shut one darker.
+func _style_art_tab(b: Button, picked: bool) -> void:
+	var ring: Color = Pal.ACCENT if picked else Pal.CARD_LINE
+	var w := 3 if picked else 1
+	var glass := func(a: float, bw: int, c: Color) -> StyleBoxFlat:
+		var sb := UI.box(Color(0, 0, 0, a), 8, bw, c)
+		sb.content_margin_left = 12            # the plain tab's margins
+		sb.content_margin_right = 12
+		return sb
+	b.add_theme_stylebox_override("normal", glass.call(0.25 if picked else 0.45, w, ring))
+	b.add_theme_stylebox_override("hover", glass.call(0.15 if picked else 0.3, w, ring))
+	b.add_theme_stylebox_override("pressed", glass.call(0.25, w, ring))
+	b.add_theme_stylebox_override("hover_pressed", glass.call(0.25, w, ring))
+	b.add_theme_stylebox_override("disabled", glass.call(0.7, 1, Pal.CARD_LINE))
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 8, 2, Pal.TEXT))
+	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(st, Pal.TEXT)
+	b.add_theme_color_override("font_disabled_color", Pal.TEXT_2)
+	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	b.add_theme_constant_override("outline_size", 4)
+
+
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the zones, as a row of buttons across the top
 	var zw := (Pal.GRID_W - COL_GAP * Data.ZONES.size()) / (Data.ZONES.size() + 1)
 	for z in range(Data.ZONES.size() + 1):
+		var art := TextureRect.new()             # the zone's painted art behind its tab (9 Oct), when there is one
+		art.position = Vector2(z * (zw + COL_GAP), 0)
+		art.size = Vector2(zw, ZONE_H)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		art.clip_contents = true
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		art.texture = UI.place_texture(Data.ZONES[z]["name"]) if z < Data.ZONES.size() else null
+		art.visible = art.texture != null
+		add_child(art)
+		_zone_art.append(art)
 		var b := UI.button(self, Rect2(z * (zw + COL_GAP), 0, zw, ZONE_H), false)
 		b.text = Data.ZONES[z]["name"] if z < Data.ZONES.size() else "The map"
 		b.pressed.connect(_pick_zone.bind(z))
@@ -155,7 +191,11 @@ func show_state(s) -> void:
 		var open_z: bool = sim.zone_open(z)
 		zb.text = Data.ZONES[z]["name"] if open_z else "%s · locked" % Data.ZONES[z]["name"]
 		zb.disabled = not open_z
-		UI.style_button(zb, z == zone)
+		if _zone_art[z].visible:
+			_style_art_tab(zb, z == zone)
+		else:
+			UI.style_button(zb, z == zone)
+			zb.remove_theme_constant_override("outline_size")
 	var mb: Button = _zone_buttons[MAP]
 	mb.text = "The map" if sim.campaign_done() else "The map · locked"
 	mb.disabled = not sim.campaign_done()

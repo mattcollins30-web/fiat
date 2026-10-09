@@ -197,10 +197,10 @@ func _show_panel() -> void:
 			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The Fence buys papers"])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
-			_pick.show_right_words("The Bench", "Fitted at the Bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
+			_pick.show_right_words("The Workshop", "Fitted in the Workshop", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
-			_pick.show_right_words("The Bench", "Fitted at the Bench", ["Goes on %s" % Items.mount_words(it["mount"])])
-		buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})     # every Bench from the start (9 Oct)
+			_pick.show_right_words("The Workshop", "Fitted in the Workshop", ["Goes on %s" % Items.mount_words(it["mount"])])
+		buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})     # every Bench from the start (9 Oct)
 	else:
 		var fitted = sim.equipped[it["slot"]]
 		var from_stash: bool = selected["kind"] == "stash"
@@ -218,7 +218,7 @@ func _show_panel() -> void:
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				_pick.set_hint("No room in the stash for what comes off")
 			if not it.has("unique") and not it.has("set"):
-				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
+				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 		else:
 			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
 			var lines := []
@@ -232,7 +232,7 @@ func _show_panel() -> void:
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
 			if not it.has("unique") and not it.has("set"):
-				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
+				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 	_set_buttons(buttons)
 
 

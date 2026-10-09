@@ -677,7 +677,7 @@ func _show_panel() -> void:
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 			if sim.med_capacity() == 0:
-				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Lock-up to carry meds", "No rig fitted: one in the Lock-up", "No rig fitted"])
+				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Runner room to carry meds", "No rig fitted: fit one in Runner", "No rig fitted"])
 			elif sim.rig.is_empty():
 				UI.fit(_left_lines[0], ["Nothing carried: take from Your meds", "Nothing carried: take from the grid", "Nothing carried"])
 			else:
@@ -693,7 +693,7 @@ func _show_panel() -> void:
 					words.append(name if counts[name] == 1 else "%s ×%d" % [name, counts[name]])
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
 				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
-				UI.fit(_left_lines[2], ["Taken out again in the Lock-up, from the rig", "Taken out in the Lock-up"])
+				UI.fit(_left_lines[2], ["Taken out again in the Runner room, from the rig", "Taken out in Runner"])
 			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), sim.clinic_stock()]
 			_right_lines[0].text = "No more until the next run"
 		else:
@@ -731,7 +731,7 @@ func _show_panel() -> void:
 	elif Items.rig_item(it):
 		_right_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 	elif Items.is_socketable(it):
-		UI.fit(_right_title, ["Fitted at the Bench, Sockets view", "Fitted at the Bench"])
+		UI.fit(_right_title, ["Fitted in the Workshop, Sockets view", "Fitted in the Workshop"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
 	elif Items.is_paper(it):
 		_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
@@ -742,7 +742,7 @@ func _show_panel() -> void:
 		else:
 			_right_lines[0].text = "Not read yet"
 	elif it.has("mount"):
-		_right_title.text = "Fitted at the Bench"
+		_right_title.text = "Fitted in the Workshop"
 		_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
 	else:
 		_right_title.text = ""

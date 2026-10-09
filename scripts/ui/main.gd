@@ -47,14 +47,14 @@ const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs
 const ODDS_MS := 5.0                # of odds work a frame on the Runs screen: the screen stays smooth, the tiers settle over a second or two
 const OVERVIEW := "The Yard"
 const MISSIONS := "Runs"
-const ARMOURY := "Lock-up"
+const ARMOURY := "Runner"          # the loadout (9 Oct, Matt: "I click runner expecting to see my loadout"): was the Lock-up
 const MEDIC := "Clinic"
 const MARKET := "The Fence"
 const BARRACKS := "Training"       # the Caravan's room (8 Oct, Matt: "caravan doesn't make any sense when it displays perk points/skill trees"); the Caravan stays as the place on its screen
-const WORKSHOP := "Bench"
+const WORKSHOP := "Workshop"       # was the Bench (9 Oct); the Bench stays the Yard's building
 const COMMS := "Radio"
-const RUNNER := "Runner"           # the runner's own room (8 Oct): the sheet, attack, defence, the record - what was the Yard's left half
-const ROOMS := [OVERVIEW, RUNNER, MISSIONS, ARMOURY, WORKSHOP, BARRACKS, MEDIC, MARKET, COMMS]
+const RUNNER := "Stats"            # the runner's sheet, attack, defence, the record (8 Oct); was the Runner room until 9 Oct
+const ROOMS := [OVERVIEW, RUNNER, ARMOURY, MISSIONS, BARRACKS, WORKSHOP, MEDIC, MARKET, COMMS]     # Matt's order (9 Oct)
 
 ## The top bar: level and HP on the left, where the runner is in the centre,
 ## cash on the right; each in a fixed slot as wide as the widest text it can
@@ -220,7 +220,7 @@ func _build() -> void:
 	add_child(_radio)
 	_armoury = Armoury.new()
 	_armoury.acted.connect(refresh)
-	_armoury.bench.connect(_open_bench)
+	_armoury.bench.connect(_open_workshop)
 	_armoury.visible = false
 	add_child(_armoury)
 	_barracks = Barracks.new()
@@ -235,7 +235,7 @@ func _build() -> void:
 	add_child(_missions)
 	_workshop = Workshop.new()
 	_workshop.acted.connect(refresh)
-	_workshop.craft.connect(_craft)                # the Bench's jobs, done in the room (8 Oct); the Lock-up's Bench button keeps the menu for worn gear
+	_workshop.craft.connect(_craft)                # the Workshop's jobs, done in the room (8 Oct); worn gear comes in through the Runner room's Workshop button (9 Oct)
 	_workshop.build.connect(_open_builds)
 	_workshop.visible = false
 	add_child(_workshop)
@@ -975,7 +975,7 @@ func _runner_cards() -> Array:
 		"title": "Kit", "headline": Fmt.money(sim.loadout_value()), "unit": "worth",
 		"lines": klines,
 		"note": "What the Fence would pay",
-		"status": "Fit it in the Lock-up",
+		"status": "Fit it in the Runner room",
 	})
 	# the last run
 	var r = sim.last_report
@@ -1228,72 +1228,14 @@ func _build_one(kind: String, name: String) -> void:
 		_juice.toast("Built: %s" % name.to_lower(), "good")
 
 
-func _open_bench(id: int) -> void:
-	var it: Dictionary = sim.item_by_id(id)
-	if it.is_empty():
+## The Runner room's Workshop button on a piece (9 Oct): the Workshop's Craft view with it picked, worn or
+## not - the old menu went (Matt: "it opens the old menu - need to just remove the old one").
+func _open_workshop(id: int) -> void:
+	if sim.item_by_id(id).is_empty():
 		return
-	# page 1: the whole-item jobs; page 2: the ones that pick an affix
-	var page1 := ["reroll", "add", "socket", "strip"]
-	var items := []
-	for kind in page1:
-		var cost: int = sim.craft_cost(it, kind)
-		if cost < 0:
-			continue
-		items.append({"name": "%s · %s" % [Data.CRAFT[kind]["name"], _craft_price(kind, cost)], "detail": Data.CRAFT[kind]["words"] + ("" if sim.can_craft(id, kind) else " · not enough"),
-			"action": _craft.bind(id, kind, "")})
-	if sim.craft_cost(it, "one", it["affixes"][0]["stat"] if not it["affixes"].is_empty() else "") >= 0 or sim.craft_cost(it, "bump") >= 0:
-		items.append({"name": "One affix, or the level …", "detail": "Lock one and re-roll the rest, re-roll one, raise the level", "action": _open_bench_picks.bind(id)})
-	items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open(it["base"], "%s · level %d · %s" % [Items.rarity_name(it), Items.ilvl(it), _purse()], items.slice(0, 5), _menu.close)
-
-
-## The second page: the jobs that pick an affix, and the level in notes.
-func _open_bench_picks(id: int) -> void:
-	var it: Dictionary = sim.item_by_id(id)
-	if it.is_empty():
-		return
-	var items := []
-	var lines: Array = Items.affix_lines(it, true, true)
-	for k in range(mini(it["affixes"].size(), 3)):
-		var stat: String = it["affixes"][k]["stat"]
-		var lock: int = sim.craft_cost(it, "lock", stat)
-		var one: int = sim.craft_cost(it, "one", stat)
-		var detail := "Re-roll it for %s" % Fmt.money(one)
-		if lock >= 0:
-			detail += " · keep it and re-roll the rest for %s" % Fmt.money(lock)
-		items.append({"name": lines[k], "detail": detail, "action": _open_bench_one.bind(id, stat), "color": Pal.tier_color(Items.affix_tier(it, k))})
-	var bump: int = sim.craft_cost(it, "bump")
-	if bump >= 0 and items.size() < 4:
-		items.append({"name": "%s · %d notes" % [Data.CRAFT["bump"]["name"], bump], "detail": Data.CRAFT["bump"]["words"], "action": _craft.bind(id, "bump", "")})
-	items.append({"name": "Back", "detail": "", "action": _open_bench.bind(id)})
-	_menu.open(it["base"], "Pick an affix · %s" % _purse(), items.slice(0, 5), _open_bench.bind(id))
-
-
-func _open_bench_one(id: int, stat: String) -> void:
-	var it: Dictionary = sim.item_by_id(id)
-	if it.is_empty():
-		return
-	var items := []
-	for kind in ["one", "lock"]:
-		var cost: int = sim.craft_cost(it, kind, stat)
-		if cost >= 0:
-			items.append({"name": "%s · %s" % [Data.CRAFT[kind]["name"], Fmt.money(cost)], "detail": Data.CRAFT[kind]["words"] + ("" if sim.can_craft(id, kind, stat) else " · not enough"),
-				"action": _craft.bind(id, kind, stat)})
-	items.append({"name": "Back", "detail": "", "action": _open_bench_picks.bind(id)})
-	var label := ""
-	for line in Items.affix_lines(it, false, true):
-		if line.contains(str(Items.affix_def(stat).get("label", stat))):
-			label = line
-	var short := str(Items.affix_def(stat).get("label", stat))
-	_menu.open([label, short, stat] if label != "" else [short, stat], _purse(), items, _open_bench_picks.bind(id))
-
-
-func _craft_price(kind: String, cost: int) -> String:
-	return ("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost)
-
-
-func _purse() -> String:
-	return "you have %s and %d notes" % [Fmt.money(sim.cash), sim.notes]
+	show_room(WORKSHOP)
+	_workshop.open_piece(id)
+	refresh()
 
 
 func _craft(id: int, kind: String, stat: String) -> void:

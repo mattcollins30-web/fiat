@@ -2519,6 +2519,25 @@ deeds lost to it, the hand-me-downs handed out before the second loss, old saves
 head's time read after the words, a Ghost run clearing on a kept pack, and Fetch going through the stash's room;
 all fixed, with checks where testable.
 
+**The rooms renamed, the old Bench menu gone, place art wired (9 Oct, the playtest's UI list).** Matt: "I click
+runner expecting to see my loadout and gear but that's actually under lockup." The loadout room is **Runner**
+(was the Lock-up), the runner's sheet is **Stats** (was Runner), the Bench is the **Workshop**; the rail runs
+the Yard, Stats, Runner, Runs, Training, Workshop, Clinic, the Fence, Radio. Rooms only: the Yard's Lock-up
+and Bench keep their names as buildings; lines that send you to a room name the new one ("fit one in Runner",
+"Fitted in the Workshop", "1 open in the Workshop"). The rail's glyph follows the name: Stats wants
+`art/ui/stats.png` (not painted; an empty stamp till then - the fit check counts a glyph named but unpainted
+as an art gap, not a failure). *The old menu:* `_open_bench`/`_picks`/`_one` are gone; the Runner room's
+button on a piece is **Workshop** and opens the Workshop on it - Craft with the piece picked, worn pieces too
+(the Workshop finds a picked id in the kit; Scrap is hollow on a worn piece), a part or a socketable on the
+Guns or Sockets view with its mount picked. *Place art:* `UI.place_texture` reads `art/places/<slug>.png`; a
+site's band (the Runs card, behind the run's clock) shows it covering the band under a shade, the skyline when
+there's none; a zone's tab shows its art under a dark glass, ringed in the accent when picked. Matt is painting
+the Estate and Ransacked Streets first. *The smoke:* the rail's names, order and rooms; the Workshop button on
+a stash piece, a worn gun (a job on it takes, no scrap) and a part; place art in a band and behind a tab, and
+the tab back to plain without it. The reviewer caught the button sending a part to Craft; fixed, with a check.
+Raised, not fixed: a job on a worn piece doesn't clear the odds' cache when only a resist moves (the old menu
+had the same gap).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
