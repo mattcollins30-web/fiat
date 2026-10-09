@@ -2426,6 +2426,15 @@ Lock free, the free cells missed in room checks, the Charger and the Field kit u
 on the run's finds, the depth gates reading the selector rather than the depth held, Long range never rolling
 its word, Floodlights missing a rolled Night, and the Insurance desk's deeds not ending the game; all fixed,
 most with a check.
+*Matt's five (same day):* old saves keep side A (refit at half); the bot counts one hour in three as away
+(`AWAY_SHARE`, cleared in `tidy`) so Overtime and the Generator's rank pay, and takes Overtime over Battery; a
+refit that takes cells is allowed and the strip says first how far over it leaves the stash
+(`yard_refit_over`, amber); the column-5 gate reads "before the first campaign"; the rail's badge is news only
+(`yard_news`: a column opened or something newly buyable since the Yard was last looked at; `yard_seen`, saved,
+kept on a move, marked before the rail paints). The reviewer caught the runner being out stopping the Yard from
+counting as seen, the move and old saves lighting the badge, the badge painted before the mark, the warning
+hiding a refit's block, and the bot's between-run sales earning the away bonus; all fixed with checks. A smoke
+flake fixed on the way: the Yard-pick check failed when the bot had built those picks first.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element

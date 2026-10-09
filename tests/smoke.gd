@@ -1290,8 +1290,11 @@ func _class_trees(main) -> void:
 	main._choose_hold(0)
 	main._menu.close()
 	# the Yard's upgrades
-	sim.cash += 40000.0
-	_check(sim.yard_pick("generator", 0, "a") and sim.yard_pick("lookout", 0, "a") and sim.yard_pick("kennel", 0, "a"), "a yard pick did not buy")
+	sim.cash += 1000000.0                       # whatever inflation has done by now
+	for k in ["generator", "lookout", "kennel"]:
+		sim.yard_picks.erase(k)                 # the bot may have built them already
+	sim._yard_changed("")
+	_check(sim.yard_pick("generator", 0, "a") and sim.yard_pick("lookout", 0, "a") and sim.yard_pick("kennel", 0, "a"), "a yard pick did not buy: %s / %s / %s" % [sim.yard_pick_block("generator", 0, "a"), sim.yard_pick_block("lookout", 0, "a"), sim.yard_pick_block("kennel", 0, "a")])
 	_check(sim.away_cap_s() == 12.0 * 3600.0, "Twelve hours did not raise the away cap")
 	main.show_room(main.OVERVIEW)
 	_check_fit(main, "The Yard (upgrades)")
@@ -6410,6 +6413,8 @@ func _yard_wide_checks(main) -> void:
 	sim.yard_picks = {}
 	sim.yard_ranks = {}
 	sim.yard_open = 1
+	sim.yard_seen = {}
+	sim.yard_seen_cols = 1
 	sim._yard_changed("")
 	var cash0: float = sim.cash
 	sim.cash = 0.0
@@ -6420,10 +6425,35 @@ func _yard_wide_checks(main) -> void:
 	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "", "the rail's Upgrade badge is lit with no cash")
 	_check(sim.yard_pick_block("bench", 0, "a") == "Short of cash", "a pick with no cash: '%s'" % sim.yard_pick_block("bench", 0, "a"))
 	_check(sim.yard_pick_block("bench", 5 - 1, "a") == Data.YARD_GATES[4] or sim.yard_cols() >= 5, "a shut column's block is not its gate: '%s'" % sim.yard_pick_block("bench", 4, "a"))
-	# pick, build, the other side dim, a refit for half
+	# pick, build, the other side dim, a refit for half; the badge is news only (9 Oct): lit for what's newly
+	# buyable or a column opened since the Yard was looked at, cleared by looking
+	main.show_room(main.MISSIONS)
 	sim.cash = 1000000.0
 	main.refresh()
-	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "the rail's Upgrade badge is not lit with a pick affordable")
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "the rail's Upgrade badge is not lit with a pick newly affordable")
+	main.show_room(main.OVERVIEW)
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "" and not main._rail_buttons[main.OVERVIEW]._badge.visible, "looking at the Yard did not clear the badge (as drawn: %s)" % str(main._rail_buttons[main.OVERVIEW]._badge.visible))
+	var seen_n: int = sim.yard_seen.size()
+	var rt: Dictionary = sim.to_dict()
+	sim.yard_seen = {}
+	sim.load_dict(rt)
+	_check(sim.yard_seen.size() == seen_n and seen_n > 0 and sim.yard_seen_cols == sim.yard_cols(), "what the badge has seen did not survive a save: %d of %d" % [sim.yard_seen.size(), seen_n])
+	main.show_room(main.MISSIONS)
+	sim.cash = 0.0
+	main.refresh()
+	sim.cash = 1000000.0
+	main.refresh()
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "", "the badge lit again for picks already seen")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission() and not sim._yard_buyable_ids().is_empty(), "with the runner out, the Yard reads nothing buyable for the badge")
+	if sim.on_mission():
+		sim._extract()
+	sim.yard_open = sim.yard_cols() + 1
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "a column opened did not light the badge")
+	sim.yard_open = 1
+	sim.yard_seen_cols = 1
+	main.show_room(main.OVERVIEW)
 	yt._press("kennel", 0, "a")
 	main.refresh()
 	_check(yt._title.visible and yt._title.text.begins_with("A dog") and yt._build.text == "Build" and not yt._build.disabled, "the strip does not offer A dog: '%s' / '%s'" % [yt._title.text, yt._build.text])
@@ -6537,6 +6567,23 @@ func _yard_pick_checks(main) -> void:
 	sim.yard_ranks["stash"] = 1
 	_check(sim.stash_cap() == cap0 + 40 + 50 + 60 + 100 + 20, "the Stash's cells are off: %d from %d" % [sim.stash_cap(), cap0])
 	sim.yard_ranks = {}
+	# a refit off cells is allowed, and the strip says first how far over it leaves the stash (9 Oct)
+	var stash_keep: Array = sim.stash.duplicate(true)
+	while sim.stash_used() < sim.stash_cap():
+		sim.stash.append(sim._plain("Helmet", "Hard hat"))
+	var picks_keep: Dictionary = sim.yard_picks.duplicate(true)
+	var over_want: int = sim.yard_refit_over("stash", 0, "b")         # Shelving's forty, less what Racks frees, plus a hard hat past the cap
+	_check(over_want > 30 and over_want <= sim.stash_used() - sim.stash_cap() + 40 and sim.yard_picks == picks_keep, "the refit off Shelving reads %d over, or the reading changed the picks" % sim.yard_refit_over("stash", 0, "b"))
+	_yard_set(sim, "kennel", 0, "a")
+	_check(sim.yard_refit_over("kennel", 0, "b") == 0, "a refit that takes no cells reads over")
+	var yt = main._yard_tree
+	main.show_room(main.OVERVIEW)
+	yt._press("stash", 0, "b")
+	main.refresh()
+	_check(yt._other.text.contains("%d cells over" % over_want) or yt._other.text.contains("%d over" % over_want), "the strip does not warn of the stash going over: '%s'" % yt._other.text)
+	_check_fit(main, "Yard (a refit over the stash's cap)")
+	yt.selected = {}
+	sim.stash = stash_keep
 	on.call("stash", 0, "b")
 	on.call("stash", 2, "b")
 	on.call("stash", 3, "b")
@@ -6709,7 +6756,9 @@ func _yard_pick_checks(main) -> void:
 	_yard_set(sim, "stash", 4, "a")
 	sim.yard_ranks["kennel"] = 3
 	var open_before: int = sim.yard_cols()
+	sim.yard_mark_seen()
 	_check(sim.can_move_yard() and sim.move_yard(), "the Yard did not move")
+	_check(not sim.yard_news(), "the move lit the Upgrade badge with nothing new: %d of %d columns seen" % [sim.yard_seen_cols, sim.yard_cols()])
 	_check(sim.yard_has("a_dog") and sim.yard_has("dry_store") and sim.yard_rank("kennel") == 3 and sim.yard_cols() == open_before and sim.notes == 300, "the buildings did not move with the Yard: %s, ranks %s, %d columns, %d notes" % [str(sim.yard_picks), str(sim.yard_ranks), sim.yard_cols(), sim.notes])
 	# an old save's levels become the matching picks, free
 	var old: Dictionary = sim.to_dict()

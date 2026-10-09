@@ -24,6 +24,8 @@ var operators_lost := 0
 var yard_picks := {}               # the Yard's lanes (9 Oct): building key -> [five sides, "a", "b" or ""]
 var yard_ranks := {}               # building key -> ranks bought
 var yard_open := 1                 # the columns opened, for good: a move doesn't close them
+var yard_seen := {}                # what the Yard has been looked at with buyable ("key/col", "key/rN"): the rail's badge is for the rest
+var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
 var tip_free := false             # the Radio's Tip line: the next fresh word is free
 var tip_runs := 0                  # runs home since the last free word
@@ -965,7 +967,7 @@ func move_yard(trade := "") -> bool:
 	var kept_share: float = 0.75 if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
-		"tip_free": tip_free, "tip_runs": tip_runs,
+		"tip_free": tip_free, "tip_runs": tip_runs, "yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols,
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon()}
@@ -994,6 +996,8 @@ func move_yard(trade := "") -> bool:
 	salvage = keep["salvage"]
 	tip_free = keep["tip_free"]
 	tip_runs = keep["tip_runs"]
+	yard_seen = keep["yard_seen"]             # what the badge has shown moves too: a move is no news
+	yard_seen_cols = keep["yard_seen_cols"]
 	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the Yard
 	atlas_points = keep["atlas_points"]
 	for i in keep["held"]:
@@ -2530,6 +2534,52 @@ func yard_any_buyable() -> bool:
 	return false
 
 
+## What's buyable now, by id: an open column with nothing built ("key/col"), a rank ("key/rN", N the next).
+## The runner being out doesn't count (the reviewer's catch: a Yard looked at mid-run marked nothing seen).
+func _yard_buyable_ids() -> Array:
+	var out: Array = []
+	for b in Data.YARD:
+		var have: int = int(salvage.get(b["salvage"], 0))
+		for c in range(b["picks"].size()):
+			if c < yard_cols() and yard_side(b["key"], c) == "" and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
+				out.append("%s/%d" % [b["key"], c])
+		if yard_cols() >= Data.YARD_COLS and cash >= yard_rank_cost(b["key"]) and have >= yard_rank_salvage(b["key"]):
+			out.append("%s/r%d" % [b["key"], yard_rank(b["key"]) + 1])
+	return out
+
+
+## The rail's badge (Matt, 9 Oct: lit nearly always, so it was ignored): only for news - a column opened since
+## the Yard was last looked at, or something buyable that wasn't when it was. Looking clears it.
+func yard_news() -> bool:
+	if yard_cols() > yard_seen_cols:
+		return true
+	for id in _yard_buyable_ids():
+		if not yard_seen.has(id):
+			return true
+	return false
+
+
+func yard_mark_seen() -> void:
+	yard_seen_cols = yard_cols()
+	for id in _yard_buyable_ids():
+		yard_seen[id] = true
+
+
+## A refit that takes cells away (off Shelving, Racks, the Annex...): how many cells the stash would be over after
+## it, 0 if none. Allowed, but the strip says so first.
+func yard_refit_over(key: String, col: int, side: String) -> int:
+	var was: Dictionary = yard_picks.duplicate(true)
+	var sides: Array = yard_picks.get(key, ["", "", "", "", ""]).duplicate()
+	sides[col] = side
+	yard_picks[key] = sides
+	_yard_dirty = true
+	var over: int = stash_used() - stash_cap()
+	yard_picks = was
+	_yard_dirty = true
+	var now_over: int = stash_used() - stash_cap()
+	return maxi(0, over) if over > now_over else 0
+
+
 ## What a pick changed: the figures read fresh; the Fence's and the Clinic's shelves and the odds again.
 func _yard_changed(_key: String) -> void:
 	_yard_dirty = true
@@ -2631,6 +2681,10 @@ func _load_yard(d: Dictionary) -> void:
 	yard_open = int(d.get("yard_open", 1))
 	tip_free = bool(d.get("tip_free", false))
 	tip_runs = int(d.get("tip_runs", 0))
+	yard_seen = {}
+	for id in d.get("yard_seen", []):
+		yard_seen[str(id)] = true
+	yard_seen_cols = int(d.get("yard_seen_cols", yard_open))     # a save from before the badge: its columns aren't news
 	salvage = {"copper": 0, "steel": 0, "army": 0}
 	var sv: Dictionary = d.get("salvage", {})
 	for k in sv:
@@ -5194,6 +5248,7 @@ func _state() -> Dictionary:
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
 		"intel": intel, "depth": depth, "best_depth": best_depth, "class": cls, "pinned": pinned,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(), "tip_free": tip_free, "tip_runs": tip_runs,
+		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,

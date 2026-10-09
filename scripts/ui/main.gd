@@ -695,6 +695,8 @@ func refresh() -> void:
 	for k in ["where", "notes", "cash"]:
 		var l: Label = _top_labels[k]
 		_top_glyphs[k].position.x = l.position.x + l.size.x - ceilf(UI.text_width(l, l.text)) - TOP_GLYPH_GAP - TOP_GLYPH
+	if room == OVERVIEW:
+		sim.yard_mark_seen()                  # before the rail is painted: the badge never shows on the Yard while it's open
 	for name in ROOMS:
 		var b = _rail_buttons[name]
 		b.set_selected(name == room)
@@ -838,7 +840,7 @@ func _rail_status(name: String) -> Dictionary:
 	match name:
 		OVERVIEW:
 			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
-			return {"badge": "Upgrade" if sim.yard_any_buyable() else "", "badge_tone": "good"}
+			return {"badge": "Upgrade" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:

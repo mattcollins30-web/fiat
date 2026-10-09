@@ -141,8 +141,8 @@ func _style(t: Dictionary, look: String, on: bool) -> void:
 
 func show_state(s, purse: Dictionary) -> void:
 	sim = s
-	var sig := "%s|%s|%s|%d|%d|%s|%s|%d|%d|%s|%s|%d|%.3f" % [str(selected), str(sim.yard_picks), str(sim.yard_ranks), int(sim.cash), sim.yard_cols(), str(sim.salvage), str(sim.on_mission()),
-		sim.notes, sim.scrap, str(purse.get("left", {}).get("note", "")), str(purse.has("button")), sim.yard_moves, sim.inflation()]
+	var sig := "%s|%s|%s|%d|%d|%s|%s|%d|%d|%s|%s|%d|%.3f|%d" % [str(selected), str(sim.yard_picks), str(sim.yard_ranks), int(sim.cash), sim.yard_cols(), str(sim.salvage), str(sim.on_mission()),
+		sim.notes, sim.scrap, str(purse.get("left", {}).get("note", "")), str(purse.has("button")), sim.yard_moves, sim.inflation(), sim.stash_used()]
 	if sig == _shown:
 		if _foot_right.visible:
 			var st = purse.get("status", "")
@@ -238,6 +238,7 @@ static func _short_money(x: int) -> String:
 
 func _show_strip(purse: Dictionary) -> void:
 	var on_pick: bool = not selected.is_empty()
+	_other.add_theme_color_override("font_color", Pal.TEXT_3)
 	for l in [_title, _words, _other]:
 		l.visible = on_pick
 	for l in [_foot, _foot_right]:
@@ -278,7 +279,14 @@ func _show_strip(purse: Dictionary) -> void:
 	var price: String = Fmt.money(sim.yard_pick_cost(key, c)) + ("" if sim.yard_pick_salvage(key, c) == 0 else " and %d %s" % [sim.yard_pick_salvage(key, c), kind])
 	var head: String = ("Refit from %s: %s" % [ot["name"], price]) if built != "" else price
 	var tail: String = "" if why == "" else " · " + why
-	UI.fit(_other, ["%s · %s%s" % [head, or_line, tail], "%s%s" % [head, tail], head])
+	var over: int = sim.yard_refit_over(key, c, side) if built != "" else 0
+	if over > 0:
+		# a refit off cells (Matt, 9 Oct): allowed, but said first - an over-full stash takes nothing until it's under
+		var warn: String = "the stash goes %d cell%s over: nothing goes in until it's under" % [over, "" if over == 1 else "s"]
+		UI.fit(_other, ["%s · %s%s" % [head, warn, tail], "%s · %d over cap%s" % [head, over, tail], "%d over cap%s" % [over, tail], "%d over cap" % over])
+		_other.add_theme_color_override("font_color", Pal.WARN)
+	else:
+		UI.fit(_other, ["%s · %s%s" % [head, or_line, tail], "%s%s" % [head, tail], head])
 	_build.text = "Refit" if built != "" else "Build"
 	_build.disabled = why != ""
 

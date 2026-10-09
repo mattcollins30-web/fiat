@@ -78,4 +78,7 @@ compact) and **Yard-L B** (eight short lanes plus the selected building opened f
   Where a level sat on the B side of an exclusive column (the Clinic's bigger shelf, the Lookout's sixty-run odds,
   the Kennel's quality) the save keeps the A side; a refit is half price.
 - The balance pass at the end of the playtest list sets the prices; a gate: *the Yard still has something to
-  buy at depth 9 on hour 16*, and *no building has its column 5 before the campaign is done*.
+  buy at depth 9 on hour 16*, and *no building has its column 5 before the first campaign is done* (a moved Yard keeps its columns, so a later Yard's column 5 can come before its own campaign - Matt, 9 Oct).
+- The rail's Upgrade badge is news only: a column opened, or something newly buyable, since the Yard was last looked at.
+- A refit that takes cells away is allowed; the strip says first how many cells over it leaves the stash.
+- The bot counts one hour in three as away, so Overtime and the Generator's rank pay as they would for an idler; it takes Overtime over Battery.

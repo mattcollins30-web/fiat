@@ -25,12 +25,17 @@ var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 var _rerolls := {}             # "item id/stat" -> re-rolls bought at the bench (capped: REROLLS_MAX)
 const REROLLS_MAX := 3
+const AWAY_SHARE := 1.0 / 3.0  # the share of the yard's time the bot counts as away (Overtime, the Generator's rank)
+const AWAY_EVERY := 3.0 * 3600.0
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 func step(sim) -> int:
+	# away a third of the time (Matt, 9 Oct): one hour in three counts as the player off the machine, so Overtime
+	# and the Generator's rank pay on it as they would for someone who idles
+	sim.away_on = fmod(sim.elapsed, AWAY_EVERY) >= AWAY_EVERY * (1.0 - AWAY_SHARE)
 	# patched up first, then the pick: the odds read at full strength, so a
 	# boss gets armed when the runner can take him, not refused because he's hurt
 	# whole before the pick: treated when the cash is there three times over,
@@ -82,6 +87,7 @@ func should_leave(sim) -> bool:
 ## the camp with £500 to spare, sell spares, buy the one market item that
 ## beats what's fitted, refill the rig.
 func tidy(sim) -> void:
+	sim.away_on = false                   # the player's back between runs: sales and contracts are theirs, not away's
 	for s in Data.SLOTS:
 		sim.equip_best(s)
 	if keystones_first and TYPE_OF.has(sim.cls):
@@ -580,7 +586,7 @@ func _train_tree(sim) -> void:
 
 ## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
-const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [], "lookout": [], "kennel": [3]}
+const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [2], "lookout": [], "kennel": [3]}   # Overtime over Battery: away a third of the time, it's ~8% on cash
 func _build_yard(sim) -> void:
 	var best_key := ""
 	var best_col := -1
