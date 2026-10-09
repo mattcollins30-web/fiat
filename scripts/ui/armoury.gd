@@ -134,7 +134,7 @@ func show_state(s) -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.workshop), str(sim.auto_equip), str(sim.auto_sell)]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.auto_sell)]
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -199,8 +199,7 @@ func _show_panel() -> void:
 			_pick.show_right_words("The Bench", "Fitted at the Bench", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
 		else:
 			_pick.show_right_words("The Bench", "Fitted at the Bench", ["Goes on %s" % Items.mount_words(it["mount"])])
-		if sim.workshop >= 1:
-			buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})
+		buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})     # every Bench from the start (9 Oct)
 	else:
 		var fitted = sim.equipped[it["slot"]]
 		var from_stash: bool = selected["kind"] == "stash"
@@ -217,7 +216,7 @@ func _show_panel() -> void:
 			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				_pick.set_hint("No room in the stash for what comes off")
-			if sim.workshop >= 1 and not it.has("unique") and not it.has("set"):
+			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 		else:
 			# fitted: a gun's parts, each with its figures, at the right; the stash's room under
@@ -230,8 +229,8 @@ func _show_panel() -> void:
 				lines.append(["%s · %s" % [a["base"], figures], a["base"]])
 			lines.append("Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()])
 			_pick.show_right_words("On the runner", "Fitted" if lines.size() > 1 else "Fitted, nothing on it", lines)
-			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_room(Items.size(it)), "primary": true})
-			if sim.workshop >= 1 and not it.has("unique") and not it.has("set"):
+			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
+			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Bench", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 	_set_buttons(buttons)
 
@@ -269,7 +268,7 @@ func _show_medical(it: Dictionary) -> Array:
 		lines[0] = ("Feeds the %s" % " and the ".join(feeds).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"
 	var buttons := []
 	if selected["kind"] == "rig":
-		buttons.append({"text": "Leave in stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and sim.stash_room(1), "primary": true})
+		buttons.append({"text": "Leave in stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
 	else:
 		var room: bool = sim.rig_room(Items.size(it))
 		if not room:

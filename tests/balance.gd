@@ -310,8 +310,12 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	g["level"] = sim.level()
 	g["best_tier"] = sim.best_tier
 	g["best_depth"] = sim.best_depth
-	g["bench"] = sim.workshop
-	g["top_bench"] = int(Data.WORKSHOP.back()["cost"])
+	g["yard_built"] = sim.yard_built()           # the Yard's lanes (9 Oct): picks built, ranks bought
+	var ranks := 0
+	for k in sim.yard_ranks:
+		ranks += int(sim.yard_ranks[k])
+	g["yard_ranks"] = ranks
+	g["top_bench"] = 14000                       # the old top Bench's price: the summary's cash-held yardstick when nothing was earned
 	g["dearest_build"] = Data.BUILD_GUN * 3
 	g["elapsed_h"] = snappedf(sim.elapsed / 3600.0, 0.01)
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000

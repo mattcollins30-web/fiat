@@ -209,7 +209,7 @@ func _init() -> void:
 		_guns[slot] = g
 	# the sockets view: the same shape, four groups, two rows each
 	y = TOP
-	var sw := (BODY_W - 2 * PAD - ROW_GAP) / 2
+	var sw := (BODY_W - 2 * PAD - 2 * ROW_GAP) / 3     # three across (9 Oct): the Yard's Third socket cuts a third
 	for slot in Data.SOCKET_SLOTS:
 		var g := {}
 		var card := UI.panel(self, Rect2(0, y, BODY_W, SOCK_HEAD_H + ROW_GAP + UI.TILE_H + CARD_PAD), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -217,7 +217,7 @@ func _init() -> void:
 		g["label"] = UI.label(card, Rect2(PAD, 0, 150, SOCK_HEAD_H), slot, "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		g["name"] = UI.label(card, Rect2(PAD, 0, BODY_W - 2 * PAD, SOCK_HEAD_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 		g["rows"] = {}
-		for k in range(Data.SOCKET_MAX):
+		for k in range(Data.SOCKET_MAX + 1):
 			var mount := "socket %d" % (k + 1)
 			var b := Button.new()
 			b.position = Vector2(PAD + k * (sw + ROW_GAP), SOCK_HEAD_H + ROW_GAP)
@@ -326,12 +326,7 @@ func show_state(s) -> void:
 			r["button"].disabled = false
 			r["mount"].add_theme_color_override("font_color", Pal.TEXT_2)
 			var a = gun["attachments"][mount]
-			if not sim.mount_open(mount):
-				r["fitted"].text = "Bench %d" % _level_for(mount)
-				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
-				r["lock"].text = "🔒"
-				_style(r["button"], on, "", true)
-			elif a == null:
+			if a == null:
 				r["fitted"].text = "Empty"
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
 				_style(r["button"], on)
@@ -371,11 +366,7 @@ func show_state(s) -> void:
 			r["button"].disabled = false
 			r["mount"].add_theme_color_override("font_color", Pal.TEXT_2)
 			var a = gear["attachments"][mount]
-			if not sim.mount_open(mount):
-				r["fitted"].text = "Needs a Bench"
-				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
-				_style(r["button"], on, "", true)
-			elif a == null:
+			if a == null:
 				r["fitted"].text = "Empty"
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
 				_style(r["button"], on)
@@ -383,32 +374,24 @@ func show_state(s) -> void:
 				r["fitted"].text = a["base"]
 				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))
 				_style(r["button"], on, rarity_tone(a))
-	# the heading: the level and what it fits; the purse; what the next level adds, so the upgrade's price buys something the player can read
-	var level: Dictionary = Data.WORKSHOP[sim.workshop]
-	var fits: String = ", ".join(level["mounts"].map(func(m): return m + "s"))
-	_headline.text = "Level %d" % sim.workshop
+	# the heading (9 Oct): every job and mount open from the start; the Bench's picks, built in the Yard, named
+	var picks: Array = []
+	var bench := Data.yard_building("bench")
+	for c in range(bench["picks"].size()):
+		var sd: String = sim.yard_side("bench", c)
+		if sd != "":
+			picks.append(str(bench["picks"][c][0 if sd == "a" else 1]["name"]))
+	_headline.text = "%d of 5" % picks.size()
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = VIEWS_X - 12 - _unit.position.x
-	var n_mounts: int = level["mounts"].size()
-	UI.fit(_unit, [("fits %s" % fits) if fits != "" else str(level["words"]).to_lower(), ("fits %d mount%s" % [n_mounts, "" if n_mounts == 1 else "s"]) if n_mounts > 0 else "fits nothing yet", "fits %d" % n_mounts if n_mounts > 0 else "nothing"])
+	UI.fit(_unit, ["picks built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "picks built", "picks"])
 	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 1)
 	_chips.position.x = Pal.GRID_W - PAD - _chips.used_width()
-	if sim.workshop >= Data.WORKSHOP.size() - 1:
-		_next.text = "The top Bench"
-		_upgrade.visible = false
+	if picks.is_empty():
+		UI.fit(_next, ["Every job and every mount, from the start; the Bench's picks are built in the Yard", "The Bench's picks are built in the Yard", "Picks: the Yard"])
 	else:
-		var next: Dictionary = Data.WORKSHOP[sim.workshop + 1]
-		var added := []
-		for m in next["mounts"]:
-			if not (m in level["mounts"]):
-				added.append(m + "s")
-		var adds: String = ("Next: %s" % _and(added)) if not added.is_empty() else ("Next: %s" % str(next["words"]).to_lower())
-		var adds_short: String = ("Next: %d more mount%s" % [added.size(), "" if added.size() == 1 else "s"]) if not added.is_empty() else "Next level"
-		UI.fit(_next, [adds, ("Next: %s" % ", ".join(added)) if not added.is_empty() else adds, adds_short])
-		_upgrade.visible = true
-		var long_up := "Upgrade · %s" % Fmt.money(sim.workshop_cost())
-		_upgrade.text = long_up if UI.text_width(_upgrade, long_up) + 32 <= UPGRADE_W else "Upgrade %s" % Fmt.money(sim.workshop_cost())
-		_upgrade.disabled = not sim.can_upgrade_workshop()
+		UI.fit(_next, ["Built: %s" % ", ".join(picks), ", ".join(picks), "Built: %s" % ", ".join(picks.slice(0, 2)), ", ".join(picks.slice(0, 2)), "%s and %d more" % [picks[0], picks.size() - 1] if picks.size() > 1 else str(picks[0]), str(picks[0]), "%d built" % picks.size()])
+	_upgrade.visible = false
 	_show_panel()
 
 
@@ -447,15 +430,6 @@ func _pick_row(slot: String, k: int) -> void:
 		_pick_mount(slot, key)
 
 
-func _level_for(mount: String) -> int:
-	if mount.begins_with("socket"):
-		return 1
-	for lv in range(Data.WORKSHOP.size()):
-		if mount in Data.WORKSHOP[lv]["mounts"]:
-			return lv
-	return Data.WORKSHOP.size() - 1
-
-
 ## The stash's gun attachments, or its socketables.
 func _all_attachments(socketables: bool) -> Array:
 	var out: Array = []
@@ -467,7 +441,7 @@ func _all_attachments(socketables: bool) -> Array:
 
 
 func _signature() -> String:
-	var parts := [view, sel_slot, sel_mount, str(sel_id), sel_stat, str(sim.on_mission()), str(sim.workshop), str(int(sim.cash) / 100), str(_inv.many),
+	var parts := [view, sel_slot, sel_mount, str(sel_id), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", ""))]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
@@ -526,7 +500,7 @@ func _show_panel() -> void:
 			return
 		_pick.show_pick(fitted, sim, "Fitted · %s %s" % [sel_slot.to_lower(), Items.mount_name(fitted["mount"]).to_lower()])
 		_pick.show_right_words("The stash", "Strip it back to the stash", ["Stash has %d of %d cells" % [sim.stash_used(), sim.stash_cap()]])
-		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_room(1), "primary": true})
+		buttons.append({"text": "Strip", "action": sim.strip.bind(sel_slot, sel_mount), "enabled": not sim.on_mission() and sim.stash_fits(fitted), "primary": true})
 		_set_pick_buttons(buttons)
 		return
 	_pick.show_pick(it, sim, "The pick · in the stash")
@@ -642,7 +616,7 @@ func _craftable() -> Array:
 ## The Craft view: the piece as a card with its affixes as rows, THE JOBS
 ## priced under it, the pick panel at the right with the piece's figures.
 func _show_craft(it: Dictionary) -> void:
-	var on_bench: bool = sim.workshop >= 1 and not sim.on_mission()
+	var on_bench: bool = not sim.on_mission()
 	for l in _piece_words:
 		l.text = ""
 	_piece_figure.text = ""
@@ -761,7 +735,7 @@ func _show_craft(it: Dictionary) -> void:
 		UI.fit(_foot, [w, w.get_slice(":", 0), w.get_slice(" · ", 0), w.get_slice(" ", 0)])     # down to its first word ("Added", "Re-rolled"): what was done, if not what to
 		_foot.add_theme_color_override("font_color", Pal.GOOD)
 	else:
-		UI.fit(_foot, ["Nothing on the Bench yet" if it.is_empty() else "Bench level %d · %d scrap in hand" % [sim.workshop, sim.scrap], "%d scrap in hand" % sim.scrap])
+		UI.fit(_foot, ["Nothing on the Bench yet" if it.is_empty() else "%d scrap in hand" % sim.scrap, "%d scrap in hand" % sim.scrap])
 		_foot.add_theme_color_override("font_color", Pal.TEXT_3)
 
 
@@ -868,9 +842,7 @@ func _press(i: int) -> void:
 
 
 func _on_upgrade() -> void:
-	if sim.upgrade_workshop():
-		acted.emit()
-	show_state(sim)
+	show_state(sim)                    # (the Bench's levels went with the Yard's lanes, 9 Oct: the button stays hidden)
 
 
 func text_nodes() -> Array:

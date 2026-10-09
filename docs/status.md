@@ -2398,6 +2398,35 @@ checks reading the strip back from what they'd just laid themselves; all fixed. 
 the plain figures count every trained tree's notables and "also" figures too, as the fight reads them - Spray's
 +25% with an SMG in hand, nothing without - where before they counted only the small nodes in the lanes.
 
+**The Yard as lanes (9 Oct, the playtest list, item three; the spec is `docs/design/yard.md`, layout A on the
+canvas).** Matt: "quickly unlocked most of them before I'd unlocked the third zone ... I still need yard upgrades
+even when I'm 9 depths deep", and crafting shouldn't wait on the Bench. *Data:* the eight buildings' levels are
+gone (`STASH_LEVELS` ... `KENNEL_LEVELS`, `WORKSHOP`); `Data.YARD` gives each a salvage kind, five columns of two
+picks (one taken; the other stays on show) and a rank; columns open from the start, the Town, the City, the
+campaign done, depth 6 held, depth 9 held (`YARD_GATES`) and stay open (`yard_open`, saved); a refit is half the
+column's price; column 5 wants 10 salvage, a rank £50k × 1.25ⁿ and 5 + n salvage, all at today's prices. *Salvage*
+(copper, safe steel, army surplus, one a zone): 1% a kill a depth past 3 on that zone's sites, home with the run,
+lost with a death. *Crafting* is open from the first minute: every job, mount, socket, build tier and the cache
+events; the Bench's lane makes it better (`roll_affix`'s top half, `reroll_one`'s no-down, a third socket, six-level
+bumps, the gunsmith's level). *Every pick does something in the sim* - the Stash's free cells for racks, uniques
+and papers (`stash_free`, `stash_fits` in every room check), the Bins on a run's commons, the Clinic's drip and
+field kit, the Fence's stock, orders, back room, insurance desk, the Radio's Scanner, Tip line (`fresh_word_price`),
+Pin, Two channels, Call in / Lock (now exclusive), Long range, Jammer and band, the Generator's hours, pouches,
+overtime, floodlights, charger, the Lookout's gangs, glasses and flares, the Kennel's finds, fetch, tracker,
+ratter - and the odds read them (`_yard_setting_off` in the dry run). *A move keeps the buildings,* picks, ranks,
+columns and salvage. *Old saves:* each level becomes the matching pick, free, side A. *The screen*
+(`yard_tree.gd`, rewritten): eight lanes like the trees - a label block, six columns, the rank tile - the purse
+with the three salvages in their colours, Move the Yard in the header, and the strip naming the pick, its other
+half, its price and Build / Refit; the rail badge lights when anything is buyable. The Bench, Clinic, Fence and
+Radio cards read their picks ("3 of 5"). *The bot* builds the cheapest open pick (a few B sides set), keeps £500,
+ranks at 1.5× their price. *The smoke:* the screen fits, build and refit, gates kept, every building's picks,
+salvage at depth 8, ranks, the move, an old save. The reviewer's two reads caught a Fence pick re-rolling every
+site's words, any build refilling a shelf bought from, Orders and Pin outliving a refit, the Tip line making
+Lock free, the free cells missed in room checks, the Charger and the Field kit unseen by the odds, the Bins not
+on the run's finds, the depth gates reading the selector rather than the depth held, Long range never rolling
+its word, Floodlights missing a rolled Night, and the Insurance desk's deeds not ending the game; all fixed,
+most with a check.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

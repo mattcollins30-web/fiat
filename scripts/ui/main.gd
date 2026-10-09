@@ -609,12 +609,14 @@ func _settle_away(away: float) -> void:
 	var seconds := minf(away, sim.away_cap_s())
 	var before: Dictionary = sim.snapshot()
 	var left := seconds
+	sim.away_on = true                     # the Generator's Overtime and rank pay on the time away (9 Oct)
 	while left > 0.0:
 		var step := minf(600.0, left)
 		sim.advance(step)
 		left -= step
 		if sim.camp_lost:
 			break
+	sim.away_on = false
 	var after: Dictionary = sim.snapshot()
 	# the log's deploys all carry the replay's real time, so the summary counts
 	# by cash and items - what the player cares about
@@ -743,7 +745,7 @@ func refresh() -> void:
 	# the Yard: the works as a tree (8 Oct), with the town and the purse in its heading
 	_yard_tree.visible = room == OVERVIEW
 	if room == OVERVIEW:
-		_yard_tree.show_state(sim, _yard_jobs(), _town_purse())
+		_yard_tree.show_state(sim, _town_purse())
 	var ev: Array = sim.events
 	for i in range(Pal.EVENT_LINES):
 		var j := ev.size() - 1 - i
@@ -836,11 +838,7 @@ func _rail_status(name: String) -> Dictionary:
 	match name:
 		OVERVIEW:
 			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
-			var can := false
-			for j in _yard_jobs():
-				if int(j["cost"]) > 0 and bool(j["can"]):
-					can = true
-			return {"badge": "Upgrade" if can else "", "badge_tone": "good"}
+			return {"badge": "Upgrade" if sim.yard_any_buyable() else "", "badge_tone": "good"}
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
@@ -948,7 +946,7 @@ func _runner_cards() -> Array:
 			["Notes", _signed_pct(sim._affix_sum("notes_pct"))], ["Search", ("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"],
 			["Gangs", ("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "as they come")]],
 		"note": "Quality: rarer. Quantity: more",
-		"status": "A dog finds +%d a search" % Data.KENNEL_LEVELS[sim.kennel_level]["finds"] if sim.kennel_level > 0 else "No dog yet",
+		"status": _dog_words(),
 	})
 	# the record: this runner's best
 	var rec: Dictionary = sim.record
@@ -998,77 +996,12 @@ func _runner_cards() -> Array:
 	return out
 
 
-## The Yard's works for the tree (8 Oct): each with its level, every level's name and words (forms longest
-## first for the fit; index 0 the start), the prices from the first built, its action. The Clinic, the Fence
-## and the radio are built here too and run in their rooms.
-func _yard_jobs() -> Array:
-	var g: Array = Data.GENERATOR_LEVELS
-	var lk: Array = Data.LOOKOUT_LEVELS
-	var kn: Array = Data.KENNEL_LEVELS
-	var st: Array = Data.STASH_LEVELS
-	var ws: Array = Data.WORKSHOP
-	var md: Array = Data.MEDIC_LEVELS
-	var mk: Array = Data.MARKET_LEVELS
-	var cm: Array = Data.COMMS_LEVELS
-	# a level: [name, [forms]] - the name before the colon in the data's words where there is one
-	var split := func(words: String, fallback_name: String) -> Array:
-		var parts: PackedStringArray = words.split(": ")
-		return [parts[0] if parts.size() > 1 else fallback_name, [parts[1] if parts.size() > 1 else parts[0]]]
-	var gen := func(lv: int) -> Array:
-		if g[lv].get("rig_row", false):
-			return ["The works wired", ["a second row of pouches on the rig", "a second rig row"]]
-		return [split.call(g[lv]["words"], "Generator %d" % lv)[0], ["%d hours away count" % g[lv]["hours"], "%d h away" % g[lv]["hours"]]]
-	var look := func(lv: int) -> Array:
-		var name: String = split.call(lk[lv]["words"], "Lookout %d" % lv)[0]
-		if lk[lv].get("call", false):
-			return [name, ["the first gang after the clear waits for the call, and the call is a full pack", "the call, a full pack", "the call"]]
-		if lv == 0:
-			return [name, ["the odds a guess", "a guess"]]
-		return [name, ["the first gang takes ×%.1f as long%s" % [lk[lv]["first"], ", and the odds shown are good ones" if int(lk[lv]["runs"]) > int(lk[0]["runs"]) else ""], "first gang ×%.1f%s" % [lk[lv]["first"], ", good odds" if int(lk[lv]["runs"]) > int(lk[0]["runs"]) else ""], "first ×%.1f" % lk[lv]["first"]]]
-	var dog := func(lv: int) -> Array:
-		var name: String = split.call(kn[lv]["words"], "Kennel %d" % lv)[0]
-		if lv == 0:
-			return [name, ["no dog"]]
-		if kn[lv].get("carries", false):
-			return [name, ["when a runner dies it carries the best thing in the pack home", "carries the best thing home", "carries home"]]
-		if float(kn[lv]["patrol"]) > 1.0:
-			return [name, ["it hears the next gang coming: they arrive %d%% later; +%d%% loot quality" % [int(round((float(kn[lv]["patrol"]) - 1.0) * 100.0)), int(kn[lv]["quality"])], "gangs %d%% later, +%d%% quality" % [int(round((float(kn[lv]["patrol"]) - 1.0) * 100.0)), int(kn[lv]["quality"])], "gangs %d%% later" % int(round((float(kn[lv]["patrol"]) - 1.0) * 100.0))]]
-		return [name, ["one more find every look, +%d%% loot quality" % int(kn[lv]["quality"]), "+%d a search, +%d%% quality" % [int(kn[lv]["finds"]), int(kn[lv]["quality"])], "+%d a search" % int(kn[lv]["finds"])]]
-	var stash := func(lv: int) -> Array:
-		return ["%d cells" % int(st[lv]["cells"]), ["the stash holds %d cells" % int(st[lv]["cells"]), "%d cells" % int(st[lv]["cells"])]]
-	var bench := func(lv: int) -> Array:
-		return split.call(ws[lv]["words"], "Bench %d" % lv)
-	var medic := func(lv: int) -> Array:
-		return [["No tent", "A tent", "A ward"][mini(lv, 2)], ["rest ×%.0f, %d meds stocked" % [float(md[lv]["rest"]) * 2.0, int(md[lv]["stock"])], "rest ×%.0f" % (float(md[lv]["rest"]) * 2.0)]]
-	var market := func(lv: int) -> Array:
-		return [["A barrow", "A stall", "A shop"][mini(lv, 2)], ["%d for sale" % int(mk[lv]["stock"])]]
-	var comms := func(lv: int) -> Array:
-		return split.call(cm[lv]["words"], "Radio %d" % lv)
-	var out := []
-	for job in [
-			["Generator", sim.generator_level, g, gen, sim.generator_cost(), sim.can_upgrade_generator(), sim.upgrade_generator],
-			["Lookout", sim.lookout_level, lk, look, sim.lookout_cost(), sim.can_upgrade_lookout(), sim.upgrade_lookout],
-			["Kennel", sim.kennel_level, kn, dog, sim.kennel_cost(), sim.can_upgrade_kennel(), sim.upgrade_kennel],
-			["Stash", sim.stash_level, st, stash, sim.stash_cost(), sim.can_upgrade_stash(), sim.upgrade_stash],
-			["Bench", sim.workshop, ws, bench, sim.workshop_cost(), sim.can_upgrade_workshop(), sim.upgrade_workshop],
-			["Clinic", sim.medic_level, md, medic, sim.medic_cost(), sim.can_upgrade_medic(), sim.upgrade_medic],
-			["The Fence", sim.market_level, mk, market, sim.market_cost(), sim.can_upgrade_market(), sim.upgrade_market],
-			["Radio", sim.comms_level, cm, comms, sim.comms_cost(), sim.can_upgrade_comms(), sim.upgrade_comms]]:
-		var lv: int = int(job[1])
-		var table: Array = job[2]
-		var words: Callable = job[3]
-		var levels := []
-		var costs := []
-		for k in range(table.size()):
-			var nw: Array = words.call(k)
-			levels.append({"name": nw[0], "forms": nw[1]})
-			if k > 0:
-				costs.append(int(table[k]["cost"]))
-		var of: int = table.size() - 1
-		out.append({"name": job[0], "level": lv, "of": of, "levels": levels, "costs": costs,
-				"now": levels[lv]["forms"], "next": levels[mini(lv + 1, of)]["forms"] if int(job[4]) > 0 else [],
-				"cost": int(job[4]), "can": bool(job[5]), "action": job[6]})
-	return out
+## The Kennel's line on the Runner's Finds card.
+func _dog_words() -> String:
+	var finds: int = (1 if sim.yard_has("a_dog") else 0) + (1 if sim.yard_has("second_dog") else 0) + (2 if sim.yard_has("pack") else 0)
+	if finds > 0:
+		return "The dogs find +%d a search" % finds if finds > 1 else "A dog finds +1 a search"
+	return "No dog finding yet" if sim.yard_side("kennel", 0) == "" else "A dog with a nose for it"
 
 
 ## The town and the purse on one card (7 Oct): the zones with their depths, the trade, what opens the next
@@ -1128,20 +1061,22 @@ func _town_purse() -> Dictionary:
 
 func _comms_cards() -> Array:
 	var out := []
-	var set_words: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level]["words"].split(": ")
-	var tower := {"title": set_words[0], "headline": "Level %d" % sim.comms_level, "unit": "of %d" % (Data.COMMS_LEVELS.size() - 1),
+	# the set (9 Oct): fresh word from the start; what the Radio's picks add, built in the Yard
+	var picks: Array = []
+	var radio := Data.yard_building("radio")
+	for c in range(radio["picks"].size()):
+		var sd: String = sim.yard_side("radio", c)
+		if sd != "":
+			picks.append(radio["picks"][c][0 if sd == "a" else 1])
+	var tower := {"title": "The set", "headline": "%d of 5" % picks.size(), "unit": "picks built",
 		"band": {"site": "the Radio", "tone": 3, "kicker": "The Radio"},
-		"lines": [["Hears", [set_words[1] if set_words.size() > 1 else "", "the word"]]]}
-	if sim.comms_cost() > 0:
-		var nxt: PackedStringArray = Data.COMMS_LEVELS[sim.comms_level + 1]["words"].split(": ")
-		tower["lines"].append(["Next", [nxt[0], "a better set"]])
-		tower["lines"].append(["Costs", Fmt.money(sim.comms_cost())])
-		tower["buttons"] = [{"text": "Build (%s)" % Fmt.money(sim.comms_cost()), "action": sim.upgrade_comms, "enabled": sim.can_upgrade_comms()}]
-	else:
-		tower["status"] = "As good as it gets"
+		"lines": [["Hears", ["fresh word on any site open", "fresh word"]]]}
+	for pk in picks.slice(0, 3):
+		tower["lines"].append([str(pk["name"]), [str(pk["short"])]])
+	tower["status"] = "More is built in the Yard" if picks.size() < 5 else "Every pick built"
+	if sim.tip_free:
+		tower["status"] = "The tip line: the next word is free"
 	out.append(tower)
-	if sim.comms_level == 0:
-		return out
 	for i in range(Data.TIERS.size()):
 		if not sim.tier_open(i):
 			continue
@@ -1165,10 +1100,13 @@ func _comms_cards() -> Array:
 			"band": {"site": t["name"], "tone": zone_i, "kicker": "%s · depth %d" % [Data.ZONES[zone_i]["name"], t["depth"]], "colour": Pal.tone_color(odds_tone) if sim.odds_settled(i) else Pal.TEXT_3},
 			"lines": lines, "word_rows": _missions.word_rows(sim, words), "tone": "good" if sim.pinned[i] else ""}
 		var buttons := [{"text": "New word (%s)" % _word_price(i, false), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
-		if sim.can_pin():
+		# the Radio's picks (9 Oct): Pin, Call in and Lock are built in the Yard apart; the buttons come as a set of
+		# four once either of the last two is, the ones not built there greyed, so the card keeps its two rows
+		var juice: bool = sim.campaign_done() and (sim.yard_has("call_in") or sim.yard_has("lock"))
+		if sim.can_pin() or juice or sim.pinned[i]:
 			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
-				"tone": "good" if sim.pinned[i] else ""})
-		if sim.can_juice():
+				"tone": "good" if sim.pinned[i] else "", "enabled": sim.can_pin() or sim.pinned[i]})
+		if juice:
 			# juicing: call in a word of your choosing, or hold one and re-roll the rest
 			buttons.append({"text": "Call in", "action": _choose_word.bind(i, 0), "enabled": sim.can_add_word(i), "primary": false})
 			buttons.append({"text": "Hold", "action": _choose_hold.bind(i), "enabled": sim.can_lock_word(i), "primary": false})
@@ -1211,6 +1149,8 @@ func _choose_hold(i: int) -> void:
 
 ## A word's price as the card says it: cash, or notes under the map's Open channel.
 func _word_price(i: int, called: bool) -> String:
+	if not called and sim.fresh_word_price(i) == 0:
+		return "free"                         # the Radio's Tip line
 	if sim.words_in_notes():
 		return Fmt.count(sim.juice_notes(i) if called else sim.intel_notes(i), "note")
 	return Fmt.money(sim.juice_cost(i) if called else sim.intel_cost(i))
@@ -1298,7 +1238,7 @@ func _open_builds(page := 0) -> void:
 		items.append({"name": "More …", "detail": "", "action": _open_builds.bind(page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Build for scrap", "%d scrap in hand · Bench level %d" % [sim.scrap, sim.workshop], items.slice(0, 5), _menu.close)
+	_menu.open("Build for scrap", "%d scrap in hand" % sim.scrap, items.slice(0, 5), _menu.close)
 
 
 func _open_build_kind(kind: String, page: int) -> void:

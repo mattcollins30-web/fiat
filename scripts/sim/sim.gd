@@ -21,9 +21,13 @@ var clinic: Array = []             # the Clinic's shelf: meds, so many a level, 
 var mission = null                 # null, or the mission in progress (a Dictionary)
 var last_report = null             # the last mission's outcome, for Mission Control
 var operators_lost := 0
-var generator_level := 0           # the Yard's: hours away that count
-var lookout_level := 0             # the first lot later; better odds
-var kennel_level := 0              # a dog
+var yard_picks := {}               # the Yard's lanes (9 Oct): building key -> [five sides, "a", "b" or ""]
+var yard_ranks := {}               # building key -> ranks bought
+var yard_open := 1                 # the columns opened, for good: a move doesn't close them
+var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
+var tip_free := false             # the Radio's Tip line: the next fresh word is free
+var tip_runs := 0                  # runs home since the last free word
+var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
 var hardcore := false              # a death ends the Yard, stash and all
 var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the Clinic treats it; "" for none
 var camp_lost := false             # hardcore: set by the KIA that ended it
@@ -33,11 +37,6 @@ var cls2 := ""                     # the second past, from ASCEND_LEVEL: its fir
 var runner_trait := ""             # what this runner turned up with
 var candidates: Array = []         # when a runner dies, two turn up: their traits, to pick from
 var promised := ""                 # a trait the next arrival brings (a runner brought home from a run)
-var workshop := 0                  # the Workshop's level; what mounts can be fitted
-var stash_level := 0               # the stash's size, by level
-var medic_level := 0               # the Medic Tent's rest rate
-var market_level := 0              # the Black Market's stock
-var comms_level := 0               # the Comms Tower: buying and pinning intel
 var pinned: Array = []             # per tier: whether its intel is pinned
 var intel: Array = []              # per tier: the modifier names on offer now
 var depth: Array = []              # per tier: the depth chosen, 1 up
@@ -113,7 +112,7 @@ func start() -> void:
 	rng.randomize()
 	_starter_loadout()
 	restock()
-	while contracts.size() < Data.CONTRACTS_OPEN:
+	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = roll_mate()
 	log_event(Words.YARD["set"])
@@ -182,7 +181,7 @@ func _max_hp_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			m += Items.affix_total(equipped[s], "hp")
-	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult()
+	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult() * (1.0 + (0.1 if yard_has("theatre") else 0.0) + 0.03 * yard_rank("clinic"))
 
 
 ## Damage a second: the primary, a third of the secondary, the level, the affixes.
@@ -228,7 +227,7 @@ func armour() -> float:
 
 ## The wound's cut on a stat: a tenth off the one it names, nothing off the rest.
 func wound_mult(stat: String) -> float:
-	return 1.0 - Data.WOUND_PCT / 100.0 if wound == stat else 1.0
+	return 1.0 - Data.WOUND_PCT / 100.0 * (2.0 / 3.0 if yard_has("physio") else 1.0) if wound == stat else 1.0
 
 
 ## The wound in words: "Wounded: pace −10%", or "" unhurt.
@@ -330,6 +329,10 @@ func _more_raw(ty: String) -> float:
 		m *= 0.5
 	if has_rule("sergeants_whistle"):
 		m *= 1.6
+	if (ty == "fire" or ty == "shock") and yard_has("arc_lamps"):
+		m *= 1.1                                  # the Generator's Arc lamps
+	if (ty == "poison" or ty == "bleed") and yard_has("ratter"):
+		m *= 1.1                                  # the Kennel's Ratter
 	if has_set_rule("army"):
 		m *= 1.3
 	return m
@@ -511,8 +514,7 @@ func med_capacity() -> int:
 	if equipped["Rig"] == null or has_rule("the_float"):
 		return 0
 	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
-	if Data.GENERATOR_LEVELS[generator_level].get("rig_row", false):
-		n += Data.RIG_ROW                    # the generator's top level: a second row of pouches (31)
+	n += (4 if yard_has("rig_wiring") else 0) + (Data.RIG_ROW if yard_has("battery") else 0)    # the Generator's picks
 	return mini(n, Data.RIG_CAP)
 
 
@@ -541,12 +543,12 @@ func loot_bonus() -> float:
 ## Rarer finds: the tree's and the class's, as a bonus the roll reads.
 func rarity_bonus() -> float:
 	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
-		+ float(Data.KENNEL_LEVELS[kennel_level].get("quality", 0.0)) / 100.0       # the dog knows what's worth carrying (27)
+		+ yard_quality() / 100.0       # the dog knows what's worth carrying (27)
 	return r * (2.0 if has_rule("bookies_pencil") else 1.0)
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (20.0 if has_joint("scrapper_fire") else 0.0)) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (20.0 if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -803,7 +805,8 @@ func can_hand_in(k: int) -> bool:
 		var freed := 0
 		for it in items:
 			freed += Items.size(it)
-		return stash_room(Items.size(Items.roll_unique(_unique_named(c["unique"]), rng)) - freed)
+		var u_it: Dictionary = Items.roll_unique(_unique_named(c["unique"]), rng)
+		return stash_free(u_it) or stash_room(Items.size(u_it) - freed)
 	return true
 
 
@@ -819,8 +822,9 @@ func hand_in(k: int) -> bool:
 			_earn(float(c["amount"]))
 			paid = _cash_words(float(c["amount"]))
 		"notes":
-			notes += int(c["amount"])
-			paid = "%d notes" % int(c["amount"])
+			var n_paid: int = int(c["amount"]) * (2 if yard_has("fixer") else 1)     # the Fence's Fixer
+			notes += n_paid
+			paid = "%d notes" % n_paid
 		"unique":
 			var it := Items.roll_unique(_unique_named(c["unique"]), rng)
 			stash.append(it)
@@ -891,7 +895,7 @@ func can_buy_mate() -> bool:
 	if mission != null or mate.is_empty() or notes < int(mate["notes"]):
 		return false
 	var u := _unique_named(mate["unique"])
-	return not u.is_empty() and stash_room(Items.size(Items.roll_unique(u, rng)))
+	return not u.is_empty() and stash_fits(Items.roll_unique(u, rng))
 
 
 func buy_mate() -> bool:
@@ -958,7 +962,10 @@ func move_yard(trade := "") -> bool:
 	for id in tree:
 		if str(id).begins_with("The Yard/"):
 			yard_tree.append(id)
-	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * Data.MOVE_NOTES_KEPT), "scrap": int(scrap * Data.MOVE_NOTES_KEPT),
+	var kept_share: float = 0.75 if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
+	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
+		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
+		"tip_free": tip_free, "tip_runs": tip_runs,
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon()}
@@ -981,6 +988,12 @@ func move_yard(trade := "") -> bool:
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
 	paragon_banked = keep["paragon_banked"]
+	yard_picks = keep["yard_picks"]       # the buildings move with the Yard (9 Oct): picks, ranks, the columns opened, the salvage
+	yard_ranks = keep["yard_ranks"]
+	yard_open = keep["yard_open"]
+	salvage = keep["salvage"]
+	tip_free = keep["tip_free"]
+	tip_runs = keep["tip_runs"]
 	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the Yard
 	atlas_points = keep["atlas_points"]
 	for i in keep["held"]:
@@ -996,6 +1009,8 @@ func move_yard(trade := "") -> bool:
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
 		stash.append(it)                   # whatever the new stash holds: they're the point of moving
+	_yard_changed("")
+	_yard_grew({"stock": Data.MARKET_STOCK, "back": false, "open": Data.CONTRACTS_OPEN, "pin": false})    # the new yard's shelf and contracts were rolled with nothing built
 	cash = float(Data.STARTING_CASH) * inflation()    # the float, at today's prices
 	log_event(Words.YARD["moved"])
 	if trade != "":
@@ -1205,10 +1220,10 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
 				return -1
 		"socket":
-			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= Data.SOCKET_MAX:
+			if not (it["slot"] in Data.SOCKET_SLOTS) or Items.sockets(it) >= socket_max():
 				return -1
 		"bump":
-			if Items.ilvl(it) >= int(it["tier"]) + Data.BUMP_CAP:
+			if Items.ilvl(it) >= int(it["tier"]) + bump_cap():
 				return -1
 			return int(Data.CRAFT[kind]["notes"]) * Items.ilvl(it)
 	var price: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(it) * (int(it["rarity"]) + 1)
@@ -1216,6 +1231,8 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 		for a in it["affixes"]:
 			if a["stat"] == stat:
 				price *= int(a.get("tier", 1))     # the better the tier, the dearer
+	if yard_has("cheap_parts"):
+		price = int(round(price * 0.75))      # the Bench's Cheap parts
 	return _inf(price)
 
 
@@ -1229,18 +1246,20 @@ func craft_in_notes(kind: String) -> bool:
 func scrap_of(it: Dictionary) -> int:
 	if it.is_empty() or Items.is_deeds(it):
 		return 0
-	return int(float(it["value"]) / Data.SCRAP_PER_POUND)
+	return int(float(it["value"]) / Data.SCRAP_PER_POUND) * (2 if yard_has("strip_for_parts") else 1)
 
 
 ## A stash item broken down at the Bench for its scrap. Gone for good.
 func scrap_item(id: int) -> bool:
-	if mission != null or workshop < 1:
+	if mission != null:
 		return false
 	for it in stash:
 		if it["id"] == id:
 			var bits: int = scrap_of(it)
 			_remove(it)
 			scrap += bits
+			if yard_has("salvage_line") and int(it.get("rarity", 0)) >= 2:
+				salvage["steel"] = int(salvage["steel"]) + 1      # the Bench's Salvage line
 			last_craft = {"id": -1, "kind": "scrap", "words": "Scrapped %s: %d scrap" % [it["base"].to_lower(), bits]}     # the Bench's foot and the toast read it (8 Oct)
 			log_event(last_craft["words"])
 			return true
@@ -1306,7 +1325,7 @@ func build_options(kind: String) -> Array:
 				out.append(_build_entry(kind, b["name"], Data.BUILD_MED * int(b["tier"]), from, 1 if from != "" else 0, have >= 1, "" if have >= 1 else "Wants a %s" % from.to_lower(), int(b["tier"])))
 		"gun":
 			for b in Data.BASES["Primary"]:
-				if b.get("type", "") != "improvised" or int(b["tier"]) > workshop or b.get("start", false):
+				if b.get("type", "") != "improvised" or b.get("start", false):
 					continue                  # the starting gun is nobody's build
 				out.append(_build_entry(kind, b["name"], Data.BUILD_GUN * int(b["tier"]), "", 0, true, "", int(b["tier"])))
 		"grenade":
@@ -1321,10 +1340,10 @@ func _build_entry(kind: String, name: String, cost: int, from: String, from_n: i
 	# room for what it makes (the eighteenth read, 8 Oct: a bot built a box a run for thirty hours and the stash sat at
 	# 327 of 234 with every find dropped): a box or a grade needs a stack with room or a cell, a med or a grenade a cell
 	var made_slot: String = Data.AMMO if (kind == "box" or kind == "grade") else (Data.MEDICAL if kind == "med" else (Data.GRENADE if kind == "grenade" else "Primary"))
-	var room: bool = stash_room(1) or (made_slot == Data.AMMO and _stack_room(_plain(Data.AMMO, name)))
-	var ok: bool = has_from and scrap >= cost and mission == null and workshop >= 1 and room
+	var room: bool = stash_room(1) or (made_slot == Data.AMMO and _stack_room(_plain(Data.AMMO, name))) or (yard_has("racks") and made_slot != "Primary")
+	var ok: bool = has_from and scrap >= cost and mission == null and room
 	if why == "" and not ok:
-		why = "The runner is out" if mission != null else ("Needs a Bench" if workshop < 1 else ("No room in the stash" if not room else "Short of scrap"))
+		why = "The runner is out" if mission != null else ("No room in the stash" if not room else "Short of scrap")
 	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier}
 
 
@@ -1355,6 +1374,8 @@ func build(kind: String, name: String) -> bool:
 			made = _plain("Primary", name)
 			made["nails"] = true
 			made["built"] = true
+			if yard_has("gunsmith"):
+				made["ilvl"] = maxi(Items.ilvl(made), deepest_site_level())     # the Bench's Gunsmith: built at your deepest site's level
 		"grenade":
 			made = _plain(Data.GRENADE, name)
 			if o["from"] != "":
@@ -1395,7 +1416,7 @@ func _take_one(base_name: String) -> void:
 
 
 func can_craft(id: int, kind: String, stat := "") -> bool:
-	if mission != null or workshop < 1:
+	if mission != null:
 		return false
 	var cost := craft_cost(item_by_id(id), kind, stat)
 	if cost < 0:
@@ -1413,22 +1434,22 @@ func craft(id: int, kind: String, stat := "") -> bool:
 	var level_before: int = Items.ilvl(it)
 	match kind:
 		"reroll":
-			Items.reroll_affixes(it, rng)
+			Items.reroll_affixes(it, rng, "", yard_has("masterwork"))
 		"lock":
-			Items.reroll_affixes(it, rng, stat)
+			Items.reroll_affixes(it, rng, stat, yard_has("masterwork"), yard_has("two_locks"))
 		"one":
-			if Items.reroll_one(it, stat, rng) == 0:
+			if Items.reroll_one(it, stat, rng, 2.0 if yard_has("steady_hands") else 1.0, yard_has("fine_tuning"), yard_has("masterwork")) == 0:
 				return false
 		"add":
-			if not Items.add_affix(it, rng):
+			if not Items.add_affix(it, rng, yard_has("masterwork")):
 				return false
 		"socket":
-			if not Items.add_socket(it):
+			if not Items.add_socket(it, socket_max()):
 				return false
 		"strip":
 			Items.strip_affixes(it)
 		"bump":
-			it["ilvl"] = mini(int(it["tier"]) + Data.BUMP_CAP, Items.ilvl(it) + Data.BUMP_LEVELS)
+			it["ilvl"] = mini(int(it["tier"]) + bump_cap(), Items.ilvl(it) + bump_levels())
 	# what the Bench did, in words the player can check against the piece
 	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
 	last_craft = {"id": id, "kind": kind, "words": words}
@@ -1857,9 +1878,9 @@ func patrol_s(t: Dictionary, first := false) -> float:
 		return INF
 	var base := (30.0 if has_node("quiet_feet") else PATROL_S) * float(t.get("patrol", 1.0)) * cm("patrol")
 	base *= 1.0 + (_fitted_sum("patrol_pct") + tree_sum("patrol_pct") + _affix_sum("patrol_pct")) / 100.0
-	base *= Data.KENNEL_LEVELS[kennel_level]["patrol"]
+	base *= yard_patrol()
 	if first:
-		base *= Data.LOOKOUT_LEVELS[lookout_level]["first"] * (2.0 if has_node("early_doors") else 1.0)
+		base *= (1.0 + (0.5 if yard_has("spotter") else 0.0) + (0.5 if yard_has("lookout_post") else 0.0)) * (2.0 if has_node("early_doors") else 1.0)
 	if has_node("loud"):
 		base *= 0.6
 	return base * trait_mult("patrol") * (1.0 + 0.1 * atlas_rank("quiet_roads")) * (2.0 if has_rule("lollipop") else 1.0)
@@ -1965,7 +1986,7 @@ func ammo_price(type: String) -> int:
 
 func buy_ammo(type: String) -> bool:
 	var b := ammo_box(type)
-	if b.is_empty() or cash < ammo_price(type) or not (stash_room(1) or _stack_room(_plain(Data.AMMO, b["name"]))):
+	if b.is_empty() or cash < ammo_price(type) or not (stash_room(1) or yard_has("racks") or _stack_room(_plain(Data.AMMO, b["name"]))):
 		return false
 	cash -= ammo_price(type)
 	stash_put(_plain(Data.AMMO, b["name"]))
@@ -2089,14 +2110,26 @@ func charm_cash() -> float:
 # ------------------------------------------------------------------ the stash
 
 func stash_cap() -> int:
-	return Data.STASH_LEVELS[stash_level]["cells"]
+	return Data.STASH_CELLS + (40 if yard_has("shelving") else 0) + (50 if yard_has("another_unit") else 0) + (60 if yard_has("lock_up") else 0) \
+		+ (100 if yard_has("annex") else 0) + 20 * yard_rank("stash")
+
+
+## Whether a stash item takes no cells: the Stash's Racks (rounds, meds, grenades), Wall of fame (uniques and set
+## pieces), Paper rack (papers and charms).
+func stash_free(it: Dictionary) -> bool:
+	if yard_has("racks") and (Items.is_ammo(it) or Items.is_medical(it) or Items.is_grenade(it)):
+		return true
+	if yard_has("wall_of_fame") and (it.has("unique") or it.has("set")):
+		return true
+	return yard_has("paper_rack") and (Items.is_paper(it) or it["slot"] == Data.CHARM)
 
 
 ## Cells in use.
 func stash_used() -> int:
 	var n := 0
 	for it in stash:
-		n += Items.size(it)
+		if not stash_free(it):
+			n += Items.size(it)
 	return n
 
 
@@ -2104,23 +2137,9 @@ func stash_room(cells: int) -> bool:
 	return stash_used() + cells <= stash_cap()
 
 
-func stash_cost() -> int:
-	if stash_level >= Data.STASH_LEVELS.size() - 1:
-		return 0
-	return _inf(Data.STASH_LEVELS[stash_level + 1]["cost"])
-
-
-func can_upgrade_stash() -> bool:
-	return stash_level < Data.STASH_LEVELS.size() - 1 and cash >= stash_cost()
-
-
-func upgrade_stash() -> bool:
-	if not can_upgrade_stash():
-		return false
-	cash -= stash_cost()
-	stash_level += 1
-	log_event("The stash is bigger: %d cells" % stash_cap())
-	return true
+## Room in the stash for this item: its cells, or none wanted at all (the Stash's Racks, Wall of fame, Paper rack).
+func stash_fits(it: Dictionary) -> bool:
+	return stash_free(it) or stash_room(Items.size(it))
 
 
 ## Cells the pack has used on this mission.
@@ -2134,64 +2153,22 @@ func pack_used(m: Dictionary) -> int:
 # ------------------------------------------------------------------ the camp's upgrades
 
 func rest_rate() -> float:
-	return Data.MEDIC_LEVELS[medic_level]["rest"] * (2.0 if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0)
+	var base: float = Data.REST_BASE + (0.5 if yard_has("beds") else 0.0) + (1.0 if yard_has("ward") else 0.0)
+	return base * (2.0 if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0)
 
 
-func medic_cost() -> int:
-	return 0 if medic_level >= Data.MEDIC_LEVELS.size() - 1 else _inf(Data.MEDIC_LEVELS[medic_level + 1]["cost"])
+## The Clinic's shelf and the Fence's, by the Yard's picks.
+func clinic_stock() -> int:
+	return Data.CLINIC_STOCK + (4 if yard_has("shelf") else 0) + (6 if yard_has("stockroom") else 0)
 
 
-func can_upgrade_medic() -> bool:
-	return medic_level < Data.MEDIC_LEVELS.size() - 1 and cash >= medic_cost()
-
-
-func upgrade_medic() -> bool:
-	if not can_upgrade_medic():
-		return false
-	cash -= medic_cost()
-	medic_level += 1
-	log_event("The Clinic is better kitted: resting heals %.1f HP a second" % Data.MEDIC_LEVELS[medic_level]["rest"])
-	return true
-
-
-func market_cost() -> int:
-	return 0 if market_level >= Data.MARKET_LEVELS.size() - 1 else _inf(Data.MARKET_LEVELS[market_level + 1]["cost"])
-
-
-func can_upgrade_market() -> bool:
-	return market_level < Data.MARKET_LEVELS.size() - 1 and cash >= market_cost()
-
-
-func upgrade_market() -> bool:
-	if not can_upgrade_market():
-		return false
-	cash -= market_cost()
-	market_level += 1
-	log_event("The Fence carries more: %d on the shelf" % Data.MARKET_LEVELS[market_level]["stock"])
-	restock()
-	return true
-
-
-func comms_cost() -> int:
-	return 0 if comms_level >= Data.COMMS_LEVELS.size() - 1 else _inf(Data.COMMS_LEVELS[comms_level + 1]["cost"])
-
-
-func can_upgrade_comms() -> bool:
-	return comms_level < Data.COMMS_LEVELS.size() - 1 and cash >= comms_cost()
-
-
-func upgrade_comms() -> bool:
-	if not can_upgrade_comms():
-		return false
-	cash -= comms_cost()
-	comms_level += 1
-	log_event("Radio level %d: %s" % [comms_level, Data.COMMS_LEVELS[comms_level]["words"].to_lower()])
-	return true
+func market_stock() -> int:
+	return Data.MARKET_STOCK + (2 if yard_has("stall") else 0) + (3 if yard_has("shopfront") else 0)
 
 
 ## Fresh intel on one tier, for cash - the tower's first job.
 func intel_cost(i: int) -> int:
-	return int(round(Data.INTEL_CASH[i] * (1.0 - 0.25 * atlas_rank("good_reception"))))
+	return int(round(Data.INTEL_CASH[i] * (1.0 - 0.25 * atlas_rank("good_reception")) * (0.5 if yard_has("scanner") else 1.0)))
 
 
 ## Open channel (the map's keystone, 7 Oct): every word costs notes, never cash.
@@ -2210,17 +2187,32 @@ func juice_notes(i: int) -> int:
 
 
 func can_buy_intel(i: int) -> bool:
-	return comms_level >= 1 and mission == null and tier_open(i) and (notes >= intel_notes(i) if words_in_notes() else cash >= intel_cost(i))
+	return mission == null and tier_open(i) and (tip_free or (notes >= intel_notes(i) if words_in_notes() else cash >= intel_cost(i)))
+
+
+## A fresh word's price now: nothing with the Radio's Tip line due (cash or notes), else its price.
+func fresh_word_price(i: int) -> int:
+	if tip_free:
+		return 0
+	return intel_notes(i) if words_in_notes() else intel_cost(i)
 
 
 func buy_intel(i: int) -> bool:
 	if not can_buy_intel(i):
 		return false
-	if words_in_notes():
+	if tip_free:
+		tip_free = false                      # the Radio's Tip line: this one's on the house
+	elif words_in_notes():
 		notes -= intel_notes(i)
 	else:
 		cash -= intel_cost(i)
 	_roll_tier_intel(i)
+	if yard_has("two_channels"):
+		# the Radio's Two channels: rolled twice, the set that pays more kept
+		var first: Array = intel[i].duplicate()
+		_roll_tier_intel(i)
+		if _words_pay(first) > _words_pay(intel[i]):
+			intel[i] = first
 	_surv_cache.erase(i)
 	log_event("Fresh word on %s: %s" % [Words.mid(tier(i)["name"]), ", ".join(intel[i]).to_lower()])
 	return true
@@ -2235,11 +2227,13 @@ const JUICE_COST := 3
 const JUICE_SHARE := 0.5                  # the pass (6 Oct): a word costs half of what a run on the site pays
 
 func can_juice() -> bool:
-	return comms_level >= 3 and campaign_done()
+	return yard_has("call_in") and campaign_done()
 
 
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
 func _earn(x: float) -> void:
+	if away_on and x > 0.0:
+		x *= 1.0 + (0.25 if yard_has("overtime") else 0.0) + 0.03 * yard_rank("generator")     # the Generator's Overtime and rank: cash made while you're away
 	cash += x
 	_takings_run += x
 	cash_in += x
@@ -2273,7 +2267,7 @@ func juice_cost(i: int) -> int:
 func insure_cost(i: int) -> int:
 	if has_rule("drivers_log"):
 		return 0
-	return int(ceil(loadout_value() * inflation() * Data.INSURE_RATE * depth[i] / 10.0)) * 10
+	return int(ceil(loadout_value() * inflation() * Data.INSURE_RATE * depth[i] * (0.5 if yard_has("strongroom") else 1.0) / 10.0)) * 10
 
 
 func can_insure(i: int) -> bool:
@@ -2295,7 +2289,7 @@ func juice_options(i: int) -> Array:
 
 ## How many words a site carries: MAX_WORDS, one more with Long wave.
 func max_words() -> int:
-	return MAX_WORDS + atlas_rank("long_wave")
+	return MAX_WORDS + atlas_rank("long_wave") + (1 if yard_has("long_range") else 0)
 
 
 func can_add_word(i: int) -> bool:
@@ -2316,7 +2310,7 @@ func add_word(i: int, name: String) -> bool:
 
 
 func can_lock_word(i: int) -> bool:
-	return can_juice() and mission == null and tier_open(i) and intel[i].size() >= 2 and (notes >= intel_notes(i) * 2 if words_in_notes() else cash >= intel_cost(i) * 2)
+	return yard_has("lock") and campaign_done() and mission == null and tier_open(i) and intel[i].size() >= 2 and (notes >= intel_notes(i) * 2 if words_in_notes() else cash >= intel_cost(i) * 2)
 
 
 ## Keep one word, re-roll the others.
@@ -2340,39 +2334,339 @@ func lock_word(i: int, name: String) -> bool:
 
 ## Pin a tier's intel so missions don't spend it - the tower's second job.
 func can_pin() -> bool:
-	return comms_level >= 2
+	return yard_has("pin")
 
 
 func set_pinned(i: int, on: bool) -> void:
-	if can_pin():
-		pinned[i] = on
+	if can_pin() or not on:
+		pinned[i] = on                        # unpinning never wants the pick (a refit off Pin leaves pins to take down)
+
+
+# ------------------------------------------------------------------ the Yard's lanes (9 Oct, docs/design/yard.md)
+
+## Whether a pick is built: the set of the built ones, worked out again whenever the picks change.
+var _yard_set := {}
+var _yard_dirty := true
+func yard_has(id: String) -> bool:
+	if _yard_dirty:
+		_yard_set = {}
+		for b in Data.YARD:
+			var sides: Array = yard_picks.get(b["key"], [])
+			for c in range(mini(sides.size(), b["picks"].size())):
+				var sd: String = str(sides[c])
+				if sd == "a" or sd == "b":
+					_yard_set[b["picks"][c][0 if sd == "a" else 1]["id"]] = true
+		_yard_dirty = false
+	return _yard_set.has(id)
+
+
+func yard_rank(key: String) -> int:
+	return int(yard_ranks.get(key, 0))
+
+
+## The side built in a building's column: "a", "b" or "".
+func yard_side(key: String, col: int) -> String:
+	var sides: Array = yard_picks.get(key, [])
+	return str(sides[col]) if col < sides.size() else ""
+
+
+## How many picks are built, of how many there are.
+func yard_built() -> int:
+	var n := 0
+	for b in Data.YARD:
+		for c in range(b["picks"].size()):
+			if yard_side(b["key"], c) != "":
+				n += 1
+	return n
+
+
+## The deepest a site has been held, this Yard or one before: the depth columns read it.
+func deepest_dug() -> int:
+	var d := 0
+	for i in range(depth.size()):
+		d = maxi(d, int(best_depth[i]))       # the depth held, not the one the selector is on
+	return maxi(d, int(best_dig.get("depth", 0)))
+
+
+## The deepest site's level (its tier and its depth): the Gunsmith's and the Arms dealer's.
+func deepest_site_level() -> int:
+	var lv := 1
+	for i in range(depth.size()):
+		if tier_open(i):
+			lv = maxi(lv, i + maxi(1, int(best_depth[i])))
+	return lv
+
+
+## The columns the campaign and the depth have opened, kept for good (a move closes none).
+func yard_cols() -> int:
+	var n := 1
+	if zone_open(1):
+		n = 2
+	if zone_open(2):
+		n = 3
+	if campaign_done():
+		n = 4
+	if deepest_dug() >= 6:
+		n = 5
+	if deepest_dug() >= 9:
+		n = 6
+	yard_open = maxi(yard_open, n)
+	return yard_open
+
+
+## A column's price: the building's figure at today's prices; changing a built pick costs YARD_REFIT of it.
+func yard_pick_cost(key: String, col: int) -> int:
+	var b := Data.yard_building(key)
+	if b.is_empty() or col < 0 or col >= b["costs"].size():
+		return -1
+	var c: int = _inf(int(b["costs"][col]))
+	return int(round(c * Data.YARD_REFIT)) if yard_side(key, col) != "" else c
+
+
+## The salvage a column wants: the fifth's, YARD_PICK_SALVAGE of the building's kind (none for a refit).
+func yard_pick_salvage(key: String, col: int) -> int:
+	return Data.YARD_PICK_SALVAGE if col == 4 and yard_side(key, col) == "" else 0
+
+
+## Why a pick can't be built now, or "": the column shut, built already, the cash or the salvage short.
+func yard_pick_block(key: String, col: int, side: String) -> String:
+	var b := Data.yard_building(key)
+	if b.is_empty() or col < 0 or col >= b["picks"].size() or not (side in ["a", "b"]):
+		return "no such pick"
+	if mission != null:
+		return "The runner is out"
+	if col >= yard_cols():
+		return "%s" % Data.YARD_GATES[col]
+	if yard_side(key, col) == side:
+		return "Built"
+	if cash < yard_pick_cost(key, col):
+		return "Short of cash"
+	if int(salvage.get(b["salvage"], 0)) < yard_pick_salvage(key, col):
+		return "Wants %d %s" % [yard_pick_salvage(key, col), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
+	return ""
+
+
+func can_yard_pick(key: String, col: int, side: String) -> bool:
+	return yard_pick_block(key, col, side) == ""
+
+
+## Build a pick, or change one (a refit, for YARD_REFIT of the price).
+func yard_pick(key: String, col: int, side: String) -> bool:
+	if not can_yard_pick(key, col, side):
+		return false
+	var b := Data.yard_building(key)
+	var refit: bool = yard_side(key, col) != ""
+	cash -= yard_pick_cost(key, col)
+	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_pick_salvage(key, col)
+	var sides: Array = yard_picks.get(key, ["", "", "", "", ""]).duplicate()
+	while sides.size() < b["picks"].size():
+		sides.append("")
+	sides[col] = side
+	var before := _yard_before()
+	yard_picks[key] = sides
+	_yard_changed(key)
+	_yard_grew(before)
+	var pk: Dictionary = b["picks"][col][0 if side == "a" else 1]
+	log_event("%s %s: %s" % [b["name"], "refitted" if refit else "built", "%s - %s" % [pk["name"], str(pk["words"]).to_lower()]])
+	return true
+
+
+## A rank's price: YARD_RANK_CASH × YARD_RANK_GROWTH a rank bought, at today's prices; salvage, one more a rank.
+func yard_rank_cost(key: String) -> int:
+	return _inf(int(round(Data.YARD_RANK_CASH * pow(Data.YARD_RANK_GROWTH, yard_rank(key)))))
+
+
+func yard_rank_salvage(key: String) -> int:
+	return Data.YARD_RANK_SALVAGE + yard_rank(key)
+
+
+func yard_rank_block(key: String) -> String:
+	var b := Data.yard_building(key)
+	if b.is_empty():
+		return "no such building"
+	if mission != null:
+		return "The runner is out"
+	if yard_cols() < Data.YARD_COLS:
+		return Data.YARD_GATES[Data.YARD_COLS - 1]
+	if cash < yard_rank_cost(key):
+		return "Short of cash"
+	if int(salvage.get(b["salvage"], 0)) < yard_rank_salvage(key):
+		return "Wants %d %s" % [yard_rank_salvage(key), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
+	return ""
+
+
+func can_yard_rank(key: String) -> bool:
+	return yard_rank_block(key) == ""
+
+
+func buy_yard_rank(key: String) -> bool:
+	if not can_yard_rank(key):
+		return false
+	var b := Data.yard_building(key)
+	cash -= yard_rank_cost(key)
+	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_rank_salvage(key)
+	yard_ranks[key] = yard_rank(key) + 1
+	_yard_changed(key)
+	log_event("%s, rank %d: %s" % [b["name"], yard_rank(key), str(b["rank"]["words"]).to_lower()])
+	return true
+
+
+## Setting off: the Generator's Charger (full HP) and the Clinic's Field kit (a bandage in the rig, if there's room).
+func _yard_setting_off() -> void:
+	if yard_has("charger"):
+		hp = max_hp()
+	if yard_has("field_kit") and rig_room(1):
+		rig.append(_plain(Data.MEDICAL, "Bandage"))
+
+
+## Whether anything in the Yard can be built now: a pick in an open column with nothing built there, or a rank.
+func yard_any_buyable() -> bool:
+	for b in Data.YARD:
+		for c in range(b["picks"].size()):
+			if yard_side(b["key"], c) == "" and can_yard_pick(b["key"], c, "a"):
+				return true
+		if can_yard_rank(b["key"]):
+			return true
+	return false
+
+
+## What a pick changed: the figures read fresh; the Fence's and the Clinic's shelves and the odds again.
+func _yard_changed(_key: String) -> void:
+	_yard_dirty = true
+	_dry_memo.clear()
+	_surv_cache = {}                          # the odds read the Yard too: the Jammer, the Med lab, the Charger
+
+
+## What a pick or a refit might grow or shrink, read before it's built: the Fence's shelf, the Back room, the
+## contracts open, Pin.
+func _yard_before() -> Dictionary:
+	return {"stock": market_stock(), "back": yard_has("back_room"), "open": contracts_open(), "pin": yard_has("pin")}
+
+
+## A pick that grows a shelf or the contracts adds only what it grew by - never a re-roll or a refill of what's
+## there (the reviewers' catches: a Fence pick re-rolled every site's words, and any build refilled a shelf the
+## player had bought from). A refit away shrinks them back: Orders' two contracts, Pin's pins.
+func _yard_grew(before: Dictionary) -> void:
+	var add: int = market_stock() - int(before["stock"])
+	if add > 0:
+		var have: Array = market
+		_restock_market()
+		var fresh: Array = market.filter(func(x): return not x.has("unique"))
+		market = have + fresh.slice(0, add)
+	if yard_has("back_room") and not bool(before["back"]) and not market.any(func(x): return x.has("unique")):
+		var loose: Array = loose_uniques(0)
+		if not loose.is_empty():
+			market.append(Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng))
+	while contracts.size() < contracts_open():
+		contracts.append(roll_contract())
+	if contracts_open() < int(before["open"]) and contracts.size() > contracts_open():
+		contracts = contracts.slice(0, contracts_open())
+	if bool(before["pin"]) and not yard_has("pin"):
+		for i in range(pinned.size()):
+			pinned[i] = false                 # refitted off Pin: the pins come down with it
+
+
+## The Kennel's quality; the gangs' lateness from the Kennel and the Lookout; the odds' dry runs; the sales.
+func yard_quality() -> float:
+	return (5.0 if yard_has("good_nose") else 0.0) + (10.0 if yard_has("pedigree") else 0.0) + (20.0 if yard_has("champion") else 0.0) + 2.0 * yard_rank("kennel")
+
+
+func yard_patrol() -> float:
+	return (1.2 if yard_has("guard_dog") else 1.0) * (1.1 if yard_has("tripwires") else 1.0) * (1.1 if yard_has("watch_rota") else 1.0) \
+		* (1.2 if yard_has("crows_nest") else 1.0) * (1.0 + 0.02 * yard_rank("lookout"))
+
+
+func odds_runs() -> int:
+	return 60 if yard_has("glasses") else Data.ODDS_RUNS
+
+
+func yard_sell_pct() -> float:
+	return (10.0 if yard_has("haggling") else 0.0) + (25.0 if yard_has("dealers_cut") else 0.0) + 2.0 * yard_rank("fence")
+
+
+func contracts_open() -> int:
+	return Data.CONTRACTS_OPEN + (2 if yard_has("orders") else 0)
+
+
+## A word as the Radio has it: the Jammer halves its bite (their health and fire past 1, more on you, their speed
+## and yours under 1); the Military band and the rank grow its rewards (cash, XP, drops past 1, quality, gear tier).
+func _radio_words(m: Dictionary) -> Dictionary:
+	var jam: bool = yard_has("jammer")
+	var boost: float = (0.5 if yard_has("military_band") else 0.0) + 0.05 * yard_rank("radio")
+	if not jam and boost <= 0.0:
+		return m
+	var out: Dictionary = m.duplicate()
+	if jam:
+		for k in ["hp", "dps", "search"]:
+			if float(out.get(k, 1.0)) > 1.0:
+				out[k] = 1.0 + (float(out[k]) - 1.0) * 0.5
+		for k in ["pace", "patrol"]:
+			if float(out.get(k, 1.0)) < 1.0:
+				out[k] = 1.0 - (1.0 - float(out[k])) * 0.5
+		if int(out.get("contact", 0)) > 0:
+			out["contact"] = int(int(out["contact"]) * 0.5)
+	if boost > 0.0:
+		for k in ["cash", "xp", "drop"]:
+			if float(out.get(k, 1.0)) > 1.0:
+				out[k] = 1.0 + (float(out[k]) - 1.0) * (1.0 + boost)
+		if float(out.get("rarity", 0.0)) > 0.0:
+			out["rarity"] = float(out["rarity"]) * (1.0 + boost)
+	return out
+
+
+## What a set of words pays, roughly: their cash, drops and quality together (the Radio's Two channels keeps the better).
+func _words_pay(words: Array) -> float:
+	var v := 1.0
+	for name in words:
+		var m := modifier(name)
+		v *= float(m.get("cash", 1.0)) * float(m.get("drop", 1.0)) * (1.0 + float(m.get("rarity", 0.0)))
+	return v
+
+
+## The Yard's lanes from a save; a save from before them maps its buildings' levels onto the picks that match,
+## free (docs/design/yard.md §5).
+func _load_yard(d: Dictionary) -> void:
+	yard_picks = d.get("yard_picks", {}).duplicate(true)
+	yard_ranks = d.get("yard_ranks", {}).duplicate()
+	yard_open = int(d.get("yard_open", 1))
+	tip_free = bool(d.get("tip_free", false))
+	tip_runs = int(d.get("tip_runs", 0))
+	salvage = {"copper": 0, "steel": 0, "army": 0}
+	var sv: Dictionary = d.get("salvage", {})
+	for k in sv:
+		salvage[k] = int(sv[k])
+	if not d.has("yard_picks"):
+		var old := {"stash": [int(d.get("stash_level", 0)), [0, 1, 3]], "clinic": [int(d.get("medic_level", 0)), [0, 1]],
+			"fence": [int(d.get("market_level", 0)), [0, 1]], "radio": [int(d.get("comms_level", 0)), [0, 1, 2]],
+			"generator": [int(d.get("generator_level", 0)), [0, 1, 2]], "lookout": [int(d.get("lookout_level", 0)), [0, 1, 2]],
+			"kennel": [int(d.get("kennel_level", 0)), [0, 1, 2]]}
+		for key in old:
+			var lv: int = old[key][0]
+			var cols: Array = old[key][1]
+			for k in range(mini(lv, cols.size())):
+				var sides: Array = yard_picks.get(key, ["", "", "", "", ""])
+				sides[int(cols[k])] = "a"
+				yard_picks[key] = sides
+	_yard_dirty = true
 
 
 # ------------------------------------------------------------------ the workshop
 
-func workshop_cost() -> int:
-	if workshop >= Data.WORKSHOP.size() - 1:
-		return 0
-	return _inf(Data.WORKSHOP[workshop + 1]["cost"])
-
-
-func can_upgrade_workshop() -> bool:
-	return workshop < Data.WORKSHOP.size() - 1 and cash >= workshop_cost()
-
-
-func upgrade_workshop() -> bool:
-	if not can_upgrade_workshop():
-		return false
-	cash -= workshop_cost()
-	workshop += 1
-	log_event("Bench level %d: %s" % [workshop, Data.WORKSHOP[workshop]["words"].to_lower()])
+## Every mount from the start (9 Oct: the Bench's levels went; crafting is open from the first minute).
+func mount_open(_mount: String) -> bool:
 	return true
 
 
-func mount_open(mount: String) -> bool:
-	if mount.begins_with("socket"):
-		return workshop >= 1                 # any bench can seat a socket
-	return mount in Data.WORKSHOP[workshop]["mounts"]
+func socket_max() -> int:
+	return Data.SOCKET_MAX + (1 if yard_has("third_socket") else 0)
+
+
+func bump_cap() -> int:
+	return Data.BUMP_CAP + yard_rank("bench")
+
+
+func bump_levels() -> int:
+	return Data.BUMP_LEVELS * (2 if yard_has("overbump") else 1)
 
 
 ## Why a stash attachment cannot go on a fitted gun's mount: "" when it can.
@@ -2461,7 +2755,7 @@ func strip(slot: String, mount: String) -> bool:
 	var gun: Dictionary = equipped[slot]
 	if gun["attachments"].get(mount, null) == null:
 		return false
-	if not (stash_room(1) or _stack_room(gun["attachments"][mount])):
+	if not (stash_fits(gun["attachments"][mount]) or _stack_room(gun["attachments"][mount])):
 		return false
 	stash_put(gun["attachments"][mount])
 	gun["attachments"][mount] = null
@@ -2640,7 +2934,7 @@ func pinnacle_depth(i: int) -> int:
 
 ## The depth the lorry runs the Services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
 func convoy_depth() -> int:
-	return Data.CONVOY_DEPTH + yard_moves - 2 * atlas_rank("lorrys_route")
+	return Data.CONVOY_DEPTH + yard_moves - 2 * atlas_rank("lorrys_route") - (2 if yard_has("lorry_watch") else 0)
 
 
 ## From pinnacle_depth(i) a crew's head comes at full strength.
@@ -2741,7 +3035,8 @@ func effective(i: int) -> Dictionary:
 	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night() or ("Night" in intel[i])
 	if night_run and not ("Night" in intel[i]):
 		var night := modifier("Night")
-		e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # Night eyes: the slower feet halved a rank
+		if not yard_has("floodlights"):     # the Generator's Floodlights: night's finds without its slow feet
+			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # Night eyes: the slower feet halved a rank
 		e["rarity"] += night.get("rarity", 0.0) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
 		e["intel"].append("Night")
 	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
@@ -2781,6 +3076,10 @@ func effective(i: int) -> Dictionary:
 		var m := modifier(name)
 		if m.get("sky", false) and atlas_rank("fair_weather") > 0:
 			m = _softened(m, 0.5)               # Fair weather: the sky's word bites half as hard
+		m = _radio_words(m)                    # the Radio's Jammer, Military band and rank
+		if name == "Night" and yard_has("floodlights"):
+			m = m.duplicate()
+			m["pace"] = 1.0                    # the Generator's Floodlights: a rolled Night's finds without its slow feet
 		if name == "Night" and atlas_rank("night_eyes") > 0:
 			m = m.duplicate()
 			m["pace"] = 1.0 - (1.0 - float(m.get("pace", 1.0))) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # the rolled word, the same eyes
@@ -2849,6 +3148,7 @@ func _roll_tier_intel(i: int) -> void:
 	if Data.TIERS[i]["zone"] >= 1:
 		n = 2
 	n += atlas_rank("long_wave")              # Long wave: one more word a site
+	n += 1 if yard_has("long_range") else 0   # and the Radio's Long range
 	var names := []
 	var clear: bool = atlas_rank("clear_air") > 0
 	var pool: Array = Data.MODIFIERS.filter(func(m): return not m.get("sky", false) and not (clear and m["name"] == "Resistant"))   # the sky's words come from the clock, not the radio; Clear air never hears Resistant
@@ -2952,7 +3252,7 @@ func survival(i: int) -> float:
 	var p0 := Time.get_ticks_usec()
 	prof["surv_calls"] += 1
 	var key := _odds_key(i)
-	var runs: int = Data.LOOKOUT_LEVELS[lookout_level]["runs"]
+	var runs: int = odds_runs()
 	if odds_runs_max > 0:
 		runs = mini(runs, odds_runs_max)
 	var c: Array
@@ -2992,7 +3292,7 @@ func survival(i: int) -> float:
 
 ## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).
 func odds_settled(i: int) -> bool:
-	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= int(Data.LOOKOUT_LEVELS[lookout_level]["runs"])
+	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= odds_runs()
 
 
 ## The fight alone, run through the real fight code on a scratch mission with
@@ -3010,7 +3310,8 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		"rng": rng, "promised": promised, "training_points": training_points, "best_level": best_level, "insure_next": insure_next}
 	prof["snap_us"] += Time.get_ticks_usec() - p0
 	rng = r
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0)
+	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
+	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
 	var m := {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false,
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
@@ -3082,7 +3383,8 @@ func deploy(i: int) -> void:
 		insured = true
 		log_event("Insured for %s. %s" % [_cash_words(insure_cost(i)), Words.FENCE["insured"]])
 	insure_next = false
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0)
+	_yard_setting_off()                       # before the run's record of its starting HP
+	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured,
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
@@ -3179,6 +3481,8 @@ func _tick(dt: float) -> void:
 		_search(m, t, dt)
 		if has_node("walk_it_off"):
 			hp = minf(max_hp(), hp + dt)
+		if yard_has("drip"):
+			_heal(m, max_hp() * 0.01 * dt)        # the Clinic's Drip
 	if mission == null:
 		return
 	if _affix_sum("regen") > 0.0:
@@ -3205,6 +3509,8 @@ func _tick(dt: float) -> void:
 			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
 				size = 1
+			if yard_has("flares"):
+				size = maxi(1, size - 1)     # the Lookout's Flares: every gang a head short
 			if has_joint("poacher_frost"):
 				size = maxi(1, size - 1)     # the Poacher's snare, joined: every gang one head short, and chilled
 				m["chill_t"] = 2.0
@@ -3273,14 +3579,12 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			promised = pool[rng.randi_range(0, pool.size() - 1)]
 			log_event(Words.EVENTS["trapped"])
 		"cache":
-			if workshop >= Data.EVENT_CACHE_BENCH or has_rule("caretakers_keys") or has_set_rule("council"):
-				var up: Dictionary = t.duplicate()
-				up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)
-				up["rarity"] = float(t.get("rarity", 0.0)) + 0.5
-				_find(m, up)
-				log_event(Words.EVENTS["cache"])
-			else:
-				log_event(Words.EVENTS["cache_shut"])
+			# a cache is always opened now (9 Oct: the Bench's levels went - it wanted Bench 2)
+			var up: Dictionary = t.duplicate()
+			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)
+			up["rarity"] = float(t.get("rarity", 0.0)) + 0.5
+			_find(m, up)
+			log_event(Words.EVENTS["cache"])
 
 
 func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
@@ -3289,6 +3593,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if m["fresh"]:
 		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
+	if m["fresh"] and yard_has("range_cards"):
+		headshot += 0.5                       # the Lookout's Range cards: the first shot on every gang half again
 	if m["fresh"] and atlas_rank("marked_men") > 0:
 		headshot += 0.25
 	if m["fresh"] and has_rule("grandads"):
@@ -3473,8 +3779,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	m["taken"] = float(m.get("taken", 0.0)) + incoming * dt     # for the run screen's red numbers
 	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
 		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
-		if auto_tier >= 0:
-			auto_tier = -1                   # auto-run stops on a wound: the Clinic is a decision, not a silent tax
+		if auto_tier >= 0 and not yard_has("whistle"):
+			auto_tier = -1                   # auto-run stops on a wound: the Clinic is a decision, not a silent tax (the Lookout's whistle: not)
 			log_event("Auto-run stopped: wounded")
 	if hp <= 0.0:
 		if has_node("not_today") and not m.get("saved", false):
@@ -3575,7 +3881,7 @@ func use_med(id: int) -> bool:
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
-			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0)}
+			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0)}
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
@@ -3677,6 +3983,11 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		* (0.8 if has_node("light_fingers") else 1.0) * (1.5 if has_rule("managers_coat") else 1.0) * trait_mult("cash")
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
+	var dd: int = int(t.get("depth", 1))
+	if dd >= Data.SALVAGE_DEPTH and rng.randf() < Data.SALVAGE_KILL * (dd - Data.SALVAGE_DEPTH + 1):
+		var kind: String = Data.SALVAGE[int(Data.TIERS[int(t["tier"])]["zone"])]
+		m["salvage"] = m.get("salvage", {})
+		m["salvage"][kind] = int(m["salvage"].get(kind, 0)) + 1      # the deep sites' salvage (9 Oct), home with the run
 	if has_node("quiet_hands"):
 		return
 	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
@@ -3766,9 +4077,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 		elif kind < Data.MED_DROP * 0.5 * float(shape.get("med", 1.0)) + Data.AMMO_DROP * float(shape.get("ammo", 1.0)):
 			slot = Data.AMMO
 	else:
-		if rng.randf() < Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (3.0 if has_node("light_fingers") else 1.0):
+		if rng.randf() < Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (3.0 if has_node("light_fingers") else 1.0) * (2.0 if yard_has("tracker") else 1.0):
 			slot = Data.PAPER
-		elif rng.randf() < Data.CHARM_DROP:
+		elif rng.randf() < Data.CHARM_DROP * (2.0 if yard_has("tracker") else 1.0):
 			slot = Data.CHARM
 		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)):
 			slot = Data.MEDICAL
@@ -3919,7 +4230,7 @@ func thinning(m: Dictionary, t: Dictionary) -> float:
 
 ## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
 func gang_held(m: Dictionary) -> bool:
-	return m["patrols"] == 0 and Data.LOOKOUT_LEVELS[lookout_level].get("call", false) and pack_used(m) < capacity() and not m.get("dry", false)
+	return m["patrols"] == 0 and yard_has("hold_fire") and pack_used(m) < capacity() and not m.get("dry", false)
 
 
 ## Nothing alive on the site: a cache every SEARCH_S.
@@ -3935,7 +4246,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		# every find this search is one of the share still there (29): past thin_after, each is a roll
 		var thin := thinning(m, t)
-		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + int(Data.KENNEL_LEVELS[kennel_level]["finds"]) + (1 if has_rule("postman") else 0)
+		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (1 if yard_has("a_dog") else 0) + (1 if yard_has("second_dog") else 0) + (2 if yard_has("pack") else 0) + (1 if has_rule("postman") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
@@ -4026,6 +4337,14 @@ func _extract() -> void:
 	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
 	_takings_run = 0.0
 	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
+	if yard_has("tip_line"):
+		tip_runs += 1
+		if tip_runs >= 5:
+			tip_runs = 0
+			tip_free = true                   # the Radio's Tip line: every fifth run home
+	var sv: Dictionary = m.get("salvage", {})
+	for kind in sv:
+		salvage[kind] = int(salvage.get(kind, 0)) + int(sv[kind])      # and its salvage (9 Oct)
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
 		run_notes += maxi(0, capacity() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
@@ -4034,6 +4353,8 @@ func _extract() -> void:
 	if has_rule("drivers_log"):
 		run_notes *= 2
 	notes += run_notes
+	if yard_has("bins"):
+		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
 	var stashed := 0
 	for it in m["found"]:
 		if Items.is_deeds(it):
@@ -4052,7 +4373,7 @@ func _extract() -> void:
 	last_report = {
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
-		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)),
+		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(),
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])
@@ -4136,6 +4457,15 @@ func _kia() -> void:
 		for it in rig:
 			stash.append(it)
 		log_event("Dead in %s. %s" % [Words.mid(t["name"]), Words.FENCE["paid_out"]])
+		if yard_has("insurance_desk") and not m["found"].is_empty():
+			for it in m["found"]:
+				stash.append(it)                 # the Fence's Insurance desk: the pack comes home too
+				if Items.is_deeds(it) and ending == "":
+					ending = "held"
+					log_event(Words.DEEDS["held"])
+			m["pack_kept"] = true
+			last_report["left"] = int(m["left"])
+			log_event("The desk paid on the pack too: %d thing%s" % [m["found"].size(), "" if m["found"].size() == 1 else "s"])
 	else:
 		log_event("Dead in %s. Kit lost (%s). %s" % [Words.mid(t["name"]), _cash_words(lost), Words.RECYCLE["listed"]])
 		for s in Data.SLOTS:
@@ -4145,7 +4475,7 @@ func _kia() -> void:
 			for it in rig:
 				stash.append(it)                 # the dog's share: the rig comes home
 			log_event("The dog came home with the rig: %d pouch%s" % [rig.size(), "" if rig.size() == 1 else "es"])
-	if Data.KENNEL_LEVELS[kennel_level].get("carries", false) and not m["found"].is_empty():
+	if yard_has("fetch") and not m["found"].is_empty() and not m.get("pack_kept", false):
 		# the kennel's top level (31): the dog carries the best thing in the pack home
 		var best: Dictionary = m["found"][0]
 		for it in m["found"]:
@@ -4269,7 +4599,9 @@ func can_equip_item(id: int) -> bool:
 				return false
 			if equipped[slot] == null:
 				return true
-			return stash_used() - Items.size(it) + Items.size(equipped[slot]) <= stash_cap()
+			var out_cells: int = 0 if stash_free(it) else Items.size(it)
+			var in_cells: int = 0 if stash_free(equipped[slot]) else Items.size(equipped[slot])
+			return stash_used() - out_cells + in_cells <= stash_cap()
 	return false
 
 
@@ -4395,7 +4727,7 @@ func leave(id: int) -> bool:
 	for r in rig:
 		if r["id"] == id:
 			leaving = r
-	if leaving.is_empty() or not (stash_room(1) or _stack_room(leaving)):
+	if leaving.is_empty() or not (stash_fits(leaving) or _stack_room(leaving)):
 		return false
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
@@ -4407,7 +4739,7 @@ func leave(id: int) -> bool:
 
 
 func unequip(slot: String) -> bool:
-	if mission != null or equipped[slot] == null or not stash_room(Items.size(equipped[slot])):
+	if mission != null or equipped[slot] == null or not stash_fits(equipped[slot]):
 		return false
 	stash.append(equipped[slot])
 	equipped[slot] = null
@@ -4429,9 +4761,14 @@ func restock() -> void:
 	reroll_intel()
 	_restock_clinic()
 	_restock_gamble()
+	_restock_market()
+
+
+## The Fence's shelf, rolled afresh.
+func _restock_market() -> void:
 	market = []
 	var t := gear_tier()
-	for k in range(Data.MARKET_LEVELS[market_level]["stock"]):
+	for k in range(market_stock()):
 		var slot: String = Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)]
 		var roll := rng.randf()
 		if roll < 0.3:
@@ -4448,7 +4785,13 @@ func restock() -> void:
 			it = Items.roll(slot, t, rng)
 		if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 			it = Items.roll(Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)], t, rng)
+		if yard_has("arms_dealer") and not Items.is_ammo(it) and not Items.is_grenade(it):
+			it = Items.roll(it["slot"], loot_tier_at(deepest_site_level()), rng, 0.0, false, false, "", "", 0.33, 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
+	if yard_has("back_room"):
+		var loose: Array = loose_uniques(0)
+		if not loose.is_empty():
+			market.append(Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng))    # the Fence's Back room: a unique on the shelf
 
 
 ## The Fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
@@ -4489,7 +4832,7 @@ func top_tier() -> int:
 func gamble_price(kind: String) -> int:
 	if gamble_kind(kind).is_empty():
 		return -1
-	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_runs_takings() * Data.GAMBLE_RUNS)))
+	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_runs_takings() * Data.GAMBLE_RUNS) * (0.5 if yard_has("gamblers_table") else 1.0)))
 
 
 func can_gamble(kind: String) -> bool:
@@ -4504,7 +4847,7 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 		return {}
 	var k := gamble_kind(kind)
 	var it := roll_gamble(k, unique_roll)
-	if not (stash_room(Items.size(it)) or _stack_room(it)):
+	if not (stash_fits(it) or _stack_room(it)):
 		return {}
 	cash -= gamble_price(kind)
 	gamble.erase(kind)
@@ -4556,7 +4899,7 @@ func price(it: Dictionary) -> int:
 
 
 func buy(i: int) -> bool:
-	if i >= market.size() or not (stash_room(Items.size(market[i])) or _stack_room(market[i])) or cash < price(market[i]):
+	if i >= market.size() or not (stash_fits(market[i]) or _stack_room(market[i])) or cash < price(market[i]):
 		return false
 	cash -= price(market[i])
 	stash_put(market[i])
@@ -4593,7 +4936,7 @@ func stash_put(it: Dictionary) -> bool:
 		if left <= 0:
 			return true
 		Items.set_stack(it, left)
-	if not stash_room(Items.size(it)):
+	if not stash_fits(it):
 		return false
 	stash.append(it)
 	return true
@@ -4637,6 +4980,24 @@ func sell_junk() -> int:
 	return n
 
 
+## The Stash's Bins: the common gear in a run's finds scrapped, the junk run's filter (never a built gun, the
+## deeds, rounds, meds, papers, socketables, uniques or set pieces); the rest is what still goes to the stash.
+func _bin_commons(found: Array) -> Array:
+	var kept: Array = []
+	var n := 0
+	var got := 0
+	for it in found:
+		if int(it.get("rarity", 0)) == 0 and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false) or Items.is_ammo(it)):
+			got += scrap_of(it)
+			n += 1
+		else:
+			kept.append(it)
+	scrap += got
+	if n > 0:
+		log_event("Into the bins: %d thing%s, %d scrap." % [n, "" if n == 1 else "s", got])
+	return kept
+
+
 ## Idle: what the toggles do when a run comes home.
 func _idle_tidy() -> void:
 	if auto_sell:
@@ -4661,12 +5022,12 @@ func stash_by_value() -> Array:
 # ------------------------------------------------------------------ the medic tent
 
 ## The Medic Tent's shelf: every common med up to the next tier, at its markup.
-## The Clinic's shelf: MEDIC_LEVELS[level]["stock"] meds, rolled from the
+## The Clinic's shelf: clinic_stock() meds, rolled from the
 ## bases it carries, cheaper ones more often. Finite until the next run.
 func _restock_clinic() -> void:
 	clinic = []
 	var bases := med_stock()
-	for k in range(int(Data.MEDIC_LEVELS[medic_level]["stock"])):
+	for k in range(clinic_stock()):
 		var b: Dictionary = bases[mini(bases.size() - 1, int(absf(rng.randfn(0.0, 1.2))))]
 		var it := Items.roll(Data.MEDICAL, int(b["tier"]), rng)
 		it["base"] = b["name"]
@@ -4685,7 +5046,7 @@ func buy_clinic(id: int) -> bool:
 	for k in range(clinic.size()):
 		if clinic[k]["id"] == id:
 			var it: Dictionary = clinic[k]
-			if cash < clinic_price(it) or not stash_room(1):
+			if cash < clinic_price(it) or not stash_fits(it):
 				return false
 			cash -= clinic_price(it)
 			clinic.remove_at(k)
@@ -4718,7 +5079,7 @@ func med_price(base: Dictionary) -> int:
 func buy_med(name: String) -> bool:
 	for b in med_stock():
 		if b["name"] == name:
-			if cash < med_price(b) or not stash_room(1):
+			if cash < med_price(b) or not (stash_room(1) or yard_has("racks")):
 				return false
 			cash -= med_price(b)
 			var it := Items.roll(Data.MEDICAL, int(b["tier"]), rng)
@@ -4735,59 +5096,11 @@ func buy_med(name: String) -> bool:
 # ------------------------------------------------------------------ the Yard's upgrades
 
 func away_cap_s() -> float:
-	return Data.GENERATOR_LEVELS[generator_level]["hours"] * 3600.0
-
-
-func generator_cost() -> int:
-	return 0 if generator_level >= Data.GENERATOR_LEVELS.size() - 1 else _inf(Data.GENERATOR_LEVELS[generator_level + 1]["cost"])
-
-
-func can_upgrade_generator() -> bool:
-	return generator_level < Data.GENERATOR_LEVELS.size() - 1 and cash >= generator_cost()
-
-
-func upgrade_generator() -> bool:
-	if not can_upgrade_generator():
-		return false
-	cash -= generator_cost()
-	generator_level += 1
-	log_event("Generator: %s" % Data.GENERATOR_LEVELS[generator_level]["words"].to_lower())
-	return true
-
-
-func lookout_cost() -> int:
-	return 0 if lookout_level >= Data.LOOKOUT_LEVELS.size() - 1 else _inf(Data.LOOKOUT_LEVELS[lookout_level + 1]["cost"])
-
-
-func can_upgrade_lookout() -> bool:
-	return lookout_level < Data.LOOKOUT_LEVELS.size() - 1 and cash >= lookout_cost()
-
-
-func upgrade_lookout() -> bool:
-	if not can_upgrade_lookout():
-		return false
-	cash -= lookout_cost()
-	lookout_level += 1
-	_surv_cache = {}
-	log_event("Lookout: %s" % Data.LOOKOUT_LEVELS[lookout_level]["words"].to_lower())
-	return true
-
-
-func kennel_cost() -> int:
-	return 0 if kennel_level >= Data.KENNEL_LEVELS.size() - 1 else _inf(Data.KENNEL_LEVELS[kennel_level + 1]["cost"])
-
-
-func can_upgrade_kennel() -> bool:
-	return kennel_level < Data.KENNEL_LEVELS.size() - 1 and cash >= kennel_cost()
-
-
-func upgrade_kennel() -> bool:
-	if not can_upgrade_kennel():
-		return false
-	cash -= kennel_cost()
-	kennel_level += 1
-	log_event("Kennel: %s" % Data.KENNEL_LEVELS[kennel_level]["words"].to_lower())
-	return true
+	var hours: int = Data.AWAY_HOURS
+	for pair in [["twelve_hours", 12], ["a_day", 24], ["two_days", 48], ["grid", 72]]:
+		if yard_has(pair[0]):
+			hours = maxi(hours, int(pair[1]))
+	return hours * 3600.0
 
 
 ## The HP back, and the wound seen to: WOUND_CASH a level, the Clinic's discount on both.
@@ -4802,7 +5115,7 @@ func heal_cost() -> int:
 
 
 func wound_cost() -> int:
-	return int(ceil(Data.WOUND_CASH * level() * _treat_rate())) if wound != "" else 0
+	return int(ceil(Data.WOUND_CASH * level() * _treat_rate() * (0.5 if yard_has("surgery") else 1.0))) if wound != "" else 0
 
 
 ## Both at once: what the bot pays, and the old button.
@@ -4879,10 +5192,9 @@ func _state() -> Dictionary:
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
-		"intel": intel, "depth": depth, "best_depth": best_depth, "workshop": workshop, "class": cls, "stash_level": stash_level,
-		"medic_level": medic_level, "market_level": market_level, "comms_level": comms_level, "pinned": pinned,
+		"intel": intel, "depth": depth, "best_depth": best_depth, "class": cls, "pinned": pinned,
+		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(), "tip_free": tip_free, "tip_runs": tip_runs,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"generator_level": generator_level, "lookout_level": lookout_level, "kennel_level": kennel_level,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
@@ -4912,7 +5224,6 @@ func load_dict(d: Dictionary) -> void:
 	auto_equip = bool(d.get("auto_equip", false))
 	auto_sell = bool(d.get("auto_sell", false))
 	tree = d.get("tree", [])
-	workshop = int(d.get("workshop", 0))
 	cls = d.get("class", "")
 	# saves from before the language pass carry the old names
 	const OLD_WORDS := {"Recon": "Poacher", "Enforcer": "Doorman", "Medic": "Paramedic", "Saboteur": "Scrapper", "Ghost": "Drifter"}
@@ -4927,15 +5238,9 @@ func load_dict(d: Dictionary) -> void:
 		if _on_show(str(id).get_slice("/", 0)) and not node(str(id)).is_empty():
 			kept.append(id)
 	tree = kept
-	stash_level = int(d.get("stash_level", 0))
-	medic_level = int(d.get("medic_level", 0))
-	market_level = int(d.get("market_level", 0))
-	comms_level = int(d.get("comms_level", 0))
+	_load_yard(d)
 	hardcore = bool(d.get("hardcore", false))
 	wound = str(d.get("wound", "")) if str(d.get("wound", "")) in Data.WOUND_STATS else ""
-	generator_level = int(d.get("generator_level", 0))
-	lookout_level = int(d.get("lookout_level", 0))
-	kennel_level = int(d.get("kennel_level", 0))
 	camp_lost = bool(d.get("camp_lost", false))
 	var pn: Array = d.get("pinned", [])
 	for i in range(mini(pn.size(), Data.TIERS.size())):
@@ -5006,7 +5311,7 @@ func load_dict(d: Dictionary) -> void:
 	contracts = []
 	for c in d.get("contracts", []):
 		contracts.append({"slot": str(c["slot"]), "rarity": int(c["rarity"]), "count": int(c["count"]), "pay": str(c["pay"]), "amount": int(c["amount"]), "unique": str(c.get("unique", "")), "what": str(c.get("what", ""))})
-	while contracts.size() < Data.CONTRACTS_OPEN:
+	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = {}
 	if d.has("mate") and not d["mate"].is_empty():

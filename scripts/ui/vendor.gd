@@ -271,7 +271,7 @@ func show_state(s) -> void:
 	var cells := 0
 	for it in stock:
 		cells += Items.size(it)
-	var shelf_cap: int = Data.MEDIC_LEVELS[sim.medic_level]["stock"] if kind == "clinic" else cells
+	var shelf_cap: int = sim.clinic_stock() if kind == "clinic" else cells
 	_shelf.show_items(sim, stock, cells, maxi(shelf_cap, cells), "Shelf")
 	_stash.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_shelf.visible = showing == "shelf"
@@ -444,7 +444,7 @@ func _stash_meds() -> int:
 
 
 func _signature() -> String:
-	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.market_level), str(sim.medic_level), str(sim.gamble), str(sim.last_craft),
+	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
 		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), sim.wound,
 		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
@@ -462,7 +462,7 @@ func _signature() -> String:
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
 	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), Data.WOUND_PCT]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
-	_band.set_words("The Clinic · level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "The medic", "%d" % sim.hp_shown(),
+	_band.set_words("The Clinic", "The medic", "%d" % sim.hp_shown(),
 		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
 	_band.headline_under_title(true)
 	_side_title.text = "TREATMENT"
@@ -526,10 +526,11 @@ func _show_side() -> void:
 		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
 		UI.set_tile(_side_tiles_c[1], "Heal", [Fmt.money(sim.heal_cost())] if hurt else ["not needed", "fit"], Pal.TEXT if hurt else Pal.TEXT_2)
 		UI.set_tile(_side_tiles_c[2], "The wound", [Fmt.money(sim.wound_cost()) if sim.wound != "" else "none"], Pal.TEXT if sim.wound != "" else Pal.TEXT_2)
-		if sim.medic_cost() > 0:
-			UI.set_tile(_side_tiles_c[3], "Clinic", ["level %d of %d" % [sim.medic_level, Data.MEDIC_LEVELS.size() - 1], "level %d" % sim.medic_level])
-		else:
-			UI.set_tile(_side_tiles_c[3], "Clinic", ["fully kitted", "level %d" % sim.medic_level], Pal.GOOD)
+		var cpicks: int = 0
+		for c in range(5):
+			if sim.yard_side("clinic", c) != "":
+				cpicks += 1
+		UI.set_tile(_side_tiles_c[3], "Clinic", ["%d of 5 picks" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
 		y += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
@@ -539,10 +540,6 @@ func _show_side() -> void:
 		if full and not out:
 			_side_buttons[0].text = "Fit for duty"
 		y += 48 + 8
-		if sim.medic_cost() > 0:
-			var nxt: Dictionary = Data.MEDIC_LEVELS[sim.medic_level + 1]
-			_side_button(2, y, "Upgrade (%s): +%.1f HP/s, %d meds" % [Fmt.money(sim.medic_cost()), nxt["rest"], nxt["stock"]], sim.upgrade_medic, sim.can_upgrade_medic())
-			y += 48 + 8
 		# your meds, by kind: what each heals for you, and how many there are
 		y += 8
 		_heads[1].position.y = y
@@ -604,12 +601,9 @@ func _show_side() -> void:
 	for n in range(types.size()):
 		var box: Dictionary = sim.ammo_box(types[n])
 		_side_tile(k, PAD + (n % 3) * (tw3 + TILE_GAP), y + (n / 3) * (UI.TILE_H + TILE_GAP), tw3, "%s ×%d" % [box["name"], int(box["rounds"])], [Fmt.money(sim.ammo_price(types[n]))], Pal.TEXT,
-			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and sim.stash_room(1))
+			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and (sim.stash_room(1) or sim.yard_has("racks")))
 		k += 1
-	if sim.market_cost() > 0:
-		_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Bigger shelf · %d" % Data.MARKET_LEVELS[sim.market_level + 1]["stock"], [Fmt.money(sim.market_cost())], Pal.ACCENT, sim.upgrade_market, sim.can_upgrade_market())
-	else:
-		_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Their shelf", ["%d, the biggest" % Data.MARKET_LEVELS[sim.market_level]["stock"], "the biggest"], Pal.TEXT_2, Callable(), false)
+	_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Their shelf", ["%d on it" % sim.market_stock(), "%d" % sim.market_stock()], Pal.TEXT_2, Callable(), false)     # a bigger one is built in the Yard (9 Oct)
 	y += 2 * UI.TILE_H + TILE_GAP + 12
 	# the contracts, in brief: the tab has the lot
 	_heads[2].position.y = y
@@ -653,7 +647,7 @@ func _show_panel() -> void:
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
 				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
 				UI.fit(_left_lines[2], ["Taken out again in the Lock-up, from the rig", "Taken out in the Lock-up"])
-			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), Data.MEDIC_LEVELS[sim.medic_level]["stock"]]
+			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), sim.clinic_stock()]
 			_right_lines[0].text = "No more until the next run"
 		else:
 			_left_title.text = "The Fence"
@@ -661,7 +655,7 @@ func _show_panel() -> void:
 				UI.fit(_left_lines[0], ["Prices up %d%% since the Yard opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
 			else:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
-			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), Data.MARKET_LEVELS[sim.market_level]["stock"]]
+			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), sim.market.size() if sim.yard_has("back_room") else sim.market_stock()]
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick a cell on either grid"
 		_lay_buttons()
@@ -706,7 +700,7 @@ func _show_panel() -> void:
 	else:
 		_right_title.text = ""
 	if selected["kind"] == "shelf":
-		var room: bool = sim.stash_room(Items.size(it)) or sim._stack_room(it)
+		var room: bool = sim.stash_fits(it) or sim._stack_room(it)
 		if not room:
 			_hint.text = "No room in your stash"
 		elif sim.cash < _price(it):
@@ -825,13 +819,13 @@ func _show_said() -> void:
 func _side_press(i: int) -> void:
 	var was_hp: float = sim.hp
 	var was_wound: String = sim.wound
-	var was_level: int = sim.medic_level + sim.market_level
+	var was_level: int = sim.clinic_stock() + sim.market_stock()
 	var was_n: int = sim.stash.size()
 	if _side_actions[i].is_valid():
 		_side_actions[i].call()
 	if kind == "clinic" and (sim.hp > was_hp or (was_wound != "" and sim.wound == "")):
 		_says("fit" if sim.hp >= sim.max_hp() and sim.wound == "" else "treated")
-	elif sim.medic_level + sim.market_level > was_level:
+	elif sim.clinic_stock() + sim.market_stock() > was_level:
 		_says("shelf")
 	elif sim.stash.size() < was_n:
 		_says("sold")

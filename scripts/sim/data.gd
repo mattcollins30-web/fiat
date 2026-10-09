@@ -62,56 +62,151 @@ const FOOTPRINTS := {
 	"Red dot": [2, 1], "Torch": [2, 1], "Holo sight": [2, 1], "Telescopic sight": [2, 1], "Thermal sight": [2, 1], "Night optic": [2, 1], "Laser module": [2, 1],
 }
 
-## The stash in cells, by its level - a camp upgrade, cash. The first is free.
-## Thirteen cells a row, seven rows a page: the first stash is one page.
-const STASH_LEVELS := [
-	{"cells": 91, "cost": 0},
-	{"cells": 130, "cost": 1500},
-	{"cells": 182, "cost": 6000},
-	{"cells": 234, "cost": 15000},
-]
-
-## The camp's other upgrades, cash: the Medic Tent's rest rate, the Black
-## Market's stock, and the Comms Tower, which buys intel.
-const MEDIC_LEVELS := [
-	{"rest": 0.5, "stock": 6, "cost": 0},
-	{"rest": 1.0, "stock": 10, "cost": 1200},
-	{"rest": 2.0, "stock": 16, "cost": 5000},
-]
-const MARKET_LEVELS := [
-	{"stock": 3, "cost": 0},
-	{"stock": 5, "cost": 2000},
-	{"stock": 8, "cost": 7000},
-]
-const COMMS_LEVELS := [
-	{"cost": 0, "words": "No set: word of mouth"},
-	{"cost": 1500, "words": "A CB set: buy fresh word"},
-	{"cost": 6000, "words": "A scanner: pin word across runs"},
-	{"cost": 15000, "words": "A transmitter: call in words"},
-]
+## The stash in cells before the Yard's picks: one page, thirteen cells a row, seven rows.
+const STASH_CELLS := 91
+## The Clinic's rest and shelf, the Fence's shelf, the hours away, the odds' dry runs before the Yard's picks.
+const REST_BASE := 0.5
+const CLINIC_STOCK := 6
+const AWAY_HOURS := 8
+const ODDS_RUNS := 24
 const INTEL_CASH := [0, 60, 150, 250, 400, 650, 900, 1200, 1600]       # fresh word on a tier, by tier index
 
-## The Yard's own upgrades, cash, late: the generator runs the Yard while
-## you're away for longer; the lookout sees the first lot coming; the kennel
-## is a dog.
-const GENERATOR_LEVELS := [
-	{"hours": 8, "cost": 0, "words": "No generator: eight hours away counts"},
-	{"hours": 12, "cost": 4000, "words": "A generator: twelve hours away counts"},
-	{"hours": 24, "cost": 12000, "words": "Diesel and a tank: a day away counts"},
-	{"hours": 24, "cost": 30000, "rig_row": true, "words": "The works wired: a second row of pouches on the rig"},
+## The Yard's buildings as lanes (9 Oct, docs/design/yard.md; Matt: the upgrades were done before the City, "I
+## still need yard upgrades even when I'm 9 depths deep", "the choices need to be more memorable and scale more").
+## Each building: five columns of two picks - take one, the other stays on show; refit for half - and a rank in
+## the sixth, bought again and again. A column opens on the campaign and the depth (YARD_GATES), once for good;
+## its price is the building's `costs` entry × inflation, the fifth column and the rank salvage too. The
+## buildings move with the Yard. `short` is the tile's figure, `words` the strip's sentence.
+const YARD_COLS := 6
+const YARD_GATES := ["From the start", "With the Town open", "With the City open", "With the campaign done", "At depth 6", "At depth 9"]
+const YARD_GATE_SHORT := ["start", "the Town", "the City", "the campaign", "depth 6", "depth 9"]
+const YARD_PICK_SALVAGE := 10            # the fifth column's salvage
+const YARD_RANK_CASH := 50000            # a rank's cash, × YARD_RANK_GROWTH a rank bought, × inflation
+const YARD_RANK_GROWTH := 1.25
+const YARD_RANK_SALVAGE := 5             # a rank's salvage, one more a rank bought
+const YARD_REFIT := 0.5                  # changing a pick: this share of the column's price
+## Salvage (9 Oct): one kind a zone, from kills on its sites from SALVAGE_DEPTH, SALVAGE_KILL a kill a depth past.
+const SALVAGE := ["copper", "steel", "army"]
+const SALVAGE_NAMES := {"copper": "Copper", "steel": "Safe steel", "army": "Army surplus"}
+const SALVAGE_DEPTH := 4
+const SALVAGE_KILL := 0.01
+const YARD := [
+	{"key": "bench", "name": "The Bench", "salvage": "steel", "costs": [2000, 7000, 16000, 40000, 80000], "picks": [
+		[{"id": "steady_hands", "name": "Steady hands", "short": "One-affix odds ×2", "words": "Re-rolling one affix: twice the chance it goes up a tier"},
+		 {"id": "cheap_parts", "name": "Cheap parts", "short": "Every job −25%", "words": "Every job at the Bench costs a quarter less"}],
+		[{"id": "third_socket", "name": "Third socket", "short": "Sockets to three", "words": "A third socket can be cut in a gun or armour"},
+		 {"id": "two_locks", "name": "Two locks", "short": "A lock keeps two", "words": "A lock keeps the affix you pick and the best of the rest"}],
+		[{"id": "gunsmith", "name": "Gunsmith", "short": "Guns at your depth", "words": "Improvised guns built at your deepest site's level, not their own"},
+		 {"id": "strip_for_parts", "name": "Strip for parts", "short": "Scrap ×2", "words": "Scrapping gives twice the scrap"}],
+		[{"id": "overbump", "name": "Overbump", "short": "A bump +6 levels", "words": "A bump raises an item six levels, not three"},
+		 {"id": "fine_tuning", "name": "Fine tuning", "short": "Never rolls down", "words": "Re-rolling one affix never takes it down a tier"}],
+		[{"id": "masterwork", "name": "Masterwork", "short": "Top-half rolls", "words": "An affix the Bench rolls lands in the top half of its tier"},
+		 {"id": "salvage_line", "name": "Salvage line", "short": "Rares give steel", "words": "Scrapping a Rare or better also gives a Safe steel"}]],
+	 "rank": {"short": "Item-level cap +1", "words": "Bumps go one item level higher a rank"}},
+	{"key": "stash", "name": "The Stash", "salvage": "copper", "costs": [1500, 6000, 15000, 35000, 80000], "picks": [
+		[{"id": "shelving", "name": "Shelving", "short": "+40 cells", "words": "Forty more cells in the stash"},
+		 {"id": "racks", "name": "Racks", "short": "Rounds take no room", "words": "Rounds, meds and grenades in the stash take no cells"}],
+		[{"id": "another_unit", "name": "Another unit", "short": "+50 cells", "words": "Fifty more cells in the stash"},
+		 {"id": "bins", "name": "Bins", "short": "Commons to scrap", "words": "The common gear a run brings home goes straight to scrap"}],
+		[{"id": "strongroom", "name": "Strongroom", "short": "Insurance half", "words": "Insuring a run costs half"},
+		 {"id": "wall_of_fame", "name": "Wall of fame", "short": "Uniques take no room", "words": "Uniques and set pieces in the stash take no cells"}],
+		[{"id": "lock_up", "name": "Lock-up", "short": "+60 cells", "words": "Sixty more cells in the stash"},
+		 {"id": "paper_rack", "name": "Paper rack", "short": "Papers take no room", "words": "Papers and charms in the stash take no cells"}],
+		[{"id": "dry_store", "name": "Dry store", "short": "Moves keep 75%", "words": "A move keeps three quarters of the notes and scrap, not half"},
+		 {"id": "annex", "name": "Annex", "short": "+100 cells", "words": "A hundred more cells in the stash"}]],
+	 "rank": {"short": "+20 cells", "words": "Twenty more cells a rank"}},
+	{"key": "clinic", "name": "The Clinic", "salvage": "steel", "costs": [1200, 5000, 12000, 30000, 80000], "picks": [
+		[{"id": "beds", "name": "Beds", "short": "Rest +0.5 HP/s", "words": "Resting heals half an HP a second more"},
+		 {"id": "shelf", "name": "Shelf", "short": "Ten meds stocked", "words": "Ten meds on the Clinic's shelf, not six"}],
+		[{"id": "ward", "name": "Ward", "short": "Rest +1 HP/s", "words": "Resting heals an HP a second more"},
+		 {"id": "stockroom", "name": "Stockroom", "short": "Six more meds", "words": "Six more meds on the Clinic's shelf"}],
+		[{"id": "surgery", "name": "Surgery", "short": "Wounds half price", "words": "Treating a wound costs half"},
+		 {"id": "physio", "name": "Physio", "short": "Wounds a third less", "words": "A wound takes a third less off"}],
+		[{"id": "drip", "name": "Drip", "short": "1% HP/s searching", "words": "1% of max HP a second back while a site is searched"},
+		 {"id": "field_kit", "name": "Field kit", "short": "A bandage a run", "words": "Every run sets off with a free bandage in the rig, if there's room"}],
+		[{"id": "theatre", "name": "Theatre", "short": "+10% max HP", "words": "Ten per cent more max HP"},
+		 {"id": "med_lab", "name": "Med lab", "short": "Meds +25%", "words": "Every med heals a quarter more"}]],
+	 "rank": {"short": "+3% max HP", "words": "Three per cent more max HP a rank"}},
+	{"key": "fence", "name": "The Fence", "salvage": "army", "costs": [2000, 7000, 18000, 40000, 80000], "picks": [
+		[{"id": "stall", "name": "Stall", "short": "Two more for sale", "words": "Two more things on the Fence's shelf"},
+		 {"id": "haggling", "name": "Haggling", "short": "Sells 10% more", "words": "Everything sells for a tenth more"}],
+		[{"id": "shopfront", "name": "Shopfront", "short": "Three more for sale", "words": "Three more things on the Fence's shelf"},
+		 {"id": "orders", "name": "Orders", "short": "Five contracts", "words": "Five contracts open, not three"}],
+		[{"id": "back_room", "name": "Back room", "short": "A unique in stock", "words": "A unique always on the shelf"},
+		 {"id": "fixer", "name": "Fixer", "short": "Contracts notes ×2", "words": "Contracts that pay notes pay twice the notes"}],
+		[{"id": "gamblers_table", "name": "Gambler's table", "short": "Gambles half price", "words": "Every gamble costs half"},
+		 {"id": "insurance_desk", "name": "Insurance desk", "short": "Insured: pack kept", "words": "An insured run that dies keeps the pack too"}],
+		[{"id": "arms_dealer", "name": "Arms dealer", "short": "Stock at your depth", "words": "The shelf rolls at your deepest site's level"},
+		 {"id": "dealers_cut", "name": "Dealer's cut", "short": "Sells 25% more", "words": "Everything sells for a quarter more"}]],
+	 "rank": {"short": "+2% on sales", "words": "Two per cent more for everything sold, a rank"}},
+	{"key": "radio", "name": "The Radio", "salvage": "army", "costs": [1500, 6000, 15000, 40000, 80000], "picks": [
+		[{"id": "scanner", "name": "Scanner", "short": "Words half price", "words": "A fresh word costs half"},
+		 {"id": "tip_line", "name": "Tip line", "short": "A free word in five", "words": "Every fifth run home, the next fresh word is free"}],
+		[{"id": "pin", "name": "Pin", "short": "Keep a word", "words": "Pin a site's words so a run doesn't spend them"},
+		 {"id": "two_channels", "name": "Two channels", "short": "A word buys two", "words": "A fresh word re-rolls a site twice and keeps the better"}],
+		[{"id": "call_in", "name": "Call in", "short": "Add words", "words": "Call in a word of your choosing (the campaign done)"},
+		 {"id": "lock", "name": "Lock", "short": "Hold a word", "words": "Hold one word and re-roll the rest (the campaign done)"}],
+		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Convoy 2 shallower", "words": "The convoy comes two depths shallower"},
+		 {"id": "long_range", "name": "Long range", "short": "A word more", "words": "A site carries one more word"}],
+		[{"id": "jammer", "name": "Jammer", "short": "Words bite half", "words": "Every word's bite - their health, their fire, more on you - is halved"},
+		 {"id": "military_band", "name": "Military band", "short": "Rewards ×1.5", "words": "Every word's reward - cash, XP, drops, quality - half again"}]],
+	 "rank": {"short": "Rewards +5%", "words": "Every word's reward five per cent more, a rank"}},
+	{"key": "generator", "name": "The Generator", "salvage": "copper", "costs": [2500, 8000, 20000, 50000, 80000], "picks": [
+		[{"id": "twelve_hours", "name": "Twelve hours", "short": "12 h away", "words": "Twelve hours away count, not eight"},
+		 {"id": "rig_wiring", "name": "Rig wiring", "short": "+4 pouches", "words": "Four more pouches on the rig"}],
+		[{"id": "a_day", "name": "A day away", "short": "24 h away", "words": "A day away counts"},
+		 {"id": "floodlights", "name": "Floodlights", "short": "Night, not slow", "words": "Night's rarer finds without its slower feet"}],
+		[{"id": "battery", "name": "Battery", "short": "+8 pouches", "words": "Eight more pouches on the rig"},
+		 {"id": "overtime", "name": "Overtime", "short": "Away pays +25%", "words": "Cash made while you're away comes in a quarter higher"}],
+		[{"id": "two_days", "name": "Two days", "short": "48 h away", "words": "Two days away count"},
+		 {"id": "arc_lamps", "name": "Arc lamps", "short": "Fire, shock +10%", "words": "Fire and shock do a tenth more"}],
+		[{"id": "grid", "name": "The grid", "short": "72 h away", "words": "Three days away count"},
+		 {"id": "charger", "name": "Charger", "short": "Runs start full", "words": "Every run sets off on full HP"}]],
+	 "rank": {"short": "Away +3%", "words": "Cash made while you're away three per cent higher, a rank"}},
+	{"key": "lookout", "name": "The Lookout", "salvage": "steel", "costs": [2500, 8000, 20000, 45000, 80000], "picks": [
+		[{"id": "spotter", "name": "Spotter", "short": "First gang ×1.5 later", "words": "The first gang takes half as long again to arrive"},
+		 {"id": "glasses", "name": "Glasses", "short": "Odds from 60 runs", "words": "The odds shown are read from sixty dry runs, not twenty-four"}],
+		[{"id": "lookout_post", "name": "Lookout post", "short": "First gang +50% later", "words": "The first gang takes half as long again to arrive, on top"},
+		 {"id": "range_cards", "name": "Range cards", "short": "First shot +50%", "words": "The first shot on every gang does half again"}],
+		[{"id": "hold_fire", "name": "Hold fire", "short": "Waits for a full pack", "words": "After the clear, the first gang waits until the pack is full"},
+		 {"id": "tripwires", "name": "Tripwires", "short": "Gangs 10% later", "words": "Every gang takes a tenth longer to arrive"}],
+		[{"id": "whistle", "name": "The whistle", "short": "Auto runs on wounded", "words": "Auto-run carries on through a wound"},
+		 {"id": "watch_rota", "name": "Watch rota", "short": "Gangs 10% later", "words": "Every gang takes a tenth longer to arrive"}],
+		[{"id": "crows_nest", "name": "Crow's nest", "short": "Gangs 20% later", "words": "Every gang takes a fifth longer to arrive"},
+		 {"id": "flares", "name": "Flares", "short": "A head short", "words": "Every gang arrives one head short"}]],
+	 "rank": {"short": "Gangs 2% later", "words": "Every gang two per cent later, a rank"}},
+	{"key": "kennel", "name": "The Kennel", "salvage": "copper", "costs": [2500, 7000, 18000, 40000, 80000], "picks": [
+		[{"id": "a_dog", "name": "A dog", "short": "+1 find a search", "words": "One more find every search"},
+		 {"id": "good_nose", "name": "A good nose", "short": "+5% quality", "words": "Five per cent better finds"}],
+		[{"id": "guard_dog", "name": "Guard dog", "short": "Gangs 20% later", "words": "It hears them coming: every gang a fifth later"},
+		 {"id": "pedigree", "name": "Pedigree", "short": "+10% quality", "words": "Ten per cent better finds"}],
+		[{"id": "fetch", "name": "Fetch", "short": "Best piece home", "words": "On a death the dog carries the best thing in the pack home"},
+		 {"id": "second_dog", "name": "Second dog", "short": "+1 find a search", "words": "One more find every search"}],
+		[{"id": "tracker", "name": "Tracker", "short": "Papers ×2", "words": "Papers and charms turn up twice as often"},
+		 {"id": "ratter", "name": "Ratter", "short": "Poison, bleed +10%", "words": "Poison and bleed do a tenth more"}],
+		[{"id": "pack", "name": "The pack", "short": "+2 finds a search", "words": "Two more finds every search"},
+		 {"id": "champion", "name": "Champion", "short": "+20% quality", "words": "Twenty per cent better finds"}]],
+	 "rank": {"short": "+2% quality", "words": "Two per cent better finds, a rank"}},
 ]
-const LOOKOUT_LEVELS := [
-	{"first": 1.0, "runs": 24, "cost": 0, "words": "No lookout: odds are a guess"},
-	{"first": 1.5, "runs": 24, "cost": 3000, "words": "A lookout: the first gang takes half as long again to arrive"},
-	{"first": 2.0, "runs": 60, "cost": 9000, "words": "A lookout with glasses: the first gang takes twice as long to arrive, and the odds shown are good ones"},
-	{"first": 2.0, "runs": 60, "cost": 24000, "call": true, "words": "A lookout on the Radio: the first gang after the clear waits for the call, and the call is a full pack"},
-]
-const KENNEL_LEVELS := [
-	{"finds": 0, "patrol": 1.0, "cost": 0, "words": "No dog"},
-	{"finds": 1, "patrol": 1.0, "cost": 2500, "quality": 5, "words": "A dog: one more find every look, +5% loot quality"},
-	{"finds": 1, "patrol": 1.2, "cost": 7000, "quality": 10, "words": "A good dog: it hears the next gang coming, so they arrive 20% later; +10% loot quality"},
-	{"finds": 1, "patrol": 1.2, "cost": 18000, "quality": 10, "carries": true, "words": "The best dog: when a runner dies it carries the best thing in the pack home"},
-]
+
+
+static func yard_building(key: String) -> Dictionary:
+	for b in YARD:
+		if b["key"] == key:
+			return b
+	return {}
+
+
+## Where a pick is: [building key, column, side 0 or 1], or [] for no such pick.
+static func yard_where(id: String) -> Array:
+	for b in YARD:
+		for c in range(b["picks"].size()):
+			for side in range(2):
+				if b["picks"][c][side]["id"] == id:
+					return [b["key"], c, side]
+	return []
+
+
 ## The works' top levels (31): the generator's second rig row is RIG_ROW pouches; the rig never shows past RIG_CAP.
 const RIG_ROW := 8
 const RIG_CAP := 24
@@ -674,12 +769,7 @@ const SETS := [
 ]
 
 ## Workshop levels: what each opens, and what it costs to reach.
-const WORKSHOP := [
-	{"cost": 0, "mounts": [], "words": "No bench: nothing can be fitted"},
-	{"cost": 1000, "mounts": ["optic", "muzzle", "grip"], "words": "A bench: optics, muzzles, grips"},
-	{"cost": 5000, "mounts": ["optic", "muzzle", "magazine", "grip", "business end"], "words": "Tooling: magazines, business ends"},
-	{"cost": 14000, "mounts": ["optic", "muzzle", "magazine", "handguard", "stock", "grip", "business end"], "words": "A gunsmith's: every mount"},
-]
+## (The Bench's levels went with the Yard's lanes, 9 Oct: every mount, every job, from the start.)
 
 ## Rarity (the pass, Matt, 6 Oct): the affixes an item rolls AND the best tier any of them can be -
 ## "common can have 1 and it can only ever roll tier 1 affix and so on", five rarities to the five

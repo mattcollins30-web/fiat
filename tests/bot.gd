@@ -91,16 +91,7 @@ func tidy(sim) -> void:
 		_hold_the_element(sim)
 	_climb(sim)
 	_train_tree(sim)
-	var sinks := [["workshop", sim.can_upgrade_workshop, sim.workshop_cost, sim.upgrade_workshop],
-			["stash", sim.can_upgrade_stash, sim.stash_cost, sim.upgrade_stash], ["medic", sim.can_upgrade_medic, sim.medic_cost, sim.upgrade_medic],
-			["market", sim.can_upgrade_market, sim.market_cost, sim.upgrade_market], ["comms", sim.can_upgrade_comms, sim.comms_cost, sim.upgrade_comms],
-			["generator", sim.can_upgrade_generator, sim.generator_cost, sim.upgrade_generator], ["lookout", sim.can_upgrade_lookout, sim.lookout_cost, sim.upgrade_lookout],
-			["kennel", sim.can_upgrade_kennel, sim.kennel_cost, sim.upgrade_kennel]]
-	for s in sinks:
-		if s[1].call() and sim.cash >= s[2].call() + 500:
-			var cost: int = s[2].call()
-			s[3].call()
-			bought.append([sim.elapsed, "%s for £%d" % [s[0], cost]])
+	_build_yard(sim)
 	var slots: Array = Data.SOCKET_SLOTS.duplicate()
 	slots.erase("Primary")
 	slots.push_front("Primary")              # the primary's sockets before the secondary's
@@ -585,6 +576,35 @@ func _train_tree(sim) -> void:
 				return                    # save up for it rather than spend elsewhere
 			if element != "" and b.get("element", "") == element and sim.points_free() < sim.node_cost(next_id):
 				return                    # an off-affinity node at double: save for it
+
+
+## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
+## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
+const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [], "lookout": [], "kennel": [3]}
+func _build_yard(sim) -> void:
+	var best_key := ""
+	var best_col := -1
+	var best_cost := 1 << 40
+	for b in Data.YARD:
+		for c in range(b["picks"].size()):
+			if sim.yard_side(b["key"], c) != "":
+				continue
+			var side: String = "b" if c in PICK_B.get(b["key"], []) else "a"
+			if sim.can_yard_pick(b["key"], c, side) and sim.yard_pick_cost(b["key"], c) < best_cost:
+				best_key = b["key"]
+				best_col = c
+				best_cost = sim.yard_pick_cost(b["key"], c)
+	if best_key != "" and sim.cash >= best_cost + 500:
+		var side: String = "b" if best_col in PICK_B.get(best_key, []) else "a"
+		if sim.yard_pick(best_key, best_col, side):
+			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if side == "a" else 1]["id"], best_cost]])
+		return
+	for b in Data.YARD:
+		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5:
+			var cost: int = sim.yard_rank_cost(b["key"])
+			if sim.buy_yard_rank(b["key"]):
+				bought.append([sim.elapsed, "%s rank %d for £%d" % [b["key"], sim.yard_rank(b["key"]), cost]])
+			return
 
 
 ## A tree's next node for this runner, left to right (the lanes, 9 Oct): the lowest column's untaken node it

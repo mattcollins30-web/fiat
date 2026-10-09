@@ -391,10 +391,11 @@ static func tier_range(a: Dictionary, tier: int) -> Array:
 	return [from, maxi(from, to)]
 
 
-static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0, rarity_cap := 0) -> Dictionary:
+static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0, rarity_cap := 0, top := false) -> Dictionary:
 	var t := tier if tier > 0 else roll_tier(ilvl, rng, rarity_cap)
 	var r := tier_range(a, t)
-	return {"stat": a["stat"], "value": int(round(rng.randi_range(r[0], r[1]) * ilvl_mult(ilvl))), "tier": t}
+	var lo: int = int(ceil((r[0] + r[1]) / 2.0)) if top else int(r[0])      # the Bench's Masterwork (9 Oct): the top half of the tier
+	return {"stat": a["stat"], "value": int(round(rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl))), "tier": t}
 
 
 ## The deep drop's edge (7 Oct): an affix's value times this at an item level - nothing to ILVL_FROM, ILVL_SCALE a level
@@ -418,22 +419,30 @@ static func ilvl(it: Dictionary) -> int:
 ## The bench: the affixes rolled again (the count kept), one of them rolled
 ## again (its tier mostly kept; up a step sometimes, down a step less often,
 ## the odds narrowing as the tier rises), one more added, all of them off.
-static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: String = "") -> void:
+static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: String = "", top := false, keep_best := false) -> void:
 	var n: int = it["affixes"].size()
 	var kept: Array = []
 	for a in it["affixes"]:
 		if a["stat"] == keep:
 			kept.append(a)
+	if keep_best and keep != "":
+		# the Bench's Two locks (9 Oct): the best of the rest kept too - the highest tier, then the bigger figure
+		var best = null
+		for a in it["affixes"]:
+			if a["stat"] != keep and (best == null or int(a.get("tier", 1)) > int(best.get("tier", 1)) or (int(a.get("tier", 1)) == int(best.get("tier", 1)) and int(a["value"]) > int(best["value"]))):
+				best = a
+		if best != null:
+			kept.append(best)
 	var have: Array = []
 	for a in kept:
 		have.append(a["stat"])
 	it["affixes"] = kept
 	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
-		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it)))     # the Bench works as a drop does: the rarity's cap, the level's floor
+		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it), top))     # the Bench works as a drop does: the rarity's cap, the level's floor
 
 
 ## One affix rolled again. Returns the new tier, or 0 if the stat isn't on it.
-static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator) -> int:
+static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator, up_mult := 1.0, no_down := false, top := false) -> int:
 	for k in range(it["affixes"].size()):
 		var a: Dictionary = it["affixes"][k]
 		if a["stat"] != stat:
@@ -442,14 +451,14 @@ static func reroll_one(it: Dictionary, stat: String, rng: RandomNumberGenerator)
 		var t: int = int(a.get("tier", 1))
 		var cap := maxi(rarity_cap(it), t)                     # one rule at the Bench (the pass, 6 Oct): the rarity's cap, the level's floor; a tier already past the cap (an old save) is left where it is
 		var lo := mini(tier_floor(ilvl(it)), cap)
-		var up := 0.25 / float(t)                              # T1 → T2 one in four; T4 → T5 one in sixteen
+		var up := 0.25 / float(t) * up_mult                    # T1 → T2 one in four; T4 → T5 one in sixteen (×2 with Steady hands)
 		var x := rng.randf()
 		if x < up and t < cap:
 			t += 1
-		elif x < up + 0.1 and t > lo:
+		elif x < up + 0.1 and t > lo and not no_down:       # Fine tuning: never down
 			t -= 1
 		t = clampi(t, lo, cap)
-		it["affixes"][k] = roll_affix(d, ilvl(it), rng, t)
+		it["affixes"][k] = roll_affix(d, ilvl(it), rng, t, 0, top)
 		return t
 	return 0
 
@@ -460,7 +469,7 @@ static func rarity_cap(it: Dictionary) -> int:
 
 
 ## One more affix, one not already on it, and the rarity up a step.
-static func add_affix(it: Dictionary, rng: RandomNumberGenerator) -> bool:
+static func add_affix(it: Dictionary, rng: RandomNumberGenerator, top := false) -> bool:
 	var have: Array = []
 	for a in it["affixes"]:
 		have.append(a["stat"])
@@ -474,7 +483,7 @@ static func add_affix(it: Dictionary, rng: RandomNumberGenerator) -> bool:
 	if picked.is_empty():
 		return false
 	it["rarity"] = int(it["rarity"]) + 1
-	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng, 0, rarity_cap(it)))     # the new rarity's cap
+	it["affixes"].append(roll_affix(picked[0], ilvl(it), rng, 0, rarity_cap(it), top))     # the new rarity's cap
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[it["rarity"]]["value"]))
 	return true
 
@@ -485,8 +494,8 @@ static func strip_affixes(it: Dictionary) -> void:
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[0]["value"]))
 
 
-static func add_socket(it: Dictionary) -> bool:
-	if not (it["slot"] in Data.SOCKET_SLOTS) or sockets(it) >= Data.SOCKET_MAX:
+static func add_socket(it: Dictionary, most := Data.SOCKET_MAX) -> bool:
+	if not (it["slot"] in Data.SOCKET_SLOTS) or sockets(it) >= most:
 		return false
 	it["attachments"]["socket %d" % (sockets(it) + 1)] = null
 	return true
