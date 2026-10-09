@@ -460,7 +460,7 @@ func _show_rig() -> void:
 			break
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
-		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)
+		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)
 		c.show_item(it, lit, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
 		c.visible = true
 		for j in range(w):

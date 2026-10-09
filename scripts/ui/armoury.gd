@@ -176,7 +176,8 @@ func _show_panel() -> void:
 	elif Items.is_ammo(it):
 		tail = "feeds %s" % ("the " + Items.base_of(it)["type"] if Items.base_of(it)["type"] != "smg" else "the SMG")
 	elif Items.is_paper(it):
-		tail = "from before" if not Items.is_deeds(it) else "what the Bank was holding"
+		var taught: String = sim.word_taught_by(str(it["base"]))
+		tail = ("from before" if taught == "" else ("teaches %s" % taught.to_lower())) if not Items.is_deeds(it) else "what the Bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])

@@ -2436,6 +2436,41 @@ counting as seen, the move and old saves lighting the badge, the badge painted b
 hiding a refit's block, and the bot's between-run sales earning the away bonus; all fixed with checks. A smoke
 flake fixed on the way: the Yard-pick check failed when the bot had built those picks first.
 
+**Map juicing (9 Oct, the playtest list, item four; the spec is `docs/design/juicing.md`, Radio-J A and Map-L on
+the canvas).** Matt: the Radio was "a ways off the PoE system of juicing a map with stupid modifiers for stupid
+rewards"; no rerolled words on campaign sites; a note found in the wild should unlock a modifier; words crafted
+from pools, in harmony with the map; the map screen in the trees' and the Yard's layout. Agreed: papers teach the
+words, a site's words stay until changed, crafts in notes, the map as lanes. *Data:* `MODIFIERS` keeps only the
+sky (Night, Rain, Fog); `WORDS` (33: four known when the depths open, fourteen taught by the plain papers, nine
+zone words heard once a zone's site is cleared at depth 2, six deep ones from the deep papers - Rationed, Curfew,
+Last bus, Foreclosure, Everyone's here, The Manager walks), each a bite and a pay at tier I; tiers I-III by depth
+(2, 8, 15), a multiplier as m^1/1.75/2.5 (3.5 for Twist's IV); words a site 2/3/4 at depth 2/5/9; pools 40% the
+zone's, 50% the general, 10% the deep; `CRAFTS` (Tune in, Broadcast, Retune, Hold, Call in, Clear, Twist) at notes
+× depth; `INTEL_CASH`, `OPEN_CHANNEL_NOTES`, `JUICE_*` gone. *Sim:* `words[i]` ([{w, t}]) and `sealed[i]` replace
+`intel` and `pinned`; nothing re-rolls after a run; `juiceable` (the campaign done, depth 2 up); `active_words`
+(the site's first `max_words`, at the tier the depth allows now, and the standing words); `word_effect` (the
+Jammer roots the bite, the band, the Radio's rank and the map's Booster grow the pay); the flags in the run
+(Rationed's no meds, Overdrawn's no cash off kills or the head, Last bus's clock, Pawned's armour through
+`incoming_rate`, The Manager walks' free head); a paper read logs the word it teaches. *The map* as three lanes
+(`ATLAS_GATES` 0/2/4/7/10/14 points in the lane), the air rebuilt as the juicing tree (Good reception, Clear air,
+Booster, Held frequency, Long wave, Tip-offs, Strong signal, Early word, Relay, Bent, the whole band); Fair
+weather, Night eyes, the forecast and Dead air moved to the Yard's Radio, whose lane is now Weather set / Night
+set, the forecast / Dead air, Scanner / Two channels, Lorry watch / Long range, Jammer / Military band; an old
+save's dropped nodes give their points back. *Screens:* the Radio (`radio.gd`): the sites with ladders down the
+left (pips by tier, the pay line), the picked site's totals, its words a row each, the seven crafts with prices
+and a hover line, the book with the unheard words named by what teaches them and the standing word and filter
+buttons; before the depths, "Nothing on the air". The Runs card's word chips carry their tier. The map
+(`atlas.gd`) as lanes. A paper's card says the word it teaches. *The bot* broadcasts and tunes the site it runs,
+clears one that reads under even odds, sets the standing words and the filter. *The smoke:* a new
+`_radio_juice_checks` (campaign plain, the book, depth's words and tiers, the pools, the seven crafts and their
+blocks, Twist's outcomes and the seal, the flags, the save, the screen) and every check that read the old
+words, the map's chains and the Radio's cards rewritten. The reviewer caught no fit check on the Radio screen at
+all, Clear air's filter outliving a map reset, a site run shallow working all its words, the screen showing six
+of eight, the totals leaving out searches/armour/resists/types, the deploy button greyed under a free walking
+head, meds lit under Rationed, and the walking head scaled by the words; all fixed, with checks. Two smoke flakes
+the change exposed (a test deploying to `best_tier` with its zone shut, the band's tone with zone 1 shut) are
+guarded.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

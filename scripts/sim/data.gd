@@ -69,7 +69,6 @@ const REST_BASE := 0.5
 const CLINIC_STOCK := 6
 const AWAY_HOURS := 8
 const ODDS_RUNS := 24
-const INTEL_CASH := [0, 60, 150, 250, 400, 650, 900, 1200, 1600]       # fresh word on a tier, by tier index
 
 ## The Yard's buildings as lanes (9 Oct, docs/design/yard.md; Matt: the upgrades were done before the City, "I
 ## still need yard upgrades even when I'm 9 depths deep", "the choices need to be more memorable and scale more").
@@ -140,12 +139,13 @@ const YARD := [
 		 {"id": "dealers_cut", "name": "Dealer's cut", "short": "Sells 25% more", "words": "Everything sells for a quarter more"}]],
 	 "rank": {"short": "+2% on sales", "words": "Two per cent more for everything sold, a rank"}},
 	{"key": "radio", "name": "The Radio", "salvage": "army", "costs": [1500, 6000, 15000, 40000, 80000], "picks": [
-		[{"id": "scanner", "name": "Scanner", "short": "Words half price", "words": "A fresh word costs half"},
-		 {"id": "tip_line", "name": "Tip line", "short": "A free word in five", "words": "Every fifth run home, the next fresh word is free"}],
-		[{"id": "pin", "name": "Pin", "short": "Keep a word", "words": "Pin a site's words so a run doesn't spend them"},
-		 {"id": "two_channels", "name": "Two channels", "short": "A word buys two", "words": "A fresh word re-rolls a site twice and keeps the better"}],
-		[{"id": "call_in", "name": "Call in", "short": "Add words", "words": "Call in a word of your choosing (the campaign done)"},
-		 {"id": "lock", "name": "Lock", "short": "Hold a word", "words": "Hold one word and re-roll the rest (the campaign done)"}],
+		# map juicing (9 Oct, docs/design/juicing.md §8): the first two columns help the campaign through the sky, the rest the words
+		[{"id": "weather_set", "name": "Weather set", "short": "Rain, fog half", "words": "Rain and fog bite half as hard"},
+		 {"id": "night_set", "name": "Night set", "short": "Night pace halved", "words": "Night's slower feet halved"}],
+		[{"id": "forecast", "name": "The forecast", "short": "Weather pays +20%", "words": "A run under rain or fog brings a fifth more cash home"},
+		 {"id": "dead_air", "name": "Dead air", "short": "Night gangs later", "words": "At Night the gangs come a quarter later"}],
+		[{"id": "scanner", "name": "Scanner", "short": "Crafts −25%", "words": "Every craft at the Radio a quarter cheaper"},
+		 {"id": "two_channels", "name": "Two channels", "short": "Rolls twice", "words": "Tune in and Retune roll twice and keep the better"}],
 		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Convoy 2 shallower", "words": "The convoy comes two depths shallower"},
 		 {"id": "long_range", "name": "Long range", "short": "A word more", "words": "A site carries one more word"}],
 		[{"id": "jammer", "name": "Jammer", "short": "Words bite half", "words": "Every word's bite - their health, their fire, more on you - is halved"},
@@ -1315,9 +1315,6 @@ const RETIRED_MAX := 3
 ## Insurance: the Fence holds the paper on the kit for a run. Dies, and the
 ## kit comes back to the Yard's stash. A share of what's worn, by depth.
 const INSURE_RATE := 0.15
-## Calling in a word costs by depth and by the words already on the site:
-## the endgame's cash sink (JUICE_COST × INTEL_CASH × depth × (1 + words)).
-const JUICE_WORDS_MULT := 1.0
 
 ## Moving the Yard: after the campaign, start again somewhere else. What
 ## comes: the uniques, the Yard's own tree, the list of runners before, half
@@ -1444,32 +1441,33 @@ const ATLAS := [
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the map gains a point."},
 	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the Services from depth 10, not 12",
 		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the Services two depths sooner."},
-	# the air
-	{"key": "word_travels", "column": 2, "name": "Word travels", "max": 1, "words": "Calling in a word on the Radio costs half",
-		"sum": "The word", "figures": ["full price", "half price"], "sentence": "Calling in a word on the Radio costs half."},
-	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Fresh word on a site a quarter cheaper a rank",
-		"sum": "Fresh word", "figures": ["full price", "a quarter less", "half price"], "sentence": "Fresh word on a site comes cheaper."},
-	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "The Radio never hears Resistant",
-		"sum": "Resistant", "figures": ["can come up", "never"], "sentence": "The Radio never hears Resistant: the words are the good ones."},
-	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "The Radio hears one more word a site",
-		"sum": "Words a site", "figures": ["as they come", "one more"], "sentence": "The Radio hears one more word on every site."},
-	{"key": "fair_weather", "column": 2, "name": "Fair weather", "max": 2, "words": "Rain and Fog bite half as hard a rank",
-		"sum": "Weather", "figures": ["as it comes", "half as hard", "not at all"], "sentence": "The rain and the fog bite less; at the second rank, not at all."},
-	{"key": "night_eyes", "column": 2, "name": "Night eyes", "max": 2, "words": "Night's slower feet halved a rank",
-		"sum": "Night feet", "figures": ["−20% pace", "−10% pace", "full pace"], "sentence": "The runner sees in the dark: Night costs less pace, then none."},
-	{"key": "forecast", "column": 2, "name": "The forecast", "max": 1, "notable": true, "words": "Rain and Fog pay: +20% cash under either",
-		"sum": "Sky pays", "figures": ["nothing", "+20% cash"], "sentence": "You know when to go out: a run in the rain or the fog brings a fifth more cash home."},
-	{"key": "early_word", "column": 2, "name": "Early word", "max": 2, "words": "A called-in word a quarter cheaper a rank",
-		"sum": "Called word", "figures": ["full price", "a quarter less", "half price"], "sentence": "Calling a word in on a site comes cheaper."},
+	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
+	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Every craft at the Radio 15% cheaper a rank",
+		"sum": "Crafts", "figures": ["full price", "15% less", "30% less"], "sentence": "Every craft at the Radio comes cheaper."},
+	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "Name a word the Radio never hears",
+		"sum": "Never heard", "figures": ["every word", "one word filtered"], "sentence": "Name one word you know: the Radio never rolls it again. Change it at the Radio."},
+	{"key": "booster", "column": 2, "name": "Booster", "max": 3, "words": "Every word's pay +10% a rank",
+		"sum": "Words pay", "figures": ["as they are", "+10%", "+20%", "+30%"], "sentence": "Every word brings a little more home, on every site."},
+	{"key": "held_frequency", "column": 2, "name": "Held frequency", "max": 1, "words": "A site's words hold through a move",
+		"sum": "Words", "figures": ["go with the move", "hold through it"], "sentence": "When the Yard moves, every site keeps its words."},
+	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "One more word a site",
+		"sum": "Words a site", "figures": ["by the depth", "one more"], "sentence": "Every site carries one more word."},
 	{"key": "tip_offs", "column": 2, "name": "Tip-offs", "max": 2, "words": "Rarer finds: +5% loot quality a rank",
 		"sum": "Quality", "figures": ["as it comes", "+5%", "+10%"], "sentence": "Word of what's where: rarer finds on every site."},
-	{"key": "dead_air", "column": 2, "name": "Dead air", "max": 1, "notable": true, "words": "At Night the gangs come a quarter later",
-		"sum": "Night gangs", "figures": ["as they come", "a quarter later"], "sentence": "Nobody's about at night: the gangs come a quarter later on a night run."},
-	{"key": "held_word", "column": 2, "name": "Held word", "max": 1, "words": "A pinned word holds through a move",
-		"sum": "Pins", "figures": ["go with the move", "hold through it"], "sentence": "What's pinned at the Radio stays pinned when the Yard moves."},
-	{"key": "open_channel", "column": 2, "name": "Open channel", "max": 1, "keystone": true, "words": "Every word costs notes, never cash",
-		"sum": "Words cost", "figures": ["cash", "notes"], "sentence": "The channel's open: fresh word and a called-in word cost notes, never cash."},
+	{"key": "strong_signal", "column": 2, "name": "Strong signal", "max": 2, "words": "A roll lands its top tier more; then one past the depth's",
+		"sum": "Tiers", "figures": ["by the depth", "the top more often", "one past the depth"], "sentence": "A rolled word lands its top tier three times in four; at the second rank it can land one tier past what the depth allows."},
+	{"key": "early_word", "column": 2, "name": "Early word", "max": 2, "words": "Call in a quarter cheaper a rank",
+		"sum": "Call in", "figures": ["full price", "a quarter less", "half price"], "sentence": "Calling a word in comes cheaper."},
+	{"key": "relay", "column": 2, "name": "Relay", "max": 1, "notable": true, "words": "A standing word from the book on every site",
+		"sum": "Standing", "figures": ["none", "one word"], "sentence": "Name a word you know: it stands on every site with words, at that site's top tier, over its own."},
+	{"key": "bent", "column": 2, "name": "Bent", "max": 1, "notable": true, "words": "Twist's tier IV twice as often",
+		"sum": "Twist", "figures": ["as it falls", "tier IV ×2"], "sentence": "A twisted site lands a tier IV word twice as often."},
+	{"key": "whole_band", "column": 2, "name": "The whole band", "max": 1, "keystone": true, "words": "A second standing word",
+		"sum": "Standing", "figures": ["one word", "two words"], "sentence": "Two standing words on every site with words."},
 ]
+## The map as lanes (9 Oct): a node's column in its lane is its place in the lane's list, two to a column; a
+## column opens on the points spent in that lane (the mockup's figures).
+const ATLAS_GATES := [0, 2, 4, 7, 10, 14]
 const ATLAS_COLUMNS := ["The sites", "The crews", "The air"]
 
 
@@ -1479,7 +1477,6 @@ static func atlas_of(key: String) -> Dictionary:
 		if a["key"] == key:
 			return a
 	return {}
-const OPEN_CHANNEL_NOTES := [2, 4]     # Open channel: a fresh word, a called-in word, in notes, times the zone and one
 
 ## Traits: what a runner turns up with. Two turn up when one dies; you pick.
 const TRAITS := [
@@ -1613,29 +1610,90 @@ static func tree_named(name: String) -> Dictionary:
 ## Word - the run's modifiers, Path of Exile's maps framed as what's been heard.
 ## Each tier carries one or two, re-rolled after every mission. Multipliers
 ## on the hostiles and the rewards; `contact` shifts how many fire at once.
+## The sky's words: never on the Radio; the clock puts Night on, the weather Rain and Fog.
 const MODIFIERS := [
-	{"name": "Numbers", "words": "+50% HP, drops +40%", "hp": 1.5, "drop": 1.4},
-	{"name": "Tooled up", "words": "Fire +40%, loot a tier up", "dps": 1.4, "loot_tier": 1},
-	{"name": "Night", "words": "Pace −20%, rarer loot", "pace": 0.8, "rarity": 0.5},
-	{"name": "Delivery day", "words": "Gangs ×2, cash +80%", "patrol": 0.6, "cash": 1.8},
-	{"name": "Quiet road", "words": "Gangs ×½, drops −30%", "patrol": 1.5, "drop": 0.7},
-	{"name": "Spread out", "words": "−1 on you, HP +30%", "contact": -1, "hp": 1.3},
-	{"name": "Cash about", "words": "Cash +50%, XP −20%", "cash": 1.5, "xp": 0.8},
-	{"name": "Lying low", "words": "Fire −30%, XP −30%", "dps": 0.7, "xp": 0.7},
-	{"name": "Ex-army", "words": "HP, fire +30%, XP +60%", "hp": 1.3, "dps": 1.3, "xp": 1.6},
-	{"name": "Picked over", "words": "Slow pickings, cash +40%", "search": 2.0, "cash": 1.4},
-	# the sky's: never rolled as a word; the clock and the weather put them on
+	{"name": "Night", "words": "Pace −20%, rarer loot", "pace": 0.8, "rarity": 0.5, "sky": true},
 	{"name": "Rain", "words": "Slower search, gangs later", "search": 1.3, "patrol": 1.25, "sky": true},
 	{"name": "Fog", "words": "−1 on you, drops −10%", "contact": -1, "drop": 0.9, "sky": true},
-	# the types: what their fire is made of, and what they resist
-	{"name": "Burners", "words": "A third fire, drops +20%", "type": "fire", "share": 0.33, "drop": 1.2},
-	{"name": "Cutters", "words": "A third bleed, drops +20%", "type": "bleed", "share": 0.33, "drop": 1.2},
-	{"name": "Wired", "words": "A third shock, drops +20%", "type": "shock", "share": 0.33, "drop": 1.2},
-	{"name": "Jacketed", "words": "Fire res 40%, cash +30%", "res": "fire", "res_add": 0.4, "cash": 1.3},
-	{"name": "Rubbered", "words": "Shock res 40%, £ +30%", "res": "shock", "res_add": 0.4, "cash": 1.3},
-	{"name": "Hardened", "words": "Phys res 30%, cash +30%", "res": "physical", "res_add": 0.3, "cash": 1.3},
-	{"name": "Resistant", "words": "All res 25%, rarer loot", "res": "all", "res_add": 0.25, "rarity": 0.5, "min_depth": 8},
 ]
+
+## Map juicing (9 Oct, docs/design/juicing.md): the Radio's words. Each has a bite (what makes the run harder)
+## and a pay (what it brings home), at tier I; a word's tier by the site's depth (WORD_TIER_DEPTH) grows both:
+## a multiplier m becomes m^WORD_TIER_POW[t], an added figure ×WORD_TIER_POW[t]; a count (on you, loot tiers)
+## and a flag stay as they are. `learn`: "start" known when the depths open; "paper" taught by `paper` read into
+## the book; "zone" known once a site of `zone` is cleared at depth 2; "deep" taught by its paper, heard only at
+## `depth` or deeper. The bite's keys: hp, dps, pool (the pack), patrol (<1 sooner), pace, search, contact,
+## armour (yours), type/share, res/res_add, no_meds, no_kill_cash, clock (seconds), boss_walks. The pay's:
+## drop (finds), rarity (quality), cash, xp, loot_tier.
+const WORD_TIER_DEPTH := [2, 8, 15]          # depth for tiers I, II, III
+const WORD_TIER_POW := [1.0, 1.75, 2.5, 3.5] # I, II, III, IV (Twist's)
+const WORD_TIER_NAMES := ["I", "II", "III", "IV"]
+const WORD_MAX_DEPTH := [[2, 2], [5, 3], [9, 4]]   # [depth, words a site]
+const WORD_POOLS := {"zone": 0.4, "general": 0.5, "deep": 0.1}
+const WORDS := [
+	{"name": "Numbers", "learn": "start", "bite": {"hp": 1.4}, "pay": {"drop": 1.3}},
+	{"name": "Tooled up", "learn": "start", "bite": {"dps": 1.3}, "pay": {"rarity": 0.25}},
+	{"name": "Delivery day", "learn": "start", "bite": {"patrol": 0.7}, "pay": {"cash": 1.4}},
+	{"name": "Ex-army", "learn": "start", "bite": {"hp": 1.2, "dps": 1.2}, "pay": {"xp": 1.4}},
+	{"name": "Bailiffs", "learn": "paper", "paper": "A council tax reminder", "bite": {"pool": 1.3}, "pay": {"cash": 1.3}},
+	{"name": "Laid off", "learn": "paper", "paper": "A P45", "bite": {"contact": 1}, "pay": {"xp": 1.5}},
+	{"name": "Long odds", "learn": "paper", "paper": "A betting slip", "bite": {"dps": 1.5}, "pay": {"rarity": 0.4}},
+	{"name": "Pawned", "learn": "paper", "paper": "A pawn ticket", "bite": {"armour": 0.75}, "pay": {"drop": 1.35}},
+	{"name": "Overdrawn", "learn": "paper", "paper": "A bank statement", "bite": {"no_kill_cash": true}, "pay": {"drop": 1.6, "rarity": 0.3}},
+	{"name": "Hungry", "learn": "paper", "paper": "A food bank voucher", "bite": {"search": 1.5}, "pay": {"drop": 1.4}},
+	{"name": "Burners", "learn": "paper", "paper": "A mortgage offer", "bite": {"type": "fire", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
+	{"name": "Cutters", "learn": "paper", "paper": "A school report", "bite": {"type": "bleed", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
+	{"name": "Wired", "learn": "paper", "paper": "A lottery ticket", "bite": {"type": "shock", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
+	{"name": "Jacketed", "learn": "paper", "paper": "A wage slip", "bite": {"res": "fire", "res_add": 0.4}, "pay": {"cash": 1.3}},
+	{"name": "Rubbered", "learn": "paper", "paper": "A parking ticket", "bite": {"res": "shock", "res_add": 0.4}, "pay": {"cash": 1.3}},
+	{"name": "Hardened", "learn": "paper", "paper": "An eviction notice", "bite": {"res": "physical", "res_add": 0.3}, "pay": {"cash": 1.3}},
+	{"name": "Night owls", "learn": "paper", "paper": "A boarding pass", "bite": {"pace": 0.8}, "pay": {"rarity": 0.5}},
+	{"name": "Everyone's in", "learn": "paper", "paper": "A Christmas list", "bite": {"pool": 1.25, "patrol": 0.8}, "pay": {"drop": 1.4, "xp": 1.2}},
+	{"name": "Dogs off the lead", "learn": "zone", "zone": 0, "bite": {"patrol": 0.8, "pace": 0.9}, "pay": {"drop": 1.3}},
+	{"name": "Kids on bikes", "learn": "zone", "zone": 0, "bite": {"contact": 1}, "pay": {"cash": 1.25}},
+	{"name": "Lock-ins", "learn": "zone", "zone": 0, "bite": {"search": 1.3}, "pay": {"rarity": 0.3}},
+	{"name": "Security", "learn": "zone", "zone": 1, "bite": {"res": "physical", "res_add": 0.2, "hp": 1.2}, "pay": {"cash": 1.35}},
+	{"name": "Market day", "learn": "zone", "zone": 1, "bite": {"pool": 1.4}, "pay": {"cash": 1.4}},
+	{"name": "Shoplifters", "learn": "zone", "zone": 1, "bite": {"patrol": 0.75}, "pay": {"drop": 1.35}},
+	{"name": "Squaddies", "learn": "zone", "zone": 2, "bite": {"dps": 1.4}, "pay": {"xp": 1.6}},
+	{"name": "Checkpoints", "learn": "zone", "zone": 2, "bite": {"pace": 0.85, "hp": 1.2}, "pay": {"rarity": 0.4}},
+	{"name": "Kitted out", "learn": "zone", "zone": 2, "depth": 8, "bite": {"res": "all", "res_add": 0.25}, "pay": {"rarity": 0.5}},
+	{"name": "Rationed", "learn": "deep", "paper": "A ration book", "depth": 12, "bite": {"no_meds": true}, "pay": {"drop": 2.0}},
+	{"name": "Curfew", "learn": "deep", "paper": "A council minute", "depth": 18, "bite": {"pool": 2.0, "patrol": 0.75}, "pay": {"drop": 1.8, "cash": 1.8}},
+	{"name": "Last bus", "learn": "deep", "paper": "A bus timetable, amended", "depth": 24, "bite": {"clock": 240.0}, "pay": {"rarity": 1.2}},
+	{"name": "Foreclosure", "learn": "deep", "paper": "A letter to the Bank", "depth": 30, "bite": {"hp": 2.5}, "pay": {"loot_tier": 2}},
+	{"name": "Everyone's here", "learn": "deep", "paper": "A list of names", "depth": 40, "bite": {"pool": 3.0, "contact": 2}, "pay": {"drop": 2.5, "xp": 2.0}},
+	{"name": "The Manager walks", "learn": "deep", "paper": "The Manager's note", "depth": 50, "bite": {"boss_walks": true}, "pay": {}},
+]
+## The Radio's crafts (juicing.md §6): notes × the site's depth × this.
+const CRAFTS := [
+	{"key": "tune", "name": "Tune in", "cost": 1.0, "words": "adds a word", "sentence": "One word added, rolled from the pools."},
+	{"key": "broadcast", "name": "Broadcast", "cost": 3.0, "words": "fills an empty site", "sentence": "An empty site filled to its most."},
+	{"key": "retune", "name": "Retune", "cost": 2.0, "words": "rolls them all again", "sentence": "Every word rolled again from the pools."},
+	{"key": "hold", "name": "Hold", "cost": 4.0, "words": "keeps one, rolls the rest", "sentence": "One word kept; the rest rolled again."},
+	{"key": "call", "name": "Call in", "cost": 8.0, "words": "a word of your choosing", "sentence": "A word of your choosing, from the book."},
+	{"key": "clear", "name": "Clear", "cost": 0.5, "words": "every word off", "sentence": "Every word off. Ten times the price on a sealed site."},
+	{"key": "twist", "name": "Twist", "cost": 6.0, "words": "a gamble; seals the site", "sentence": "A gamble: a word to tier IV, a deep word, nothing, or every word at its top tier. Either way the site is sealed."},
+]
+const TWIST_ODDS := [0.4, 0.25, 0.25, 0.1]   # tier IV, a deep word, nothing, all at the top tier
+const SEALED_CLEAR := 10.0
+
+
+## A word by name, or {}.
+static func word_of(name: String) -> Dictionary:
+	for w in WORDS:
+		if w["name"] == name:
+			return w
+	return {}
+
+
+static func craft_of(key: String) -> Dictionary:
+	for c in CRAFTS:
+		if c["key"] == key:
+			return c
+	return {}
+
+
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.

@@ -15,6 +15,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Card := preload("res://scripts/ui/card.gd")
 const YardTree := preload("res://scripts/ui/yard_tree.gd")
+const RadioScreen := preload("res://scripts/ui/radio.gd")
 const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
@@ -99,6 +100,7 @@ var _rail_buttons := {}
 var _grid: Control
 var _cards: Array = []
 var _yard_tree                     # the Yard (8 Oct): the works as a tree, the town and the purse in its heading
+var _radio                         # the Radio (9 Oct): map juicing, the sites and their words, the crafts, the book
 var _armoury
 var _barracks
 var _missions
@@ -210,6 +212,12 @@ func _build() -> void:
 	_yard_tree = YardTree.new()
 	_yard_tree.acted.connect(refresh)
 	add_child(_yard_tree)
+	_radio = RadioScreen.new()
+	_radio.acted.connect(refresh)
+	_radio.choose.connect(_choose_word)
+	_radio.choose_book.connect(_choose_book)
+	_radio.visible = false
+	add_child(_radio)
 	_armoury = Armoury.new()
 	_armoury.acted.connect(refresh)
 	_armoury.bench.connect(_open_bench)
@@ -335,6 +343,7 @@ func layout(s: Vector2) -> void:
 		b.set_row_height(row_h)
 	_grid.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, band_y)
 	_yard_tree.position = _grid.position
+	_radio.position = _grid.position
 	_armoury.position = _grid.position
 	_barracks.position = _grid.position
 	_missions.position = _grid.position
@@ -713,7 +722,10 @@ func refresh() -> void:
 	_run.visible = run_screen
 	_fence.visible = room == MARKET
 	_clinic.visible = room == MEDIC
-	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW)
+	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS)
+	_radio.visible = room == COMMS
+	if room == COMMS:
+		_radio.show_state(sim)
 	if room == ARMOURY:
 		_armoury.show_state(sim)
 	elif room == BARRACKS:
@@ -730,10 +742,8 @@ func refresh() -> void:
 		_clinic.show_state(sim)
 	var cards: Array
 	match room:
-		MISSIONS, ARMOURY, BARRACKS, WORKSHOP, MARKET, MEDIC, OVERVIEW:
+		MISSIONS, ARMOURY, BARRACKS, WORKSHOP, MARKET, MEDIC, OVERVIEW, COMMS:
 			cards = []
-		COMMS:
-			cards = _comms_cards()
 		_:
 			cards = _runner_cards()
 	# each card set once to where it ends up: hiding them all and showing the used ones again, ten
@@ -1061,101 +1071,53 @@ func _town_purse() -> Dictionary:
 
 # ------------------------------------------------------------------ comms tower
 
-func _comms_cards() -> Array:
-	var out := []
-	# the set (9 Oct): fresh word from the start; what the Radio's picks add, built in the Yard
-	var picks: Array = []
-	var radio := Data.yard_building("radio")
-	for c in range(radio["picks"].size()):
-		var sd: String = sim.yard_side("radio", c)
-		if sd != "":
-			picks.append(radio["picks"][c][0 if sd == "a" else 1])
-	var tower := {"title": "The set", "headline": "%d of 5" % picks.size(), "unit": "picks built",
-		"band": {"site": "the Radio", "tone": 3, "kicker": "The Radio"},
-		"lines": [["Hears", ["fresh word on any site open", "fresh word"]]]}
-	for pk in picks.slice(0, 3):
-		tower["lines"].append([str(pk["name"]), [str(pk["short"])]])
-	tower["status"] = "More is built in the Yard" if picks.size() < 5 else "Every pick built"
-	if sim.tip_free:
-		tower["status"] = "The tip line: the next word is free"
-	out.append(tower)
-	for i in range(Data.TIERS.size()):
-		if not sim.tier_open(i):
-			continue
-		var t: Dictionary = sim.effective(i)
-		# the radio's own words, not the sky's: those are on the Runs card. The
-		# words as chips (a harder site's in amber, an easier one's in green), each
-		# one's figures on a line under; the odds to clear the fight with them on
-		# a row a word: its name in its tone (amber harder, green easier), its effect beside, shortened by clause when it must
-		var words: Array = sim.intel[i]
-		var lines := []
-		if words.is_empty():
-			lines.append(["Nothing on the air for it", ""])
-		var odds: float = sim.odds_now(i)         # as read so far (the shell reads them a few ms a frame on this room too)
-		var zone_i := 0
-		for z in range(Data.ZONES.size()):
-			if i in Data.ZONES[z]["tiers"]:
-				zone_i = z
-		var odds_tone := "good" if odds >= 0.9 else ("warn" if odds >= 0.6 else "bad")
-		var d := {"title": t["name"], "headline": Words.odds_words(odds), "unit": ("%s to clear, D%d" % [Fmt.pct(odds), t["depth"]]) if sim.odds_settled(i) else "reading the odds",
-			"unit_forms": ["%s to clear, D%d" % [Fmt.pct(odds), t["depth"]], "%s, D%d" % [Fmt.pct(odds), t["depth"]], Fmt.pct(odds)] if sim.odds_settled(i) else ["reading the odds", "reading"],
-			"band": {"site": t["name"], "tone": zone_i, "kicker": "%s · depth %d" % [Data.ZONES[zone_i]["name"], t["depth"]], "colour": Pal.tone_color(odds_tone) if sim.odds_settled(i) else Pal.TEXT_3},
-			"lines": lines, "word_rows": _missions.word_rows(sim, words), "tone": "good" if sim.pinned[i] else ""}
-		var buttons := [{"text": "New word (%s)" % _word_price(i, false), "action": sim.buy_intel.bind(i), "enabled": sim.can_buy_intel(i)}]
-		# the Radio's picks (9 Oct): Pin, Call in and Lock are built in the Yard apart; the buttons come as a set of
-		# four once either of the last two is, the ones not built there greyed, so the card keeps its two rows
-		var juice: bool = sim.campaign_done() and (sim.yard_has("call_in") or sim.yard_has("lock"))
-		if sim.can_pin() or juice or sim.pinned[i]:
-			buttons.append({"text": "Unpin" if sim.pinned[i] else "Pin", "action": sim.set_pinned.bind(i, not sim.pinned[i]), "primary": false,
-				"tone": "good" if sim.pinned[i] else "", "enabled": sim.can_pin() or sim.pinned[i]})
-		if juice:
-			# juicing: call in a word of your choosing, or hold one and re-roll the rest
-			buttons.append({"text": "Call in", "action": _choose_word.bind(i, 0), "enabled": sim.can_add_word(i), "primary": false})
-			buttons.append({"text": "Hold", "action": _choose_hold.bind(i), "enabled": sim.can_lock_word(i), "primary": false})
-		d["buttons"] = buttons
-		# a note only while there's a line for it: two rows of buttons and three words fill the card
-		if lines.size() + words.size() + 1 <= 4 and buttons.size() <= 2:
-			d["note"] = "Pinned: runs don't spend it" if sim.pinned[i] else ""
-		out.append(d)
-	return out
-
-
-## The menu as a chooser: four words a page and More, for calling one in.
-func _choose_word(i: int, page: int) -> void:
-	var options: Array = sim.juice_options(i)
+## The Radio's crafts that want a word (9 Oct): Call in a word from the book, Hold one of the site's - four a page and More.
+func _choose_word(i: int, key: String, page := 0) -> void:
+	var options: Array = sim.call_options(i) if key == "call" else sim.word_names(i)
 	var items := []
 	var per := 4
 	for k in range(page * per, mini(options.size(), (page + 1) * per)):
 		var name: String = options[k]
-		items.append({"name": name, "detail": sim.modifier(name)["words"], "action": _add_word.bind(i, name)})
+		var ww: Array = sim.word_words(name, maxi(1, sim.word_tier_cap(int(sim.depth[i]))))
+		items.append({"name": name, "detail": "%s · %s" % [ww[0], ww[1]], "action": _do_word.bind(i, key, name)})
 	if (page + 1) * per < options.size():
-		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, page + 1)})
+		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, key, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Call in a word on %s" % sim.tier(i)["name"].to_lower(), "%s, and the site carries it until a run spends it" % _word_price(i, true), items, _menu.close)
+	var title: String = ("Call in a word on %s" if key == "call" else "Hold a word on %s") % sim.tier(i)["name"].to_lower()
+	_menu.open(title, "%s, and the words stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
 
 
-func _add_word(i: int, name: String) -> void:
-	sim.add_word(i, name)
+func _do_word(i: int, key: String, name: String) -> void:
+	sim.word_craft(i, key, name)
 	_menu.close()
 	refresh()
 
 
-func _choose_hold(i: int) -> void:
+## The book's choices: a standing word (the map's Relay, the whole band) or the word never heard (Clear air).
+func _choose_book(kind: String, page := 0) -> void:
+	var options: Array = sim.words_known()
+	options.insert(0, "")
 	var items := []
-	for name in sim.intel[i]:
-		items.append({"name": name, "detail": "Keep this; the rest re-roll", "action": _hold_word.bind(i, name)})
-	items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Hold a word on %s" % sim.tier(i)["name"].to_lower(), "%s" % (Fmt.count(sim.intel_notes(i) * 2, "note") if sim.words_in_notes() else Fmt.money(sim.intel_cost(i) * 2)), items, _menu.close)
+	var per := 4
+	for k in range(page * per, mini(options.size(), (page + 1) * per)):
+		var name: String = options[k]
+		items.append({"name": name if name != "" else "None", "detail": "" if name == "" else "%s · %s" % sim.word_words(name, 1), "action": _set_book.bind(kind, name)})
+	if (page + 1) * per < options.size():
+		items.append({"name": "More", "detail": "", "action": _choose_book.bind(kind, page + 1)})
+	else:
+		items.append({"name": "Back", "detail": "", "action": _menu.close})
+	var title: String = "The word never heard" if kind == "filter" else "A standing word on every site"
+	_menu.open(title, "From the book: change it any time", items, _menu.close)
 
 
-## A word's price as the card says it: cash, or notes under the map's Open channel.
-func _word_price(i: int, called: bool) -> String:
-	if not called and sim.fresh_word_price(i) == 0:
-		return "free"                         # the Radio's Tip line
-	if sim.words_in_notes():
-		return Fmt.count(sim.juice_notes(i) if called else sim.intel_notes(i), "note")
-	return Fmt.money(sim.juice_cost(i) if called else sim.intel_cost(i))
+func _set_book(kind: String, name: String) -> void:
+	if kind == "filter":
+		sim.set_filtered(name)
+	else:
+		sim.set_standing(int(kind.trim_prefix("standing")), name)
+	_menu.close()
+	refresh()
 
 
 ## After a death, two turn up: pick who stays.
@@ -1361,10 +1323,5 @@ func _set_second(name: String) -> void:
 	_menu.close()
 	refresh()
 
-
-func _hold_word(i: int, name: String) -> void:
-	sim.lock_word(i, name)
-	_menu.close()
-	refresh()
 
 

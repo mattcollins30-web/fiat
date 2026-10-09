@@ -92,7 +92,7 @@ func _next() -> void:
 		main._missions._shown = ""
 		main.refresh()
 		main.sim.atlas_points = maxi(main.sim.atlas_points, 18)
-		for k in ["picked_over", "picked_over", "deeper_pockets", "deeper_pockets", "deeper_pockets", "quiet_roads", "after_dark", "second_look", "paid_in_notes", "paid_in_notes", "paid_in_notes", "two_of_everything", "heads_up", "word_travels", "good_reception", "good_reception"]:
+		for k in ["picked_over", "picked_over", "deeper_pockets", "deeper_pockets", "deeper_pockets", "quiet_roads", "after_dark", "second_look", "paid_in_notes", "paid_in_notes", "paid_in_notes", "two_of_everything", "heads_up", "good_reception", "good_reception", "clear_air", "booster"]:
 			main.sim.rank_atlas(k)
 		main._missions._atlas._pick("worn_in")
 		main.refresh()

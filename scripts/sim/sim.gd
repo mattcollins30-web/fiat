@@ -27,8 +27,6 @@ var yard_open := 1                 # the columns opened, for good: a move doesn'
 var yard_seen := {}                # what the Yard has been looked at with buyable ("key/col", "key/rN"): the rail's badge is for the rest
 var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
-var tip_free := false             # the Radio's Tip line: the next fresh word is free
-var tip_runs := 0                  # runs home since the last free word
 var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
 var hardcore := false              # a death ends the Yard, stash and all
 var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the Clinic treats it; "" for none
@@ -39,8 +37,10 @@ var cls2 := ""                     # the second past, from ASCEND_LEVEL: its fir
 var runner_trait := ""             # what this runner turned up with
 var candidates: Array = []         # when a runner dies, two turn up: their traits, to pick from
 var promised := ""                 # a trait the next arrival brings (a runner brought home from a run)
-var pinned: Array = []             # per tier: whether its intel is pinned
-var intel: Array = []              # per tier: the modifier names on offer now
+var words: Array = []              # per tier: the Radio's words on the site, [{"w": name, "t": tier}] (9 Oct: map juicing)
+var sealed: Array = []             # per tier: twisted, so nothing but Clear touches its words
+var filtered := ""                 # the map's Clear air: a known word the Radio never rolls
+var standing: Array = []           # the map's Relay and the whole band: words on every site with a ladder
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
 var training_points := 0           # earned, one a level, across operators
@@ -97,10 +97,10 @@ func _init() -> void:
 	for s in Data.SLOTS:
 		equipped[s] = null
 	for i in range(Data.TIERS.size()):
-		intel.append([])
+		words.append([])
+		sealed.append(false)
 		depth.append(1)
 		best_depth.append(0)
-		pinned.append(false)
 		worn.append(-1.0)
 		worn_depth.append(1)
 		boss_paid.append([])
@@ -255,6 +255,17 @@ func _wound(m: Dictionary) -> void:
 ## The share of incoming damage the armour stops.
 func mitigation() -> float:
 	return _memo("mitigation", _mitigation_raw)
+
+
+## The armour as the run's words leave it (the Radio's Pawned): the mitigation with the armour cut.
+func _mitigation_under(t: Dictionary) -> float:
+	var f: float = float(t.get("armour", 1.0))
+	if f >= 1.0 and mission != null:
+		f = float(mission["t"].get("armour", 1.0))
+	if f >= 1.0 or has_rule("nans_cardigan"):
+		return mitigation()
+	var a := armour() * (1.25 if has_node("plates") else 1.0) * cm("armour") * f
+	return a / (a + Data.ARMOUR_K)
 
 
 func _mitigation_raw() -> float:
@@ -429,7 +440,7 @@ func incoming_rate(t: Dictionary, on_you: int, chilled := false) -> float:
 	var total := 0.0
 	for ty in types:
 		var share := float(types[ty])
-		total += t["dps"] * on_you * share * ((1.0 - mitigation()) if ty == "physical" else (1.0 - resist(ty)))
+		total += t["dps"] * on_you * share * ((1.0 - _mitigation_under(t)) if ty == "physical" else (1.0 - resist(ty)))
 	return total * ((1.0 - chill_amount()) if chilled else 1.0) * (Data.MELEE_INCOMING if melee() else 1.0)
 
 
@@ -967,14 +978,13 @@ func move_yard(trade := "") -> bool:
 	var kept_share: float = 0.75 if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
-		"tip_free": tip_free, "tip_runs": tip_runs, "yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols,
+		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon()}
-	if atlas_rank("held_word") > 0:
-		for i in range(pinned.size()):
-			if pinned[i]:
-				keep["held"][i] = intel[i].duplicate()     # Held word: what's pinned at the radio moves with the Yard
+	if atlas_rank("held_frequency") > 0:
+		for i in range(words.size()):
+			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
 	if trade != "":
 		keep["trades"].append(trade)
 	var fresh = get_script().new()
@@ -994,15 +1004,15 @@ func move_yard(trade := "") -> bool:
 	yard_ranks = keep["yard_ranks"]
 	yard_open = keep["yard_open"]
 	salvage = keep["salvage"]
-	tip_free = keep["tip_free"]
-	tip_runs = keep["tip_runs"]
+	filtered = keep["filtered"]
+	standing = keep["standing"]
 	yard_seen = keep["yard_seen"]             # what the badge has shown moves too: a move is no news
 	yard_seen_cols = keep["yard_seen_cols"]
 	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the Yard
 	atlas_points = keep["atlas_points"]
 	for i in keep["held"]:
-		pinned[i] = true
-		intel[i] = keep["held"][i]
+		words[i] = keep["held"][i][0]
+		sealed[i] = keep["held"][i][1]
 	elapsed = keep["elapsed"]
 	events = keep["events"]
 	operators_lost = keep["operators_lost"]
@@ -1014,7 +1024,7 @@ func move_yard(trade := "") -> bool:
 	for it in uniques:
 		stash.append(it)                   # whatever the new stash holds: they're the point of moving
 	_yard_changed("")
-	_yard_grew({"stock": Data.MARKET_STOCK, "back": false, "open": Data.CONTRACTS_OPEN, "pin": false})    # the new yard's shelf and contracts were rolled with nothing built
+	_yard_grew({"stock": Data.MARKET_STOCK, "back": false, "open": Data.CONTRACTS_OPEN})    # the new yard's shelf and contracts were rolled with nothing built
 	cash = float(Data.STARTING_CASH) * inflation()    # the float, at today's prices
 	log_event(Words.YARD["moved"])
 	if trade != "":
@@ -1132,6 +1142,9 @@ func sky_words(i: int) -> String:
 func _read(it: Dictionary) -> void:
 	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
 		book.append(it["base"])
+		var taught := word_taught_by(str(it["base"]))
+		if taught != "" and not _dry_on:
+			log_event("%s: the Radio knows %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper teaches its word
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
 
@@ -1529,15 +1542,33 @@ func can_rank_atlas(key: String) -> bool:
 	return false
 
 
-## A node is open when the one before it in its column has a rank (the map at thirty-six, 7 Oct: each column a chain).
+## The map as lanes (9 Oct): a node's column in its lane is its place there, two to a column; the column opens
+## on the points spent in that lane (Data.ATLAS_GATES), like the trees.
 func atlas_open(key: String) -> bool:
-	var before: String = ""
+	var col := atlas_col(key)
+	if col < 0:
+		return false
+	return atlas_in_lane(int(Data.atlas_of(key)["column"])) >= int(Data.ATLAS_GATES[mini(col, Data.ATLAS_GATES.size() - 1)])
+
+
+func atlas_col(key: String) -> int:
+	var lane: int = int(Data.atlas_of(key).get("column", -1))
+	var k := 0
 	for a in Data.ATLAS:
+		if int(a["column"]) != lane:
+			continue
 		if a["key"] == key:
-			return before == "" or atlas_rank(before) > 0
-		if int(a["column"]) == Data.atlas_of(key).get("column", -1):
-			before = a["key"]
-	return false
+			return k / 2
+		k += 1
+	return -1
+
+
+func atlas_in_lane(lane: int) -> int:
+	var n := 0
+	for a in Data.ATLAS:
+		if int(a["column"]) == lane:
+			n += atlas_rank(a["key"])
+	return n
 
 
 func rank_atlas(key: String) -> bool:
@@ -1547,9 +1578,12 @@ func rank_atlas(key: String) -> bool:
 	return true
 
 
-## The map's points come back; the ranks go.
+## The map's points come back; the ranks go, and what they set (the standing words, Clear air's filter).
 func reset_atlas() -> void:
 	atlas = {}
+	filtered = ""
+	standing = []
+	_surv_cache = {}
 
 
 func trait_data() -> Dictionary:
@@ -2170,70 +2204,6 @@ func market_stock() -> int:
 	return Data.MARKET_STOCK + (2 if yard_has("stall") else 0) + (3 if yard_has("shopfront") else 0)
 
 
-## Fresh intel on one tier, for cash - the tower's first job.
-func intel_cost(i: int) -> int:
-	return int(round(Data.INTEL_CASH[i] * (1.0 - 0.25 * atlas_rank("good_reception")) * (0.5 if yard_has("scanner") else 1.0)))
-
-
-## Open channel (the map's keystone, 7 Oct): every word costs notes, never cash.
-func words_in_notes() -> bool:
-	return atlas_rank("open_channel") > 0
-
-
-## A fresh word's price in notes, under Open channel: by the zone.
-func intel_notes(i: int) -> int:
-	return int(Data.OPEN_CHANNEL_NOTES[0]) * (int(Data.TIERS[i]["zone"]) + 1)
-
-
-## A called-in word's price in notes, under Open channel.
-func juice_notes(i: int) -> int:
-	return int(Data.OPEN_CHANNEL_NOTES[1]) * (int(Data.TIERS[i]["zone"]) + 1)
-
-
-func can_buy_intel(i: int) -> bool:
-	return mission == null and tier_open(i) and (tip_free or (notes >= intel_notes(i) if words_in_notes() else cash >= intel_cost(i)))
-
-
-## A fresh word's price now: nothing with the Radio's Tip line due (cash or notes), else its price.
-func fresh_word_price(i: int) -> int:
-	if tip_free:
-		return 0
-	return intel_notes(i) if words_in_notes() else intel_cost(i)
-
-
-func buy_intel(i: int) -> bool:
-	if not can_buy_intel(i):
-		return false
-	if tip_free:
-		tip_free = false                      # the Radio's Tip line: this one's on the house
-	elif words_in_notes():
-		notes -= intel_notes(i)
-	else:
-		cash -= intel_cost(i)
-	_roll_tier_intel(i)
-	if yard_has("two_channels"):
-		# the Radio's Two channels: rolled twice, the set that pays more kept
-		var first: Array = intel[i].duplicate()
-		_roll_tier_intel(i)
-		if _words_pay(first) > _words_pay(intel[i]):
-			intel[i] = first
-	_surv_cache.erase(i)
-	log_event("Fresh word on %s: %s" % [Words.mid(tier(i)["name"]), ", ".join(intel[i]).to_lower()])
-	return true
-
-
-## Juicing - the radio's third job, at level 3: call in a word of your choosing
-## on a tier (up to MAX_WORDS, at JUICE_COST times the tier's word price), or
-## lock one word and re-roll the rest. The site is still spent by the run
-## unless it's pinned, like PoE's map.
-const MAX_WORDS := 3
-const JUICE_COST := 3
-const JUICE_SHARE := 0.5                  # the pass (6 Oct): a word costs half of what a run on the site pays
-
-func can_juice() -> bool:
-	return yard_has("call_in") and campaign_done()
-
-
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
 func _earn(x: float) -> void:
 	if away_on and x > 0.0:
@@ -2259,14 +2229,6 @@ func a_runs_takings() -> float:
 	return run_pay(top_tier()) * inflation()
 
 
-## The endgame's cash sink: half a run's pay on the site (never under the tier's word price three
-## times over), and more by the words already on it. It was the tier's word price × 3 × the depth,
-## which at depth 15 was £70k against a run paying £5k, and the pile sat under it.
-func juice_cost(i: int) -> int:
-	var base: float = maxf(_inf(Data.INTEL_CASH[i] * JUICE_COST), a_runs_takings() * JUICE_SHARE) * (1.0 + Data.JUICE_WORDS_MULT * intel[i].size())
-	return int(round(base * (1.0 - 0.25 * atlas_rank("early_word")) / (2 if atlas_rank("word_travels") > 0 else 1)))
-
-
 ## Insurance: a share of the kit's worth, by the depth of the run.
 func insure_cost(i: int) -> int:
 	if has_rule("drivers_log"):
@@ -2282,68 +2244,530 @@ func set_insure(on: bool) -> void:
 	insure_next = on
 
 
-## The words that could be called in on a tier: every modifier it doesn't have.
-func juice_options(i: int) -> Array:
-	var out := []
-	for m in Data.MODIFIERS:
-		if not (m["name"] in intel[i]) and not m.get("sky", false):
-			out.append(m["name"])
+# ------------------------------------------------------------------ the Radio: map juicing (9 Oct, docs/design/juicing.md)
+
+## A site carries words once its ladder is open: the campaign done and depth 2 or deeper. Campaign sites are
+## plain (Matt: "you don't juice campaign maps in PoE").
+func juiceable(i: int) -> bool:
+	return campaign_done() and tier_open(i) and int(depth[i]) >= int(Data.WORD_TIER_DEPTH[0])
+
+
+## The top tier a word reaches at a depth: 0 above the first, then I, II, III.
+func word_tier_cap(d: int) -> int:
+	var n := 0
+	for k in range(Data.WORD_TIER_DEPTH.size()):
+		if d >= int(Data.WORD_TIER_DEPTH[k]):
+			n = k + 1
+	return n
+
+
+## How many words a site carries: by its depth, one more with the map's Long wave, one more with the Yard's Long range.
+func max_words(i: int) -> int:
+	var n := 0
+	for row in Data.WORD_MAX_DEPTH:
+		if int(depth[i]) >= int(row[0]):
+			n = int(row[1])
+	if n == 0:
+		return 0
+	return n + atlas_rank("long_wave") + (1 if yard_has("long_range") else 0)
+
+
+## The book's words: the four the depths open with, every paper's read, every zone's once a site of it is
+## cleared at depth 2.
+func words_known() -> Array:
+	var out: Array = []
+	if not campaign_done():
+		return out
+	for w in Data.WORDS:
+		if knows_word(w["name"]):
+			out.append(w["name"])
 	return out
 
 
-## How many words a site carries: MAX_WORDS, one more with Long wave.
-func max_words() -> int:
-	return MAX_WORDS + atlas_rank("long_wave") + (1 if yard_has("long_range") else 0)
-
-
-func can_add_word(i: int) -> bool:
-	return can_juice() and mission == null and tier_open(i) and intel[i].size() < max_words() and (notes >= juice_notes(i) if words_in_notes() else cash >= juice_cost(i))
-
-
-func add_word(i: int, name: String) -> bool:
-	if not can_add_word(i) or not (name in juice_options(i)):
+func knows_word(name: String) -> bool:
+	var w := Data.word_of(name)
+	if w.is_empty():
 		return false
-	if words_in_notes():
-		notes -= juice_notes(i)
-	else:
-		cash -= juice_cost(i)
-	intel[i].append(name)
+	match str(w["learn"]):
+		"start":
+			return true
+		"paper", "deep":
+			return book.has(str(w["paper"]))
+		"zone":
+			return zone_heard(int(w["zone"]))
+	return false
+
+
+func zone_heard(z: int) -> bool:
+	for i in Data.ZONES[z]["tiers"]:
+		if int(best_depth[i]) >= int(Data.WORD_TIER_DEPTH[0]):
+			return true
+	return false
+
+
+## The paper's word: what reading it teaches the Radio ("" if none).
+static func word_taught_by(paper: String) -> String:
+	for w in Data.WORDS:
+		if str(w.get("paper", "")) == paper:
+			return w["name"]
+	return ""
+
+
+func word_names(i: int) -> Array:
+	var out: Array = []
+	for wd in words[i]:
+		out.append(wd["w"])
+	return out
+
+
+## The words a site could roll now, by pool: known, not on it, not filtered (the map's Clear air), deep enough.
+func _word_pools(i: int, exclude: Array) -> Dictionary:
+	var pools := {"zone": [], "general": [], "deep": []}
+	var z: int = int(Data.TIERS[i]["zone"])
+	for name in words_known():
+		if name in exclude or (name == filtered and atlas_rank("clear_air") > 0):
+			continue
+		var w := Data.word_of(name)
+		if int(depth[i]) < int(w.get("depth", 0)):
+			continue
+		match str(w["learn"]):
+			"zone":
+				if int(w["zone"]) == z:
+					pools["zone"].append(name)
+			"deep":
+				pools["deep"].append(name)
+			_:
+				pools["general"].append(name)
+	return pools
+
+
+## One word rolled for a site: a pool by its weight among those with anything in them, a word from it, a tier.
+func _roll_word(i: int, exclude: Array) -> Dictionary:
+	var pools := _word_pools(i, exclude)
+	var total := 0.0
+	for k in pools:
+		if not pools[k].is_empty():
+			total += float(Data.WORD_POOLS[k])
+	if total <= 0.0:
+		return {}
+	var r := rng.randf() * total
+	for k in ["zone", "general", "deep"]:
+		if pools[k].is_empty():
+			continue
+		r -= float(Data.WORD_POOLS[k])
+		if r <= 0.0 or k == "deep":
+			var list: Array = pools[k]
+			return {"w": list[rng.randi_range(0, list.size() - 1)], "t": _roll_tier(i)}
+	var last: Array = pools["general"] if not pools["general"].is_empty() else (pools["zone"] if not pools["zone"].is_empty() else pools["deep"])
+	return {"w": last[rng.randi_range(0, last.size() - 1)], "t": _roll_tier(i)}
+
+
+## A rolled word's tier: the depth's top half the time (three in four with the map's Strong signal), a lower one
+## otherwise; Strong signal's second rank lets the top go one past the depth's.
+func _roll_tier(i: int) -> int:
+	var cap := word_tier_cap(int(depth[i]))
+	if atlas_rank("strong_signal") >= 2:
+		cap = mini(3, cap + 1)
+	if cap <= 1:
+		return maxi(cap, 1)
+	var top: float = 0.75 if atlas_rank("strong_signal") >= 1 else 0.5
+	if rng.randf() < top:
+		return cap
+	return rng.randi_range(1, cap - 1)
+
+
+## The words a site rolls to fill `n` places, beside `keep`.
+func _roll_words(i: int, keep: Array, n: int) -> Array:
+	var out: Array = keep.duplicate(true)
+	for k in range(n):
+		var have: Array = []
+		for wd in out:
+			have.append(wd["w"])
+		var wd := _roll_word(i, have)
+		if wd.is_empty():
+			break
+		out.append(wd)
+	return out
+
+
+## The tier a word works at on its site now: what it rolled, held to what the depth allows (a site run shallower
+## than it was juiced at works shallower); Twist's tier IV works only where III does.
+func word_tier_now(i: int, t: int) -> int:
+	var cap := word_tier_cap(int(depth[i]))
+	if atlas_rank("strong_signal") >= 2:
+		cap = mini(3, cap + 1)
+	if t >= 4 and cap >= 3:
+		return 4
+	return mini(t, cap)
+
+
+## The words working on a site now, [name, tier]: its own, then the standing words (the map's Relay, the whole
+## band) at the site's top tier where they aren't already on it. Nothing on a campaign site.
+func active_words(i: int) -> Array:
+	var out: Array = []
+	if not juiceable(i):
+		return out
+	var names: Array = []
+	for wd in words[i].slice(0, max_words(i)):   # a site run shallower than it was juiced works its first words only
+		var t := word_tier_now(i, int(wd["t"]))
+		if t > 0:
+			out.append([wd["w"], t])
+			names.append(wd["w"])
+	for k in range(standing.size()):
+		var sw: String = standing[k]
+		if sw != "" and standing_open(k) and knows_word(sw) and not (sw in names):
+			out.append([sw, maxi(1, word_tier_cap(int(depth[i])))])
+			names.append(sw)
+	return out
+
+
+const WORD_MULT_KEYS := ["hp", "dps", "pool", "patrol", "pace", "search", "armour", "drop", "cash", "xp"]
+const WORD_ADD_KEYS := ["rarity", "share", "res_add"]
+
+## A word at a tier, as the run reads it: its bite (halved by the Yard's Jammer) and its pay (grown by the
+## Military band, the Radio's rank and the map's Booster), a multiplier as m^pow, an added figure ×pow, a count
+## and a flag as they are.
+func word_effect(name: String, t: int) -> Dictionary:
+	var w := Data.word_of(name)
+	var out := {}
+	if w.is_empty():
+		return out
+	var pw: float = float(Data.WORD_TIER_POW[clampi(t, 1, 4) - 1])
+	var jam: bool = yard_has("jammer")
+	var boost: float = (0.5 if yard_has("military_band") else 0.0) + 0.05 * yard_rank("radio") + 0.1 * atlas_rank("booster")
+	for side in ["bite", "pay"]:
+		var part: Dictionary = w[side]
+		for k in part:
+			var v = part[k]
+			if k in WORD_MULT_KEYS:
+				var x: float = pow(float(v), pw)
+				if side == "bite" and jam:
+					x = pow(x, 0.5)
+				elif side == "pay" and boost > 0.0:
+					x = 1.0 + (x - 1.0) * (1.0 + boost)
+				out[k] = float(out.get(k, 1.0)) * x
+			elif k in WORD_ADD_KEYS:
+				var a: float = float(v) * pw
+				if side == "bite" and jam:
+					a *= 0.5
+				elif side == "pay":
+					a *= 1.0 + boost
+				out[k] = float(out.get(k, 0.0)) + a
+			elif k == "contact" or k == "loot_tier":
+				var c: int = int(v)
+				if side == "bite" and jam:
+					c = int(c * 0.5)
+				out[k] = int(out.get(k, 0)) + c
+			else:
+				out[k] = v
+	return out
+
+
+## A word's two halves in words, at a tier: ["HP +70%", "Finds +53%"].
+func word_words(name: String, t: int) -> Array:
+	var w := Data.word_of(name)
+	if w.is_empty():
+		return ["", ""]
+	var e := word_effect(name, t)
+	var bite: Array = []
+	var pay: Array = []
+	for k in w["bite"]:
+		bite.append(_word_part(k, e, w["bite"]))
+	for k in w["pay"]:
+		pay.append(_word_part(k, e, w["pay"]))
+	if pay.is_empty() and w["bite"].has("boss_walks"):
+		pay.append("his drops every run")
+	return [", ".join(bite.filter(func(x): return x != "")), ", ".join(pay.filter(func(x): return x != ""))]
+
+
+func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
+	var pc := func(x: float) -> String: return "%d%%" % int(round(absf(x - 1.0) * 100.0))
+	match k:
+		"hp":
+			return "HP +" + pc.call(e["hp"])
+		"dps":
+			return "fire +" + pc.call(e["dps"])
+		"pool":
+			return ("pack ×%s" % ("%.1f" % float(e["pool"])).trim_suffix(".0")) if float(e["pool"]) >= 2.0 else "pack +" + pc.call(e["pool"])
+		"patrol":
+			return "gangs %s sooner" % pc.call(e["patrol"])
+		"pace":
+			return "pace −" + pc.call(e["pace"])
+		"search":
+			return "searches %s slower" % pc.call(e["search"])
+		"armour":
+			return "your armour −" + pc.call(e["armour"])
+		"contact":
+			var c: int = int(e.get("contact", 0))
+			return "" if c <= 0 else ("one more on you" if c == 1 else "%d more on you" % c)
+		"type":
+			return "%d%% of their fire is %s" % [int(round(float(e.get("share", 0.0)) * 100.0)), str(part["type"])]
+		"res":
+			return "%s res %d%%" % ["all" if part["res"] == "all" else str(part["res"]), int(round(float(e.get("res_add", 0.0)) * 100.0))]
+		"no_meds":
+			return "no meds on the run"
+		"no_kill_cash":
+			return "no cash from kills"
+		"clock":
+			return "the run ends at %d minutes" % int(float(part["clock"]) / 60.0)
+		"boss_walks":
+			return "the zone's head every run, free"
+		"drop":
+			return "finds +" + pc.call(e["drop"])
+		"cash":
+			return "cash +" + pc.call(e["cash"])
+		"xp":
+			return "XP +" + pc.call(e["xp"])
+		"rarity":
+			return "quality +%d%%" % int(round(float(e["rarity"]) * 100.0))
+		"loot_tier":
+			var n: int = int(e["loot_tier"])
+			return "loot a tier up" if n == 1 else "loot %d tiers up" % n
+	return ""
+
+
+## A site's totals, the way a PoE map shows them: what you get and what they bring, multiplied through.
+func word_totals(i: int) -> Dictionary:
+	var gets := {"drop": 1.0, "rarity": 0.0, "cash": 1.0, "xp": 1.0, "loot_tier": 0}
+	var bring := {"hp": 1.0, "dps": 1.0, "pool": 1.0, "patrol": 1.0, "pace": 1.0, "search": 1.0, "armour": 1.0, "contact": 0, "flags": [], "res": {}, "types": {}}
+	for aw in active_words(i):
+		var e := word_effect(aw[0], aw[1])
+		for k in ["drop", "cash", "xp"]:
+			gets[k] *= float(e.get(k, 1.0))
+		gets["rarity"] += float(e.get("rarity", 0.0))
+		gets["loot_tier"] += int(e.get("loot_tier", 0))
+		for k in ["hp", "dps", "pool", "patrol", "pace", "search", "armour"]:
+			bring[k] *= float(e.get(k, 1.0))
+		if e.has("res"):
+			bring["res"][e["res"]] = float(bring["res"].get(e["res"], 0.0)) + float(e.get("res_add", 0.0))
+		if e.has("type"):
+			bring["types"][e["type"]] = float(bring["types"].get(e["type"], 0.0)) + float(e.get("share", 0.0))
+		bring["contact"] += int(e.get("contact", 0))
+		for f in ["no_meds", "no_kill_cash", "clock", "boss_walks"]:
+			if e.has(f):
+				bring["flags"].append(f)
+	return {"get": gets, "bring": bring}
+
+
+## The totals as lines: ["Finds +64% · quality +40%", "HP +70% · fire +30%"]; "" for a side with nothing.
+func word_total_words(i: int) -> Array:
+	var tt := word_totals(i)
+	var g: Dictionary = tt["get"]
+	var b: Dictionary = tt["bring"]
+	var gw: Array = []
+	var pc := func(x: float) -> String: return "%d%%" % int(round(absf(x - 1.0) * 100.0))
+	if g["drop"] > 1.005:
+		gw.append("finds +" + pc.call(g["drop"]))
+	if g["rarity"] > 0.005:
+		gw.append("quality +%d%%" % int(round(g["rarity"] * 100.0)))
+	if g["cash"] > 1.005:
+		gw.append("cash +" + pc.call(g["cash"]))
+	if g["xp"] > 1.005:
+		gw.append("XP +" + pc.call(g["xp"]))
+	if g["loot_tier"] > 0:
+		gw.append("loot +%d tier%s" % [g["loot_tier"], "" if g["loot_tier"] == 1 else "s"])
+	var bw: Array = []
+	if b["hp"] > 1.005:
+		bw.append("HP +" + pc.call(b["hp"]))
+	if b["dps"] > 1.005:
+		bw.append("fire +" + pc.call(b["dps"]))
+	if b["pool"] > 1.005:
+		bw.append("pack +" + pc.call(b["pool"]))
+	if b["patrol"] < 0.995:
+		bw.append("gangs %s sooner" % pc.call(b["patrol"]))
+	if b["pace"] < 0.995:
+		bw.append("pace −" + pc.call(b["pace"]))
+	if b["search"] > 1.005:
+		bw.append("searches %s slower" % pc.call(b["search"]))
+	if b["armour"] < 0.995:
+		bw.append("your armour −" + pc.call(b["armour"]))
+	if b["contact"] > 0:
+		bw.append("+%d on you" % b["contact"])
+	for ty in b["types"]:
+		bw.append("%d%% %s" % [int(round(float(b["types"][ty]) * 100.0)), ty])
+	for ty in b["res"]:
+		bw.append("%s res %d%%" % [ty, int(round(float(b["res"][ty]) * 100.0))])
+	for f in b["flags"]:
+		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill cash", "clock": "a clock", "boss_walks": "the head walks"}[f])
+	return [" · ".join(gw), " · ".join(bw)]
+
+
+## What a set of words pays, roughly: cash × finds × (1 + quality) (the Yard's Two channels keeps the better).
+func _words_pay(list: Array) -> float:
+	var v := 1.0
+	for wd in list:
+		var e := word_effect(wd["w"], int(wd["t"]))
+		v *= float(e.get("cash", 1.0)) * float(e.get("drop", 1.0)) * (1.0 + float(e.get("rarity", 0.0)))
+	return v
+
+
+## A craft's price in notes: the craft's figure × the site's depth, less the map's Good reception and the Yard's
+## Scanner (Call in less the map's Early word too); Clear on a sealed site ten times over.
+func word_craft_cost(i: int, key: String) -> int:
+	var c := Data.craft_of(key)
+	if c.is_empty():
+		return 0
+	var v: float = float(c["cost"]) * maxf(1.0, float(depth[i]))
+	v *= (1.0 - 0.15 * atlas_rank("good_reception")) * (0.75 if yard_has("scanner") else 1.0)
+	if key == "call":
+		v *= 1.0 - 0.25 * atlas_rank("early_word")
+	if key == "clear" and sealed[i]:
+		v *= Data.SEALED_CLEAR
+	return maxi(1, int(ceil(v)))
+
+
+## Why a craft can't be done now ("" if it can).
+func word_craft_block(i: int, key: String) -> String:
+	if mission != null:
+		return "The runner is out"
+	if not juiceable(i):
+		return "Words from depth 2, the campaign done"
+	var n: int = words[i].size()
+	if sealed[i] and key != "clear":
+		return "Sealed: only Clear"
+	match key:
+		"tune", "call":
+			if n >= max_words(i):
+				return "Full: %d of %d" % [n, max_words(i)]
+			if key == "tune" and _word_pools(i, word_names(i)).values().all(func(l): return l.is_empty()):
+				return "Nothing more known to hear"
+			if key == "call" and call_options(i).is_empty():
+				return "Nothing more known to call"
+		"broadcast":
+			if n > 0:
+				return "Only on a silent site"
+		"retune", "clear", "twist":
+			if n == 0:
+				return "No words on it"
+		"hold":
+			if n < 2:
+				return "Wants two words"
+	if notes < word_craft_cost(i, key):
+		return "Short of notes"
+	return ""
+
+
+func can_word_craft(i: int, key: String) -> bool:
+	return word_craft_block(i, key) == ""
+
+
+## The words that could be called in: every one known and deep enough that isn't on the site.
+func call_options(i: int) -> Array:
+	var out: Array = []
+	var have := word_names(i)
+	for name in words_known():
+		if name in have or int(depth[i]) < int(Data.word_of(name).get("depth", 0)):
+			continue
+		out.append(name)
+	return out
+
+
+## Craft a site's words: `arg` is the word for Call in and Hold.
+func word_craft(i: int, key: String, arg := "") -> bool:
+	if not can_word_craft(i, key):
+		return false
+	if key == "call" and not (arg in call_options(i)):
+		return false
+	if key == "hold" and not (arg in word_names(i)):
+		return false
+	notes -= word_craft_cost(i, key)
+	var two: bool = yard_has("two_channels") and (key == "tune" or key == "retune")
+	match key:
+		"tune":
+			words[i] = _better_roll(i, words[i], 1, two)
+		"broadcast":
+			words[i] = _roll_words(i, [], max_words(i))
+		"retune":
+			words[i] = _better_roll(i, [], words[i].size(), two)
+		"hold":
+			var kept: Array = words[i].filter(func(wd): return wd["w"] == arg)
+			words[i] = _roll_words(i, kept, words[i].size() - 1)
+		"call":
+			words[i].append({"w": arg, "t": _roll_tier(i)})
+		"clear":
+			words[i] = []
+			sealed[i] = false
+		"twist":
+			_twist(i)
 	_surv_cache.erase(i)
-	log_event("Called in on %s: %s" % [Words.mid(tier(i)["name"]), name.to_lower()])
+	var c := Data.craft_of(key)
+	log_event("%s on %s: %s" % [c["name"], Words.mid(tier(i)["name"]), ", ".join(word_names(i)).to_lower() if not words[i].is_empty() else "silent"])
 	return true
 
 
-func can_lock_word(i: int) -> bool:
-	return yard_has("lock") and campaign_done() and mission == null and tier_open(i) and intel[i].size() >= 2 and (notes >= intel_notes(i) * 2 if words_in_notes() else cash >= intel_cost(i) * 2)
+## A roll of `n` words beside `keep`, twice over with the Yard's Two channels and the better kept.
+func _better_roll(i: int, keep: Array, n: int, twice: bool) -> Array:
+	var a := _roll_words(i, keep, n)
+	if not twice:
+		return a
+	var b := _roll_words(i, keep, n)
+	return b if _words_pay(b) > _words_pay(a) else a
 
 
-## Keep one word, re-roll the others.
-func lock_word(i: int, name: String) -> bool:
-	if not can_lock_word(i) or not (name in intel[i]):
+## Twist (PoE's Vaal orb): a word to tier IV, a deep word whether known or not, nothing, or every word again at
+## its depth's top tier; whichever, the site is sealed. The map's Bent doubles the first.
+func _twist(i: int) -> void:
+	var odds: Array = Data.TWIST_ODDS.duplicate()
+	if atlas_rank("bent") > 0:
+		odds[0] = float(odds[0]) * 2.0
+	var total := 0.0
+	for o in odds:
+		total += float(o)
+	var r := rng.randf() * total
+	var pick := 0
+	while pick < odds.size() - 1 and r > float(odds[pick]):
+		r -= float(odds[pick])
+		pick += 1
+	match pick:
+		0:
+			var k := rng.randi_range(0, words[i].size() - 1)
+			words[i][k]["t"] = 4
+			log_event("Twisted: %s goes to tier IV" % str(words[i][k]["w"]).to_lower())
+		1:
+			var deep: Array = []
+			for w in Data.WORDS:
+				if w["learn"] == "deep" and not (w["name"] in word_names(i)):
+					deep.append(w["name"])
+			if not deep.is_empty():
+				var wd := {"w": deep[rng.randi_range(0, deep.size() - 1)], "t": maxi(1, word_tier_cap(int(depth[i])))}
+				if words[i].size() >= max_words(i):
+					words[i][rng.randi_range(0, words[i].size() - 1)] = wd
+				else:
+					words[i].append(wd)
+				log_event("Twisted: %s comes on the air" % str(wd["w"]).to_lower())
+		2:
+			log_event("Twisted: nothing changes")
+		3:
+			var cap := maxi(1, word_tier_cap(int(depth[i])))
+			var n: int = words[i].size()
+			words[i] = _roll_words(i, [], n)
+			for wd in words[i]:
+				wd["t"] = cap
+			log_event("Twisted: every word again, at tier %s" % Data.WORD_TIER_NAMES[cap - 1])
+	sealed[i] = true
+
+
+## The standing words (the map's Relay, the whole band): one slot a node.
+func standing_open(k: int) -> bool:
+	return atlas_rank("relay") > 0 if k == 0 else atlas_rank("whole_band") > 0
+
+
+func set_standing(k: int, name: String) -> bool:
+	if k < 0 or k > 1 or not standing_open(k) or (name != "" and not knows_word(name)):
 		return false
-	if words_in_notes():
-		notes -= intel_notes(i) * 2
-	else:
-		cash -= intel_cost(i) * 2
-	var keep := [name]
-	_roll_tier_intel(i)
-	for w in intel[i]:
-		if w != name and keep.size() < max_words() and not (w in keep):
-			keep.append(w)
-	intel[i] = keep
-	_surv_cache.erase(i)
-	log_event("Held %s on %s; the rest re-rolled: %s" % [name.to_lower(), Words.mid(tier(i)["name"]), ", ".join(intel[i]).to_lower()])
+	while standing.size() <= k:
+		standing.append("")
+	standing[k] = name
+	_surv_cache = {}
 	return true
 
 
-## Pin a tier's intel so missions don't spend it - the tower's second job.
-func can_pin() -> bool:
-	return yard_has("pin")
-
-
-func set_pinned(i: int, on: bool) -> void:
-	if can_pin() or not on:
-		pinned[i] = on                        # unpinning never wants the pick (a refit off Pin leaves pins to take down)
+## The map's Clear air: one known word the Radio never rolls.
+func set_filtered(name: String) -> bool:
+	if atlas_rank("clear_air") <= 0 or (name != "" and not knows_word(name)):
+		return false
+	filtered = name
+	return true
 
 
 # ------------------------------------------------------------------ the Yard's lanes (9 Oct, docs/design/yard.md)
@@ -2590,7 +3014,7 @@ func _yard_changed(_key: String) -> void:
 ## What a pick or a refit might grow or shrink, read before it's built: the Fence's shelf, the Back room, the
 ## contracts open, Pin.
 func _yard_before() -> Dictionary:
-	return {"stock": market_stock(), "back": yard_has("back_room"), "open": contracts_open(), "pin": yard_has("pin")}
+	return {"stock": market_stock(), "back": yard_has("back_room"), "open": contracts_open()}
 
 
 ## A pick that grows a shelf or the contracts adds only what it grew by - never a re-roll or a refill of what's
@@ -2611,9 +3035,6 @@ func _yard_grew(before: Dictionary) -> void:
 		contracts.append(roll_contract())
 	if contracts_open() < int(before["open"]) and contracts.size() > contracts_open():
 		contracts = contracts.slice(0, contracts_open())
-	if bool(before["pin"]) and not yard_has("pin"):
-		for i in range(pinned.size()):
-			pinned[i] = false                 # refitted off Pin: the pins come down with it
 
 
 ## The Kennel's quality; the gangs' lateness from the Kennel and the Lookout; the odds' dry runs; the sales.
@@ -2638,49 +3059,12 @@ func contracts_open() -> int:
 	return Data.CONTRACTS_OPEN + (2 if yard_has("orders") else 0)
 
 
-## A word as the Radio has it: the Jammer halves its bite (their health and fire past 1, more on you, their speed
-## and yours under 1); the Military band and the rank grow its rewards (cash, XP, drops past 1, quality, gear tier).
-func _radio_words(m: Dictionary) -> Dictionary:
-	var jam: bool = yard_has("jammer")
-	var boost: float = (0.5 if yard_has("military_band") else 0.0) + 0.05 * yard_rank("radio")
-	if not jam and boost <= 0.0:
-		return m
-	var out: Dictionary = m.duplicate()
-	if jam:
-		for k in ["hp", "dps", "search"]:
-			if float(out.get(k, 1.0)) > 1.0:
-				out[k] = 1.0 + (float(out[k]) - 1.0) * 0.5
-		for k in ["pace", "patrol"]:
-			if float(out.get(k, 1.0)) < 1.0:
-				out[k] = 1.0 - (1.0 - float(out[k])) * 0.5
-		if int(out.get("contact", 0)) > 0:
-			out["contact"] = int(int(out["contact"]) * 0.5)
-	if boost > 0.0:
-		for k in ["cash", "xp", "drop"]:
-			if float(out.get(k, 1.0)) > 1.0:
-				out[k] = 1.0 + (float(out[k]) - 1.0) * (1.0 + boost)
-		if float(out.get("rarity", 0.0)) > 0.0:
-			out["rarity"] = float(out["rarity"]) * (1.0 + boost)
-	return out
-
-
-## What a set of words pays, roughly: their cash, drops and quality together (the Radio's Two channels keeps the better).
-func _words_pay(words: Array) -> float:
-	var v := 1.0
-	for name in words:
-		var m := modifier(name)
-		v *= float(m.get("cash", 1.0)) * float(m.get("drop", 1.0)) * (1.0 + float(m.get("rarity", 0.0)))
-	return v
-
-
 ## The Yard's lanes from a save; a save from before them maps its buildings' levels onto the picks that match,
 ## free (docs/design/yard.md §5).
 func _load_yard(d: Dictionary) -> void:
 	yard_picks = d.get("yard_picks", {}).duplicate(true)
 	yard_ranks = d.get("yard_ranks", {}).duplicate()
 	yard_open = int(d.get("yard_open", 1))
-	tip_free = bool(d.get("tip_free", false))
-	tip_runs = int(d.get("tip_runs", 0))
 	yard_seen = {}
 	for id in d.get("yard_seen", []):
 		yard_seen[str(id)] = true
@@ -3067,7 +3451,7 @@ func effective(i: int) -> Dictionary:
 		"cash": base["cash"] * pow(1.0 + Data.DEPTH_REWARD, d - 1),
 		"drop": base["drop"] + Data.DEPTH_DROP * (d - 1),
 		"loot_tier": int(base["loot_tier"]), "rarity": Data.DEPTH_RARITY * (d - 1),
-		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": intel[i].duplicate(),
+		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": [], "word_tiers": {}, "armour": 1.0,
 	}
 	if d >= 2 and campaign_done():
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
@@ -3086,11 +3470,11 @@ func effective(i: int) -> Dictionary:
 		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
-	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night() or ("Night" in intel[i])
-	if night_run and not ("Night" in intel[i]):
+	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night()
+	if night_run:
 		var night := modifier("Night")
 		if not yard_has("floodlights"):     # the Generator's Floodlights: night's finds without its slow feet
-			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # Night eyes: the slower feet halved a rank
+			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (0.5 if yard_has("night_set") else 1.0)   # the Radio's Night set: the slower feet halved
 		e["rarity"] += night.get("rarity", 0.0) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
 		e["intel"].append("Night")
 	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
@@ -3102,17 +3486,22 @@ func effective(i: int) -> Dictionary:
 	e["rarity"] += 0.05 * atlas_rank("tip_offs")
 	if atlas_rank("local_knowledge") > 0:
 		e["loot_tier"] = mini(Data.MAX_TIER, int(e["loot_tier"]) + 1)
-	if night_run and atlas_rank("dead_air") > 0:
-		e["patrol"] *= 1.25
+	if night_run and yard_has("dead_air"):
+		e["patrol"] *= 1.25                  # the Radio's Dead air
 	var sky: String = weather_of(i)
-	if sky != "" and not (sky in intel[i]) and atlas_rank("fair_weather") < 2:
-		e["intel"].append(sky)               # applied with the words below, softened by Fair weather
-	if sky != "" and atlas_rank("forecast") > 0:
-		e["cash"] *= 1.2                     # The forecast: a run under the weather pays
+	if sky != "":
+		e["intel"].append(sky)               # applied with the words below, softened by the Radio's Weather set
+	if sky != "" and yard_has("forecast"):
+		e["cash"] *= 1.2                     # the Radio's forecast: a run under the weather pays
 	var w := wear(i)
 	if w > 0.0:
 		e["drop"] *= 1.0 - Data.WORN_DROP * w
 		e["cash"] *= 1.0 - Data.WORN_CASH * w
+	var act: Array = active_words(i)
+	var walks := false
+	for aw in act:
+		if Data.word_of(aw[0])["bite"].has("boss_walks"):
+			walks = true
 	var b := boss_of(i)
 	if boss_armed.get(i, false) and is_convoy(i):
 		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, plain fire): the crews stayed with the load
@@ -3124,20 +3513,30 @@ func effective(i: int) -> Dictionary:
 		e["convoy"] = true
 	elif not b.is_empty() and boss_armed.get(i, false):
 		e["boss"] = boss_form(b, e, is_pinnacle(i))
+	elif walks:
+		e["boss"] = boss_form(Data.BOSSES[int(base["zone"])], e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
 	for name in e["intel"]:
-		if name == "Night" and not ("Night" in intel[i]):
+		if name == "Night":
 			continue                              # the clock's night is applied above
 		var m := modifier(name)
-		if m.get("sky", false) and atlas_rank("fair_weather") > 0:
-			m = _softened(m, 0.5)               # Fair weather: the sky's word bites half as hard
-		m = _radio_words(m)                    # the Radio's Jammer, Military band and rank
-		if name == "Night" and yard_has("floodlights"):
-			m = m.duplicate()
-			m["pace"] = 1.0                    # the Generator's Floodlights: a rolled Night's finds without its slow feet
-		if name == "Night" and atlas_rank("night_eyes") > 0:
-			m = m.duplicate()
-			m["pace"] = 1.0 - (1.0 - float(m.get("pace", 1.0))) * (1.0 - 0.5 * atlas_rank("night_eyes"))   # the rolled word, the same eyes
-			m["rarity"] = float(m.get("rarity", 0.0)) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)
+		if yard_has("weather_set"):
+			m = _softened(m, 0.5)               # the Radio's Weather set: the sky's word bites half as hard
+		e["hp"] *= m.get("hp", 1.0)
+		e["xp"] *= m.get("xp", 1.0)
+		e["cash"] *= m.get("cash", 1.0)
+		e["drop"] *= m.get("drop", 1.0)
+		e["rarity"] += m.get("rarity", 0.0)
+		e["pace"] *= m.get("pace", 1.0)
+		e["patrol"] *= m.get("patrol", 1.0)
+		e["search"] *= m.get("search", 1.0)
+		e["contact"] += int(m.get("contact", 0))
+	# the Radio's words (9 Oct, map juicing): each at its tier, the bite and the pay
+	var wfx: Array = []
+	for aw in act:
+		var m := word_effect(aw[0], aw[1])
+		wfx.append(m)
+		e["intel"].append(aw[0])
+		e["word_tiers"][aw[0]] = aw[1]
 		e["hp"] *= m.get("hp", 1.0)
 		e["dps"] *= m.get("dps", 1.0)
 		e["xp"] *= m.get("xp", 1.0)
@@ -3149,6 +3548,13 @@ func effective(i: int) -> Dictionary:
 		e["patrol"] *= m.get("patrol", 1.0)
 		e["search"] *= m.get("search", 1.0)
 		e["contact"] += int(m.get("contact", 0))
+		e["pool"] = maxi(1, int(round(float(e["pool"]) * float(m.get("pool", 1.0)))))
+		e["armour"] *= float(m.get("armour", 1.0))
+		for f in ["no_meds", "no_kill_cash", "boss_walks"]:
+			if m.get(f, false):
+				e[f] = true
+		if m.has("clock"):
+			e["clock"] = minf(float(e.get("clock", 1e9)), float(m["clock"]))
 	# what their fire is made of, and what they resist: the zone's, grown by depth, and the words
 	var zone: Dictionary = Data.ZONE_TYPES[int(base["zone"])]
 	var types := {}
@@ -3159,8 +3565,7 @@ func effective(i: int) -> Dictionary:
 	for ty in Data.TYPES:
 		var own: bool = zone["res"].has(ty) or zone["types"].has(ty)
 		res[ty] = float(zone["res"].get(ty, 0.0)) + (Data.RESIST_DEPTH_STEP * (d - Data.RESIST_DEPTH + 1) if d >= Data.RESIST_DEPTH and own else 0.0)
-	for name in intel[i]:
-		var m := modifier(name)
+	for m in wfx:
 		if m.has("type"):
 			types[m["type"]] = minf(0.9, float(types.get(m["type"], 0.0)) + float(m["share"]))
 		if m.has("res"):
@@ -3188,32 +3593,7 @@ func modifier(name: String) -> Dictionary:
 	return {}
 
 
-## New intel on every tier that isn't pinned: one modifier, two from tier 2
-## and at depth 3 up.
-func reroll_intel(force := false) -> void:
-	for i in range(Data.TIERS.size()):
-		if pinned[i] and not force:
-			continue
-		_roll_tier_intel(i)
-
-
-func _roll_tier_intel(i: int) -> void:
-	var n := 1 if (i == 0 and depth[i] < 3) else 2
-	if Data.TIERS[i]["zone"] >= 1:
-		n = 2
-	n += atlas_rank("long_wave")              # Long wave: one more word a site
-	n += 1 if yard_has("long_range") else 0   # and the Radio's Long range
-	var names := []
-	var clear: bool = atlas_rank("clear_air") > 0
-	var pool: Array = Data.MODIFIERS.filter(func(m): return not m.get("sky", false) and not (clear and m["name"] == "Resistant"))   # the sky's words come from the clock, not the radio; Clear air never hears Resistant
-	pool.shuffle()
-	for k in range(n):
-		names.append(pool[k]["name"])
-	intel[i] = names
-
-
-## Depth up or down. The word on the tier stays as it is - it only changes
-## after a run, so it can't be re-rolled by stepping the depth back and forth.
+## Depth up or down. A site's words stay as they are; their tiers work at what the new depth allows.
 func set_depth(i: int, d: int) -> void:
 	if mission == null:
 		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
@@ -3286,7 +3666,7 @@ func _odds_key(i: int) -> Array:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second (rounded: a rest to full that
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
-	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(intel[i]), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(words[i]), str(standing), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
 
 
 ## A figure in steps of 2%: the odds don't move for less.
@@ -3422,7 +3802,7 @@ func deploy(i: int) -> void:
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
 	var t := effective(i)
-	if t.has("boss"):
+	if t.has("boss") and not (t.get("boss_walks", false) and not boss_armed.get(i, false)):
 		var cost := boss_cost(i)
 		if notes < cost:
 			return
@@ -3538,6 +3918,10 @@ func _tick(dt: float) -> void:
 		if yard_has("drip"):
 			_heal(m, max_hp() * 0.01 * dt)        # the Clinic's Drip
 	if mission == null:
+		return
+	if t.has("clock") and m["elapsed"] >= float(t["clock"]) and not m.get("dry", false):
+		log_event("Last bus: the run's out of time")
+		_extract()                                # the Radio's Last bus: the run ends on the clock, home with what it has
 		return
 	if _affix_sum("regen") > 0.0:
 		_heal(m, _affix_sum("regen") * dt)
@@ -3926,8 +4310,8 @@ func _dose(m: Dictionary) -> void:
 
 ## Using a med: the seconds run down under whatever fire there is, then it heals.
 func use_med(id: int) -> bool:
-	if mission == null or mission["using"] != null:
-		return false
+	if mission == null or mission["using"] != null or mission["t"].get("no_meds", false):
+		return false                          # the Radio's Rationed: no meds on the run
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
 			var it: Dictionary = rig[k]
@@ -4033,7 +4417,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	xp += gain
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
-	m["cash"] += (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
+	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
 		* (0.8 if has_node("light_fingers") else 1.0) * (1.5 if has_rule("managers_coat") else 1.0) * trait_mult("cash")
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
@@ -4069,7 +4453,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	var before := level()
 	xp += t["xp"] * 10.0
 	_earn_points(before)
-	m["cash"] += t["cash"] * 10.0 * inflation()
+	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
 	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + 0.5 * atlas_rank("bounties"))))
 	if b.get("pinnacle", false) and atlas_rank("head_start") > 0:
 		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
@@ -4391,11 +4775,6 @@ func _extract() -> void:
 	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
 	_takings_run = 0.0
 	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
-	if yard_has("tip_line"):
-		tip_runs += 1
-		if tip_runs >= 5:
-			tip_runs = 0
-			tip_free = true                   # the Radio's Tip line: every fifth run home
 	var sv: Dictionary = m.get("salvage", {})
 	for kind in sv:
 		salvage[kind] = int(salvage.get(kind, 0)) + int(sv[kind])      # and its salvage (9 Oct)
@@ -4812,7 +5191,6 @@ func gear_tier() -> int:
 
 
 func restock() -> void:
-	reroll_intel()
 	_restock_clinic()
 	_restock_gamble()
 	_restock_market()
@@ -5246,8 +5624,8 @@ func _state() -> Dictionary:
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
-		"intel": intel, "depth": depth, "best_depth": best_depth, "class": cls, "pinned": pinned,
-		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(), "tip_free": tip_free, "tip_runs": tip_runs,
+		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls,
+		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
@@ -5297,19 +5675,27 @@ func load_dict(d: Dictionary) -> void:
 	hardcore = bool(d.get("hardcore", false))
 	wound = str(d.get("wound", "")) if str(d.get("wound", "")) in Data.WOUND_STATS else ""
 	camp_lost = bool(d.get("camp_lost", false))
-	var pn: Array = d.get("pinned", [])
-	for i in range(mini(pn.size(), Data.TIERS.size())):
-		pinned[i] = bool(pn[i])
 	if d.has("depth"):
 		for i in range(Data.TIERS.size()):
 			if i < d["depth"].size():
 				depth[i] = int(d["depth"][i])
 				best_depth[i] = int(d["best_depth"][i])
-				intel[i] = d["intel"][i]
-		if d["depth"].size() < Data.TIERS.size():
-			reroll_intel()
-	else:
-		reroll_intel()
+	# the Radio's words (9 Oct): a save from before map juicing has its old words cleared
+	var dw: Array = d.get("words", [])
+	var ds: Array = d.get("sealed", [])
+	for i in range(Data.TIERS.size()):
+		words[i] = []
+		sealed[i] = false
+		if i < dw.size():
+			for wd in dw[i]:
+				if wd is Dictionary and not Data.word_of(str(wd.get("w", ""))).is_empty():
+					words[i].append({"w": str(wd["w"]), "t": int(wd.get("t", 1))})
+		if i < ds.size():
+			sealed[i] = bool(ds[i])
+	filtered = str(d.get("filtered", ""))
+	standing = []
+	for sw in d.get("standing", []):
+		standing.append(str(sw))
 	training_points = int(d.get("training_points", maxi(0, level() - 1)))
 	best_level = int(d.get("best_level", level()))
 	if int(d.get("tree_v", 1)) < TREE_V and not tree.is_empty():
@@ -5353,7 +5739,8 @@ func load_dict(d: Dictionary) -> void:
 		retired.append(str(r))
 	atlas = {}
 	for k in d.get("atlas", {}):
-		atlas[str(k)] = int(d["atlas"][k])
+		if not Data.atlas_of(str(k)).is_empty():
+			atlas[str(k)] = mini(int(d["atlas"][k]), int(Data.atlas_of(str(k))["max"]))     # a node the map dropped (9 Oct: the air) gives its points back
 	atlas_points = int(d.get("atlas_points", 0))
 	boss_paid = []
 	var paid: Array = d.get("boss_paid", [])

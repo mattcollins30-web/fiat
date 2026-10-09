@@ -1,14 +1,12 @@
 extends Control
-## The map (Map-A then Map-B, 7 Oct): the endgame's tree in the Caravan's
-## shape, in the Runs room where the columns stand. A band (the points free,
-## what earns one, the zones' depths as chips); thirty-six nodes as the
-## caravan's tiles, two across, in three columns by what they touch - the
-## sites, the crews, the air - each column a chain from the top (a node opens
-## when the one before it has a rank), four notables (★) and a keystone (◆)
-## the width, the ranks as pips, a taken tile lined in the accent; the sum
-## strip as the taken nodes' figures; and the panel under: the pick's name and
-## rank (and what it needs when locked), its figure as a chip with the next
-## rank's beside, one sentence, Take a rank and Start the map again.
+## The map as lanes (Map-L, 9 Oct; Matt: "the map screen also needs to be updated to follow the changes we've
+## made to the skill tree and yard"). The band (the points free, what earns one, the zones' depths as chips);
+## three lanes - the sites, the crews, the air - in the Training screen's layout: a label block (the points in
+## the lane, the next column's gate), six columns of two nodes, the lane's keystone last (alone in its column,
+## the lane's height). A column opens on the points spent in its lane (Data.ATLAS_GATES); the ranks as pips, a
+## taken tile lined in the accent; the sum strip as the taken nodes' figures; and the panel under: the pick's
+## name and rank (and the gate when shut), its figure as a chip with the next rank's beside, one sentence, Take
+## a rank and Start the map again.
 
 signal acted
 
@@ -22,16 +20,17 @@ const Words := preload("res://scripts/sim/words.gd")
 const W := Pal.GRID_W
 const PAD := 20
 const BAND_H := 170                # the band's chips sit under the headline at this height (150 puts them over it)
-const COL_GAP := 16
-const COL_W := (W - 2 * COL_GAP) / 3                           # 501
-const COLS_Y := BAND_H + 14
-const HEAD_H := 34
-const TILE_H := 52                 # a node: a tile, two across, the keystone the width (the Caravan's, Map-B)
+const LANES_Y := BAND_H + 12
+const LANE_H := 140
+const LANE_GAP := 6
+const LABEL_W := 180
+const TILES_X := LABEL_W + 10
+const COLS := 6
 const TILE_GAP := 6
-const TILE_W := (COL_W - TILE_GAP) / 2                                # 247
-const TILES_Y := COLS_Y + HEAD_H + 6
-const TILE_ROWS := 7               # eleven two across and the keystone under
-const SUM_Y := TILES_Y + TILE_ROWS * (TILE_H + TILE_GAP) - TILE_GAP + 12
+const ROW_GAP := 4
+const TILE_W := (W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS
+const TILE_H := (LANE_H - 14 - ROW_GAP) / 2
+const SUM_Y := LANES_Y + 3 * LANE_H + 2 * LANE_GAP + 12
 const SUM_H := 10 + Chips.CHIP_H + 10
 const SUM_HEAD_W := 150
 const SUM_CHIPS := 7               # the taken nodes' figures, so many and a count
@@ -42,7 +41,7 @@ const PIP_GAP := 4
 var sim
 var selected := ""                 # a passive's key, or ""
 var _band: Band
-var _heads: Array = []             # per column: {name, count}
+var _heads: Array = []             # per lane: {name, count, gate, bar}
 var _tiles := {}                   # key -> {button, name, words, pips: [Panel]}
 var _sum_head: Label
 var _sum_chips: Chips
@@ -64,32 +63,35 @@ func _init(h: float) -> void:
 	_band.set_site("the map")
 	top.add_child(_band)
 	for c in range(Data.ATLAS_COLUMNS.size()):
-		var x: int = c * (COL_W + COL_GAP)
+		var y: float = LANES_Y + c * (LANE_H + LANE_GAP)
+		var lane := UI.panel(self, Rect2(0, y, W, LANE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 		var head := {}
-		head["name"] = UI.label(self, Rect2(x + 4, COLS_Y, COL_W - 8, HEAD_H), Data.ATLAS_COLUMNS[c], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		head["count"] = UI.label(self, Rect2(x + 4, COLS_Y, COL_W - 8, HEAD_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		head["bar"] = UI.panel(lane, Rect2(0, 0, 4, LANE_H), UI.box(Pal.CARD_LINE, 2))
+		head["name"] = UI.label(lane, Rect2(16, 8, LABEL_W - 20, 30), Data.ATLAS_COLUMNS[c], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		head["count"] = UI.label(lane, Rect2(16, 42, LABEL_W - 20, 23), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		head["gate"] = UI.label(lane, Rect2(16, 66, LABEL_W - 20, 23), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_heads.append(head)
-		var rects: Array = _tile_rects(c)
-		var k := 0
-		for a in Data.ATLAS:
-			if int(a["column"]) != c:
-				continue
+		var nodes: Array = Data.ATLAS.filter(func(a): return int(a["column"]) == c)
+		for k in range(nodes.size()):
+			var a: Dictionary = nodes[k]
 			var key: String = a["key"]
-			var rc: Rect2 = rects[k]
-			k += 1
+			var col: int = k / 2
+			var row: int = k % 2
+			var alone: bool = k == nodes.size() - 1 and row == 0
+			var rc := Rect2(TILES_X + col * (TILE_W + TILE_GAP), y + 7 + row * (TILE_H + ROW_GAP), TILE_W, (2 * TILE_H + ROW_GAP) if alone else TILE_H)
 			var t := {}
 			var b := Button.new()
-			b.position = Vector2(x + rc.position.x, TILES_Y + rc.position.y)
+			b.position = rc.position
 			b.size = rc.size
 			b.pressed.connect(_pick.bind(key))
 			add_child(b)
 			t["button"] = b
 			var big: bool = a.get("notable", false) or a.get("keystone", false)
-			t["name"] = UI.label(b, Rect2(10, 3, rc.size.x - 20, 22), ("◆ " if a.get("keystone", false) else ("★ " if big else "")) + str(a["name"]), "SemiBold" if big else "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["words"] = UI.label(b, Rect2(10, 26, rc.size.x - 20, 22), "", "Regular", Pal.CELL_TEXT_BIG - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["name"] = UI.label(b, Rect2(10, 3, rc.size.x - 20, 26), ("◆ " if a.get("keystone", false) else ("★ " if big else "")) + str(a["name"]), "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["words"] = UI.label(b, Rect2(10, rc.size.y - 28, rc.size.x - 20, 24), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 			var pips: Array = []
 			for j in range(int(a["max"])):
-				var p := UI.panel(b, Rect2(rc.size.x - 10 - (int(a["max"]) - j) * (PIP + PIP_GAP) + PIP_GAP, 9, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE))
+				var p := UI.panel(b, Rect2(rc.size.x - 10 - (int(a["max"]) - j) * (PIP + PIP_GAP) + PIP_GAP, 11, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE))
 				pips.append(p)
 			t["pips"] = pips
 			t["name"].size.x = rc.size.x - 20 - int(a["max"]) * (PIP + PIP_GAP) - 6
@@ -104,9 +106,9 @@ func _init(h: float) -> void:
 	_panel = UI.panel(self, Rect2(0, PANEL_Y, W, h - PANEL_Y), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_title = UI.label(_panel, Rect2(PAD, 10, W - 2 * PAD, 34), "", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_chips = Chips.new(600)
-	_chips.position = Vector2(PAD, 47)
+	_chips.position = Vector2(PAD, 52)
 	_panel.add_child(_chips)
-	_words = UI.label(_panel, Rect2(PAD, 46, W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words = UI.label(_panel, Rect2(PAD, 52, W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var by: float = _panel.size.y - PAD - Pal.BUTTON_H
 	_take = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), true)
 	_take.pressed.connect(_on_take)
@@ -117,30 +119,6 @@ func _init(h: float) -> void:
 
 static func _passive(key: String) -> Dictionary:
 	return Data.atlas_of(key)
-
-
-## Where a column's nodes sit: two across in chain order, the keystone across both, in the column's own space.
-static func _tile_rects(c: int) -> Array:
-	var out: Array = []
-	var row := 0
-	var col := 0
-	for a in Data.ATLAS:
-		if int(a["column"]) != c:
-			continue
-		var wide: bool = a.get("keystone", false)
-		if wide and col == 1:
-			row += 1
-			col = 0
-		out.append(Rect2(col * (TILE_W + TILE_GAP), row * (TILE_H + TILE_GAP), (2 * TILE_W + TILE_GAP) if wide else TILE_W, TILE_H))
-		if wide:
-			row += 1
-			col = 0
-		else:
-			col += 1
-			if col == 2:
-				col = 0
-				row += 1
-	return out
 
 
 func _style(b: Button, look: String) -> void:
@@ -206,7 +184,15 @@ func show_state(s) -> void:
 			else:
 				more += 1
 	for c in range(Data.ATLAS_COLUMNS.size()):
-		_heads[c]["count"].text = Words.MAP["column_count"] % [taken_of[c][0], taken_of[c][1]]
+		var pts: int = sim.atlas_in_lane(c)
+		UI.fit(_heads[c]["count"], ["%d point%s in · %d of %d ranks" % [pts, "" if pts == 1 else "s", taken_of[c][0], taken_of[c][1]], "%d points in" % pts, "%d in" % pts])
+		var nxt := -1
+		for g in Data.ATLAS_GATES:
+			if int(g) > pts:
+				nxt = int(g)
+				break
+		UI.fit(_heads[c]["gate"], ["next column at %d" % nxt if nxt >= 0 else "every column open", "next at %d" % nxt if nxt >= 0 else "all open"])
+		(_heads[c]["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if pts > 0 else Pal.CARD_LINE
 	# the sum strip: the taken nodes' figures, so many and a count; nothing taken, the point's worth
 	if more > 0:
 		items.append({"tag": "and", "forms": ["%d more" % more], "colour": Pal.TEXT_2})
@@ -230,7 +216,7 @@ func _show_panel() -> void:
 		var figs: Array = a["figures"]
 		var needs: String = ""
 		if not sim.atlas_open(selected):
-			needs = Words.MAP["needs"] % _before(selected)["name"]
+			needs = "opens at %d points in %s" % [int(Data.ATLAS_GATES[sim.atlas_col(selected)]), str(Data.ATLAS_COLUMNS[int(a["column"])]).to_lower()]
 		UI.fit(_title, ["%s · rank %d of %d%s" % [a["name"], rank, int(a["max"]), (" · " + needs) if needs != "" else ""], "%s · rank %d of %d" % [a["name"], rank, int(a["max"])], str(a["name"])])
 		var items := []
 		if rank > 0:
@@ -251,17 +237,15 @@ func _show_panel() -> void:
 	if _take.visible:
 		x -= 12 + _take.size.x
 		_take.position.x = x
-
-
-## The node before one in its column, or {} for the first.
-static func _before(key: String) -> Dictionary:
-	var prev := {}
-	for a in Data.ATLAS:
-		if a["key"] == key:
-			return prev
-		if int(a["column"]) == int(Data.atlas_of(key)["column"]):
-			prev = a
-	return {}
+	# the sentence stops short of the buttons (the panel is one line shorter under the lanes)
+	var room: float = x - 16 - _words.position.x
+	if _words.size.x > room:
+		_words.size.x = room
+		var a2: Dictionary = _passive(selected)
+		if a2.is_empty():
+			UI.fit(_words, [Words.MAP["empty_short"] % sim.convoy_depth(), "Pick a node above."])
+		else:
+			UI.fit(_words, [str(a2["sentence"]), str(a2["words"]), ""])
 
 
 # ------------------------------------------------------------------ acting
@@ -295,7 +279,7 @@ func text_nodes() -> Array:
 	if _take.visible:
 		out.append(_take)
 	for h in _heads:
-		out.append_array([h["name"], h["count"]])
+		out.append_array([h["name"], h["count"], h["gate"]])
 	for key in _tiles:
 		out.append_array([_tiles[key]["name"], _tiles[key]["words"]])
 	return out

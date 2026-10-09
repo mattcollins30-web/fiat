@@ -162,6 +162,29 @@ func _endgame(sim) -> void:
 				break
 		if not took:
 			break
+	# what the air's nodes set (9 Oct): the standing words the richest-paying known, the filter the stingiest
+	for k in range(2):
+		if sim.standing_open(k) and (k >= sim.standing.size() or sim.standing[k] == ""):
+			var best := ""
+			var best_v := 0.0
+			for name in sim.words_known():
+				if name in sim.standing:
+					continue
+				var v: float = sim._words_pay([{"w": name, "t": 1}])
+				if v > best_v:
+					best = name
+					best_v = v
+			if best != "":
+				sim.set_standing(k, best)
+	if sim.atlas_rank("clear_air") > 0 and sim.filtered == "":
+		var worst := ""
+		var worst_v := 1e9
+		for name in sim.words_known():
+			var v: float = sim._words_pay([{"w": name, "t": 1}])
+			if v < worst_v:
+				worst = name
+				worst_v = v
+		sim.set_filtered(worst)
 	# the lorry beaten: the yard moves on (the loop), the class put back, and the campaign again from the floor
 	if sim.lorry_done and lorry_at < 0.0:
 		lorry_at = sim.elapsed / 3600.0
@@ -178,17 +201,21 @@ func _endgame(sim) -> void:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()
 		bought.append([sim.elapsed, "the mate: %s" % name])
-	# the cash sinks past the campaign: a word called in on the tier it'll run (the
-	# words go with the run, so it's a sink every run), and the kit insured, while
-	# there's twice the price in hand - a flush player's reserve, not a miser's
+	# the sinks past the campaign (9 Oct, map juicing): the site it'll run broadcast to its most while the notes
+	# hold twice the price over the kept floor, tuned up when the depth grows its room, cleared when its words
+	# read it under even odds; and the kit insured, while there's twice the price in hand
 	if sim.campaign_done():
 		# the tier it'll run: the one just run (8 Oct, the pass at an hour: a full pick here, every site read, and
 		# the word it put on changed that site's key so the step's pick read it all again - two picks a run)
 		var t: int = last_tier if last_tier >= 0 and sim.tier_open(last_tier) else pick_tier(sim)
-		while sim.can_add_word(t) and sim.cash - sim.juice_cost(t) * 2 >= _reserve(sim) and (not sim.words_in_notes() or sim.notes - sim.juice_notes(t) >= _notes_kept(sim)):     # twice: at depth 15 a word is £70k and the pile sat under three of them
-			var cost: int = sim.juice_cost(t)
-			sim.add_word(t, sim.juice_options(t)[0])
-			bought.append([sim.elapsed, "word on tier %d for £%d" % [t, cost]])
+		for key in ["broadcast", "tune"]:
+			if sim.can_word_craft(t, key) and sim.notes - sim.word_craft_cost(t, key) * 2 >= _notes_kept(sim):
+				var cost: int = sim.word_craft_cost(t, key)
+				sim.word_craft(t, key)
+				bought.append([sim.elapsed, "%s on tier %d for %d notes" % [key, t, cost]])
+		if not sim.words[t].is_empty() and sim.can_word_craft(t, "clear") and sim.survival(t) < 0.5:
+			sim.word_craft(t, "clear")
+			bought.append([sim.elapsed, "cleared tier %d" % t])
 		if sim.can_insure(t) and sim.cash >= sim.insure_cost(t) * 3 and sim.survival(t) < 0.95:
 			sim.set_insure(true)
 	# the bench: an affix on what's worn, while the notes stay above the next boss's price

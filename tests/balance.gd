@@ -287,16 +287,16 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i) and i <= sim.best_tier:      # the tiers held: the one just opened reads what it reads until the kit catches up
 			var d0: int = sim.depth[i]
-			var intel0: Array = sim.intel[i].duplicate()
+			var intel0: Array = sim.words[i].duplicate(true)
 			sim.set_depth(i, 1)
-			sim.intel[i] = []                 # the plain site: the words on it are the ladder's business (a Resistant word reads any kit red)
+			sim.words[i] = []                 # the plain site: the words on it are the ladder's business (a Resistant word reads any kit red)
 			if sim.boss_armed.get(i, false):
 				sim.arm_boss(i, false)        # and no boss left armed from an earlier pick: the campaign's odds are the site's
 			var s: float = sim.survival(i)
 			odds.append([i, snappedf(s, 0.001)])
 			if s < 0.6:
 				_odds_detail(sim, i, s)
-			sim.intel[i] = intel0
+			sim.words[i] = intel0
 			sim.set_depth(i, d0)
 	for box in boxes:
 		sim.rig.erase(box)
@@ -376,8 +376,8 @@ func _ladder_read(sim, push: float) -> Dictionary:
 			boxes.append(box)
 	for i in [0, 8]:
 		var d0: int = sim.depth[i]
-		var intel0: Array = sim.intel[i].duplicate()
-		sim.intel[i] = []
+		var intel0: Array = sim.words[i].duplicate(true)
+		sim.words[i] = []
 		# the deepest depth that holds, by halving (8 Oct, the pass at an hour: thirty reads a site stepped; the
 		# odds fall with the depth, so five or six reads find the edge) - lo holds, hi doesn't
 		var lo := 0
@@ -392,7 +392,7 @@ func _ladder_read(sim, push: float) -> Dictionary:
 				hi = d
 		ladder[str(i)] = lo
 		sim.depth[i] = d0
-		sim.intel[i] = intel0
+		sim.words[i] = intel0
 		sim._surv_cache.erase(i)
 	for box in boxes:
 		sim.rig.erase(box)
@@ -455,7 +455,7 @@ func _odds_detail(sim, i: int, s: float) -> void:
 			meds += 1
 	print("  odds T%d %.0f%% at depth 1: hp %.0f/%.0f dps %.1f (gun %s, rounds %s %d, grade %.0f) armour %.0f mitigation %.2f pace %.2f contact %d meds %d wound '%s' night %s weather '%s' intel %s | site hp %.0f dps %.1f pool %d res %s" % [
 		i, s * 100.0, sim.hp, sim.max_hp(), sim.dps(), Items.full_name(gun) if gun != null else "none", str(sim.has_rounds(gun)) if gun != null else "-", sim.rounds_for(gun) if gun != null else 0, sim.grade_bonus(gun) if gun != null else 0.0,
-		sim.armour(), sim.mitigation(), sim.pace(), sim.contact(t), meds, sim.wound, str(sim.is_night()), sim.weather_of(i), str(sim.intel[i]), float(t["hp"]), float(t["dps"]), int(t["pool"]), str(t.get("res", {}))])
+		sim.armour(), sim.mitigation(), sim.pace(), sim.contact(t), meds, sim.wound, str(sim.is_night()), sim.weather_of(i), str(sim.word_names(i)), float(t["hp"]), float(t["dps"]), int(t["pool"]), str(t.get("res", {}))])
 
 
 func _kit(sim) -> String:

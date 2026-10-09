@@ -145,7 +145,7 @@ func show_state(s) -> void:
 	var settled := ""
 	for i in range(Data.TIERS.size()):
 		settled += "1" if sim.odds_settled(i) else "0"
-	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.intel) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
+	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
 		return
@@ -224,11 +224,18 @@ func show_state(s) -> void:
 			res_chips.append(["Nothing", Pal.TEXT_2])
 		c["resist"].show_chips(res_chips if is_open else [])
 		# four rows: the radio's words first, the sky's after; a fifth (three called in, at night, in weather) is left off the end
-		c["intel"].show_rows(word_rows(sim, t["intel"]) if is_open else [], WORD_ROWS)
-		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), "pinned at the Radio" if sim.pinned[i] else "new word after every run"], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
+		var wtiers: Dictionary = t.get("word_tiers", {})
+		var names: Array = wtiers.keys()
+		for nm in t["intel"]:
+			if not (nm in names):
+				names.append(nm)                 # the Radio's words first, the sky's after
+		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
+		var radio: String = ("%d word%s from the Radio" % [wtiers.size(), "" if wtiers.size() == 1 else "s"]) if sim.juiceable(i) else ("words from depth 2" if sim.campaign_done() else "a plain site")
+		UI.fit(c["intel_head"], ["THE WORD · %s · %s" % [sim.sky_words(i), radio], "THE WORD · %s" % sim.sky_words(i), "THE WORD"])
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
-		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and sim.notes < sim.boss_cost(i))
+		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
+		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and not walks and sim.notes < sim.boss_cost(i))
 		var boss: Dictionary = sim.boss_of(i)
 		var convoy: bool = sim.is_convoy(i)
 		if convoy:
@@ -311,9 +318,16 @@ func _reset_map() -> void:
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
 ## the effect as the tail, whole then cut by clause with "+N". Shared with the radio.
-static func word_rows(sim, names: Array) -> Array:
+static func word_rows(sim, names: Array, tiers := {}) -> Array:
 	var out := []
 	for name in names:
+		if tiers.has(name):
+			# a Radio word (9 Oct): its tier as the tag, its bite and pay as the tail, amber - it bites for what it pays
+			var t: int = int(tiers[name])
+			var ww: Array = sim.word_words(name, t)
+			var tail := [str(ww[0]) + " · " + str(ww[1]), str(ww[0]).get_slice(", ", 0) + " · " + str(ww[1]).get_slice(", ", 0), str(ww[1]).get_slice(", ", 0)]
+			out.append({"forms": [name], "tag": Data.WORD_TIER_NAMES[clampi(t, 1, 4) - 1], "colour": Pal.WARN, "tail": tail})
+			continue
 		var m: Dictionary = sim.modifier(name)
 		var clauses: PackedStringArray = str(m["words"]).split(", ", false)
 		var forms := []
