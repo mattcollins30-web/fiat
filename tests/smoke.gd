@@ -1810,7 +1810,16 @@ func _joint_payoff_checks(main) -> void:
 	sim.cls = "Doorman"
 	sim.tree = ["Knuckles/5"]
 	var phys: Array = main._barracks.sum_items([]).filter(func(it): return str(it.get("tag", "")) == "Physical")
-	_check(phys.size() == 1 and phys[0]["forms"].all(func(f): return str(f) != "" and not str(f).contains("+0%")) and str(phys[0]["forms"].back()).begins_with("ignores"), "the pen-only Physical chip reads a nothing: %s" % str(phys))
+	_check(phys.size() == 1 and phys[0]["forms"].all(func(f): return str(f) != "" and not str(f).contains("+0%")) and phys[0]["forms"].slice(1).all(func(f): return str(f).contains("+") or str(f).contains("ignores")), "the pen-only Physical chip reads a nothing: %s" % str(phys))
+	# the plain figures count the notables as the fight does: Spray's quarter with an SMG in hand, none without
+	sim.cls = "Drifter"
+	sim.tree = ["Moving on/3"]
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("smg"))
+	var dmg: Array = main._barracks.sum_items([]).filter(func(it): return str(it.get("tag", "")) == "Damage")
+	_check(dmg.size() == 1 and str(dmg[0]["forms"][0]) == "+25%", "the strip's Damage leaves out Spray: %s" % str(dmg))
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	dmg = main._barracks.sum_items([]).filter(func(it): return str(it.get("tag", "")) == "Damage")
+	_check(dmg.is_empty(), "the strip counts Spray without an SMG in hand: %s" % str(dmg))
 	sim.load_dict(saved)
 	main.refresh()
 	print("joint payoffs ok: the ten joints and Flattened, each where it lives")
@@ -2196,8 +2205,12 @@ func _element_checks(main) -> void:
 	var crowd_tags: Array = []
 	for k in range(bk._sum_chips.shown()):
 		crowd_tags.append(bk._sum_chips._tags[k].text)
+	var crowd_full: Array = bk.sum_items([])     # the row as laid, then the long forms tried alone: they must not fit
+	_check(not bk._fits(bk.sum_items_raw()), "the crowded strip fits at its long forms - the check is not crowded")
+	_check(crowd_tags.size() == crowd_full.size(), "the crowded strip shows %d of %d" % [crowd_tags.size(), crowd_full.size()])
+	bk._shown = ""
+	main.refresh()                              # the probe above laid the long forms on the widget: lay the strip again
 	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Dots"].all(func(t): return crowd_tags.has(t)) and crowd_tags.back() == "Joints", "the crowded strip lost an element, Damage or the Joints: %s" % str(crowd_tags))
-	_check(bk.SUM_DROP.any(func(t): return not crowd_tags.has(t)) or bk._sum_chips._labels[crowd_tags.find("Fire")].text.find("of hits") < 0, "the crowded strip did not need its fallbacks - the check is not crowded: %s" % str(crowd_tags))
 	_sum_strip_check(main)
 	_check_fit(main, "Caravan (a crowded sum strip)")
 	sim.tree = crowd_tree

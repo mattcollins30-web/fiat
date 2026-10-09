@@ -2394,7 +2394,9 @@ shown, every element the trees give is on the row (read off the screen), and a c
 four elements at once) needs its fallbacks and keeps Damage, the four elements, Dots and the Joints last. The
 reviewer caught a Physical chip reading "+0%" on a build with only the Doorman's knuckles, the nothing-fits
 case dropping the Joints, the dots' "×2 long" reading the kit as well as the trees, and the first cut of the
-checks reading the strip back from what they'd just laid themselves; all fixed.
+checks reading the strip back from what they'd just laid themselves; all fixed. Then (Matt: "may as well be consistent")
+the plain figures count every trained tree's notables and "also" figures too, as the fight reads them - Spray's
++25% with an SMG in hand, nothing without - where before they counted only the small nodes in the lanes.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element

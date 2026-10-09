@@ -747,7 +747,7 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 	return {"name": title, "drawer": true, "nodes": nodes, "pages": pages, "page": page, "found": list.size(), "total": total, "lines": lines, "row_h": row_h, "rows": rows}
 
 
-## What the trees add up to (9 Oct, option A): the small nodes' figures over the lanes; the elements in play -
+## What the trees add up to (9 Oct, option A): every trained tree's figures, as the fight reads them; the elements in play -
 ## each the share of the hit the trees convert to it and the increase they give it, notables included, in its
 ## colour; the dots; the joints closed of the runner's. A plain figure at nothing is left off; when the row is
 ## still too long the plain figures go from the least telling up (SUM_DROP), never an element's or the joints'.
@@ -756,16 +756,17 @@ func _show_sum(lanes: Array) -> void:
 	_sum_chips.show_chips(sum_items(lanes))
 
 
-func sum_items(lanes: Array) -> Array:
+## The strip's items at their long forms, nothing cut to fit (for the tests).
+func sum_items_raw() -> Array:
+	return sum_items([], false)
+
+
+func sum_items(_lanes: Array, fit := true) -> Array:
+	# every figure from every trained tree, notables and "also" figures included, typed ones only with their gun in
+	# hand (9 Oct, Matt: "may as well be consistent" - Spray's +25% was left out while it counted in the fight)
 	var sums := {}
-	for t in lanes:
-		if t == null:
-			continue
-		for i in range(t["nodes"].size()):
-			var nd: Dictionary = t["nodes"][i]
-			var id := "%s/%d" % [t["name"], i]
-			if not (nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false)) and sim.tree.has(id) and sim.node_active(id):
-				sums[nd["effect"]] = float(sums.get(nd["effect"], 0.0)) + float(nd.get("value", 0))
+	for e in ["damage_pct", "hp", "first_pct", "search_pct", "patrol_pct", "rarity", "loot_pct"]:
+		sums[e] = sim.tree_sum(e)
 	var items := []
 	var plain := func(tag: String, value: float, words: String) -> void:
 		if value > 0.0:
@@ -808,6 +809,8 @@ func sum_items(lanes: Array) -> Array:
 			long.append(ignores)
 		var short: String = ("+%.0f%%" % phys_inc) if phys_inc > 0.0 else (ignores if ignores != "" else str(mid[0]) if not mid.is_empty() else "")
 		if short != "":
+			if phys_inc <= 0.0 and ignores != "":
+				mid = ([mid[0]] if not mid.is_empty() else []) + [ignores]     # no increase: what it ignores is the telling part
 			items.append({"tag": "Physical", "forms": [" · ".join(long), " · ".join(mid) if not mid.is_empty() else short, short],
 				"colour": Pal.ELEMENT_COLOURS.get("physical", Pal.TEXT)})
 	# the dots: their increase, and what the notables do to them
@@ -842,6 +845,8 @@ func sum_items(lanes: Array) -> Array:
 		items.append({"tag": "Joints", "forms": ["%d of %d" % [closed, joints]], "colour": Pal.ACCENT})
 	if items.is_empty():
 		items.append({"forms": ["Nothing trained yet"], "colour": Pal.TEXT_2})
+	if not fit:
+		return items
 	# too long for the row: the middle forms ("80% · +52%"), then the plain figures but Damage and Max HP go to
 	# keep them - the elements are what the strip is for; then the shortest forms, the plain going least telling first
 	var tries: Array = [[0, 0]]
