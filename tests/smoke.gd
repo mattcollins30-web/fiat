@@ -876,12 +876,14 @@ func _campaign_checks(main) -> void:
 	var guard := 0
 	while sim.on_mission() and sim.mission["remaining"] > 0 and guard < 20000:
 		sim.hp = sim.max_hp()
+		sim.mission["clock"] = 900.0            # the test wants the boss, not the clock
 		sim.advance(1.0)
 		guard += 1
 	_check(sim.on_mission() and sim.mission["boss"]["started"], "the boss did not come out when the pool was down")
 	guard = 0
 	while sim.on_mission() and sim.mission["boss"]["alive"] and guard < 20000:
 		sim.hp = sim.max_hp()
+		sim.mission["clock"] = 900.0
 		sim.advance(1.0)
 		guard += 1
 	_check(sim.on_mission() and not sim.mission["boss"]["alive"], "the boss did not go down")
@@ -1106,6 +1108,7 @@ func _run_screen(main) -> void:
 			sim.deploy(0)
 		var guard := 0
 		while sim.on_mission() and sim.mission["found"].size() < 2 and guard < 600:
+			sim.mission["clock"] = 900.0         # the test wants the run, not the clock
 			sim.advance(1.0)
 			if sim.on_mission() and sim.hp < sim.max_hp() * 0.3:
 				sim.hp = sim.max_hp()     # the test wants the run, not the risk
@@ -1252,6 +1255,7 @@ func _class_trees(main) -> void:
 	sim.respec()
 	_set_cls(sim, "Doorman")
 	_radio_juice_checks(main)
+	_clock_checks(main)
 	# the Yard's upgrades
 	sim.cash += 1000000.0                       # whatever inflation has done by now
 	for k in ["generator", "lookout", "kennel"]:
@@ -4065,7 +4069,7 @@ func _playtest_checks(main) -> void:
 	var band0 = c["band"]
 	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
 	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.begins_with("Tier 1 · "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
-	_check(c["tiles"][0]["key"].text == "Them" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight", "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
+	_check(c["tiles"][0]["key"].text == "Them" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
 	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
 	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
 	if yard_note != null and yard_note.text != "":
@@ -7875,19 +7879,14 @@ func _radio_juice_checks(main) -> void:
 	if sim.on_mission():
 		sim._extract()
 	sim.words[3] = []
-	sim.words[0] = [{"w": "Last bus", "t": 1}]
 	sim.best_depth[0] = 30
 	sim.set_depth(0, 24)
-	sim.hp = sim.max_hp()
-	sim.deploy(0)
-	if sim.on_mission():
-		sim.mission["target_hp"] = 1e12
-		sim.hp = 1e9
-		for k in range(300):
-			if not sim.on_mission():
-				break
-			sim.advance(1.0)
-	_check(not sim.on_mission(), "Last bus did not end the run on its clock")
+	sim.words[0] = []
+	var clock_plain: float = sim.clock_of(0)
+	sim.words[0] = [{"w": "Last bus", "t": 1}]
+	_check(is_equal_approx(sim.clock_of(0), clock_plain * 0.5), "Last bus did not halve the clock: %.0f of %.0f" % [sim.clock_of(0), clock_plain])
+	sim.words[0] = [{"w": "Numbers", "t": 3}, {"w": "Market day", "t": 3}]
+	_check(is_equal_approx(sim.clock_of(0), clock_plain), "the Radio's words moved the clock: %.0f of %.0f" % [sim.clock_of(0), clock_plain])
 	sim.words[0] = []
 	# Twist: one of four, always sealed; a sealed site takes nothing but a dear Clear
 	sim.set_depth(0, 15)
@@ -7965,3 +7964,138 @@ func _radio_juice_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("map juicing ok: campaign sites plain, the book, depth's words and tiers, the pools, seven crafts, Twist, the flags, the save, the screen")
+
+
+## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
+## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
+## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+func _clock_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var t0: Dictionary = sim.effective(0)
+	_check(is_equal_approx(sim.clock_of(0), Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * (int(t0["plain_pool"]) + Data.CLOCK_GANGS)), "the streets' clock is off: %.0f" % sim.clock_of(0))
+	_check(is_equal_approx(sim.clock_for_head(t0, float(t0["plain_hp"]) * 10.0), Data.CLOCK_PER_HEAD * 10.0), "a head ten heads strong does not bring ten heads' time")
+	# it runs while they're on you, and stands while the site's clear
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	_check(m != null and is_equal_approx(float(m["clock"]), sim.clock_budget(m["t"])) and is_equal_approx(float(m["clock_max"]), float(m["clock"])), "the run did not start on the site's clock")
+	m["target_hp"] = 1e12
+	sim.hp = 1e9
+	var c0: float = float(m["clock"])
+	sim.advance(2.0)
+	_check(sim.on_mission() and is_equal_approx(float(m["clock"]), c0 - 2.0), "the clock did not run in the fight: %.1f from %.1f" % [float(m["clock"]), c0])
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var rs = main._run
+	_check(rs._band.headline.text == Fmt.mss(ceilf(float(m["clock"]))) and rs._band.unit.text.begins_with("left"), "the run's headline is not the clock: '%s' / '%s'" % [rs._band.headline.text, rs._band.unit.text])
+	_check_fit(main, "Run (the clock)")
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9                     # no gang for a while
+	var c1: float = float(m["clock"])
+	sim.advance(3.0)
+	_check(sim.on_mission() and is_equal_approx(float(m["clock"]), c1), "the clock ran while the site was clear: %.1f from %.1f" % [float(m["clock"]), c1])
+	main.refresh()
+	_check(rs._band.unit.text.contains("stopped") or rs._band.unit.text == "left", "the run's clock does not say it's stopped: '%s'" % rs._band.unit.text)
+	# out of time: the runner home, the pack lost, two pieces of kit with it
+	m["remaining"] = 5
+	m["cleared"] = false
+	m["target_hp"] = 1e12
+	var junk: Dictionary = sim._plain("Helmet", "Hard hat")
+	m["found"].append(junk)
+	for s in ["Helmet", "Armour", "Secondary"]:
+		if sim.equipped[s] == null:
+			sim.equipped[s] = sim._plain(s, Data.BASES[s][0]["name"])
+	var worn0: int = 0
+	var ids0 := {}
+	for s in Data.SLOTS:
+		worn0 += 1 if sim.equipped[s] != null else 0
+		ids0[s] = sim.equipped[s]["id"] if sim.equipped[s] != null else -1
+	var lost0: int = sim.operators_lost
+	var auto_eq0 = sim.auto_equip
+	sim.auto_equip = false                       # the slot check reads the kit as the clock left it
+	m["clock"] = 0.5
+	sim.advance(1.0)
+	var worn1: int = 0
+	for s in Data.SLOTS:
+		worn1 += 1 if sim.equipped[s] != null else 0
+	_check(not sim.on_mission() and sim.last_report.get("outcome", "") == "Out of time" and sim.operators_lost == lost0 and sim.hp > 0.0, "running out of time did not end the run with the runner home: %s" % str(sim.last_report.get("outcome", "")))
+	var fresh := 0
+	for s in Data.SLOTS:
+		if sim.equipped[s] != null and sim.equipped[s]["base"] in ["Hand-me-down nail gun", "Work jacket", "Plastic bag", "Bum bag"] and int(sim.equipped[s]["rarity"]) == 0:
+			fresh += 1
+	_check(worn0 - worn1 + fresh >= Data.CLOCK_LOSE_KIT and worn1 >= worn0 - Data.CLOCK_LOSE_KIT and (not sim.stash.has(junk) or sim.yard_has("fetch")), "out of time lost %d pieces of kit (%d hand-me-downs in), or the pack came home" % [worn0 - worn1, fresh])
+	_check(sim.equipped["Primary"] != null, "out of time left the runner with no gun")
+	var changed := 0
+	for s in Data.SLOTS:
+		var id1: int = sim.equipped[s]["id"] if sim.equipped[s] != null else -1
+		changed += 1 if id1 != ids0[s] else 0
+	_check(changed == Data.CLOCK_LOSE_KIT, "out of time changed %d slots, not %d" % [changed, Data.CLOCK_LOSE_KIT])
+	sim.auto_equip = auto_eq0
+	_check(sim.events.slice(-4).any(func(ev): return str(ev[1]).begins_with("Out of time")), "out of time has no line")
+	# insured, the kit comes back to the stash
+	for s in ["Helmet", "Armour", "Secondary"]:
+		if sim.equipped[s] == null:
+			sim.equipped[s] = sim._plain(s, Data.BASES[s][0]["name"])
+	sim.cash += 1e6
+	sim.hp = sim.max_hp()
+	if sim.can_insure(0):
+		sim.set_insure(true)
+	sim.deploy(0)
+	m = sim.mission
+	_check(m != null and m.get("insured", false), "the insured time-out test could not insure its run")
+	if m != null and m.get("insured", false):
+		var stash0: int = sim.stash.size()
+		m["clock"] = 0.5
+		m["target_hp"] = 1e12
+		sim.hp = 1e9
+		sim.advance(1.0)
+		_check(not sim.on_mission() and sim.stash.size() >= stash0 + Data.CLOCK_LOSE_KIT, "the insurance did not pay for the kit lost to the clock: %d → %d" % [stash0, sim.stash.size()])
+	elif m != null:
+		sim.extract_now()
+	# the dry runs read the clock: out of time is a run lost
+	var dm := {"dry": true}
+	sim._time_out(dm)
+	_check(dm.get("dead", false) and dm.get("timed_out", false), "a dry run out of time did not read as lost")
+	# and a real dry run: fists against the streets, the runner unkillable, loses to the clock
+	var gun0 = sim.equipped["Primary"]
+	var hat0 = sim.equipped["Helmet"]
+	var hp0: float = sim.hp
+	sim.equipped["Primary"] = null
+	var hat: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
+	hat["affixes"].append({"stat": "hp", "value": 1e7})          # a runner who can't go down: only the clock beats him
+	sim.equipped["Helmet"] = hat
+	sim.hp = sim.max_hp()
+	var to0: int = int(sim.prof.get("dry_timeouts", 0))
+	var rr := RandomNumberGenerator.new()
+	rr.seed = 7
+	var won: bool = sim._dry_run(0, rr)
+	_check(not won and int(sim.prof.get("dry_timeouts", 0)) == to0 + 1, "fists against the streets' clock did not time out in the odds (won %s)" % str(won))
+	# the Runs card goes red when the fight won't fit
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(0)
+	main._missions._shown = ""
+	main.refresh()
+	var cr: Dictionary = main._missions._cols[0]
+	var t00 = Data.ZONES[0]["tiers"][0]
+	_check(sim.estimate(t00) > sim.clock_of(t00) and cr["tiles"][2]["value"].get_theme_color("font_color") == Pal.BAD, "fists' Runs card is not red over the clock: %.0f of %.0f" % [sim.estimate(t00), sim.clock_of(t00)])
+	sim.equipped["Primary"] = gun0
+	sim.equipped["Helmet"] = hat0
+	sim.hp = hp0
+	# the Runs card: the clock beside the fight, red when the fight won't fit
+	sim.load_dict(saved)
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(0)
+	main._missions._shown = ""
+	main.refresh()
+	var c: Dictionary = main._missions._cols[0]
+	_check(c["tiles"][2]["value"].text.contains(Fmt.mss(sim.clock_of(Data.ZONES[0]["tiers"][0]))), "the Runs card's clock is off: '%s'" % c["tiles"][2]["value"].text)
+	var red: bool = c["tiles"][2]["value"].get_theme_color("font_color") == Pal.BAD
+	_check(red == (sim.estimate(Data.ZONES[0]["tiers"][0]) > sim.clock_of(Data.ZONES[0]["tiers"][0])), "the Runs card's clock is red when it shouldn't be, or not when it should")
+	_check_fit(main, "Runs (the clock)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("run timers ok: the budget, the head's time, ticking only in a fight, out of time, the insurance, the dry runs, the screens")

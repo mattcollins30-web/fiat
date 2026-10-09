@@ -61,6 +61,8 @@ const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 var sim
 var _left: Panel                   # the column: the band and the sections
 var _band: Band
+var _clock_track: Panel
+var _clock_fill: Panel
 var _fight := {}                   # {box, head, tiles[4], track, fill, bar_text, key, chips}
 var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note, key, chips}
 var _rig_head: Label
@@ -92,6 +94,9 @@ func _init() -> void:
 	_left = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_band = Band.new(BODY_W, BAND_H)
 	_left.add_child(_band)
+	# the run's clock (9 Oct, Clock-A): a thin bar under the kills, draining as it runs
+	_clock_track = UI.panel(_band, Rect2(PAD, BAND_H - 11, BODY_W - 2 * PAD, 6), UI.box(Color(Pal.BG, 0.85), 3))
+	_clock_fill = UI.panel(_clock_track, Rect2(0, 0, BODY_W - 2 * PAD, 6), UI.box(Pal.ACCENT, 3))
 	# the fight and the runner each in an outlined box, so them and you read apart
 	_fight["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, FIGHT_BOX_Y, INNER + 2 * BOX_PAD, FIGHT_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	_runner["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, RUNNER_BOX_Y, INNER + 2 * BOX_PAD, RUNNER_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
@@ -165,7 +170,15 @@ func show_state(s) -> void:
 			zone_i = z
 	_band.set_site(t["name"])
 	_band.set_tone(zone_i)
-	_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(m["elapsed"]), "of the run", Pal.ACCENT)
+	# the headline is the clock (9 Oct, Clock-A): counting down while a gang is on you, standing while it's clear
+	var clock: float = maxf(0.0, float(m.get("clock", 0.0)))
+	var clock_max: float = maxf(1.0, float(m.get("clock_max", clock)))
+	var ticking: bool = int(m["remaining"]) > 0
+	var clock_colour: Color = Pal.BAD if clock <= 10.0 else (Pal.ACCENT if clock <= clock_max * Data.CLOCK_WARN else Pal.TEXT)
+	var clock_unit: Array = ["left · ticks while they're on you", "left · ticking", "left"] if ticking else ["left · stopped while it's clear", "left · stopped", "left"]
+	_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)
+	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
+	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
 	# the capstones in play on this run, by name, as the band's third line
 	var caps := []
@@ -184,7 +197,7 @@ func show_state(s) -> void:
 	var gangs: String = "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]
 	if convoy_in:
 		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
-	_band.set_right(["Cash so far %s" % Fmt.money(m["cash"]), gangs, cap_line])
+	_band.set_right(["%s in · clock %s" % [Fmt.mss(m["elapsed"]), Fmt.mss(ceilf(clock_max))], gangs, cap_line])
 	var of: int = maxi(1, int(m["kills"]) + int(m["remaining"])) if not m["cleared"] else int(t["pool"])
 	_band.set_bar((float(m["kills"]) / float(of)) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], of]))
 	# them
@@ -445,7 +458,7 @@ func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
 	# one row of full cells to eight, one row of smaller to twelve, two rows past that (the generator's row): the same 64 px tall
 	var rows: int = 1 if cap <= 12 else 2
-	var per_row: int = ceili(float(cap) / rows)
+	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
 	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end

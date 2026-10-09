@@ -1665,7 +1665,7 @@ const WORDS := [
 	{"name": "Kitted out", "learn": "zone", "zone": 2, "depth": 8, "bite": {"res": "all", "res_add": 0.25}, "pay": {"rarity": 0.5}},
 	{"name": "Rationed", "learn": "deep", "paper": "A ration book", "depth": 12, "bite": {"no_meds": true}, "pay": {"drop": 2.0}},
 	{"name": "Curfew", "learn": "deep", "paper": "A council minute", "depth": 18, "bite": {"pool": 2.0, "patrol": 0.75}, "pay": {"drop": 1.8, "cash": 1.8}},
-	{"name": "Last bus", "learn": "deep", "paper": "A bus timetable, amended", "depth": 24, "bite": {"clock": 240.0}, "pay": {"rarity": 1.2}},
+	{"name": "Last bus", "learn": "deep", "paper": "A bus timetable, amended", "depth": 24, "bite": {"clock_half": true}, "pay": {"rarity": 1.2}},
 	{"name": "Foreclosure", "learn": "deep", "paper": "A letter to the Bank", "depth": 30, "bite": {"hp": 2.5}, "pay": {"loot_tier": 2}},
 	{"name": "Everyone's here", "learn": "deep", "paper": "A list of names", "depth": 40, "bite": {"pool": 3.0, "contact": 2}, "pay": {"drop": 2.5, "xp": 2.0}},
 	{"name": "The Manager walks", "learn": "deep", "paper": "The Manager's note", "depth": 50, "bite": {"boss_walks": true}, "pay": {}},
@@ -1708,6 +1708,17 @@ const DEPTH_DROP := 0.03
 const ARMOUR_K := 150.0           # mitigation = armour / (armour + ARMOUR_K)
 const CLEAR_BONUS := 0.3          # the clear bonus: this many kills' worth of XP per hostile in the pool
 const DEPTH_RARITY := 0.10
+
+## Run timers (9 Oct, docs/design/timers.md): one clock a run, ticking only while a gang is on you. A site's
+## budget is the same for every build - CLOCK_BASE + CLOCK_PER_HEAD a head of its plain pool and CLOCK_GANGS
+## heads for the gangs after - so the damage it asks grows with its heads' HP: a DPS check. A crew's head adds
+## CLOCK_PER_HEAD for every plain head's HP he carries when he comes out. Out of time: the pack and CLOCK_LOSE_KIT
+## random pieces of worn kit lost, the runner home. First figures; the balance pass sets them.
+const CLOCK_BASE := 60.0            # the starting kit's 12/s on the streets' 200 HP heads is 17 s a head: the clock must let a new runner through
+const CLOCK_PER_HEAD := 12.0        # the bot's median at the sites it picks is 6 s a head (9 Oct probe): twice that
+const CLOCK_GANGS := 5
+const CLOCK_LOSE_KIT := 2
+const CLOCK_WARN := 0.2            # the clock's last fifth: amber
 
 ## The operator. Level n: +HP_PER_LEVEL max HP and +DMG_PER_LEVEL damage a level.
 const BASE_HP := 100.0

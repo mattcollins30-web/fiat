@@ -2587,8 +2587,8 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 			return "no meds on the run"
 		"no_kill_cash":
 			return "no cash from kills"
-		"clock":
-			return "the run ends at %d minutes" % int(float(part["clock"]) / 60.0)
+		"clock_half":
+			return "the clock halved"
 		"boss_walks":
 			return "the zone's head every run, free"
 		"drop":
@@ -2622,7 +2622,7 @@ func word_totals(i: int) -> Dictionary:
 		if e.has("type"):
 			bring["types"][e["type"]] = float(bring["types"].get(e["type"], 0.0)) + float(e.get("share", 0.0))
 		bring["contact"] += int(e.get("contact", 0))
-		for f in ["no_meds", "no_kill_cash", "clock", "boss_walks"]:
+		for f in ["no_meds", "no_kill_cash", "clock_half", "boss_walks"]:
 			if e.has(f):
 				bring["flags"].append(f)
 	return {"get": gets, "bring": bring}
@@ -2667,7 +2667,7 @@ func word_total_words(i: int) -> Array:
 	for ty in b["res"]:
 		bw.append("%s res %d%%" % [ty, int(round(float(b["res"][ty]) * 100.0))])
 	for f in b["flags"]:
-		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill cash", "clock": "a clock", "boss_walks": "the head walks"}[f])
+		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill cash", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
 	return [" · ".join(gw), " · ".join(bw)]
 
 
@@ -3576,6 +3576,8 @@ func effective(i: int) -> Dictionary:
 	if w > 0.0:
 		e["drop"] *= 1.0 - Data.WORN_DROP * w
 		e["cash"] *= 1.0 - Data.WORN_CASH * w
+	e["plain_pool"] = int(e["pool"])         # the clock reads the site as plain (9 Oct): the words bite through it; the heads are formed from the same
+	e["plain_hp"] = float(e["hp"])
 	var act: Array = active_words(i)
 	var walks := false
 	for aw in act:
@@ -3632,8 +3634,8 @@ func effective(i: int) -> Dictionary:
 		for f in ["no_meds", "no_kill_cash", "boss_walks"]:
 			if m.get(f, false):
 				e[f] = true
-		if m.has("clock"):
-			e["clock"] = minf(float(e.get("clock", 1e9)), float(m["clock"]))
+		if m.get("clock_half", false):
+			e["clock_half"] = true
 	# what their fire is made of, and what they resist: the zone's, grown by depth, and the words
 	var zone: Dictionary = Data.ZONE_TYPES[int(base["zone"])]
 	var types := {}
@@ -3723,7 +3725,7 @@ const EARLY_RUNS := 8
 var _dry_min_hp := 1.0               # the last dry run's lowest HP, as a share of the max
 ## Where the time goes (8 Oct, the pass at an hour): counts and microseconds the balance gate prints. Cheap
 ## enough to leave on: a few adds a tick.
-var prof := {"surv_calls": 0, "surv_reads": 0, "surv_us": 0, "dry_runs": 0, "dry_ticks": 0, "snap_us": 0, "real_ticks": 0, "real_us": 0}
+var prof := {"surv_calls": 0, "surv_reads": 0, "surv_us": 0, "dry_runs": 0, "dry_ticks": 0, "snap_us": 0, "real_ticks": 0, "real_us": 0, "dry_timeouts": 0}
 
 
 func odds_frame_start() -> void:
@@ -3826,7 +3828,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
 	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
 	var m := {
-		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false,
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false, "clock": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
@@ -3858,7 +3860,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		if m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 			use_med(first_med()["id"])
 		guard += 1
-	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard < 450
+	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard < 450     # out of time reads as dead
 	_dry_on = false
 	hp = keep["hp"]
 	xp = keep["xp"]
@@ -3899,7 +3901,7 @@ func deploy(i: int) -> void:
 	_yard_setting_off()                       # before the run's record of its starting HP
 	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
 	mission = {
-		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured,
+		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured, "clock": clock_budget(t), "clock_max": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0,
@@ -3989,6 +3991,12 @@ func _tick(dt: float) -> void:
 	var t: Dictionary = m["t"]
 	m["elapsed"] += dt
 	if m["remaining"] > 0:
+		# the clock (9 Oct): it runs while a gang is on you, and stands while the site is clear
+		m["clock"] = float(m.get("clock", clock_budget(t))) - dt
+		m["clock_used"] = float(m.get("clock_used", 0.0)) + dt
+		if m["clock"] <= 0.0:
+			_time_out(m)
+			return
 		_fight(m, t, dt)
 	else:
 		_search(m, t, dt)
@@ -3997,10 +4005,6 @@ func _tick(dt: float) -> void:
 		if yard_has("drip"):
 			_heal(m, max_hp() * 0.01 * dt)        # the Clinic's Drip
 	if mission == null:
-		return
-	if t.has("clock") and m["elapsed"] >= float(t["clock"]) and not m.get("dry", false):
-		log_event("Last bus: the run's out of time")
-		_extract()                                # the Radio's Last bus: the run ends on the clock, home with what it has
 		return
 	if _affix_sum("regen") > 0.0:
 		_heal(m, _affix_sum("regen") * dt)
@@ -4047,6 +4051,89 @@ func _tick(dt: float) -> void:
 		_extract()
 
 
+## The run's clock (9 Oct, docs/design/timers.md): a site's budget, the same for every build - so many seconds a
+## head of its plain pool and of the gangs after it - halved by the Radio's Last bus.
+func clock_budget(t: Dictionary) -> float:
+	var heads: int = int(t.get("plain_pool", t.get("pool", 1))) + Data.CLOCK_GANGS
+	return (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * heads) * (0.5 if t.get("clock_half", false) else 1.0)
+
+
+## A crew's head brings his own time when he comes out: a head's seconds for every plain head's HP he carries.
+func clock_for_head(t: Dictionary, head_hp: float) -> float:
+	return Data.CLOCK_PER_HEAD * head_hp / maxf(1.0, float(t.get("plain_hp", t.get("hp", 1.0))))
+
+
+## The clock a site would start with now, for the Runs card.
+func clock_of(i: int) -> float:
+	return clock_budget(effective(i))
+
+
+## Out of time: the runner gets out, the pack doesn't, and CLOCK_LOSE_KIT pieces of worn kit go with it - the
+## insurance pays for those as on a death (the Fence's Insurance desk the pack too); the dog fetches the best of it.
+func _time_out(m: Dictionary) -> void:
+	m["timed_out"] = true
+	if m.get("dry", false):
+		m["dead"] = true                       # the odds: out of time is a run lost
+		prof["dry_timeouts"] = int(prof.get("dry_timeouts", 0)) + 1     # the bot and the balance gate count them
+		return
+	var t := tier(m["tier"])
+	var insured: bool = m.get("insured", false)
+	if auto_tier >= 0:
+		auto_tier = -1                         # out of time stops the auto-run, as a wound or a death does: no run after run lost
+		log_event("Auto-run stopped")
+	var worn: Array = []
+	for s in Data.SLOTS:
+		if equipped[s] != null:
+			worn.append(s)
+	var lost: Array = []
+	var lost_slots: Array = []
+	for k in range(mini(Data.CLOCK_LOSE_KIT, worn.size())):
+		var s: String = worn[rng.randi_range(0, worn.size() - 1)]
+		worn.erase(s)
+		lost_slots.append(s)
+		var it: Dictionary = equipped[s]
+		equipped[s] = null
+		lost.append(Items.full_name(it).to_lower() if not it.has("unique") else Items.full_name(it))
+		if insured:
+			stash.append(it)                     # the Fence held the paper on it
+		else:
+			_lose(it, "a runner", "runner")
+		if s == "Rig":
+			for r_it in rig:
+				if insured:
+					stash.append(r_it)               # what was in it goes with it
+			rig = []
+	# the hand-me-downs in their places, once every loss is in, as a new runner arrives with (no runner left with fists
+	# and a clock: a spiral); a new nail gun brings its nails
+	var start := {"Primary": "Hand-me-down nail gun", "Armour": "Work jacket", "Backpack": "Plastic bag", "Rig": "Bum bag"}
+	for s in lost_slots:
+		if start.has(s):
+			equipped[s] = _plain(s, start[s])
+	if "Primary" in lost_slots and rig_room(1):
+		rig.append(_plain(Data.AMMO, "Nails"))
+	var kept_pack: bool = insured and yard_has("insurance_desk")
+	var carried := ""
+	if not kept_pack and not m["found"].is_empty():
+		var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it))     # the deeds come home whatever: _extract writes the ending
+		var rest: Array = m["found"].filter(func(it): return not Items.is_deeds(it))
+		if yard_has("fetch") and not rest.is_empty():
+			var best: Dictionary = rest[0]
+			for it in rest:
+				if sell_price(it) > sell_price(best):
+					best = it
+			stash.append(best)                   # the Kennel's Fetch: the best of the pack, carried out - straight in, as on a death
+			carried = Items.full_name(best)
+			log_event("The dog came home with %s" % (carried if best.has("unique") else carried.to_lower()))
+			rest.erase(best)
+		m["left"] = int(m["left"]) + rest.size()
+		m["found"] = keep
+	_dry_memo.clear()
+	log_event("Out of time in %s. The pack's gone%s%s." % [Words.mid(t["name"]), "" if lost.is_empty() else ", and %s with it" % " and ".join(lost), "; the Fence pays for the kit" if insured and not lost.is_empty() else ""])
+	_extract()
+	if carried != "":
+		last_report["carried"] = carried
+
+
 ## "Fill up, then go": with the fight won, keep searching and leave by itself
 ## when the pack's full or the next gang comes - the auto-run's rule, for one
 ## run, so a long gang delay isn't three minutes of watching.
@@ -4082,6 +4169,8 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 		"convoy":
 			var size: int = PATROL_BASE + 2
 			m["remaining"] += size
+			m["clock"] = float(m.get("clock", 0.0)) + Data.CLOCK_PER_HEAD * size      # a convoy's crew brings its own time
+			m["clock_max"] = float(m.get("clock_max", 0.0)) + Data.CLOCK_PER_HEAD * size
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
 			m["fresh"] = true
@@ -4228,6 +4317,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["boss"]["started"] = true
 			m["remaining"] = 1
 			m["target_hp"] = float(m["boss"]["hp"])
+			var head_s: float = clock_for_head(t, float(m["boss"]["hp"]))
+			m["clock"] = float(m.get("clock", 0.0)) + head_s     # the head brings his own time
+			m["clock_max"] = float(m.get("clock_max", 0.0)) + head_s
 			m["fresh"] = true
 			m["sustain_t"] = 0.0
 			log_event("%s comes out%s. %s" % [m["boss"]["name"], ", at full strength" if m["boss"].get("pinnacle", false) else "", Words.BOSSES.get(m["boss"]["name"], {}).get("out", "")])
@@ -4843,12 +4935,13 @@ func _extract() -> void:
 		return
 	var m: Dictionary = mission
 	var t := tier(m["tier"])
-	if m.get("ghost_pending", false) and pack_used(m) >= capacity():
+	var timed_out: bool = m.get("timed_out", false)
+	if m.get("ghost_pending", false) and pack_used(m) >= capacity() and not timed_out:     # out of time is no clear, kept pack or not
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack full, and %s counts as cleared" % Words.mid(t["name"]))
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
-	if has_node("cap_the_lot") and pack_used(m) >= capacity():
+	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
 	_earn(float(m["cash"]))
 	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
@@ -4878,7 +4971,9 @@ func _extract() -> void:
 		elif stash_put(it):
 			stashed += 1
 	var outcome := "Back"
-	if not m["cleared"]:
+	if m.get("timed_out", false):
+		outcome = "Out of time"
+	elif not m["cleared"]:
 		outcome = "Cut and run"
 	elif m["patrols"] > 0:
 		outcome = "Back, chased"
@@ -4886,6 +4981,7 @@ func _extract() -> void:
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
 		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(),
+		"clock_used": float(m.get("clock_used", 0.0)), "clock_left": float(m.get("clock", 0.0)), "timed_out": bool(m.get("timed_out", false)),
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])
@@ -5877,6 +5973,9 @@ func load_dict(d: Dictionary) -> void:
 			else:
 				for k in ["pool", "loot_tier", "contact", "depth", "tier"]:
 					mission["t"][k] = int(mission["t"][k])
+				if not mission.has("clock"):
+					mission["clock"] = clock_budget(mission["t"])     # a run from before the clock (9 Oct): the site's, from now
+					mission["clock_max"] = mission["clock"]
 	for it in _all_items():
 		it["id"] = int(it["id"])
 		it["rarity"] = int(it["rarity"])

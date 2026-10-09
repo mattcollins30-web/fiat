@@ -2493,6 +2493,32 @@ cash compounding through the takings, affix asks unreadable (two armours, "of da
 resetting the turn-downs, the bot skipping meds and papers, and the Fence's line going blank; all fixed, with
 checks.
 
+**Run timers (9 Oct, the playtest list, item six; the spec is `docs/design/timers.md`, Clock-A on the canvas).**
+Matt: a count-up clock lets a 0% site be face-tanked on meds and luck; a countdown that stops while the site is
+clear, a loss if it runs out, "same as other extraction games", a DPS check. Agreed: out of time the runner lives,
+the pack goes and two random pieces of worn kit with it; the budget is a reference DPS check, the same for every
+build; nothing buys more time yet. *Data:* `CLOCK_BASE` 60 s, `CLOCK_PER_HEAD` 12 s, `CLOCK_GANGS` 5,
+`CLOCK_LOSE_KIT` 2, `CLOCK_WARN` 0.2. *Sim:* `clock_budget` reads the site as plain (`plain_pool`/`plain_hp`,
+recorded before the words and the head form) - base + 12 s × (pool + 5); Last bus halves it in place of its
+forced extract; a head brings `clock_for_head` (12 s per plain head's worth of his HP), a convoy 12 s a truck.
+`_tick` runs the clock only while heads remain; `_time_out`: the dry runs count it a loss (`prof.dry_timeouts`);
+a real run stops the auto-run, loses two worn pieces (to the stash if insured; a lost rig takes its pouches),
+hands out the new-runner hand-me-downs (and nails) for a lost gun, armour, bag or rig - a time-out never leaves
+fists against the next clock - keeps the deeds, the Kennel's Fetch carries the best of the rest straight to the
+stash, the Insurance desk keeps the pack; "Out of time" in the report, no Ghost clear or The lot on it. Old
+saves' runs get the site's clock on load. *The run* (`run.gd`): the band's headline is the clock ("1:24 left ·
+ticks while they're on you" / "stopped while it's clear"), a bar draining under the kills, amber in the last
+fifth, red under ten seconds; "X in · clock Y" in the corner. *The Runs card:* "Fight · clock", "0:52 of 1:40",
+red when the estimate is over the clock. *Balance:* probes at 20/8 timed the early game out; 60/12 is twice the
+bot's median 6 s a head (Poacher 9 h: 4 time-outs in 224 runs). The gate (chosen sites time out under one run in
+twenty, two depths past the climb over half) needs the bot to report real time-outs - for the balance pass.
+*The smoke:* the budget and a head's time, ticking only in a fight, the headline and its stopped form, out of time
+(runner home, exactly two slots changed, a gun after, the line), insured kit to the stash, a dry run on fists
+timing out, the Runs card's clock and its red. The reviewer caught the auto-run running on after a time-out, the
+deeds lost to it, the hand-me-downs handed out before the second loss, old saves' runs, the convoy's time, the
+head's time read after the words, a Ghost run clearing on a kept pack, and Fetch going through the stash's room;
+all fixed, with checks where testable.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

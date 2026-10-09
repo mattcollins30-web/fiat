@@ -677,7 +677,7 @@ func _show_panel() -> void:
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 			if sim.med_capacity() == 0:
-				_left_lines[0].text = "No rig fitted - fit one in the Lock-up to carry meds"
+				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Lock-up to carry meds", "No rig fitted: one in the Lock-up", "No rig fitted"])
 			elif sim.rig.is_empty():
 				UI.fit(_left_lines[0], ["Nothing carried: take from Your meds", "Nothing carried: take from the grid", "Nothing carried"])
 			else:

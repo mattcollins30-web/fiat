@@ -198,7 +198,7 @@ func show_state(s) -> void:
 		var tiles: Array = [
 			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
-			["Fight", [Fmt.mss(sim.estimate(i))]],
+			["Fight · clock", ["%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "over %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
 			["Finds" if endgame else "Drops", (["level %d · tier %d gear" % [t["level"], t["loot_tier"]], "level %d gear" % t["level"], "level %d" % t["level"]]) if endgame else ["tier %d gear" % t["loot_tier"], "tier %d" % t["loot_tier"]]],
 			["Depth", [("%d of %d" % [t["depth"], sim.best_depth[i] + 1]), "%d/%d" % [t["depth"], sim.best_depth[i] + 1]] if endgame else ["Locked"]],
 			["Rewards", ["×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)]],
@@ -208,6 +208,8 @@ func show_state(s) -> void:
 			tiles[5] = ["The site", [state, state.get_slice(" · ", 0)]]
 		for r in range(6):
 			UI.set_tile(c["tiles"][r], tiles[r][0], tiles[r][1], Pal.TEXT if is_open else Pal.TEXT_3)
+		if is_open and sim.estimate(i) > sim.clock_of(i):
+			UI.set_tile(c["tiles"][2], tiles[2][0], tiles[2][1], Pal.BAD)     # a fight that won't fit the clock: the DPS check, failed
 		# the figure keeps clear of the −/+ when the ladder's open
 		for l in [c["tiles"][DEPTH_TILE]["value"], c["tiles"][DEPTH_TILE]["key"]]:
 			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20 - ((DEPTH_BTN + 8) if endgame else 0)
