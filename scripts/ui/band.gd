@@ -38,6 +38,7 @@ var _under := false                   # the headline under the title, the unit b
 var _right_any := false               # right-hand lines showing: the unit keeps clear of them
 var _art: TextureRect                 # the site's painted art (9 Oct), over the skyline when there is one
 var _art_fade: TextureRect            # its shade: a touch at the top for the title, the fade into the card at the foot
+var _compact := false                 # a room's short band (10 Oct, Rooms-B): the title and the headline on one row
 
 
 ## `w` × `h` at the parent's top left; `tone` picks the sky; `fade_to` is the panel colour under it.
@@ -102,6 +103,7 @@ func set_words(k: String, t: String, h: String, u, headline_colour := Pal.ACCENT
 	unit.text = str(_unit_forms[0])
 	headline.add_theme_color_override("font_color", headline_colour)
 	_fit_unit()
+	_lay_compact()
 
 
 ## The unit's first form that fits its box - and, beside the headline, the first that fits the line
@@ -151,6 +153,29 @@ func portrait_width(w: float) -> void:
 		l.position.x = _left
 	set_right([right[0].text, right[1].text, right[2].text])
 	headline_under_title(_under)
+	_lay_compact()
+
+
+## A room's short band (96-110 px; 10 Oct, Rooms-B): the kicker at the top, then the title and the headline in gold
+## on one row, the unit after it - a tall band's headline sits at the foot, where a short one has no room.
+func compact(on := true) -> void:
+	_compact = on
+	_lay_compact()
+
+
+func _lay_compact() -> void:
+	if not _compact:
+		return
+	title.position = Vector2(_left, size.y - 52)
+	title.size = Vector2(ceilf(UI.text_width(title, title.text)) + 4, 40)
+	headline.position = Vector2(title.position.x + title.size.x + 22, size.y - 56)
+	var hw: float = ceilf(UI.text_width(headline, headline.text))
+	headline.size = Vector2(hw + 4, 48)
+	unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	unit.position = Vector2(headline.position.x + hw + 12, size.y - 48)
+	unit.size = Vector2(maxf(40.0, size.x - unit.position.x - PAD - (RIGHT_W + 12 if _right_any else 0)), 36)
+	if not _unit_forms.is_empty():
+		UI.fit(unit, _unit_forms)
 
 
 ## Where the right-hand lines start: lower when something sits over them (the Bench's upgrade button).
@@ -171,6 +196,7 @@ func set_right(lines: Array) -> void:
 	title.size.x = kicker.size.x
 	if _under:
 		headline_under_title(true)
+	_lay_compact()
 
 
 ## A progress bar along the foot, in place of the chips.

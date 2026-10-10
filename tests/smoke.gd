@@ -5,6 +5,7 @@ extends SceneTree
 ## then round-trips the save. Exit 1 if anything doesn't fit.
 
 const Data := preload("res://scripts/sim/data.gd")
+const StatsRoom := preload("res://scripts/ui/stats_room.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
@@ -3754,9 +3755,10 @@ func _faces_checks(main) -> void:
 	_check_fit(main, "Caravan (the wall)")
 	main.show_room(main.RUNNER)
 	main.refresh()
-	var wall_card = main._cards[7]
-	_check(wall_card._title.text == "The wall" and wall_card._labels[0].text == "Scrapper L4" and wall_card._labels[1].text == "Poacher L14", "the wall card is off: '%s' %s / %s" % [wall_card._title.text, wall_card._labels[0].text, wall_card._labels[1].text])
-	_check_fit(main, "Runner (the wall card)")
+	var plates: Array = main._stats.cards["wall"]["plates"]
+	_check(plates[0]["name"].text == "Scrapper · 4" and plates[1]["name"].text == "Poacher · 14" and plates[2]["name"].text == "Doorman · 9" and plates[3]["name"].text == "", "the wall's plates are off: %s / %s / %s" % [plates[0]["name"].text, plates[1]["name"].text, plates[2]["name"].text])
+	_check(plates[0]["line"].get_theme_color("font_color") == Pal.BAD and plates[1]["line"].get_theme_color("font_color") == Pal.GOOD, "a lost runner's plate does not read as lost, or one moved on as lost")
+	_check_fit(main, "Stats (the wall)")
 	sim.past = []
 	main.show_room(main.BARRACKS)
 	main._barracks._shown = ""
@@ -4999,6 +5001,70 @@ func _body_drops(main) -> void:
 	print("body drag and drop ok: every slot pair")
 
 
+## A chip row's words, the shown chips only.
+func _chip_texts(ch) -> Array:
+	var out := []
+	for k in range(ch._panels.size()):
+		if ch._panels[k].visible:
+			out.append(ch._labels[k].text)
+	return out
+
+
+## The Stats sheet's geometry (10 Oct): every part inside the room and apart from the others; each row, bar and tile
+## inside its part; the band's words inside the band.
+func _stats_layout(main, where: String) -> int:
+	var bad := 0
+	var st = main._stats
+	var room := Rect2(Vector2.ZERO, st.size)
+	var rects := {}
+	for k in st.cards:
+		var p: Panel = st.cards[k]["panel"]
+		rects[k] = Rect2(p.position, p.size)
+		if not room.encloses(rects[k]):
+			push_error("%s: the sheet's %s leaves the room (%s)" % [where, k, str(rects[k])])
+			bad += 1
+	for a in rects:
+		for b in rects:
+			if str(a) < str(b) and rects[a].intersects(rects[b]):
+				push_error("%s: the sheet's %s and %s overlap" % [where, a, b])
+				bad += 1
+		var band_r := Rect2(st.band.position, st.band.size)
+		if band_r.intersects(rects[a]):
+			push_error("%s: the sheet's %s runs into the band" % [where, a])
+			bad += 1
+	for k in st.cards:
+		var c: Dictionary = st.cards[k]
+		var inner: Rect2 = rects[k].grow(-1.0)
+		var parts: Array = []
+		for key in c.keys():
+			var v = c[key]
+			if v is Control and v != c["panel"] and v.visible and v.get_parent() == st:
+				parts.append(v)
+			elif v is Array:
+				for e in v:
+					if e is Dictionary:
+						for e2 in e.values():
+							if e2 is Control and e2.get_parent() == st and e2.visible:
+								parts.append(e2)
+		for n in parts:
+			var r := Rect2(n.position, n.size)
+			if n is Label and (n as Label).text == "":
+				continue
+			if not inner.encloses(r) and not (n == c.get("edge")):
+				push_error("%s: the sheet's %s has a piece outside it: %s %s" % [where, k, n.name, str(r)])
+				bad += 1
+	for l in [st.band.kicker, st.band.title, st.band.headline, st.band.unit]:
+		if l.text != "" and (l.position.y < 0.0 or l.position.y + l.size.y > st.band.size.y + 0.5):
+			push_error("%s: the sheet's band word '%s' leaves the band" % [where, l.text])
+			bad += 1
+	var t_r := Rect2(st.band.title.position, Vector2(UI.text_width(st.band.title, st.band.title.text), st.band.title.size.y))
+	var h_r := Rect2(st.band.headline.position, Vector2(UI.text_width(st.band.headline, st.band.headline.text), st.band.headline.size.y))
+	if t_r.intersects(h_r):
+		push_error("%s: the sheet's band title and headline overlap" % where)
+		bad += 1
+	return bad
+
+
 func _check_fit(main, where: String) -> void:
 	var bad := 0
 	for k in range(main._cards.size()):
@@ -5021,6 +5087,9 @@ func _check_fit(main, where: String) -> void:
 	elif main.room == main.MEDIC:
 		bad += _check_nodes(main._clinic.text_nodes(), main._clinic.line_pairs(), where + " screen")
 		_check(main._clinic.face_clear(), where + ": the medic's face is under something")
+	elif main.room == main.RUNNER:
+		bad += _check_nodes(main._stats.text_nodes(), [], where + " screen")
+		bad += _stats_layout(main, where)
 	elif main.room == main.ARMOURY:
 		bad += _check_nodes(main._armoury.text_nodes(), main._armoury.line_pairs() if main._armoury.has_method("line_pairs") else [], where + " screen")
 		_check_grid(main._armoury._inv, main.sim.stash_cap(), where + " stash grid")
@@ -5552,9 +5621,9 @@ func _retire_checks(main) -> void:
 	_check_fit(main, "Caravan (retire)")
 	main.show_room(main.RUNNER)
 	main.refresh()
-	var card_chips: Array = main._cards[0]._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
-	_check(card_chips.any(func(t): return t.begins_with("Greedy")) and card_chips.has("Scrapper") and main._cards[0]._status.text == "Wall: Wary, Light, Greedy", "the Runner card does not show the wall under the runner's own trait: %s / '%s'" % [str(card_chips), main._cards[0]._status.text])
-	_check_fit(main, "Runner (the wall)")
+	var card_chips: Array = _chip_texts(main._stats.cards["runner"]["chips"])
+	_check(card_chips.any(func(t): return t.begins_with("Greedy")) and card_chips.has("Scrapper") and main._stats.cards["wall"]["retired"].text == "Wall: Wary, Light, Greedy", "the sheet does not show the wall under the runner's own trait: %s / '%s'" % [str(card_chips), main._stats.cards["wall"]["retired"].text])
+	_check_fit(main, "Stats (the wall's traits)")
 	# the bad side of a trait does not retire: Greedy's HP cut stays with the runner who had it
 	_check(is_equal_approx(sim.trait_mult("hp"), 0.9), "the wall's Greedy cut the Yard's HP: ×%.3f" % sim.trait_mult("hp"))
 	main._confirm_retire()
@@ -6374,9 +6443,9 @@ func _wound_checks(main) -> void:
 	# the Runner room's card and the last run say so
 	main.show_room(main.RUNNER)
 	main.refresh()
-	var runner_card = main._cards[0]
-	_check(runner_card._title.text == "Runner" and runner_card._chips[0].visible and runner_card._chip_labels[0].text.begins_with("Wounded:"), "the Runner card does not carry the wound chip: '%s'" % runner_card._chip_labels[0].text)
-	_check_fit(main, "Runner (wounded)")
+	var wound_chips: Array = _chip_texts(main._stats.cards["runner"]["chips"])
+	_check(not wound_chips.is_empty() and str(wound_chips[0]).begins_with("Wounded:"), "the sheet does not carry the wound chip: %s" % str(wound_chips))
+	_check_fit(main, "Stats (wounded)")
 	# the Clinic: the band says so, Treat costs the wound's price by level at full HP, and clears it
 	sim.wound = "pace"                    # a wound that leaves the max HP alone: the checks below read HP against it
 	sim.hp = sim.max_hp()
@@ -7164,6 +7233,7 @@ func _growth_checks(main) -> void:
 	var sim = main.sim
 	var hold: Dictionary = sim.to_dict()
 	sim.lorries = 0
+	sim.hp = 1e12                          # never under half: the under-half damage would ride on the growth (10 Oct)
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
 	var hp50: float = sim.max_hp()
 	var dps50: float = sim.dps()
@@ -7502,7 +7572,7 @@ func _rail_order_checks(main) -> void:
 	_check(main._armoury.visible and main.ARMOURY == "Runner", "Runner does not open the loadout")
 	main.show_room(main.RUNNER)
 	main.refresh()
-	_check(main.RUNNER == "Stats" and main._cards.size() > 0 and main._cards[0].visible, "Stats does not open the runner's sheet")
+	_check(main.RUNNER == "Stats" and main._stats.visible and not main._grid.visible, "Stats does not open the runner's sheet")
 	_check(main._rail_buttons["Workshop"]._glyph.texture != null and main._rail_buttons["Runner"]._glyph.texture != null, "Workshop or Runner lost its glyph")
 
 
@@ -7572,45 +7642,64 @@ func _yard_checks(main) -> void:
 	_loot_roll_checks(main)
 	if sim.on_mission():
 		sim.extract_now()
-	# the Runner room (8 Oct): eight cards, the Yard's left half with attack and defence apart and the record
+	# the Stats room as a sheet (10 Oct, Stats-R A): the seven parts, each with its picture; every figure the cards had
 	main.show_room(main.RUNNER)
 	main.refresh()
-	var titles: Array = main._cards.map(func(c): return c._title.text if c.visible else "")
-	for want in ["Runner", "Attack", "Defence", "Finds", "The record", "Kit", "Last run", "The wall"]:
-		_check(titles.has(want), "the Runner room has no %s card: %s" % [want, str(titles)])
-	_check(titles.count("") == 0, "the Runner room does not fill its eight slots: %s" % str(titles))
-	_check_fit(main, "Runner")
+	var st = main._stats
+	for want in ["runner", "attack", "defence", "finds", "record", "last", "wall"]:
+		_check(st.cards.has(want) and st.cards[want]["panel"].visible, "the sheet has no %s" % want)
+	_check_fit(main, "Stats")
 	_yard_wide_checks(main)
 	main.show_room(main.RUNNER)
 	main.refresh()
-	var defence = main._cards[titles.find("Defence")]
-	var fire_row := -1
-	for k in range(defence._labels.size()):
-		if defence._labels[k].text == "Fire res":
-			fire_row = k
-	_check(fire_row >= 0 and defence._values[fire_row].text.ends_with("%") and defence._values[fire_row].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["fire"], "the Defence card's fire line is off: %s" % (defence._values[fire_row].text if fire_row >= 0 else "none"))
-	_check(defence._headline.text == "%d" % sim.max_hp_shown() and defence._unit.text == "max HP", "the Defence card's headline is not the max HP: '%s'" % defence._headline.text)
-	# a torch makes the deal share show on Attack, as a chip
+	var defence: Dictionary = st.cards["defence"]
+	var fire_row: Dictionary = defence["res"][Data.ELEMENTS.find("fire")]
+	_check(fire_row["key"].text == "Fire" and fire_row["value"].text.begins_with("%.0f%%" % (sim.resist("fire") * 100.0)) and (fire_row["value"].get_theme_color("font_color") == Pal.ELEMENT_COLOURS["fire"] or fire_row["value"].get_theme_color("font_color") == Pal.BAD), "the sheet's fire resist is off: %s" % fire_row["value"].text)
+	_check(defence["headline"].text == "%d" % sim.max_hp_shown() and defence["unit"].text == "max HP", "the Defence headline is not the max HP: '%s'" % defence["headline"].text)
+	_check(is_equal_approx(fire_row["tick"].position.x + 1.0, fire_row["track"].size.x * Data.RESIST_CAP / 100.0), "the resist bar's tick is not at the cap")
+	# a torch makes the deal share show on Attack: a chip and its segment of the split
 	var hold_gun = sim.equipped["Primary"]
 	var torch: Dictionary = sim._plain("Primary", "Nail gun")
 	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 20, "tier": 2}]
 	sim.equipped["Primary"] = torch
 	main.refresh()
-	var attack = main._cards[titles.find("Attack")]
+	var attack: Dictionary = st.cards["attack"]
 	var fire_share: int = int(round(float(sim.conversion().get("fire", 0.0)) * 100.0))
-	var attack_chips: Array = attack._chip_labels.filter(func(l): return l.visible).map(func(l): return l.text)
-	_check(fire_share >= 20 and attack_chips.has("Fire %d%%" % fire_share), "with %d%% as fire the Attack card's chips read %s" % [fire_share, str(attack_chips)])
-	_check(attack._headline.text == "%.0f dmg/s" % sim.dps(), "the Attack headline is '%s', not the damage a second" % attack._headline.text)
+	var attack_chips: Array = _chip_texts(attack["chips"])
+	_check(fire_share >= 20 and attack_chips.has("Fire %d%%" % fire_share) and attack["segs"][Data.TYPES.find("fire")].visible, "with %d%% as fire the Attack chips read %s" % [fire_share, str(attack_chips)])
+	_check(attack["headline"].text == "%.0f" % sim.dps() and attack["unit"].text == "dmg/s", "the Attack headline is '%s', not the damage a second" % attack["headline"].text)
+	var total_row: Dictionary = attack["chain"][4]
+	_check(total_row["value"].text == "%.0f/s" % sim.dps(), "the chain's total is off: %s" % total_row["value"].text)
+	for r in attack["chain"]:
+		_check(r["fill"].size.x <= r["track"].size.x + 0.5, "a chain bar runs past its track: %s" % r["key"].text)
+	var dp: Dictionary = sim.damage_parts()
+	var made: float = float(dp["guns"]) * (1.0 + float(dp["level"]) + float(dp["pct"])) * (1.0 + float(dp["attack"])) * float(dp["past"]) * float(dp["trait"]) * float(dp["growth"])
+	_check(absf(made - sim.dps()) <= 0.01 * maxf(1.0, sim.dps()), "the damage's parts do not make dps(): %.1f against %.1f" % [made, sim.dps()])
+	# a moved Yard's banked paragon is not this runner's XP: the bar's figures never go below nought
+	var hold_bank: int = sim.paragon_banked
+	sim.paragon_banked = 12
+	main.refresh()
+	_check(not st.cards["runner"]["xp"].text.begins_with("-") and not st.cards["runner"]["xp"].text.begins_with("−") and st.cards["runner"]["fill"].size.x >= 0.0, "the sheet's XP reads below nought after a move: '%s'" % st.cards["runner"]["xp"].text)
+	sim.paragon_banked = hold_bank
+	# a time-out is no success on the last run
+	var hold_report = sim.last_report
+	if hold_report != null:
+		var to_report: Dictionary = hold_report.duplicate()
+		to_report["outcome"] = "Out of time"
+		to_report["timed_out"] = true
+		sim.last_report = to_report
+		main.refresh()
+		_check(st.cards["last"]["headline"].get_theme_color("font_color") == Pal.ACCENT and st.cards["last"]["status"].text.begins_with("Out of time"), "a time-out reads as a success on the last run")
+		_check_fit(main, "Stats (out of time)")
+		sim.last_report = hold_report
+		main.refresh()
+	_check_fit(main, "Stats (a torch)")
 	sim.equipped["Primary"] = hold_gun
-	# the runner's trait reads as a stat: a chip with its figures on the Runner card, a line on the Caravan
-	var runner_card = main._cards[titles.find("Runner")]
+	# the runner's trait reads as a stat: a chip with its figures on the sheet, a line on the Caravan
 	var tdata: Dictionary = sim.trait_data()
 	if not tdata.is_empty():
-		var chip_texts2 := []
-		for k in range(runner_card.CHIPS):
-			if runner_card._chips[k].visible:
-				chip_texts2.append(runner_card._chip_labels[k].text)
-		_check(chip_texts2.any(func(t): return str(t).begins_with(tdata["name"] + ": ")), "the Runner card has no trait chip: %s" % str(chip_texts2))
+		var chip_texts2: Array = _chip_texts(st.cards["runner"]["chips"])
+		_check(chip_texts2.any(func(t): return str(t).begins_with(tdata["name"] + ": ")), "the sheet has no trait chip: %s" % str(chip_texts2))
 		main.show_room(main.BARRACKS)
 		main._barracks.selected = ""
 		main.refresh()
@@ -7619,17 +7708,19 @@ func _yard_checks(main) -> void:
 		_check_fit(main, "Caravan (trait)")
 		main.show_room(main.OVERVIEW)
 		main.refresh()
-	var finds = main._cards[titles.find("Finds")]
-	_check(finds._unit.text == "loot quality" and finds._labels[0].text == "Loot quantity", "the Finds card is off: %s / %s" % [finds._unit.text, finds._labels[0].text])
+	main.show_room(main.RUNNER)
+	main.refresh()
+	var finds: Dictionary = st.cards["finds"]
+	_check(finds["unit"].text == "loot quality" and finds["bars"][0]["key"].text == "Loot quantity", "the Finds part is off: %s / %s" % [finds["unit"].text, finds["bars"][0]["key"].text])
 	# a bonus below nought reads with a minus, never "+-5%": the rat's share takes 20% off quantity
 	var hold_tree: Array = sim.tree.duplicate()
 	if not sim.tree.has("The rat man/9"):
 		sim.tree.append("The rat man/9")
 	main.refresh()
-	var figures: Array = [finds._headline.text] + finds._values.map(func(l): return l.text)
+	var figures: Array = [finds["headline"].text] + finds["bars"].map(func(r): return r["value"].text)
 	_check(not figures.any(func(t): return str(t).contains("+-") or str(t).contains("+−")), "a Finds figure reads with a doubled sign: %s" % str(figures))
-	_check(sim.loot_bonus() >= 0.0 or finds._values[0].text.begins_with("−"), "a quantity below nought reads '%s'" % finds._values[0].text)
-	_check(main._signed_pct(-5.0) == "−5%" and main._signed_pct(8.0) == "+8%" and main._signed_pct(0.0) == "0%" and main._signed_pct(-0.2) == "0%", "signed percents read off: %s %s %s" % [main._signed_pct(-5.0), main._signed_pct(8.0), main._signed_pct(-0.2)])
+	_check(sim.loot_bonus() >= 0.0 or finds["bars"][0]["value"].text.begins_with("−"), "a quantity below nought reads '%s'" % finds["bars"][0]["value"].text)
+	_check(StatsRoom.signed_pct(-5.0) == "−5%" and StatsRoom.signed_pct(8.0) == "+8%" and StatsRoom.signed_pct(0.0) == "0%" and StatsRoom.signed_pct(-0.2) == "0%", "signed percents read off")
 	sim.tree = hold_tree
 	main.refresh()
 	_check_fit(main, "The Yard (option A)")

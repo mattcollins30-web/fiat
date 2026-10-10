@@ -33,6 +33,7 @@ const Missions := preload("res://scripts/ui/missions.gd")
 const Workshop := preload("res://scripts/ui/workshop.gd")
 const Run := preload("res://scripts/ui/run.gd")
 const Vendor := preload("res://scripts/ui/vendor.gd")
+const StatsRoom := preload("res://scripts/ui/stats_room.gd")
 
 const SAVE_FILE := "user://fiat.save"           # the autosave: the game in progress
 const SLOT_FILE := "user://fiat_slot%d.save"    # saves the player makes
@@ -123,6 +124,7 @@ var _sound
 var _events_seen := 0              # how many log lines the toasts have looked at
 var _fence
 var _clinic
+var _stats                         # the Stats room as a sheet (10 Oct, Stats-R A)
 var _events: Panel
 var _event_times: Array[Label] = []
 var _event_labels: Array[Label] = []
@@ -272,6 +274,9 @@ func _build() -> void:
 	_clinic.acted.connect(refresh)
 	_clinic.visible = false
 	add_child(_clinic)
+	_stats = StatsRoom.new()
+	_stats.visible = false
+	add_child(_stats)
 	_events = UI.panel(self, Rect2(0, 0, Pal.GRID_W, Pal.EVENTS_H), UI.box(Pal.PANEL, 8))
 	var tones := [Pal.TEXT, Pal.TEXT_2, Pal.TEXT_3]
 	var tw := ceilf(UI.font("Regular").get_string_size(EVENT_TIME_WORST, HORIZONTAL_ALIGNMENT_LEFT, -1, Pal.FLOOR).x)
@@ -370,6 +375,7 @@ func layout(s: Vector2) -> void:
 	_run.position = _grid.position
 	_fence.position = _grid.position
 	_clinic.position = _grid.position
+	_stats.position = _grid.position
 	# the log sits under the grid, bottom right; the rail runs the full height beside it
 	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.MARGIN - Pal.EVENTS_H)
 	_menu.layout(s)
@@ -741,7 +747,8 @@ func refresh() -> void:
 	_run.visible = run_screen
 	_fence.visible = room == MARKET
 	_clinic.visible = room == MEDIC
-	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS)
+	_stats.visible = room == RUNNER
+	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS or room == RUNNER)
 	_radio.visible = room == COMMS
 	if room == COMMS:
 		_radio.show_state(sim)
@@ -759,12 +766,9 @@ func refresh() -> void:
 		_fence.show_state(sim)
 	elif room == MEDIC:
 		_clinic.show_state(sim)
-	var cards: Array
-	match room:
-		MISSIONS, ARMOURY, BARRACKS, WORKSHOP, MARKET, MEDIC, OVERVIEW, COMMS:
-			cards = []
-		_:
-			cards = _runner_cards()
+	elif room == RUNNER:
+		_stats.show_state(sim)
+	var cards: Array = []                     # the card grid's last room went to its own sheet (10 Oct, Stats-R A)
 	# each card set once to where it ends up: hiding them all and showing the used ones again, ten
 	# times a second, dropped a button's hover and any press in progress - the Radio's buttons flickered
 	# and took a click only now and then (9 Oct)
@@ -923,149 +927,6 @@ func _rail_status(name: String) -> Dictionary:
 					ready += 1
 			return {"badge": "Ready" if ready > 0 else "", "badge_tone": "good"}
 	return {}
-
-
-static func _signed_pct(v: float) -> String:
-	return ("+%.0f%%" % v) if v >= 0.5 else (("−%.0f%%" % absf(v)) if v <= -0.5 else "0%")
-
-
-## The Runner room (8 Oct, Matt: the Yard was "combining runner stats and yard upgrades"; attack and defence
-## "into their own cards"; "one card for the runner's current stats - time alive, best loot, most damage, most
-## kills"): eight cards - the sheet, attack, defence, the finds, the record, the kit, the last run, the wall.
-func _runner_cards() -> Array:
-	var out := []
-	var lv: int = sim.level()
-	var next_xp := Data.xp_for_level(mini(lv + 1, Data.MAX_LEVEL))
-	var this_xp := Data.xp_for_level(lv)
-	var fill: float = 1.0 if lv >= Data.MAX_LEVEL else clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
-	var td: Dictionary = sim.trait_data()
-	var cd: Dictionary = sim.class_data()
-	# the sheet: who they are
-	var who := []
-	if sim.cls != "":
-		who.append([sim.cls, ""])
-	if not td.is_empty():
-		who.append(["%s: %s" % [td["name"], td["words"]], "good"])
-	if sim.wound != "":
-		who.push_front([sim.wound_words(), "bad"])
-	var alive: float = sim.elapsed - float(sim.record.get("since", 0.0))
-	out.append({
-		"title": "Runner", "headline": "Level %d" % lv, "unit": "no past yet" if sim.cls == "" else "",
-		"bar": {"fill": fill, "text": _xp_words(), "smooth": true},
-		"chips": who,
-		"lines": [["Pace", "×%.2f" % sim.pace()], ["Pack · rig", "%d cells · %d" % [sim.capacity(), sim.med_capacity()]],
-			["Runs", "%d" % sim.runner_runs], ["In the Yard", Fmt.clock(alive)]],
-		"status": ("Wall: %s" % ", ".join(sim.retired)) if not sim.retired.is_empty() else "Runners lost: %d" % sim.operators_lost,
-		"note": [sim.next_words(true), sim.next_words(true).replace(" on Runs", "")],
-	})
-	# attack: the damage a second and what makes it; the elements dealt as chips
-	var conv: Dictionary = sim.conversion()
-	var deal_chips := []
-	for ty in Data.ELEMENTS:
-		var deal: float = float(conv.get(ty, 0.0)) * 100.0
-		if deal > 0.5:
-			deal_chips.append(["%s %.0f%%" % [ty.capitalize(), deal], ty])
-	var guns := 0.0
-	for sl in ["Primary", "Secondary"]:
-		if sim.equipped[sl] != null and sim.has_rounds(sim.equipped[sl]):
-			guns += Items.dps(sim.equipped[sl]) * (1.0 if sl == "Primary" else (1.0 / 3.0 if sim.equipped["Primary"] != null else 1.0))
-	var affix_pct: float = sim._affix_sum("damage_pct") + sim.tree_sum("damage_pct") + sim._affix_sum("attack_pct")
-	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
-	out.append({
-		"title": "Attack", "headline": "%.0f dmg/s" % sim.dps(), "unit": "",
-		"chips": deal_chips,
-		"lines": [["Guns", "%.0f/s" % maxf(guns, Data.UNARMED_DPS)], ["Level", "+%.0f%%" % (Data.DMG_PER_LEVEL * (lv - 1) * 100.0)],
-			["Affixes · tree", _signed_pct(affix_pct)], ["Past", ("×%.2f" % sim.cm("damage")) if sim.cls != "" else "—"],
-			["First shot", _signed_pct(first_pct)]],
-		"note": ("Growth ×%.2f past the cap" % sim.growth_mult()) if sim.growth_mult() > 1.001 else (["The elements: a share of every hit", "Elements in every hit"] if not deal_chips.is_empty() else "All of it physical"),
-		"status": "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand"),
-	})
-	# defence: HP, armour, the resists
-	var dlines := [["Armour", "%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())]]]
-	var zone_fires := {}
-	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i):
-			for ty in Data.ZONE_TYPES[int(Data.TIERS[i]["zone"])]["types"]:
-				zone_fires[ty] = true
-	var fire_chips := []
-	for ty in Data.ELEMENTS:
-		dlines.append(["%s res" % ty.capitalize(), "%.0f%%" % (sim.resist(ty) * 100.0), ty])
-		if zone_fires.has(ty):
-			fire_chips.append([ty.capitalize(), ty])
-	var fired := []
-	for c in fire_chips:
-		fired.append(c[0])
-	out.append({
-		"title": "Defence", "headline": "%d" % sim.max_hp_shown(), "unit": "max HP",
-		"lines": dlines,
-		"note": "Resists cap at %d%%" % int(Data.RESIST_CAP),
-		"status": (("Sites fire %s" % ", ".join(fired).to_lower()) if fired.size() <= 2 else "Sites fire %d elements" % fired.size()) if not fired.is_empty() else "Nothing open fires an element",
-	})
-	# the finds: quality and quantity, and the rest of what a run gives
-	var search_faster: float = (1.0 - sim.search_s({}) / sim.SEARCH_S) * 100.0
-	var patrol_later: float = (sim.patrol_s({}) / sim.PATROL_S - 1.0) * 100.0 if not sim.has_node("never_there") else 0.0
-	out.append({
-		"title": "Finds", "headline": _signed_pct(sim.rarity_bonus() * 100.0), "unit": "loot quality",
-		"lines": [["Loot quantity", _signed_pct(sim.loot_bonus() * 100.0)], ["Cash", _signed_pct(sim.tree_sum("cash_pct") + sim.charm_cash())],
-			["Notes", _signed_pct(sim._affix_sum("notes_pct"))], ["Search", ("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"],
-			["Gangs", ("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "as they come")]],
-		"note": "Quality: rarer. Quantity: more",
-		"status": _dog_words(),
-	})
-	# the record: this runner's best
-	var rec: Dictionary = sim.record
-	out.append({
-		"title": "The record", "headline": "%d" % int(rec.get("kills", 0)), "unit": "kills, the best run",
-		"lines": [["Most damage", [Fmt.num(float(rec.get("dealt", 0.0))) + " in a run", Fmt.num(float(rec.get("dealt", 0.0)))]], ["Best take", Fmt.money(float(rec.get("cash", 0.0)))],
-			["Dearest find", [str(rec.get("find", "")), str(rec.get("find", "")).get_slice(" ", 0)] if str(rec.get("find", "")) != "" else "nothing yet"],
-			["Runs back", "%d" % int(rec.get("runs", 0))], ["Alive", Fmt.clock(alive)]],
-		"note": ["This runner's; the wall keeps the rest", "This runner's"],
-		"status": ("Deaths seen: %d" % (sim.operators_lost - int(rec.get("deaths_seen", 0)))) if sim.operators_lost > int(rec.get("deaths_seen", 0)) else "No one lost on their watch",
-	})
-	# the kit: what's worn
-	var klines := []
-	for sl in ["Primary", "Secondary", "Armour", "Helmet", "Backpack", "Charm"]:
-		var it = sim.equipped[sl]
-		klines.append([sl, [Items.full_name(it), str(it["base"]), str(it["base"]).get_slice(" ", str(it["base"]).count(" "))] if it != null else "—"])
-	out.append({
-		"title": "Kit", "headline": Fmt.money(sim.loadout_value()), "unit": "worth",
-		"lines": klines,
-		"note": "What the Fence would pay",
-		"status": "Fit it in the Runner room",
-	})
-	# the last run
-	var r = sim.last_report
-	if r != null:
-		var t: Dictionary = sim.tier(r["tier"])
-		out.append({
-			"title": "Last run", "headline": r["outcome"], "unit": "",
-			"lines": [["Where", t["name"]], ["Kills · gangs", "%d · %d" % [r["kills"], int(r.get("patrols", 0))]], ["Loot", "%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]],
-				["Cash · scrap", "%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]], ["Took", Fmt.mss(r["time"])]],
-			"tone": "bad" if r["outcome"] == "Dead" else "good",
-			"status": (("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])) if r["outcome"] == "Dead" else (("XP +%s · wounded" % Fmt.num(r["xp"])) if r.get("wounded", false) else "XP +%s" % Fmt.num(r["xp"])),
-		})
-	else:
-		out.append({"title": "Last run", "headline": "None yet", "unit": "", "lines": [], "note": "The first run writes here", "status": ""})
-	# the wall: the runners before, newest first
-	var wlines := []
-	for k in range(sim.past.size() - 1, maxi(-1, sim.past.size() - 7), -1):
-		var p: Dictionary = sim.past[k]
-		wlines.append(["%s L%d" % [p["class"], int(p["level"])], ["%d runs, %s" % [int(p["runs"]), str(p["end"])], "%d runs" % int(p["runs"])]])
-	out.append({
-		"title": "The wall", "headline": "%d" % sim.operators_lost, "unit": "runners lost",
-		"lines": wlines,
-		"note": ("Retired: %s" % ", ".join(sim.retired)) if not sim.retired.is_empty() else "No one retired yet",
-		"status": "A third of each stays" if not sim.retired.is_empty() else "",
-	})
-	return out
-
-
-## The Kennel's line on the Runner's Finds card.
-func _dog_words() -> String:
-	var finds: int = (1 if sim.yard_has("a_dog") else 0) + (1 if sim.yard_has("second_dog") else 0) + (2 if sim.yard_has("pack") else 0)
-	if finds > 0:
-		return "The dogs find +%d a search" % finds if finds > 1 else "A dog finds +1 a search"
-	return "No dog finding yet" if sim.yard_side("kennel", 0) == "" else "A dog with a nose for it"
 
 
 ## The town and the purse on one card (7 Oct): the zones with their depths, the trade, what opens the next

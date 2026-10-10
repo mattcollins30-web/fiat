@@ -191,6 +191,19 @@ func _max_hp_raw() -> float:
 ## Damage a second: the primary while it has rounds, else the secondary at full
 ## (a third of it behind the primary, or all of it with Double tap), else fists.
 func dps() -> float:
+	return _dps(null)
+
+
+## Damage a second in its parts (10 Oct, the Stats sheet's chain): {guns, level, pct, attack, past, trait, growth},
+## each as dps() multiplies them - guns × (1 + level + pct) × (1 + attack) × past × trait × growth - so the sheet
+## draws what dps() is made of and never a formula of its own.
+func damage_parts() -> Dictionary:
+	var parts := {}
+	_dps(parts)
+	return parts
+
+
+func _dps(parts) -> float:
 	var d := 0.0
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
@@ -214,6 +227,9 @@ func dps() -> float:
 		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (40.0 if has_node("walking_wounded") else 0.0)
 	if mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)):
 		pct += _affix_sum("first_lot_pct")
+	if parts != null:
+		parts.merge({"guns": d, "level": Data.DMG_PER_LEVEL * (level() - 1), "pct": pct / 100.0, "attack": _affix_sum("attack_pct") / 100.0,
+			"past": cm("damage"), "trait": trait_mult("damage"), "growth": growth_mult()}, true)
 	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage") * growth_mult()
 
 

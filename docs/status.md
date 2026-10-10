@@ -2629,6 +2629,23 @@ currency at its worst out on a run. The reviewer's catches: the place's glyph ig
 never showed; the figures' boxes were as wide as their worst and put their tooltips over their neighbours; scrap's
 worst was 99,999; fixed, with checks.
 
+**The Stats room as a sheet (10 Oct, Stats-R A, docs/design/faces_and_bands.md 5).** Matt: the one room that "reads like
+a sample Godot project"; keep the information. `scripts/ui/stats_room.gd`: a 96 px band (`Band.compact()`: the title
+and the headline on one row; the runner's face, the damage in gold; `the_stats.png` once painted) over three rows -
+the runner (level, XP, the class, trait and wound as chips, pace, pack and rig, runs, alive, the deepest hold, kit
+worth), attack and defence as the tall cards, finds, the record and the last run, and the wall along the foot.
+Attack draws `Sim.damage_parts()` - dps()'s own parts in its order - as a chain of bars from the guns to the total,
+the elements as one split bar and chips; defence the resists as bars against the cap, red where the open sites fire
+an element you have none of; finds as bars; the record as four tiles; the last run with an edge in its outcome's tone
+(a time-out amber); the wall as the runners' plates, newest first, a lost one's face greyed. The Kit card's slot
+list went (the Runner room has the kit); its worth is in the runner's rows. The card grid now shows for no room.
+*The smoke:* the sheet's geometry (parts in the room and apart, every piece in its part, the band's words in the
+band, title and headline apart), its fit, the old card checks rewritten against it, the parts making dps(), the XP
+after a move, a time-out's last run. The reviewer's catches: the chain used a formula of its own (the Past bar could
+pass the total); the XP read below nought after a Yard move (the banked paragon); a time-out showed as a success;
+fixed with checks. The growth check now holds the runner over half HP (the under-half damage rode on it). Open for
+Matt: the top bar's XP figure has the same banked-paragon flaw after a move (not touched).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

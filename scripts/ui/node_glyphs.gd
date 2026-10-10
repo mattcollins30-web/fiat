@@ -7,6 +7,13 @@ const Data := preload("res://scripts/sim/data.gd")
 
 const SIZE := 64
 const SVG := {
+	# the Stats sheet's rows and trophies (10 Oct, Stats-R A)
+	"pack": '<path d="M7 7 V5 a5 3 0 0 1 10 0 V7 M5 8 H19 V20 H5 Z M9 13 H15"/>',
+	"runs": '<path d="M4 12 H17 M13 7 L18 12 L13 17 M20 5 V19"/>',
+	"depth": '<path d="M12 4 V18 M7 13 L12 18 L17 13 M4 21 H20"/>',
+	"skull": '<path d="M6 16 V11 a6 6 0 0 1 12 0 V16 H15 V19 H9 V16 Z M9.5 12 V12.5 M14.5 12 V12.5"/>',
+	"gem": '<path d="M6 4 H18 L22 9 L12 21 L2 9 Z M2 9 H22"/>',
+	"where": '<path d="M12 21 C8 16 5 13 5 9.5 a7 7 0 0 1 14 0 C19 13 16 16 12 21 Z"/><circle cx="12" cy="9.5" r="2"/>',
 	# the purse on the top bar (10 Oct, Bar-C)
 	"scrap": '<path d="M12 8 a4 4 0 1 0 0.01 0 Z M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/>',
 	"copper": '<path d="M5 7 C5 4 19 4 19 7 C19 10 5 10 5 13 C5 16 19 16 19 13 M5 13 C5 18 19 18 19 20"/>',
