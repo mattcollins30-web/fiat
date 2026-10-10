@@ -6621,6 +6621,10 @@ func _yard_wide_checks(main) -> void:
 			for pk in col:
 				_check(NodeGlyphs.SVG.has(NodeGlyphs.of_pick(pk, bld["key"])), "%s's glyph is not drawn: %s" % [pk["name"], NodeGlyphs.of_pick(pk, bld["key"])])
 	_check(yt.STRIP_Y + yt.STRIP_H <= yt.size.y and yt._build.position.y + yt._build.size.y <= yt.STRIP_H, "the Yard's strip runs past the room or its button out of it")
+	# the heading takes the room the lanes left (Matt, 10 Oct): the strip ends at the room's foot, the heading its band
+	_check(is_equal_approx(yt.STRIP_Y + yt.STRIP_H, yt.size.y) and yt.HEAD_H >= 200 and yt.LANES_Y == yt.HEAD_H + 8, "the Yard leaves room unused or its heading short: strip to %d of %d, heading %d" % [yt.STRIP_Y + yt.STRIP_H, int(yt.size.y), yt.HEAD_H])
+	var mv: Button = yt._move
+	_check(mv.position.y + mv.size.y <= yt.HEAD_H - 8 and mv.position.y >= yt.HEAD_H / 2.0, "Move the Yard is not at the band's foot")
 	var names: Array = yt._lanes.map(func(l): return l["name"].text)
 	_check(names == Data.YARD.map(func(b): return b["name"]), "the Yard's lanes are off: %s" % str(names))
 	# a fresh Yard: column 1 open, the rest shut with their gates; nothing affordable with no cash

@@ -2698,6 +2698,13 @@ title, clear of the buttons, never the points; every node's sentence in two line
 the Workshop's heading; the top bar's XP after a move; the backdrop with nothing painted on it. The reviewer's catch:
 four buttons late on left a one-line sentence ~430 px and long ones fell to nothing; two lines now, with the check.
 
+**The Yard's tall heading (10 Oct).** Matt: the Yard is the one room the painted place doesn't suit, and it has
+room to spare at the foot. The eight lanes and the strip move down to the room's foot and the heading takes the
+space made (`HEAD_H` from `ROOM_H`, the lanes and the strip: 270 px), so the painting shows nearly whole; *Move the
+Yard* sits at the band's foot and the purse chips take the width it left. *The smoke:* the heading's height from the
+constants, the lanes and strip at the room's foot, nothing below the room, Move inside the band, the chips clear of
+it. The way out's button text now fits the button less its padding (48 px).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

@@ -307,7 +307,7 @@ func show_state(s) -> void:
 	else:
 		# before the clear it says its price (10 Oct, the way out): the seconds and a last gang
 		var wo: String = Fmt.mss(ceilf(sim.way_out_s(t, m)))
-		var room: float = ((INNER - 12) / 2.0 if auto else float(INNER)) - 28.0     # the half-width button on an auto-run (10 Oct)
+		var room: float = ((INNER - 12) / 2.0 if auto else float(INNER)) - 48.0     # the half-width button on an auto-run (10 Oct); the button's own padding
 		_button.text = "Get out · %s" % wo
 		for o in ["Get out now · %s and a last gang" % wo, "Get out · %s, a gang" % wo]:
 			if UI.text_width(_button, o) <= room:

@@ -20,7 +20,9 @@ const Data := preload("res://scripts/sim/data.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const PAD := 20
-const HEAD_H := 84
+## The heading takes the room the glyph lanes left (10 Oct, Matt: "moving everything down and making the header fit
+## the space"): the lanes and the strip sit at the foot, the Yard's painted place above them.
+const HEAD_H := Pal.ROOM_H - 8 - (8 * LANE_H + 7 * LANE_GAP) - 6 - STRIP_H     # eight buildings, as STRIP_Y
 const MOVE_W := 220
 const LANES_Y := HEAD_H + 8
 # the lanes in the tree's glyphs (10 Oct, Lanes-G; Matt: "yard and map look really bad now" beside Training): a
@@ -68,10 +70,10 @@ func _init() -> void:
 	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Yard", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_chips = Chips.new(Pal.GRID_W - 2 * PAD - 350 - MOVE_W - 16, 9)
+	_chips = Chips.new(Pal.GRID_W - 2 * PAD - 350, 9)     # Move sits at the band's foot now: the chips take the width
 	_chips.position = Vector2(PAD + 350, 12)
 	head.add_child(_chips)
-	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, (HEAD_H - Pal.BUTTON_H) / 2.0, MOVE_W, Pal.BUTTON_H), true)
+	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, HEAD_H - 16 - Pal.BUTTON_H, MOVE_W, Pal.BUTTON_H), true)     # at the band's foot, right
 	_move.text = "Move the Yard"
 	_move.visible = false
 	_move.pressed.connect(func(): if _move_action.is_valid(): _move_action.call())
