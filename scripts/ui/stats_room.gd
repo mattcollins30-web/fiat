@@ -18,22 +18,23 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const W := Pal.GRID_W                      # 1536
 const H := Pal.ROOM_H                      # 916
-const BAND_H := 96
+const BAND_H := Pal.BAND_H                  # the rooms' one band (10 Oct, Bands-U A): 96 → 180, paid for by the rows below
 const GAP := 10
 const PAD := 18
 const COL_X := [0, 450, 998]
 const COL_W := [440, 538, 538]
 const R1_Y := BAND_H + GAP
-const R1_H := 366
+const R1_H := 332
 const R2_Y := R1_Y + R1_H + GAP
-const R2_H := 284
+const R2_H := 252
 const R3_Y := R2_Y + R2_H + GAP
 const R3_H := H - R3_Y
-const ROW_H := 28
+const ROW_H := 24                          # 28 → 24 (Bands-U A)
 const BAR_TH := 10
 const FACE := 64                           # the band's face and the wall's: a clean half of the 128 px portraits
 const PLATE_W := 236
 const PLATE_H := 84
+const TILE_H := 84                          # the record's tiles (96 → 84, Bands-U A)
 const PLATES := 5
 const KEY_W := 150                          # a chain or bar row's words before its bar
 const VAL_W := 86                           # and its figure after it
@@ -49,10 +50,10 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	band = Band.new(W, BAND_H, 3)
 	add_child(band)
-	band.portrait_width(FACE)
-	band.compact()
+	band.portrait_width(Pal.BAND_FACE)
+	band.room_band()
 	band.set_site("The Stats")              # art/places/the_stats.png once painted (Rooms-B); the skyline till then
-	_band_face = People.rect(band, Vector2(Band.PAD, (BAND_H - FACE) / 2.0), 0.5)
+	_band_face = People.rect(band, Vector2(Band.PAD, (BAND_H - Pal.BAND_FACE) / 2.0), Pal.BAND_FACE / 128.0)
 	_card("runner", 0, R1_Y, R1_H, "The runner")
 	_card("attack", 1, R1_Y, R1_H, "Attack")
 	_card("defence", 2, R1_Y, R1_H, "Defence")
@@ -85,8 +86,8 @@ func _card_wide(name: String, y: float, h: float, title: String) -> Dictionary:
 	var c := {"x": 0.0, "y": y, "w": float(W), "h": h}
 	c["panel"] = UI.panel(self, Rect2(0, y, W, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	c["title"] = UI.head(self, Rect2(PAD, y + 10, 300, UI.HEAD_H), title)
-	c["headline"] = UI.label(self, Rect2(PAD, y + 36, 80, 50), "", "SemiBold", Pal.HEADLINE, Pal.TEXT)
-	c["unit"] = UI.label(self, Rect2(PAD, y + 46, 160, 36), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	c["headline"] = UI.label(self, Rect2(PAD, y + 30, 80, 46), "", "SemiBold", Pal.HEADLINE, Pal.TEXT)
+	c["unit"] = UI.label(self, Rect2(PAD, y + 40, 160, 36), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	cards[name] = c
 	return c
 
@@ -137,13 +138,13 @@ func _build_runner() -> void:
 	c["fill"] = UI.panel(c["track"], Rect2(0, 0, 0, BAR_TH), UI.box(Pal.ACCENT, 4))
 	c["xp"] = _small(c, y + 110)
 	c["chips"] = Chips.new(c["w"] - 2 * PAD)
-	c["chips"].position = Vector2(c["x"] + PAD, y + 138)
+	c["chips"].position = Vector2(c["x"] + PAD, y + 134)
 	add_child(c["chips"])
 	c["rows"] = []
 	var keys := ["pace", "pack", "runs", "clock", "depth", "cash"]
 	for k in range(keys.size()):
-		c["rows"].append(_row(c, y + 172 + k * ROW_H, keys[k]))
-	c["note"] = _small(c, y + c["h"] - 30)
+		c["rows"].append(_row(c, y + 160 + k * ROW_H, keys[k]))
+	c["note"] = _small(c, y + c["h"] - 26)
 
 
 func _build_attack() -> void:
@@ -153,15 +154,15 @@ func _build_attack() -> void:
 	c["chain"] = []
 	for k in range(5):
 		c["chain"].append(_bar_row(c, y + 116 + k * ROW_H))
-	c["split"] = UI.panel(self, Rect2(c["x"] + PAD, y + 266, c["w"] - 2 * PAD, BAR_TH), UI.box(Pal.BG, 4))
+	c["split"] = UI.panel(self, Rect2(c["x"] + PAD, y + 240, c["w"] - 2 * PAD, BAR_TH), UI.box(Pal.BG, 4))
 	c["segs"] = []
 	for ty in Data.TYPES:
 		c["segs"].append(UI.panel(c["split"], Rect2(0, 0, 0, BAR_TH), UI.box(Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3, 0)))
 	c["chips"] = Chips.new(c["w"] - 2 * PAD)
-	c["chips"].position = Vector2(c["x"] + PAD, y + 284)
+	c["chips"].position = Vector2(c["x"] + PAD, y + 256)
 	add_child(c["chips"])
-	c["note"] = _small(c, y + 318)
-	c["status"] = _small(c, y + c["h"] - 30)
+	c["note"] = _small(c, y + 282)
+	c["status"] = _small(c, y + c["h"] - 26)
 
 
 func _build_defence() -> void:
@@ -173,9 +174,9 @@ func _build_defence() -> void:
 	c["armour_line"] = _small(c, y + 110)
 	c["res"] = []
 	for k in range(Data.ELEMENTS.size()):
-		c["res"].append(_bar_row(c, y + 142 + k * ROW_H, Data.RESIST_CAP / 100.0))
-	c["note"] = _small(c, y + 290)
-	c["status"] = _small(c, y + c["h"] - 30)
+		c["res"].append(_bar_row(c, y + 138 + k * ROW_H, Data.RESIST_CAP / 100.0))
+	c["note"] = _small(c, y + 262)
+	c["status"] = _small(c, y + c["h"] - 26)
 
 
 func _build_finds() -> void:
@@ -183,8 +184,8 @@ func _build_finds() -> void:
 	var y: float = c["y"]
 	c["bars"] = []
 	for k in range(3):
-		c["bars"].append(_bar_row(c, y + 94 + k * ROW_H))
-	c["rows"] = [_row(c, y + 94 + 3 * ROW_H + 6, "search"), _row(c, y + 94 + 4 * ROW_H + 6, "loud")]
+		c["bars"].append(_bar_row(c, y + 90 + k * ROW_H))
+	c["rows"] = [_row(c, y + 90 + 3 * ROW_H + 6, "search"), _row(c, y + 90 + 4 * ROW_H + 6, "loud")]
 	c["status"] = _small(c, y + c["h"] - 30)
 
 
@@ -196,12 +197,12 @@ func _build_record() -> void:
 	var glyphs := ["skull", "dmg", "cash", "gem"]
 	for k in range(4):
 		var tx: float = c["x"] + PAD + (k % 2) * (tw + GAP)
-		var ty: float = y + 40 + (k / 2) * (96 + GAP)
+		var ty: float = y + 40 + (k / 2) * (TILE_H + GAP)
 		var t := {}
-		t["panel"] = UI.panel(self, Rect2(tx, ty, tw, 96), UI.box(Pal.BG, 6))
-		t["glyph"] = _glyph(Rect2(tx + 12, ty + 10, 22, 22), glyphs[k], Pal.ACCENT)
-		t["value"] = UI.label(self, Rect2(tx + 12, ty + 34, tw - 24, 34), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
-		t["key"] = UI.label(self, Rect2(tx + 12, ty + 66, tw - 24, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["panel"] = UI.panel(self, Rect2(tx, ty, tw, TILE_H), UI.box(Pal.BG, 6))
+		t["glyph"] = _glyph(Rect2(tx + 12, ty + 8, 20, 20), glyphs[k], Pal.ACCENT)
+		t["value"] = UI.label(self, Rect2(tx + 12, ty + 26, tw - 24, 32), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
+		t["key"] = UI.label(self, Rect2(tx + 12, ty + 56, tw - 24, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["tiles"].append(t)
 	c["status"] = _small(c, y + c["h"] - 30)
 
@@ -214,15 +215,15 @@ func _build_last() -> void:
 	c["rows"] = []
 	var keys := ["where", "skull", "pack", "cash", "clock"]
 	for k in range(keys.size()):
-		c["rows"].append(_row(c, y + 92 + k * ROW_H, keys[k]))
-	c["status"] = UI.label(self, Rect2(c["x"] + PAD, y + c["h"] - 34, c["w"] - 2 * PAD, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["rows"].append(_row(c, y + 88 + k * ROW_H, keys[k]))
+	c["status"] = UI.label(self, Rect2(c["x"] + PAD, y + c["h"] - 32, c["w"] - 2 * PAD, 26), "", "Medium", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
 func _build_wall() -> void:
 	var c: Dictionary = cards["wall"]
 	var y: float = c["y"]
-	c["sub"] = UI.label(self, Rect2(PAD, y + 84, 262, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	c["retired"] = UI.label(self, Rect2(PAD, y + 106, 262, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	c["sub"] = UI.label(self, Rect2(PAD, y + 76, 262, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	c["retired"] = UI.label(self, Rect2(PAD, y + 98, 262, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	c["plates"] = []
 	var x0: float = W - PAD - PLATES * PLATE_W - (PLATES - 1) * GAP
 	var py: float = y + (R3_H - PLATE_H) / 2.0
@@ -242,7 +243,7 @@ func show_state(s) -> void:
 	sim = s
 	var lv: int = sim.level()
 	var dps: float = sim.dps()
-	band.set_words("%s · level %d" % [sim.cls if sim.cls != "" else "No past yet", lv], "Stats", "%.0f" % dps, ["dmg/s"])
+	band.set_words("Stats · %s, level %d" % [sim.cls if sim.cls != "" else "no past yet", lv], "", "%.0f" % dps, ["dmg/s"])
 	People.show(_band_face, sim.cls)
 	_show_runner(lv)
 	_show_attack(lv, dps)

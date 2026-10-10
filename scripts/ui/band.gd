@@ -39,6 +39,7 @@ var _right_any := false               # right-hand lines showing: the unit keeps
 var _art: TextureRect                 # the site's painted art (9 Oct), over the skyline when there is one
 var _art_fade: TextureRect            # its shade: a touch at the top for the title, the fade into the card at the foot
 var _compact := false                 # a room's short band (10 Oct, Rooms-B): the title and the headline on one row
+var _room := false                    # a room's art band (10 Oct, Bands-U A): the Yard's layout, the art shaded from the left
 
 
 ## `w` × `h` at the parent's top left; `tone` picks the sky; `fade_to` is the panel colour under it.
@@ -97,7 +98,7 @@ func _init(w: float, h: float, tone := 0, fade_to := Pal.CARD) -> void:
 var _unit_forms: Array = []
 func set_words(k: String, t: String, h: String, u, headline_colour := Pal.ACCENT) -> void:
 	kicker.text = k
-	title.text = t
+	title.text = "" if _room else t       # a room's band has no title line: the kicker names the room
 	headline.text = h
 	_unit_forms = u if u is Array else [str(u)]
 	unit.text = str(_unit_forms[0])
@@ -126,6 +127,9 @@ func _fit_unit() -> void:
 ## Where the headline sits: at the foot (the default) or under the title, with the unit beside it.
 func headline_under_title(on: bool) -> void:
 	_under = on
+	if _room:
+		_lay_room()                       # a room's band keeps the Yard's layout
+		return
 	if on:
 		headline.position.y = 78
 		headline.size.y = 44
@@ -163,7 +167,48 @@ func compact(on := true) -> void:
 	_lay_compact()
 
 
+## A room's art band (10 Oct, Bands-U A; Matt: "uniform with everywhere else"): laid as the Yard's - the kicker at
+## the top, the headline in gold under it with its unit beside, the chips under that, all down the shaded left; the
+## title unused; the painting covering the band from the centre, shaded from the left like UI.head_art's, no fade at
+## the foot. The room puts its own buttons at the band's foot, right.
+func room_band(on := true) -> void:
+	_room = on
+	if on:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+		g.colors = PackedColorArray([Color(Pal.CARD, 0.94), Color(Pal.CARD, 0.6), Color(Pal.CARD, 0.15)])
+		var gt := GradientTexture2D.new()
+		gt.gradient = g
+		gt.fill_from = Vector2(0, 0)
+		gt.fill_to = Vector2(1, 0)
+		gt.width = 64
+		gt.height = 4
+		_art_fade.texture = gt
+		title.visible = false
+		chips.size.x = Pal.BAND_TEXT_W
+	_lay_room()
+
+
+func _lay_room() -> void:
+	if not _room:
+		return
+	kicker.position = Vector2(_left, 8)
+	kicker.size = Vector2(maxf(Pal.BAND_TEXT_W, size.x * 0.5 - _left), 24)
+	headline.add_theme_font_size_override("font_size", Pal.HEADLINE - 4)
+	headline.position = Vector2(_left, 32)
+	var hw: float = ceilf(UI.text_width(headline, headline.text))
+	headline.size = Vector2(Pal.BAND_TEXT_W + 120, 44)     # the line the headline and its unit share: the tests read it
+	unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	unit.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 2)
+	unit.position = Vector2(_left + hw + 16, 38)
+	unit.size = Vector2(maxf(40.0, _left + Pal.BAND_TEXT_W + 120 - unit.position.x), 36)
+	if not _unit_forms.is_empty():
+		UI.fit(unit, _unit_forms)
+	chips.position = Vector2(_left, Pal.BAND_CHIPS_Y)
+
+
 func _lay_compact() -> void:
+	_lay_room()
 	if not _compact:
 		return
 	title.position = Vector2(_left, size.y - 52)
@@ -211,6 +256,9 @@ func set_bar(fraction: float, words: String) -> void:
 func set_chips(items: Array) -> void:
 	chips.visible = not items.is_empty()
 	bar.visible = false
+	if _room:
+		chips.show_chips(items, 3)       # down the left, up to three rows (a room's band)
+		return
 	chips.show_chips(items)
 	if chips.visible:
 		headline_under_title(true)      # the foot is the chips' now

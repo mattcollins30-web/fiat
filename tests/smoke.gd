@@ -1069,8 +1069,13 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Fence (said)")
 	# the A style on the vendors: the band with the face, the name and the figure; the line under it; the tabs in the band's foot; the sections
 	var fv = main._fence
-	_check(fv._band.title.text == "The Fence" and fv._band.headline.text.begins_with("£") and fv._band.kicker.text.begins_with("The Fence · "), "the Fence's band is off: '%s' / '%s' / '%s'" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text])
-	_check(fv._said[0].text != "" and fv._said[0].position.y >= fv.BAND_H, "the Fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._said[0].position.y])
+	# the rooms' one band across the top (10 Oct, Bands-U A): the kicker names the vendor, the figure in gold, no title line
+	_check(fv._band.title.text == "" and fv._band.headline.text.begins_with("£") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
+	_check(fv._said[0].text != "" and fv._side.position.y + fv._said[0].position.y >= fv.BAND_H, "the Fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._side.position.y + fv._said[0].position.y])
+	var ftab_x := 0.0
+	for t in fv._tabs:
+		_check(t.position.x >= fv._band.kicker.position.x + Pal.BAND_TEXT_W and t.position.x + t.size.x <= Pal.GRID_W - fv.PAD + 0.5 and t.position.x >= ftab_x, "a fence tab is not at the band's foot, right, in order: %s" % str(Rect2(t.position, t.size)))
+		ftab_x = t.position.x + t.size.x
 	for t in fv._tabs:
 		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
 	_check(fv._side_tiles[0]["key"].text == "Com" and fv._side_tiles[Data.RARITIES.size() - 1]["key"].text == "Leg" and fv._side_tiles[Data.RARITIES.size()]["key"].text.begins_with("Nails") and fv._side_tiles[Data.RARITIES.size() + 5]["button"].visible, "the Fence's tiles are off: %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
@@ -1082,7 +1087,7 @@ func _narrative_checks(main) -> void:
 	_check(main._clinic._line != "", "the medic said nothing")
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
-	_check(cv._band.title.text == "The medic" and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
+	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
 	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Heal" and cv._side_tiles_c[2]["key"].text == "The wound" and cv._side_tiles_c[3]["key"].text == "Clinic", "the Clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
 	var med_kinds := {}
@@ -2167,7 +2172,7 @@ func _element_checks(main) -> void:
 	# its column, none overlapping; the Also row, the sum strip and the panel under the lanes
 	_check(bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the Caravan's points read '%s'" % bk._points.text)
 	for cb in bk._class_buttons:
-		_check(cb.position.y + cb.size.y <= bk.HEAD_H and cb.position.x >= bk._kicker.position.x + bk._kicker.size.x, "a class button is not in the header's top right")
+		_check(cb.position.y + cb.size.y <= bk.HEAD_H and cb.position.x >= bk._kicker.position.x + bk._kicker.size.x, "a class button is not in the band, right")
 	for k in range(bk.LANES):
 		var lane: Dictionary = bk._lanes[k]
 		if not lane["panel"].visible:
@@ -2247,7 +2252,15 @@ func _element_checks(main) -> void:
 	sim.load_dict(snap)
 	bk._shown = ""
 	main.refresh()
-	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.SUM_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H, "the Caravan's strips overlap")
+	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.PANEL_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H and bk.LANES_Y >= bk.HEAD_H, "the Caravan's strips overlap")
+	# the band (10 Oct, Bands-U A): the rooms' one height; the sum in it under the class's line, clear of the face, the
+	# classes and the notice; the classes at its foot, right
+	var sum_r := Rect2(bk._sum.position, bk._sum.size)
+	_check(bk.HEAD_H == Pal.BAND_H and Rect2(0, 0, Pal.GRID_W, bk.HEAD_H).encloses(sum_r) and sum_r.position.y >= bk._points.position.y + 40 and sum_r.position.x >= bk._face.position.x + bk._face.size.x and not sum_r.intersects(Rect2(bk._class_line.position, bk._class_line.size)), "the sum is not in the band under the points: %s" % str(sum_r))
+	for cb in bk._class_buttons:
+		var cr := Rect2(cb.position, cb.size)
+		_check(not cr.intersects(sum_r) and cr.end.y <= bk.HEAD_H - 8 and cr.end.y >= bk.HEAD_H - 24, "a class button is off the band's foot or on the sum: %s" % str(cr))
+	_check(not Rect2(bk._notice.position, bk._notice.size).intersects(sum_r), "the class notice sits on the sum")
 	# the sum strip (option A, 9 Oct): the elements in play in their colours, the dots, the joints last; no zeros
 	var sum_tags: Array = []
 	for k in range(bk._sum_chips.shown()):
@@ -2278,6 +2291,30 @@ func _element_checks(main) -> void:
 	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Dots"].all(func(t): return crowd_tags.has(t)) and crowd_tags.back() == "Joints", "the crowded strip lost an element, Damage or the Joints: %s" % str(crowd_tags))
 	_sum_strip_check(main)
 	_check_fit(main, "Caravan (a crowded sum strip)")
+	# heavier still, in the band's three rows (Bands-U A; the reviewer): every element tree, Knuckles, a second past -
+	# every element and the Joints still on show, the plain figures going first
+	var cls2_hold: String = sim.cls2
+	for tn in ["Blades", "Knuckles"]:
+		var tt: Dictionary = Data.tree_named(tn)
+		if tt.is_empty():
+			continue
+		for i in range(tt["nodes"].size() - 1):
+			if not sim.tree.has("%s/%d" % [tn, i]):
+				sim.tree.append("%s/%d" % [tn, i])
+	for cd in Data.CLASSES:
+		if cd["name"] != sim.cls:
+			sim.cls2 = cd["name"]
+			break
+	bk._shown = ""
+	main.refresh()
+	var heavy_tags: Array = []
+	for k in range(bk._sum_chips.shown()):
+		heavy_tags.append(bk._sum_chips._tags[k].text)
+	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Bleed"].all(func(t): return heavy_tags.has(t)) and heavy_tags.back() == "Joints" and heavy_tags.size() == bk.sum_items([]).size(), "the heaviest sum lost an element or the Joints in the band: %s" % str(heavy_tags))
+	bk._shown = ""
+	main.refresh()
+	_check_fit(main, "Caravan (the heaviest sum)")
+	sim.cls2 = cls2_hold
 	sim.tree = crowd_tree
 	sim.trades = crowd_trades
 	bk._shown = ""
@@ -2565,7 +2602,13 @@ func _melee_checks(main) -> void:
 		_check(main._workshop._headline.text == ("2 of 5" if picks_on else "0 of 5") and not main._workshop._upgrade.visible, "the Bench's heading reads '%s', upgrade %s" % [main._workshop._headline.text, str(main._workshop._upgrade.visible)])
 		_check(main._workshop._next.text.contains("Cheap parts") == picks_on, "the Bench's heading does not name its picks: '%s'" % main._workshop._next.text)
 		var chips = main._workshop._chips
-		_check(chips.position.x >= main._workshop._views[2].position.x + main._workshop._views[2].size.x and chips.position.x + chips.used_width() <= main._workshop.size.x - main._workshop.PAD + 0.5, "the purse chips are off their place in the heading")
+		# the band (Bands-U A): the purse down the left under the headline, the views at the foot, right, the line between
+		var ws = main._workshop
+		var cr := Rect2(chips.position, chips.size)
+		_check(ws.HEAD_H == Pal.BAND_H and cr.position.y >= ws._headline.position.y + ws._headline.size.y and cr.end.x <= ws.PAD + Pal.BAND_TEXT_W + 0.5 and cr.end.y <= ws.HEAD_H - 8 and chips.shown() == 3, "the purse chips are off their place in the band: %s, %d shown" % [str(cr), chips.shown()])
+		for v in ws._views:
+			var vr := Rect2(v.position, v.size)
+			_check(vr.end.y <= ws.HEAD_H - 8 and vr.end.x <= ws.size.x - ws.PAD + 0.5 and not vr.intersects(cr) and not vr.intersects(Rect2(ws._next.position, ws._next.size)), "a view's tab is off the band's foot or on the purse or the line: %s" % str(vr))
 		var prim = sim.equipped["Primary"]
 		if prim != null:
 			for r in main._workshop._guns["Primary"]["rows"]:
@@ -7140,7 +7183,7 @@ func _sum_strip_check(main) -> void:
 	if bk.selected != "" and bk._chips.visible:
 		var said: String = (bk._words.text + " " + bk._words2.text).strip_edges()
 		_check(bk._words.position.y >= bk._chips.position.y + Chips.CHIP_H and bk._words.text != "" and said.ends_with("."), "the node's chip and sentence are off: words at y %.0f, chips to %.0f, '%s'" % [bk._words.position.y, bk._chips.position.y + Chips.CHIP_H, said])
-	_check(bk._panel.position.y >= bk._sum.position.y + bk._sum.size.y + 8, "the node panel sits on the sum strip")
+	_check(bk._panel.position.y >= bk.HEAD_H, "the node panel sits on the band")
 
 
 ## The rarities' colours (Rarity-A, 7 Oct): seven tones a cell can wear, every one its own, none the pick ring's;
@@ -8277,6 +8320,12 @@ func _start_kit_checks(main) -> void:
 ## seals; the words' bite and pay and their flags in the run; they stay through a run and a save; the screen.
 func _radio_juice_checks(main) -> void:
 	var sim = main.sim
+	# the band (Bands-U A): the book's rows a label apart at least, the sites' list inside the room, the detail's crafts inside it
+	var rdo = main._radio
+	var bstep: float = rdo._book[rdo.BOOK_COLS].position.y - rdo._book[0].position.y if rdo._book.size() > rdo.BOOK_COLS else 99.0
+	_check(bstep >= rdo._book[0].size.y and rdo.HEAD_H == Pal.BAND_H, "the Radio's book rows overlap: a step of %.1f for %.0f px labels" % [bstep, rdo._book[0].size.y])
+	var last_row: Button = rdo._rows.back()["button"]
+	_check(last_row.position.y + last_row.size.y <= Pal.ROOM_H, "the Radio's last site runs out of the room")
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()

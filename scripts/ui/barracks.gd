@@ -22,16 +22,17 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const PAD := 20
 # the header: the face, the class and trait, the points free, the class's line; the classes top right
-const HEAD_H := 96
-const FACE := 72
+const HEAD_H := Pal.BAND_H                                     # the rooms' one band (10 Oct, Bands-U A): 96 → 180
+const FACE := Pal.BAND_FACE
 const CLASS_W := 164
 const CLASS_H := 40
 const CLASS_GAP := 8
 # the lanes: five, a link strip between a class lane and its element, a gap between the pairs
-const LANES_Y := HEAD_H + 8
-const LANE_H := 104
-const LINK_H := 22
-const PAIR_GAP := 8
+const LANES_Y := HEAD_H + 6
+const LANE_H := 100                                            # 104 → 100 (Bands-U A): the tiles keep 44, the pad 4
+const LINK_H := 20
+const PAIR_GAP := 6
+const TILE_TOP := 4                                            # a tile's row 0 from the lane's top
 const LANES := 5
 const LABEL_W := 170                                           # the lane's label block: name, whose, points in, the next gate
 const TILES_X := LABEL_W + 12
@@ -39,7 +40,7 @@ const COLS := 6
 const TILE_GAP := 6
 const ROW_GAP := 4
 const TILE_W := (Pal.GRID_W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS     # 219
-const TILE_H := (LANE_H - 12 - ROW_GAP) / 2                                    # 44
+const TILE_H := (LANE_H - 2 * TILE_TOP - ROW_GAP) / 2                          # 44
 const LANE_NODES := 12                                         # tiles a lane holds (a tree has eleven)
 ## A node as a glyph (9 Oct, Tree-G A): a square tile, a notable round, a keystone a diamond, the capstone a bigger
 ## diamond alone in its column; centred in its column's cell; the cost a chip on its corner, a tick once trained.
@@ -49,15 +50,17 @@ const DIAMOND_BIG := 40                                        # the capstone, t
 const GLYPH := 26
 const COST_W := 26
 const YARD_TONE := Color("8fb3d9")                             # the Yard's tree: its glyphs' tone (its lane's line is the card's)
-const LANES_H := LANES * LANE_H + 2 * LINK_H + 2 * PAIR_GAP    # 576
-const ALSO_Y := LANES_Y + LANES_H + 8
+const LANES_H := LANES * LANE_H + 2 * LINK_H + 2 * PAIR_GAP    # 552
+const ALSO_Y := LANES_Y + LANES_H + 6
 const ALSO_H := 40
 const ALSO_HEAD_W := 150
 const ALSO_MAX := 10
-const SUM_Y := ALSO_Y + ALSO_H + 8
-const SUM_H := 10 + Chips.CHIP_H + 10
-const SUM_HEAD_W := 150
-const PANEL_Y := SUM_Y + SUM_H + 8
+# the sum ("Add up to") in the band, under the class's line (Bands-U A: the strip's 54 px pay for the band)
+const SUM_Y := 76                                              # under the points; the class's line goes right, over the classes
+const SUM_H := 3 * Chips.CHIP_H + 2 * Chips.ROW_GAP
+const SUM_HEAD_W := 96
+const SUM_ROWS := 3
+const PANEL_Y := ALSO_Y + ALSO_H + 6
 const PANEL_H := Pal.ROOM_H - PANEL_Y
 const WORDS_UNDER_Y := 50          # a node's sentence, under its title
 # the drawer and the shelf take the lanes' whole area: three columns of cards
@@ -113,11 +116,17 @@ func _init() -> void:
 	_build_lanes()
 	_build_also()
 	_build_pages()
-	_sum = UI.panel(self, Rect2(0, SUM_Y, Pal.GRID_W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_sum_head = UI.head(_sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
+	_sum = Panel.new()                  # a frame in the band: the head's words column, two chip rows
+	_sum.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_sum.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sum.position = Vector2(_words_x(), SUM_Y)
+	_sum.size = Vector2(_words_w(), SUM_H)
+	head_band["art"].get_parent().add_child(_sum)
+	_sum_head = UI.head(_sum, Rect2(0, 0, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
 	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_sum_chips = Chips.new(Pal.GRID_W - 2 * PAD - SUM_HEAD_W - 10, 16)
-	_sum_chips.position = Vector2(PAD + SUM_HEAD_W + 10, 10)
+	UI.shadow(_sum_head)
+	_sum_chips = Chips.new(_words_w() - SUM_HEAD_W - 8, 16)
+	_sum_chips.position = Vector2(SUM_HEAD_W + 8, 0)
 	_sum.add_child(_sum_chips)
 	_build_panel()
 
@@ -125,21 +134,35 @@ func _init() -> void:
 func _build_head() -> void:
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The caravan")     # art/places/the_caravan.png (Rooms-B)
-	_face = People.rect(head, Vector2(16, 12), FACE / 128.0)
-	var cx0: float = Pal.GRID_W - PAD - Data.CLASSES.size() * CLASS_W - CLASS_GAP * (Data.CLASSES.size() - 1)
-	var x0 := 16 + FACE + 14
-	var left_w: float = cx0 - 24 - x0
-	_kicker = UI.label(head, Rect2(x0, 6, left_w, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_points = UI.label(head, Rect2(x0, 28, left_w, 40), "", "SemiBold", Pal.HEADLINE - 6, Pal.ACCENT)
-	_unit = UI.label(head, Rect2(x0, 32, left_w, 34), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_class_line = UI.label(head, Rect2(x0, 64, left_w, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the band as the Yard's (Bands-U A): the face at the left, the words down the shade, the classes at the foot, right
+	_face = People.rect(head, Vector2(16, (HEAD_H - FACE) / 2.0), FACE / 128.0)
+	var cx0: float = _classes_x()
+	var x0: float = _words_x()
+	var left_w: float = _words_w()
+	_kicker = UI.label(head, Rect2(x0, 8, left_w, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_points = UI.label(head, Rect2(x0, 30, left_w, 40), "", "SemiBold", Pal.HEADLINE - 6, Pal.ACCENT)
+	_unit = UI.label(head, Rect2(x0, 34, left_w, 34), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_class_line = UI.label(head, Rect2(cx0, HEAD_H - 16 - CLASS_H - 62, Pal.GRID_W - PAD - cx0, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)     # over the classes, right
 	for k in range(Data.CLASSES.size()):
-		var cb := UI.button(head, Rect2(cx0 + k * (CLASS_W + CLASS_GAP), 10, CLASS_W, CLASS_H), false)
+		var cb := UI.button(head, Rect2(cx0 + k * (CLASS_W + CLASS_GAP), HEAD_H - 16 - CLASS_H, CLASS_W, CLASS_H), false)
 		cb.text = Data.CLASSES[k]["name"]
 		cb.add_theme_font_size_override("font_size", 20)
 		cb.pressed.connect(_pick_class.bind(Data.CLASSES[k]["name"]))
 		_class_buttons.append(cb)
-	_notice = UI.label(head, Rect2(cx0, 56, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_notice = UI.label(head, Rect2(cx0, HEAD_H - 16 - CLASS_H - 34, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+
+
+static func _classes_x() -> float:
+	return Pal.GRID_W - PAD - Data.CLASSES.size() * CLASS_W - CLASS_GAP * (Data.CLASSES.size() - 1)
+
+
+## The band's words column: past the face, up to the classes.
+static func _words_x() -> float:
+	return 16 + FACE + 14
+
+
+static func _words_w() -> float:
+	return _classes_x() - 24 - _words_x()
 
 
 ## Where lane `k` starts: two pairs, each a lane, its link and its element's lane, then the Yard's.
@@ -156,7 +179,7 @@ static func lane_y(k: int) -> float:
 
 ## A tile's rect in its lane: column `c`, row `r`; `span` a node alone in its column, the two rows' height.
 static func tile_rect(c: int, r: int, span := false) -> Rect2:
-	return Rect2(TILES_X + c * (TILE_W + TILE_GAP), 6 + (0 if span else r * (TILE_H + ROW_GAP)), TILE_W, (2 * TILE_H + ROW_GAP) if span else TILE_H)
+	return Rect2(TILES_X + c * (TILE_W + TILE_GAP), TILE_TOP + (0 if span else r * (TILE_H + ROW_GAP)), TILE_W, (2 * TILE_H + ROW_GAP) if span else TILE_H)
 
 
 ## A node's tile in its lane: centred in its column's cell (tile_rect), square; a keystone's diamond smaller (it
@@ -169,7 +192,7 @@ static func node_rect(c: int, r: int, span: bool, kind: String) -> Rect2:
 
 ## A gate's place: the boundary between column c-1 and c, at the lane's middle.
 static func gate_pos(c: int) -> Vector2:
-	return Vector2(TILES_X + c * (TILE_W + TILE_GAP) - TILE_GAP / 2.0, 6 + TILE_H + ROW_GAP / 2.0)
+	return Vector2(TILES_X + c * (TILE_W + TILE_GAP) - TILE_GAP / 2.0, TILE_TOP + TILE_H + ROW_GAP / 2.0)
 
 
 const GATE_R := 13.0
@@ -190,7 +213,7 @@ func _lay_gates(k: int) -> void:
 	for nd in t["nodes"]:
 		per_col[int(nd.get("col", 0))] = int(per_col.get(int(nd.get("col", 0)), 0)) + 1
 	for c in per_col.keys():
-		lane["rows_at"][c] = [gate_pos(0).y] if int(per_col[c]) == 1 else [6 + TILE_H / 2.0, 6 + TILE_H + ROW_GAP + TILE_H / 2.0]
+		lane["rows_at"][c] = [gate_pos(0).y] if int(per_col[c]) == 1 else [TILE_TOP + TILE_H / 2.0, TILE_TOP + TILE_H + ROW_GAP + TILE_H / 2.0]
 	for c in range(1, COLS):
 		if not per_col.has(c) or not per_col.has(c - 1):
 			continue
@@ -913,7 +936,7 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 ## still too long the plain figures go from the least telling up (SUM_DROP), never an element's or the joints'.
 const SUM_DROP := ["Search", "Quantity", "First shot", "Quality", "Gangs", "Max HP", "Damage"]
 func _show_sum(lanes: Array) -> void:
-	_sum_chips.show_chips(sum_items(lanes))
+	_sum_chips.show_chips(sum_items(lanes), SUM_ROWS)
 
 
 ## The strip's items at their long forms, nothing cut to fit (for the tests).
@@ -1034,7 +1057,7 @@ func sum_items(_lanes: Array, fit := true) -> Array:
 
 ## Whether the items fit the strip's one row (the chips laid, then read back).
 func _fits(items: Array) -> bool:
-	_sum_chips.show_chips(items)
+	_sum_chips.show_chips(items, SUM_ROWS)
 	return _sum_chips.shown() == items.size()
 
 

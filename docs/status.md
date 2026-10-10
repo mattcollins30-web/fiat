@@ -2740,6 +2740,21 @@ width and the band, clear of Move, all six chips at the largest figures; a paper
 paper. The reviewer's catches: the worst case left notes and scrap small; the Fence said "safe to sell" of a paper
 on its own shelf; fixed.
 
+**One art band on every room (10 Oct, Bands-U A on the canvas).** Matt: the Yard's band works; Stats, Training, the
+Workshop and the Radio want more of their art, and the Clinic and the Fence want the same band as everywhere else
+(the Runner and Runs stay). Every one of those rooms now has a 180 px band (`Pal.BAND_H`; the Yard keeps 270) laid
+as the Yard's: the room in the kicker, its figure in gold under it, chips down the shaded left, a face where the
+room has one (128 px), the room's buttons at the band's foot, right. `Band.room_band()` gives Stats and the vendors
+that layout (the art shaded from the left, no title line). Paid for from each room's spare: Stats' rows 28 → 24 and
+its cards 32-34 px shorter; Training's lanes 104 → 100 (the tiles keep 44) and its "Add up to" strip moved into the
+band under the points, the class's line over the classes; the Workshop's grid four rows a page; the Radio's site rows
+82 → 74 and its detail 36 px shorter; the Clinic and the Fence lose the side band - the face, the name and the figure
+go into the full band, the tabs to its foot, the side column under it, the grid four rows a page, and the word and
+the contracts take the whole right column (the pick panel hides there). *The smoke:* each room's band at the one
+height, its words, chips and buttons in their places and apart; the heaviest Training sum (every element, a second
+past) keeps every element and the Joints; the Radio's book rows apart. The reviewer's catches: the sum's room in
+the band unproven at its heaviest; three Stats labels touching; the book's rows with no slack; fixed or checked.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

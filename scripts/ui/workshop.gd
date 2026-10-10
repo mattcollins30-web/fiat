@@ -28,11 +28,11 @@ const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
 const PAD := 20
-const HEAD_H := 118                # the heading band across the top
+const HEAD_H := Pal.BAND_H         # the rooms' one band across the top (10 Oct, Bands-U A): 118 → 180
 const TOP := HEAD_H + 14           # the columns under it
 const VIEW_W := 140                # a view's tab
 const VIEW_H := 40
-const VIEWS_X := 560               # the tab row starts here in the heading
+const VIEWS_X := Pal.GRID_W - PAD - 3 * VIEW_W - 12     # the views at the band's foot, right (Bands-U A)
 const UPGRADE_W := 270
 const UPGRADE_H := 44
 const NEXT_W := 220                # "Next: handguards, stocks", left of Upgrade
@@ -45,7 +45,7 @@ const TILES := 6                   # five mounts and a spare, two rows
 const ROW_GAP := 8
 const GUN_CARD_H := CARD_PAD + HEAD_LINE_H + NAME_H + CHIPS_H + 2 * UI.TILE_H + ROW_GAP + CARD_PAD      # 250
 const SOCK_HEAD_H := 44
-const GRID_ROWS := 5               # the grid under the heading: five rows a page
+const GRID_ROWS := 4               # the grid under the band: four rows a page (five before the band grew; it pages)
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.GRID_Y + GRID_ROWS * Pal.CELL + (GRID_ROWS - 1) * Pal.CELL_GAP      # 448
@@ -109,20 +109,21 @@ func _init() -> void:
 	# the heading: the room, its level and what it fits; the views; the purse; the next level and Upgrade
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The workshop")    # art/places/the_workshop.png (Rooms-B)
-	_kicker = UI.label(head, Rect2(PAD, 12, 400, 26), "The Workshop", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_headline = UI.label(head, Rect2(PAD, 38, 300, 48), "", "SemiBold", Pal.HEADLINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
-	_unit = UI.label(head, Rect2(PAD, 44, 400, 40), "", "Medium", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the band as the Yard's (Bands-U A): the words and the purse down the shaded left, the views at the foot, right
+	_kicker = UI.label(head, Rect2(PAD, 8, Pal.BAND_TEXT_W, 24), "The Workshop", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_headline = UI.label(head, Rect2(PAD, 32, Pal.BAND_TEXT_W, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	_unit = UI.label(head, Rect2(PAD, 38, Pal.BAND_TEXT_W, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(3):
 		var v := UI.button(head, Rect2(VIEWS_X + i * (VIEW_W + 6), HEAD_H - 16 - VIEW_H, VIEW_W, VIEW_H), false)      # plain: _style skins the one that's on (a primary start left Guns' text dark, 8 Oct)
 		v.text = ["Guns", "Sockets", "Craft"][i]
 		v.pressed.connect(_set_view.bind(["guns", "sockets", "craft"][i]))
 		_views.append(v)
-	_chips = Chips.new(Pal.GRID_W - 2 * PAD - VIEWS_X - 3 * VIEW_W - 24, 3)
-	_chips.position = Vector2(Pal.GRID_W - PAD - _chips.size.x, 14)
+	_chips = Chips.new(Pal.BAND_TEXT_W, 3)
+	_chips.position = Vector2(PAD, Pal.BAND_CHIPS_Y)
 	head.add_child(_chips)
 	_upgrade = UI.button(head, Rect2(Pal.GRID_W - PAD - UPGRADE_W, HEAD_H - 14 - UPGRADE_H, UPGRADE_W, UPGRADE_H), true)
 	_upgrade.pressed.connect(_on_upgrade)
-	_next = UI.label(head, Rect2(Pal.GRID_W - PAD - UPGRADE_W - 16 - NEXT_W, HEAD_H - 14 - UPGRADE_H, NEXT_W, UPGRADE_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_next = UI.label(head, Rect2(PAD + Pal.BAND_TEXT_W + 24, HEAD_H - 16 - VIEW_H, VIEWS_X - 16 - (PAD + Pal.BAND_TEXT_W + 24), VIEW_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)     # left of the views
 	# the Craft view: the piece as a card, its affixes as rows, the picked one's jobs under them
 	_piece = UI.panel(self, Rect2(0, TOP, BODY_W, PIECE_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_piece.visible = false
@@ -385,10 +386,9 @@ func show_state(s) -> void:
 			picks.append(str(bench["picks"][c][0 if sd == "a" else 1]["name"]))
 	_headline.text = "%d of 5" % picks.size()
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
-	_unit.size.x = VIEWS_X - 12 - _unit.position.x
+	_unit.size.x = PAD + Pal.BAND_TEXT_W + 120 - _unit.position.x
 	UI.fit(_unit, ["upgrades built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "upgrades built", "upgrades"])
-	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 1)
-	_chips.position.x = Pal.GRID_W - PAD - _chips.used_width()
+	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 3)
 	if picks.is_empty():
 		UI.fit(_next, ["Every job and every mount, from the start; the Bench's upgrades are built in the Yard", "The Bench's upgrades are built in the Yard", "Upgrades: the Yard"])
 	else:

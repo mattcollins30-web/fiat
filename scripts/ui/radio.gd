@@ -20,14 +20,14 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 
 const PAD := 20
-const HEAD_H := 84
+const HEAD_H := Pal.BAND_H         # the rooms' one band (10 Oct, Bands-U A): 84 → 180
 const BODY_Y := HEAD_H + 8
 const LIST_W := 330
-const ROW_H := 82
+const ROW_H := 74                  # 82 → 74 (Bands-U A): nine sites still on show
 const ROW_GAP := 6
 const RIGHT_X := LIST_W + 12
 const RIGHT_W := Pal.GRID_W - RIGHT_X
-const DETAIL_H := 566
+const DETAIL_H := 530              # 566 → 530: the words, the crafts and the hint, no slack
 const WORD_H := 34
 const WORD_GAP := 3
 const WORDS_MAX := 8                # six of the site's own at most, and two standing words
@@ -77,8 +77,8 @@ func _init() -> void:
 	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Radio", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_chips = Chips.new(Pal.GRID_W - 2 * PAD - 370, 6)
-	_chips.position = Vector2(PAD + 370, 12)
+	_chips = Chips.new(Pal.BAND_TEXT_W, 6)                 # down the shaded left under the headline (Bands-U A)
+	_chips.position = Vector2(PAD, Pal.BAND_CHIPS_Y)
 	head.add_child(_chips)
 	for i in range(Data.TIERS.size()):
 		var y: float = BODY_Y + i * (ROW_H + ROW_GAP)
@@ -92,9 +92,9 @@ func _init() -> void:
 		r["name"] = UI.label(b, Rect2(12, 4, LIST_W - 90, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		r["depth"] = UI.label(b, Rect2(LIST_W - 130, 4, 118, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
 		for k in range(WORDS_MAX):
-			var p := UI.panel(b, Rect2(12 + k * (PIP_W + 4), 34, PIP_W, 9), UI.box(Pal.RAIL_RULE, 3))
+			var p := UI.panel(b, Rect2(12 + k * (PIP_W + 4), 32, PIP_W, 9), UI.box(Pal.RAIL_RULE, 3))
 			r["pips"].append(p)
-		r["pay"] = UI.label(b, Rect2(12, 50, LIST_W - 24, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["pay"] = UI.label(b, Rect2(12, 44, LIST_W - 24, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_rows.append(r)
 	var detail := UI.panel(self, Rect2(RIGHT_X, BODY_Y, RIGHT_W, DETAIL_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	var iw: float = RIGHT_W - 2 * PAD
@@ -182,7 +182,7 @@ func show_state(s) -> void:
 	_chips.show_chips([{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Color("c9b98f")},
 		{"tag": "Words known", "forms": ["%d of %d" % [known, Data.WORDS.size()]], "colour": Pal.TEXT_2},
 		{"forms": [sim.sky_words(selected) if selected >= 0 else "", ""], "colour": Pal.TEXT_3},
-		{"forms": ["words stay until you change them", "they stay"], "colour": Pal.TEXT_3}], 1)
+		{"forms": ["words stay until you change them", "they stay"], "colour": Pal.TEXT_3}], 3)
 	for i in range(_rows.size()):
 		_show_row(i)
 	_show_detail(on_air)

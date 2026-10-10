@@ -91,6 +91,10 @@ const GRID_H := ROWS * CARD_H + (ROWS - 1) * CARD_GAP     # 864
 const EVENTS_H := 36                                       # one line of log: the latest; the rooms get the rest
 const EVENT_LINES := 1
 const ROOM_H := GRID_H + 88 - EVENTS_H                     # 916: a room's height; the Yard's card grid keeps GRID_H
+const BAND_H := 180                                        # every room's art band, one height (10 Oct, Bands-U A); the Yard's 270
+const BAND_FACE := 128                                     # a face in a room's band: the portrait whole
+const BAND_TEXT_W := 330                                   # the band's words and chips down its shaded left
+const BAND_CHIPS_Y := 88                                   # the chips under the headline
 const MAX_CARDS := COLS * ROWS                             # eight a room, never more
 
 # the card (Pithole's menu_shell.md §3)

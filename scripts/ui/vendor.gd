@@ -25,18 +25,24 @@ const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH
-const GRID_H := Inventory.HEIGHT
-const PANEL_Y := GRID_H + GAP
+# the rooms' one band across the top (10 Oct, Bands-U A; Matt: "uniform with everywhere else"): the vendor's face, name
+# and figure in it, the tabs at its foot, right; the side column and the grid under it
+const BAND_H := Pal.BAND_H
+const BODY_Y := BAND_H + 10
+const BODY_H := Pal.ROOM_H - BODY_Y
+const GRID_ROWS := 4                                          # seven before the band; the grid pages
+const GRID_H := Inventory.GRID_Y + GRID_ROWS * Pal.CELL + (GRID_ROWS - 1) * Pal.CELL_GAP
+const PANEL_Y := BODY_Y + GRID_H + GAP
 const PANEL_H := Pal.ROOM_H - PANEL_Y
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30
 const PANEL_LINES := 4
 const COL_W := (GRID_W - 3 * PAD) / 2
-const TAB_H := 40                                             # the tabs, along the band's foot
-const BAND_H := 200                                           # the vendor's band: the face, the name, the headline figure
-const FACE := 116                                             # the portrait in the band
-const TOP := BAND_H + 36                                      # the sections under the band and the vendor's line
+const TAB_H := 40                                             # the tabs, along the band's foot, right
+const TAB_W := 160
+const FACE := Pal.BAND_FACE                                   # the portrait in the band
+const TOP := 44                                               # the side column's sections, under the vendor's line
 const TILE_GAP := 8
 const SIDE_TILES := 11            # five rarities, five boxes, the shelf (the pass, 6 Oct)
 const WORD_Y := PAD + 38 + 28 + 12 + UI.HEAD_H + 4                # the offer row's top, under the title, the line and its head
@@ -107,20 +113,21 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the left column: the band with the tabs along its foot, the vendor's business under it
-	_side = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_band = Band.new(BODY_W, BAND_H, 3)
-	_side.add_child(_band)
-	_face = People.rect(_band, Vector2(PAD, 16), FACE / 128.0)
+	# the band across the top (Bands-U A), the tabs at its foot, right; the left column under it: the vendor's line, their business
+	_band = Band.new(Pal.GRID_W, BAND_H, 3)
+	add_child(_band)
+	_face = People.rect(_band, Vector2(PAD, (BAND_H - FACE) / 2.0), FACE / 128.0)
 	_band.portrait_width(FACE)
-	_said.append(UI.label(_side, Rect2(PAD, BAND_H + 4, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
+	_band.room_band()
+	_side = UI.panel(self, Rect2(0, BODY_Y, BODY_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_said.append(UI.label(_side, Rect2(PAD, 10, INNER, 26), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false))
 	for k in range(4):
-		var b := UI.button(_side, Rect2(PAD + k * ((INNER - 8) / 2 + 8), BAND_H - 14 - TAB_H, (INNER - 8) / 2, TAB_H), k == 0)
+		var b := UI.button(self, Rect2(_tab_x(k, 2), BAND_H - 16 - TAB_H, TAB_W, TAB_H), k == 0)
 		b.pressed.connect(_show.bind(["shelf", "stash", "contracts", "word"][k]))
 		b.visible = k < 2
 		_tabs.append(b)
 	# the Fence's word (the gamble, Matt, 6 Oct): five kinds on offer where the grid would be, the last thing it got you under them
-	_word = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_word = UI.panel(self, Rect2(GRID_X, BODY_Y, GRID_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))     # the grid's and the panel's place
 	_word.visible = false
 	_word_title = UI.label(_word, Rect2(PAD, PAD, GRID_W - 2 * PAD, 36), "A word in the right ear", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_word_line = UI.label(_word, Rect2(PAD, PAD + 38, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -149,9 +156,9 @@ func _init() -> void:
 	_last.visible = false
 	_word.add_child(_last)
 	_last_none = UI.label(_word, Rect2(PAD, LAST_Y, GRID_W - 2 * PAD, 28), "Nothing yet. Pay, and whatever he gets you lands in the stash.", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_word_note = UI.label(_word, Rect2(PAD, GRID_H - PAD - 28, GRID_W - 2 * PAD, 28), "Rolled at the best tier you have opened, never Common. One in fifty is a unique of the kind.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_word_note = UI.label(_word, Rect2(PAD, BODY_H - PAD - 28, GRID_W - 2 * PAD, 28), "Rolled at the best tier you have opened, never Common. One in fifty is a unique of the kind.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the contracts (Deals-A, 9 Oct): a strip, a row a contract - five with the Fence's Orders - and the mate's
-	_deals = UI.panel(self, Rect2(GRID_X, 0, GRID_W, GRID_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_deals = UI.panel(self, Rect2(GRID_X, BODY_Y, GRID_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_deals.visible = false
 	_deal_head = UI.label(_deals, Rect2(PAD, 10, 360, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_deal_pass = UI.label(_deals, Rect2(PAD + 370, 10, GRID_W - 2 * PAD - 370, 32), "", "Regular", Pal.CELL_TEXT, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT, false)
@@ -181,12 +188,14 @@ func _init() -> void:
 	_mate_buy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
 	_mate_buy.pressed.connect(_buy_mate)
 	_shelf = Inventory.new()
-	_shelf.position = Vector2(GRID_X, 0)
+	_shelf.position = Vector2(GRID_X, BODY_Y)
+	_shelf.set_rows(GRID_ROWS)
 	_shelf.can_many = false
 	_shelf.picked.connect(_on_pick.bind("shelf"))
 	add_child(_shelf)
 	_stash = Inventory.new()
-	_stash.position = Vector2(GRID_X, 0)
+	_stash.position = Vector2(GRID_X, BODY_Y)
+	_stash.set_rows(GRID_ROWS)
 	_stash.visible = false
 	_stash.picked.connect(_on_pick.bind("stash"))
 	_stash.acted.connect(_on_acted)
@@ -252,10 +261,8 @@ func _init() -> void:
 func setup(k: String) -> void:
 	kind = k
 	if kind == "fence":
-		var tw := (BODY_W - 16 - 24) / 4            # four across the band's foot, from its edge
-		for i in range(4):
-			_tabs[i].position.x = 8 + i * (tw + 8)
-			_tabs[i].size.x = tw
+		for i in range(4):                          # four at the band's foot, right
+			_tabs[i].position.x = _tab_x(i, 4)
 			_tabs[i].visible = true
 			_tabs[i].add_theme_font_size_override("font_size", 16)     # four across: "Contracts ✓1" wants 146 at 18
 	if kind == "clinic":
@@ -292,6 +299,7 @@ func show_state(s) -> void:
 	_stash.visible = showing == "stash"
 	_deals.visible = showing == "contracts"
 	_word.visible = showing == "word"
+	_panel.visible = not (_deals.visible or _word.visible)     # the contracts and the word take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 		for t in _side_tiles_c:
@@ -510,7 +518,7 @@ func _signature() -> String:
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
 	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), Data.WOUND_PCT]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
-	_band.set_words("The Clinic", "The medic", "%d" % sim.hp_shown(),
+	_band.set_words("The Clinic · the medic", "", "%d" % sim.hp_shown(),
 		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
 	_band.headline_under_title(true)
 	_side_title.text = "TREATMENT"
@@ -618,7 +626,7 @@ func _show_side() -> void:
 	var worth_all := 0
 	for it in sim.stash:
 		worth_all += sim.sell_price(it)
-	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "The Fence",
+	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "",
 		Fmt.money(worth_all), ["for the lot · %d in the stash" % sim.stash.size(), "for the lot of %d" % sim.stash.size(), "for the lot"], Pal.ACCENT)
 	_band.headline_under_title(true)
 	_side_title.text = "SELL BY RARITY"
@@ -901,6 +909,11 @@ func _press(i: int) -> void:
 		_shelf.selected = -1
 		_stash.selected = -1
 	acted.emit()
+
+
+## Tab k's x at the band's foot, right, of n showing.
+static func _tab_x(k: int, n: int) -> float:
+	return Pal.GRID_W - PAD - n * TAB_W - (n - 1) * 8 + k * (TAB_W + 8)
 
 
 ## For the tests: the vendor's face sits clear of everything else showing in

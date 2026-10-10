@@ -60,6 +60,7 @@ the Radio, the Yard and Stats**.
 | The Yard | heading (purse chips, the town) | band; fits because the glyph lanes are shorter | `art/places/the_yard.png` |
 | Stats | none | 96 px band over the eight cards (each 48 px shorter across two rows); the runner's face at its left | `art/places/the_stats.png` |
 
+- Rebuilt (10 Oct, Bands-U A): one 180 px band on Stats, Training, the Workshop, the Radio, the Clinic and the Fence, laid as the Yard's; see status.md.
 - Built (10 Oct): each heading keeps its height and its layout and takes its painted place under its words
   (`UI.head_art`: covering it from the centre, shaded from the left, the words with a shadow); Stats has its own
   short band. The plain card while a file is missing.
