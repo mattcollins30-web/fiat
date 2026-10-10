@@ -2755,6 +2755,11 @@ height, its words, chips and buttons in their places and apart; the heaviest Tra
 past) keeps every element and the Joints; the Radio's book rows apart. The reviewer's catches: the sum's room in
 the band unproven at its heaviest; three Stats labels touching; the book's rows with no slack; fixed or checked.
 
+**Two tidies before the playtest (10 Oct).** The smoke's damage-line check flaked when a fight landed about the
+sheet's figure (the line barely moves there): it now reads the exact place the line eases to - the Yard's share
+scaled by landed over the sheet's figure - within 0.005. The Workshop's Upgrade button, hidden since the Bench's
+levels went to the Yard and sitting behind the views since the band, is gone.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

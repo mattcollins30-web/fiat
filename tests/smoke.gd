@@ -133,7 +133,10 @@ func _init() -> void:
 				for k in range(30):
 					main._move_dps_line(0.1)
 				var shown: float = main._top_lines["dps"][1].size.x / main._top_lines["dps"][0].size.x
-				_check(absf(shown - at_rest) > 0.01 or absf(float(sim.mission["landed_rate"]) / maxf(sim.dps(), 1.0) - 1.0) < 0.01, "the damage line sits at the Yard's share (%.2f) mid-fight with %.0f landing a second against %.0f" % [at_rest, float(sim.mission["landed_rate"]), sim.dps()])
+				# eased to what lands, not left at the Yard's share: the share scaled by landed over the sheet's figure (a
+				# fight landing near the sheet's figure barely moves it - the old "moved by 0.01" test flaked there, 10 Oct)
+				var want: float = minf(at_rest * clampf(float(sim.mission["landed_rate"]) / maxf(sim.dps(), 1.0), 0.0, 1.6), 1.0)
+				_check(absf(shown - want) < 0.005, "the damage line reads %.3f mid-fight, not %.3f (the Yard's share %.2f, %.1f landing a second against %.1f)" % [shown, want, at_rest, float(sim.mission["landed_rate"]), sim.dps()])
 			# the bot bails at a quarter HP, like a player would
 			if sim.on_mission() and (sim.hp < sim.max_hp() * 0.25 or (sim.searching() and sim.pack_used(sim.mission) >= sim.capacity()) or guard > 1200):
 				sim.extract_now()
@@ -2599,7 +2602,7 @@ func _melee_checks(main) -> void:
 		_yard_set(sim, "bench", 1, "a" if picks_on else "")
 		main._workshop._shown = ""
 		main.refresh()
-		_check(main._workshop._headline.text == ("2 of 5" if picks_on else "0 of 5") and not main._workshop._upgrade.visible, "the Bench's heading reads '%s', upgrade %s" % [main._workshop._headline.text, str(main._workshop._upgrade.visible)])
+		_check(main._workshop._headline.text == ("2 of 5" if picks_on else "0 of 5"), "the Bench's heading reads '%s'" % main._workshop._headline.text)
 		_check(main._workshop._next.text.contains("Cheap parts") == picks_on, "the Bench's heading does not name its picks: '%s'" % main._workshop._next.text)
 		var chips = main._workshop._chips
 		# the band (Bands-U A): the purse down the left under the headline, the views at the foot, right, the line between

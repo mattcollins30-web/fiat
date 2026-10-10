@@ -1,10 +1,10 @@
 extends Control
-## The Bench's screen (its treatment, 8 Oct): a heading across the top in the
-## Yard tree's shape - the room, its level and what it fits, the three views
-## as a tab row, the purse as chips, the next level and Upgrade at the right -
-## then the left column under it and the stash's grid with the pick panel on
-## the right, as the Lock-up has them. The Workshop's own level - which mounts
-## the Bench can work on - is bought here too; it's the camp's cash sink.
+## The Bench's screen (its treatment, 8 Oct; the rooms' one band, 10 Oct): the
+## band across the top in the Yard's shape - the room and its upgrades built,
+## the purse as chips down the left, the three views at the foot, right, the
+## Bench's line beside them - then the left column under it and the stash's
+## grid with the pick panel on the right, as the Lock-up has them. The Bench's
+## upgrades are built in the Yard.
 ## Three views of the left column: Guns (each gun a card, its mounts as
 ## tiles), Sockets (the sockets of the guns, the helmet and the armour, and
 ## the socketables that go in them) and Craft (the picked piece as a card with
@@ -33,9 +33,6 @@ const TOP := HEAD_H + 14           # the columns under it
 const VIEW_W := 140                # a view's tab
 const VIEW_H := 40
 const VIEWS_X := Pal.GRID_W - PAD - 3 * VIEW_W - 12     # the views at the band's foot, right (Bands-U A)
-const UPGRADE_W := 270
-const UPGRADE_H := 44
-const NEXT_W := 220                # "Next: handguards, stocks", left of Upgrade
 const CARD_PAD := 14
 const HEAD_LINE_H := 26            # a gun card's first line: the slot and the figure
 const NAME_H := 34                 # the gun's name under it
@@ -74,7 +71,6 @@ var _headline: Label
 var _unit: Label
 var _chips: Chips                  # the purse
 var _next: Label                   # what the next level adds
-var _upgrade: Button
 # the Craft view
 var _piece: Panel
 var _piece_title: Label
@@ -106,7 +102,7 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the heading: the room, its level and what it fits; the views; the purse; the next level and Upgrade
+	# the heading: the room, its level and what it fits; the views; the purse; the Bench's line (its upgrades are the Yard's)
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The workshop")    # art/places/the_workshop.png (Rooms-B)
 	# the band as the Yard's (Bands-U A): the words and the purse down the shaded left, the views at the foot, right
@@ -121,8 +117,6 @@ func _init() -> void:
 	_chips = Chips.new(Pal.BAND_TEXT_W, 3)
 	_chips.position = Vector2(PAD, Pal.BAND_CHIPS_Y)
 	head.add_child(_chips)
-	_upgrade = UI.button(head, Rect2(Pal.GRID_W - PAD - UPGRADE_W, HEAD_H - 14 - UPGRADE_H, UPGRADE_W, UPGRADE_H), true)
-	_upgrade.pressed.connect(_on_upgrade)
 	_next = UI.label(head, Rect2(PAD + Pal.BAND_TEXT_W + 24, HEAD_H - 16 - VIEW_H, VIEWS_X - 16 - (PAD + Pal.BAND_TEXT_W + 24), VIEW_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)     # left of the views
 	# the Craft view: the piece as a card, its affixes as rows, the picked one's jobs under them
 	_piece = UI.panel(self, Rect2(0, TOP, BODY_W, PIECE_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -393,7 +387,6 @@ func show_state(s) -> void:
 		UI.fit(_next, ["Every job and every mount, from the start; the Bench's upgrades are built in the Yard", "The Bench's upgrades are built in the Yard", "Upgrades: the Yard"])
 	else:
 		UI.fit(_next, ["Built: %s" % ", ".join(picks), ", ".join(picks), "Built: %s" % ", ".join(picks.slice(0, 2)), ", ".join(picks.slice(0, 2)), "%s and %d more" % [picks[0], picks.size() - 1] if picks.size() > 1 else str(picks[0]), str(picks[0]), "%d built" % picks.size()])
-	_upgrade.visible = false
 	_show_panel()
 
 
@@ -873,15 +866,9 @@ func _press(i: int) -> void:
 	_pick.press(i)                     # the pick panel's button: its action, then the shell's refresh
 
 
-func _on_upgrade() -> void:
-	show_state(sim)                    # (the Bench's levels went with the Yard's lanes, 9 Oct: the button stays hidden)
-
-
 func text_nodes() -> Array:
 	var out: Array = [_kicker, _headline, _unit, _next]
 	out.append_array(_chips.text_nodes())
-	if _upgrade.visible:
-		out.append(_upgrade)
 	out.append_array(_views)
 	out.append_array(_pick.text_nodes())
 	if view == "craft":
