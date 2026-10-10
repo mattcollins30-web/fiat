@@ -503,7 +503,7 @@ static func add_socket(it: Dictionary, most := Data.SOCKET_MAX) -> bool:
 
 ## A set piece, rolled: its base, its fixed affixes, the set's name on it.
 static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
-	var it := roll(piece["slot"], Data.MAX_TIER, rng, 0.0, false, false, "", "", 0.33, 0, level)
+	var it := roll(piece["slot"], int(base_named(piece["slot"], piece["base"]).get("tier", Data.CAMPAIGN_TIER)), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its own base's tier: a deep throwaway would set its level (10 Oct)
 	it["base"] = piece["base"]
 	it["tier"] = base_of(it)["tier"]
 	it["rarity"] = 2
@@ -527,7 +527,7 @@ static func set_named(name: String) -> Dictionary:
 
 ## A unique, rolled: its base, its fixed affixes, its name, its rule.
 static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
-	var it := roll(u["slot"], Data.MAX_TIER, rng, 0.0, false, false, "", "", 0.33, 0, level)
+	var it := roll(u["slot"], int(base_named(u["slot"], u["base"]).get("tier", Data.CAMPAIGN_TIER)), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its own base's tier: a deep throwaway would set its level (10 Oct)
 	it["base"] = u["base"]
 	it["tier"] = base_of(it)["tier"]
 	it["rarity"] = Data.RARITIES.size() - 1

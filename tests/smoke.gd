@@ -4678,7 +4678,7 @@ func _pool_checks(sim) -> void:
 	sim.equipped["Primary"] = Items.roll_unique(Data.UNIQUES[0], sim.rng)
 	_check(sim.has_rule("grandads") and Items.full_name(sim.equipped["Primary"]) == "Grandad's Shotgun", "the unique's rule or name is wrong")
 	# gear tiers run to 5: the Bank drops tier 5, and the Fence stocks what the open sites drop
-	_check(Data.TIERS[Data.TIERS.size() - 1]["loot_tier"] == Data.MAX_TIER, "the last site does not drop the top tier")
+	_check(Data.TIERS[Data.TIERS.size() - 1]["loot_tier"] == Data.CAMPAIGN_TIER, "the last site does not drop the campaign's top tier")
 	var top := 0
 	for slot in Data.SLOTS:
 		for b in Data.BASES[slot]:
@@ -6993,13 +6993,83 @@ func _endgame_move_checks(main) -> void:
 
 ## A site's level (the endgame, 7 Oct): tier plus depth drives the curve, the bases and the item level, so the
 ## streets' ladder is gentle and long and the Barracks' steep and short; the Runs card says the level.
+## The deep bases (10 Oct, docs/design/deep_guns.md): tiers 7-9 from level 12, 16 and 20, on every slot a runner
+## wears; a campaign site's "a tier up" never reaches them; every deep base has its words and a footprint that fits.
+func _deep_tier_checks(main) -> void:
+	var sim = main.sim
+	_check(sim.loot_tier_at(11) == 6 and sim.loot_tier_at(12) == 7 and sim.loot_tier_at(15) == 7 and sim.loot_tier_at(16) == 8 and sim.loot_tier_at(20) == 9,
+		"the deep tiers by level are off: %d %d %d %d" % [sim.loot_tier_at(11), sim.loot_tier_at(12), sim.loot_tier_at(16), sim.loot_tier_at(20)])
+	_check(sim.loot_cap(9) == Data.CAMPAIGN_TIER and sim.loot_cap(12) == Data.MAX_TIER, "a campaign site's tier up reaches the deep bases")
+	for slot in ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Charm"]:
+		for tier in [7, 8, 9]:
+			var n := 0
+			for b in Data.BASES[slot]:
+				if int(b["tier"]) == tier:
+					n += 1
+					_check(Words.ITEMS.has(b["name"]), "the deep base %s has no words" % b["name"])
+					var f: Vector2i = Items.footprint({"slot": slot, "base": b["name"]})
+					_check(f.x <= 5 and f.y <= 4, "the deep base %s does not fit a cell grid" % b["name"])
+			_check(n > 0, "no %s base at tier %d" % [slot, tier])
+		var deep_rng := RandomNumberGenerator.new()
+		deep_rng.seed = 7
+		var seen_deep := false
+		for k in range(400):
+			var it: Dictionary = Items.roll(slot, Data.CAMPAIGN_TIER, deep_rng)
+			_check(int(it["tier"]) <= Data.CAMPAIGN_TIER, "a campaign roll gave a deep %s" % it["base"])
+			var deep: Dictionary = Items.roll(slot, Data.MAX_TIER, deep_rng)
+			seen_deep = seen_deep or int(deep["tier"]) > Data.CAMPAIGN_TIER
+		_check(seen_deep, "a tier-9 roll never gave a deep %s" % slot)
+	for t in Data.TIERS:
+		_check(int(t["loot_tier"]) <= Data.CAMPAIGN_TIER, "the campaign's %s drops a deep tier" % t["name"])
+	# the Workshop's gun builds: a deep improvised base only once a site drops its tier (the review, 10 Oct)
+	var hold_bd: Array = sim.best_depth.duplicate()
+	for i in range(sim.best_depth.size()):
+		sim.best_depth[i] = 1
+	var top_build := 0
+	for e in sim.build_options("gun"):
+		top_build = maxi(top_build, int(e["tier"]))
+	_check(top_build == Data.CAMPAIGN_TIER, "the campaign's gun builds reach T%d" % top_build)
+	for i in range(sim.best_depth.size()):
+		sim.best_depth[i] = 20
+	top_build = 0
+	for e in sim.build_options("gun"):
+		top_build = maxi(top_build, int(e["tier"]))
+	_check(top_build == Data.MAX_TIER, "the deep gun builds stop at T%d at depth 20" % top_build)
+	sim.best_depth = hold_bd
+	# a shop's unique or set piece carries its own base's level, not a deep throwaway's
+	var u_rng := RandomNumberGenerator.new()
+	u_rng.seed = 11
+	for k in range(60):
+		var u: Dictionary = Data.UNIQUES[k % Data.UNIQUES.size()]
+		var it: Dictionary = Items.roll_unique(u, u_rng)
+		_check(Items.ilvl(it) <= int(Items.base_named(u["slot"], u["base"])["tier"]), "%s rolled at level %d over its base's tier" % [u["name"], Items.ilvl(it)])
+	# each gun line climbs: every deep tier beats the line's best below it
+	for slot in ["Primary", "Secondary"]:
+		var best := {}
+		for b in Data.BASES[slot]:
+			if b.has("rof"):
+				var k := "%s/%d" % [str(b.get("type", "")), int(b["tier"])]
+				best[k] = maxf(float(best.get(k, 0.0)), float(b["damage"]) * float(b["rof"]))
+		for k in best.keys():
+			var bits: PackedStringArray = k.split("/")
+			var tier := int(bits[1])
+			if tier >= 7:
+				var below := 0.0
+				for k2 in best.keys():
+					var b2: PackedStringArray = k2.split("/")
+					if b2[0] == bits[0] and int(b2[1]) < tier:
+						below = maxf(below, float(best[k2]))
+				_check(float(best[k]) > below, "the deep %s at T%d (%.0f) doesn't beat its line below (%.0f)" % [bits[0], tier, float(best[k]), below])
+
+
 func _site_level_checks(main) -> void:
 	var sim = main.sim
 	var hold_depth: Array = sim.depth.duplicate()
 	var hold_best: Array = sim.best_depth.duplicate()
 	for i in range(Data.TIERS.size()):
 		sim.best_depth[i] = 20
-	_check(sim.loot_tier_at(1) == 1 and sim.loot_tier_at(8) == 5 and sim.loot_tier_at(9) == Data.MAX_TIER and sim.loot_tier_at(30) == Data.MAX_TIER, "the gear tier by level is off: %d %d %d" % [sim.loot_tier_at(1), sim.loot_tier_at(8), sim.loot_tier_at(9)])
+	_check(sim.loot_tier_at(1) == 1 and sim.loot_tier_at(8) == 5 and sim.loot_tier_at(9) == Data.CAMPAIGN_TIER and sim.loot_tier_at(30) == Data.MAX_TIER, "the gear tier by level is off: %d %d %d" % [sim.loot_tier_at(1), sim.loot_tier_at(8), sim.loot_tier_at(9)])
+	_deep_tier_checks(main)
 	sim.set_depth(0, 8)
 	sim.set_depth(8, 2)
 	var hold_intel: Array = [sim.words[0].duplicate(true), sim.words[8].duplicate(true)]
@@ -7009,7 +7079,7 @@ func _site_level_checks(main) -> void:
 	var barracks: Dictionary = sim.effective(8)
 	_check(int(streets["level"]) == 8 and int(barracks["level"]) == 10 and sim.site_level(0) == 8, "the sites' levels are off: %d / %d" % [int(streets["level"]), int(barracks["level"])])
 	_check(float(barracks["hp"]) > float(streets["hp"]) and float(barracks["dps"]) > float(streets["dps"]), "the Barracks at depth 2 is no harder than the streets at depth 8: %.0f vs %.0f HP" % [float(barracks["hp"]), float(streets["hp"])])
-	_check(int(streets["loot_tier"]) == 5 and int(barracks["loot_tier"]) == Data.MAX_TIER, "the bases by level are off: streets tier %d, barracks tier %d" % [int(streets["loot_tier"]), int(barracks["loot_tier"])])
+	_check(int(streets["loot_tier"]) == 5 and int(barracks["loot_tier"]) == Data.CAMPAIGN_TIER, "the bases by level are off: streets tier %d, barracks tier %d" % [int(streets["loot_tier"]), int(barracks["loot_tier"])])
 	# a find carries the site's level
 	var f0: Dictionary = Items.roll("Primary", int(streets["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 8, int(streets["level"]))
 	var f8: Dictionary = Items.roll("Primary", int(barracks["loot_tier"]), sim.rng, 0.0, false, false, "", "", 0.33, 2, int(barracks["level"]))
@@ -7091,7 +7161,7 @@ func _smg_line_checks(main) -> void:
 	var sim = main.sim
 	var smgs: Array = []
 	for b in Data.BASES["Primary"]:
-		if b.get("type", "") == "smg":
+		if b.get("type", "") == "smg" and int(b["tier"]) <= Data.CAMPAIGN_TIER:     # the campaign's line; the deep bases are their own checks
 			smgs.append(b)
 	var tiers: Array = smgs.map(func(b): return int(b["tier"]))
 	for t in range(2, 7):
@@ -7100,7 +7170,7 @@ func _smg_line_checks(main) -> void:
 	var top_smg := 0.0
 	var top_other := 0.0
 	for b in Data.BASES["Primary"]:
-		if not b.has("rof"):
+		if not b.has("rof") or int(b["tier"]) > Data.CAMPAIGN_TIER:
 			continue
 		var dps: float = float(b["damage"]) * float(b["rof"])
 		if b.get("type", "") == "smg":
@@ -7583,6 +7653,7 @@ func _fill_up_checks(main) -> void:
 	_check(not main._run._button2.visible, "the second button shows before the clear on a manual run")
 	m["remaining"] = 0
 	sim._clear(m, m["t"])
+	m["found"] = []                      # room in the pack: a full one leaves on the press, and the check reads a run still on (10 Oct)
 	main.refresh()
 	_check(main._run._button2.visible and main._run._button2.text == "Fill up, then go", "after the clear the second button reads '%s'" % main._run._button2.text)
 	main._run._second_button()

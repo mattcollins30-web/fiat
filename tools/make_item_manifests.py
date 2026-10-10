@@ -88,6 +88,10 @@ SMG_WORDS = {
     "Belt-fed SMG": "an improvised belt-fed submachine gun, a canvas ammunition bag hung off the side, a strap, oily",
     "Riot squad's SMG": "a long riot-squad submachine gun with a full stock, a fore-end rail and a scratched-off number on the receiver, black polymer",
     "Section gun": "a light machine gun with a bipod folded under the barrel and a belt box, army green worn to bare metal",
+    # the deep bases (10 Oct)
+    "Security service SMG": "a modern government-issue submachine gun, short and boxy, a red-dot sight and a folding stock, black, well kept",
+    "Close protection SMG": "a compact close-protection submachine gun with an integral suppressor and a short rail, matt black, immaculate",
+    "Special forces SMG": "a special-forces submachine gun with a long suppressor, a holographic sight, a torch and a foregrip, tan and black",
 }
 
 
@@ -140,6 +144,13 @@ ARMOUR_WORDS = {
     "Hazmat suit": "a yellow hazmat suit's torso, taped at the seams, a respirator port, a chemical works' stencil",
     "Butcher's chainmail": "a butcher's stainless chainmail vest over a dark rubber apron, meat-stained, the rings bright",
     "Bomb suit": "a bomb-disposal suit's torso in olive green, thick layered plates over the chest and neck collar, straps everywhere",
+    # the deep bases (10 Oct)
+    "Military plate carrier": "a modern army plate carrier in multicam, front, back and side plates, a radio pouch and a tourniquet on the front",
+    "Fire service turnout gear": "a modern fire service turnout coat in dark gold-tan with silver reflective bands, heat-scarred",
+    "Special forces plates": "a black special-forces plate carrier, slim and laser-cut, high-grade plates inside, pouches in a tight row",
+    "CBRN suit": "a sealed olive-green chemical warfare suit's torso with its hood and taped seams, a filter port at the chest",
+    "Heavy armour suit": "a heavy riot-armour torso of overlapping black plates over a padded suit, shoulder and neck guards, enormous",
+    "Full EOD suit": "a full bomb-disposal suit's torso in dark green, a huge chest plate and a tall neck collar, the trouser armour hung below",
 }
 
 
@@ -180,6 +191,10 @@ MELEE_WORDS = {
     "Knife": "a kitchen knife with the handle wrapped in grey tape",
     "Knuckle duster": "a brass knuckle duster, old and worn smooth",
     "Cosh": "a short leather cosh with a wrist loop",
+    # the deep bases (10 Oct)
+    "Demolition bar": "a yard-long hardened steel wrecking bar with a claw at each end, the paint gone, the steel dark and oiled",
+    "Rescue axe": "a fire crew's rescue axe with a yellow fibreglass handle, a broad blade and a pick, the edge bright",
+    "Door ram": "a police riot van's steel door ram, a heavy black cylinder with two handles, the striking face battered",
 }
 
 
@@ -255,6 +270,10 @@ CHARM_WORDS = {
     "Casino chip": "a casino chip, dark green with a gold edge, the printing scuffed",
     "Bank's own pen": "a bank counter's ballpoint pen on its short bead chain, the chain snapped",
     "Mayor's chain": "a mayor's gilt chain of office with its enamel medallion, tarnished, one link bent",
+    # the deep bases (10 Oct)
+    "Signet ring": "a heavy gold signet ring with an engraved family crest worn almost smooth",
+    "Regimental medal": "a bronze regimental medal on a faded striped ribbon, the bar clasp tarnished",
+    "Gold sovereign": "a single gold sovereign coin, the king's head worn soft, bright where it has been rubbed",
 }
 
 
@@ -402,6 +421,14 @@ SET_WORDS = {
 }
 
 
+def words_for(table, name):
+    """A unique's or a set piece's words, whatever case the game spells its name in ("Grandad's Shotgun")."""
+    if name in table:
+        return table[name]
+    low = {k.lower(): v for k, v in table.items()}
+    return low[name.lower()]
+
+
 def set_jobs(seed):
     jobs = []
     body = re.search(r"const SETS := \[(.*?)\n\]", src, re.S).group(1)
@@ -410,7 +437,7 @@ def set_jobs(seed):
         jobs.append({
             "out": "art/items/%s.png" % slug(name),
             "endpoint": "generate-image-v2",
-            "description": "A realistic painted pixel-art still-life of %s, one object alone, worn and used." % SET_WORDS[name] + TAIL,   # SET_WORDS carry their article
+            "description": "A realistic painted pixel-art still-life of %s, one object alone, worn and used." % words_for(SET_WORDS, name) + TAIL,   # SET_WORDS carry their article
             "width": w * CELL,
             "height": h * CELL,
             "no_background": True,
@@ -431,7 +458,7 @@ def unique_jobs(seed):
         jobs.append({
             "out": "art/items/%s.png" % slug(name),
             "endpoint": "generate-image-v2",
-            "description": UNIQUE_WORDS[name] + TAIL,
+            "description": words_for(UNIQUE_WORDS, name) + TAIL,
             "width": w * CELL,
             "height": h * CELL,
             "no_background": True,
@@ -513,7 +540,7 @@ def main():
             if not os.path.exists(os.path.join(ROOT, job["out"])):
                 new_jobs.append(job)
     readme = [
-        "FIAT GEAR - the new items, in one go: the builds pass's uniques, the five sets' pieces, the melee weapons, the "
+        "FIAT GEAR - the new items, in one go: the deep bases (tiers 7-9 on every slot a runner wears, 10 Oct), the builds pass's uniques, the five sets' pieces, the melee weapons, the "
         "small melee and the melee parts (grips and heads), the grenades, the scrap icon and the new ammo grades - every "
         "job from %s whose art/items/<slug>.png was not on disk when this was generated. %d jobs." % (", ".join(NEW_GROUPS), len(new_jobs)),
         "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_new_manifest.json   "

@@ -1,6 +1,6 @@
 {
   "_readme": [
-    "FIAT GEAR - long guns. 37 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
+    "FIAT GEAR - long guns. 49 bases, one job each, written straight to the LIVE name art/items/<slug>.png ('single': one file, no _NN, no sheet, no _response.json). Each job's size is the base's footprint x 64 px (data.gd SIZE / FOOTPRINTS): the game draws the picture at its own pixels, centred, when it fits the cell.",
     "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_items_long_guns_manifest.json   (++ --dry-run to list). A job whose file exists is skipped, so a rerun only does what's missing; one that came out wrong: ++ --only <slug> ++ --force, or delete the file and rerun.",
     "Items.slug(base) is the name: lowercase, runs of anything but a letter or digit become one underscore. The cells load the file if it exists and show text if not, so the pool fills in any order.",
     "ORDER: run long_guns first - it has no style image. Promote three or four of the best and copy them to art/reference/items/ref_01.png .. ref_04.png; every other manifest rides those as style_image with every style option on, rotated, so the whole pool shares the guns' palette and rendering.",
@@ -376,6 +376,126 @@
       "height": 64,
       "no_background": true,
       "seed": 70036,
+      "single": true
+    },
+    {
+      "out": "art/items/security_service_smg.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single security service SMG, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a modern government-issue submachine gun, short and boxy, a red-dot sight and a folding stock, black, well kept. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70037,
+      "single": true
+    },
+    {
+      "out": "art/items/close_protection_smg.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single close protection SMG, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a compact close-protection submachine gun with an integral suppressor and a short rail, matt black, immaculate. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70038,
+      "single": true
+    },
+    {
+      "out": "art/items/special_forces_smg.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single special forces SMG, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a special-forces submachine gun with a long suppressor, a holographic sight, a torch and a foregrip, tan and black. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70039,
+      "single": true
+    },
+    {
+      "out": "art/items/range_rifle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single range rifle, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a stalking or ex-army rifle, worn bluing, a sling. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 320,
+      "height": 64,
+      "no_background": true,
+      "seed": 70040,
+      "single": true
+    },
+    {
+      "out": "art/items/service_rifle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single service rifle, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a stalking or ex-army rifle, worn bluing, a sling. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 320,
+      "height": 64,
+      "no_background": true,
+      "seed": 70041,
+      "single": true
+    },
+    {
+      "out": "art/items/anti_materiel_rifle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single anti-materiel rifle, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a stalking or ex-army rifle, worn bluing, a sling. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 320,
+      "height": 64,
+      "no_background": true,
+      "seed": 70042,
+      "single": true
+    },
+    {
+      "out": "art/items/breaching_shotgun.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single breaching shotgun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a farmer's or a security firm's gun, scuffed stock, oiled steel. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70043,
+      "single": true
+    },
+    {
+      "out": "art/items/entry_shotgun.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single entry shotgun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a farmer's or a security firm's gun, scuffed stock, oiled steel. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70044,
+      "single": true
+    },
+    {
+      "out": "art/items/combat_shotgun.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single combat shotgun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - a farmer's or a security firm's gun, scuffed stock, oiled steel. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70045,
+      "single": true
+    },
+    {
+      "out": "art/items/bolt_action_garage_rifle.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single bolt-action garage rifle, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - cobbled together from hardware-shop parts, pipe, tape and timber. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 320,
+      "height": 64,
+      "no_background": true,
+      "seed": 70046,
+      "single": true
+    },
+    {
+      "out": "art/items/workshop_gauss.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single workshop gauss, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - cobbled together from hardware-shop parts, pipe, tape and timber. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70047,
+      "single": true
+    },
+    {
+      "out": "art/items/the_engineer_s_piece.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art still-life of a single the engineer's piece, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right, as it might be found in post-collapse Britain - cobbled together from hardware-shop parts, pipe, tape and timber. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+      "width": 256,
+      "height": 64,
+      "no_background": true,
+      "seed": 70048,
       "single": true
     }
   ]

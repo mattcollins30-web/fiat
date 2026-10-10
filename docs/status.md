@@ -2577,6 +2577,21 @@ and the Fence's face clear over painted art. The reviewer's catches: the drawer'
 mark and the diamonds' extent weren't in the checks; fixed. The Legion's first run with the art caught the face
 check counting the backdrop; fixed with a check.
 
+**Deep bases: tiers 7-9 on every slot a runner wears (10 Oct, Guns-D, docs/design/deep_guns.md).** Matt: "a 100dps
+SMG at the bank" and nothing past it; agreed, new bases at depth, the campaign as it is; then "complement them with
+other gear types". 42 bases: three a gun line (the SMGs to 192/s, rifles 180, shotguns 189, improvised 180, melee
+180, pistols 93, machine pistols 120) and helmets, armour (the resist lines carried on), rigs, packs and charms.
+`Data.CAMPAIGN_TIER` 6 is the campaign's top, `MAX_TIER` 9; a site's tier steps at level 12, 16 and 20
+(`DEEP_TIER_LEVELS`: the Barracks at depth 4, 8, 12); a campaign site's "a tier up" (Local knowledge, a word, a
+cache, the ledger) stops at 6 (`loot_cap`). The Arms dealer stocks them at your depth; the Workshop builds a deep
+improvised gun once a site drops its tier. Words for each; `tools/make_item_manifests.py` prompts them and
+`tools/pixellab_items_new_manifest.json` is their 42 jobs (every other item already has its art); the script's
+unique lookup is case-blind now (it had stopped on "Grandad's Shotgun"). *The smoke:* the tiers by level, the
+cap, a base at each deep tier on every slot with words and a footprint, campaign rolls never deep, each gun
+line climbing, the campaign's gun builds at 6 and the deep ones at depth; the campaign checks (the SMG line,
+the bases by level) scoped to the campaign. The reviewer's catches: the Workshop offered the deep improvised
+guns from the first hour; a shop's unique took its level from a deep throwaway base; both fixed with checks.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

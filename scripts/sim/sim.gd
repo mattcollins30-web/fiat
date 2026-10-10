@@ -1423,6 +1423,8 @@ func build_options(kind: String) -> Array:
 			for b in Data.BASES["Primary"]:
 				if b.get("type", "") != "improvised" or b.get("start", false):
 					continue                  # the starting gun is nobody's build
+				if int(b["tier"]) > maxi(Data.CAMPAIGN_TIER, loot_tier_at(deepest_site_level())):
+					continue                  # a deep base (10 Oct) is built once a site that drops its tier is reached
 				out.append(_build_entry(kind, b["name"], Data.BUILD_GUN * int(b["tier"]), "", 0, true, "", int(b["tier"])))
 		"grenade":
 			for b in Data.BASES[Data.GRENADE]:
@@ -3515,8 +3517,18 @@ func site_level(i: int) -> int:
 
 
 ## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the Barracks from depth 1.
+## Past the campaign's six (10 Oct, docs/design/deep_guns.md): a deep tier a step from level 12, 16 and 20.
 static func loot_tier_at(level: int) -> int:
-	return clampi(int(floor(level * Data.MAX_TIER / 9.0)), 1, Data.MAX_TIER)
+	var t: int = clampi(int(floor(level * Data.CAMPAIGN_TIER / 9.0)), 1, Data.CAMPAIGN_TIER)
+	for at in Data.DEEP_TIER_LEVELS:
+		if level >= int(at):
+			t += 1
+	return mini(t, Data.MAX_TIER)
+
+
+## The top a tier-up can reach at a level: a campaign site's "a tier up" stays in the campaign's six.
+static func loot_cap(level: int) -> int:
+	return Data.CAMPAIGN_TIER if level < int(Data.DEEP_TIER_LEVELS[0]) else Data.MAX_TIER
 
 
 ## The tier as it will be fought: depth and intel applied. Every multiplier
@@ -3567,7 +3579,7 @@ func effective(i: int) -> Dictionary:
 	e["contact"] += (1 if atlas_rank("heavy_crews") > 0 else 0) - (1 if atlas_rank("open_ground") > 0 else 0)
 	e["rarity"] += 0.05 * atlas_rank("tip_offs")
 	if atlas_rank("local_knowledge") > 0:
-		e["loot_tier"] = mini(Data.MAX_TIER, int(e["loot_tier"]) + 1)
+		e["loot_tier"] = mini(loot_cap(lv), int(e["loot_tier"]) + 1)
 	if night_run and yard_has("dead_air"):
 		e["patrol"] *= 1.25                  # the Radio's Dead air
 	var sky: String = weather_of(i)
@@ -3626,7 +3638,7 @@ func effective(i: int) -> Dictionary:
 		e["xp"] *= m.get("xp", 1.0)
 		e["cash"] *= m.get("cash", 1.0)
 		e["drop"] *= m.get("drop", 1.0)
-		e["loot_tier"] = mini(Data.MAX_TIER, e["loot_tier"] + int(m.get("loot_tier", 0)))
+		e["loot_tier"] = mini(loot_cap(int(e["level"])), e["loot_tier"] + int(m.get("loot_tier", 0)))
 		e["rarity"] += m.get("rarity", 0.0)
 		e["pace"] *= m.get("pace", 1.0)
 		e["patrol"] *= m.get("patrol", 1.0)
@@ -4190,7 +4202,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 		"cache":
 			# a cache is always opened now (9 Oct: the Bench's levels went - it wanted Bench 2)
 			var up: Dictionary = t.duplicate()
-			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)
+			up["loot_tier"] = mini(loot_cap(int(t.get("level", int(t["tier"]) + int(t["depth"])))), int(t["loot_tier"]) + 1)
 			up["rarity"] = float(t.get("rarity", 0.0)) + 0.5
 			_find(m, up)
 			log_event(Words.EVENTS["cache"])
@@ -4605,7 +4617,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
-			up["loot_tier"] = mini(Data.MAX_TIER, int(t["loot_tier"]) + 1)     # signed for: a tier up
+			up["loot_tier"] = mini(loot_cap(int(t.get("level", int(t["tier"]) + int(t["depth"])))), int(t["loot_tier"]) + 1)     # signed for: a tier up
 			_find(m, up, true)
 		else:
 			_find(m, t, true)

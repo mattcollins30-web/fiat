@@ -49,11 +49,15 @@ const FOOTPRINTS := {
 	"Security guard's carbine": [3, 1], "Courier's SMG": [3, 1], "Armoured car gun": [3, 1],      # the SMG line (7 Oct); the riot squad's SMG is the slot's four
 	# scoped long guns
 	"Old .303": [5, 1], "Scoped .308": [5, 1], "Sniper rifle": [5, 1], "Marksman rifle": [5, 1], "Section gun": [5, 1], "Police marksman's rifle": [5, 1],
+	"Range rifle": [5, 1], "Service rifle": [5, 1], "Anti-materiel rifle": [5, 1], "Bolt-action garage rifle": [5, 1],     # the deep bases (10 Oct)
+	"Demolition bar": [3, 1], "Rescue axe": [3, 1], "Door ram": [3, 1],
 	# heavy armour
 	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Issue plates": [3, 4], "Bomb suit": [3, 4], "Butcher's chainmail": [3, 4],
+	"Military plate carrier": [3, 4], "Special forces plates": [3, 4], "CBRN suit": [3, 4], "Heavy armour suit": [3, 4], "Full EOD suit": [3, 4],
 	# bags
 	"Plastic bag": [2, 2], "School bag": [2, 2], "Carrier bags": [2, 2], "Holdall": [2, 2],
 	"Framed pack": [3, 4], "Expedition pack": [3, 4], "Cargo frame": [3, 4], "Patrol pack": [3, 4], "Full bergen": [3, 4],
+	"Assault pack": [3, 4], "Long-range bergen": [3, 4], "Mountain-troop bergen": [3, 4], "Special forces bergen": [3, 4],
 	# medical
 	"First aid kit": [2, 1], "Trauma kit": [2, 1], "Surgeon's kit": [2, 2], "Hospital kit": [2, 2],
 	# the deeds
@@ -328,6 +332,38 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "Belt-fed SMG", "type": "smg", "tier": 5, "damage": 24.0, "rof": 3.8, "value": 470, "sustain": [4, 40],
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		## the deep bases (10 Oct, docs/design/deep_guns.md): tiers 7-9, found from level 12, 16 and 20 (the Barracks at depth
+		## 4, 8, 12); about +18% damage a second a tier on each type's own line, so the climb has a base to chase all the way down
+		{"name": "Security service SMG", "type": "smg", "tier": 7, "damage": 31.0, "rof": 4.6, "value": 1050, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Close protection SMG", "type": "smg", "tier": 8, "damage": 34.0, "rof": 4.9, "value": 1450, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Special forces SMG", "type": "smg", "tier": 9, "damage": 37.0, "rof": 5.2, "value": 2000, "sustain": [4, 40],
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Range rifle", "type": "rifle", "tier": 7, "damage": 96.0, "rof": 1.4, "value": 1100,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Service rifle", "type": "rifle", "tier": 8, "damage": 104.0, "rof": 1.5, "value": 1500,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Anti-materiel rifle", "type": "rifle", "tier": 9, "damage": 150.0, "rof": 1.2, "value": 2100,
+			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		{"name": "Breaching shotgun", "type": "shotgun", "tier": 7, "damage": 60.0, "rof": 2.25, "value": 1050,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Entry shotgun", "type": "shotgun", "tier": 8, "damage": 66.0, "rof": 2.4, "value": 1450,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Combat shotgun", "type": "shotgun", "tier": 9, "damage": 74.0, "rof": 2.55, "value": 2000,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Bolt-action garage rifle", "type": "improvised", "ammo": "rifle", "tier": 7, "damage": 112.0, "rof": 1.2, "value": 900,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Workshop gauss", "type": "improvised", "tier": 8, "damage": 52.0, "rof": 3.0, "value": 1250,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "The engineer's piece", "type": "improvised", "ammo": "smg", "tier": 9, "damage": 50.0, "rof": 3.6, "value": 1700,
+			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
+		{"name": "Demolition bar", "type": "melee", "ammo": "none", "tier": 7, "damage": 100.0, "rof": 1.3, "value": 900, "conv_bleed_pct": 15,
+			"attachments": ["grip", "business end"]},
+		{"name": "Rescue axe", "type": "melee", "ammo": "none", "tier": 8, "damage": 120.0, "rof": 1.3, "value": 1250, "conv_bleed_pct": 25,
+			"attachments": ["grip", "business end"]},
+		{"name": "Door ram", "type": "melee", "ammo": "none", "tier": 9, "damage": 220.0, "rof": 0.82, "value": 1700, "conv_bleed_pct": 5,
+			"attachments": ["grip", "business end"]},
 	],
 	"Secondary": [
 		{"name": "Converted blank-firer", "type": "improvised", "ammo": "pistol", "tier": 1, "damage": 12.0, "rof": 1.5, "value": 40,
@@ -362,6 +398,19 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Automatic pistol", "type": "smg", "tier": 5, "damage": 14.0, "rof": 4.2, "value": 240,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
+		## the deep bases (10 Oct): tiers 7-9 on the pistol and the machine pistol lines
+		{"name": "Close quarters pistol", "type": "pistol", "tier": 7, "damage": 24.0, "rof": 2.8, "value": 500,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Bodyguard's pistol", "type": "pistol", "tier": 8, "damage": 27.0, "rof": 2.9, "value": 700,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Special issue pistol", "type": "pistol", "tier": 9, "damage": 30.0, "rof": 3.1, "value": 950,
+			"attachments": ["optic", "muzzle", "magazine"]},
+		{"name": "Diplomatic machine pistol", "type": "smg", "tier": 7, "damage": 19.0, "rof": 4.6, "value": 530,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Embassy PDW", "type": "smg", "tier": 8, "damage": 21.0, "rof": 4.9, "value": 740,
+			"attachments": ["muzzle", "magazine", "stock"]},
+		{"name": "Protection squad PDW", "type": "smg", "tier": 9, "damage": 24.0, "rof": 5.0, "value": 1000,
+			"attachments": ["muzzle", "magazine", "stock"]},
 	],
 	## Armour and helmets: armour, and weight as pace - a riot suit stops a lot and
 	## slows you; leathers stop less and don't.
@@ -379,6 +428,12 @@ const BASES := {
 		{"name": "Welder's mask", "tier": 3, "armour": 22.0, "pace": -2, "value": 150, "res": {"fire": 35}},
 		{"name": "Station helmet, visored", "tier": 4, "armour": 40.0, "pace": -3, "value": 300, "res": {"fire": 25}},
 		{"name": "Bomb-squad helmet", "tier": 6, "armour": 72.0, "pace": -8, "value": 560, "res": {"fire": 20, "shock": 20}},
+		## the deep bases (10 Oct): tiers 7-9, about +18% armour a tier, and the resist line carried on
+		{"name": "High-cut helmet", "tier": 7, "armour": 70.0, "pace": -3, "value": 600},
+		{"name": "Special forces helmet", "tier": 8, "armour": 82.0, "pace": -3, "value": 850},
+		{"name": "CBRN helmet", "tier": 8, "armour": 70.0, "pace": -5, "value": 900, "res": {"poison": 30, "frost": 20}},
+		{"name": "Command helmet", "tier": 9, "armour": 96.0, "pace": -4, "value": 1200},
+		{"name": "Full EOD helmet", "tier": 9, "armour": 100.0, "pace": -8, "value": 1300, "res": {"fire": 25, "shock": 25}},
 	],
 	"Armour": [
 		{"name": "Work jacket", "tier": 1, "armour": 6.0, "value": 10, "start": true},     # the start: the worst there is, never found
@@ -400,6 +455,13 @@ const BASES := {
 		{"name": "Hazmat suit", "tier": 5, "armour": 50.0, "pace": -4, "value": 520, "res": {"poison": 50}},
 		{"name": "Butcher's chainmail", "tier": 5, "armour": 90.0, "pace": -4, "value": 600, "res": {"bleed": 45}},
 		{"name": "Bomb suit", "tier": 6, "armour": 190.0, "pace": -14, "value": 1200, "res": {"fire": 20, "shock": 20}},
+		## the deep bases (10 Oct): tiers 7-9, about +16% armour a tier, and the resist line carried on
+		{"name": "Military plate carrier", "tier": 7, "armour": 185.0, "pace": -6, "value": 1300},
+		{"name": "Fire service turnout gear", "tier": 7, "armour": 110.0, "pace": -4, "value": 1100, "res": {"fire": 50}},
+		{"name": "Special forces plates", "tier": 8, "armour": 215.0, "pace": -6, "value": 1700},
+		{"name": "CBRN suit", "tier": 8, "armour": 120.0, "pace": -6, "value": 1500, "res": {"poison": 55, "frost": 30}},
+		{"name": "Heavy armour suit", "tier": 9, "armour": 250.0, "pace": -12, "value": 2200},
+		{"name": "Full EOD suit", "tier": 9, "armour": 260.0, "pace": -16, "value": 2400, "res": {"fire": 30, "shock": 30}},
 	],
 	## Rigs carry meds and ammo, a slot each; packs carry loot, in cells. Capacity in cells for packs:
 	## a rifle is 3, a pistol or helmet 2, a med or an attachment 1.
@@ -413,6 +475,10 @@ const BASES := {
 		{"name": "Plate rig", "tier": 5, "capacity": 8, "pace": 2, "value": 340},
 		{"name": "Assault rig", "tier": 6, "capacity": 9, "value": 460},
 		{"name": "Bomb-disposal rig", "tier": 6, "capacity": 11, "pace": -3, "value": 620},
+		## the deep bases (10 Oct): tiers 7-9
+		{"name": "Special forces rig", "tier": 7, "capacity": 12, "value": 800},
+		{"name": "Breacher's rig", "tier": 8, "capacity": 13, "pace": 2, "value": 1000},
+		{"name": "Command rig", "tier": 9, "capacity": 15, "pace": -2, "value": 1300},
 	],
 	"Backpack": [
 		{"name": "Plastic bag", "tier": 1, "capacity": 9, "value": 5, "start": true},     # the start: the worst there is, never found; nine cells, so a found vest (3×3) comes home
@@ -426,6 +492,11 @@ const BASES := {
 		{"name": "Cargo frame", "tier": 5, "capacity": 72, "pace": -8, "value": 400},
 		{"name": "Patrol pack", "tier": 6, "capacity": 60, "value": 480},
 		{"name": "Full bergen", "tier": 6, "capacity": 80, "pace": -6, "value": 640},
+		## the deep bases (10 Oct): tiers 7-9
+		{"name": "Assault pack", "tier": 7, "capacity": 72, "value": 820},
+		{"name": "Long-range bergen", "tier": 7, "capacity": 96, "pace": -6, "value": 860},
+		{"name": "Mountain-troop bergen", "tier": 8, "capacity": 112, "pace": -6, "value": 1100},
+		{"name": "Special forces bergen", "tier": 9, "capacity": 130, "pace": -6, "value": 1450},
 	],
 	## Charms: `find` is magic find - rarer finds, in percent - and `cash`
 	## percent on top. Every runner carries something.
@@ -439,6 +510,10 @@ const BASES := {
 		{"name": "Casino chip", "tier": 5, "find": 18, "cash": 15, "value": 520},
 		{"name": "Bank's own pen", "tier": 6, "find": 20, "cash": 20, "value": 800},
 		{"name": "Mayor's chain", "tier": 6, "find": 24, "cash": 24, "value": 1100},
+		## the deep bases (10 Oct): tiers 7-9
+		{"name": "Signet ring", "tier": 7, "find": 28, "cash": 26, "value": 1500},
+		{"name": "Regimental medal", "tier": 8, "find": 32, "cash": 30, "value": 2000},
+		{"name": "Gold sovereign", "tier": 9, "find": 36, "cash": 36, "value": 2700},
 	],
 	## Papers: the before, on paper. Worth their value to the Fence and nothing
 	## else; the deeds are dropped by the Bank once and are the ending.
@@ -1810,7 +1885,9 @@ const SOCKET_STACK := 10
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50
-const MAX_TIER := 6               # gear tiers: the town drops to 5, the city 6
+const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
+const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
+const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12
 static var _xp_table: Array = []
 
 
