@@ -2678,6 +2678,17 @@ rank); two glyphs read wrong (Open ground's crowd, Wages' star); fixed, with che
 way out's price running past the half-width button on an auto-run ("Get out · 0:20, a gang"): it now takes the
 longest form that fits.
 
+**The rooms' bands (10 Oct, Rooms-B, docs/design/faces_and_bands.md 4).** Matt: replicate the Clinic's and the Fence's
+art for every other room. Training, the Workshop, the Radio and the Yard take their painted places under their
+headings (`UI.head_art`: `the_caravan`, `the_workshop`, `the_radio`, `the_yard`; the rooms manifest), covering
+each from the centre inside its line, shaded from the left, the words with a shadow; the plain card until the file
+is there. Stats has its short band (`the_stats`). Each heading kept its height and layout. *The smoke:* each band
+names its place, follows its file, sits under the words inside the line, filters by its true scale, a stand-in's
+fit, the shadows gone on the plain card. The reviewer's catches: nearest filtering at a 2.23x scale; the art
+covered the heading's line; shadows stayed on the plain card; fixed with checks. Open for Matt: at these heights
+only the middle sixth of a 688x296 painting shows - paint the room art as wide strips, or take taller headings.
+The way out's seen-off checks now wait past a melee runner's first swing (one run's melee primary missed it in a second).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

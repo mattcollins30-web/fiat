@@ -40,6 +40,7 @@ const PIP_W := 30
 const TIER_COLOURS := [Color("a9afb6"), Color("7fb2e5"), Color("e3a33b"), Color("b07be0")]
 const POOL_COLOURS := {"general": Color("a9afb6"), "zone": Color("7fb2e5"), "deep": Color("b07be0"), "start": Color("a9afb6"), "paper": Color("a9afb6")}
 
+var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var sim
 var selected := -1
 var _kicker: Label
@@ -72,6 +73,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	head_band = UI.head_art(head, "The radio")       # art/places/the_radio.png (Rooms-B)
 	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Radio", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)

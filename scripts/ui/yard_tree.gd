@@ -41,6 +41,7 @@ const STRIP_Y := LANES_Y + 8 * LANE_H + 7 * LANE_GAP + 6
 const STRIP_H := 92                                         # under the lanes, its own height (the review: the rest of the room left it half empty)
 const BUILD_W := 260
 
+var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var sim
 var selected := {}                  # {key, col, side} a pick, {key, rank: true} a rank, {} nothing
 var _kicker: Label
@@ -63,6 +64,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	head_band = UI.head_art(head, "The yard")        # art/places/the_yard.png (Rooms-B)
 	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Yard", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)

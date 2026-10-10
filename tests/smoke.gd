@@ -1281,6 +1281,7 @@ func _class_trees(main) -> void:
 	_way_out_checks(main)
 	_purse_checks(main)
 	_backdrop_checks(main)
+	_room_band_checks(main)
 	_rail_order_checks(main)
 	_place_art_checks(main)
 	# the Yard's upgrades
@@ -8371,6 +8372,42 @@ func _radio_juice_checks(main) -> void:
 ## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
 ## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
 ## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+## The rooms' bands (10 Oct, Rooms-B): Training, the Workshop, the Radio and the Yard under their painted places once
+## painted (Stats has its band); the art under the words, covering the heading, shaded from the left, the words with a
+## shadow; nothing while the file is missing.
+func _room_band_checks(main) -> void:
+	var rooms := [[main.BARRACKS, main._barracks, "the_caravan"], [main.WORKSHOP, main._workshop, "the_workshop"], [main.COMMS, main._radio, "the_radio"], [main.OVERVIEW, main._yard_tree, "the_yard"]]
+	var stand_in: Texture2D = UI.place_texture("Ransacked Streets")
+	for r in rooms:
+		var hb: Dictionary = r[1].head_band
+		var art: TextureRect = hb["art"]
+		var head: Panel = art.get_parent()
+		var file := "res://art/places/%s.png" % r[2]
+		var painted: bool = ResourceLoader.exists(file) or FileAccess.file_exists(file)
+		_check(UI.place_slug(hb["place"]) == r[2], "%s's band names %s, not %s" % [r[2], UI.place_slug(hb["place"]), r[2]])
+		_check(art.visible == painted and hb["shade"].visible == painted, "%s's band does not follow its art (painted %s)" % [r[2], str(painted)])
+		_check(art.get_index() == 0 and hb["shade"].get_index() == 1 and head.clip_contents and art.size == head.size - Vector2(2, 2) and art.position == Vector2(1, 1) and art.mouse_filter == Control.MOUSE_FILTER_IGNORE, "%s's band is not under the heading's words, or not inside its line" % r[2])
+		if stand_in != null and not painted:
+			UI.set_head_art(hb, stand_in)
+			var unshadowed := 0
+			for c in head.get_children():
+				if c is Label and c.get_theme_color("font_shadow_color").a < 0.5:
+					unshadowed += 1
+			_check(art.visible and hb["shade"].visible and unshadowed == 0, "%s's band, painted, leaves %d words without a shadow" % [r[2], unshadowed])
+			var sc: float = maxf(art.size.x / stand_in.get_width(), art.size.y / stand_in.get_height())
+			_check((art.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST) == is_equal_approx(sc, roundf(sc)), "%s's band filters a %.2fx scale the wrong way" % [r[2], sc])
+			main.show_room(r[0])
+			main.refresh()
+			_check_fit(main, "%s (a stand-in band)" % r[2])
+			UI.set_head_art(hb, null)
+			for c in head.get_children():
+				if c is Label:
+					_check(c.get_theme_color("font_shadow_color").a < 0.01, "%s's words kept a shadow on the plain card" % r[2])
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("the rooms' bands ok: four headings under their places, the words over them")
+
+
 ## The Runner room's backdrop (10 Oct, Kit-B): under the figure and the slots, the frame round them; the painted
 ## lock-up at 40% with the slots as glass where the art is, the drawn light where it isn't.
 func _backdrop_checks(main) -> void:
@@ -8482,7 +8519,9 @@ func _way_out_checks(main) -> void:
 	# seen off: home with the pack
 	m["remaining"] = 1
 	m["target_hp"] = 0.01
-	sim.advance(1.0)
+	for w in range(6):                         # past a melee wait or an underlay's grace
+		if sim.on_mission():
+			sim.advance(1.0)
 	_check(not sim.on_mission() and sim.last_report.get("way_out", false) and not sim.last_report.get("timed_out", false) and sim.stash.has(found), "seeing them off did not bring the pack home: %s" % str(sim.last_report.get("outcome", "")))
 	# out of time at the door: a time-out
 	sim.hp = sim.max_hp()
@@ -8534,7 +8573,9 @@ func _way_out_checks(main) -> void:
 	_check(not m["boss"]["started"], "the head kept fighting through the way out")
 	m["remaining"] = 1
 	m["target_hp"] = 0.01
-	sim.advance(1.0)
+	for w in range(6):                         # past a melee wait or an underlay's grace
+		if sim.on_mission():
+			sim.advance(1.0)
 	_check(not sim.on_mission() and sim.last_report.get("way_out", false), "the door's gang down did not end the run with a head left behind")
 	# saved and loaded mid way out, it carries on
 	sim.hp = 1e9
@@ -8549,7 +8590,9 @@ func _way_out_checks(main) -> void:
 	m["remaining"] = 1
 	m["target_hp"] = 0.01
 	sim.hp = 1e9
-	sim.advance(1.0)
+	for w in range(6):
+		if sim.on_mission():
+			sim.advance(1.0)
 	_check(not sim.on_mission() and sim.last_report.get("way_out", false), "a loaded way out did not end when seen off")
 	# the price follows the run's clock as it falls under the way out's time
 	sim.hp = 1e9

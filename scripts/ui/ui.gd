@@ -98,6 +98,63 @@ static func place_texture(name: String) -> Texture2D:
 	return tex
 
 
+## A room's heading as a band (10 Oct, Rooms-B; Matt: replicate the Clinic's and the Fence's art for every other
+## room): its painted place under the heading's words, covering it from the centre, shaded from the left so the words
+## read; nothing until the place is painted (art/places/<slug>.png, the rooms manifest). Returns {art, shade, place}.
+static func head_art(head: Panel, place: String) -> Dictionary:
+	head.clip_contents = true
+	var d := {"place": place}
+	var art := TextureRect.new()
+	art.position = Vector2(1, 1)
+	art.size = head.size - Vector2(2, 2)                         # inside the heading's line, which the other cards keep
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(art)
+	head.move_child(art, 0)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+	g.colors = PackedColorArray([Color(Pal.CARD, 0.94), Color(Pal.CARD, 0.6), Color(Pal.CARD, 0.15)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(1, 0)
+	gt.width = 64
+	gt.height = 4
+	var shade := TextureRect.new()
+	shade.texture = gt
+	shade.position = Vector2(1, 1)
+	shade.size = head.size - Vector2(2, 2)
+	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shade.stretch_mode = TextureRect.STRETCH_SCALE
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(shade)
+	head.move_child(shade, 1)
+	d["art"] = art
+	d["shade"] = shade
+	head.child_entered_tree.connect(func(n): if n is Label and art.visible: shadow(n))     # the heading's words come after
+	set_head_art(d, place_texture(place))
+	return d
+
+
+## Point a heading's band at a texture (null: the plain card); its words take a shadow over art.
+static func set_head_art(d: Dictionary, tex: Texture2D) -> void:
+	var art: TextureRect = d["art"]
+	art.texture = tex
+	art.visible = tex != null
+	d["shade"].visible = tex != null
+	if tex != null:
+		# whole-number scales stay crisp; any other is smoothed (nearest at 2.23x doubles some pixels and triples others)
+		var s: float = maxf(art.size.x / tex.get_width(), art.size.y / tex.get_height())
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if (s >= 1.0 and is_equal_approx(s, roundf(s))) else CanvasItem.TEXTURE_FILTER_LINEAR
+	for c in art.get_parent().get_children():
+		if c is Label:
+			if tex != null:
+				shadow(c)
+			else:
+				c.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))     # the plain card: no shadow
+
+
 static func glyph_texture(name: String) -> Texture2D:
 	if _glyphs.has(name):
 		return _glyphs[name]

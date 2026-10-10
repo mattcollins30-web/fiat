@@ -76,6 +76,7 @@ var _armed_cls := ""               # the class it was armed from: a death, a mov
 var _shown := ""
 
 var _face: TextureRect
+var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var _kicker: Label
 var _points: Label
 var _unit: Label
@@ -120,6 +121,7 @@ func _init() -> void:
 
 func _build_head() -> void:
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	head_band = UI.head_art(head, "The caravan")     # art/places/the_caravan.png (Rooms-B)
 	_face = People.rect(head, Vector2(16, 12), FACE / 128.0)
 	var cx0: float = Pal.GRID_W - PAD - Data.CLASSES.size() * CLASS_W - CLASS_GAP * (Data.CLASSES.size() - 1)
 	var x0 := 16 + FACE + 14
