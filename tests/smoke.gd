@@ -1279,6 +1279,7 @@ func _class_trees(main) -> void:
 	_clock_checks(main)
 	_way_out_checks(main)
 	_purse_checks(main)
+	_backdrop_checks(main)
 	_rail_order_checks(main)
 	_place_art_checks(main)
 	# the Yard's upgrades
@@ -8324,6 +8325,44 @@ func _radio_juice_checks(main) -> void:
 ## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
 ## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
 ## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+## The Runner room's backdrop (10 Oct, Kit-B): under the figure and the slots, the frame round them; the painted
+## lock-up at 40% with the slots as glass where the art is, the drawn light where it isn't.
+func _backdrop_checks(main) -> void:
+	var sim = main.sim
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var body = main._armoury._body
+	_check(body.get_child(0) == body.backdrop and body.backdrop.size == body.size and body.backdrop.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the backdrop is not under the figure and the slots, or takes the mouse")
+	var file := "res://art/places/the_kit_room.png"
+	var painted: bool = ResourceLoader.exists(file) or FileAccess.file_exists(file)
+	_check(body.has_backdrop_art() == painted, "the backdrop does not follow the art (painted %s)" % str(painted))
+	_check(body.get_child(1) == body._frame and body._frame.mouse_filter == Control.MOUSE_FILTER_IGNORE and body._flat.get_index() > body._frame.get_index(), "the backdrop's frame or the flat figure's layer is out of order, or takes the mouse")
+	for slot in Data.SLOTS:
+		var b: Dictionary = body._boxes[slot]
+		_check(b["zone"].get_index() > body._flat.get_index(), "the %s slot is under the backdrop's layers" % slot)
+		var sb: StyleBoxFlat = b["outline"].get_theme_stylebox("panel")
+		var filled: bool = sim.equipped[slot] != null
+		# empty: the outline is the glass; filled: the cell is, over a clear outline (two glass layers let nothing through)
+		_check((filled and sb.bg_color.a < 0.01) or (not filled and is_equal_approx(sb.bg_color.a, body.GLASS_ALPHA)) or body.selected == slot, "the %s slot is not one layer of glass: %.2f (%s)" % [slot, sb.bg_color.a, "filled" if filled else "empty"])
+		_check(b["cell"].glass, "the %s slot's cell is not glass" % slot)
+		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
+	_check_fit(main, "Runner (the backdrop, %s)" % ("painted" if painted else "drawn"))
+	# A, as it will read once painted: any place's art stands in
+	var stand_in: Texture2D = UI.place_texture("Ransacked Streets")
+	if stand_in != null and not painted:
+		body._backdrop_art.texture = stand_in
+		body._backdrop_art.visible = true
+		body._vignette.visible = true
+		body.backdrop.queue_redraw()
+		_check(body.has_backdrop_art() and is_equal_approx(body._backdrop_art.modulate.a, body.BACKDROP_ALPHA), "the painted backdrop is not at %.0f%%" % (body.BACKDROP_ALPHA * 100.0))
+		_check_fit(main, "Runner (the backdrop, a stand-in painted)")
+		body._backdrop_art.texture = null
+		body._backdrop_art.visible = false
+		body._vignette.visible = false
+		body.backdrop.queue_redraw()
+	print("the backdrop ok: under it all, glass slots, the art or the light")
+
+
 ## The purse on the top bar (10 Oct, Bar-C): notes and scrap through the campaign, each salvage kind joining once
 ## there's any; the worst figures out on a run still clear of the runner's figures (the fit's purse check).
 func _purse_checks(main) -> void:

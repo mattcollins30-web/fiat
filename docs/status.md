@@ -2646,6 +2646,15 @@ pass the total); the XP read below nought after a Yard move (the banked paragon)
 fixed with checks. The growth check now holds the runner over half HP (the under-half damage rode on it). Open for
 Matt: the top bar's XP figure has the same banked-paragon flaw after a move (not touched).
 
+**A backdrop behind the runner (10 Oct, Kit-B A with B under it, docs/design/faces_and_bands.md 6).** Matt: "a semi
+transparent backdrop ... behind the character model / gear slot selection". Under the Runner room's figure and its
+slots, in a hairline frame: `art/places/the_kit_room.png` at 40% with a vignette (the rooms manifest's sixth job),
+the slots as glass (an empty slot's fill, or the item's cell, at 80%: one layer, so a fifth of the wall shows); while
+the art is missing, a cone of cold light from above and a shadow at the feet, drawn. The flat figure (no body art)
+has its own layer over both. *The smoke:* the layers' order and that none takes the mouse, each slot one layer of
+glass, the slots inside the frame, the art followed, a stand-in painted backdrop's fit. The reviewer's catches: a
+filled slot was two glass layers and nearly solid; the flat figure would have sat under the wall; fixed, with checks.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

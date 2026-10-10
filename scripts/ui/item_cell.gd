@@ -15,6 +15,7 @@ const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour":
 const INSET := 3                   # the picture sits inside the border
 
 var id := -1
+var glass := false                 # over a backdrop (10 Oct, Kit-B): the fill lets a fifth of it through
 var _art: TextureRect
 var _lines: Array[Label] = []      # up to three, laid out by the footprint
 var _corner: Label                 # over the picture: an ammo stack's rounds
@@ -122,7 +123,8 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 
 func _style(on: bool, tone: String) -> void:
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		var sb := UI.box(Pal.SELECT if on else (Pal.CARD if state == "hover" else Pal.PANEL), 6)
+		var fill: Color = Pal.SELECT if on else (Pal.CARD if state == "hover" else Pal.PANEL)
+		var sb := UI.box(Color(fill, 0.8) if glass and not on else fill, 6)
 		if on:
 			sb.set_border_width_all(2)
 			sb.border_color = Pal.PICK

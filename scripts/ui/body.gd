@@ -42,7 +42,18 @@ const FIGURE_X := 302                          # between the columns: 212..392
 const FIGURE_W := 180
 const FIGURE_H := 488                          # down to the primary's box
 const BODY_ART := "res://art/body.png"         # a drawn figure, 180 x 488, drawn at its own pixels like the items, takes the flat one's place
+## The backdrop (10 Oct, Kit-B; Matt: "a semi transparent backdrop ... behind the character model / gear slot
+## selection"): A, a painted lock-up wall at about 40%, dark at the edges, the slots as glass; B, while the art is
+## missing, a cone of cold light from above and a shadow at the feet, drawn here.
+const BACKDROP_PLACE := "The kit room"         # art/places/the_kit_room.png (the rooms manifest)
+const BACKDROP_ALPHA := 0.4
+const GLASS_ALPHA := 0.8
 var _figure: TextureRect
+var backdrop: Control                          # under everything: the art, or the light
+var _backdrop_art: TextureRect
+var _vignette: TextureRect
+var _frame: Panel
+var _flat: Control                             # the flat figure's layer, over the backdrop, when art/body.png is missing
 
 var sim
 var selected := ""                 # the slot picked, or ""
@@ -55,6 +66,46 @@ var _shown := ""
 func _init() -> void:
 	size = Vector2(WIDTH, HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	backdrop = Control.new()
+	backdrop.size = size
+	backdrop.clip_contents = true
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.draw.connect(_draw_backdrop)
+	add_child(backdrop)
+	_backdrop_art = TextureRect.new()
+	_backdrop_art.size = size
+	_backdrop_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backdrop_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backdrop_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_backdrop_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop_art.texture = UI.place_texture(BACKDROP_PLACE)
+	_backdrop_art.visible = _backdrop_art.texture != null
+	_backdrop_art.modulate = Color(1, 1, 1, BACKDROP_ALPHA)
+	backdrop.add_child(_backdrop_art)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	g.colors = PackedColorArray([Color(Pal.BG, 0.0), Color(Pal.BG, 0.25), Color(Pal.BG, 0.95)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.45)
+	gt.fill_to = Vector2(1.05, 1.05)
+	gt.width = 64
+	gt.height = 64
+	_vignette = TextureRect.new()
+	_vignette.texture = gt
+	_vignette.size = size
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.visible = _backdrop_art.visible
+	backdrop.add_child(_vignette)
+	_frame = UI.panel(self, Rect2(Vector2.ZERO, size), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
+	_flat = Control.new()
+	_flat.size = size
+	_flat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flat.draw.connect(func(): _draw_flat(_flat))
+	add_child(_flat)
 	if ResourceLoader.exists(BODY_ART) or FileAccess.file_exists(BODY_ART):
 		_figure = TextureRect.new()
 		_figure.texture = load(BODY_ART) if ResourceLoader.exists(BODY_ART) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(BODY_ART)))
@@ -75,13 +126,14 @@ func _init() -> void:
 		zone.mouse_filter = Control.MOUSE_FILTER_PASS
 		zone.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		add_child(zone)
-		var outline := UI.panel(zone, Rect2(0, 0, w, h), UI.box(GLASS, 6, 1, Pal.CARD_LINE))
+		var outline := UI.panel(zone, Rect2(0, 0, w, h), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
 		var inset := 8 if b["cells"].x > 1 else 5          # the charm's one cell: "Charm" is 52 px of 64
 		var name := UI.label(zone, Rect2(inset, 0, w - 2 * inset, h), slot, "SemiBold", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		name.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		name.position.y = 4
 		name.size.y = 20
 		var cell := ItemCell.new()
+		cell.glass = true
 		cell.visible = false
 		cell.pressed.connect(_pick.bind(slot))
 		cell.gui_input.connect(_cell_input.bind(slot))
@@ -90,22 +142,56 @@ func _init() -> void:
 		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell}
 
 
+## The slots' fill: glass over the backdrop.
+static func _glass() -> Color:
+	return Color(GLASS, GLASS_ALPHA)
+
+
+## Whether the painted backdrop shows (A); else the drawn light (B).
+func has_backdrop_art() -> bool:
+	return _backdrop_art.visible
+
+
+## B, the drawn light: a cone of cold light from above onto the figure, and a shadow at its feet - only while the
+## art (A) is missing.
+func _draw_backdrop() -> void:
+	if _backdrop_art.visible:
+		return
+	var x := float(FIGURE_X)
+	var top := 0.0
+	var foot := float(FIGURE_H) - 6.0
+	var light := Color(0.42, 0.5, 0.62)
+	var steps := 14
+	for k in range(steps):
+		var t: float = float(k) / float(steps)
+		var a: float = 0.11 * (1.0 - t)
+		var half_top: float = 30.0 + 24.0 * t
+		var half_foot: float = 120.0 + 40.0 * t
+		backdrop.draw_colored_polygon(PackedVector2Array([Vector2(x - half_top, top), Vector2(x + half_top, top), Vector2(x + half_foot, foot), Vector2(x - half_foot, foot)]), Color(light, a / 2.0))
+	backdrop.draw_set_transform(Vector2(x, foot), 0.0, Vector2(1.0, 0.22))
+	for k in range(6):
+		backdrop.draw_circle(Vector2.ZERO, 120.0 - k * 14.0, Color(light, 0.035))
+	for k in range(5):
+		backdrop.draw_circle(Vector2.ZERO, 74.0 - k * 10.0, Color(0, 0, 0, 0.09))
+	backdrop.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 ## The runner as a flat silhouette between the columns - head, shoulders,
 ## arms, legs - so the column reads as a body and the boxes as what's on it.
-## Drawn by this control, under its children; art/body.png replaces it.
-func _draw() -> void:
+## Drawn on its own layer over the backdrop (the light or the wall under it); art/body.png replaces it.
+func _draw_flat(c: Control) -> void:
 	if _figure != null:
 		return
 	var x := float(FIGURE_X)
-	draw_circle(Vector2(x, 40), 34.0, FIGURE)
-	draw_rect(Rect2(x - 12, 70, 24, 20), FIGURE)                       # neck
-	draw_rect(Rect2(x - 62, 90, 124, 160), FIGURE)                     # torso
-	draw_circle(Vector2(x - 62, 104), 14.0, FIGURE)                    # shoulders, rounded
-	draw_circle(Vector2(x + 62, 104), 14.0, FIGURE)
-	draw_rect(Rect2(x - 88, 106, 22, 170), FIGURE)                     # arms
-	draw_rect(Rect2(x + 66, 106, 22, 170), FIGURE)
-	draw_rect(Rect2(x - 56, 250, 50, 238), FIGURE)                     # legs
-	draw_rect(Rect2(x + 6, 250, 50, 238), FIGURE)
+	c.draw_circle(Vector2(x, 40), 34.0, FIGURE)
+	c.draw_rect(Rect2(x - 12, 70, 24, 20), FIGURE)                       # neck
+	c.draw_rect(Rect2(x - 62, 90, 124, 160), FIGURE)                     # torso
+	c.draw_circle(Vector2(x - 62, 104), 14.0, FIGURE)                    # shoulders, rounded
+	c.draw_circle(Vector2(x + 62, 104), 14.0, FIGURE)
+	c.draw_rect(Rect2(x - 88, 106, 22, 170), FIGURE)                     # arms
+	c.draw_rect(Rect2(x + 66, 106, 22, 170), FIGURE)
+	c.draw_rect(Rect2(x - 56, 250, 50, 238), FIGURE)                     # legs
+	c.draw_rect(Rect2(x + 6, 250, 50, 238), FIGURE)
 
 
 # ------------------------------------------------------------------ showing
@@ -127,11 +213,11 @@ func show_state(s) -> void:
 			b["cell"].id = -1
 			b["name"].visible = true
 			b["name"].text = slot
-			b["outline"].add_theme_stylebox_override("panel", UI.box(Pal.SELECT if on else GLASS, 6, 2 if on else 1,
+			b["outline"].add_theme_stylebox_override("panel", UI.box(Pal.SELECT if on else _glass(), 6, 2 if on else 1,
 				Pal.ACCENT if on else (Pal.BAD if slot == "Primary" else Pal.CARD_LINE)))
 		else:
 			b["name"].visible = false
-			b["outline"].add_theme_stylebox_override("panel", UI.box(GLASS, 6, 1, Pal.CARD_LINE))
+			b["outline"].add_theme_stylebox_override("panel", UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))     # the cell is the glass: two layers let nothing through (the review)
 			b["cell"].visible = true
 			b["cell"].show_item(it, on, b["zone"].size)   # fills the box
 			b["cell"].position = Vector2.ZERO
