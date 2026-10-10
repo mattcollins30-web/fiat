@@ -2760,6 +2760,17 @@ sheet's figure (the line barely moves there): it now reads the exact place the l
 scaled by landed over the sheet's figure - within 0.005. The Workshop's Upgrade button, hidden since the Bench's
 levels went to the Yard and sitting behind the views since the band, is gone.
 
+**The Runner room as the loadout (10 Oct, Runner-R A, docs/design/runner_room.md).** Matt: the Runner is now the
+worst-looking screen. A runner strip over the column (face, level, HP and its bar, damage, armour, pace, cells);
+under it the figure on the painted kit room again (Matt: "add the art we have for that screen back in"), seven
+glass cards of one size in his order - the weapons, the charm and what's worn on the left, the helmet over the
+armour, the rig and the pack on the right - each naming its slot, the item and its one figure, edged in its
+rarity; a long gun lies across its card. *The smoke:* the cards glass, named, on their side and off the figure, in
+order, their words the item's, no picture a sliver; the worn card, the strip, the column inside the room; the kit
+room's art following its file. The reviewer's catches: a rifle in a 56 px cell was a sliver; the cards' figures,
+edge and worth went stale when worn kit changed in place; fixed with checks. Open: a full 24-pouch rig of
+multi-cell kits wraps a fourth row and pushes the pack out of the room (containers.gd, as before this change).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

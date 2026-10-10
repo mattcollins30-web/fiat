@@ -22,9 +22,14 @@ const Inventory := preload("res://scripts/ui/inventory.gd")
 const Containers := preload("res://scripts/ui/containers.gd")
 const Body := preload("res://scripts/ui/body.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
+const People := preload("res://scripts/ui/people.gd")
 
-const BODY_W := Body.WIDTH                                    # 420
-const CONTAINERS_Y := Body.HEIGHT + 8                         # 568: the body, then the rig and the pack (to 864)
+const BODY_W := Body.WIDTH                                    # 608
+## The runner strip over the loadout (10 Oct, Runner-R A): the face, the level, HP with its bar, the damage, the
+## armour and the pace - who this is, before what they wear.
+const STRIP_H := 88
+const BODY_Y := STRIP_H + 8                                   # 96: the loadout (516), then the rig and the pack
+const CONTAINERS_Y := BODY_Y + Body.HEIGHT + 8                # 620, to 916
 const GAP := 24
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 904
@@ -44,13 +49,35 @@ var _containers                    # the rig and the pack
 var _pick                          # the pick panel (pick_panel.gd): the pick against the fitted, the buttons
 var _actions: Array = []           # what the panel's buttons do, by index; _press follows the item after
 var _shown := ""                   # what the screen last drew, so a refresh that changes nothing redraws nothing
+var _strip: Panel
+var _face: TextureRect
+var _who: Label
+var _hp: Label
+var _hp_track: Panel
+var _hp_fill: Panel
+var _dps: Label
+var _armour: Label
+var _pace: Label
+var _carry: Label
 
 
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the body: drag gear from the stash onto its slot; drag it off to the stash
+	# the runner strip: who, HP, damage, armour, pace
+	_strip = UI.panel(self, Rect2(0, 0, BODY_W, STRIP_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_face = People.rect(_strip, Vector2(12, (STRIP_H - 64) / 2.0), 0.5)
+	_who = UI.label(_strip, Rect2(90, 6, 230, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_hp = UI.label(_strip, Rect2(90, 26, 230, 32), "", "SemiBold", Pal.LINE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_hp_track = UI.panel(_strip, Rect2(90, 64, 220, 8), UI.box(Pal.BG, 4))
+	_hp_fill = UI.panel(_hp_track, Rect2(0, 0, 0, 8), UI.box(Pal.GOOD, 4))
+	_dps = UI.label(_strip, Rect2(330, 8, 150, 32), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_armour = UI.label(_strip, Rect2(330, 44, 150, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pace = UI.label(_strip, Rect2(486, 12, BODY_W - 486 - 12, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_carry = UI.label(_strip, Rect2(486, 44, BODY_W - 486 - 12, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the loadout: drag gear from the stash onto its card; drag it off to the stash
 	_body = Body.new()
+	_body.position = Vector2(0, BODY_Y)
 	_body.picked.connect(_pick_slot)
 	_body.equip.connect(_on_equip_drop)
 	add_child(_body)
@@ -120,6 +147,7 @@ func show_state(s) -> void:
 	_inv.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_body.selected = selected.get("slot", "") if selected.get("kind", "") == "slot" else ""
 	_body.show_state(sim)
+	_show_strip()
 	_containers.selected = selected["id"] if selected.get("kind", "") == "rig" else -1
 	_containers.show_state(sim)
 	# main.gd refreshes ten times a second; rebuilding the buttons that often
@@ -130,6 +158,20 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	_show_panel()
+
+
+## The runner strip: the face, the past and the level, HP and its bar, the damage, the armour, the pace and the pack.
+func _show_strip() -> void:
+	People.show(_face, sim.cls)
+	UI.fit(_who, ["%s · level %d" % [sim.cls if sim.cls != "" else "No past yet", sim.level()], "Level %d" % sim.level()])
+	UI.fit(_hp, ["%d / %d HP" % [sim.hp_shown(), sim.max_hp_shown()], "%d HP" % sim.hp_shown()])
+	var frac: float = clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
+	_hp_fill.size.x = roundf(_hp_track.size.x * frac)
+	(_hp_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if frac > 0.5 else (Pal.WARN if frac > 0.25 else Pal.BAD)
+	UI.fit(_dps, ["%.0f dmg/s" % sim.dps(), "%.0f" % sim.dps()])
+	UI.fit(_armour, ["%s armour" % Fmt.pct(sim.mitigation()), Fmt.pct(sim.mitigation())])
+	UI.fit(_pace, ["pace ×%.2f" % sim.pace(), "×%.2f" % sim.pace()])
+	UI.fit(_carry, ["%d cells · %d pouches" % [sim.capacity(), sim.med_capacity()], "%d cells" % sim.capacity()])
 
 
 ## Everything the screen's look depends on, as one string.
@@ -413,6 +455,7 @@ func text_nodes() -> Array:
 	var out: Array = _pick.text_nodes()
 	out.append_array(_containers.text_nodes())
 	out.append_array(_body.text_nodes())
+	out.append_array([_who, _hp, _dps, _armour, _pace, _carry])
 	out.append_array(_inv.text_nodes())
 	return out
 

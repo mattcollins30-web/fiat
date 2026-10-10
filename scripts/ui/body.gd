@@ -15,48 +15,66 @@ signal equip(id: int)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 
-## Where each slot's box sits and how many cells it spans - the biggest
-## footprint any base of the slot has, so every item of the slot fits in it.
-## A paper doll: the figure stands in the middle, the boxes either side of it
-## - helmet, secondary and backpack down the left, armour and rig down the
-## right, the primary along the bottom under all three.
-const BOXES := {
-	"Helmet": {"at": Vector2i(0, 0), "cells": Vector2i(2, 2)},
-	"Secondary": {"at": Vector2i(0, 142), "cells": Vector2i(2, 1)},
-	"Backpack": {"at": Vector2i(0, 214), "cells": Vector2i(3, 4)},
-	"Armour": {"at": Vector2i(400, 0), "cells": Vector2i(3, 4)},
-	"Rig": {"at": Vector2i(400, 282), "cells": Vector2i(3, 2)},
-	"Primary": {"at": Vector2i(0, 496), "cells": Vector2i(5, 1)},
-	"Charm": {"at": Vector2i(356, 496), "cells": Vector2i(1, 1)},    # the one cell kept for luck, beside the primary
-}
-const WIDTH := Inventory.SIDE_W    # 608; the boxes span 604
-const HEIGHT := 560
+## The loadout (10 Oct, Runner-R A; Matt: the Runner "hasn't changed since the first version"): the figure in its
+## light in the middle, each slot a card of one size down either side - the weapons, the charm and what's worn on
+## the left, the helmet over the armour, the rig and the pack on the right (Matt's order) - each card saying its
+## slot, the item's name and its one figure, edged in its rarity. A card takes a drop of its own slot only; press
+## it to pick it; drag the item off to the stash.
+const CARD_W := 198
+const CARD_H := 119
+const CARD_GAP := 8
+const PAD := 8
+const ART_W := 56                              # the item's picture at the card's left
+const LEFT := ["Primary", "Secondary", "Charm"]               # the fourth place down the left is what's worn
+const RIGHT := ["Helmet", "Armour", "Rig", "Backpack"]
+const WIDTH := Inventory.SIDE_W    # 608
+const HEIGHT := 2 * PAD + 4 * CARD_H + 3 * CARD_GAP          # 516
 const GLASS := Pal.PANEL
 const FIGURE := Color(Pal.CARD_LINE, 0.7)      # the runner, flat, until art/body.png is made
-const FIGURE_X := 302                          # between the columns: 212..392
+const FIGURE_X := WIDTH / 2                    # between the columns: 214..394
 const FIGURE_W := 180
-const FIGURE_H := 488                          # down to the primary's box
+const FIGURE_H := 488
+const FIGURE_Y := (HEIGHT - FIGURE_H) / 2
 const BODY_ART := "res://art/body.png"         # a drawn figure, 180 x 488, drawn at its own pixels like the items, takes the flat one's place
-## The backdrop (10 Oct, Kit-B; Matt: "a semi transparent backdrop ... behind the character model / gear slot
-## selection"): a cone of cold light from above and a shadow at the feet, drawn here, the slots as glass over it.
-## The painted wall (A) went the same day - Matt: the light alone "will look better".
+## The backdrop (10 Oct, Kit-B): the painted kit room at 40%, dark at the edges, the cards as glass over it (Matt,
+## 10 Oct: "add the art we have for that screen back in"); the drawn cone of light while the file is missing.
+const BACKDROP_PLACE := "The kit room"         # art/places/the_kit_room.png
+const BACKDROP_ALPHA := 0.4
 const GLASS_ALPHA := 0.8
 var _figure: TextureRect
 var backdrop: Control                          # under everything: the art, or the light
+var _backdrop_art: TextureRect
+var _vignette: TextureRect
 var _frame: Panel
 var _flat: Control                             # the flat figure's layer, over the backdrop, when art/body.png is missing
+var _worn: Panel                               # the fourth place down the left: what's worn, its worth
+var _worn_head: Label
+var _worn_value: Label
+var _worn_line: Label
 
 var sim
 var selected := ""                 # the slot picked, or ""
-var _boxes := {}                   # slot -> {zone, outline, name, cell}
+var _boxes := {}                   # slot -> {zone, outline, name, cell, item: [Label, Label], fig}
 var _press_at := Vector2.ZERO
 var _press_slot := ""
 var _shown := ""
+
+
+## A slot's card: its column, its place down it.
+static func card_rect(slot: String) -> Rect2:
+	var right: bool = slot in RIGHT
+	var k: int = RIGHT.find(slot) if right else LEFT.find(slot)
+	return Rect2(WIDTH - PAD - CARD_W if right else PAD, PAD + k * (CARD_H + CARD_GAP), CARD_W, CARD_H)
+
+
+static func worn_rect() -> Rect2:
+	return Rect2(PAD, PAD + 3 * (CARD_H + CARD_GAP), CARD_W, CARD_H)
 
 
 func _init() -> void:
@@ -68,6 +86,34 @@ func _init() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.draw.connect(_draw_backdrop)
 	add_child(backdrop)
+	_backdrop_art = TextureRect.new()
+	_backdrop_art.size = size
+	_backdrop_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backdrop_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backdrop_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_backdrop_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop_art.texture = UI.place_texture(BACKDROP_PLACE)
+	_backdrop_art.visible = _backdrop_art.texture != null
+	_backdrop_art.modulate = Color(1, 1, 1, BACKDROP_ALPHA)
+	backdrop.add_child(_backdrop_art)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	g.colors = PackedColorArray([Color(Pal.BG, 0.0), Color(Pal.BG, 0.25), Color(Pal.BG, 0.95)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.45)
+	gt.fill_to = Vector2(1.05, 1.05)
+	gt.width = 64
+	gt.height = 64
+	_vignette = TextureRect.new()
+	_vignette.texture = gt
+	_vignette.size = size
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.visible = _backdrop_art.visible
+	backdrop.add_child(_vignette)
 	_frame = UI.panel(self, Rect2(Vector2.ZERO, size), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	_flat = Control.new()
 	_flat.size = size
@@ -81,45 +127,62 @@ func _init() -> void:
 		_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		_figure.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, 0)
+		_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y)
 		_figure.size = Vector2(FIGURE_W, FIGURE_H)
 		add_child(_figure)
+	var tw: float = CARD_W - ART_W - 22
 	for slot in Data.SLOTS:
-		var b: Dictionary = BOXES[slot]
-		var w := ItemCell.px(b["cells"].x)
-		var h := ItemCell.px(b["cells"].y)
+		var r := card_rect(slot)
 		var zone := Control.new()
-		zone.position = Vector2(b["at"])
-		zone.size = Vector2(w, h)
-		zone.mouse_filter = Control.MOUSE_FILTER_PASS
+		zone.position = r.position
+		zone.size = r.size
+		zone.mouse_filter = Control.MOUSE_FILTER_STOP
 		zone.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
+		zone.gui_input.connect(_zone_input.bind(slot))
 		add_child(zone)
-		var outline := UI.panel(zone, Rect2(0, 0, w, h), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
-		var inset := 8 if b["cells"].x > 1 else 5          # the charm's one cell: "Charm" is 52 px of 64
-		var name := UI.label(zone, Rect2(inset, 0, w - 2 * inset, h), slot, "SemiBold", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		name.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		name.position.y = 4
-		name.size.y = 20
+		var outline := UI.panel(zone, Rect2(Vector2.ZERO, r.size), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
+		outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var name := UI.label(zone, Rect2(10, 4, CARD_W - 20, 20), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var item: Array = []                     # the name over up to three lines
+		for i in range(3):
+			item.append(UI.label(zone, Rect2(ART_W + 16, 24 + i * 20, tw, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
+		var fig := UI.label(zone, Rect2(ART_W + 16, CARD_H - 28, tw, 24), "", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		for l in [name, item[0], item[1], fig]:
+			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var cell := ItemCell.new()
 		cell.glass = true
 		cell.visible = false
+		cell.position = Vector2(8, 28)
 		cell.pressed.connect(_pick.bind(slot))
 		cell.gui_input.connect(_cell_input.bind(slot))
 		cell.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.add_child(cell)
-		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell}
+		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell, "item": item, "fig": fig}
+	var wr := worn_rect()
+	_worn = UI.panel(self, wr, UI.box(Color(Pal.BG, GLASS_ALPHA), 6, 1, Pal.CARD_LINE))
+	_worn_head = UI.label(_worn, Rect2(10, 4, CARD_W - 20, 20), "WORN", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_worn_value = UI.label(_worn, Rect2(10, 28, CARD_W - 20, 36), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_worn_line = UI.label(_worn, Rect2(10, CARD_H - 34, CARD_W - 20, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
-## The slots' fill: glass over the backdrop.
+## The cards' fill: glass over the backdrop.
 static func _glass() -> Color:
 	return Color(GLASS, GLASS_ALPHA)
 
 
-## The drawn light: a cone of cold light from above onto the figure, and a shadow at its feet.
+## Whether the painted kit room shows; else the drawn light.
+func has_backdrop_art() -> bool:
+	return _backdrop_art.visible
+
+
+## The drawn light, while the kit room's art is missing: a cone of cold light from above onto the figure, a shadow
+## at its feet.
 func _draw_backdrop() -> void:
+	if _backdrop_art.visible:
+		return
 	var x := float(FIGURE_X)
 	var top := 0.0
-	var foot := float(FIGURE_H) - 6.0
+	var foot := float(FIGURE_Y + FIGURE_H) - 6.0
 	var light := Color(0.42, 0.5, 0.62)
 	var steps := 14
 	for k in range(steps):
@@ -136,51 +199,116 @@ func _draw_backdrop() -> void:
 	backdrop.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## The runner as a flat silhouette between the columns - head, shoulders,
-## arms, legs - so the column reads as a body and the boxes as what's on it.
-## Drawn on its own layer over the backdrop (the light or the wall under it); art/body.png replaces it.
+## The runner as a flat silhouette between the columns, until art/body.png is made.
 func _draw_flat(c: Control) -> void:
 	if _figure != null:
 		return
 	var x := float(FIGURE_X)
-	c.draw_circle(Vector2(x, 40), 34.0, FIGURE)
-	c.draw_rect(Rect2(x - 12, 70, 24, 20), FIGURE)                       # neck
-	c.draw_rect(Rect2(x - 62, 90, 124, 160), FIGURE)                     # torso
-	c.draw_circle(Vector2(x - 62, 104), 14.0, FIGURE)                    # shoulders, rounded
-	c.draw_circle(Vector2(x + 62, 104), 14.0, FIGURE)
-	c.draw_rect(Rect2(x - 88, 106, 22, 170), FIGURE)                     # arms
-	c.draw_rect(Rect2(x + 66, 106, 22, 170), FIGURE)
-	c.draw_rect(Rect2(x - 56, 250, 50, 238), FIGURE)                     # legs
-	c.draw_rect(Rect2(x + 6, 250, 50, 238), FIGURE)
+	var y0 := float(FIGURE_Y)
+	c.draw_circle(Vector2(x, y0 + 40), 34.0, FIGURE)
+	c.draw_rect(Rect2(x - 12, y0 + 70, 24, 20), FIGURE)
+	c.draw_rect(Rect2(x - 62, y0 + 90, 124, 160), FIGURE)
+	c.draw_circle(Vector2(x - 62, y0 + 104), 14.0, FIGURE)
+	c.draw_circle(Vector2(x + 62, y0 + 104), 14.0, FIGURE)
+	c.draw_rect(Rect2(x - 88, y0 + 106, 22, 170), FIGURE)
+	c.draw_rect(Rect2(x + 66, y0 + 106, 22, 170), FIGURE)
+	c.draw_rect(Rect2(x - 56, y0 + 250, 50, 238), FIGURE)
+	c.draw_rect(Rect2(x + 6, y0 + 250, 50, 238), FIGURE)
 
 
 # ------------------------------------------------------------------ showing
+
+## A long item (a gun, a bar: twice as wide as tall or more) lies across the card under the slot's name, the name and
+## the figure under it; anything else stands at the card's left (the reviewer, 10 Oct: a rifle in 56 px was a sliver).
+static func wide(it: Dictionary) -> bool:
+	var f: Vector2i = Items.footprint(it)
+	return f.x >= f.y * 2
+
+
+const WIDE_ART_H := 34
+
+
+func _lay_card(b: Dictionary, across: bool) -> void:
+	var tw: float = CARD_W - ART_W - 22
+	if across:
+		b["cell"].position = Vector2(8, 24)
+		b["cell"].size = Vector2(CARD_W - 16, WIDE_ART_H)
+		for i in range(3):
+			b["item"][i].position = Vector2(10, 58 + i * 18)
+			b["item"][i].size = Vector2(CARD_W - 20, 20)
+		b["item"][2].text = ""
+		b["fig"].position = Vector2(10, CARD_H - 24)
+		b["fig"].size = Vector2(CARD_W - 20, 22)
+	else:
+		b["cell"].position = Vector2(8, 28)
+		b["cell"].size = Vector2(ART_W, CARD_H - 36)
+		for i in range(3):
+			b["item"][i].position = Vector2(ART_W + 16, 24 + i * 20)
+			b["item"][i].size = Vector2(tw, 20)
+		b["fig"].position = Vector2(ART_W + 16, CARD_H - 28)
+		b["fig"].size = Vector2(tw, 24)
+
+
+## A slot's one figure, long to short: what the pick panel compares it by.
+static func figure_forms(it: Dictionary) -> Array:
+	var slot: String = it["slot"]
+	if slot in ["Primary", "Secondary"]:
+		var d: float = Items.dps(it)
+		var rounds: String = Items.ammo_words(it).trim_prefix("Takes ").to_lower()
+		return ["%.0f dmg/s · %s" % [d, rounds], "%.0f dmg/s" % d]
+	if slot in ["Helmet", "Armour"]:
+		return ["%.0f armour" % Items.armour(it)]
+	if slot == "Backpack":
+		return ["%d cells" % Items.capacity(it)]
+	if slot == "Rig":
+		var n: int = Items.capacity(it)
+		return ["%d pouch%s" % [n, "" if n == 1 else "es"]]
+	return [Items.rarity_name(it)]
+
 
 func show_state(s) -> void:
 	sim = s
 	var sig := selected
 	for slot in Data.SLOTS:
-		sig += "|" + (str(sim.equipped[slot]["id"]) if sim.equipped[slot] != null else "-")
+		var w = sim.equipped[slot]
+		# what's worn can change in place (a Workshop job, a part fitted, the Fence's prices): its figure, its rarity
+		# and its worth are in the signature, not just its id (the reviewer, 10 Oct)
+		sig += "|" + ("%d:%d:%d:%s:%d:%s" % [w["id"], int(w["rarity"]), w["affixes"].size(), figure_forms(w)[0], int(sim.sell_price(w)), str(w.get("attachments", {}).keys())] if w != null else "-")
 	if sig == _shown:
 		return
 	_shown = sig
+	var worth := 0
+	var filled := 0
 	for slot in Data.SLOTS:
 		var b: Dictionary = _boxes[slot]
 		var it = sim.equipped[slot]
 		var on: bool = selected == slot
+		var edge: Color = Pal.ACCENT if on else (Pal.CARD_LINE if it == null else Pal.tone_color(Pal.item_tone(it)).darkened(0.15))
+		if it == null and slot == "Primary" and not on:
+			edge = Pal.BAD                                   # nothing to fight with
+		b["outline"].add_theme_stylebox_override("panel", UI.box(_glass(), 6, 2 if on else 1, edge))
 		if it == null:
+			_lay_card(b, false)
 			b["cell"].visible = false
 			b["cell"].id = -1
-			b["name"].visible = true
-			b["name"].text = slot
-			b["outline"].add_theme_stylebox_override("panel", UI.box(Pal.SELECT if on else _glass(), 6, 2 if on else 1,
-				Pal.ACCENT if on else (Pal.BAD if slot == "Primary" else Pal.CARD_LINE)))
+			b["item"][0].text = "Empty"
+			b["item"][0].add_theme_color_override("font_color", Pal.TEXT_3)
+			b["item"][1].text = ""
+			b["item"][2].text = ""
+			UI.fit(b["fig"], ["drop one here", "empty"] if slot != "Primary" else ["nothing to fight with", "no gun", ""])
+			b["fig"].add_theme_color_override("font_color", Pal.BAD if slot == "Primary" else Pal.TEXT_3)
 		else:
-			b["name"].visible = false
-			b["outline"].add_theme_stylebox_override("panel", UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))     # the cell is the glass: two layers let nothing through (the review)
+			filled += 1
+			worth += int(sim.sell_price(it))
 			b["cell"].visible = true
-			b["cell"].show_item(it, on, b["zone"].size)   # fills the box
-			b["cell"].position = Vector2.ZERO
+			_lay_card(b, wide(it))
+			b["cell"].show_item(it, on, b["cell"].size)
+			b["item"][0].add_theme_color_override("font_color", Pal.TEXT)
+			UI.wrap(b["item"].slice(0, 2) if wide(it) else b["item"], Items.full_name(it))
+			UI.fit(b["fig"], figure_forms(it))
+			b["fig"].add_theme_color_override("font_color", Pal.ACCENT if slot in ["Primary", "Secondary"] else Pal.TEXT_2)
+	_worn_value.text = Fmt.money(worth)
+	UI.fit(_worn_line, ["%d of %d slots filled · at the Fence" % [filled, Data.SLOTS.size()], "%d of %d filled" % [filled, Data.SLOTS.size()]])
 
 
 # ------------------------------------------------------------------ dragging and dropping
@@ -224,10 +352,19 @@ func text_nodes() -> Array:
 	var out: Array = []
 	for slot in Data.SLOTS:
 		var b: Dictionary = _boxes[slot]
-		if b["name"].visible:
-			out.append(b["name"])
+		out.append(b["name"])
+		for l in b["item"] + [b["fig"]]:
+			if l.text != "":
+				out.append(l)
 		out.append_array(b["cell"].text_nodes())
+	out.append_array([_worn_head, _worn_value, _worn_line])
 	return out
+
+
+## A press on the card, not on its picture: the card picks its slot.
+func _zone_input(event: InputEvent, slot: String) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_pick(slot)
 
 
 ## For the tests: the slot box's rect, in this panel.

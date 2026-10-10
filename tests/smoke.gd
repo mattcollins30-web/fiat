@@ -8638,19 +8638,45 @@ func _backdrop_checks(main) -> void:
 	main.refresh()
 	var body = main._armoury._body
 	_check(body.get_child(0) == body.backdrop and body.backdrop.size == body.size and body.backdrop.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the backdrop is not under the figure and the slots, or takes the mouse")
-	_check(body.backdrop.get_child_count() == 0, "the backdrop has art on it: the drawn light alone (Matt, 10 Oct)")
+	# the kit room's art back under the loadout (Matt, 10 Oct: "add the art we have for that screen back in"): painted
+	# when the file is there, the drawn light while it isn't
+	var kit_file := "res://art/places/the_kit_room.png"
+	var kit_painted: bool = ResourceLoader.exists(kit_file) or FileAccess.file_exists(kit_file)
+	_check(body.has_backdrop_art() == kit_painted and body._backdrop_art.get_parent() == body.backdrop and body._vignette.visible == kit_painted, "the kit room's art does not follow its file (painted %s)" % str(kit_painted))
 	_check(body.get_child(1) == body._frame and body._frame.mouse_filter == Control.MOUSE_FILTER_IGNORE and body._flat.get_index() > body._frame.get_index(), "the backdrop's frame or the flat figure's layer is out of order, or takes the mouse")
 	for slot in Data.SLOTS:
 		var b: Dictionary = body._boxes[slot]
 		_check(b["zone"].get_index() > body._flat.get_index(), "the %s slot is under the backdrop's layers" % slot)
 		var sb: StyleBoxFlat = b["outline"].get_theme_stylebox("panel")
 		var filled: bool = sim.equipped[slot] != null
-		# empty: the outline is the glass; filled: the cell is, over a clear outline (two glass layers let nothing through)
-		_check((filled and sb.bg_color.a < 0.01) or (not filled and is_equal_approx(sb.bg_color.a, body.GLASS_ALPHA)) or body.selected == slot, "the %s slot is not one layer of glass: %.2f (%s)" % [slot, sb.bg_color.a, "filled" if filled else "empty"])
+		# the card is glass whether full or not (Runner-R A: it carries the words); the picture's cell is glass too
+		_check(is_equal_approx(sb.bg_color.a, body.GLASS_ALPHA), "the %s card is not glass: %.2f (%s)" % [slot, sb.bg_color.a, "filled" if filled else "empty"])
+		# the loadout (Runner-R A): the slot named always; a full card names its item and its figure; Matt's order -
+		# the weapons and the charm down the left, the helmet over the armour, the rig and the pack down the right
+		_check(b["name"].text == slot.to_upper() and b["name"].visible, "the %s card does not name its slot" % slot)
+		if filled:
+			# the picture big enough to read: a long gun across the card, the rest at its left
+			var cz: Vector2 = b["cell"].size
+			var fp: Vector2i = Items.footprint(sim.equipped[slot])
+			var shown_h: float = minf(cz.y, cz.x * float(fp.y) / float(fp.x))
+			_check(shown_h >= 24.0 or not body.wide(sim.equipped[slot]) and cz.x >= 48.0, "the %s card's picture is a sliver: %.0f px tall in %s" % [slot, shown_h, str(cz)])
+			var said: String = (b["item"][0].text + " " + b["item"][1].text + " " + b["item"][2].text).strip_edges()
+			_check(said == Items.full_name(sim.equipped[slot]) and b["fig"].text != "", "the %s card's words are off: '%s' / '%s'" % [slot, said, b["fig"].text])
+		var cr: Rect2 = body.box_rect(slot)
+		_check((cr.position.x < body.FIGURE_X) == (slot in ["Primary", "Secondary", "Charm"]), "the %s card is on the wrong side" % slot)
+		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)
 		_check(b["cell"].glass, "the %s slot's cell is not glass" % slot)
 		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
 	_check_fit(main, "Runner (the backdrop)")
-	print("the backdrop ok: under it all, glass slots, the drawn light")
+	_check(body.box_rect("Helmet").position.y < body.box_rect("Armour").position.y and body.box_rect("Armour").position.y < body.box_rect("Rig").position.y and body.box_rect("Rig").position.y < body.box_rect("Backpack").position.y and body.box_rect("Primary").position.y < body.box_rect("Secondary").position.y and body.box_rect("Secondary").position.y < body.box_rect("Charm").position.y, "the loadout's order is not Matt's")
+	var wr: Rect2 = body.worn_rect()
+	for slot in Data.SLOTS:
+		_check(not wr.intersects(body.box_rect(slot)), "the worn card sits on the %s card" % slot)
+	_check(body._worn_value.text.begins_with("£"), "the worn card says no worth: '%s'" % body._worn_value.text)
+	# the strip over it: who, HP, damage, armour, inside the strip and above the loadout
+	var arm = main._armoury
+	_check(arm._hp.text.contains("HP") and arm._dps.text.contains("dmg/s") and arm._who.text.contains("level") and arm.BODY_Y >= arm.STRIP_H and arm.CONTAINERS_Y + arm._containers.size.y <= Pal.ROOM_H, "the runner strip or the column's stack is off: '%s' '%s' '%s'" % [arm._who.text, arm._hp.text, arm._dps.text])
+	print("the loadout ok: the strip, the cards in Matt's order, the kit room under it, glass cards")
 
 
 ## The purse on the top bar (10 Oct, Bar-C): notes and scrap through the campaign, each salvage kind joining once
