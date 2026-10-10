@@ -1,0 +1,99 @@
+{
+ "_readme": [
+  "FIAT ROOM BANDS (10 Oct, concept - docs/design/faces_and_bands.md section 4): Training (the_caravan), the Workshop, the Radio, the Yard and Stats, 688x296, art/places/<slug>.png, shown covering the band from the centre and shaded from the left, as the Clinic's and the Fence's.",
+  "Style image: art/places/ransacked_streets.png, as the places manifest. A job whose file exists is skipped.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_rooms_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <slug> ++ --force)."
+ ],
+ "jobs": [
+  {
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Training's band (110 px high, the class buttons at its right)",
+   "description": "Pixel art, wide view of a crew's base camp in a British lay-by after a collapse: an old touring caravan with its awning out, a camping table with maps and a kettle, a punch bag hung from a lamp post, a row of jerry cans, a tarp shelter with a bench and a rack of training weights, a hatchback with its boot open, wet tarmac. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "out": "art/places/the_caravan.png",
+   "seed": 96001
+  },
+  {
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Workshop's band (96 px high, the view tabs at its right)",
+   "description": "Pixel art, wide view inside a British lock-up workshop after a collapse: a long workbench with a vice and a gun stripped into its parts, a pegboard of tools, a pillar drill, coffee tins of screws and springs, a lathe under a work lamp, an angle grinder, boxes of salvaged parts stacked to the roof, the roller door shut. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "out": "art/places/the_workshop.png",
+   "seed": 96002
+  },
+  {
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Radio's band (96 px high)",
+   "description": "Pixel art, wide view inside a pirate radio room on the top floor of a British tower block after a collapse: a desk of old radio sets, a scanner and a microphone, a car battery and wires, a wall of pinned maps and notes, a window looking out over dark tower blocks with an aerial mast on the roof opposite. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "out": "art/places/the_radio.png",
+   "seed": 96003
+  },
+  {
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "the Yard's band (the purse chips and the town at its right)",
+   "description": "Pixel art, wide view of a fortified British scrapyard after a collapse: a corrugated wall topped with wire, a lookout tower made of scaffold, a crane, stacks of crushed cars, a generator shed, a hand-painted gate, a garden of raised beds in tyres, a fire barrel. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "out": "art/places/the_yard.png",
+   "seed": 96004
+  },
+  {
+   "endpoint": "generate-image-v2",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "single": true,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "_where": "Stats' band (96 px high, the runner's face at its left)",
+   "description": "Pixel art, wide view inside a crew's back room in a British flat after a collapse: a wall of photos and newspaper cuttings joined with string, a tally chalked on a door, a shelf of trophies taken from gang bosses, a battered armchair, a sideboard with a lamp, a calendar with days crossed off. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
+   "out": "art/places/the_stats.png",
+   "seed": 96005
+  }
+ ]
+}
