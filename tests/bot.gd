@@ -58,10 +58,10 @@ func step(sim) -> int:
 		sim.advance(1.0)
 		if sim.on_mission() and sim.hp < sim.max_hp() * 0.4 and sim.mission["using"] == null and not sim.first_med().is_empty():
 			sim.use_med(sim.first_med()["id"])
-		if sim.on_mission() and should_leave(sim):
+		if sim.on_mission() and should_leave(sim) and not sim.mission.get("way_out", false):
 			if sim.hp < sim.max_hp() * 0.25:
 				bails += 1
-			sim.extract_now()
+			sim.get_out()                     # the player's button: before the clear, the way out (10 Oct)
 		guard += 1
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still

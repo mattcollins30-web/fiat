@@ -176,7 +176,13 @@ func show_state(s) -> void:
 	var ticking: bool = int(m["remaining"]) > 0
 	var clock_colour: Color = Pal.BAD if clock <= 10.0 else (Pal.ACCENT if clock <= clock_max * Data.CLOCK_WARN else Pal.TEXT)
 	var clock_unit: Array = ["left · ticks while they're on you", "left · ticking", "left"] if ticking else ["left · stopped while it's clear", "left · stopped", "left"]
-	_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)
+	var way_out: bool = m.get("way_out", false)
+	if way_out:
+		# the way out (10 Oct, Run-P B): the headline is the extract counting down, in amber
+		_band.set_words("Depth %d · %s · the way out" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"])))),
+			["to the way out · see them off", "see them off", "left"], Pal.BAD if float(m["way_out_t"]) <= 5.0 else Pal.ACCENT)
+	else:
+		_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)
 	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
 	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
@@ -207,6 +213,12 @@ func show_state(s) -> void:
 		_fight["head"].text = m["boss"]["name"].to_upper()
 		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
+	elif way_out:
+		var door_on: int = mini(m["remaining"], sim.contact(t))
+		_fight["head"].text = "THE FIGHT · THE WAY OUT"
+		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]],
+			["At the door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
+		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
@@ -250,23 +262,39 @@ func show_state(s) -> void:
 	_show_rig()
 	# the take
 	_tiles(_take_tiles, [["Cash", [Fmt.money(m["cash"])]], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
-	_note.text = "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
+	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
-	_note.add_theme_color_override("font_color", Pal.BAD if low else Pal.TEXT_2)
+	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
 	# buttons and the pick panel change rarely; a redraw under the mouse drops presses
-	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0))]
+	var real_clear: bool = m["cleared"] and not m.get("ghost_pending", false)
+	if way_out:
+		_button.text = "Getting out · %s" % Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"]))))     # the seconds each frame; the restyle below only when it starts
+	# the price before the clear changes only as the run's clock caps it (the review, 10 Oct)
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
+		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
 	if sig == _shown:
 		return
 	_shown = sig
 	var auto: bool = sim.auto_tier >= 0
 	var filling: bool = m.get("leave_full", false)
-	_button.text = "Get out now"
 	_button.visible = true
-	UI.style_button(_button, low or (m["cleared"] and not filling))
+	_button.disabled = not sim.can_extract()
+	if not sim.can_extract():
+		_button.text = "Stand and fight: no way out"      # the Stand node holds you to the clear
+		UI.style_button(_button, false)
+	elif way_out:
+		UI.style_button(_button, false, "warn")
+	elif real_clear:
+		_button.text = "Get out now"
+		UI.style_button(_button, low or not filling)
+	else:
+		# before the clear it says its price (10 Oct, the way out): the seconds and a last gang
+		_button.text = ("Get out · %s, a gang" if auto else "Get out now · %s and a last gang") % Fmt.mss(ceilf(sim.way_out_s(t, m)))
+		UI.style_button(_button, low)
 	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
 	_button2.visible = auto or m["cleared"]
 	_button2.text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
@@ -507,7 +535,7 @@ func _take_pick() -> void:
 
 
 func _get_out() -> void:
-	sim.extract_now()
+	sim.get_out()
 	acted.emit()
 
 

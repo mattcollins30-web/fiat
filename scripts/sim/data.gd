@@ -1799,6 +1799,8 @@ const CLOCK_PER_HEAD := 12.0        # the bot's median at the sites it picks is 
 const CLOCK_GANGS := 5
 const CLOCK_LOSE_KIT := 2
 const CLOCK_WARN := 0.2            # the clock's last fifth: amber
+const WAY_OUT_S := 20.0           # the way out (10 Oct, docs/design/way_out.md): a paid early leave, so long at the first site
+const WAY_OUT_PER_TIER := 2.0     # and so much longer a site along (Matt: it grows with the tier)
 
 ## The operator. Level n: +HP_PER_LEVEL max HP and +DMG_PER_LEVEL damage a level.
 const BASE_HP := 100.0

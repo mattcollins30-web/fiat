@@ -4009,7 +4009,9 @@ func _tick(dt: float) -> void:
 		# the clock (9 Oct): it runs while a gang is on you, and stands while the site is clear
 		m["clock"] = float(m.get("clock", clock_budget(t))) - dt
 		m["clock_used"] = float(m.get("clock_used", 0.0)) + dt
-		if m["clock"] <= 0.0:
+		if m.get("way_out", false):
+			m["way_out_t"] = float(m["way_out_t"]) - dt
+		if m["clock"] <= 0.0 or (m.get("way_out", false) and float(m["way_out_t"]) <= 0.0):
 			_time_out(m)
 			return
 		_fight(m, t, dt)
@@ -4025,7 +4027,7 @@ func _tick(dt: float) -> void:
 		_heal(m, _affix_sum("regen") * dt)
 	if has_rule("nans_cardigan"):
 		_heal(m, max_hp() * 0.03 * dt)
-	if float(m.get("event_at", -1.0)) >= 0.0 and m["elapsed"] >= float(m["event_at"]):
+	if float(m.get("event_at", -1.0)) >= 0.0 and m["elapsed"] >= float(m["event_at"]) and not m.get("way_out", false):
 		_event(m, t)
 	# the Medic's rule: a med by itself under 40%
 	if class_data().get("auto_med", false) and m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
@@ -4327,6 +4329,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["shock_t"] = 0.0
 		_kill(m, t)
 	if m["remaining"] <= 0:
+		if m.get("way_out", false):
+			_seen_off(m)
+			return
 		if m.has("boss") and m["boss"]["alive"] and not m["boss"]["started"]:
 			# the pool is down; the crew's head comes out
 			m["boss"]["started"] = true
@@ -4939,6 +4944,71 @@ func extract_now() -> void:
 		_extract()
 
 
+## The player's Get out now (10 Oct, docs/design/way_out.md): free and at once after the clear, as before; before
+## it, the way out - a last gang at the door and so long to see them off. extract_now stays the instant leave the
+## tools and the tests use.
+func get_out() -> void:
+	if mission == null or not can_extract():
+		return
+	if (mission["cleared"] and not mission.get("ghost_pending", false)) or mission.get("dry", false):
+		extract_now()                          # a Ghost's run is cleared from the start; its clear is the first gang beaten
+		return
+	if mission.get("way_out", false):
+		return                                 # already making for it
+	if auto_tier >= 0:
+		auto_tier = -1
+		log_event("Auto-run stopped")
+	_start_way_out(mission)
+
+
+## How long the way out gives at a site: WAY_OUT_S, so much more a site along, never more than the run's clock has left.
+func way_out_s(t: Dictionary, m = null) -> float:
+	var s: float = Data.WAY_OUT_S + Data.WAY_OUT_PER_TIER * int(t["tier"])
+	if m != null:
+		s = minf(s, maxf(1.0, float(m.get("clock", s))))
+	return s
+
+
+## The gang at the door: the site's own (its words on it), the size of the gangs after a clear's first - the Flares,
+## Trapline and the Poacher's snare shrink it as they shrink those.
+func door_gang(t: Dictionary) -> int:
+	var size: int = maxi(1, PATROL_BASE - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
+	if has_rule("scouts_whistle"):
+		size = 1
+	if yard_has("flares"):
+		size = maxi(1, size - 1)
+	if has_joint("poacher_frost"):
+		size = maxi(1, size - 1)
+	return size
+
+
+func _start_way_out(m: Dictionary) -> void:
+	var t: Dictionary = m["t"]
+	var size := door_gang(t)
+	m["way_out"] = true
+	m["way_out_t"] = way_out_s(t, m)
+	m["way_out_max"] = m["way_out_t"]
+	m["way_out_gang"] = size
+	m["left_behind"] = int(m["remaining"])
+	if m.has("boss") and m["boss"]["alive"]:
+		m["boss"]["started"] = false           # the head is left with the rest of them
+	m["remaining"] = size
+	m["target_hp"] = float(t["hp"])
+	m["dots"] = {}
+	m["chill_t"] = 2.0 if has_joint("poacher_frost") else 0.0
+	m["shock_t"] = 0.0
+	m["fresh"] = true
+	m["sustain_t"] = 0.0
+	log_event("Making for the way out, %d at the door" % size)
+
+
+## The door's gang down: out with the pack.
+func _seen_off(m: Dictionary) -> void:
+	m["seen_off"] = true
+	log_event("Seen off at the door. Out with the pack")
+	_extract()
+
+
 func stop_auto() -> void:
 	if auto_tier >= 0:
 		auto_tier = -1
@@ -4996,7 +5066,7 @@ func _extract() -> void:
 		"outcome": outcome, "tier": m["tier"], "kills": m["kills"], "of": int(t["pool"]), "loot": stashed,
 		"left": m["left"] + (m["found"].size() - stashed), "cash": m["cash"], "xp": m["xp"],
 		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(),
-		"clock_used": float(m.get("clock_used", 0.0)), "clock_left": float(m.get("clock", 0.0)), "timed_out": bool(m.get("timed_out", false)),
+		"clock_used": float(m.get("clock_used", 0.0)), "clock_left": float(m.get("clock", 0.0)), "timed_out": bool(m.get("timed_out", false)), "way_out": bool(m.get("way_out", false)),
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])

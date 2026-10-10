@@ -1,4 +1,4 @@
-# The way out (10 Oct 2026, concept - not built)
+# The way out (10 Oct 2026)
 
 From Matt's playtest: early extraction should cost something - "maybe its own timer and a gang you have to see
 off?" Agreed with Matt (10 Oct): **the way out, on the run's clock**. Board: Run-P (B) on the design canvas.
@@ -43,3 +43,12 @@ off?" Agreed with Matt (10 Oct): **the way out, on the run's clock**. Board: Run
 - The 20 s **grow with the tier**, as the run's clock does (`WAY_OUT_S` is the tier-1 figure; the balance pass
   sets the growth).
 - The door gang **carries the site's Radio words**: a tougher site has a tougher door.
+
+## 5. Built (10 Oct)
+
+- `Sim.get_out()` is the button; `extract_now()` stays the instant leave the tools and the tests use.
+  `way_out_s(t, m)`, `door_gang(t)`, `_start_way_out`, `_seen_off`; the report carries `way_out`.
+- A Ghost's run counts as cleared only once its first gang is beaten, so its first gang on you is the way out too.
+- Under Stand and fight the button reads "Stand and fight: no way out" and is off until the clear.
+- Seen off, the run's outcome reads as an early leave ("Cut and run") with `way_out` on the report; a name of its
+  own is open.

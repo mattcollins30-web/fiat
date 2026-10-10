@@ -2592,6 +2592,19 @@ line climbing, the campaign's gun builds at 6 and the deep ones at depth; the ca
 the bases by level) scoped to the campaign. The reviewer's catches: the Workshop offered the deep improvised
 guns from the first hour; a shop's unique took its level from a deep throwaway base; both fixed with checks.
 
+**The way out (10 Oct, Run-P B, docs/design/way_out.md).** Matt: an early leave "should cost something - maybe its
+own timer and a gang you have to see off". Get out now before the clear is the way out: the gangs on you left
+behind (a head with them), one last gang of the site's own at the door (the first post-clear gang's size: Trapline,
+Flares, the snare shrink it; the Radio's words on it), and `WAY_OUT_S` 20 s + 2 a site along (Matt: it grows with
+the tier), never past the run's clock. Seen off: home with the pack. Out of time: a time-out as the clock has it.
+Down: a death. After the clear it's free and at once, as before. The band's headline is the way out counting down
+in amber, the fight box the door's gang, the button "Getting out · 0:14"; before the clear the button says its price.
+The bot presses it as a player would (`get_out`); `extract_now` stays the tools' instant leave. *The smoke:* the
+price, the door's gang, the time and its cap, seen off, out of time, a second press, free after the clear, a Ghost's
+first gang, a head left behind, a save and load mid way out, the price following the clock. The reviewer's catches:
+a Ghost's run left for free; the button's redraw ran every second through the pick panel; the price went stale
+under the clock; Stand and fight showed a price it never charged; all fixed, the gaps tested.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

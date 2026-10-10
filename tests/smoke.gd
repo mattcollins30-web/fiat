@@ -1206,8 +1206,13 @@ func _run_screen(main) -> void:
 		main._run._inv._sell_chosen()
 		_check(sim.mission["found"].size() == n_before - 2, "Select many did not ditch")
 		main._run._inv._toggle_many()
+	var was_clear: bool = sim.mission["cleared"] and not sim.mission.get("ghost_pending", false)
 	main._run._get_out()
-	_check(not sim.on_mission(), "Get out now did not end the run")
+	if was_clear:
+		_check(not sim.on_mission(), "Get out now did not end the run")
+	else:
+		_check(sim.on_mission() and sim.mission.get("way_out", false), "Get out now before the clear did not take the way out")
+		sim.extract_now()
 	print("run screen ok")
 
 
@@ -1256,6 +1261,7 @@ func _class_trees(main) -> void:
 	_set_cls(sim, "Doorman")
 	_radio_juice_checks(main)
 	_clock_checks(main)
+	_way_out_checks(main)
 	_rail_order_checks(main)
 	_place_art_checks(main)
 	# the Yard's upgrades
@@ -8169,6 +8175,131 @@ func _radio_juice_checks(main) -> void:
 ## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
 ## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
 ## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+## The way out (10 Oct, docs/design/way_out.md, Run-P B): Get out now before the clear is a last gang at the door and
+## so long to see them off - seen off, home with the pack; out of time, a time-out; after the clear, free as before.
+func _way_out_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var autos: Array = [sim.auto_equip, sim.auto_sell]
+	sim.auto_equip = false
+	sim.auto_sell = false                       # the pack's find is read in the stash as it came home
+	_check(sim.way_out_s(sim.effective(8)) > sim.way_out_s(sim.effective(0)) and is_equal_approx(sim.way_out_s(sim.effective(0)), Data.WAY_OUT_S), "the way out does not grow with the tier: %.0f / %.0f" % [sim.way_out_s(sim.effective(0)), sim.way_out_s(sim.effective(8))])
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["target_hp"] = 1e12
+	sim.hp = 1e9
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var rs = main._run
+	_check(rs._button.text.begins_with("Get out now · ") and rs._button.text.ends_with("and a last gang"), "before the clear Get out now does not say its price: '%s'" % rs._button.text)
+	_check_fit(main, "Run (the way out's price)")
+	var found: Dictionary = sim._plain("Helmet", "Hard hat")
+	m["found"].append(found)
+	var pool: int = int(m["remaining"])
+	rs._get_out()
+	_check(sim.on_mission() and m.get("way_out", false) and int(m["remaining"]) == sim.door_gang(m["t"]) and int(m["left_behind"]) == pool, "Get out now before the clear did not start the way out: %s / %d at the door" % [str(m.get("way_out", false)), int(m["remaining"])])
+	_check(is_equal_approx(float(m["way_out_t"]), minf(sim.way_out_s(m["t"]), float(m["clock"]))), "the way out's time is off: %.1f" % float(m["way_out_t"]))
+	main.refresh()
+	_check(rs._band.kicker.text.ends_with("the way out") and rs._band.headline.text == Fmt.mss(ceilf(float(m["way_out_t"]))) and rs._fight["head"].text == "THE FIGHT · THE WAY OUT" and rs._button.text.begins_with("Getting out"),
+		"the run screen does not show the way out: '%s' / '%s' / '%s' / '%s'" % [rs._band.kicker.text, rs._band.headline.text, rs._fight["head"].text, rs._button.text])
+	_check_fit(main, "Run (the way out)")
+	rs._get_out()
+	_check(sim.on_mission() and m.get("way_out", false), "a second press left the way out")
+	var w0: float = float(m["way_out_t"])
+	sim.advance(1.0)
+	_check(sim.on_mission() and is_equal_approx(float(m["way_out_t"]), w0 - 1.0), "the way out's time did not run: %.1f from %.1f" % [float(m["way_out_t"]), w0])
+	# seen off: home with the pack
+	m["remaining"] = 1
+	m["target_hp"] = 0.01
+	sim.advance(1.0)
+	_check(not sim.on_mission() and sim.last_report.get("way_out", false) and not sim.last_report.get("timed_out", false) and sim.stash.has(found), "seeing them off did not bring the pack home: %s" % str(sim.last_report.get("outcome", "")))
+	# out of time at the door: a time-out
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["target_hp"] = 1e12
+	sim.hp = 1e9
+	sim.get_out()
+	m["target_hp"] = 1e12
+	m["way_out_t"] = 0.5
+	sim.advance(1.0)
+	_check(not sim.on_mission() and sim.last_report.get("timed_out", false) and sim.last_report.get("outcome", "") == "Out of time", "out of time at the door was not a time-out: %s" % str(sim.last_report.get("outcome", "")))
+	# never longer than the run's clock has left
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["clock"] = 6.0
+	sim.get_out()
+	_check(float(m["way_out_t"]) <= 6.0, "the way out ran past the run's clock: %.1f" % float(m["way_out_t"]))
+	sim.extract_now()
+	# after the clear: free and at once
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["remaining"] = 0
+	sim._clear(m, m["t"])
+	sim.get_out()
+	_check(not sim.on_mission() and not sim.last_report.get("way_out", false), "after the clear Get out now was not free and at once")
+	# a Ghost's run is cleared from the start, but its first gang on you is no clear: the way out (the review, 10 Oct)
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["cleared"] = true
+	m["ghost_pending"] = true
+	m["remaining"] = 3
+	m["target_hp"] = 1e12
+	sim.get_out()
+	_check(sim.on_mission() and m.get("way_out", false), "a Ghost's run left for free with its first gang on")
+	sim.extract_now()
+	# a head who has come out is left behind; the door's gang down is out, never the head coming back
+	sim.hp = 1e9
+	sim.deploy(0)
+	m = sim.mission
+	m["boss"] = sim._boss_entry({"name": "The Carpet Man", "hp": 1e9, "dps": 1.0, "zone": 0})
+	m["boss"]["started"] = true
+	m["remaining"] = 1
+	m["target_hp"] = 1e9
+	sim.get_out()
+	_check(not m["boss"]["started"], "the head kept fighting through the way out")
+	m["remaining"] = 1
+	m["target_hp"] = 0.01
+	sim.advance(1.0)
+	_check(not sim.on_mission() and sim.last_report.get("way_out", false), "the door's gang down did not end the run with a head left behind")
+	# saved and loaded mid way out, it carries on
+	sim.hp = 1e9
+	sim.deploy(0)
+	m = sim.mission
+	m["target_hp"] = 1e12
+	sim.get_out()
+	var mid: Dictionary = sim.to_dict()
+	sim.load_dict(JSON.parse_string(JSON.stringify(mid)))
+	m = sim.mission
+	_check(sim.on_mission() and m.get("way_out", false) and float(m["way_out_t"]) > 0.0, "a load mid way out lost it")
+	m["remaining"] = 1
+	m["target_hp"] = 0.01
+	sim.hp = 1e9
+	sim.advance(1.0)
+	_check(not sim.on_mission() and sim.last_report.get("way_out", false), "a loaded way out did not end when seen off")
+	# the price follows the run's clock as it falls under the way out's time
+	sim.hp = 1e9
+	sim.deploy(8 if sim.tier_open(8) else 0)
+	m = sim.mission
+	m["target_hp"] = 1e12
+	main.refresh()
+	m["clock"] = 7.0
+	main.refresh()
+	_check(rs._button.text.contains(Fmt.mss(7.0)), "the price did not follow the run's clock: '%s'" % rs._button.text)
+	sim.extract_now()
+	sim.load_dict(saved)
+	sim.auto_equip = autos[0]
+	sim.auto_sell = autos[1]
+	main.refresh()
+	print("the way out ok: the price, the door's gang, the time, seen off, out of time, the clock's cap, free after the clear")
+
+
 func _clock_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
