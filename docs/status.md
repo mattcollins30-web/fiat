@@ -2791,6 +2791,13 @@ the strip, the loadout (516 → 648: every card taller, the art bigger) and the 
 size stays on the Backpack card and the strip. *The smoke:* the pack's map gone; the rig inside its room in every
 state, the worst wrap (four-pouch kits among singles, rounds in the thousands) with its words inside its pouches.
 
+**The loadout, tidied (10 Oct).** Matt: the backpack's words clipped its art; no words at the foot at all (the figure
+is on the strip, in the panel and the tooltip); the charm smaller; his redrawn figure looked too small. The art sits
+under the slot's name now, never under words; the charm's card 110 (the guns' 180 and 170); the figure's drawing is
+cropped to what's drawn and scaled to fill the gap between the columns (his 131 × 390 drawn at about 192 × 572,
+nearest, as the gear's art is). *The smoke:* the art clear of the slot's name, no foot words, the figure binding on
+the gap, the charm under the primary.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

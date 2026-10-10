@@ -38,10 +38,12 @@ const HEIGHT := 648                            # the column (the pack's map went
 const GLASS := Pal.PANEL
 const FIGURE := Color(Pal.CARD_LINE, 0.7)      # the runner, flat, until art/body.png is made
 const FIGURE_X := PAD + LEFT_W + (WIDTH - 2 * PAD - LEFT_W - RIGHT_W) / 2     # between the columns: 262..442
-const FIGURE_W := 180
-const FIGURE_H := 488
-const FIGURE_Y := (HEIGHT - FIGURE_H) / 2
-const BODY_ART := "res://art/body.png"         # a drawn figure, 180 x 488, drawn at its own pixels like the items, takes the flat one's place
+## The figure fills the room between the columns (Matt, 10 Oct: his redrawn figure "looks too small"): the drawing's
+## transparent margin is cropped off and what's left is scaled to the gap's height or width, whichever binds.
+const FIGURE_W := WIDTH - 2 * PAD - LEFT_W - RIGHT_W - 4       # 192: the gap between the columns, 2 px clear each side
+const FIGURE_H := HEIGHT - 2 * PAD
+const FIGURE_Y := PAD
+const BODY_ART := "res://art/body.png"         # a drawn figure: its transparent margin cropped, scaled to fill the gap between the columns
 ## The backdrop (10 Oct, Kit-B): the painted kit room at 40%, dark at the edges, the cards as glass over it (Matt,
 ## 10 Oct: "add the art we have for that screen back in"); the drawn cone of light while the file is missing.
 const BACKDROP_PLACE := "The kit room"         # art/places/the_kit_room.png
@@ -72,8 +74,8 @@ var _shown := ""
 ## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
 const LEFT_W := 246
 const RIGHT_W := 150
-const HEIGHTS := {"Primary": 150, "Secondary": 140, "Charm": 170, "Helmet": 140, "Armour": 204, "Rig": 118, "Backpack": 146}
-const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 150 - 140 - 170     # what the left column leaves: 148
+const HEIGHTS := {"Primary": 180, "Secondary": 170, "Charm": 110, "Helmet": 140, "Armour": 204, "Rig": 118, "Backpack": 146}
+const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 180 - 170 - 110     # what the left column leaves: 148
 
 
 static func card_rect(slot: String) -> Rect2:
@@ -136,7 +138,7 @@ func _init() -> void:
 	add_child(_flat)
 	if ResourceLoader.exists(BODY_ART) or FileAccess.file_exists(BODY_ART):
 		_figure = TextureRect.new()
-		_figure.texture = load(BODY_ART) if ResourceLoader.exists(BODY_ART) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(BODY_ART)))
+		_figure.texture = _cropped(load(BODY_ART) if ResourceLoader.exists(BODY_ART) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(BODY_ART))))
 		_figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		_figure.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -169,7 +171,7 @@ func _init() -> void:
 		var item: Array = []                     # "Empty" on an empty card; a full one's name is the art's (and its tooltip)
 		for i in range(3):
 			item.append(UI.label(zone, Rect2(10, r.size.y / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
-		var fig := UI.label(zone, Rect2(10, r.size.y - 28, r.size.x - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		var fig := UI.label(zone, Rect2(10, r.size.y - 25, r.size.x - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
 		for l in [name, item[0], item[1], item[2], fig]:
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			l.set_meta("over_art", true)          # a caption over the card's art, drawn above it: the button-clear check lets it be
@@ -180,6 +182,34 @@ func _init() -> void:
 	_worn_head = UI.label(_worn, Rect2(10, 4, wr.size.x - 20, 20), "WORN", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_worn_value = UI.label(_worn, Rect2(10, 28, wr.size.x - 20, 36), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_worn_line = UI.label(_worn, Rect2(10, wr.size.y - 34, wr.size.x - 20, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+
+
+## The drawing without its transparent margin, so the figure, not the canvas, is what's scaled to fit.
+static func _cropped(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var img: Image = tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img = img.duplicate()
+		img.decompress()
+	var r: Rect2i = img.get_used_rect()
+	if r.size.x <= 0 or r.size.y <= 0 or r.size == img.get_size():
+		return tex
+	var at := AtlasTexture.new()
+	at.atlas = tex
+	at.region = Rect2(r)
+	return at
+
+
+## For the tests: the figure's drawn size inside its box (aspect kept), or zero with no drawing.
+func figure_drawn() -> Vector2:
+	if _figure == null or _figure.texture == null:
+		return Vector2.ZERO
+	var t: Vector2 = _figure.texture.get_size()
+	var sc: float = minf(_figure.size.x / t.x, _figure.size.y / t.y)
+	return t * sc
 
 
 ## The cards' fill: glass over the backdrop.
@@ -199,7 +229,8 @@ func _draw_backdrop() -> void:
 		return
 	var x := float(FIGURE_X)
 	var top := 0.0
-	var foot := float(FIGURE_Y + FIGURE_H) - 6.0
+	var drawn_h: float = figure_drawn().y if _figure != null else float(FIGURE_H)
+	var foot: float = FIGURE_Y + (FIGURE_H + drawn_h) / 2.0 - 6.0     # the drawn figure's feet
 	var light := Color(0.42, 0.5, 0.62)
 	var steps := 14
 	for k in range(steps):
@@ -221,7 +252,7 @@ func _draw_flat(c: Control) -> void:
 	if _figure != null:
 		return
 	var x := float(FIGURE_X)
-	var y0 := float(FIGURE_Y)
+	var y0 := float(FIGURE_Y) + (FIGURE_H - 488) / 2.0       # the 488 px silhouette centred in the gap
 	c.draw_circle(Vector2(x, y0 + 40), 34.0, FIGURE)
 	c.draw_rect(Rect2(x - 12, y0 + 70, 24, 20), FIGURE)
 	c.draw_rect(Rect2(x - 62, y0 + 90, 124, 160), FIGURE)
@@ -244,9 +275,14 @@ static func wide(it: Dictionary) -> bool:
 
 
 
+## The art between the slot's name and the figure, never under them (Matt, 10 Oct: the words clipped the backpack).
+const TOP_STRIP := 22
+const FOOT_STRIP := 4                          # no words at the foot (Matt, 10 Oct: the figure is on the strip, the panel, the tooltip)
+
+
 func _lay_card(b: Dictionary, _across: bool) -> void:
-	b["cell"].position = Vector2(ART_INSET, ART_INSET)
-	b["cell"].size = b["zone"].size - Vector2(2 * ART_INSET, 2 * ART_INSET)
+	b["cell"].position = Vector2(ART_INSET, TOP_STRIP)
+	b["cell"].size = b["zone"].size - Vector2(2 * ART_INSET, TOP_STRIP + FOOT_STRIP)
 
 
 ## A slot's one figure, long to short: what the pick panel compares it by.
@@ -295,8 +331,7 @@ func show_state(s) -> void:
 			b["item"][0].add_theme_color_override("font_color", Pal.TEXT_3)
 			b["item"][1].text = ""
 			b["item"][2].text = ""
-			UI.fit(b["fig"], ["drop one here", "empty"] if slot != "Primary" else ["nothing to fight with", "no gun", ""])
-			b["fig"].add_theme_color_override("font_color", Pal.BAD if slot == "Primary" else Pal.TEXT_3)
+			b["fig"].text = ""
 		else:
 			filled += 1
 			worth += int(sim.sell_price(it))
@@ -306,8 +341,7 @@ func show_state(s) -> void:
 			for l in b["item"]:
 				l.text = ""
 			b["cell"].tooltip_text = "%s · %s" % [Items.full_name(it), figure_forms(it)[0]]
-			UI.fit(b["fig"], figure_forms(it))
-			b["fig"].add_theme_color_override("font_color", Pal.ACCENT if slot in ["Primary", "Secondary"] else Pal.TEXT)
+			b["fig"].text = ""                         # the figure is the tooltip's, the strip's and the panel's
 	_worn_value.text = Fmt.money(worth)
 	UI.fit(_worn_line, ["%d of %d slots filled · at the Fence" % [filled, Data.SLOTS.size()], "%d of %d filled" % [filled, Data.SLOTS.size()]])
 

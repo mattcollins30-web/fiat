@@ -8725,7 +8725,7 @@ func _backdrop_checks(main) -> void:
 			var shown_h: float = minf(cz.y, cz.x * float(fp.y) / float(fp.x))
 			_check(shown_h >= 36.0, "the %s card's picture is a sliver: %.0f px tall in %s" % [slot, shown_h, str(cz)])
 			# the art fills the card (Runner-R B's way, Matt 10 Oct): the name is the art's and the tooltip's, the figure over it
-			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and b["fig"].text != "" and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - 8 and b["fig"].get_index() > b["cell"].get_index(), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
+			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and b["fig"].text == "" and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - body.TOP_STRIP - body.FOOT_STRIP - 2 and not Rect2(b["cell"].position, b["cell"].size).intersects(Rect2(b["name"].position, Vector2(b["name"].size.x, 18))), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
 		var cr: Rect2 = body.box_rect(slot)
 		_check((cr.position.x < body.FIGURE_X) == (slot in ["Primary", "Secondary", "Charm"]), "the %s card is on the wrong side" % slot)
 		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)
@@ -8733,6 +8733,11 @@ func _backdrop_checks(main) -> void:
 		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
 	_check_fit(main, "Runner (the backdrop)")
 	_check(body.box_rect("Helmet").position.y < body.box_rect("Armour").position.y and body.box_rect("Armour").position.y < body.box_rect("Rig").position.y and body.box_rect("Rig").position.y < body.box_rect("Backpack").position.y and body.box_rect("Primary").position.y < body.box_rect("Secondary").position.y and body.box_rect("Secondary").position.y < body.box_rect("Charm").position.y, "the loadout's order is not Matt's")
+	# the figure fills the gap between the columns (Matt, 10 Oct: his redraw looked too small): its drawing, margin
+	# cropped, binds on the gap's height or width
+	var fd: Vector2 = body.figure_drawn()
+	_check(fd == Vector2.ZERO or fd.y >= body.FIGURE_H - 1.0 or fd.x >= body.FIGURE_W - 1.0, "the figure is drawn %s in a %d × %d gap" % [str(fd), body.FIGURE_W, body.FIGURE_H])
+	_check(body.box_rect("Charm").size.y < body.box_rect("Primary").size.y, "the charm's card is bigger than the primary's")
 	var wr: Rect2 = body.worn_rect()
 	for slot in Data.SLOTS:
 		_check(not wr.intersects(body.box_rect(slot)), "the worn card sits on the %s card" % slot)
