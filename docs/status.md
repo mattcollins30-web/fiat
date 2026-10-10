@@ -2798,6 +2798,11 @@ cropped to what's drawn and scaled to fill the gap between the columns (his 131 
 nearest, as the gear's art is). *The smoke:* the art clear of the slot's name, no foot words, the figure binding on
 the gap, the charm under the primary.
 
+**The loadout's last order (10 Oct).** Matt: the pack big over the primary and the secondary down the left; the
+charm where the pack was, a little smaller; the worn card gone; the armour bigger with the room. The left column is
+the pack (240), the primary (192), the secondary (184); the right the helmet (140), the armour (240), the rig (118),
+the charm (110). *The smoke:* the order, no worn card, each column filling the loadout, each card on its side.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

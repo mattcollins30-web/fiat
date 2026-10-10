@@ -15,7 +15,6 @@ signal equip(id: int)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
-const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
@@ -31,8 +30,8 @@ const CARD_H := 119
 const CARD_GAP := 8
 const PAD := 8
 const ART_INSET := 3                           # the art over the whole card, inside its line
-const LEFT := ["Primary", "Secondary", "Charm"]               # the fourth place down the left is what's worn
-const RIGHT := ["Helmet", "Armour", "Rig", "Backpack"]
+const LEFT := ["Backpack", "Primary", "Secondary"]            # Matt, 10 Oct: the pack big over the weapons down the left
+const RIGHT := ["Helmet", "Armour", "Rig", "Charm"]             # the charm where the pack was
 const WIDTH := Inventory.SIDE_W    # 608
 const HEIGHT := 648                            # the column (the pack's map went, 10 Oct: 516 → 648); each card its own height, below
 const GLASS := Pal.PANEL
@@ -55,10 +54,6 @@ var _backdrop_art: TextureRect
 var _vignette: TextureRect
 var _frame: Panel
 var _flat: Control                             # the flat figure's layer, over the backdrop, when art/body.png is missing
-var _worn: Panel                               # the fourth place down the left: what's worn, its worth
-var _worn_head: Label
-var _worn_value: Label
-var _worn_line: Label
 
 var sim
 var selected := ""                 # the slot picked, or ""
@@ -74,8 +69,7 @@ var _shown := ""
 ## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
 const LEFT_W := 246
 const RIGHT_W := 150
-const HEIGHTS := {"Primary": 180, "Secondary": 170, "Charm": 110, "Helmet": 140, "Armour": 204, "Rig": 118, "Backpack": 146}
-const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 180 - 170 - 110     # what the left column leaves: 148
+const HEIGHTS := {"Backpack": 240, "Primary": 192, "Secondary": 184, "Helmet": 140, "Armour": 240, "Rig": 118, "Charm": 110}     # each column fills the 648 with its gaps
 
 
 static func card_rect(slot: String) -> Rect2:
@@ -89,8 +83,6 @@ static func card_rect(slot: String) -> Rect2:
 	return Rect2(WIDTH - PAD - RIGHT_W if right else PAD, y, RIGHT_W if right else LEFT_W, HEIGHTS[slot])
 
 
-static func worn_rect() -> Rect2:
-	return Rect2(PAD, HEIGHT - PAD - WORN_H, LEFT_W, WORN_H)
 
 
 func _init() -> void:
@@ -177,11 +169,6 @@ func _init() -> void:
 			l.set_meta("over_art", true)          # a caption over the card's art, drawn above it: the button-clear check lets it be
 			UI.shadow(l)
 		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell, "item": item, "fig": fig}
-	var wr := worn_rect()
-	_worn = UI.panel(self, wr, UI.box(Color(Pal.BG, GLASS_ALPHA), 6, 1, Pal.CARD_LINE))
-	_worn_head = UI.label(_worn, Rect2(10, 4, wr.size.x - 20, 20), "WORN", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_worn_value = UI.label(_worn, Rect2(10, 28, wr.size.x - 20, 36), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_worn_line = UI.label(_worn, Rect2(10, wr.size.y - 34, wr.size.x - 20, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
 ## The drawing without its transparent margin, so the figure, not the canvas, is what's scaled to fit.
@@ -313,8 +300,6 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
-	var worth := 0
-	var filled := 0
 	for slot in Data.SLOTS:
 		var b: Dictionary = _boxes[slot]
 		var it = sim.equipped[slot]
@@ -333,8 +318,6 @@ func show_state(s) -> void:
 			b["item"][2].text = ""
 			b["fig"].text = ""
 		else:
-			filled += 1
-			worth += int(sim.sell_price(it))
 			b["cell"].visible = true
 			_lay_card(b, wide(it))
 			b["cell"].show_item(it, on, b["cell"].size)
@@ -342,8 +325,6 @@ func show_state(s) -> void:
 				l.text = ""
 			b["cell"].tooltip_text = "%s · %s" % [Items.full_name(it), figure_forms(it)[0]]
 			b["fig"].text = ""                         # the figure is the tooltip's, the strip's and the panel's
-	_worn_value.text = Fmt.money(worth)
-	UI.fit(_worn_line, ["%d of %d slots filled · at the Fence" % [filled, Data.SLOTS.size()], "%d of %d filled" % [filled, Data.SLOTS.size()]])
 
 
 # ------------------------------------------------------------------ dragging and dropping
@@ -392,7 +373,6 @@ func text_nodes() -> Array:
 			if l.text != "":
 				out.append(l)
 		out.append_array(b["cell"].text_nodes())
-	out.append_array([_worn_head, _worn_value, _worn_line])
 	return out
 
 

@@ -8727,21 +8727,22 @@ func _backdrop_checks(main) -> void:
 			# the art fills the card (Runner-R B's way, Matt 10 Oct): the name is the art's and the tooltip's, the figure over it
 			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and b["fig"].text == "" and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - body.TOP_STRIP - body.FOOT_STRIP - 2 and not Rect2(b["cell"].position, b["cell"].size).intersects(Rect2(b["name"].position, Vector2(b["name"].size.x, 18))), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
 		var cr: Rect2 = body.box_rect(slot)
-		_check((cr.position.x < body.FIGURE_X) == (slot in ["Primary", "Secondary", "Charm"]), "the %s card is on the wrong side" % slot)
+		_check((cr.position.x < body.FIGURE_X) == (slot in ["Backpack", "Primary", "Secondary"]), "the %s card is on the wrong side" % slot)
 		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)
 		_check(b["cell"].glass, "the %s slot's cell is not glass" % slot)
 		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
 	_check_fit(main, "Runner (the backdrop)")
-	_check(body.box_rect("Helmet").position.y < body.box_rect("Armour").position.y and body.box_rect("Armour").position.y < body.box_rect("Rig").position.y and body.box_rect("Rig").position.y < body.box_rect("Backpack").position.y and body.box_rect("Primary").position.y < body.box_rect("Secondary").position.y and body.box_rect("Secondary").position.y < body.box_rect("Charm").position.y, "the loadout's order is not Matt's")
+	# Matt's order (10 Oct): the pack big over the primary and the secondary down the left; the helmet, the armour, the
+	# rig and the charm down the right; no worn card; the charm smaller than the armour; each column filling the loadout
+	var by := func(sl): return body.box_rect(sl).position.y
+	_check(by.call("Backpack") < by.call("Primary") and by.call("Primary") < by.call("Secondary") and by.call("Helmet") < by.call("Armour") and by.call("Armour") < by.call("Rig") and by.call("Rig") < by.call("Charm"), "the loadout's order is not Matt's")
+	_check(not body.has_method("worn_rect") and body.box_rect("Charm").size.y < body.box_rect("Armour").size.y and body.box_rect("Backpack").size.y >= body.box_rect("Primary").size.y, "the worn card is back, or the charm, armour or pack sized wrong")
+	for col in [body.LEFT, body.RIGHT]:
+		_check(absf(body.box_rect(col.back()).end.y - (body.HEIGHT - body.PAD)) < 0.5, "the %s column does not fill the loadout" % col.back())
 	# the figure fills the gap between the columns (Matt, 10 Oct: his redraw looked too small): its drawing, margin
 	# cropped, binds on the gap's height or width
 	var fd: Vector2 = body.figure_drawn()
 	_check(fd == Vector2.ZERO or fd.y >= body.FIGURE_H - 1.0 or fd.x >= body.FIGURE_W - 1.0, "the figure is drawn %s in a %d × %d gap" % [str(fd), body.FIGURE_W, body.FIGURE_H])
-	_check(body.box_rect("Charm").size.y < body.box_rect("Primary").size.y, "the charm's card is bigger than the primary's")
-	var wr: Rect2 = body.worn_rect()
-	for slot in Data.SLOTS:
-		_check(not wr.intersects(body.box_rect(slot)), "the worn card sits on the %s card" % slot)
-	_check(body._worn_value.text.begins_with("£"), "the worn card says no worth: '%s'" % body._worn_value.text)
 	# the strip over it: who, HP, damage, armour, inside the strip and above the loadout
 	var arm = main._armoury
 	_check(arm._hp.text.contains("HP") and arm._dps.text.contains("dmg/s") and arm._who.text.contains("level") and arm.BODY_Y >= arm.STRIP_H and arm.CONTAINERS_Y + arm._containers.size.y <= Pal.ROOM_H, "the runner strip or the column's stack is off: '%s' '%s' '%s'" % [arm._who.text, arm._hp.text, arm._dps.text])

@@ -1,8 +1,8 @@
 # The Runner room: the loadout (10 Oct 2026, Runner-R A)
 
 Matt: the Runner is the worst-looking screen now; it hadn't changed since the first build. Agreed: **A, the
-loadout**, with his order: the weapons, the charm and what's worn down the left; the helmet over the armour, then
-the rig and the pack down the right. Board: Runner-R on the design canvas.
+loadout**. His last order (10 Oct): the pack, the primary and the secondary down the left; the helmet, the armour,
+the rig and the charm down the right; no worn card. Board: Runner-R on the design canvas.
 
 ## Built
 
