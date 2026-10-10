@@ -39,5 +39,5 @@ the rig and the charm down the right; no worn card. Board: Runner-R on the desig
 - **Style**: as the items and the people in art/ (chunky readable pixels, limited ramp per material, no
   anti-aliased soft gradients).
 
-A later option, not built: a figure a class (art/body_<class>.png, the Drifter's beanie, the Doorman's jacket),
-falling back to art/body.png.
+Built (10 Oct): a figure a class - art/body_<class>.png (poacher, doorman, paramedic, scrapper, drifter), falling
+back to art/body.png.

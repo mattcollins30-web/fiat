@@ -2803,6 +2803,12 @@ charm where the pack was, a little smaller; the worn card gone; the armour bigge
 the pack (240), the primary (192), the secondary (184); the right the helmet (140), the armour (240), the rig (118),
 the charm (110). *The smoke:* the order, no worn card, each column filling the loadout, each card on its side.
 
+**A figure a class (10 Oct).** Matt drew the five pasts' figures (art/body_poacher, _doorman, _paramedic, _scrapper,
+_drifter.png, from the prompts in docs/design/runner_room.md). The Runner room shows the runner's past's own,
+art/body.png while one is missing, the flat silhouette with neither; it follows a change of past. Each is cropped and
+fitted to the gap as before. *The smoke:* each past shows its own figure, filling the gap. The reviewer's catch:
+with no art at all the figure re-set itself every refresh; fixed.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

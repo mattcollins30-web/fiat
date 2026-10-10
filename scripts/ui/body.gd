@@ -43,6 +43,10 @@ const FIGURE_W := WIDTH - 2 * PAD - LEFT_W - RIGHT_W - 4       # 192: the gap be
 const FIGURE_H := HEIGHT - 2 * PAD
 const FIGURE_Y := PAD
 const BODY_ART := "res://art/body.png"         # a drawn figure: its transparent margin cropped, scaled to fill the gap between the columns
+## A figure a class (Matt, 10 Oct): art/body_<class>.png for the runner's past, art/body.png while one is missing.
+const BODY_CLASS_ART := "res://art/body_%s.png"
+var figure_path := "-"                         # the drawing showing now, for the tests ("-" until the first is set)
+var _figures := {}                             # path -> cropped texture, loaded once
 ## The backdrop (10 Oct, Kit-B): the painted kit room at 40%, dark at the edges, the cards as glass over it (Matt,
 ## 10 Oct: "add the art we have for that screen back in"); the drawn cone of light while the file is missing.
 const BACKDROP_PLACE := "The kit room"         # art/places/the_kit_room.png
@@ -128,16 +132,15 @@ func _init() -> void:
 	_flat.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flat.draw.connect(func(): _draw_flat(_flat))
 	add_child(_flat)
-	if ResourceLoader.exists(BODY_ART) or FileAccess.file_exists(BODY_ART):
-		_figure = TextureRect.new()
-		_figure.texture = _cropped(load(BODY_ART) if ResourceLoader.exists(BODY_ART) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(BODY_ART))))
-		_figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_figure.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y)
-		_figure.size = Vector2(FIGURE_W, FIGURE_H)
-		add_child(_figure)
+	_figure = TextureRect.new()
+	_set_figure("")
+	_figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_figure.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y)
+	_figure.size = Vector2(FIGURE_W, FIGURE_H)
+	add_child(_figure)
 	for slot in Data.SLOTS:
 		var r := card_rect(slot)
 		var zone := Control.new()
@@ -190,6 +193,31 @@ static func _cropped(tex: Texture2D) -> Texture2D:
 	return at
 
 
+## The drawing for a past: its own when painted, art/body.png when not; "" when neither is.
+static func figure_for(cls: String) -> String:
+	if cls != "":
+		var own: String = BODY_CLASS_ART % cls.to_lower()
+		if ResourceLoader.exists(own) or FileAccess.file_exists(own):
+			return own
+	return BODY_ART if (ResourceLoader.exists(BODY_ART) or FileAccess.file_exists(BODY_ART)) else ""
+
+
+## Show the figure for a past (the flat silhouette when there's no drawing at all).
+func _set_figure(cls: String) -> void:
+	var path := figure_for(cls)
+	if path == figure_path:
+		return
+	figure_path = path
+	if path == "":
+		_figure.texture = null
+	else:
+		if not _figures.has(path):
+			_figures[path] = _cropped(load(path) if ResourceLoader.exists(path) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(path))))
+		_figure.texture = _figures[path]
+	_flat.queue_redraw()
+	backdrop.queue_redraw()
+
+
 ## For the tests: the figure's drawn size inside its box (aspect kept), or zero with no drawing.
 func figure_drawn() -> Vector2:
 	if _figure == null or _figure.texture == null:
@@ -216,7 +244,7 @@ func _draw_backdrop() -> void:
 		return
 	var x := float(FIGURE_X)
 	var top := 0.0
-	var drawn_h: float = figure_drawn().y if _figure != null else float(FIGURE_H)
+	var drawn_h: float = figure_drawn().y if (_figure != null and _figure.texture != null) else float(FIGURE_H)
 	var foot: float = FIGURE_Y + (FIGURE_H + drawn_h) / 2.0 - 6.0     # the drawn figure's feet
 	var light := Color(0.42, 0.5, 0.62)
 	var steps := 14
@@ -236,7 +264,7 @@ func _draw_backdrop() -> void:
 
 ## The runner as a flat silhouette between the columns, until art/body.png is made.
 func _draw_flat(c: Control) -> void:
-	if _figure != null:
+	if _figure != null and _figure.texture != null:
 		return
 	var x := float(FIGURE_X)
 	var y0 := float(FIGURE_Y) + (FIGURE_H - 488) / 2.0       # the 488 px silhouette centred in the gap
@@ -291,6 +319,7 @@ static func figure_forms(it: Dictionary) -> Array:
 
 func show_state(s) -> void:
 	sim = s
+	_set_figure(sim.cls)                          # the runner's past's own figure
 	var sig := selected
 	for slot in Data.SLOTS:
 		var w = sim.equipped[slot]

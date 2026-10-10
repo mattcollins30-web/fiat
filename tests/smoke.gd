@@ -8743,6 +8743,19 @@ func _backdrop_checks(main) -> void:
 	# cropped, binds on the gap's height or width
 	var fd: Vector2 = body.figure_drawn()
 	_check(fd == Vector2.ZERO or fd.y >= body.FIGURE_H - 1.0 or fd.x >= body.FIGURE_W - 1.0, "the figure is drawn %s in a %d × %d gap" % [str(fd), body.FIGURE_W, body.FIGURE_H])
+	# a figure a class (Matt, 10 Oct): the runner's past's own drawing when there is one, art/body.png when not; it
+	# follows a change of past
+	var cls_hold: String = sim.cls
+	for cd in Data.CLASSES:
+		sim.cls = cd["name"]
+		body.show_state(sim)
+		var own: String = body.BODY_CLASS_ART % str(cd["name"]).to_lower()
+		var has_own: bool = ResourceLoader.exists(own) or FileAccess.file_exists(own)
+		_check(body.figure_path == (own if has_own else body.figure_for("")), "%s shows %s, not its own figure" % [cd["name"], body.figure_path])
+		var fd2: Vector2 = body.figure_drawn()
+		_check(body.figure_path == "" or fd2.y >= body.FIGURE_H - 1.0 or fd2.x >= body.FIGURE_W - 1.0, "%s's figure is drawn %s in the gap" % [cd["name"], str(fd2)])
+	sim.cls = cls_hold
+	body.show_state(sim)
 	# the strip over it: who, HP, damage, armour, inside the strip and above the loadout
 	var arm = main._armoury
 	_check(arm._hp.text.contains("HP") and arm._dps.text.contains("dmg/s") and arm._who.text.contains("level") and arm.BODY_Y >= arm.STRIP_H and arm.CONTAINERS_Y + arm._containers.size.y <= Pal.ROOM_H, "the runner strip or the column's stack is off: '%s' '%s' '%s'" % [arm._who.text, arm._hp.text, arm._dps.text])
