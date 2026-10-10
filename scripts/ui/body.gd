@@ -30,14 +30,14 @@ const CARD_W := 198
 const CARD_H := 119
 const CARD_GAP := 8
 const PAD := 8
-const ART_W := 56                              # the item's picture at the card's left
+const ART_INSET := 3                           # the art over the whole card, inside its line
 const LEFT := ["Primary", "Secondary", "Charm"]               # the fourth place down the left is what's worn
 const RIGHT := ["Helmet", "Armour", "Rig", "Backpack"]
 const WIDTH := Inventory.SIDE_W    # 608
-const HEIGHT := 2 * PAD + 4 * CARD_H + 3 * CARD_GAP          # 516
+const HEIGHT := 2 * PAD + 4 * CARD_H + 3 * CARD_GAP          # 516 (the column; each card its own height, below)
 const GLASS := Pal.PANEL
 const FIGURE := Color(Pal.CARD_LINE, 0.7)      # the runner, flat, until art/body.png is made
-const FIGURE_X := WIDTH / 2                    # between the columns: 214..394
+const FIGURE_X := PAD + LEFT_W + (WIDTH - 2 * PAD - LEFT_W - RIGHT_W) / 2     # between the columns: 262..442
 const FIGURE_W := 180
 const FIGURE_H := 488
 const FIGURE_Y := (HEIGHT - FIGURE_H) / 2
@@ -67,14 +67,28 @@ var _shown := ""
 
 
 ## A slot's card: its column, its place down it.
+## Each card sized for its gear (Matt, 10 Oct: "make the boxes fit for the gear type ... show off the great art"):
+## the weapons' column wide for a gun's length, the worn column narrow for a jacket's height; each card's height by
+## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
+const LEFT_W := 246
+const RIGHT_W := 150
+const HEIGHTS := {"Primary": 104, "Secondary": 104, "Charm": 120, "Helmet": 112, "Armour": 160, "Rig": 90, "Backpack": 114}
+const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 104 - 104 - 120     # what the left column leaves: 148
+
+
 static func card_rect(slot: String) -> Rect2:
 	var right: bool = slot in RIGHT
-	var k: int = RIGHT.find(slot) if right else LEFT.find(slot)
-	return Rect2(WIDTH - PAD - CARD_W if right else PAD, PAD + k * (CARD_H + CARD_GAP), CARD_W, CARD_H)
+	var col: Array = RIGHT if right else LEFT
+	var y: float = PAD
+	for s in col:
+		if s == slot:
+			break
+		y += HEIGHTS[s] + CARD_GAP
+	return Rect2(WIDTH - PAD - RIGHT_W if right else PAD, y, RIGHT_W if right else LEFT_W, HEIGHTS[slot])
 
 
 static func worn_rect() -> Rect2:
-	return Rect2(PAD, PAD + 3 * (CARD_H + CARD_GAP), CARD_W, CARD_H)
+	return Rect2(PAD, HEIGHT - PAD - WORN_H, LEFT_W, WORN_H)
 
 
 func _init() -> void:
@@ -130,7 +144,6 @@ func _init() -> void:
 		_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y)
 		_figure.size = Vector2(FIGURE_W, FIGURE_H)
 		add_child(_figure)
-	var tw: float = CARD_W - ART_W - 22
 	for slot in Data.SLOTS:
 		var r := card_rect(slot)
 		var zone := Control.new()
@@ -142,27 +155,31 @@ func _init() -> void:
 		add_child(zone)
 		var outline := UI.panel(zone, Rect2(Vector2.ZERO, r.size), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
 		outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var name := UI.label(zone, Rect2(10, 4, CARD_W - 20, 20), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var item: Array = []                     # the name over up to three lines
-		for i in range(3):
-			item.append(UI.label(zone, Rect2(ART_W + 16, 24 + i * 20, tw, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
-		var fig := UI.label(zone, Rect2(ART_W + 16, CARD_H - 28, tw, 24), "", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		for l in [name, item[0], item[1], fig]:
-			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# the item's art fills the card, loud (Matt, 10 Oct: as Runner-R B - "the art showing loud and proud"); the
+		# slot's name and the item's figure sit over it, top left and bottom right, with a shadow
 		var cell := ItemCell.new()
 		cell.glass = true
 		cell.visible = false
-		cell.position = Vector2(8, 28)
+		cell.position = Vector2(ART_INSET, ART_INSET)
 		cell.pressed.connect(_pick.bind(slot))
 		cell.gui_input.connect(_cell_input.bind(slot))
 		cell.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.add_child(cell)
+		var name := UI.label(zone, Rect2(10, 4, r.size.x - 20, 20), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var item: Array = []                     # "Empty" on an empty card; a full one's name is the art's (and its tooltip)
+		for i in range(3):
+			item.append(UI.label(zone, Rect2(10, r.size.y / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
+		var fig := UI.label(zone, Rect2(10, r.size.y - 28, r.size.x - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		for l in [name, item[0], item[1], item[2], fig]:
+			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			l.set_meta("over_art", true)          # a caption over the card's art, drawn above it: the button-clear check lets it be
+			UI.shadow(l)
 		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell, "item": item, "fig": fig}
 	var wr := worn_rect()
 	_worn = UI.panel(self, wr, UI.box(Color(Pal.BG, GLASS_ALPHA), 6, 1, Pal.CARD_LINE))
-	_worn_head = UI.label(_worn, Rect2(10, 4, CARD_W - 20, 20), "WORN", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_worn_value = UI.label(_worn, Rect2(10, 28, CARD_W - 20, 36), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_worn_line = UI.label(_worn, Rect2(10, CARD_H - 34, CARD_W - 20, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_worn_head = UI.label(_worn, Rect2(10, 4, wr.size.x - 20, 20), "WORN", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_worn_value = UI.label(_worn, Rect2(10, 28, wr.size.x - 20, 36), "", "SemiBold", Pal.LINE, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_worn_line = UI.label(_worn, Rect2(10, wr.size.y - 34, wr.size.x - 20, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
 ## The cards' fill: glass over the backdrop.
@@ -225,28 +242,11 @@ static func wide(it: Dictionary) -> bool:
 	return f.x >= f.y * 2
 
 
-const WIDE_ART_H := 34
 
 
-func _lay_card(b: Dictionary, across: bool) -> void:
-	var tw: float = CARD_W - ART_W - 22
-	if across:
-		b["cell"].position = Vector2(8, 24)
-		b["cell"].size = Vector2(CARD_W - 16, WIDE_ART_H)
-		for i in range(3):
-			b["item"][i].position = Vector2(10, 58 + i * 18)
-			b["item"][i].size = Vector2(CARD_W - 20, 20)
-		b["item"][2].text = ""
-		b["fig"].position = Vector2(10, CARD_H - 24)
-		b["fig"].size = Vector2(CARD_W - 20, 22)
-	else:
-		b["cell"].position = Vector2(8, 28)
-		b["cell"].size = Vector2(ART_W, CARD_H - 36)
-		for i in range(3):
-			b["item"][i].position = Vector2(ART_W + 16, 24 + i * 20)
-			b["item"][i].size = Vector2(tw, 20)
-		b["fig"].position = Vector2(ART_W + 16, CARD_H - 28)
-		b["fig"].size = Vector2(tw, 24)
+func _lay_card(b: Dictionary, _across: bool) -> void:
+	b["cell"].position = Vector2(ART_INSET, ART_INSET)
+	b["cell"].size = b["zone"].size - Vector2(2 * ART_INSET, 2 * ART_INSET)
 
 
 ## A slot's one figure, long to short: what the pick panel compares it by.
@@ -303,10 +303,11 @@ func show_state(s) -> void:
 			b["cell"].visible = true
 			_lay_card(b, wide(it))
 			b["cell"].show_item(it, on, b["cell"].size)
-			b["item"][0].add_theme_color_override("font_color", Pal.TEXT)
-			UI.wrap(b["item"].slice(0, 2) if wide(it) else b["item"], Items.full_name(it))
+			for l in b["item"]:
+				l.text = ""
+			b["cell"].tooltip_text = "%s · %s" % [Items.full_name(it), figure_forms(it)[0]]
 			UI.fit(b["fig"], figure_forms(it))
-			b["fig"].add_theme_color_override("font_color", Pal.ACCENT if slot in ["Primary", "Secondary"] else Pal.TEXT_2)
+			b["fig"].add_theme_color_override("font_color", Pal.ACCENT if slot in ["Primary", "Secondary"] else Pal.TEXT)
 	_worn_value.text = Fmt.money(worth)
 	UI.fit(_worn_line, ["%d of %d slots filled · at the Fence" % [filled, Data.SLOTS.size()], "%d of %d filled" % [filled, Data.SLOTS.size()]])
 

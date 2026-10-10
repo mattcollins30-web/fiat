@@ -5438,6 +5438,8 @@ func _check_buttons_clear(main, labels: Array, where: String) -> int:
 		for l in labels:
 			if l is Button or l.get_parent() != b.get_parent():
 				continue
+			if l.has_meta("over_art") and l.get_index() > b.get_index():
+				continue                         # a caption drawn over an item's art on purpose (the loadout's cards)
 			var x: Rect2 = br.intersection(Rect2(l.position, l.size).intersection(_text_rect_local(l, UI)))
 			if x.size.x > 2.0 and x.size.y > 2.0:
 				push_error("%s: the button '%s' sits on '%s' (%.0f × %.0f px)" % [where, b.text, l.text, x.size.x, x.size.y])
@@ -8695,9 +8697,9 @@ func _backdrop_checks(main) -> void:
 			var cz: Vector2 = b["cell"].size
 			var fp: Vector2i = Items.footprint(sim.equipped[slot])
 			var shown_h: float = minf(cz.y, cz.x * float(fp.y) / float(fp.x))
-			_check(shown_h >= 24.0 or not body.wide(sim.equipped[slot]) and cz.x >= 48.0, "the %s card's picture is a sliver: %.0f px tall in %s" % [slot, shown_h, str(cz)])
-			var said: String = (b["item"][0].text + " " + b["item"][1].text + " " + b["item"][2].text).strip_edges()
-			_check(said == Items.full_name(sim.equipped[slot]) and b["fig"].text != "", "the %s card's words are off: '%s' / '%s'" % [slot, said, b["fig"].text])
+			_check(shown_h >= 36.0, "the %s card's picture is a sliver: %.0f px tall in %s" % [slot, shown_h, str(cz)])
+			# the art fills the card (Runner-R B's way, Matt 10 Oct): the name is the art's and the tooltip's, the figure over it
+			_check(b["cell"].tooltip_text.begins_with(Items.full_name(sim.equipped[slot])) and b["fig"].text != "" and b["cell"].size.x >= body.box_rect(slot).size.x - 8 and b["cell"].size.y >= body.box_rect(slot).size.y - 8 and b["fig"].get_index() > b["cell"].get_index(), "the %s card's art or words are off: '%s' / '%s' %s" % [slot, b["cell"].tooltip_text, b["fig"].text, str(b["cell"].size)])
 		var cr: Rect2 = body.box_rect(slot)
 		_check((cr.position.x < body.FIGURE_X) == (slot in ["Primary", "Secondary", "Charm"]), "the %s card is on the wrong side" % slot)
 		_check(not cr.intersects(Rect2(body.FIGURE_X - body.FIGURE_W / 2.0, body.FIGURE_Y, body.FIGURE_W, body.FIGURE_H)), "the %s card sits on the figure" % slot)

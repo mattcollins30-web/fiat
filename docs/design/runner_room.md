@@ -8,7 +8,9 @@ the rig and the pack down the right. Board: Runner-R on the design canvas.
 
 - A runner strip over the column (88 px): the face, the past and level, HP and its bar, damage a second, armour,
   pace, cells and pouches.
-- The loadout (608 × 516): the figure in the middle on the painted kit room (art/places/the_kit_room.png at 40%,
+- Rebuilt the same day (Matt: show the art "loud and proud", the boxes fit for the gear): each card sized for its
+  gear - the weapons' column 246 wide, the worn column 150; the art fills the card, the slot and figure over it.
+- The loadout (608 × 516), first build: the figure in the middle on the painted kit room (art/places/the_kit_room.png at 40%,
   a vignette; the drawn light while it's missing). Seven cards of one size (198 × 119), glass, edged in the item's
   rarity: the slot named always, the item's name and its one figure (damage a second and rounds, armour, pouches,
   cells, a charm's rarity). A long gun lies across its card under the slot's name; the rest stand at the left. An

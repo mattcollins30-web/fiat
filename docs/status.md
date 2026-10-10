@@ -2777,6 +2777,13 @@ size (64, 52, 44, 36, 28) that leaves the pack 16 px cells or more across the co
 the last resort). A small pouch shows its short word whichever way it's small. *The smoke:* the worst state with a
 24-pouch rig that wraps and the deepest pack - the pack inside the room and readable, no pouch's words outside it.
 
+**The loadout's art, loud (10 Oct).** Matt: the cards lost the gear's art - "the best thing about the previous
+iteration was the art showing loud and proud"; make the boxes fit the gear. Each card is sized for its gear now (the
+weapons' column 246 wide, the worn column 150; an armour or pack tall, a rig short, a helmet near square) and the
+item's art fills it; the slot's name and the figure sit over the art with a shadow, the item's name in its tooltip.
+*The smoke:* the art filling its card, no picture under 36 px tall, the captions drawn above it (the button check
+lets a caption tagged over the art be).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
