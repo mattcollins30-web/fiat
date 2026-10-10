@@ -2720,6 +2720,15 @@ joint column could take the line; the rail into a joint half ran through its ⇄
 style; the top bar takes the painted file once it's there (tinted if it's a line drawing) and the drawn glyph until
 then. *The smoke:* both cases.
 
+**The thirtieth read (10 Oct, after the deep bases and the way out; fifty reads, five a build).** Matt: balance with
+the accepted reds before the playtest. Green: loot, quantity, the cash sink, depth pace, **the lorry** (every build by
+9.0 h; red on the last read), the ladders, the clock (every build under 1%, the way out included), scrap, no reds.
+The deep bases drop (13 of the fifty end kits carry one) and nothing they touch went red. Red, as on the twenty-ninth:
+the classes' band 1.2-2.8 h (the plain Poacher's five reads 0.8-3.9 again: the swing, not a lever), the keystone (the
+bleed Doorman 2.4 h, the frost and poison Poachers 2.1), the capstone (the frost Poacher 6.6 h). These were left
+for the pass after the playtest; wounds and deaths stay accepted reds until his save fills them. Kept in
+`docs/balance/pass30`.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
