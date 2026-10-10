@@ -198,9 +198,10 @@ func _build() -> void:
 		if TOP_GLYPH_OF.has(k):
 			_top_glyphs[k] = UI.glyph(_top_row, Rect2(0, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), TOP_GLYPH_OF[k], tint)
 		else:
-			_top_glyphs[k] = UI.glyph(_top_row, Rect2(0, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), "notes", tint)
-			_top_glyphs[k].texture = NodeGlyphs.texture(k)          # drawn by the engine: no painted icon for these
-			_top_glyphs[k].modulate = TOP_TONE[k]
+			_top_glyphs[k] = UI.glyph(_top_row, Rect2(0, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), k, TOP_TONE[k])
+			if UI.glyph_texture(k) == null:
+				_top_glyphs[k].texture = NodeGlyphs.texture(k)      # the engine's line glyph until art/ui/<k>.png is painted (the purse manifest)
+				_top_glyphs[k].modulate = TOP_TONE[k]
 		var color: Color = Pal.ACCENT if k == "cash" else (TOP_TONE[k] if TOP_TONE.has(k) else Pal.TEXT_2)
 		_top_labels[k] = UI.label(_top_row, Rect2(0, 0, widths[k], Pal.TOP_H), "", "SemiBold" if k == "cash" else "Medium", Pal.FLOOR, color, HORIZONTAL_ALIGNMENT_RIGHT, k != "where")
 		if TOP_TIP.has(k):

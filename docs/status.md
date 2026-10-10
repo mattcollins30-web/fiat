@@ -2705,6 +2705,21 @@ Yard* sits at the band's foot and the purse chips take the width it left. *The s
 constants, the lanes and strip at the room's foot, nothing below the room, Move inside the band, the chips clear of
 it. The way out's button text now fits the button less its padding (48 px).
 
+**Training's gates (10 Oct, Tree-J B).** Matt: the joined halves sat a row apart, and nothing said the next
+column needs points from the one before. Each lane's two rails become curves from a column's rows into a numbered
+gate between the columns and out to the next: the disc shows the points in that tree the column needs, filled and in
+the tree's tone once reached. The lane's label says "N points in". A joint's half takes the row by the line that
+joins its two lanes (the upper lane's bottom row, the lower's top), so the two halves face each other across it.
+*The smoke:* a gate between each two columns, its number the tree's gate and lit once reached, inside the lane and on
+no tile, cost chip or ⇄; the joint halves at the line, for every class with a second past that shares its element
+trees; no rail into a ⇄. The reviewer's catches: with a second past, the other class's half in the element tree's
+joint column could take the line; the rail into a joint half ran through its ⇄; fixed, with checks.
+
+**The purse's painted glyphs (10 Oct).** Matt: a manifest for the currency glyphs on the top bar.
+`tools/pixellab_ui_purse_manifest.json` has four jobs, `art/ui/scrap`, `copper`, `steel` and `army`, in the UI icons'
+style; the top bar takes the painted file once it's there (tinted if it's a line drawing) and the drawn glyph until
+then. *The smoke:* both cases.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

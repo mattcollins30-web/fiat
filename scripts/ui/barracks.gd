@@ -167,6 +167,85 @@ static func node_rect(c: int, r: int, span: bool, kind: String) -> Rect2:
 	return Rect2(cell.position + (cell.size - Vector2(n, n)) / 2.0, Vector2(n, n))
 
 
+## A gate's place: the boundary between column c-1 and c, at the lane's middle.
+static func gate_pos(c: int) -> Vector2:
+	return Vector2(TILES_X + c * (TILE_W + TILE_GAP) - TILE_GAP / 2.0, 6 + TILE_H + ROW_GAP / 2.0)
+
+
+const GATE_R := 13.0
+
+
+## A lane's gates as they stand: [{c, n, lit, x, y}] and each column's rows' y (one: the lane's middle). Laid with
+## the lane (the tests read it), drawn by _draw_gates.
+func _lay_gates(k: int) -> void:
+	var lane: Dictionary = _lanes[k]
+	lane["gate_at"] = []
+	lane["rows_at"] = {}
+	var t = lane["tree"]
+	if t == null or sim == null:
+		return
+	var mine: Array = sim.my_classes()
+	var pts: int = sim.points_in(t["name"])
+	var per_col := {}
+	for nd in t["nodes"]:
+		per_col[int(nd.get("col", 0))] = int(per_col.get(int(nd.get("col", 0)), 0)) + 1
+	for c in per_col.keys():
+		lane["rows_at"][c] = [gate_pos(0).y] if int(per_col[c]) == 1 else [6 + TILE_H / 2.0, 6 + TILE_H + ROW_GAP + TILE_H / 2.0]
+	for c in range(1, COLS):
+		if not per_col.has(c) or not per_col.has(c - 1):
+			continue
+		var g: int = Data.gate(t, c, mine)
+		var gp := gate_pos(c)
+		lane["gate_at"].append({"c": c, "n": g, "lit": pts >= g, "x": gp.x, "y": gp.y})
+
+
+## Each column's rows into the gate before the next, and out of it: curves, and the gate a numbered disc.
+func _draw_gates(k: int) -> void:
+	var lane: Dictionary = _lanes[k]
+	var conn: Control = lane["conn"]
+	var t = lane["tree"]
+	if t == null or not lane.has("gate_at"):
+		return
+	var colour := lane_colour(t)
+	var tone: Color = colour if colour != Pal.CARD_LINE else YARD_TONE
+	var font: Font = UI.font("SemiBold", true)
+	for gd in lane["gate_at"]:
+		var c: int = int(gd["c"])
+		var lit: bool = gd["lit"]
+		var line: Color = Color(tone, 0.85) if lit else Pal.CARD_LINE
+		var gp := Vector2(gd["x"], gd["y"])
+		var x_from: float = TILES_X + (c - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0 + NODE / 2.0 + 2.0
+		for y0 in lane["rows_at"][c - 1]:
+			_curve(conn, Vector2(x_from, y0), gp - Vector2(GATE_R, 0), line)
+		for y1 in lane["rows_at"][c]:
+			_curve(conn, gp + Vector2(GATE_R, 0), Vector2(rail_in_x(k, c, y1), y1), line)
+		conn.draw_circle(gp, GATE_R, Pal.SELECT if lit else Pal.BG)
+		conn.draw_arc(gp, GATE_R, 0.0, TAU, 32, tone if lit else Pal.CARD_LINE, 1.5, true)
+		var s := str(gd["n"])
+		var sw: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+		conn.draw_string(font, gp + Vector2(-sw / 2.0, 5.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, tone if lit else Pal.TEXT_2)
+
+
+## Where a rail into column `c`'s row at lane-local `y` ends: just short of the tile, or of a joint half's mark at
+## its left (the reviewer, 10 Oct: the rail ran through the ⇄).
+func rail_in_x(k: int, c: int, y: float) -> float:
+	var x: float = TILES_X + c * (TILE_W + TILE_GAP) + TILE_W / 2.0 - NODE / 2.0 - 2.0
+	if _lanes[k].get("marked", {}).has("%d:%d" % [c, int(round(y))]):
+		x -= 26.0
+	return x
+
+
+## A rail: flat out of `a`, a bend, flat into `b`.
+static func _curve(c: Control, a: Vector2, b: Vector2, colour: Color) -> void:
+	var pts := PackedVector2Array()
+	var mx: float = (a.x + b.x) / 2.0
+	for i in range(17):
+		var u: float = float(i) / 16.0
+		var p := a.bezier_interpolate(Vector2(mx, a.y), Vector2(mx, b.y), b, u)
+		pts.append(p)
+	c.draw_polyline(pts, colour, 1.5, true)
+
+
 ## The joint's link's x: the fourth column's middle.
 static func link_x() -> float:
 	return TILES_X + Data.JOINT_COL * (TILE_W + TILE_GAP) + TILE_W / 2.0
@@ -182,13 +261,17 @@ func _build_lanes() -> void:
 		lane["tag"] = UI.label(p, Rect2(14, 32, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		lane["gates"] = UI.label(p, Rect2(14, 54, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		lane["count"] = UI.label(p, Rect2(14, 76, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		# two faint rails, a row's tiles strung along each (Tree-G A)
-		var x0: float = TILES_X + TILE_W / 2.0
-		var x1: float = TILES_X + (COLS - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0
+		# the rails meet at a gate between columns (10 Oct, Tree-J B; Matt: the rails read node to node, but a column
+		# opens on the points in its tree): each column's rows run into a numbered gate - the points that open the
+		# next - and out of it to the next column's, lit in the tree's tone once reached
 		lane["rails"] = []
-		for r in range(2):
-			var rr := tile_rect(0, r)
-			lane["rails"].append(UI.panel(p, Rect2(x0, rr.position.y + rr.size.y / 2.0 - 1.0, x1 - x0, 2), UI.box(Pal.CARD_LINE, 1)))
+		var conn := Control.new()
+		conn.size = Vector2(Pal.GRID_W, LANE_H)
+		conn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		conn.draw.connect(_draw_gates.bind(k))
+		p.add_child(conn)
+		lane["conn"] = conn
+		lane["gate_at"] = []                # [{x, y, n, lit}] as drawn, for the tests
 		for i in range(LANE_NODES):
 			var btn := Button.new()
 			btn.text = ""
@@ -574,11 +657,31 @@ func _show_lane(k: int, t) -> void:
 		if g > pts:
 			next_gate = g
 			break
-	UI.fit(lane["gates"], ["%d in · next at %d" % [pts, next_gate] if next_gate >= 0 else "%d in · all open" % pts, "%d in" % pts])
+	UI.fit(lane["gates"], ["%d point%s in" % [pts, "" if pts == 1 else "s"], "%d in" % pts])     # the gates say what opens next (Tree-J B)
+	_lay_gates(k)
+	lane["conn"].queue_redraw()
 	var taken := 0
 	var per_col := {}
 	for nd in t["nodes"]:
 		per_col[int(nd.get("col", 0))] = int(per_col.get(int(nd.get("col", 0)), 0)) + 1
+	# a joint's halves meet at the line that joins them (Matt, 10 Oct): the upper lane's on its bottom row, the lower
+	# lane's on its top row - the column's other node takes the row it leaves
+	var rows := {}
+	for i in range(t["nodes"].size()):
+		rows[i] = int(t["nodes"][i].get("row", 0))
+	if k < 4:
+		var want: int = 1 if k % 2 == 0 else 0
+		# only this pair's joint: a second past's half in the same column stays off the line (the reviewer, 10 Oct)
+		var pair: Dictionary = Data.joint_in(sim.cls, t["name"])
+		for i in range(t["nodes"].size()):
+			var nj: Dictionary = t["nodes"][i]
+			if not pair.is_empty() and str(nj.get("joint", "")) == str(pair["key"]) and rows[i] != want:
+				for o in range(t["nodes"].size()):
+					if o != i and int(t["nodes"][o].get("col", 0)) == int(nj.get("col", 0)):
+						rows[o] = rows[i]
+				rows[i] = want
+	lane["rows"] = rows
+	lane["marked"] = {}     # "col:y" of each shown joint mark, so its rail stops at the mark
 	for i in range(mini(t["nodes"].size(), LANE_NODES)):
 		var nd: Dictionary = t["nodes"][i]
 		var id := "%s/%d" % [t["name"], i]
@@ -587,7 +690,7 @@ func _show_lane(k: int, t) -> void:
 		var c: int = int(nd.get("col", 0))
 		var span: bool = int(per_col.get(c, 0)) == 1
 		var kind: String = "capstone" if nd.get("capstone", false) else ("keystone" if nd.get("keystone", false) else ("notable" if nd.get("notable", false) else "node"))
-		var rc := node_rect(c, int(nd.get("row", 0)), span, kind)
+		var rc := node_rect(c, int(rows[i]), span, kind)
 		b.position = Vector2(rc.position.x, y + rc.position.y)
 		b.size = rc.size
 		b.pivot_offset = rc.size / 2.0
@@ -622,6 +725,8 @@ func _show_lane(k: int, t) -> void:
 		more.position = Vector2(b.position.x + rc.size.x / 2.0 + half + 3.0, b.position.y + rc.size.y / 2.0 - half - 2.0)     # beside the tile's top right, never on a tile
 		more.visible = true
 		tile["joint"].visible = edge != Color.TRANSPARENT
+		if tile["joint"].visible:
+			lane["marked"]["%d:%d" % [c, int(round(rc.position.y + rc.size.y / 2.0))]] = true     # lane-local, as rows_at
 		tile["joint"].position = Vector2(b.position.x + rc.size.x / 2.0 - half - 24.0, b.position.y + rc.size.y / 2.0 - 11.5)     # at its left, clear of the tile
 		tile["joint"].add_theme_color_override("font_color", edge if edge != Color.TRANSPARENT else Pal.BAD)
 		tile["name"].text = ""

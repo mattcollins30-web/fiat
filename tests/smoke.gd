@@ -2192,6 +2192,61 @@ func _element_checks(main) -> void:
 			for other in rects:
 				_check(not rc.intersects(other), "tiles overlap in lane %d: %s and %s" % [k, str(rc), str(other)])
 			rects.append(rc)
+		# the gates (10 Oct, Tree-J B): one between each two columns, its number the tree's gate, lit once reached,
+		# in the lane and on no tile, no cost chip and no joint mark
+		var lt = lane["tree"]
+		var lpts: int = sim.points_in(lt["name"])
+		_check(lane["gate_at"].size() == bk.COLS - 1, "lane %d has %d gates" % [k, lane["gate_at"].size()])
+		for gd in lane["gate_at"]:
+			var gr := Rect2(Vector2(gd["x"], lane["panel"].position.y + gd["y"]) - Vector2(bk.GATE_R, bk.GATE_R), Vector2(2 * bk.GATE_R, 2 * bk.GATE_R))
+			_check(int(gd["n"]) == Data.gate(lt, int(gd["c"]), sim.my_classes()) and bool(gd["lit"]) == (lpts >= int(gd["n"])), "lane %d's gate %d reads %d (lit %s)" % [k, int(gd["c"]), int(gd["n"]), str(gd["lit"])])
+			_check(box.encloses(gr), "lane %d's gate %d leaves its lane" % [k, int(gd["c"])])
+			for o in rects:
+				_check(not gr.intersects(o), "lane %d's gate %d sits on a tile" % [k, int(gd["c"])])
+			for tile in lane["tiles"]:
+				if tile["button"].visible:
+					for mark in [tile["more"], tile["joint"]]:
+						if mark.visible:
+							_check(not gr.intersects(Rect2(mark.position, Vector2(UI.text_width(mark, mark.text), mark.size.y))), "lane %d's gate %d sits on a mark" % [k, int(gd["c"])])
+		# a joint's halves meet at the line (Matt, 10 Oct): the upper lane's on its bottom row, the lower's on its top
+		if k < 4:
+			_check_joint_rows(bk, k)
+		# a rail into a joint half stops short of its mark (the reviewer, 10 Oct)
+		for i in range(mini(lt["nodes"].size(), lane["tiles"].size())):
+			var jt: Dictionary = lane["tiles"][i]
+			if jt["button"].visible and jt["joint"].visible:
+				var jc: int = int(lt["nodes"][i].get("col", 0))
+				var jy: float = jt["button"].position.y + jt["button"].size.y / 2.0 - lane["panel"].position.y
+				_check(bk.rail_in_x(k, jc, jy) <= jt["joint"].position.x - lane["panel"].position.x + 0.5, "lane %d's rail runs into %s's joint mark" % [k, lt["name"]])
+	# a second past whose halves share the element trees' joint column (the Drifter and the Scrapper share Petrol and
+	# Live): only this pair's half goes to the line. Every class with such a sharer, set straight on the sim.
+	var snap: Dictionary = sim.to_dict()
+	var shared := 0
+	for cd in Data.CLASSES:
+		var c1: String = cd["name"]
+		var elems: Array = []
+		for j in Data.JOINTS:
+			if j["class"] == c1:
+				elems.append(j["element_tree"])
+		var other := ""
+		for j in Data.JOINTS:
+			if j["class"] != c1 and j["element_tree"] in elems:
+				other = j["class"]
+				break
+		if other == "":
+			continue
+		shared += 1
+		sim.cls = c1
+		sim.cls2 = other
+		bk._shown = ""
+		main.refresh()
+		for k in range(4):
+			if bk._lanes[k]["panel"].visible:
+				_check_joint_rows(bk, k)
+	_check(shared > 0, "no two classes share an element tree's joint column")
+	sim.load_dict(snap)
+	bk._shown = ""
+	main.refresh()
 	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.SUM_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y >= bk.SUM_Y + bk.SUM_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H, "the Caravan's strips overlap")
 	# the sum strip (option A, 9 Oct): the elements in play in their colours, the dots, the joints last; no zeros
 	var sum_tags: Array = []
@@ -8502,6 +8557,10 @@ func _purse_checks(main) -> void:
 	main.refresh()
 	_check(main._top_labels["scrap"].visible and main._top_labels["scrap"].text == Fmt.num(sim.scrap) and not main._top_labels["copper"].visible and not main._top_glyphs["army"].visible, "the campaign's purse is not notes and scrap")
 	_check_fit(main, "Top bar (the campaign's purse)")
+	# a painted art/ui/<k>.png where there is one (the purse manifest), else the engine's line glyph
+	for k in ["scrap", "copper", "steel", "army"]:
+		var painted: Texture2D = UI.glyph_texture(k)
+		_check(main._top_glyphs[k].texture == (painted if painted != null else NodeGlyphs.texture(k)), "the top bar's %s glyph is not its art or its line" % k)
 	sim.salvage = {"copper": 0, "steel": 7, "army": 0}
 	main.refresh()
 	_check(main._top_labels["steel"].visible and main._top_labels["steel"].text == "7" and not main._top_labels["copper"].visible, "safe steel did not join the purse alone")
@@ -8791,3 +8850,22 @@ func _clock_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("run timers ok: the budget, the head's time, ticking only in a fight, out of time, the insurance, the dry runs, the screens")
+
+
+## A joint's halves meet at the line (Matt, 10 Oct): this pair's half on the upper lane's bottom row or the lower's
+## top row; any other class's half in that column (a second past's) off it.
+func _check_joint_rows(bk, k: int) -> void:
+	var sim = bk.sim
+	var lane: Dictionary = bk._lanes[k]
+	var lt = lane["tree"]
+	var want: int = 1 if k % 2 == 0 else 0
+	var pair: Dictionary = Data.joint_in(sim.cls, lt["name"])
+	var col := -1
+	for i in range(lt["nodes"].size()):
+		if not pair.is_empty() and str(lt["nodes"][i].get("joint", "")) == str(pair["key"]):
+			col = int(lt["nodes"][i].get("col", 0))
+			_check(int(lane["rows"][i]) == want, "%s's joint half is on row %d, not at the line (second past %s)" % [lt["name"], int(lane["rows"][i]), sim.cls2])
+	for i in range(lt["nodes"].size()):
+		var nd: Dictionary = lt["nodes"][i]
+		if int(nd.get("col", 0)) == col and str(nd.get("joint", "")) != str(pair["key"]):
+			_check(int(lane["rows"][i]) != want, "%s: another half sits at the line (second past %s)" % [lt["name"], sim.cls2])
