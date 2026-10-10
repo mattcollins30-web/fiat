@@ -2605,6 +2605,19 @@ first gang, a head left behind, a save and load mid way out, the price following
 a Ghost's run left for free; the button's redraw ran every second through the pick panel; the price went stale
 under the clock; Stand and fight showed a price it never charged; all fixed, the gaps tested.
 
+**Faces beside the run's boxes (10 Oct, Run-P A, docs/design/faces_and_bands.md 1).** Matt: the Carpet Man's art sat
+over the fight box; "make the stat boxes smaller ... profile picture to the left ... both the enemy and you", the
+gangs' faces from Greenhorn. A 92 px face at each box's left, the four tiles and the bar narrowed to its right,
+neither box taller: the head's portrait while he's out, else the zone's gang (`art/people/gang_the_estate.png`,
+`gang_the_town.png`, `gang_the_city.png`: Matt's to drop in), else a drawn figure; the runner's class portrait. The
+head's name joins the kicker ("THE FIGHT · THE CARPET MAN"); the old floating face is gone; the fight's numbers
+scatter over the narrowed bar. Tile words that no longer fit the narrower tiles: "Gangs", "held" for "on the call",
+"Door". *The smoke:* each face in its box and its frame, clear of the head, tiles, bar, key, chips and note, art
+or the drawn figure and never neither, the class's and the zone's art followed, the head's name in the kicker. The
+reviewer's catches: the runner's face ran 2 px into its head; the faces scaled down with nearest filtering; both
+fixed (92 px, linear). Found on the way and fixed with a check (Matt to know): the Lock-up's rig pick said "Feeds
+the hand-me-down nail gun and the flare pistol", past its panel - two guns now read "Feeds both guns".
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

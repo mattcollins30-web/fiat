@@ -7,6 +7,7 @@ const Data := preload("res://scripts/sim/data.gd")
 
 const SIZE := 64
 const SVG := {
+	"person": '<circle cx="12" cy="8" r="4"/><path d="M4 21 C4 15.5 8 13 12 13 C16 13 20 15.5 20 21"/>',     # a face we have no art for (10 Oct, the run's boxes)
 	"dmg": '<path d="M5 19 L15 9 M13 7 L17 11 M15 5 L19 9 M17 3 L21 7 M4 20 L6 18"/>',
 	"armour": '<path d="M12 3 L19 6 V11 C19 16 16 19 12 21 C8 19 5 16 5 11 V6 Z"/>',
 	"hp": '<path d="M12 20 L5 13 a4 4 0 0 1 7 -6 a4 4 0 0 1 7 6 Z"/>',

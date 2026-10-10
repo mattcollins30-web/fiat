@@ -266,7 +266,7 @@ func _show_medical(it: Dictionary) -> Array:
 		for g in [gun, sec]:
 			if g != null and Items.ammo_type(g) == Items.base_of(it)["type"]:
 				feeds.append(g["base"])
-		lines[0] = ("Feeds the %s" % " and the ".join(feeds).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"
+		lines[0] = ("Feeds both guns" if feeds.size() == 2 else "Feeds the %s" % str(feeds[0]).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"     # two names ran past the panel (10 Oct)
 	var buttons := []
 	if selected["kind"] == "rig":
 		buttons.append({"text": "Leave in stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})

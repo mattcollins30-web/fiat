@@ -21,6 +21,7 @@ const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -44,6 +45,11 @@ const FIGHT_TILES_Y := FIGHT_Y + UI.HEAD_H + 16                 # room over the 
 const FIGHT_BAR_Y := FIGHT_TILES_Y + UI.TILE_H + 6
 const FIGHT_THEM_Y := FIGHT_BAR_Y + BAR_H + 8                   # "On them": what your fire has left on them, as chips
 const KEY_W := 88                                              # the "On them" / "On you" key before the chips
+# the faces (10 Oct, Run-P A; Matt: the head's art sat over the fight box): 92 px at each box's left, the tiles and
+# the bar narrowed to its right, neither box any taller
+const FACE := 92                                              # fits the runner's box between its head and its note (the review)
+const BOXED_X := PAD + FACE + 10
+const BOXED_W := INNER - FACE - 10
 const FIGHT_BOX_H := FIGHT_THEM_Y + Chips.CHIP_H + BOX_PAD - FIGHT_BOX_Y
 const RUNNER_BOX_Y := FIGHT_BOX_Y + FIGHT_BOX_H + SECTION_GAP
 const RUNNER_Y := RUNNER_BOX_Y + BOX_PAD
@@ -74,7 +80,8 @@ var _button2: Button               # Stop auto, or Fill up then go
 var _inv
 var _pick                          # the pick panel (pick_panel.gd): the pick against the fitted, the buttons
 var _shown := ""
-var _head_face: TextureRect        # the crew's head, while he's out
+var _fight_face := {}              # {frame, art, blank}: the crew's head while he's out, else the zone's gang (Matt's Greenhorn faces), else a drawn one
+var _runner_face := {}             # the runner's class
 var _rig_cells: Array = []         # ItemCells, one a pouch, in the Runner panel
 var _rig_outlines: Array = []
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
@@ -101,18 +108,19 @@ func _init() -> void:
 	_fight["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, FIGHT_BOX_Y, INNER + 2 * BOX_PAD, FIGHT_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	_runner["box"] = UI.panel(_left, Rect2(PAD - BOX_PAD, RUNNER_BOX_Y, INNER + 2 * BOX_PAD, RUNNER_BOX_H), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	# the fight: a head, four tiles, their HP as the bar (or the search's)
-	_fight["head"] = UI.head(_left, Rect2(PAD, FIGHT_Y, INNER - 80, UI.HEAD_H), "The fight")
-	_fight["tiles"] = UI.tile_row(_left, PAD, FIGHT_TILES_Y, INNER, 4)
-	_bar_make(_fight, FIGHT_BAR_Y)
+	_fight["head"] = UI.head(_left, Rect2(PAD, FIGHT_Y, INNER, UI.HEAD_H), "The fight")
+	_fight_face = _face_make(Vector2(PAD, FIGHT_TILES_Y - 2))
+	_fight["tiles"] = UI.tile_row(_left, BOXED_X, FIGHT_TILES_Y, BOXED_W, 4)
+	_bar_make(_fight, FIGHT_BAR_Y, BOXED_X, BOXED_W)
 	_fight["key"] = UI.label(_left, Rect2(PAD, FIGHT_THEM_Y, KEY_W - 8, Chips.CHIP_H), "On them", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
 	_fight["chips"] = Chips.new(INNER - KEY_W)
 	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_THEM_Y)
 	_left.add_child(_fight["chips"])
-	_head_face = People.rect(_left, Vector2(BODY_W - PAD - 48, FIGHT_Y - 12), 0.375)     # 48 px, between the band and the tiles
 	# the runner: the head, your HP as the bar, four tiles, a note
 	_runner["head"] = UI.head(_left, Rect2(PAD, RUNNER_Y, INNER, UI.HEAD_H), "The runner")
-	_bar_make(_runner, RUNNER_BAR_Y)
-	_runner["tiles"] = UI.tile_row(_left, PAD, RUNNER_TILES_Y, INNER, 4)
+	_runner_face = _face_make(Vector2(PAD, RUNNER_Y + UI.HEAD_H + 1))
+	_bar_make(_runner, RUNNER_BAR_Y, BOXED_X, BOXED_W)
+	_runner["tiles"] = UI.tile_row(_left, BOXED_X, RUNNER_TILES_Y, BOXED_W, 4)
 	_runner["note"] = UI.label(_left, Rect2(PAD, RUNNER_NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# "On you": what their fire has left on you, as chips in the elements' tones, with the med in use as a muted one
 	_runner["key"] = UI.label(_left, Rect2(PAD, RUNNER_NOTE_Y + 2, KEY_W - 8, Chips.CHIP_H), "On you", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
@@ -205,19 +213,24 @@ func show_state(s) -> void:
 		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
 	_band.set_right(["%s in · clock %s" % [Fmt.mss(m["elapsed"]), Fmt.mss(ceilf(clock_max))], gangs, cap_line])
 	var of: int = maxi(1, int(m["kills"]) + int(m["remaining"])) if not m["cleared"] else int(t["pool"])
-	_band.set_bar((float(m["kills"]) / float(of)) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], of]))
+	if m.get("way_out", false):
+		var door: int = maxi(1, int(m.get("way_out_gang", 1)))
+		_band.set_bar(float(door - int(m["remaining"])) / float(door), "%d of %d at the door seen off" % [door - int(m["remaining"]), door])
+	else:
+		_band.set_bar((float(m["kills"]) / float(of)) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], of]))
 	# them
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
-	People.show(_head_face, m["boss"]["name"] if boss_on else "")
+	_face_show(_fight_face, [m["boss"]["name"] if boss_on else "", gang_face(zone_i)])
+	_face_show(_runner_face, [sim.cls])
 	if boss_on:
-		_fight["head"].text = m["boss"]["name"].to_upper()
+		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
 		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif way_out:
 		var door_on: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = "THE FIGHT · THE WAY OUT"
 		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]],
-			["At the door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
+			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you: int = mini(m["remaining"], sim.contact(t))
@@ -228,7 +241,7 @@ func show_state(s) -> void:
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		_tiles(_fight["tiles"], [["Next gang", [("on the call" if sim.gang_held(m) else (Fmt.mss(next) if next < 1e8 else "never"))]], ["Gangs so far", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
+		_tiles(_fight["tiles"], [["Next gang", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
 		var thin: float = sim.thinning(m, t)
 		var search_words: String = "Searching" if thin >= 1.0 else (("Thinned out: finds at %d%%" if is_equal_approx(thin, Data.THIN_FLOOR) else "Thinning: finds at %d%%") % int(roundf(thin * 100.0)))
 		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
@@ -309,9 +322,10 @@ func show_state(s) -> void:
 
 
 ## A bar: its track, its fill and its words, at `y` across the column.
-func _bar_make(d: Dictionary, y: float) -> void:
-	var track := UI.panel(_left, Rect2(PAD, y, INNER, BAR_H), UI.box(Pal.BG, 6))
+func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> void:
+	var track := UI.panel(_left, Rect2(x, y, w, BAR_H), UI.box(Pal.BG, 6))
 	d["track"] = track
+	d["w"] = w
 	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
 	# what the dots still have to take off the bar (Matt, 6 Oct): the end of the fill, a segment a type, so the
 	# fill is seen going down into them as they tick
@@ -320,13 +334,13 @@ func _bar_make(d: Dictionary, y: float) -> void:
 		var seg := UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3, 0))
 		seg.visible = false
 		d["segments"].append(seg)
-	d["bar_text"] = UI.label(track, Rect2(0, 0, INNER, BAR_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	d["bar_text"] = UI.label(track, Rect2(0, 0, w, BAR_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	track.move_child(d["bar_text"], -1)
 
 
 func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0) -> void:
 	(d["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
-	d["fill"].size.x = roundf(INNER * clampf(fill, 0.0, 1.0))
+	d["fill"].size.x = roundf(float(d.get("w", INNER)) * clampf(fill, 0.0, 1.0))
 	d["bar_text"].text = text
 	_bar_segments(d, pending, of)
 
@@ -340,12 +354,48 @@ func _bar_segments(d: Dictionary, pending: Dictionary, of: float) -> void:
 		var ty: String = Data.TYPES[k]
 		var seg: Panel = d["segments"][k]
 		var amount: float = maxf(0.0, float(pending.get(ty, 0.0)))
-		var w: float = floorf(INNER * amount / maxf(of, 1.0)) if amount > 0.0 else 0.0
+		var w: float = floorf(float(d.get("w", INNER)) * amount / maxf(of, 1.0)) if amount > 0.0 else 0.0
 		w = minf(w, right - left_limit)
 		seg.visible = w >= 1.0
 		seg.size.x = w
 		seg.position.x = right - w
 		right -= w
+
+
+## A face's place in a box: a frame, the portrait in it, and a drawn figure for a face with no art.
+func _face_make(at: Vector2) -> Dictionary:
+	var f := {}
+	f["frame"] = UI.panel(_left, Rect2(at, Vector2(FACE, FACE)), UI.box(Pal.BG, 6, 1, Pal.CARD_LINE))
+	f["frame"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+	f["blank"] = TextureRect.new()
+	f["blank"].position = Vector2(18, 18)
+	f["blank"].size = Vector2(FACE - 36, FACE - 36)
+	f["blank"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	f["blank"].stretch_mode = TextureRect.STRETCH_SCALE
+	f["blank"].texture = NodeGlyphs.texture("person")
+	f["blank"].modulate = Pal.TEXT_3
+	f["blank"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+	f["frame"].add_child(f["blank"])
+	f["art"] = People.rect(_left, at + Vector2(1, 1), float(FACE - 2) / 128.0)     # inside the frame's line
+	f["art"].texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR                      # scaled down: nearest drops rows (the review)
+	return f
+
+
+## The first of `names` with art; the drawn figure when none has. Returns the name shown, or "".
+func _face_show(f: Dictionary, names: Array) -> String:
+	for n in names:
+		if str(n) != "" and People.show(f["art"], str(n)):
+			f["blank"].visible = false
+			return str(n)
+	People.show(f["art"], "")
+	f["blank"].visible = true
+	return ""
+
+
+## A zone's gang face: art/people/gang_<the zone>.png (gang_the_estate, gang_the_town, gang_the_city), from Matt's
+## Greenhorn set.
+static func gang_face(zone_i: int) -> String:
+	return "gang " + str(Data.ZONES[clampi(zone_i, 0, Data.ZONES.size() - 1)]["name"])
 
 
 ## The tiles' words: [[key, [long, shorter...]], ...].
@@ -477,7 +527,7 @@ func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sign: String, b
 
 ## A spot along a bar of the column, at a different height each time, in the juice's own space.
 func _scatter(bar_y: float) -> Vector2:
-	var local := Vector2(PAD + 60 + randf() * (INNER - 120), bar_y - 6 + randf_range(-16.0, 16.0))
+	var local := Vector2(BOXED_X + 30 + randf() * (BOXED_W - 90), bar_y - 6 + randf_range(-16.0, 16.0))     # over the bar, never the face
 	return _left.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
 
 

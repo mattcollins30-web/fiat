@@ -235,6 +235,21 @@ func _init() -> void:
 		main.refresh()
 		_check(main._armoury.selected.get("kind", "") == "rig", "pressing a rig slot did not select it")
 		_check_fit(main, "Armoury (rig pick)")
+	# rounds that feed both guns: one short line, not both names (10 Oct: "the hand-me-down nail gun and the flare pistol" ran past)
+	var held_guns: Array = [sim.equipped["Primary"], sim.equipped["Secondary"]]
+	sim.equipped["Primary"] = sim._plain("Primary", "Hand-me-down nail gun")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Flare pistol")
+	if Items.ammo_type(sim.equipped["Primary"]) == Items.ammo_type(sim.equipped["Secondary"]):
+		var nails: Dictionary = sim._plain(Data.AMMO, "Nails")
+		sim.stash.append(nails)
+		main.refresh()
+		main._armoury._pick_cell(main._armoury._inv.cell_of(nails["id"]))
+		main.refresh()
+		_check_fit(main, "Armoury (rounds for both guns)")
+		sim.stash.erase(nails)
+	sim.equipped["Primary"] = held_guns[0]
+	sim.equipped["Secondary"] = held_guns[1]
+	main.refresh()
 	if sim.med_capacity() == 0:
 		sim.equipped["Rig"] = sim._plain("Rig", Data.BASES["Rig"][0]["name"])    # the run may have lost the rig
 	while not sim.stash_room(2) and sim.stash.size() > 0:
@@ -3722,7 +3737,9 @@ func _faces_checks(main) -> void:
 	main.show_room(main.MISSIONS)        # on a run, Runs is the run screen
 	main.refresh()
 	var face_file := "res://art/people/%s.png" % Items.slug(m["boss"]["name"])
-	_check(main._run._head_face.visible == (ResourceLoader.exists(face_file) or FileAccess.file_exists(face_file)), "the head's face slot does not follow the art")
+	var has_face: bool = ResourceLoader.exists(face_file) or FileAccess.file_exists(face_file)
+	_check(not has_face or main._run._fight_face["art"].texture == People.portrait(m["boss"]["name"]), "the fight's face does not show the head where his art is")
+	_check(main._run._fight["head"].text == "THE FIGHT · " + str(m["boss"]["name"]).to_upper(), "the head's name is not in the fight's kicker: '%s'" % main._run._fight["head"].text)
 	_check_fit(main, "Run (the head out)")
 	sim.extract_now()
 	# the wall: three runners before, their faces where the art is
@@ -6159,7 +6176,7 @@ func _top_works_checks(main) -> void:
 	_check(sim.on_mission() and m["patrols"] == 0 and m["patrol_timer"] == 0.0, "the first gang's clock ran before the call: %.1f" % m["patrol_timer"])
 	main.show_room(main.MISSIONS)
 	main.refresh()
-	_check(main._run._fight["tiles"][0]["value"].text == "on the call", "the Next gang tile does not say on the call: '%s'" % main._run._fight["tiles"][0]["value"].text)
+	_check(main._run._fight["tiles"][0]["value"].text in ["on the call", "held"], "the Next gang tile does not say on the call: '%s'" % main._run._fight["tiles"][0]["value"].text)
 	_check_fit(main, "Run (on the call)")
 	while sim.pack_used(m) < sim.capacity():
 		m["found"].append(sim._plain(Data.AMMO, "Nails"))
@@ -6239,11 +6256,11 @@ func _dots_chip_checks(main) -> void:
 	var poison_i: int = Data.TYPES.find("poison")
 	var bleed_i: int = Data.TYPES.find("bleed")
 	var fill_px: float = rn._fight["fill"].size.x
-	_check(segs[fire_i].visible and segs[poison_i].visible and absf(segs[fire_i].size.x - rn.INNER * 0.1) <= 1.5 and absf(segs[poison_i].size.x - rn.INNER * 0.2) <= 1.5, "their bar's end is not the dots' pools: fire %.0f, poison %.0f" % [segs[fire_i].size.x, segs[poison_i].size.x])
+	_check(segs[fire_i].visible and segs[poison_i].visible and absf(segs[fire_i].size.x - rn.BOXED_W * 0.1) <= 1.5 and absf(segs[poison_i].size.x - rn.BOXED_W * 0.2) <= 1.5, "their bar's end is not the dots' pools: fire %.0f, poison %.0f" % [segs[fire_i].size.x, segs[poison_i].size.x])
 	_check(absf(segs[fire_i].position.x + segs[fire_i].size.x - fill_px) <= 0.5 and absf(segs[poison_i].position.x + segs[poison_i].size.x - segs[fire_i].position.x) <= 0.5, "the pools do not sit at the fill's end, in a row")
 	var ysegs: Array = rn._runner["segments"]
 	var yfill: float = rn._runner["fill"].size.x
-	_check(ysegs[poison_i].visible and ysegs[bleed_i].visible and absf(ysegs[poison_i].size.x - rn.INNER * 0.1) <= 1.5 and absf(ysegs[bleed_i].size.x - (yfill - ysegs[poison_i].size.x)) <= 1.5 and ysegs[bleed_i].position.x >= -0.5, "a pool past the fill's left end is not cut to it: poison %.0f, bleed %.0f of a %.0f fill" % [ysegs[poison_i].size.x, ysegs[bleed_i].size.x, yfill])
+	_check(ysegs[poison_i].visible and ysegs[bleed_i].visible and absf(ysegs[poison_i].size.x - rn.BOXED_W * 0.1) <= 1.5 and absf(ysegs[bleed_i].size.x - (yfill - ysegs[poison_i].size.x)) <= 1.5 and ysegs[bleed_i].position.x >= -0.5, "a pool past the fill's left end is not cut to it: poison %.0f, bleed %.0f of a %.0f fill" % [ysegs[poison_i].size.x, ysegs[bleed_i].size.x, yfill])
 	m["dots"] = {}
 	m["my_dots"] = {}
 	main.refresh()
@@ -7653,9 +7670,31 @@ func _fill_up_checks(main) -> void:
 		_check(rb.encloses(Rect2(piece.position, piece.size)), "the runner's box does not hold its %s" % piece.name)
 	_check(fb.end.y + 8 <= rb.position.y and fb.position.y >= rn.BAND_H and rb.end.y < rn.RIG_HEAD_Y, "the fight's and the runner's boxes are not apart: %s / %s" % [str(fb), str(rb)])
 	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Cash", "the run's tiles are off")
-	# the crew head's face sits between the band and the fight tiles, never on either
-	var face_r := Rect2(rn._head_face.position, rn._head_face.size)
-	_check(face_r.position.y >= rn.BAND_H and face_r.end.y <= rn.FIGHT_TILES_Y, "the head's face (%s) runs into the band or the tiles" % str(face_r))
+	# the faces (10 Oct, Run-P A): each in its box at the left, clear of the head, the tiles, the bar and the chips;
+	# a face shows art or the drawn figure, never neither
+	for pair in [[rn._fight_face, fb, rn._fight, "fight"], [rn._runner_face, rb, rn._runner, "runner"]]:
+		var fr := Rect2(pair[0]["frame"].position, pair[0]["frame"].size)
+		var ar := Rect2(pair[0]["art"].position, pair[0]["art"].size)
+		_check(pair[1].encloses(fr) and fr.encloses(ar), "the %s's face (%s) is out of its box or its frame (%s)" % [pair[3], str(fr), str(ar)])
+		var parts: Array = [pair[2]["head"], pair[2]["track"], pair[2]["key"], pair[2]["chips"]]
+		if pair[2].has("note"):
+			parts.append(pair[2]["note"])
+		for tile in pair[2]["tiles"]:
+			parts.append(tile["panel"])
+		for piece in parts:
+			_check(not fr.intersects(Rect2(piece.position, piece.size)), "the %s's face runs into its %s" % [pair[3], piece.name])
+		_check(pair[0]["art"].visible != pair[0]["blank"].visible, "the %s's face shows %s" % [pair[3], "both art and the figure" if pair[0]["art"].visible else "nothing"])
+	_check(rn._runner_face["art"].visible == (People.portrait(sim.cls) != null), "the runner's face does not follow the class's art")
+	_check(rn.BOXED_X + 30 >= rn.PAD + rn.FACE + 10, "the fight's numbers can land on the faces")
+	_check(rn._face_show(rn._fight_face, ["nobody with a face"]) == "" and rn._fight_face["blank"].visible and not rn._fight_face["art"].visible, "a face with no art does not show the drawn figure")
+	main._run._shown = ""
+	main.refresh()
+	var zi := 0
+	for z in range(Data.ZONES.size()):
+		if int(m["tier"]) in Data.ZONES[z]["tiers"]:
+			zi = z
+	var head_out: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	_check(head_out or rn._fight_face["art"].visible == (People.portrait(rn.gang_face(zi)) != null), "the fight's face does not show the zone's gang where the art is")
 	_check(not main._run._button2.visible, "the second button shows before the clear on a manual run")
 	m["remaining"] = 0
 	sim._clear(m, m["t"])
@@ -8205,6 +8244,7 @@ func _way_out_checks(main) -> void:
 	main.refresh()
 	_check(rs._band.kicker.text.ends_with("the way out") and rs._band.headline.text == Fmt.mss(ceilf(float(m["way_out_t"]))) and rs._fight["head"].text == "THE FIGHT · THE WAY OUT" and rs._button.text.begins_with("Getting out"),
 		"the run screen does not show the way out: '%s' / '%s' / '%s' / '%s'" % [rs._band.kicker.text, rs._band.headline.text, rs._fight["head"].text, rs._button.text])
+	_check(rs._band._bar_label.text.ends_with("at the door seen off"), "the way out's bar does not count the door: '%s'" % rs._band._bar_label.text)
 	_check_fit(main, "Run (the way out)")
 	rs._get_out()
 	_check(sim.on_mission() and m.get("way_out", false), "a second press left the way out")
