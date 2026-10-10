@@ -2769,7 +2769,13 @@ rarity; a long gun lies across its card. *The smoke:* the cards glass, named, on
 order, their words the item's, no picture a sliver; the worn card, the strip, the column inside the room; the kit
 room's art following its file. The reviewer's catches: a rifle in a 56 px cell was a sliver; the cards' figures,
 edge and worth went stale when worn kit changed in place; fixed with checks. Open: a full 24-pouch rig of
-multi-cell kits wraps a fourth row and pushes the pack out of the room (containers.gd, as before this change).
+multi-cell kits wrapped a fourth row and pushed the pack out of the room - fixed, the next entry.
+
+**The rig and the pack stay in the room (10 Oct).** Found reviewing the loadout: a full rig of wide kits wrapped a
+fourth row and a deep pack ran out of the room. The rig's items are laid first, then the pouches take the biggest
+size (64, 52, 44, 36, 28) that leaves the pack 16 px cells or more across the column's whole width (10 and 12 px as
+the last resort). A small pouch shows its short word whichever way it's small. *The smoke:* the worst state with a
+24-pouch rig that wraps and the deepest pack - the pack inside the room and readable, no pouch's words outside it.
 
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element

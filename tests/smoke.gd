@@ -675,6 +675,42 @@ func _worst_case(main) -> void:
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, "%s (worst)" % r)
+	# a full rig that wraps its rows (seven bandages, then a two-pouch kit that can't cross the row's end) under the
+	# deepest pack: the pouches shrink until the pack fits in the room (10 Oct: the pack ran out of the room)
+	var rig_hold: Array = sim.rig.duplicate(true)
+	var pack_hold = sim.equipped["Backpack"]
+	var rig_slot_hold = sim.equipped["Rig"]
+	sim.equipped["Backpack"] = _worst_item("Backpack", Data.BASES["Backpack"].back(), sim)
+	var big_rig: Dictionary = _worst_item("Rig", Data.BASES["Rig"].back(), sim)
+	big_rig["affixes"].append({"stat": "capacity", "value": 24.0, "tier": 1})     # the sim's cap: 24 pouches
+	sim.equipped["Rig"] = big_rig
+	sim.rig = []
+	var wraps := true
+	while wraps:
+		wraps = false
+		for i in range(7):
+			if sim.rig_room(1):
+				sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+				wraps = true
+		if sim.rig_room(2):
+			sim.rig.append(sim._plain(Data.MEDICAL, "First aid kit"))
+			wraps = true
+	main.show_room(main.ARMOURY)
+	main.refresh()
+	var ct = main._armoury._containers
+	_check(ct.pack_inside() and main._armoury.CONTAINERS_Y + ct.size.y <= Pal.ROOM_H, "a wrapped full rig under the deepest pack (%d cells) pushes the pack out: pouches %.0f px, pack %.0f px" % [sim.capacity(), ct.rig_cell(), ct.pack_cell()])
+	_check(ct._rig_zone.size.y >= 3 * ct.rig_cell(), "the wrapped rig is not the crowded case: %.0f px of rows" % ct._rig_zone.size.y)     # three rows or more: the case that ran out
+	_check(ct.pack_cell() >= ct.PACK_READABLE or ct.rig_cell() <= ct.RIG_SIZES.back()[0], "the deep pack is drawn at %.0f px while the pouches stay %.0f" % [ct.pack_cell(), ct.rig_cell()])
+	for rc in ct._rig_cells:
+		if rc.visible:
+			for l in rc.text_nodes():
+				if l.visible and l.text != "":
+					_check(Rect2(Vector2.ZERO, rc.size).grow(0.5).encloses(Rect2(l.position, l.size)), "a pouch's words spill out of its %s cell: '%s'" % [str(rc.size), l.text])
+	_check_fit(main, "Lock-up (a wrapped rig, the deepest pack)")
+	sim.rig = rig_hold
+	sim.equipped["Backpack"] = pack_hold
+	sim.equipped["Rig"] = rig_slot_hold
+	main.refresh()
 	# the Lock-up: every slot picked, then the first cell of every kind
 	main.show_room(main.ARMOURY)
 	for slot in Data.SLOTS:

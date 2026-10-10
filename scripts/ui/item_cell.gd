@@ -96,7 +96,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:
 			words.append("T%d · %s" % [it["tier"], Items.rarity_name(it)])
-	if size.x < 44.0:
+	if size.x < 44.0 or size.y < 44.0:     # a small pouch either way (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
 		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
 		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
 		fs = 11

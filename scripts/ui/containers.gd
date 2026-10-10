@@ -26,7 +26,11 @@ const RIG_MAX := Data.RIG_CAP      # the sim's cap, 24: three full rows
 const RIG_Y := LABEL_H + 2
 const ROW_W := RIG_COLS * (Pal.CELL + Pal.CELL_GAP) - Pal.CELL_GAP   # 554
 const PACK_MAX := 80               # the biggest pack (72) with Pack horse (+6) is 78
-const PACK_SIZES := [64, 48, 40, 32, 24, 16]   # the biggest of these that fits the room
+const PACK_SIZES := [64, 48, 40, 32, 24, 16, 12, 10]   # the biggest of these that fits the room
+## A full rig of wide kits wraps its rows, and a deep pack with it ran out of the room (10 Oct, found reviewing
+## Runner-R): the rig's pouches shrink a step at a time until the pack fits under them at one of its sizes.
+const RIG_SIZES := [[64, 6], [52, 5], [44, 4], [36, 4], [28, 3]]
+const PACK_READABLE := 16
 const BLOCK_GAP := 8
 const HEIGHT := 296                # what the Lock-up has under the body
 
@@ -41,10 +45,19 @@ var _rig_zone: Control             # the drop target over the rig's rows
 var _press_at := Vector2.ZERO
 var _press_cell := -1
 var _shown := ""
+var _rc := Pal.CELL                 # a pouch's size now, and the gap between
+var _rg := Pal.CELL_GAP
 
 
-static func _rig_at(k: int) -> Vector2:
-	return Vector2((k % RIG_COLS) * (Pal.CELL + Pal.CELL_GAP), (k / RIG_COLS) * (Pal.CELL + Pal.CELL_GAP))
+func _rig_at(k: int) -> Vector2:
+	return Vector2((k % RIG_COLS) * (_rc + _rg), (k / RIG_COLS) * (_rc + _rg))
+
+
+## The rows a pack of `pcap` cells needs at cell `c` (its gap with it) across the width, and their height.
+static func _pack_h(pcap: int, c: int) -> float:
+	var g: int = 6 if c >= 48 else (4 if c >= 32 else 2)
+	var n: int = maxi(1, (WIDTH + g) / (c + g))
+	return ceili(float(pcap) / n) * (c + g) - g
 
 
 func _init() -> void:
@@ -90,48 +103,67 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	_rig_label.text = ("Rig %d / %d pouches" % [sim.rig_used(), cap]) if cap > 0 else "No rig"
-	for k in range(RIG_MAX):
-		_rig_outlines[k].visible = k < cap
-	# a pouch a cell: an item spans as many as its cells, along the row, never across a row's end
+	# a pouch a cell: an item spans as many as its cells, along the row, never across a row's end - laid first in
+	# pouch places, so the rows it takes are known before the size is picked
+	var places: Array = []
 	var pos := 0
 	var last := 0
+	for it in sim.rig:
+		var w: int = mini(Items.size(it), RIG_COLS)
+		if pos % RIG_COLS + w > RIG_COLS:
+			pos += RIG_COLS - pos % RIG_COLS
+		places.append([pos, w])
+		pos += w
+		last = pos
+	var rig_rows := maxi(1, ceili(float(maxi(cap, last)) / RIG_COLS))   # a smaller rig fitted keeps what's carried showing
+	var pcap: int = mini(sim.capacity(), PACK_MAX)
+	# the biggest pouches that leave the pack readable (16 px cells or more); failing that, the biggest that leave it
+	# room at all (the reviewer: keeping 64 px pouches drew a deep pack at 10 px)
+	_rc = RIG_SIZES.back()[0]
+	_rg = RIG_SIZES.back()[1]
+	var found := false
+	for pack_min in [PACK_READABLE, PACK_SIZES.back()]:
+		for rs in RIG_SIZES:
+			var rig_h: float = rig_rows * (rs[0] + rs[1]) - rs[1]
+			if RIG_Y + rig_h + BLOCK_GAP + LABEL_H + 2 + _pack_h(pcap, pack_min) <= HEIGHT:
+				_rc = rs[0]
+				_rg = rs[1]
+				found = true
+				break
+		if found:
+			break
+	for k in range(RIG_MAX):
+		_rig_outlines[k].visible = k < cap
+		_rig_outlines[k].position = _rig_at(k)
+		_rig_outlines[k].size = Vector2(_rc, _rc)
 	for k in range(RIG_MAX):
 		var c = _rig_cells[k]
 		if k < sim.rig.size():
 			var it: Dictionary = sim.rig[k]
-			var w: int = mini(Items.size(it), RIG_COLS)
-			if pos % RIG_COLS + w > RIG_COLS:
-				pos += RIG_COLS - pos % RIG_COLS
+			var w: int = places[k][1]
 			c.visible = true
-			c.position = _rig_at(pos)
-			c.show_item(it, it["id"] == selected, Vector2(w * Pal.CELL + (w - 1) * Pal.CELL_GAP, Pal.CELL))
-			pos += w
-			last = pos
+			c.position = _rig_at(places[k][0])
+			c.show_item(it, it["id"] == selected, Vector2(w * _rc + (w - 1) * _rg, _rc))
 		else:
 			c.id = -1
 			c.visible = false
-	# the rig takes a row, or two for the biggest; the pack gets the rest at
-	# the biggest cell that fits its capacity in it
-	var rig_rows := maxi(1, ceili(float(maxi(cap, last)) / RIG_COLS))   # a smaller rig fitted keeps what's carried showing
-	_rig_zone.size.y = rig_rows * (Pal.CELL + Pal.CELL_GAP) - Pal.CELL_GAP
+	_rig_zone.size = Vector2(RIG_COLS * (_rc + _rg) - _rg, rig_rows * (_rc + _rg) - _rg)
 	var pack_label_y: float = RIG_Y + _rig_zone.size.y + BLOCK_GAP
 	_pack_label.position.y = pack_label_y
 	var pack_y: float = pack_label_y + LABEL_H + 2
 	var avail: float = HEIGHT - pack_y
-	var pcap: int = mini(sim.capacity(), PACK_MAX)
+	# the pack gets the rest at the biggest cell that fits its capacity in it
 	var cell := PACK_SIZES.back() as int
 	var gap := 2
 	var cols := 1
 	for c in PACK_SIZES:
 		var g: int = 6 if c >= 48 else (4 if c >= 32 else 2)
-		var n: int = (ROW_W + g) / (c + g)
-		var rows := ceili(float(pcap) / n)
-		if rows * (c + g) - g <= avail:
+		if _pack_h(pcap, c) <= avail:
 			cell = c
 			gap = g
-			cols = n
+			cols = maxi(1, (WIDTH + g) / (c + g))
 			break
-		cols = (ROW_W + g) / (c + g)
+		cols = maxi(1, (WIDTH + g) / (c + g))
 	_pack_label.text = "Pack %d cells" % pcap
 	for k in range(_pack_outlines.size()):
 		var o: Panel = _pack_outlines[k]
@@ -139,6 +171,11 @@ func show_state(s) -> void:
 		o.position = Vector2((k % cols) * (cell + gap), pack_y + (k / cols) * (cell + gap))
 		o.size = Vector2(cell, cell)
 		o.add_theme_stylebox_override("panel", UI.box(Color.TRANSPARENT, 6 if cell >= 32 else 3, 1, Pal.CARD_LINE))
+
+
+## For the tests: the rig's pouch size now.
+func rig_cell() -> float:
+	return float(_rc)
 
 
 # ------------------------------------------------------------------ dragging and dropping
