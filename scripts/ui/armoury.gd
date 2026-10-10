@@ -177,7 +177,9 @@ func _show_panel() -> void:
 		tail = "feeds %s" % ("the " + Items.base_of(it)["type"] if Items.base_of(it)["type"] != "smg" else "the SMG")
 	elif Items.is_paper(it):
 		var taught: String = sim.word_taught_by(str(it["base"]))
-		tail = ("from before" if taught == "" else ("teaches %s" % taught.to_lower())) if not Items.is_deeds(it) else "what the Bank was holding"
+		# read on pickup (10 Oct, Matt: "where do they actually need to be learned?"): once read, say the word is known
+		var read: bool = it["base"] in sim.book
+		tail = ("from before" if taught == "" else (("read · the Radio knows %s" % taught.to_lower()) if read else ("teaches %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -194,7 +196,7 @@ func _show_panel() -> void:
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
 		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the Caravan's drawer" if it["base"] in sim.book else "Not read yet"),
-			["Read, and kept" if (it["base"] in sim.book and not Items.is_deeds(it)) else "", "The Fence buys papers"])
+			[Items.paper_keep(it, sim.book), "The Fence buys papers"])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
 			_pick.show_right_words("The Workshop", "Fitted in the Workshop", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])
@@ -413,3 +415,4 @@ func text_nodes() -> Array:
 	out.append_array(_body.text_nodes())
 	out.append_array(_inv.text_nodes())
 	return out
+

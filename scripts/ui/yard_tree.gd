@@ -24,6 +24,9 @@ const PAD := 20
 ## the space"): the lanes and the strip sit at the foot, the Yard's painted place above them.
 const HEAD_H := Pal.ROOM_H - 8 - (8 * LANE_H + 7 * LANE_GAP) - 6 - STRIP_H     # eight buildings, as STRIP_Y
 const MOVE_W := 220
+const CHIPS_Y := 88                  # the purse under the headline (it ends at 76), down the left
+const CHIPS_W := 330                 # the title's width
+const CHIPS_ROWS := 3
 const LANES_Y := HEAD_H + 8
 # the lanes in the tree's glyphs (10 Oct, Lanes-G; Matt: "yard and map look really bad now" beside Training): a
 # column's two picks as glyph tiles side by side, its price beside them; the rank's tile, figure and pips at the end
@@ -70,8 +73,10 @@ func _init() -> void:
 	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Yard", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_chips = Chips.new(Pal.GRID_W - 2 * PAD - 350, 9)     # Move sits at the band's foot now: the chips take the width
-	_chips.position = Vector2(PAD + 350, 12)
+	# the purse down the left under the title, on the band's shaded side, so the painting across the top is clear
+	# (Matt, 10 Oct): up to three rows in the title's width
+	_chips = Chips.new(CHIPS_W, 9)
+	_chips.position = Vector2(PAD, CHIPS_Y)
 	head.add_child(_chips)
 	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, HEAD_H - 16 - Pal.BUTTON_H, MOVE_W, Pal.BUTTON_H), true)     # at the band's foot, right
 	_move.text = "Move the Yard"
@@ -186,13 +191,13 @@ func show_state(s, purse: Dictionary) -> void:
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 350 - _unit.position.x
-	UI.fit(_unit, ["picks built", "built"])
+	UI.fit(_unit, ["upgrades built", "built"])
 	# the purse: cash in gold, notes and scrap, the salvage in their colours
 	var items := [{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT},
 		{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Pal.TEXT_2}, {"tag": "Scrap", "forms": ["%d" % sim.scrap], "colour": Pal.TEXT_2}]
 	for kind in Data.SALVAGE:
 		items.append({"tag": Data.SALVAGE_NAMES[kind], "forms": ["%d" % int(sim.salvage.get(kind, 0))], "colour": salvage_colour(kind)})
-	_chips.show_chips(items, 2)
+	_chips.show_chips(items, CHIPS_ROWS)
 	_move.visible = purse.has("button")
 	if _move.visible:
 		UI.style_button(_move, bool(purse["button"].get("primary", false)))

@@ -908,3 +908,13 @@ static func one_of(it: Dictionary) -> Dictionary:
 	_next_id += 1
 	set_stack(one, 1)
 	return one
+
+
+## What a paper in the stash is for now (10 Oct): a rule paper works from the stash, keep it; a read one is spent,
+## its word kept by the Radio, safe to sell. The Lock-up and the Fence both say it; "" for the deeds or one unread.
+static func paper_keep(it: Dictionary, book: Array) -> String:
+	if not is_paper(it) or is_deeds(it) or not (it["base"] in book):
+		return ""
+	if str(it.get("rule", "")) != "":
+		return "Works from the stash: keep it"
+	return "Read: safe to sell, the word stays"

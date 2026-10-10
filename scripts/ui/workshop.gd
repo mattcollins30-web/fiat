@@ -386,11 +386,11 @@ func show_state(s) -> void:
 	_headline.text = "%d of 5" % picks.size()
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = VIEWS_X - 12 - _unit.position.x
-	UI.fit(_unit, ["picks built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "picks built", "picks"])
+	UI.fit(_unit, ["upgrades built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "upgrades built", "upgrades"])
 	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 1)
 	_chips.position.x = Pal.GRID_W - PAD - _chips.used_width()
 	if picks.is_empty():
-		UI.fit(_next, ["Every job and every mount, from the start; the Bench's picks are built in the Yard", "The Bench's picks are built in the Yard", "Picks: the Yard"])
+		UI.fit(_next, ["Every job and every mount, from the start; the Bench's upgrades are built in the Yard", "The Bench's upgrades are built in the Yard", "Upgrades: the Yard"])
 	else:
 		UI.fit(_next, ["Built: %s" % ", ".join(picks), ", ".join(picks), "Built: %s" % ", ".join(picks.slice(0, 2)), ", ".join(picks.slice(0, 2)), "%s and %d more" % [picks[0], picks.size() - 1] if picks.size() > 1 else str(picks[0]), str(picks[0]), "%d built" % picks.size()])
 	_upgrade.visible = false

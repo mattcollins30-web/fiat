@@ -3669,6 +3669,36 @@ func _book_checks(main) -> void:
 	_check_fit(main, "Caravan (the shelf, one filled)")
 	bk.pick_also("The shelf")
 	main.refresh()
+	# a paper is read on pickup (Matt, 10 Oct: "where do they actually need to be learned?"): unread it teaches its
+	# word; read, the Lock-up says the Radio knows it and it's safe to sell; a rule paper says keep it
+	var pw: Dictionary = {}
+	for w in Data.WORDS:
+		if str(w.get("paper", "")) != "":
+			pw = w
+			break
+	_check(not pw.is_empty(), "no paper with a word to test")
+	if not pw.is_empty():
+		sim.book.erase(str(pw["paper"]))     # unread for the check; the save comes back after
+	if not pw.is_empty():
+		var pp: Dictionary = sim._plain(Data.PAPER, str(pw["paper"]))
+		sim.stash.append(pp)
+		_check(Items.paper_keep(pp, sim.book) == "", "an unread paper says it's spent")
+		main.show_room(main.ARMOURY)
+		main._armoury.selected = {"kind": "stash", "id": pp["id"]}
+		main._armoury._shown = ""
+		main.refresh()
+		var said := " | ".join(_texts(main._armoury))
+		_check(said.contains("teaches %s" % str(pw["name"]).to_lower()) and not said.contains("the Radio knows"), "an unread paper's panel doesn't say what it teaches: %s" % said.left(300))
+		sim._read(pp)
+		main._armoury._shown = ""
+		main.refresh()
+		said = " | ".join(_texts(main._armoury))
+		_check(said.contains("read · the Radio knows %s" % str(pw["name"]).to_lower()) and said.contains("safe to sell"), "a read paper's panel doesn't say it's known and safe to sell: %s" % said.left(300))
+		_check_fit(main, "Lock-up (a read paper)")
+		main._armoury.selected = {}
+	var log_it: Dictionary = Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
+	sim._read(log_it)
+	_check(Items.paper_keep(log_it, sim.book) == "Works from the stash: keep it", "a rule paper doesn't say keep it: '%s'" % Items.paper_keep(log_it, sim.book))
 	sim.load_dict(saved)
 	print("the book ok: twenty pages, the deep ones gated, read once in order, the drawer, its pages, saved; the shelf of uniques")
 
@@ -4291,7 +4321,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("teaches laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio knows laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("In the Caravan's drawer") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -6774,8 +6804,31 @@ func _yard_wide_checks(main) -> void:
 	sim.cash = cash0
 	yt._shown = ""
 	main.refresh()
-	_check(yt._headline.text.contains(" of 40") and yt._unit.text == "picks built", "the Yard's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
+	_check(yt._headline.text.contains(" of 40") and yt._unit.text == "upgrades built", "the Yard's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
 	_check(yt._chips.shown() == 6 and yt._chips._labels[0].text.begins_with(Fmt.money(sim.cash)), "the Yard's purse chips are off: %d shown, first '%s'" % [yt._chips.shown(), yt._chips._labels[0].text])
+	# the purse down the left under the title (Matt, 10 Oct): below the headline, inside the title's width and the band,
+	# clear of Move; every chip shown with the most salvage the Yard can hold
+	var yc := Rect2(yt._chips.position, yt._chips.size)
+	_check(yc.position.y >= yt._headline.position.y + yt._headline.size.y and yc.end.x <= yt.PAD + 350 and yc.end.y <= yt.HEAD_H - 8 and not yc.intersects(Rect2(yt._move.position, yt._move.size)), "the Yard's purse is not down the left under the title: %s" % str(yc))
+	var salv_was: Dictionary = sim.salvage.duplicate()
+	var cash_was: float = sim.cash
+	var notes_was: int = sim.notes
+	var scrap_was: int = sim.scrap
+	for kind in Data.SALVAGE:
+		sim.salvage[kind] = 99999
+	sim.cash = 99999999.0
+	sim.notes = 999999
+	sim.scrap = 999999
+	yt._shown = ""
+	main.refresh()
+	yc = Rect2(yt._chips.position, yt._chips.size)
+	_check(yt._chips.shown() == 6 and yc.end.y <= yt.HEAD_H - 8 and yc.end.x <= yt.PAD + 350, "the Yard's purse loses a chip or leaves the band at the most: %d shown, %s" % [yt._chips.shown(), str(yc)])
+	sim.salvage = salv_was
+	sim.cash = cash_was
+	sim.notes = notes_was
+	sim.scrap = scrap_was
+	yt._shown = ""
+	main.refresh()
 	_check(yt._move.visible == sim.can_move_yard(), "Move the Yard shows %s when the Yard %s move" % ["on" if yt._move.visible else "off", "can" if sim.can_move_yard() else "cannot"])
 	_check_fit(main, "Yard (lanes)")
 	sim.load_dict(saved)
@@ -8869,3 +8922,15 @@ func _check_joint_rows(bk, k: int) -> void:
 		var nd: Dictionary = lt["nodes"][i]
 		if int(nd.get("col", 0)) == col and str(nd.get("joint", "")) != str(pair["key"]):
 			_check(int(lane["rows"][i]) != want, "%s: another half sits at the line (second past %s)" % [lt["name"], sim.cls2])
+
+
+## Every visible label's text under a node, for checks on what a panel says.
+func _texts(n: Node) -> Array:
+	var out: Array = []
+	if n is CanvasItem and not n.visible:
+		return out
+	if n is Label and n.text != "":
+		out.append(n.text)
+	for c in n.get_children():
+		out.append_array(_texts(c))
+	return out

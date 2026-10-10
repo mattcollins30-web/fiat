@@ -2960,7 +2960,7 @@ func yard_pick_salvage(key: String, col: int) -> int:
 func yard_pick_block(key: String, col: int, side: String) -> String:
 	var b := Data.yard_building(key)
 	if b.is_empty() or col < 0 or col >= b["picks"].size() or not (side in ["a", "b"]):
-		return "no such pick"
+		return "no such upgrade"
 	if mission != null:
 		return "The runner is out"
 	if col >= yard_cols():

@@ -578,7 +578,7 @@ func _show_side() -> void:
 		for c in range(5):
 			if sim.yard_side("clinic", c) != "":
 				cpicks += 1
-		UI.set_tile(_side_tiles_c[3], "Clinic", ["%d of 5 picks" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
+		UI.set_tile(_side_tiles_c[3], "Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
 		y += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
@@ -740,6 +740,8 @@ func _show_panel() -> void:
 			UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
 		elif it["base"] in sim.book:
 			UI.fit(_right_lines[0], ["Read, and kept in the Caravan's drawer", "Read; in the Caravan's drawer", "In the drawer"])
+			if selected.get("kind", "") == "stash":     # only one the runner holds: a shelf paper isn't theirs to sell
+				UI.fit(_right_lines[1], [Items.paper_keep(it, sim.book), "Keep it" if str(it.get("rule", "")) != "" else "Safe to sell"])     # Matt, 10 Oct
 		else:
 			_right_lines[0].text = "Not read yet"
 	elif it.has("mount"):

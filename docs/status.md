@@ -2729,6 +2729,17 @@ bleed Doorman 2.4 h, the frost and poison Poachers 2.1), the capstone (the frost
 for the pass after the playtest; wounds and deaths stay accepted reds until his save fills them. Kept in
 `docs/balance/pass30`.
 
+**The Yard's purse down the left; upgrades; papers read (10 Oct).** Matt: the Yard's chips cluttered the art across
+the top - they go down the left under the title, up to three rows in its width, on the band's shaded side. The
+Yard's buildings' choices are "upgrades" wherever a player reads them (the Yard's and the Workshop's "upgrades built",
+the Bench's line, the Clinic's tile); the code keeps `yard_picks`. Papers are read on pickup and their word goes to
+the Radio, so a read paper now says so: the Lock-up's line reads "read · the Radio knows <word>" (unread still
+"teaches"), and the Lock-up and the Fence's stash say "Read: safe to sell, the word stays", or "Works from the stash:
+keep it" for a paper with a rule (`Items.paper_keep`). *The smoke:* the purse under the headline, in the title's
+width and the band, clear of Move, all six chips at the largest figures; a paper unread, then read, then a rule
+paper. The reviewer's catches: the worst case left notes and scrap small; the Fence said "safe to sell" of a paper
+on its own shelf; fixed.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
