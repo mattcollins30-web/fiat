@@ -17,22 +17,28 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const PAD := 20
 const HEAD_H := 84
 const MOVE_W := 220
 const LANES_Y := HEAD_H + 8
-const LANE_H := 89
+# the lanes in the tree's glyphs (10 Oct, Lanes-G; Matt: "yard and map look really bad now" beside Training): a
+# column's two picks as glyph tiles side by side, its price beside them; the rank's tile, figure and pips at the end
+const LANE_H := 64
 const LANE_GAP := 4
 const LABEL_W := 150
 const TILES_X := LABEL_W + 12
 const COLS := 6
-const TILE_GAP := 5
-const ROW_GAP := 3
-const TILE_W := (Pal.GRID_W - TILES_X - 6 - (COLS - 1) * TILE_GAP) / COLS
-const TILE_H := (LANE_H - 8 - ROW_GAP) / 2
+const TILE := 48
+const PAIR_GAP := 8
+const RANK_W := 210
+const COL_W := (Pal.GRID_W - TILES_X - 8 - RANK_W) / (COLS - 1)
+const GLYPH := 28
+const PIP := 8
+const PIP_GAP := 4
 const STRIP_Y := LANES_Y + 8 * LANE_H + 7 * LANE_GAP + 6
-const STRIP_H := Pal.ROOM_H - STRIP_Y
+const STRIP_H := 92                                         # under the lanes, its own height (the review: the rest of the room left it half empty)
 const BUILD_W := 260
 
 var sim
@@ -73,16 +79,29 @@ func _init() -> void:
 		var lane := {"key": b["key"], "tiles": []}
 		lane["panel"] = UI.panel(self, Rect2(0, y, Pal.GRID_W, LANE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 		lane["bar"] = UI.panel(lane["panel"], Rect2(0, 0, 4, LANE_H), UI.box(Pal.CARD_LINE, 2))
-		lane["name"] = UI.label(lane["panel"], Rect2(14, 4, LABEL_W - 14, 24), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["count"] = UI.label(lane["panel"], Rect2(14, 28, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["gate"] = UI.label(lane["panel"], Rect2(14, 46, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["kind"] = UI.label(lane["panel"], Rect2(14, 64, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		lane["name"] = UI.label(lane["panel"], Rect2(14, 2, LABEL_W - 14, 22), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		lane["count"] = UI.label(lane["panel"], Rect2(14, 24, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		lane["gate"] = UI.label(lane["panel"], Rect2(14, 24, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		lane["gate"].visible = false                 # the gate is the first shut column's, beside its tiles
+		lane["kind"] = UI.label(lane["panel"], Rect2(14, 43, LABEL_W - 14, 19), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var ty: float = y + (LANE_H - TILE) / 2.0
 		for c in range(COLS - 1):
+			var x0: float = TILES_X + c * COL_W + 10
+			var cost := UI.label(self, Rect2(x0 + 2 * TILE + PAIR_GAP + 8, ty, COL_W - 2 * TILE - PAIR_GAP - 22, TILE), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
 			var pair := []
 			for side in range(2):
-				pair.append(_tile(Rect2(TILES_X + c * (TILE_W + TILE_GAP), y + 4 + side * (TILE_H + ROW_GAP), TILE_W, TILE_H), _press.bind(b["key"], c, "a" if side == 0 else "b")))
+				var tl := _tile(Rect2(x0 + side * (TILE + PAIR_GAP), ty, TILE, TILE), _press.bind(b["key"], c, "a" if side == 0 else "b"))
+				tl["cost"] = cost                         # the pair's price, beside it: one, as a column is bought once
+				pair.append(tl)
 			lane["tiles"].append(pair)
-		lane["rank"] = _tile(Rect2(TILES_X + (COLS - 1) * (TILE_W + TILE_GAP), y + 4, TILE_W, 2 * TILE_H + ROW_GAP), _press_rank.bind(b["key"]))
+		var rx: float = TILES_X + (COLS - 1) * COL_W + 10
+		lane["rank"] = _tile(Rect2(rx, ty, TILE, TILE), _press_rank.bind(b["key"]))
+		var r: Dictionary = lane["rank"]
+		r["name"] = UI.label(self, Rect2(rx + TILE + 10, y + 4, RANK_W - TILE - 24, 22), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["cost"] = UI.label(self, Rect2(rx + TILE + 10, y + 25, RANK_W - TILE - 24, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
+		r["pips"] = []
+		for pi in range(5):
+			r["pips"].append(UI.panel(self, Rect2(rx + TILE + 10 + pi * (PIP + PIP_GAP), y + 48, PIP, PIP), UI.box(Pal.CARD_LINE, PIP / 2)))
 		_lanes.append(lane)
 	var strip := UI.panel(self, Rect2(0, STRIP_Y, Pal.GRID_W, STRIP_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	var tw: float = Pal.GRID_W - 2 * PAD - BUILD_W - 16
@@ -91,11 +110,12 @@ func _init() -> void:
 	_other = UI.label(strip, Rect2(PAD, 54, tw, 23), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_foot = UI.label(strip, Rect2(PAD, 8, tw, 30), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_foot_right = UI.label(strip, Rect2(PAD, 42, tw, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_build = UI.button(strip, Rect2(Pal.GRID_W - PAD - BUILD_W, (STRIP_H - Pal.BUTTON_H) / 2.0, BUILD_W, Pal.BUTTON_H), true)
+	_build = UI.button(strip, Rect2(Pal.GRID_W - PAD - BUILD_W, 12, BUILD_W, Pal.BUTTON_H), true)     # level with the title
 	_build.pressed.connect(_on_build)
 
 
-## A tile: a button, its name with the cost at the right, its figure under.
+## A tile: a button with its pick's glyph; its words are the strip's and its tooltip's. "name" and "words" stay as
+## empty labels (a tile reads by its glyph); "cost" is the pair's price beside it.
 func _tile(r: Rect2, action: Callable) -> Dictionary:
 	var b := Button.new()
 	b.position = r.position
@@ -105,38 +125,45 @@ func _tile(r: Rect2, action: Callable) -> Dictionary:
 	b.pressed.connect(action)
 	add_child(b)
 	var t := {"button": b}
-	t["edge"] = UI.panel(b, Rect2(0, 0, 4, r.size.y), UI.box(Pal.ACCENT, 2))
-	# two lines in a 39 px tile: a label's box is 23 px whatever its font, so the name's sits 2 px over the top
-	t["name"] = UI.label(b, Rect2(9, -2, r.size.x - 16, 23), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	t["cost"] = UI.label(b, Rect2(9, -2, r.size.x - 16, 23), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
-	t["words"] = UI.label(b, Rect2(9, r.size.y - 23, r.size.x - 16, 23), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	t["edge"] = UI.panel(b, Rect2(0, 0, 0, 0), UI.box(Pal.ACCENT, 2))
+	t["edge"].visible = false
+	t["glyph"] = TextureRect.new()
+	t["glyph"].position = (r.size - Vector2(GLYPH, GLYPH)) / 2.0
+	t["glyph"].size = Vector2(GLYPH, GLYPH)
+	t["glyph"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t["glyph"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t["glyph"].texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	t["glyph"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(t["glyph"])
+	t["name"] = UI.label(b, Rect2(0, 0, 0, 0), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	t["words"] = UI.label(b, Rect2(0, 0, 0, 0), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	t["name"].visible = false
+	t["words"].visible = false
 	return t
 
 
-## A tile's look: "built" edged gold; "other" the pick not taken, dim; "open" buyable; "shut" its column shut.
+## A tile's look, the tree's (Tree-G): "built" filled gold-edged, its glyph gold; "open" buyable, white; "other" the
+## pick not taken, dim; "shut" its column shut, dimmer. The picked one ringed in the accent.
 func _style(t: Dictionary, look: String, on: bool) -> void:
 	var b: Button = t["button"]
 	for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		var sb: StyleBoxFlat
 		match look:
 			"built":
-				sb = UI.box(Pal.SELECT, 6, 1, Pal.CARD_LINE)
+				sb = UI.box(Pal.SELECT, 8, 2, Pal.ACCENT)
 			"open":
-				sb = UI.box(Pal.BUTTON if st == "hover" else Pal.CARD, 6, 1, Pal.CARD_LINE)
+				sb = UI.box(Pal.BUTTON if st == "hover" else Pal.CARD, 8, 1, Pal.TEXT_2)
 			"other":
-				sb = UI.box(Pal.BG if st != "hover" else Pal.PANEL, 6, 1, Pal.RAIL_RULE)
+				sb = UI.box(Pal.BG if st != "hover" else Pal.PANEL, 8, 1, Pal.RAIL_RULE)
 			_:
-				sb = UI.box(Color.TRANSPARENT, 6, 1, Pal.RAIL_RULE)
+				sb = UI.box(Color.TRANSPARENT, 8, 1, Pal.RAIL_RULE)
 		if on:
-			sb.set_border_width_all(2)
-			sb.border_color = Pal.ACCENT
+			sb.set_border_width_all(3)
+			sb.border_color = Pal.TEXT
 		b.add_theme_stylebox_override(st, sb)
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 6, 2, Pal.TEXT))
-	t["edge"].visible = look == "built"
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 8, 2, Pal.TEXT))
 	t["look"] = look
-	var lit: bool = look == "built" or look == "open"
-	t["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_3)
-	t["words"].add_theme_color_override("font_color", Pal.TEXT_2 if lit else Pal.TEXT_3)
+	t["glyph"].modulate = {"built": Pal.ACCENT, "open": Pal.TEXT, "other": Color(Pal.TEXT_3, 0.6), "shut": Color(Pal.TEXT_3, 0.35)}.get(look, Pal.TEXT_3)
 
 
 func show_state(s, purse: Dictionary) -> void:
@@ -193,8 +220,10 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 	lane["kind"].add_theme_color_override("font_color", salvage_colour(b["salvage"]))
 	var sel_here: bool = selected.get("key", "") == key
 	(lane["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if picked > 0 else Pal.CARD_LINE
+	var gate_said := false
 	for c in range(COLS - 1):
 		var side_built: String = sim.yard_side(key, c)
+		var cost := ""
 		for s in range(2):
 			var side: String = "a" if s == 0 else "b"
 			var pk: Dictionary = b["picks"][c][s]
@@ -207,26 +236,29 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 			elif c < cols:
 				look = "open"
 			_style(t, look, sel_here and int(selected.get("col", -1)) == c and selected.get("side", "") == side)
-			var cost := ""
+			t["glyph"].texture = NodeGlyphs.texture(NodeGlyphs.of_pick(pk, key))
+			t["button"].tooltip_text = "%s: %s" % [pk["name"], pk["short"]]
 			if look == "open":
 				cost = _short_money(sim.yard_pick_cost(key, c))
-			elif look == "shut":
-				cost = str(Data.YARD_GATE_SHORT[c])
-			var nm: String = ("✓ " if look == "built" else "") + str(pk["name"])
-			if cost != "" and UI.text_width(t["name"], nm) + 16.0 + UI.text_width(t["cost"], cost) > t["name"].size.x:
-				if look == "shut":
-					cost = ""                         # the gate is on the lane's label too: the name keeps the room
-				else:
-					nm = str(pk["name"]).get_slice(" ", 0) if str(pk["name"]).get_slice(" ", 0).length() > 3 else str(pk["name"])
-			t["cost"].text = cost
-			t["name"].text = nm
-			UI.fit(t["words"], [str(pk["short"])])
+			elif look == "shut" and not gate_said:
+				cost = str(Data.YARD_GATE_SHORT[c])     # the first shut column says what opens it
+		if side_built == "" and c >= cols:
+			gate_said = true
+		var cl: Label = lane["tiles"][c][0]["cost"]
+		UI.fit(cl, [cost, cost.get_slice(" ", cost.count(" "))] if cost != "" else [""])
+		cl.add_theme_color_override("font_color", Pal.TEXT_2 if c < cols else Pal.TEXT_3)
 	var r: Dictionary = lane["rank"]
 	var rank_open: bool = cols >= COLS
-	_style(r, "built" if sim.yard_rank(key) > 0 else ("open" if rank_open else "shut"), sel_here and selected.get("rank", false))
-	r["name"].text = "◆ Rank %d" % sim.yard_rank(key)
-	r["cost"].text = _short_money(sim.yard_rank_cost(key)) if rank_open else str(Data.YARD_GATE_SHORT[COLS - 1])
-	UI.fit(r["words"], ["%s a rank" % b["rank"]["short"], str(b["rank"]["short"])])
+	var rank: int = sim.yard_rank(key)
+	_style(r, "built" if rank > 0 else ("open" if rank_open else "shut"), sel_here and selected.get("rank", false))
+	r["glyph"].texture = NodeGlyphs.texture("star")
+	r["button"].tooltip_text = "Rank %d: %s a rank" % [rank, b["rank"]["short"]]
+	UI.fit(r["name"], ["◆ Rank %d · %s" % [rank, b["rank"]["short"]], "◆ Rank %d" % rank])
+	UI.fit(r["cost"], [_short_money(sim.yard_rank_cost(key)) if rank_open else "opens %s" % str(Data.YARD_GATE_SHORT[COLS - 1]), str(Data.YARD_GATE_SHORT[COLS - 1])])
+	# five pips: the ranks in this five, all five lit past each fifth
+	var lit: int = 0 if rank == 0 else ((rank - 1) % 5) + 1
+	for k in range(5):
+		(r["pips"][k].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if k < lit else Pal.CARD_LINE
 
 
 ## "£16,000", "£160k": a tile's price, short.
@@ -331,19 +363,12 @@ func text_nodes() -> Array:
 	if _move.visible:
 		out.append(_move)
 	for lane in _lanes:
-		out.append_array([lane["name"], lane["count"], lane["gate"], lane["kind"]])
+		out.append_array([lane["name"], lane["count"], lane["kind"]])
 		for pair in lane["tiles"]:
-			for t in pair:
-				out.append_array([t["name"], t["words"], t["cost"]])
-		out.append_array([lane["rank"]["name"], lane["rank"]["words"], lane["rank"]["cost"]])
+			out.append(pair[0]["cost"])
+		out.append_array([lane["rank"]["name"], lane["rank"]["cost"]])
 	return out
 
 
 func line_pairs() -> Array:
-	var out: Array = [[_headline, _unit]]
-	for lane in _lanes:
-		for pair in lane["tiles"]:
-			for t in pair:
-				out.append([t["name"], t["cost"]])
-		out.append([lane["rank"]["name"], lane["rank"]["cost"]])
-	return out
+	return [[_headline, _unit]]

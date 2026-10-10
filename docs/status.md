@@ -2655,6 +2655,18 @@ has its own layer over both. *The smoke:* the layers' order and that none takes 
 glass, the slots inside the frame, the art followed, a stand-in painted backdrop's fit. The reviewer's catches: a
 filled slot was two glass layers and nearly solid; the flat figure would have sat under the wall; fixed, with checks.
 
+**The Yard in the tree's glyphs (10 Oct, Lanes-G, docs/design/faces_and_bands.md 3).** Matt: the Yard and the map
+"look really bad now" beside Training. Each building a 64 px lane: its name, picks and rank, its salvage; each
+column's two picks as 48 px glyph tiles side by side (built gold, its other dim, buyable white, shut dimmer, the
+picked one ringed), the column's price beside them (the first shut column says what opens it); the rank a star
+tile with its figure, price and five pips. A pick's name and words are its tooltip and the strip's; every pick has
+its own glyph (`NodeGlyphs.PICK_GLYPH`), no column's two alike. The strip sits under the lanes at its own height,
+its button level with its title. *The smoke:* every tile in its lane with a glyph, none on another, prices and the
+rank's words in the lane and off the tiles; every pick its own drawn glyph and no pair alike; the strip in the room.
+The reviewer's catches: the strip had grown to the rest of the room, its words at the top and its button adrift;
+the keyword rules gave nine pairs one glyph and some odd ones; fixed. The fists check now drops the secondary too
+(a good secondary had taken the streets in time).
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

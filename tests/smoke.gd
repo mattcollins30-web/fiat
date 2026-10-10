@@ -6,6 +6,7 @@ extends SceneTree
 
 const Data := preload("res://scripts/sim/data.gd")
 const StatsRoom := preload("res://scripts/ui/stats_room.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
@@ -5108,16 +5109,38 @@ func _check_fit(main, where: String) -> void:
 					_check(not ra.intersects(body.box_rect(b)), "%s: the %s and %s boxes overlap" % [where, a, b])
 	if main.room == main.OVERVIEW and main._yard_tree.visible:
 		bad += _check_nodes(main._yard_tree.text_nodes(), main._yard_tree.line_pairs(), where + " yard tree")
-		# a tile's words stay inside their tile
+		# the lanes in glyphs (10 Oct, Lanes-G): every tile a glyph inside its lane, no tile on another, each price and
+		# the rank's words inside the lane and on no tile
 		var yt = main._yard_tree
 		for lane in yt._lanes:
+			var lr := Rect2(lane["panel"].position, lane["panel"].size)
+			var rects: Array = []
 			var tiles: Array = [lane["rank"]]
 			for pair in lane["tiles"]:
 				tiles.append_array(pair)
-			for t in tiles:
-				for l in [t["name"], t["words"], t["cost"]]:
-					if l.text != "" and l.position.y + l.size.y > t["button"].size.y + 0.5:
-						push_error("%s: a yard tile's words leave the tile: '%s'" % [where, l.text])
+			for tl in tiles:
+				var br := Rect2(tl["button"].position, tl["button"].size)
+				if not lr.encloses(br) or tl["glyph"].texture == null:
+					push_error("%s: a yard tile leaves its lane or has no glyph (%s)" % [where, lane["key"]])
+					bad += 1
+				for o in rects:
+					if br.intersects(o):
+						push_error("%s: two yard tiles overlap in %s" % [where, lane["key"]])
+						bad += 1
+				rects.append(br)
+			var words: Array = [lane["rank"]["name"], lane["rank"]["cost"]]
+			for pair in lane["tiles"]:
+				words.append(pair[0]["cost"])
+			for l in words:
+				if l.text == "":
+					continue
+				var wr := Rect2(l.position, Vector2(UI.text_width(l, l.text), l.size.y))
+				if not lr.encloses(wr):
+					push_error("%s: '%s' leaves its lane" % [where, l.text])
+					bad += 1
+				for o in rects:
+					if wr.intersects(o):
+						push_error("%s: '%s' runs onto a tile" % [where, l.text])
 						bad += 1
 	var rail_nodes := []
 	for name in main.ROOMS:
@@ -6588,6 +6611,14 @@ func _yard_wide_checks(main) -> void:
 	main.refresh()
 	var yt = main._yard_tree
 	_check(yt.visible and not main._grid.visible, "the Yard is not the lanes alone")
+	# every pick its own glyph, and no column's two the same (Lanes-G, the review)
+	for bld in Data.YARD:
+		for col in bld["picks"]:
+			_check(NodeGlyphs.PICK_GLYPH.has(col[0]["id"]) and NodeGlyphs.PICK_GLYPH.has(col[1]["id"]), "a Yard pick has no glyph of its own: %s / %s" % [col[0]["id"], col[1]["id"]])
+			_check(NodeGlyphs.of_pick(col[0], bld["key"]) != NodeGlyphs.of_pick(col[1], bld["key"]), "%s's %s and %s share a glyph" % [bld["name"], col[0]["name"], col[1]["name"]])
+			for pk in col:
+				_check(NodeGlyphs.SVG.has(NodeGlyphs.of_pick(pk, bld["key"])), "%s's glyph is not drawn: %s" % [pk["name"], NodeGlyphs.of_pick(pk, bld["key"])])
+	_check(yt.STRIP_Y + yt.STRIP_H <= yt.size.y and yt._build.position.y + yt._build.size.y <= yt.STRIP_H, "the Yard's strip runs past the room or its button out of it")
 	var names: Array = yt._lanes.map(func(l): return l["name"].text)
 	_check(names == Data.YARD.map(func(b): return b["name"]), "the Yard's lanes are off: %s" % str(names))
 	# a fresh Yard: column 1 open, the rest shut with their gates; nothing affordable with no cash
@@ -8615,9 +8646,11 @@ func _clock_checks(main) -> void:
 	_check(dm.get("dead", false) and dm.get("timed_out", false), "a dry run out of time did not read as lost")
 	# and a real dry run: fists against the streets, the runner unkillable, loses to the clock
 	var gun0 = sim.equipped["Primary"]
+	var sec0 = sim.equipped["Secondary"]
 	var hat0 = sim.equipped["Helmet"]
 	var hp0: float = sim.hp
 	sim.equipped["Primary"] = null
+	sim.equipped["Secondary"] = null      # fists means fists: a good secondary took the streets in time (10 Oct)
 	var hat: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
 	hat["affixes"].append({"stat": "hp", "value": 1e7})          # a runner who can't go down: only the clock beats him
 	sim.equipped["Helmet"] = hat
@@ -8636,6 +8669,7 @@ func _clock_checks(main) -> void:
 	var t00 = Data.ZONES[0]["tiers"][0]
 	_check(sim.estimate(t00) > sim.clock_of(t00) and cr["tiles"][2]["value"].get_theme_color("font_color") == Pal.BAD, "fists' Runs card is not red over the clock: %.0f of %.0f" % [sim.estimate(t00), sim.clock_of(t00)])
 	sim.equipped["Primary"] = gun0
+	sim.equipped["Secondary"] = sec0
 	sim.equipped["Helmet"] = hat0
 	sim.hp = hp0
 	# the Runs card: the clock beside the fight, red when the fight won't fit

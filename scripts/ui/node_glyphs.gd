@@ -81,6 +81,51 @@ static func of(nd: Dictionary) -> String:
 	return "star"
 
 
+## A Yard pick's glyph (10 Oct, Lanes-G): what its line is about, read from its words; else its building's.
+const PICK_RULES := [
+	["cells", "pack"], ["no room", "pack"], ["pouches", "pack"], ["moves keep", "pack"],
+	["max hp", "hp"], ["hp/s", "hp"], ["rest +", "hp"], ["wound", "med"], ["meds", "med"], ["bandage", "med"],
+	["quality", "quality"], ["find", "search"], ["search", "search"], ["best piece", "dog"], ["full pack", "dog"],
+	["sales", "cash"], ["sells", "cash"], ["for sale", "cash"], ["in stock", "cash"], ["stock at", "cash"], ["gambles", "dice"],
+	["insur", "armour"], ["contracts", "pen"], ["papers", "pen"], ["rewards", "cash"], ["notes", "pen"],
+	["affix", "dice"], ["rolls", "dice"], ["socket", "wrench"], ["lock", "wrench"], ["bump", "wrench"], ["level", "wrench"],
+	["job", "wrench"], ["crafts", "wrench"], ["scrap", "scrap"], ["steel", "steel"], ["guns at", "dmg"], ["first shot", "first"],
+	["fire, shock", "fire"], ["poison, bleed", "poison"], ["gang", "clock"], ["head short", "three"], ["convoy", "depth"],
+	["night", "quiet"], ["rain", "quiet"], ["weather", "quiet"], ["word", "loud"], ["away", "clock"], [" h away", "clock"],
+	["odds", "dice"], ["auto", "runs"], ["runs start", "runs"],
+]
+## Each pick's own (the review, 10 Oct: the rules gave nine pairs one glyph for both sides); the rules are the fallback.
+const PICK_GLYPH := {
+	"steady_hands": "dice", "cheap_parts": "cash", "third_socket": "wrench", "two_locks": "dice", "gunsmith": "dmg", "strip_for_parts": "scrap",
+	"overbump": "wrench", "fine_tuning": "quality", "masterwork": "star", "salvage_line": "steel",
+	"shelving": "pack", "racks": "first", "another_unit": "pack", "bins": "scrap", "strongroom": "armour", "wall_of_fame": "gem",
+	"lock_up": "pack", "paper_rack": "pen", "dry_store": "forever", "annex": "pack",
+	"beds": "hp", "shelf": "med", "ward": "hp", "stockroom": "med", "surgery": "cash", "physio": "med", "drip": "hp", "field_kit": "med",
+	"theatre": "hp", "med_lab": "med",
+	"stall": "quantity", "haggling": "cash", "shopfront": "quantity", "orders": "pen", "back_room": "gem", "fixer": "pen",
+	"gamblers_table": "dice", "insurance_desk": "armour", "arms_dealer": "dmg", "dealers_cut": "cash",
+	"weather_set": "half", "night_set": "quiet", "forecast": "cash", "dead_air": "clock", "scanner": "wrench", "two_channels": "dice",
+	"lorry_watch": "depth", "long_range": "loud", "jammer": "half", "military_band": "cash",
+	"twelve_hours": "clock", "rig_wiring": "pack", "a_day": "clock", "floodlights": "quiet", "battery": "pack", "overtime": "cash",
+	"two_days": "clock", "arc_lamps": "fire", "grid": "clock", "charger": "hp",
+	"spotter": "clock", "glasses": "dice", "lookout_post": "clock", "range_cards": "first", "hold_fire": "pack", "tripwires": "clock",
+	"whistle": "runs", "watch_rota": "clock", "crows_nest": "clock", "flares": "three",
+	"a_dog": "search", "good_nose": "quality", "guard_dog": "clock", "pedigree": "quality", "fetch": "dog", "second_dog": "search",
+	"tracker": "pen", "ratter": "poison", "pack": "search", "champion": "quality",
+}
+const BUILDING_GLYPH := {"bench": "wrench", "stash": "pack", "clinic": "med", "fence": "cash", "radio": "loud", "generator": "shock", "lookout": "search", "kennel": "dog"}
+
+
+static func of_pick(pick: Dictionary, building: String) -> String:
+	if PICK_GLYPH.has(str(pick.get("id", ""))):
+		return PICK_GLYPH[str(pick["id"])]
+	var said: String = (str(pick.get("short", "")) + " " + str(pick.get("words", ""))).to_lower()
+	for rule in PICK_RULES:
+		if said.contains(rule[0]):
+			return rule[1]
+	return BUILDING_GLYPH.get(building, "star")
+
+
 static var _cache := {}
 ## The glyph as a white texture, drawn once.
 static func texture(key: String) -> Texture2D:
