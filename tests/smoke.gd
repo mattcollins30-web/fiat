@@ -1277,6 +1277,7 @@ func _class_trees(main) -> void:
 	_radio_juice_checks(main)
 	_clock_checks(main)
 	_way_out_checks(main)
+	_purse_checks(main)
 	_rail_order_checks(main)
 	_place_art_checks(main)
 	# the Yard's upgrades
@@ -5083,6 +5084,24 @@ func _check_fit(main, where: String) -> void:
 		push_error("%s: the log line sits apart from its time" % where)
 		bad += 1
 	bad += _check_nodes([main._top_caption], [], where + " top bar caption")
+	# the purse (10 Oct, Bar-C): left to right the place, notes, scrap, the salvage found, cash, each glyph before its
+	# figure, none on the next, and the lot clear of the HP, XP and damage
+	var purse_from := 0.0
+	for k in ["hp", "xp", "dps"]:
+		var lk: Label = main._top_labels[k]
+		purse_from = maxf(purse_from, maxf(main._top_lines[k][0].position.x + main._top_lines[k][0].size.x, lk.position.x + UI.text_width(lk, lk.text)))
+	for k in ["where", "notes", "scrap", "copper", "steel", "army", "cash"]:
+		var g: TextureRect = main._top_glyphs[k]
+		if not g.visible:
+			continue
+		if g.position.x < purse_from + 8.0:
+			push_error("%s: the top bar's %s runs into what's before it (%.0f < %.0f)" % [where, k, g.position.x, purse_from + 8.0])
+			bad += 1
+		var pl: Label = main._top_labels[k]
+		purse_from = (pl.position.x + pl.size.x) if pl.visible else g.position.x + g.size.x
+		if pl.visible and g.position.x + g.size.x > pl.position.x + pl.size.x - UI.text_width(pl, pl.text) + 0.5:
+			push_error("%s: the top bar's %s glyph sits on its figure" % [where, k])
+			bad += 1
 	for k in main._top_glyphs:
 		if main._top_glyphs[k].texture == null:
 			push_error("%s: the top bar's %s glyph is missing" % [where, k])
@@ -8214,6 +8233,39 @@ func _radio_juice_checks(main) -> void:
 ## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
 ## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
 ## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+## The purse on the top bar (10 Oct, Bar-C): notes and scrap through the campaign, each salvage kind joining once
+## there's any; the worst figures out on a run still clear of the runner's figures (the fit's purse check).
+func _purse_checks(main) -> void:
+	var sim = main.sim
+	var hold: Array = [sim.salvage.duplicate(), sim.scrap, sim.notes]
+	sim.salvage = {"copper": 0, "steel": 0, "army": 0}
+	main.refresh()
+	_check(main._top_labels["scrap"].visible and main._top_labels["scrap"].text == Fmt.num(sim.scrap) and not main._top_labels["copper"].visible and not main._top_glyphs["army"].visible, "the campaign's purse is not notes and scrap")
+	_check_fit(main, "Top bar (the campaign's purse)")
+	sim.salvage = {"copper": 0, "steel": 7, "army": 0}
+	main.refresh()
+	_check(main._top_labels["steel"].visible and main._top_labels["steel"].text == "7" and not main._top_labels["copper"].visible, "safe steel did not join the purse alone")
+	sim.salvage = {"copper": 9999, "steel": 9999, "army": 9999}
+	sim.scrap = 99999
+	sim.notes = 999999
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	main.refresh()
+	_check(main._top_glyphs["where"].tooltip_text.begins_with("Out: ") and main._top_glyphs["where"].mouse_filter != Control.MOUSE_FILTER_IGNORE, "the place's glyph does not keep its words where a hover finds them: '%s'" % main._top_glyphs["where"].tooltip_text)
+	# each purse label's box is its figure: a tooltip never lies over its neighbour
+	for k in ["notes", "scrap", "copper", "steel", "army", "cash"]:
+		var pl: Label = main._top_labels[k]
+		if pl.visible:
+			_check(pl.size.x <= UI.text_width(pl, pl.text) + 4.0, "the top bar's %s box runs past its figure: %.0f for %.0f" % [k, pl.size.x, UI.text_width(pl, pl.text)])
+	_check_fit(main, "Top bar (every currency, out on a run)")
+	sim.extract_now()
+	sim.salvage = hold[0]
+	sim.scrap = hold[1]
+	sim.notes = hold[2]
+	main.refresh()
+	print("the purse ok: notes and scrap, the salvage as it's found, clear of the figures at the worst")
+
+
 ## The way out (10 Oct, docs/design/way_out.md, Run-P B): Get out now before the clear is a last gang at the door and
 ## so long to see them off - seen off, home with the pack; out of time, a time-out; after the clear, free as before.
 func _way_out_checks(main) -> void:

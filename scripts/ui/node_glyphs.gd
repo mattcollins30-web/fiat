@@ -7,6 +7,11 @@ const Data := preload("res://scripts/sim/data.gd")
 
 const SIZE := 64
 const SVG := {
+	# the purse on the top bar (10 Oct, Bar-C)
+	"scrap": '<path d="M12 8 a4 4 0 1 0 0.01 0 Z M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/>',
+	"copper": '<path d="M5 7 C5 4 19 4 19 7 C19 10 5 10 5 13 C5 16 19 16 19 13 M5 13 C5 18 19 18 19 20"/>',
+	"steel": '<path d="M3 15 L7 9 H17 L21 15 Z M3 15 V19 H21 V15"/>',
+	"army": '<rect x="3" y="7" width="18" height="12" rx="1"/><path d="M12 9.5 L13 12 H15.5 L13.5 13.6 L14.3 16 L12 14.5 L9.7 16 L10.5 13.6 L8.5 12 H11 Z"/>',
 	"person": '<circle cx="12" cy="8" r="4"/><path d="M4 21 C4 15.5 8 13 12 13 C16 13 20 15.5 20 21"/>',     # a face we have no art for (10 Oct, the run's boxes)
 	"dmg": '<path d="M5 19 L15 9 M13 7 L17 11 M15 5 L19 9 M17 3 L21 7 M4 20 L6 18"/>',
 	"armour": '<path d="M12 3 L19 6 V11 C19 16 16 19 12 21 C8 19 5 16 5 11 V6 Z"/>',

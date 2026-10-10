@@ -2618,6 +2618,17 @@ reviewer's catches: the runner's face ran 2 px into its head; the faces scaled d
 fixed (92 px, linear). Found on the way and fixed with a check (Matt to know): the Lock-up's rig pick said "Feeds
 the hand-me-down nail gun and the flare pistol", past its panel - two guns now read "Feeds both guns".
 
+**The purse on the top bar (10 Oct, Bar-C, docs/design/faces_and_bands.md 2).** Matt: scrap and the other currencies
+on the bar. Right-justified from the cash: the place, notes, scrap, then copper, safe steel and army surplus once
+there's any of each (the campaign reads notes and scrap), each a line glyph in its own tone drawn by the engine
+(`node_glyphs.gd`), a tooltip on each. The purse lays out by its figures as they read; where it would reach the
+HP, XP and damage it tightens - the place without "Out:", the salvage closer, the place to its glyph (the tooltip
+keeps the words), every gap closer. *The smoke:* in every fit check, the purse in order, each glyph before its
+figure and clear of the next, the lot clear of the runner's figures; the campaign's purse, one kind joining, every
+currency at its worst out on a run. The reviewer's catches: the place's glyph ignored the mouse, so its tooltip
+never showed; the figures' boxes were as wide as their worst and put their tooltips over their neighbours; scrap's
+worst was 99,999; fixed, with checks.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

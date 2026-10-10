@@ -21,6 +21,7 @@ const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Sound := preload("res://scripts/ui/sound.gd")
 const SETTINGS_FILE := "user://fiat_settings.save"
 const Data := preload("res://scripts/sim/data.gd")
@@ -56,13 +57,24 @@ const COMMS := "Radio"
 const RUNNER := "Stats"            # the runner's sheet, attack, defence, the record (8 Oct); was the Runner room until 9 Oct
 const ROOMS := [OVERVIEW, RUNNER, ARMOURY, MISSIONS, BARRACKS, WORKSHOP, MEDIC, MARKET, COMMS]     # Matt's order (9 Oct)
 
-## The top bar: level and HP on the left, where the runner is in the centre,
-## cash on the right; each in a fixed slot as wide as the widest text it can
-## hold, so nothing shifts as figures change.
-const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "cash"]
+## The top bar: level and HP on the left, the purse right-justified on the right. The left group's slots are as wide
+## as the widest text they can hold, so nothing there shifts; the purse lays out by its figures as they read
+## (_lay_top_right), so a salvage kind can join it.
+const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "scrap", "copper", "steel", "army", "cash"]
+## The right group, right to left (10 Oct, Bar-C): the cash, each salvage kind once there's any, scrap, notes, the place.
+const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"]
+const TOP_SALVAGE := ["copper", "steel", "army"]
+const TOP_TONE := {"scrap": Color("eceded"), "copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}
+const TOP_TIP := {"notes": "Notes: the Radio's currency", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Yard",
+	"steel": "Safe steel: salvage from the Town's depths, for the Yard", "army": "Army surplus: salvage from the City's depths, for the Yard", "cash": "Cash",
+	"where": "Where the runner is"}
 const TOP_WORST := {
 	"cash": "£9,999,999",
 	"notes": "999,999",
+	"scrap": "999,999",
+	"copper": "9,999",
+	"steel": "9,999",
+	"army": "9,999",
 	"level": "50 +999",
 	"hp": "999 / 999",
 	"dps": "9,999 dmg/s",
@@ -177,15 +189,22 @@ func _build() -> void:
 		_top_lines[k] = [UI.panel(_top_row, Rect2(x, 46, TOP_LINE_W, 4), UI.box(Pal.TRACK, 2)),
 				UI.panel(_top_row, Rect2(x, 46, TOP_LINE_W, 4), UI.box({"hp": Pal.GOOD, "xp": Pal.ACCENT, "dps": Pal.TEXT_2}[k], 2))]
 		x += TOP_LINE_W + TOP_GAP
-	# the right group, right-justified: the place, notes, cash
-	x = inner
-	for k in ["cash", "notes", "where"]:
-		x -= slot_w.call(k)
+	# the right group, right-justified at one gap: the place, notes, scrap, the salvage found, cash (Bar-C); each slot as
+	# wide as its widest figure, laid out on refresh so a salvage kind joins when there's any
+	for k in TOP_RIGHT:
 		var tint: Color = Pal.ACCENT if k == "cash" else Pal.TEXT_3
-		_top_glyphs[k] = UI.glyph(_top_row, Rect2(x, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), TOP_GLYPH_OF[k], tint)
-		var color: Color = Pal.ACCENT if k == "cash" else Pal.TEXT_2
-		_top_labels[k] = UI.label(_top_row, Rect2(x + TOP_GLYPH + TOP_GLYPH_GAP, 0, widths[k], Pal.TOP_H), "", "SemiBold" if k == "cash" else "Medium", Pal.FLOOR, color, HORIZONTAL_ALIGNMENT_RIGHT, k != "where")
-		x -= TOP_GAP
+		if TOP_GLYPH_OF.has(k):
+			_top_glyphs[k] = UI.glyph(_top_row, Rect2(0, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), TOP_GLYPH_OF[k], tint)
+		else:
+			_top_glyphs[k] = UI.glyph(_top_row, Rect2(0, (Pal.TOP_H - TOP_GLYPH) / 2.0, TOP_GLYPH, TOP_GLYPH), "notes", tint)
+			_top_glyphs[k].texture = NodeGlyphs.texture(k)          # drawn by the engine: no painted icon for these
+			_top_glyphs[k].modulate = TOP_TONE[k]
+		var color: Color = Pal.ACCENT if k == "cash" else (TOP_TONE[k] if TOP_TONE.has(k) else Pal.TEXT_2)
+		_top_labels[k] = UI.label(_top_row, Rect2(0, 0, widths[k], Pal.TOP_H), "", "SemiBold" if k == "cash" else "Medium", Pal.FLOOR, color, HORIZONTAL_ALIGNMENT_RIGHT, k != "where")
+		if TOP_TIP.has(k):
+			for c in [_top_glyphs[k], _top_labels[k]]:
+				c.tooltip_text = TOP_TIP[k]
+				c.mouse_filter = Control.MOUSE_FILTER_PASS
 	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines; its height is the
 	# layout's (to the log's bottom), the rows sharing it
 	_rail = Control.new()
@@ -689,6 +708,9 @@ func refresh() -> void:
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.money(sim.cash)
 	_top_labels["notes"].text = Fmt.num(sim.notes)
+	_top_labels["scrap"].text = Fmt.num(sim.scrap)
+	for k in TOP_SALVAGE:
+		_top_labels[k].text = Fmt.num(int(sim.salvage.get(k, 0)))
 	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
 	_top_labels["hp"].text = "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
 	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
@@ -700,10 +722,7 @@ func refresh() -> void:
 	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the Yard"
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
-	# the right group's glyphs before their right-aligned figures
-	for k in ["where", "notes", "cash"]:
-		var l: Label = _top_labels[k]
-		_top_glyphs[k].position.x = l.position.x + l.size.x - ceilf(UI.text_width(l, l.text)) - TOP_GLYPH_GAP - TOP_GLYPH
+	_lay_top_right()
 	if room == OVERVIEW:
 		sim.yard_mark_seen()                  # before the rail is painted: the badge never shows on the Yard while it's open
 	for name in ROOMS:
@@ -807,6 +826,43 @@ func _xp_words() -> String:
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
 	return "%s / %s" % [_short(sim.xp - this_xp), _short(next_xp - this_xp)]
+
+
+## The right group from the right edge (10 Oct, Bar-C): a salvage kind only once there's any (the campaign reads notes
+## and scrap); each slot its glyph and its figure as it reads now, so the purse never reaches the HP, XP and damage.
+## Where it would, it tightens: the place without "Out:", the salvage closer together, the place's words to its glyph
+## alone (its tooltip keeps them), then every gap closer.
+func _lay_top_right() -> void:
+	var left_end := 0.0
+	for k in ["hp", "xp", "dps"]:
+		var lk: Label = _top_labels[k]
+		left_end = maxf(left_end, maxf(_top_lines[k][0].position.x + _top_lines[k][0].size.x, lk.position.x + UI.text_width(lk, lk.text)))
+	var place: String = _top_labels["where"].text
+	_top_glyphs["where"].tooltip_text = place
+	for step in range(5):
+		_top_labels["where"].text = place.trim_prefix("Out: ") if step >= 1 else place
+		_top_labels["where"].visible = step < 3
+		var x: float = 1920.0 - 2 * Pal.MARGIN
+		var first_x: float = x
+		for k in TOP_RIGHT:
+			var shown: bool = not (k in TOP_SALVAGE) or int(sim.salvage.get(k, 0)) > 0
+			_top_glyphs[k].visible = shown
+			if k != "where":
+				_top_labels[k].visible = shown
+			if not shown:
+				continue
+			var l: Label = _top_labels[k]
+			var text_w: float = ceilf(UI.text_width(l, l.text)) if l.visible else -TOP_GLYPH_GAP
+			if l.visible:
+				l.size.x = text_w + 2.0                       # the box its figure, so its tooltip covers nothing beside it
+				l.position.x = x - l.size.x
+			x -= text_w + TOP_GLYPH_GAP + TOP_GLYPH
+			_top_glyphs[k].position.x = x
+			first_x = x
+			var gap: float = 10.0 if (step >= 2 and k in TOP_SALVAGE) else (14.0 if step >= 4 else float(TOP_GAP))
+			x -= gap
+		if first_x >= left_end + TOP_GAP:
+			return
 
 
 ## A figure for the top bar: 12,345 · 123k · 1.2M, so the XP slot stays narrow past the cap.
@@ -1260,6 +1316,3 @@ func _set_second(name: String) -> void:
 	sim.set_second(name)
 	_menu.close()
 	refresh()
-
-
-
