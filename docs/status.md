@@ -2689,6 +2689,15 @@ covered the heading's line; shadows stayed on the plain card; fixed with checks.
 only the middle sixth of a 688x296 painting shows - paint the room art as wide strips, or take taller headings.
 The way out's seen-off checks now wait past a melee runner's first swing (one run's melee primary missed it in a second).
 
+**Matt's notes on the pass (10 Oct).** Training's node panel: the sentence under the title over two lines (the room
+the title left), and never "wants 1 point" - the cost is the tree's and the button's to say, the button off without a
+point. The Workshop's heading says "The Workshop" (it still said the Bench). The top bar's XP is this runner's own
+after a move (it counted the banked paragon and went below nought). The Runner room's backdrop is the drawn light
+alone (Matt: it "will look better"); the kit-room job left the rooms manifest. *The smoke:* the sentence under the
+title, clear of the buttons, never the points; every node's sentence in two lines at 430 px (four buttons late on);
+the Workshop's heading; the top bar's XP after a move; the backdrop with nothing painted on it. The reviewer's catch:
+four buttons late on left a one-line sentence ~430 px and long ones fell to nothing; two lines now, with the check.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

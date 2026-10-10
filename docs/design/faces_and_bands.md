@@ -96,6 +96,9 @@ the wall share one card.
 
 ## 6. A backdrop behind the runner (Kit-B)
 
+Built (10 Oct): the drawn light (B) alone - Matt: "remove the art and just use the fall back lighting"; the
+kit-room job left the rooms manifest. A below is the concept as it was.
+
 From Matt: a semi-transparent backdrop behind the Runner room's figure and gear slots.
 
 - **A · a painted place, the slots as glass**: a painted lock-up wall at about 40%, darker at the edges. The slot

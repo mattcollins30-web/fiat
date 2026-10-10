@@ -826,7 +826,7 @@ static func _by_sentence(line: String) -> Array:
 
 ## "XP 1,234 / 2,345": into this level, of what the next takes; "XP 101,333" at the top.
 func _xp_words() -> String:
-	var lv: int = sim.level() + sim.paragon()          # past the cap the paragon levels count on, on the same curve (7 Oct)
+	var lv: int = sim.level() + Data.paragon_for_xp(sim.xp)   # this runner's own: the banked paragon is another yard's XP (10 Oct)
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
 	return "%s / %s" % [_short(sim.xp - this_xp), _short(next_xp - this_xp)]
@@ -889,7 +889,7 @@ func _dps_share() -> float:
 
 ## The level's progress, 0 to 1, for the line under the XP figure.
 func _xp_share() -> float:
-	var lv: int = sim.level() + sim.paragon()
+	var lv: int = sim.level() + Data.paragon_for_xp(sim.xp)
 	var this_xp := Data.xp_for_level(lv)
 	var next_xp := Data.xp_for_level(lv + 1)
 	return clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)

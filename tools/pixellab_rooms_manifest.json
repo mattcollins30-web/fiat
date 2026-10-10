@@ -1,6 +1,6 @@
 {
  "_readme": [
-  "FIAT ROOM BANDS (10 Oct, concept - docs/design/faces_and_bands.md section 4): Training (the_caravan), the Workshop, the Radio, the Yard and Stats, and the Runner room's backdrop (the_kit_room, Kit-B), 688x296, art/places/<slug>.png, shown covering the band from the centre and shaded from the left, as the Clinic's and the Fence's.",
+  "FIAT ROOM BANDS (10 Oct, concept - docs/design/faces_and_bands.md section 4): Training (the_caravan), the Workshop, the Radio, the Yard and Stats, 688x296, art/places/<slug>.png, shown covering the band from the centre and shaded from the left, as the Clinic's and the Fence's.",
   "Style image: art/places/ransacked_streets.png, as the places manifest. A job whose file exists is skipped.",
   "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_rooms_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <slug> ++ --force)."
  ],
@@ -94,24 +94,6 @@
    "description": "Pixel art, wide view inside a crew's back room in a British flat after a collapse: a wall of photos and newspaper cuttings joined with string, a tally chalked on a door, a shelf of trophies taken from gang bosses, a battered armchair, a sideboard with a lamp, a calendar with days crossed off. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. The left third and the bottom quarter stay darker and lower in detail (a face, the title and the figures sit there); the interest is in the centre-right. No people, no text, no readable signage or lettering.",
    "out": "art/places/the_stats.png",
    "seed": 96005
-  },
-  {
-   "endpoint": "generate-image-v2",
-   "width": 688,
-   "height": 296,
-   "no_background": false,
-   "single": true,
-   "style_image": "res://art/places/ransacked_streets.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the Runner room's backdrop, behind the figure and the six slots (about 416x386, at about 40%, dark at the edges)",
-   "description": "Pixel art, a view of the back wall of a British lock-up after a collapse, seen straight on: a chain-link cage door, a pegboard of tools, hooks with a jacket and a helmet hung on them, a steel locker, a shelf of ammo tins, a single caged bulb, a concrete floor with an oil stain in the centre where a person would stand. Muted blue-grey palette, dark navy shadows, one warm orange lamp. The centre of the frame stays plain and darker (a figure stands there); the detail sits to the sides and above. No people, no text, no readable signage or lettering.",
-   "out": "art/places/the_kit_room.png",
-   "seed": 96006
   }
  ]
 }

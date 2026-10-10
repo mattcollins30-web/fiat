@@ -59,6 +59,7 @@ const SUM_H := 10 + Chips.CHIP_H + 10
 const SUM_HEAD_W := 150
 const PANEL_Y := SUM_Y + SUM_H + 8
 const PANEL_H := Pal.ROOM_H - PANEL_Y
+const WORDS_UNDER_Y := 50          # a node's sentence, under its title
 # the drawer and the shelf take the lanes' whole area: three columns of cards
 const PAGE_COLS := 3
 const PAGE_GAP := 6
@@ -96,6 +97,8 @@ var _panel: Panel
 var _title: Label
 var _chips: Chips
 var _words: Label
+var _words2: Label                  # a node's sentence, its second line (the review: four buttons leave ~450 px)
+var _node_forms: Array = []          # a node's sentence in its forms, fitted once the buttons have their places
 var _past: Label
 var _train: Button
 var _respec: Button
@@ -260,6 +263,7 @@ func _build_panel() -> void:
 	_chips.position = Vector2(PAD, 14)
 	_panel.add_child(_chips)
 	_words = UI.label(_panel, Rect2(PAD, 13, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_words2 = UI.label(_panel, Rect2(PAD, WORDS_UNDER_Y + 28, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var by: float = PANEL_H - 12 - Pal.BUTTON_H
 	_past = UI.label(_panel, Rect2(PAD, by, Pal.GRID_W - 2 * PAD - 520, Pal.BUTTON_H), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_train = UI.button(_panel, Rect2(0, by, 200, Pal.BUTTON_H), true)
@@ -932,7 +936,8 @@ func _fits(items: Array) -> bool:
 func _show_panel() -> void:
 	_train.visible = false
 	_chips.visible = false
-	_words.position.x = PAD
+	_words.position = Vector2(PAD, 13)
+	_words2.text = ""
 	_words.size.x = Pal.GRID_W - 2 * PAD
 	var after_title := func() -> void:
 		_words.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
@@ -967,8 +972,8 @@ func _show_panel() -> void:
 		_chips.visible = true
 		_chips.show_chips(items)
 		_chips.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
-		_words.position.x = _chips.position.x + _chips.used_width() + 10
-		_words.size.x = Pal.GRID_W - PAD - _words.position.x
+		# the sentence under the title (10 Oct, Matt: the dead space there), the width the buttons leave (set below)
+		_words.position = Vector2(PAD, WORDS_UNDER_Y)
 		var sentence: String = _sentence(nd)
 		var forms: Array = []
 		var tail := ""
@@ -983,7 +988,7 @@ func _show_panel() -> void:
 			tail = "idle without %s in hand" % type_words(nd)
 		elif is_taken and not sim.node_active(selected):
 			tail = "idle until a joint in %s closes again" % str(selected).get_slice("/", 0)
-		var block: String = "" if is_taken else sim.train_block(selected)
+		var block: String = "" if is_taken else sim.train_block(selected, true)     # the points are the tree's and the button's to say (Matt, 10 Oct)
 		var t2 := _as_sentence(tail)
 		var b2 := _as_sentence(block)
 		if tail != "" and block != "":
@@ -993,12 +998,12 @@ func _show_panel() -> void:
 		elif block != "":
 			forms = ["%s %s" % [sentence, b2]]
 		forms.append_array([sentence, b2, ""])
-		UI.fit(_words, forms)
+		_node_forms = forms
 		if not is_taken:
 			_train.visible = true
 			var cost: int = sim.node_cost(selected)
 			_train.text = "Train (%d point%s)" % [cost, "" if cost == 1 else "s"]
-			_train.disabled = block != ""
+			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
 	_respec.text = "Respec for %s" % Fmt.money(sim.respec_cost())
 	_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
@@ -1023,11 +1028,28 @@ func _show_panel() -> void:
 	if _train.visible:
 		x -= 12 + _train.size.x
 		_train.position.x = x
+	if selected != "" and not _node_forms.is_empty():
+		fit_two(_node_forms, x - 16 - PAD)            # under the title, clear of the buttons, over two lines
+	_node_forms = []
 	# the runners before, in what's left beside the buttons: on the class's panel, not under a node
 	_past.size.x = x - 12 - _past.position.x
 	_past.visible = selected == ""
 	if selected == "":
 		_show_past()
+
+
+## A node's sentence under its title over two lines `w` wide: the longest form that wraps into them whole.
+func fit_two(forms: Array, w: float) -> void:
+	_words.size.x = w
+	_words2.position.x = PAD
+	_words2.size.x = w
+	for f in forms:
+		if str(f) == "":
+			continue
+		UI.wrap([_words, _words2], str(f))
+		if UI.text_width(_words2, _words2.text) <= w:
+			return
+	UI.wrap([_words, _words2], str(forms[0]))       # nothing wraps whole: the fit checks will say so
 
 
 ## A clause as a sentence of its own: a capital, a full stop.
@@ -1145,7 +1167,7 @@ func line_pairs() -> Array:
 
 ## For the tests: every label with text on show.
 func text_nodes() -> Array:
-	var out: Array = [_title, _words, _past, _respec, _sum_head, _kicker, _points, _unit, _class_line, _notice, _also_head]
+	var out: Array = [_title, _words, _words2, _past, _respec, _sum_head, _kicker, _points, _unit, _class_line, _notice, _also_head]
 	if _chips.visible:
 		out.append_array(_chips.text_nodes())
 	out.append_array(_sum_chips.text_nodes())

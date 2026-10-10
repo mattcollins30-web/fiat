@@ -1282,6 +1282,7 @@ func _class_trees(main) -> void:
 	_purse_checks(main)
 	_backdrop_checks(main)
 	_room_band_checks(main)
+	_panel_words_checks(main)
 	_rail_order_checks(main)
 	_place_art_checks(main)
 	# the Yard's upgrades
@@ -7023,9 +7024,10 @@ func _sum_strip_check(main) -> void:
 		var pnl = bk._sum_chips._panels[k]
 		var r := Rect2(bk._sum_chips.position + pnl.position, pnl.size)
 		_check(inside.encloses(r), "a sum chip runs out of its strip: %s in %s" % [str(r), str(inside)])
-	# a node's panel: the figure as a chip, the sentence after it, apart
+	# a node's panel: the figure as a chip beside the title, the sentence under them (Matt, 10 Oct), apart
 	if bk.selected != "" and bk._chips.visible:
-		_check(bk._words.position.x >= bk._chips.position.x + bk._chips.used_width() and bk._words.text != "" and bk._words.text.ends_with("."), "the node's chip and sentence are off: words at %.0f, chips to %.0f, '%s'" % [bk._words.position.x, bk._chips.position.x + bk._chips.used_width(), bk._words.text])
+		var said: String = (bk._words.text + " " + bk._words2.text).strip_edges()
+		_check(bk._words.position.y >= bk._chips.position.y + Chips.CHIP_H and bk._words.text != "" and said.ends_with("."), "the node's chip and sentence are off: words at y %.0f, chips to %.0f, '%s'" % [bk._words.position.y, bk._chips.position.y + Chips.CHIP_H, said])
 	_check(bk._panel.position.y >= bk._sum.position.y + bk._sum.size.y + 8, "the node panel sits on the sum strip")
 
 
@@ -8372,6 +8374,62 @@ func _radio_juice_checks(main) -> void:
 ## Run timers (9 Oct, docs/design/timers.md): a site's clock, the same for every build; it runs only while a gang
 ## is on you; a head brings his own time; out of time the runner lives, the pack and two pieces of kit don't
 ## (the insurance pays for the kit); the dry runs read it; the run screen and the Runs card show it.
+## Matt's notes of 10 Oct: a node's sentence under its title and never "wants N points" (the tree and the button say
+## the cost); the Workshop's heading says Workshop; the top bar's XP is this runner's after a move.
+func _panel_words_checks(main) -> void:
+	var sim = main.sim
+	var hold_pts: int = sim.training_points
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	var pick := ""
+	for t in sim.trees():
+		if t == null or t.get("drawer", false):
+			continue
+		for k in range(t["nodes"].size()):
+			var id := "%s/%d" % [t["name"], k]
+			if not sim.tree.has(id) and sim.train_block(id, true) == "":
+				pick = id
+				break
+		if pick != "":
+			break
+	sim.training_points = sim.points_spent()           # none free: the block would be the points
+	bk.selected = pick
+	bk._shown = ""
+	main.refresh()
+	if pick != "":
+		_check(not bk._words.text.to_lower().contains("wants 1 point") and not bk._words.text.to_lower().contains("point free"), "a node's sentence still says the points: '%s'" % bk._words.text)
+		_check(bk._words.position.y >= bk._title.position.y + bk._title.size.y - 2.0 and bk._words.position.x + bk._words.size.x <= bk._train.position.x - 8.0, "a node's sentence is not under its title, clear of the buttons")
+		_check(bk._train.disabled, "Train is not off with no point free")
+		# four buttons late on leave ~430 px: every node's sentence still says itself, over its two lines
+		var worst := 0
+		for t in sim.trees():
+			if t == null or t.get("drawer", false):
+				continue
+			for k in range(t["nodes"].size()):
+				var s: String = bk._sentence(t["nodes"][k])
+				bk.fit_two([s], 430.0)
+				if (bk._words.text + " " + bk._words2.text).strip_edges() != s.strip_edges() or UI.text_width(bk._words2, bk._words2.text) > 430.0:
+					worst += 1
+		_check(worst == 0, "%d node sentences do not fit two lines at 430 px" % worst)
+		bk._shown = ""
+		main.refresh()
+		_check_fit(main, "Training (a node, no point free)")
+	sim.training_points = hold_pts
+	bk.selected = ""
+	bk._shown = ""
+	main.show_room(main.WORKSHOP)
+	main.refresh()
+	_check(main._workshop._kicker.text == "The Workshop", "the Workshop's heading says '%s'" % main._workshop._kicker.text)
+	var hold_bank: int = sim.paragon_banked
+	sim.paragon_banked = 12
+	main.refresh()
+	_check(not main._top_labels["xp"].text.begins_with("-") and not main._top_labels["xp"].text.begins_with("−") and main._top_lines["xp"][1].size.x >= 0.0, "the top bar's XP reads below nought after a move: '%s'" % main._top_labels["xp"].text)
+	sim.paragon_banked = hold_bank
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("the panel's words ok: under the title, no points; the Workshop's heading; the top bar's XP after a move")
+
+
 ## The rooms' bands (10 Oct, Rooms-B): Training, the Workshop, the Radio and the Yard under their painted places once
 ## painted (Stats has its band); the art under the words, covering the heading, shaded from the left, the words with a
 ## shadow; nothing while the file is missing.
@@ -8416,9 +8474,7 @@ func _backdrop_checks(main) -> void:
 	main.refresh()
 	var body = main._armoury._body
 	_check(body.get_child(0) == body.backdrop and body.backdrop.size == body.size and body.backdrop.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the backdrop is not under the figure and the slots, or takes the mouse")
-	var file := "res://art/places/the_kit_room.png"
-	var painted: bool = ResourceLoader.exists(file) or FileAccess.file_exists(file)
-	_check(body.has_backdrop_art() == painted, "the backdrop does not follow the art (painted %s)" % str(painted))
+	_check(body.backdrop.get_child_count() == 0, "the backdrop has art on it: the drawn light alone (Matt, 10 Oct)")
 	_check(body.get_child(1) == body._frame and body._frame.mouse_filter == Control.MOUSE_FILTER_IGNORE and body._flat.get_index() > body._frame.get_index(), "the backdrop's frame or the flat figure's layer is out of order, or takes the mouse")
 	for slot in Data.SLOTS:
 		var b: Dictionary = body._boxes[slot]
@@ -8429,21 +8485,8 @@ func _backdrop_checks(main) -> void:
 		_check((filled and sb.bg_color.a < 0.01) or (not filled and is_equal_approx(sb.bg_color.a, body.GLASS_ALPHA)) or body.selected == slot, "the %s slot is not one layer of glass: %.2f (%s)" % [slot, sb.bg_color.a, "filled" if filled else "empty"])
 		_check(b["cell"].glass, "the %s slot's cell is not glass" % slot)
 		_check(Rect2(Vector2.ZERO, body.size).encloses(Rect2(b["zone"].position, b["zone"].size)), "the %s slot leaves the backdrop's frame" % slot)
-	_check_fit(main, "Runner (the backdrop, %s)" % ("painted" if painted else "drawn"))
-	# A, as it will read once painted: any place's art stands in
-	var stand_in: Texture2D = UI.place_texture("Ransacked Streets")
-	if stand_in != null and not painted:
-		body._backdrop_art.texture = stand_in
-		body._backdrop_art.visible = true
-		body._vignette.visible = true
-		body.backdrop.queue_redraw()
-		_check(body.has_backdrop_art() and is_equal_approx(body._backdrop_art.modulate.a, body.BACKDROP_ALPHA), "the painted backdrop is not at %.0f%%" % (body.BACKDROP_ALPHA * 100.0))
-		_check_fit(main, "Runner (the backdrop, a stand-in painted)")
-		body._backdrop_art.texture = null
-		body._backdrop_art.visible = false
-		body._vignette.visible = false
-		body.backdrop.queue_redraw()
-	print("the backdrop ok: under it all, glass slots, the art or the light")
+	_check_fit(main, "Runner (the backdrop)")
+	print("the backdrop ok: under it all, glass slots, the drawn light")
 
 
 ## The purse on the top bar (10 Oct, Bar-C): notes and scrap through the campaign, each salvage kind joining once

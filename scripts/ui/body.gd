@@ -43,15 +43,11 @@ const FIGURE_W := 180
 const FIGURE_H := 488                          # down to the primary's box
 const BODY_ART := "res://art/body.png"         # a drawn figure, 180 x 488, drawn at its own pixels like the items, takes the flat one's place
 ## The backdrop (10 Oct, Kit-B; Matt: "a semi transparent backdrop ... behind the character model / gear slot
-## selection"): A, a painted lock-up wall at about 40%, dark at the edges, the slots as glass; B, while the art is
-## missing, a cone of cold light from above and a shadow at the feet, drawn here.
-const BACKDROP_PLACE := "The kit room"         # art/places/the_kit_room.png (the rooms manifest)
-const BACKDROP_ALPHA := 0.4
+## selection"): a cone of cold light from above and a shadow at the feet, drawn here, the slots as glass over it.
+## The painted wall (A) went the same day - Matt: the light alone "will look better".
 const GLASS_ALPHA := 0.8
 var _figure: TextureRect
 var backdrop: Control                          # under everything: the art, or the light
-var _backdrop_art: TextureRect
-var _vignette: TextureRect
 var _frame: Panel
 var _flat: Control                             # the flat figure's layer, over the backdrop, when art/body.png is missing
 
@@ -72,34 +68,6 @@ func _init() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.draw.connect(_draw_backdrop)
 	add_child(backdrop)
-	_backdrop_art = TextureRect.new()
-	_backdrop_art.size = size
-	_backdrop_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_backdrop_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_backdrop_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	_backdrop_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_backdrop_art.texture = UI.place_texture(BACKDROP_PLACE)
-	_backdrop_art.visible = _backdrop_art.texture != null
-	_backdrop_art.modulate = Color(1, 1, 1, BACKDROP_ALPHA)
-	backdrop.add_child(_backdrop_art)
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
-	g.colors = PackedColorArray([Color(Pal.BG, 0.0), Color(Pal.BG, 0.25), Color(Pal.BG, 0.95)])
-	var gt := GradientTexture2D.new()
-	gt.gradient = g
-	gt.fill = GradientTexture2D.FILL_RADIAL
-	gt.fill_from = Vector2(0.5, 0.45)
-	gt.fill_to = Vector2(1.05, 1.05)
-	gt.width = 64
-	gt.height = 64
-	_vignette = TextureRect.new()
-	_vignette.texture = gt
-	_vignette.size = size
-	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
-	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vignette.visible = _backdrop_art.visible
-	backdrop.add_child(_vignette)
 	_frame = UI.panel(self, Rect2(Vector2.ZERO, size), UI.box(Color.TRANSPARENT, 8, 1, Pal.CARD_LINE))
 	_flat = Control.new()
 	_flat.size = size
@@ -147,16 +115,8 @@ static func _glass() -> Color:
 	return Color(GLASS, GLASS_ALPHA)
 
 
-## Whether the painted backdrop shows (A); else the drawn light (B).
-func has_backdrop_art() -> bool:
-	return _backdrop_art.visible
-
-
-## B, the drawn light: a cone of cold light from above onto the figure, and a shadow at its feet - only while the
-## art (A) is missing.
+## The drawn light: a cone of cold light from above onto the figure, and a shadow at its feet.
 func _draw_backdrop() -> void:
-	if _backdrop_art.visible:
-		return
 	var x := float(FIGURE_X)
 	var top := 0.0
 	var foot := float(FIGURE_H) - 6.0
