@@ -14,7 +14,7 @@ off?" Agreed with Matt (10 Oct): **the way out, on the run's clock**. Board: Run
 - **The 20 s run out with one of them standing**: a **time-out** exactly as the run's clock has it (the pack lost,
   two random pieces of worn kit with it, the runner alive).
 - **Down**: a death, as now.
-- The 20 s also run on the run's clock: if the clock has less than 20 s left, the way out is that long. So a run
+- The 20 s (growing with the tier, section 4) also run on the run's clock: if the clock has less than that left, the way out is that long. So a run
   that is nearly out of time is in the same place either way, and nothing about the way out buys time.
 - **After the clear, *Get out now* is free and instant**, as now. So are the leaves that happen after the clear:
   Hit and run, auto-run and "fill up then go". Stand and fight still holds the runner until the clear, so it
@@ -38,8 +38,8 @@ off?" Agreed with Matt (10 Oct): **the way out, on the run's clock**. Board: Run
   off a gang in 20 s. Read the balance gate's deaths and time-outs after it - an early leave now has a cost, so
   both may rise a little.
 
-## 4. Open for Matt
+## 4. Settled with Matt (10 Oct)
 
-- 20 s flat, or growing with the tier (as the run's clock does)?
-- Should the door gang carry the site's Radio words (a tougher site, a tougher door)? The concept says yes, since
-  it's the site's own gang.
+- The 20 s **grow with the tier**, as the run's clock does (`WAY_OUT_S` is the tier-1 figure; the balance pass
+  sets the growth).
+- The door gang **carries the site's Radio words**: a tougher site has a tougher door.

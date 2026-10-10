@@ -1,6 +1,6 @@
-# Faces, the top bar, glyph lanes and room bands (10 Oct 2026, concept - not built)
+# Faces, the top bar, glyph lanes, room bands, Stats and the runner backdrop (10 Oct 2026, concept - not built)
 
-Four UI items from Matt's 10 Oct playtest, agreed with him the same day. Each has a board on the design canvas.
+Six UI items from Matt's 10 Oct playtest, agreed with him the same day (5 and 6 waiting on his pick). Each has a board on the design canvas.
 
 ## 1. Faces beside the boxes (Run-P A)
 
@@ -65,3 +65,38 @@ the Radio, the Yard and Stats**.
   skyline.
 - The five jobs are in `tools/pixellab_rooms_manifest.json`, in the places style: 688×296, the site style image,
   the left third and the bottom quarter kept dark and low-detail. Run it as the places manifest was run.
+
+## 5. The Stats room reworked (Stats-R)
+
+From Matt: Stats is the one room that looks like a sample Godot project. Keep the information it has now.
+
+The problem today: eight cards of the same shape, all grey rows, so nothing leads the eye. The Kit card also
+repeats what the Runner room shows. Both options keep every figure, but each part gets the picture that suits it:
+
+- **Attack**: the damage as a chain showing where it comes from (guns → level → affixes and the tree → past →
+  the total, each bar growing from the last), the element split as one bar, and the notes as chips.
+- **Defence**: max HP and armour % as headlines, with an armour bar. The five resists are bars against the 75%
+  cap. A resist at 0% is red, with a red dot, when the sites here use that element.
+- **Finds**: loot quality as the headline; quantity, cash and notes as bars.
+- **The record**: four trophy tiles (best run's kills, most damage, best take, dearest find).
+- **Last run**: as now, with a green or red edge for back or lost, and the wound as a pill.
+- **The wall**: one plate per past runner, from `sim.past` and `sim.retired`. Each plate has the class face
+  (greyed if the runner was lost), the level, the runs and how they ended. Empty slots are dashed.
+- **The Kit card goes**. Its worth moves into the runner's facts.
+
+**A · the sheet**: the Rooms-B band on top, then three rows. Row one is the runner, attack and defence; attack
+and defence are the tall cards. Row two is finds, the record and the last run. The wall runs along the bottom.
+
+**B · the runner and the sheet**: no band. The runner's full figure (`art/body.png`) stands down the left on the
+Runner room's backdrop (section 6), with their facts underneath. The cards sit to the right, and the record and
+the wall share one card.
+
+## 6. A backdrop behind the runner (Kit-B)
+
+From Matt: a semi-transparent backdrop behind the Runner room's figure and gear slots.
+
+- **A · a painted place, the slots as glass**: a painted lock-up wall at about 40%, darker at the edges. The slot
+  fills let about a fifth of it through, so the figure and the kit read as one scene. The panel gets a hairline
+  frame. The art is `art/places/the_kit_room.png`, a job in `tools/pixellab_rooms_manifest.json`.
+- **B · drawn in engine**: a cone of cold light from above and a shadow at the feet (a gradient and two blurred
+  shapes). It needs no art and is A's fallback while the art file is missing.
