@@ -7,6 +7,7 @@ const Data := preload("res://scripts/sim/data.gd")
 
 const SIZE := 64
 const SVG := {
+	"up": '<path d="M12 20 V5 M6 11 L12 5 L18 11"/>',     # XP, the map's Wages (10 Oct)
 	# the Stats sheet's rows and trophies (10 Oct, Stats-R A)
 	"pack": '<path d="M7 7 V5 a5 3 0 0 1 10 0 V7 M5 8 H19 V20 H5 Z M9 13 H15"/>',
 	"runs": '<path d="M4 12 H17 M13 7 L18 12 L13 17 M20 5 V19"/>',
@@ -113,6 +114,21 @@ const PICK_GLYPH := {
 	"a_dog": "search", "good_nose": "quality", "guard_dog": "clock", "pedigree": "quality", "fetch": "dog", "second_dog": "search",
 	"tracker": "pen", "ratter": "poison", "pack": "search", "champion": "quality",
 }
+## The map's nodes (10 Oct, Lanes-G): each its own.
+const ATLAS_GLYPH := {
+	"picked_over": "gem", "deeper_pockets": "search", "quiet_roads": "clock", "after_dark": "quiet", "second_look": "quantity", "worn_in": "forever",
+	"easy_pickings": "quantity", "local_knowledge": "depth", "short_cuts": "pace", "open_ground": "half", "every_penny": "cash", "lie_of_the_land": "where",
+	"paid_in_notes": "pen", "two_of_everything": "half", "heads_up": "first", "full_strength": "skull", "bounties": "cash", "wages": "up",
+	"heavy_crews": "three", "their_own_kit": "dmg", "marked_men": "first", "long_memory": "forever", "head_start": "runs", "lorrys_route": "depth",
+	"good_reception": "loud", "clear_air": "quiet", "booster": "loud", "held_frequency": "forever", "long_wave": "spread", "tip_offs": "quality",
+	"strong_signal": "shock", "early_word": "clock", "relay": "spread", "bent": "dice", "whole_band": "stand",
+}
+
+
+static func of_atlas(key: String) -> String:
+	return ATLAS_GLYPH.get(key, "star")
+
+
 const BUILDING_GLYPH := {"bench": "wrench", "stash": "pack", "clinic": "med", "fence": "cash", "radio": "loud", "generator": "shock", "lookout": "search", "kennel": "dog"}
 
 

@@ -2667,6 +2667,17 @@ The reviewer's catches: the strip had grown to the rest of the room, its words a
 the keyword rules gave nine pairs one glyph and some odd ones; fixed. The fists check now drops the secondary too
 (a good secondary had taken the streets in time).
 
+**The map in the tree's glyphs (10 Oct, Lanes-G, docs/design/faces_and_bands.md 3).** The map's nodes as 52 px glyph
+tiles (`NodeGlyphs.ATLAS_GLYPH`, each its own) in their columns, two rows a lane; the shapes say what a node is, as
+on Training - a notable round, a keystone a diamond (turned 45°, its glyph upright), the rest square; the ranks as
+pips under a node of two ranks or more; taken gold, open white, locked dim, the picked one ringed. The words are the
+panel's and the tooltip's. *The smoke:* a glyph on every node, roundness following notable, the diamond following
+keystone, every node and its pips inside its lane, the keystone a diamond in the lane's last column. The reviewer's
+catches: the second row's pips hung below the lane; keystones and notables had lost their marks (round meant one
+rank); two glyphs read wrong (Open ground's crowd, Wages' star); fixed, with checks. The smoke on the way caught the
+way out's price running past the half-width button on an auto-run ("Get out · 0:20, a gang"): it now takes the
+longest form that fits.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

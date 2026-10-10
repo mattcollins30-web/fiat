@@ -306,7 +306,13 @@ func show_state(s) -> void:
 		UI.style_button(_button, low or not filling)
 	else:
 		# before the clear it says its price (10 Oct, the way out): the seconds and a last gang
-		_button.text = ("Get out · %s, a gang" if auto else "Get out now · %s and a last gang") % Fmt.mss(ceilf(sim.way_out_s(t, m)))
+		var wo: String = Fmt.mss(ceilf(sim.way_out_s(t, m)))
+		var room: float = ((INNER - 12) / 2.0 if auto else float(INNER)) - 28.0     # the half-width button on an auto-run (10 Oct)
+		_button.text = "Get out · %s" % wo
+		for o in ["Get out now · %s and a last gang" % wo, "Get out · %s, a gang" % wo]:
+			if UI.text_width(_button, o) <= room:
+				_button.text = o
+				break
 		UI.style_button(_button, low)
 	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
 	_button2.visible = auto or m["cleared"]

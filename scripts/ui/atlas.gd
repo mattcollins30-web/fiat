@@ -16,6 +16,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const W := Pal.GRID_W
 const PAD := 20
@@ -37,6 +38,14 @@ const SUM_CHIPS := 7               # the taken nodes' figures, so many and a cou
 const PANEL_Y := SUM_Y + SUM_H + 12
 const PIP := 10
 const PIP_GAP := 4
+# the nodes as glyph tiles (10 Oct, Lanes-G; Matt: the map "looks really bad now" beside Training): a 52 px tile in
+# its column, the ranks as pips under it, a one-rank node round, the lane's keystone bigger and alone; the words are
+# the panel's and the tooltip's
+const NODE := 52
+const NODE_BIG := 64
+const KEY_SIDE := 46                # a keystone's diamond: a 46 px square turned 45° (65 across), the Training tree's mark
+const ROW_Y := [2, 72]              # the two rows' tops in a 140 px lane: a tile and its pips, each row inside the lane
+const GLYPH := 30
 
 var sim
 var selected := ""                 # a passive's key, or ""
@@ -78,23 +87,46 @@ func _init(h: float) -> void:
 			var col: int = k / 2
 			var row: int = k % 2
 			var alone: bool = k == nodes.size() - 1 and row == 0
-			var rc := Rect2(TILES_X + col * (TILE_W + TILE_GAP), y + 7 + row * (TILE_H + ROW_GAP), TILE_W, (2 * TILE_H + ROW_GAP) if alone else TILE_H)
-			var t := {}
+			var keystone: bool = a.get("keystone", false)
+			var side: float = KEY_SIDE if keystone else NODE
+			var slot_x: float = TILES_X + col * (TILE_W + TILE_GAP)
+			var mid_y: float = (y + LANE_H / 2.0) if alone else (y + ROW_Y[row] + NODE / 2.0)
+			var rc := Rect2(slot_x + (TILE_W - side) / 2.0, mid_y - side / 2.0, side, side)
+			# the shapes say what a node is, as on Training: a notable round, a keystone a diamond, the rest square
+			var t := {"max": int(a["max"]), "round": a.get("notable", false) and not keystone, "keystone": keystone}
 			var b := Button.new()
 			b.position = rc.position
 			b.size = rc.size
+			b.tooltip_text = "%s: %s" % [a["name"], a["words"]]
 			b.pressed.connect(_pick.bind(key))
 			add_child(b)
 			t["button"] = b
-			var big: bool = a.get("notable", false) or a.get("keystone", false)
-			t["name"] = UI.label(b, Rect2(10, 3, rc.size.x - 20, 26), ("◆ " if a.get("keystone", false) else ("★ " if big else "")) + str(a["name"]), "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["words"] = UI.label(b, Rect2(10, rc.size.y - 28, rc.size.x - 20, 24), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["glyph"] = TextureRect.new()
+			t["glyph"].position = (rc.size - Vector2(GLYPH, GLYPH)) / 2.0
+			t["glyph"].size = Vector2(GLYPH, GLYPH)
+			t["glyph"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			t["glyph"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			t["glyph"].texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+			t["glyph"].texture = NodeGlyphs.texture(NodeGlyphs.of_atlas(key))
+			t["glyph"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(t["glyph"])
+			if keystone:
+				b.pivot_offset = rc.size / 2.0
+				b.rotation_degrees = 45.0
+				t["glyph"].pivot_offset = t["glyph"].size / 2.0
+				t["glyph"].rotation_degrees = -45.0              # upright inside the turned tile
+			# the words live in the panel: the labels stay, empty, for the tests' sake of a tile's shape
+			t["name"] = UI.label(b, Rect2(0, 0, 0, 0), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["words"] = UI.label(b, Rect2(0, 0, 0, 0), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+			t["name"].visible = false
+			t["words"].visible = false
+			# the ranks as pips under it, for a node of two ranks or more (one rank: its fill says it)
 			var pips: Array = []
-			for j in range(int(a["max"])):
-				var p := UI.panel(b, Rect2(rc.size.x - 10 - (int(a["max"]) - j) * (PIP + PIP_GAP) + PIP_GAP, 11, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE))
-				pips.append(p)
+			var n: int = int(a["max"]) if int(a["max"]) > 1 else 0
+			var px0: float = rc.position.x + (side - (n * PIP + (n - 1) * PIP_GAP)) / 2.0
+			for j in range(n):
+				pips.append(UI.panel(self, Rect2(px0 + j * (PIP + PIP_GAP), rc.position.y + side + 4, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE)))
 			t["pips"] = pips
-			t["name"].size.x = rc.size.x - 20 - int(a["max"]) * (PIP + PIP_GAP) - 6
 			_tiles[key] = t
 			_style(b, "open")
 	var sum := UI.panel(self, Rect2(0, SUM_Y, W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -121,24 +153,24 @@ static func _passive(key: String) -> Dictionary:
 	return Data.atlas_of(key)
 
 
-func _style(b: Button, look: String) -> void:
+## A node's look, the tree's (Tree-G): taken filled and gold-edged, its glyph gold; open white; locked dim; the
+## picked one ringed white. A one-rank node is round.
+func _style(b: Button, look: String, round := false, picked := false) -> void:
+	var r: int = int(b.size.x / 2.0) if round else 8
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		var sb: StyleBoxFlat
 		match look:
 			"taken":
-				sb = UI.box(Pal.SELECT, 8)
-				sb.border_width_left = 6
-				sb.border_color = Pal.ACCENT
+				sb = UI.box(Pal.SELECT, r, 2, Pal.ACCENT)
 			"locked":
-				sb = UI.box(Pal.PANEL, 8)
+				sb = UI.box(Color.TRANSPARENT, r, 1, Pal.CARD_LINE)
 			_:
-				sb = UI.box(Pal.CARD if state == "hover" else Pal.PANEL, 8, 1, Pal.CARD_LINE)
-		if look == "selected":
-			sb = UI.box(Pal.SELECT, 8)
-			sb.set_border_width_all(2)
-			sb.border_color = Pal.ACCENT
+				sb = UI.box(Pal.CARD if state == "hover" else Pal.PANEL, r, 1, Pal.TEXT_2)
+		if picked:
+			sb.set_border_width_all(3)
+			sb.border_color = Pal.TEXT
 		b.add_theme_stylebox_override(state, sb)
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 8, 2, Pal.TEXT))
+	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, r, 2, Pal.TEXT))
 
 
 # ------------------------------------------------------------------ showing
@@ -171,13 +203,13 @@ func show_state(s) -> void:
 		var t: Dictionary = _tiles[key]
 		var open: bool = sim.atlas_open(key)
 		var figs: Array = a["figures"]
-		var words: String = str(figs[rank]) if rank > 0 else str(a["words"])
-		UI.fit(t["words"], [words, words.get_slice(":", 0).get_slice(";", 0), words.get_slice(", ", 0), str(figs[maxi(rank, 1)]), str(a["sum"])])
 		for k in range(t["pips"].size()):
 			t["pips"][k].add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < rank else Color.TRANSPARENT, PIP / 2, 1, Pal.ACCENT if k < rank else Pal.CARD_LINE))
-		_style(t["button"], "selected" if key == selected else ("taken" if rank > 0 else ("open" if open else "locked")))
-		t["name"].add_theme_color_override("font_color", Pal.TEXT if (rank > 0 or open) else Pal.TEXT_3)
-		t["words"].add_theme_color_override("font_color", Pal.TEXT_2 if (rank > 0 or open) else Pal.TEXT_3)
+		var look: String = "taken" if rank > 0 else ("open" if open else "locked")
+		t["look"] = look
+		_style(t["button"], look, t["round"], key == selected)
+		t["glyph"].modulate = {"taken": Pal.ACCENT, "open": Pal.TEXT, "locked": Color(Pal.TEXT_3, 0.6)}[look]
+		t["button"].tooltip_text = "%s · rank %d of %d: %s" % [a["name"], rank, int(a["max"]), str(figs[rank]) if rank > 0 else str(a["words"])]
 		if rank > 0:
 			if items.size() < SUM_CHIPS:
 				items.append({"tag": str(a["sum"]), "forms": [str(figs[rank])], "colour": Pal.GOOD})
@@ -280,8 +312,6 @@ func text_nodes() -> Array:
 		out.append(_take)
 	for h in _heads:
 		out.append_array([h["name"], h["count"], h["gate"]])
-	for key in _tiles:
-		out.append_array([_tiles[key]["name"], _tiles[key]["words"]])
 	return out
 
 

@@ -7551,12 +7551,27 @@ func _map_screen_checks(main) -> void:
 		rects.append(r)
 		var pips: Array = at._tiles[key]["pips"]
 		var a: Dictionary = at._passive(key)
-		_check(pips.size() == int(a["max"]), "%s has %d pips for %d ranks" % [key, pips.size(), int(a["max"])])
+		_check(pips.size() == (int(a["max"]) if int(a["max"]) > 1 else 0), "%s has %d pips for %d ranks" % [key, pips.size(), int(a["max"])])
+		# the glyphs (10 Oct, Lanes-G): a glyph on every node, a one-rank node round, its pips under it and on no tile
+		_check(at._tiles[key]["glyph"].texture != null and NodeGlyphs.ATLAS_GLYPH.has(key), "the %s node has no glyph of its own" % key)
+		var sb0: StyleBoxFlat = b.get_theme_stylebox("normal")
+		var notable: bool = a.get("notable", false) and not a.get("keystone", false)
+		_check(notable == (sb0.corner_radius_top_left >= int(b.size.x / 2.0) - 1), "the %s node's roundness does not follow its being notable" % key)
+		_check(a.get("keystone", false) == is_equal_approx(b.rotation_degrees, 45.0), "the %s node's diamond does not follow its being the keystone" % key)
+		var lane_y: float = at.LANES_Y + int(a["column"]) * (at.LANE_H + at.LANE_GAP)
+		var reach: float = b.size.x * 0.21 if a.get("keystone", false) else 0.0       # a turned square reaches past its box
+		_check(r.position.y - reach >= lane_y and r.end.y + reach <= lane_y + at.LANE_H, "the %s node leaves its lane" % key)
+		for p in pips:
+			var pr := Rect2(p.position, p.size)
+			_check(pr.position.y >= r.end.y and pr.end.y <= lane_y + at.LANE_H and pr.position.x >= r.position.x - 1.0 and pr.end.x <= r.end.x + 1.0, "the %s node's pips are not under it in its lane" % key)
 		var lit := 0
 		for p in pips:
 			if (p.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Pal.ACCENT:
 				lit += 1
-		_check(lit == sim.atlas_rank(key), "%s shows %d pips lit for rank %d" % [key, lit, sim.atlas_rank(key)])
+		if pips.is_empty():
+			_check((sim.atlas_rank(key) > 0) == (at._tiles[key].get("look", "") == "taken"), "%s (one rank) does not read taken by its fill: rank %d, %s" % [key, sim.atlas_rank(key), at._tiles[key].get("look", "")])
+		else:
+			_check(lit == sim.atlas_rank(key), "%s shows %d pips lit for rank %d" % [key, lit, sim.atlas_rank(key)])
 	var taken := 0
 	for key in sim.atlas:
 		if sim.atlas_rank(key) > 0:
@@ -7572,7 +7587,7 @@ func _map_screen_checks(main) -> void:
 				last = a
 		_check((n == 12 or (c == 2 and n == 11)) and last.get("keystone", false), "lane %d is not its nodes ending in a keystone" % c)
 		var kb: Button = at._tiles[last["key"]]["button"]
-		_check(n % 2 == 0 or kb.size.y > at.TILE_H * 1.5, "a keystone alone in its column is not the lane's height")
+		_check(is_equal_approx(kb.rotation_degrees, 45.0), "the lane's keystone is not a diamond")
 		_check(kb.position.x > at.TILES_X + 4 * at.TILE_W, "the keystone is not in the lane's last column")
 	at._pick("lie_of_the_land")
 	_check((at._title.text.contains("opens at 14 points in the sites") or sim.atlas_open("lie_of_the_land")) and (at._take.disabled or sim.atlas_open("lie_of_the_land")), "a shut node's panel does not say what opens it: '%s'" % at._title.text)
