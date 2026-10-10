@@ -17,7 +17,8 @@ the rig and the pack down the right. Board: Runner-R on the design canvas.
   empty Primary is edged red ("nothing to fight with"). The fourth place down the left is what's worn: its worth
   at the Fence and how many slots are filled.
 - Drop onto a card fits it (its own slot only); press it to pick it; drag the picture off to the stash.
-- The rig and the pack under it, as before.
+- The rig under it. The pack's empty map went the same day (Matt: never usable, never full); its cells are on the
+  Backpack card and in the strip. The loadout took its room (648 tall).
 
 ## The figure: a brief for the redraw (art/body.png)
 

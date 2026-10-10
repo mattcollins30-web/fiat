@@ -3,9 +3,8 @@ extends Control
 ## pouches, a 64 px cell each (meds and rounds, a slot a pouch whatever
 ## the item's own footprint), drawn through item_cell.gd like everything
 ## else; it takes drops from the stash and gives drags back to it, and a
-## press on a pouch selects what's in it. The pack is its cells drawn empty
-## at half size: a map of the capacity a run packs into (the run screen's
-## grid is where that packing shows), nothing goes out in it here.
+## press on a pouch selects what's in it. The pack's empty map went (Matt, 10 Oct: never usable, never full - what
+## a run brings goes to the stash; the Backpack card and the strip say its cells).
 ## Signals: `picked(id)` for a pouch, `take(id)` and `leave(id)` for drops.
 
 signal picked(id: int)
@@ -25,22 +24,16 @@ const RIG_COLS := 8                # 8 × 64 + 7 × 6 = 554
 const RIG_MAX := Data.RIG_CAP      # the sim's cap, 24: three full rows
 const RIG_Y := LABEL_H + 2
 const ROW_W := RIG_COLS * (Pal.CELL + Pal.CELL_GAP) - Pal.CELL_GAP   # 554
-const PACK_MAX := 80               # the biggest pack (72) with Pack horse (+6) is 78
-const PACK_SIZES := [64, 48, 40, 32, 24, 16, 12, 10]   # the biggest of these that fits the room
-## A full rig of wide kits wraps its rows, and a deep pack with it ran out of the room (10 Oct, found reviewing
-## Runner-R): the rig's pouches shrink a step at a time until the pack fits under them at one of its sizes.
-const RIG_SIZES := [[64, 6], [52, 5], [44, 4], [36, 4], [28, 3]]
-const PACK_READABLE := 16
-const BLOCK_GAP := 8
-const HEIGHT := 296                # what the Lock-up has under the body
+## Two rows of full-size pouches fit; a bigger rig, or a full one of wide kits that wraps, takes smaller pouches a
+## step at a time until its rows fit (10 Oct: the loadout took the pack's room).
+const RIG_SIZES := [[64, 6], [52, 5], [44, 4], [36, 4], [28, 3], [22, 2]]
+const HEIGHT := LABEL_H + 2 + 3 * 44 + 2 * 4                  # 164: the label and two rows of full pouches, or three at 44 (a 24-pouch rig)
 
 var sim
 var selected := -1
 var _rig_label: Label
-var _pack_label: Label
 var _rig_outlines: Array = []
 var _rig_cells: Array = []         # ItemCells, one a pouch
-var _pack_outlines: Array = []
 var _rig_zone: Control             # the drop target over the rig's rows
 var _press_at := Vector2.ZERO
 var _press_cell := -1
@@ -51,13 +44,6 @@ var _rg := Pal.CELL_GAP
 
 func _rig_at(k: int) -> Vector2:
 	return Vector2((k % RIG_COLS) * (_rc + _rg), (k / RIG_COLS) * (_rc + _rg))
-
-
-## The rows a pack of `pcap` cells needs at cell `c` (its gap with it) across the width, and their height.
-static func _pack_h(pcap: int, c: int) -> float:
-	var g: int = 6 if c >= 48 else (4 if c >= 32 else 2)
-	var n: int = maxi(1, (WIDTH + g) / (c + g))
-	return ceili(float(pcap) / n) * (c + g) - g
 
 
 func _init() -> void:
@@ -83,12 +69,6 @@ func _init() -> void:
 		c.set_drag_forwarding(Callable(), _can_drop, _drop)
 		_rig_zone.add_child(c)
 		_rig_cells.append(c)
-	_pack_label = UI.label(self, Rect2(0, 0, WIDTH, LABEL_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for k in range(PACK_MAX):
-		var o := UI.panel(self, Rect2(0, 0, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
-		o.visible = false
-		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_pack_outlines.append(o)
 
 
 # ------------------------------------------------------------------ showing
@@ -116,21 +96,12 @@ func show_state(s) -> void:
 		pos += w
 		last = pos
 	var rig_rows := maxi(1, ceili(float(maxi(cap, last)) / RIG_COLS))   # a smaller rig fitted keeps what's carried showing
-	var pcap: int = mini(sim.capacity(), PACK_MAX)
-	# the biggest pouches that leave the pack readable (16 px cells or more); failing that, the biggest that leave it
-	# room at all (the reviewer: keeping 64 px pouches drew a deep pack at 10 px)
 	_rc = RIG_SIZES.back()[0]
 	_rg = RIG_SIZES.back()[1]
-	var found := false
-	for pack_min in [PACK_READABLE, PACK_SIZES.back()]:
-		for rs in RIG_SIZES:
-			var rig_h: float = rig_rows * (rs[0] + rs[1]) - rs[1]
-			if RIG_Y + rig_h + BLOCK_GAP + LABEL_H + 2 + _pack_h(pcap, pack_min) <= HEIGHT:
-				_rc = rs[0]
-				_rg = rs[1]
-				found = true
-				break
-		if found:
+	for rs in RIG_SIZES:
+		if RIG_Y + rig_rows * (rs[0] + rs[1]) - rs[1] <= HEIGHT:
+			_rc = rs[0]
+			_rg = rs[1]
 			break
 	for k in range(RIG_MAX):
 		_rig_outlines[k].visible = k < cap
@@ -148,29 +119,6 @@ func show_state(s) -> void:
 			c.id = -1
 			c.visible = false
 	_rig_zone.size = Vector2(RIG_COLS * (_rc + _rg) - _rg, rig_rows * (_rc + _rg) - _rg)
-	var pack_label_y: float = RIG_Y + _rig_zone.size.y + BLOCK_GAP
-	_pack_label.position.y = pack_label_y
-	var pack_y: float = pack_label_y + LABEL_H + 2
-	var avail: float = HEIGHT - pack_y
-	# the pack gets the rest at the biggest cell that fits its capacity in it
-	var cell := PACK_SIZES.back() as int
-	var gap := 2
-	var cols := 1
-	for c in PACK_SIZES:
-		var g: int = 6 if c >= 48 else (4 if c >= 32 else 2)
-		if _pack_h(pcap, c) <= avail:
-			cell = c
-			gap = g
-			cols = maxi(1, (WIDTH + g) / (c + g))
-			break
-		cols = maxi(1, (WIDTH + g) / (c + g))
-	_pack_label.text = "Pack %d cells" % pcap
-	for k in range(_pack_outlines.size()):
-		var o: Panel = _pack_outlines[k]
-		o.visible = k < pcap
-		o.position = Vector2((k % cols) * (cell + gap), pack_y + (k / cols) * (cell + gap))
-		o.size = Vector2(cell, cell)
-		o.add_theme_stylebox_override("panel", UI.box(Color.TRANSPARENT, 6 if cell >= 32 else 3, 1, Pal.CARD_LINE))
 
 
 ## For the tests: the rig's pouch size now.
@@ -223,22 +171,18 @@ func _pick(k: int) -> void:
 		picked.emit(id)
 
 
-## For the tests: the pack's cell size and whether every outline sits inside this control.
-func pack_cell() -> float:
-	return _pack_outlines[0].size.x
-
-
-func pack_inside() -> bool:
+## For the tests: every pouch inside this control.
+func rig_inside() -> bool:
 	var me := Rect2(Vector2.ZERO, size)
-	for o in _pack_outlines:
-		if o.visible and not me.encloses(Rect2(o.position, o.size)):
+	for c in _rig_cells:
+		if c.visible and not me.encloses(Rect2(_rig_zone.position + c.position, c.size)):
 			return false
-	return true
+	return me.encloses(Rect2(_rig_zone.position, _rig_zone.size))
 
 
 ## For the tests: the labels with text.
 func text_nodes() -> Array:
-	var out: Array = [_rig_label, _pack_label]
+	var out: Array = [_rig_label]
 	for c in _rig_cells:
 		if c.visible:
 			out.append_array(c.text_nodes())

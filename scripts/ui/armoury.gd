@@ -28,8 +28,8 @@ const BODY_W := Body.WIDTH                                    # 608
 ## The runner strip over the loadout (10 Oct, Runner-R A): the face, the level, HP with its bar, the damage, the
 ## armour and the pace - who this is, before what they wear.
 const STRIP_H := 88
-const BODY_Y := STRIP_H + 8                                   # 96: the loadout (516), then the rig and the pack
-const CONTAINERS_Y := BODY_Y + Body.HEIGHT + 8                # 620, to 916
+const BODY_Y := STRIP_H + 8                                   # 96: the loadout (654), then the rig
+const CONTAINERS_Y := BODY_Y + Body.HEIGHT + 8                # 758: the rig under the loadout, to 916 (the pack's map went)
 const GAP := 24
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 904

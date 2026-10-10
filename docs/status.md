@@ -2784,6 +2784,13 @@ item's art fills it; the slot's name and the figure sit over the art with a shad
 *The smoke:* the art filling its card, no picture under 36 px tall, the captions drawn above it (the button check
 lets a caption tagged over the art be).
 
+**The pack's map goes; the loadout grows (10 Oct).** Matt: the pack's empty cells were never usable and never full
+(a run's finds go to the stash) - remove them and give the room to the cards and the rig. The Lock-up's column is
+the strip, the loadout (516 → 648: every card taller, the art bigger) and the rig (two rows of full pouches, three at
+44 for a 24-pouch rig, smaller for a wrap). A shrunk pouch's count goes small ("2k" in the smallest). The pack's
+size stays on the Backpack card and the strip. *The smoke:* the pack's map gone; the rig inside its room in every
+state, the worst wrap (four-pouch kits among singles, rounds in the thousands) with its words inside its pouches.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

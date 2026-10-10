@@ -34,7 +34,7 @@ const ART_INSET := 3                           # the art over the whole card, in
 const LEFT := ["Primary", "Secondary", "Charm"]               # the fourth place down the left is what's worn
 const RIGHT := ["Helmet", "Armour", "Rig", "Backpack"]
 const WIDTH := Inventory.SIDE_W    # 608
-const HEIGHT := 2 * PAD + 4 * CARD_H + 3 * CARD_GAP          # 516 (the column; each card its own height, below)
+const HEIGHT := 648                            # the column (the pack's map went, 10 Oct: 516 → 648); each card its own height, below
 const GLASS := Pal.PANEL
 const FIGURE := Color(Pal.CARD_LINE, 0.7)      # the runner, flat, until art/body.png is made
 const FIGURE_X := PAD + LEFT_W + (WIDTH - 2 * PAD - LEFT_W - RIGHT_W) / 2     # between the columns: 262..442
@@ -72,8 +72,8 @@ var _shown := ""
 ## its gear's shape - an armour or a pack tall, a rig short, a helmet near square.
 const LEFT_W := 246
 const RIGHT_W := 150
-const HEIGHTS := {"Primary": 104, "Secondary": 104, "Charm": 120, "Helmet": 112, "Armour": 160, "Rig": 90, "Backpack": 114}
-const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 104 - 104 - 120     # what the left column leaves: 148
+const HEIGHTS := {"Primary": 150, "Secondary": 140, "Charm": 170, "Helmet": 140, "Armour": 204, "Rig": 118, "Backpack": 146}
+const WORN_H := HEIGHT - 2 * PAD - 3 * CARD_GAP - 150 - 140 - 170     # what the left column leaves: 148
 
 
 static func card_rect(slot: String) -> Rect2:

@@ -73,8 +73,16 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		if Items.is_ammo(it) or (Items.is_socketable(it) and int(it.get("count", 1)) > 1):
 			_corner.text = ("%d" % int(it["rounds"])) if Items.is_ammo(it) else ("×%d" % int(it["count"]))
-			_corner.position = Vector2(0, size.y - 20)
-			_corner.size = Vector2(size.x - 4, 18)
+			var small: bool = size.y < 44.0               # a shrunk pouch (a full rig): the count smaller, "1.2k" past 999
+			var tiny: bool = size.x < 34.0                # the smallest pouches: 9 px, whole thousands
+			_corner.add_theme_font_size_override("font_size", (9 if tiny else 11) if small else Pal.CELL_TEXT)
+			var n: int = int(it["rounds"]) if Items.is_ammo(it) else int(it["count"])
+			if small and n >= 1000:
+				_corner.text = "%.1fk" % (n / 1000.0) if (n < 10000 and not tiny) else "%dk" % (n / 1000)
+			# a small pouch: the count laid over the whole cell, bottom right (a label won't go under its font's line height)
+			_corner.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM if small else VERTICAL_ALIGNMENT_CENTER
+			_corner.position = Vector2(0, 0 if small else size.y - 20)
+			_corner.size = Vector2(size.x - 2, size.y if small else 18)
 			_corner.visible = true
 		return
 	_art.visible = false
@@ -99,8 +107,8 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 	if size.x < 44.0 or size.y < 44.0:     # a small pouch either way (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
 		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
 		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
-		fs = 11
-		line_h = 14
+		fs = 11 if size.x >= 26.0 else 8          # the smallest pouch (22 px): the short word at 8
+		line_h = 14 if size.x >= 26.0 else 10
 	var y := (size.y - words.size() * line_h) / 2.0
 	for i in range(words.size()):
 		var l := _lines[i]

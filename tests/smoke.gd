@@ -675,8 +675,8 @@ func _worst_case(main) -> void:
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, "%s (worst)" % r)
-	# a full rig that wraps its rows (seven bandages, then a two-pouch kit that can't cross the row's end) under the
-	# deepest pack: the pouches shrink until the pack fits in the room (10 Oct: the pack ran out of the room)
+	# a full rig that wraps its rows (seven bandages, then a two-pouch kit that can't cross the row's end): the
+	# pouches shrink until its rows fit under the loadout (10 Oct)
 	var rig_hold: Array = sim.rig.duplicate(true)
 	var pack_hold = sim.equipped["Backpack"]
 	var rig_slot_hold = sim.equipped["Rig"]
@@ -698,15 +698,41 @@ func _worst_case(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	var ct = main._armoury._containers
-	_check(ct.pack_inside() and main._armoury.CONTAINERS_Y + ct.size.y <= Pal.ROOM_H, "a wrapped full rig under the deepest pack (%d cells) pushes the pack out: pouches %.0f px, pack %.0f px" % [sim.capacity(), ct.rig_cell(), ct.pack_cell()])
+	_check(ct.rig_inside() and main._armoury.CONTAINERS_Y + ct.size.y <= Pal.ROOM_H, "a wrapped full rig runs out of its room: pouches %.0f px" % ct.rig_cell())
 	_check(ct._rig_zone.size.y >= 3 * ct.rig_cell(), "the wrapped rig is not the crowded case: %.0f px of rows" % ct._rig_zone.size.y)     # three rows or more: the case that ran out
-	_check(ct.pack_cell() >= ct.PACK_READABLE or ct.rig_cell() <= ct.RIG_SIZES.back()[0], "the deep pack is drawn at %.0f px while the pouches stay %.0f" % [ct.pack_cell(), ct.rig_cell()])
+	_check(not ct.has_method("pack_inside") and not ct.has_method("pack_cell"), "the Lock-up still draws the pack's map (Matt, 10 Oct: removed)")
 	for rc in ct._rig_cells:
 		if rc.visible:
 			for l in rc.text_nodes():
 				if l.visible and l.text != "":
 					_check(Rect2(Vector2.ZERO, rc.size).grow(0.5).encloses(Rect2(l.position, l.size)), "a pouch's words spill out of its %s cell: '%s'" % [str(rc.size), l.text])
 	_check_fit(main, "Lock-up (a wrapped rig, the deepest pack)")
+	# the worst wrap: four-pouch kits among singles, and rounds in the thousands - the smallest pouches, their words
+	# and counts inside them (the reviewer, 10 Oct)
+	sim.rig = []
+	var more := true
+	while more:
+		more = false
+		for i in range(5):
+			if sim.rig_room(1):
+				sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+				more = true
+		var kit: Dictionary = sim._plain(Data.MEDICAL, "Surgeon's kit")
+		if sim.rig_room(Items.size(kit)):
+			sim.rig.append(kit)
+			more = true
+	var rounds: Dictionary = sim._plain(Data.AMMO, "Nails")
+	rounds["rounds"] = 2500
+	if not sim.rig.is_empty():
+		sim.rig[0] = rounds
+	main.refresh()
+	_check(ct.rig_inside(), "the worst wrap runs out of its room at %.0f px pouches" % ct.rig_cell())
+	for rc in ct._rig_cells:
+		if rc.visible:
+			for l in rc.text_nodes():
+				if l.visible and l.text != "":
+					_check(UI.text_width(l, l.text) <= l.size.x + 0.5 and Rect2(Vector2.ZERO, rc.size).grow(0.5).encloses(Rect2(l.position, l.size)), "a %s pouch's '%s' doesn't fit: %.0f px of text in %s at %s" % [str(rc.size), l.text, UI.text_width(l, l.text), str(l.size), str(l.position)])
+	_check_fit(main, "Lock-up (the worst wrap)")
 	sim.rig = rig_hold
 	sim.equipped["Backpack"] = pack_hold
 	sim.equipped["Rig"] = rig_slot_hold
@@ -5264,7 +5290,7 @@ func _check_fit(main, where: String) -> void:
 	elif main.room == main.ARMOURY:
 		bad += _check_nodes(main._armoury.text_nodes(), main._armoury.line_pairs() if main._armoury.has_method("line_pairs") else [], where + " screen")
 		_check_grid(main._armoury._inv, main.sim.stash_cap(), where + " stash grid")
-		_check(main._armoury._containers.pack_inside(), "%s: the pack map (%d cells at %.0f px) runs out of its room" % [where, main.sim.capacity(), main._armoury._containers.pack_cell()])
+		_check(main._armoury._containers.rig_inside(), "%s: the rig (%.0f px pouches) runs out of its room" % [where, main._armoury._containers.rig_cell()])
 		# the body's boxes: inside the panel, none overlapping, and the item cell inside its box
 		var body = main._armoury._body
 		for a in Data.SLOTS:
