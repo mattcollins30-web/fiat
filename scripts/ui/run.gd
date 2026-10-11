@@ -345,6 +345,19 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 		d["segments"].append(seg)
 	d["bar_text"] = UI.label(track, Rect2(0, 0, w, BAR_H), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	track.move_child(d["bar_text"], -1)
+	# the skull (Matt, 11 Oct): what the dots still have to take off covers what's left - finished, the shooting or
+	# not; on your own bar, the bleed will have you unless something heals it. Shown only, nothing changes
+	var skull := TextureRect.new()
+	skull.texture = NodeGlyphs.texture("skull")
+	skull.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	skull.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	skull.position = Vector2(3, 1)
+	skull.size = Vector2(BAR_H - 2, BAR_H - 2)
+	skull.modulate = Color(Pal.BG, 0.95)        # dark on the fill and the dots' colours, which it always sits over
+	skull.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skull.visible = false
+	track.add_child(skull)
+	d["skull"] = skull
 
 
 func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0) -> void:
@@ -352,6 +365,17 @@ func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dicti
 	d["fill"].size.x = roundf(float(d.get("w", INNER)) * clampf(fill, 0.0, 1.0))
 	d["bar_text"].text = text
 	_bar_segments(d, pending, of)
+	d["skull"].visible = dots_finish(fill * of, pending)
+
+
+## Whether the dots still to tick off cover the HP that's left (and there's some left): the bar's skull.
+static func dots_finish(left: float, pending: Dictionary) -> bool:
+	if left <= 0.0:
+		return false
+	var total := 0.0
+	for ty in pending:
+		total += maxf(0.0, float(pending[ty]))
+	return total >= left
 
 
 ## The dots' pools as the end of the fill: `pending` is {type: HP still to tick off}, `of` the bar's whole in HP.

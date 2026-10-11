@@ -2916,6 +2916,14 @@ Van's Spare's full-damage secondary), so the margin only kept it past its time; 
 body pieces. A worn unique bag or charm still never reads as beaten (their score never sees the rule). *The smoke:*
 a pistol a few percent better on the runner's damage reads better than a worn Van's Spare.
 
+**The bar's skull (11 Oct).** Matt asked whether a bar whose last stretch is all damage-over-time should finish
+the enemy; no execute (a hidden buff to every dot build, and the carry nodes are the answer to the waste), but a
+mark: a dark skull at the bar's left when what the dots still have to take off covers the HP left - on their bar,
+and on yours (the bleed will have you unless something heals it). Shown only. The rest went to the ideas list: a
+probe of how much dot damage the kills throw away, by build, then decide between keeping it, half carrying by
+default, or an execute. *The smoke:* the skull with 110 of dots over 100 HP and not with 40, on yours with a bleed
+past your HP and gone with none, and the fight unchanged.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

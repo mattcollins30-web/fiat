@@ -18,3 +18,8 @@ Later, if they still look right:
 
 - **Saved loadouts per past**, swapped with the class.
 - **A weekly broadcast**: one site modifier the radio announces each week, for a reason to go back to old sites.
+
+- **Dots and the kill** (11 Oct): a kill throws away what the dots still had to tick (bar the carry nodes). The skull
+  on the bar shows when they'd finish it (built). Next, after the playtest: a bot probe of the dot damage lost on
+  kills, by build - small, leave it; large for poison and bleed, half carries by default and the carry nodes take it
+  to all; an execute only if both fall short.

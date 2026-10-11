@@ -4167,6 +4167,7 @@ func _idle_checks(main) -> void:
 	_came_back_checks(main)
 	_rig_checks(main)
 	_build_rounds_checks(main)
+	_skull_checks(main)
 
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
@@ -9721,3 +9722,37 @@ func _build_rounds_checks(main) -> void:
 	main._armoury.selected = {}
 	main.refresh()
 	print("build rounds ok: the build's element first, a worn unique gun judged like any other, no rounds said")
+
+
+## The bar's skull (11 Oct, Matt): shown when what the dots still have to take off covers the HP left, on their bar
+## and on yours; gone when it doesn't. Shown only - the fight goes on as it would.
+func _skull_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	main.show_room(main.MISSIONS)
+	m["target_hp"] = 100.0
+	m["dots"] = {"poison": 40.0}
+	main.refresh()
+	var run_ui = main._run
+	_check(not run_ui._fight["skull"].visible, "the skull shows with the dots short of the HP left")
+	m["dots"] = {"poison": 70.0, "fire": 40.0}
+	main.refresh()
+	_check(run_ui._fight["skull"].visible, "no skull with the dots covering the HP left (110 against 100)")
+	var hp_before: float = m["target_hp"]
+	_check(is_equal_approx(hp_before, 100.0), "the skull changed the fight")
+	m["my_dots"] = {"bleed": sim.hp + 10.0}
+	main.refresh()
+	_check(run_ui._runner["skull"].visible, "no skull on your own bar with a bleed that will have you")
+	m["my_dots"] = {}
+	main.refresh()
+	_check(not run_ui._runner["skull"].visible, "the skull stayed on your bar with nothing on you")
+	_check(run_ui.dots_finish(50.0, {"bleed": 50.0}) and not run_ui.dots_finish(0.0, {"bleed": 5.0}) and not run_ui.dots_finish(50.0, {}), "dots_finish reads wrong")
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("skull ok: on their bar and yours when the dots cover what's left, gone when they don't")
