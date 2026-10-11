@@ -260,8 +260,14 @@ func _show_panel() -> void:
 				var v: Array = PickPanel.verdict_for(sim, it)
 				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
 			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
+			# the foot's hint: no rounds for it (the try-on counts it fed, 11 Oct), no room for what comes off, or both
+			var hints: Array = []
+			if Items.is_gun(it) and not sim.has_rounds(it):
+				hints.append("No rounds for it in the rig")
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
-				_pick.set_hint("No room in the stash for what comes off")
+				hints.append("No room in the stash for what comes off")
+			if not hints.is_empty():
+				_pick.set_hint_options(_hint_forms(hints))
 			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": false})
 		else:
@@ -477,3 +483,14 @@ func text_nodes() -> Array:
 	out.append_array(_inv.text_nodes())
 	return out
 
+
+
+## The foot's hints in forms long to short: alone, no rounds says why it matters; together, both on one line; then
+## each cut to its first words.
+static func _hint_forms(hints: Array) -> Array:
+	var out: Array = []
+	if hints.size() == 1 and str(hints[0]).begins_with("No rounds"):
+		out.append(str(hints[0]) + ": it won't fire until it has some")
+	out.append(" · ".join(hints))
+	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
+	return out

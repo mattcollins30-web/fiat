@@ -2138,19 +2138,44 @@ func grade_stat(gun, stat: String) -> float:
 
 
 ## The stack a gun fires from (11 Oct, Matt: Depot rounds put in the rig did nothing, the first stack of the type
-## fed whatever was better): the best grade of its type with rounds left - by the grade's worth (Rifle 40, Match
-## 100, Salted 150, Depot 170) - and the first of those in the rig on a tie. {} when it's dry.
+## fed whatever was better): the best grade of its type with rounds left. A grade carrying an element the runner
+## has trained into (a node in that element's tree) comes first - a fire build fires its incendiaries before Depot
+## (Matt, the same day) - then by the grade's worth (Rifle 40, Match 100, Salted 150, Depot 170), the first in the
+## rig on a tie. {} when it's dry.
 func feed_stack(gun: Dictionary) -> Dictionary:
 	var t := Items.ammo_type(gun)
+	# the element only counts for the primary: a secondary's grade is damage only (the conversion reads the primary's)
+	var els: Array = build_elements() if is_same(gun, equipped["Primary"]) else []
 	var best := {}
 	var bv := -1
 	for it in rig:
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
-			var v: int = int(Items.base_of(it).get("value", 0))
+			var b: Dictionary = Items.base_of(it)
+			var v: int = int(b.get("value", 0))
+			for e in els:
+				if float(b.get("conv_%s_pct" % e, 0)) > 0.0:
+					v += 100000                  # the build's own element before any worth
 			if v > bv:
 				best = it
 				bv = v
 	return best
+
+
+## The elements the runner is built for: each element whose tree has a node trained. Read again when the tree changes
+## (a hash of the node list, as the trees' own lookups key theirs every tick).
+var _els_key := -1
+var _els: Array = []
+func build_elements() -> Array:
+	var k: int = hash(tree)              # the nodes themselves: a respec retrained to the same count is another build (the review)
+	if k != _els_key:
+		_els_key = k
+		_els = []
+		for et in Data.ELEMENT_TREES:
+			for id in tree:
+				if str(id).begins_with(str(et["name"]) + "/"):
+					_els.append(et["element"])
+					break
+	return _els
 
 
 ## Rounds fired this tick come off the first stack of the type; an empty
@@ -5456,8 +5481,20 @@ func compare(it: Dictionary) -> int:
 	if _cmp_cache.has(ih):
 		return _cmp_cache[ih]
 	var c := _compare(it, slot)
+	# over a worn unique (Matt, 11 Oct): its rule may be worth more than the figures show, so better only by a clear
+	# margin on the slot's figure - an early unique gets outgrown, a near-match never reads as the upgrade
+	if c == 1 and equipped[slot].has("unique"):
+		# a gun's or a body piece's figure is the runner's own, rule and all where it counts: a clear margin. A bag's or
+		# a charm's is the piece's score alone, which never sees the rule (the Van Keys' 12 against a plain charm's 30):
+		# never better outright, the player's to judge
+		var kind: String = Data.SLOT_SCORE.get(slot, "")
+		if not (kind == "dps" or kind == "armour") or upgrade_gain(it) < UNIQUE_MARGIN:
+			c = 0
 	_cmp_cache[ih] = c
 	return c
+
+
+const UNIQUE_MARGIN := 0.25          # a quarter better on the slot's figure before anything reads as better than a unique
 
 
 var _cmp_key := 0
@@ -6339,6 +6376,7 @@ func _state() -> Dictionary:
 
 
 func load_dict(d: Dictionary) -> void:
+	_els_key = -1                         # the build's elements read again from the loaded tree
 	d = d.duplicate(true)                # the save's items stay the save's; the live ones are copies
 	_rename_old(d)                       # a save from before the caps pass (8 Oct) carries the old names
 	cash = float(d.get("cash", Data.STARTING_CASH))

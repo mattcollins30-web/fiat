@@ -4166,6 +4166,7 @@ func _idle_checks(main) -> void:
 	_upgrade_arrow_checks(main)
 	_came_back_checks(main)
 	_rig_checks(main)
+	_build_rounds_checks(main)
 
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
@@ -9618,3 +9619,107 @@ func _rig_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("rig ok: the best grade first and the next after, into the pack and its room, home to the rig, the med's hover, its heal and the log")
+
+
+## Three calls of Matt's (11 Oct): a build's own element's rounds fire before a dearer grade; nothing reads as better
+## than a worn unique without a clear margin; a gun with no rounds in the rig says so under its verdict.
+func _build_rounds_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
+	sim.rig.clear()
+	var depot: Dictionary = sim._plain(Data.AMMO, "Depot rounds")
+	var salted: Dictionary = sim._plain(Data.AMMO, "Salted rounds")
+	sim.rig.append(depot)
+	sim.rig.append(salted)
+	sim.tree = []
+	_check(sim.feed_stack(sim.equipped["Primary"]) == depot, "with no element trained the dearest grade does not fire first")
+	sim.tree.append("The cold/0")
+	_check(sim.build_elements().has("frost") and sim.feed_stack(sim.equipped["Primary"]) == salted, "a frost build does not fire its salted rounds before Depot: %s" % str(sim.build_elements()))
+	sim.tree = []
+	_check(sim.feed_stack(sim.equipped["Primary"]) == depot, "the frost rounds still fire first with the tree gone")
+	# a respec to the same count is another build (the review): fire then frost, one node each
+	sim.tree = ["Petrol/0"]
+	sim.feed_stack(sim.equipped["Primary"])
+	sim.tree = ["The cold/0"]
+	_check(sim.feed_stack(sim.equipped["Primary"]) == salted, "a respec from fire to frost at the same count left the fire build's rounds order")
+	# the secondary's grade is damage only: no element first for it. A fire build with SMGs both hands: the primary
+	# fires the incendiary rounds first, the machine pistol behind it the belt links (dearer, damage only)
+	sim.tree = ["Petrol/0"]
+	sim.equipped["Primary"] = sim._plain("Primary", "Workshop SMG")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Machine pistol")
+	var belt: Dictionary = sim._plain(Data.AMMO, "Belt links")
+	var fire: Dictionary = sim._plain(Data.AMMO, "Incendiary SMG rounds")
+	sim.rig.append(belt)
+	sim.rig.append(fire)
+	_check(sim.feed_stack(sim.equipped["Primary"]) == fire and sim.feed_stack(sim.equipped["Secondary"]) == belt, "the primary and secondary don't each fire their own best: %s / %s" % [sim.feed_stack(sim.equipped["Primary"]).get("base", ""), sim.feed_stack(sim.equipped["Secondary"]).get("base", "")])
+	sim.equipped["Secondary"] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
+	sim.tree = []
+	# a worn unique: better only by a clear margin
+	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
+	sim.equipped["Secondary"] = vans
+	var pct := 0.0
+	var near: Dictionary = {}
+	while pct < 400.0:
+		var mp: Dictionary = sim._plain("Secondary", "Machine pistol")
+		mp["affixes"] = [{"stat": "damage_pct", "value": pct, "tier": 3}]
+		var g: float = sim.upgrade_gain(mp)
+		if near.is_empty() and g > 0.02 and g < sim.UNIQUE_MARGIN:
+			near = mp
+		if g >= sim.UNIQUE_MARGIN + 0.05:
+			_check(sim.compare(mp) == 1, "a piece %.0f%% better than a worn unique does not read better" % (g * 100.0))
+			break
+		pct += 5.0
+	if not near.is_empty():
+		_check(sim.compare(near) == 0 and not sim.is_upgrade(near), "a piece only %.0f%% better reads as an upgrade over a worn unique" % (sim.upgrade_gain(near) * 100.0))
+	# a gun with no rounds in the rig says so
+	sim.equipped["Secondary"] = null
+	sim.rig.clear()
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	var smg: Dictionary = sim._plain("Primary", "Workshop SMG")
+	sim.stash_put(smg)
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": smg["id"]}
+	main._armoury._shown = ""
+	main.refresh()
+	_check(main._armoury._pick._words.text.begins_with("No rounds for it"), "a gun with no rounds in the rig does not say so: '%s'" % main._armoury._pick._words.text)
+	# and over an empty slot, where it matters most
+	sim.equipped["Primary"] = null
+	main._armoury._shown = ""
+	main.refresh()
+	_check(main._armoury._pick._words.text.begins_with("No rounds for it"), "a gun for an empty slot with no rounds does not say so: '%s'" % main._armoury._pick._words.text)
+	_check_fit(main, "Lock-up (a gun with no rounds, nothing fitted)")
+	# both hints at once, on the run screen where the pick has Equip and Ditch beside it
+	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
+	sim.rig = [sim._plain(Data.AMMO, "Rifle rounds")]       # rounds for the rifle, none for the SMG
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["target_hp"] = 1e9
+	var big: Dictionary = sim._plain("Primary", "Workshop SMG")
+	sim.mission["found"] = [big]
+	while sim.pack_used(sim.mission) < sim.capacity():
+		sim.mission["found"].append(sim._plain(Data.MEDICAL, "Bandage"))
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	main._run._inv._pick(main._run._inv.cell_of(big["id"]))
+	main.refresh()
+	var hw: String = main._run._pick._words.text
+	_check(hw.begins_with("No rounds") and hw.contains("No room"), "the run's pick does not carry both hints: '%s'" % hw)
+	_check_fit(main, "Run (no rounds and no room)")
+	sim.extract_now()
+	# a charm over a worn unique charm is never the upgrade (its rule is beyond the charm's score)
+	var keys: Dictionary = Items.roll_unique(sim._unique_named("The Van Keys"), sim.rng)
+	sim.equipped["Charm"] = keys
+	var plain_charm: Dictionary = sim._plain("Charm", "Dog tag")
+	plain_charm["rarity"] = 3
+	plain_charm["affixes"] = [{"stat": "loot_pct", "value": 60.0, "tier": 5}]
+	_check(sim.compare(plain_charm) != 1, "a plain charm reads better than the worn Van Keys")
+	_check_fit(main, "Lock-up (a gun with no rounds)")
+	sim.load_dict(saved)
+	main._armoury.selected = {}
+	main.refresh()
+	print("build rounds ok: the build's element first, a worn unique's margin, no rounds said")

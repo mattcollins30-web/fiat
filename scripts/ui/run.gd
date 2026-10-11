@@ -460,8 +460,14 @@ func _show_pick(m: Dictionary) -> void:
 		else:
 			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
 		var can: bool = sim.can_equip_from_pack(it["id"])
+		# the foot's hint: no rounds for it (the try-on counts it fed, 11 Oct), no room for what comes off, or both
+		var hints: Array = []
+		if Items.is_gun(it) and not sim.has_rounds(it):
+			hints.append("No rounds for it in the rig")
 		if not can and fitted != null:
-			_pick.set_hint("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
+			hints.append("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
+		if not hints.is_empty():
+			_pick.set_hint_options(_hint_forms(hints))
 		buttons.append({"text": "Equip", "action": _equip_pick, "enabled": can, "primary": true})
 	else:
 		_pick.show_right_words("", "", [])
@@ -714,4 +720,15 @@ func text_nodes() -> Array:
 func line_pairs() -> Array:
 	var out: Array = _pick.line_pairs()
 	out.append([_band.headline, _band.unit])
+	return out
+
+
+## The foot's hints in forms long to short: alone, no rounds says why it matters; together, both on one line; then
+## each cut to its first words.
+static func _hint_forms(hints: Array) -> Array:
+	var out: Array = []
+	if hints.size() == 1 and str(hints[0]).begins_with("No rounds"):
+		out.append(str(hints[0]) + ": it won't fire until it has some")
+	out.append(" · ".join(hints))
+	out.append(" · ".join(hints.map(func(h): return str(h).get_slice(" (", 0).replace(" for what comes off", "").replace(" for it in the rig", ""))))
 	return out

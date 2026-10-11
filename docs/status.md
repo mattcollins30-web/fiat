@@ -2892,6 +2892,21 @@ The reviewer's catches: rounds moved to the pack were counted as loot and, with 
 without a word (now home to the rig, or the stash, or a log line); a med could be stowed by the sim (rounds only);
 a second stack of the same grade read "a better grade fires first".
 
+**Three calls before the playtest (11 Oct).** Matt agreed all three. *A build's rounds first*: a grade carrying an
+element the runner has trained into (any node of that element's tree) fires before a dearer grade - a frost build's
+Salted rounds before Depot - then by worth (build_elements, read again as the tree grows). *A worn unique*: its rule
+may be worth more than the figures show, so nothing reads as better than it without a quarter's gain on the slot's
+figure for a gun or body piece (UNIQUE_MARGIN 0.25), and never for a bag or charm; an early unique is still outgrown, a near-match never takes the arrow or Equip if
+better. *No rounds said*: a gun picked in the stash or the pack with no rounds for it in the rig says so under its
+verdict (the try-on counts every gun fed). Also: the playtest read run on the Legion through the watcher for the first
+time, on the old save - it reads it and says there's no record, as it should. *The smoke:* Depot first with no
+element, Salted first for a frost build and Depot again with the tree gone; a piece a few percent over a worn unique
+a sidegrade, a quarter over it the upgrade; the no-rounds line under a gun with none, fitting. The reviewer's
+catches: the build's elements were read again only when the tree's size changed (a respec to the same count kept
+the old build's rounds order); the secondary fired element rounds first though its grade is damage only (the
+primary alone now); the no-rounds line was missing over an empty slot and lost under the no-room one (both now, on
+one line); a bag's or charm's figure never sees a unique's rule, so over a worn unique one it's never the upgrade.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

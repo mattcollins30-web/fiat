@@ -52,6 +52,7 @@ var _words: Label                                             # the item's own l
 var _buttons: Array[Button] = []
 var _actions: Array = []
 var _hint_on := false
+var _hint_options: Array = []      # the hint's forms, long to short: fitted to the room left of the buttons
 
 
 func _init(width: int, height: int) -> void:
@@ -179,9 +180,16 @@ func set_verdict(verdict: String, tone: String, deltas: Array) -> void:
 
 ## A hint in place of the item's own line: what stops the button, mostly.
 func set_hint(text: String) -> void:
-	_hint_on = text != ""
+	set_hint_options([text])
+
+
+## A hint in forms long to short (11 Oct: two hints on one line ran past the buttons): the first that fits is shown.
+func set_hint_options(options: Array) -> void:
+	_hint_options = options.filter(func(o): return str(o) != "")
+	_hint_on = not _hint_options.is_empty()
 	if _hint_on:
-		_words.text = text
+		_words.text = str(_hint_options[0])
+		_lay_foot()
 
 
 ## The buttons at the foot's right: [{text, action, enabled, primary, tone}], the first primary by default.
@@ -219,6 +227,8 @@ func _foot_left_edge() -> float:
 func _lay_foot() -> void:
 	var edge := _foot_left_edge()
 	_words.size.x = maxf(80.0, edge - PAD)
+	if _hint_on and not _hint_options.is_empty():
+		UI.fit(_words, _hint_options)
 	_words.visible = _words.text != ""
 	if _hint_on:
 		_words.add_theme_color_override("font_color", Pal.TEXT_3)
