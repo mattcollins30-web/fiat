@@ -5433,10 +5433,23 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 
 
 ## What the try-on's answers hang on: what's worn (bench work and all), the level, the trees, the pasts, a wound,
-## the rig (the grade feeding a gun), the trades, and whether a run is on.
+## the grades of rounds in the rig (what feeds a gun - never the count, which falls every shot of a run and would
+## throw the answers away each second) and how many things it holds (armour a med), the pack's fill on a run
+## (armour a free cell), the Yard (the Clinic's HP), the trades, and whether a run is on.
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
-	return hash([equipped, level(), tree, cls, cls2, wound, rig, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5])
+	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review), and a run's bonus armour
+	var bonus: float = float(mission.get("bonus_armour", 0.0)) if mission != null else 0.0
+	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5])
+
+
+## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
+func _rig_grades() -> Array:
+	var out: Array = []
+	for it in rig:
+		if Items.is_ammo(it) and int(it["rounds"]) > 0:
+			out.append(str(it["base"]))
+	return out
 
 
 func _compare(it: Dictionary, slot: String) -> int:

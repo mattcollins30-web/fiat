@@ -9373,10 +9373,36 @@ func _try_on_checks(main) -> void:
 	dmg_vest["affixes"] = [{"stat": "damage_pct", "value": 30.0, "tier": 4}]
 	sim.equipped["Armour"] = dmg_vest
 	_check(sim.compare(riot) == 0, "a riot suit that costs the vest's damage is not a trade: %d" % sim.compare(riot))
+	# the answers hold through a run's shooting: rounds spent aren't a change of kit (the first cut threw them away
+	# each second, the rig's counts in the key)
+	sim.load_dict(saved)
+	if sim.equipped["Primary"] == null:
+		sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")
+	var box: Dictionary = sim.ammo_box(Items.ammo_type(sim.equipped["Primary"]))
+	if not box.is_empty():
+		sim.rig.push_front(sim._plain(Data.AMMO, box["name"]))     # fed whatever the smoke left in the rig
+	sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["target_hp"] = 1e9
+	sim.advance(1.0)
+	var k0: int = sim._kit_key()
+	var r0: int = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
+	for k in range(5):
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+	var r1: int = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
+	_check(r1 < r0 and sim._kit_key() == k0, "the try-on's answers were thrown away by rounds spent (%d -> %d rounds, key %s)" % [r0, r1, "same" if sim._kit_key() == k0 else "changed"])
+	# but a thing leaving the rig is a change (armour a med, the review): a med used throws them away
+	var med: Dictionary = sim.first_med()
+	if not med.is_empty():
+		sim.use_med(med["id"])
+		_check(sim._kit_key() != k0, "a med used left the try-on's answers standing (armour a med counts the rig)")
+	sim.extract_now()
 	sim.load_dict(saved)
 	main._armoury.selected = {}
 	main.refresh()
-	print("tried on ok: the Van's Spare kept, the arrow, the verdict, the deltas, the junk, equip if better, a trade")
+	print("tried on ok: the Van's Spare kept, the arrow, the verdict, the deltas, the junk, equip if better, a trade, held through a run")
 
 
 ## What came back (11 Oct, Matt's list): every run since the last Seen added up on a card over the Runs screen -

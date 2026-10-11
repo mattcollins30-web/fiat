@@ -2869,6 +2869,14 @@ trade when the vest carried 30 damage %. The reviewer's catches: the bot's shop 
 sell loop tried every gun on for every stash item (fit_value cached with the verdicts); the cache missed the first
 lot's clear.
 
+**The try-on's cache through a run (11 Oct).** Matt asked what the try-on costs; answering it turned up that the
+cache's key held the rig's stacks whole, rounds and all, so every shot of a run threw the answers away and the pack's
+arrows were worked out again each refresh (about 6 ms a refresh with a 15-item pack). The key holds the grades of
+rounds in the rig now (each stack with rounds left, by name) and how many things it holds, not the counts; and, from
+the reviewer, the pack's fill on a run (armour a free cell), a run's bonus armour and the Yard (the Clinic's HP),
+which it had missed before. *The smoke:* five seconds of a run's shooting spend rounds and leave the key as it was;
+a med used changes it.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
