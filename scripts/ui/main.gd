@@ -388,6 +388,7 @@ func _process(delta: float) -> void:
 	if sim == null or _menu.visible:
 		return
 	sim.advance(delta * speed)
+	sim.tick_played(delta)              # the player's own time at the game, for the playtest record (11 Oct)
 	if sim.camp_lost:
 		show_camp_lost()
 		return
@@ -593,10 +594,12 @@ func _quit_to_title() -> void:
 # ------------------------------------------------------------------ the game
 
 func new_game(hardcore := false) -> void:
+	_archive_record()                    # the last game's record kept beside, this one's starts empty
 	sim = Sim.new()
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.hardcore = hardcore
 	sim.start()
+	sim.chron("start", {"hardcore": hardcore, "version": SAVE_VERSION})
 	room = OVERVIEW
 	speed = 1.0
 	_speed_label.visible = false
@@ -610,11 +613,15 @@ func save_game(path := "") -> void:
 		path = save_file
 	if sim == null or sim.camp_lost:
 		return
+	_flush_record()
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"version": SAVE_VERSION, "saved": Time.get_unix_time_from_system(), "sim": sim.to_dict()}))
 	f.close()
+	if path != save_file and FileAccess.file_exists(record_file()):
+		if DirAccess.copy_absolute(record_file(), record_file(path)) != OK:     # a slot takes the record so far with it
+			push_warning("the playtest record did not copy to %s" % record_file(path))
 	if path == save_file:
 		_since_save = 0.0
 
@@ -625,6 +632,11 @@ func load_game(path := "") -> void:
 	var d := _read_save(path)
 	if d.is_empty():
 		return
+	if path != save_file:
+		# a slot: it carries on as the autosave, so its record becomes the autosave's (the one there kept beside)
+		if _archive_record() and FileAccess.file_exists(record_file(path)):
+			if DirAccess.copy_absolute(record_file(path), record_file()) != OK:
+				push_warning("the slot's playtest record did not come in")
 	sim = Sim.new()
 	sim.odds_budget = ODDS_BUDGET       # the Runs screen reads its odds over a few frames, not in one
 	sim.load_dict(d["sim"])
@@ -633,6 +645,9 @@ func load_game(path := "") -> void:
 	_speed_label.visible = false
 	_menu.close()
 	var away := Time.get_unix_time_from_system() - float(d.get("saved", 0.0))
+	# a session in the playtest record, ahead of the runs the settle adds: how long away, how much of it the sim
+	# settles (11 Oct; the away runs carry their own flag)
+	sim.chron("session", {"away_s": int(away), "settled_s": int(minf(away, sim.away_cap_s())) if away >= 60.0 else 0})
 	if away >= 60.0:
 		_settle_away(away)
 	refresh()
@@ -683,8 +698,47 @@ func show_camp_lost() -> void:
 	var words := "The Yard is gone with the runner."
 	if r != null and r.has("lost_value"):
 		words = "Dead in %s with %s of kit on. The Yard is gone with the runner." % [Words.mid(sim.tier(r["tier"])["name"]), Fmt.money(r["lost_value"])]
+	_flush_record()                       # the death goes into the record, which outlives the save
 	DirAccess.remove_absolute(save_file)
 	_menu.open("The Yard is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
+
+
+## The playtest record (11 Oct): the sim's lines go into a file beside the save, appended on each save, so the save
+## never carries the hours of them (an autosave every 30 s copying megabytes would hitch). user://fiat.save's is
+## user://fiat.record.jsonl, a line a JSON object; tools/playtest_summary.gd reads them together.
+func record_file(path := "") -> String:
+	return (save_file if path == "" else path).get_basename() + ".record.jsonl"
+
+
+func _flush_record() -> void:
+	if sim == null or sim.chronicle.is_empty():
+		return
+	var path := record_file()
+	var f := FileAccess.open(path, FileAccess.READ_WRITE) if FileAccess.file_exists(path) else FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return                            # kept waiting: the next save tries again
+	f.seek_end()
+	for e in sim.chronicle:
+		f.store_line(JSON.stringify(e))
+	f.close()
+	sim.chronicle.clear()
+
+
+## The autosave's record moved aside (fiat.record.<unix ms>.jsonl) before a new game or a slot takes its place.
+## False when it couldn't (the file held open elsewhere, the read running): then nothing is copied over it. A rename
+## that fails is tried as a copy and a delete; a game whose record couldn't move carries on in the old file rather
+## than lose it (the read's count line says so).
+func _archive_record() -> bool:
+	var path := record_file()
+	if not FileAccess.file_exists(path):
+		return true
+	var to := "%s.%d.jsonl" % [path.get_basename(), int(Time.get_unix_time_from_system() * 1000.0)]
+	if DirAccess.rename_absolute(path, to) == OK:
+		return true
+	if DirAccess.copy_absolute(path, to) == OK and DirAccess.remove_absolute(path) == OK:
+		return true
+	push_warning("the playtest record could not be moved aside: %s" % path)
+	return false
 
 
 func _quit() -> void:

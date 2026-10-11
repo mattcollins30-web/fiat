@@ -1,0 +1,20 @@
+# Ideas to revisit
+
+*Banked 11 Oct, from asking Claude what it would add. Nothing here is agreed; each goes through design with Matt
+first. Matt's framing: Fiat is an auto-battler ARPG (Melvor's kind of active), the away settle its only idle
+system. The guard rail: no new systems. Each of these sharpens one that's there.*
+
+1. **The playtest record.** Built 11 Oct (docs/design/playtest_record.md).
+2. **Upgrade arrows in the stash.** A small ▲ on any stash item that beats what's worn in its slot, so the stash
+   reads at a glance without opening the compare.
+3. **"What came back."** A card after each run: the best find, the money, the XP, levels gained, anything new
+   (a first paper, a unique, a depth). The run's payoff, shown once instead of scattered.
+4. **Junk rules.** Replace the auto-sell toggle with a couple of rules: sell under a rarity, sell anything worth
+   less than what's worn, keep a type. Fewer stash trips.
+5. **A controller / Steam Deck pass.** Focus order through every room, tooltips that open on focus as well as
+   hover, the shoulder buttons for rooms.
+
+Later, if they still look right:
+
+- **Saved loadouts per past**, swapped with the class.
+- **A weekly broadcast**: one site modifier the radio announces each week, for a reason to go back to old sites.

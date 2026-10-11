@@ -11,6 +11,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
+const PlaytestRead := preload("res://tools/playtest_summary.gd")
 const SMOKE_SAVE := "user://smoke_autosave.save"
 const SMOKE_SLOT := "user://smoke_slot%d.save"
 var _player_saves_before := {}
@@ -23,6 +24,8 @@ static func _player_saves() -> Dictionary:
 	var paths: Array = [Main.SAVE_FILE]
 	for k in range(Main.SLOTS):
 		paths.append(Main.SLOT_FILE % (k + 1))
+	for path in paths.duplicate():
+		paths.append(path.get_basename() + ".record.jsonl")     # the playtest records beside them (11 Oct)
 	for path in paths:
 		if FileAccess.file_exists(path):
 			var f := FileAccess.open(path, FileAccess.READ)
@@ -487,11 +490,15 @@ func _init() -> void:
 	# every screen with the worst items there are: elites of every base, every affix at its top roll
 	_worst_case(main)
 	_slots_offline_hardcore(main)
+	_record_file_checks(main)
 	# the player's own saves are as they were, and the smoke's are gone
 	_check(_player_saves() == _player_saves_before, "the smoke touched the player's saves: %s -> %s" % [str(_player_saves_before), str(_player_saves())])
 	for path in [SMOKE_SAVE, SMOKE_SLOT % 1, SMOKE_SLOT % 2, SMOKE_SLOT % 3]:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
+	for f in DirAccess.get_files_at("user://"):
+		if f.begins_with("smoke_") and f.contains(".record"):
+			DirAccess.remove_absolute("user://" + f)
 	if _misfits > 0 or _fails > 0:
 		print("FAIL: %d labels do not fit their boxes, %d checks failed" % [_misfits, _fails])
 		quit(1)
@@ -3672,6 +3679,7 @@ func _move_checks(main) -> void:
 	_yard_checks(main)
 	_sound_checks(main)
 	_playtest_checks(main)
+	_chronicle_checks()
 
 
 ## The estate recycles: a dead runner's worn kit and a unique sold to the Fence
@@ -9095,3 +9103,121 @@ func _texts(n: Node) -> Array:
 	for c in n.get_children():
 		out.append_array(_texts(c))
 	return out
+
+
+## The playtest record (11 Oct): what the player does lands in sim.chronicle, a dry run adds nothing, the record
+## rides the save and the move, the clock at the game snapshots every ten minutes, and the read makes its page from it.
+func _chronicle_checks() -> void:
+	var s = Sim.new()
+	s.start()
+	var kinds := func() -> Dictionary:
+		var k := {}
+		for e in s.chronicle:
+			k[e["k"]] = int(k.get(e["k"], 0)) + 1
+		return k
+	s.cash += 100000.0
+	s.set_class("Doorman")
+	_check(kinds.call().get("class", 0) == 1, "a class change wrote no line: %s" % str(kinds.call()))
+	var n0: int = s.chronicle.size()
+	s.survival(0)                                  # the odds: dry runs
+	_check(s.chronicle.size() == n0, "a dry run wrote %d lines to the record" % (s.chronicle.size() - n0))
+	for i in range(4):
+		s.deploy(0)
+		var guard := 0
+		while s.on_mission() and guard < 3000:
+			s.hp = s.max_hp()                      # kept alive: a death would hand the record a fresh, classless runner
+			s.advance(1.0)
+			guard += 1
+		if s.on_mission():
+			s.extract_now()
+	_check(s.cls == "Doorman", "the record's runner died on tier 1")
+	var lv0: int = s.level()
+	while s.level() < lv0 + 3:
+		s.xp += 50.0
+	s._earn_points(lv0)                           # what a run's XP does on the way back
+	var k: Dictionary = kinds.call()
+	_check(k.get("run", 0) == 4, "four runs wrote %d run lines" % k.get("run", 0))
+	_check(k.get("level", 0) >= 1 and s.level() > 1, "levelling to %d wrote no level line" % s.level())
+	_check(s.chronicle.filter(func(e): return e["k"] == "level")[-1].get("to", 0) == s.level(), "the level line does not read the level reached")
+	var run: Dictionary = s.chronicle.filter(func(e): return e["k"] == "run")[0]
+	for f in ["t", "p", "w", "lv", "cls", "yard", "tier", "site", "outcome", "time", "kills", "of", "dps", "kit"]:
+		_check(run.has(f), "a run line has no '%s': %s" % [f, str(run.keys())])
+	_check(s.train_node("Muscle/0"), "Muscle/0 did not train for the record: %s" % s.train_block("Muscle/0"))
+	_check(kinds.call().get("train", 0) == 1, "training wrote no line")
+	_check(s.yard_pick("generator", 0, "a"), "the generator pick did not buy: %s" % s.yard_pick_block("generator", 0, "a"))
+	_check(kinds.call().get("yard", 0) == 1, "a yard pick wrote no line")
+	# the clock at the game: a snapshot each SNAP_S played, none between
+	var snaps0: int = kinds.call().get("snap", 0)
+	for i in range(int(Sim.SNAP_S * 2.5)):
+		s.tick_played(1.0)
+	_check(kinds.call().get("snap", 0) - snaps0 == 2, "two and a half snapshots' time played wrote %d" % (kinds.call().get("snap", 0) - snaps0))
+	# the save carries the count and the clock, never the lines (they go to the record file: _record_file_checks)
+	_check(s.chron_count == s.chronicle.size(), "the record counts %d lines and holds %d" % [s.chron_count, s.chronicle.size()])
+	var d: Dictionary = s.to_dict()
+	_check(not d.has("chronicle"), "the save carries the record's lines")
+	var t = Sim.new()
+	t.load_dict(JSON.parse_string(JSON.stringify(d)))
+	_check(t.chron_count == s.chron_count and t.chronicle.is_empty() and absf(t.played_s - s.played_s) < 0.01, "the count and the clock did not ride the save: %d of %d lines, %.0f of %.0f s" % [t.chron_count, s.chron_count, t.played_s, s.played_s])
+	t.tick_played(1.0)
+	_check(t.chronicle.is_empty(), "a loaded save snapshotted again at once")
+	# a save from the first build (v1) carried its lines: they wait to go out to the file, none lost
+	var v1: Dictionary = d.duplicate()
+	v1.erase("chron_count")
+	v1["chronicle"] = [{"k": "start", "t": 0.0, "p": 0.0}, {"k": "run", "t": 10.0, "p": 10.0}]
+	var u = Sim.new()
+	u.load_dict(JSON.parse_string(JSON.stringify(v1)))
+	_check(u.chronicle.size() == 2 and u.chron_count == 2, "a v1 save's record was dropped on loading: %d waiting, %d counted" % [u.chronicle.size(), u.chron_count])
+	var kept: int = s.chronicle.size()
+	_finish_campaign(s)
+	_check(s.can_move_yard(), "the record's sim cannot move yard")
+	if s.move_yard():
+		_check(s.chronicle.size() == kept + 1 and s.chron_count == kept + 1 and s.chronicle[-1]["k"] == "move" and s.played_s > 0.0, "the move lost the record: %d lines of %d" % [s.chronicle.size(), kept + 1])
+	# the read
+	var page: String = PlaytestRead.summarize(s.to_dict(), s.chronicle, "smoke")
+	for h in ["## The time", "## Milestones", "## The gates, read from play", "## Runs, site by site", "## Hour by hour", "## Where the money and the points went", "## The kit, as it changed"]:
+		_check(page.contains(h), "the playtest read has no '%s'" % h)
+	_check(page.contains("Class: none to Doorman") and page.contains("Level "), "the playtest read's milestones miss the class or a level")
+
+
+## The record file (11 Oct, the reviewer): the lines go to the .record.jsonl beside the save on each save and leave
+## the sim; a slot takes a copy and brings it back; a new game moves the old record aside; the read takes the save
+## through JSON with the file, as on the player's machine.
+func _record_file_checks(main) -> void:
+	main.new_game()
+	var rec: String = main.record_file()
+	_check(rec == SMOKE_SAVE.get_basename() + ".record.jsonl", "the smoke's record is at %s" % rec)
+	_check(main.sim.chronicle.is_empty() and PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count >= 1, "a new game's save did not write its start to the record: %d in the file, %d counted, %d waiting" % [PlaytestRead.read_record(rec).size(), main.sim.chron_count, main.sim.chronicle.size()])
+	_set_cls(main.sim, "Doorman")
+	main.sim.cash += 100000.0
+	main.sim.yard_pick("generator", 0, "a")
+	for i in range(int(Sim.SNAP_S) + 1):
+		main.sim.tick_played(1.0)
+	main.save_game()
+	var lines: Array = PlaytestRead.read_record(rec)
+	_check(lines.size() == main.sim.chron_count and main.sim.chronicle.is_empty(), "the save left the record at %d lines of %d" % [lines.size(), main.sim.chron_count])
+	_check(lines.any(func(e): return e["k"] == "class") and lines.any(func(e): return e["k"] == "yard") and lines.any(func(e): return e["k"] == "snap"), "the record file misses the class, the pick or the snapshot: %s" % str(lines.map(func(e): return e["k"])))
+	var bytes := FileAccess.get_file_as_string(SMOKE_SAVE).length()
+	main.save_game()
+	_check(PlaytestRead.read_record(rec).size() == lines.size() and absi(FileAccess.get_file_as_string(SMOKE_SAVE).length() - bytes) < 200, "a second save wrote the record again or grew the save")
+	# a slot takes the record with it
+	main.save_game(SMOKE_SLOT % 3)
+	_check(PlaytestRead.read_record(main.record_file(SMOKE_SLOT % 3)).size() == lines.size(), "the slot did not take the record")
+	# loading: a session line, ahead of the settle's runs
+	main.load_game(SMOKE_SAVE)
+	main.save_game()
+	var after: Array = PlaytestRead.read_record(rec)
+	_check(after.size() == lines.size() + 1 and after[-1]["k"] == "session", "loading did not write one session line: %s" % str(after.slice(lines.size()).map(func(e): return e["k"])))
+	# the read, from the files as the player has them: the save through JSON, every number a float
+	var d: Dictionary = main._read_save(SMOKE_SAVE)
+	var page: String = PlaytestRead.summarize(d["sim"], PlaytestRead.read_record(rec), SMOKE_SAVE)
+	_check(page.contains("## Milestones") and page.contains("Class: none to Doorman") and page.contains("## Hour by hour") and not page.contains("were lost") and not page.contains("past the save"), "the read from the files is short: %s" % page.substr(0, 300))
+	# a slot loaded brings its record back as the autosave's, the one there moved aside
+	main.sim.chron("after the slot")
+	main.save_game()
+	main.load_game(SMOKE_SLOT % 3)
+	_check(PlaytestRead.read_record(rec).size() == lines.size(), "the loaded slot's record is not the autosave's: %d lines, not %d" % [PlaytestRead.read_record(rec).size(), lines.size()])
+	var kept: Array = Array(DirAccess.get_files_at("user://")).filter(func(f): return f.begins_with(SMOKE_SAVE.get_file().get_basename() + ".record.") and f != rec.get_file())
+	_check(not kept.is_empty(), "the autosave's record was not kept aside when the slot came in")
+	# a new game starts an empty record and keeps the old one
+	main.new_game()
+	_check(PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count <= 2, "a new game's record holds the last game's lines: %d" % PlaytestRead.read_record(rec).size())

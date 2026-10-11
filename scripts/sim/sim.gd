@@ -91,6 +91,19 @@ var trades: Array = []             # the Yard's trade: elements whose keystone e
 var insure_next := false           # the next run is insured: the Fence holds the paper on the kit
 var elapsed := 0.0
 var events: Array = []
+## The playtest record (11 Oct, Matt: "did we actually log everything required? The answer is not really"): every
+## moment a balance read wants, stamped with the sim's clock, the player's own time at the game and the wall clock.
+## A run's end, each first clear and head, the levels, the trees, the Yard, the classes, the kit, the Workshop, the
+## Fence, the Radio, the sessions and a snapshot every ten minutes played. The lines wait in `chronicle` until the
+## shell appends them to the record file beside the save on each save (main.gd's _flush_record: the save itself never
+## carries them, so it doesn't grow with the hours); the bot and the tests, with no shell, keep them all here.
+## tools/playtest.bat reads the record file.
+const CHRONICLE_V := 2
+const SNAP_S := 600.0                # a snapshot every ten minutes played
+var chronicle: Array = []            # lines not yet written to the record file
+var chron_count := 0                 # every line ever written, the file's and the waiting ones
+var played_s := 0.0                  # real seconds at the game, the player there (the shell adds them: not away, not the menu)
+var _snaps := 0
 var rng := RandomNumberGenerator.new()
 
 
@@ -632,6 +645,7 @@ func set_class(name: String) -> bool:
 				return false
 			var drops: Array = _change_drops(name)
 			cash -= cost
+			chron("class", {"from": cls, "to": name, "cost": cost, "dropped": drops.size()})
 			cls = name
 			# the old class's trees come back as points, and what the new class can't keep: another class's half, an
 			# element off its pair (it would cost double now); the Yard's and the pair's elements stay
@@ -726,6 +740,7 @@ func can_retire() -> bool:
 func retire() -> bool:
 	if not can_retire():
 		return false
+	chron("retire", {"trait": runner_trait, "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired", "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	if runner_trait != "":
 		retired.append(runner_trait)
@@ -912,6 +927,7 @@ func hand_in(k: int) -> bool:
 			salvage[c["salvage"]] = int(salvage.get(c["salvage"], 0)) + int(c["amount"])
 			paid = contract_pay_words(c)
 	log_event("Handed in: %s. %s" % [contract_words(c), paid])
+	chron("contract", {"kind": str(c.get("kind", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0))})
 	contracts[k] = roll_contract()
 	return true
 
@@ -1059,6 +1075,7 @@ func _yard_nodes_taken() -> Array:
 func move_yard(trade := "") -> bool:
 	if not can_move_yard() or (trade != "" and not can_trade(trade)):
 		return false
+	chron("move", {"trade": trade, "lorries": lorries})
 	var uniques: Array = []
 	for it in stash:
 		if it.has("unique"):
@@ -1076,7 +1093,7 @@ func move_yard(trade := "") -> bool:
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
-		"paragon_banked": paragon()}
+		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s}     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
 		for i in range(words.size()):
 			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
@@ -1095,6 +1112,10 @@ func move_yard(trade := "") -> bool:
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
 	paragon_banked = keep["paragon_banked"]
+	chronicle = keep["chronicle"]
+	chron_count = keep["chron_count"]
+	played_s = keep["played_s"]
+	_snaps = int(played_s / SNAP_S)
 	yard_picks = keep["yard_picks"]       # the buildings move with the Yard (9 Oct): picks, ranks, the columns opened, the salvage
 	yard_ranks = keep["yard_ranks"]
 	yard_open = keep["yard_open"]
@@ -1237,11 +1258,13 @@ func sky_words(i: int) -> String:
 func _read(it: Dictionary) -> void:
 	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
 		book.append(it["base"])
+		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
 		if taught != "" and not _dry_on:
 			log_event("%s: the Radio knows %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper teaches its word
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
+		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size()})
 
 
 ## Every paper there is to find, deep ones last.
@@ -1373,6 +1396,7 @@ func scrap_item(id: int) -> bool:
 			if yard_has("salvage_line") and int(it.get("rarity", 0)) >= 2:
 				salvage["steel"] = int(salvage["steel"]) + 1      # the Bench's Salvage line
 			last_craft = {"id": -1, "kind": "scrap", "words": "Scrapped %s: %d scrap" % [it["base"].to_lower(), bits]}     # the Bench's foot and the toast read it (8 Oct)
+			chron("scrap", {"item": _chron_item(it), "scrap": bits})
 			log_event(last_craft["words"])
 			return true
 	return false
@@ -1498,6 +1522,7 @@ func build(kind: String, name: String) -> bool:
 	if not stash_put(made):
 		stash.append(made)                   # whatever the room: it was paid for
 	last_craft = {"id": made["id"], "kind": "build", "words": "Built %s for %d scrap" % [name.to_lower(), int(o["scrap"])]}
+	chron("build", {"name": name, "scrap": int(o["scrap"])})
 	log_event("In the Workshop, for %d scrap: %s" % [int(o["scrap"]), name.to_lower()])
 	_dry_memo.clear()
 	return true
@@ -1567,6 +1592,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 	# what the Bench did, in words the player can check against the piece
 	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
 	last_craft = {"id": id, "kind": kind, "words": words}
+	chron("craft", {"kind": kind, "stat": stat, "cost": cost, "item": _chron_item(it), "worn": not stash.has(it)})
 	if not stash.has(it):
 		_surv_cache = {}                       # a job on worn kit (the Workshop, 9 Oct): the odds read it again, the id is the same
 		_dry_memo.clear()
@@ -1675,6 +1701,7 @@ func rank_atlas(key: String) -> bool:
 	if not can_rank_atlas(key):
 		return false
 	atlas[key] = atlas_rank(key) + 1
+	chron("atlas", {"key": key, "rank": atlas[key]})
 	return true
 
 
@@ -1714,6 +1741,7 @@ func set_second(name: String) -> bool:
 	for c in Data.CLASSES:
 		if c["name"] == name:
 			cls2 = name
+			chron("ascend", {"second": name})
 			var kept := []
 			for id in tree:
 				if _on_show(str(id).get_slice("/", 0)):
@@ -1957,8 +1985,13 @@ func can_train(id: String) -> bool:
 func train_node(id: String) -> bool:
 	if not can_train(id):
 		return false
+	var nd: Dictionary = node(id)
+	var paid: int = node_cost(id)
 	tree.append(id)
-	log_event("Trained: %s" % node(id)["name"])
+	log_event("Trained: %s" % nd["name"])
+	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "col": int(nd.get("col", 0)), "cost": paid,
+		"keystone": bool(nd.get("keystone", false)), "capstone": bool(nd.get("capstone", false)), "notable": bool(nd.get("notable", false)),
+		"joint": str(nd.get("joint", "")), "free": training_points - points_spent()})
 	return true
 
 
@@ -1976,7 +2009,9 @@ func respec_cost() -> int:
 func respec() -> bool:
 	if tree.is_empty() or cash < respec_cost():
 		return false
-	cash -= respec_cost()
+	var paid := respec_cost()
+	cash -= paid
+	chron("respec", {"cost": paid, "points": points_spent()})
 	tree = []
 	log_event("Training reset: the points are free to spend again")
 	return true
@@ -1991,8 +2026,10 @@ func _earn_points(before: int) -> void:
 		best_level = after
 		training_points += gained
 		log_event("Level %d: %d training point%s" % [after, gained, "" if gained == 1 else "s"])
+		chron("level", {"to": after, "gained": gained, "best": true})
 	elif after > before:
 		log_event("Level %d: no point - the camp's had a runner at level %d" % [after, best_level])
+		chron("level", {"to": after, "gained": 0, "best": false})
 
 
 func contact(t: Dictionary) -> int:
@@ -2770,7 +2807,8 @@ func word_craft(i: int, key: String, arg := "") -> bool:
 		return false
 	if key == "hold" and not (arg in word_names(i)):
 		return false
-	notes -= word_craft_cost(i, key)
+	var paid_notes := word_craft_cost(i, key)
+	notes -= paid_notes
 	var two: bool = yard_has("two_channels") and (key == "tune" or key == "retune")
 	match key:
 		"tune":
@@ -2792,6 +2830,7 @@ func word_craft(i: int, key: String, arg := "") -> bool:
 	_surv_cache.erase(i)
 	var c := Data.craft_of(key)
 	log_event("%s on %s: %s" % [c["name"], Words.mid(tier(i)["name"]), ", ".join(word_names(i)).to_lower() if not words[i].is_empty() else "silent"])
+	chron("word", {"tier": i, "craft": key, "words": word_names(i), "cost": paid_notes})
 	return true
 
 
@@ -2984,6 +3023,8 @@ func yard_pick(key: String, col: int, side: String) -> bool:
 		return false
 	var b := Data.yard_building(key)
 	var refit: bool = yard_side(key, col) != ""
+	var pk0: Dictionary = b["picks"][col][0 if side == "a" else 1]
+	chron("yard", {"key": key, "col": col, "side": side, "name": str(pk0["name"]), "cost": yard_pick_cost(key, col), "salvage": yard_pick_salvage(key, col), "refit": refit})
 	cash -= yard_pick_cost(key, col)
 	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_pick_salvage(key, col)
 	var sides: Array = yard_picks.get(key, ["", "", "", "", ""]).duplicate()
@@ -3031,6 +3072,7 @@ func buy_yard_rank(key: String) -> bool:
 	if not can_yard_rank(key):
 		return false
 	var b := Data.yard_building(key)
+	chron("yard_rank", {"key": key, "rank": yard_rank(key) + 1, "cost": yard_rank_cost(key), "salvage": yard_rank_salvage(key)})
 	cash -= yard_rank_cost(key)
 	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_rank_salvage(key)
 	yard_ranks[key] = yard_rank(key) + 1
@@ -4666,6 +4708,8 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
 		log_event(Words.MAP["head_start"] % b["name"])
 	var first: bool = not bosses_beaten[int(b["zone"])]
+	chron("boss", {"name": str(b["name"]), "zone": int(b["zone"]), "tier": int(m["tier"]), "depth": int(t.get("depth", 1)), "first": first,
+		"pinnacle": bool(b.get("pinnacle", false)), "convoy": bool(m.get("convoy", false))})
 	bosses_beaten[int(b["zone"])] = true
 	var pool: Array = []
 	var head: Dictionary = {}
@@ -4686,6 +4730,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		if not lorry_done:
 			lorry_done = true
 			lorries += 1
+			chron("lorry", {"lorries": lorries})
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)))
@@ -4834,6 +4879,10 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
 		log_event("%s cleared; this Yard's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
+	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
+	if first_clear or t["depth"] > best_depth[m["tier"]]:
+		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(t["depth"]), "first": first_clear,
+			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
 	if t["depth"] > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = t["depth"]
 		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
@@ -4851,6 +4900,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		log_event("%s cleared. Picking it over; more will come" % t["name"])
 	if m["tier"] == Data.BANK and not deeds_found:
 		deeds_found = true
+		chron("deeds", {})
 		var deeds := _plain(Data.PAPER, "The deeds")
 		deeds["deeds"] = true
 		m["found"].append(deeds)            # whatever the pack holds, this comes too
@@ -5086,6 +5136,11 @@ func _extract() -> void:
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])
+	_chron_run(m, outcome, {"loot": stashed, "left": int(last_report["left"]), "cash": int(m["cash"]), "xp": int(m["xp"]),
+		"notes": run_notes, "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(), "hp_lost": int(m["hp_start"] - hp),
+		"wounded": bool(m.get("wounded", false)), "timed_out": bool(m.get("timed_out", false)), "way_out": bool(m.get("way_out", false)),
+		"clock_used": snappedf(float(m.get("clock_used", 0.0)), 0.1), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
+		"cleared": bool(m["cleared"]), "pack": pack_used(m), "cap": capacity()})
 	_record_run(m)
 	mission = null
 	_idle_tidy()
@@ -5103,6 +5158,23 @@ func _record_run(m: Dictionary) -> void:
 		if int(it.get("value", 0)) > int(record.get("find_value", 0)):
 			record["find_value"] = int(it["value"])
 			record["find"] = Items.full_name(it)
+
+
+## A run's end in the playtest record: where, how deep, how it ended, what the runner was, and the run's own figures.
+func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
+	var et: Dictionary = m.get("t", tier(m["tier"]))
+	var b = m.get("boss", null)
+	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
+		"outcome": outcome, "time": snappedf(float(m["elapsed"]), 0.1), "kills": int(m["kills"]), "of": int(et.get("pool", 0)),
+		"auto": auto_tier >= 0, "cls2": cls2, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
+		"kit": loadout_value(), "wound_in": wound}
+	if b != null and b is Dictionary and not b.is_empty():
+		d["boss"] = str(b.get("name", ""))
+		d["boss_down"] = not bool(b.get("alive", true))
+	if m.get("convoy", false):
+		d["convoy"] = true
+	d.merge(extra, true)
+	chron("run", d)
 
 
 func _record_reset() -> void:
@@ -5154,6 +5226,8 @@ func _kia() -> void:
 		"left": m["found"].size() + m["left"], "cash": 0.0, "xp": 0.0, "hp_lost": m["hp_start"], "time": m["elapsed"],
 		"lost_value": lost, "searches": m["searches"], "patrols": m["patrols"],
 	}
+	_chron_run(m, "Dead", {"lost_value": lost, "insured": bool(m.get("insured", false)), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
+		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	runner_runs = 0
 	_record_reset()
@@ -5274,6 +5348,7 @@ func equip_best(slot: String) -> bool:
 	if equipped[slot] != null and Items.score(equipped[slot]) >= Items.score(best):
 		return false
 	_remove(best)
+	chron("equip", {"slot": slot, "how": "best", "on": _chron_item(best), "off": _chron_item(equipped[slot])})
 	if equipped[slot] != null:
 		stash.append(equipped[slot])
 	equipped[slot] = best
@@ -5288,6 +5363,7 @@ func equip_item(id: int) -> bool:
 		if it["id"] == id:
 			var slot: String = it["slot"]
 			_remove(it)
+			chron("equip", {"slot": slot, "how": "hand", "on": _chron_item(it), "off": _chron_item(equipped[slot])})
 			if equipped[slot] != null:
 				stash.append(equipped[slot])
 			equipped[slot] = it
@@ -5357,6 +5433,7 @@ func equip_from_pack(id: int) -> bool:
 				log_event("%s on, %s into the pack" % [it["base"], equipped[slot]["base"].to_lower()])
 			else:
 				log_event("%s on" % it["base"])
+			chron("equip", {"slot": slot, "how": "pack", "on": _chron_item(it), "off": _chron_item(equipped[slot])})
 			equipped[slot] = it
 			_read(it)
 			_dry_memo.clear()
@@ -5558,6 +5635,7 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 	var it := roll_gamble(k, unique_roll)
 	if not (stash_fits(it) or _stack_room(it)):
 		return {}
+	chron("gamble", {"kind": kind, "price": gamble_price(kind), "item": _chron_item(it)})
 	cash -= gamble_price(kind)
 	gamble.erase(kind)
 	stash_put(it)
@@ -5847,6 +5925,7 @@ func can_treat_wound() -> bool:
 func heal() -> bool:
 	if not can_heal():
 		return false
+	chron("heal", {"cost": heal_cost(), "hp": int(hp), "max": int(max_hp())})
 	cash -= heal_cost()
 	hp = max_hp()
 	return true
@@ -5855,6 +5934,7 @@ func heal() -> bool:
 func treat_wound() -> bool:
 	if not can_treat_wound():
 		return false
+	chron("treat", {"cost": wound_cost(), "wound": wound})
 	cash -= wound_cost()
 	log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
 	wound = ""
@@ -5865,6 +5945,7 @@ func treat_wound() -> bool:
 func treat() -> bool:
 	if mission != null or not needs_treating() or cash < treat_cost():
 		return false
+	chron("treat", {"cost": treat_cost(), "wound": wound, "hp": int(hp), "max": int(max_hp())})
 	cash -= treat_cost()
 	if wound != "":
 		log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
@@ -5891,6 +5972,46 @@ func log_event(text: String) -> void:
 		events.pop_front()
 
 
+## A line in the playtest record. Never from a dry run (the odds and the bot's reads), always with the clocks.
+func chron(kind: String, data := {}) -> void:
+	if _dry_on:
+		return
+	var e := {"k": kind, "t": snappedf(elapsed, 0.1), "p": snappedf(played_s, 0.1), "w": int(Time.get_unix_time_from_system()),
+		"lv": level(), "cls": cls, "yard": yard_moves + 1}
+	if away_on:
+		e["away"] = true
+	e.merge(data, true)
+	chronicle.append(e)
+	chron_count += 1
+
+
+## The shell's real time at the game: the player's hours, and a snapshot every SNAP_S of them.
+func tick_played(delta: float) -> void:
+	played_s += delta
+	if int(played_s / SNAP_S) > _snaps:
+		_snaps = int(played_s / SNAP_S)
+		chron("snap", snap_line())
+
+
+## What a snapshot holds: the purse, the runner, the reach, the spend.
+func snap_line() -> Dictionary:
+	var deepest := 0
+	for d in best_depth:
+		deepest = maxi(deepest, int(d))
+	return {"cash": int(cash), "cash_in": int(cash_in), "notes": notes, "scrap": scrap, "salvage": salvage.duplicate(), "xp": int(xp),
+		"best_tier": best_tier, "best_depth": best_depth.duplicate(), "deepest": deepest, "points": training_points, "spent": points_spent(),
+		"yard_built": yard_built(), "atlas": atlas_spent(), "stash": stash.size(), "dps": snappedf(dps(), 0.1), "max_hp": int(max_hp()),
+		"mit": snappedf(mitigation(), 0.001), "runs": runs_total, "lost": operators_lost, "kit": loadout_value()}
+
+
+## A worn piece, as the record keeps it.
+static func _chron_item(it) -> Dictionary:
+	if it == null:
+		return {}
+	return {"base": str(it["base"]), "name": Items.full_name(it), "slot": str(it["slot"]), "tier": int(it.get("tier", 0)),
+		"rarity": int(it.get("rarity", 0)), "value": int(it.get("value", 0)), "unique": it.has("unique"), "set": it.has("set")}
+
+
 func to_dict() -> Dictionary:
 	return _state().duplicate(true)      # a copy: the live items aren't shared with the save
 
@@ -5909,6 +6030,7 @@ func _state() -> Dictionary:
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
+		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s,
 	}
 
 
@@ -5942,6 +6064,10 @@ func load_dict(d: Dictionary) -> void:
 	runner_trait = str(d.get("trait", ""))
 	candidates = d.get("candidates", [])
 	promised = str(d.get("promised", ""))
+	chronicle = d.get("chronicle", [])    # the record's lines live in their file; a save from the first build (v1) carried them, and they go out at the next save
+	chron_count = int(d.get("chron_count", chronicle.size()))
+	played_s = float(d.get("played_s", 0.0))
+	_snaps = int(played_s / SNAP_S)
 	# trees from before the class trees: nodes that aren't in the trees on show are refunded
 	var kept := []
 	for id in tree:

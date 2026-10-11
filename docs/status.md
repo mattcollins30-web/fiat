@@ -2809,6 +2809,28 @@ art/body.png while one is missing, the flat silhouette with neither; it follows 
 fitted to the gap as before. *The smoke:* each past shows its own figure, filling the gap. The reviewer's catch:
 with no art at all the figure re-set itself every refresh; fixed.
 
+**The playtest record (11 Oct).** Matt: the save didn't log what a playtest needs. The sim keeps a record now
+(sim.chronicle, design in docs/design/playtest_record.md): a line for every run (site, depth, outcome, time, kills,
+cash, XP, HP lost, wounds, the clock, the way out, the kit's worth, damage and armour at the start), level, training
+node, respec, class change, the second past, Yard pick and rank, first clears and new depths, bosses, the deeds, the
+lorry, the move, retiring, the map, the bench's jobs, scrapping, the Fence's word, contracts, each first paper and
+unique, every change of kit, heals and treatment, each session's away time, and a snapshot of the purse and the
+runner every ten minutes at the game. Each line has the sim's time, the player's own time at the game (played_s,
+the real seconds the game was open) and the wall clock. Dry runs write nothing. The lines go to a file beside the
+save (user://fiat.record.jsonl), appended on each save, not into the save itself; a slot takes a copy, a new game
+keeps the old record aside.
+tools\playtest.bat (or docs\balance\playtest.flag through the watcher) reads a save into docs\balance\playtest.md:
+the time, the milestones by played hours, the balance gates read from play against the bot's targets, the sites,
+the half-hour curve, the spending, the kit. Old saves start with an empty record (Matt starts a new one). *The
+smoke:* runs, levels, training, a Yard pick and a class change each write a line; a dry run writes none; ten
+minutes played snapshots once; the move keeps the record; a save writes the lines to the file once and the save
+doesn't grow; a slot carries the record out and back; a new game starts a fresh one; the read, from the files
+through JSON, has every section. The reviewer's catches: the record in the save grew without limit and every
+30-second autosave copied it (moved to the file); a hardcore death deleted it with the save (written first now);
+the read untested on a save through JSON; the session line after the runs it settled; the Radio's notes unrecorded; then a save from the first build losing
+its lines on load, a record that couldn't be moved aside (held open) mixed with the next game's, and the read silent
+on a record running past the save's count.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
