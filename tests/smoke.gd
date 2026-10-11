@@ -9658,23 +9658,21 @@ func _build_rounds_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.tree = []
-	# a worn unique: better only by a clear margin
+	# a worn unique gun is judged on the runner's damage like anything else: a pistol that beats the Van's Spare with
+	# it on is the upgrade (a margin held the bot to it all game, the 11 Oct read)
 	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
 	sim.equipped["Secondary"] = vans
 	var pct := 0.0
-	var near: Dictionary = {}
+	var found := false
 	while pct < 400.0:
 		var mp: Dictionary = sim._plain("Secondary", "Machine pistol")
 		mp["affixes"] = [{"stat": "damage_pct", "value": pct, "tier": 3}]
-		var g: float = sim.upgrade_gain(mp)
-		if near.is_empty() and g > 0.02 and g < sim.UNIQUE_MARGIN:
-			near = mp
-		if g >= sim.UNIQUE_MARGIN + 0.05:
-			_check(sim.compare(mp) == 1, "a piece %.0f%% better than a worn unique does not read better" % (g * 100.0))
+		if sim.upgrade_gain(mp) > 0.02:
+			found = true
+			_check(sim.compare(mp) == 1, "a pistol %.0f%% better on the runner's damage does not read better than a worn Van's Spare" % (sim.upgrade_gain(mp) * 100.0))
 			break
 		pct += 5.0
-	if not near.is_empty():
-		_check(sim.compare(near) == 0 and not sim.is_upgrade(near), "a piece only %.0f%% better reads as an upgrade over a worn unique" % (sim.upgrade_gain(near) * 100.0))
+	_check(found, "no pistol up to 400 per cent damage beat the Van's Spare: the case doesn't stand")
 	# a gun with no rounds in the rig says so
 	sim.equipped["Secondary"] = null
 	sim.rig.clear()
@@ -9722,4 +9720,4 @@ func _build_rounds_checks(main) -> void:
 	sim.load_dict(saved)
 	main._armoury.selected = {}
 	main.refresh()
-	print("build rounds ok: the build's element first, a worn unique's margin, no rounds said")
+	print("build rounds ok: the build's element first, a worn unique gun judged like any other, no rounds said")

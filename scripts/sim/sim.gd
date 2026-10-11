@@ -5481,20 +5481,17 @@ func compare(it: Dictionary) -> int:
 	if _cmp_cache.has(ih):
 		return _cmp_cache[ih]
 	var c := _compare(it, slot)
-	# over a worn unique (Matt, 11 Oct): its rule may be worth more than the figures show, so better only by a clear
-	# margin on the slot's figure - an early unique gets outgrown, a near-match never reads as the upgrade
+	# over a worn unique bag or charm (Matt, 11 Oct): their figure is the piece's own score, which never sees the
+	# unique's rule (the Van Keys' 12 against a plain charm's 30), so nothing is better outright - the player's to
+	# judge. A gun's or body piece's figure is the runner's own with it on, the rule counted where it touches the
+	# damage or the armour, so it's judged like anything else (a quarter's margin there held the bot to a T2 Van's
+	# Spare all game: services at depth 5 at 11.6 h against 3.4 h on the same dice, the 11 Oct read)
 	if c == 1 and equipped[slot].has("unique"):
-		# a gun's or a body piece's figure is the runner's own, rule and all where it counts: a clear margin. A bag's or
-		# a charm's is the piece's score alone, which never sees the rule (the Van Keys' 12 against a plain charm's 30):
-		# never better outright, the player's to judge
 		var kind: String = Data.SLOT_SCORE.get(slot, "")
-		if not (kind == "dps" or kind == "armour") or upgrade_gain(it) < UNIQUE_MARGIN:
+		if not (kind == "dps" or kind == "armour"):
 			c = 0
 	_cmp_cache[ih] = c
 	return c
-
-
-const UNIQUE_MARGIN := 0.25          # a quarter better on the slot's figure before anything reads as better than a unique
 
 
 var _cmp_key := 0
