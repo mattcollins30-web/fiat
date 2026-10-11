@@ -2877,6 +2877,21 @@ the reviewer, the pack's fill on a run (armour a free cell), a run's bonus armou
 which it had missed before. *The smoke:* five seconds of a run's shooting spend rounds and leave the key as it was;
 a med used changes it.
 
+**The rig on a run (11 Oct).** Matt, three from play. *The best rounds first*: a gun fired the first stack of its
+type in the rig, so Depot rounds put in behind plain ones did nothing until those ran out. It fires the best grade of
+its type now, by the grade's worth (Rifle 40, Match 100, Salted 150, Depot 170), and the next best takes over when
+that's spent (sim.feed_stack: the damage and the spending both read it). *Rig to pack*: tapping a stack of rounds in
+the rig on a run picks it for the pick panel - firing now, waiting behind a better grade, or fired by no gun worn -
+with Into the pack when there's a cell (a better gun's rounds need the pouch); a second tap lets go; meds and grenades
+keep their one tap. *What a med heals*: the hover on a rig med says "+42 HP over 3 s", a med picked in the pack says
+the same, both from the one figure the heal uses (med_heal); the log says what it healed after the max HP: "Bandage
+used: +38 HP (112 of 140)". *The smoke:* the Depot rounds behind plain ones fire first and the plain take over; Into
+the pack from the run screen, refused into a full pack, let go on a second tap; the hover, the pack's pick and the
+log's figure against the heal; the words fit; rounds moved to the pack home to the rig with a full stash, not loot.
+The reviewer's catches: rounds moved to the pack were counted as loot and, with the stash full, dropped at the gate
+without a word (now home to the rig, or the stash, or a log line); a med could be stowed by the sim (rounds only);
+a second stack of the same grade read "a better grade fires first".
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

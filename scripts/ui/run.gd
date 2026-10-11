@@ -83,6 +83,7 @@ var _shown := ""
 var _fight_face := {}              # {frame, art, blank}: the crew's head while he's out, else the zone's gang (Matt's Greenhorn faces), else a drawn one
 var _runner_face := {}             # the runner's class
 var _rig_cells: Array = []         # ItemCells, one a pouch, in the Runner panel
+var _rig_pick := -1                # a stack of rounds picked in the rig (11 Oct): shown in the pick panel, Into the pack
 var _rig_outlines: Array = []
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
@@ -169,6 +170,8 @@ func show_state(s) -> void:
 		return
 	var m: Dictionary = sim.mission
 	var t: Dictionary = m["t"]
+	if _inv.selected >= 0 or _rig_picked().is_empty():
+		_rig_pick = -1                    # a pack cell picked, or the stack gone: the rig's pick goes
 	var low: bool = sim.hp / sim.max_hp() <= 0.35
 	var tier_i: int = int(m["tier"])
 	# the band: the site, the clock as the headline, the fight's progress as the bar
@@ -287,7 +290,7 @@ func show_state(s) -> void:
 	if way_out:
 		_button.text = "Getting out · %s" % Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"]))))     # the seconds each frame; the restyle below only when it starts
 	# the price before the clear changes only as the run's clock caps it (the review, 10 Oct)
-	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d" % _rig_pick, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
 		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
 	if sig == _shown:
 		return
@@ -415,6 +418,10 @@ func _tiles(tiles: Array, rows: Array) -> void:
 
 func _show_pick(m: Dictionary) -> void:
 	var it := _picked_item(m)
+	var r := _rig_picked()
+	if it.is_empty() and not r.is_empty():
+		_show_rig_pick(m, r)
+		return
 	if it.is_empty():
 		var lines := ["A rifle is four cells by one, armour three by three, a med or a part one"]
 		if sim.pack_used(m) >= sim.capacity():
@@ -438,7 +445,7 @@ func _show_pick(m: Dictionary) -> void:
 		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
-			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds"),
+			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "%s, under fire" % sim.med_words(it)),
 			"" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")])
 		buttons.append({"text": "Take into the rig", "action": _take_pick, "enabled": room, "primary": true})
 	elif it["slot"] in Data.SLOTS:
@@ -460,6 +467,47 @@ func _show_pick(m: Dictionary) -> void:
 		_pick.show_right_words("", "", [])
 	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": true, "primary": buttons.is_empty()})
 	_pick.set_buttons(buttons)
+
+
+## A stack of rounds picked in the rig: what it is, whether it's the one firing, and Into the pack when there's room.
+func _show_rig_pick(m: Dictionary, r: Dictionary) -> void:
+	_pick.show_pick(r, sim, "The pick · in the rig", Items.ammo_words(r).to_lower().replace("smg", "SMG"))
+	var firing := false
+	var same := false                    # a stack of the same grade as the one firing: next after it
+	for slot in ["Primary", "Secondary"]:
+		var g = sim.equipped[slot]
+		if g != null and sim.feed_stack(g) == r:
+			firing = true
+		elif g != null and not sim.feed_stack(g).is_empty() and sim.feed_stack(g)["base"] == r["base"]:
+			same = true
+	var room: bool = sim.can_rig_to_pack(r["id"])
+	_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()],
+		["Firing now: the best in the rig" if firing else ("Next: the same rounds, after these" if same else ("Waiting: a better grade fires first" if _fires_for_worn(r) else "No gun worn fires it")),
+		"" if room else "No room: ditch something first"])
+	_pick.set_buttons([{"text": "Into the pack", "action": _rig_to_pack, "enabled": room, "primary": true}])
+
+
+func _fires_for_worn(r: Dictionary) -> bool:
+	for slot in ["Primary", "Secondary"]:
+		var g = sim.equipped[slot]
+		if g != null and Items.ammo_type(g) == Items.base_of(r)["type"]:
+			return true
+	return false
+
+
+func _rig_picked() -> Dictionary:
+	if _rig_pick < 0 or sim == null:
+		return {}
+	for it in sim.rig:
+		if int(it["id"]) == _rig_pick:
+			return it
+	return {}
+
+
+func _rig_to_pack() -> void:
+	if _rig_pick >= 0 and sim.rig_to_pack(_rig_pick):
+		_rig_pick = -1
+	acted.emit()
 
 
 func _picked_item(m: Dictionary) -> Dictionary:
@@ -558,7 +606,14 @@ func _show_rig() -> void:
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
 		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)
-		c.show_item(it, lit, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
+		c.show_item(it, lit or int(it["id"]) == _rig_pick, Vector2(w * cell + (w - 1) * Pal.CELL_GAP, cell))
+		# the hover (11 Oct): what a med heals, what a stack is and whether it's firing
+		if Items.is_medical(it):
+			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
+		elif Items.is_ammo(it):
+			c.tooltip_text = "%s · %d rounds · tap for the pack" % [it["base"], int(it["rounds"])]
+		else:
+			c.tooltip_text = str(it["base"])
 		c.visible = true
 		for j in range(w):
 			taken[pos + j] = true
@@ -575,7 +630,12 @@ func _show_rig() -> void:
 
 func _rig_pressed(k: int) -> void:
 	if k < sim.rig.size() and sim.on_mission():
-		if Items.is_medical(sim.rig[k]):
+		if Items.is_ammo(sim.rig[k]):
+			# rounds: picked for the pick panel (Into the pack), or let go on a second tap
+			var id: int = int(sim.rig[k]["id"])
+			_rig_pick = -1 if _rig_pick == id else id
+			_inv.selected = -1
+		elif Items.is_medical(sim.rig[k]):
 			sim.use_med(sim.rig[k]["id"])
 		elif Items.is_grenade(sim.rig[k]):
 			sim.use_grenade(sim.rig[k]["id"])     # thrown at everyone on you (32)

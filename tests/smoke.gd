@@ -4165,6 +4165,7 @@ func _idle_checks(main) -> void:
 	_junk_rule_checks(main)
 	_upgrade_arrow_checks(main)
 	_came_back_checks(main)
+	_rig_checks(main)
 
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
@@ -9510,3 +9511,110 @@ func _came_back_buttons_clear(main, where: String) -> void:
 				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
 		if c["note"].text != "":
 			_check(not cr.intersects(c["note"].get_global_rect()), "the card covers the column's note '%s' (%s)" % [c["note"].text, where])
+
+
+## The rig on a run (11 Oct, Matt): the best grade of a gun's rounds fires first and the next takes over; rounds go
+## from the rig into the pack (a better gun's rounds need the pouch); a med says what it heals, on the hover and in
+## the pick, the heal is that figure, and the log says what it healed after the cap.
+func _rig_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
+	sim.equipped["Secondary"] = null
+	sim.rig.clear()
+	var plain: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	var depot: Dictionary = sim._plain(Data.AMMO, "Depot rounds")
+	depot["rounds"] = 5
+	sim.rig.append(plain)
+	sim.rig.append(depot)
+	var band: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	sim.rig.append(band)
+	_check(sim.feed_stack(sim.equipped["Primary"]) == depot and sim.grade_bonus(sim.equipped["Primary"]) == 25.0, "the Depot rounds behind the plain ones don't fire first")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	sim.mission["target_hp"] = 1e9
+	var p0: int = int(plain["rounds"])
+	var g := 0
+	while sim.rig.has(depot) and g < 120:
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+		g += 1
+	_check(not sim.rig.has(depot) and int(plain["rounds"]) <= p0, "the Depot rounds did not run out first (plain %d of %d)" % [int(plain["rounds"]), p0])
+	sim.hp = sim.max_hp()
+	sim.advance(2.0)
+	_check(int(plain["rounds"]) < p0 and sim.feed_stack(sim.equipped["Primary"]) == plain, "the plain rounds did not take over when the Depot rounds ran out")
+	# into the pack, from the run screen
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var run_ui = main._run
+	var k: int = sim.rig.find(plain)
+	run_ui._rig_pressed(k)
+	main.refresh()
+	_check(run_ui._rig_pick == int(plain["id"]) and run_ui._pick._buttons[0].visible and run_ui._pick._buttons[0].text == "Into the pack" and not run_ui._pick._buttons[0].disabled, "the rig's rounds don't offer Into the pack")
+	_check_fit(main, "Run (rounds picked in the rig)")
+	run_ui._pick._press(0)
+	main.refresh()
+	_check(not sim.rig.has(plain) and sim.mission["found"].has(plain) and run_ui._rig_pick == -1, "Into the pack did not move the rounds")
+	_check(not sim.can_rig_to_pack(band["id"]), "a med can be stowed in the pack")
+	# no room: the button says so
+	var stack2: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	sim.rig.push_front(stack2)
+	while sim.pack_used(sim.mission) < sim.capacity():
+		sim.mission["found"].append(sim._plain(Data.MEDICAL, "Bandage"))
+	run_ui._rig_pressed(0)
+	main.refresh()
+	_check(not sim.can_rig_to_pack(stack2["id"]) and run_ui._pick._buttons[0].disabled, "Into the pack is offered into a full pack")
+	_check_fit(main, "Run (rounds picked, the pack full)")
+	run_ui._rig_pressed(0)                   # a second tap lets go
+	main.refresh()
+	_check(run_ui._rig_pick == -1, "a second tap on the rounds did not let go")
+	# a med in the pack says what it heals in the pick
+	var spare: Dictionary = sim.mission["found"][sim.mission["found"].size() - 1]
+	var kk: int = run_ui._inv.cell_of(spare["id"])
+	if kk >= 0:
+		run_ui._inv._pick(kk)
+		main.refresh()
+		_check(run_ui._pick._right_lines.any(func(l): return l.text.contains(sim.med_words(spare))), "the pack's med does not say what it heals")
+		_check_fit(main, "Run (a med picked in the pack)")
+		run_ui._inv.selected = -1
+		main.refresh()
+	# the med: the hover, the pick, the heal, the log
+	var cell = null
+	for c in run_ui._rig_cells:
+		if c.visible and c.id == int(band["id"]):
+			cell = c
+	var words: String = sim.med_words(band)
+	_check(words.begins_with("+%d HP" % int(round(sim.med_heal(band)))) and cell != null and cell.tooltip_text.contains(words), "the med's hover does not say what it heals: '%s'" % (cell.tooltip_text if cell != null else "no cell"))
+	sim.hp = maxf(1.0, sim.max_hp() - sim.med_heal(band) - 20.0)
+	var hp0: float = sim.hp
+	sim.mission["target_hp"] = 1e9
+	sim.mission["remaining"] = 0
+	_check(sim.use_med(band["id"]), "the bandage would not use")
+	var g2 := 0
+	while sim.mission != null and sim.mission["using"] != null and g2 < 30:
+		sim.advance(0.5)
+		g2 += 1
+	var line: String = ""
+	for ev in sim.events:
+		if str(ev[1]).begins_with("Bandage used: +"):
+			line = str(ev[1])
+	_check(line != "" and line.contains("+%d HP" % int(round(sim.med_heal(band)))), "the log does not say what the bandage healed: '%s' (HP %d to %d)" % [line, int(hp0), int(sim.hp)])
+	sim.extract_now()
+	# rounds moved to the pack come home to the rig (or the stash), not as loot, even with the stash full
+	sim.hp = sim.max_hp()
+	sim.rig.clear()
+	var mine: Dictionary = sim._plain(Data.AMMO, "Rifle rounds")
+	sim.rig.append(mine)
+	while sim.stash_room(1):
+		sim.stash.append(sim._plain("Helmet", "Cycle helmet"))
+	sim.deploy(0)
+	sim.mission["found"] = []
+	_check(sim.rig_to_pack(mine["id"]), "the rounds would not go into the pack")
+	sim.extract_now()
+	_check(sim.rig.any(func(x): return int(x["id"]) == int(mine["id"])) and int(sim.last_report["loot"]) == 0, "the runner's rounds did not come home to the rig, or counted as loot (loot %d)" % int(sim.last_report["loot"]))
+	_check(not mine.has("from_rig"), "the rounds came home still marked as the rig's")
+	sim.load_dict(saved)
+	main.refresh()
+	print("rig ok: the best grade first and the next after, into the pack and its room, home to the rig, the med's hover, its heal and the log")

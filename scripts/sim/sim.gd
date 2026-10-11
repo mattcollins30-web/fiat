@@ -2101,7 +2101,7 @@ func _pace_raw() -> float:
 
 # ------------------------------------------------------------------ ammo
 
-## The rig's stacks for a gun's type, first taken first.
+## The rounds in the rig for a gun's type, every stack counted (feed_stack says which fires).
 func rounds_for(gun: Dictionary) -> int:
 	var n := 0
 	var t := Items.ammo_type(gun)
@@ -2133,11 +2133,24 @@ func grade_bonus(gun: Dictionary) -> float:
 func grade_stat(gun, stat: String) -> float:
 	if gun == null:
 		return 0.0                       # no gun in hand: untyped on purpose, a typed parameter would refuse the null
+	var stack := feed_stack(gun)
+	return float(Items.base_of(stack).get(stat, 0)) if not stack.is_empty() else 0.0
+
+
+## The stack a gun fires from (11 Oct, Matt: Depot rounds put in the rig did nothing, the first stack of the type
+## fed whatever was better): the best grade of its type with rounds left - by the grade's worth (Rifle 40, Match
+## 100, Salted 150, Depot 170) - and the first of those in the rig on a tie. {} when it's dry.
+func feed_stack(gun: Dictionary) -> Dictionary:
 	var t := Items.ammo_type(gun)
+	var best := {}
+	var bv := -1
 	for it in rig:
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
-			return float(Items.base_of(it).get(stat, 0))
-	return 0.0
+			var v: int = int(Items.base_of(it).get("value", 0))
+			if v > bv:
+				best = it
+				bv = v
+	return best
 
 
 ## Rounds fired this tick come off the first stack of the type; an empty
@@ -2150,11 +2163,7 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 	m["fired"] = m.get("fired", {})
 	m["fired"][t] = float(m["fired"].get(t, 0.0)) + shots
 	while m["fired"][t] >= 1.0:
-		var stack := {}
-		for it in rig:
-			if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
-				stack = it
-				break
+		var stack := feed_stack(gun)       # the best grade first, as the damage reads it
 		if stack.is_empty():
 			m["fired"][t] = 0.0
 			return
@@ -4578,6 +4587,18 @@ func _dose(m: Dictionary) -> void:
 	m["dosed"] = int(m.get("dosed", 0)) + 1
 
 
+## What a med heals this runner, before the max HP caps it: its own figure through the past, the trait, the trees,
+## the nodes, the rules, the set and the Yard. The rig's hover, the pick panel and the heal itself all read this.
+func med_heal(it: Dictionary) -> float:
+	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0)
+
+
+## A med in words: "+42 HP over 3 s" (at once with Field surgery).
+func med_words(it: Dictionary) -> String:
+	var t := use_time(it)
+	return "+%d HP %s" % [int(round(med_heal(it))), ("over %s s" % (("%.1f" % t) if t < 10.0 and t != floorf(t) else "%d" % int(t))) if t > 0.0 else "at once"]
+
+
 ## Using a med: the seconds run down under whatever fire there is, then it heals.
 func use_med(id: int) -> bool:
 	if mission == null or mission["using"] != null or mission["t"].get("no_meds", false):
@@ -4589,7 +4610,7 @@ func use_med(id: int) -> bool:
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
-			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0)}
+			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": med_heal(it)}
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
@@ -4661,7 +4682,9 @@ func _patch(m: Dictionary, dt: float) -> void:
 		return
 	m["using"]["left"] -= dt
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
+		var hp_was := hp
 		_heal(m, m["using"]["heal"] * (1.2 if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true)
+		m["using"]["gained"] = hp - hp_was     # what it healed, after the max HP caps it (the log's figure)
 		if has_joint("paramedic_poison") and m["remaining"] > 0:
 			_dose(m)                         # the Paramedic's dose, joined: the med's a full stack of poison on them
 		if m.has("my_dots"):
@@ -4672,7 +4695,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 		if has_rule("arsonists_rig") and m["remaining"] > 0:
 			_alight(m)                       # the Arsonist's Rig: the med's a petrol bomb's worth on everyone on you
 		m["meds_used"] += 1
-		log_event("%s used: HP %d" % [m["using"]["name"], ceili(hp)])
+		log_event("%s used: +%d HP (%d of %d)" % [m["using"]["name"], int(round(float(m["using"].get("gained", 0.0)))), ceili(hp), ceili(max_hp())])
 		m["using"] = null
 
 
@@ -5134,6 +5157,15 @@ func _extract() -> void:
 		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
 	var stashed := 0
 	for it in m["found"]:
+		if it.get("from_rig", false):
+			# the runner's own rounds, moved to the pack on the run: back to the rig when there's a pouch, else the
+			# stash, never loot (the review: a full stash dropped them without a word)
+			it.erase("from_rig")
+			if rig_room(Items.size(it)):
+				rig.append(it)
+			elif not stash_put(it):
+				log_event("No room for the %s: left at the gate" % str(it["base"]).to_lower())
+			continue
 		if Items.is_deeds(it):
 			stash.append(it)                 # whatever the room: the deeds come home
 			stashed += 1
@@ -5611,6 +5643,35 @@ func equip_from_pack(id: int) -> bool:
 
 
 ## A med or rounds found out there, into the rig while the run's on.
+## Rounds out of the rig and into the pack on a run (11 Oct, Matt: a better rifle and its rounds found, and the rig
+## full of the shotgun's shells with no way to make room). Needs the cells in the pack; never what's being used.
+func can_rig_to_pack(id: int) -> bool:
+	if mission == null:
+		return false
+	for it in rig:
+		if int(it["id"]) == id:
+			return Items.is_ammo(it) and _pack_has_room(mission, Items.size(it))     # rounds only: a med is used, never stowed
+	return false
+
+
+func rig_to_pack(id: int) -> bool:
+	if not can_rig_to_pack(id):
+		return false
+	for k in range(rig.size()):
+		if int(rig[k]["id"]) == id:
+			var it: Dictionary = rig[k]
+			rig.remove_at(k)
+			it["from_rig"] = true              # the runner's own: home to the rig, not counted as loot
+			mission["found"].append(it)
+			log_event("%s into the pack" % it["base"])
+			return true
+	return false
+
+
+func _pack_has_room(m: Dictionary, cells: int) -> bool:
+	return pack_used(m) + cells <= capacity()
+
+
 func take_from_pack(id: int) -> bool:
 	if mission == null:
 		return false
