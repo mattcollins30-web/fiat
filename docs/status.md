@@ -2924,6 +2924,15 @@ probe of how much dot damage the kills throw away, by build, then decide between
 default, or an execute. *The smoke:* the skull with 110 of dots over 100 HP and not with 40, on yours with a bleed
 past your HP and gone with none, and the fight unchanged.
 
+**The pass judges the element builds (11 Oct).** Matt: every class has two elements; anyone playing without one
+should expect it slow, so balancing around plain builds isn't worth it. tools\balance.bat runs the ten element
+builds - every class on each of its affinities, the Scrapper's shock and fire, the Paramedic's poison and frost and
+the Doorman's physical new - and every gate in summary.md reads those alone (the Bank's band within them only). The
+five plain classes run at least 24 hours a read and sit on one row, the plain floor: every read beats the lorry by
+hour 24 (each read, not the median - one read stuck is what it's there to catch). Thirty-one jobs, two reads a build
+and the probe. A local 8-hour read of the physical Doorman: the Bank 1.1 h, the keystone 2.8 h, the capstone 7.9 h,
+the lorry 4.0 h - the first figures for it.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

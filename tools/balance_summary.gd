@@ -31,6 +31,7 @@ const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's w
 const LORRY_BY := 16.0          # hour: the lorry beaten on every build (the endgame's ending; Matt, 7 Oct: "16 hours would be right given the type of game")
 const SPREAD := [7, 11]         # the ladders' spread: the streets' deepest depth at PUSH less the barracks' (by level they sit eight apart; the shapes read 7-12 on the fifteenth read, the band re-stated from it)
 const DEATH_RUNS := [10.0, 30.0]  # runs a death at Matt's risk; read from his save (MATT_DEATHS), the bot's bail-outs shown beside and not judged (Matt, 8 Oct: the bot at 0.88 with a kit past its sites is never wounded and never bails)
+const PLAIN_LORRY_BY := 24.0    # hour: a plain build (no element tree) only has to finish - every read beats the lorry by this (Matt, 11 Oct: "if they did then they should expect it to be slow"; slow is fine, stuck isn't)
 const MATT_DEATHS := [-1, 0]     # Matt's save: -1 until the playtest of the 9 Oct build (Matt: "so much has changed that it's not worth looking at my previous save"; the old 7 in 116 retired). An accepted red till then.
 
 
@@ -79,14 +80,17 @@ func _init() -> void:
 		quit(1)
 		return
 	var rows: Array = []    # [name, green when, read, ok (true/false/null)]
+	# the element builds are the game (Matt, 11 Oct: every class has its two elements; who'd play without one?): every
+	# gate below reads them alone. The plain builds - a class to its keystones, no element tree - are a floor, read on
+	# their own row: every read beats the lorry within PLAIN_LORRY_BY
+	var plains: Array = full.filter(func(b): return str(b.get("element", "")) == "")
+	full = full.filter(func(b): return str(b.get("element", "")) != "")
 
-	# the bank's band, read within each family: the five classes keystones-first, and the five element
-	# builds (which are meant to be the stronger thing - Matt's "broken builds" - so a band across both
-	# would only ever read the element builds' head start)
+	# the bank's band, read across the element builds (the plain classes only have the floor, 11 Oct)
 	if not full.is_empty():
 		var ok := true
 		var texts: Array = []
-		for fam in [["the classes", func(b): return str(b.get("element", "")) == ""], ["the element builds", func(b): return str(b.get("element", "")) != ""]]:
+		for fam in [["the element builds", func(b): return str(b.get("element", "")) != ""]]:
 			var banks: Array = []
 			var never: Array = []
 			for b in full:
@@ -104,7 +108,7 @@ func _init() -> void:
 			if not never.is_empty():
 				t += " (never: " + ", ".join(never) + ")"
 			texts.append(t)
-		rows.append(["The bank's band", "slowest within %.1fx the fastest, within the classes and within the element builds" % BANK_BAND, "; ".join(texts), ok])
+		rows.append(["The bank's band", "slowest within %.1fx the fastest, the element builds" % BANK_BAND, "; ".join(texts), ok])
 
 	# the keystone, the capstone
 	for pair in [["keystone_at", "The keystone", KEYSTONE_BY], ["capstone_at", "The capstone", CAPSTONE_BY]]:
@@ -229,6 +233,20 @@ func _init() -> void:
 	else:
 		rows.append(["The lorry", "beaten by hour %.0f, every build" % LORRY_BY, "no lorry in these reads (an older balance.gd)", null])
 		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], "not read", null])
+	# the plain floor: every read of a plain build, not their median - one read stuck is the thing it's there to catch
+	if not plains.is_empty():
+		var stuck: Array = []
+		var times: Array = []
+		for g in reads:
+			if str(g.get("element", "")) != "":
+				continue
+			var h := float(g.get("lorry_at", -1.0))
+			if h < 0.0 or h > PLAIN_LORRY_BY:
+				stuck.append("%s %s in %s (services at depth %d)" % [g["build"], _hours(h), _hours(float(g.get("elapsed_h", g.get("hours", 0.0)))), int(g.get("services_depth", 0))])
+			else:
+				times.append(h)
+		var ptext: String = ("every read by %s (latest %s)" % [_hours(PLAIN_LORRY_BY), _hours(times.max())]) if stuck.is_empty() else "stuck: " + ", ".join(stuck)
+		rows.append(["The plain floor", "every read of a plain build (no element tree) beats the lorry by hour %.0f" % PLAIN_LORRY_BY, ptext, stuck.is_empty()])
 
 	# wounds
 	if not full.is_empty():
@@ -277,8 +295,8 @@ func _init() -> void:
 	var out: Array = []
 	out.append("# Balance summary")
 	out.append("")
-	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds%s. %s" % [
-		Time.get_datetime_string_from_system(false, true), reads.size(), full.size(), " and the probe" if not probe.is_empty() else " (no probe)",
+	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds (%d element, %d plain)%s. %s" % [
+		Time.get_datetime_string_from_system(false, true), reads.size(), full.size() + plains.size(), full.size(), plains.size(), " and the probe" if not probe.is_empty() else " (no probe)",
 		("%d RED." % reds) if reds > 0 else "No reds."])
 	var missing: Array = []
 	for b in builds:
