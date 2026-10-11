@@ -732,9 +732,9 @@ func _show_panel() -> void:
 		UI.fit(_right_title, ["Fitted now: " + fitted["base"], "Fitted: " + fitted["base"], "Fitted now"])
 		_right_lines[0].text = "%s %s" % [fh[0], fh[1]]
 		UI.fit(_right_lines[1], Items.affix_options(fitted))
-		var gain := Items.score(it) - Items.score(fitted)
-		_right_lines[2].text = "Sidegrade" if absf(gain) < 0.05 else ("▲ Better than it" if gain > 0 else "▼ Worse than it")
-		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if absf(gain) < 0.05 else (Pal.GOOD if gain > 0 else Pal.BAD))
+		var c: int = sim.compare(it)      # tried on (11 Oct), as the Lock-up's verdict
+		_right_lines[2].text = "Sidegrade" if c == 0 else ("▲ Better than it" if c > 0 else "▼ Worse than it")
+		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if c == 0 else (Pal.GOOD if c > 0 else Pal.BAD))
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):

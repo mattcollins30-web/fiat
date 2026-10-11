@@ -2851,6 +2851,24 @@ its tiles, find, capped firsts and level, off the run's column, no button or not
 fitting, saved, kept by a move, put away by Seen, and no dry run on it. The reviewer's catches: a move wiped the
 tally; the card sat over a column's buttons; the arrows worked out twice a cell a refresh.
 
+**Better, tried on (11 Oct).** Matt: his Van's Spare (+18% damage, a T3 unique) read worse than a machine pistol,
+and putting the pistol on cost him damage. "Better" was each piece's own score, alone: a damage % counted on that gun
+only (it multiplies the whole of the damage), a secondary counted at full (it fires at a third behind a live
+primary - the Van's Spare's rule is what lifts that), and no unique's rule, tree gun type or set seen. Now a piece is
+tried on: put in its slot for a moment, every gun counted fed, the runner's figures read, put back (sim.compare,
+fit_value). A gun is better when the runner's damage goes up; a body piece by its armour and half its max HP on the
+runner's totals, bags and charms by their own score - and either way a piece that costs damage is a trade
+("Sidegrade", no arrow), not an upgrade. The Lock-up's and the pack's verdict, the Fence's line, the stash arrow, the
+junk rules' keep, Equip if better and the bot's shop all go by it; a gun's damage delta is the runner's with it on.
+The answers are cached per piece until the kit changes (40 cells: 15 ms once, under 1 ms after). The bot wears what
+the player would now, so its reads move; its gates wait on the playtest anyway. *The smoke:* the machine pistol over
+the Van's Spare reads ▼ Downgrade with no arrow, the damage lost first in the deltas, junk to the rules, left alone by
+Equip if better; the Van's Spare over the pistol the upgrade and taken; a riot suit over a stab vest better, and a
+trade when the vest carried 30 damage %. The reviewer's catches: the bot's shop weighed a share against score units
+(a build's gun) and blew an empty slot up to a hundredfold (now a share throughout, an empty slot 1.0); the bot's
+sell loop tried every gun on for every stash item (fit_value cached with the verdicts); the cache missed the first
+lot's clear.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

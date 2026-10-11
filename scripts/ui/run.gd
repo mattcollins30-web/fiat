@@ -448,8 +448,8 @@ func _show_pick(m: Dictionary) -> void:
 			if Items.is_gun(fitted):
 				ftail = [Items.fitted_words(fitted), Items.ammo_words(fitted).to_lower().replace("smg", "SMG")]
 			_pick.show_fitted(fitted, sim, "Fitted now", ftail)
-			var v: Array = PickPanel.verdict_of(it, fitted)
-			_pick.set_verdict(v[0], v[1], PickPanel.deltas_of(it, fitted))
+			var v: Array = PickPanel.verdict_for(sim, it)
+			_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
 		else:
 			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
 		var can: bool = sim.can_equip_from_pack(it["id"])

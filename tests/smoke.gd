@@ -11,6 +11,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Bot := preload("res://tests/bot.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const PlaytestRead := preload("res://tools/playtest_summary.gd")
 const SMOKE_SAVE := "user://smoke_autosave.save"
 const SMOKE_SLOT := "user://smoke_slot%d.save"
@@ -9322,7 +9323,60 @@ func _upgrade_arrow_checks(main) -> void:
 	_check(cw2 != null and not cw2._up.visible and (hard == null or not hard._up.visible), "an arrow stayed once the better helmet went on")
 	sim.load_dict(saved)
 	main.refresh()
+	_try_on_checks(main)
 	print("upgrade arrows ok: the better piece alone, inside its cell, never on the body, gone once worn")
+
+
+## Tried on (11 Oct, Matt: the Van's Spare's +18% damage read worse than a machine pistol that cost him damage):
+## better is the runner's damage with the piece worn, so the verdict, the arrow, the deltas, the junk rules and
+## Equip if better all agree with the top bar; and a plain better piece still reads better.
+func _try_on_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
+	sim.equipped["Secondary"] = vans
+	var mp: Dictionary = sim._plain("Secondary", "Machine pistol")
+	mp["affixes"] = [{"stat": "damage_pct", "value": 10.0, "tier": 2}]
+	sim.stash_put(mp)
+	_check(Items.score(mp) > Items.score(vans), "the case no longer stands: the pistol's own score is under the Van's Spare's")
+	var before: float = sim.fit_value({}, "Secondary")
+	var with_mp: float = sim.fit_value(mp)
+	_check(with_mp < before and sim.compare(mp) == -1 and not sim.is_upgrade(mp), "the machine pistol over the Van's Spare reads %d (%.1f against %.1f dmg/s)" % [sim.compare(mp), with_mp, before])
+	sim.auto_equip = true
+	_check(not sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "Equip if better put the pistol on over the Van's Spare")
+	sim.junk_upto = 2
+	_check(sim.is_junk(mp), "the junk rules keep the pistol that costs damage")
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": mp["id"]}
+	main.refresh()
+	var cell = main._armoury._inv.cell_node(main._armoury._inv.cell_of(mp["id"]))
+	_check(cell != null and not cell._up.visible, "the pistol that costs damage carries the arrow")
+	_check(main._armoury._pick._verdict.text == "▼ Downgrade", "the verdict on the pistol reads '%s'" % main._armoury._pick._verdict.text)
+	var ds: Array = PickPanel.deltas_for(sim, mp, vans)
+	_check(not ds.is_empty() and float(ds[0][0]) < 0.0 and str(ds[0][1]).ends_with("dmg/s"), "the deltas don't lead with the damage lost: %s" % str(ds))
+	_check_fit(main, "Lock-up (a pistol against the Van's Spare)")
+	# the other way: the Van's Spare over the pistol is the upgrade, and Equip if better takes it
+	sim.equipped["Secondary"] = mp
+	sim.stash.erase(mp)
+	sim.stash_put(vans)
+	_check(sim.compare(vans) == 1 and sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "the Van's Spare over the pistol is not the upgrade")
+	# a plain better vest still reads better; the same vest a trade when it costs the damage a worn helmet gave
+	var vest: Dictionary = sim._plain("Armour", "Stab vest")
+	sim.equipped["Armour"] = vest
+	var riot: Dictionary = sim._plain("Armour", "Riot suit")
+	_check(sim.compare(riot) == 1, "a riot suit over a stab vest is not the upgrade")
+	var dmg_vest: Dictionary = sim._plain("Armour", "Stab vest")
+	dmg_vest["affixes"] = [{"stat": "damage_pct", "value": 30.0, "tier": 4}]
+	sim.equipped["Armour"] = dmg_vest
+	_check(sim.compare(riot) == 0, "a riot suit that costs the vest's damage is not a trade: %d" % sim.compare(riot))
+	sim.load_dict(saved)
+	main._armoury.selected = {}
+	main.refresh()
+	print("tried on ok: the Van's Spare kept, the arrow, the verdict, the deltas, the junk, equip if better, a trade")
 
 
 ## What came back (11 Oct, Matt's list): every run since the last Seen added up on a card over the Runs screen -

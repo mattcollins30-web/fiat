@@ -287,12 +287,26 @@ static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 	return out
 
 
-## The verdict for a pick against the fitted, by the slot's score: [words, tone].
-static func verdict_of(it: Dictionary, fitted: Dictionary) -> Array:
-	var gain := Items.score(it) - Items.score(fitted)
-	if absf(gain) < 0.05:
-		return ["Sidegrade", "warn"]
-	return ["▲ Upgrade", "good"] if gain > 0 else ["▼ Downgrade", "bad"]
+## The verdict for a pick against what's worn, tried on (sim.compare, 11 Oct): [words, tone].
+static func verdict_for(sim, it: Dictionary) -> Array:
+	match sim.compare(it):
+		1:
+			return ["▲ Upgrade", "good"]
+		-1:
+			return ["▼ Downgrade", "bad"]
+	return ["Sidegrade", "warn"]
+
+
+## The deltas, a gun's damage read as the runner's with it on (its own figure alone missed what a damage % on the
+## whole does, the secondary's third, a unique's rule), then each affix that differs.
+static func deltas_for(sim, it: Dictionary, fitted: Dictionary) -> Array:
+	var out: Array = deltas_of(it, fitted)
+	if Data.SLOT_SCORE.get(str(it["slot"]), "") == "dps":
+		out = out.filter(func(d): return not str(d[1]).ends_with("dmg/s"))
+		var d: float = sim.fit_value(it) - sim.fit_value({}, str(it["slot"]))
+		if absf(d) >= 0.05:
+			out.push_front([d, ("%.1f dmg/s" if absf(d) < 10.0 else "%.0f dmg/s") % absf(d)])
+	return out
 
 
 func _press(i: int) -> void:

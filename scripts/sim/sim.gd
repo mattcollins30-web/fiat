@@ -1895,7 +1895,7 @@ var fast_memo := false
 const FAST_MEMO_S := 30.0
 var _memo_age := 0.0
 func _memo(key: String, f: Callable) -> Variant:
-	if not (_dry_on or (fast_memo and mission != null)):
+	if _trying or not (_dry_on or (fast_memo and mission != null)):     # a try-on reads the kit it's trying, never a memo
 		return f.call()
 	if _dry_memo.has(key):
 		return _dry_memo[key]
@@ -2112,6 +2112,8 @@ func rounds_for(gun: Dictionary) -> int:
 
 
 func has_rounds(gun: Dictionary) -> bool:
+	if _trying:
+		return true                          # a try-on weighs every gun fed: the rounds are a trip to the rig, not the gun
 	if Items.ammo_type(gun) == "none" or gun.get("rule", "") == "weed_burner":
 		return true                          # a bat never runs dry; the burner takes nothing
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
@@ -5351,24 +5353,153 @@ func _cash_words(x: float) -> String:
 
 # ------------------------------------------------------------------ the armoury
 
-## The best item of a slot in the stash, by its score, or {}.
+## Trying it on (11 Oct, Matt: the Van's Spare's +18% damage read worse than a machine pistol that cost him damage).
+## A piece's own score sees it alone; what it does on this runner - a damage % on the whole of the damage, the
+## secondary's third behind the primary, a unique's rule, the trees' gun types, the sets - only shows with it worn.
+## So "better" is read with it in its slot for a moment, every gun counted fed, nothing memoised, then put back.
+var _trying := false
+const TRY_EPS := 0.005               # half a percent either way is the same
+
+
+## What `f` reads with `it` in its slot (or as the kit is, `it` empty), every gun fed.
+func _try(it: Dictionary, f: Callable) -> Variant:
+	var was_trying := _trying
+	_trying = true
+	var slot: String = str(it.get("slot", ""))
+	var swap: bool = not it.is_empty() and equipped.has(slot)
+	var was = equipped[slot] if swap else null
+	if swap:
+		equipped[slot] = it
+	var v = f.call()
+	if swap:
+		equipped[slot] = was
+	_trying = was_trying
+	return v
+
+
+## The runner's figure for a slot with `it` worn ({} for the kit as it is): the damage for a gun, armour and half the
+## max HP for the body (the slot score's own weighing, on the runner's totals), the piece's score for bags and charms.
+func fit_value(it: Dictionary, slot := "") -> float:
+	if slot == "":
+		slot = str(it.get("slot", ""))
+	# cached with the verdicts (the bot's sell loop asks for the best of a slot once a stash item)
+	var key := _kit_key()
+	if key != _cmp_key:
+		_cmp_key = key
+		_cmp_cache.clear()
+	var fk := "f/%s/%d" % [slot, hash(it)]
+	if _cmp_cache.has(fk):
+		return _cmp_cache[fk]
+	var v := _fit_value(it, slot)
+	_cmp_cache[fk] = v
+	return v
+
+
+func _fit_value(it: Dictionary, slot: String) -> float:
+	match Data.SLOT_SCORE.get(slot, ""):
+		"dps":
+			return _try(it, dps)
+		"armour":
+			return _try(it, func(): return armour() + 0.5 * max_hp())
+	if it.is_empty():
+		return Items.score(equipped[slot]) if equipped.get(slot) != null else 0.0
+	return Items.score(it)
+
+
+## Against what's worn in its slot: 1 better, 0 a sidegrade (or a trade: better at its own job, worse for the
+## damage), -1 worse. A gun by the runner's damage with it on; anything else by its own job, and the damage with it on
+## breaking a tie or making it a trade. An empty slot takes anything that goes in it.
+func compare(it: Dictionary) -> int:
+	var slot: String = str(it.get("slot", ""))
+	if not equipped.has(slot):
+		return 0
+	if equipped[slot] == null:
+		return 1
+	# the grids ask for every cell ten times a second: an answer stands until the kit or the piece changes
+	var key := _kit_key()
+	if key != _cmp_key:
+		_cmp_key = key
+		_cmp_cache.clear()
+	var ih: int = hash(it)
+	if _cmp_cache.has(ih):
+		return _cmp_cache[ih]
+	var c := _compare(it, slot)
+	_cmp_cache[ih] = c
+	return c
+
+
+var _cmp_key := 0
+var _cmp_cache := {}                 # hash of the piece -> its verdict, while the kit stays as it is
+
+
+## What the try-on's answers hang on: what's worn (bench work and all), the level, the trees, the pasts, a wound,
+## the rig (the grade feeding a gun), the trades, and whether a run is on.
+func _kit_key() -> int:
+	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
+	return hash([equipped, level(), tree, cls, cls2, wound, rig, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5])
+
+
+func _compare(it: Dictionary, slot: String) -> int:
+	var d0: float = _try({}, dps)
+	var rel: float = (_try(it, dps) - d0) / maxf(d0, 0.01)
+	var g: int = 1 if rel > TRY_EPS else (-1 if rel < -TRY_EPS else 0)
+	var kind: String = Data.SLOT_SCORE.get(slot, "")
+	if kind == "dps":
+		return g
+	var o := 0
+	if kind == "armour":
+		var v0: float = fit_value({}, slot)
+		var orel: float = (fit_value(it) - v0) / maxf(v0, 0.01)
+		o = 1 if orel > TRY_EPS else (-1 if orel < -TRY_EPS else 0)
+	else:
+		var own: float = Items.score(it) - Items.score(equipped[slot])
+		o = 1 if own >= 0.05 else (-1 if own <= -0.05 else 0)
+	if o == g or g == 0:
+		return o
+	if o == 0:
+		return g
+	return 0                             # a trade: the panel's deltas say which way
+
+
+## How much better, as a share of what the slot gives now (the bot's shop weighs one slot against another by it).
+## An empty slot filled counts as doubling it (1.0): first in line, without the share blowing up over nothing.
+const EMPTY_GAIN := 1.0
+func upgrade_gain(it: Dictionary) -> float:
+	var slot: String = str(it.get("slot", ""))
+	if not equipped.has(slot):
+		return 0.0
+	if equipped[slot] == null:
+		return EMPTY_GAIN
+	var v0: float = fit_value({}, slot)
+	return (fit_value(it) - v0) / maxf(v0, 0.01)
+
+
+## The best of a slot in the stash, tried on, or {}.
 func best_in_stash(slot: String) -> Dictionary:
 	var best := {}
-	var bs := -1.0
+	var bs := -INF
 	for it in stash:
-		if it["slot"] == slot and Items.score(it) > bs:
-			best = it
-			bs = Items.score(it)
+		if it["slot"] == slot:
+			var v := fit_value(it)
+			if v > bs:
+				best = it
+				bs = v
 	return best
 
 
 func equip_best(slot: String) -> bool:
 	if mission != null:
 		return false
-	var best := best_in_stash(slot)
+	# the best of the ones that are better outright (a trade is the player's to make)
+	var best := {}
+	var bs := -INF
+	for it in stash:
+		if it["slot"] == slot and compare(it) == 1:
+			var v := fit_value(it)
+			if v > bs:
+				best = it
+				bs = v
 	if best.is_empty():
-		return false
-	if equipped[slot] != null and Items.score(equipped[slot]) >= Items.score(best):
 		return false
 	_remove(best)
 	chron("equip", {"slot": slot, "how": "best", "on": _chron_item(best), "off": _chron_item(equipped[slot])})
@@ -5788,15 +5919,9 @@ func is_junk(it: Dictionary) -> bool:
 	return not is_upgrade(it)
 
 
-## Better than what's worn in its slot by the slot's score: the compare's "▲ Upgrade", and the stash's arrow (11 Oct).
-## An empty slot takes anything that goes in it.
+## Better than what's worn, tried on (compare): the compare's "▲ Upgrade", the stash's arrow, the junk rules' keep.
 func is_upgrade(it: Dictionary) -> bool:
-	var slot: String = str(it.get("slot", ""))
-	if not equipped.has(slot):
-		return false
-	if equipped[slot] == null:
-		return true
-	return Items.score(it) - Items.score(equipped[slot]) >= 0.05
+	return compare(it) == 1
 
 
 ## The idle junk run, by the junk rules (is_junk).

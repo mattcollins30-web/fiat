@@ -257,8 +257,8 @@ func _show_panel() -> void:
 				if Items.is_gun(fitted):
 					ftail = [Items.fitted_words(fitted), _rounds_clause(fitted)]
 				_pick.show_fitted(fitted, sim, "Fitted now", ftail)
-				var v: Array = PickPanel.verdict_of(it, fitted)
-				_pick.set_verdict(v[0], v[1], PickPanel.deltas_of(it, fitted))
+				var v: Array = PickPanel.verdict_for(sim, it)
+				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
 			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				_pick.set_hint("No room in the stash for what comes off")

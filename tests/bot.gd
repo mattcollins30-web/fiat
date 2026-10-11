@@ -807,9 +807,9 @@ func _buy_upgrade(sim) -> void:
 		if Items.is_attachment(it) or Items.rig_item(it):
 			continue
 		var cur = sim.equipped[it["slot"]]
-		var g: float = Items.score(it) - (Items.score(cur) if cur != null else 0.0)
+		var g: float = sim.upgrade_gain(it) if sim.compare(it) == 1 else 0.0     # tried on (11 Oct), as the player's arrow
 		if element != "" and it["slot"] == "Primary":
-			g = _elem_score(it) - (_elem_score(cur) if cur != null else 0.0)   # a build weighs its gun its own way
+			g = ((_elem_score(it) - _elem_score(cur)) / maxf(_elem_score(cur), 0.01)) if cur != null else sim.EMPTY_GAIN   # a build weighs its gun its own way, as a share like the rest
 		if g > gain and sim.cash >= sim.price(it) + 100:
 			gain = g
 			pick = i
