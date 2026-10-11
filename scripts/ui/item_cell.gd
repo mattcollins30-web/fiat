@@ -19,6 +19,10 @@ var glass := false                 # over a backdrop (10 Oct, Kit-B): the fill l
 var _art: TextureRect
 var _lines: Array[Label] = []      # up to three, laid out by the footprint
 var _corner: Label                 # over the picture: an ammo stack's rounds
+var _up: Label                     # the upgrade's arrow (11 Oct): top right, on a dark disc so it reads over any art
+const UP := 18                     # the arrow's disc
+const UP_NUDGE := 6                # a one-row cell's words, moved down out of the arrow's corner
+var _nudged := false
 
 
 func _init() -> void:
@@ -38,6 +42,24 @@ func _init() -> void:
 		_lines.append(l)
 	_corner = UI.label(self, Rect2(0, 0, Pal.CELL, 18), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
 	_corner.visible = false
+	_up = UI.label(self, Rect2(0, 0, UP, UP), "▲", "SemiBold", 11, Pal.GOOD, HORIZONTAL_ALIGNMENT_CENTER)
+	_up.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_up.add_theme_stylebox_override("normal", UI.box(Color(Pal.BG, 0.85), UP / 2, 1, Pal.GOOD))
+	_up.visible = false
+
+
+## The upgrade's arrow on or off: better than what's worn in its slot (sim.is_upgrade). Off by default, so the
+## body's slots and the rig never show one; the grids that hold spares set it.
+func set_upgrade(on: bool) -> void:
+	_up.visible = on
+	_up.position = Vector2(size.x - UP - 2, 2)
+	_up.move_to_front()
+	# no picture and one row: the words sit high enough to meet the arrow, so they drop a little (once a show)
+	if on and not _nudged and not _art.visible and size.y < 100.0:
+		_nudged = true
+		for l in _lines:
+			if l.visible:
+				l.position.y += UP_NUDGE
 
 
 ## Pixels a footprint of so many cells spans, gaps included.
@@ -53,6 +75,8 @@ static func rarity_tone(it: Dictionary) -> String:
 ## (a body slot fills its box whatever is in it; a rig pouch is one cell).
 func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	id = it["id"]
+	_up.visible = false
+	_nudged = false
 	var f := Items.footprint(it)
 	size = box if box != Vector2.ZERO else Vector2(px(f.x), px(f.y))
 	# the words are laid out by the room there is, in cells
@@ -153,4 +177,6 @@ func text_nodes() -> Array:
 			out.append(l)
 	if _corner.visible:
 		out.append(_corner)
+	if _up.visible:
+		out.append(_up)
 	return out

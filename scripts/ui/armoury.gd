@@ -110,7 +110,7 @@ var _buttons: Array:
 		return _pick._buttons
 var _toggles: Array:
 	get:
-		return [_pick._buttons[0], _pick._buttons[1]]
+		return [_pick._buttons[0], _pick._buttons[1], _pick._buttons[2]]
 var _head:
 	get:
 		return _pick._heads[0]
@@ -176,7 +176,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.auto_sell)]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep]
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -202,11 +202,12 @@ func _affix_words(it: Dictionary) -> String:
 func _show_panel() -> void:
 	var it := _selected_item()
 	if it.is_empty():
-		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right"])
-		# the idle toggles live where the buttons would be
+		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right", "", "When a run comes home:", junk_words(sim)])
+		# the idle toggles and the junk rules (11 Oct) live where the buttons would be
 		_pick.set_buttons([
 			{"text": "Equip if better ✓" if sim.auto_equip else "Equip if better", "action": _toggle.bind(0), "enabled": true, "primary": false, "tone": "good" if sim.auto_equip else ""},
-			{"text": "Sell the junk on return ✓" if sim.auto_sell else "Sell the junk on return", "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.auto_sell else ""}])
+			{"text": "Sell: " + SELL_WORDS[sim.junk_upto + 1], "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.junk_upto >= 0 else ""},
+			{"text": "Keep: " + KEEP_WORDS[sim.junk_keep], "action": _toggle.bind(2), "enabled": sim.junk_upto >= 0, "primary": false, "tone": ""}])
 		return
 	var buttons := []
 	var tail = ""
@@ -323,11 +324,28 @@ func _show_medical(it: Dictionary) -> Array:
 	return buttons
 
 
+## The junk rules' buttons: the rarity the Fence takes up to (off, then each rarity to Rare), and the kind kept.
+const SELL_WORDS := ["off", "commons", "to uncommon", "to rare"]
+const KEEP_WORDS := {"": "upgrades", "guns": "upgrades, guns", "body": "upgrades, body", "bags": "upgrades, bags", "parts": "upgrades, parts"}
+
+
+## The rules in a line: what goes to the Fence when a run comes home.
+static func junk_words(s) -> String:
+	if s.junk_upto < 0:
+		return "nothing's sold" + (", the best goes on" if s.auto_equip else "")
+	var what: String = ["commons", "commons and uncommons", "everything to rare"][s.junk_upto]
+	var keep: String = "" if s.junk_keep == "" else ", or %s" % s.junk_keep
+	return "the Fence takes %s, never an upgrade%s" % [what, keep]
+
+
 func _toggle(i: int) -> void:
 	if i == 0:
 		sim.auto_equip = not sim.auto_equip
+	elif i == 1:
+		sim.junk_upto = sim.junk_upto + 1 if sim.junk_upto < SELL_WORDS.size() - 2 else -1
 	else:
-		sim.auto_sell = not sim.auto_sell
+		var keys: Array = sim.JUNK_KEEPS.keys()
+		sim.junk_keep = keys[(keys.find(sim.junk_keep) + 1) % keys.size()]
 	acted.emit()
 	show_state(sim)
 

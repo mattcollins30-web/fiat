@@ -2831,6 +2831,26 @@ the read untested on a save through JSON; the session line after the runs it set
 its lines on load, a record that couldn't be moved aside (held open) mixed with the next game's, and the read silent
 on a record running past the save's count.
 
+**Three off the ideas list (11 Oct).** Matt, away for the day: items 2, 3 and 4, nothing linked, no numbers.
+*Upgrade arrows*: a small ▲ on a green-ringed disc, top right of any spare that beats what's worn in its slot by the
+slot's score (the compare's own "▲ Upgrade"; an empty slot takes anything) - in the stash, the pack, the Fence's
+shelf and stash, the Workshop's; never on the body. A picture-less one-row cell's words drop 6 px clear of it.
+*What came back*: a card over the Runs screen adding up every run since the player last pressed Seen - runs, cash,
+XP, items, the level climbed, the dearest find (its cell, its worth, whether it beats what's worn, or worn, or sold)
+and up to four firsts (a clear, a new depth, a head down, a unique, a paper, the deeds, the lorry; then "and N
+more"); a death's cost in red; Seen at its head's right. It sits over the right-hand column (the left when the last
+run came from the right), between the tiles and the buttons, so nothing under it can be pressed; not on the map.
+A move keeps the tally and counts as a first. The tally is the sim's (came_back, in the save), so
+away runs are on it when he's back. *Junk rules* in place of the junk toggle, on the Lock-up with nothing picked:
+Sell: off / commons / to uncommon / to rare, and Keep: upgrades / upgrades and guns, body, bags or parts; the
+panel says the rules in a line. Never an upgrade, never what the old junk run never took (rounds, meds, grenades,
+papers, socketed parts, uniques, sets, the deeds, a built gun). An old save's toggle reads as commons. *The smoke:*
+the sell and keep rules going round and fitting, what goes and what stays, the rules saved, an old save's toggle;
+the arrow on the better piece alone, inside its cell, never on the body, gone once worn; the card after two runs,
+its tiles, find, capped firsts and level, off the run's column, no button or note under it, inside the screen,
+fitting, saved, kept by a move, put away by Seen, and no dry run on it. The reviewer's catches: a move wiped the
+tally; the card sat over a column's buttons; the arrows worked out twice a cell a refresh.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

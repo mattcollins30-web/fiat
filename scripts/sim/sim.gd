@@ -59,7 +59,21 @@ var weather: Array = []            # per zone: "", "Rain" or "Fog"
 var weather_at := -1               # the hour the weather was last rolled
 var last_next := ""                # the last "what's next" line the log carried
 var auto_equip := false            # idle: the best of each slot goes on when a run comes home
-var auto_sell := false             # idle: the common gear is sold when a run comes home
+## The junk rules (11 Oct, Matt's list: in place of the one junk toggle). What the Fence takes when a run comes home:
+## the gear at or under `junk_upto`'s rarity (-1, nothing), never an upgrade on what's worn (is_upgrade), never a kind
+## kept (`junk_keep`, one of JUNK_KEEPS), and never what the junk run never took (rounds, meds, grenades, papers,
+## parts that socket, uniques, set pieces, the deeds, a built gun).
+const JUNK_KEEPS := {"": [], "guns": ["Primary", "Secondary"], "body": ["Helmet", "Armour", "Charm"], "bags": ["Rig", "Backpack"], "parts": ["Attachment"]}
+var junk_upto := -1
+var junk_keep := ""
+var auto_sell: bool:                 # the old toggle: on is "sell the commons" (old saves, the tests)
+	get:
+		return junk_upto >= 0
+	set(v):
+		junk_upto = (maxi(junk_upto, 0) if v else -1)
+## What came back (11 Oct, Matt's list): every run since the player last looked, added up for the Runs screen's card -
+## runs, deaths, cash, XP, notes, scrap, items stashed, kit lost, the dearest find, the levels, and the firsts.
+var came_back := {}
 var runner_runs := 0               # this runner's runs so far
 ## This runner's record (8 Oct, the Runner room): the Yard's clock when they arrived, their best run by kills,
 ## by damage dealt and by cash, the dearest thing they found, the deepest site they held. Reset with the runner.
@@ -128,6 +142,7 @@ func start() -> void:
 	rng.randomize()
 	_starter_loadout()
 	restock()
+	came_back_seen()
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = roll_mate()
@@ -1093,7 +1108,8 @@ func move_yard(trade := "") -> bool:
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
-		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s}     # the playtest record runs on through a move
+		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
+		"came_back": came_back.duplicate(true)}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
 		for i in range(words.size()):
 			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
@@ -1114,6 +1130,9 @@ func move_yard(trade := "") -> bool:
 	paragon_banked = keep["paragon_banked"]
 	chronicle = keep["chronicle"]
 	chron_count = keep["chron_count"]
+	came_back = keep["came_back"]
+	if not came_back.is_empty():
+		came_back["lv_from"] = level()        # the new runner starts the climb again
 	played_s = keep["played_s"]
 	_snaps = int(played_s / SNAP_S)
 	yard_picks = keep["yard_picks"]       # the buildings move with the Yard (9 Oct): picks, ranks, the columns opened, the salvage
@@ -5121,6 +5140,10 @@ func _extract() -> void:
 				log_event(Words.DEEDS["held"])
 		elif stash_put(it):
 			stashed += 1
+		else:
+			continue
+		if not Items.rig_item(it):
+			_came_back_find(it)              # the card's dearest find (rounds and meds aren't finds)
 	var outcome := "Back"
 	if m.get("timed_out", false):
 		outcome = "Out of time"
@@ -5753,12 +5776,35 @@ func sell_commons() -> int:
 	return sell_rarity(0)
 
 
-## The idle junk run: common gear only - never rounds, meds, bottles, papers, uniques or set pieces.
+## Whether the junk rules sell this: at or under the rarity, not an upgrade, not a kind kept, and never what the junk
+## run leaves (rounds, meds, grenades, papers, socketed parts, uniques, set pieces, the deeds, a built gun).
+func is_junk(it: Dictionary) -> bool:
+	if junk_upto < 0 or int(it.get("rarity", 0)) > junk_upto:
+		return false
+	if Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false):
+		return false
+	if str(it.get("slot", "")) in JUNK_KEEPS.get(junk_keep, []):
+		return false
+	return not is_upgrade(it)
+
+
+## Better than what's worn in its slot by the slot's score: the compare's "▲ Upgrade", and the stash's arrow (11 Oct).
+## An empty slot takes anything that goes in it.
+func is_upgrade(it: Dictionary) -> bool:
+	var slot: String = str(it.get("slot", ""))
+	if not equipped.has(slot):
+		return false
+	if equipped[slot] == null:
+		return true
+	return Items.score(it) - Items.score(equipped[slot]) >= 0.05
+
+
+## The idle junk run, by the junk rules (is_junk).
 func sell_junk() -> int:
 	var n := 0
 	var got := 0.0
 	for it in stash.duplicate():
-		if int(it["rarity"]) == 0 and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set")):
+		if is_junk(it):
 			got += sell_price(it)
 			sell(it)
 			n += 1
@@ -5972,6 +6018,64 @@ func log_event(text: String) -> void:
 		events.pop_front()
 
 
+## What came back, started again (the card's Seen): nothing since, from the level the runner is at now.
+func came_back_seen() -> void:
+	came_back = {"runs": 0, "deaths": 0, "cash": 0.0, "xp": 0.0, "notes": 0, "scrap": 0, "items": 0, "lost": 0,
+		"lv_from": level(), "find": {}, "firsts": [], "more": 0, "since": elapsed}
+
+
+const CAME_BACK_FIRSTS := 4          # the card's lines; past that, "and N more"
+
+
+## A record line, added to what came back: a run's takings, and the firsts worth a line on the card.
+func _came_back_line(e: Dictionary) -> void:
+	if came_back.is_empty():
+		came_back_seen()
+	var cb := came_back
+	var line := ""
+	match str(e["k"]):
+		"run":
+			cb["runs"] = int(cb["runs"]) + 1
+			if e.get("outcome", "") == "Dead":
+				cb["deaths"] = int(cb["deaths"]) + 1
+				cb["lost"] = int(cb["lost"]) + int(e.get("lost_value", 0))
+			else:
+				cb["cash"] = float(cb["cash"]) + float(e.get("cash", 0))
+				cb["xp"] = float(cb["xp"]) + float(e.get("xp", 0))
+				cb["notes"] = int(cb["notes"]) + int(e.get("notes", 0))
+				cb["scrap"] = int(cb["scrap"]) + int(e.get("scrap", 0))
+				cb["items"] = int(cb["items"]) + int(e.get("loot", 0))
+		"clear":
+			line = ("First clear: %s" % e["site"]) if e.get("first", false) else ("%s held at depth %d" % [e["site"], int(e["depth"])])
+		"boss":
+			if e.get("first", false):
+				line = "%s down" % e["name"]
+		"unique":
+			line = "Found %s" % e["name"]
+		"paper":
+			line = "Read %s" % e["name"]
+		"deeds":
+			line = "The deeds, from the Bank's vault"
+		"lorry":
+			line = "The lorry beaten"
+		"move":
+			line = "The Yard moved on"
+	if line != "":
+		if cb["firsts"].size() < CAME_BACK_FIRSTS:
+			cb["firsts"].append(line)
+		else:
+			cb["more"] = int(cb["more"]) + 1
+
+
+## The dearest thing a run brought home, kept for the card (a copy: it may be sold or worn by the time it's seen).
+func _came_back_find(it: Dictionary) -> void:
+	if came_back.is_empty():
+		came_back_seen()
+	var f: Dictionary = came_back["find"]
+	if f.is_empty() or int(it.get("value", 0)) > int(f.get("value", 0)):
+		came_back["find"] = it.duplicate(true)
+
+
 ## A line in the playtest record. Never from a dry run (the odds and the bot's reads), always with the clocks.
 func chron(kind: String, data := {}) -> void:
 	if _dry_on:
@@ -5983,6 +6087,7 @@ func chron(kind: String, data := {}) -> void:
 	e.merge(data, true)
 	chronicle.append(e)
 	chron_count += 1
+	_came_back_line(e)
 
 
 ## The shell's real time at the game: the player's hours, and a snapshot every SNAP_S of them.
@@ -6021,7 +6126,7 @@ func _state() -> Dictionary:
 		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
-		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "auto_sell": auto_sell, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
+		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
 		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
@@ -6054,7 +6159,11 @@ func load_dict(d: Dictionary) -> void:
 	best_tier = int(d.get("best_tier", 0))
 	auto_tier = int(d.get("auto_tier", -1))
 	auto_equip = bool(d.get("auto_equip", false))
-	auto_sell = bool(d.get("auto_sell", false))
+	junk_upto = int(d.get("junk_upto", 0 if bool(d.get("auto_sell", false)) else -1))
+	junk_keep = str(d.get("junk_keep", ""))
+	if not JUNK_KEEPS.has(junk_keep):
+		junk_keep = ""
+	came_back = d.get("came_back", {})
 	tree = d.get("tree", [])
 	cls = d.get("class", "")
 	# saves from before the language pass carry the old names

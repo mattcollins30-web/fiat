@@ -5,11 +5,11 @@ first. Matt's framing: Fiat is an auto-battler ARPG (Melvor's kind of active), t
 system. The guard rail: no new systems. Each of these sharpens one that's there.*
 
 1. **The playtest record.** Built 11 Oct (docs/design/playtest_record.md).
-2. **Upgrade arrows in the stash.** A small ▲ on any stash item that beats what's worn in its slot, so the stash
+2. **Upgrade arrows in the stash.** Built 11 Oct. A small ▲ on any stash item that beats what's worn in its slot, so the stash
    reads at a glance without opening the compare.
-3. **"What came back."** A card after each run: the best find, the money, the XP, levels gained, anything new
+3. **"What came back."** Built 11 Oct. A card after each run: the best find, the money, the XP, levels gained, anything new
    (a first paper, a unique, a depth). The run's payoff, shown once instead of scattered.
-4. **Junk rules.** Replace the auto-sell toggle with a couple of rules: sell under a rarity, sell anything worth
+4. **Junk rules.** Built 11 Oct. Replace the auto-sell toggle with a couple of rules: sell under a rarity, sell anything worth
    less than what's worn, keep a type. Fewer stash trips.
 5. **A controller / Steam Deck pass.** Focus order through every room, tooltips that open on focus as well as
    hover, the shoulder buttons for rooms.

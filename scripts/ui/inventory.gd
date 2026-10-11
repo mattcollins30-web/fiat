@@ -177,8 +177,10 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	if selected >= 0 and not _has(selected):
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page]
+	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	for it in items:
-		sig += ",%d:%d" % [it["id"], Items.stack_size(it)]     # a stack redraws as it fills
+		ups[it["id"]] = _upgrade(it)
+		sig += ",%d:%d%s" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else ""]     # a stack redraws as it fills; an arrow as the kit changes
 	if sig == _shown:
 		return
 	_shown = sig
@@ -230,11 +232,21 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		c.visible = true
 		c.position = Vector2(r.position.x * (CELL + GAP), GRID_Y + (r.position.y - top) * (CELL + GAP))
 		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected)
+		c.set_upgrade(ups[it["id"]])
 		k += 1
 	while k < _cells.size():
 		_cells[k].visible = false
 		_cells[k].id = -1
 		k += 1
+
+
+## The upgrade's arrow (11 Oct, Matt's list): better than what's worn in its slot, wherever spares are shown - the
+## stash, the pack, the Fence's shelf, the Workshop's. `upgrades` off hides it.
+var upgrades := true
+
+
+func _upgrade(it: Dictionary) -> bool:
+	return upgrades and sim != null and sim.is_upgrade(it)
 
 
 ## First-fit: each item in order takes the first free place, scanning rows

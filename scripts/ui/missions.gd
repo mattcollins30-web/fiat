@@ -15,6 +15,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Atlas := preload("res://scripts/ui/atlas.gd")
+const CameBack := preload("res://scripts/ui/came_back.gd")
 
 const COL_GAP := 16
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
@@ -35,6 +36,7 @@ var _zone_buttons: Array = []
 var _zone_art: Array = []                 # a TextureRect a tab, behind it
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
+var _came                          # what came back (came_back.gd): the runs since the player last looked, over a column
 var _atlas                         # the map (atlas.gd): the endgame's tree in the Caravan's shape, in place of the columns
 const MAP := 3                     # the fourth button on the zone row
 const ZONE_H := 56
@@ -173,12 +175,17 @@ func _init() -> void:
 		c["boss"].visible = false
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_cols.append(c)
+	_came = CameBack.new()
+	_came.visible = false
+	_came.acted.connect(func(): acted.emit())
+	add_child(_came)
 
 
 # ------------------------------------------------------------------ showing
 
 func show_state(s) -> void:
 	sim = s
+	_show_came_back()
 	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
 	for i in range(Data.TIERS.size()):
@@ -437,9 +444,29 @@ func _boss(k: int) -> void:
 	acted.emit()
 
 
+## What came back, over a column the last run didn't come from (the right one, or the left when the last run was the
+## right's), above that column's buttons and note so nothing it covers can be pressed (the review). Not on the map.
+const CAME_FOOT := PAD + 2 * Pal.BUTTON_H + 12 + 36 + 8       # a column's buttons, the gap, its note, a margin
+
+
+func _show_came_back() -> void:
+	_came.show_state(sim)
+	if zone == MAP:
+		_came.visible = false
+	if not _came.visible:
+		return
+	var col := 2
+	var r = sim.last_report
+	if r != null and zone < Data.ZONES.size() and Data.ZONES[zone]["tiers"].find(int(r["tier"])) == 2:
+		col = 0
+	_came.position = Vector2(col * (COL_W + COL_GAP), Pal.ROOM_H - CAME_FOOT - _came.size.y)
+	_came.move_to_front()
+
+
 ## For the tests: every label and button with text.
 func text_nodes() -> Array:
 	var out: Array = []
+	out.append_array(_came.text_nodes())
 	for zb in _zone_buttons:
 		out.append(zb)
 	if zone == MAP:
@@ -459,6 +486,10 @@ func text_nodes() -> Array:
 		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
 			if b.visible:
 				out.append(b)
+	if _came.visible:
+		# under the card is out of sight: the column's words there aren't the screen's (the card's own are)
+		var cr: Rect2 = _came.get_global_rect()
+		out = out.filter(func(n): return _came.is_ancestor_of(n) or not cr.intersects(n.get_global_rect()))
 	return out
 
 

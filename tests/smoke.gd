@@ -4122,7 +4122,7 @@ func _idle_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {}
 	main.refresh()
-	_check(main._armoury._toggles[0].visible and main._armoury._toggles[1].visible, "the idle toggles are not on the Lock-up")
+	_check(main._armoury._toggles[0].visible and main._armoury._toggles[1].visible and main._armoury._toggles[2].visible, "the idle toggles and the junk rules are not on the Lock-up")
 	_check_fit(main, "Lock-up (idle toggles)")
 	main._armoury._toggle(0)
 	main._armoury._toggle(1)
@@ -4151,8 +4151,9 @@ func _idle_checks(main) -> void:
 	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
 	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The Fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
 	main._armoury._toggle(0)
-	main._armoury._toggle(1)
-	_check(not sim.auto_equip and not sim.auto_sell, "the toggles did not turn off")
+	for k in range(3):
+		main._armoury._toggle(1)              # the sell rule goes round: to uncommon, to rare, off
+	_check(not sim.auto_equip and not sim.auto_sell and sim.junk_upto == -1, "the toggles did not turn off")
 	var d: Dictionary = sim.to_dict()
 	sim.auto_sell = true
 	d = sim.to_dict()
@@ -4160,6 +4161,9 @@ func _idle_checks(main) -> void:
 	_check(sim.auto_sell, "the toggle did not save")
 	sim.load_dict(saved)
 	print("idle ok: the toggles, the junk run, equip if better, the lines, the save")
+	_junk_rule_checks(main)
+	_upgrade_arrow_checks(main)
+	_came_back_checks(main)
 
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
@@ -9221,3 +9225,208 @@ func _record_file_checks(main) -> void:
 	# a new game starts an empty record and keeps the old one
 	main.new_game()
 	_check(PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count <= 2, "a new game's record holds the last game's lines: %d" % PlaytestRead.read_record(rec).size())
+
+
+## The junk rules (11 Oct, Matt's list): the rarity the Fence takes up to, never an upgrade on what's worn, never a
+## kind kept, the buttons going round, the line saying it, an old save's toggle read as commons, the rules saved.
+func _junk_rule_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {}
+	sim.junk_upto = -1
+	sim.junk_keep = ""
+	main.refresh()
+	var words := []
+	for k in range(4):
+		main._armoury._toggle(1)
+		words.append(main._armoury._toggles[1].text)
+		_check_fit(main, "Lock-up (sell %s)" % main._armoury._toggles[1].text)
+	_check(words == ["Sell: commons", "Sell: to uncommon", "Sell: to rare", "Sell: off"] and sim.junk_upto == -1, "the sell rule does not go round: %s" % str(words))
+	_check(main._armoury._toggles[2].disabled, "the keep rule is live with nothing sold")
+	main._armoury._toggle(1)
+	main._armoury._toggle(1)                  # to uncommon
+	var keeps := []
+	for k in range(sim.JUNK_KEEPS.size()):
+		main._armoury._toggle(2)
+		keeps.append(sim.junk_keep)
+		_check_fit(main, "Lock-up (keep %s)" % main._armoury._toggles[2].text)
+	_check(keeps == ["guns", "body", "bags", "parts", ""], "the keep rule does not go round: %s" % str(keeps))
+	_check(main._armoury.junk_words(sim).contains("commons and uncommons") and main._armoury.junk_words(sim).contains("never an upgrade"), "the rules' line is off: %s" % main._armoury.junk_words(sim))
+	# what goes: an uncommon spare under what's worn; what stays: a rare, an upgrade, a kept kind
+	sim.equipped["Armour"] = sim._plain("Armour", "Riot suit")
+	sim.equipped["Helmet"] = sim._plain("Helmet", "Visored helmet")
+	var spare: Dictionary = sim._plain("Helmet", "Cycle helmet")
+	spare["rarity"] = 1
+	var rare: Dictionary = sim._plain("Helmet", "Cycle helmet")
+	rare["rarity"] = 2
+	var up: Dictionary = sim._plain("Armour", "Riot suit")
+	up["rarity"] = 1
+	up["affixes"] = [{"stat": "hp", "value": 60.0, "tier": 3}]
+	var gun: Dictionary = sim._plain("Secondary", "Knife")
+	gun["rarity"] = 0
+	_check(sim.is_upgrade(up) and not sim.is_upgrade(spare), "the upgrade reads wrong: up %s, spare %s" % [sim.is_upgrade(up), sim.is_upgrade(spare)])
+	sim.junk_keep = "guns"
+	_check(sim.is_junk(spare) and not sim.is_junk(rare) and not sim.is_junk(up) and not sim.is_junk(gun), "the rules read wrong: spare %s rare %s upgrade %s gun %s" % [sim.is_junk(spare), sim.is_junk(rare), sim.is_junk(up), sim.is_junk(gun)])
+	sim.junk_keep = ""
+	_check(sim.is_junk(gun) == (not sim.is_upgrade(gun)), "with nothing kept the gun is not by the other rules")
+	sim.junk_upto = -1
+	_check(not sim.is_junk(spare), "the rules sell with the rule off")
+	# the save: the rules, and an old save's toggle as commons
+	sim.junk_upto = 2
+	sim.junk_keep = "bags"
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	sim.load_dict(d)
+	_check(sim.junk_upto == 2 and sim.junk_keep == "bags", "the rules did not save: %d %s" % [sim.junk_upto, sim.junk_keep])
+	d.erase("junk_upto")
+	d.erase("junk_keep")
+	d["auto_sell"] = true
+	sim.load_dict(d)
+	_check(sim.junk_upto == 0 and sim.junk_keep == "", "an old save's junk toggle is not commons: %d" % sim.junk_upto)
+	sim.load_dict(saved)
+	main.refresh()
+	print("junk rules ok: the rarity, the upgrade kept, the kind kept, the buttons, the line, the save")
+
+
+## The upgrade's arrow (11 Oct, Matt's list): on a stash item that beats what's worn in its slot, nowhere else, gone
+## once it's on; inside its cell; in the pack and on the Fence's shelf the same.
+func _upgrade_arrow_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.equipped["Helmet"] = sim._plain("Helmet", "Hard hat")
+	var better: Dictionary = sim._plain("Helmet", "Visored helmet")
+	var worse: Dictionary = sim._plain("Helmet", "Cycle helmet")
+	sim.stash_put(better)
+	sim.stash_put(worse)
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {}
+	main._armoury._inv.kind = 0
+	main._armoury._inv.rarity = -1
+	main.refresh()
+	var inv = main._armoury._inv
+	var cb = inv.cell_node(inv.cell_of(better["id"]))
+	var cw = inv.cell_node(inv.cell_of(worse["id"]))
+	_check(cb != null and cb._up.visible and cw != null and not cw._up.visible, "the arrow is not on the better helmet alone: better %s, worse %s" % [cb != null and cb._up.visible, cw != null and cw._up.visible])
+	if cb != null:
+		_check(Rect2(Vector2.ZERO, cb.size).encloses(Rect2(cb._up.position, cb._up.size)), "the arrow leaves its cell")
+	_check_fit(main, "Lock-up (an upgrade's arrow)")
+	for slot in Data.SLOTS:
+		var c = main._armoury._body._boxes[slot]["cell"]
+		_check(not c._up.visible, "a worn %s carries the arrow" % slot)
+	sim.equip_item(better["id"])
+	main.refresh()
+	var cw2 = inv.cell_node(inv.cell_of(worse["id"]))
+	var hard = inv.cell_node(inv.cell_of(sim.stash.filter(func(x): return x["base"] == "Hard hat")[0]["id"])) if sim.stash.any(func(x): return x["base"] == "Hard hat") else null
+	_check(cw2 != null and not cw2._up.visible and (hard == null or not hard._up.visible), "an arrow stayed once the better helmet went on")
+	sim.load_dict(saved)
+	main.refresh()
+	print("upgrade arrows ok: the better piece alone, inside its cell, never on the body, gone once worn")
+
+
+## What came back (11 Oct, Matt's list): every run since the last Seen added up on a card over the Runs screen -
+## the runs, cash, XP, items, levels, the dearest find, the firsts - over a column the last run didn't come from,
+## put away by Seen, kept by the save, never added to by a dry run.
+func _came_back_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.came_back_seen()
+	main.show_room(main.MISSIONS)
+	main._missions.zone = 0
+	main.refresh()
+	_check(not main._missions._came.visible, "the card shows with no run since Seen")
+	sim.survival(0)
+	_check(int(sim.came_back["runs"]) == 0, "a dry run added to what came back")
+	var cash0: float = sim.cash
+	for k in range(2):
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var g := 0
+		while sim.on_mission() and g < 3000:
+			sim.hp = sim.max_hp()
+			sim.advance(1.0)
+			g += 1
+		if sim.on_mission():
+			sim.extract_now()
+	var cb: Dictionary = sim.came_back
+	_check(int(cb["runs"]) == 2, "two runs read %d on the card" % int(cb["runs"]))
+	_check(float(cb["xp"]) > 0.0 and float(cb["cash"]) >= 0.0, "the card's XP and cash did not add: %s" % str(cb))
+	# a find, a first and a level, as a run would bring them
+	var find: Dictionary = sim._plain("Armour", "Riot suit")
+	find["rarity"] = 3
+	find["value"] = 99999
+	sim.stash_put(find)
+	sim._came_back_find(find)
+	var cheap: Dictionary = sim._plain("Helmet", "Cycle helmet")
+	sim._came_back_find(cheap)
+	_check(int(sim.came_back["find"]["id"]) == int(find["id"]), "the card's find is not the dearest")
+	for k in range(6):
+		sim.chron("clear", {"site": "Test site %d" % k, "depth": 2 + k, "first": k == 0})
+	_check(sim.came_back["firsts"].size() == sim.CAME_BACK_FIRSTS and int(sim.came_back["more"]) >= 2, "the firsts did not cap: %s" % str(sim.came_back["firsts"]))
+	var lv0: int = sim.level()
+	sim.came_back["lv_from"] = lv0
+	while sim.level() < lv0 + 2:
+		sim.xp += 50.0
+	main.refresh()
+	var card = main._missions._came
+	_check(card.visible, "the card did not show after two runs")
+	_check(card._head.text.begins_with("WHAT CAME BACK · 2 RUNS"), "the card's head reads '%s'" % card._head.text)
+	_check(card._tiles[3]["value"].text.contains("→"), "the card's level does not read the climb: '%s'" % card._tiles[3]["value"].text)
+	_check(card._cell.visible and card._find_name.text.begins_with(Items.full_name(find).get_slice(" ", 0)) and card._find_line.text.contains(Fmt.money(99999.0)), "the card's find is off: '%s' / '%s'" % [card._find_name.text, card._find_line.text])
+	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
+	var col0 := Rect2(0, 0, main._missions.COL_W, Pal.ROOM_H)
+	_check(not Rect2(card.position, card.size).intersects(col0), "the card sits over the column the run came from (tier 1)")
+	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)), "the card leaves the Runs screen")
+	_check_fit(main, "Runs (what came back)")
+	_came_back_buttons_clear(main, "the run from tier 1")
+	# the endgame's figures in a quarter-width tile (the first smoke: £47,082 ran out of it)
+	var hold_cb: Dictionary = sim.came_back.duplicate(true)
+	sim.came_back["cash"] = 12345678.0
+	sim.came_back["xp"] = 9876543.0
+	sim.came_back["runs"] = 1234
+	sim.came_back["deaths"] = 12
+	main.refresh()
+	_check_fit(main, "Runs (what came back, the endgame's figures)")
+	sim.came_back = hold_cb
+	main.refresh()
+	# a run from the right-hand column puts it on the left
+	sim.last_report["tier"] = Data.ZONES[0]["tiers"][2]
+	main._missions._shown = ""
+	main.refresh()
+	_check(card.position.x == 0.0, "the card did not move off the right-hand column the run came from")
+	_came_back_buttons_clear(main, "the run from tier 3")
+	sim.last_report["tier"] = Data.ZONES[0]["tiers"][0]
+	main.refresh()
+	# the save keeps it; Seen puts it away and starts again
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	sim.load_dict(d)
+	_check(int(sim.came_back["runs"]) == 2 and int(sim.came_back["find"]["id"]) == int(find["id"]), "the save lost what came back")
+	main.refresh()
+	card._on_seen()
+	main.refresh()
+	_check(not card.visible and int(sim.came_back["runs"]) == 0 and sim.came_back["firsts"].is_empty() and int(sim.came_back["lv_from"]) == sim.level(), "Seen did not put the card away and start again")
+	sim.load_dict(saved)
+	main.refresh()
+	# a move keeps the tally (an away move mustn't wipe it), the climb from the new runner's level
+	var y = Sim.new()
+	y.start()
+	y.came_back["runs"] = 3
+	y.came_back["firsts"] = ["First clear: Somewhere"]
+	_finish_campaign(y)
+	_check(y.move_yard() and int(y.came_back["runs"]) == 3 and y.came_back["firsts"].size() == 2 and int(y.came_back["lv_from"]) == y.level(), "the move wiped what came back: %s" % str(y.came_back))
+	print("what came back ok: the runs, the money, the find, the firsts capped, the level, the column, the buttons clear, the save, the move, Seen")
+
+
+## No button on the Runs screen under the card: the column it sits over keeps its Set off, auto and insure clear.
+func _came_back_buttons_clear(main, where: String) -> void:
+	var card = main._missions._came
+	var cr: Rect2 = card.get_global_rect()
+	for c in main._missions._cols:
+		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
+			if b.is_visible_in_tree():
+				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
+		if c["note"].text != "":
+			_check(not cr.intersects(c["note"].get_global_rect()), "the card covers the column's note '%s' (%s)" % [c["note"].text, where])
