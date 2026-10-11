@@ -4143,6 +4143,7 @@ func _idle_checks(main) -> void:
 	for it in [junk, keep_ammo, keep_med, keep_bottle, better]:
 		sim.stash_put(it)
 	sim.equipped["Armour"] = sim._plain("Armour", "Stab vest")
+	sim.equipped["Helmet"] = sim._plain("Helmet", "Visored helmet")     # the hard hat junk only when it's no upgrade (the junk rules keep upgrades, 11 Oct)
 	sim.words[0] = []
 	sim.hp = sim.max_hp()
 	sim.deploy(0)
@@ -4168,6 +4169,7 @@ func _idle_checks(main) -> void:
 	_rig_checks(main)
 	_build_rounds_checks(main)
 	_skull_checks(main)
+	_card_frame_checks(main)
 
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
@@ -9756,3 +9758,31 @@ func _skull_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("skull ok: on their bar and yours when the dots cover what's left, gone when they don't")
+
+
+## The Runner's cards (11 Oct, Matt): the slot's name floats over the card, not inside it, and a picked slot shows
+## one frame - the gear's own cell is the card, the empty card's outline hidden under it. And the title's foot carries
+## the version, not the window line.
+func _card_frame_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	main.show_room(main.ARMOURY)
+	var body = main._armoury._body
+	for slot in Data.SLOTS:
+		body._pick(slot)                      # as a press on the card: the Lock-up picks the slot
+		main.refresh()
+		var b: Dictionary = body._boxes[slot]
+		var full: bool = sim.equipped[slot] != null
+		_check(b["name"].position.y + b["name"].size.y <= body.TOP_STRIP + 0.5, "the %s label is not over its card" % slot)
+		if full:
+			_check(not b["outline"].visible and b["cell"].visible and is_equal_approx(b["cell"].position.y, float(body.TOP_STRIP)) and is_equal_approx(b["cell"].size.x, body.box_rect(slot).size.x), "the picked %s card shows two frames, or its gear doesn't fill it" % slot)
+		else:
+			_check(b["outline"].visible and b["outline"].position.y >= body.TOP_STRIP - 0.5, "the empty %s card has no outline under its label" % slot)
+	_check_fit(main, "Lock-up (labels over the cards)")
+	body.selected = ""
+	main._armoury.selected = {}
+	main.refresh()
+	var Menu = load("res://scripts/ui/menu.gd")
+	_check(Menu._build_words() == "FIAT · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
+	print("card frames ok: the label over the card, one frame picked; the title's version")

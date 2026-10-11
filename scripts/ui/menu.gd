@@ -173,9 +173,13 @@ static func _load_art(path: String, from_file := false) -> Texture2D:
 	return null
 
 
+## The game's version, on the title's foot (Matt, 11 Oct: the window line went with the Deck's fix). Raise it with
+## each build Matt plays: the second number for a playtest build, the first for a milestone.
+const VERSION := "0.1"
+
+
 static func _build_words() -> String:
-	var v := str(ProjectSettings.get_setting("application/config/version", ""))
-	return ("FIAT · %s" % v) if v != "" else "FIAT"
+	return "FIAT · v%s" % VERSION
 
 
 ## items: [{name, detail, action: Callable, enabled (true), confirm (""), color (the name's), glyph ("")}].
@@ -313,10 +317,8 @@ func layout(s: Vector2) -> void:
 			_panel.position = Vector2(x0 + COLUMN_X, COLUMN_ROWS_Y)
 			_foot_left.position = Vector2(x0 + COLUMN_X, s.y - 36 - FOOT_H)
 			_foot_right.position = Vector2(x0 + COLUMN_X + COLUMN_ROW_W - 300, s.y - 36 - FOOT_H)
-			# the build, then the window and the canvas as the game sees them: what the Deck is actually getting (8 Oct)
-			var win := get_window()
-			var ws: Vector2i = win.size if win != null else Vector2i.ZERO
-			UI.fit(_foot_right, ["%s · %d×%d → %d×%d" % [_build_words(), ws.x, ws.y, int(s.x), int(s.y)], _build_words()])
+			# the version (11 Oct; the window and canvas line that settled the Deck's fix, 8 Oct, went with it)
+			UI.fit(_foot_right, [_build_words(), "v" + VERSION])
 		"drawer":
 			_panel.position = _dock.position
 		_:

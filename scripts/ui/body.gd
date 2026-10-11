@@ -150,7 +150,9 @@ func _init() -> void:
 		zone.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.gui_input.connect(_zone_input.bind(slot))
 		add_child(zone)
-		var outline := UI.panel(zone, Rect2(Vector2.ZERO, r.size), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
+		# the slot's name floats over the card, the card below it (Matt, 11 Oct: a picked slot read as two frames, the
+		# card's and the gear's inside it): an empty card is its outline, a full one is the gear's own cell - one frame
+		var outline := UI.panel(zone, Rect2(0, TOP_STRIP, r.size.x, r.size.y - TOP_STRIP), UI.box(_glass(), 6, 1, Pal.CARD_LINE))
 		outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# the item's art fills the card, loud (Matt, 10 Oct: as Runner-R B - "the art showing loud and proud"); the
 		# slot's name and the item's figure sit over it, top left and bottom right, with a shadow
@@ -162,10 +164,10 @@ func _init() -> void:
 		cell.gui_input.connect(_cell_input.bind(slot))
 		cell.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.add_child(cell)
-		var name := UI.label(zone, Rect2(10, 4, r.size.x - 20, 20), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var name := UI.label(zone, Rect2(2, 0, r.size.x - 4, TOP_STRIP - 1), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var item: Array = []                     # "Empty" on an empty card; a full one's name is the art's (and its tooltip)
 		for i in range(3):
-			item.append(UI.label(zone, Rect2(10, r.size.y / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
+			item.append(UI.label(zone, Rect2(10, TOP_STRIP + (r.size.y - TOP_STRIP) / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
 		var fig := UI.label(zone, Rect2(10, r.size.y - 25, r.size.x - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
 		for l in [name, item[0], item[1], item[2], fig]:
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -290,14 +292,15 @@ static func wide(it: Dictionary) -> bool:
 
 
 
-## The art between the slot's name and the figure, never under them (Matt, 10 Oct: the words clipped the backpack).
-const TOP_STRIP := 22
-const FOOT_STRIP := 4                          # no words at the foot (Matt, 10 Oct: the figure is on the strip, the panel, the tooltip)
+## The slot's name over the card, the card under it (Matt, 11 Oct): the gear's cell is the whole card below the
+## name, its own frame the card's - picked, it's the pick's colour, else its rarity's.
+const TOP_STRIP := 24                          # the name's line (a 15 px label is 23 tall)
+const FOOT_STRIP := 0                          # no words at the foot (Matt, 10 Oct: the figure is on the strip, the panel, the tooltip)
 
 
 func _lay_card(b: Dictionary, _across: bool) -> void:
-	b["cell"].position = Vector2(ART_INSET, TOP_STRIP)
-	b["cell"].size = b["zone"].size - Vector2(2 * ART_INSET, TOP_STRIP + FOOT_STRIP)
+	b["cell"].position = Vector2(0, TOP_STRIP)
+	b["cell"].size = b["zone"].size - Vector2(0, TOP_STRIP + FOOT_STRIP)
 
 
 ## A slot's one figure, long to short: what the pick panel compares it by.
@@ -337,6 +340,9 @@ func show_state(s) -> void:
 		if it == null and slot == "Primary" and not on:
 			edge = Pal.BAD                                   # nothing to fight with
 		b["outline"].add_theme_stylebox_override("panel", UI.box(_glass(), 6, 2 if on else 1, edge))
+		# one frame: a full card's is the gear cell's (the pick's colour, or its rarity's); a common has no frame of its
+		# own, so its card keeps the outline until it's picked
+		b["outline"].visible = it == null or (not on and Pal.item_tone(it) == "")
 		if it == null:
 			_lay_card(b, false)
 			b["cell"].visible = false

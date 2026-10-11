@@ -2933,6 +2933,17 @@ hour 24 (each read, not the median - one read stuck is what it's there to catch)
 and the probe. A local 8-hour read of the physical Doorman: the Bank 1.1 h, the keystone 2.8 h, the capstone 7.9 h,
 the lorry 4.0 h - the first figures for it.
 
+**Three from Matt before the Deck (11 Oct).** *The Runner's cards*: the slot's name floats over its card, not
+inside it - a picked slot read as two frames, the card's and the gear's cell inside it. A full card is the gear's
+cell now, one frame: the pick's colour when picked, its rarity's otherwise (a common keeps the card's outline until
+picked); an empty card is its outline. The smoke's idle check put a hard hat in the stash as junk with whatever helmet was worn; with
+the junk rules keeping upgrades it read as an upgrade when the helmet was weaker and went on instead of to the
+Fence (no junk line) - it wears a visored helmet first now. *The title*: the window-and-canvas line that settled the Deck's fix (8 Oct)
+is gone; the foot reads the version, "FIAT · v0.1" (menu.gd's VERSION: the second number for each build Matt plays,
+the first for a milestone). *The title painting*: a prompt at 688x384 in docs/design/faces_and_bands.md. *The
+smoke:* every card's name over the card, a picked full card's one frame, an empty card's outline; the foot's
+version.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a

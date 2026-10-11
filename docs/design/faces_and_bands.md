@@ -107,3 +107,26 @@ From Matt: a semi-transparent backdrop behind the Runner room's figure and gear 
   frame. The art is `art/places/the_kit_room.png`, a job in `tools/pixellab_rooms_manifest.json`.
 - **B · drawn in engine**: a cone of cold light from above and a shadow at the feet (a gradient and two blurred
   shapes). It needs no art and is A's fallback while the art file is missing.
+
+## The title painting (11 Oct)
+
+Matt: the wheel in the first title art works, the rest doesn't; regenerate at the tool's largest size, 688x384, in
+the rooms' style. The title shows art/title.png covering the screen (1920x1080 from 688x384 is a hair's crop at the
+sides), and the menu's dark column covers its left third (about 225 px of the 688), so the scene lives in the right
+two-thirds.
+
+Settings: 688 x 384, background on, style image art/places/the_estate.png (the rooms' and the zones' look), colour
+palette, outline, detail and shading from the style.
+
+> Pixel art, a wide establishing view at dusk of a run-down northern English ring road where a council estate meets
+> an abandoned pleasure park. Just right of centre, a large rusting Ferris wheel with a few empty gondolas stands
+> tall against low grey cloud. In front of it, a row of soot-stained red-brick terraced houses with a single lit
+> window, and a closed high-street bank with boarded windows and a dead cash machine. A wet road curves in from the
+> bottom right towards the wheel, lined with abandoned cars, a skip with a small fire smouldering in it and sodium
+> streetlights just coming on. Muted blue-grey and slate palette, the only warm colours the lit window, the
+> streetlights and the fire; light drizzle haze, quiet, a country that has run out of money. The left third of the
+> frame is empty and dark: open overgrown waste ground and darkening sky, no buildings and no detail. Horizon at
+> about 40% height, even readable detail, no people, no text, no letters on any sign.
+
+The left third stays empty because the menu covers it; anything there is lost. No lettering, because a generated
+sign reads as garbage at this size; the bank reads by its shape.
