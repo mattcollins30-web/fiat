@@ -9710,6 +9710,36 @@ func _chronicle_checks() -> void:
 	for h in ["## The time", "## Milestones", "## The gates, read from play", "## Runs, site by site", "## Hour by hour", "## Where the money and the points went", "## The kit, as it changed"]:
 		_check(page.contains(h), "the playtest read has no '%s'" % h)
 	_check(page.contains("Class: none to Doorman") and page.contains("Level "), "the playtest read's milestones miss the class or a level")
+	# the odds set off at (12 Oct): a run line carries the card's reading and the regen worn, and the read bands them
+	var with_odds: Array = s.chronicle.duplicate(true)
+	with_odds.append({"k": "run", "site": "The Allotments", "tier": 0, "depth": 1, "outcome": "Back", "odds": 0.95, "regen": 2.5, "time": 60.0, "kills": 4, "of": 4, "cash": 10, "xp": 5, "p": 100.0, "t": 100.0, "lv": 1, "cls": "Doorman"})
+	with_odds.append({"k": "run", "site": "The Allotments", "tier": 0, "depth": 1, "outcome": "Dead", "odds": 0.5, "regen": 0.0, "time": 60.0, "kills": 1, "of": 4, "cash": 0, "xp": 0, "p": 200.0, "t": 200.0, "lv": 1, "cls": "Doorman"})
+	var page2: String = PlaytestRead.summarize(s.to_dict(), with_odds, "smoke")
+	_check(page2.contains("## The odds set off at") and page2.contains("| Safe (90-100%) | 1 | 0 |") and page2.contains("| A coin toss (40-60%) | 1 | 1 |") and page2.contains("the lowest taken: 50%"), "the playtest read doesn't band the odds set off at: %s" % page2.substr(page2.find("## The odds"), 500))
+	# and the sim writes them: a run read at the gate carries its odds, the site's fire and HP, the regen
+	var g = Sim.new()
+	g.start()
+	g.set_class("Doorman")
+	var o0: float = g.survival(0)
+	g.deploy(0)
+	while g.on_mission():
+		g.advance(1.0)
+	var run_line: Dictionary = {}
+	for e in g.chronicle:
+		if e["k"] == "run":
+			run_line = e
+	_check(not run_line.is_empty() and is_equal_approx(float(run_line.get("odds", -2.0)), snappedf(o0, 0.01)) and run_line.has("their_hp") and run_line.has("their_dps") and run_line.has("regen"), "a run's line doesn't carry the odds at the gate (%.2f): %s" % [o0, str(run_line)])
+	# a card still reading logs -1, never its part-read share (the reviewer)
+	g.hp = g.max_hp()
+	g._surv_cache[0] = [g._odds_key(0), 0.0, 0, 0, RandomNumberGenerator.new(), 1.0]     # the shape survival() keeps, no runs read
+	g.deploy(0)
+	while g.on_mission():
+		g.advance(1.0)
+	var last_run: Dictionary = {}
+	for e in g.chronicle:
+		if e["k"] == "run":
+			last_run = e
+	_check(float(last_run.get("odds", 0.0)) == -1.0, "a part-read card's odds were logged as read: %s" % str(last_run.get("odds", "")))
 
 
 ## The record file (11 Oct, the reviewer): the lines go to the .record.jsonl beside the save on each save and leave
@@ -9882,7 +9912,6 @@ func _try_on_checks(main) -> void:
 	for o in others:
 		sim.stash.erase(o)                      # the case is the pistol against the Van's Spare alone: another secondary an earlier test left could rightly beat it (12 Oct: the flake)
 	_check(not sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "Equip if better put the %s on over the Van's Spare" % sim.equipped["Secondary"]["base"])
-	sim.stash.append_array(others)
 	sim.junk_upto = 2
 	_check(sim.is_junk(mp), "the junk rules keep the pistol that costs damage")
 	main.show_room(main.ARMOURY)
@@ -9898,7 +9927,8 @@ func _try_on_checks(main) -> void:
 	sim.equipped["Secondary"] = mp
 	sim.stash.erase(mp)
 	sim.stash_put(vans)
-	_check(sim.compare(vans) == 1 and sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "the Van's Spare over the pistol is not the upgrade")
+	_check(sim.compare(vans) == 1 and sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "the Van's Spare over the pistol is not the upgrade (%s went on)" % sim.equipped["Secondary"]["base"])
+	sim.stash.append_array(others)            # the case done: what an earlier test left goes back
 	# a plain better vest still reads better; the same vest a trade when it costs the damage a worn helmet gave
 	var vest: Dictionary = sim._plain("Armour", "Stab vest")
 	sim.equipped["Armour"] = vest

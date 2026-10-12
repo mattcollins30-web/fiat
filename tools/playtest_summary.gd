@@ -71,6 +71,10 @@ static func read_record(path: String) -> Array:
 
 
 ## The whole read, as markdown: the save's sim dict and the record's lines.
+## The Runs card's words by its odds (Words.ODDS), high to low: [from, to, words].
+const ODDS_BANDS := [[0.9, 1.01, "Safe"], [0.75, 0.9, "Likely"], [0.6, 0.75, "Risky"], [0.4, 0.6, "A coin toss"], [0.2, 0.4, "Long odds"], [0.0, 0.2, "A bad idea"]]
+
+
 static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	var played: float = float(s.get("played_s", 0.0))
 	var by_play: bool = played > 0.0
@@ -225,6 +229,30 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 		var n: int = r["n"]
 		L.append("| %s | %d | %d | %d | %d | %s | %s | %s | %s | %.0f s | %.0f%% | %s | %d |" % [nm, n, r["away"], r["deep"], r["dead"], _pct(r["wound"], n), _pct(r["out"], n), _pct(r["way"], n),
 			_pct(r["cut"], n), r["time"] / n, 100.0 * r["kills"] / maxf(1.0, r["of"]), _money(r["cash"] / n), r["xp"] / n])
+	# ---- the odds set off at (12 Oct, Matt: "how the bot plays isn't how a person plays"): the Runs card's reading at
+	# the gate, by its words, and what came of it - the bot's PUSH is set from where people actually go
+	var read_runs: Array = runs.filter(func(e): return float(e.get("odds", -1.0)) >= 0.0 and not e.get("away", false))
+	L.append("")
+	L.append("## The odds set off at (the Runs card's reading at the gate)")
+	L.append("")
+	if read_runs.is_empty():
+		L.append("No run in this record carries its odds (a save from before 12 Oct, or none read).")
+	else:
+		L.append("| The card read | Runs | Deaths | Wounded | Cut and run | Regen worn (median, HP/s) |")
+		L.append("| --- | --- | --- | --- | --- | --- |")
+		for band in ODDS_BANDS:
+			var these: Array = read_runs.filter(func(e): return float(e["odds"]) >= float(band[0]) and float(e["odds"]) < float(band[1]))
+			if these.is_empty():
+				continue
+			var regens: Array = these.map(func(e): return float(e.get("regen", 0.0)))
+			regens.sort()
+			L.append("| %s (%.0f-%.0f%%) | %d | %d | %s | %s | %.1f |" % [band[2], 100.0 * float(band[0]), minf(100.0, 100.0 * float(band[1])), these.size(),
+				these.filter(func(e): return e.get("outcome", "") == "Dead").size(), _pct(these.filter(func(e): return e.get("wounded", false)).size(), these.size()),
+				_pct(these.filter(func(e): return e.get("outcome", "") == "Cut and run").size(), these.size()), regens[regens.size() / 2]])
+		var odds_all: Array = read_runs.map(func(e): return float(e["odds"]))
+		odds_all.sort()
+		L.append("")
+		L.append("Median odds at the gate: %.0f%%; the lowest taken: %.0f%%; %d of %d runs read." % [100.0 * odds_all[odds_all.size() / 2], 100.0 * odds_all[0], read_runs.size(), runs.size()])
 	# ---- hour by hour
 	var snaps: Array = ch.filter(func(e): return e["k"] == "snap")
 	if not snaps.is_empty():

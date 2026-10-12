@@ -4161,6 +4161,7 @@ func deploy(i: int) -> void:
 		return
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
+	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
 	var t := effective(i)
@@ -4183,7 +4184,7 @@ func deploy(i: int) -> void:
 	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured, "clock": clock_budget(t), "clock_max": clock_budget(t),
-		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
+		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false, "odds_seen": odds_seen,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0,
 	}
@@ -5537,7 +5538,11 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
 		"outcome": outcome, "time": snappedf(float(m["elapsed"]), 0.1), "kills": int(m["kills"]), "of": int(et.get("pool", 0)),
 		"auto": auto_tier >= 0, "cls2": cls2, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
-		"kit": loadout_value(), "wound_in": wound}
+		"kit": loadout_value(), "wound_in": wound,
+		# what the player saw and set off against (12 Oct, Matt: "how the bot plays isn't how a person plays"): the
+		# odds the Runs card read at the gate (-1 unread), the site's own fire and HP, and the kit's regen
+		"odds": snappedf(float(m.get("odds_seen", -1.0)), 0.01), "their_hp": int(et.get("hp", 0)), "their_dps": snappedf(float(et.get("dps", 0.0)), 0.1),
+		"regen": snappedf(_affix_sum("regen"), 0.1)}
 	if b != null and b is Dictionary and not b.is_empty():
 		d["boss"] = str(b.get("name", ""))
 		d["boss_down"] = not bool(b.get("alive", true))

@@ -4098,3 +4098,12 @@ reviewer's catches fixed: the trait's line was said before the pick; two radio l
 now, and the smoke runs every line and every paper through the pages); the radio's chip is asserted on the row; "the
 wall" is the retired's, so the dead go on the Yard's list. Smoke clean in the cloud copy; on the Legion the one
 failure was the save check - Matt's game was open and autosaved mid-run.
+
+**The odds at the gate, and the bot rushing the campaign (12 Oct).** Matt's fire Drifter (slot 1, 39 min): the campaign
+done at 36 minutes, the Bank at 21, one run a site at depth 1, no deaths, no wounds, every card "Safe" - a regen
+helmet and charm (+5 HP/s together) carried it. Matt: no numbers touched; record what a player sets off at, and play the
+bot as a person does, then read a fresh save. Built: every run line carries the Runs card's odds at the gate (settled,
+else -1), the site's fire and HP and the regen worn; the playtest read gains "The odds set off at", runs banded by the
+card's words with deaths, wounds, cut-and-runs and the median regen. The bot's `RUSH`: no climbing until the campaign's
+done (one run a site at depth 1, straight on when the next reads PUSH); the endgame climbs as before. The reviewer's
+catch fixed: a part-read card logged its share as the odds. The Equip-if-better flake's second half fixed the same way.

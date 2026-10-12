@@ -1,6 +1,6 @@
 extends RefCounted
 ## The bot the balance reader and the peek script share: a pushy player.
-## Deploys where survival is at least PUSH, climbs depth where it's CLIMB,
+## Deploys where survival is at least PUSH, climbs depth where it's CLIMB (once the campaign's done: RUSH, 12 Oct),
 ## uses a med under 40% HP, bails at a quarter, leaves after two patrols or a
 ## full pack; between missions fits the best of everything, trains, buys the
 ## camp with £500 to spare, sells spares, shops, refills the rig.
@@ -10,6 +10,7 @@ const Items := preload("res://scripts/sim/items.gd")
 
 const PUSH := 0.88             # the pass (6-7 Oct): at 0.75 the bot bailed under a quarter one run in four, at 0.85 one in eight, at 0.9 one in 33-47 on four builds, against Matt's one in seventeen
 const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four builds
+const RUSH := true             # the campaign as a person plays it (12 Oct, Matt's fire Drifter: one run a site, depth 1, straight to the next when it reads PUSH): no climbing until the campaign's done; the endgame climbs as before
 const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
 var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
@@ -582,6 +583,8 @@ func _disarm_stale(sim) -> void:
 ## tier just run alone: a player digs where they play, and every tier read
 ## costs the lookout's dry runs.
 func _climb(sim) -> void:
+	if RUSH and not sim.campaign_done():
+		return                                # the campaign first, at depth 1, as a person plays it (12 Oct)
 	var i := last_tier
 	if i == Data.CONVOY_TIER and sim.is_convoy(i) and not sim.lorry_done:
 		return                                # at the lorry's depth: beat it before digging past it
