@@ -1931,6 +1931,20 @@ func _joint_payoff_checks(main) -> void:
 	m["dots"]["poison"] = 0.01
 	sim._joints_on_hit(m, m["t"], 10.0, "rifle", 0.1)
 	_check(float(m["dots"]["poison"]) < full, "the full dose landed twice on one gang")
+	# the Rat Man's Bag lifts the cap, not the fill (12 Oct, the lorry-fix read: a full dose at 999 stacks was thousands of seconds of the gun)
+	var bag_was = sim.equipped["Backpack"]
+	sim.equipped["Backpack"] = Items.roll_unique(sim._unique_named("The Rat Man's Bag"), sim.rng)
+	sim._dry_memo.clear()
+	_check(sim.dot_stacks("poison") >= 999 and sim.dot_fill_stacks("poison") == (15 if sim.has_node("poison_stacks") else int(Data.DOTS["poison"]["stacks"])), "the Rat Man's Bag's uncapped stacks reach the full dose: %d" % sim.dot_fill_stacks("poison"))
+	m = fresh_run.call()
+	m["fresh"] = true
+	m["dots"]["poison"] = 0.01
+	sim._joints_on_hit(m, m["t"], 10.0, "rifle", 0.1)
+	var bag_full: float = float(m["dots"]["poison"])
+	var bag_rate: float = float(sim.type_dps()["poison"]) * (1.0 - float(m["t"].get("res", {}).get("poison", 0.0))) * sim.pace() * float(m["t"]["pace"])
+	var bag_cap: float = bag_rate * float(Data.DOTS["poison"]["ratio"]) * sim.dot_seconds("poison") * sim.dot_fill_stacks("poison") * sim.dot_depth()
+	_check(m.has("full_dose") and bag_cap > 1.0 and is_equal_approx(bag_full, bag_cap), "the full dose with the Bag is not the tree's stacks: %.0f against %.0f" % [bag_full, bag_cap])
+	sim.equipped["Backpack"] = bag_was
 	# the Paramedic's poison: a med is a full stack on them; the Paramedic's frost: chilled, they do 30% less and meds heal a fifth more
 	close.call("paramedic_poison")
 	m = fresh_run.call()

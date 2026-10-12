@@ -4784,8 +4784,18 @@ func _dot_fill(m: Dictionary, ty: String) -> void:
 		m["dots"] = {}
 	var t: Dictionary = m["t"]
 	var rate: float = float(type_dps()[ty]) * (1.0 - float(t.get("res", {}).get(ty, 0.0))) * pace() * float(t["pace"])
-	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_stacks(ty, true) * dot_depth(true)
+	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_fill_stacks(ty) * dot_depth(true)
 	m["dots"][ty] = maxf(float(m["dots"].get(ty, 0.0)), cap)
+
+
+## The stacks a fill counts: dot_stacks, but a rule that lifts the cap (the Rat Man's Bag, the Overalls: 999) fills to
+## what the tree gives, not to the lifted cap (12 Oct, the lorry-fix read: a first shot or a dose at 999 stacks was
+## a pool of thousands of seconds of the gun, carried gang to gang - the poison builds' lorry at 1.5-2.7 h).
+func dot_fill_stacks(ty: String) -> int:
+	var n := dot_stacks(ty, true)
+	if ty == "poison" and n >= 999:
+		n = 15 if has_node("poison_stacks") else int(Data.DOTS[ty]["stacks"])
+	return n
 
 
 ## The Paramedic's dose, joined: a med used is a full stack of poison on the gang.
