@@ -4079,3 +4079,10 @@ art/people/greenhorn (a .gdignore keeps them out of the build). The three heads 
 now points at art/people/fence.png for them. Smoke: every zone has its gang's face and every class its own.
 **The figures to match**: tools/pixellab_bodies_manifest.json, the five art/body_<class>.png redrawn at 208 x 488 into
 art/body_new/, each from its class's new portrait (reference and style) in the old figure's pose (reference).
+
+**The figures and two flakes (12 Oct).** Matt's Claude Code wired the five redrawn figures (art/body_<class>.png; the old
+ones in art/body_greenhorn/) and evened them: `body.gd` draws every past's figure at one height, the widest (the
+Scrapper) filling the gap's width, so heads and boots line up; the smoke reads all five the same height, none past the
+gap. Two smoke flakes, both test state left by earlier tests, not the game: *Equip if better* (another secondary in the
+stash could rightly beat the Van's Spare - the check now weighs the pistol against it alone) and *two sockets* (240
+re-rolls could spend the cash first - the check now has the cash, and reads the Yard's third socket). Smoke clean.

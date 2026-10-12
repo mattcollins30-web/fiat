@@ -138,8 +138,11 @@ func _init() -> void:
 	_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_figure.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y)
-	_figure.size = Vector2(FIGURE_W, FIGURE_H)
+	# every past's figure drawn the same height, centred in the gap (Matt, 12 Oct: the redrawn five "even them out"):
+	# the widest drawing fills the gap's width and the rest take its height, so heads and feet line up
+	var tall := _figure_tall()
+	_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y + (FIGURE_H - tall) / 2.0)
+	_figure.size = Vector2(FIGURE_W, tall)
 	add_child(_figure)
 	for slot in Data.SLOTS:
 		var r := card_rect(slot)
@@ -213,11 +216,28 @@ func _set_figure(cls: String) -> void:
 	if path == "":
 		_figure.texture = null
 	else:
-		if not _figures.has(path):
-			_figures[path] = _cropped(load(path) if ResourceLoader.exists(path) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(path))))
-		_figure.texture = _figures[path]
+		_figure.texture = _figure_tex(path)
 	_flat.queue_redraw()
 	backdrop.queue_redraw()
+
+
+## A drawing, its margin cropped, loaded once.
+func _figure_tex(path: String) -> Texture2D:
+	if not _figures.has(path):
+		_figures[path] = _cropped(load(path) if ResourceLoader.exists(path) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(path))))
+	return _figures[path]
+
+
+## The one height every past's figure is drawn at: the gap's, unless the widest drawing at that height would
+## overrun the gap's width - then the height that drawing fills the width at.
+func _figure_tall() -> float:
+	var tall := float(FIGURE_H)
+	for cd in Data.CLASSES:
+		var path := figure_for(str(cd["name"]))
+		var t: Texture2D = _figure_tex(path) if path != "" else null
+		if t != null:
+			tall = minf(tall, FIGURE_W * t.get_size().y / t.get_size().x)
+	return tall
 
 
 ## For the tests: the figure's drawn size inside its box (aspect kept), or zero with no drawing.

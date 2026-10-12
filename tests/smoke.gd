@@ -3864,7 +3864,8 @@ func _craft_checks(main) -> void:
 	while sim.craft_cost(it, "bump") >= 0:
 		sim.craft(it["id"], "bump")
 	_check(it["ilvl"] == it["tier"] + Data.BUMP_CAP, "the level went past its cap: %d" % it["ilvl"])
-	_check(sim.craft(it["id"], "socket") and sim.craft(it["id"], "socket") and Items.sockets(it) == 2 and sim.craft_cost(it, "socket") < 0, "two sockets did not cut, or a third would")
+	sim.cash = maxf(sim.cash, 1e9)              # 240 re-rolls can spend the cash an earlier test left (12 Oct: the flake)
+	_check(sim.craft(it["id"], "socket") and sim.craft(it["id"], "socket") and Items.sockets(it) == 2 and (sim.craft_cost(it, "socket") < 0) == (sim.socket_max() <= 2), "two sockets did not cut, or a third would (cash £%.0f, socket max %d)" % [sim.cash, sim.socket_max()])
 	var value_elite: int = it["value"]
 	_check(sim.craft(it["id"], "strip") and it["rarity"] == 0 and it["affixes"].is_empty() and it["value"] < value_elite, "Strip did not take it back to plain")
 	_check(Items.sockets(it) == 2, "stripping took the sockets")
@@ -9268,12 +9269,14 @@ func _backdrop_checks(main) -> void:
 	_check(not body.has_method("worn_rect") and body.box_rect("Charm").size.y < body.box_rect("Armour").size.y and body.box_rect("Backpack").size.y >= body.box_rect("Primary").size.y, "the worn card is back, or the charm, armour or pack sized wrong")
 	for col in [body.LEFT, body.RIGHT]:
 		_check(absf(body.box_rect(col.back()).end.y - (body.HEIGHT - body.PAD)) < 0.5, "the %s column does not fill the loadout" % col.back())
-	# the figure fills the gap between the columns (Matt, 10 Oct: his redraw looked too small): its drawing, margin
-	# cropped, binds on the gap's height or width
+	# the figure fills the gap between the columns (Matt, 10 Oct: his redraw looked too small), every past's the same
+	# height (Matt, 12 Oct: "even them out"): the widest binds on the gap's width or height, none overruns it
 	var fd: Vector2 = body.figure_drawn()
-	_check(fd == Vector2.ZERO or fd.y >= body.FIGURE_H - 1.0 or fd.x >= body.FIGURE_W - 1.0, "the figure is drawn %s in a %d × %d gap" % [str(fd), body.FIGURE_W, body.FIGURE_H])
+	_check(fd == Vector2.ZERO or (fd.x <= body.FIGURE_W + 0.5 and fd.y <= body.FIGURE_H + 0.5), "the figure is drawn %s in a %d × %d gap" % [str(fd), body.FIGURE_W, body.FIGURE_H])
 	# a figure a class (Matt, 10 Oct): the runner's past's own drawing when there is one, art/body.png when not; it
 	# follows a change of past
+	var talls := []
+	var widest := 0.0
 	var cls_hold: String = sim.cls
 	for cd in Data.CLASSES:
 		sim.cls = cd["name"]
@@ -9282,7 +9285,11 @@ func _backdrop_checks(main) -> void:
 		var has_own: bool = ResourceLoader.exists(own) or FileAccess.file_exists(own)
 		_check(body.figure_path == (own if has_own else body.figure_for("")), "%s shows %s, not its own figure" % [cd["name"], body.figure_path])
 		var fd2: Vector2 = body.figure_drawn()
-		_check(body.figure_path == "" or fd2.y >= body.FIGURE_H - 1.0 or fd2.x >= body.FIGURE_W - 1.0, "%s's figure is drawn %s in the gap" % [cd["name"], str(fd2)])
+		_check(body.figure_path == "" or (fd2.x <= body.FIGURE_W + 0.5 and fd2.y <= body.FIGURE_H + 0.5), "%s's figure is drawn %s, past the %d × %d gap" % [cd["name"], str(fd2), body.FIGURE_W, body.FIGURE_H])
+		if body.figure_path != "":
+			talls.append(fd2.y)
+			widest = maxf(widest, fd2.x)
+	_check(talls.is_empty() or (talls.max() - talls.min() < 1.0 and (widest >= body.FIGURE_W - 1.0 or talls.max() >= body.FIGURE_H - 1.0)), "the pasts' figures are not one height filling the gap: %s tall, the widest %.0f" % [str(talls), widest])
 	sim.cls = cls_hold
 	body.show_state(sim)
 	# the strip over it: who, HP, damage, armour, inside the strip and above the loadout
@@ -9866,7 +9873,11 @@ func _try_on_checks(main) -> void:
 	var with_mp: float = sim.fit_value(mp)
 	_check(with_mp < before and sim.compare(mp) == -1 and not sim.is_upgrade(mp), "the machine pistol over the Van's Spare reads %d (%.1f against %.1f dmg/s)" % [sim.compare(mp), with_mp, before])
 	sim.auto_equip = true
-	_check(not sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "Equip if better put the pistol on over the Van's Spare")
+	var others: Array = sim.stash.filter(func(o): return o["slot"] == "Secondary" and o["id"] != mp["id"])
+	for o in others:
+		sim.stash.erase(o)                      # the case is the pistol against the Van's Spare alone: another secondary an earlier test left could rightly beat it (12 Oct: the flake)
+	_check(not sim.equip_best("Secondary") and sim.equipped["Secondary"]["id"] == vans["id"], "Equip if better put the %s on over the Van's Spare" % sim.equipped["Secondary"]["base"])
+	sim.stash.append_array(others)
 	sim.junk_upto = 2
 	_check(sim.is_junk(mp), "the junk rules keep the pistol that costs damage")
 	main.show_room(main.ARMOURY)
