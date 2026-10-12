@@ -588,8 +588,8 @@ func show_state(s) -> void:
 	sim = s
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
-	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size()]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size(),
+		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier)]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -907,11 +907,17 @@ func _shelf_branch() -> Dictionary:
 		if not (name in names):
 			names.append(name)
 	var branch := _pages_branch("The shelf", names, Data.UNIQUES.size(), Words.SHELF["empty"],
-		func(name): return gaps[name] if gaps.has(name) else Words.UNIQUES.get(name, ""), 3)
+		func(name): return gaps[name] if gaps.has(name) else _shelf_words(name), 3)
 	for nd in branch["nodes"]:
 		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
 	branch["found"] = sim.shelf.size()
 	return branch
+
+
+## A found unique's words on the shelf: the best tier of it found first (12 Oct, uniques by tier), then who it was.
+func _shelf_words(name: String) -> String:
+	var t: int = int(sim.shelf_tier.get(name, 0))
+	return ("Best T%d. " % t if t > 0 else "") + str(Words.UNIQUES.get(name, ""))
 
 
 ## A page of a list: a card a name with `lines` of words under it, as many as the lanes' area takes.

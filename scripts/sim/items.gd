@@ -525,17 +525,111 @@ static func set_named(name: String) -> Dictionary:
 	return {}
 
 
-## A unique, rolled: its base, its fixed affixes, its name, its rule.
-static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
-	var it := roll(u["slot"], int(base_named(u["slot"], u["base"]).get("tier", Data.CAMPAIGN_TIER)), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its own base's tier: a deep throwaway would set its level (10 Oct)
-	it["base"] = u["base"]
-	it["tier"] = base_of(it)["tier"]
+## A unique, rolled: its base, its fixed affixes, its name, its rule. With a range (12 Oct, docs/design/uniques.md) it
+## comes at `tier` held inside its range (its own base's tier when none is given), on unique_body's base for that tier;
+## a paper has no range and keeps its base.
+static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1, tier := -1) -> Dictionary:
+	var body := {"base": u["base"], "tier": int(base_named(u["slot"], u["base"]).get("tier", Data.CAMPAIGN_TIER)), "lift": 1.0}
+	if u.has("range"):
+		body = unique_body(u, unique_tier(u, tier if tier > 0 else int(body["tier"])))
+	var it := roll(u["slot"], int(body["tier"]), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its body's tier: a deep throwaway would set its level (10 Oct)
+	it["base"] = body["base"]
+	it["tier"] = int(body["tier"])
+	if float(body["lift"]) > 1.0:
+		it["lift"] = float(body["lift"])
+	# the mounts are the body's own (roll() drew them off whatever base it picked); the sockets it rolled stay
+	var att := {}
+	for name in base_of(it).get("attachments", []):
+		att[name] = null
+	for k in it["attachments"]:
+		if str(k).begins_with("socket"):
+			att[k] = null
+	it["attachments"] = att
+	if level < 0:
+		it["ilvl"] = maxi(ilvl(it), int(body["tier"]))
 	it["rarity"] = Data.RARITIES.size() - 1
 	it["affixes"] = _scaled(u["affixes"], ilvl(it))          # found deep, it carries the depth (7 Oct)
 	it["unique"] = u["name"]
 	it["rule"] = u["rule"]
-	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[Data.RARITIES.size() - 1]["value"] * 1.5))
+	it["value"] = int(round(base_of(it)["value"] * float(body["lift"]) * Data.RARITIES[Data.RARITIES.size() - 1]["value"] * 1.5))
 	return it
+
+
+## A tier held inside a unique's range; a unique without one (a paper) keeps its base's.
+static func unique_tier(u: Dictionary, tier: int) -> int:
+	if not u.has("range"):
+		return int(base_named(u["slot"], u["base"]).get("tier", 1))
+	return clampi(tier, int(u["range"][0]), int(u["range"][1]))
+
+
+## Whether a unique can drop at a find of this tier: inside its range.
+static func unique_fits(u: Dictionary, tier: int) -> bool:
+	return u.has("range") and tier >= int(u["range"][0]) and tier <= int(u["range"][1])
+
+
+## The body a scaling unique wears at a tier: the best base of its slot at that tier by the slot's own figure (a gun's
+## of its own type; a helmet or armour without a resist built in, so the rule stays the unique's), never the start's,
+## a site's own or a paper. Where its type has no base at that tier (a melee secondary stops at the Cosh), the type's
+## best below it, lifted by the slot's curve - the best figure of the slot at the tier over the best at the body's.
+## {base, tier, lift}.
+static var _bodies := {}
+static func unique_body(u: Dictionary, tier: int) -> Dictionary:
+	var key := "%s|%d" % [u["name"], tier]
+	if _bodies.has(key):
+		return _bodies[key]
+	var own := base_named(u["slot"], u["base"])
+	var type: String = str(own.get("type", ""))
+	var best := {}
+	var best_score := -1.0
+	for b in Data.BASES[u["slot"]]:
+		if int(b["tier"]) > tier or not _body_ok(b) or str(b.get("type", "")) != type:
+			continue
+		var sc := _base_score(u["slot"], b)
+		# the best figure at or under the tier, the higher tier on a tie (a T5 Plate rig carries less than the T4 harness:
+		# the reviewer's catch - a T5 copy must never be the weaker)
+		if best.is_empty() or sc > best_score or (sc == best_score and int(b["tier"]) > int(best["tier"])):
+			best = b
+			best_score = sc
+	if best.is_empty():
+		best = own
+		best_score = _base_score(u["slot"], own)
+	var lift := 1.0
+	if int(best["tier"]) < tier and Data.SLOT_SCORE[u["slot"]] == "dps":
+		# its own type's next base up, when there is one: the lift goes part way to it (a T5 pistol between the T4 and
+		# the T6, never past the T6 - the reviewer's catch); past the type's top, the slot's curve
+		var next := {}
+		for b in Data.BASES[u["slot"]]:
+			if int(b["tier"]) > tier and _body_ok(b) and str(b.get("type", "")) == type and (next.is_empty() or int(b["tier"]) < int(next["tier"]) or (int(b["tier"]) == int(next["tier"]) and _base_score(u["slot"], b) > _base_score(u["slot"], next))):
+				next = b
+		if not next.is_empty() and best_score > 0.0:
+			var span := float(int(next["tier"]) - int(best["tier"]))
+			lift = pow(_base_score(u["slot"], next) / best_score, float(tier - int(best["tier"])) / span)
+		else:
+			var at := _slot_curve(u["slot"], tier)
+			var was := _slot_curve(u["slot"], int(best["tier"]))
+			if was > 0.0 and at > was:
+				lift = at / was
+	lift = maxf(1.0, lift)
+	var out := {"base": best["name"], "tier": maxi(tier, int(best["tier"])), "lift": lift}     # the copy's tier is the tier it came at
+	_bodies[key] = out
+	return out
+
+
+static func _body_ok(b: Dictionary) -> bool:
+	return not b.get("start", false) and not b.has("res") and int(b.get("depth", 0)) == 0
+
+
+static func _base_score(slot: String, b: Dictionary) -> float:
+	return score({"slot": slot, "base": b["name"], "affixes": [], "attachments": {}, "tier": b["tier"]})
+
+
+## The best plain figure of a slot at or below a tier (the lift's curve).
+static func _slot_curve(slot: String, tier: int) -> float:
+	var top := 0.0
+	for b in Data.BASES[slot]:
+		if int(b["tier"]) <= tier and _body_ok(b):
+			top = maxf(top, _base_score(slot, b))
+	return top
 
 
 ## A base's own pace, as a percent (weight: a riot suit slows, leathers don't).
@@ -554,7 +648,7 @@ static func dps(it: Dictionary) -> float:
 	var b := base_of(it)
 	if not b.has("damage") or not b.has("rof"):
 		return 0.0
-	return b["damage"] * b["rof"] * (1.0 + fitted_sum(it, "damage_pct") / 100.0)
+	return b["damage"] * b["rof"] * (1.0 + fitted_sum(it, "damage_pct") / 100.0) * float(it.get("lift", 1.0))     # a unique past its type's top base: lifted (12 Oct)
 
 
 static func armour(it: Dictionary) -> float:

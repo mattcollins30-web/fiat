@@ -381,7 +381,8 @@ func _show_deals() -> void:
 		_mate_line.text = "Not about."
 		_mate_buy.visible = false
 	else:
-		UI.fit(_mate_line, ["%s, for %d notes. A new one every %d runs." % [sim.mate["unique"], int(sim.mate["notes"]), Data.MATE_RUNS], "%s, %d notes" % [sim.mate["unique"], int(sim.mate["notes"])], str(sim.mate["unique"])])
+		var mt: String = (" T%d" % int(sim.mate["tier"])) if sim.mate.has("tier") else ""     # the tier he has it at (12 Oct)
+		UI.fit(_mate_line, ["%s%s, for %d notes. A new one every %d runs." % [sim.mate["unique"], mt, int(sim.mate["notes"]), Data.MATE_RUNS], "%s%s, %d notes" % [sim.mate["unique"], mt, int(sim.mate["notes"])], str(sim.mate["unique"]) + mt, str(sim.mate["unique"])])
 		_mate_buy.visible = true
 		_mate_buy.text = "Buy for %d notes" % int(sim.mate["notes"])
 		_mate_buy.disabled = not sim.can_buy_mate()

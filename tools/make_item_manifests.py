@@ -395,6 +395,20 @@ UNIQUE_WORDS = {
     "The lorry's load": ("A realistic painted pixel-art still-life of a single large cargo-frame backpack with a green lorry tarp "
                          "lashed over it, standing upright as if set down on the floor, seen from the front, filling the frame, "
                          "banknotes showing at one edge under the tarp."),
+    # the gaps' (12 Oct, docs/design/uniques.md)
+    "The starting pistol": ("A realistic painted pixel-art still-life of a single black athletics starting pistol rebored into a "
+                            "real handgun, seen exactly side-on with the muzzle pointing left, laid level and filling the frame left "
+                            "to right: a school sports day's pistol, the cylinder scratched, a strip of white tape round the grip "
+                            "with a PE department's initials in marker."),
+    "The miner's lamp": ("A realistic painted pixel-art still-life of a single battered white coal miner's helmet with a brass cap "
+                         "lamp clipped to the front and a coiled cable to a battery, seen from the front and slightly above, filling "
+                         "the frame top to bottom, coal dust in every scratch, the lamp lens bright."),
+    "The paramedic's bumbag": ("A realistic painted pixel-art still-life of a single green ambulance-service paramedic's bum bag with "
+                               "reflective strips and a white cross patch, lying flat, seen from the front, filling the frame: the "
+                               "zips bulging, a foil blanket and rolls of tape showing at the top."),
+    "The plumber's belt": ("A realistic painted pixel-art still-life of a single worn brown leather plumber's tool belt hung flat, seen "
+                           "from the front, filling the frame: pipe wrenches, a blowtorch, a roll of white PTFE tape and grips in "
+                           "the pouches, copper stains on the leather."),
 }
 
 

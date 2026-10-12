@@ -285,6 +285,10 @@ const UNIQUES := {
 	"The Rat Man's Overalls": "The pest man's, stiff with what he sprayed. Nothing that gets poisoned near him stops being poisoned.",
 	"The Substation Key": "A key to a box no one should open. Everyone it touches touches everyone else.",
 	"The Butcher's Apron": "Chainmail under a rubber apron. The butcher never stopped at one cut.",
+	"The Starting Pistol": "From the school sports day, rebored. Everyone used to wait for it. Everyone still does, for about a second.",
+	"The Miner's Lamp": "Off the last shift at the pit, the battery rewired. It finds the seam before you've looked.",
+	"The Paramedic's Bumbag": "Off an ambulance that stopped coming. Plasters, a foil blanket, and a habit of being there when you go down.",
+	"The Plumber's Belt": "Wrenches, PTFE tape, a blowtorch. Whatever he fixed stayed fixed. Whatever he broke stayed broken.",
 }
 
 

@@ -193,4 +193,7 @@ The pass gives each its affixes and art (a unique without its own art draws its 
 3. The bosses' and pinnacles' scale with the boss's depth on the map: **yes**.
 4. The gaps: **new uniques, nothing moved**. Open: which candidate per gap (section 4).
 
-Built in the balance pass after the Poison Poacher playtest, before that pass's runs.
+Built on 12 Oct at Matt's ask, ahead of the pass (the Deck's build is the playtest's); the pass after the Poison
+Poacher save tunes the numbers. Gap picks: A the Starting Pistol, B the Miner's Lamp (its words cut to "searches take
+half as long": the Caretaker's Keys already open every cache), C the Paramedic's Bumbag ("under 40% HP", the
+Paramedic's own line), D the Plumber's Belt. What was built, and what's left for the pass: docs/status.md, 12 Oct.

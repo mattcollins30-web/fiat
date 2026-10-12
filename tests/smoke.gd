@@ -2746,7 +2746,7 @@ func _unique_rules_checks(main) -> void:
 	for u in Data.UNIQUES:
 		var it := Items.roll_unique(u, sim.rng)
 		_check(it["unique"] == u["name"] and Words.UNIQUES.has(u["name"]), "%s does not roll, or has no words" % u["name"])
-	_check(sim.loose_uniques(1).size() == 4 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
+	_check(sim.loose_uniques(1).size() == 7 and sim.loose_uniques(12).size() > 10 and sim.loose_uniques(25).size() == sim.loose_uniques(99).size(), "the depth gates on the loose pool are off: %d / %d / %d" % [sim.loose_uniques(1).size(), sim.loose_uniques(12).size(), sim.loose_uniques(25).size()])
 	for i in range(sim.best_depth.size()):
 		sim.best_depth[i] = 1
 	for k in range(20):
@@ -2754,7 +2754,7 @@ func _unique_rules_checks(main) -> void:
 	sim.best_depth[0] = 25
 	var deep := 0
 	for k in range(40):
-		deep += 1 if int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) >= 12 else 0
+		deep += 1 if int(sim._unique_named(sim.roll_mate()["unique"]).get("depth", 0)) >= 6 else 0     # the build ones open at 6 now (12 Oct)
 	_check(deep > 10, "the mate's deep stock did not open at depth 25: %d of 40" % deep)
 	# a bare runner to hang each rule on
 	for s in Data.SLOTS:
@@ -2902,7 +2902,111 @@ func _unique_rules_checks(main) -> void:
 	sim.stash.erase(log)
 	sim.load_dict(saved)
 	print("the uniques ok: all roll with words, the depth gates, the mate's deep stock, twenty-one rules")
+	_unique_tier_checks(main)
 	_set_checks(main)
+
+
+## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but the paper has a band and a range; it rolls held
+## inside its range on its slot's best base there, name, rule and art kept; a higher copy beats a lower; the melee
+## secondary past the Cosh is lifted; the bands pick by tier; the shelf keeps the best tier; the mate's offer has one;
+## the four gap uniques' rules.
+func _unique_tier_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	for u in Data.UNIQUES:
+		if u["slot"] == Data.PAPER:
+			_check(not u.has("range"), "the paper has a range")
+			continue
+		_check(u.has("range") and Data.UNIQUE_BAND_WEIGHT.has(str(u.get("band", ""))), "%s has no band or range" % u["name"])
+		var lo: int = int(u["range"][0])
+		var hi: int = int(u["range"][1])
+		var low: Dictionary = Items.roll_unique(u, sim.rng, -1, 1)
+		var high: Dictionary = Items.roll_unique(u, sim.rng, -1, 99)
+		_check(int(low["tier"]) == lo and int(high["tier"]) == hi, "%s did not hold inside %d-%d: T%d / T%d" % [u["name"], lo, hi, int(low["tier"]), int(high["tier"])])
+		_check(low["unique"] == u["name"] and high["unique"] == u["name"] and high["rule"] == u["rule"] and Items.full_name(high) == u["name"], "%s lost its name or rule at its top" % u["name"])
+		_check(Items.base_of(high).get("type", "") == Items.base_named(u["slot"], u["base"]).get("type", ""), "%s changed its gun type at its top: %s" % [u["name"], high["base"]])
+		for k in high["attachments"]:
+			_check(str(k).begins_with("socket") or str(k) in Items.base_of(high).get("attachments", []), "%s has a mount its body hasn't: %s on %s" % [u["name"], k, high["base"]])
+		if hi > lo:
+			_check(Items.score(high) > Items.score(low), "%s at T%d does not beat itself at T%d: %.1f vs %.1f" % [u["name"], hi, lo, Items.score(high), Items.score(low)])
+	# the sign past the Cosh: still a Cosh, lifted to the slot's curve
+	var sign: Dictionary = sim._unique_named("The Lollipop Lady's Sign")
+	var s4: Dictionary = Items.roll_unique(sign, sim.rng, -1, 4)
+	var s9: Dictionary = Items.roll_unique(sign, sim.rng, -1, 9)
+	_check(s9["base"] == "Cosh" and float(s9.get("lift", 1.0)) > float(s4.get("lift", 1.0)) and float(s4.get("lift", 1.0)) > 1.0 and Items.dps(s9) > Items.dps(s4), "the sign is not a lifted Cosh: %s ×%.2f" % [s9["base"], float(s9.get("lift", 1.0))])
+	# a worn copy and a better one: the better reads as an upgrade
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	var steel: Dictionary = sim._unique_named("The Butcher's Steel")
+	sim.equipped["Primary"] = Items.roll_unique(steel, sim.rng, -1, 4)
+	var better: Dictionary = Items.roll_unique(steel, sim.rng, -1, 9)
+	_check(sim.compare(better) == 1, "a T9 steel does not read better than the T4 worn")
+	# the bands: a levelling one never at T9, a chase one never at T2, the levelling ones most at T3
+	var loose: Array = sim.loose_uniques(99)
+	var by_band := {"levelling": 0, "core": 0, "chase": 0}
+	for k in range(300):
+		var at9: Dictionary = sim.pick_unique(loose, 9)
+		_check(at9.is_empty() or str(at9["band"]) != "levelling", "a levelling unique came at T9: %s" % at9.get("name", ""))
+		var at2: Dictionary = sim.pick_unique(loose, 2)
+		_check(not at2.is_empty() and str(at2["band"]) == "levelling", "a %s unique came at T2: %s" % [str(at2.get("band", "")), at2.get("name", "")])
+		var at4: Dictionary = sim.pick_unique(loose, 4)
+		by_band[str(at4["band"])] += 1
+	_check(by_band["levelling"] > by_band["core"] and by_band["chase"] == 0, "the bands' weights did not pick at T4: %s" % str(by_band))
+	_check(sim.pick_unique(loose, 0).is_empty() and not sim.pick_unique(loose, 0, true).is_empty(), "a find outside every range dropped one, or a shop came up empty")
+	# the shelf keeps the best tier found, through a save
+	var hold_shelf: Array = sim.shelf.duplicate()
+	sim.shelf = []
+	sim.shelf_tier = {}
+	sim._read(Items.roll_unique(steel, sim.rng, -1, 7))
+	sim._read(Items.roll_unique(steel, sim.rng, -1, 5))
+	_check(int(sim.shelf_tier.get(steel["name"], 0)) == 7, "the shelf did not keep the best tier: %s" % str(sim.shelf_tier))
+	var round_trip = Sim.new()
+	round_trip.start()
+	round_trip.load_dict(sim.to_dict())
+	_check(int(round_trip.shelf_tier.get(steel["name"], 0)) == 7, "the shelf's tiers did not save")
+	# the mate: an offer with a tier, and what he sells is that tier
+	sim.mate = sim.roll_mate()
+	_check(sim.mate.has("tier") and int(sim.mate["notes"]) == Data.MATE_NOTES * int(sim.mate["tier"]), "the mate's offer has no tier: %s" % str(sim.mate))
+	_check(int(sim._mate_item()["tier"]) == int(sim.mate["tier"]), "the mate's unique is not the tier he offered")
+	sim.mate = {"unique": "Lucky Cap", "notes": 400}      # a save from before the tiers
+	_check(int(sim._mate_item()["tier"]) == 1, "an old mate's offer did not roll at its own base's tier")
+	sim.shelf = hold_shelf
+	# the four gaps' rules
+	var t: Dictionary = sim.effective(0)
+	var search0: float = sim.search_s(t)
+	sim.equipped["Helmet"] = Items.roll_unique(sim._unique_named("The Miner's Lamp"), sim.rng)
+	_check(sim.search_s(t) < search0 * 0.5 + 0.01, "the Miner's Lamp did not halve the search: %.1f vs %.1f" % [sim.search_s(t), search0])
+	sim.equipped["Helmet"] = null
+	var med: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+	var heal0: float = sim.med_heal(med)
+	var fire0: float = sim.dot_seconds("fire")
+	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Paramedic's Bumbag"), sim.rng)
+	_check(is_equal_approx(sim.med_heal(med), heal0 * 1.5), "the Bumbag's meds do not heal half again: %.1f vs %.1f" % [sim.med_heal(med), heal0])
+	sim.rig = [med.duplicate()]
+	sim.words[0] = []                    # no Rationed on the site: the med is allowed
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	sim.hp = sim.max_hp() * 0.3
+	sim.advance(0.1)
+	_check(m["using"] != null or sim.rig.is_empty(), "the Bumbag did not use a med under 40%")
+	sim.extract_now()
+	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Plumber's Belt"), sim.rng)
+	_check(is_equal_approx(sim.dot_seconds("fire"), fire0 * 2.0) and is_equal_approx(sim.status_s(1.0), 2.0), "the Plumber's Belt did not double a status: %.1f vs %.1f" % [sim.dot_seconds("fire"), fire0])
+	sim.equipped["Rig"] = null
+	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("The Starting Pistol"), sim.rng)
+	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]
+	sim.deploy(0)
+	m = sim.mission
+	m["target_hp"] = 100000.0
+	sim._starting_shot(m, m["t"])
+	var after: float = float(m["target_hp"])
+	var shot: float = 100000.0 - after
+	_check(shot > 0.0 and m.get("opened", false), "the Starting Pistol's first shot did not land")
+	sim.advance(0.05)
+	_check(after - float(m["target_hp"]) < shot, "the Starting Pistol fired its first shot twice: %.0f then %.0f" % [shot, after - float(m["target_hp"])])
+	sim.extract_now()
+	sim.load_dict(saved)
+	print("uniques by tier ok: bands and ranges, held in range, the body's mounts, a higher copy better, the sign lifted, the bands by tier, the shelf's best, the mate's tier, the four new rules")
 
 
 ## Sets: pieces roll and have words, the count, the bonuses at two and the
@@ -7428,7 +7532,7 @@ func _deep_tier_checks(main) -> void:
 	for k in range(60):
 		var u: Dictionary = Data.UNIQUES[k % Data.UNIQUES.size()]
 		var it: Dictionary = Items.roll_unique(u, u_rng)
-		_check(Items.ilvl(it) <= int(Items.base_named(u["slot"], u["base"])["tier"]), "%s rolled at level %d over its base's tier" % [u["name"], Items.ilvl(it)])
+		_check(Items.ilvl(it) <= Items.unique_tier(u, int(Items.base_named(u["slot"], u["base"])["tier"])), "%s rolled at level %d over its base's tier, held in its range" % [u["name"], Items.ilvl(it)])
 	# each gun line climbs: every deep tier beats the line's best below it
 	for slot in ["Primary", "Secondary"]:
 		var best := {}
@@ -8333,7 +8437,7 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	for kk in sim.gamble:
 		var kd: Dictionary = sim.gamble_kind(kk)
-		var fits: bool = Data.UNIQUES.any(func(u): return not u.has("site") and not u.get("boss", false) and u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]))   # the chase is never the Fence's (part 3)
+		var fits: bool = Data.UNIQUES.any(func(u): return not u.has("site") and not u.get("boss", false) and u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]) and Items.unique_fits(u, sim.shop_unique_tier()))   # the chase is never the Fence's (part 3); its range takes the deepest tier dug (12 Oct)
 		var u: Dictionary = sim.gamble_buy(kk, 0.0)
 		_check(not u.is_empty() and (u.has("unique") == fits) and u["slot"] == kd["slot"], "the unique roll on %s gave %s (a unique fits: %s)" % [kk, str(u.get("unique", u.get("base", "nothing"))), str(fits)])
 		break
@@ -9343,6 +9447,9 @@ func _try_on_checks(main) -> void:
 	while not sim.stash_room(12) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
+	vans["base"] = "Old revolver"            # the case as Matt met it (11 Oct), on its old body: tiered (12 Oct) it rolls at T3 or up
+	vans["tier"] = 2
+	vans["attachments"] = {"optic": null}
 	sim.equipped["Secondary"] = vans
 	var mp: Dictionary = sim._plain("Secondary", "Machine pistol")
 	mp["affixes"] = [{"stat": "damage_pct", "value": 10.0, "tier": 2}]

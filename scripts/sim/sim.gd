@@ -53,6 +53,7 @@ var retired: Array = []            # the traits on the wall (36): a third of eac
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
+var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
 var worn_depth: Array = []         # and the depth it was cleared at: another depth is another site, fresh (Matt, 7 Oct: "depth needs to reset the site being picked over"); the worn depth stays worn until it recovers
 var weather: Array = []            # per zone: "", "Rain" or "Fog"
@@ -406,6 +407,8 @@ func dot_seconds(ty: String, theirs := true) -> float:
 		s *= 2.0
 	if ty == "poison" and has_rule("rat_mans_overalls"):
 		s *= 0.5                                 # the overalls: the same pool, twice as fast
+	if has_rule("plumbers_belt"):
+		s *= 2.0                                 # the Plumber's Belt: every status on them lasts twice as long (12 Oct)
 	return s
 
 
@@ -1023,25 +1026,39 @@ func _unique_named(name: String) -> Dictionary:
 
 
 ## The Fence's mate: one of the loose uniques, for notes.
+## At the player's deepest tier (12 Oct, uniques by tier), one whose range takes it; the tier rides with the offer.
 func roll_mate() -> Dictionary:
-	var loose: Array = loose_uniques(deepest())    # his deep stock opens as you go deeper
-	var u: Dictionary = loose[rng.randi_range(0, loose.size() - 1)]
-	var tier: int = int(Items.base_of({"slot": u["slot"], "base": u["base"]}).get("tier", 1))
-	return {"unique": u["name"], "notes": Data.MATE_NOTES * tier}
+	var at := shop_unique_tier()
+	var u: Dictionary = pick_unique(loose_uniques(deepest()), at, true)    # his deep stock opens as you go deeper
+	var tier: int = Items.unique_tier(u, at)
+	return {"unique": u["name"], "tier": tier, "notes": Data.MATE_NOTES * tier}
+
+
+## The tier a shop's unique comes at (the mate, the Back room, a gamble): the loot tier of the deepest site dug.
+func shop_unique_tier() -> int:
+	return loot_tier_at(deepest_site_level())
+
+
+## The mate's offer, rolled: at its tier (a save from before the tiers has none: its own base's).
+func _mate_item() -> Dictionary:
+	var u := _unique_named(mate["unique"])
+	if u.is_empty():
+		return {}
+	return Items.roll_unique(u, rng, -1, int(mate.get("tier", -1)))
 
 
 func can_buy_mate() -> bool:
 	if mission != null or mate.is_empty() or notes < int(mate["notes"]):
 		return false
-	var u := _unique_named(mate["unique"])
-	return not u.is_empty() and stash_fits(Items.roll_unique(u, rng))
+	var it := _mate_item()
+	return not it.is_empty() and stash_fits(it)
 
 
 func buy_mate() -> bool:
 	if not can_buy_mate():
 		return false
 	notes -= int(mate["notes"])
-	var it := Items.roll_unique(_unique_named(mate["unique"]), rng)
+	var it := _mate_item()
 	stash.append(it)
 	_read(it)
 	log_event("From the Fence's mate, for %d notes: %s." % [int(mate["notes"]), it["unique"]])
@@ -1106,7 +1123,7 @@ func move_yard(trade := "") -> bool:
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(),
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true)}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
@@ -1154,6 +1171,7 @@ func move_yard(trade := "") -> bool:
 	trades = keep["trades"]
 	book = keep["book"]
 	shelf = keep["shelf"]
+	shelf_tier = keep["shelf_tier"]
 	tree = yard_tree
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
 	for it in uniques:
@@ -1283,7 +1301,9 @@ func _read(it: Dictionary) -> void:
 			log_event("%s: the Radio knows %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper teaches its word
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
-		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size()})
+		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size(), "tier": int(it.get("tier", 0))})
+	if it.has("unique") and not Items.is_paper(it):
+		shelf_tier[it["unique"]] = maxi(int(shelf_tier.get(it["unique"], 0)), int(it.get("tier", 0)))
 
 
 ## Every paper there is to find, deep ones last.
@@ -2061,7 +2081,7 @@ func contact(t: Dictionary) -> int:
 
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
-	return SEARCH_S * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (2.0 if has_node("never_there") else 1.0) * trait_mult("search") \
+	return SEARCH_S * (0.5 if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (2.0 if has_node("never_there") else 1.0) * trait_mult("search") \
 		* (1.0 - 0.1 * atlas_rank("deeper_pockets"))
 
 
@@ -2269,6 +2289,39 @@ func loose_uniques(at_depth: int) -> Array:
 		if not u.get("boss", false) and not u.has("site") and int(u.get("depth", 0)) <= at_depth:
 			out.append(u)
 	return out
+
+
+## A unique out of a pool at a find's tier (12 Oct, uniques by tier): among those whose range takes the tier, the
+## band's weight picks (levelling 10, core 4, chase 1). {} when none can drop there; `any` falls back (a shop's:
+## something is always on offer) to the ones the tier has outgrown, held at their top, and only then the whole pool -
+## never a deeper one than the player's dug to when an outgrown one will do (the reviewer's catch).
+func pick_unique(pool: Array, tier: int, any := false) -> Dictionary:
+	var fits: Array = pool.filter(func(u): return Items.unique_fits(u, tier))
+	if fits.is_empty():
+		if not any or pool.is_empty():
+			return {}
+		fits = pool.filter(func(u): return u.has("range") and int(u["range"][1]) < tier)
+		if fits.is_empty():
+			fits = pool
+	var total := 0.0
+	for u in fits:
+		total += float(Data.UNIQUE_BAND_WEIGHT.get(str(u.get("band", "core")), 1.0))
+	var x := rng.randf() * total
+	for u in fits:
+		x -= float(Data.UNIQUE_BAND_WEIGHT.get(str(u.get("band", "core")), 1.0))
+		if x <= 0.0:
+			return u
+	return fits.back()
+
+
+## The loose uniques a find can drop: gated at its depth or shallower, the range taking its tier. Cached: the table
+## never changes, and _find reads it every find.
+var _loose_at := {}
+func loose_at(at_depth: int, tier: int) -> Array:
+	var key := at_depth * 100 + tier
+	if not _loose_at.has(key):
+		_loose_at[key] = loose_uniques(at_depth).filter(func(u): return Items.unique_fits(u, tier))
+	return _loose_at[key]
 
 
 ## A site's own unique (endgame part 3): one a site, found there only, past
@@ -3225,9 +3278,9 @@ func _yard_grew(before: Dictionary) -> void:
 		var fresh: Array = market.filter(func(x): return not x.has("unique"))
 		market = have + fresh.slice(0, add)
 	if yard_has("back_room") and not bool(before["back"]) and not market.any(func(x): return x.has("unique")):
-		var loose: Array = loose_uniques(0)
-		if not loose.is_empty():
-			market.append(Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng))
+		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
+		if not bu.is_empty():
+			market.append(Items.roll_unique(bu, rng, -1, shop_unique_tier()))
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	if contracts_open() < int(before["open"]) and contracts.size() > contracts_open():
@@ -4143,7 +4196,7 @@ func _tick(dt: float) -> void:
 	if float(m.get("event_at", -1.0)) >= 0.0 and m["elapsed"] >= float(m["event_at"]) and not m.get("way_out", false):
 		_event(m, t)
 	# the Medic's rule: a med by itself under 40%
-	if class_data().get("auto_med", false) and m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
+	if (class_data().get("auto_med", false) or has_rule("paramedics_bumbag")) and m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 		use_med(first_med()["id"])
 	_patch(m, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
@@ -4155,6 +4208,7 @@ func _tick(dt: float) -> void:
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1
 			m["fresh"] = true
+			m.erase("opened")
 			m["sustain_t"] = 0.0
 			var grown: int = 0 if has_node("cap_dead_quiet") else m["patrols"] - 1      # Dead quiet: every gang the size of the first
 			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
@@ -4303,6 +4357,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			m["clock_max"] = float(m.get("clock_max", 0.0)) + Data.CLOCK_PER_HEAD * size
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
+				m.erase("opened")             # the Starting Pistol: a new one, its own first shot; one already up has had it
 			m["fresh"] = true
 			m["sustain_t"] = 0.0
 			m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t) * size
@@ -4337,6 +4392,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		headshot += 2.0
 	if m["fresh"] and (has_node("one_shot") or has_rule("lollipop")):
 		m["target_hp"] = 0.0              # the first of the lot drops where it stands
+	if has_rule("starting_pistol") and not m.get("opened", false) and m["remaining"] > 0 and float(m["target_hp"]) > 0.0:
+		_starting_shot(m, t)
 	# in among them: their first shot lands before your first swing, each gang
 	if melee() and m["fresh"]:
 		m["melee_wait"] = float(m.get("melee_wait", 0.0)) + dt
@@ -4388,9 +4445,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["dots"] = {}
 			_dot_add(m["dots"], ty, landed, float(per_type[ty]) * (1.0 - r_ty) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0))
 			if ty == "frost":
-				m["chill_t"] = 999.0 if has_rule("gritters_keys") else 1.0    # the Gritter's Keys: a chill holds as long as you fire
+				m["chill_t"] = 999.0 if has_rule("gritters_keys") else status_s(1.0)    # the Gritter's Keys: a chill holds as long as you fire
 			if ty == "shock":
-				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 1.0     # Arc: the shock holds as long as you fire
+				m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else status_s(1.0)     # Arc: the shock holds as long as you fire
 	if has_rule("gritters_hopper"):
 		m["chill_t"] = 1.0                        # everyone on you is chilled, always
 	_joints_on_hit(m, t, landed_total, held, dt)
@@ -4425,6 +4482,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["remaining"] = 0                           # comes out below
 			break
 		m["target_hp"] += t["hp"]
+		m.erase("opened")                    # the Starting Pistol: the next of them has its own first shot
 		m["kill_shocked"] = float(m.get("shock_t", 0.0)) > 0.0
 		m["kill_burning"] = float(m.get("dots", {}).get("fire", 0.0)) > 0.0
 		if has_node("cap_flattened") and float(type_dps().get("physical", 0.0)) > 0.0:
@@ -4454,6 +4512,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["clock"] = float(m.get("clock", 0.0)) + head_s     # the head brings his own time
 			m["clock_max"] = float(m.get("clock_max", 0.0)) + head_s
 			m["fresh"] = true
+			m.erase("opened")
 			m["sustain_t"] = 0.0
 			log_event("%s comes out%s. %s" % [m["boss"]["name"], ", at full strength" if m["boss"].get("pinnacle", false) else "", Words.BOSSES.get(m["boss"]["name"], {}).get("out", "")])
 			return
@@ -4615,7 +4674,7 @@ func _dose(m: Dictionary) -> void:
 ## What a med heals this runner, before the max HP caps it: its own figure through the past, the trait, the trees,
 ## the nodes, the rules, the set and the Yard. The rig's hover, the pick panel and the heal itself all read this.
 func med_heal(it: Dictionary) -> float:
-	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0)
+	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0) * (1.5 if has_rule("paramedics_bumbag") else 1.0)
 
 
 ## A med in words: "+42 HP over 3 s" (at once with Field surgery).
@@ -4639,6 +4698,31 @@ func use_med(id: int) -> bool:
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
+
+
+## The Starting Pistol (12 Oct): the secondary's first shot at each of them, triple, before anything else lands - one
+## shot of its own figure (its damage a second over its rate), through the physical's increases, their armour and a shock.
+func _starting_shot(m: Dictionary, t: Dictionary) -> void:
+	m["opened"] = true
+	var sec = equipped["Secondary"]
+	if sec == null or not has_rounds(sec):
+		return
+	var rof: float = maxf(0.01, float(Items.base_of(sec).get("rof", 1.0)))
+	var parts := {}
+	var full: float = _dps(parts)
+	var chain: float = full / maxf(0.001, float(parts.get("guns", 1.0)))     # the runner's whole chain on a gun's figure: level, damage, attack, past, trait, growth
+	var shot: float = Items.dps(sec) * (1.0 + grade_bonus(sec) / 100.0) / rof * 3.0 * chain * (1.0 + increased("physical") / 100.0) * more("physical") \
+		* (1.0 - phys_resist(float(t.get("res", {}).get("physical", 0.0)))) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
+	m["target_hp"] -= shot
+	m["dealt"] = float(m.get("dealt", 0.0)) + shot
+	if not m.has("dealt_by"):
+		m["dealt_by"] = {}
+	m["dealt_by"]["physical"] = float(m["dealt_by"].get("physical", 0.0)) + shot
+
+
+## How long a chill or a shock holds on them: the Plumber's Belt doubles it (12 Oct).
+func status_s(s: float) -> float:
+	return s * (2.0 if has_rule("plumbers_belt") else 1.0)
 
 
 ## The Arsonist's Rig: a petrol bomb's worth of fire on everyone on you, through the model.
@@ -4693,9 +4777,9 @@ func use_grenade(id: int) -> bool:
 		var gun_rate: float = float(type_dps()[ty]) * (1.0 - r) * pace() * t["pace"] * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0)
 		_dot_add(m["dots"], ty, single, maxf(single, gun_rate))
 		if ty == "frost":
-			m["chill_t"] = 2.0
+			m["chill_t"] = status_s(2.0)
 		if ty == "shock":
-			m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else 2.0
+			m["shock_t"] = 999.0 if (has_rule("tester") or has_node("cap_arc")) else status_s(2.0)
 		m["thrown"] = int(m.get("thrown", 0)) + 1
 		log_event("%s thrown: %.0f %s to %d of them" % [it["base"], landed, ty, crowd])
 		return true
@@ -4792,7 +4876,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
 		# the last of the convoy: the Lorry's Load comes home too, and the Yard's ending is written (7 Oct)
-		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)))
+		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		m["found"].append(load)
 		_read(load)
 		log_event("The convoy's done. Found: %s" % load["unique"])
@@ -4802,12 +4886,12 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			chron("lorry", {"lorries": lorries})
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
-		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)))
+		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))     # at the depth he's fought at (12 Oct)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
 		_read(it)
 		log_event("%s is down. %s Found: %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
-			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)))
+			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))
 			m["found"].append(it2)
 			_read(it2)
 			log_event("And a second: %s." % it2["unique"])
@@ -4849,15 +4933,15 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)) + (Data.ATT_DROP + tree_sum("att_share") / 100.0) * float(shape.get("att", 1.0)) + Data.AMMO_DROP * 0.5 * float(shape.get("ammo", 1.0)) + Data.GRENADE_DROP:
 			slot = Data.GRENADE                   # a grenade lying about (32)
 	var it: Dictionary
-	var loose: Array = loose_uniques(int(t["depth"]))
+	var loose: Array = loose_at(int(t["depth"]), int(t["loot_tier"]))     # those whose range takes the find's tier (12 Oct)
 	var pieces: Array = set_pieces_at(int(t["depth"]))
 	var own: Dictionary = site_unique(int(t["tier"]))
 	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
 	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
-		it = Items.roll_unique(own, rng, int(t.get("level", -1)))     # the site's own, only here and only this deep (endgame part 3)
+		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
 		log_event("Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]])
-	elif t["depth"] >= 2 and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
-		it = Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng, int(t.get("level", -1)))
+	elif t["depth"] >= 2 and not loose.is_empty() and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
+		it = Items.roll_unique(pick_unique(loose, int(t["loot_tier"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the band's weight picks
 		log_event("Found: %s" % it["unique"])
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
@@ -5133,6 +5217,7 @@ func _start_way_out(m: Dictionary) -> void:
 	m["chill_t"] = 2.0 if has_joint("poacher_frost") else 0.0
 	m["shock_t"] = 0.0
 	m["fresh"] = true
+	m.erase("opened")
 	m["sustain_t"] = 0.0
 	log_event("Making for the way out, %d at the door" % size)
 
@@ -5837,9 +5922,9 @@ func _restock_market() -> void:
 			it = Items.roll(it["slot"], loot_tier_at(deepest_site_level()), rng, 0.0, false, false, "", "", 0.33, 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
 	if yard_has("back_room"):
-		var loose: Array = loose_uniques(0)
-		if not loose.is_empty():
-			market.append(Items.roll_unique(loose[rng.randi_range(0, loose.size() - 1)], rng))    # the Fence's Back room: a unique on the shelf
+		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
+		if not bu.is_empty():
+			market.append(Items.roll_unique(bu, rng, -1, shop_unique_tier()))    # the Fence's Back room: a loose one (the ungated), held in its range
 
 
 ## The Fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
@@ -5918,8 +6003,9 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 				continue                                  # the chase is the ladders', never the Fence's (endgame part 3)
 			if u["slot"] == k["slot"] and (k["type"] == "" or Items.base_named(k["slot"], u["base"]).get("type", "") == k["type"]):
 				fits.append(u)
-		if not fits.is_empty():
-			return Items.roll_unique(fits[rng.randi_range(0, fits.size() - 1)], rng)
+		var gu := pick_unique(fits, shop_unique_tier())
+		if not gu.is_empty():
+			return Items.roll_unique(gu, rng, -1, shop_unique_tier())     # one whose range takes the deepest tier dug; else a plain roll
 	var t := top_tier()
 	var it: Dictionary = {}
 	for tries in range(40):
@@ -6364,7 +6450,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -6452,6 +6538,9 @@ func load_dict(d: Dictionary) -> void:
 	loose_kit = Array(d.get("loose_kit", []))
 	book = Array(d.get("book", []))
 	shelf = Array(d.get("shelf", []))
+	shelf_tier = {}
+	for k in d.get("shelf_tier", {}):
+		shelf_tier[str(k)] = int(d["shelf_tier"][k])
 	if d.has("worn"):
 		for i in range(mini(worn.size(), d["worn"].size())):
 			worn[i] = float(d["worn"][i])
@@ -6509,6 +6598,8 @@ func load_dict(d: Dictionary) -> void:
 	mate = {}
 	if d.has("mate") and not d["mate"].is_empty():
 		mate = {"unique": str(d["mate"]["unique"]), "notes": int(d["mate"]["notes"])}
+		if d["mate"].has("tier"):
+			mate["tier"] = int(d["mate"]["tier"])     # the tier he has it at (12 Oct): a reload keeps the offer as offered
 	if mate.is_empty():
 		mate = roll_mate()
 	runs_total = int(d.get("runs_total", 0))
@@ -6553,6 +6644,8 @@ func load_dict(d: Dictionary) -> void:
 		it["value"] = int(it["value"])
 		if it.has("rounds"):
 			it["rounds"] = int(it["rounds"])
+		if not d.has("shelf_tier") and it.has("unique") and not Items.is_paper(it) and it["unique"] in shelf and not (it in market):
+			shelf_tier[it["unique"]] = maxi(int(shelf_tier.get(it["unique"], 0)), int(it["tier"]))     # a save from before the tiers: the shelf's from what's owned
 	if market.is_empty():
 		restock()
 		passes = int(d.get("passes", 0))     # the restock is the shelf's; the turn-downs stay as saved

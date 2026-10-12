@@ -2944,6 +2944,38 @@ the first for a milestone). *The title painting*: a prompt at 688x384 in docs/de
 smoke:* every card's name over the card, a picked full card's one frame, an empty card's outline; the foot's
 version.
 
+**Uniques by tier, built (12 Oct, docs/design/uniques.md).** Matt asked for it built now and the numbers left to the
+pass after his Poison Poacher save; the Deck's build is the playtest's, so nothing here reaches it. Every unique but
+the paper has a band (levelling 1-4, core 4-7, chase 7-9; weights 10 / 4 / 1, `Data.UNIQUE_BAND_WEIGHT`) and a range.
+It rolls at the find's loot tier held inside its range, on the best base of its slot at that tier (a gun's of its own
+type; a helmet or armour without a resist built in): `Items.unique_body`, cached. A type with no base at the tier
+(the melee secondary stops at the Cosh; no pistol at T5) takes its best below, lifted - part way to its next base up,
+or past its top by the slot's curve (`it["lift"]` on `Items.dps`). A loose find drops only the uniques whose range
+takes its tier (`sim.loose_at`, cached), the band's weight picking; a site's own, a head's, a pinnacle's and the
+lorry's come at the find's tier, held in range, so a deep Carpet Man drops a better Van's Spare. The shops come at the
+deepest tier dug (`shop_unique_tier`): the mate's offer carries its tier and prices by it (old offers roll at their
+base's), the Back room sells an ungated one held in range, a gamble's unique is one whose range takes the tier or a
+plain roll. The shelf keeps the best tier of each (`shelf_tier`, saved, kept through a move; an old save's filled
+from what's owned) and the Caravan's shelf card says it. The nine build uniques open at depth 6 (from 12); the Scout
+Leader's Whistle and the Traffic Warden's Hat are found anywhere. Four new, Matt's pick of the candidates: *the
+Starting Pistol* (chase secondary: the secondary's first shot at each of them lands, triple - one shot through the
+runner's whole damage chain), *the Miner's Lamp* (core helmet: searches take half as long), *the Paramedic's Bumbag*
+(levelling rig: meds heal half again; one is used for you under 40%, as the Paramedic's are), *the Plumber's Belt*
+(core rig: every status on them lasts twice as long - a dot's seconds, a chill's and a shock's, like the trees'
+notables). Art: tools/pixellab_items_gap_uniques_manifest.json, the four at their bases' footprints. The reviewer's
+catches, fixed before the smoke: a site's own base was left out of the bodies (gaps at T4 and T6), the mate's tier
+dropped on a reload, a lifted T5 pistol outscored the T6, a gamble could hand a T7 unique to a T1 yard, the convoy
+gave a damaged target a second opening shot, the shot skipped the runner's chain; and on the second pass, a T5 copy
+on a rig that carries less than the T4's (the body is now the best figure at or under the tier, labelled the tier it
+came at). For the pass (not fixed, numbers or
+Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
+plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
+Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5
+drops no loose unique (the levelling ones stop at 5, the core ones open at 6). *The smoke:* every unique held in its
+range at both ends with its name, rule, type and its body's mounts; a top copy beats a bottom; the sign a lifted Cosh;
+a T9 steel an upgrade on a T4; the bands by tier; the shelf's best through a save; the mate's tier, old and new; the
+four rules.
+
 **The twenty-fourth read (the Legion, 8 Oct, thirty reads, three a build: the Drifter at +15%, the band at
 2×).** Three red, two of them not the game's. *The bank's band:* the classes 1.4-2.2 h; the element
 builds 1.1-2.2 h, 2.0× exactly, which the reader called red on a float (2.2/1.1 = 2.0000000004) - a
