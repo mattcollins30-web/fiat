@@ -4062,3 +4062,13 @@ cloud copy (the device smoke hung on a mid-edit parse error - Matt to close it):
   the rest in its style), the Outskirts' gang new. art/people untouched.
 - *Flavour text*: every base, ammo and attachment has its line and the Lock-up shows it (rendered: Incendiary shells,
   Antifreeze) - asked Matt where it's missing.
+
+**The playtest-fixes read (12 Oct, commit 935d202; docs/balance/summary_playtest_fixes.md) and Matt's shock Scrapper
+save (docs/balance/playtest.md).** The bot: the lorry green (every element build by 16 h), the ladders' spread and scrap
+green; the Scrappers now take the lorry (fire 2.9 and 7.5 h, shock 5.2 and 10.7 h; the plain Scrapper on a Tooled-up
+garage rifle and a Workshop gauss). Slowest now: the fire Drifter (3.8 and 13.7 h, depth pace 0.4/h). Still red: the
+bank's band (0.7-1.7 h), the keystone/capstone hours (the physical Doorman), depth pace (four builds), the plain floor
+(five reads stuck). Matt's save, 1.1 h played: deaths one in 27 and wounds 19% - both in their bands, the first read of
+the two gates off play. The Shopping Centre was his wall: three runs, two cut and run, the death at level 13 (150
+dmg/s); the Bank not reached in 68 minutes. Next playtest: the fire Drifter (the bot's slowest; his 10 Oct fire Drifter
+reached the Bank in 47 minutes, a before-and-after).
