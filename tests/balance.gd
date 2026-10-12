@@ -426,6 +426,9 @@ func _probe() -> void:
 		pack["affixes"] = [] if pair[1] == 0.0 else [{"stat": "loot_pct", "value": int(pair[1] * 100), "tier": 5}]
 		sim.equipped["Backpack"] = pack
 		sim.tree = []
+		for oi in Data.ZONES[0]["tiers"]:
+			sim.best_depth[oi] = maxi(1, int(sim.best_depth[oi]))     # the Outskirts walked, so the Streets are open (12 Oct)
+		sim.hp = sim.max_hp()
 		sim.deploy(Data.OUTSKIRTS_SITES)          # the Streets, as before the Outskirts (12 Oct)
 		var m: Dictionary = sim.mission
 		m["remaining"] = 0
