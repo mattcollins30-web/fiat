@@ -2980,6 +2980,7 @@ func _unique_tier_checks(main) -> void:
 	var med: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
 	var heal0: float = sim.med_heal(med)
 	var fire0: float = sim.dot_seconds("fire")
+	var depth0: float = sim.dot_depth()
 	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Paramedic's Bumbag"), sim.rng)
 	_check(is_equal_approx(sim.med_heal(med), heal0 * 1.5), "the Bumbag's meds do not heal half again: %.1f vs %.1f" % [sim.med_heal(med), heal0])
 	sim.rig = [med.duplicate()]
@@ -2991,7 +2992,7 @@ func _unique_tier_checks(main) -> void:
 	_check(m["using"] != null or sim.rig.is_empty(), "the Bumbag did not use a med under 40%")
 	sim.extract_now()
 	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Plumber's Belt"), sim.rng)
-	_check(is_equal_approx(sim.dot_seconds("fire"), fire0 * 2.0) and is_equal_approx(sim.status_s(1.0), 2.0), "the Plumber's Belt did not double a status: %.1f vs %.1f" % [sim.dot_seconds("fire"), fire0])
+	_check(is_equal_approx(sim.dot_seconds("fire"), fire0) and is_equal_approx(sim.dot_depth(), depth0 * 2.0) and is_equal_approx(sim.dot_depth(false), 1.0) and is_equal_approx(sim.status_s(1.0), 2.0), "the Plumber's Belt did not double a dot's depth and a chill's length, or slowed the dot: %.1f s, ×%.1f" % [sim.dot_seconds("fire"), sim.dot_depth()])
 	sim.equipped["Rig"] = null
 	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("The Starting Pistol"), sim.rng)
 	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]

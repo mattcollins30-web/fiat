@@ -2967,7 +2967,15 @@ catches, fixed before the smoke: a site's own base was left out of the bodies (g
 dropped on a reload, a lifted T5 pistol outscored the T6, a gamble could hand a T7 unique to a T1 yard, the convoy
 gave a damaged target a second opening shot, the shot skipped the runner's chain; and on the second pass, a T5 copy
 on a rig that carries less than the T4's (the body is now the best figure at or under the tier, labelled the tier it
-came at). For the pass (not fixed, numbers or
+came at).
+
+**Before the pass, from that list (12 Oct, Matt: "make any changes you can now").** *A unique's body keeps its family*:
+a `body` hint on the unique narrows the bases it scales onto - Nan's Cardigan wears only what costs no pace (its rule
+takes the armour anyway: the Ceramic plates to the Light plates, never the heavy suits), the Butcher's Steel only a
+blade that bleeds a quarter or more (the Bayonet, the Rescue axe, lifted between and past). *The Plumber's Belt*: a
+burn, a poison or a bleed on them builds twice as deep and drains at the same seconds (`dot_depth`), so it ticks twice
+as hard and a quick kill loses nothing; chills and shocks still last twice as long. Its words say so. Left: a city
+site at depth 2-5 drops no loose unique (it dropped only the four outgrown ungated ones before) - the pass's to read. For the pass (not fixed, numbers or
 Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
 plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
 Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5

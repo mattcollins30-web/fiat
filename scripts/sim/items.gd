@@ -582,7 +582,7 @@ static func unique_body(u: Dictionary, tier: int) -> Dictionary:
 	var best := {}
 	var best_score := -1.0
 	for b in Data.BASES[u["slot"]]:
-		if int(b["tier"]) > tier or not _body_ok(b) or str(b.get("type", "")) != type:
+		if int(b["tier"]) > tier or not _body_fits(u, b, type):
 			continue
 		var sc := _base_score(u["slot"], b)
 		# the best figure at or under the tier, the higher tier on a tie (a T5 Plate rig carries less than the T4 harness:
@@ -599,7 +599,7 @@ static func unique_body(u: Dictionary, tier: int) -> Dictionary:
 		# the T6, never past the T6 - the reviewer's catch); past the type's top, the slot's curve
 		var next := {}
 		for b in Data.BASES[u["slot"]]:
-			if int(b["tier"]) > tier and _body_ok(b) and str(b.get("type", "")) == type and (next.is_empty() or int(b["tier"]) < int(next["tier"]) or (int(b["tier"]) == int(next["tier"]) and _base_score(u["slot"], b) > _base_score(u["slot"], next))):
+			if int(b["tier"]) > tier and _body_fits(u, b, type) and (next.is_empty() or int(b["tier"]) < int(next["tier"]) or (int(b["tier"]) == int(next["tier"]) and _base_score(u["slot"], b) > _base_score(u["slot"], next))):
 				next = b
 		if not next.is_empty() and best_score > 0.0:
 			var span := float(int(next["tier"]) - int(best["tier"]))
@@ -613,6 +613,20 @@ static func unique_body(u: Dictionary, tier: int) -> Dictionary:
 	var out := {"base": best["name"], "tier": maxi(tier, int(best["tier"])), "lift": lift}     # the copy's tier is the tier it came at
 	_bodies[key] = out
 	return out
+
+
+## A base a unique can wear: _body_ok, its own gun type, and its `body` hint (12 Oct, the pass's list): a family the
+## rule wants kept - Nan's Cardigan light (no pace lost: its rule takes the armour anyway), the Butcher's Steel a
+## blade that bleeds (a quarter or more of the hit).
+static func _body_fits(u: Dictionary, b: Dictionary, type: String) -> bool:
+	if not _body_ok(b) or str(b.get("type", "")) != type:
+		return false
+	var hint: Dictionary = u.get("body", {})
+	if hint.has("pace_min") and float(b.get("pace", 0)) < float(hint["pace_min"]):
+		return false
+	if hint.has("bleed_min") and float(b.get("conv_bleed_pct", 0)) < float(hint["bleed_min"]):
+		return false
+	return true
 
 
 static func _body_ok(b: Dictionary) -> bool:

@@ -172,7 +172,7 @@ hooks the game already has (statuses, meds, rounds, pace, searches), so none nee
 | B | Helmet | Core | 4-7 | The Foundry Man's Visor | Burns, shocks and chills on you last half as long |
 | C | Rig | Levelling | 1-4 | The Paramedic's Bumbag | Meds heal half again, and one is used for you under a third HP |
 | C | Rig | Levelling | 1-4 | The Paper Round Satchel | Every kill puts a round back in the pouch |
-| D | Rig | Core | 4-7 | The Plumber's Belt | Every status you put on them lasts twice as long |
+| D | Rig | Core | 4-7 | The Plumber's Belt | Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long (built: doubling a dot's seconds dealt less on a quick kill) |
 | D | Rig | Core | 4-7 | The Bin Man's Tabard | Everything picked up is worth a quarter more; junk sells at full |
 
 The pass gives each its affixes and art (a unique without its own art draws its base's, as now).

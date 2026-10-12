@@ -407,8 +407,6 @@ func dot_seconds(ty: String, theirs := true) -> float:
 		s *= 2.0
 	if ty == "poison" and has_rule("rat_mans_overalls"):
 		s *= 0.5                                 # the overalls: the same pool, twice as fast
-	if has_rule("plumbers_belt"):
-		s *= 2.0                                 # the Plumber's Belt: every status on them lasts twice as long (12 Oct)
 	return s
 
 
@@ -499,7 +497,7 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 		return
 	var d: Dictionary = Data.DOTS[ty]
 	var theirs: bool = mission == null or dots != mission.get("my_dots", {})
-	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs)
+	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs)
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
 
 
@@ -4661,7 +4659,7 @@ func _dot_fill(m: Dictionary, ty: String) -> void:
 		m["dots"] = {}
 	var t: Dictionary = m["t"]
 	var rate: float = float(type_dps()[ty]) * (1.0 - float(t.get("res", {}).get(ty, 0.0))) * pace() * float(t["pace"])
-	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_stacks(ty, true)
+	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_stacks(ty, true) * dot_depth(true)
 	m["dots"][ty] = maxf(float(m["dots"].get(ty, 0.0)), cap)
 
 
@@ -4718,6 +4716,12 @@ func _starting_shot(m: Dictionary, t: Dictionary) -> void:
 	if not m.has("dealt_by"):
 		m["dealt_by"] = {}
 	m["dealt_by"]["physical"] = float(m["dealt_by"].get("physical", 0.0)) + shot
+
+
+## How deep a burn, a poison or a bleed on them can build: the Plumber's Belt doubles the pool, drained at the same
+## seconds, so it ticks twice as hard and never slower (12 Oct; doubling the seconds dealt less on a quick kill).
+func dot_depth(theirs := true) -> float:
+	return 2.0 if theirs and has_rule("plumbers_belt") else 1.0
 
 
 ## How long a chill or a shock holds on them: the Plumber's Belt doubles it (12 Oct).

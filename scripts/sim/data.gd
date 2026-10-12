@@ -743,7 +743,7 @@ const UNIQUES := [
 		"words": "A third of your damage as shock; shock on one of them is shock on all of them", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
 	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "Poison never caps and carries to the next of them", "affixes": [{"stat": "poison_pct", "value": 40}, {"stat": "capacity", "value": 6}, {"stat": "dot_pct", "value": 20}]},
-	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "The Butcher's Steel", "slot": "Primary", "base": "Machete", "rule": "butchers_steel", "band": "core", "range": [4, 9], "body": {"bleed_min": 25}, "depth": 6,
 		"words": "Bleed does double, and a bleed carries to the next of them", "affixes": [{"stat": "bleed_pct", "value": 40}, {"stat": "conv_bleed_pct", "value": 25}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Gritter's Hopper", "slot": "Armour", "base": "Riot suit", "rule": "gritters_hopper", "band": "chase", "range": [6, 9], "site": 0,
 		"words": "Everyone on you is chilled, always; chilled gangs come one at a time", "affixes": [{"stat": "frost_pct", "value": 40}, {"stat": "armour", "value": 30}, {"stat": "frost_res", "value": 30}]},
@@ -759,7 +759,7 @@ const UNIQUES := [
 		"words": "Loot quality doubled; cash halved", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
 	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "band": "chase", "range": [6, 9], "site": 4,
 		"words": "Pace +40% and the pack half again; you carry no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
-	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [4, 9], "depth": 6,
+	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [4, 9], "body": {"pace_min": 0}, "depth": 6,
 		"words": "3% of your HP back a second; no armour at all", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
 	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "Every kill is a tenth of your HP back; meds do nothing", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "attack_pct", "value": 15}]},
@@ -798,7 +798,7 @@ const UNIQUES := [
 	{"name": "The Paramedic's Bumbag", "slot": "Rig", "base": "Bum bag", "rule": "paramedics_bumbag", "band": "levelling", "range": [1, 4],
 		"words": "Meds heal half again; one is used for you under 40% HP", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "hp", "value": 15}]},
 	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [4, 7], "depth": 6,
-		"words": "Every status you put on them lasts twice as long", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
+		"words": "Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
 ]
 ## Sets: whose gear it was. A piece is a fixed base with its own name and a
 ## couple of fixed affixes, rolled like a unique, drawn in the set's own
