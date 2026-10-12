@@ -3018,7 +3018,13 @@ sites; the weather had one row too few (each zone took the one before's); the Ma
 no crew; the screenshot tool's map; what's been seen kept the old numbers; the probe ran at the Allotments; the read
 moved items' tiers on old lines. *The smoke:* the Outskirts (first, three sites, no crew, the Estate after, levels, an
 old save moved and moved only once, Runs' four zones, the Radio's map); every test's site moved up three (the fresh
-yards' to the Allotments), the map's tests on the Radio. The bot clears the Outskirts in about ten runs. For the pass (not fixed, numbers or
+yards' to the Allotments), the map's tests on the Radio. The bot clears the Outskirts in about ten runs.
+
+**Guard's last two (12 Oct).** The Stats sheet's defence card says where Guard comes from and how far it fills, in
+Guard's steel ("Guard to 80: overheal, 15% a gang"; the cap's note when nothing fills it), and the run screen shows
+what Guard took as its own numbers in that colour - the red figures by type now count only what reached HP (scaled by
+what reached it of what the types made, so Held's cut is out of them too: the review's catch). The band's the same
+steel. *The smoke:* Guard's share kept out of the red, the Stats sheet's line and its fit. For the pass (not fixed, numbers or
 Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
 plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
 Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5

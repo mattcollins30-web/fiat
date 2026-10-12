@@ -3142,7 +3142,26 @@ func _guard_checks(main) -> void:
 	m["using"] = {"name": "Bandage", "left": 0.0, "heal": 5.0}
 	sim._patch(m, 0.1)
 	_check(is_equal_approx(sim.guard(), sim.guard_cap()), "Transfusion's med did not fill Guard to the top: %.0f of %.0f" % [sim.guard(), sim.guard_cap()])
-	sim.extract_now()
+	# what Guard takes is Guard's on the run screen, not red: the red figures count only what reached HP
+	var taken0: float = float(m.get("taken", 0.0))
+	var by0: float = 0.0
+	for ty in m.get("taken_by", {}):
+		by0 += float(m["taken_by"][ty])
+	m["t"]["dps"] = 1.0
+	m["remaining"] = maxi(1, int(m["remaining"]))
+	sim.advance(1.0)
+	var by1: float = 0.0
+	for ty in m.get("taken_by", {}):
+		by1 += float(m["taken_by"][ty])
+	_check(sim.mission == null or (float(m.get("guarded", 0.0)) > 0.0 and absf((by1 - by0) - (float(m.get("taken", 0.0)) - taken0)) < 0.5), "Guard's share went into the red figures: by type +%.1f, to HP +%.1f, guarded %.1f" % [by1 - by0, float(m.get("taken", 0.0)) - taken0, float(m.get("guarded", 0.0))])
+	# the Stats sheet says where Guard comes from, in its colour
+	main.show_room(main.RUNNER)
+	main.refresh()
+	var gnote: Label = main._stats.cards["defence"]["note"]
+	_check(gnote.text.begins_with("Guard to ") and gnote.text.contains("overheal"), "the Stats sheet's defence does not say where Guard comes from: '%s'" % gnote.text)
+	_check_fit(main, "Stats (Guard)")
+	if sim.mission != null:
+		sim.extract_now()
 	sim.load_dict(saved)
 	print("Guard ok: first off Guard, the cap, overheal and a med's overflow, Squared up, Transfusion's cap, gone at the extract")
 

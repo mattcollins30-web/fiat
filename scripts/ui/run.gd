@@ -91,6 +91,7 @@ var _dealt_seen_by := {}           # and by type, for the coloured numbers
 var _taken_seen_by := {}
 var _number_at := -1.0             # the run's clock when the last number came off
 var _taken_seen := 0.0             # what the red numbers have shown so far this run
+var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): its share in its own colour, not red
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
@@ -340,7 +341,7 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
 	# Guard (12 Oct, docs/design/shields.md): a pale steel band laid from the fill's right edge back over it, its
 	# width Guard over max HP - the part of the bar their fire takes first; under the dots' segments (the review)
-	d["guard"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Color(Pal.TEXT, 0.45), 0))
+	d["guard"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Color(Pal.GUARD, 0.5), 0))
 	d["guard"].visible = false
 	# what the dots still have to take off the bar (Matt, 6 Oct): the end of the fill, a segment a type, so the
 	# fill is seen going down into them as they tick
@@ -572,6 +573,7 @@ func _juice_tick(m: Dictionary) -> void:
 		_hp_at = -1.0
 		_taken_seen = 0.0
 		_taken_seen_by = {}
+		_guarded_seen = 0.0
 		_healed_seen = 0.0
 		_found_seen = []
 	var dealt: float = float(m.get("dealt", 0.0))
@@ -591,6 +593,12 @@ func _juice_tick(m: Dictionary) -> void:
 		if taken - _taken_seen >= 1.0:
 			_numbers_by(m.get("taken_by", {}), _taken_seen_by, RUNNER_BAR_Y, "−", 40)
 			_taken_seen = taken
+			shown = true
+		var guarded: float = float(m.get("guarded", 0.0))
+		if guarded - _guarded_seen >= 1.0:
+			var gn: int = int(floor(guarded - _guarded_seen))
+			juice.number(_scatter(RUNNER_BAR_Y), "−%d" % gn, "guard", gn >= 40)
+			_guarded_seen += gn
 			shown = true
 		if healed - _healed_seen >= 1.0:
 			var n: int = int(round(healed - _healed_seen))

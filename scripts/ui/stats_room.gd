@@ -391,7 +391,15 @@ func _show_defence() -> void:
 		_set_bar(c["res"][k], ty.capitalize(), v / 100.0, vt, Pal.tone_color(ty), Pal.BAD if naked else Pal.tone_color(ty))
 		if fires.has(ty):
 			fired.append(ty)
-	c["note"].text = "%d%% cap · +N past it is +N%% damage · ● none where sites hit" % int(Data.RESIST_CAP)
+	var gs: Array = sim.guard_sources()
+	if gs.is_empty():
+		c["note"].text = "%d%% cap · +N past it is +N%% damage · ● none where sites hit" % int(Data.RESIST_CAP)
+		c["note"].add_theme_color_override("font_color", Pal.TEXT_3)
+	else:
+		# Guard (12 Oct): its cap and where it comes from, in its own colour; the cap's note is the bars' ticks
+		var cap: int = int(round(sim.guard_cap()))
+		UI.fit(c["note"], ["Guard to %d: %s" % [cap, ", ".join(gs)], "Guard to %d: %s" % [cap, gs[0] + (" +%d" % (gs.size() - 1) if gs.size() > 1 else "")], "Guard to %d" % cap])
+		c["note"].add_theme_color_override("font_color", Pal.GUARD)
 	c["status"].text = (("Sites fire %s" % ", ".join(fired)) if fired.size() <= 3 else "Sites fire %d elements" % fired.size()) if not fired.is_empty() else "Nothing open fires an element"
 
 

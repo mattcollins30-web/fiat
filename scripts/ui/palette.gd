@@ -34,6 +34,7 @@ const RARE := Color("5aa0e6")
 const EPIC := Color("b58cf0")
 const LEGENDARY := Color("f2c94c")
 const UNIQUE := Color("ee6fb5")
+const GUARD := Color("c9d3dc")         # Guard (12 Oct): the steel band over HP, and what it took
 const PICK := TEXT                    # the ring round a picked cell or tile
 const RARITY_TONES := ["", "good", "rare", "epic", "legendary"]   # Common .. Legendary
 # a damage type's colour, for the numbers off a hit: physical white, fire
@@ -149,6 +150,8 @@ static func tone_color(tone: String) -> Color:
 			return LEGENDARY
 		"unique":
 			return UNIQUE
+		"guard":
+			return GUARD
 	if ELEMENT_COLOURS.has(tone):
 		return ELEMENT_COLOURS[tone]
 	return TEXT_2

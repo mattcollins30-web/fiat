@@ -4409,6 +4409,27 @@ func _guard_add(m: Dictionary, amount: float) -> void:
 	m["guard"] = minf(guard_cap(), float(m.get("guard", 0.0)) + amount)
 
 
+## Where this runner's Guard comes from, in words (the Stats sheet, 12 Oct): [] when nothing fills it.
+func guard_sources() -> Array:
+	var out: Array = []
+	if class_data().get("overheal", false):
+		out.append("overheal")
+	if has_node("cap_transfusion"):
+		out.append("a med fills it")
+	var gang: float = (15.0 if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
+	if gang > 0.0:
+		out.append("%d%% a gang" % int(round(gang)))
+	if has_node("in_the_hide"):
+		out.append("15% the first down")
+	if has_node("sheet_metal"):
+		out.append("6% a cache")
+	if has_node("breather"):
+		out.append("back between gangs")
+	if rig.any(func(it): return Items.is_medical(it) and Items.affix_total(it, "overflow_pct") > 0.0):
+		out.append("a med's overflow")
+	return out
+
+
 ## A gang arriving (the first, a patrol, the convoy's, the door's): Squared up and the `guard_gang` lines.
 func _gang_arrives(m: Dictionary) -> void:
 	var share: float = (15.0 if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
@@ -4653,8 +4674,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if not m.has("taken_by"):
 		m["taken_by"] = {}
 	var shares := incoming_shares({"types": their_types} if not their_types.is_empty() else {})
+	var tick_by := {}                          # this tick's by type, added below at the share that reached HP (Guard's apart)
 	for ty in shares:
-		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + incoming * dt * float(shares[ty])
+		tick_by[ty] = incoming * dt * float(shares[ty])
 	var fire_pool: float = float(m["my_dots"].get("fire", 0.0))
 	var ticked_by := {}
 	var ticked: float = _dot_tick(m["my_dots"], dt, ticked_by)
@@ -4664,7 +4686,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		ticked_by.erase("fire")
 		_heal(m, fire_tick)                        # a burn on you heals you instead
 	for ty in ticked_by:
-		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + float(ticked_by[ty])
+		tick_by[ty] = float(tick_by.get(ty, 0.0)) + float(ticked_by[ty])
 	incoming += ticked / maxf(dt, 0.001)
 	if has_node("cap_held"):
 		incoming = minf(incoming, max_hp() * 0.1)       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
@@ -4672,6 +4694,12 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var above: bool = hp >= max_hp() * Data.WOUND_AT
 	var on_hp: float = _take(m, incoming * dt)
 	m["taken"] = float(m.get("taken", 0.0)) + on_hp     # for the run screen's red numbers: what reached HP, Guard's share apart
+	var tick_total := 0.0
+	for ty in tick_by:
+		tick_total += float(tick_by[ty])
+	var reached: float = on_hp / maxf(tick_total, 0.000001)     # over what the types made, so Held's cut is out of them too (the review)
+	for ty in tick_by:
+		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + float(tick_by[ty]) * reached
 	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
 		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
 		if auto_tier >= 0 and not yard_has("whistle"):
