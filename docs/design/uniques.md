@@ -4,7 +4,8 @@ Matt, 12 Oct: most uniques were made before most of the bases, so plain bases si
 rule. He wants uniques tiered like the bases: levelling uniques at the bottom that drop almost commonly, chase
 uniques at the top that hardly drop, the gaps filled in between, and the ones good enough to keep for good dropping
 at several tiers of their own. **Design only: nothing is built until Matt's Poison Poacher playtest save is in, and
-then this lands with that balance pass** (it changes numbers, so it goes in before the pass, never after).
+then this lands with that balance pass** (it changes numbers, so it goes in before the pass, never after). The
+model was agreed on 12 Oct (section 6).
 
 ## 1. What we have (the audit, 12 Oct)
 
@@ -157,16 +158,24 @@ Counted by band and slot after the moves above (paper aside):
 | Backpack | 1 | 1 | 2 |
 | Charm | 1 | 3 | 8 |
 
-The holes: **a chase secondary**, **a core helmet**, **a levelling and a core rig**. And Charm is top-heavy (eight
-chase). Matt's call for each gap: a new unique, or move one across. Space left for the new ones (rule and name to
-Matt):
+The holes: **a chase secondary**, **a core helmet**, **a levelling and a core rig**. Matt, 12 Oct: fill them with
+new uniques; nothing existing moves across. Charm stays top-heavy (eight chase) as it is.
 
-| Gap | Slot | Band | Range | Idea, if wanted |
-| --- | --- | --- | --- | --- |
-| A | Secondary | Chase | 7-9 | _Matt's_ |
-| B | Helmet | Core | 4-7 | _Matt's_ |
-| C | Rig | Levelling | 1-4 | _Matt's_ |
-| D | Rig | Core | 4-7 | _Matt's_ |
+Two candidates a gap, Matt picks one (or neither) and the name and words are his to change. Each is a rule on the
+hooks the game already has (statuses, meds, rounds, pace, searches), so none needs a new system:
+
+| Gap | Slot | Band | Range | Candidate | Words |
+| --- | --- | --- | --- | --- | --- |
+| A | Secondary (pistol) | Chase | 7-9 | The Starting Pistol | Every gang opens on the secondary: its first shot at each of them lands, triple |
+| A | Secondary (melee) | Chase | 7-9 | The Nightwatchman's Truncheon | Every status on one of them makes the rest hit it 15% harder |
+| B | Helmet | Core | 4-7 | The Miner's Lamp | Every cache shows; searches take half as long |
+| B | Helmet | Core | 4-7 | The Foundry Man's Visor | Burns, shocks and chills on you last half as long |
+| C | Rig | Levelling | 1-4 | The Paramedic's Bumbag | Meds heal half again, and one is used for you under a third HP |
+| C | Rig | Levelling | 1-4 | The Paper Round Satchel | Every kill puts a round back in the pouch |
+| D | Rig | Core | 4-7 | The Plumber's Belt | Every status you put on them lasts twice as long |
+| D | Rig | Core | 4-7 | The Bin Man's Tabard | Everything picked up is worth a quarter more; junk sells at full |
+
+The pass gives each its affixes and art (a unique without its own art draws its base's, as now).
 
 ## 5. How it's checked (in the pass)
 
@@ -177,9 +186,11 @@ Matt):
 - **A smoke**: a unique rolled at tiers 1, 5 and 9 takes its range's nearest tier, keeps its name, art and rule,
   and a higher copy reads ▲ over a lower.
 
-## 6. For Matt
+## 6. Decided (Matt, 12 Oct)
 
-1. The bands and the weights (10 / 4 / 1) as first figures?
-2. The build-defining ones opening at depth 6 (from 12), to run 4-9?
-3. The bosses' and pinnacles' scaling with the boss's depth on the map?
-4. The four gaps: new uniques (your names and rules), or move existing ones across?
+1. Bands and weights 10 / 4 / 1 as first figures: **yes**.
+2. The build-defining ones open at depth 6 (from 12) and run 4-9: **yes**.
+3. The bosses' and pinnacles' scale with the boss's depth on the map: **yes**.
+4. The gaps: **new uniques, nothing moved**. Open: which candidate per gap (section 4).
+
+Built in the balance pass after the Poison Poacher playtest, before that pass's runs.
