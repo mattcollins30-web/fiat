@@ -142,8 +142,13 @@ func _init() -> void:
 	_build()
 
 
+const MAX_FPS := 60
+
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	if DisplayServer.get_name() != "headless":
+		Engine.max_fps = MAX_FPS             # drawn at the panel's own refresh, the Legion's fans ran on a menu (12 Oct); the tests run headless, uncapped
 	_fit_window_to_screen()
 	get_viewport().size_changed.connect(_on_resize)
 	_on_resize()
