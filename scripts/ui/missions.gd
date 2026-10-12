@@ -14,7 +14,6 @@ const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
-const Atlas := preload("res://scripts/ui/atlas.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 
 const COL_GAP := 16
@@ -32,13 +31,13 @@ const WORD_ROWS := 4               # the radio's two words and the sky's two, a 
 
 var sim
 var zone := 0                      # the zone whose tiers the columns show
+var _zone_set := false             # the first show opens on the furthest zone open (12 Oct: not the Outskirts every launch)
 var _zone_buttons: Array = []
 var _zone_art: Array = []                 # a TextureRect a tab, behind it
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, over a column
-var _atlas                         # the map (atlas.gd): the endgame's tree in the Caravan's shape, in place of the columns
-const MAP := 3                     # the fourth button on the zone row
+# the map moved to the Radio (12 Oct): the zone row is the four zones, the Outskirts first
 const ZONE_H := 56
 const TOP := ZONE_H + 16
 
@@ -70,8 +69,8 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the zones, as a row of buttons across the top
-	var zw := (Pal.GRID_W - COL_GAP * Data.ZONES.size()) / (Data.ZONES.size() + 1)
-	for z in range(Data.ZONES.size() + 1):
+	var zw := (Pal.GRID_W - COL_GAP * (Data.ZONES.size() - 1)) / Data.ZONES.size()
+	for z in range(Data.ZONES.size()):
 		var art := TextureRect.new()             # the zone's painted art behind its tab (9 Oct), when there is one
 		art.position = Vector2(z * (zw + COL_GAP), 0)
 		art.size = Vector2(zw, ZONE_H)
@@ -80,22 +79,16 @@ func _init() -> void:
 		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		art.clip_contents = true
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art.texture = UI.place_texture(Data.ZONES[z]["name"]) if z < Data.ZONES.size() else null
+		art.texture = UI.place_texture(Data.ZONES[z]["name"])
 		art.visible = art.texture != null
 		if art.texture != null and art.texture.get_width() > zw:
 			art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR     # scaled down into the tab: smoothed
 		add_child(art)
 		_zone_art.append(art)
 		var b := UI.button(self, Rect2(z * (zw + COL_GAP), 0, zw, ZONE_H), false)
-		b.text = Data.ZONES[z]["name"] if z < Data.ZONES.size() else "The map"
+		b.text = Data.ZONES[z]["name"]
 		b.pressed.connect(_pick_zone.bind(z))
 		_zone_buttons.append(b)
-	# the map: the endgame's tree in the Caravan's shape (Map-A, 7 Oct)
-	_atlas = Atlas.new(Pal.ROOM_H - TOP)
-	_atlas.position = Vector2(0, TOP)
-	_atlas.visible = false
-	_atlas.acted.connect(func(): acted.emit())
-	add_child(_atlas)
 	for col in range(3):
 		var x := col * (COL_W + COL_GAP)
 		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -185,6 +178,11 @@ func _init() -> void:
 
 func show_state(s) -> void:
 	sim = s
+	if not _zone_set or not sim.zone_open(zone):
+		_zone_set = true
+		for z in range(Data.ZONES.size()):
+			if sim.zone_open(z):
+				zone = z
 	_show_came_back()
 	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
@@ -205,17 +203,6 @@ func show_state(s) -> void:
 		else:
 			UI.style_button(zb, z == zone)
 			zb.remove_theme_constant_override("outline_size")
-	var mb: Button = _zone_buttons[MAP]
-	mb.text = "The map" if sim.campaign_done() else "The map · locked"
-	mb.disabled = not sim.campaign_done()
-	UI.style_button(mb, zone == MAP)
-	_atlas.visible = zone == MAP
-	for c in _cols:
-		c["panel"].visible = zone != MAP
-		c["edge"].visible = zone != MAP
-	if zone == MAP:
-		_show_map()
-		return
 	var tiers: Array = Data.ZONES[zone]["tiers"]
 	for k in range(3):
 		var i: int = tiers[k]
@@ -348,23 +335,9 @@ func _tier(k: int) -> int:
 
 
 func _pick_zone(z: int) -> void:
-	if (z == MAP and sim.campaign_done()) or (z < MAP and sim.zone_open(z)):
+	if z >= 0 and z < Data.ZONES.size() and sim.zone_open(z):
 		zone = z
 		show_state(sim)
-
-
-func _show_map() -> void:
-	_atlas.show_state(sim)
-
-
-## The tests' hands on the map: a rank of a passive, and the map started again.
-func _rank(key: String) -> void:
-	_atlas.selected = key
-	_atlas._on_take()
-
-
-func _reset_map() -> void:
-	_atlas._on_reset()
 
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
@@ -453,8 +426,6 @@ const CAME_FOOT := PAD + 2 * Pal.BUTTON_H + 12 + 36 + 8       # a column's butto
 
 func _show_came_back() -> void:
 	_came.show_state(sim)
-	if zone == MAP:
-		_came.visible = false
 	if not _came.visible:
 		return
 	var col := 2
@@ -471,9 +442,6 @@ func text_nodes() -> Array:
 	out.append_array(_came.text_nodes())
 	for zb in _zone_buttons:
 		out.append(zb)
-	if zone == MAP:
-		out.append_array(_atlas.text_nodes())
-		return out
 	for c in _cols:
 		out.append_array(c["band"].text_nodes())
 		out.append_array([c["intel_head"], c["note"], c["fire_label"], c["resist_label"]])

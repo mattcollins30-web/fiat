@@ -18,8 +18,8 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const PAD := 20
 const RIGHT_W := 240                 # the right-hand lines' box
 const RIGHT_LINES := 3
-const SKY := [Color("2a3340"), Color("3a2f2a"), Color("2b3a33"), Color("33303a")]   # a tone a zone (the last for rooms)
-const GROUND := [Color("141a22"), Color("1d1614"), Color("131c18"), Color("17151b")]
+const SKY := [Color("2e3a33"), Color("2a3340"), Color("3a2f2a"), Color("2b3a33"), Color("33303a")]   # a tone a zone, the Outskirts first (12 Oct; the last for rooms)
+const GROUND := [Color("161d17"), Color("141a22"), Color("1d1614"), Color("131c18"), Color("17151b")]
 
 var kicker: Label
 var title: Label

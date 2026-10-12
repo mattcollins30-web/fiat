@@ -48,7 +48,7 @@ var cards := {}                            # name -> {panel, title, headline, un
 func _init() -> void:
 	size = Vector2(W, H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	band = Band.new(W, BAND_H, 3)
+	band = Band.new(W, BAND_H, 4)
 	add_child(band)
 	band.portrait_width(Pal.BAND_FACE)
 	band.room_band()

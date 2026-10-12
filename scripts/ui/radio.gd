@@ -18,13 +18,17 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const Atlas := preload("res://scripts/ui/atlas.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H         # the rooms' one band (10 Oct, Bands-U A): 84 → 180
 const BODY_Y := HEAD_H + 8
 const LIST_W := 330
-const ROW_H := 74                  # 82 → 74 (Bands-U A): nine sites still on show
+const ROW_H := 54                  # 74 → 54 (12 Oct): twelve sites on show with the Outskirts - the name and depth, then the pips and the pay on one line
 const ROW_GAP := 6
+const VIEW_W := 170                # the air / the map, at the band's right under its lines (12 Oct: the map moved here from Runs)
+const VIEW_H := 28
+const VIEW_Y := 88
 const RIGHT_X := LIST_W + 12
 const RIGHT_W := Pal.GRID_W - RIGHT_X
 const DETAIL_H := 530              # 566 → 530: the words, the crafts and the hint, no slack
@@ -36,7 +40,7 @@ const CRAFT_GAP := 6
 const BOOK_Y := BODY_Y + DETAIL_H + 8
 const BOOK_H := Pal.ROOM_H - BOOK_Y
 const BOOK_COLS := 6
-const PIP_W := 30
+const PIP_W := 14
 const TIER_COLOURS := [Color("a9afb6"), Color("7fb2e5"), Color("e3a33b"), Color("b07be0")]
 const POOL_COLOURS := {"general": Color("a9afb6"), "zone": Color("7fb2e5"), "deep": Color("b07be0"), "start": Color("a9afb6"), "paper": Color("a9afb6")}
 
@@ -67,6 +71,10 @@ var _book: Array = []              # labels, BOOK_COLS a row
 var _stand: Array = []             # the standing words' buttons
 var _filter: Button
 var _shown := ""
+var view := "air"                  # "air": the sites and their words; "map": the endgame's tree (12 Oct, from Runs)
+var _air: Control                  # everything of the air's, shown or hidden together
+var _atlas                         # the map (atlas.gd), the room's whole height
+var _views: Array = []             # the two buttons, the air and the map
 
 
 func _init() -> void:
@@ -92,9 +100,9 @@ func _init() -> void:
 		r["name"] = UI.label(b, Rect2(12, 4, LIST_W - 90, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		r["depth"] = UI.label(b, Rect2(LIST_W - 130, 4, 118, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
 		for k in range(WORDS_MAX):
-			var p := UI.panel(b, Rect2(12 + k * (PIP_W + 4), 32, PIP_W, 9), UI.box(Pal.RAIL_RULE, 3))
+			var p := UI.panel(b, Rect2(12 + k * (PIP_W + 4), 35, PIP_W, 9), UI.box(Pal.RAIL_RULE, 3))
 			r["pips"].append(p)
-		r["pay"] = UI.label(b, Rect2(12, 44, LIST_W - 24, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["pay"] = UI.label(b, Rect2(12 + WORDS_MAX * (PIP_W + 4) + 6, 27, LIST_W - 24 - WORDS_MAX * (PIP_W + 4) - 6, 24), "", "Regular", Pal.CELL_TEXT - 2, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_rows.append(r)
 	var detail := UI.panel(self, Rect2(RIGHT_X, BODY_Y, RIGHT_W, DETAIL_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	var iw: float = RIGHT_W - 2 * PAD
@@ -156,10 +164,40 @@ func _init() -> void:
 		var col: int = k % BOOK_COLS
 		var row: int = k / BOOK_COLS
 		_book.append(UI.label(book, Rect2(PAD + col * (bw + 6), 42 + row * ((BOOK_H - 50) / rows), bw, 23), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+	# the air's whole room in one holder, so the map can take the room (12 Oct: the map moved here from Runs)
+	_air = Control.new()
+	_air.size = size
+	_air.mouse_filter = Control.MOUSE_FILTER_PASS
+	for ch in get_children():
+		remove_child(ch)
+		_air.add_child(ch)
+	add_child(_air)
+	_atlas = Atlas.new(Pal.ROOM_H)
+	_atlas.visible = false
+	_atlas.acted.connect(func(): acted.emit())
+	add_child(_atlas)
+	for k in range(2):
+		var vb := UI.button(self, Rect2(Pal.GRID_W - PAD - (2 - k) * (VIEW_W + 6) + 6, VIEW_Y, VIEW_W, VIEW_H), false)
+		vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+		vb.pressed.connect(_pick_view.bind(["air", "map"][k]))
+		_views.append(vb)
 
 
 func show_state(s) -> void:
 	sim = s
+	if view == "map" and not sim.campaign_done():
+		view = "air"
+	_views[0].text = "The air"
+	_views[1].text = "The map" if sim.campaign_done() else "The map · locked"
+	_views[1].disabled = not sim.campaign_done()
+	UI.style_button(_views[0], view == "air")
+	UI.style_button(_views[1], view == "map")
+	_air.visible = view == "air"
+	_atlas.visible = view == "map"
+	if view == "map":
+		_shown = ""
+		_atlas.show_state(sim)
+		return
 	if selected < 0 or not sim.tier_open(selected):
 		selected = _first_site()
 	var sig := "%d|%s|%s|%s|%s|%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%s" % [selected, str(sim.words), str(sim.sealed), str(sim.depth), str(sim.best_depth), sim.notes, str(sim.book.size()), str(sim.atlas),
@@ -226,7 +264,7 @@ func _show_row(i: int) -> void:
 	if sim.juiceable(i):
 		pay = sim.word_total_words(i)[0]
 	var plain: String = "silent" if sim.juiceable(i) else ("plain: words from depth 2" if sim.campaign_done() else "plain")
-	UI.fit(r["pay"], [_cap(pay) if pay != "" else plain, _cap(pay.get_slice(" · ", 0)) if pay != "" else plain])
+	UI.fit(r["pay"], [_cap(pay) if pay != "" else plain, _cap(pay.get_slice(" · ", 0)) if pay != "" else plain, _cap(pay.get_slice(" · ", 0).get_slice(" ", 0)) if pay != "" else plain.get_slice(":", 0)])
 	r["pay"].add_theme_color_override("font_color", Pal.GOOD if pay != "" else Pal.TEXT_3)
 
 
@@ -397,8 +435,30 @@ func word_row(k: int) -> Dictionary:
 	return _words[k]
 
 
+## The air or the map (12 Oct): the map once the campaign's done.
+func _pick_view(v: String) -> void:
+	if v == "map" and not sim.campaign_done():
+		return
+	view = v
+	_shown = ""
+	show_state(sim)
+	acted.emit()
+
+
+## The tests' hands on the map: a rank of a passive, and the map started again.
+func _rank(key: String) -> void:
+	_atlas.selected = key
+	_atlas._on_take()
+
+
+func _reset_map() -> void:
+	_atlas._on_reset()
+
+
 func text_nodes() -> Array:
-	var out: Array = [_kicker, _headline, _unit, _title, _sub, _odds, _book_title, _book_note]
+	if view == "map":
+		return _views + _atlas.text_nodes()
+	var out: Array = [_kicker, _headline, _unit, _title, _sub, _odds, _book_title, _book_note] + _views
 	out.append_array(_chips.text_nodes())
 	for r in _rows:
 		if r["button"].visible:
@@ -422,6 +482,8 @@ func text_nodes() -> Array:
 
 
 func line_pairs() -> Array:
+	if view == "map":
+		return []                          # the map's heads stack their lines (Runs never paired them either)
 	var out: Array = [[_headline, _unit]]
 	for r in _rows:
 		if r["button"].visible:

@@ -14,6 +14,7 @@ extends SceneTree
 const OUT := "res://docs/balance/playtest.md"
 const GATES := preload("res://tools/balance_summary.gd")
 const Data := preload("res://scripts/sim/data.gd")
+const Sim := preload("res://scripts/sim/sim.gd")
 const LEVELS := [5, 10, 15, 20, 25, 30, 40, 50]
 const DEPTHS := [2, 4, 6, 8, 10, 12, 16, 20]
 
@@ -32,6 +33,12 @@ func _init() -> void:
 		else:
 			var ch: Array = read_record(record_path(path))
 			ch.append_array(d["sim"].get("chronicle", []))     # a save written by a script (the bot's), lines and all
+			Sim._shift_sites(d["sim"])                          # a save from before the Outskirts (12 Oct): its sites up three
+			for e in ch:
+				if not e.has("sv") and e.has("tier") and str(e.get("k", "")) in ["clear", "run", "boss", "word"]:     # a site's index, never an item's tier
+					e["tier"] = int(e["tier"]) + Data.OUTSKIRTS_SITES     # a line from before the Outskirts: the site's index then
+				if not e.has("sv") and e.has("zone"):
+					e["zone"] = int(e["zone"]) + 1
 			out = summarize(d["sim"], ch, path)
 	var w := FileAccess.open(OUT, FileAccess.WRITE)
 	if w != null:

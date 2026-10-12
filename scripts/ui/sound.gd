@@ -107,7 +107,7 @@ func follow(sim) -> void:
 		return
 	# the ambient: the zone's, and the rain over it
 	var zone: int = int(Data.TIERS[int(m["tier"])]["zone"])
-	var want: String = ["ambient_estate", "ambient_town", "ambient_city"][mini(zone, 2)]
+	var want: String = ["ambient_estate", "ambient_estate", "ambient_town", "ambient_city"][mini(zone, 3)]     # the Outskirts on the estate's for now (12 Oct)
 	if _ambient_name != want:
 		_ambient_name = want
 		_ambient.stream = _looped(stream(want))

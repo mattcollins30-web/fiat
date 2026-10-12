@@ -73,6 +73,37 @@ const PASTS := {
 ## the line the log gives the first clear. Index by tier, then depth − 1
 ## (the last line holds for every depth past it).
 const SITES := {
+	# the Outskirts (12 Oct)
+	"The Allotments": {
+		"depths": [
+			"Council plots off the ring road. The sheds were somebody's whole weekend.",
+			"Every water butt's been tipped for what was in it.",
+			"Someone's still growing potatoes here. They'll fight you for them.",
+			"The polytunnel's a house now. The bonfire's a kitchen.",
+			"Nothing's grown here in a year but the fence, and the people behind it.",
+		],
+		"cleared": "The plots are quiet. The beans came up anyway.",
+	},
+	"The Garden Centre": {
+		"depths": [
+			"Big glasshouse, bigger car park. The trolleys are still where they were left.",
+			"The cafe's been stripped down to the scones' sign.",
+			"Compost bags make good walls. Someone worked that out.",
+			"The aquatics end smells. Nobody goes to the aquatics end.",
+			"Whoever runs it now has the tills open and nothing in them.",
+		],
+		"cleared": "The garden centre's yours for an hour. The roses don't mind.",
+	},
+	"Top Farm": {
+		"depths": [
+			"Up the lane past the cattle grid. The dogs went first, then the farmer.",
+			"The barn's full of feed nobody's feeding to anything.",
+			"The shotgun cabinet's open and empty. That's the farm's story.",
+			"There's diesel in the tank and a quad in the yard. Everybody wants both.",
+			"The farmhouse light's on every night. Somebody's keeping it on.",
+		],
+		"cleared": "Top Farm's quiet. Even the crows have moved down to the town.",
+	},
 	"Ransacked Streets": {
 		"depths": [
 			"The first streets off the ring road. Doors open, curtains gone.",
@@ -622,18 +653,18 @@ const SKY := {
 ## in the log when it changes. Nobody says objective.
 const NEXT := {
 	"past": "The runner's in the Caravan. Ask what they were, before.",
-	"first": "Ransacked Streets is outside. Go and see what's left.",
+	"first": "The Allotments are out past the ring road. Go and see what's left.",
 	"contract": "The Fence has a contract you can fill. Contracts, on his screen: hand it in.",
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. Depth is the game now; the lorry runs the Services at depth %d.",
 	"lorry": "The lorry's beaten. Move the Yard when you're ready: the next starts its ladders higher, with a free node on the Yard's tree.",
-	"moved": "A new yard, the same list on the wall. Start at the streets.",
+	"moved": "A new yard, the same list on the wall. Start at the allotments.",
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in the Caravan",
-	"first": "The streets are outside",
+	"first": "The Outskirts are outside",
 	"contract": "A contract's ready",
 	"site": "Next: %s",
 	"head": "Arm %s on Runs",
@@ -660,9 +691,9 @@ const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The Yard is set. One runner, a nail gun, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
-	"first_run": "Out for the first time. The estate doesn't know the Yard yet.",
+	"first_run": "Out for the first time. Nobody past the ring road knows the Yard yet.",
 	"hardcore_lost": "Hardcore: the Yard goes with the runner. Someone else will have the Lock-up by morning.",
-	"campaign": "The estate, the town, the city. The Yard's name is known in all three. Now it's a question of how far in you go.",
+	"campaign": "The edge of it, the estate, the town, the city. The Yard's name is known in all of them. Now it's a question of how far in you go.",
 	"moved": "The Yard moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
 	"lorry": "The Lorry's Load is yours. There's nothing left in this town that's worth the drive; the Yard can move on whenever you like.",
 	"trade": "The Yard's trade came too: %s, and anyone who runs for the Yard learns the lot of it.",

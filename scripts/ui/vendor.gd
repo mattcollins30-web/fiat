@@ -114,7 +114,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the band across the top (Bands-U A), the tabs at its foot, right; the left column under it: the vendor's line, their business
-	_band = Band.new(Pal.GRID_W, BAND_H, 3)
+	_band = Band.new(Pal.GRID_W, BAND_H, 4)
 	add_child(_band)
 	_face = People.rect(_band, Vector2(PAD, (BAND_H - FACE) / 2.0), FACE / 128.0)
 	_band.portrait_width(FACE)

@@ -882,8 +882,8 @@ func salvage_kinds() -> Array:
 	var out: Array = []
 	for z in range(Data.ZONES.size()):
 		for i in Data.ZONES[z]["tiers"]:
-			if int(best_depth[i]) >= Data.SALVAGE_DEPTH:
-				out.append(Data.SALVAGE[z])
+			if int(best_depth[i]) >= Data.SALVAGE_DEPTH and Data.ZONE_SALVAGE[z] != "":
+				out.append(Data.ZONE_SALVAGE[z])
 				break
 	return out
 
@@ -2383,7 +2383,7 @@ func shelf_chase() -> Array:
 ## The deepest the Yard has been, on any site.
 func deepest() -> int:
 	var d := 1
-	for i in range(best_depth.size()):
+	for i in range(Data.OUTSKIRTS_SITES, best_depth.size()):     # the Outskirts' ladders are the gentle ones: the depths that count are from the Streets (12 Oct)
 		d = maxi(d, int(best_depth[i]))
 	return d
 
@@ -3085,7 +3085,7 @@ func yard_built() -> int:
 ## The deepest a site has been held, this Yard or one before: the depth columns read it.
 func deepest_dug() -> int:
 	var d := 0
-	for i in range(depth.size()):
+	for i in range(Data.OUTSKIRTS_SITES, depth.size()):     # from the Streets (12 Oct): the Outskirts' depths are cheap
 		d = maxi(d, int(best_depth[i]))       # the depth held, not the one the selector is on
 	return maxi(d, int(best_dig.get("depth", 0)))
 
@@ -3095,16 +3095,16 @@ func deepest_site_level() -> int:
 	var lv := 1
 	for i in range(depth.size()):
 		if tier_open(i):
-			lv = maxi(lv, i + maxi(1, int(best_depth[i])))
+			lv = maxi(lv, lv_at(i, maxi(1, int(best_depth[i]))))
 	return lv
 
 
 ## The columns the campaign and the depth have opened, kept for good (a move closes none).
 func yard_cols() -> int:
 	var n := 1
-	if zone_open(1):
+	if zone_open(2):                         # the Town (zones moved up one with the Outskirts, 12 Oct)
 		n = 2
-	if zone_open(2):
+	if zone_open(3):                         # the City
 		n = 3
 	if campaign_done():
 		n = 4
@@ -3594,7 +3594,15 @@ func zone_complete(z: int) -> bool:
 	for i in Data.ZONES[z]["tiers"]:
 		if best_depth[i] <= 0:
 			return false
-	return bosses_beaten[z]
+	return bosses_beaten[z] or zone_boss(z).is_empty()     # the Outskirts has no crew (12 Oct): its sites cleared is it done
+
+
+## A zone's crew's head, {} for a zone without one (the Outskirts).
+func zone_boss(z: int) -> Dictionary:
+	for b in Data.BOSSES:
+		if int(b["zone"]) == z:
+			return b
+	return {}
 
 
 func campaign_done() -> bool:
@@ -3706,7 +3714,13 @@ func zone_name(i: int) -> String:
 ## The streets at depth 8 is level 8; the Barracks at depth 1 is level 9, at depth 8 level 16. The endgame's
 ## curve, the bases a find draws from and the item level a find carries all run by it.
 func site_level(i: int) -> int:
-	return i + depth[i]
+	return lv_at(i, int(depth[i]))
+
+
+## A site's level at a depth: its place past the Outskirts and the depth (12 Oct: the Streets at depth 1 is level 1, as
+## before the Outskirts came; the Outskirts' are level 1 until their depth climbs past their place).
+static func lv_at(i: int, d: int) -> int:
+	return maxi(1, i - Data.OUTSKIRTS_SITES + d)
 
 
 ## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the Barracks from depth 1.
@@ -3729,7 +3743,7 @@ static func loot_cap(level: int) -> int:
 func effective(i: int) -> Dictionary:
 	var base: Dictionary = Data.TIERS[i]
 	var d: int = depth[i]
-	var lv: int = i + d
+	var lv: int = lv_at(i, d)
 	var e := {
 		"name": base["name"], "tier": i, "depth": d, "level": lv, "pool": int(base["pool"]),
 		"hp": base["hp"] * pow(1.0 + Data.DEPTH_HOSTILE, d - 1),
@@ -3802,8 +3816,8 @@ func effective(i: int) -> Dictionary:
 		e["convoy"] = true
 	elif not b.is_empty() and boss_armed.get(i, false):
 		e["boss"] = boss_form(b, e, is_pinnacle(i))
-	elif walks:
-		e["boss"] = boss_form(Data.BOSSES[int(base["zone"])], e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
+	elif walks and not zone_boss(int(base["zone"])).is_empty():     # no crew on the Outskirts: nobody walks (the review)
+		e["boss"] = boss_form(zone_boss(int(base["zone"])), e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
 	for name in e["intel"]:
 		if name == "Night":
 			continue                              # the clock's night is applied above
@@ -4449,7 +4463,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 		"cache":
 			# a cache is always opened now (9 Oct: the Bench's levels went - it wanted Bench 2)
 			var up: Dictionary = t.duplicate()
-			up["loot_tier"] = mini(loot_cap(int(t.get("level", int(t["tier"]) + int(t["depth"])))), int(t["loot_tier"]) + 1)
+			up["loot_tier"] = mini(loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))), int(t["loot_tier"]) + 1)
 			up["rarity"] = float(t.get("rarity", 0.0)) + 0.5
 			_find(m, up)
 			log_event(Words.EVENTS["cache"])
@@ -4914,8 +4928,8 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
 	var dd: int = int(t.get("depth", 1))
-	if dd >= Data.SALVAGE_DEPTH and rng.randf() < Data.SALVAGE_KILL * (dd - Data.SALVAGE_DEPTH + 1):
-		var kind: String = Data.SALVAGE[int(Data.TIERS[int(t["tier"])]["zone"])]
+	var kind: String = Data.ZONE_SALVAGE[int(Data.TIERS[int(t["tier"])]["zone"])]
+	if kind != "" and dd >= Data.SALVAGE_DEPTH and rng.randf() < Data.SALVAGE_KILL * (dd - Data.SALVAGE_DEPTH + 1):
 		m["salvage"] = m.get("salvage", {})
 		m["salvage"][kind] = int(m["salvage"].get(kind, 0)) + 1      # the deep sites' salvage (9 Oct), home with the run
 	if has_node("quiet_hands"):
@@ -4923,7 +4937,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
-			up["loot_tier"] = mini(loot_cap(int(t.get("level", int(t["tier"]) + int(t["depth"])))), int(t["loot_tier"]) + 1)     # signed for: a tier up
+			up["loot_tier"] = mini(loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))), int(t["loot_tier"]) + 1)     # signed for: a tier up
 			_find(m, up, true)
 		else:
 			_find(m, t, true)
@@ -5040,7 +5054,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
 			var mine := Items.ammo_type(equipped["Primary"])
@@ -5052,12 +5066,12 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
 		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
 			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
 		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", int(t["tier"]) + int(t["depth"]))))
+			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	if Items.stacks(it):
@@ -5129,12 +5143,12 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	if t["depth"] > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = t["depth"]
 		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
-		if t["depth"] >= 2:
+		if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES:     # the map's points from the Streets on (12 Oct)
 			atlas_points += 1
 			log_event("A point on the map.")
-	if t["depth"] >= 2 and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
+	if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
 		best_dig = {"site": t["name"], "tier": m["tier"], "depth": t["depth"], "yard": yard_moves + 1}     # the ladder's, not the campaign's
-	if m["tier"] == 2 and not depot_cleared:
+	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)
 		depot_cleared = true
 	if not seen.has("cleared/%d" % m["tier"]):
 		seen["cleared/%d" % m["tier"]] = true
@@ -5274,7 +5288,7 @@ func get_out() -> void:
 
 ## How long the way out gives at a site: WAY_OUT_S, so much more a site along, never more than the run's clock has left.
 func way_out_s(t: Dictionary, m = null) -> float:
-	var s: float = Data.WAY_OUT_S + Data.WAY_OUT_PER_TIER * int(t["tier"])
+	var s: float = Data.WAY_OUT_S + Data.WAY_OUT_PER_TIER * maxi(0, int(t["tier"]) - Data.OUTSKIRTS_SITES)     # from the Streets, as before the Outskirts (12 Oct)
 	if m != null:
 		s = minf(s, maxf(1.0, float(m.get("clock", s))))
 	return s
@@ -6493,7 +6507,7 @@ func chron(kind: String, data := {}) -> void:
 	if _dry_on:
 		return
 	var e := {"k": kind, "t": snappedf(elapsed, 0.1), "p": snappedf(played_s, 0.1), "w": int(Time.get_unix_time_from_system()),
-		"lv": level(), "cls": cls, "yard": yard_moves + 1}
+		"lv": level(), "cls": cls, "yard": yard_moves + 1, "sv": SITES_V}     # sv: the site numbering (12 Oct: the Outskirts moved every site up three)
 	if away_on:
 		e["away"] = true
 	e.merge(data, true)
@@ -6547,14 +6561,79 @@ func _state() -> Dictionary:
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
-		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s,
+		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 	}
+
+
+## The site numbering (12 Oct): 2 since the Outskirts came before the Estate. A save at 1 has nine sites and three zones.
+const SITES_V := 2
+
+
+## A save from before the Outskirts: every per-site list gets the Outskirts' three in front (counted cleared at depth 1:
+## that runner was past them), every per-zone list the Outskirts in front, and every site's index up three, every
+## zone's up one - the mission out, its head, the last report, the deepest dig, the auto-run and the best tier.
+static func _shift_sites(d: Dictionary) -> void:
+	if int(d.get("sites_v", 1)) >= SITES_V or not d.has("depth") or Array(d["depth"]).size() != Data.TIERS.size() - Data.OUTSKIRTS_SITES:
+		return
+	var n: int = Data.OUTSKIRTS_SITES
+	var front := func(key: String, v) -> void:
+		if d.has(key) and d[key] is Array:
+			var a: Array = d[key]
+			for k in range(n):
+				a.push_front(v.duplicate() if v is Array else v)
+	front.call("depth", 1)
+	front.call("best_depth", 1)
+	front.call("worn_depth", 1)
+	front.call("worn", -1.0)
+	front.call("sealed", false)
+	front.call("words", [])
+	front.call("boss_paid", [])
+	for key in ["weather", "bosses_beaten"]:
+		if d.has(key) and d[key] is Array:
+			d[key].push_front("" if key == "weather" else true)
+	d["best_tier"] = int(d.get("best_tier", 0)) + n
+	if int(d.get("auto_tier", -1)) >= 0:
+		d["auto_tier"] = int(d["auto_tier"]) + n
+	var m = d.get("mission", null)
+	if m is Dictionary:
+		m["tier"] = int(m.get("tier", 0)) + n
+		if m.get("t", null) is Dictionary:
+			m["t"]["tier"] = int(m["t"].get("tier", 0)) + n
+			if m["t"].get("boss", null) is Dictionary:
+				m["t"]["boss"]["zone"] = int(m["t"]["boss"].get("zone", 0)) + 1
+		for k in ["boss"]:
+			if m.get(k, null) is Dictionary:
+				m[k]["zone"] = int(m[k].get("zone", 0)) + 1
+		for b in m.get("boss_queue", []) + (m["t"].get("boss_queue", []) if m.get("t", null) is Dictionary else []):
+			if b is Dictionary:
+				b["zone"] = int(b.get("zone", 0)) + 1
+	if d.get("last_report", null) is Dictionary and d["last_report"].has("tier"):
+		d["last_report"]["tier"] = int(d["last_report"]["tier"]) + n
+	if d.get("best_dig", null) is Dictionary and d["best_dig"].has("tier"):
+		d["best_dig"]["tier"] = int(d["best_dig"]["tier"]) + n
+	# what the yard has seen, keyed by site: "cleared/N" and "N/D" up three; the Outskirts' counted seen (the review)
+	if d.get("seen", null) is Dictionary:
+		var moved := {}
+		for k in d["seen"]:
+			var key := str(k)
+			if key.begins_with("cleared/") and key.get_slice("/", 1).is_valid_int():
+				moved["cleared/%d" % (int(key.get_slice("/", 1)) + n)] = d["seen"][k]
+			elif key.get_slice_count("/") == 2 and key.get_slice("/", 0).is_valid_int() and key.get_slice("/", 1).is_valid_int():
+				moved["%d/%s" % [int(key.get_slice("/", 0)) + n, key.get_slice("/", 1)]] = d["seen"][k]
+			else:
+				moved[key] = d["seen"][k]
+		for i in range(n):
+			moved["cleared/%d" % i] = true
+			moved["%d/1" % i] = true
+		d["seen"] = moved
+	d["sites_v"] = SITES_V
 
 
 func load_dict(d: Dictionary) -> void:
 	_els_key = -1                         # the build's elements read again from the loaded tree
 	d = d.duplicate(true)                # the save's items stay the save's; the live ones are copies
 	_rename_old(d)                       # a save from before the caps pass (8 Oct) carries the old names
+	_shift_sites(d)                      # a save from before the Outskirts (12 Oct): every site up three, every zone up one
 	cash = float(d.get("cash", Data.STARTING_CASH))
 	xp = float(d.get("xp", 0.0))
 	hp = float(d.get("hp", Data.BASE_HP))
@@ -6705,7 +6784,7 @@ func load_dict(d: Dictionary) -> void:
 		bosses_beaten[z] = bool(bb[z]) if z < bb.size() else false
 	# a save from before the city: the zones it had cleared count as complete
 	if bb.is_empty() and bool(d.get("depot_cleared", false)):
-		bosses_beaten[0] = true
+		bosses_beaten[1] = true              # the Estate (index 1 since the Outskirts)
 	elapsed = float(d.get("elapsed", 0.0))
 	events = d.get("events", [])
 	Items._next_id = maxi(Items._next_id, int(d.get("next_id", 1)))

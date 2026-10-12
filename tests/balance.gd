@@ -126,7 +126,7 @@ func _all_classes(hours: float) -> void:
 				runs += 1
 				if sim.operators_lost > lost_before:
 					kias += 1
-				if bank < 0.0 and sim.best_depth[5] > 0:
+				if bank < 0.0 and sim.best_depth[Data.BANK] > 0:
 					bank = sim.elapsed
 				bot.tidy(sim)
 		var keys := []
@@ -168,7 +168,7 @@ func _elements(hours: float, forced: String) -> void:
 				runs += 1
 				if sim.operators_lost > lost_before:
 					kias += 1
-				if bank < 0.0 and sim.best_depth[5] > 0:
+				if bank < 0.0 and sim.best_depth[Data.BANK] > 0:
 					bank = sim.elapsed
 				bot.tidy(sim)
 				if key < 0.0 and sim.tree.has("%s/6" % t["name"]):
@@ -377,7 +377,8 @@ func _ladder_read(sim, push: float) -> Dictionary:
 			box["rounds"] = 100000
 			sim.rig.append(box)
 			boxes.append(box)
-	for i in [0, 8]:
+	for pair in [[Data.OUTSKIRTS_SITES, "0"], [Data.TIERS.size() - 1, "8"]]:     # the Streets and the Barracks, keyed as before the Outskirts (12 Oct)
+		var i: int = pair[0]
 		var d0: int = sim.depth[i]
 		var intel0: Array = sim.words[i].duplicate(true)
 		sim.words[i] = []
@@ -393,7 +394,7 @@ func _ladder_read(sim, push: float) -> Dictionary:
 				lo = d
 			else:
 				hi = d
-		ladder[str(i)] = lo
+		ladder[str(pair[1])] = lo
 		sim.depth[i] = d0
 		sim.words[i] = intel0
 		sim._surv_cache.erase(i)
@@ -425,7 +426,7 @@ func _probe() -> void:
 		pack["affixes"] = [] if pair[1] == 0.0 else [{"stat": "loot_pct", "value": int(pair[1] * 100), "tier": 5}]
 		sim.equipped["Backpack"] = pack
 		sim.tree = []
-		sim.deploy(0)
+		sim.deploy(Data.OUTSKIRTS_SITES)          # the Streets, as before the Outskirts (12 Oct)
 		var m: Dictionary = sim.mission
 		m["remaining"] = 0
 		m["cleared"] = true

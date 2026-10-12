@@ -68,7 +68,7 @@ func _init(h: float) -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var top := UI.panel(self, Rect2(0, 0, W, BAND_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	top.clip_contents = true
-	_band = Band.new(W, BAND_H, 3)
+	_band = Band.new(W, BAND_H, 4)
 	_band.set_site("the map")
 	top.add_child(_band)
 	for c in range(Data.ATLAS_COLUMNS.size()):

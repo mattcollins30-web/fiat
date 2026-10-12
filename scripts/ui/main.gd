@@ -77,7 +77,7 @@ const TOP_WORST := {
 	"steel": "9,999",
 	"army": "9,999",
 	"level": "50 +999",
-	"hp": "999 / 999",
+	"hp": "999 / 999 +999",          # Guard's "+N" (12 Oct)
 	"dps": "9,999 dmg/s",
 	"xp": "99,999 / 99,999",         # _short reads a hundred thousand up as 123k, so this is the widest
 	"where": "Out: Ransacked Streets",
@@ -673,7 +673,7 @@ func _settle_away(away: float) -> void:
 	var words := ""
 	var runs: int = int(after.get("runs", 0)) - int(before.get("runs", 0))
 	if sim.auto_tier >= 0 or runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
-		var where: String = Words.mid(sim.tier(sim.auto_tier)["name"]) if sim.auto_tier >= 0 else "the Estate"
+		var where: String = Words.mid(sim.tier(sim.auto_tier)["name"]) if sim.auto_tier >= 0 else "the Outskirts"
 		var things: int = after["stash"] - before["stash"]
 		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
 				things, "" if things == 1 else "s", before["level"], after["level"]]

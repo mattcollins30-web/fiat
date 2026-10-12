@@ -204,7 +204,7 @@ func show_data(d: Dictionary) -> void:
 		l.visible = not _band.visible
 	if _band.visible:
 		_band.set_site(str(band.get("site", _title.text)))
-		_band.set_tone(int(band.get("tone", 0)))
+		_band.set_tone(int(band.get("tone", 1)))     # the Estate's, as before the Outskirts took 0 (12 Oct)
 		_band.set_words(str(band.get("kicker", "")), _title.text, _headline.text, d.get("unit_forms", [_unit.text]), band.get("colour", Pal.ACCENT))
 		_band.headline_under_title(true)
 		_band.set_right([])

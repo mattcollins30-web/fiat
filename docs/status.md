@@ -3001,7 +3001,24 @@ numbers counted what Guard took. Left: the Stats sheet's Guard row; Guard's shar
 the petrol on your hands still takes HP direct (self-inflicted: Guard doesn't cover it). *The smoke:* over the cap
 (110 is 75 and +35, held at 50, all resists, never physical, the Plaque, -proofed, soaked, the lines' slots, the six
 nodes); Guard (first off Guard, the cap, overheal and a med's line, Squared up with the guard line, the next run at
-nothing, In the hide, Sheet metal and Breather through the run's own code, Overtime, Transfusion's cap and its med). For the pass (not fixed, numbers or
+nothing, In the hide, Sheet metal and Breather through the run's own code, Overtime, Transfusion's cap and its med).
+
+**The Outskirts (12 Oct, Matt; docs/design/outskirts.md).** A zone before the Estate, built after Guard and over
+the cap: the Allotments, the Garden Centre and Top Farm, gentler than the Streets, with no crew (the zone is done when
+its three are cleared). Every site's index moved up three and every zone's up one, so `Data.BANK` is 8,
+`CONVOY_TIER` 9 and the Barracks 11. The tables and per-zone lists moved with them; the bossless zone's head is
+`zone_boss(z)`, `{}` for the Outskirts. A site's level counts from the Streets (`Sim.lv_at`), so every old site keeps
+its level. The Outskirts' depths don't count for the map's points, the deepest dig, the uniques' depth gates or the
+Yard's depth columns. A save from before is moved on load (`Sim._shift_sites`: the Outskirts counted cleared, every
+index up three, what's been seen with it), and the playtest read moves an old save and its record the same way.
+Runs: four zone tabs and no map, opening on the furthest zone open. The map is on the Radio (the air / the map at
+the band's right), and the Radio's site rows are two lines so twelve fit. Art: four jobs in
+tools/pixellab_places_outskirts_manifest.json. The reviewer's catches, fixed: the ladders' spread read the wrong two
+sites; the weather had one row too few (each zone took the one before's); the Manager walking crashed on a site with
+no crew; the screenshot tool's map; what's been seen kept the old numbers; the probe ran at the Allotments; the read
+moved items' tiers on old lines. *The smoke:* the Outskirts (first, three sites, no crew, the Estate after, levels, an
+old save moved and moved only once, Runs' four zones, the Radio's map); every test's site moved up three (the fresh
+yards' to the Allotments), the map's tests on the Radio. The bot clears the Outskirts in about ten runs. For the pass (not fixed, numbers or
 Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
 plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
 Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5

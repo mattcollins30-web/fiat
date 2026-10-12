@@ -87,14 +87,13 @@ func _next() -> void:
 			main.sim.hp = main.sim.max_hp() * 0.6
 		main.show_room(main.MISSIONS)
 	elif r == "map":
-		main.show_room(main.MISSIONS)
-		main._missions.zone = main._missions.MAP
-		main._missions._shown = ""
+		main.show_room(main.COMMS)             # the map moved to the Radio (12 Oct)
+		main._radio._pick_view("map")
 		main.refresh()
 		main.sim.atlas_points = maxi(main.sim.atlas_points, 18)
 		for k in ["picked_over", "picked_over", "deeper_pockets", "deeper_pockets", "deeper_pockets", "quiet_roads", "after_dark", "second_look", "paid_in_notes", "paid_in_notes", "paid_in_notes", "two_of_everything", "heads_up", "good_reception", "good_reception", "clear_air", "booster"]:
 			main.sim.rank_atlas(k)
-		main._missions._atlas._pick("worn_in")
+		main._radio._atlas._pick("worn_in")
 		main.refresh()
 	elif r == "node":
 		# the Caravan with a notable picked: the chip and the sentence
