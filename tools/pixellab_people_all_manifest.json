@@ -1,0 +1,240 @@
+{
+  "_readme": [
+    "FIAT PEOPLE - every portrait new (12 Oct, Matt: the Greenhorn faces don't sit right across the board). Fourteen 128 x 128 heads to art/people_new/<slug>.png: the Fence first with no style image, then everyone else in the Fence's new style (style_image res://art/people_new/fence.png) - the runners (doorman, drifter, poacher, paramedic, scrapper), the Clinic's medic, the four zones' gangs (gang_the_outskirts new), the three heads.",
+    "Nothing in art/people is touched. Look them over, then move the keepers into art/people (or ask Claude to: the old ones go to art/people/greenhorn/).",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_people_all_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force. If the Fence comes out wrong, redo it first: everyone else takes its style."
+  ],
+  "jobs": [
+    {
+      "out": "art/people_new/fence.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Fence, a wiry man in his sixties who buys and sells anything at a lock-up: a waxed jacket over two jumpers, fingerless gloves, a jeweller's loupe on a cord, a pencil behind one ear, a face that has already priced you. Looking just past the viewer. Post-collapse Britain, a bare bulb's warm light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81000,
+      "single": true
+    },
+    {
+      "out": "art/people_new/medic.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Clinic's medic, a woman in her forties who was a nurse before: a cardigan over old scrubs, a fob watch pinned on, reading glasses on a chain, hair tied back hard, tired kind eyes that have seen everything. Looking just past the viewer. Post-collapse Britain, pale strip-light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81001,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/doorman.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Doorman, a broad man in his thirties who worked doors in town: a black bomber jacket, a shaved head, an earpiece wire hanging loose, a nose broken twice, arms folded, a calm that means trouble. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81002,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/drifter.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Drifter, a lean woman in her twenties who never stays anywhere: a hooded parka with the fur gone, a rucksack strap across the chest, a scarf pulled down, windburnt cheeks, eyes already on the way out. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81003,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/poacher.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Poacher, a weathered man in his fifties from the hills: a wax jacket, a flat cap pulled low, a knitted jumper, grey stubble, a rifle sling over one shoulder, patient narrow eyes. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81004,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/paramedic.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Paramedic, a woman in her thirties still in what is left of the green uniform: the hi-vis gone grey, a stethoscope, a radio clipped to the shoulder with no one on it, hair cropped short, a steady look. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81005,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/scrapper.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of the Scrapper, a stocky man in his forties who builds guns out of anything: oil-black overalls, welding goggles pushed up on a beanie, a pencil and a nail behind his ears, burn scars on the knuckles, a grin missing a tooth. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81006,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/gang_the_outskirts.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a man from a gang off the allotments and the farms past the ring road: wellies-and-wax-jacket type in his thirties, a hi-vis vest over it, a balaclava rolled up as a hat, a billhook over his shoulder, mud on his face. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81007,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/gang_the_estate.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a young man from an estate gang: a grey tracksuit and a puffer, a hood up over a cap, a scarf over the mouth, a bat resting on his shoulder, tower blocks behind in the dusk. Looking just past the viewer. Post-collapse Britain, sodium streetlight. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81008,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/gang_the_town.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a man from a town-centre gang in his thirties: a padded work jacket, a petrol can's smell about him, a rag tied round one wrist, a hard face with a cut lip, a high street's dark shopfronts behind. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81009,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/gang_the_city.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a soldier-turned-gangster from the city: an army greatcoat, a beret pushed back, webbing over the chest, a gas mask hanging at the neck, a scar through one eyebrow, cold discipline. Looking just past the viewer. Post-collapse Britain, grey city light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81010,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/the_carpet_man.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a heavy man in his fifties who ran a carpet warehouse before the collapse and runs the car park now: a fleece with the shop's name half unpicked, a flat cap, a face that has decided things, a roll of carpet tape on a lanyard, grey stubble, a kettle's steam behind him. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81011,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/the_manager.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of a bank branch manager in his forties still in the suit, which fits: a clean collar, a tie done properly, a name badge with the name scratched off, hair combed with water, a face that is polite and will not help. Looking just past the viewer. Post-collapse Britain, strip-light pale. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81012,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/people_new/the_quartermaster.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art portrait, head and shoulders, of an army quartermaster in his sixties, out of the army and still in it: issue jumper with the rank unpicked, a clipboard held like a weapon, reading glasses pushed up, a face that signs for everything. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+      "width": 128,
+      "height": 128,
+      "no_background": false,
+      "seed": 81013,
+      "single": true,
+      "style_image": "res://art/people_new/fence.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

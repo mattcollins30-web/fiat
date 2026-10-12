@@ -85,16 +85,26 @@ func show_state(s) -> void:
 	_rig_label.text = ("Rig %d / %d pouches" % [sim.rig_used(), cap]) if cap > 0 else "No rig"
 	# a pouch a cell: an item spans as many as its cells, along the row, never across a row's end - laid first in
 	# pouch places, so the rows it takes are known before the size is picked
+	# first fit (12 Oct, Matt's playtest: a full rig showed an empty pouch where a two-pouch kit wrapped): each item at
+	# the first run of free pouches on one row, so a single fills the gap a wide kit left
 	var places: Array = []
-	var pos := 0
+	var taken := {}
 	var last := 0
 	for it in sim.rig:
 		var w: int = mini(Items.size(it), RIG_COLS)
-		if pos % RIG_COLS + w > RIG_COLS:
-			pos += RIG_COLS - pos % RIG_COLS
+		var pos := 0
+		while true:
+			var fits: bool = pos % RIG_COLS + w <= RIG_COLS
+			for j in range(w):
+				if taken.has(pos + j):
+					fits = false
+			if fits:
+				break
+			pos += 1
+		for j in range(w):
+			taken[pos + j] = true
 		places.append([pos, w])
-		pos += w
-		last = pos
+		last = maxi(last, pos + w)
 	var rig_rows := maxi(1, ceili(float(maxi(cap, last)) / RIG_COLS))   # a smaller rig fitted keeps what's carried showing
 	_rc = RIG_SIZES.back()[0]
 	_rg = RIG_SIZES.back()[1]
@@ -103,8 +113,14 @@ func show_state(s) -> void:
 			_rc = rs[0]
 			_rg = rs[1]
 			break
+	# the free pouches' outlines: as many as the rig has free, in the first places nothing sits in
+	var free_left: int = maxi(0, cap - sim.rig_used())
 	for k in range(RIG_MAX):
-		_rig_outlines[k].visible = k < cap
+		var show: bool = taken.has(k)
+		if not show and free_left > 0:
+			show = true
+			free_left -= 1
+		_rig_outlines[k].visible = show and k < RIG_MAX
 		_rig_outlines[k].position = _rig_at(k)
 		_rig_outlines[k].size = Vector2(_rc, _rc)
 	for k in range(RIG_MAX):

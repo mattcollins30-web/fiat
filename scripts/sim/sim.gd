@@ -238,9 +238,9 @@ func _dps(parts) -> float:
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
 	if primary_live:
-		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (1.5 if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0)   # Jerry-rigged: something improvised hits half again as hard
+		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (1.5 if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"])   # Jerry-rigged: something improvised hits half again as hard
 	if secondary_live:
-		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) / (1.0 if (has_node("double_tap") or has_rule("vans_spare") or not primary_live) else 3.0)
+		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) / (1.0 if (has_node("double_tap") or has_rule("vans_spare") or not primary_live) else 3.0)
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
 			sec *= 2.0
 		d += sec
@@ -261,6 +261,11 @@ func _dps(parts) -> float:
 		parts.merge({"guns": d, "level": Data.DMG_PER_LEVEL * (level() - 1), "pct": pct / 100.0, "attack": _affix_sum("attack_pct") / 100.0,
 			"past": cm("damage"), "trait": trait_mult("damage"), "growth": growth_mult()}, true)
 	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage") * growth_mult()
+
+
+## The class's own gun: the Scrapper's improvised guns do 20% more (12 Oct); 1 for any other gun or class.
+func _class_gun_mult(it: Dictionary) -> float:
+	return cm("improvised") if Items.base_of(it).get("type", "") == "improvised" else 1.0
 
 
 func armour() -> float:
@@ -903,7 +908,7 @@ func _price_contract(c: Dictionary) -> void:
 	var deep: float = 1.0 + deepest() / 5.0
 	match c["pay"]:
 		"cash":
-			c["amount"] = maxi(10, int(round(a_runs_takings() * Data.CONTRACT_CASH * minf(w, Data.CONTRACT_CASH_WEIGHT_MAX) / 10.0)) * 10)     # two runs' takings at most
+			c["amount"] = maxi(10, int(round(a_runs_takings() * Data.CONTRACT_CASH * minf(w, Data.CONTRACT_CASH_WEIGHT_MAX) / 10.0)) * 10)     # a share of a run's takings
 		"notes":
 			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_NOTES * w * deep)))
 		"scrap":
@@ -911,6 +916,53 @@ func _price_contract(c: Dictionary) -> void:
 		"salvage":
 			c["salvage"] = kinds[rng.randi_range(0, kinds.size() - 1)]
 			c["amount"] = maxi(1, int(ceil(w)))
+	_contract_floor(c)
+
+
+## A gear ask's pay never under CONTRACT_OVER_FENCE of what its pieces fetch (12 Oct): cash at the Fence's price, scrap
+## at what they'd scrap for. Raises, never lowers: a save's contracts come up to it on load.
+func _contract_floor(c: Dictionary) -> void:
+	var worth := contract_worth(c)
+	if worth <= 0.0:
+		return
+	match str(c.get("pay", "")):
+		"cash":
+			var price: float = float(sell_price({"value": int(round(worth))}))
+			c["amount"] = maxi(int(c["amount"]), int(round(price * Data.CONTRACT_OVER_FENCE / 10.0)) * 10)
+		"scrap":
+			c["amount"] = maxi(int(c["amount"]), int(ceil(worth / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))
+
+
+## What a gear ask's pieces are worth (12 Oct), before the Fence's own price: the slot's bases a find draws now (the
+## deepest open site's loot tier, held to the slot's top, and the two under it; never the starting kit, a site's own or
+## a socketable), their mean value at the rarity asked, times the count. A deep ask reads every contract slot at the
+## level's tier; an affix ask an uncommon of its slot; papers and meds nothing (their pay stays as it was).
+func contract_worth(c: Dictionary) -> float:
+	var kind := str(c.get("kind", "gear"))
+	if not (kind in ["gear", "deep", "affix"]):
+		return 0.0
+	var want: int = loot_tier_at(int(c["level"]) if kind == "deep" else deepest_site_level())
+	var slots: Array = Data.CONTRACT_SLOTS if kind == "deep" else [str(c["slot"])]
+	var r: int = 1 if kind == "affix" else (0 if kind == "deep" else clampi(int(c["rarity"]), 0, Data.RARITIES.size() - 1))
+	var total := 0.0
+	var n := 0
+	for slot in slots:
+		var pool: Array = []
+		var top := 1
+		for b in (Data.ATTACHMENTS if slot == Data.ATTACHMENT else Data.BASES[slot]):
+			if b.get("start", false) or str(b.get("mount", "")) == "socket" or Items.exclusive_to(str(b["name"])) != "" or not b.has("value"):
+				continue
+			pool.append(b)
+			top = maxi(top, int(b.get("tier", 1)))
+		var t_hi: int = mini(want, top)
+		for b in pool:
+			var t := int(b.get("tier", 1))
+			if t <= t_hi and t >= t_hi - 2:
+				total += float(b["value"])
+				n += 1
+	if n == 0:
+		return 0.0
+	return total / n * float(Data.RARITIES[r]["value"]) * int(c.get("count", 1))
 
 
 func contract_fits(c: Dictionary, it: Dictionary) -> bool:
@@ -6200,6 +6252,36 @@ func sell(it: Dictionary) -> bool:
 	return true
 
 
+## Half a stack off into a stack of its own, beside it (12 Oct, Matt's playtest: "need a way to split ammo stacks"):
+## rounds or bottles, two or more, in the stash (a free cell wanted) or the rig (a free slot); the larger half stays.
+func can_split(id: int) -> bool:
+	if mission != null:
+		return false
+	for where in [stash, rig]:
+		for it in where:
+			if it["id"] == id:
+				if not Items.stacks(it) or Items.stack_size(it) < 2:
+					return false
+				return stash_fits(it) if where == stash else rig_room(Items.size(it))     # the Racks hold rounds without a cell
+	return false
+
+
+func split_stack(id: int) -> bool:
+	if not can_split(id):
+		return false
+	for where in [stash, rig]:
+		for it in where:
+			if it["id"] == id:
+				var half: int = Items.stack_size(it) / 2
+				var off: Dictionary = Items.one_of(it)
+				Items.set_stack(off, half)
+				Items.set_stack(it, Items.stack_size(it) - half)
+				where.append(off)                # not stash_put: that would merge it straight back
+				_dry_memo.clear()
+				return true
+	return false
+
+
 ## Into the stash, merging what stacks: rounds into the same base's stack to
 ## its cap, a bottle onto the bottles; the rest as its own stack if there's
 ## room. Returns whether everything found a place.
@@ -6806,6 +6888,8 @@ func load_dict(d: Dictionary) -> void:
 	passes = int(d.get("passes", 0))
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
+	for c in contracts:
+		_contract_floor(c)                       # a save's asks up to what their pieces fetch (12 Oct)
 	mate = {}
 	if d.has("mate") and not d["mate"].is_empty():
 		mate = {"unique": str(d["mate"]["unique"]), "notes": int(d["mate"]["notes"])}

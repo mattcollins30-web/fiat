@@ -1520,6 +1520,7 @@ const CONTRACT_CASH := 0.5         # a run's takings, times the ask's weight
 const CONTRACT_CASH_WEIGHT_MAX := 4.0   # a cash contract pays two runs' takings at most
 const CONTRACT_NOTES := 4          # notes, times the weight and (1 + the deepest depth / 5)
 const CONTRACT_SCRAP := 6          # scrap, the same
+const CONTRACT_OVER_FENCE := 1.5   # a gear ask pays at least this times what the Fence gives for what it asks (12 Oct, Matt: "why would I accept these prices when the items sell for 6x+ alone at the fence") - cash at the Fence's price, scrap at what the pieces would scrap for
 const CONTRACT_DEEP_LESS := 3      # a deep piece: from the deepest site's level less this
 const CONTRACT_DEEP_FROM := 6      # and asked for only once that's this level or more
 const CONTRACT_PASS_NOTES := 5     # the second turn-down in a run; doubling after
@@ -1647,8 +1648,8 @@ const CLASSES := [
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP; healing past full is Guard",
 		"damage": 1.1, "heal": 1.5, "auto_med": true, "overheal": true},     # overheal (12 Oct, docs/design/shields.md)     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
-	{"name": "Scrapper", "words": "Searches 25% faster; +10% loot quantity",
-		"search": 0.75, "loot": 0.10},             # searches 30% to 25% faster, the loot back to +10% (12 Oct: +5% loot read 9.3 crafts an hour against 8 - the search pace is the source)              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
+	{"name": "Scrapper", "words": "Searches 25% faster; +10% loot quantity; improvised guns do 20% more damage",
+		"search": 0.75, "loot": 0.10, "improvised": 1.2},     # improvised +20% (12 Oct, Matt's playtest: the only class with no damage in its line; the bot's Scrappers ended on an SMG, their improvised nodes idle)             # searches 30% to 25% faster, the loot back to +10% (12 Oct: +5% loot read 9.3 crafts an hour against 8 - the search pace is the source)              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+5% damage; one fewer on you at a time; +10% pace",
 		"damage": 1.05,     # +15% to +5% (Matt, 9 Oct, the twenty-eighth read: with its HP back, the fastest to the Bank at 0.6 h)
 		 "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate

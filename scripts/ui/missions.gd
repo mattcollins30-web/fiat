@@ -38,7 +38,9 @@ var _zone_buttons: Array = []
 var _zone_art: Array = []                 # a TextureRect a tab, behind it
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
-var _came                          # what came back (came_back.gd): the runs since the player last looked, over a column
+var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
+var _came_btn: Button              # the tally's button at the zone row's right
+var _came_open := false            # the card dropped down
 # the map moved to the Radio (12 Oct): the zone row is the four zones, the Outskirts first
 const ZONE_H := 56
 const TOP := ZONE_H + 16
@@ -91,6 +93,11 @@ func _init() -> void:
 		b.text = Data.ZONES[z]["name"]
 		b.pressed.connect(_pick_zone.bind(z))
 		_zone_buttons.append(b)
+	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
+	# row's right while there's a tally, the card dropping under it when pressed
+	_came_btn = UI.button(self, Rect2(Pal.GRID_W - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
+	_came_btn.pressed.connect(_toggle_came)
+	_came_btn.visible = false
 	for col in range(3):
 		var x := col * (COL_W + COL_GAP)
 		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -437,27 +444,56 @@ func _boss(k: int) -> void:
 	acted.emit()
 
 
-## What came back, over a column the last run didn't come from (the right one, or the left when the last run was the
-## right's), above that column's buttons and note so nothing it covers can be pressed (the review). Not on the map.
-const CAME_FOOT := PAD + 2 * Pal.BUTTON_H + 12 + 36 + 8       # a column's buttons, the gap, its note, a margin
+## What came back (12 Oct): a button at the zone row's right while runs have come home since Seen, the zone tabs
+## narrowing to make room; pressed, the card drops under it at the screen's right, over the top of the right-hand
+## column only (its band and fight), clear of every button. Seen puts both away.
+const CAME_BTN_W := 340
+const CAME_Y := ZONE_H + 4
 
 
 func _show_came_back() -> void:
 	_came.show_state(sim)
-	if not _came.visible:
-		return
-	var col := 2
-	var r = sim.last_report
-	if r != null and zone < Data.ZONES.size() and Data.ZONES[zone]["tiers"].find(int(r["tier"])) == 2:
-		col = 0
-	_came.position = Vector2(col * (COL_W + COL_GAP), Pal.ROOM_H - CAME_FOOT - _came.size.y)
+	var has: bool = _came.visible
+	if not has:
+		_came_open = false
+	_came_btn.visible = has
+	var zn: int = Data.ZONES.size()
+	var room: float = Pal.GRID_W - ((CAME_BTN_W + COL_GAP) if has else 0)
+	var zw: float = (room - COL_GAP * (zn - 1)) / zn
+	for z in range(zn):
+		_zone_buttons[z].position.x = z * (zw + COL_GAP)
+		_zone_buttons[z].size.x = zw
+		_zone_art[z].position.x = z * (zw + COL_GAP)
+		_zone_art[z].size.x = zw
+	if has:
+		var cb: Dictionary = sim.came_back
+		var runs: int = int(cb.get("runs", 0))
+		var rw := "%d run%s" % [runs, "" if runs == 1 else "s"]
+		var cash: float = float(cb.get("cash", 0.0))
+		var arrow := " ▴" if _came_open else " ▾"
+		var forms := ["What came back · %s · +%s%s" % [rw, Fmt.money(cash), arrow], "Came back · %s · +%s%s" % [rw, Fmt.money(cash), arrow], "Came back · %s%s" % [rw, arrow], "%s back%s" % [rw, arrow]]
+		_came_btn.text = forms.back()
+		for f in forms:
+			if UI.text_width(_came_btn, f) <= CAME_BTN_W - 28:
+				_came_btn.text = f
+				break
+		UI.style_button(_came_btn, _came_open, "good")
+	_came.visible = has and _came_open
+	_came.position = Vector2(Pal.GRID_W - _came.size.x, CAME_Y)
 	_came.move_to_front()
+
+
+func _toggle_came() -> void:
+	_came_open = not _came_open
+	_show_came_back()
 
 
 ## For the tests: every label and button with text.
 func text_nodes() -> Array:
 	var out: Array = []
 	out.append_array(_came.text_nodes())
+	if _came_btn.visible:
+		out.append(_came_btn)
 	for zb in _zone_buttons:
 		out.append(zb)
 	for c in _cols:

@@ -97,7 +97,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 		_art.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED if fits else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		if Items.is_ammo(it) or (Items.is_socketable(it) and int(it.get("count", 1)) > 1):
 			_corner.text = ("%d" % int(it["rounds"])) if Items.is_ammo(it) else ("×%d" % int(it["count"]))
-			var small: bool = size.y < 44.0               # a shrunk pouch (a full rig): the count smaller, "1.2k" past 999
+			var small: bool = size.y < 48.0               # a shrunk pouch (a full rig, 44 px and under): the count smaller, "1.2k" past 999
 			var tiny: bool = size.x < 34.0                # the smallest pouches: 9 px, whole thousands
 			_corner.add_theme_font_size_override("font_size", (9 if tiny else 11) if small else Pal.CELL_TEXT)
 			var n: int = int(it["rounds"]) if Items.is_ammo(it) else int(it["count"])
@@ -128,7 +128,7 @@ func _words(it: Dictionary, f: Vector2i) -> void:
 		words = [Items.full_name(it) if it.has("piece") else it["base"], ("%d rounds" % int(it["rounds"])) if Items.is_ammo(it) else "%s %s" % [h[0], h[1]]]
 		if big:
 			words.append("T%d · %s" % [it["tier"], Items.rarity_name(it)])
-	if size.x < 44.0 or size.y < 44.0:     # a small pouch either way (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
+	if size.x < 48.0 or size.y < 48.0:     # a small pouch either way, 44 px included (12 Oct: a packed rig at 44 spilled a kit's lines) (10 Oct: a two-pouch kit at 28 px tall spilled its two lines)
 		# a small pouch (the run's rig two rows deep): the slot's short word alone, small
 		words = [words[0] if f.x > 1 else SHORT[it["slot"]]]
 		fs = 11 if size.x >= 26.0 else 8          # the smallest pouch (22 px): the short word at 8

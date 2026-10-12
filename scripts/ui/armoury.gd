@@ -246,6 +246,8 @@ func _show_panel() -> void:
 		else:
 			_pick.show_right_words("The Workshop", "Fitted in the Workshop", ["Goes on %s" % Items.mount_words(it["mount"])])
 		buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission(), "primary": true})     # every Bench from the start (9 Oct)
+		if Items.stacks(it):
+			buttons.append(_split_button(it))
 	else:
 		var fitted = sim.equipped[it["slot"]]
 		var from_stash: bool = selected["kind"] == "stash"
@@ -326,8 +328,15 @@ func _show_medical(it: Dictionary) -> Array:
 		if not room:
 			lines.append("No rig fitted" if sim.med_capacity() == 0 else ("The rig is full" if Items.size(it) == 1 else "No room: it takes %d pouches" % Items.size(it)))
 		buttons.append({"text": "Take", "action": sim.take.bind(it["id"]), "enabled": not sim.on_mission() and room, "primary": true})
+	if Items.stacks(it):
+		buttons.append(_split_button(it))
 	_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()], lines)
 	return buttons
+
+
+## Split: half a stack off into its own, beside it (12 Oct).
+func _split_button(it: Dictionary) -> Dictionary:
+	return {"text": "Split", "action": func(): _keep_pick = sim.split_stack(it["id"]), "enabled": sim.can_split(it["id"]), "primary": false}
 
 
 ## The junk rules' buttons: the rarity the Fence takes up to (off, then each rarity to Rare), and the kind kept.
@@ -439,11 +448,19 @@ func _pick_cell(k: int) -> void:
 	_inv._pick(k)
 
 
+var _keep_pick := false                 # the pressed action leaves the pick where it is (a split)
+
+
 func _press(i: int) -> void:
 	var it := _selected_item()
 	var was: Dictionary = selected.duplicate()
+	_keep_pick = false
 	if _actions[i].is_valid():
 		_actions[i].call()
+	if _keep_pick:
+		selected = was                       # a split leaves the stack where it was, still picked
+		acted.emit()
+		return
 	# follow the item: equipped, it's now in its slot; unequipped, it's in the
 	# stash under its id; sold, it's gone
 	if was.get("kind", "") == "stash" and not it.is_empty() and Items.rig_item(it):

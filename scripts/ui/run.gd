@@ -643,14 +643,22 @@ func _show_rig() -> void:
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
 	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
-	var pos := 0
+	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the
+	# gap a wide kit left at a row's end; nothing past the cap (the cells follow the rig's order, so the first that finds no run stops the rest)
 	var k := 0
 	var taken := {}
 	for it in sim.rig:
 		var w: int = mini(Items.size(it), per_row)
-		if pos % per_row + w > per_row and pos + (per_row - pos % per_row) + w <= cap:
-			pos += per_row - pos % per_row      # to the next row when the row's end would split it, and the cap allows
-		if k >= RIG_MAX or pos + w > cap:
+		var pos := -1
+		for p in range(0, maxi(cap, 1)):
+			var ok: bool = p % per_row + w <= per_row and p + w <= cap
+			for j in range(w):
+				if taken.has(p + j):
+					ok = false
+			if ok:
+				pos = p
+				break
+		if k >= RIG_MAX or pos < 0:
 			break
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
@@ -666,7 +674,6 @@ func _show_rig() -> void:
 		c.visible = true
 		for j in range(w):
 			taken[pos + j] = true
-		pos += w
 		k += 1
 	for i in range(k, RIG_MAX):
 		_rig_cells[i].visible = false

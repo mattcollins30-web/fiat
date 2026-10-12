@@ -3985,3 +3985,80 @@ numbers for the tiers were far too easy (depot at 0.4 h) and then far too hard (
 killed any loadout in 25 s), so the enemy dps is low and the pools are deep — missions are 60–90 s.
 
 Not yet opened in the 4.7 editor on the Legion.
+
+**The lorry-fix read (12 Oct, the Legion, 31 jobs; docs/balance/summary_lorry_fix.md).** After the A/B reads (uniques on
+their old bases moved nothing; with the lorries' multiplier off the moves in 16 h fell from 9-20 to 1-9), commit fc9db48:
+`CONVOY_DEPTH` 8 to 10, `CONVOY_HP` 0.25 to 0.4, `LORRY_MULT` 1.25 to 1.12, the Scrapper's loot +10% to +5%. Nine red.
+*The lorry split in two:* poison, frost, bleed and physical still take it at 1.5-7.9 h (the poison Paramedic 1.5 and
+2.5 h with ten moves; the poison Poacher 2.3-2.7 h with ladders 29-30/18-21 at the first lorry, the next deepest 19/9),
+while every fire and shock read but one never did - their Services stall at depth 6-8 (depth pace 0.2-0.9/h), so depth
+10 is past their reach; before, Lorry watch brought it to 6. Every plain read stuck. Scrap 8.7 against 8. Read: the
+lorry was never uniformly easy - poison is the outlier, and fire and shock plateau.
+
+**Poison's full dose (12 Oct, commit 5905148).** Read from the lorry-fix read's end saves (a headless kit read): over the
+cap wasn't it (only the fire Scrapper sat over, by 16). The poison builds wore the Rat Man's Bag (the bot takes it on
+nearly every build, for its capacity), and `_dot_fill` - the Poacher's joint (the first shot on a gang at full stacks)
+and the Paramedic's dose - multiplied by `dot_stacks`, which the Bag and the Overalls lift to 999: one shot was a pool
+of thousands of seconds of the gun, and the Bag carried it gang to gang. `dot_fill_stacks` fills to the tree's stacks
+(15 with Builds, else 5); the uncapped build-up from hits is the Bag's rule and stays. A smoke check holds the Bag's
+fill to the tree's stacks. `CONVOY_DEPTH` back to 8; `CONVOY_HP` 0.4 and `LORRY_MULT` 1.12 stay. Also seen, for Matt:
+the city (the Services, the lorry) resists fire and shock 20% and frost 10%, poison and bleed nothing - the order the
+builds reach the lorry in.
+
+**The poison-fix read (12 Oct, the Legion, 31 jobs; docs/balance/summary_poison_fix.md).** Nine red. *The fix holds:* the
+poison Poacher's ladders at the first lorry 18/8 and 17/6 (were 29-30/18-21). *Every element build beats the lorry*
+(latest 7.7 h), fire and shock included, and three plain reads of ten stick. *Still early:* the first lorry at 1.3-7.7 h
+(median about 3 h) against the 16 it was sized for, and the loop runs to 9-15 moves on the poison and bleed builds
+(the city resists neither), 1-6 on fire and shock. The bank's band 0.6-1.4 h (2.3x). Ladders' spread: the poison
+Paramedic 19/7. Scrap: the shock Scrapper 9.3 against 8 - the loot cut didn't move it; the search pace is the source.
+
+**The city's poison, the convoy, the Scrapper's search (12 Oct, commit c254b15; Matt: "do it all").** The city resists
+poison 15% - bleed left open, not 10% as proposed: the reviewer caught that every zone leaves an open type (the band
+check, smoke 2176-2178) and both would have grown from depth 8. `CONVOY_HP` 0.4 to 0.7, `CONVOY_DPS` 0.75 to 1.0. The
+Scrapper searches 25% faster (was 30%), loot back to +10%. Found on the way, not fixed (Matt's call): the Runs card's
+"They resist" row is one line of 313 px and silently drops chips - the city showed 2 of its 3 before today, 2 of 4
+now. A smoke check counting the chips is written and held uncommitted until the fix is agreed. The Workshop's
+"two sockets" check failed once on the same run (the known Workshop flake's area).
+
+**The Runs card's resists wrap (12 Oct; Matt: "make the change", no mockup).** "They resist" runs to two rows
+(`RESIST_ROWS`), paid for by the band (200 to 180, the rooms' one height) and the gaps between the boxes (12 to 9).
+`show_resists` lays the chips; if the names still don't all fit (all five, past Kitted out) every chip falls back to its
+figure in its element's colour, so none is dropped. The smoke counts the chips on each zone's first site and on a
+site resisting all five at 70%, and holds them inside the elements' box. Waiting on the smoke (the watcher is on the
+balance pass). Training's band: mockups of the class lines over the caravan (now, one pill, a pill a line, a pill with
+brighter text, a fade from the right) sent to Matt.
+
+**Committed (12 Oct): the resists' wrap and Training's pills.** Smoke clean on the watcher. Training's band: the class's
+line and the notice on glass pills (`PILL_H` 28, a hairline between two), the text in `Pal.TEXT`; a lone line drops to
+the notice's place. Reviewer notes left for Matt: the Runs card's band is 180 now and the run screen's still 200 (a
+20 px step on Set off); the word box now ends flush on the note (0 px, was 4).
+
+**The city/convoy read (12 Oct, the Legion; docs/balance/summary_city_convoy.md).** Nine red. Green now: scrap (every
+build in the band), the ladders' spread. *The lorry:* the frost and poison Paramedics 1.8-3.0 h with 8-11 moves, the
+bleed Doorman 3.4-4.1 h (8-10), the frost and poison Poachers 3.0-4.1 h; the fire Drifter never, the shock Scrapper
+never and one fire Scrapper never - their Services stall at depth 6 (Lorry watch's convoy depth), depth pace 0.0-0.7/h.
+The plain builds 6-23 h, three stuck. Read: the convoy's three heads in a row favour what lasts - chill, meds and
+Guard, poison and bleed's pools - over fire and shock; a stronger convoy strands fire and shock before it slows the
+Paramedic.
+
+**The convoy-halfway read (12 Oct, commit d25a361; docs/balance/summary_convoy_half.md).** `CONVOY_HP` 0.55,
+`CONVOY_DPS` 0.85. Nine red. The lorry: the Scrapper's fire and shock never (both reads, the Services stall at depth 6;
+the shock Scrapper's depth pace 0.0/h); one fire Drifter read and one poison Paramedic read never; the rest 2.0-8.8 h,
+the Paramedics fastest (2.1-2.5 h, 6-9 moves). Ladders' spread green. Scrap: the shock Scrapper 8.4 against 8. The
+plain floor: three of ten stuck. The playtest build picked for Matt: the Scrapper as shock - the weakest at the lorry,
+and it reads the scrap row too.
+
+**Matt's playtest list (12 Oct, the shock Scrapper on the exported build; "just do it all").** Built, smoke clean in the
+cloud copy (the device smoke hung on a mid-edit parse error - Matt to close it):
+- *What came back*: off the columns. A button at the zone row's right while there's a tally (the zone tabs narrow to
+  make room, and take the row back after Seen); pressed, the card drops under it at the screen's right, clear of every
+  button (smoke: column 3's depth +/- included).
+- *Contracts*: a gear, deep or affix ask pays at least `CONTRACT_OVER_FENCE` 1.5x what its pieces fetch - cash at the
+  Fence's price, scrap at what they'd scrap for - from the slot's bases a find draws now (the loot tier and two under,
+  held to the slot's top; no starting kit, site-only bases or socketables). A save's asks come up to it on load.
+- *Split*: a stack of rounds or bottles halves into its own (Lock-up, rig or stash; the Racks count).
+- *The Scrapper*: "improvised guns do 20% more damage" in the class line (the only class with no damage in it).
+- *Portraits*: tools/pixellab_people_all_manifest.json, fourteen new heads to art/people_new/ (the Fence first, unstyled;
+  the rest in its style), the Outskirts' gang new. art/people untouched.
+- *Flavour text*: every base, ammo and attachment has its line and the Lock-up shows it (rendered: Incendiary shells,
+  Antifreeze) - asked Matt where it's missing.

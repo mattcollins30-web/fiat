@@ -395,6 +395,34 @@ func _init() -> void:
 	sim.sell(kit)
 	main.refresh()
 	_check_fit(main, "Armoury (containers)")
+	# a full rig shows no empty pouch (12 Oct, Matt's playtest: a two-pouch kit wrapped and left a hole): singles to one
+	# short of a row's end, the kit, singles to full - the outlines are the pouches the rig has, every one filled
+	var rig_keep: Array = sim.rig.duplicate()
+	var rig_eq = sim.equipped["Rig"]
+	sim.equipped["Rig"] = _worst_item("Rig", Data.BASES["Rig"].back(), sim)
+	sim.rig = []
+	var capn: int = sim.med_capacity()
+	if capn >= main._armoury._containers.RIG_COLS + 2:
+		for i in range(main._armoury._containers.RIG_COLS - 1):
+			sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+		sim.rig.append(sim._plain(Data.MEDICAL, "First aid kit"))
+		while sim.rig_room(1):
+			sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+		main._armoury._containers._shown = ""
+		main.refresh()
+		var ctr = main._armoury._containers
+		var lit := 0
+		var holes := 0
+		for k in range(ctr.RIG_MAX):
+			if ctr._rig_outlines[k].visible:
+				lit += 1
+				var o: Rect2 = Rect2(ctr._rig_outlines[k].position, ctr._rig_outlines[k].size)
+				if not ctr._rig_cells.any(func(rc): return rc.visible and Rect2(rc.position, rc.size).grow(-1.0).intersects(o)):
+					holes += 1
+		_check(lit == capn and holes == 0, "a full rig of %d shows %d pouches, %d of them empty" % [capn, lit, holes])
+	sim.equipped["Rig"] = rig_eq
+	sim.rig = rig_keep
+	main.refresh()
 	_body_drops(main)
 	_check_grid(main._armoury._inv, sim.stash_cap(), "the stash")
 	# the inventory grid: kinds, rarity, sort, select-many sell, paging
@@ -1920,6 +1948,18 @@ func _joint_payoff_checks(main) -> void:
 	m["kill_burning"] = true
 	sim._kill(m, t_dry)
 	_check(int(m.get("finds", 0)) == finds0 + 1, "a kill while it burned dropped nothing with the Scrapper's joint")
+	# the Scrapper's class: improvised guns do 20% more, nothing else does, and no other class's do (12 Oct)
+	var cls_keep: String = sim.cls
+	var mission_keep = sim.mission
+	sim.mission = null                       # a class changes only at the Yard
+	var imp_gun: Dictionary = sim._plain("Primary", _base_of_type("improvised"))
+	var smg_gun: Dictionary = sim._plain("Primary", _base_of_type("smg"))
+	_set_cls(sim, "Scrapper")
+	_check(is_equal_approx(sim._class_gun_mult(imp_gun), 1.2) and is_equal_approx(sim._class_gun_mult(smg_gun), 1.0), "the Scrapper's improvised guns are not 20%% up, or another gun is: %.2f / %.2f" % [sim._class_gun_mult(imp_gun), sim._class_gun_mult(smg_gun)])
+	_set_cls(sim, "Doorman")
+	_check(sim.cls == "Doorman" and is_equal_approx(sim._class_gun_mult(imp_gun), 1.0), "a Doorman's improvised gun takes the Scrapper's 20%%: %s" % sim.cls)
+	_set_cls(sim, cls_keep)
+	sim.mission = mission_keep
 	# the Poacher's poison: the first shot on a gang lands its poison at full stacks
 	close.call("poacher_poison")
 	m = fresh_run.call()
@@ -6306,12 +6346,20 @@ func _contract_material_checks(main) -> void:
 		pays[c["pay"]] = pays.get(c["pay"], 0) + 1
 		_check(c["pay"] in ["cash", "notes", "scrap"] and int(c["amount"]) > 0 and sim.contract_pay_words(c) != "" and sim.contract_words(c) != "", "a contract before any salvage drops is off: %s" % str(c))
 		if c["pay"] == "scrap":
-			_check(int(c["amount"]) == maxi(1, int(ceil(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0)))), "a scrap contract's amount is off: %s" % str(c))
+			_check(int(c["amount"]) == maxi(1, int(ceil(maxf(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0), sim.contract_worth(c) / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))) or (sim.contract_worth(c) <= 0.0 and int(c["amount"]) == maxi(1, int(ceil(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0))))), "a scrap contract's amount is off: %s" % str(c))
 		_check(not (c["kind"] == "meds" and c["pay"] == "cash"), "a meds ask pays cash: %s" % str(c))
 		if c["pay"] == "cash":
-			_check(absi(int(c["amount"]) - int(round(sim.a_runs_takings() * Data.CONTRACT_CASH * minf(sim.contract_weight(c), Data.CONTRACT_CASH_WEIGHT_MAX)))) <= 10 or int(c["amount"]) == 10, "a cash contract is not half a run's takings by its weight: %s" % str(c))
+			var fence: float = float(sim.sell_price({"value": int(round(sim.contract_worth(c)))})) if sim.contract_worth(c) > 0.0 else 0.0
+			_check(absi(int(c["amount"]) - int(round(maxf(sim.a_runs_takings() * Data.CONTRACT_CASH * minf(sim.contract_weight(c), Data.CONTRACT_CASH_WEIGHT_MAX), fence * Data.CONTRACT_OVER_FENCE)))) <= 10 or int(c["amount"]) == 10, "a cash contract is not its share of a run's takings, or under the pieces' price: %s" % str(c))
+			if c["kind"] == "gear":
+				_check(fence > 0.0 and float(c["amount"]) >= fence * Data.CONTRACT_OVER_FENCE - 5.0, "a gear contract pays under what the Fence gives for its pieces: %s against %.0f" % [str(c), fence])
 	_check(kinds.size() == (5 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 4) and pays.size() == 3, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
-	# every slot pays alike at a rarity: no rare primary worth fishing for
+	# every slot weighs alike at a rarity (the pay's floor follows the pieces' price since 12 Oct)
+	for slot in Data.CONTRACT_SLOTS:
+		var probe_c := {"kind": "gear", "slot": slot, "rarity": 2, "count": 1, "level": 0, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+		_check(sim.contract_worth(probe_c) > 0.0, "a %s ask is worth nothing to price" % slot)
+	var deep_c := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 30, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+	_check(sim.contract_worth(deep_c) > 0.0, "a deep ask at level 30 is worth nothing to price")
 	var takings: float = sim.a_runs_takings()
 	var prim := {"kind": "gear", "slot": "Primary", "rarity": 2, "count": 2, "level": 0, "stat": "", "pay": "", "amount": 0, "salvage": ""}
 	var helm: Dictionary = prim.duplicate()
@@ -6678,6 +6726,29 @@ func _grenade_checks(main) -> void:
 	_check_fit(main, "Lock-up (a grenade)")
 	main._armoury._press(0)
 	_check(sim.rig.size() == 1 and sim.rig[0]["id"] == g2["id"], "Take did not move the grenade to the rig")
+	# Split (12 Oct, Matt's playtest): half a stack of rounds off into its own beside it, the pick kept, the value following
+	var shells: Dictionary = sim._plain("Ammo", "Shells") if Data.BASES.has("Ammo") else {}
+	if not shells.is_empty():
+		Items.set_stack(shells, 31)
+		sim.stash.append(shells)
+		main._armoury._inv._set_kind(0)
+		main.refresh()
+		main._armoury._pick_cell(main._armoury._inv.cell_of(shells["id"]))
+		main.refresh()
+		var bt: Array = main._armoury._pick.button_texts()
+		_check(bt.has("Split"), "a stack of rounds offers no Split: %s" % str(bt))
+		_check_fit(main, "Lock-up (rounds, Split)")
+		var v0: int = int(shells["value"])
+		main._armoury._press(bt.find("Split"))
+		var halves: Array = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Shells")
+		_check(halves.size() == 2 and Items.stack_size(shells) == 16 and halves.any(func(it): return it["id"] != shells["id"] and Items.stack_size(it) == 15), "Split did not halve the stack: %s" % str(halves.map(func(it): return Items.stack_size(it))))
+		_check(absi(int(halves[0]["value"]) + int(halves[1]["value"]) - v0) <= 1, "Split changed what the rounds are worth")
+		_check(main._armoury.selected.get("id", -1) == shells["id"], "Split lost the pick")
+		var one: Dictionary = sim._plain("Ammo", "Shells")
+		Items.set_stack(one, 1)
+		sim.stash.append(one)
+		_check(not sim.can_split(one["id"]), "a single round splits")
+		sim.stash = sim.stash.filter(func(it): return not (Items.is_ammo(it) and it["base"] == "Shells"))
 	# the Fence's shelf carries them now and then
 	var seen := false
 	for k in range(40):
@@ -6898,6 +6969,26 @@ func _top_works_checks(main) -> void:
 			outlines_on += 1
 	_check(cells_on == sim.rig.size() and outlines_on == 0, "a full rig of kits and meds shows %d of %d items and %d free pouches" % [cells_on, sim.rig.size(), outlines_on])
 	_check_fit(main, "Run (a full rig)")
+	# a kit at a row's end (12 Oct, Matt's playtest): singles to one short of the row, the kit, singles to full - every
+	# item shows and no pouch reads empty
+	if not two.is_empty():
+		var per_row: int = maxi(1, ceili(float(mini(main._run.RIG_MAX, pouches)) / (1 if pouches <= 12 else 2)))
+		sim.rig = []
+		for i in range(per_row - 1):
+			sim.rig.append(sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"]))
+		sim.rig.append(sim._plain(Data.MEDICAL, two["name"]))
+		while sim.rig_used() < pouches:
+			sim.rig.append(sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"]))
+		main.refresh()
+		cells_on = 0
+		outlines_on = 0
+		for c in main._run._rig_cells:
+			if c.visible:
+				cells_on += 1
+		for o in main._run._rig_outlines:
+			if o.visible:
+				outlines_on += 1
+		_check(cells_on == sim.rig.size() and outlines_on == 0, "a kit at the row's end: %d of %d items show, %d pouches read empty" % [cells_on, sim.rig.size(), outlines_on])
 	sim.extract_now()
 	main.show_room(main.ARMOURY)
 	main.refresh()
@@ -9875,14 +9966,22 @@ func _came_back_checks(main) -> void:
 		sim.xp += 50.0
 	main.refresh()
 	var card = main._missions._came
-	_check(card.visible, "the card did not show after two runs")
+	var cbtn: Button = main._missions._came_btn
+	# the tally's button at the zone row's right (12 Oct): the card stays up until it's pressed, then drops under it
+	_check(cbtn.visible and not card.visible and cbtn.text.contains("2 runs"), "the tally's button did not show, or the card came up unasked: '%s'" % cbtn.text)
+	var zr: Rect2 = Rect2(main._missions._zone_buttons.back().position, main._missions._zone_buttons.back().size)
+	_check(zr.end.x + 8 <= cbtn.position.x and cbtn.position.x + cbtn.size.x <= Pal.GRID_W, "the zone tabs run into the tally's button")
+	_check_fit(main, "Runs (the tally's button)")
+	cbtn.pressed.emit()
+	_check(card.visible, "the card did not show after two runs and a press")
 	_check(card._head.text.begins_with("WHAT CAME BACK · 2 RUNS"), "the card's head reads '%s'" % card._head.text)
 	_check(card._tiles[3]["value"].text.contains("→"), "the card's level does not read the climb: '%s'" % card._tiles[3]["value"].text)
 	_check(card._cell.visible and card._find_name.text.begins_with(Items.full_name(find).get_slice(" ", 0)) and card._find_line.text.contains(Fmt.money(99999.0)), "the card's find is off: '%s' / '%s'" % [card._find_name.text, card._find_line.text])
 	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
-	var col0 := Rect2(0, 0, main._missions.COL_W, Pal.ROOM_H)
-	_check(not Rect2(card.position, card.size).intersects(col0), "the card sits over the column the run came from (tier 1)")
-	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)), "the card leaves the Runs screen")
+	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)) and card.position.y >= main._missions.ZONE_H, "the card leaves the Runs screen or sits on the zone row")
+	var c3: Dictionary = main._missions._cols[2]
+	for db in [c3["depth_up"], c3["depth_down"], c3["deploy"], c3["auto"], c3["insure"], c3["boss"]]:
+		_check(not card.get_global_rect().intersects(db.get_global_rect()), "the card would cover the right-hand column's '%s' when it shows" % db.text)
 	_check_fit(main, "Runs (what came back)")
 	_came_back_buttons_clear(main, "the run from tier 1")
 	# the endgame's figures in a quarter-width tile (the first smoke: £47,082 ran out of it)
@@ -9895,14 +9994,10 @@ func _came_back_checks(main) -> void:
 	_check_fit(main, "Runs (what came back, the endgame's figures)")
 	sim.came_back = hold_cb
 	main.refresh()
-	# a run from the right-hand column puts it on the left
-	sim.last_report["tier"] = Data.ZONES[main._missions.zone]["tiers"][2]     # the right-hand column of the zone on show
-	main._missions._shown = ""
-	main.refresh()
-	_check(card.position.x == 0.0, "the card did not move off the right-hand column the run came from")
-	_came_back_buttons_clear(main, "the run from tier 3")
-	sim.last_report["tier"] = Data.ZONES[1]["tiers"][0]
-	main.refresh()
+	# pressed again, it folds away and the tally stays
+	cbtn.pressed.emit()
+	_check(not card.visible and cbtn.visible and int(sim.came_back["runs"]) == 2, "the button did not fold the card away, or the tally went with it")
+	cbtn.pressed.emit()
 	# the save keeps it; Seen puts it away and starts again
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
@@ -9910,7 +10005,8 @@ func _came_back_checks(main) -> void:
 	main.refresh()
 	card._on_seen()
 	main.refresh()
-	_check(not card.visible and int(sim.came_back["runs"]) == 0 and sim.came_back["firsts"].is_empty() and int(sim.came_back["lv_from"]) == sim.level(), "Seen did not put the card away and start again")
+	_check(not card.visible and not cbtn.visible and int(sim.came_back["runs"]) == 0 and sim.came_back["firsts"].is_empty() and int(sim.came_back["lv_from"]) == sim.level(), "Seen did not put the card and its button away and start again")
+	_check(is_equal_approx(main._missions._zone_buttons.back().position.x + main._missions._zone_buttons.back().size.x, Pal.GRID_W), "the zone tabs did not take the row back after Seen")
 	sim.load_dict(saved)
 	main.refresh()
 	# a move keeps the tally (an away move mustn't wipe it), the climb from the new runner's level
