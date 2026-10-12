@@ -4107,3 +4107,9 @@ else -1), the site's fire and HP and the regen worn; the playtest read gains "Th
 card's words with deaths, wounds, cut-and-runs and the median regen. The bot's `RUSH`: no climbing until the campaign's
 done (one run a site at depth 1, straight on when the next reads PUSH); the endgame climbs as before. The reviewer's
 catch fixed: a part-read card logged its share as the odds. The Equip-if-better flake's second half fixed the same way.
+
+**The rush read (12 Oct, commit 9dfd990; docs/balance/summary_rush.md).** With the bot rushing the campaign at depth 1
+the campaign barely moved: the fire Drifter's Bank 0.59 and 0.68 h, the campaign done at 1.37 and 1.66 h (Matt's: 21 and
+36 minutes); the element builds' campaigns 1.1-2.7 h. So the climbing wasn't the gap. What's left between the bot and
+a person: the bot waits out its HP between runs (`advance` to full at the rest rate) where Matt pays the Clinic, and it
+holds a site until the next reads 88% where Matt's regen gear made every card Safe. Matt's next save carries the odds.
