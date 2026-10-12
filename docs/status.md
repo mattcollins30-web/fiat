@@ -3024,7 +3024,15 @@ yards' to the Allotments), the map's tests on the Radio. The bot clears the Outs
 Guard's steel ("Guard to 80: overheal, 15% a gang"; the cap's note when nothing fills it), and the run screen shows
 what Guard took as its own numbers in that colour - the red figures by type now count only what reached HP (scaled by
 what reached it of what the types made, so Held's cut is out of them too: the review's catch). The band's the same
-steel. *The smoke:* Guard's share kept out of the red, the Stats sheet's line and its fit. For the pass (not fixed, numbers or
+steel. *The smoke:* Guard's share kept out of the red, the Stats sheet's line and its fit.
+
+**The first read with Guard and the Outskirts (12 Oct), and what it changed.** The probe hung the pass: it set off for
+the Streets on a fresh yard, locked behind the Outskirts now (fixed: it walks them first). The thirty reads: the lorry
+at 2.0-6.7 h with 8-15 moves in sixteen hours (the 7 Oct read had 3-8 in about twenty), the bank 0.6-1.3 h, every
+site at 100% - Guard's quarter of HP on top of everything, compounding through the lorries' ×1.25. Matt: "these games
+aren't supposed to be a cake walk" - Guard's cap 25% to 15% of max HP (Transfusion's words: "twice as much"). Scrap
+read 7.1-9.0 crafts an hour against 7 and the Scrapper 10.7-11.8 against 8: a search's handful one in 0.35 (from 0.5)
+and scrapping an item a pound in 24 (from 20). Run again with the probe. For the pass (not fixed, numbers or
 Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
 plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
 Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5

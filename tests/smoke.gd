@@ -3078,13 +3078,13 @@ func _guard_checks(main) -> void:
 	sim.tree.append(node_id.call("The door", "squared_up"))
 	_check(sim.has_node("squared_up"), "Squared up did not take")
 	sim._gang_arrives(m)
-	_check(is_equal_approx(sim.guard(), sim.max_hp() * 0.15), "Squared up gave %.0f, not 15%% of max HP" % sim.guard())
+	_check(is_equal_approx(sim.guard(), minf(sim.guard_cap(), sim.max_hp() * 0.15)), "Squared up gave %.0f, not 15%% of max HP to the cap" % sim.guard())
 	m["guard"] = 0.0
 	var coat: Dictionary = sim._plain("Armour", "Stab vest")
 	coat["affixes"] = [{"stat": "guard_gang", "value": 8}]
 	sim.equipped["Armour"] = coat
 	sim._gang_arrives(m)
-	_check(is_equal_approx(sim.guard(), sim.max_hp() * 0.23), "Squared up and the guard line did not add: %.0f" % sim.guard())
+	_check(is_equal_approx(sim.guard(), minf(sim.guard_cap(), sim.max_hp() * 0.23)), "Squared up and the guard line did not add to the cap: %.0f" % sim.guard())
 	sim.extract_now()
 	sim.equipped["Armour"] = null
 	sim.tree.erase(node_id.call("The door", "squared_up"))
@@ -7414,7 +7414,7 @@ func _yard_pick_checks(main) -> void:
 	on.call("stash", 3, "b")
 	_check(sim.stash_free(sim._plain(Data.AMMO, "Nails")) and sim.stash_free(Items.roll_unique(Data.UNIQUES[0], sim.rng)) and sim.stash_free(sim._plain(Data.PAPER, "A P45")) and not sim.stash_free(it), "Racks, Wall of fame or Paper rack is off")
 	on.call("stash", 1, "b")
-	var junk: Dictionary = sim._plain("Helmet", "Hard hat")
+	var junk: Dictionary = sim._plain("Helmet", "Army helmet")     # worth a pound of scrap or more (a hard hat's £20 is under 24, 12 Oct)
 	junk["rarity"] = 0
 	junk["affixes"] = []
 	var sc0: int = sim.scrap

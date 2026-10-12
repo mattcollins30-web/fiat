@@ -17,7 +17,7 @@ only resist, armour and HP. **Design only. It's built before the next balance pa
 
 - **Guard** is a second bar over HP. Their fire, and whatever they've left burning or bleeding on you, comes off
   Guard first and HP after. It's taken after armour and resists, so it's on top of them, not instead of them.
-- **Its cap** is 25% of max HP (`GUARD_SHARE`), raised by `guard_pct`.
+- **Its cap** is 15% of max HP (`GUARD_SHARE`; 25% at first, cut after the first read, 12 Oct), raised by `guard_pct`.
 - Nothing fills it by itself. **Each class has its own way to fill it** (section 3), and the affixes give everyone a
   little.
 - **It lasts the run.** It doesn't decay, and it's gone at the extract or the death. The cap is what stops it running

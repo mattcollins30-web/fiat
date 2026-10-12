@@ -621,7 +621,7 @@ const SOCKET_WORDS := {"conv_fire_pct": "fire", "conv_frost_pct": "frost", "conv
 const TYPES := ["physical", "fire", "frost", "poison", "shock", "bleed"]
 const ELEMENTS := ["fire", "frost", "poison", "shock", "bleed"]
 const RESIST_CAP := 75.0
-const GUARD_SHARE := 0.25          # Guard (12 Oct, docs/design/shields.md): its cap, a share of max HP
+const GUARD_SHARE := 0.15          # Guard (12 Oct, docs/design/shields.md): its cap, a share of max HP; 0.25 to 0.15 (Matt, the first read: the lorry at 2-7 h, 8-15 moves in 16 - "not supposed to be a cake walk")
 const OVER_CAP := 50.0             # over the cap (12 Oct, docs/design/over_the_cap.md): a resist past RESIST_CAP is +1% of that element's damage a point, to this many points
 const THICK_SKIN_FROM := 200.0     # Thick-skinned: armour past this, a tenth of it as physical
 const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.7, "s": 6.0, "stacks": 1}}
@@ -1244,7 +1244,7 @@ const TREES := [
 		{"name": "Discount", "col": 3, "row": 1, "effect": "treat_pct", "value": 20},
 		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "A share of every hit lands as frost and slows them"},
 		{"name": "Second shift", "col": 4, "row": 1, "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
-		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Guard holds half your max HP, and a med fills it to the top"},     # Guard (12 Oct): was overflow as armour, two to one; the class does overflow now
+		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Guard holds twice as much, and a med fills it to the top"},     # Guard (12 Oct): was overflow as armour, two to one; the class does overflow now
 		{"name": "Overtime", "col": 5, "row": 1, "beside": true, "effect": "overtime", "notable": true, "words": "Guard holds 50% more; with Guard up, meds take half the time"},
 	]},
 	# Scrapper
@@ -1486,8 +1486,8 @@ const BUMP_CAP := 20
 ## ("from"); a med, scrap plus the one below; an improvised gun of a type for
 ## scrap by its tier, Common, firing nails whatever it is; a grenade, scrap
 ## plus the element's socketable. Costs are untuned until the pass.
-const SCRAP_PER_POUND := 20
-const SCRAP_SEARCH := 0.5           # the pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
+const SCRAP_PER_POUND := 24         # 20 to 24 (12 Oct, the read: 7.1-9.0 crafts an hour against 7, the Scrapper 10.7-11.8 against 8)
+const SCRAP_SEARCH := 0.35          # 0.5 to 0.35 (12 Oct, the same read). The pass (6 Oct): 0.2 read half a craft an hour against the dearest build; 0.4 left three builds at 0.5-0.8
 const SCRAP_HANDFUL := [5, 10]      # the pass (6 Oct): [3, 6], [4, 8], then [6, 12] which read 3-5 crafts an hour on the builds that run most
 const BUILD_BOX := 8                # a standard box of any type you have a gun for
 const BUILD_GRADE := 15             # a grade, with the box below
