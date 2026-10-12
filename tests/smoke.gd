@@ -9938,6 +9938,37 @@ func _try_on_checks(main) -> void:
 	dmg_vest["affixes"] = [{"stat": "damage_pct", "value": 30.0, "tier": 4}]
 	sim.equipped["Armour"] = dmg_vest
 	_check(sim.compare(riot) == 0, "a riot suit that costs the vest's damage is not a trade: %d" % sim.compare(riot))
+	# the body's figure (12 Oct, Matt kept a 5-armour helmet and a charm for their +5 HP/s over 50-armour drops, and the
+	# arrow called the drops better): regen counts, the verdict follows the figure, and a charm's find against its
+	# regen is a trade
+	sim.equipped["Armour"] = vest
+	var hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim.equipped["Helmet"] = hat
+	# the regen sized to the fight the smoke has reached (the review): a fifth of the HP back over the fight, never under 5
+	var rg: float = maxf(5.0, 0.2 * sim.max_hp() / sim.front_fight())
+	var regen_hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	regen_hat["affixes"] = [{"stat": "regen", "value": rg, "tier": 4}]
+	var s0: float = sim.survival_value()
+	_check(sim.survival_gain(regen_hat) > 0.0 and sim.compare(regen_hat) == 1, "a hard hat with +%.0f HP/s over a plain one: survival %+.3f, verdict %d" % [rg, sim.survival_gain(regen_hat), sim.compare(regen_hat)])
+	_check(is_equal_approx(sim.survival_value(), s0), "trying the regen hat on moved the kit's own figure: %.3f against %.3f" % [sim.survival_value(), s0])
+	var hd: Array = PickPanel.deltas_for(sim, regen_hat, hat)
+	_check(not hd.is_empty() and float(hd[0][0]) > 0.0 and str(hd[0][1]).ends_with("survival"), "the helmet's deltas don't lead with the survival: %s" % str(hd))
+	sim.equipped["Helmet"] = regen_hat
+	var comp: Dictionary = sim._plain("Helmet", "Composite helmet")
+	var sg: float = sim.survival_gain(comp)
+	var want: int = 1 if sg > sim.TRY_EPS else (-1 if sg < -sim.TRY_EPS else 0)
+	_check(sim.compare(comp) == want, "a composite helmet over the regen hat reads %d with the survival at %+.3f" % [sim.compare(comp), sg])
+	var tag: Dictionary = sim._plain("Charm", "Dog tag")
+	tag["affixes"] = [{"stat": "regen", "value": rg, "tier": 4}]
+	sim.equipped["Charm"] = tag
+	var finder: Dictionary = sim._plain("Charm", "Dog tag")
+	finder["affixes"] = [{"stat": "rarity_pct", "value": 40.0, "tier": 4}]
+	_check(sim.compare(finder) == 0, "a find charm over a regen charm is not a trade: %d" % sim.compare(finder))
+	var both: Dictionary = sim._plain("Charm", "Dog tag")
+	both["affixes"] = [{"stat": "regen", "value": rg, "tier": 4}, {"stat": "rarity_pct", "value": 40.0, "tier": 4}]
+	_check(sim.compare(both) == 1, "a charm with the same regen and find on top is not the upgrade: %d" % sim.compare(both))
+	sim.equipped["Charm"] = finder
+	_check(sim.upgrade_gain(both) >= sim.survival_gain(both) and sim.upgrade_gain(both) > 0.0, "a charm's regen counts nothing in the bot's shop: %.3f" % sim.upgrade_gain(both))
 	# the answers hold through a run's shooting: rounds spent aren't a change of kit (the first cut threw them away
 	# each second, the rig's counts in the key)
 	sim.load_dict(saved)

@@ -316,6 +316,11 @@ static func deltas_for(sim, it: Dictionary, fitted: Dictionary) -> Array:
 		var d: float = sim.fit_value(it) - sim.fit_value({}, str(it["slot"]))
 		if absf(d) >= 0.05:
 			out.push_front([d, ("%.1f dmg/s" if absf(d) < 10.0 else "%.0f dmg/s") % absf(d)])
+	elif str(it["slot"]) in sim.SURV_SLOTS and fitted != null and not fitted.is_empty():
+		# the body's figure first (12 Oct): what the arrow reads for a helmet or a coat, regen and resists in it
+		var sg: float = sim.survival_gain(it) * 100.0
+		if absf(sg) >= 0.5:
+			out.push_front([sg, "%.0f%% survival" % absf(sg)])
 	return out
 
 

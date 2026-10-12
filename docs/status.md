@@ -4113,3 +4113,14 @@ the campaign barely moved: the fire Drifter's Bank 0.59 and 0.68 h, the campaign
 36 minutes); the element builds' campaigns 1.1-2.7 h. So the climbing wasn't the gap. What's left between the bot and
 a person: the bot waits out its HP between runs (`advance` to full at the rest rate) where Matt pays the Clinic, and it
 holds a site until the next reads 88% where Matt's regen gear made every card Safe. Matt's next save carries the odds.
+
+**The body's figure (12 Oct).** Matt kept a 5-armour helmet and a charm for their +5 HP/s over 50-armour drops, and
+the game's "better" called the drops the upgrade: a helmet or coat was scored as armour and half the HP, a charm by its
+find alone, so regen and resists counted nothing in the arrow, Equip if better, the junk rules or the bot. Matt's
+call, option A: score the body by survival where the runner is. `survival_value()`: HP, regen over the fight and HP a
+kill, against their fire through armour and resists over the same seconds, at `front_tier()` (the open site that hits
+hardest at its set depth); the fight's length held at the worn kit's (`front_fight`, every gun fed) so a piece's damage
+and pace aren't counted twice. `compare` reads each way - damage, the piece's own job, and survival for helmet, coat,
+charm and rig - up on one and down on none is better, both is a trade. The pick panel leads with "N% survival". The
+bot's shop counts a charm's or rig's survival (`upgrade_gain`). Reviewer catches fixed: the front's key (bosses, words,
+atlas), an easy front's 1 HP floor that hid armour, the fight read once a kit, the smoke's regen sized to its fight.

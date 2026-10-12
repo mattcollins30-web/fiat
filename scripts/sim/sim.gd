@@ -5729,8 +5729,9 @@ func _try(it: Dictionary, f: Callable) -> Variant:
 	return v
 
 
-## The runner's figure for a slot with `it` worn ({} for the kit as it is): the damage for a gun, armour and half the
-## max HP for the body (the slot score's own weighing, on the runner's totals), the piece's score for bags and charms.
+## The runner's figure for a slot with `it` worn ({} for the kit as it is): the damage for a gun, the survival figure
+## for the body (survival_value: HP, regen, armour and resists against the fight being pushed), the piece's score for
+## bags and charms.
 func fit_value(it: Dictionary, slot := "") -> float:
 	if slot == "":
 		slot = str(it.get("slot", ""))
@@ -5752,15 +5753,85 @@ func _fit_value(it: Dictionary, slot: String) -> float:
 		"dps":
 			return _try(it, dps)
 		"armour":
-			return _try(it, func(): return armour() + 0.5 * max_hp())
+			return _try(it, survival_value.bind(front_fight()))
 	if it.is_empty():
 		return Items.score(equipped[slot]) if equipped.get(slot) != null else 0.0
 	return Items.score(it)
 
 
-## Against what's worn in its slot: 1 better, 0 a sidegrade (or a trade: better at its own job, worse for the
-## damage), -1 worse. A gun by the runner's damage with it on; anything else by its own job, and the damage with it on
-## breaking a tie or making it a trade. An empty slot takes anything that goes in it.
+## The body's figure (12 Oct, Matt: a +5 HP/s helmet and charm carried his run while the arrow called 50-armour drops
+## better - armour and half the HP saw no regen, no resist): how many times over the runner stands the fight being
+## pushed. HP, regen over the fight and HP a kill, against their fire through armour and resists over the same
+## seconds - regen, resists, armour and HP in one currency, at the depth that's open. Read tried on (fit_value).
+const SURV_SLOTS := ["Helmet", "Armour", "Charm", "Rig"]
+## `fight` is the fight's seconds, held at the worn kit's (front_fight) when a piece is tried on: what a piece does to
+## the damage and the pace is the damage's own reading, not counted twice through a longer fight (the riot suit's -8
+## pace read as less survival than a stab vest's 15 armour).
+func survival_value(fight := -1.0) -> float:
+	var i := front_tier()
+	var t := effective(i)
+	if fight <= 0.0:
+		fight = front_fight()
+	var took: float = incoming_rate(t, contact(t)) * fight
+	var back: float = max_hp() + _affix_sum("regen") * fight + _affix_sum("life_per_kill") * float(t["pool"])
+	return back / maxf(took, 0.000001)       # an easy front still reads the armour (a floor of 1 HP hid it: the review)
+
+
+## The seconds the fight being pushed takes on the kit as worn, every gun fed as a try-on reads it (out of rounds,
+## the fists' fight ran twenty-five times as long); no damage at all reads as an hour.
+func front_fight() -> float:
+	var key := _kit_key()
+	if key != _cmp_key:
+		_cmp_key = key
+		_cmp_cache.clear()
+	if not _cmp_cache.has("ff"):             # once a kit (the review: every cell of a grid asked it again)
+		_cmp_cache["ff"] = clampf(float(_try({}, func(): return estimate(front_tier()))), 1.0, 3600.0)
+	return _cmp_cache["ff"]
+
+
+## The fight being pushed: the open site that hits hardest at its set depth (the campaign's newest site, the
+## endgame's deepest ladder). The kit doesn't move it; the depths and the clears do.
+var _front_key := 0
+var _front := 0
+func front_tier() -> int:
+	var key: int = hash([depth, best_depth, campaign_done(), yard_moves, bosses_beaten, words, standing, atlas])     # what opens a site and what it fights with (the review)
+	if key == _front_key:
+		return _front
+	var bf := -1.0
+	_front = 0
+	for i in range(Data.TIERS.size()):
+		if tier_open(i):
+			var t := effective(i)
+			var f: float = float(t["dps"]) * float(t["hp"]) * float(t["pool"])
+			if f > bf:
+				bf = f
+				_front = i
+	_front_key = key
+	return _front
+
+
+## The body's figure with `it` worn, as a share up or down on the kit as it is (0.0 for a slot that has none).
+func survival_gain(it: Dictionary) -> float:
+	var slot: String = str(it.get("slot", ""))
+	if not (slot in SURV_SLOTS) or not equipped.has(slot):
+		return 0.0
+	var key := _kit_key()
+	if key != _cmp_key:
+		_cmp_key = key
+		_cmp_cache.clear()
+	var sk := "s/%d" % hash(it)
+	if not _cmp_cache.has(sk):
+		if not _cmp_cache.has("s0"):
+			_cmp_cache["s0"] = _try({}, survival_value)
+		var s0: float = _cmp_cache["s0"]
+		_cmp_cache[sk] = (float(_try(it, survival_value.bind(front_fight()))) - s0) / maxf(s0, 0.0001)
+	return _cmp_cache[sk]
+
+
+## Against what's worn in its slot: 1 better, 0 a sidegrade (or a trade: up one way, down another), -1 worse. A gun
+## by the runner's damage with it on; anything else by its own job and the damage with it on, and a helmet, coat,
+## charm or rig by the survival figure too (12 Oct; a helmet's or coat's job is that figure). An empty slot takes
+## anything that goes in it.
 func compare(it: Dictionary) -> int:
 	var slot: String = str(it.get("slot", ""))
 	if not equipped.has(slot):
@@ -5801,7 +5872,7 @@ func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review), and a run's bonus armour
 	var bonus: float = float(mission.get("bonus_armour", 0.0)) if mission != null else 0.0
-	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5])
+	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier()])     # the front: the body's figure reads the fight being pushed
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
@@ -5820,19 +5891,22 @@ func _compare(it: Dictionary, slot: String) -> int:
 	var kind: String = Data.SLOT_SCORE.get(slot, "")
 	if kind == "dps":
 		return g
-	var o := 0
-	if kind == "armour":
-		var v0: float = fit_value({}, slot)
-		var orel: float = (fit_value(it) - v0) / maxf(v0, 0.01)
-		o = 1 if orel > TRY_EPS else (-1 if orel < -TRY_EPS else 0)
-	else:
+	# each way it's read (12 Oct): the damage, the piece's own job, and for what's on the body the survival figure (a
+	# body piece's job is that figure). Up on one and down on none, better; the reverse, worse; both, a trade
+	var ways: Array = [g]
+	var srel: float = survival_gain(it)
+	if slot in SURV_SLOTS:
+		ways.append(1 if srel > TRY_EPS else (-1 if srel < -TRY_EPS else 0))
+	if kind != "armour":
 		var own: float = Items.score(it) - Items.score(equipped[slot])
-		o = 1 if own >= 0.05 else (-1 if own <= -0.05 else 0)
-	if o == g or g == 0:
-		return o
-	if o == 0:
-		return g
-	return 0                             # a trade: the panel's deltas say which way
+		ways.append(1 if own >= 0.05 else (-1 if own <= -0.05 else 0))
+	var up: bool = ways.has(1)
+	var down: bool = ways.has(-1)
+	if up and not down:
+		return 1
+	if down and not up:
+		return -1
+	return 0                             # a trade, or the same: the panel's deltas say which way
 
 
 ## How much better, as a share of what the slot gives now (the bot's shop weighs one slot against another by it).
@@ -5845,7 +5919,10 @@ func upgrade_gain(it: Dictionary) -> float:
 	if equipped[slot] == null:
 		return EMPTY_GAIN
 	var v0: float = fit_value({}, slot)
-	return (fit_value(it) - v0) / maxf(v0, 0.01)
+	var g: float = (fit_value(it) - v0) / maxf(v0, 0.000001)
+	if slot in SURV_SLOTS and Data.SLOT_SCORE.get(slot, "") != "armour":
+		g = maxf(g, survival_gain(it))       # a charm or rig bought for its regen or resists (the review: the bot never would)
+	return g
 
 
 ## The best of a slot in the stash, tried on, or {}.
