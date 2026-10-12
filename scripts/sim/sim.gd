@@ -3808,7 +3808,7 @@ func effective(i: int) -> Dictionary:
 			walks = true
 	var b := boss_of(i)
 	if boss_armed.get(i, false) and is_convoy(i):
-		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, plain fire): the crews stayed with the load
+		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, CONVOY_DPS of their fire): the crews stayed with the load
 		var queue: Array = []
 		for cb in Data.BOSSES:
 			queue.append(boss_form(cb, e, false, true))
