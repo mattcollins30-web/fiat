@@ -6,6 +6,62 @@ extends RefCounted
 ## things said shortest. Words only - no rules live here.
 
 
+# ------------------------------------------------------------------ the story (12 Oct, docs/design/lore.md)
+
+## The opening: a new camp's first lines in the log, before the Yard is set. Said once.
+const OPENING := [
+	"The money went on a Tuesday. The cards first, then the machines. By the Thursday nobody would take the notes.",
+	"By the Friday the Fence was the only one still open, and he paid in cash. Nobody asked what that meant any more.",
+	"The crews kept the notes anyway. Nobody knows what for.",
+]
+
+## The radio: three voices on the air, a line after every few runs home (RADIO_EVERY), the first unheard one whose
+## gate is open: a zone open ("zone"), or lorries beaten ("lorries"). The official loop wears down, a pirate comes on in
+## the town, the army's net crackles in the city; the notes' story runs through all three and closes on the loop.
+## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
+const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net"}
+const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net"}
+const RADIO := [
+	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
+	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to."},
+	{"voice": "loop", "zone": 1, "text": "This is a recorded. Remain. Limited to."},
+	{"voice": "kev", "zone": 1, "text": "Kev here, on whatever this is. If you can hear me, you've got batteries. Look after them."},
+	{"voice": "kev", "zone": 1, "text": "Someone on the Parade's buying old tenners. Paying in tins. Make of that what you like."},
+	{"voice": "loop", "zone": 2, "text": "The loop's stopped. It's just the tone now."},
+	{"voice": "kev", "zone": 2, "text": "The Bank crew are taking notes by the bin bag. Not spending them. Counting them. Twice."},
+	{"voice": "kev", "zone": 2, "text": "A request, from a lady in the flats: could whoever took her bins bring the bins back. Keep the rest."},
+	{"voice": "net", "zone": 3, "text": "Convoy four, convoy four. Load is paper. Destination withheld. Acknowledge."},
+	{"voice": "kev", "zone": 3, "text": "The army's on the air. They don't say much. They say 'paper' a lot."},
+	{"voice": "net", "zone": 3, "text": "All call signs. The lorry is not to be stopped. Repeat, not to be stopped."},
+	{"voice": "kev", "lorries": 1, "text": "Somebody stopped the lorry. It was notes, baled. Somebody else signed for them at the other end. I'd like to know who."},
+	{"voice": "net", "lorries": 2, "text": "Collection resumes on the second route. The holders are to be registered. Out."},
+	{"voice": "kev", "lorries": 3, "text": "Rumour is the Mint never stopped. Llantrisant. The lights on all night and nobody going in."},
+	{"voice": "net", "lorries": 4, "text": "Exchange to commence on a date to be announced. Old notes at par from registered holders only."},
+	{"voice": "kev", "lorries": 5, "text": "Registered holders. That's the crews. That's who they were holding it all for. Not for them. For whoever comes back."},
+	{"voice": "loop", "lorries": 6, "text": "This is a recorded message. A new currency will be issued. Its value is as stated. By order. Let it be done."},
+]
+
+## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.
+const GANGS := [
+	{"name": "The field lads", "arrive": ["Wellies, a billhook, a dog somewhere behind.", "They come over the hedge, not round it.", "Mud to the knee. They've been waiting."]},
+	{"name": "The Parade boys", "arrive": ["Hoods up.", "One of them's filming it.", "They knew you were coming. Somebody always says."]},
+	{"name": "The High Street lot", "arrive": ["They smell of petrol before you see them.", "A bottle with a rag in it, lit.", "They've done this outside every shop on the street."]},
+	{"name": "The Garrison", "arrive": ["They come in pairs, covering.", "Somebody's still giving orders.", "Greatcoats, and the discipline to go with them."]},
+]
+
+## The traits: what the runner's like, said when they turn up.
+const TRAITS := {
+	"Lucky": "Found a twenty in a hedge once. Hasn't stopped looking since.",
+	"Heavy-handed": "Doesn't do anything gently. Doors, mostly.",
+	"Wary": "Sits facing the door. Every door.",
+	"Greedy": "Counts the take twice and the cuts once.",
+	"Tough": "Has been hit by worse. Says so.",
+	"Light": "Gone before you finish the sentence.",
+	"Careful": "Packs the kit the same way every time. Unpacks it the same way too.",
+	"Nosy": "Opens every drawer. Reads every letter.",
+}
+
+
 # ------------------------------------------------------------------ the people
 
 ## The Fence. `visit` lines rotate by how often you've been; the rest fire
@@ -55,15 +111,20 @@ const MEDIC := {
 ## What the runner was, before: a line each, and how they turn up at the Yard.
 const PASTS := {
 	"Poacher": {"was": "Kept the village in rabbits when the shops shut. Knows where everything hides.",
-		"arrives": "A poacher turns up at the Yard, rifle wrapped in a coat. Doesn't say where from."},
+		"arrives": "A poacher turns up at the Yard, rifle wrapped in a coat. Doesn't say where from.",
+		"wall": "Knew where everything hid. Not this."},
 	"Doorman": {"was": "Worked the door of a club that closed the week after. Still stands like it's open.",
-		"arrives": "A doorman turns up at the Yard. Big, polite, looks at your hands first."},
+		"arrives": "A doorman turns up at the Yard. Big, polite, looks at your hands first.",
+		"wall": "Stood in the doorway to the end. Nobody got past while he did."},
 	"Paramedic": {"was": "Stayed on the ambulances after the pay stopped. Left when the fuel did.",
-		"arrives": "A paramedic turns up at the Yard, still in the green. Asks where the kit is."},
+		"arrives": "A paramedic turns up at the Yard, still in the green. Asks where the kit is.",
+		"wall": "Stayed with the last one. Always did."},
 	"Scrapper": {"was": "Stripped the estate's own cars for copper. Knows what everything's worth, to the penny.",
-		"arrives": "A scrapper turns up at the Yard with a trolley. Prices the Lock-up before saying hello."},
+		"arrives": "A scrapper turns up at the Yard with a trolley. Prices the Lock-up before saying hello.",
+		"wall": "Knew what everything was worth. The Fence got the trolley."},
 	"Drifter": {"was": "Walked in from somewhere worse. Doesn't say where; doesn't plan to stay.",
-		"arrives": "A drifter turns up at the Yard. Light pack, good boots, already looking at the road."},
+		"arrives": "A drifter turns up at the Yard. Light pack, good boots, already looking at the road.",
+		"wall": "Kept walking. Not far enough."},
 }
 
 
@@ -216,6 +277,15 @@ const PAPERS := [
 	{"name": "A boarding pass", "value": 4, "words": "One way. The flight went; the ticket didn't."},
 	{"name": "A parking ticket", "value": 2, "words": "Issued the morning of. The car's still there."},
 	{"name": "A Christmas list", "value": 3, "words": "In a child's hand. Most of it's in the Retail Park."},
+	# the Outskirts' and the City's (12 Oct, the lore pass): found only at their own sites
+	{"name": "A seed order", "value": 2, "words": "Broad beans, onion sets, a dozen seed potatoes. Paid by cheque. Delivered after."},
+	{"name": "An allotment waiting list", "value": 2, "words": "Eleven years for a plot. Every name on it has one now."},
+	{"name": "A loyalty card", "value": 2, "words": "The garden centre's. Nine stamps of ten. The free coffee's still owed."},
+	{"name": "A milk quota letter", "value": 3, "words": "The dairy's last offer, per litre. Less than the water costs. The cows went first."},
+	{"name": "A delivery note", "value": 4, "words": "Forty bales, paper, on pallets. Signed for at the Services by someone who printed their name."},
+	{"name": "A drug chart", "value": 3, "words": "Bed nine, four-hourly. The last dose is signed for. Nobody's signed the page after."},
+	{"name": "A leave pass", "value": 3, "words": "Seventy-two hours, from the Monday. He went home. The barracks marked him absent anyway."},
+	{"name": "A requisition", "value": 4, "words": "For the vault: one safe, Chubb, to hold currency, used. Approved. Underlined twice."},
 	# the deep ones
 	{"name": "A ration book", "value": 4, "words": "Printed after. Someone tried to run it properly, for a while."},
 	{"name": "A council minute", "value": 4, "words": "The last meeting. Item nine, the lights. There's no item ten."},
@@ -230,6 +300,13 @@ const BOOK := {
 	"empty": "Nothing in the drawer yet. Papers come off the sites.",
 	"count": "%d of %d found",
 	"deep": "The rest are deeper than you've been.",
+	"gap": "Not found yet.",
+	"gap_site": "Not found yet: only at %s.",
+	"gap_deep": "Not found yet: from depth %d.",
+}
+## The radio's log in the Caravan (12 Oct).
+const HEARD := {
+	"empty": "Nothing heard yet. The radio comes on after a few runs home.",
 }
 ## The map at thirty-six (7 Oct).
 const MAP := {
@@ -745,4 +822,6 @@ static func toast_tone(line: String) -> String:
 		return ""
 	if line.begins_with("Dead in "):
 		return "bad"
+	if line.contains(", on the radio: "):
+		return ""                               # the radio's line (12 Oct): a plain toast
 	return "none"

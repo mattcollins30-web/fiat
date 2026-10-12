@@ -133,3 +133,8 @@ keep them. Lines for the gangs — they're words on a site, not characters,
 and the Run screen's Them panel is a fight, not a face. A win screen —
 the log and the deeds are the ending. Voice for the runner — they don't
 talk; the yard does.
+
+## The story underneath (12 Oct)
+
+The notes' thread, the radio's three voices, the opening, the drawer as a book, the gangs' names, the wall's lines
+and the traits: docs/design/lore.md.

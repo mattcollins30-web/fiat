@@ -19,6 +19,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Atlas := preload("res://scripts/ui/atlas.gd")
+const Words := preload("res://scripts/sim/words.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H         # the rooms' one band (10 Oct, Bands-U A): 84 → 180
@@ -41,6 +42,10 @@ const BOOK_Y := BODY_Y + DETAIL_H + 8
 const BOOK_H := Pal.ROOM_H - BOOK_Y
 const BOOK_COLS := 6
 const PIP_W := 14
+const HEARD_X := LIST_W + 40         # the last line heard: from past the band's words to its right edge
+const HEARD_Y := HEAD_H - 44
+var _heard: Label
+var _heard_pill: Panel
 const TIER_COLOURS := [Color("a9afb6"), Color("7fb2e5"), Color("e3a33b"), Color("b07be0")]
 const POOL_COLOURS := {"general": Color("a9afb6"), "zone": Color("7fb2e5"), "deep": Color("b07be0"), "start": Color("a9afb6"), "paper": Color("a9afb6")}
 
@@ -88,6 +93,10 @@ func _init() -> void:
 	_chips = Chips.new(Pal.BAND_TEXT_W, 6)                 # down the shaded left under the headline (Bands-U A)
 	_chips.position = Vector2(PAD, Pal.BAND_CHIPS_Y)
 	head.add_child(_chips)
+	# the last line heard on the air (12 Oct, the lore pass): at the band's foot, right, on a glass pill as Training's
+	_heard_pill = UI.panel(head, Rect2(0, HEARD_Y, 10, 28), UI.box(Color(0.06, 0.07, 0.08, 0.62), 10))
+	_heard_pill.visible = false
+	_heard = UI.label(head, Rect2(HEARD_X, HEARD_Y, Pal.GRID_W - PAD - HEARD_X, 28), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 	for i in range(Data.TIERS.size()):
 		var y: float = BODY_Y + i * (ROW_H + ROW_GAP)
 		var b := Button.new()
@@ -200,7 +209,7 @@ func show_state(s) -> void:
 		return
 	if selected < 0 or not sim.tier_open(selected):
 		selected = _first_site()
-	var sig := "%d|%s|%s|%s|%s|%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%s" % [selected, str(sim.words), str(sim.sealed), str(sim.depth), str(sim.best_depth), sim.notes, str(sim.book.size()), str(sim.atlas),
+	var sig := "%d|%s|%s|%s|%s|%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%s" % [selected, str(sim.words), str(sim.sealed), str(sim.depth), str(sim.best_depth), sim.notes, str(sim.book.size()) + "/" + str(sim.heard.size()), str(sim.atlas),
 		str(sim.standing), sim.filtered, str(sim.on_mission()), str(sim.yard_picks.get("radio", [])), int(sim.odds_now(selected) * 100.0) if selected >= 0 else 0,
 		sim.yard_rank("radio"), sim.sky_words(selected) if selected >= 0 else "", str(sim.odds_settled(selected)) if selected >= 0 else ""]
 	if sig == _shown:
@@ -221,10 +230,25 @@ func show_state(s) -> void:
 		{"tag": "Words known", "forms": ["%d of %d" % [known, Data.WORDS.size()]], "colour": Pal.TEXT_2},
 		{"forms": [sim.sky_words(selected) if selected >= 0 else "", ""], "colour": Pal.TEXT_3},
 		{"forms": ["words stay until you change them", "they stay"], "colour": Pal.TEXT_3}], 3)
+	_show_heard()
 	for i in range(_rows.size()):
 		_show_row(i)
 	_show_detail(on_air)
 	_show_book(on_air)
+
+
+## The last line the radio said, on its pill; nothing before the first.
+func _show_heard() -> void:
+	var line := ""
+	if not sim.heard.is_empty():
+		var r: Dictionary = sim.radio_line(str(sim.heard.back()))
+		line = "%s: %s" % [Words.RADIO_SHORT.get(r.get("voice", ""), ""), r.get("text", "")]
+	UI.fit(_heard, [line, line.get_slice(". ", 0) + ("." if line.contains(". ") else ""), ""] if line != "" else [""])
+	_heard_pill.visible = _heard.text != ""
+	if _heard_pill.visible:
+		var w: float = ceilf(UI.text_width(_heard, _heard.text)) + 24.0
+		_heard_pill.position.x = _heard.position.x + _heard.size.x + 12.0 - w
+		_heard_pill.size.x = w
 
 
 func _first_site() -> int:
@@ -458,7 +482,7 @@ func _reset_map() -> void:
 func text_nodes() -> Array:
 	if view == "map":
 		return _views + _atlas.text_nodes()
-	var out: Array = [_kicker, _headline, _unit, _title, _sub, _odds, _book_title, _book_note] + _views
+	var out: Array = [_kicker, _headline, _unit, _title, _sub, _odds, _book_title, _book_note, _heard] + _views
 	out.append_array(_chips.text_nodes())
 	for r in _rows:
 		if r["button"].visible:

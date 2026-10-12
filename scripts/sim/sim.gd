@@ -52,6 +52,7 @@ var past: Array = []               # the runners before this one: {class, level,
 var retired: Array = []            # the traits on the wall (36): a third of each stays with the Yard, newest last
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
+var heard: Array = []                # the radio's lines heard, in order (12 Oct, the lore pass): voice/index keys
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
 var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
@@ -147,6 +148,8 @@ func start() -> void:
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = roll_mate()
+	for line in Words.OPENING:
+		log_event(line)                       # the opening (12 Oct): said once, on a new camp
 	log_event(Words.YARD["set"])
 	_say_next()
 
@@ -1198,7 +1201,7 @@ func move_yard(trade := "") -> bool:
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true)}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
@@ -1245,6 +1248,7 @@ func move_yard(trade := "") -> bool:
 	operators_lost = keep["operators_lost"]
 	trades = keep["trades"]
 	book = keep["book"]
+	heard = keep["heard"]
 	shelf = keep["shelf"]
 	shelf_tier = keep["shelf_tier"]
 	tree = yard_tree
@@ -1840,7 +1844,7 @@ func choose_runner(k: int) -> bool:
 		return false
 	runner_trait = candidates[k]
 	candidates = []
-	log_event("The one who stays is %s. The other moved on." % Data.TRAIT_WORDS.get(runner_trait, runner_trait.to_lower()))
+	log_event("The one who stays is %s. The other moved on.%s" % [Data.TRAIT_WORDS.get(runner_trait, runner_trait.to_lower()), (" " + Words.TRAITS[runner_trait]) if Words.TRAITS.has(runner_trait) else ""])     # the trait's line (12 Oct): said of the one who stays
 	return true
 
 
@@ -4328,7 +4332,7 @@ func _tick(dt: float) -> void:
 			m["remaining"] += size
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
-			log_event("Another gang, %d of them" % size)
+			log_event(gang_line(m, size))
 			if auto_tier >= 0 or m.get("leave_full", false):
 				_extract()                  # auto-run, or "fill up then go", leaves as the gang arrives
 				return
@@ -5501,6 +5505,7 @@ func _extract() -> void:
 	}
 	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
 			_cash_words(m["cash"])])
+	_radio_after_run()
 	_chron_run(m, outcome, {"loot": stashed, "left": int(last_report["left"]), "cash": int(m["cash"]), "xp": int(m["xp"]),
 		"notes": run_notes, "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(), "hp_lost": int(m["hp_start"] - hp),
 		"wounded": bool(m.get("wounded", false)), "timed_out": bool(m.get("timed_out", false)), "way_out": bool(m.get("way_out", false)),
@@ -5594,6 +5599,8 @@ func _kia() -> void:
 	_chron_run(m, "Dead", {"lost_value": lost, "insured": bool(m.get("insured", false)), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
 		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
+	if Words.PASTS.has(cls) and not _dry_on:
+		log_event("On the Yard's list: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
 	runner_runs = 0
 	_record_reset()
 	if m.get("insured", false):
@@ -6558,6 +6565,58 @@ func snapshot() -> Dictionary:
 
 
 var events_total := 0              # every line ever logged, counted (the log keeps twenty)
+## A gang as it arrives (12 Oct, the lore pass): the zone's gang by name, how many, and a line of theirs, in turn.
+func gang_line(m: Dictionary, size: int) -> String:
+	var z: int = zone_of(int(m.get("tier", 0)))
+	if z < 0 or z >= Words.GANGS.size():
+		return "Another gang, %d of them" % size
+	var g: Dictionary = Words.GANGS[z]
+	return "%s, %d of them. %s" % [g["name"], size, Words.rotate(g["arrive"], int(m.get("patrols", 0)) + runs_total)]
+
+
+## The zone a site is in, or -1.
+func zone_of(tier_i: int) -> int:
+	for z in range(Data.ZONES.size()):
+		if tier_i in Data.ZONES[z]["tiers"]:
+			return z
+	return -1
+
+
+## The radio's next line (12 Oct, docs/design/lore.md): the first unheard one whose gate is open - a zone open, or
+## lorries beaten - or {} when there's none yet.
+func radio_next() -> Dictionary:
+	for k in range(Words.RADIO.size()):
+		var r: Dictionary = Words.RADIO[k]
+		var key := "%s/%d" % [r["voice"], k]
+		if key in heard:
+			continue
+		if r.has("zone") and not zone_open(int(r["zone"])):
+			continue
+		if r.has("lorries") and lorries < int(r["lorries"]):
+			continue
+		return {"key": key, "voice": r["voice"], "text": r["text"]}
+	return {}
+
+
+## A heard line by its key: the RADIO row, or {}.
+static func radio_line(key: String) -> Dictionary:
+	var k: int = int(key.get_slice("/", 1))
+	if k < 0 or k >= Words.RADIO.size():
+		return {}
+	return Words.RADIO[k]
+
+
+## Every RADIO_EVERY runs home the radio comes on: the next line, into the log and the Caravan's list.
+func _radio_after_run() -> void:
+	if _dry_on or runs_total % Data.RADIO_EVERY != 0:
+		return
+	var r := radio_next()
+	if r.is_empty():
+		return
+	heard.append(r["key"])
+	log_event("%s, on the radio: %s" % [Words.RADIO_SHORT[r["voice"]], r["text"]])
+
+
 func log_event(text: String) -> void:
 	events.append([Time.get_unix_time_from_system(), text])
 	events_total += 1
@@ -6678,7 +6737,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -6830,6 +6889,7 @@ func load_dict(d: Dictionary) -> void:
 	past = d.get("past", [])
 	loose_kit = Array(d.get("loose_kit", []))
 	book = Array(d.get("book", []))
+	heard = Array(d.get("heard", []))
 	shelf = Array(d.get("shelf", []))
 	shelf_tier = {}
 	for k in d.get("shelf_tier", {}):

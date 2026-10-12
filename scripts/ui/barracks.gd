@@ -17,6 +17,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Items := preload("res://scripts/sim/items.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
@@ -587,11 +588,21 @@ func also_names() -> Array:
 			out.append(t["name"])
 	out.append("The drawer")
 	out.append("The shelf")
+	out.append("The radio")
 	return out
 
 
 static func _is_pages(name: String) -> bool:
-	return name == "The drawer" or name == "The shelf"
+	return name == "The drawer" or name == "The shelf" or name == "The radio"
+
+
+## The pages over the lanes, by the Also chip's name.
+func _branch_for(name: String) -> Dictionary:
+	if name == "The drawer":
+		return _drawer_branch()
+	if name == "The radio":
+		return _radio_branch()
+	return _shelf_branch()
 
 
 # ------------------------------------------------------------------ showing
@@ -600,7 +611,7 @@ func show_state(s) -> void:
 	sim = s
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
-	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size(), drawer_page, sim.shelf.size(),
+	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
 		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier)]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
@@ -865,11 +876,12 @@ func _show_also() -> void:
 			words = "%s · %s" % [name, t["class"].to_lower()]
 		elif _is_pages(name):
 			# the drawer and the shelf carry their counts, and the page when one's open over the lanes
-			var found: int = sim.book.size() if name == "The drawer" else sim.shelf.size()
-			var total: int = sim.book_pages().size() if name == "The drawer" else Data.UNIQUES.size()
+			var br0: Dictionary = _branch_for(name)
+			var found: int = int(br0["found"])
+			var total: int = int(br0["total"])
 			words = "%s · %d of %d" % [name, found, total]
 			if alt == name:
-				var br: Dictionary = _drawer_branch() if name == "The drawer" else _shelf_branch()
+				var br: Dictionary = br0
 				if int(br["pages"]) > 1:
 					words += " · page %d of %d" % [int(br["page"]) + 1, int(br["pages"])]
 			short = "%s %d/%d" % [name.get_slice(" ", 1).capitalize(), found, total]
@@ -891,7 +903,7 @@ func _show_pages(on: bool) -> void:
 		for c in _cells:
 			c["button"].visible = false
 		return
-	var branch: Dictionary = _drawer_branch() if alt == "The drawer" else _shelf_branch()
+	var branch: Dictionary = _branch_for(alt)
 	var row_h: int = branch["row_h"]
 	var lines: int = branch["lines"]
 	var rows: int = branch["rows"]
@@ -918,9 +930,31 @@ func _show_pages(on: bool) -> void:
 		c["name"].add_theme_color_override("font_color", Pal.TEXT_3 if nd.get("gap", false) else Pal.TEXT)
 
 
-## The drawer: the papers found so far, in the order found, a page at a time.
+## The drawer: every paper in the story's order (12 Oct, the lore pass: read like a book), the found ones with their
+## words, the rest a gap that says where it's found; a page at a time.
 func _drawer_branch() -> Dictionary:
-	return _pages_branch("The drawer", sim.book, sim.book_pages().size(), Words.BOOK["empty"], func(name): return Words.item_words(name), 2)
+	var pages: Array = sim.book_pages()
+	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(name): return Words.item_words(name) if name in sim.book else _paper_gap(name), 2)
+	for nd in branch["nodes"]:
+		nd["gap"] = not (str(nd["name"]).substr(str(nd["name"]).find(" ") + 1) in sim.book)
+	branch["found"] = sim.book.size()
+	return branch
+
+
+## Where an unfound paper turns up: its one site, or the depth it's found from.
+func _paper_gap(name: String) -> String:
+	var site: String = Items.exclusive_to(name)
+	if site != "":
+		return Words.BOOK["gap_site"] % Words.mid(site)
+	var d: int = int(Items.base_named(Data.PAPER, name).get("depth", 0))
+	return Words.BOOK["gap_deep"] % d if d > 0 else Words.BOOK["gap"]
+
+
+## The radio (12 Oct, the lore pass): every line heard, in the order heard, under its voice.
+func _radio_branch() -> Dictionary:
+	return _pages_branch("The radio", sim.heard, Words.RADIO.size(), Words.HEARD["empty"],
+		func(key): return str(sim.radio_line(key).get("text", "")), 3,
+		func(key): return str(Words.RADIO_VOICES.get(sim.radio_line(key).get("voice", ""), "")))
 
 
 ## The shelf: the chase first (endgame part 3) - the nine sites' own, the heads' charms, the Lorry's Load, a
@@ -951,7 +985,7 @@ func _shelf_words(name: String) -> String:
 
 
 ## A page of a list: a card a name with `lines` of words under it, as many as the lanes' area takes.
-func _pages_branch(title: String, list: Array, total: int, empty: String, words: Callable, lines: int) -> Dictionary:
+func _pages_branch(title: String, list: Array, total: int, empty: String, words: Callable, lines: int, label := Callable()) -> Dictionary:
 	var row_h: int = NAME_H + lines * WORD_H + 4
 	var rows: int = maxi(1, (LANES_H + PAGE_GAP) / (row_h + PAGE_GAP))
 	var per: int = mini(PAGE_CELLS, rows * PAGE_COLS)
@@ -960,7 +994,7 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 	var nodes: Array = []
 	var start: int = page * per
 	for k in range(start, mini(list.size(), start + per)):
-		nodes.append({"name": "%d. %s" % [k + 1, list[k]], "words": str(words.call(list[k]))})
+		nodes.append({"name": "%d. %s" % [k + 1, (str(label.call(list[k])) if label.is_valid() else str(list[k]))], "words": str(words.call(list[k]))})
 	if nodes.is_empty():
 		nodes.append({"name": empty, "words": ""})
 	return {"name": title, "drawer": true, "nodes": nodes, "pages": pages, "page": page, "found": list.size(), "total": total, "lines": lines, "row_h": row_h, "rows": rows}

@@ -31,6 +31,7 @@ const AMMO := "Ammo"
 ## the Fence. Their words live in words.gd; the deeds are the one that matters.
 const PAPER := "Paper"
 const PAPER_DROP := 0.06           # the share of a site's finds that are papers
+const RADIO_EVERY := 3             # the radio comes on every this many runs home (12 Oct, the lore pass): the next line heard
 const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle rounds", "smg": "SMG rounds", "pistol": "Pistol rounds", "none": ""}
 
 ## An item's footprint in cells, W x H - what it takes in the stash and the
@@ -533,6 +534,15 @@ const BASES := {
 		{"name": "A boarding pass", "tier": 1, "value": 4},
 		{"name": "A parking ticket", "tier": 1, "value": 2},
 		{"name": "A Christmas list", "tier": 1, "value": 3},
+		# the Outskirts' and the City's (12 Oct, the lore pass): each in its site's "only" list
+		{"name": "A seed order", "tier": 1, "value": 2},
+		{"name": "An allotment waiting list", "tier": 1, "value": 2},
+		{"name": "A loyalty card", "tier": 1, "value": 2},
+		{"name": "A milk quota letter", "tier": 1, "value": 3},
+		{"name": "A delivery note", "tier": 1, "value": 4},
+		{"name": "A drug chart", "tier": 1, "value": 3},
+		{"name": "A leave pass", "tier": 1, "value": 3},
+		{"name": "A requisition", "tier": 1, "value": 4},
 		# the deep ones: only past these depths, so the whole book is a reason to go there
 		{"name": "A ration book", "tier": 1, "value": 4, "depth": 12},
 		{"name": "A council minute", "tier": 1, "value": 4, "depth": 18},
@@ -987,13 +997,13 @@ const TIERS := [
 	# the Outskirts (12 Oct): gentler than the Streets, no crew; finds at tier 1
 	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 120.0, "dps": 0.2, "drop": 0.35, "loot_tier": 1, "xp": 1, "cash": 3,
 		"shape": {"pool": 14, "hp": 0.6, "dps": 0.7, "patrol": 0.9, "cash": 0.7},
-		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Backpack": 2}, "type": "melee", "only": []}},
+		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Backpack": 2}, "type": "melee", "only": ["A seed order", "An allotment waiting list"]}},
 	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 150.0, "dps": 0.25, "drop": 0.4, "loot_tier": 1, "xp": 1, "cash": 4,
 		"shape": {"pool": 13, "hp": 0.7, "dps": 0.8, "patrol": 1.0, "cash": 0.9, "med": 1.5},
-		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "improvised", "only": []}},
+		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "improvised", "only": ["A loyalty card"]}},
 	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 170.0, "dps": 0.3, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 5,
 		"shape": {"pool": 12, "hp": 0.8, "dps": 0.8, "patrol": 1.1, "cash": 1.0, "ammo": 1.5},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "shotgun", "only": []}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "shotgun", "only": ["A milk quota letter"]}},
 	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 200.0, "dps": 0.4, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 6,
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
@@ -1014,13 +1024,13 @@ const TIERS := [
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
 	{"name": "The Services", "zone": 3, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 30, "cash": 40,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
-		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "smg", "only": ["Belt links", "Depot rounds", "Cargo frame"]}},
+		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},
 	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 36, "cash": 44,
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
-		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["Hospital kit", "Surgeon's kit", "Medic's harness"]}},
+		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
 	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 46, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["Section gun", "Issue plates", "Night optic"]}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Issue plates", "Night optic"]}},
 ]
 
 const BANK := 8                    # the tier whose vault holds the deeds

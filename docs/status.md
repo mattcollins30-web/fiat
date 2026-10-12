@@ -4086,3 +4086,15 @@ Scrapper) filling the gap's width, so heads and boots line up; the smoke reads a
 gap. Two smoke flakes, both test state left by earlier tests, not the game: *Equip if better* (another secondary in the
 stash could rightly beat the Van's Spare - the check now weighs the pistol against it alone) and *two sockets* (240
 re-rolls could spend the cash first - the check now has the cash, and reads the Yard's third socket). Smoke clean.
+
+**The lore pass (12 Oct; Matt: "just do it all"; docs/design/lore.md).** The notes as the spine: the crews hold the old
+money for an exchange at par, the lorry is the collection, the Mint never stopped, and the radio's last line is the
+decree ("Let it be done"). Built: the opening (three lines on a new camp); the radio (seventeen lines in three voices -
+the loop, Kev, the army net - gated by zone and lorries, one every three runs home, a toast, the last on a pill in the
+Radio's band, all of them on the Caravan's new Also page, The radio); the drawer as a book (every paper in the story's
+order, gaps saying where; eight new papers, each its site's own - twenty-eight pages); the gangs by name with a line as
+they arrive; a line on the Yard's list when a runner dies; a line for each trait, said of the one who stays. The
+reviewer's catches fixed: the trait's line was said before the pick; two radio lines ran past a two-line card (three
+now, and the smoke runs every line and every paper through the pages); the radio's chip is asserted on the row; "the
+wall" is the retired's, so the dead go on the Yard's list. Smoke clean in the cloud copy; on the Legion the one
+failure was the save check - Matt's game was open and autosaved mid-run.

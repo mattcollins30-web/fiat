@@ -1113,7 +1113,7 @@ func _campaign_checks(main) -> void:
 	for i in range(Data.TIERS.size()):
 		var site: Dictionary = Data.TIERS[i]
 		for k in range(300):
-			for slot in ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Medical", "Ammo", "Attachment"]:
+			for slot in ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Medical", "Ammo", "Attachment", Data.PAPER]:     # papers too (12 Oct)
 				var it := Items.roll(slot, Data.MAX_TIER, sim.rng, 0.0, false, false, site["name"], str(site["drops"].get("type", "")))
 				var home := Items.exclusive_to(it["base"])
 				if home != "":
@@ -2359,7 +2359,7 @@ func _element_checks(main) -> void:
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
 		bk.also_button(name).pressed.emit()
 		_check_fit(main, "Caravan (also: %s)" % name)
-		if name == "The drawer" or name == "The shelf":
+		if name == "The drawer" or name == "The shelf" or name == "The radio":
 			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
 		else:
 			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
@@ -4103,6 +4103,7 @@ func _move_checks(main) -> void:
 	_inflation_checks(main)
 	_recycle_checks(main)
 	_book_checks(main)
+	_lore_checks(main)
 	_places_checks(main)
 	_faces_checks(main)
 	_stack_checks(main)
@@ -4127,7 +4128,7 @@ func _book_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.book = []
 	var pages: Array = sim.book_pages()
-	_check(pages.size() == 20 and not pages.has("The deeds"), "the book has %d pages, not 20" % pages.size())
+	_check(pages.size() == 28 and not pages.has("The deeds"), "the book has %d pages, not 28" % pages.size())     # 20, and the Outskirts' and the City's eight (12 Oct)
 	# shallow rolls never turn up a deep paper; deep ones do
 	var deep_seen := false
 	for k in range(200):
@@ -4161,18 +4162,22 @@ func _book_checks(main) -> void:
 	_check(bk.also_names().has("The drawer") and bk.also_button("The drawer") != null, "the drawer is not in the Also row")
 	bk.pick_also("The drawer")
 	main.refresh()
-	_check(bk.also_button("The drawer").text.contains("2 of 20"), "the drawer's chip is off: %s" % bk.also_button("The drawer").text)
-	_check(bk._cells[0]["name"].text == "1. A P45" and bk._cells[1]["name"].text == "2. A betting slip" and not bk._cells[2]["button"].visible, "the drawer's cards are off: %s / %s" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text])
-	_check(bk._cells[0]["lines"][0].text != "", "the paper's words are not under its name")
+	_check(bk.also_button("The drawer").text.contains("2 of %d" % pages.size()), "the drawer's chip is off: %s" % bk.also_button("The drawer").text)
+	# the drawer reads in the story's order (12 Oct): every page, the found ones with their words, the rest a gap saying where
+	_check(bk._cells[0]["name"].text == "1. %s" % pages[0] and bk._cells[1]["name"].text == "2. A P45" and bk._cells[2]["name"].text == "3. A betting slip", "the drawer's cards are off: %s / %s / %s" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text, bk._cells[2]["name"].text])
+	_check(bk._cells[1]["lines"][0].text != "" and not bk._cells[1]["lines"][0].text.begins_with("Not found"), "the paper's words are not under its name")
+	_check(bk._cells[0]["lines"][0].text.begins_with("Not found yet") and bk._cells[0]["name"].get_theme_color("font_color") == Pal.TEXT_3, "a paper not found is not a gap: '%s'" % bk._cells[0]["lines"][0].text)
+	var seed_k: int = pages.find("A seed order")
+	_check(seed_k >= 0 and main._barracks._paper_gap("A seed order").contains("Allotments") and main._barracks._paper_gap("A ration book").contains("depth 12"), "a gap doesn't say where its paper is: '%s' / '%s'" % [main._barracks._paper_gap("A seed order"), main._barracks._paper_gap("A ration book")])
 	_check_fit(main, "Caravan (the drawer, two)")
 	for name in pages:
 		sim._read(sim._plain(Data.PAPER, name))
-	_check(sim.book.size() == 20, "the full book is not twenty")
+	_check(sim.book.size() == pages.size(), "the full book is not every page")
 	bk._shown = ""
 	main.refresh()
 	# a page holds what the lanes' area takes; twenty papers are that many pages
 	var per_page: int = bk._cells.filter(func(n): return n["button"].visible).size()
-	var n_pages: int = ceili(20.0 / per_page)
+	var n_pages: int = ceili(float(pages.size()) / per_page)
 	_check(per_page >= 3 and (n_pages == 1 or bk.also_button("The drawer").text.contains("page 1 of %d" % n_pages)), "a full drawer's pages are off: %s (%d a page)" % [bk.also_button("The drawer").text, per_page])
 	_check_fit(main, "Caravan (the drawer, full)")
 	bk._turn_page()
@@ -4184,7 +4189,7 @@ func _book_checks(main) -> void:
 	_check_fit(main, "Caravan (back from the drawer)")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
-	_check(sim.book.size() == 20, "the book did not save")
+	_check(sim.book.size() == pages.size(), "the book did not save")
 	# the shelf: the uniques found, the same way
 	sim.shelf = []
 	var u1: Dictionary = Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng)
@@ -10337,3 +10342,110 @@ func _line_pill_checks(bk, sum_r: Rect2) -> void:
 		_check(absf((bk._class_line.position.y + bk._class_line.size.y / 2.0) - (bk._notice.position.y + bk._notice.size.y / 2.0)) < 1.0, "a lone class line leaves a gap over the classes")
 	elif bk._notice.text != "" and bk._class_line.text != "":
 		_check(Rect2(bk._class_line.position, bk._class_line.size).end.y <= bk._notice.position.y + 2, "the class's line runs into the notice")
+
+
+## The lore pass (12 Oct, docs/design/lore.md): the opening once on a new camp, the radio's lines after every few runs
+## home in order and behind their gates, the gangs by name, the wall's line, the traits, the drawer's new papers at their
+## own sites, the Caravan's radio page and the Radio's last line on its pill.
+func _lore_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	# the opening: before "the Yard is set", once
+	var y = Sim.new()
+	y.start()
+	var said: Array = y.events.map(func(e): return str(e[1]))
+	var at_set: int = said.find(Words.YARD["set"])
+	_check(at_set >= Words.OPENING.size() and said.slice(at_set - Words.OPENING.size(), at_set) == Words.OPENING, "the opening is not said before the Yard is set: %s" % str(said))
+	# the radio: a line every RADIO_EVERY runs home, in order, the zone's and the lorries' gates holding
+	_check(y.radio_next().get("key", "") == "loop/0", "the radio's first line is not the loop's: %s" % str(y.radio_next()))
+	y.runs_total = Data.RADIO_EVERY
+	y._radio_after_run()
+	_check(y.heard == ["loop/0"] and str(y.events.back()[1]).begins_with(Words.RADIO_SHORT["loop"] + ", on the radio: "), "the radio didn't come on after %d runs: %s" % [Data.RADIO_EVERY, str(y.heard)])
+	_check(Words.toast_tone(str(y.events.back()[1])) == "", "the radio's line doesn't toast")
+	y.runs_total = Data.RADIO_EVERY + 1
+	y._radio_after_run()
+	_check(y.heard.size() == 1, "the radio came on off its beat")
+	y.runs_total = 2 * Data.RADIO_EVERY
+	y._radio_after_run()
+	y.runs_total = 3 * Data.RADIO_EVERY
+	y._radio_after_run()
+	_check(y.heard == ["loop/0", "loop/1"] and y.radio_next().is_empty(), "the Outskirts' radio is past its gate: %s, next %s" % [str(y.heard), str(y.radio_next())])
+	var last: Dictionary = Words.RADIO.back()
+	_check(last.has("lorries") and str(last["text"]).contains("Let it be done"), "the radio's story doesn't close on the decree")
+	for r in Words.RADIO:
+		_check(Words.RADIO_VOICES.has(r["voice"]) and Words.RADIO_SHORT.has(r["voice"]) and str(r["text"]).ends_with(".") and (r.has("zone") or r.has("lorries")), "a radio line is off: %s" % str(r))
+	# the gangs by name, the wall, the traits
+	for z in range(Data.ZONES.size()):
+		var tz: int = Data.ZONES[z]["tiers"][0]
+		var gl: String = y.gang_line({"tier": tz, "patrols": 1}, 3)
+		_check(z < Words.GANGS.size() and gl.begins_with(Words.GANGS[z]["name"] + ", 3 of them. "), "%s's gang line is off: '%s'" % [Data.ZONES[z]["name"], gl])
+	for cd in Data.CLASSES:
+		_check(Words.PASTS.has(cd["name"]) and str(Words.PASTS[cd["name"]].get("wall", "")).ends_with("."), "the %s has no line on the wall" % cd["name"])
+	for tr in Data.TRAITS:
+		_check(Words.TRAITS.has(tr["name"]) and str(Words.TRAITS[tr["name"]]).ends_with("."), "the %s trait has no line" % tr["name"])
+	# the new papers: each at its own site, with its words
+	for pair in [["A seed order", "The Allotments"], ["An allotment waiting list", "The Allotments"], ["A loyalty card", "The Garden Centre"], ["A milk quota letter", "Top Farm"],
+			["A delivery note", "The Services"], ["A drug chart", "The Hospital"], ["A leave pass", "The Barracks"], ["A requisition", "The Barracks"]]:
+		_check(Items.exclusive_to(pair[0]) == pair[1] and Words.item_words(pair[0]).ends_with("."), "%s is not %s's paper, or has no line" % pair)
+	# the Caravan's radio page, and the Radio's last line on its pill
+	sim.heard = ["loop/0", "kev/3"]
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	bk._shown = ""
+	main.refresh()
+	_check(bk.also_names().has("The radio"), "the radio's page is not in the Also row")
+	bk.pick_also("The radio")
+	main.refresh()
+	_check(bk._cells[0]["name"].text == "1. " + Words.RADIO_VOICES["loop"] and bk._cells[1]["name"].text == "2. " + Words.RADIO_VOICES["kev"] and bk._cells[1]["lines"][0].text != "", "the radio's page is off: '%s' / '%s'" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text])
+	var rb = bk.also_button("The radio")
+	_check(rb != null and rb.visible and rb.text.contains("2 of %d" % Words.RADIO.size()), "the radio's chip is off the Also row, or off: %s" % (rb.text if rb != null else "hidden"))
+	_check_fit(main, "Caravan (the radio)")
+	# every line the radio has, and every paper's words, fit their cards (the reviewer: two lines ran past two rows)
+	sim.heard = []
+	for k in range(Words.RADIO.size()):
+		sim.heard.append("%s/%d" % [Words.RADIO[k]["voice"], k])
+	bk._shown = ""
+	main.refresh()
+	var radio_pages: int = int(bk._radio_branch()["pages"])
+	for pg in range(radio_pages):
+		bk.drawer_page = pg
+		bk._shown = ""
+		main.refresh()
+		_check_fit(main, "Caravan (the radio, page %d)" % (pg + 1))
+		for c in bk._cells:
+			if c["button"].visible:
+				for l in c["lines"]:
+					if l.visible and l.text != "":
+						_check(not l.text.ends_with("…") and UI.text_width(l, l.text) <= l.size.x + 0.5, "a radio line runs past its card: '%s'" % l.text)
+	bk.drawer_page = 0
+	bk.pick_also("The radio")
+	var book_keep: Array = sim.book.duplicate()
+	sim.book = sim.book_pages().duplicate()
+	bk.pick_also("The drawer")
+	var drawer_pages: int = int(bk._drawer_branch()["pages"])
+	for pg in range(drawer_pages):
+		bk.drawer_page = pg
+		bk._shown = ""
+		main.refresh()
+		_check_fit(main, "Caravan (the drawer, page %d)" % (pg + 1))
+		for c in bk._cells:
+			if c["button"].visible:
+				for l in c["lines"]:
+					if l.visible and l.text != "":
+						_check(UI.text_width(l, l.text) <= l.size.x + 0.5, "a paper's words run past its card: '%s'" % l.text)
+	bk.drawer_page = 0
+	bk.pick_also("The drawer")
+	sim.book = book_keep
+	sim.heard = ["loop/0", "kev/3"]
+	main.show_room(main.COMMS)
+	main._radio._shown = ""
+	main.refresh()
+	_check(main._radio._heard.text.begins_with(Words.RADIO_SHORT["kev"] + ": ") and main._radio._heard_pill.visible, "the Radio doesn't show the last line heard: '%s'" % main._radio._heard.text)
+	var hp_r := Rect2(main._radio._heard_pill.position, main._radio._heard_pill.size)
+	_check(hp_r.position.x >= 0.0 and hp_r.end.x <= Pal.GRID_W and hp_r.end.y <= main._radio.HEAD_H, "the Radio's pill runs out of its band: %s" % str(hp_r))
+	_check_fit(main, "Radio (the last line heard)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("the lore ok: the opening, the radio's order and gates, the gangs, the wall, the traits, the new papers, the radio page and its pill")
