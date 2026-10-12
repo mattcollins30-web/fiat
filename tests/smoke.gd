@@ -2418,6 +2418,18 @@ func _element_checks(main) -> void:
 		var cr := Rect2(cb.position, cb.size)
 		_check(not cr.intersects(sum_r) and cr.end.y <= bk.HEAD_H - 8 and cr.end.y >= bk.HEAD_H - 24, "a class button is off the band's foot or on the sum: %s" % str(cr))
 	_check(not Rect2(bk._notice.position, bk._notice.size).intersects(sum_r), "the class notice sits on the sum")
+	# the lines over the classes (12 Oct): as the screen stands, with no past (two lines), and with a past and no trait (one)
+	_line_pill_checks(bk, sum_r)
+	var trait_was: String = sim.runner_trait
+	var cls_was: String = sim.cls
+	for st in [["", ""], [cls_was if cls_was != "" else "Poacher", ""]]:
+		sim.cls = st[0]
+		sim.runner_trait = st[1]
+		bk._show_head()
+		_line_pill_checks(bk, sum_r)
+	sim.cls = cls_was
+	sim.runner_trait = trait_was
+	bk._show_head()
 	# the sum strip (option A, 9 Oct): the elements in play in their colours, the dots, the joints last; no zeros
 	var sum_tags: Array = []
 	for k in range(bk._sum_chips.shown()):
@@ -4770,6 +4782,22 @@ func _playtest_checks(main) -> void:
 	_check((c["resist"].words(0) == "Nothing") == (not any_res), "the resist chips disagree with the site: '%s'" % c["resist"].words(0))
 	if any_res:
 		_check(c["resist"].words(0).contains("%"), "a resist chip has no figure: '%s'" % c["resist"].words(0))
+	# every resist shows: the row hides a chip that doesn't fit, so count them (12 Oct: the city showed 2 of 4) - each
+	# zone's first site, and the worst case: every element resisted at 70% (all five, past Kitted out)
+	var worst := {"res": {}}
+	for ty in Data.ELEMENTS:
+		worst["res"][ty] = 0.7
+	var res_cases := []
+	for z in range(Data.ZONES.size()):
+		res_cases.append(sim.effective(Data.ZONES[z]["tiers"][0]))
+	res_cases.append(worst)
+	for tz in res_cases:
+		var want: int = main._missions.show_resists(c["resist"], tz)
+		_check(c["resist"].shown() == want, "the resist chips drop one: %d of %d (%s)" % [c["resist"].shown(), want, str(tz.get("res", {}))])
+		var r1b := Rect2(bx[1].position, bx[1].size)
+		_check(r1b.encloses(Rect2(c["resist"].position, c["resist"].size)), "the resist chips run out of their box: %s" % str(tz.get("res", {})))
+	main._missions._shown = ""
+	main._missions.show_state(sim)                 # the card back to its own site
 	for k in range(c["intel"].shown()):
 		_check(c["intel"].tail(k) != "", "a word's effect is missing from its row: '%s'" % c["intel"].words(k))
 	_check(c["intel"].shown() == mini(main._missions.WORD_ROWS, sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])["intel"].size()), "the Runs card shows %d word rows" % c["intel"].shown())
@@ -10176,3 +10204,24 @@ func _card_frame_checks(main) -> void:
 	var Menu = load("res://scripts/ui/menu.gd")
 	_check(Menu._build_words() == "FIAT · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
 	print("card frames ok: the label over the card, one frame picked; the title's version")
+
+## The lines over the classes (12 Oct): each on a pill fitted to its words, in the band, clear of the classes and the
+## sum; a lone line sits where the notice would, just over the classes, not up a row with a gap under it.
+func _line_pill_checks(bk, sum_r: Rect2) -> void:
+	var lines: Array = [bk._class_line, bk._notice]
+	for k in range(2):
+		var l: Label = lines[k]
+		var pill: Panel = bk._line_pills[k]
+		_check(pill.visible == (l.text != ""), "a line's pill shows without its words, or its words without it: '%s'" % l.text)
+		if not pill.visible:
+			continue
+		var pr := Rect2(pill.position, pill.size)
+		var tw: float = UI.text_width(l, l.text)
+		var text_r := Rect2(l.position.x + l.size.x - tw, l.position.y + (l.size.y - Pal.CELL_TEXT_BIG) / 2.0, tw, Pal.CELL_TEXT_BIG)
+		_check(pr.encloses(text_r) and Rect2(0, 0, Pal.GRID_W, bk.HEAD_H).encloses(pr) and not pr.intersects(sum_r), "a line's pill does not hold its words in the band: %s" % str(pr))
+		for cb in bk._class_buttons:
+			_check(not pr.intersects(Rect2(cb.position, cb.size)), "a line's pill sits on a class: %s" % str(pr))
+	if bk._notice.text == "" and bk._class_line.text != "":
+		_check(absf((bk._class_line.position.y + bk._class_line.size.y / 2.0) - (bk._notice.position.y + bk._notice.size.y / 2.0)) < 1.0, "a lone class line leaves a gap over the classes")
+	elif bk._notice.text != "" and bk._class_line.text != "":
+		_check(Rect2(bk._class_line.position, bk._class_line.size).end.y <= bk._notice.position.y + 2, "the class's line runs into the notice")

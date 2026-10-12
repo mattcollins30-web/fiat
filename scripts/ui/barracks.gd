@@ -27,6 +27,13 @@ const FACE := Pal.BAND_FACE
 const CLASS_W := 164
 const CLASS_H := 40
 const CLASS_GAP := 8
+# the class's line and the notice over the classes, each on a glass pill so the art doesn't eat them (12 Oct); a lone
+# line drops to the notice's place, just over the classes, rather than leaving a gap under it
+const NOTICE_Y := HEAD_H - 16 - CLASS_H - 34
+const LINE_TOP_Y := HEAD_H - 16 - CLASS_H - 62
+const PILL_H := 28                 # a hairline between two pills, 4 px over the classes
+const PILL_PAD := 12
+const PILL_GLASS := Color(0.06, 0.07, 0.08, 0.62)
 # the lanes: five, a link strip between a class lane and its element, a gap between the pairs
 const LANES_Y := HEAD_H + 6
 const LANE_H := 100                                            # 104 → 100 (Bands-U A): the tiles keep 44, the pad 4
@@ -86,6 +93,7 @@ var _points: Label
 var _unit: Label
 var _class_line: Label
 var _notice: Label                 # under the classes: the trait's line, or the armed change's price
+var _line_pills: Array = []        # a glass pill a line, behind the class's line and the notice (12 Oct, Matt: option B, the text brighter)
 var _class_buttons: Array = []
 var _lanes: Array = []             # a slot each: {panel, bar, name, tag, gates, count, tiles: [{button, name, more, effect, id}], tree}
 var _links: Array = []             # two: {bar, chip, label}, under lanes 0 and 2
@@ -142,14 +150,18 @@ func _build_head() -> void:
 	_kicker = UI.label(head, Rect2(x0, 8, left_w, 24), "", "Regular", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_points = UI.label(head, Rect2(x0, 30, left_w, 40), "", "SemiBold", Pal.HEADLINE - 6, Pal.ACCENT)
 	_unit = UI.label(head, Rect2(x0, 34, left_w, 34), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_class_line = UI.label(head, Rect2(cx0, HEAD_H - 16 - CLASS_H - 62, Pal.GRID_W - PAD - cx0, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)     # over the classes, right
+	for k in range(2):
+		var pill := UI.panel(head, Rect2(0, 0, 10, PILL_H), UI.box(PILL_GLASS, 10))
+		pill.visible = false
+		_line_pills.append(pill)                  # made first, so the words sit on them
+	_class_line = UI.label(head, Rect2(cx0, LINE_TOP_Y, Pal.GRID_W - PAD - cx0, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)     # over the classes, right
 	for k in range(Data.CLASSES.size()):
 		var cb := UI.button(head, Rect2(cx0 + k * (CLASS_W + CLASS_GAP), HEAD_H - 16 - CLASS_H, CLASS_W, CLASS_H), false)
 		cb.text = Data.CLASSES[k]["name"]
 		cb.add_theme_font_size_override("font_size", 20)
 		cb.pressed.connect(_pick_class.bind(Data.CLASSES[k]["name"]))
 		_class_buttons.append(cb)
-	_notice = UI.label(head, Rect2(cx0, HEAD_H - 16 - CLASS_H - 34, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_notice = UI.label(head, Rect2(cx0, NOTICE_Y, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 
 static func _classes_x() -> float:
@@ -627,7 +639,7 @@ func _show_head() -> void:
 		cb.text = ("%s ✓" % name) if sim.cls == name else (("%s ?" % name) if _armed == name else name)
 		cb.disabled = sim.on_mission() or name == sim.cls2     # the second past's class is taken already
 		UI.style_button(cb, sim.cls == name or _armed == name)
-	_notice.add_theme_color_override("font_color", Pal.TEXT_2)
+	_notice.add_theme_color_override("font_color", Pal.TEXT)
 	if _armed != "":
 		var cost: int = sim.class_change_cost(_armed)
 		_notice.add_theme_color_override("font_color", Pal.ACCENT if sim.cash >= cost else Pal.BAD)
@@ -641,6 +653,24 @@ func _show_head() -> void:
 		UI.fit(_notice, ["%s: %s · one a runner" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]], td["name"]])
 	else:
 		_notice.text = ""
+	_lay_lines()
+
+
+## The class's line and the notice, bottom up: a lone line sits just over the classes, where the notice would; each
+## line that has words gets its pill, fitted to them.
+func _lay_lines() -> void:
+	_class_line.position.y = LINE_TOP_Y if _notice.text != "" else NOTICE_Y + (_notice.size.y - _class_line.size.y) / 2.0
+	var lines: Array[Label] = [_class_line, _notice]
+	for k in range(2):
+		var l: Label = lines[k]
+		var pill: Panel = _line_pills[k]
+		pill.visible = l.visible and l.text != ""
+		if not pill.visible:
+			continue
+		var w: float = ceilf(UI.text_width(l, l.text)) + 2 * PILL_PAD
+		var right: float = l.position.x + l.size.x + PILL_PAD
+		pill.position = Vector2(right - w, l.position.y + (l.size.y - PILL_H) / 2.0)
+		pill.size = Vector2(w, PILL_H)
 
 
 func _show_lane(k: int, t) -> void:
