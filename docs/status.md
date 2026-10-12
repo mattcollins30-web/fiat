@@ -4131,3 +4131,10 @@ else changed: 8 RED to 7. The Bank's band green (the element builds 0.5-0.9 h, f
 capstone later for Doorman bleed and physical and the frost Poacher (5.2-7.6 h). New reds: depth pace (fire and shock
 Drifter 0.3/h, fire Scrapper 0.2/h after hour 4) and the Scrapper as shock's scrap at 8.1 crafts a hour (cap 8). The
 plain floor narrowed to the plain Drifter alone (Services 6), from three builds. Still far from Matt's 21 minutes.
+
+**Parked for after the fire Drifter playtest - FIRST on the list (12 Oct, Matt).** The pick panel, from his Branch
+Pistol vs Van's Spare screenshot (the verdict is right: the Van's Spare fires its secondary at full, the Branch Pistol
+at a third above half HP): (1) `deltas_of` loops Data.AFFIXES, where damage_pct and speed_pct appear twice (gun rows
+and attachment rows), so "2% dmg" shows twice and pushes the deciding deltas (dmg <½HP, dmg 1st gang) off the line -
+dedupe by stat, plus a smoke assertion that no delta repeats; (2) a unique's rule isn't on its card - show the rule as a
+line under the chips (mockup first unless waived). Then the playtest read: the Clinic-paying bot and PUSH from his odds.
