@@ -528,9 +528,10 @@ static func set_named(name: String) -> Dictionary:
 ## A unique, rolled: its base, its fixed affixes, its name, its rule. With a range (12 Oct, docs/design/uniques.md) it
 ## comes at `tier` held inside its range (its own base's tier when none is given), on unique_body's base for that tier;
 ## a paper has no range and keeps its base.
+static var fixed_uniques := false     # the balance read's A/B switch (12 Oct): every unique on its own base, as before the tiers
 static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1, tier := -1) -> Dictionary:
 	var body := {"base": u["base"], "tier": int(base_named(u["slot"], u["base"]).get("tier", Data.CAMPAIGN_TIER)), "lift": 1.0}
-	if u.has("range"):
+	if u.has("range") and not fixed_uniques:
 		body = unique_body(u, unique_tier(u, tier if tier > 0 else int(body["tier"])))
 	var it := roll(u["slot"], int(body["tier"]), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its body's tier: a deep throwaway would set its level (10 Oct)
 	it["base"] = body["base"]

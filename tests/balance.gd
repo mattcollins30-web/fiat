@@ -19,6 +19,15 @@ const Bot := preload("res://tests/bot.gd")
 
 
 func _init() -> void:
+	# the A/B switches (12 Oct): docs/balance/ab.cfg (not .txt: balance.bat clears those), a word a line - "fixed_uniques" (every unique on its own base, as
+	# before the tiers), "no_lorry_mult" (the lorries beaten multiply nothing). No file, no switch.
+	var ab := FileAccess.open("res://docs/balance/ab.cfg", FileAccess.READ)
+	if ab != null:
+		var words := ab.get_as_text()
+		ab.close()
+		Items.fixed_uniques = words.contains("fixed_uniques")
+		Sim.lorry_mult_off = words.contains("no_lorry_mult")
+		print("A/B: %s" % words.strip_edges())
 	var hours := 8.0
 	var cls := "Doorman"
 	var every_run := 0

@@ -195,8 +195,9 @@ func paragon() -> int:
 
 
 ## The Yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
+static var lorry_mult_off := false   # the balance read's A/B switch (12 Oct): the lorries beaten multiply nothing
 func lorry_mult() -> float:
-	return pow(Data.LORRY_MULT, lorries)
+	return 1.0 if lorry_mult_off else pow(Data.LORRY_MULT, lorries)
 
 
 ## What grows without end: the paragon levels and the lorries, as one multiplier on damage and HP.

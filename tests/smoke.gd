@@ -3630,7 +3630,7 @@ func _pinnacle_checks(main) -> void:
 				charms += 1
 		sim.extract_now()
 	_check(charms == 0, "the Van Keys came from the Carpet Man under full strength")
-	# the convoy: the Services at convoy_depth() (8 on the first yard, a depth deeper a move)
+	# the convoy: the Services at convoy_depth() (CONVOY_DEPTH on the first yard, a depth deeper a move)
 	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH - 1)
 	_check(not sim.is_convoy(Data.CONVOY_TIER) and not sim.can_arm_boss(Data.CONVOY_TIER), "the convoy came before depth %d" % Data.CONVOY_DEPTH)
 	sim.set_depth(Data.CONVOY_TIER, Data.CONVOY_DEPTH)

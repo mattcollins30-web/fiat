@@ -1057,10 +1057,10 @@ const PINNACLE_DEPTH := [99, 12, 9, 6]  # by zone: level 14 on the head's own si
 const PINNACLE_HP := 2.0
 const PINNACLE_DPS := 1.0
 const PINNACLE_COST := 2
-const CONVOY_DEPTH := 8           # level 14 on the Services, plus the moves made (the sixteenth read: the end kit holds level 14, not 16)
-const CONVOY_HP := 0.25           # the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load (the probe, 7 Oct: at 35%/full fire a Poacher read 0.80 and a stronger Doorman 0.00 - the Poacher's first-of-the-gang bonus counts on every head; at 25%/0.75 both read 0.93-1.00)
+const CONVOY_DEPTH := 10          # 8 to 10 (12 Oct, the A/B reads: the element builds took the first lorry at 1.4-4.5 h against the 16 it was sized for): level 16 on the Services, plus the moves made. Before: level 14 (the sixteenth read: the end kit holds level 14, not 16)
+const CONVOY_HP := 0.4            # 0.25 to 0.4 (12 Oct, the same reads); the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load (the probe, 7 Oct: at 35%/full fire a Poacher read 0.80 and a stronger Doorman 0.00 - the Poacher's first-of-the-gang bonus counts on every head; at 25%/0.75 both read 0.93-1.00)
 const CONVOY_DPS := 0.75
-const LORRY_MULT := 1.25          # the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
+const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, the moves in 16 h fell from 9-20 to 1-9 - the ×1.25 outran a depth's ×1.14 and each leg came easier than the last); the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
 const PARAGON_PCT := 2.0          # past MAX_LEVEL: damage and HP +this% a paragon level, uncapped, on the same XP curve
 const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
 const ILVL_FROM := 15
@@ -1647,8 +1647,8 @@ const CLASSES := [
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP; healing past full is Guard",
 		"damage": 1.1, "heal": 1.5, "auto_med": true, "overheal": true},     # overheal (12 Oct, docs/design/shields.md)     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
-	{"name": "Scrapper", "words": "Searches 30% faster; +10% loot quantity",
-		"search": 0.7, "loot": 0.10},              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
+	{"name": "Scrapper", "words": "Searches 30% faster; +5% loot quantity",
+		"search": 0.7, "loot": 0.05},              # +10% to +5% (12 Oct: 8.9-9.1 crafts an hour against 8)              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+5% damage; one fewer on you at a time; +10% pace",
 		"damage": 1.05,     # +15% to +5% (Matt, 9 Oct, the twenty-eighth read: with its HP back, the fastest to the Bank at 0.6 h)
 		 "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
