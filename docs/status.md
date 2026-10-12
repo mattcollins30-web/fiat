@@ -4124,3 +4124,10 @@ and pace aren't counted twice. `compare` reads each way - damage, the piece's ow
 charm and rig - up on one and down on none is better, both is a trade. The pick panel leads with "N% survival". The
 bot's shop counts a charm's or rig's survival (`upgrade_gain`). Reviewer catches fixed: the front's key (bosses, words,
 atlas), an easy front's 1 HP floor that hid armour, the fight read once a kit, the smoke's regen sized to its fight.
+
+**The survival read (12 Oct, commit c9df501; docs/balance/summary_survival.md, 16 h).** Against the rush read, nothing
+else changed: 8 RED to 7. The Bank's band green (the element builds 0.5-0.9 h, from 0.5-1.5); the lorry far sooner
+(element builds 1.3-3.1 h, from 2.4-14.1 h) with more moves; the bot's wounds down (1-17% from 4-22%). Keystone and
+capstone later for Doorman bleed and physical and the frost Poacher (5.2-7.6 h). New reds: depth pace (fire and shock
+Drifter 0.3/h, fire Scrapper 0.2/h after hour 4) and the Scrapper as shock's scrap at 8.1 crafts a hour (cap 8). The
+plain floor narrowed to the plain Drifter alone (Services 6), from three builds. Still far from Matt's 21 minutes.
