@@ -2,7 +2,8 @@
   "_readme": [
     "FIAT PEOPLE - every portrait new (12 Oct, Matt: the Greenhorn faces don't sit right across the board). Fourteen 128 x 128 heads to art/people_new/<slug>.png: the Fence first with no style image, then everyone else in the Fence's new style (style_image res://art/people_new/fence.png) - the runners (doorman, drifter, poacher, paramedic, scrapper), the Clinic's medic, the four zones' gangs (gang_the_outskirts new), the three heads.",
     "Nothing in art/people is touched. Look them over, then move the keepers into art/people (or ask Claude to: the old ones go to art/people/greenhorn/).",
-    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_people_all_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force. If the Fence comes out wrong, redo it first: everyone else takes its style."
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_people_all_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <slug> ++ --force. If the Fence comes out wrong, redo it first: everyone else takes its style.",
+    "12 Oct: the eleven came back and are wired in (art/people; the Greenhorn faces in art/people/greenhorn, ignored by Godot). The three heads didn't run: ++ --only the_carpet_man (the_manager, the_quartermaster), styled from art/people/fence.png now; then move them over the old ones."
   ],
   "jobs": [
     {
@@ -24,7 +25,7 @@
       "no_background": false,
       "seed": 81001,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -41,7 +42,7 @@
       "no_background": false,
       "seed": 81002,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -58,7 +59,7 @@
       "no_background": false,
       "seed": 81003,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -75,7 +76,7 @@
       "no_background": false,
       "seed": 81004,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -92,7 +93,7 @@
       "no_background": false,
       "seed": 81005,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -109,7 +110,7 @@
       "no_background": false,
       "seed": 81006,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -126,7 +127,7 @@
       "no_background": false,
       "seed": 81007,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -143,7 +144,7 @@
       "no_background": false,
       "seed": 81008,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -160,7 +161,7 @@
       "no_background": false,
       "seed": 81009,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -177,7 +178,7 @@
       "no_background": false,
       "seed": 81010,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -194,7 +195,7 @@
       "no_background": false,
       "seed": 81011,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -211,7 +212,7 @@
       "no_background": false,
       "seed": 81012,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,
@@ -228,7 +229,7 @@
       "no_background": false,
       "seed": 81013,
       "single": true,
-      "style_image": "res://art/people_new/fence.png",
+      "style_image": "res://art/people/fence.png",
       "style_options": {
         "color_palette": true,
         "outline": true,

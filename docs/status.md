@@ -4072,3 +4072,10 @@ bank's band (0.7-1.7 h), the keystone/capstone hours (the physical Doorman), dep
 the two gates off play. The Shopping Centre was his wall: three runs, two cut and run, the death at level 13 (150
 dmg/s); the Bank not reached in 68 minutes. Next playtest: the fire Drifter (the bot's slowest; his 10 Oct fire Drifter
 reached the Bank in 47 minutes, a before-and-after).
+
+**The new portraits wired in (12 Oct).** Matt's run of tools/pixellab_people_all_manifest.json: eleven heads (the Fence,
+the medic, the five runners, the four gangs - the Outskirts' new) now in art/people; the Greenhorn faces moved to
+art/people/greenhorn (a .gdignore keeps them out of the build). The three heads didn't run; the manifest's style image
+now points at art/people/fence.png for them. Smoke: every zone has its gang's face and every class its own.
+**The figures to match**: tools/pixellab_bodies_manifest.json, the five art/body_<class>.png redrawn at 208 x 488 into
+art/body_new/, each from its class's new portrait (reference and style) in the old figure's pose (reference).

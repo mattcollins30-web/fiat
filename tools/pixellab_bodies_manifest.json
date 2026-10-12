@@ -1,0 +1,115 @@
+{
+  "_readme": [
+    "FIAT BODIES - the five runners' full figures redrawn to match the new portraits (12 Oct, Matt). 208 x 488 to art/body_new/body_<class>.png, transparent: each from its class's portrait (art/people/<class>.png, reference and style) in the old figure's pose and framing (art/body_<class>.png, reference). The brief: docs/design/runner_room.md, 'The figure'.",
+    "Nothing in art/ is overwritten. Look them over, then ask Claude to wire them in (the old ones go to art/body_greenhorn/).",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_bodies_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only body_<class> ++ --force).",
+    "The old figures were made at 208 x 488. If the endpoint refuses that size (or a 488-tall reference), run them at 104 x 244 (width/height in each job) and Claude scales them 2x whole when wiring them in."
+  ],
+  "jobs": [
+    {
+      "out": "art/body_new/body_doorman.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art full-length figure of the Doorman: a broad man in his thirties, shaved head, stubble, a nose broken twice; a black bomber jacket zipped over a black hoodie, an earpiece wire hanging loose at the collar, dark work trousers, black boots. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+      "width": 208,
+      "height": 488,
+      "no_background": true,
+      "seed": 82000,
+      "single": true,
+      "reference_images": [
+        "res://art/people/doorman.png",
+        "res://art/body_doorman.png"
+      ],
+      "style_image": "res://art/people/doorman.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/body_new/body_drifter.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art full-length figure of the Drifter: a lean young woman, windburnt cheeks; an olive-brown hooded parka with the hood up and the fur gone, a dark scarf at the neck, rucksack straps across the chest with no rucksack, worn dark trousers, scuffed walking boots. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+      "width": 208,
+      "height": 488,
+      "no_background": true,
+      "seed": 82001,
+      "single": true,
+      "reference_images": [
+        "res://art/people/drifter.png",
+        "res://art/body_drifter.png"
+      ],
+      "style_image": "res://art/people/drifter.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/body_new/body_poacher.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art full-length figure of the Poacher: a weathered man in his fifties, grey stubble, a flat cap pulled low; a waxed brown jacket over a knitted jumper, a rifle sling strap across the chest with no rifle, moleskin trousers, muddy leather boots. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+      "width": 208,
+      "height": 488,
+      "no_background": true,
+      "seed": 82002,
+      "single": true,
+      "reference_images": [
+        "res://art/people/poacher.png",
+        "res://art/body_poacher.png"
+      ],
+      "style_image": "res://art/people/poacher.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/body_new/body_paramedic.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art full-length figure of the Paramedic: a woman in her thirties with short dark cropped hair; what is left of the green paramedic uniform, the hi-vis gone grey, a radio clipped to the shoulder, a stethoscope round the neck, green uniform trousers with cargo pockets, black boots. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+      "width": 208,
+      "height": 488,
+      "no_background": true,
+      "seed": 82003,
+      "single": true,
+      "reference_images": [
+        "res://art/people/paramedic.png",
+        "res://art/body_paramedic.png"
+      ],
+      "style_image": "res://art/people/paramedic.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    },
+    {
+      "out": "art/body_new/body_scrapper.png",
+      "endpoint": "generate-image-v2",
+      "description": "A realistic painted pixel-art full-length figure of the Scrapper: a stocky man in his forties with a gap-toothed grin; a black beanie with welding goggles pushed up on it, a pencil behind his ear, oil-black dungaree overalls over a dark long-sleeved top, burn scars on the knuckles, heavy work boots. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+      "width": 208,
+      "height": 488,
+      "no_background": true,
+      "seed": 82004,
+      "single": true,
+      "reference_images": [
+        "res://art/people/scrapper.png",
+        "res://art/body_scrapper.png"
+      ],
+      "style_image": "res://art/people/scrapper.png",
+      "style_options": {
+        "color_palette": true,
+        "outline": true,
+        "detail": true,
+        "shading": true
+      }
+    }
+  ]
+}

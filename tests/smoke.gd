@@ -8598,6 +8598,11 @@ func _fill_up_checks(main) -> void:
 			zi = z
 	var head_out: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	_check(head_out or rn._fight_face["art"].visible == (People.portrait(rn.gang_face(zi)) != null), "the fight's face does not show the zone's gang where the art is")
+	# every zone has its gang's face and every class its own (12 Oct: the new portraits, the Outskirts' gang among them)
+	for z in range(Data.ZONES.size()):
+		_check(People.portrait(rn.gang_face(z)) != null, "no gang face for %s" % Data.ZONES[z]["name"])
+	for cd in Data.CLASSES:
+		_check(People.portrait(str(cd["name"])) != null, "no portrait for the %s" % cd["name"])
 	_check(not main._run._button2.visible, "the second button shows before the clear on a manual run")
 	m["remaining"] = 0
 	sim._clear(m, m["t"])
