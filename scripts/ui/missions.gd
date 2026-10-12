@@ -408,7 +408,9 @@ func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
 	for ty in Data.ELEMENTS:
 		var share: float = float(t.get("types", {}).get(ty, 0.0))
 		if share > 0.0:
-			chips.append(["%s %.0f%% · you resist %.0f%%" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0], "%s · res %.0f%%" % [ty.capitalize(), sim.resist(ty) * 100.0], ty])
+			var over: float = sim.over_cap(ty)
+			var ot: String = (" +%.0f" % over) if over >= 0.5 else ""     # over the cap (12 Oct)
+			chips.append(["%s %.0f%% · you resist %.0f%%%s" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0, ot], "%s · res %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
 	if chips.is_empty():
 		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
 	c["fire_label"].visible = is_open

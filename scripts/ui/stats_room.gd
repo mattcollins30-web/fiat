@@ -386,10 +386,12 @@ func _show_defence() -> void:
 		var ty: String = Data.ELEMENTS[k]
 		var v: float = sim.resist(ty) * 100.0
 		var naked: bool = fires.has(ty) and v < 0.5
-		_set_bar(c["res"][k], ty.capitalize(), v / 100.0, ("%.0f%% ●" % v) if naked else "%.0f%%" % v, Pal.tone_color(ty), Pal.BAD if naked else Pal.tone_color(ty))
+		var over: float = sim.over_cap(ty)
+		var vt: String = ("%.0f%% ●" % v) if naked else ("%.0f%% +%.0f" % [v, over] if over >= 0.5 else "%.0f%%" % v)     # over the cap (12 Oct): what's past it, as that element's damage
+		_set_bar(c["res"][k], ty.capitalize(), v / 100.0, vt, Pal.tone_color(ty), Pal.BAD if naked else Pal.tone_color(ty))
 		if fires.has(ty):
 			fired.append(ty)
-	c["note"].text = "The tick: the %d%% cap · ● none, where the sites hit with it" % int(Data.RESIST_CAP)
+	c["note"].text = "%d%% cap · +N past it is +N%% damage · ● none where sites hit" % int(Data.RESIST_CAP)
 	c["status"].text = (("Sites fire %s" % ", ".join(fired)) if fired.size() <= 3 else "Sites fire %d elements" % fired.size()) if not fired.is_empty() else "Nothing open fires an element"
 
 

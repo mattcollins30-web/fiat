@@ -1,4 +1,4 @@
-# Guard: overheal and shields (12 Oct, design - not built)
+# Guard: overheal and shields (12 Oct, built the same day; numbers in the pass)
 
 Matt, 12 Oct: an overheal for the Paramedic, and a version of it for the other classes, so that protection isn't
 only resist, armour and HP. **Design only. It's built before the next balance pass**, with over the cap
@@ -125,3 +125,7 @@ nothing new.
 3. Transfusion: repointed to Guard as above, or kept as armour with Guard beside it?
 4. Are the four classes' sources (Squared up, In the hide, Sheet metal, Breather) right for them?
 5. Should Guard last the run with no decay (my lean), or drain slowly?
+
+Matt, 12 Oct: agreed across the board - "Guard", the Paramedic's class line, Transfusion repointed, the four sources,
+no decay. Built; the Stats sheet's Guard row and the run screen's Guard-coloured numbers are left (the HP bar's band,
+the top bar's "+N" and "Guard gone" are in). What was built: docs/status.md, 12 Oct.

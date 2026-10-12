@@ -620,6 +620,9 @@ const SOCKET_WORDS := {"conv_fire_pct": "fire", "conv_frost_pct": "frost", "conv
 const TYPES := ["physical", "fire", "frost", "poison", "shock", "bleed"]
 const ELEMENTS := ["fire", "frost", "poison", "shock", "bleed"]
 const RESIST_CAP := 75.0
+const GUARD_SHARE := 0.25          # Guard (12 Oct, docs/design/shields.md): its cap, a share of max HP
+const OVER_CAP := 50.0             # over the cap (12 Oct, docs/design/over_the_cap.md): a resist past RESIST_CAP is +1% of that element's damage a point, to this many points
+const THICK_SKIN_FROM := 200.0     # Thick-skinned: armour past this, a tenth of it as physical
 const DOTS := {"fire": {"ratio": 0.5, "s": 4.0, "stacks": 1}, "poison": {"ratio": 0.8, "s": 8.0, "stacks": 5}, "bleed": {"ratio": 0.7, "s": 6.0, "stacks": 1}}
 const CHILL := 0.2                 # their fire, while chilled
 const FREEZE := 0.85               # Frozen solid: how much of their fire a chilled gang loses (not all: a sliver keeps the depth honest)
@@ -911,12 +914,18 @@ const AFFIXES := [
 	{"stat": "conv_poison_pct", "label": "of damage as poison", "short": "as poison", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_shock_pct", "label": "of damage as shock", "short": "as shock", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
 	{"stat": "conv_bleed_pct", "label": "of damage as bleed", "short": "as bleed", "min": 5, "max": 25, "slots": ["Primary", "Secondary"], "weight": 0.5},
-	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
-	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
-	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
-	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
-	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm"]},
-	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm"], "weight": 0.3},
+	{"stat": "fire_res", "label": "fire resist", "short": "fire res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "frost_res", "label": "frost resist", "short": "frost res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "poison_res", "label": "poison resist", "short": "poison res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "shock_res", "label": "shock resist", "short": "shock res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
+	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm", "Rig"], "weight": 0.3},
+	# -proofed (12 Oct, over the cap): an element's resist and its damage on one line, the stacker's line
+	{"stat": "fire_proofed", "label": "fire resist and fire damage", "short": "fire proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "frost_proofed", "label": "frost resist and frost damage", "short": "frost proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "poison_proofed", "label": "poison resist and poison damage", "short": "poison proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "shock_proofed", "label": "shock resist and shock damage", "short": "shock proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "bleed_proofed", "label": "bleed resist and bleed damage", "short": "bleed proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
 	{"stat": "dot_pct", "label": "burn, poison and bleed damage", "short": "dots", "min": 8, "max": 40, "slots": ["Primary", "Secondary", "Charm"], "weight": 0.6},
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
 	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
@@ -924,6 +933,10 @@ const AFFIXES := [
 	{"stat": "capacity", "label": "capacity", "short": "cap", "min": 1, "max": 6, "slots": ["Backpack"], "flat": true},
 	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 3, "max": 15, "slots": ["Primary", "Secondary", "Armour"]},
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
+	# Guard (12 Oct): anyone's, a little
+	{"stat": "overflow_pct", "label": "of its heal past full as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
+	{"stat": "guard_gang", "label": "max HP as Guard every gang", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
+	{"stat": "guard_pct", "label": "Guard holds more", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from
 	{"stat": "damage_low_pct", "label": "dmg under ½ HP", "short": "dmg <½HP", "min": 8, "max": 20, "slots": ["Primary", "Secondary"]},
@@ -1144,6 +1157,7 @@ const TREES := [
 		{"name": "Rat bait", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "poacher_poison", "words": "A share of every hit lands as poison and keeps working"},
 		{"name": "Night work", "col": 4, "row": 1, "effect": "night_work", "notable": true, "words": "Every site you run is Night: rarer finds, slower feet"},
 		{"name": "Dead quiet", "col": 5, "row": 0, "effect": "cap_dead_quiet", "capstone": true, "words": "Every gang is the size of the first: they never grow"},
+		{"name": "In the hide", "col": 5, "row": 1, "beside": true, "effect": "in_the_hide", "notable": true, "words": "The first of every gang down: Guard of 15% of your max HP"},     # Guard (12 Oct)
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
 		{"name": "Quick hands", "col": 0, "row": 0, "effect": "search_pct", "value": 15},
@@ -1185,6 +1199,7 @@ const TREES := [
 		{"name": "Through the lot", "col": 3, "row": 1, "effect": "melee_sweep", "type": "melee", "notable": true, "words": "A swing hits everyone on you"},
 		{"name": "Stand and fight", "col": 4, "row": 1, "effect": "stand", "notable": true, "words": "No leaving before the fight is won; the bonus for winning it is doubled"},
 		{"name": "Held", "col": 5, "row": 0, "effect": "cap_held", "capstone": true, "words": "No second of their fire takes more than a tenth of you"},
+		{"name": "Squared up", "col": 5, "row": 1, "beside": true, "effect": "squared_up", "notable": true, "words": "Every gang, as they arrive: Guard of 15% of your max HP"},     # Guard (12 Oct)
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
@@ -1212,7 +1227,8 @@ const TREES := [
 		{"name": "Discount", "col": 3, "row": 1, "effect": "treat_pct", "value": 20},
 		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "A share of every hit lands as frost and slows them"},
 		{"name": "Second shift", "col": 4, "row": 1, "effect": "second_shift", "notable": true, "words": "The first med used on a run isn't spent"},
-		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Healing past full becomes armour for the run, two HP to one"},
+		{"name": "Transfusion", "col": 5, "row": 0, "effect": "cap_transfusion", "capstone": true, "words": "Guard holds half your max HP, and a med fills it to the top"},     # Guard (12 Oct): was overflow as armour, two to one; the class does overflow now
+		{"name": "Overtime", "col": 5, "row": 1, "beside": true, "effect": "overtime", "notable": true, "words": "Guard holds 50% more; with Guard up, meds take half the time"},
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
@@ -1227,6 +1243,7 @@ const TREES := [
 		{"name": "Live wire", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "scrapper_shock", "words": "A share of every hit lands as shock"},
 		{"name": "Quiet hands", "col": 4, "row": 1, "effect": "quiet_hands", "notable": true, "words": "Every search finds two things, and kills drop nothing"},
 		{"name": "Jerry-rigged", "col": 5, "row": 0, "effect": "cap_jerry", "capstone": true, "words": "Something improvised hits half again as hard"},
+		{"name": "Sheet metal", "col": 5, "row": 1, "beside": true, "effect": "sheet_metal", "notable": true, "words": "Every cache searched: Guard of 6% of your max HP"},     # Guard (12 Oct)
 	]},
 	{"name": "Fencing", "class": "Scrapper", "nodes": [
 		{"name": "Haggling", "col": 0, "row": 0, "effect": "sell_pct", "value": 10},
@@ -1254,6 +1271,7 @@ const TREES := [
 		{"name": "Petrol bomb", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "drifter_fire", "words": "A share of every hit lands as fire and keeps burning"},
 		{"name": "Hit and run", "col": 4, "row": 1, "effect": "hit_and_run", "notable": true, "words": "Leaves as the first gang arrives, the loot kept; every kill pays 50% more"},
 		{"name": "Ghost", "col": 5, "row": 0, "effect": "cap_ghost", "capstone": true, "words": "The first gang never comes: a run starts at the search, and a full pack brought home is the clear"},
+		{"name": "Breather", "col": 5, "row": 1, "beside": true, "effect": "breather", "notable": true, "words": "While no one's on you, Guard comes back a tenth of its cap a second"},     # Guard (12 Oct)
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
 		{"name": "Lucky", "col": 0, "row": 0, "effect": "rarity", "value": 10},
@@ -1289,6 +1307,8 @@ const ELEMENT_TREES := [
 		{"name": "Scrapper's torch", "col": 3, "row": 1, "effect": "fire_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_fire", "words": "Improvised guns do 25% more fire"},
 		{"name": "On your hands", "col": 4, "row": 1, "effect": "fire_more", "notable": true, "words": "Fire does 40% more; every hit of it burns you for 2% of it"},
 		{"name": "Spread", "col": 5, "row": 0, "effect": "cap_spread", "capstone": true, "words": "The burn on one of them carries to the next"},
+		{"name": "Fireproof", "col": 5, "row": 1, "beside": true, "effect": "proof_fire", "value": 1, "also": {"fire_res": 20}, "notable": true,
+		 "words": "+20% fire resist; every 1% past the cap is +2% fire, not +1%"},     # over the cap (12 Oct)
 	]},
 	{"name": "The cold", "element": "frost", "nodes": [
 		{"name": "Antifreeze", "col": 0, "row": 0, "effect": "conv_frost_pct", "value": 30},
@@ -1303,6 +1323,8 @@ const ELEMENT_TREES := [
 		{"name": "Cold hands", "col": 4, "row": 1, "effect": "frost_more", "notable": true, "words": "Frost does 40% more; pace −15%"},
 		{"name": "Shatter", "col": 5, "row": 0, "effect": "cap_shatter", "capstone": true, "cost_less": 1,     # a point under (the twenty-eighth read: the frost Poacher's capstone 5.6 h against 5)
 		  "words": "A chilled target takes double from the physical"},
+		{"name": "Thermals", "col": 5, "row": 1, "beside": true, "effect": "proof_frost", "value": 1, "also": {"frost_res": 20}, "notable": true,
+		 "words": "+20% frost resist; every 1% past the cap is +2% frost, not +1%"},     # over the cap (12 Oct)
 	]},
 	{"name": "The rat man", "element": "poison", "nodes": [
 		{"name": "Under the sink", "col": 0, "row": 0, "effect": "conv_poison_pct", "value": 30},
@@ -1316,6 +1338,8 @@ const ELEMENT_TREES := [
 		{"name": "Paramedic's dose", "col": 3, "row": 1, "effect": "poison_pct", "value": 25, "class": "Paramedic", "notable": true, "joint": "paramedic_poison", "words": "+25% poison"},
 		{"name": "Rat's share", "col": 4, "row": 1, "effect": "poison_more", "notable": true, "words": "Poison does 40% more; loot quantity −20%"},
 		{"name": "Lingers", "col": 5, "row": 0, "effect": "cap_lingers", "capstone": true, "words": "The poison on one of them carries to the next"},
+		{"name": "Immune", "col": 5, "row": 1, "beside": true, "effect": "proof_poison", "value": 1, "also": {"poison_res": 20}, "notable": true,
+		 "words": "+20% poison resist; every 1% past the cap is +2% poison, not +1%"},     # over the cap (12 Oct)
 	]},
 	{"name": "Live", "element": "shock", "nodes": [
 		{"name": "Jump Leads", "col": 0, "row": 0, "effect": "conv_shock_pct", "value": 30},
@@ -1329,6 +1353,8 @@ const ELEMENT_TREES := [
 		{"name": "Scrapper's mains", "col": 3, "row": 1, "effect": "shock_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_shock", "words": "Improvised guns do 25% more shock"},
 		{"name": "Earthed", "col": 4, "row": 1, "effect": "shock_more", "notable": true, "words": "Shock does 40% more; armour −20%"},
 		{"name": "Arc", "col": 5, "row": 0, "effect": "cap_arc", "capstone": true, "words": "A shock holds as long as you fire"},
+		{"name": "Rubber soles", "col": 5, "row": 1, "beside": true, "effect": "proof_shock", "value": 1, "also": {"shock_res": 20}, "notable": true,
+		 "words": "+20% shock resist; every 1% past the cap is +2% shock, not +1%"},     # over the cap (12 Oct)
 	]},
 	{"name": "Blades", "element": "bleed", "nodes": [
 		{"name": "Stanley knife", "col": 0, "row": 0, "effect": "conv_bleed_pct", "value": 30},
@@ -1344,6 +1370,8 @@ const ELEMENT_TREES := [
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed does 40% more; your meds 30% slower"},
 		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 2,     # two under (its capstone 8.9 h, then 5.8, against 5)
 		 "words": "A bleed carries to the next, and bleeds half again as hard"},
+		{"name": "Scar tissue", "col": 5, "row": 1, "beside": true, "effect": "proof_bleed", "value": 1, "also": {"bleed_res": 20}, "notable": true,
+		 "words": "+20% bleed resist; every 1% past the cap is +2% bleed, not +1%"},     # over the cap (12 Oct)
 	]},
 	{"name": "Knuckles", "element": "physical", "nodes": [
 		{"name": "Bare hands", "col": 0, "row": 0, "effect": "physical_pct", "value": 10},
@@ -1357,6 +1385,8 @@ const ELEMENT_TREES := [
 		{"name": "Knuckle-duster", "col": 3, "row": 1, "effect": "physical_pct", "value": 20},
 		{"name": "Heavy", "col": 4, "row": 1, "effect": "physical_more", "notable": true, "words": "Physical does 40% more; pace −15%"},
 		{"name": "Flattened", "col": 5, "row": 0, "effect": "cap_flattened", "capstone": true, "words": "A kill with the plain staggers the next gang: they fire at half for two seconds"},
+		{"name": "Thick-skinned", "col": 5, "row": 1, "beside": true, "effect": "thick_skinned", "notable": true,
+		 "words": "Every 10 armour past 200 is +1% physical, to +50%"},     # over the cap's physical (12 Oct): armour is its resist
 	]},
 ]
 const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
@@ -1598,8 +1628,8 @@ const CLASSES := [
 		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
-	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP",
-		"damage": 1.1, "heal": 1.5, "auto_med": true},     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
+	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP; healing past full is Guard",
+		"damage": 1.1, "heal": 1.5, "auto_med": true, "overheal": true},     # overheal (12 Oct, docs/design/shields.md)     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
 	{"name": "Scrapper", "words": "Searches 30% faster; +10% loot quantity",
 		"search": 0.7, "loot": 0.10},              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+5% damage; one fewer on you at a time; +10% pace",
@@ -1649,8 +1679,8 @@ static func capstone_cost(t: Dictionary) -> int:
 	var total := 0
 	var half := 0                                      # a class's half counts once: one class trains one of them
 	for nd in t["nodes"]:
-		if nd.get("capstone", false):
-			continue
+		if nd.get("capstone", false) or nd.get("beside", false):
+			continue                                       # a node beside the capstone (12 Oct) is its peer, not behind it
 		var c := node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
 		if nd.has("class"):
 			half = maxi(half, c)
@@ -1756,6 +1786,7 @@ const WORDS := [
 	{"name": "Squaddies", "learn": "zone", "zone": 2, "bite": {"dps": 1.4}, "pay": {"xp": 1.6}},
 	{"name": "Checkpoints", "learn": "zone", "zone": 2, "bite": {"pace": 0.85, "hp": 1.2}, "pay": {"rarity": 0.4}},
 	{"name": "Kitted out", "learn": "zone", "zone": 2, "depth": 8, "bite": {"res": "all", "res_add": 0.25}, "pay": {"rarity": 0.5}},
+	{"name": "Water cannon", "learn": "zone", "zone": 2, "depth": 10, "bite": {"soaked": 0.3}, "pay": {"drop": 1.4}},     # over the cap (12 Oct): your resists down, so the overflow defends
 	{"name": "Rationed", "learn": "deep", "paper": "A ration book", "depth": 12, "bite": {"no_meds": true}, "pay": {"drop": 2.0}},
 	{"name": "Curfew", "learn": "deep", "paper": "A council minute", "depth": 18, "bite": {"pool": 2.0, "patrol": 0.75}, "pay": {"drop": 1.8, "cash": 1.8}},
 	{"name": "Last bus", "learn": "deep", "paper": "A bus timetable, amended", "depth": 24, "bite": {"clock_half": true}, "pay": {"rarity": 1.2}},

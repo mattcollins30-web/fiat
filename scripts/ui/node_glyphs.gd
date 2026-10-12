@@ -68,6 +68,9 @@ const OF_EFFECT := {
 	"never_there": "quiet", "quiet_feet": "quiet", "quiet_hands": "quiet", "cap_ghost": "quiet", "cap_dead_quiet": "quiet", "night_work": "quiet",
 	"double_tap": "first", "one_shot": "first", "overwatch": "first", "cap_poached": "first", "early_doors": "first",
 	"hit_and_run": "pace", "trapline": "clock", "second_shift": "clock", "cap_jerry": "wrench",
+	# beside the capstone (12 Oct): over the cap's by element, Guard's as armour
+	"proof_fire": "fire", "proof_frost": "frost", "proof_poison": "poison", "proof_shock": "shock", "proof_bleed": "bleed", "thick_skinned": "armour",
+	"overtime": "med", "squared_up": "armour", "in_the_hide": "armour", "sheet_metal": "armour", "breather": "armour",
 }
 
 

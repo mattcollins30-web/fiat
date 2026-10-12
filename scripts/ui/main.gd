@@ -773,7 +773,7 @@ func refresh() -> void:
 	for k in TOP_SALVAGE:
 		_top_labels[k].text = Fmt.num(int(sim.salvage.get(k, 0)))
 	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
-	_top_labels["hp"].text = "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]
+	_top_labels["hp"].text = ("%d / %d +%d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(sim.guard()))]) if sim.guard() >= 0.5 else "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]     # Guard (12 Oct)
 	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)

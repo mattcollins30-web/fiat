@@ -70,6 +70,24 @@ func _base_of_type(ty: String) -> String:
 
 ## A class change for a check that isn't about its price (9 Oct: a change costs the respec of the class
 ## trees): the price handed over first, so the cash after is what it was.
+## A tree's capstone by its index, and the nodes behind it (12 Oct: a node beside the capstone comes after it in the list).
+func _cap_idx(tree_name: String) -> int:
+	var nodes: Array = Data.tree_named(tree_name)["nodes"]
+	for k in range(nodes.size()):
+		if nodes[k].get("capstone", false):
+			return k
+	return nodes.size() - 1
+
+
+func _behind_cap(tree_name: String) -> Array:
+	var out: Array = []
+	var nodes: Array = Data.tree_named(tree_name)["nodes"]
+	for k in range(nodes.size()):
+		if not nodes[k].get("capstone", false) and not nodes[k].get("beside", false):
+			out.append(k)
+	return out
+
+
 func _set_cls(s, name: String) -> void:
 	var c: int = s.class_change_cost(name)
 	s.cash += c
@@ -2347,7 +2365,7 @@ func _element_checks(main) -> void:
 	var crowd_tree: Array = sim.tree.duplicate()
 	var crowd_trades: Array = sim.trades.duplicate()
 	for tn in ["The Yard", "Petrol", "The cold", "Live", "The rat man"]:
-		for i in range(Data.tree_named(tn)["nodes"].size() - 1):
+		for i in _behind_cap(tn):
 			if not sim.tree.has("%s/%d" % [tn, i]):
 				sim.tree.append("%s/%d" % [tn, i])
 	sim.trades = ["fire", "frost", "shock", "poison"]
@@ -2371,7 +2389,7 @@ func _element_checks(main) -> void:
 		var tt: Dictionary = Data.tree_named(tn)
 		if tt.is_empty():
 			continue
-		for i in range(tt["nodes"].size() - 1):
+		for i in _behind_cap(tn):
 			if not sim.tree.has("%s/%d" % [tn, i]):
 				sim.tree.append("%s/%d" % [tn, i])
 	for cd in Data.CLASSES:
@@ -2395,7 +2413,8 @@ func _element_checks(main) -> void:
 	# a node alone in its column (the capstone, most trees) spans both rows
 	var cap_tile: Button = bk.tile_for("The door/10")
 	var lane_mid: float = bk.lane_y(2) + bk.LANE_H / 2.0
-	_check(cap_tile != null and is_equal_approx(cap_tile.rotation_degrees, 45.0) and absf(cap_tile.position.y + cap_tile.size.y / 2.0 - lane_mid) < 1.0, "the capstone's diamond is not centred on its lane")
+	var cap_mid: float = cap_tile.position.y + cap_tile.size.y / 2.0 if cap_tile != null else -1.0
+	_check(cap_tile != null and is_equal_approx(cap_tile.rotation_degrees, 45.0) and cap_mid > lane_mid - bk.LANE_H / 2.0 and cap_mid < lane_mid + bk.LANE_H / 2.0, "the capstone's diamond is not on its lane")     # The door has a node beside it now (12 Oct): its own row, not the lane's middle
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
 	for b in Data.TREES:
@@ -2438,14 +2457,15 @@ func _capstone_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	# every tree carries one, last, wide on the Caravan, and its cost is a third of the tree rounded up
 	for b in Data.TREES + Data.ELEMENT_TREES:
-		var last: Dictionary = b["nodes"].back()
+		var behind: Array = b["nodes"].filter(func(n): return not n.get("beside", false))     # a node beside the capstone (12 Oct) comes after it
+		var last: Dictionary = behind.back()
 		_check(last.get("capstone", false) and last.has("words") and last["effect"].begins_with("cap_"), "%s has no capstone at its end" % b["name"])
 		_check(b["nodes"].filter(func(n): return n.get("capstone", false)).size() == 1, "%s has more than one capstone" % b["name"])
 		# a quarter of the rest of the tree, rounded up; the two classes' halves in an element tree count once
 		var others := 0
 		var half := 0
-		for i in range(b["nodes"].size() - 1):
-			var nd: Dictionary = b["nodes"][i]
+		for i in range(behind.size() - 1):
+			var nd: Dictionary = behind[i]
 			var c: int = Data.node_cost(int(nd["col"]), nd.get("notable", false), nd.get("keystone", false))
 			if nd.has("class"):
 				half = maxi(half, c)
@@ -2510,7 +2530,7 @@ func _capstone_checks(main) -> void:
 	_check_fit(main, "Run (capstone)")
 	sim.extract_now()
 	# Dead quiet: every gang the size of the first; Ghost: a run starts at the search and a full pack brought home is the clear
-	sim.tree.append("Stalking/%d" % (Data.tree_named("Stalking")["nodes"].size() - 1))
+	sim.tree.append("Stalking/%d" % _cap_idx("Stalking"))
 	sim.deploy(0)
 	m = sim.mission
 	m["remaining"] = 0
@@ -2522,7 +2542,7 @@ func _capstone_checks(main) -> void:
 	sim.extract_now()
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Stalking/"))
 	_set_cls(sim, "Drifter")
-	sim.tree.append("Moving on/%d" % (Data.tree_named("Moving on")["nodes"].size() - 1))
+	sim.tree.append("Moving on/%d" % _cap_idx("Moving on"))
 	var best_before: int = sim.best_tier
 	sim.deploy(0)
 	m = sim.mission
@@ -2541,7 +2561,7 @@ func _capstone_checks(main) -> void:
 	_check(sim.best_tier == 1 and sim.best_depth[0] >= 1, "a Ghost run brought home full did not clear the site (best tier %d)" % sim.best_tier)
 	sim.load_dict(saved)
 	# Held: no second takes more than a tenth of you, their shots and what they left on you together
-	sim.tree.append("The door/%d" % (Data.tree_named("The door")["nodes"].size() - 1))
+	sim.tree.append("The door/%d" % _cap_idx("The door"))
 	var deep: int = sim.best_tier if sim.tier_open(sim.best_tier) else 0     # the deepest open (a flake: best_tier can name a tier whose zone isn't open)
 	sim.deploy(deep)
 	m = sim.mission
@@ -2903,7 +2923,173 @@ func _unique_rules_checks(main) -> void:
 	sim.load_dict(saved)
 	print("the uniques ok: all roll with words, the depth gates, the mate's deep stock, twenty-one rules")
 	_unique_tier_checks(main)
+	_over_cap_checks(main)
+	_guard_checks(main)
 	_set_checks(main)
+
+
+## Over the cap (12 Oct, docs/design/over_the_cap.md): a resist past 75 is its element's damage, a point a point, to
+## 50; all resists count; physical never; the Water cannon soaks it; the new lines roll where they should.
+func _over_cap_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	var inc0: float = sim.increased("fire")
+	var coat: Dictionary = sim._plain("Armour", "Stab vest")
+	coat["affixes"] = [{"stat": "fire_res", "value": 60}]
+	var hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	hat["affixes"] = [{"stat": "fire_res", "value": 50}]
+	sim.equipped["Armour"] = coat
+	sim.equipped["Helmet"] = hat
+	_check(is_equal_approx(sim.resist("fire"), 0.75) and is_equal_approx(sim.resist_raw("fire"), 110.0) and is_equal_approx(sim.over_cap("fire"), 35.0), "110 fire resist is not 75%% and 35 over: %.2f / %.0f" % [sim.resist("fire"), sim.over_cap("fire")])
+	_check(is_equal_approx(sim.increased("fire") - inc0, 35.0), "35 over the cap is not +35%% fire: +%.0f" % (sim.increased("fire") - inc0))
+	hat["affixes"] = [{"stat": "fire_res", "value": 200}]
+	_check(is_equal_approx(sim.over_cap("fire"), Data.OVER_CAP), "over the cap is not held at %d" % int(Data.OVER_CAP))
+	hat["affixes"] = [{"stat": "all_res", "value": 80}]
+	coat["affixes"] = []
+	_check(is_equal_approx(sim.over_cap("frost"), 5.0) and is_equal_approx(sim.over_cap("poison"), 5.0) and sim.over_cap("physical") == 0.0, "all resists did not go over the cap on each, or physical did")
+	hat["affixes"] = [{"stat": "fire_proofed", "value": 20}]
+	_check(is_equal_approx(sim.resist("fire"), 0.2) and is_equal_approx(sim.increased("fire") - inc0, 20.0), "the -proofed line is not resist and damage")
+	# the Water cannon: a run's resists down
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("A Blue Plaque"), sim.rng)
+	coat["affixes"] = [{"stat": "fire_res", "value": 100}]
+	_check(sim.over_cap("fire") == 0.0, "the Blue Plaque went over the cap")
+	sim.equipped["Charm"] = null
+	coat["affixes"] = []
+	hat["affixes"] = [{"stat": "fire_res", "value": 100}]
+	sim.hp = sim.max_hp()
+	sim.words[0] = []
+	sim.deploy(0)
+	_check(sim.mission != null, "the over-the-cap run did not set off")
+	if sim.mission == null:
+		sim.load_dict(saved)
+		return
+	sim.mission["t"]["soaked"] = 0.3
+	sim._dry_memo.clear()                 # the run's memo read the resists at the gate
+	_check(is_equal_approx(sim.resist_raw("fire"), 70.0) and is_equal_approx(sim.resist("fire"), 0.7) and sim.over_cap("fire") == 0.0, "soaked did not take 30 off: %.0f" % sim.resist_raw("fire"))
+	sim.extract_now()
+	_check(sim.word_words("Water cannon", 1)[0].contains("your resists"), "the Water cannon's bite has no words: %s" % str(sim.word_words("Water cannon", 1)))
+	# where the lines roll
+	var on := func(slot: String, stat: String) -> bool: return Items.allowed_affixes(slot).any(func(a): return a["stat"] == stat)
+	_check(on.call("Rig", "fire_res") and on.call("Rig", "all_res") and on.call("Armour", "fire_proofed") and on.call("Helmet", "bleed_proofed") and not on.call("Charm", "fire_proofed") and not on.call("Primary", "fire_proofed"), "the resists or the -proofed lines roll in the wrong slots")
+	# every element tree's notable over the cap, and Knuckles' armour one
+	for et in Data.ELEMENT_TREES:
+		var want: String = "thick_skinned" if et["element"] == "physical" else "proof_" + str(et["element"])
+		_check(et["nodes"].any(func(n): return n["effect"] == want and int(n["col"]) == 5 and int(n["row"]) == 1), "%s has no over-the-cap node" % et["name"])
+	sim.load_dict(saved)
+	print("over the cap ok: 110 is 75 and +35, held at 50, all resists, never physical, -proofed, soaked, the lines' slots, the six nodes")
+
+
+## Guard (12 Oct, docs/design/shields.md): their fire comes off Guard first; the cap; the Paramedic's overheal and a
+## med's overflow; each class's node at its moment; Transfusion fills it; gone at the extract.
+func _guard_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
+	_set_cls(sim, "Doorman")
+	sim.respec()
+	sim.words[0] = []
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	_check(sim.guard() == 0.0 and is_equal_approx(sim.guard_cap(), sim.max_hp() * Data.GUARD_SHARE), "a bare Doorman starts with Guard, or its cap is off: %.0f of %.0f" % [sim.guard(), sim.guard_cap()])
+	sim._guard_add(m, 1000000.0)
+	_check(is_equal_approx(sim.guard(), sim.guard_cap()), "Guard went past its cap")
+	m["guard"] = 50.0
+	var hp0: float = sim.hp
+	sim._take(m, 10.0)
+	_check(is_equal_approx(sim.guard(), 40.0) and is_equal_approx(sim.hp, hp0), "Guard did not take the hit first")
+	sim._take(m, 100.0)
+	_check(sim.guard() == 0.0 and is_equal_approx(sim.hp, hp0 - 60.0), "what Guard couldn't take did not come off HP: %.0f" % (hp0 - sim.hp))
+	sim.hp = sim.max_hp()
+	sim._heal(m, 30.0)
+	_check(sim.guard() == 0.0, "a Doorman's overflow became Guard")
+	sim._heal(m, 30.0, true, 0.5)
+	_check(is_equal_approx(sim.guard(), 15.0), "a med's overflow line did not make Guard: %.0f" % sim.guard())
+	# the class nodes, at their moments
+	var node_id := func(tree_name: String, effect: String) -> String:
+		for t in Data.TREES:
+			if t["name"] == tree_name:
+				for k in range(t["nodes"].size()):
+					if t["nodes"][k]["effect"] == effect:
+						return "%s/%d" % [tree_name, k]
+		return ""
+	m["guard"] = 0.0
+	sim.tree.append(node_id.call("The door", "squared_up"))
+	_check(sim.has_node("squared_up"), "Squared up did not take")
+	sim._gang_arrives(m)
+	_check(is_equal_approx(sim.guard(), sim.max_hp() * 0.15), "Squared up gave %.0f, not 15%% of max HP" % sim.guard())
+	m["guard"] = 0.0
+	var coat: Dictionary = sim._plain("Armour", "Stab vest")
+	coat["affixes"] = [{"stat": "guard_gang", "value": 8}]
+	sim.equipped["Armour"] = coat
+	sim._gang_arrives(m)
+	_check(is_equal_approx(sim.guard(), sim.max_hp() * 0.23), "Squared up and the guard line did not add: %.0f" % sim.guard())
+	sim.extract_now()
+	sim.equipped["Armour"] = null
+	sim.tree.erase(node_id.call("The door", "squared_up"))
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.mission != null and sim.guard() == 0.0, "the next run started with Guard")
+	if sim.mission != null:
+		sim.extract_now()
+	# the other three classes' nodes at their moments, through the run's own code
+	for cd in [["Poacher", "Stalking", "in_the_hide"], ["Scrapper", "Stripping", "sheet_metal"], ["Drifter", "Moving on", "breather"]]:
+		_set_cls(sim, cd[0])
+		sim.tree.append(node_id.call(cd[1], cd[2]))
+		_check(sim.has_node(cd[2]), "%s did not take" % cd[2])
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		if sim.mission == null:
+			_check(false, "the %s run did not set off" % cd[2])
+			continue
+		m = sim.mission
+		m["guard"] = 0.0
+		match cd[2]:
+			"in_the_hide":
+				m["fresh"] = true
+				m["remaining"] = 3
+				m["target_hp"] = -1.0
+			_:
+				m["remaining"] = 0
+				m["target_hp"] = 0.0
+				m["cleared"] = true
+				m["search"] = sim.search_s(m["t"])
+		sim.advance(0.05)
+		_check(sim.guard() > 0.0, "%s gave no Guard at its moment" % cd[2])
+		sim.extract_now()
+		sim.tree.erase(node_id.call(cd[1], cd[2]))
+	sim.load_dict(saved)
+	saved = sim.to_dict()
+	_set_cls(sim, "Paramedic")
+	sim.respec()
+	sim.words[0] = []
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	m = sim.mission
+	m["guard"] = 0.0
+	var half: float = sim.guard_cap() * 0.5
+	sim._heal(m, half)
+	_check(is_equal_approx(sim.guard(), half), "the Paramedic's overheal did not make Guard: %.0f of %.0f" % [sim.guard(), half])
+	sim.tree.append(node_id.call("Shifts", "overtime"))
+	_check(is_equal_approx(sim.guard_cap(), sim.max_hp() * Data.GUARD_SHARE * 1.5), "Overtime did not grow Guard's cap by half")
+	sim.tree.erase(node_id.call("Shifts", "overtime"))
+	sim.tree.append(node_id.call("Shifts", "cap_transfusion"))
+	_check(sim.has_node("cap_transfusion") and is_equal_approx(sim.guard_cap(), sim.max_hp() * Data.GUARD_SHARE * 2.0), "Transfusion did not double Guard's cap")
+	m["using"] = {"name": "Bandage", "left": 0.0, "heal": 5.0}
+	sim._patch(m, 0.1)
+	_check(is_equal_approx(sim.guard(), sim.guard_cap()), "Transfusion's med did not fill Guard to the top: %.0f of %.0f" % [sim.guard(), sim.guard_cap()])
+	sim.extract_now()
+	sim.load_dict(saved)
+	print("Guard ok: first off Guard, the cap, overheal and a med's overflow, Squared up, Transfusion's cap, gone at the extract")
 
 
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but the paper has a band and a range; it rolls held
@@ -4935,7 +5121,13 @@ func _damage_model_checks(main) -> void:
 	var armour: Dictionary = sim._plain("Armour", "Stab vest")
 	armour["affixes"] = [{"stat": "fire_res", "value": 40, "tier": 5}, {"stat": "all_res", "value": 10, "tier": 3}]
 	sim.equipped["Armour"] = armour
+	var res_hold := {}
+	for s in ["Helmet", "Rig", "Charm"]:
+		res_hold[s] = sim.equipped[s]
+		sim.equipped[s] = null              # a rig rolls resists too now (12 Oct): only the coat's count here
 	_check(is_equal_approx(sim.resist("fire"), 0.5) and is_equal_approx(sim.resist("shock"), 0.1) and is_equal_approx(sim.resist("physical"), 0.0), "resists do not add: fire %.2f shock %.2f" % [sim.resist("fire"), sim.resist("shock")])
+	for s in res_hold:
+		sim.equipped[s] = res_hold[s]
 	armour["affixes"].append({"stat": "fire_res", "value": 90, "tier": 5})
 	_check(is_equal_approx(sim.resist("fire"), Data.RESIST_CAP / 100.0), "the resist cap did not hold: %.2f" % sim.resist("fire"))
 	var mit: float = sim.mitigation()

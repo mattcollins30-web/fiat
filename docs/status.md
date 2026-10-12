@@ -2975,7 +2975,33 @@ takes the armour anyway: the Ceramic plates to the Light plates, never the heavy
 blade that bleeds a quarter or more (the Bayonet, the Rescue axe, lifted between and past). *The Plumber's Belt*: a
 burn, a poison or a bleed on them builds twice as deep and drains at the same seconds (`dot_depth`), so it ticks twice
 as hard and a quick kill loses nothing; chills and shocks still last twice as long. Its words say so. Left: a city
-site at depth 2-5 drops no loose unique (it dropped only the four outgrown ungated ones before) - the pass's to read. For the pass (not fixed, numbers or
+site at depth 2-5 drops no loose unique (it dropped only the four outgrown ungated ones before) - the pass's to read.
+
+**Over the cap and Guard, built (12 Oct, Matt: "agreed across the board"; docs/design/over_the_cap.md, shields.md).**
+*Over the cap*: `resist_raw` is a resist before the cap (less a Water cannon's soak on the run), `resist` caps it at
+75, `over_cap` is what's past it to 50, and every point is +1% of that element in `increased` - everyone's. A notable
+beside each element tree's capstone (Fireproof, Thermals, Immune, Rubber soles, Scar tissue: +20 resist, the point
+counts twice); Knuckles' Thick-skinned (armour past 200, a tenth of it as physical, to +50%). The resists roll on the
+rig too; a "-proofed" line a element (its resist and its damage, 5-20) on armour and helmets. The word "Water cannon"
+(the city's, from depth 10): your resists down for the run. The Blue Plaque never goes over. The Stats sheet's resist
+rows and the Runs card's chips say "+N" past the cap. *Guard*: a second bar over HP, their fire and what they left on
+you off it first (`_take`), its cap a quarter of max HP; it lasts the run. The Paramedic's class line: healing past
+full is Guard. Transfusion: Guard holds half your max HP and a med fills it (its overflow-as-armour went). Beside the
+capstone: Overtime (Shifts: +50% cap, meds faster with Guard up), Squared up (The door: 15% at every gang, the head
+included), In the hide (Stalking: 15% at the first of a gang down), Sheet metal (Stripping: 6% a cache searched),
+Breather (Moving on: a tenth of the cap a second with no one on you). Lines: Guard every gang (armour, helmet), Guard
+holds more (rig, armour), a med's overflow as Guard. The run screen's HP bar carries a steel band (Guard over max
+HP), the top bar "+N", the log "Guard gone" (a Guard worth a twentieth of the cap). *Beside the capstone*: the twelve
+new nodes sit in column 6, row 2 - after the capstone in the list, so no node id moves - flagged `beside`: the
+capstone's cost and its "every notable first" skip them. *The old burn bug*: a dot on them or on you is told apart by
+the dictionary itself now (`is_same`), not its contents. The reviewer's catches, fixed: the head's arrival gave no
+Guard; "Guard gone" could fill the log on a Paramedic's trickle; the skull read HP alone and the band hid the dots'
+segments; the Blue Plaque went over the cap with Fireproof; the dry run's first Guard read the last memo; the red
+numbers counted what Guard took. Left: the Stats sheet's Guard row; Guard's share in its own colour on the run screen;
+the petrol on your hands still takes HP direct (self-inflicted: Guard doesn't cover it). *The smoke:* over the cap
+(110 is 75 and +35, held at 50, all resists, never physical, the Plaque, -proofed, soaked, the lines' slots, the six
+nodes); Guard (first off Guard, the cap, overheal and a med's line, Squared up with the guard line, the next run at
+nothing, In the hide, Sheet metal and Breather through the run's own code, Overtime, Transfusion's cap and its med). For the pass (not fixed, numbers or
 Matt's call): a body is the best by its figure alone, so Nan's Cardigan (no armour by its rule) wears the heaviest
 plates and their pace, and the Butcher's Steel loses the Machete's 30% bleed for the Door ram's 5%; the Plumber's
 Belt drains a dot at half the rate, so a fast kill deals less of it; a site at loot tier 6 or more and depth 2-5

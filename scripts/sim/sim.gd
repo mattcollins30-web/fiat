@@ -368,7 +368,11 @@ func increased(ty: String) -> float:
 
 
 func _increased_raw(ty: String) -> float:
-	return _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty)
+	var inc: float = _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty) + _affix_sum("%s_proofed" % ty)
+	inc += over_cap(ty) * (2.0 if has_node("proof_" + ty) else 1.0)     # over the cap (12 Oct): what's past it is that element's damage
+	if ty == "physical" and has_node("thick_skinned"):
+		inc += clampf((armour() - Data.THICK_SKIN_FROM) / 10.0, 0.0, Data.OVER_CAP)     # Thick-skinned: armour past 200, a tenth of it
+	return inc
 
 
 ## Everything that multiplies a type on its own: the element's costly notable, keystones, uniques.
@@ -465,9 +469,29 @@ func resist(ty: String) -> float:
 
 
 func _resist_raw(ty: String) -> float:
+	return clampf(resist_raw(ty), 0.0, Data.RESIST_CAP) / 100.0
+
+
+## A resist before the cap, in percent (12 Oct, over the cap): the affixes, the trees, the bases, the -proofed lines,
+## less a Water cannon's soaking on the run. What's past RESIST_CAP is over_cap's.
+func resist_raw(ty: String) -> float:
+	return _memo("resist_raw/" + ty, _resist_raw_pct.bind(ty))
+
+
+func _resist_raw_pct(ty: String) -> float:
 	if ty == "physical" or (ty == "fire" and has_rule("vicars_thermos")):
 		return 0.0
-	return minf(Data.RESIST_CAP, _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + (0.0 if has_rule("blue_plaque") else base_res(ty))) / 100.0
+	var r: float = _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + _affix_sum("%s_proofed" % ty) + (0.0 if has_rule("blue_plaque") else base_res(ty))
+	if mission != null:
+		r -= float(mission["t"].get("soaked", 0.0)) * 100.0     # the Water cannon: your resists down for the run
+	return r
+
+
+## An element's resist past the cap, to OVER_CAP: what over the cap turns into its damage.
+func over_cap(ty: String) -> float:
+	if has_rule("blue_plaque"):
+		return 0.0                               # the listing: nothing else counts, so nothing's over (the design's check)
+	return clampf(resist_raw(ty) - Data.RESIST_CAP, 0.0, Data.OVER_CAP)
 
 
 ## A resist built into what's worn (the welder's mask, the lineman's coat): the bases' own, beside the affixes.
@@ -496,7 +520,7 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	if not Data.DOTS.has(ty) or landed <= 0.0:
 		return
 	var d: Dictionary = Data.DOTS[ty]
-	var theirs: bool = mission == null or dots != mission.get("my_dots", {})
+	var theirs: bool = mission == null or not is_same(dots, mission.get("my_dots"))     # the same dictionary, not equal contents: two empty pools read alike (12 Oct)
 	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs)
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
 
@@ -510,7 +534,7 @@ func _dot_tick(dots: Dictionary, dt: float, by: Dictionary) -> float:
 		if pool <= 0.0:
 			dots.erase(ty)
 			continue
-		var theirs: bool = mission == null or dots != mission.get("my_dots", {})
+		var theirs: bool = mission == null or not is_same(dots, mission.get("my_dots"))     # the same dictionary, not equal contents: two empty pools read alike (12 Oct)
 		var tick := minf(pool, pool / dot_seconds(ty, theirs) * dt)
 		if not (ty == "bleed" and has_node("bleed_forever") and theirs):
 			dots[ty] = pool - tick             # Won't stop: a bleed on them doesn't fade
@@ -2006,7 +2030,7 @@ func train_block(id: String, ignore_points := false) -> String:
 		# the capstone wants the tree's shape behind it: the keystone and every notable this runner can train
 		for k in range(t["nodes"].size()):
 			var nd: Dictionary = t["nodes"][k]
-			if (nd.get("keystone", false) or nd.get("notable", false)) and Data.for_classes(nd, my_classes()) and not tree.has("%s/%d" % [parts[0], k]):
+			if (nd.get("keystone", false) or nd.get("notable", false)) and not nd.get("beside", false) and Data.for_classes(nd, my_classes()) and not tree.has("%s/%d" % [parts[0], k]):
 				return "wants the keystone and every notable first"
 	if not ignore_points and points_free() < node_cost(id):
 		return "wants %d point%s" % [node_cost(id), "" if node_cost(id) == 1 else "s"]
@@ -2665,7 +2689,7 @@ func active_words(i: int) -> Array:
 
 
 const WORD_MULT_KEYS := ["hp", "dps", "pool", "patrol", "pace", "search", "armour", "drop", "cash", "xp"]
-const WORD_ADD_KEYS := ["rarity", "share", "res_add"]
+const WORD_ADD_KEYS := ["rarity", "share", "res_add", "soaked"]
 
 ## A word at a tier, as the run reads it: its bite (halved by the Yard's Jammer) and its pay (grown by the
 ## Military band, the Radio's rank and the map's Booster), a multiplier as m^pow, an added figure ×pow, a count
@@ -2747,6 +2771,8 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 			return "%d%% of their fire is %s" % [int(round(float(e.get("share", 0.0)) * 100.0)), str(part["type"])]
 		"res":
 			return "%s res %d%%" % ["all" if part["res"] == "all" else str(part["res"]), int(round(float(e.get("res_add", 0.0)) * 100.0))]
+		"soaked":
+			return "your resists −%d" % int(round(float(e.get("soaked", 0.0)) * 100.0))
 		"no_meds":
 			return "no meds on the run"
 		"no_kill_cash":
@@ -2786,6 +2812,7 @@ func word_totals(i: int) -> Dictionary:
 		if e.has("type"):
 			bring["types"][e["type"]] = float(bring["types"].get(e["type"], 0.0)) + float(e.get("share", 0.0))
 		bring["contact"] += int(e.get("contact", 0))
+		bring["soaked"] = float(bring.get("soaked", 0.0)) + float(e.get("soaked", 0.0))
 		for f in ["no_meds", "no_kill_cash", "clock_half", "boss_walks"]:
 			if e.has(f):
 				bring["flags"].append(f)
@@ -2830,6 +2857,8 @@ func word_total_words(i: int) -> Array:
 		bw.append("%d%% %s" % [int(round(float(b["types"][ty]) * 100.0)), ty])
 	for ty in b["res"]:
 		bw.append("%s res %d%%" % [ty, int(round(float(b["res"][ty]) * 100.0))])
+	if float(b.get("soaked", 0.0)) > 0.005:
+		bw.append("your res −%d" % int(round(float(b["soaked"]) * 100.0)))
 	for f in b["flags"]:
 		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill cash", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
 	return [" · ".join(gw), " · ".join(bw)]
@@ -3810,6 +3839,7 @@ func effective(i: int) -> Dictionary:
 		e["contact"] += int(m.get("contact", 0))
 		e["pool"] = maxi(1, int(round(float(e["pool"]) * float(m.get("pool", 1.0)))))
 		e["armour"] *= float(m.get("armour", 1.0))
+		e["soaked"] = float(e.get("soaked", 0.0)) + float(m.get("soaked", 0.0))     # the Water cannon (12 Oct): your resists down
 		for f in ["no_meds", "no_kill_cash", "boss_walks"]:
 			if m.get(f, false):
 				e[f] = true
@@ -4022,6 +4052,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_dry_rules = _snapshot_rules()
 	_dry_memo = {}
 	_dry_on = true
+	_gang_arrives(m)                          # Guard at the first gang, as a run (12 Oct); after the memo's reset (the review)
 	var guard := 0
 	_dry_min_hp = 1.0
 	while guard < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
@@ -4103,6 +4134,8 @@ func deploy(i: int) -> void:
 	if rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys"):
 		mission["event"] = Data.EVENTS[rng.randi_range(0, Data.EVENTS.size() - 1)]
 		mission["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
+	if mission["remaining"] > 0:
+		_gang_arrives(mission)                # Guard at the first gang (12 Oct)
 	runner_runs += 1
 	runs_total += 1
 	if runs_total % Data.MATE_RUNS == 0:
@@ -4182,7 +4215,9 @@ func _tick(dt: float) -> void:
 	else:
 		_search(m, t, dt)
 		if has_node("walk_it_off"):
-			hp = minf(max_hp(), hp + dt)
+			_heal(m, dt)                         # through _heal: the Paramedic's overflow counts (12 Oct)
+		if has_node("breather"):
+			_guard_add(m, guard_cap() * 0.1 * dt)     # Breather: with no one on you, Guard comes back
 		if yard_has("drip"):
 			_heal(m, max_hp() * 0.01 * dt)        # the Clinic's Drip
 	if mission == null:
@@ -4208,6 +4243,7 @@ func _tick(dt: float) -> void:
 			m["fresh"] = true
 			m.erase("opened")
 			m["sustain_t"] = 0.0
+			_gang_arrives(m)
 			var grown: int = 0 if has_node("cap_dead_quiet") else m["patrols"] - 1      # Dead quiet: every gang the size of the first
 			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
@@ -4328,14 +4364,56 @@ func set_leave_full(on: bool) -> bool:
 	return true
 
 
-## HP back, counted for the run screen's green numbers (regen, a med, life on a kill).
-## `med` marks a med's heal: Transfusion keeps its overflow, not a trickle's.
-func _heal(m: Dictionary, amount: float, med := false) -> void:
+## HP back, counted for the run screen's green numbers (regen, a med, life on a kill). What heals past full is Guard
+## for the Paramedic, and the `overflow` share of it for a med with that line; `med` marks a med's heal.
+func _heal(m: Dictionary, amount: float, med := false, overflow := 0.0) -> void:
 	var before := hp
 	hp = minf(max_hp(), hp + amount)
 	m["healed"] = float(m.get("healed", 0.0)) + (hp - before)
-	if med and has_node("cap_transfusion"):
-		m["bonus_armour"] = float(m.get("bonus_armour", 0.0)) + maxf(0.0, amount - (hp - before)) / 2.0     # Transfusion: a med's overflow is armour, two to one
+	# Guard (12 Oct, docs/design/shields.md): what heals past full - all of it the Paramedic's, a med's `overflow`
+	# share anyone's
+	var past: float = maxf(0.0, amount - (hp - before))
+	var share: float = 1.0 if class_data().get("overheal", false) else overflow
+	if past > 0.0 and share > 0.0:
+		_guard_add(m, past * minf(1.0, share))
+
+
+## Guard (12 Oct, docs/design/shields.md): a second bar over HP that their fire takes first. Its cap: GUARD_SHARE of
+## max HP (half with Transfusion), grown by Overtime and `guard_pct`. It lasts the run.
+func guard_cap() -> float:
+	var share: float = Data.GUARD_SHARE * (2.0 if has_node("cap_transfusion") else 1.0)
+	return max_hp() * share * (1.0 + (_affix_sum("guard_pct") + (50.0 if has_node("overtime") else 0.0)) / 100.0)
+
+
+func guard() -> float:
+	return float(mission.get("guard", 0.0)) if mission != null else 0.0
+
+
+func _guard_add(m: Dictionary, amount: float) -> void:
+	if amount <= 0.0:
+		return
+	m["guard"] = minf(guard_cap(), float(m.get("guard", 0.0)) + amount)
+
+
+## A gang arriving (the first, a patrol, the convoy's, the door's): Squared up and the `guard_gang` lines.
+func _gang_arrives(m: Dictionary) -> void:
+	var share: float = (15.0 if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
+	if share > 0.0:
+		_guard_add(m, max_hp() * share / 100.0)
+
+
+## Their fire on you this tick, through Guard first: what's left comes off HP. "Guard gone" when it breaks.
+func _take(m: Dictionary, amount: float) -> float:
+	var g: float = float(m.get("guard", 0.0))
+	if g > 0.0:
+		var off: float = minf(g, amount)
+		m["guard"] = g - off
+		m["guarded"] = float(m.get("guarded", 0.0)) + off     # for the run screen
+		amount -= off
+		if m["guard"] <= 0.0 and g >= guard_cap() * 0.05 and not m.get("dry", false):
+			log_event("Guard gone")              # a Guard worth the name broken, never a trickle of overheal (the review)
+	hp -= amount
+	return amount
 
 
 func _boss_entry(b: Dictionary) -> Dictionary:
@@ -4351,6 +4429,7 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 		"convoy":
 			var size: int = PATROL_BASE + 2
 			m["remaining"] += size
+			_gang_arrives(m)
 			m["clock"] = float(m.get("clock", 0.0)) + Data.CLOCK_PER_HEAD * size      # a convoy's crew brings its own time
 			m["clock_max"] = float(m.get("clock_max", 0.0)) + Data.CLOCK_PER_HEAD * size
 			if m["target_hp"] <= 0.0:
@@ -4470,6 +4549,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	while m["target_hp"] <= 0.0 and m["remaining"] > 0:
 		m["remaining"] -= 1
+		if m["fresh"] and has_node("in_the_hide"):
+			_guard_add(m, max_hp() * 0.15)       # In the hide: the first of a gang down
 		m["fresh"] = false
 		if boss_on:
 			m["target_hp"] = 0.0
@@ -4512,6 +4593,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["fresh"] = true
 			m.erase("opened")
 			m["sustain_t"] = 0.0
+			_gang_arrives(m)                     # the head is a gang of his own: Squared up and the guard lines (the review)
 			log_event("%s comes out%s. %s" % [m["boss"]["name"], ", at full strength" if m["boss"].get("pinnacle", false) else "", Words.BOSSES.get(m["boss"]["name"], {}).get("out", "")])
 			return
 		m["target_hp"] = 0.0
@@ -4574,8 +4656,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		incoming = minf(incoming, max_hp() * 0.1)       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
 	m["last_incoming"] = incoming
 	var above: bool = hp >= max_hp() * Data.WOUND_AT
-	hp -= incoming * dt
-	m["taken"] = float(m.get("taken", 0.0)) + incoming * dt     # for the run screen's red numbers
+	var on_hp: float = _take(m, incoming * dt)
+	m["taken"] = float(m.get("taken", 0.0)) + on_hp     # for the run screen's red numbers: what reached HP, Guard's share apart
 	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
 		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
 		if auto_tier >= 0 and not yard_has("whistle"):
@@ -4692,7 +4774,7 @@ func use_med(id: int) -> bool:
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
-			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": med_heal(it)}
+			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": med_heal(it), "overflow": Items.affix_total(it, "overflow_pct") / 100.0}
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
@@ -4794,9 +4876,13 @@ func _patch(m: Dictionary, dt: float) -> void:
 	if m["using"] == null:
 		return
 	m["using"]["left"] -= dt
+	if has_node("overtime") and float(m.get("guard", 0.0)) > 0.0:
+		m["using"]["left"] -= dt                 # Overtime: with Guard up, a med takes half the time
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
 		var hp_was := hp
-		_heal(m, m["using"]["heal"] * (1.2 if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true)
+		_heal(m, m["using"]["heal"] * (1.2 if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true, float(m["using"].get("overflow", 0.0)))
+		if has_node("cap_transfusion"):
+			m["guard"] = guard_cap()             # Transfusion: a med fills Guard to the top
 		m["using"]["gained"] = hp - hp_was     # what it healed, after the max HP caps it (the log's figure)
 		if has_joint("paramedic_poison") and m["remaining"] > 0:
 			_dose(m)                         # the Paramedic's dose, joined: the med's a full stack of poison on them
@@ -5092,6 +5178,8 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 	while m["search"] >= every:
 		m["search"] -= every
 		m["searches"] += 1
+		if has_node("sheet_metal"):
+			_guard_add(m, max_hp() * 0.06)       # Sheet metal: every cache searched
 		if rng.randf() < Data.NOTES_SEARCH:
 			m["notes"] = int(m.get("notes", 0)) + rng.randi_range(1, 2)
 		if rng.randf() < Data.SCRAP_SEARCH:
@@ -5223,6 +5311,7 @@ func _start_way_out(m: Dictionary) -> void:
 	m["fresh"] = true
 	m.erase("opened")
 	m["sustain_t"] = 0.0
+	_gang_arrives(m)
 	log_event("Making for the way out, %d at the door" % size)
 
 

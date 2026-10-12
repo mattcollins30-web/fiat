@@ -1,4 +1,4 @@
-# Over the cap: resist into damage (12 Oct, design - not built)
+# Over the cap: resist into damage (12 Oct, built the same day; numbers in the pass)
 
 Matt, 12 Oct: a fire build should be able to stack fire resist past the cap, and what's over the cap should add to its
 fire damage. **Design only. It's built before the next balance pass**, with the shields (docs/design/shields.md),
@@ -117,3 +117,7 @@ the resist bases are. The pass decides the rate (1:1), the cap (50) and the nota
 2. Are the first figures OK: +1% per 1% over, up to 50 over, doubled by the notable?
 3. Knuckles' armour version ("Thick-skinned"): in, or physical stays out of it?
 4. Soaked (a word that lowers your resists, so the overflow also defends): in, or not now?
+
+Matt, 12 Oct: agreed across the board - everyone's at 1:1, the first figures, Thick-skinned in, the word in. Built as
+"Water cannon" (the city's, from depth 10: a resist point off a tier-I point, more at the higher tiers). The Blue Plaque
+never goes over. What was built: docs/status.md, 12 Oct.

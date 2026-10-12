@@ -250,7 +250,9 @@ func show_state(s) -> void:
 		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
-	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "bad" if low else "good", m.get("my_dots", {}), sim.max_hp())
+	var g: float = sim.guard()
+	var hp_words: String = ("Your HP %d / %d + %d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(g))]) if g >= 0.5 else ("Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()])
+	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), hp_words, "bad" if low else "good", m.get("my_dots", {}), sim.max_hp(), g / maxf(1.0, sim.max_hp()))
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
@@ -336,6 +338,10 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 	d["track"] = track
 	d["w"] = w
 	d["fill"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
+	# Guard (12 Oct, docs/design/shields.md): a pale steel band laid from the fill's right edge back over it, its
+	# width Guard over max HP - the part of the bar their fire takes first; under the dots' segments (the review)
+	d["guard"] = UI.panel(track, Rect2(0, 0, 0, BAR_H), UI.box(Color(Pal.TEXT, 0.45), 0))
+	d["guard"].visible = false
 	# what the dots still have to take off the bar (Matt, 6 Oct): the end of the fill, a segment a type, so the
 	# fill is seen going down into them as they tick
 	d["segments"] = []
@@ -360,12 +366,17 @@ func _bar_make(d: Dictionary, y: float, x: float = PAD, w: float = INNER) -> voi
 	d["skull"] = skull
 
 
-func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0) -> void:
+func _bar(d: Dictionary, fill: float, text: String, tone: String, pending: Dictionary = {}, of: float = 1.0, guard_share := 0.0) -> void:
 	(d["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
 	d["fill"].size.x = roundf(float(d.get("w", INNER)) * clampf(fill, 0.0, 1.0))
 	d["bar_text"].text = text
 	_bar_segments(d, pending, of)
-	d["skull"].visible = dots_finish(fill * of, pending)
+	if d.has("guard"):
+		var gw: float = minf(d["fill"].size.x, roundf(float(d.get("w", INNER)) * clampf(guard_share, 0.0, 1.0)))
+		d["guard"].visible = gw >= 1.0
+		d["guard"].size.x = gw
+		d["guard"].position.x = d["fill"].size.x - gw
+	d["skull"].visible = dots_finish(fill * of + guard_share * of, pending)     # the dots come off Guard first (the review)
 
 
 ## Whether the dots still to tick off cover the HP that's left (and there's some left): the bar's skull.
