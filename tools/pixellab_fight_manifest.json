@@ -1,0 +1,1310 @@
+{
+ "_readme": [
+  "FIAT FIGHT ART, the full pass (13 Oct, Matt: the slice reads; docs/design/fight_art.md): per site a plate (688x296) and a taller cover (688x160); per zone two gang members standing, firing, going down (128x192); the four heads the same three ways; your hands per weapon type (256x192). art/fight/.",
+  "The Parade's plate is the test's: copy art/fight_test/parade_plate.png to art/fight/the_parade_plate.png before or after the run.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force). Each stand is made before its poses, which use it."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight/the_allotments_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95000,
+   "style_image": "res://art/places/the_allotments.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across overgrown allotments at the edge of a town: sheds of corrugated iron and old doors, runner-bean canes, water butts, a polytunnel with its plastic torn, a rusting wheelbarrow, a shed with its door hanging open. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_allotments",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_allotments_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95001,
+   "style_image": "res://art/places/the_allotments.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a raised vegetable bed built of old railway sleepers, weeds and a broken cane over the top, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_allotments (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_garden_centre_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95002,
+   "style_image": "res://art/places/the_garden_centre.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down an aisle of a looted garden centre: a glasshouse roof with panes out, toppled shelving of pots, dead plants on trolleys, a caf\u00e9 counter, the exit doors at the end standing open. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_garden_centre",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_garden_centre_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95003,
+   "style_image": "res://art/places/the_garden_centre.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a pallet stacked with split compost bags, soil spilling over the edge, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_garden_centre (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/top_farm_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95004,
+   "style_image": "res://art/places/top_farm.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a farmyard: a stone barn with its big doors open, a rusting tractor, round bales in black plastic, a muddy yard with puddles, a farmhouse back door ajar. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: top_farm",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/top_farm_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95005,
+   "style_image": "res://art/places/top_farm.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a low dry-stone wall with a gate post, nettles at its foot, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: top_farm (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/ransacked_streets_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95006,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a ransacked terraced street: front doors kicked in, a sofa in the road, a car on its roof, washing still on a line between houses, a ginnel between two terraces. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: ransacked_streets",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/ransacked_streets_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95007,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a low front-garden wall of pebbledash with a toppled wheelie bin against it, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: ransacked_streets (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_parade_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95008,
+   "style_image": "res://art/places/the_parade.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a low wall of grimy red brick with a broken concrete coping, moss in the joints, a crisp packet caught on it, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_parade (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_retail_park_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95009,
+   "style_image": "res://art/places/the_retail_park.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a retail park car park: big box stores with their shutters half up, abandoned cars at angles, a trolley shelter, lamp posts, a carpet warehouse's loading bay open on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_retail_park",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_retail_park_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95010,
+   "style_image": "res://art/places/the_retail_park.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a long concrete planter with dead shrubs and a run of trolleys jammed against it, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_retail_park (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_pleasure_park_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95011,
+   "style_image": "res://art/places/the_pleasure_park.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a dead seaside pleasure park: a stalled waltzer, a ghost train's dark entrance, a burger kiosk with its hatch up, bunting in tatters, a helter-skelter in the haze. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_pleasure_park",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_pleasure_park_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95012,
+   "style_image": "res://art/places/the_pleasure_park.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: the side of an overturned dodgem car, its pole bent, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_pleasure_park (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/shopping_centre_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95013,
+   "style_image": "res://art/places/shopping_centre.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking along a shopping centre's upper mall in failing daylight from the roof: shop shutters, a dead escalator, a fountain dried up, a department store's dark entrance, litter everywhere. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: shopping_centre",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/shopping_centre_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95014,
+   "style_image": "res://art/places/shopping_centre.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a row of upturned mall benches and a broken planter edge, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: shopping_centre (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_bank_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95015,
+   "style_image": "res://art/places/the_bank.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a high-street bank's banking hall: teller windows with their glass starred, a queue rope fallen, leaflets on the floor, a door marked private open onto the dark, the vault corridor beyond. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_bank",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_bank_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95016,
+   "style_image": "res://art/places/the_bank.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: the front of a wooden counter with a cracked glass screen above it, pens on chains hanging, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_bank (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_services_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95017,
+   "style_image": "res://art/places/the_services.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a motorway services forecourt: petrol pumps, a shop with its glass smashed, a jack-knifed lorry, the canopy lights out, the slip road in haze. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_services",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_services_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95018,
+   "style_image": "res://art/places/the_services.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a run of steel crash barrier, dented, with a traffic cone tipped against it, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_services (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_hospital_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95019,
+   "style_image": "res://art/places/the_hospital.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a hospital corridor: trolleys left at angles, curtains pulled round bays, a nurses' station, fire doors propped open, signs to wards, strip lights out but for one. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_hospital",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_hospital_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95020,
+   "style_image": "res://art/places/the_hospital.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: an overturned hospital trolley and its thin mattress on its side, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_hospital (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_barracks_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 95021,
+   "style_image": "res://art/places/the_barracks.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across an army barracks' parade ground: brick accommodation blocks, a guardroom with its barrier up, a Land Rover with flat tyres, a flagpole with no flag, a hangar door open on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate: the_barracks",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/the_barracks_cover.png",
+   "width": 688,
+   "height": 160,
+   "no_background": true,
+   "seed": 95022,
+   "style_image": "res://art/places/the_barracks.png",
+   "description": "Seen very close from behind, running across the whole width of the frame at the bottom: a low wall of sandbags, some split, a strip of hessian flapping, as the cover a player crouches behind in a light-gun arcade game. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the cover across the frame's foot: the_barracks (taller than the test's, for the duck)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_a_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95023,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "A man in his thirties from a gang off the allotments and the farms: a wax jacket with a hi-vis vest over it, a balaclava rolled up as a hat, wellies, mud on his face, standing wary, a billhook held low. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, a: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_a_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95023,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "The same a man in his thirties from a gang off the allotments and the farms: a wax jacket with a hi-vis vest over it, a balaclava rolled up as a hat, wellies, mud on his face, aiming a double-barrelled shotgun straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, a: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_outskirts_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_a_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95023,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "The same a man in his thirties from a gang off the allotments and the farms: a wax jacket with a hi-vis vest over it, a balaclava rolled up as a hat, wellies, mud on his face, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, a: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_outskirts_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_b_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95024,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "A weathered woman in her fifties from the same gang: a fleece and a body-warmer, a woolly hat, wellies, a scarf round the neck, standing wary, a garden fork held across her. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, b: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_b_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95024,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "The same a weathered woman in her fifties from the same gang: a fleece and a body-warmer, a woolly hat, wellies, a scarf round the neck, aiming an air rifle straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, b: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_outskirts_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_outskirts_b_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95024,
+   "style_image": "res://art/people/gang_the_outskirts.png",
+   "description": "The same a weathered woman in her fifties from the same gang: a fleece and a body-warmer, a woolly hat, wellies, a scarf round the neck, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_outskirts gang, b: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_outskirts_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_estate_a_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95025,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "A young estate gang member in a grey hoodie with the hood up, a scarf over the lower face, tracksuit bottoms and dirty trainers, standing wary, a spiked baseball bat low at his side. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, a: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_estate_a_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95025,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "The same a young estate gang member in a grey hoodie with the hood up, a scarf over the lower face, tracksuit bottoms and dirty trainers, aiming a sawn-off shotgun straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, a: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_estate_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_estate_a_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95025,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "The same a young estate gang member in a grey hoodie with the hood up, a scarf over the lower face, tracksuit bottoms and dirty trainers, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, a: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_estate_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_estate_b_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95026,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "A young woman from the same estate gang in a black puffer jacket, a cap under her hood, a snood up over her nose, leggings and trainers, standing wary, a kitchen knife held low. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, b: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_estate_b_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95026,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "The same a young woman from the same estate gang in a black puffer jacket, a cap under her hood, a snood up over her nose, leggings and trainers, aiming a small pistol held sideways straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, b: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_estate_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_estate_b_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95026,
+   "style_image": "res://art/people/gang_the_estate.png",
+   "description": "The same a young woman from the same estate gang in a black puffer jacket, a cap under her hood, a snood up over her nose, leggings and trainers, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_estate gang, b: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_estate_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_town_a_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95027,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "A man in his thirties from a town-centre gang: a padded work jacket, a rag tied round one wrist, a hard face with a cut lip, work boots, standing wary, a crowbar held low. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, a: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_town_a_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95027,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "The same a man in his thirties from a town-centre gang: a padded work jacket, a rag tied round one wrist, a hard face with a cut lip, work boots, aiming a pistol straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, a: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_town_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_town_a_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95027,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "The same a man in his thirties from a town-centre gang: a padded work jacket, a rag tied round one wrist, a hard face with a cut lip, work boots, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, a: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_town_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_town_b_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95028,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "A heavy-set man from the same town gang in a road-crew orange jacket gone grey with dirt, a beanie, a dust mask pulled down, standing wary, a sledgehammer over his shoulder. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, b: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_town_b_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95028,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "The same a heavy-set man from the same town gang in a road-crew orange jacket gone grey with dirt, a beanie, a dust mask pulled down, aiming a pump-action shotgun straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, b: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_town_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_town_b_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95028,
+   "style_image": "res://art/people/gang_the_town.png",
+   "description": "The same a heavy-set man from the same town gang in a road-crew orange jacket gone grey with dirt, a beanie, a dust mask pulled down, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_town gang, b: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_town_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_city_a_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95029,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "A soldier turned gangster from the city: an army greatcoat, a beret pushed back, webbing over the chest, a gas mask hanging at the neck, a scar through one eyebrow, standing wary, a rifle held across the body at the ready, not aimed. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, a: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_city_a_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95029,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "The same a soldier turned gangster from the city: an army greatcoat, a beret pushed back, webbing over the chest, a gas mask hanging at the neck, a scar through one eyebrow, aiming a rifle straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, a: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_city_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_city_a_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95029,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "The same a soldier turned gangster from the city: an army greatcoat, a beret pushed back, webbing over the chest, a gas mask hanging at the neck, a scar through one eyebrow, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, a: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_city_a_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_city_b_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95030,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "A second soldier turned gangster from the same city crew: a combat helmet, body armour over a camouflage smock, knee pads, a face mask, standing wary, a submachine gun held down at the hip. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, b: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight/gang_the_city_b_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95030,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "The same a second soldier turned gangster from the same city crew: a combat helmet, body armour over a camouflage smock, knee pads, a face mask, aiming a submachine gun in a short burst straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, b: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_city_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/gang_the_city_b_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95030,
+   "style_image": "res://art/people/gang_the_city.png",
+   "description": "The same a second soldier turned gangster from the same city crew: a combat helmet, body armour over a camouflage smock, knee pads, a face mask, hit and falling backwards, arms flung out, what they held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_city gang, b: hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/gang_the_city_b_stand.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_gamekeeper_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95031,
+   "style_image": "res://art/people/the_gamekeeper.png",
+   "description": "A gamekeeper in his sixties: a tweed shooting jacket and flat cap, a waxed cartridge bag over one shoulder, moleskin trousers, green wellies, a weathered face that has stood in the rain for years, standing, a broken-open shotgun over his arm, unafraid. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_gamekeeper: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/people/the_gamekeeper.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_gamekeeper_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95031,
+   "style_image": "res://art/people/the_gamekeeper.png",
+   "description": "The same a gamekeeper in his sixties: a tweed shooting jacket and flat cap, a waxed cartridge bag over one shoulder, moleskin trousers, green wellies, a weathered face that has stood in the rain for years, aiming a shotgun straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_gamekeeper: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_gamekeeper_stand.png",
+    "res://art/people/the_gamekeeper.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_gamekeeper_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95031,
+   "style_image": "res://art/people/the_gamekeeper.png",
+   "description": "The same a gamekeeper in his sixties: a tweed shooting jacket and flat cap, a waxed cartridge bag over one shoulder, moleskin trousers, green wellies, a weathered face that has stood in the rain for years, hit and falling backwards, arms flung out, what he held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_gamekeeper: beaten, going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_gamekeeper_stand.png",
+    "res://art/people/the_gamekeeper.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_carpet_man_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95032,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "A heavy man in his fifties who ran a carpet warehouse: a fleece with the shop's name half unpicked, a flat cap, grey stubble, a roll of carpet tape on a lanyard, work trousers, standing, a carpet knife held low, unafraid. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_carpet_man: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/people/the_carpet_man.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_carpet_man_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95032,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "The same a heavy man in his fifties who ran a carpet warehouse: a fleece with the shop's name half unpicked, a flat cap, grey stubble, a roll of carpet tape on a lanyard, work trousers, aiming a nail gun held like a pistol straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_carpet_man: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_carpet_man_stand.png",
+    "res://art/people/the_carpet_man.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_carpet_man_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95032,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "The same a heavy man in his fifties who ran a carpet warehouse: a fleece with the shop's name half unpicked, a flat cap, grey stubble, a roll of carpet tape on a lanyard, work trousers, hit and falling backwards, arms flung out, what he held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_carpet_man: beaten, going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_carpet_man_stand.png",
+    "res://art/people/the_carpet_man.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_manager_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95033,
+   "style_image": "res://art/people/the_manager.png",
+   "description": "A bank branch manager in his forties still in the suit, which fits: a clean collar, a tie done properly, a name badge with the name scratched off, hair combed with water, polished shoes, standing, his hands clasped in front of him, a pistol in one, unafraid. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_manager: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/people/the_manager.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_manager_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95033,
+   "style_image": "res://art/people/the_manager.png",
+   "description": "The same a bank branch manager in his forties still in the suit, which fits: a clean collar, a tie done properly, a name badge with the name scratched off, hair combed with water, polished shoes, aiming a pistol, one-handed, arm straight straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_manager: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_manager_stand.png",
+    "res://art/people/the_manager.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_manager_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95033,
+   "style_image": "res://art/people/the_manager.png",
+   "description": "The same a bank branch manager in his forties still in the suit, which fits: a clean collar, a tie done properly, a name badge with the name scratched off, hair combed with water, polished shoes, hit and falling backwards, arms flung out, what he held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_manager: beaten, going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_manager_stand.png",
+    "res://art/people/the_manager.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_quartermaster_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95034,
+   "style_image": "res://art/people/the_quartermaster.png",
+   "description": "An army quartermaster in his sixties, out of the army and still in it: an issue jumper with the rank unpicked, combat trousers, polished boots, reading glasses pushed up, standing, a clipboard held like a weapon under one arm, a rifle slung, unafraid. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_quartermaster: standing",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/people/the_quartermaster.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_quartermaster_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95034,
+   "style_image": "res://art/people/the_quartermaster.png",
+   "description": "The same an army quartermaster in his sixties, out of the army and still in it: an issue jumper with the rank unpicked, combat trousers, polished boots, reading glasses pushed up, aiming a scoped rifle straight at the viewer, a bright muzzle flash. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_quartermaster: firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_quartermaster_stand.png",
+    "res://art/people/the_quartermaster.png"
+   ]
+  },
+  {
+   "out": "art/fight/head_the_quartermaster_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 95034,
+   "style_image": "res://art/people/the_quartermaster.png",
+   "description": "The same an army quartermaster in his sixties, out of the army and still in it: an issue jumper with the rank unpicked, combat trousers, polished boots, reading glasses pushed up, hit and falling backwards, arms flung out, what he held dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the_quartermaster: beaten, going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight/head_the_quartermaster_stand.png",
+    "res://art/people/the_quartermaster.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_pistol.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95035,
+   "style_image": "res://art/items/old_revolver.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding an old revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: pistol",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_shotgun.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95036,
+   "style_image": "res://art/items/farmer_s_shotgun.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a farmer's double-barrelled shotgun, the barrels pointing forward up the frame, one hand at the fore-end and one at the stock, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: shotgun",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_rifle.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95037,
+   "style_image": "res://art/items/bolt_action_garage_rifle.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bolt-action rifle shouldered, the barrel pointing forward up the frame, one hand on the bolt-side grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: rifle",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_smg.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95038,
+   "style_image": "res://art/items/army_smg.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a compact submachine gun held out forward in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: smg",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_improvised.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95039,
+   "style_image": "res://art/items/hand_me_down_nail_gun.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a battered nail gun held forward like a pistol in one hand, its hose trailing back past the wrist, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: improvised",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_melee.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95040,
+   "style_image": "res://art/items/claw_hammer.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a claw hammer raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: melee",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  },
+  {
+   "out": "art/fight/hands_blade.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 95041,
+   "style_image": "res://art/items/machete.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a machete raised, ready to swing, the blade catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: blade",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "reference_images": [
+    "res://art/fight_test/hands_revolver.png"
+   ]
+  }
+ ]
+}
