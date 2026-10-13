@@ -512,6 +512,7 @@ func show_title() -> void:
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
 	_menu.open("Fiat", "Let it be done", items, Callable(), true, Rect2(), true)
+	_sound.title()                     # the title's music, the world quiet (13 Oct)
 
 
 ## "Level 22, £14,437, 2 h 10 m played · 1 Oct, 11:04" for a save file, or "".
@@ -569,17 +570,29 @@ func _save_to_slot(path: String) -> void:
 func show_pause() -> void:
 	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close, "glyph": "menu_continue"},
-		{"name": "Sound: on" if _sound.enabled else "Sound: off", "detail": "The Yard's ambient, the gun, the gangs, the door", "action": _toggle_sound, "glyph": "menu_sound"},
+		{"name": ("Sound: on" if _sound.music_on else "Sound: no music") if _sound.enabled else "Sound: off", "detail": "Sound and music, sound alone, or quiet: press to change", "action": _toggle_sound, "glyph": "menu_sound"},
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause), "glyph": "menu_slots"},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title, "glyph": "menu_title"},
 	], _menu.close, false, Rect2(_rail.position, _rail_panel.size))
 
 
+## The pause's one row (a menu holds five): on with the music, on without it, off - and round again.
 func _toggle_sound() -> void:
-	_sound.set_enabled(not _sound.enabled)
+	_next_sound()
 	_save_settings()
+	_sound.follow(sim)
 	show_pause()
+
+
+func _next_sound() -> void:
+	if _sound.enabled and _sound.music_on:
+		_sound.set_music(false)
+	elif _sound.enabled:
+		_sound.set_enabled(false)
+	else:
+		_sound.set_enabled(true)
+		_sound.set_music(true)
 
 
 func _load_settings() -> void:
@@ -589,12 +602,13 @@ func _load_settings() -> void:
 		f.close()
 		if d is Dictionary:
 			_sound.enabled = bool(d.get("sound", true))
+			_sound.music_on = bool(d.get("music", true))
 
 
 func _save_settings() -> void:
 	var f := FileAccess.open(SETTINGS_FILE, FileAccess.WRITE)
 	if f != null:
-		f.store_string(JSON.stringify({"sound": _sound.enabled}))
+		f.store_string(JSON.stringify({"sound": _sound.enabled, "music": _sound.music_on}))
 		f.close()
 
 

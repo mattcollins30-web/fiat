@@ -88,6 +88,18 @@ S = [
     ("the_end_sell", "A door closing quietly and a latch clicking", 3.0, False, 1, "world"),
 ]
 
+# music (13 Oct, Matt: "looping music - nothing crazy - title, menu and fight and search"): ElevenLabs' music endpoint,
+# instrumental; it has no loop option, so each is asked to run steady with no intro or ending and the game crossfades
+# its tail into its top
+MUSIC_TAIL = ("Instrumental only, no vocals. A steady piece that could loop: no intro build, no ending, no fade out, "
+              "the same mood throughout. Sparse and understated, for a game about scavenging in a grey, collapsed Britain.")
+MUSIC = [
+    ("music_title", "Slow, bleak and beautiful: a lone electric guitar with heavy reverb over a low string drone, distant and patient, a little hope in it", 75),
+    ("music_camp", "Quiet and warm against the cold: a fingerpicked acoustic guitar and a soft upright piano, an old radio's warmth, slow and unhurried", 120),
+    ("music_fight", "Tense and driving: low pulsing synth bass, tight dry drums and a gritty distorted guitar riff, urgent but not frantic, around 120 bpm", 90),
+    ("music_search", "Low and wary: a soft ticking pulse, muted piano notes, a dark ambient pad, quiet tension as someone picks through rubble", 90),
+]
+
 TAIL = {"world": WORLD, "amb": AMB, "ui": UI}
 INFLUENCE = {"world": 0.5, "amb": 0.35, "ui": 0.6}
 jobs = []
@@ -96,9 +108,13 @@ for sid, what, secs, loop, variants, kind in S:
         jobs.append({"id": sid if variants == 1 else "%s_%d" % (sid, v + 1), "sound": sid,
                      "text": "%s. %s" % (what, TAIL[kind]), "duration_seconds": max(0.5, min(30.0, secs)),
                      "loop": loop, "prompt_influence": INFLUENCE[kind]})
+for mid, what, secs in MUSIC:
+    jobs.append({"id": mid, "sound": mid, "endpoint": "music", "text": "%s. %s" % (what, MUSIC_TAIL), "music_length_ms": secs * 1000})
 out = {"_readme": [
     "FIAT SOUNDS (13 Oct, docs/design/sound.md): ElevenLabs sound effects, one job a file, art/sound_new/<id>.mp3. Busy sounds have takes (_1, _2, _3) the game picks between.",
+    "Music: the four tracks go to the music endpoint (instrumental, the game crossfades their loop).",
     "Run on Matt's machine: python tools/eleven_batch.py   (--dry-run lists and totals the seconds; --only <id or sound>; --force remakes). The key: tools/elevenlabs_secret.txt, one line, never committed.",
-], "output_format": "mp3_44100_128", "model_id": "eleven_text_to_sound_v2", "jobs": jobs}
+], "output_format": "mp3_44100_128", "model_id": "eleven_text_to_sound_v2", "music_model_id": "music_v1", "jobs": jobs}
 json.dump(out, open("tools/sound_manifest.json", "w"), indent=1)
-print("%d sounds, %d files, %.0f s in all" % (len(S), len(jobs), sum(j["duration_seconds"] for j in jobs)))
+print("%d sounds and %d tracks, %d files, %.0f s of sound and %.0f s of music" % (len(S), len(MUSIC), len(jobs),
+      sum(j.get("duration_seconds", 0) for j in jobs), sum(j.get("music_length_ms", 0) for j in jobs) / 1000.0))

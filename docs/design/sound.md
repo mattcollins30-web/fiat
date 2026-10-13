@@ -109,5 +109,16 @@ and change how the radio reads - left out unless Matt wants them.
   eleven_text_to_sound_v2, mp3_44100_128; the key from tools/elevenlabs_secret.txt (gitignored), sent only as the
   `xi-api-key` header; skips what's on disk; --dry-run, --only, --force. Out to art/sound_new/.
 - The key: Restrict Key on, Sound Effects access on, everything else off.
-- Next: sound.gd's table (event to sound, a take at random, several players, loops crossfading), the old thirteen as the
-  fallback; the smoke checks every id has a file or a fallback.
+- Music (13 Oct, Matt: "looping music - nothing crazy - title, menu and fight and search"): four instrumental tracks
+  through ElevenLabs' music endpoint (POST /v1/music, music_v1, force_instrumental; title 75 s, camp 120 s, fight and
+  search 90 s). The endpoint has no loop option: each is asked to run steady with no intro or ending, and the game
+  crossfades its tail into its top. The key needs Music access as well as Sound Effects.
+- sound.gd rebuilt: one table of every id (its level, the old placeholder it falls back to), takes picked at random,
+  ten one-shot players, five loop layers (place, weather, heartbeat, watch, music) each crossfading. Everything
+  follows the sim each refresh - shots at the gun's rate (the click when dry), their fire now and then, a gang, a head,
+  a kill, a hit, Guard gone, a med, the way out, an element landing; a crate taken in hand (the keys first if locked),
+  a lock passed by, each search, picked clean, a find on the floor by its worth, taken, ditched; at home the
+  chronicle's moments (a level, a point, a build, a gamble, a gate, the run home or a death) and a sale. Buttons click,
+  the rail's rooms turn a page. Music: the title, the camp, the fight (a head's too), the search. The pause's Sound
+  row goes round: on, no music, off. New files are picked up at the title. Not wired yet: `duck`, `reload`, `grenade`,
+  `no_room`, `dog_sniff`, `the_end_sell`, `radio_on` (made, played once the moments that want them say so).

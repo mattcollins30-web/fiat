@@ -4780,44 +4780,127 @@ func _juice_checks(main) -> void:
 ## over it, the gun's tick, the sting, the door; off from the pause menu.
 func _sound_checks(main) -> void:
 	var sim = main.sim
+	var snd = main._sound
 	var saved: Dictionary = sim.to_dict()
+	# the old placeholders still read, and every sound the game asks for has a file - new, or the old one it replaces -
+	# or is one the ElevenLabs pass hasn't made yet (13 Oct: listed, not failed, until art/sound_new has them)
 	for name in ["ambient_estate", "ambient_town", "ambient_city", "rain", "tick_improvised", "tick_shotgun", "tick_rifle", "tick_smg", "tick_pistol", "tick_melee", "sting", "door", "found"]:
-		_check(main._sound.stream(name) != null, "no sound reads for %s" % name)
-	main._sound.set_enabled(true)
+		_check(snd.stream(name) != null, "no sound reads for %s" % name)
+	var manifest = JSON.parse_string(FileAccess.get_file_as_string("res://tools/sound_manifest.json"))
+	var ids := {}
+	for jb in manifest["jobs"]:
+		ids[str(jb["sound"])] = true
+	for id in snd.SOUNDS:
+		_check(ids.has(id), "the game asks for %s, which the manifest doesn't make" % id)
+	for id in ids:
+		_check(snd.SOUNDS.has(id), "the manifest makes %s, which the game never plays" % id)
+	var missing: Array = snd.SOUNDS.keys().filter(func(id): return not snd.has_sound(id))
+	print("sound: %d of %d have a file (new or old); not made yet: %d" % [snd.SOUNDS.size() - missing.size(), snd.SOUNDS.size(), missing.size()])
+	for id in ["gang_arrives", "head_door", "find_rare", "shot_pistol", "swing_melee", "amb_estate", "rain"]:
+		_check(snd.has_sound(id), "%s has neither a new file nor its old one" % id)
+	# the title: its music, nothing of the world
+	snd.set_enabled(true)
+	snd.set_music(true)
+	snd.title()
+	_check(snd.playing()["music"] == "music_title" and snd.playing()["ambient"] == "", "the title's music isn't up: %s" % str(snd.playing()))
+	# out on the estate in the rain: its place, the rain, the fight's music; the gun goes off, a gang, a kill, a hit
 	sim.words[3] = []
 	sim.weather[1] = "Rain"
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
-	sim.mission["t"]["hp"] = 100000.0
-	sim.mission["target_hp"] = 100000.0
+	var m: Dictionary = sim.mission
+	m["t"]["hp"] = 100000.0
+	m["target_hp"] = 100000.0
 	main.show_room(main.MISSIONS)
 	main.refresh()
-	var p: Dictionary = main._sound.playing()
-	_check(p["ambient"] == "ambient_estate" and p["rain"], "the estate's ambient and the rain are not playing out on the estate: %s" % str(p))
+	var p: Dictionary = snd.playing()
+	_check(p["ambient"] == "amb_estate" and p["rain"] and p["music"] == "music_fight", "the estate, the rain and the fight's music are not playing out on the estate: %s" % str(p))
+	snd.clear_cued()
 	sim.advance(2.0)
 	main.refresh()
-	_check(main._sound._tick_at > 0.0, "the gun did not tick")
-	sim.mission["patrols"] = 1
+	_check(snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"), "the gun did not go off: %s" % str(snd.cued()))
+	snd.clear_cued()
+	m["patrols"] = int(m.get("patrols", 0)) + 1
+	m["kills"] = int(m["kills"]) + 1
+	sim.hp -= sim.max_hp() * 0.1
+	m["dots"] = {"fire": 50.0}
 	main.refresh()
-	_check(main._sound._patrols_seen == 1 and main._sound._one.stream == main._sound.stream("sting"), "the gang's sting did not play")
+	for want in ["gang_arrives", "kill", "hit_taken", "burn"]:
+		_check(want in snd.cued(), "%s didn't sound: %s" % [want, str(snd.cued())])
+	# low on HP: the heartbeat; the clock's last ten seconds: the watch
+	sim.hp = sim.max_hp() * 0.2
+	m["clock"] = 8.0
+	main.refresh()
+	_check(snd.playing()["low_hp"] == "low_hp" and snd.playing()["clock"] == "clock_warn", "the heartbeat or the watch didn't come in: %s" % str(snd.playing()))
+	sim.hp = sim.max_hp()
+	m["clock"] = 200.0
+	m["dots"] = {}
+	# the search: its music, a crate taken in hand, a find on the floor
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	sim._roll_crates(m, m["t"])
+	snd.clear_cued()
+	main.refresh()
+	_check(snd.playing()["music"] == "music_search" and snd.playing()["low_hp"] == "" and snd.playing()["clock"] == "", "the search's music isn't up, or the heartbeat or watch stayed: %s" % str(snd.playing()))
+	_check(snd.cued().any(func(c): return str(c).begins_with("crate_")), "taking a crate in hand made no sound: %s" % str(snd.cued()))
+	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
+	rare["rarity"] = 2
+	m["floor"] = m.get("floor", []) + [rare]
+	snd.clear_cued()
+	main.refresh()
+	_check("find_rare" in snd.cued(), "a rare on the floor made no sound: %s" % str(snd.cued()))
+	# home: the van, the camp's place and music
+	snd.clear_cued()
 	sim.extract_now()
 	main.refresh()
-	p = main._sound.playing()
-	_check(p["ambient"] == "" and not p["rain"], "the ambient kept playing in the Yard: %s" % str(p))
-	main._sound.set_enabled(false)
+	p = snd.playing()
+	_check("extract" in snd.cued() and p["ambient"] == "amb_yard" and not p["rain"] and p["music"] == "music_camp", "home is off: %s, %s" % [str(snd.cued()), str(p)])
+	# at home: tins in with nothing said for them is a sale; with the chronicle saying something (a Yard move), not
+	snd.clear_cued()
+	sim.cash += 100.0
+	main.refresh()
+	_check("sell" in snd.cued(), "a sale at home made no sound: %s" % str(snd.cued()))
+	snd.clear_cued()
+	sim.chron("move", {})
+	sim.cash += 100.0
+	main.refresh()
+	_check(not ("sell" in snd.cued()), "the cash a chronicled moment brought sounded as a sale: %s" % str(snd.cued()))
+	# a button clicks
+	snd.clear_cued()
+	var b := Button.new()
+	main.add_child(b)
+	if not snd.is_inside_tree():
+		snd._hook_button(b)                    # headless with no tree: node_added never fires
+	b.pressed.emit()
+	_check("ui_click" in snd.cued(), "a button press made no click")
+	b.queue_free()
+	# sound off: the world quiet, the music on; music off: no music
+	snd.set_enabled(false)
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	main.refresh()
-	_check(main._sound.playing()["ambient"] == "", "sound off still plays")
-	main._sound.set_enabled(true)
+	_check(snd.playing()["ambient"] == "" and snd.playing()["music"] == "music_fight", "sound off still plays the world, or took the music: %s" % str(snd.playing()))
+	snd.set_music(false)
+	main.refresh()
+	_check(snd.playing()["music"] == "", "music off still plays")
+	snd.set_enabled(true)
+	snd.set_music(true)
 	sim.extract_now()
 	main.show_pause()
-	_check(main._menu._items.any(func(i): return str(i["name"]).begins_with("Sound: ")), "the pause menu has no sound toggle")
+	_check(main._menu._items.any(func(i): return str(i["name"]) == "Sound: on"), "the pause menu has no sound row")
+	# its one row goes round: on, no music, off, on
+	var seen_rows := []
+	for k in range(3):
+		main._next_sound()                     # the row's turn without its save: the player's settings file isn't the smoke's
+		seen_rows.append([main._sound.enabled, main._sound.music_on])
+	_check(seen_rows == [[true, false], [false, false], [true, true]], "the sound row doesn't go round on, no music, off: %s" % str(seen_rows))
 	_check(main._menu.shape() == "drawer", "the pause is not the drawer: %s" % main._menu.shape())
 	_check_fit(main, "Paused (sound)")
 	main._menu.close()
 	sim.load_dict(saved)
-	print("sound ok: the files, the ambient and the rain, the tick, the sting, off in the Yard, the toggle")
+	main.refresh()
+	print("sound ok: every id made and played, the title, the place and the rain, the gun, a gang, a kill, a hit, fire, the heartbeat and the watch, the search, a crate, a find, home, a click, the toggles")
 
 
 ## From Matt's playtest (5 Oct): HP never reads past its max; Locked sits
