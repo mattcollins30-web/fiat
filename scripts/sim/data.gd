@@ -1971,7 +1971,7 @@ const CRATES := [
 	{"key": "cardboard", "name": "Cardboard box", "short": "Cardboard", "searches": 1, "w": 4.0},
 	{"key": "ammo_tin", "name": "Ammo tin", "searches": 1, "w": 1.5, "shape": "ammo", "lean": 0.7, "slots": ["Ammo"]},
 	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "locks": true, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.2},
-	{"key": "toolbox", "name": "Toolbox", "searches": 2, "locks": true, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 1.8},
+	{"key": "toolbox", "name": "Toolbox", "searches": 2, "locks": true, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 1.5},
 	{"key": "medicine", "name": "Medicine cabinet", "short": "Medicine", "searches": 2, "locks": true, "w": 1.2, "shape": "med", "lean": 0.6, "slots": ["Medical"]},
 	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "locks": true, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 1.6},
 	{"key": "safe", "name": "Safe", "searches": 3, "locks": true, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 2.0, "tins": true, "unique": 2.0},

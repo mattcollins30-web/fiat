@@ -4291,3 +4291,9 @@ first, nine a page - and go into the pack only when the player drags one there o
 Kill drops still go straight in. A thing ditched mid-run lands on the floor with its scrap paid, and comes back without
 it (a ditched stack whole or not at all). "Fill up, then go" picks up what fits, dearest first, and from then on finds
 go straight in, as on an auto-run, away, and for the bot (Bot.step sets loot_by_hand off). The pack-full lines say so.
+
+**The pass on the hammer and the floor (13 Oct).** The Bank 0.4-2.1 h on every build but one Doorman as bleed read (4.2 h:
+melee down a tenth); the lorry by 6.4 h, the plain floor by 11.4 h, cash, the clock, the loot gates green. The scrap
+economy just over (Scrapper as shock 8.4 crafts an hour against 8, Poacher as poison 7.3 against 7): a toolbox's scrap
+1.8 to 1.5, to read on the next pass. The ladders' spread (Paramedic as frost 12) sits at 11-13 build to build since the
+crates - to Matt. Timing reds as before; deaths and wounds on Matt's playtest.
