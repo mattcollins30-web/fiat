@@ -92,6 +92,7 @@ var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the 
 var notes := 0                     # the old paper money: the crews still take it
 var scrap := 0                     # the Bench's material (34): found, stripped, ditched for
 var takings := 0.0                 # what the Yard takes a run, averaged over the last few: the run's cash and the Fence's money (the pass, 6 Oct)
+var gamble_base := 0.0             # the gamble's own: the takings, but a run moves it GAMBLE_STEP at most (13 Oct, Matt: 305 to 2366 off one sale)
 var _takings_run := 0.0            # the cash in since the last run came home
 var cash_in := 0.0                 # every pound in since the game began (runs, sales, contracts); not saved: the readers' figure
 var atlas := {}                    # the map's passives: key -> rank
@@ -1428,6 +1429,21 @@ func _hear_gate(gate: String) -> void:
 				heard.append(key)
 				log_event(Words.RADIO_LEAD + str(r["text"]))
 			return
+
+
+## A gate's "before" line is done with once every room its head opens is open (13 Oct, Matt: the Clinic saved, the
+## medic still asking for the bag on the strip). Any other line, false.
+func gate_line_done(r: Dictionary) -> bool:
+	var gate: String = str(r.get("gate", ""))
+	if not gate.ends_with("/before"):
+		return false
+	for b in Data.BOSSES:
+		if str(b["name"]) + "/before" == gate:
+			for room in b.get("opens", {}):
+				if not room_open(str(room)):
+					return false
+			return true
+	return false
 
 
 ## The line before a room opens: once its head's site is open and the room isn't.
@@ -4344,7 +4360,8 @@ func deploy(i: int) -> void:
 	runs_total += 1
 	if runs_total % Data.MATE_RUNS == 0:
 		mate = roll_mate()
-	log_event("Out to %s, %s, depth %d: %s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), t["depth"], ", ".join(t["intel"]).to_lower()])
+	var intel: String = ", ".join(t["intel"]).to_lower()
+	log_event("Out to %s, %s, depth %d%s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), t["depth"], (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
 	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
@@ -5844,6 +5861,8 @@ func _extract() -> void:
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
 	_earn(float(m["cash"]))
+	var base0: float = a_gamble_base()
+	gamble_base = clampf(lerp(base0, _takings_run, 0.25), base0 * (1.0 - Data.GAMBLE_STEP), base0 * (1.0 + Data.GAMBLE_STEP))     # before takings moves: the first run starts from its stand-in
 	takings = _takings_run if takings <= 0.0 else lerp(takings, _takings_run, 0.25)     # a run's takings: this run's cash and the Fence's money since the last
 	_takings_run = 0.0
 	scrap += int(m.get("scrap", 0))       # the run's scrap comes home (34)
@@ -6692,11 +6711,18 @@ func top_tier() -> int:
 	return top
 
 
-## The price of a gamble: GAMBLE_RUNS of what a run on the top open tier pays, never under the floor.
+## What the gamble's priced off: a run's takings, Fence money and all, but one run moves it GAMBLE_STEP at most - a
+## clear-out at the Fence creeps the price up over runs, never lurches it (13 Oct, Matt's save: 305 then 2366). Before
+## the first run home, the same stand-in the takings have.
+func a_gamble_base() -> float:
+	return gamble_base if gamble_base > 0.0 else a_runs_takings()
+
+
+## The price of a gamble: GAMBLE_RUNS of the gamble's base, never under the floor.
 func gamble_price(kind: String) -> int:
 	if gamble_kind(kind).is_empty():
 		return -1
-	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_runs_takings() * Data.GAMBLE_RUNS) * (0.5 if yard_has("gamblers_table") else 1.0)))
+	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_gamble_base() * Data.GAMBLE_RUNS) * (0.5 if yard_has("gamblers_table") else 1.0)))
 
 
 func can_gamble(kind: String) -> bool:
@@ -7278,7 +7304,7 @@ func _state() -> Dictionary:
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
@@ -7466,6 +7492,7 @@ func load_dict(d: Dictionary) -> void:
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))
 	takings = float(d.get("takings", 0.0))
+	gamble_base = float(d.get("gamble_base", takings))     # an older save: from where its price stood
 	retired = []
 	for r in d.get("retired", []):
 		retired.append(str(r))

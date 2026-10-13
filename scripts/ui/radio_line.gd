@@ -110,7 +110,7 @@ func _next_line() -> String:
 	if sim != null:
 		for key in sim.heard:
 			var r: Dictionary = Sim.radio_line(str(key))
-			if not r.is_empty():
+			if not r.is_empty() and not sim.gate_line_done(r):      # a room's "bring me the bag" stops once it's open
 				pool.append(str(r["text"]))
 	if pool.is_empty():
 		return str(Words.RADIO[0]["text"])

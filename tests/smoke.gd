@@ -3670,9 +3670,21 @@ func _events_checks(main) -> void:
 	var found0: int = m["found"].size()
 	sim.advance(0.1)
 	_check(m["found"].size() == found0 + 1, "the cache did not open")
+	# its words never name a room that may be shut (13 Oct, Matt's save: "the Bench's tools" with the Workshop shut)
+	var cache_line: String = str(sim.events.back()[1])
+	for room_word in ["Bench", "Workshop", "Clinic", "Fence", "Radio", "Yard"]:
+		_check(not cache_line.contains(room_word), "the cache's line names the %s: '%s'" % [room_word, cache_line])
+	sim.extract_now()
+	# a run out to a site with no codes says so with no colon left hanging (13 Oct, Matt's save: "depth 1: ")
+	sim.deploy(0)
+	var out_lines: Array = sim.events.filter(func(e): return str(e[1]).begins_with("Out to "))
+	_check(not out_lines.is_empty(), "no 'Out to' line was logged")
+	if not out_lines.is_empty():
+		var ol: String = str(out_lines.back()[1])
+		_check(not ol.strip_edges().ends_with(":") and (sim.mission["t"]["intel"].is_empty() != ol.contains(": ")), "the run's line is off: '%s' (codes %s)" % [ol, str(sim.mission["t"]["intel"])])
 	sim.extract_now()
 	sim.load_dict(saved)
-	print("events ok: the convoy, the trapped runner, the cache")
+	print("events ok: the convoy, the trapped runner, the cache, the run's line")
 	_pinnacle_checks(main)
 
 
@@ -9310,7 +9322,35 @@ func _gamble_checks(main) -> void:
 	# the price: runs' pay on the top open tier, never under the floor
 	var kind: String = sim.gamble[0]
 	var price: int = sim.gamble_price(kind)
-	_check(price >= sim._inf(Data.GAMBLE_FLOOR) and absi(price - int(round(maxf(float(sim._inf(Data.GAMBLE_FLOOR)), sim.a_runs_takings() * Data.GAMBLE_RUNS)))) <= 1, "the gamble's price is off: %d (a run's takings %.0f)" % [price, sim.a_runs_takings()])
+	_check(price >= sim._inf(Data.GAMBLE_FLOOR) and absi(price - int(round(maxf(float(sim._inf(Data.GAMBLE_FLOOR)), sim.a_gamble_base() * Data.GAMBLE_RUNS)))) <= 1, "the gamble's price is off: %d (its base %.0f)" % [price, sim.a_gamble_base()])
+	# a clear-out at the Fence creeps the price, never lurches it (13 Oct, Matt's save: 305 then 2366): a run home
+	# after a sale twenty times the base moves it GAMBLE_STEP, and a few more runs keep climbing
+	var gb0: float = sim.a_gamble_base()
+	var tk_g0: float = sim.takings
+	sim.deploy(0)
+	sim._takings_run += gb0 * 20.0
+	sim.mission["cleared"] = true
+	sim.extract_now()
+	var gb1: float = sim.a_gamble_base()
+	_check(gb1 <= gb0 * (1.0 + Data.GAMBLE_STEP) + 1.0 and gb1 > gb0, "one sale moved the gamble's base %.0f to %.0f" % [gb0, gb1])
+	_check(sim.takings > tk_g0, "the takings themselves did not take the sale (the contracts read them)")
+	var loaded = load("res://scripts/sim/sim.gd").new()
+	loaded.load_dict(sim.to_dict())
+	_check(is_equal_approx(loaded.gamble_base, sim.gamble_base), "the gamble's base did not save")
+	# an older save, no base: it starts from that save's takings
+	var old_save: Dictionary = sim.to_dict()
+	old_save.erase("gamble_base")
+	loaded.load_dict(old_save)
+	_check(is_equal_approx(loaded.gamble_base, sim.takings), "an old save's gamble base is %.0f, not its takings %.0f" % [loaded.gamble_base, sim.takings])
+	# and down: a run home with nothing in moves it GAMBLE_STEP at most
+	sim.deploy(0)
+	sim._takings_run = 0.0
+	sim.mission["cash"] = 0.0
+	sim.mission["cleared"] = true
+	sim.extract_now()
+	_check(sim.a_gamble_base() >= gb1 * (1.0 - Data.GAMBLE_STEP) - 1.0 and sim.a_gamble_base() < gb1, "a quiet run moved the gamble's base %.0f to %.0f" % [gb1, sim.a_gamble_base()])
+	kind = sim.gamble[0]                  # the run home restocked the offer
+	price = sim.gamble_price(kind)
 	_check(sim.gamble_price("no such kind") < 0 and not sim.can_gamble("no such kind"), "a kind not on offer can be gambled")
 	# short of cash: refused; paid: a thing of the kind in the stash, never Common, the kind off the offer
 	sim.cash = price - 1
@@ -11080,6 +11120,28 @@ func _radio_line_checks(main) -> void:
 			break
 	_check(added == heard_line, "a line just heard was not next on the radio line: '%s'" % added)
 	sim.events = saved_events
+	# a room's "before" line stops in the turn once its room is open (13 Oct, Matt: the Clinic saved, the bag still asked for)
+	var heard0: Array = sim.heard.duplicate()
+	var unlocked0: Array = sim.unlocked.duplicate()
+	var bag_k: int = -1
+	for k in range(Words.RADIO.size()):
+		if str(Words.RADIO[k].get("gate", "")) == "The Gamekeeper/before":
+			bag_k = k
+	_check(bag_k >= 0, "the Gamekeeper's before line is gone from the radio's lines")
+	var bag_text: String = str(Words.RADIO[bag_k]["text"]) if bag_k >= 0 else ""
+	sim.heard = ["%s/%d" % [Words.RADIO[maxi(0, bag_k)]["voice"], bag_k]] + heard0.filter(func(h): return not str(h).ends_with("/%d" % bag_k))
+	rl._queue.clear()
+	for shut in [true, false]:
+		if shut:
+			sim.unlocked = unlocked0.filter(func(r): return r != "clinic")
+		else:
+			sim.unlocked = unlocked0 + (["clinic"] if not ("clinic" in unlocked0) else [])
+		var played := []
+		for n in range(sim.heard.size() * 2 + 2):
+			played.append(rl._next_line())
+		_check(played.has(bag_text) == shut, "the bag's line %s with the Clinic %s" % ["plays" if not shut else "never plays", "open" if not shut else "shut"])
+	sim.heard = heard0
+	sim.unlocked = unlocked0
 	# a press - a real click through the strip's input - opens the Radio
 	var was: String = main.room
 	var click := InputEventMouseButton.new()
