@@ -181,6 +181,7 @@ def ammo(base):
 
 
 MELEE_WORDS = {
+    "Claw hammer": "an old claw hammer from a garden shed, the wooden handle dark and greasy with use, the steel head scuffed, a bent nail still caught in the claw",     # the start (13 Oct)
     "Spiked bat": "a wooden baseball bat with roofing nails hammered through the thick end",
     "Machete": "a garden-centre machete with a black plastic handle, the blade nicked and oiled",
     "Pipe wrench": "a heavy red Stillson pipe wrench, paint chipped, jaws rusted",
