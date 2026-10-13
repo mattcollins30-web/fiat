@@ -4342,3 +4342,15 @@ breathing. The chips' thresholds; nothing on them once the fight's over; the vie
 
 **Seen once, not chased (13 Oct):** two smoke reds on one run that passed on the next - "an arrow stayed once the
 better helmet went on" and "the log does not say what the bandage healed" (_class_trees' chain). Flakes; parked.
+
+**The fight's full art manifest (13 Oct, 1a15aac).** tools/make_fight_manifest.py writes tools/pixellab_fight_manifest.json:
+66 jobs into art/fight/ - a plate (688x296) and a taller cover (688x160, for the duck) per site, every plate asked for the
+same layout (open ground centre-right, a far doorway left, room right foreground); two gang members a zone and the four
+heads, each standing, firing, going down (128x192); your hands per weapon type, hammer and blade among them (256x192).
+The Parade's plate is the test's, copied. Matt running it. Not wired in yet: the view still reads art/fight_test.
+
+**The run view from the second recording (13 Oct, acab0ab).** Ducked, the wall runs on down to the frame's foot (the
+cover's own bricks, cut from its lower 28% and tiled); the cover starts 20 px further right so it spans the frame at the
+search's pan too. The figures stand by their feet; the far one down the street at the kerb, 0.32. The crates stand on
+the ground in depth with a shadow each, riding the pan in; a magnifying glass bobs over the one being opened, its ring
+the search so far.
