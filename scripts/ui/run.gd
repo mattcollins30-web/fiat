@@ -288,6 +288,7 @@ func show_state(s) -> void:
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	_face_show(_fight_face, [m["boss"]["name"] if boss_on else "", gang_face(zone_i)])
 	_face_show(_runner_face, [sim.cls])
+	_faces_off()
 	if boss_on:
 		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
 		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
@@ -543,6 +544,14 @@ func _face_show(f: Dictionary, names: Array) -> String:
 	People.show(f["art"], "")
 	f["blank"].visible = true
 	return ""
+
+
+## The faces' art kept off the run view (13 Oct, Matt: "the profile pictures need removing"): the art is _left's, not the frame's.
+func _faces_off() -> void:
+	if _view != null:
+		for f in [_fight_face, _runner_face]:
+			f["art"].visible = false
+			f["blank"].visible = false
 
 
 ## A zone's gang face: art/people/gang_<the zone>.png (gang_the_estate, gang_the_town, gang_the_city), from Matt's

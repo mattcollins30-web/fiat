@@ -51,6 +51,12 @@ var _firing := false
 var _recoil := 0.0
 var _marker_t := 0.0
 var _run_seen := -1
+var _duck := 0.0                          # 0 up, 1 down behind the wall (13 Oct, Matt: "you never duck")
+var _duck_t := 0.0                        # how long left down
+var _duck_next := 4.0                     # till the next duck while under fire
+const DUCK_COVER := 80.0
+const DUCK_HANDS := 150.0
+const DUCK_SCENE := 10.0
 
 
 ## A texture by name from the test art: imported if the editor's seen it, else read straight off the disk.
@@ -137,6 +143,8 @@ func show_state(sim, m: Dictionary) -> void:
 		_run_seen = sim.runs_total                # a new run: nobody up, nothing to drop
 		_kills_seen = int(m["kills"])
 		_hp_seen = sim.hp
+		_duck = 0.0
+		_duck_t = 0.0
 		for f in _figs:
 			f["state"] = ""
 			f["rect"].visible = false
@@ -148,15 +156,18 @@ func show_state(sim, m: Dictionary) -> void:
 	_firing = _on_you > 0
 	# a kill: the one in front goes down
 	if int(m["kills"]) > _kills_seen:
-		for k in range(SLOTS.size()):
-			if _figs[k]["state"] in ["pop", "up"]:
-				_set_state(k, "down")
-				break
+		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
+		for n in range(mini(int(m["kills"]) - _kills_seen, ups.size())):
+			var pick: int = ups[randi() % ups.size()]      # any of them, not the first every time (Matt, 13 Oct)
+			ups.erase(pick)
+			_set_state(pick, "down")
 		_kills_seen = int(m["kills"])
 	# a hit on you: the jolt and the red, a hundredth of your HP or more
 	if _hp_seen >= 0.0 and sim.hp < _hp_seen - sim.max_hp() * 0.01:
 		_jolt = JOLT_S
 		_red_a = 1.0
+		if sim.hp < _hp_seen - sim.max_hp() * 0.05 and _duck_t <= 0.0:
+			_duck_t = randf_range(0.6, 1.0)          # a big one: down behind the wall
 	_hp_seen = sim.hp
 	# your gun's rate, for the recoil and the marker
 	var gun = sim.equipped["Primary"]
@@ -236,32 +247,46 @@ func _process(dt: float) -> void:
 		if r.texture != null:
 			r.size = r.texture.get_size()
 		r.scale = Vector2(slot["scale"], slot["scale"])
-		r.position = slot["at"] + Vector2(_pan * -0.6, lift)
+		r.position = slot["at"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
 		var lit: float = slot["lit"]
+		if float(f.get("hit_t", 0.0)) > 0.0:
+			f["hit_t"] = float(f["hit_t"]) - dt
+			lit = 2.2                                  # a hit: the figure flashes white
 		r.self_modulate = Color(lit, lit, lit, 1.0)
+	# ducking: now and then under fire, and on a big hit - the wall comes up, the gun goes down, no shots
+	if _firing:
+		_duck_next -= dt
+		if _duck_next <= 0.0 and _duck_t <= 0.0:
+			_duck_t = randf_range(0.7, 1.3)
+			_duck_next = randf_range(3.5, 6.5)
+	if _duck_t > 0.0:
+		_duck_t -= dt
+	var down: bool = _duck_t > 0.0 and _firing
+	_duck = move_toward(_duck, 1.0 if down else 0.0, dt * 6.0)
 	# the pan, the plate and the cover sliding at their depths
 	_pan = move_toward(_pan, _pan_to, dt * 60.0)
 	var jolt := Vector2.ZERO
 	if _jolt > 0.0:
 		_jolt -= dt
 		jolt = Vector2(randf_range(-4.0, 4.0), randf_range(-3.0, 3.0))
-	_plate.position = PLATE_AT + Vector2(-_pan, 0) + jolt
-	_cover.position = Vector2(PLATE_AT.x - _pan * 1.4, COVER_Y) + jolt * 1.5
+	_plate.position = PLATE_AT + Vector2(-_pan, -DUCK_SCENE * _duck) + jolt
+	_cover.position = Vector2(PLATE_AT.x - _pan * 1.4, COVER_Y - DUCK_COVER * _duck) + jolt * 1.5
 	for c in _crates:
 		pass
 	# your gun: a kick back at its rate while there's someone to shoot, the marker on the one you're hitting
 	_shot_t -= dt
-	if _firing and _shot_t <= 0.0:
+	if _firing and _shot_t <= 0.0 and _duck < 0.2:
 		_shot_t = 1.0 / _rof
 		_recoil = 0.08
-		for k in range(SLOTS.size()):
-			if _figs[k]["state"] == "up":
-				var r: TextureRect = _figs[k]["rect"]
-				_marker.position = r.position + Vector2(r.size.x * r.scale.x * 0.5 - 12, r.size.y * r.scale.y * 0.18)
-				_marker_t = 0.12
-				break
+		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "up")
+		if not ups.is_empty():
+			var k: int = ups[randi() % ups.size()]      # whoever's in your sights, not the same one every time
+			var r: TextureRect = _figs[k]["rect"]
+			_marker.position = r.position + Vector2(r.size.x * r.scale.x * 0.5 - 12, r.size.y * r.scale.y * randf_range(0.15, 0.45))
+			_marker_t = 0.12
+			_figs[k]["hit_t"] = 0.08
 	_recoil = maxf(0.0, _recoil - dt)
-	_hands.position = HANDS_AT + Vector2(10, 12) * (_recoil / 0.08) + jolt
+	_hands.position = HANDS_AT + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt
 	_marker_t -= dt
 	_marker.visible = _marker_t > 0.0
 	_red_a = maxf(0.0, _red_a - dt / RED_S)
@@ -278,4 +303,4 @@ func figures_up() -> int:
 
 
 func state() -> Dictionary:
-	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size()}
+	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck}

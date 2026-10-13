@@ -7722,12 +7722,30 @@ func _run_view_checks(main) -> void:
 	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
 	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
 	_check_fit(main, "Run (the run view, a gang)")
-	# a kill drops one
+	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
+	# a kill drops one - any of them, not the first every time (Matt, 13 Oct)
 	var up0: int = v.figures_up()
 	m["kills"] = int(m["kills"]) + 1
 	main.refresh()
 	v._process(0.05)
 	_check(v._figs.any(func(f): return f["state"] == "down"), "a kill dropped nobody")
+	var fallen := {}
+	for trial in range(24):
+		for k in range(v._figs.size()):
+			v._set_state(k, "up")
+		v._kills_seen = int(m["kills"])
+		m["kills"] = int(m["kills"]) + 1
+		main.refresh()
+		for k in range(v._figs.size()):
+			if v._figs[k]["state"] == "down":
+				fallen[k] = true
+	_check(fallen.size() >= 2, "only one of them ever goes down: %s" % str(fallen.keys()))
+	# under fire you duck behind the wall now and then
+	v._duck_next = 0.0
+	v._duck_t = 0.0
+	for k in range(4):
+		v._process(0.1)
+	_check(float(v.state()["duck"]) > 0.3, "the runner never ducks: %s" % str(v.state()))
 	# a hit reddens the edges
 	sim.hp -= sim.max_hp() * 0.1
 	main.refresh()
@@ -9020,7 +9038,7 @@ func _fill_up_checks(main) -> void:
 		for piece in parts:
 			_check(not fr.intersects(Rect2(piece.position, piece.size)), "the %s's face runs into its %s" % [pair[3], piece.name])
 		_check(pair[0]["art"].visible != pair[0]["blank"].visible, "the %s's face shows %s" % [pair[3], "both art and the figure" if pair[0]["art"].visible else "nothing"])
-	_check(rn._runner_face["art"].visible == (People.portrait(sim.cls) != null), "the runner's face does not follow the class's art")
+	_check(rn._view != null or rn._runner_face["art"].visible == (People.portrait(sim.cls) != null), "the runner's face does not follow the class's art")
 	_check(rn.BOXED_X + 30 >= rn.PAD + rn.FACE + 10, "the fight's numbers can land on the faces")
 	_check(rn._face_show(rn._fight_face, ["nobody with a face"]) == "" and rn._fight_face["blank"].visible and not rn._fight_face["art"].visible, "a face with no art does not show the drawn figure")
 	main._run._shown = ""
@@ -9030,7 +9048,7 @@ func _fill_up_checks(main) -> void:
 		if int(m["tier"]) in Data.ZONES[z]["tiers"]:
 			zi = z
 	var head_out: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
-	_check(head_out or rn._fight_face["art"].visible == (People.portrait(rn.gang_face(zi)) != null), "the fight's face does not show the zone's gang where the art is")
+	_check(head_out or rn._view != null or rn._fight_face["art"].visible == (People.portrait(rn.gang_face(zi)) != null), "the fight's face does not show the zone's gang where the art is")
 	# every zone has its gang's face and every class its own (12 Oct: the new portraits, the Outskirts' gang among them)
 	for z in range(Data.ZONES.size()):
 		_check(People.portrait(rn.gang_face(z)) != null, "no gang face for %s" % Data.ZONES[z]["name"])

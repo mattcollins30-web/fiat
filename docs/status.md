@@ -4318,3 +4318,8 @@ revolver bottom right with a kick at the gun's rate and a marker on the one you'
 hands yet). Their bar and chips over the frame's top, yours at its foot; six tiles under it (Fire in or Gang in, Your
 fire, Kills, Armour, Meds, Rounds); the search bar under those. Without the art on disk, the boxes as they were. The
 editor must import art/fight_test before an export (load() needs the .import; the off-disk read is the editor's only).
+
+**The run view, from Matt's recording (13 Oct).** The faces' pictures are off the frame (their art is _left's, it kept
+showing). A kill drops any of them, not the first every time; each shot of yours lands on one of them at random, a
+marker and a white flash. You duck behind the wall now and then under fire and on a big hit - the wall comes up, the
+gun goes down, no shots while you're down.
