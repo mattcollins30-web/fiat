@@ -49,5 +49,6 @@ codes. The Kennel's top rank is the fifth column (the pack or Champion), either 
 - The panel (scripts/ui/crates_panel.gd) takes the pick panel's place on the run screen while nothing's picked; the
   pack keeps its seven rows. Up to seven crates show, the window sliding with the one in hand.
 - Codes add crates (built 13 Oct): a pay key `crates`, see status.md.
-- Not yet: the Caretaker's Keys and locked crates, the art
+- Locked crates and the Caretaker's Keys (built 13 Oct): see status.md.
+- Not yet: the art
   (tools/pixellab_crates_manifest.json), fight drops brought down (the balance pass).

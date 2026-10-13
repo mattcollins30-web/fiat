@@ -35,6 +35,7 @@ const SVG := {
 	"quality": '<path d="M12 3 L14.5 9 L21 9.5 L16 13.8 L17.5 20 L12 16.8 L6.5 20 L8 13.8 L3 9.5 L9.5 9 Z"/>',
 	"quantity": '<path d="M7 9 L5 20 H19 L17 9 Z M9 9 V7 a3 3 0 0 1 6 0 V9"/>',
 	"search": '<circle cx="10" cy="10" r="6"/><path d="M15 15 L21 21"/>',
+	"lock": '<path d="M6 11 H18 V21 H6 Z M8.5 11 V7.5 a3.5 3.5 0 0 1 7 0 V11 M12 15 V17"/>',     # a locked crate (13 Oct)
 	"crate": '<path d="M3 9 H21 V20 H3 Z M3 9 L5 5 H19 L21 9 M9 13 H15"/>',     # a crate until its art is painted (13 Oct)
 	"pace": '<path d="M5 18 L11 12 L5 6 M13 18 L19 12 L13 6"/>',
 	"first": '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2 V6 M12 18 V22 M2 12 H6 M18 12 H22"/>',

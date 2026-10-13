@@ -796,7 +796,7 @@ const UNIQUES := [
 	{"name": "The Gamekeeper's Flask", "slot": "Charm", "base": "Wedding ring", "rule": "gamekeepers_flask", "band": "core", "range": [4, 8], "site": 6,
 		"words": "Poison on you poisons them back", "short": "Poison on you poisons them", "affixes": [{"stat": "poison_res", "value": 30}, {"stat": "poison_pct", "value": 30}]},
 	{"name": "The Caretaker's Keys", "slot": "Charm", "base": "Bank's own pen", "rule": "caretakers_keys", "band": "chase", "range": [7, 9], "depth": 12,
-		"words": "Something happens on every run, and every cache opens", "short": "An event every run", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
+		"words": "Something happens on every run, and every locked crate opens", "short": "An event a run; locks open", "affixes": [{"stat": "loot_pct", "value": 15}, {"stat": "search_pct", "value": 10}]},
 	{"name": "The Lorry Driver's Log", "slot": "Paper", "base": "A pawn ticket", "rule": "drivers_log", "site": 9,
 		"words": "Notes found doubled; insurance is free", "short": "Notes ×2, free insurance", "affixes": [{"stat": "notes_pct", "value": 50}]},
 	# the elements' own (6 Oct): one a type, each leaning the whole way into it, for the builds that break the game
@@ -1964,14 +1964,18 @@ const THIN_PER_DEPTH := 2
 const CRATES := [
 	{"key": "cardboard", "name": "Cardboard box", "short": "Cardboard", "searches": 1, "w": 4.0},
 	{"key": "ammo_tin", "name": "Ammo tin", "searches": 1, "w": 1.5, "shape": "ammo", "lean": 0.7, "slots": ["Ammo"]},
-	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.5},
-	{"key": "toolbox", "name": "Toolbox", "searches": 2, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 2.5},
-	{"key": "medicine", "name": "Medicine cabinet", "short": "Medicine", "searches": 2, "w": 1.2, "shape": "med", "lean": 0.6, "slots": ["Medical"]},
-	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 2.0},
-	{"key": "safe", "name": "Safe", "searches": 3, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 3.0, "tins": true, "unique": 2.0},
-	{"key": "military", "name": "Military crate", "short": "Military", "searches": 4, "w": 0.4, "from_zone": 2, "depth_w": 0.3, "lean": 0.6,
+	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "locks": true, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.5},
+	{"key": "toolbox", "name": "Toolbox", "searches": 2, "locks": true, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 2.5},
+	{"key": "medicine", "name": "Medicine cabinet", "short": "Medicine", "searches": 2, "locks": true, "w": 1.2, "shape": "med", "lean": 0.6, "slots": ["Medical"]},
+	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "locks": true, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 2.0},
+	{"key": "safe", "name": "Safe", "searches": 3, "locks": true, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 3.0, "tins": true, "unique": 2.0},
+	{"key": "military", "name": "Military crate", "short": "Military", "searches": 4, "locks": true, "w": 0.4, "from_zone": 2, "depth_w": 0.3, "lean": 0.6,
 		"slots": ["Primary", "Secondary", "Helmet", "Armour"], "rarity": 0.25},
 ]
+## Locked crates (13 Oct, the Caretaker's Keys): a crate that `locks` comes locked CRATE_LOCK of the time, over and above
+## the site's searches; without the Keys it's passed over, with them it opens, its finds CRATE_LOCK_RARITY better.
+const CRATE_LOCK := 0.15
+const CRATE_LOCK_RARITY := 0.25
 ## A site's own crates, its weights times these: the Bank's safes, the Barracks' military crates.
 const CRATE_SITES := {
 	"The Bank": {"safe": 6.0}, "The Barracks": {"military": 5.0}, "The Services": {"military": 2.0, "ammo_tin": 1.5},

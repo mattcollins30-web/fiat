@@ -5479,15 +5479,42 @@ func _roll_crates(m: Dictionary, t: Dictionary) -> void:
 				key = str(k)
 				break
 		var c: Dictionary = crate_def(key)
-		queue.append({"key": key, "name": c["name"], "searches": int(c["searches"]), "done": 0, "finds": []})
-		total += int(c["searches"])
+		var locked: bool = c.get("locks", false) and rng.randf() < Data.CRATE_LOCK
+		queue.append({"key": key, "name": c["name"], "searches": int(c["searches"]), "done": 0, "finds": [], "locked": locked})
+		if not locked:
+			total += int(c["searches"])       # a locked one is over and above the site's searches: the Keys' to open
 	m["crates"] = queue
 	m["crate_i"] = 0
 	if dog_sniffs():
 		for q in queue:
-			var held: Dictionary = _find(m, t, false, crate_def(str(q["key"])), true)
+			var held: Dictionary = _find(m, t, false, crate_for(q), true)
 			if not held.is_empty():
 				q["held"] = held
+	_pass_locked(m)
+
+
+## A crate in the queue as the finds read it: its line in Data.CRATES, a locked one's quality up.
+static func crate_for(q: Dictionary) -> Dictionary:
+	var c: Dictionary = crate_def(str(q["key"]))
+	if q.get("locked", false):
+		c = c.duplicate()
+		c["rarity"] = float(c.get("rarity", 0.0)) + Data.CRATE_LOCK_RARITY
+	return c
+
+
+## Whether a run opens locked crates: the Caretaker's Keys.
+func has_keys() -> bool:
+	return has_rule("caretakers_keys")
+
+
+## Locked crates in hand without the Keys are passed over, marked so.
+func _pass_locked(m: Dictionary) -> void:
+	if has_keys():
+		return
+	var cs: Array = m.get("crates", [])
+	while int(m.get("crate_i", 0)) < cs.size() and cs[int(m["crate_i"])].get("locked", false):
+		cs[int(m["crate_i"])]["passed"] = true
+		m["crate_i"] = int(m["crate_i"]) + 1
 
 
 ## The crate being opened; {} once they're all open (or before the clear).
@@ -5517,7 +5544,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 	while m["search"] >= every:
 		m["search"] -= every
 		m["searches"] += 1
-		var cd: Dictionary = {} if cr.is_empty() else crate_def(str(cr["key"]))
+		var cd: Dictionary = {} if cr.is_empty() else crate_for(cr)
 		if has_node("sheet_metal"):
 			_guard_add(m, max_hp() * 0.06)       # Sheet metal: every cache searched
 		if rng.randf() < Data.NOTES_SEARCH * float(cd.get("notes", 1.0)):
@@ -5549,6 +5576,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		cr["done"] = int(cr["done"]) + 1
 		if int(cr["done"]) >= int(cr["searches"]):
 			m["crate_i"] = int(m.get("crate_i", 0)) + 1
+			_pass_locked(m)
 			cr = crate_now(m)
 			if cr.is_empty():
 				m["search"] = 0.0

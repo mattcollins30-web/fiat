@@ -7316,17 +7316,20 @@ func _crates_checks(main) -> void:
 	var total := 0
 	var keys_ok := true
 	for q in m["crates"]:
-		total += int(q["searches"])
+		total += 0 if q.get("locked", false) else int(q["searches"])     # a locked one's over and above (13 Oct)
 		keys_ok = keys_ok and not sim.crate_def(str(q["key"])).is_empty() and int(q["done"]) == 0
 		_check(str(q["key"]) != "military", "a military crate on the Streets (the estate's before the town)")
 	_check(keys_ok and total >= n and total < n + 4, "the crates' searches add to %d against %d" % [total, n])
-	_check(sim.crate_now(m) == m["crates"][0] and not sim.crates_done(m), "the first crate is not the one in hand")
+	var first_i: int = 0
+	while not sim.has_keys() and m["crates"][first_i].get("locked", false):
+		first_i += 1                          # the locked ones before it passed over (13 Oct)
+	_check(int(m["crate_i"]) == first_i and sim.crate_now(m) == m["crates"][first_i] and not sim.crates_done(m), "the first crate is not the one in hand")
 	# the panel: under the pack, the pack two rows a page, and it fits with nothing open
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	var run = main._run
 	_check(run._crates.visible and not run._pick.visible and run._inv.page_rows == run._inv.ROWS, "the crates are not up in the pick panel's place, the pack whole")
-	_check(run._crates._head.text == "THE CRATES · 0 OF %d OPEN" % m["crates"].size(), "the crates' head reads '%s'" % run._crates._head.text)
+	_check(run._crates._head.text.begins_with("THE CRATES · 0 OF %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()), "the crates' head reads '%s'" % run._crates._head.text)
 	_check(run._fight["bar_text"].text.begins_with("Crate 1 of %d" % m["crates"].size()), "the fight bar does not name the crate: '%s'" % run._fight["bar_text"].text)
 	_check(run._crates.position.y >= run._inv.position.y + run._inv.size.y and run._crates.position.y + run._crates.size.y <= Pal.ROOM_H, "the crates panel overlaps the pack or runs off the room")
 	_check_fit(main, "Run (the crates)")
@@ -7338,14 +7341,14 @@ func _crates_checks(main) -> void:
 			_check(tile_box.encloses(rc), "a crate tile's %s runs out of it: %s in %s" % [part, str(rc), str(tile_box)])
 	_check(Rect2(Vector2.ZERO, run._crates._query.size).encloses(Rect2(run._crates._query_glass.position, run._crates._query_glass.size)), "the ? cell's magnifier runs out of it")
 	# opening: the first crate's searches, its finds kept on it, then the next in hand
-	var first: Dictionary = m["crates"][0]
+	var first: Dictionary = m["crates"][first_i]
 	var finds0: int = int(m.get("finds", 0))
 	for k in range(int(4.0 * sim.search_s(t)) + 4):
 		sim.hp = sim.max_hp()
 		sim.advance(1.0)
-		if not sim.on_mission() or int(m["crate_i"]) >= 1:
+		if not sim.on_mission() or int(m["crate_i"]) > first_i:
 			break
-	_check(sim.on_mission() and int(m["crate_i"]) == 1 and int(first["done"]) == int(first["searches"]), "the first crate did not open in its searches: %d of %d, on %d" % [int(first["done"]), int(first["searches"]), int(m["crate_i"])])
+	_check(sim.on_mission() and int(m["crate_i"]) > first_i and int(first["done"]) == int(first["searches"]), "the first crate did not open in its searches: %d of %d, on %d" % [int(first["done"]), int(first["searches"]), int(m["crate_i"])])
 	_check(first["finds"].size() > 0 and first["finds"].size() <= int(m.get("finds", 0)) - finds0, "the first crate kept %d finds against %d found" % [first["finds"].size(), int(m.get("finds", 0)) - finds0])
 	main.refresh()
 	_check(run._crates._finds_head.text.begins_with("OUT OF THE ") or run._crates._finds_head.text.begins_with("IN THE "), "the reveal's head reads '%s'" % run._crates._finds_head.text)
@@ -7365,8 +7368,9 @@ func _crates_checks(main) -> void:
 				_check(int(f["rounds"]) > 0, "a crate shows %s found with %d rounds" % [f["base"], int(f["rounds"])])
 	# a clear on a site already searching (a Ghost's first gang beaten) keeps its crates
 	var queue_before: Array = m["crates"]
+	var at_i: int = int(m["crate_i"])
 	sim._clear(m, m["t"])
-	_check(m["crates"] == queue_before and int(m["crate_i"]) == 1, "a second clear rolled the crates again")
+	_check(m["crates"] == queue_before and int(m["crate_i"]) == at_i, "a second clear rolled the crates again")
 	# the save keeps them
 	var mid: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	var crate_i: int = int(m["crate_i"])
@@ -7395,7 +7399,7 @@ func _crates_checks(main) -> void:
 			sim.advance(1.0)
 		_check(sim.on_mission() and int(m.get("finds", 0)) == f_done and int(m["searches"]) == s_done, "a picked-clean site still finds: %d → %d" % [f_done, int(m.get("finds", 0))])
 		main.refresh()
-		_check(run._crates._head.text == "THE CRATES · ALL %d OPEN" % m["crates"].size() and run._fight["bar_text"].text.begins_with("Picked clean"), "picked clean does not read so: '%s' / '%s'" % [run._crates._head.text, run._fight["bar_text"].text])
+		_check(run._crates._head.text.begins_with("THE CRATES · ALL %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()) and run._fight["bar_text"].text.begins_with("Picked clean"), "picked clean does not read so: '%s' / '%s'" % [run._crates._head.text, run._fight["bar_text"].text])
 		_check_fit(main, "Run (picked clean)")
 		# "Fill up, then go" goes: nothing more to stay for
 		m["leave_full"] = true
@@ -7455,6 +7459,73 @@ func _crates_checks(main) -> void:
 	_check(run._crates._aside.text == "the dog's nose on them", "the panel does not say the dog's on them: '%s'" % run._crates._aside.text)
 	_check_fit(main, "Run (the dog's nose)")
 	sim.extract_now()
+	_yard_set(sim, "kennel", 4, "")
+	# locked crates (13 Oct): over and above the site's searches; passed over without the Caretaker's Keys, opened with
+	# them, a quality up; the panel says how many
+	var hold_charm = sim.equipped["Charm"]
+	sim.equipped["Charm"] = null
+	sim.deploy(8)
+	if not sim.on_mission():
+		sim.deploy(3)
+	m = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0
+	var tries := 0
+	while tries < 60 and not m["crates"].any(func(q): return q.get("locked", false)) if m.has("crates") else true:
+		sim._roll_crates(m, m["t"])
+		tries += 1
+	var locked_n: int = m["crates"].filter(func(q): return q.get("locked", false)).size()
+	_check(locked_n > 0, "no locked crate in sixty rolls")
+	var open_total := 0
+	for q in m["crates"]:
+		if not q.get("locked", false):
+			open_total += int(q["searches"])
+		_check(not q.get("locked", false) or sim.crate_def(str(q["key"])).get("locks", false), "a %s came locked" % q["key"])
+	_check(open_total >= sim.thin_after(m["t"]), "the locked crates ate the site's searches: %d of %d" % [open_total, sim.thin_after(m["t"])])
+	_check(not sim.crate_now(m).get("locked", false), "a locked crate is in hand without the Keys")
+	main.refresh()
+	_check(run._crates._head.text.ends_with("· %d LOCKED" % locked_n), "the head does not count the locked: '%s'" % run._crates._head.text)
+	_check_fit(main, "Run (locked crates)")
+	var steps := 0
+	while sim.on_mission() and not sim.crates_done(m) and steps < 4000:
+		sim.hp = sim.max_hp()
+		m["remaining"] = 0
+		sim.advance(1.0)
+		steps += 1
+	_check(sim.on_mission() and m["crates"].all(func(q): return (q.get("passed", false) and int(q["done"]) == 0 and q["finds"].is_empty()) if q.get("locked", false) else int(q["done"]) == int(q["searches"])),
+		"without the Keys a locked crate was searched, or an open one wasn't finished")
+	main.refresh()
+	_check_fit(main, "Run (picked clean, locked left)")
+	sim.extract_now()
+	# with the Keys they open, a quality up
+	sim.equipped["Charm"] = Items.roll_unique(sim._unique_named("The Caretaker's Keys"), sim.rng)
+	_check(sim.has_keys(), "the Caretaker's Keys do not open locks")
+	_check(is_equal_approx(float(sim.crate_for({"key": "safe", "locked": true}).get("rarity", 0.0)), float(sim.crate_def("safe").get("rarity", 0.0)) + Data.CRATE_LOCK_RARITY), "a locked safe's finds are no better")
+	sim.deploy(8)
+	if not sim.on_mission():
+		sim.deploy(3)
+	m = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0
+	tries = 0
+	while tries < 60 and not m["crates"].any(func(q): return q.get("locked", false)) if m.has("crates") else true:
+		sim._roll_crates(m, m["t"])
+		tries += 1
+	main.refresh()
+	_check_fit(main, "Run (the Keys)")
+	steps = 0
+	while sim.on_mission() and not sim.crates_done(m) and steps < 6000:
+		sim.hp = sim.max_hp()
+		m["remaining"] = 0
+		sim.advance(1.0)
+		steps += 1
+	_check(sim.on_mission() and m["crates"].all(func(q): return not q.get("passed", false) and int(q["done"]) == int(q["searches"])), "with the Keys a locked crate was passed over")
+	sim.extract_now()
+	sim.equipped["Charm"] = hold_charm
 	# depth and quantity push the searches
 	sim.deploy(3)
 	m = sim.mission

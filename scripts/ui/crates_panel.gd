@@ -32,7 +32,7 @@ const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewel
 
 var _head: Label
 var _aside: Label
-var _tiles: Array = []             # {panel, art, name, pips, tick, glass}
+var _tiles: Array = []             # {panel, art, name, pips, tick, glass, lock}
 var _finds_head: Label
 var _cells: Array = []
 var _query: Panel                  # the ? under the magnifier
@@ -73,9 +73,16 @@ func build(w: float, h: float = HEIGHT) -> void:
 		glass.modulate = Pal.ACCENT
 		glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(glass)
+		var lock := TextureRect.new()
+		lock.texture = NodeGlyphs.texture("lock")
+		lock.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lock.position = Vector2(4, 4)
+		lock.size = Vector2(24, 24)
+		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(lock)
 		var name := UI.label(p, Rect2(4, ART + 2, tw - 8, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
 		var pips := UI.label(p, Rect2(4, TILE_H - 25, tw - 8, 23), "", "SemiBold", 12, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
-		_tiles.append({"panel": p, "art": art, "name": name, "pips": pips, "tick": tick, "glass": glass})
+		_tiles.append({"panel": p, "art": art, "name": name, "pips": pips, "tick": tick, "glass": glass, "lock": lock})
 	_finds_head = UI.head(self, Rect2(PAD, FINDS_HEAD_Y, inner, UI.HEAD_H), "")
 	for k in range(FINDS_MAX):
 		var c := ItemCell.new()
@@ -133,7 +140,17 @@ func show_crates(sim, m: Dictionary) -> void:
 	var all_open: bool = i >= n
 	var gang_on: bool = int(m["remaining"]) > 0
 	var sniffs: bool = sim.dog_sniffs()
-	_head.text = ("THE CRATES · ALL %d OPEN" % n) if all_open else ("THE CRATES · %d OF %d OPEN" % [i, n])
+	var keys: bool = sim.has_keys()
+	# a locked crate without the Caretaker's Keys is passed over (13 Oct): it isn't one of the site's to open
+	var shut := 0
+	var opened_n := 0
+	for j in range(n):
+		if cs[j].get("passed", false) or (j > i and cs[j].get("locked", false) and not keys):
+			shut += 1                          # passed over, or will be (the Keys may come off or go on mid-run: the sim's mark first)
+		elif j < i:
+			opened_n += 1
+	var locked_tail: String = (" · %d LOCKED" % shut) if shut > 0 else ""
+	_head.text = (("THE CRATES · ALL %d OPEN" % (n - shut)) if all_open else ("THE CRATES · %d OF %d OPEN" % [opened_n, n - shut])) + locked_tail
 	_aside.text = "the dog's nose on them" if sniffs else "the order's the dice's"
 	# the row: a window on the queue, the one being opened kept in it
 	var start: int = clampi(i - 2, 0, maxi(0, n - SHOWN))
@@ -145,17 +162,20 @@ func show_crates(sim, m: Dictionary) -> void:
 			continue
 		var q: Dictionary = cs[j]
 		var c: Dictionary = sim.crate_def(str(q["key"]))
-		var opened: bool = j < i
+		var passed: bool = q.get("passed", false) or (j > i and q.get("locked", false) and not keys)     # passed over, or it will be
+		var opened: bool = j < i and not passed
 		var current: bool = j == i
 		var pic: Array = crate_texture(str(q["key"]), opened)
 		t["art"].texture = pic[0]
-		t["art"].modulate = Color(pic[1], 0.45 if opened else 1.0)
+		t["art"].modulate = Color(pic[1], 0.3 if passed else (0.45 if opened else 1.0))
 		t["tick"].visible = opened
+		t["lock"].visible = q.get("locked", false)       # locked: grey and passed over, or amber for the Keys to open
+		t["lock"].modulate = Pal.TEXT_3 if passed else Pal.ACCENT
 		t["glass"].visible = current
 		UI.fit(t["name"], [str(c["name"]), str(c.get("short", c["name"]))])
 		t["name"].add_theme_color_override("font_color", Pal.TEXT if current else Pal.TEXT_2)
 		var pips := ""
-		for s in range(int(q["searches"])):
+		for s in range(0 if passed else int(q["searches"])):
 			pips += "●" if s < int(q["done"]) else "○"
 		t["pips"].text = pips
 		var edge: Color = Pal.ACCENT if current else Pal.CARD_LINE
@@ -166,6 +186,8 @@ func show_crates(sim, m: Dictionary) -> void:
 		(t["panel"].get_theme_stylebox("panel") as StyleBoxFlat).set_border_width_all(2 if (current or held != "") else 1)
 	# the reveal: what came out of the crate last searched - the one in hand once it's given something, else the last
 	var shown_i: int = i if (not all_open and int(cs[i]["done"]) > 0) else i - 1
+	while shown_i >= 0 and cs[shown_i].get("passed", false):
+		shown_i -= 1                       # a locked one passed over gave nothing
 	var finds: Array = cs[shown_i]["finds"] if shown_i >= 0 and shown_i < n else []
 	var searching_now: bool = not all_open and not gang_on
 	if shown_i >= 0 and shown_i < n:
@@ -209,14 +231,19 @@ func show_crates(sim, m: Dictionary) -> void:
 		var due: float = sim.patrol_s(m["t"], m["patrols"] == 0) - float(m["patrol_timer"])
 		gang = " The next gang's on the call." if sim.gang_held(m) else ((" The next gang's due in %s." % Fmt.mss(due)) if due < 1e8 else "")
 	var line := ""
+	var nxt: int = i + 1
+	while nxt < n and cs[nxt].get("locked", false) and not keys:
+		nxt += 1                           # the next one opened, past the locked ones
 	if all_open:
-		line = "Nothing more here."
-	elif i + 1 >= n:
+		line = "Nothing more here." if shut == 0 else "Nothing more here; the locked ones want the Caretaker's Keys."
+	elif nxt >= n:
 		line = "The last crate."
 	else:
-		var nx: Dictionary = cs[i + 1]
+		var nx: Dictionary = cs[nxt]
 		var smell: String = nosed(nx) if sniffs else ""
-		line = "Next: %s %s, %s%s." % ["an" if str(nx["name"]).to_lower()[0] in "aeiou" else "a", str(nx["name"]).to_lower(), searches_words(int(nx["searches"])), (", " + smell + " inside") if smell != "" else ""]
+		var nm: String = ("locked " if nx.get("locked", false) else "") + str(nx["name"]).to_lower()
+		line = "Next: %s %s, %s%s%s." % ["an" if nm[0] in "aeiou" else "a", nm, searches_words(int(nx["searches"])), (", " + smell + " inside") if smell != "" else "",
+			", the Keys open it" if nx.get("locked", false) else ""]
 	UI.fit(_next, [line + gang, line])
 
 
