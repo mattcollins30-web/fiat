@@ -4304,7 +4304,7 @@ the deeds. With the Fence shut, Select-many's button bins the plain things ("Bin
 hammer start shook loose fixed in the tests: the junk run's nails go to the rig now there's a free pouch; the Craft
 view's piece picked by its cell, not its place in the list.
 
-**Parked (13 Oct, Matt's playtest, not fixed yet): a gate's "before" line keeps playing after its room's open.** The
+**Fixed in dceac06 (was parked, 13 Oct, Matt's playtest): a gate's "before" line keeps playing after its room's open.** The
 medic's "Anyone near Top Farm: the keeper there has a vet's bag" still runs on the radio line with the Clinic open. The
 cause: radio_line.gd's loop (`_next_line`) plays every line in `sim.heard` in turn, and a gate's "before" line stays
 heard. The fix: the loop skips a `<head>/before` line once every room its head opens is open (the "after" lines stay);
@@ -4323,3 +4323,22 @@ editor must import art/fight_test before an export (load() needs the .import; th
 showing). A kill drops any of them, not the first every time; each shot of yours lands on one of them at random, a
 marker and a white flash. You duck behind the wall now and then under fire and on a big hit - the wall comes up, the
 gun goes down, no shots while you're down.
+
+**The run view's numbers off the chips (13 Oct, 6a87054).** Your hits' numbers rise off the one you hit (about its chest),
+what you take from the frame's foot right of your bar; a spot whose rise would cross a bar, the head, a key or a chip is
+tried again, then the frame's clear middle right. The smoke scatters 120 with chips on both sides, and again with your
+chips as wide as they go.
+
+**From Matt's save (13 Oct, dceac06).** The gamble's price is GAMBLE_RUNS of its own base: a run's takings (Fence money
+in), but one run home moves it GAMBLE_STEP (15%) at most - a clear-out creeps it up, never lurches it (305 to 2366 off
+one sale before; the pass's saves had takings from 1x to 195x a run's kill pay). Takings themselves unchanged (the
+contracts read them). "Out to ..., depth N" has no colon with no codes. The cache's words name no Bench. Matt picked
+the capped takings over pricing off the item (steady but no late sink).
+
+**The elements in engine (13 Oct, b695263).** On them, on every one up: fire - an orange tint, a flicker and additive
+flames; poison - green and bubbles; bleed - red and drips; frost (chilled) - blue, flakes, and they pop and fire at half
+pace; shock - a flash, a twitch and an arc across them. On you: the frame's edges in the colour of what's on you,
+breathing. The chips' thresholds; nothing on them once the fight's over; the view ticks only while it's on screen.
+
+**Seen once, not chased (13 Oct):** two smoke reds on one run that passed on the next - "an arrow stayed once the
+better helmet went on" and "the log does not say what the bandage healed" (_class_trees' chain). Flakes; parked.
