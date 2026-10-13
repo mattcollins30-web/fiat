@@ -4190,3 +4190,7 @@ The art from the campaign manifest: the rail's nine glyphs from art/rail (UI.gly
 (art/ui/tins.png), the Gamekeeper's portrait in art/people (for the gates), the unlock items in art/items. The smoke
 checks every coded paper, the Radio and the Runs cards off the air and on it for the word, the rail and the tin loaded.
 Needs the editor opened once before an export: the new PNGs have no .import yet.
+
+**The rail's order and names (13 Oct, Matt).** Stats, The Kit (was Runner), The Map (was Runs), Training, The Clinic,
+The Fence, Workshop, The Yard, Radio. The Caravan's gone from the words (Training, the drawer in Training). The Map's
+card heads "ON THE AIR" (the sky and the codes). A painted rail glyph sits on a lighter stamp.

@@ -149,7 +149,7 @@ func _init() -> void:
 		c["boxes"][2].position.y = y
 		y += BOX_PAD
 		# the word: the head carries the sky; a row a word, its name left and its effect right
-		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "The codes")
+		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "On the air")
 		y += UI.HEAD_H + 2
 		# the words as toned rows: the name in its tone, its effect muted beside it, one chip a row
 		c["intel"] = Chips.new(INNER)
@@ -275,7 +275,7 @@ func show_state(s) -> void:
 				names.append(nm)                 # the Radio's words first, the sky's after
 		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
 		var radio: String = ("%d code%s from the Radio" % [wtiers.size(), "" if wtiers.size() == 1 else "s"]) if sim.juiceable(i) else ("codes from depth 2" if sim.campaign_done() else "a plain site")
-		UI.fit(c["intel_head"], ["THE CODES · %s · %s" % [sim.sky_words(i), radio], "THE CODES · %s" % sim.sky_words(i), "THE CODES"])
+		UI.fit(c["intel_head"], ["ON THE AIR · %s · %s" % [sim.sky_words(i), radio], "ON THE AIR · %s" % sim.sky_words(i), "ON THE AIR"])     # the sky and the codes (13 Oct, Matt)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free

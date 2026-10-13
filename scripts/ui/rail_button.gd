@@ -18,8 +18,9 @@ const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
 ## The rail's glyphs (13 Oct, the campaign manifest): art/rail/, drawn for the rooms as they're named now; the five a
 ## boss opens are the things that open them (the deeds, the tool roll, the vet's bag, the ledger, the military radio).
-const GLYPH_OF := {"The Yard": "rail/yard", "Stats": "rail/stats", "Runner": "rail/runner", "Runs": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
-	"Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio"}
+const GLYPH_OF := {"The Yard": "rail/yard", "Stats": "rail/stats", "The Kit": "rail/runner", "The Map": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
+	"The Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio"}
+const STAMP_PAINTED := Color("4b525a")   # a painting's stamp, lighter (13 Oct, Matt: the dark ones sank into the dark)
 
 var room: String
 var _name: Label
@@ -100,7 +101,8 @@ func _style(on: bool) -> void:
 		add_theme_stylebox_override(state, UI.box(bg, 0))
 	add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 0, 2, Pal.TEXT))
 	var sb := _stamp.get_theme_stylebox("panel") as StyleBoxFlat
-	sb.bg_color = Pal.ACCENT if on else Pal.STAMP
+	var painted: bool = not UI.glyph_mono(GLYPH_OF.get(room, "yard"))
+	sb.bg_color = Pal.ACCENT if on else (STAMP_PAINTED if painted else Pal.STAMP)
 	sb.border_color = Pal.ACCENT if on else Pal.CARD_LINE
 	if UI.glyph_mono(GLYPH_OF.get(room, "yard")):
 		_glyph.modulate = Pal.ACCENT_TEXT if on else Pal.TEXT_2       # a line drawing takes the stamp's ink; a painting is itself

@@ -1260,7 +1260,7 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Heal" and cv._side_tiles_c[2]["key"].text == "The wound" and cv._side_tiles_c[3]["key"].text == "Clinic", "the Clinic's treatment tiles are off")
+	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Heal" and cv._side_tiles_c[2]["key"].text == "The wound" and cv._side_tiles_c[3]["key"].text == "The Clinic", "the Clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
 	var med_kinds := {}
 	for it in sim.stash:
@@ -4344,7 +4344,7 @@ func _places_checks(main) -> void:
 	for r in range(c["intel"].shown()):
 		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_head"].text.begins_with("THE CODES · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("ON THE AIR · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
 	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = sim.to_dict()
@@ -4534,7 +4534,7 @@ func _next_checks(main) -> void:
 	_check(fresh.next_words().begins_with("The Allotments hasn't") or fresh.next_words().begins_with("The Garden Centre hasn't"), "after the first run the next site is not named: %s" % fresh.next_words())
 	for i in [0, 1, 2, 3, 4, 5]:
 		fresh.best_depth[i] = 1
-	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on Runs", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
+	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on the Map", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
 	fresh.bosses_beaten[1] = true
 	_check(fresh.next_words() == Words.NEXT["site"] % "The Pleasure Park", "the town's first site is not named: %s" % fresh.next_words())
 	var n0: int = fresh.events.size()
@@ -4813,7 +4813,7 @@ func _playtest_checks(main) -> void:
 	_check(c["band"]._tone == 2 or not sim.zone_open(2), "the band's tone did not follow the zone")
 	main._missions._pick_zone(1)
 	main.refresh()
-	_check(c["intel_head"].text.begins_with("THE CODES"), "the codes' head is off: '%s'" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("ON THE AIR"), "the air's head is off: '%s'" % c["intel_head"].text)
 	# three boxes under the band: the fight holds its tiles, the elements their chips, the word its rows and the site lines; none overlap, and the last clears the note
 	var bx: Array = c["boxes"]
 	var r0 := Rect2(bx[0].position, bx[0].size)
@@ -4912,7 +4912,7 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
 	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
-	_check(main._armoury._pick._right_title.text.begins_with("In the Caravan's drawer") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
+	_check(main._armoury._pick._right_title.text.begins_with("In the drawer, in Training") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
 	main.show_room(main.MARKET)
@@ -8372,7 +8372,7 @@ func _map_screen_checks(main) -> void:
 
 ## The rail (9 Oct, Matt's order and names): the loadout is Runner, the sheet is Stats, the Bench is the Workshop.
 func _rail_order_checks(main) -> void:
-	var want := ["The Yard", "Stats", "Runner", "Runs", "Training", "Workshop", "Clinic", "The Fence", "Radio"]
+	var want := ["Stats", "The Kit", "The Map", "Training", "The Clinic", "The Fence", "Workshop", "The Yard", "Radio"]     # Matt's order and names (13 Oct)
 	_check(main.ROOMS == want, "the rail's rooms are %s" % str(main.ROOMS))
 	var ys := []
 	for name in want:
@@ -8383,11 +8383,11 @@ func _rail_order_checks(main) -> void:
 		_check(ys[k] > ys[k - 1], "the rail's %s row is not under %s" % [want[k], want[k - 1]])
 	main.show_room(main.ARMOURY)
 	main.refresh()
-	_check(main._armoury.visible and main.ARMOURY == "Runner", "Runner does not open the loadout")
+	_check(main._armoury.visible and main.ARMOURY == "The Kit", "the Kit does not open the loadout")
 	main.show_room(main.RUNNER)
 	main.refresh()
 	_check(main.RUNNER == "Stats" and main._stats.visible and not main._grid.visible, "Stats does not open the runner's sheet")
-	_check(main._rail_buttons["Workshop"]._glyph.texture != null and main._rail_buttons["Runner"]._glyph.texture != null, "Workshop or Runner lost its glyph")
+	_check(main._rail_buttons["Workshop"]._glyph.texture != null and main._rail_buttons["The Kit"]._glyph.texture != null, "Workshop or the Kit lost its glyph")
 
 
 ## Place art (9 Oct): a painted site shows in its band, a painted zone behind its tab; none painted, the skyline.

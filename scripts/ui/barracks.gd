@@ -636,7 +636,7 @@ func _show_head() -> void:
 	var faced := People.show(_face, sim.cls)
 	_face.visible = faced
 	var who: String = str(cd.get("name", "No past yet"))
-	UI.fit(_kicker, [("%s · %s · The Caravan" % [who, td["name"]]) if not td.is_empty() else "%s · The Caravan" % who, ("%s · %s" % [who, td["name"]]) if not td.is_empty() else who, who])
+	UI.fit(_kicker, [("%s · %s · Training" % [who, td["name"]]) if not td.is_empty() else "%s · Training" % who, ("%s · %s" % [who, td["name"]]) if not td.is_empty() else who, who])
 	var free: int = sim.points_free()
 	_points.text = "%d of %d" % [free, sim.training_points]
 	_points.add_theme_color_override("font_color", Pal.ACCENT if free > 0 else Pal.TEXT_2)

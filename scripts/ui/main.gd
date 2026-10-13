@@ -49,15 +49,15 @@ const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
 const ODDS_MS := 5.0                # of odds work a frame on the Runs screen: the screen stays smooth, the tiers settle over a second or two
 const OVERVIEW := "The Yard"
-const MISSIONS := "Runs"
-const ARMOURY := "Runner"          # the loadout (9 Oct, Matt: "I click runner expecting to see my loadout"): was the Lock-up
-const MEDIC := "Clinic"
+const MISSIONS := "The Map"        # the sites (13 Oct, Matt): was Runs
+const ARMOURY := "The Kit"         # the loadout (13 Oct, Matt): was Runner, the Lock-up before that
+const MEDIC := "The Clinic"        # (13 Oct, Matt)
 const MARKET := "The Fence"
 const BARRACKS := "Training"       # the Caravan's room (8 Oct, Matt: "caravan doesn't make any sense when it displays perk points/skill trees"); the Caravan stays as the place on its screen
 const WORKSHOP := "Workshop"       # was the Bench (9 Oct); the Bench stays the Yard's building
 const COMMS := "Radio"
 const RUNNER := "Stats"            # the runner's sheet, attack, defence, the record (8 Oct); was the Runner room until 9 Oct
-const ROOMS := [OVERVIEW, RUNNER, ARMOURY, MISSIONS, BARRACKS, WORKSHOP, MEDIC, MARKET, COMMS]     # Matt's order (9 Oct)
+const ROOMS := [RUNNER, ARMOURY, MISSIONS, BARRACKS, MEDIC, MARKET, WORKSHOP, OVERVIEW, COMMS]     # Matt's order (13 Oct)
 
 ## The top bar: level and HP on the left, the purse right-justified on the right. The left group's slots are as wide
 ## as the widest text they can hold, so nothing there shifts; the purse lays out by its figures as they read

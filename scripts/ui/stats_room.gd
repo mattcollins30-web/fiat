@@ -311,7 +311,7 @@ func _show_runner(lv: int) -> void:
 	_set_row(rows[3], "Alive", [Fmt.clock(alive)])
 	_set_row(rows[4], "Deepest hold", [dig, dig.get_slice(",", 0)])
 	_set_row(rows[5], "Kit worth", [Fmt.money(sim.loadout_value())], Pal.ACCENT)
-	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on Runs", ""), ""])
+	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
 
 
 func _show_attack(lv: int, dps: float) -> void:

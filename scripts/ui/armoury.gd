@@ -238,7 +238,7 @@ func _show_panel() -> void:
 	if Items.rig_item(it):
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
-		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the Caravan's drawer" if it["base"] in sim.book else "Not read yet"),
+		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned: the ending" if Items.is_deeds(it) else ("In the drawer, in Training" if it["base"] in sim.book else "Not read yet"),
 			[Items.paper_keep(it, sim.book), "The Fence buys papers"])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):

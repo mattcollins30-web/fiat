@@ -654,7 +654,7 @@ func _show_craft(it: Dictionary) -> void:
 		sel_stat = ""
 		_piece_title.text = "Pick a piece"
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets."
-		_piece_words[1].text = "Worn gear: Workshop on it in the Runner room."
+		_piece_words[1].text = "Worn gear: Workshop on it in the Kit."
 		_piece_words[2].text = "The jobs below price up once a piece is picked."
 		_pick.show_empty("Nothing picked", ["In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "Scrap: searched up, scrapped here, ditched"])
 		_set_pick_buttons([])

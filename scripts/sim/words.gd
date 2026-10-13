@@ -731,22 +731,22 @@ const SKY := {
 ## The first ten minutes: what's next, in the voice, on the Runner card and
 ## in the log when it changes. Nobody says objective.
 const NEXT := {
-	"past": "The runner's in the Caravan. Ask what they were, before.",
+	"past": "The runner's waiting in Training. Ask what they were, before.",
 	"first": "The Allotments are out past the ring road. Go and see what's left.",
 	"contract": "The Fence has a contract you can fill. Contracts, on his screen: hand it in.",
 	"site": "%s hasn't been cleared. That's where the next lot are.",
-	"head": "%s is behind %s. Arm him on Runs when the odds hold.",
+	"head": "%s is behind %s. Arm him on the Map when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. Depth is the game now; the lorry runs the Services at depth %d.",
 	"lorry": "The lorry's beaten. Move the Yard when you're ready: the next starts its ladders higher, with a free node on the Yard's tree.",
 	"moved": "A new yard, the same list on the wall. Start at the allotments.",
 }
 const NEXT_SHORT := {
-	"past": "Pick a past in the Caravan",
+	"past": "Pick a past in Training",
 	"first": "The Outskirts are outside",
 	"contract": "A contract's ready",
 	"site": "Next: %s",
-	"head": "Arm %s on Runs",
+	"head": "Arm %s on the Map",
 	"done": "Depth is the game now",
 	"lorry": "The lorry's beaten: move the Yard",
 }

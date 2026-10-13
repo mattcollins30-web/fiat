@@ -378,7 +378,7 @@ func _hover(key: String) -> void:
 		if sim.sealed[i]:
 			note = "Sealed by a Twist: nothing but Clear, at ten times the price."
 		elif not sim.juiceable(i):
-			note = "Codes from depth 2: step the ladder down on the Runs screen."
+			note = "Codes from depth 2: step the ladder down on the Map."
 		UI.fit(_hint, [note, note.get_slice(";", 0) + "."])
 		return
 	var cd := Data.craft_of(key)

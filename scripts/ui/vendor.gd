@@ -590,7 +590,7 @@ func _show_side() -> void:
 		for c in range(5):
 			if sim.yard_side("clinic", c) != "":
 				cpicks += 1
-		UI.set_tile(_side_tiles_c[3], "Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
+		UI.set_tile(_side_tiles_c[3], "The Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
 		y += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
@@ -694,7 +694,7 @@ func _show_panel() -> void:
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 			if sim.med_capacity() == 0:
-				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Runner room to carry meds", "No rig fitted: fit one in Runner", "No rig fitted"])
+				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Kit to carry meds", "No rig fitted: fit one in the Kit", "No rig fitted"])
 			elif sim.rig.is_empty():
 				UI.fit(_left_lines[0], ["Nothing carried: take from Your meds", "Nothing carried: take from the grid", "Nothing carried"])
 			else:
@@ -710,7 +710,7 @@ func _show_panel() -> void:
 					words.append(name if counts[name] == 1 else "%s ×%d" % [name, counts[name]])
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
 				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
-				UI.fit(_left_lines[2], ["Taken out again in the Runner room, from the rig", "Taken out in Runner"])
+				UI.fit(_left_lines[2], ["Taken out again in the Kit, from the rig", "Taken out in the Kit"])
 			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), sim.clinic_stock()]
 			_right_lines[0].text = "No more until the next run"
 		else:
@@ -755,7 +755,7 @@ func _show_panel() -> void:
 		if Items.is_deeds(it):
 			UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
 		elif it["base"] in sim.book:
-			UI.fit(_right_lines[0], ["Read, and kept in the Caravan's drawer", "Read; in the Caravan's drawer", "In the drawer"])
+			UI.fit(_right_lines[0], ["Read, and kept in the drawer in Training", "Read; in the drawer", "In the drawer"])
 			if selected.get("kind", "") == "stash":     # only one the runner holds: a shelf paper isn't theirs to sell
 				UI.fit(_right_lines[1], [Items.paper_keep(it, sim.book), "Keep it" if str(it.get("rule", "")) != "" else "Safe to sell"])     # Matt, 10 Oct
 		else:
