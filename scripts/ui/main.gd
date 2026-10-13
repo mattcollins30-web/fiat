@@ -462,7 +462,7 @@ func _toast_new_lines() -> void:
 		var tone := Words.toast_tone(line)
 		# only what just happened: a load or a settle brings old lines, and those stay in the log
 		if tone != "none" and now - float(sim.events[k][0]) < 5.0 and not (line in _juice.lines()):
-			_juice.toast(line, tone)
+			_juice.toast(line, tone, toast_forms(line))
 	_events_seen = total
 
 
@@ -867,6 +867,15 @@ func refresh() -> void:
 
 
 ## A line's shorter forms: the whole, then fewer sentences, then the first clause - never trailing off.
+## A toast's forms: the sentence cuts, then the line's own short form (Words.short_line).
+static func toast_forms(line: String) -> Array:
+	var out: Array = _by_sentence(line)
+	var s: String = Words.short_line(line)
+	if s != "" and not (s in out):
+		out.append(s)
+	return out
+
+
 static func _by_sentence(line: String) -> Array:
 	var out: Array = [line]
 	var parts := line.split(". ", false)

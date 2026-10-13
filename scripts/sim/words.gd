@@ -810,6 +810,16 @@ static func rotate(lines: Array, n: int) -> String:
 
 
 ## Which log lines earn a toast, and in what tone: "" for a plain one, "none" for the rest.
+## A line's last short form for a toast, when it has no full stop, colon or comma to cut at (13 Oct: "One of them is in
+## the last Doorman's hand-me-down nail gun." ran past its toast): the piece goes, the person stays. "" when none.
+static func short_line(line: String) -> String:
+	var lead: String = RECYCLE["wearing"].get_slice("%s", 0)
+	var at: int = line.find("'s ", lead.length()) if line.begins_with(lead) else -1     # the person's, not a "butcher's chainmail"'s
+	if at > lead.length():
+		return line.substr(0, at) + "'s kit."
+	return ""
+
+
 static func toast_tone(line: String) -> String:
 	if line.begins_with("Found: ") or line.begins_with("And a second: ") or line.contains(" Found: "):
 		return "good"

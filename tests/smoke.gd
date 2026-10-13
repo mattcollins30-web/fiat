@@ -4892,6 +4892,13 @@ func _playtest_checks(main) -> void:
 	var one := "One of them is in the last doorman's station helmet, visored and with the strap on."
 	var one_forms: Array = main._by_sentence(one)
 	_check(one_forms.size() == 2 and one_forms[1] == "One of them is in the last doorman's station helmet.", "the one-sentence forms are off: %s" % str(one_forms))
+	# a toast with nowhere to cut (13 Oct: the lost Doorman's hand-me-down nail gun ran past its box): the piece goes, then a smaller size
+	for tline in ["One of them is in the last Doorman's hand-me-down nail gun.", "One of them is in the last Paramedic's Bomb-disposal rig with the Arsonist's straps on it and more."]:
+		main._juice.toast(tline, "", main.toast_forms(tline))
+		var tl: Label = main._juice._toasts[0]["label"]
+		_check(UI.text_width(tl, tl.text) <= tl.size.x + 0.5, "a toast runs past its box: '%s'" % tl.text)
+	_check(Words.short_line("One of them is in the last Doorman's butcher's chainmail.") == "One of them is in the last Doorman's kit.", "the short form cut at the piece's apostrophe: '%s'" % Words.short_line("One of them is in the last Doorman's butcher's chainmail."))
+	_check(main.toast_forms("One of them is in the last Doorman's hand-me-down nail gun.").back() == "One of them is in the last Doorman's kit.", "the wearing line's short form is off: %s" % str(main.toast_forms("One of them is in the last Doorman's hand-me-down nail gun.")))
 	# a paper picked in the Lock-up
 	var paper: Dictionary = sim._plain(Data.PAPER, "A P45")
 	while not sim.stash_room(2) and not sim.stash.is_empty():

@@ -4167,3 +4167,7 @@ smoke fails any label showing £, and checks the Clinic and the Fence at level 5
 campaign manifest (art/ui_new/tins.png). Flakes fixed: the came-back card's firsts (papers read on the test's two runs).
 Open: a toast with no full stop or comma to cut at can run past its box ("One of them is in the last Doorman's
 hand-me-down nail gun.") - seen once, not from tins; to Matt.
+
+**Toasts that can't be cut (13 Oct).** A toast takes the log's sentence cuts, then the line's own short form
+(Words.short_line: "One of them is in the last Doorman's kit." for a lost runner's piece, cut at the person's apostrophe,
+not a "butcher's chainmail"'s), then a smaller size down to 20 (the Deck's two-thirds); the smoke toasts the worst ones.

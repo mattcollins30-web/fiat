@@ -29,11 +29,18 @@ func set_top(y: float) -> void:
 
 
 ## A line worth a moment of its own, under the top bar; the newest on top.
-func toast(text: String, tone := "") -> void:
+## `forms`: the line long to short (the shell's sentence cuts); none, its own first sentence and clause. Past them all
+## the line takes a smaller size until it fits: a toast never runs past its box.
+const TOAST_MIN_FONT := 20         # the Deck draws at two-thirds: no smaller than this
+func toast(text: String, tone := "", forms: Array = []) -> void:
 	var p := UI.panel(self, Rect2(0, 0, TOAST_W, TOAST_H), UI.box(Pal.CARD, 8, 1, Pal.tone_color(tone) if tone != "" else Pal.CARD_LINE))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := UI.label(p, Rect2(16, 0, TOAST_W - 32, TOAST_H), "", "SemiBold", Pal.FLOOR, Pal.tone_color(tone) if tone != "" else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
-	UI.fit(l, [text, text.get_slice(". ", 0) + ".", text.get_slice(":", 0)])
+	UI.fit(l, forms if not forms.is_empty() else [text, text.get_slice(". ", 0) + ".", text.get_slice(":", 0)])
+	var fs: int = Pal.FLOOR
+	while UI.text_width(l, l.text) > l.size.x and fs > TOAST_MIN_FONT:
+		fs -= 1
+		l.add_theme_font_size_override("font_size", fs)
 	_toasts.push_front({"panel": p, "label": l, "left": TOAST_S, "line": text})
 	while _toasts.size() > TOAST_MAX:
 		var old: Dictionary = _toasts.pop_back()
