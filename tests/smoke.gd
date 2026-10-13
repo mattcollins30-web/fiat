@@ -7353,14 +7353,27 @@ func _crates_checks(main) -> void:
 	main.refresh()
 	_check(run._crates._finds_head.text.begins_with("OUT OF THE ") or run._crates._finds_head.text.begins_with("IN THE "), "the reveal's head reads '%s'" % run._crates._finds_head.text)
 	_check_fit(main, "Run (a crate open)")
-	# a pick brings the pick panel back over the crates; letting it go, the crates again
+	# the toggle (13 Oct, Matt): one search bar at a time - the crates up, the fight box's bar gone; its click away,
+	# the pick and the bar back; a pick shows its comparison; a new search opens on the crates whatever was picked
+	_check(run._crates.visible and not run._fight["track"].visible and not run._search_button.visible, "with the crates up the fight box still shows its search bar")
+	run._crates.toggled.emit()
+	main.refresh()
+	_check(run._pick.visible and not run._crates.visible and run._fight["track"].visible and run._search_button.visible, "the crates' bar did not give the pick and the search bar back")
+	_check(run._fight["bar_text"].text.contains("Crate ") and Rect2(Vector2.ZERO, run._fight["track"].size).has_point(run._search_button.position - run._fight["track"].position + Vector2(1, 1)), "the search bar is not the toggle: '%s'" % run._fight["bar_text"].text)
+	_check_fit(main, "Run (the search bar, the pick)")
+	run._search_button.pressed.emit()
+	main.refresh()
+	_check(run._crates.visible and not run._pick.visible and not run._fight["track"].visible, "the search bar did not open the crates")
 	if not m["found"].is_empty():
 		run._inv.selected = int(m["found"][0]["id"])
+		run._on_inv_pick(int(m["found"][0]["id"]))
 		main.refresh()
-		_check(run._pick.visible and not run._crates.visible, "a pick did not bring the pick panel over the crates")
+		_check(run._pick.visible and not run._crates.visible, "a pick did not show its comparison over the crates")
+		var next_q: Array = m["crates"].duplicate()
+		m["crates"] = next_q                     # a new search (Matt, 13 Oct: a rig still picked when the fight ended hid the crates)
+		main.refresh()
+		_check(run._crates.visible and not run._pick.visible, "a new search with a pick held did not open on the crates")
 		run._inv.selected = -1
-		main.refresh()
-		_check(run._crates.visible and not run._pick.visible, "the crates did not come back with the pick let go")
 	# a stack found shows what was found, not what was left once it joined the pack's (the review, 13 Oct)
 	for q in m["crates"]:
 		for f in q["finds"]:

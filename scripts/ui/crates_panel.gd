@@ -30,6 +30,8 @@ const WORDS := ["no", "one", "two", "three", "four", "five", "six"]
 const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewellery": Color("c9a0c8"), "toolbox": Color("b4483c"),
 	"medicine": Color("d8dde2"), "filing": Color("8f9aa6"), "safe": Color("6b7178"), "military": Color("5f7a45")}
 
+signal toggled                     # the bar pressed: back to the pick (13 Oct, Matt: one search bar at a time)
+
 var _head: Label
 var _aside: Label
 var _tiles: Array = []             # {panel, art, name, pips, tick, glass, lock}
@@ -42,6 +44,7 @@ var _track: Panel
 var _fill: Panel
 var _bar_text: Label
 var _next: Label
+var _bar_button: Button
 
 
 func _init() -> void:
@@ -104,6 +107,20 @@ func build(w: float, h: float = HEIGHT) -> void:
 	_fill = UI.panel(_track, Rect2(0, 0, 0, BAR_H), UI.box(Pal.ACCENT, 6))
 	_bar_text = UI.label(_track, Rect2(0, 0, inner, BAR_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
 	UI.shadow(_bar_text)
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.position = _track.position
+	b.size = _track.size
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.tooltip_text = "Back to the pick"
+	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.06), 6))
+	b.add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.1), 6))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.pressed.connect(func(): toggled.emit())
+	add_child(b)
+	_bar_button = b
 	_next = UI.label(self, Rect2(PAD, NEXT_Y, inner, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 
 
@@ -215,15 +232,15 @@ func show_crates(sim, m: Dictionary) -> void:
 	var tone: Color = Pal.ACCENT
 	if all_open:
 		_fill.size.x = _track.size.x
-		_bar_text.text = "Picked clean: every crate open"
+		_bar_text.text = "Picked clean: every crate open · show the pick"
 		tone = Pal.TEXT_3
 	elif gang_on:
 		_fill.size.x = _track.size.x * clampf(float(m["search"]) / every, 0.0, 1.0)
-		_bar_text.text = "A gang's on you: the %s waits" % str(cs[i]["name"]).to_lower()
+		_bar_text.text = "A gang's on you: the %s waits · show the pick" % str(cs[i]["name"]).to_lower()
 		tone = Pal.BAD
 	else:
 		_fill.size.x = _track.size.x * clampf(float(m["search"]) / every, 0.0, 1.0)
-		_bar_text.text = "%s · search %d of %d" % [cs[i]["name"], int(cs[i]["done"]) + 1, int(cs[i]["searches"])]
+		_bar_text.text = "%s · search %d of %d · show the pick" % [cs[i]["name"], int(cs[i]["done"]) + 1, int(cs[i]["searches"])]
 	(_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = tone
 	# what's next, and the gang's clock: the stay-or-go call
 	var gang: String = ""

@@ -96,7 +96,10 @@ var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): i
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
-var _crates                        # the crates (crates_panel.gd): under the pack once the site's cleared, in the pick panel's place while nothing's picked
+var _crates                        # the crates (crates_panel.gd): under the pack once the site's cleared, in the pick panel's place
+var view_crates := false           # the toggle (13 Oct, Matt): the search bar shows the crates, the crates' bar the pick again; one bar at a time
+var _crates_for = null             # the run's crates the view last opened on: a new search opens on the crates
+var _search_button: Button         # over the fight box's bar while it's the search's
 
 
 func _init() -> void:
@@ -159,8 +162,12 @@ func _init() -> void:
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
+	_search_button = _bar_button(_fight["track"])
+	_search_button.tooltip_text = "Show the crates"
+	_search_button.pressed.connect(_toggle_crates)
 	_crates = CratesPanel.new()
 	_crates.build(GRID_W, PICK_H)
+	_crates.toggled.connect(_toggle_crates)
 	_crates.position = Vector2(GRID_X, PICK_Y)
 	_crates.visible = false
 	add_child(_crates)
@@ -258,6 +265,8 @@ func show_state(s) -> void:
 		var search_words: String = "Searching" if not m.has("crates") else ("Picked clean: every crate open" if cr.is_empty() else
 			"Crate %d of %d · %s" % [int(m.get("crate_i", 0)) + 1, m["crates"].size(), str(cr["name"]).to_lower()])
 		_bar(_fight, 1.0 if sim.crates_done(m) else clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "warn" if sim.crates_done(m) else "good")
+		if m.has("crates") and UI.text_width(_fight["bar_text"], search_words + " · show the crates") <= _fight["w"] - 16:
+			_fight["bar_text"].text = search_words + " · show the crates"     # the bar's a button (13 Oct): it says so
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
 	var g: float = sim.guard()
@@ -296,7 +305,16 @@ func show_state(s) -> void:
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates under the pack once the site's cleared, where the pick panel sits while nothing's picked (a pick
 	# brings the panel back over them: the review, 13 Oct - a 3x3 vest wouldn't fit a pack cut to two rows)
-	var crates_on: bool = m.has("crates") and not m.get("crates_off", false) and _picked_item(m).is_empty() and _rig_picked().is_empty()
+	# the crates (13 Oct, Matt): a toggle, the search bar opening them and the crates' bar giving the pick back - one
+	# search bar shown at a time; a new search opens on the crates, whatever was picked when the fight ended
+	var has_crates: bool = m.has("crates") and not m.get("crates_off", false)
+	if has_crates and not is_same(_crates_for, m["crates"]):
+		_crates_for = m["crates"]
+		view_crates = true
+	var crates_on: bool = has_crates and view_crates
+	var searching_bar: bool = has_crates and m["remaining"] <= 0 and not boss_on and not way_out
+	_fight["track"].visible = not (crates_on and searching_bar)
+	_search_button.visible = searching_bar and not crates_on
 	_crates.visible = crates_on
 	_pick.visible = not crates_on
 	if crates_on:
@@ -707,6 +725,7 @@ func _rig_pressed(k: int) -> void:
 			var id: int = int(sim.rig[k]["id"])
 			_rig_pick = -1 if _rig_pick == id else id
 			_inv.selected = -1
+			view_crates = false               # its comparison shows: the crates are the search bar's click away
 		elif Items.is_medical(sim.rig[k]):
 			sim.use_med(sim.rig[k]["id"])
 		elif Items.is_grenade(sim.rig[k]):
@@ -755,7 +774,32 @@ func _on_pick_acted() -> void:
 
 
 func _on_inv_pick(_id: int) -> void:
+	view_crates = false                   # a pick shows its comparison: the crates are a click on the search bar away
 	acted.emit()
+
+
+## The search bar's toggle (13 Oct, Matt): the crates, or the pick.
+func _toggle_crates() -> void:
+	view_crates = not view_crates
+	_shown = ""                           # the pick panel redraws when it comes back
+	acted.emit()
+
+
+## A flat button over a bar: the bar shows through, the pointer says it's pressable.
+func _bar_button(track: Control) -> Button:
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.position = track.position
+	b.size = track.size
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.06), 6))
+	b.add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.1), 6))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	track.get_parent().add_child(b)
+	b.visible = false
+	return b
 
 
 func _on_inv_acted() -> void:

@@ -4273,3 +4273,8 @@ but the ladders' spread now Paramedic as poison 12 (Poacher as frost 12 and 11: 
 the crates, 9-11 before); the bank's band 0.6-1.8 h. Both plain Doorman reads held at the Carpet Man for three hours (the
 Retail Park cleared at 0.8 and 2.1 h, the Town at 4.2 and 3.9), one of them at 6 damage a second for half an hour of it -
 rounds out with the Fence shut, the ammo trap's edge. To Matt with the playtest.
+
+**The crates are a toggle (13 Oct, Matt's playtest: a rig still picked when the fight ended hid the crates).** The fight
+box's search bar is a button ("· show the crates"); the crates' own bar gives the pick back ("· show the pick"); one
+search bar shows at a time. A new search opens on the crates whatever's picked; a pick in the pack or the rig shows its
+comparison.
