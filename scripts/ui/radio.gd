@@ -242,7 +242,7 @@ func _show_heard() -> void:
 	var line := ""
 	if not sim.heard.is_empty():
 		var r: Dictionary = sim.radio_line(str(sim.heard.back()))
-		line = "%s: %s" % [Words.RADIO_SHORT.get(r.get("voice", ""), ""), r.get("text", "")]
+		line = str(r.get("text", ""))           # no speaker (13 Oct, Matt)
 	UI.fit(_heard, [line, line.get_slice(". ", 0) + ("." if line.contains(". ") else ""), ""] if line != "" else [""])
 	_heard_pill.visible = _heard.text != ""
 	if _heard_pill.visible:

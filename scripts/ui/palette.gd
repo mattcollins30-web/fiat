@@ -74,6 +74,10 @@ const CELL_GAP := 6
 # the screen at 1920 x 1080 (Pithole's menu_shell.md §1)
 const MARGIN := 24
 const TOP_H := 64
+const RADIO_H := 36                  # the radio line under the top bar (13 Oct, mockup C): the top bar's second row
+const TOP_GAP := 8                   # under the radio line to the rooms (was MARGIN, 24: the line took it)
+const LOG_GAP := 8                   # a room to the log under it (was CARD_GAP, 16)
+const BOTTOM := 12                   # the log to the screen's foot (was MARGIN, 24)
 const RAIL_W := 312
 const RAIL_BTN_H := 112              # a row of the ledger (8 Oct) before the layout: the rows share the rail's height, which runs to the log's bottom
 const RAIL_GAP := 0                  # rows under a hairline, one panel

@@ -6702,7 +6702,7 @@ func _radio_after_run() -> void:
 	if r.is_empty():
 		return
 	heard.append(r["key"])
-	log_event("%s, on the radio: %s" % [Words.RADIO_SHORT[r["voice"]], r["text"]])
+	log_event(Words.RADIO_LEAD + str(r["text"]))     # no speaker (13 Oct): the radio line under the top bar plays it
 
 
 func log_event(text: String) -> void:

@@ -21,6 +21,7 @@ const OPENING := [
 ## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
 const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net"}
 const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net"}
+const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [
 	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
 	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to."},
@@ -832,6 +833,6 @@ static func toast_tone(line: String) -> String:
 		return ""
 	if line.begins_with("Dead in "):
 		return "bad"
-	if line.contains(", on the radio: "):
-		return ""                               # the radio's line (12 Oct): a plain toast
+	if line.begins_with(RADIO_LEAD):
+		return "none"                           # the radio line under the top bar plays it (13 Oct): no toast
 	return "none"

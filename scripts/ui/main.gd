@@ -21,6 +21,7 @@ const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
+const RadioLine := preload("res://scripts/ui/radio_line.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Sound := preload("res://scripts/ui/sound.gd")
 const SETTINGS_FILE := "user://fiat_settings.save"
@@ -100,6 +101,7 @@ var _since_refresh := 0.0
 
 var _bg: Panel
 var _top: Panel
+var _radio_line                    # the radio line under the top bar (radio_line.gd)
 var _top_row: Control
 var _top_labels := {}
 var _top_glyphs := {}
@@ -164,7 +166,7 @@ func _ready() -> void:
 
 func _build() -> void:
 	_bg = UI.panel(self, Rect2(Vector2.ZERO, Vector2(1920, 1080)), UI.box(Pal.BG, 0))
-	_top = UI.panel(self, Rect2(0, 0, 1920, Pal.TOP_H), UI.box(Pal.PANEL, 0))
+	_top = UI.panel(self, Rect2(0, 0, 1920, Pal.TOP_H + Pal.RADIO_H), UI.box(Pal.PANEL, 0))     # the bar and the radio line under it
 	_top_row = Control.new()
 	_top_row.size = Vector2(1920 - 2 * Pal.MARGIN, Pal.TOP_H)
 	_top.add_child(_top_row)
@@ -298,6 +300,10 @@ func _build() -> void:
 	_speed_label = UI.label(_events, Rect2(Pal.GRID_W - 20 - sw, 4, sw, 27), SPEED_TEXT, "SemiBold", Pal.FLOOR, Pal.WARN,
 			HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_speed_label.visible = false
+	_radio_line = RadioLine.new()
+	_radio_line.position = Vector2(0, Pal.TOP_H)
+	_radio_line.pressed.connect(func(): show_room(COMMS))
+	add_child(_radio_line)
 	_juice = Juice.new()
 	add_child(_juice)
 	_run.juice = _juice
@@ -355,16 +361,19 @@ func _on_resize() -> void:
 ## below the grid.
 func layout(s: Vector2) -> void:
 	_bg.size = s
-	_top.size = Vector2(s.x, Pal.TOP_H)
+	_top.size = Vector2(s.x, Pal.TOP_H + Pal.RADIO_H)
 	_juice.size = s
-	_juice.set_top(Pal.TOP_H + 12)
+	_juice.set_top(Pal.TOP_H + Pal.RADIO_H + 12)
 	var x0 := floorf((s.x - 1920.0) / 2.0) + Pal.MARGIN
 	_top_row.position = Vector2(x0, 0)
-	var free := s.y - Pal.TOP_H - Pal.MARGIN - Pal.CARD_GAP - Pal.EVENTS_H - Pal.MARGIN - Pal.ROOM_H
-	var band_y := Pal.TOP_H + Pal.MARGIN + floorf(maxf(0.0, free) / 2.0)
+	_radio_line.size.x = s.x
+	_radio_line.lay(x0, 1920.0 - 2 * Pal.MARGIN)
+	# the radio line took the space round the rooms, not the rooms (13 Oct): 24 over them to 8, 16 under to 8, 24 at the foot to 12
+	var free := s.y - Pal.TOP_H - Pal.RADIO_H - Pal.TOP_GAP - Pal.ROOM_H - Pal.LOG_GAP - Pal.EVENTS_H - Pal.BOTTOM
+	var band_y := Pal.TOP_H + Pal.RADIO_H + Pal.TOP_GAP + floorf(maxf(0.0, free) / 2.0)
 	_rail.position = Vector2(x0, band_y)
 	# the rail runs from the band's top to the log's bottom, the rows sharing what's under the heading (8 Oct)
-	var rail_h: float = maxf(s.y - Pal.MARGIN - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * 72.0)     # a screen too short for the rows gets rows of 72 and a rail that runs under
+	var rail_h: float = maxf(s.y - Pal.BOTTOM - band_y, Pal.RAIL_HEAD_H + ROOMS.size() * 72.0)     # a screen too short for the rows gets rows of 72 and a rail that runs under
 	_rail_panel.size.y = rail_h
 	var row_h: float = floorf((rail_h - Pal.RAIL_HEAD_H) / ROOMS.size())
 	for i in range(ROOMS.size()):
@@ -383,7 +392,7 @@ func layout(s: Vector2) -> void:
 	_clinic.position = _grid.position
 	_stats.position = _grid.position
 	# the log sits under the grid, bottom right; the rail runs the full height beside it
-	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.MARGIN - Pal.EVENTS_H)
+	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.BOTTOM - Pal.EVENTS_H)
 	_menu.layout(s)
 
 
@@ -461,6 +470,8 @@ func _toast_new_lines() -> void:
 		var line: String = str(sim.events[k][1])
 		var tone := Words.toast_tone(line)
 		# only what just happened: a load or a settle brings old lines, and those stay in the log
+		if line.begins_with(Words.RADIO_LEAD) and now - float(sim.events[k][0]) < 5.0:
+			_radio_line.push(line.trim_prefix(Words.RADIO_LEAD))     # just heard: next on the radio line (a loaded camp's old ones aren't)
 		if tone != "none" and now - float(sim.events[k][0]) < 5.0 and not (line in _juice.lines()):
 			_juice.toast(line, tone, toast_forms(line))
 	_events_seen = total
@@ -770,6 +781,7 @@ func refresh() -> void:
 	if sim.candidates.size() == 2 and not _menu.visible and not sim.on_mission() and not _asked_runner:
 		_asked_runner = true
 		_choose_runner()
+	_radio_line.set_sim(sim)
 	_toast_new_lines()
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins

@@ -4171,3 +4171,13 @@ hand-me-down nail gun.") - seen once, not from tins; to Matt.
 **Toasts that can't be cut (13 Oct).** A toast takes the log's sentence cuts, then the line's own short form
 (Words.short_line: "One of them is in the last Doorman's kit." for a lost runner's piece, cut at the person's apostrophe,
 not a "butcher's chainmail"'s), then a smaller size down to 20 (the Deck's two-thirds); the smoke toasts the worst ones.
+
+**The radio line (13 Oct, mockup C).** scripts/ui/radio_line.gd: the top bar's second row (Pal.RADIO_H 36), always on, one
+line scrolling right to left at 70 px a second and never stopping, a pulsing dot, soft ends; no speaker anywhere (the log
+says "On the radio: ..." - Words.RADIO_LEAD - and the Radio room's last-heard pill the words alone). A line just heard
+is next (first heard, first played); with nothing new it plays what's been heard in turn, the loop's first before
+anything. A click opens the Radio. A new or loaded camp starts it clean; a loaded camp's old lines aren't pushed. Radio
+lines don't toast now. The 36 px came from the gaps, not the rooms: over them 24 to 8 (TOP_GAP), under to the log 16 to 8
+(LOG_GAP), the foot 24 to 12 (BOTTOM). The smoke checks the row, the rooms under it, the scroll, the queue, a real click,
+the clean start. Two old flakes fixed on the way (the bot's run finding the deeds before the deeds' check; the deeds
+counted as a common the Fence wouldn't take).

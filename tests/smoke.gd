@@ -1009,15 +1009,15 @@ func _fence_screen(main) -> void:
 	main.refresh()
 	var commons := 0
 	for it in sim.stash:
-		if it["rarity"] == 0:
+		if it["rarity"] == 0 and not Items.is_deeds(it):
 			commons += 1
 	if commons > 0:
 		main._fence._side_press(0)          # Common
 		var left := 0
 		for it in sim.stash:
-			if it["rarity"] == 0:
+			if it["rarity"] == 0 and not Items.is_deeds(it):      # the deeds never go to the Fence (13 Oct: the bot's run had found them)
 				left += 1
-		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return x["rarity"] == 0).map(func(x): return x["base"]))])
+		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return x["rarity"] == 0 and not Items.is_deeds(x)).map(func(x): return x["base"]))])
 	_check_fit(main, "Fence (after)")
 	main._fence._show("shelf")
 	print("fence screen ok")
@@ -1145,6 +1145,7 @@ func _narrative_checks(main) -> void:
 	var bank: int = Data.BANK
 	_check(sim.tier_open(bank), "the Bank did not open with every depth cleared")
 	sim.seen.erase("%d/1" % bank)              # the bot's run may have walked it already
+	sim.deeds_found = false                     # and found the deeds (13 Oct)
 	sim.deploy(bank)
 	_check(sim.on_mission(), "could not set off for the Bank")
 	_check(sim.events.back()[1] == Words.site_line("The Bank", 1), "setting off for the Bank gave no site line: %s" % sim.events.back()[1])
@@ -4104,6 +4105,7 @@ func _move_checks(main) -> void:
 	_recycle_checks(main)
 	_book_checks(main)
 	_lore_checks(main)
+	_radio_line_checks(main)
 	_tins_checks(main)
 	_places_checks(main)
 	_faces_checks(main)
@@ -10463,8 +10465,8 @@ func _lore_checks(main) -> void:
 	_check(y.radio_next().get("key", "") == "loop/0", "the radio's first line is not the loop's: %s" % str(y.radio_next()))
 	y.runs_total = Data.RADIO_EVERY
 	y._radio_after_run()
-	_check(y.heard == ["loop/0"] and str(y.events.back()[1]).begins_with(Words.RADIO_SHORT["loop"] + ", on the radio: "), "the radio didn't come on after %d runs: %s" % [Data.RADIO_EVERY, str(y.heard)])
-	_check(Words.toast_tone(str(y.events.back()[1])) == "", "the radio's line doesn't toast")
+	_check(y.heard == ["loop/0"] and str(y.events.back()[1]).begins_with(Words.RADIO_LEAD), "the radio didn't come on after %d runs: %s" % [Data.RADIO_EVERY, str(y.heard)])
+	_check(Words.toast_tone(str(y.events.back()[1])) == "none", "the radio's line toasts: the radio line plays it (13 Oct)")
 	y.runs_total = Data.RADIO_EVERY + 1
 	y._radio_after_run()
 	_check(y.heard.size() == 1, "the radio came on off its beat")
@@ -10543,7 +10545,7 @@ func _lore_checks(main) -> void:
 	main.show_room(main.COMMS)
 	main._radio._shown = ""
 	main.refresh()
-	_check(main._radio._heard.text.begins_with(Words.RADIO_SHORT["kev"] + ": ") and main._radio._heard_pill.visible, "the Radio doesn't show the last line heard: '%s'" % main._radio._heard.text)
+	_check(str(Words.RADIO[3]["text"]).begins_with(main._radio._heard.text.trim_suffix(".")) and main._radio._heard_pill.visible, "the Radio doesn't show the last line heard: '%s'" % main._radio._heard.text)
 	var hp_r := Rect2(main._radio._heard_pill.position, main._radio._heard_pill.size)
 	_check(hp_r.position.x >= 0.0 and hp_r.end.x <= Pal.GRID_W and hp_r.end.y <= main._radio.HEAD_H, "the Radio's pill runs out of its band: %s" % str(hp_r))
 	_check_fit(main, "Radio (the last line heard)")
@@ -10572,3 +10574,54 @@ func _tins_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("tins ok: the Clinic and the Fence at level 50 with a wound")
+
+
+## The radio line (13 Oct, Matt; mockup C): the top bar's second row, the rooms under it at their full height, the words
+## scrolling and never stopping, a line just heard next, no speaker's name anywhere, a press opening the Radio.
+func _radio_line_checks(main) -> void:
+	var sim = main.sim
+	var rl = main._radio_line
+	main.layout(Vector2(1920, 1080))             # the shell lays out on a resize; headless has none
+	var top: float = Pal.TOP_H + Pal.RADIO_H
+	_check(rl.visible and is_equal_approx(rl.position.y, Pal.TOP_H) and is_equal_approx(rl.size.y, Pal.RADIO_H) and main._top.size.y >= top, "the radio line is not the top bar's second row: y %.0f h %.0f" % [rl.position.y, rl.size.y])
+	var room_end: float = main._grid.position.y + Pal.ROOM_H
+	_check(main._rail.position.y >= top and main._grid.position.y >= top and room_end + Pal.LOG_GAP <= main._events.position.y + 0.5 and main._events.position.y + Pal.EVENTS_H <= 1080.0 - Pal.BOTTOM + 0.5, "the rooms don't fit under the radio line: grid %.0f, room end %.0f, log %.0f" % [main._grid.position.y, room_end, main._events.position.y])
+	rl.step(0.0)
+	_check(not rl._items.is_empty(), "the radio line plays nothing")
+	var x0: float = rl._items[0]["label"].position.x
+	rl.step(10.0)
+	_check(is_equal_approx(rl._items[0]["label"].position.x, x0 - 10.0), "the radio line does not move")
+	for it in rl._items:
+		_check(it["label"].size.y <= Pal.RADIO_H, "a radio word runs out of its row")
+	# a line just heard jumps the queue: the next line on the strip is it, not the turn through what's been heard
+	var saved_events: Array = sim.events.duplicate(true)
+	main.refresh()                               # the shell's count of lines seen in step with this camp's (a load before can leave it ahead)
+	rl._queue.clear()                            # lines the smoke's own runs heard wait their turn ahead of the probe: first heard, first played
+	var heard_line := "Probe on the air, testing."
+	sim.log_event(Words.RADIO_LEAD + heard_line)
+	main.refresh()
+	var tail: Label = rl._items.back()["label"]
+	var added := ""
+	for k in range(4000):
+		rl.step(10.0)
+		if rl._items.back()["label"] != tail:
+			added = rl._items.back()["label"].text
+			break
+	_check(added == heard_line, "a line just heard was not next on the radio line: '%s'" % added)
+	sim.events = saved_events
+	# a press - a real click through the strip's input - opens the Radio
+	var was: String = main.room
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	rl._gui_input(click)
+	_check(main.room == main.COMMS, "a click on the radio line did not open the Radio")
+	main.show_room(was)
+	main.refresh()
+	# a new camp starts the strip clean
+	rl.push("Last camp's line.")
+	rl.set_sim(null)
+	_check(rl._queue.is_empty() and rl._items.is_empty(), "a new camp's radio line kept the last one's")
+	rl.set_sim(sim)
+	_check_fit(main, "the radio line")
+	print("radio line ok: the second row, the rooms under it, it moves, a line just heard next, no names, a press opens the Radio")
