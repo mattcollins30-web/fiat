@@ -4309,3 +4309,12 @@ medic's "Anyone near Top Farm: the keeper there has a vet's bag" still runs on t
 cause: radio_line.gd's loop (`_next_line`) plays every line in `sim.heard` in turn, and a gate's "before" line stays
 heard. The fix: the loop skips a `<head>/before` line once every room its head opens is open (the "after" lines stay);
 the smoke asserts it - open the Clinic, and the medic's before line never comes round again.
+
+**The run view, the slice (13 Oct, Matt: "proceed and build the slice so I can test").** scripts/ui/run_view.gd: a light-gun
+frame over the run screen's fight and runner boxes - the Parade's test art (art/fight_test) on every site for now. The
+gang up as many as are on you (three at most: by the car, close, a far doorway), each firing now and then; a kill drops
+one; a hit jolts the frame and reddens its edges; the search pans along to the next crates in the street; your hands and
+revolver bottom right with a kick at the gun's rate and a marker on the one you're hitting (guns only - melee shows no
+hands yet). Their bar and chips over the frame's top, yours at its foot; six tiles under it (Fire in or Gang in, Your
+fire, Kills, Armour, Meds, Rounds); the search bar under those. Without the art on disk, the boxes as they were. The
+editor must import art/fight_test before an export (load() needs the .import; the off-disk read is the editor's only).

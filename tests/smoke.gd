@@ -33,6 +33,7 @@ static func _player_saves() -> Dictionary:
 			out[path] = [f.get_length(), FileAccess.get_modified_time(path)]
 	return out
 const Sim := preload("res://scripts/sim/sim.gd")
+const RunView := preload("res://scripts/ui/run_view.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -4738,6 +4739,9 @@ func _juice_checks(main) -> void:
 	sim.equipped["Helmet"] = hold
 	var you_y: float = main._run._left.global_position.y + main._run.RUNNER_BAR_Y
 	var them_y: float = main._run._left.global_position.y + main._run.FIGHT_BAR_Y
+	if main._run._view != null:          # the run view: the bars moved over the frame (13 Oct)
+		you_y = main._run._left.global_position.y + main._run._runner["track"].position.y - 10
+		them_y = main._run._left.global_position.y + main._run._fight["track"].position.y + main._run.BAR_H + 12
 	var reds: Array = main._juice._numbers.filter(func(n): return n["label"].text.begins_with("−") or n["label"].text.begins_with("+"))
 	_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 40), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
 	var whites: Array = main._juice._numbers.filter(func(n): return not (n["label"].text.begins_with("−") or n["label"].text.begins_with("+")))
@@ -6211,6 +6215,7 @@ func _loot_roll_checks(main) -> void:
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_crates_checks(main)
 	_bin_checks(main)
+	_run_view_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
 	_top_works_checks(main)
@@ -7146,11 +7151,11 @@ func _dots_chip_checks(main) -> void:
 	var poison_i: int = Data.TYPES.find("poison")
 	var bleed_i: int = Data.TYPES.find("bleed")
 	var fill_px: float = rn._fight["fill"].size.x
-	_check(segs[fire_i].visible and segs[poison_i].visible and absf(segs[fire_i].size.x - rn.BOXED_W * 0.1) <= 1.5 and absf(segs[poison_i].size.x - rn.BOXED_W * 0.2) <= 1.5, "their bar's end is not the dots' pools: fire %.0f, poison %.0f" % [segs[fire_i].size.x, segs[poison_i].size.x])
+	_check(segs[fire_i].visible and segs[poison_i].visible and absf(segs[fire_i].size.x - float(rn._fight["w"]) * 0.1) <= 1.5 and absf(segs[poison_i].size.x - float(rn._fight["w"]) * 0.2) <= 1.5, "their bar's end is not the dots' pools: fire %.0f, poison %.0f" % [segs[fire_i].size.x, segs[poison_i].size.x])
 	_check(absf(segs[fire_i].position.x + segs[fire_i].size.x - fill_px) <= 0.5 and absf(segs[poison_i].position.x + segs[poison_i].size.x - segs[fire_i].position.x) <= 0.5, "the pools do not sit at the fill's end, in a row")
 	var ysegs: Array = rn._runner["segments"]
 	var yfill: float = rn._runner["fill"].size.x
-	_check(ysegs[poison_i].visible and ysegs[bleed_i].visible and absf(ysegs[poison_i].size.x - rn.BOXED_W * 0.1) <= 1.5 and absf(ysegs[bleed_i].size.x - (yfill - ysegs[poison_i].size.x)) <= 1.5 and ysegs[bleed_i].position.x >= -0.5, "a pool past the fill's left end is not cut to it: poison %.0f, bleed %.0f of a %.0f fill" % [ysegs[poison_i].size.x, ysegs[bleed_i].size.x, yfill])
+	_check(ysegs[poison_i].visible and ysegs[bleed_i].visible and absf(ysegs[poison_i].size.x - float(rn._runner["w"]) * 0.1) <= 1.5 and absf(ysegs[bleed_i].size.x - (yfill - ysegs[poison_i].size.x)) <= 1.5 and ysegs[bleed_i].position.x >= -0.5, "a pool past the fill's left end is not cut to it: poison %.0f, bleed %.0f of a %.0f fill" % [ysegs[poison_i].size.x, ysegs[bleed_i].size.x, yfill])
 	m["dots"] = {}
 	m["my_dots"] = {}
 	main.refresh()
@@ -7688,6 +7693,61 @@ func _bin_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the bin ok: a pick's Bin for scrap, a unique asked twice, never the deeds, Select-many bins with the Fence shut")
+
+
+## The run view (13 Oct, Time Crisis; docs/design/fight_art.md): with its art there, the frame takes the two boxes; the
+## six figures under it; the gang up as many as are on you; a kill drops one; a hit reddens the edges; the search pans
+## to the crates; their bar over the frame in a fight, the search's under the six; it all fits.
+func _run_view_checks(main) -> void:
+	var run = main._run
+	if run._view == null:
+		print("the run view: no art here (art/fight_test), the boxes as they were")
+		return
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["event_at"] = -1.0
+	m["remaining"] = 3
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	for k in range(4):
+		run._view._process(0.2)
+	var v = run._view
+	_check(v.visible and not run._fight["box"].visible and not run._runner["box"].visible and run._six[0]["panel"].visible, "the run view did not take the two boxes")
+	var want: int = mini(3, mini(int(m["remaining"]), maxi(1, sim.contact(m["t"]))))
+	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
+	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
+	_check_fit(main, "Run (the run view, a gang)")
+	# a kill drops one
+	var up0: int = v.figures_up()
+	m["kills"] = int(m["kills"]) + 1
+	main.refresh()
+	v._process(0.05)
+	_check(v._figs.any(func(f): return f["state"] == "down"), "a kill dropped nobody")
+	# a hit reddens the edges
+	sim.hp -= sim.max_hp() * 0.1
+	main.refresh()
+	_check(v.state()["red"] > 0.5, "a hit did not redden the frame")
+	# the search: panned to the crates, the search bar under the six
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	sim._roll_crates(m, m["t"])
+	run.view_crates = false
+	main.refresh()
+	for k in range(10):
+		v._process(0.2)
+	_check(v.state()["pan_to"] > 0.0 and v.state()["crates"] > 0 and v.figures_up() == 0, "the search did not pan to the crates: %s" % str(v.state()))
+	_check(run._fight["track"].position.y >= run.VIEW_SEARCH_Y and run._six[0]["key"].text == "Gang in", "the search bar is not under the six while searching")
+	_check_fit(main, "Run (the run view, the search)")
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the run view ok: the frame, the gang up, a kill, a hit, the search, the bars and the six, the fit")
 
 
 ## The Yard as lanes (9 Oct, docs/design/yard.md): eight buildings, five columns of two picks and a rank; a tile
@@ -8948,7 +9008,7 @@ func _fill_up_checks(main) -> void:
 	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Tins", "the run's tiles are off")
 	# the faces (10 Oct, Run-P A): each in its box at the left, clear of the head, the tiles, the bar and the chips;
 	# a face shows art or the drawn figure, never neither
-	for pair in [[rn._fight_face, fb, rn._fight, "fight"], [rn._runner_face, rb, rn._runner, "runner"]]:
+	for pair in ([] if rn._view != null else [[rn._fight_face, fb, rn._fight, "fight"], [rn._runner_face, rb, rn._runner, "runner"]]):     # the run view hides the faces (13 Oct)
 		var fr := Rect2(pair[0]["frame"].position, pair[0]["frame"].size)
 		var ar := Rect2(pair[0]["art"].position, pair[0]["art"].size)
 		_check(pair[1].encloses(fr) and fr.encloses(ar), "the %s's face (%s) is out of its box or its frame (%s)" % [pair[3], str(fr), str(ar)])

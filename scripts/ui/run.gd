@@ -23,6 +23,7 @@ const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
+const RunView := preload("res://scripts/ui/run_view.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -64,6 +65,12 @@ const TAKE_Y := RIG_Y + Pal.CELL + SECTION_GAP
 const TAKE_TILES_Y := TAKE_Y + UI.HEAD_H + 2
 const NOTE_Y := TAKE_TILES_Y + UI.TILE_H + 10                 # the run's own line, above the buttons
 const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
+# the run view (13 Oct, Time Crisis): the frame over both boxes, the six figures under it, the search bar under those
+const VIEW_X := PAD - BOX_PAD
+const VIEW_W := INNER + 2 * BOX_PAD                           # 588
+const VIEW_ROW_Y := FIGHT_BOX_Y + RunView.H + 8
+const VIEW_SEARCH_Y := VIEW_ROW_Y + UI.TILE_H + 8
+const OVER_W := 300                                           # a bar laid over the frame
 
 var sim
 var _left: Panel                   # the column: the band and the sections
@@ -101,6 +108,8 @@ var view_crates := false           # the toggle (13 Oct, Matt): the search bar s
 var _crates_for = null             # the run's crates the view last opened on: a new search opens on the crates
 var _search_button: Button         # over the fight box's bar while it's the search's
 var _floor_pick := -1              # a thing on the floor picked (13 Oct): its comparison, and Take
+var _view = null                   # the run view (run_view.gd), when its art is there; else the boxes as they were
+var _six: Array = []               # the six figures under the frame
 
 
 func _init() -> void:
@@ -180,6 +189,40 @@ func _init() -> void:
 	_pick.position = Vector2(GRID_X, PICK_Y)
 	_pick.acted.connect(_on_pick_acted)
 	add_child(_pick)
+	if RunView.has_art():
+		_view_make()
+
+
+## The run view in place of the two boxes: the frame, the bars and the chips over it, six tiles under it.
+func _view_make() -> void:
+	_view = RunView.new()
+	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
+	_left.add_child(_view)
+	_left.move_child(_view, _band.get_index() + 1)
+	for n in [_fight["box"], _runner["box"], _fight_face["frame"], _runner_face["frame"], _runner["head"]]:
+		n.visible = false
+	for t in _fight["tiles"] + _runner["tiles"]:
+		t["panel"].visible = false
+	_six = UI.tile_row(_left, VIEW_X, VIEW_ROW_Y, VIEW_W, 6, 6)
+	_fight["head"].position = Vector2(PAD, FIGHT_BOX_Y + 6)
+	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
+	UI.shadow(_fight["head"])
+	_bar_place(_runner, Rect2(PAD, FIGHT_BOX_Y + RunView.H - BAR_H - 10, OVER_W, BAR_H))
+	_fight["key"].position = Vector2(PAD, FIGHT_BOX_Y + 62)
+	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + 62)
+	_runner["key"].position = Vector2(PAD, FIGHT_BOX_Y + RunView.H - BAR_H - 14 - Chips.CHIP_H)
+	_runner["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + RunView.H - BAR_H - 14 - Chips.CHIP_H)
+	for k in [_fight["key"], _runner["key"]]:
+		k.add_theme_color_override("font_color", Pal.TEXT)
+		UI.shadow(k)
+
+
+## A bar moved: its track, its width, its words.
+func _bar_place(d: Dictionary, r: Rect2) -> void:
+	d["track"].position = r.position
+	d["track"].size = r.size
+	d["w"] = r.size.x
+	d["bar_text"].size = Vector2(r.size.x, BAR_H)
 
 
 # ------------------------------------------------------------------ showing
@@ -272,6 +315,15 @@ func show_state(s) -> void:
 		_bar(_fight, 1.0 if sim.crates_done(m) else clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "warn" if sim.crates_done(m) else "good")
 		if m.has("crates") and UI.text_width(_fight["bar_text"], search_words + " · show the crates") <= _fight["w"] - 16:
 			_fight["bar_text"].text = search_words + " · show the crates"     # the bar's a button (13 Oct): it says so
+	if _view != null:
+		# the run view: their bar over the frame in a fight, the search's under the six while it's searching
+		var search_state: bool = not boss_on and not way_out and m["remaining"] <= 0
+		if search_state:
+			_bar_place(_fight, Rect2(VIEW_X, VIEW_SEARCH_Y, VIEW_W, BAR_H))
+		else:
+			_bar_place(_fight, Rect2(PAD, FIGHT_BOX_Y + 32, OVER_W, BAR_H))
+		_search_button.position = _fight["track"].position
+		_search_button.size = _fight["track"].size
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
 	var g: float = sim.guard()
@@ -282,6 +334,19 @@ func show_state(s) -> void:
 	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
 		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"]) else Pal.TEXT)
+	if _view != null:
+		# the six under the frame: theirs, then yours
+		var fighting: bool = m["remaining"] > 0
+		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
+		var first: Array = ["Fire in", ["%.1f/s" % m["last_incoming"]]] if fighting else ["Gang in", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(nx) if nx < 1e8 else "never")])]
+		_tiles(_six, [first, ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]],
+			["Armour", ["%.0f" % sim.armour()]], ["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]],
+			["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
+		_six[5]["value"].add_theme_color_override("font_color", _runner["tiles"][3]["value"].get_theme_color("font_color"))
+		if fighting and not boss_on and not way_out:
+			var on_now: int = mini(m["remaining"], sim.contact(t))
+			_fight["head"].text += " · %d ON YOU%s" % [on_now, (" · %d MORE" % (m["remaining"] - on_now)) if m["remaining"] > on_now else ""]
+		_view.show_state(sim, m)
 	# on them: the chips under their bar; nothing while there's no one to be on
 	var them: Array = sim.dots_on_them()
 	_fight["key"].visible = not them.is_empty()
@@ -693,6 +758,10 @@ func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sign: String, b
 ## A spot along a bar of the column, at a different height each time, in the juice's own space.
 func _scatter(bar_y: float) -> Vector2:
 	var local := Vector2(BOXED_X + 30 + randf() * (BOXED_W - 90), bar_y - 6 + randf_range(-16.0, 16.0))     # over the bar, never the face
+	if _view != null:
+		# the run view: over the bar where it's moved to (the review, 13 Oct), theirs or yours by the row asked for
+		var tr: Control = _fight["track"] if bar_y == FIGHT_BAR_Y else _runner["track"]
+		local = Vector2(tr.position.x + 20 + randf() * maxf(10.0, tr.size.x - 60), tr.position.y + (BAR_H + 12 if bar_y == FIGHT_BAR_Y else -10) + randf_range(-8.0, 8.0))
 	return _left.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
 
 
@@ -868,7 +937,7 @@ func text_nodes() -> Array:
 		if d["chips"].visible:
 			out.append(d["key"])
 			out.append_array(d["chips"].text_nodes())
-	for t in _fight["tiles"] + _runner["tiles"] + _take_tiles:
+	for t in (_six if _view != null else _fight["tiles"] + _runner["tiles"]) + _take_tiles:
 		out.append_array([t["key"], t["value"]])
 	for b in [_button, _button2]:
 		if b.visible:
