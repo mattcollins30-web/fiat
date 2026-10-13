@@ -28,6 +28,7 @@ func _add(a: Dictionary, b: Dictionary) -> void:
 		a[k] = float(a.get(k, 0.0)) + float(b[k])
 func _init() -> void:
 	var sim = Sim.new()
+	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.rng.seed = 7
 	sim.unlock_all()
 	for z in range(sim.bosses_beaten.size()):

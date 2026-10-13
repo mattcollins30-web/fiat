@@ -100,6 +100,7 @@ var _crates                        # the crates (crates_panel.gd): under the pac
 var view_crates := false           # the toggle (13 Oct, Matt): the search bar shows the crates, the crates' bar the pick again; one bar at a time
 var _crates_for = null             # the run's crates the view last opened on: a new search opens on the crates
 var _search_button: Button         # over the fight box's bar while it's the search's
+var _floor_pick := -1              # a thing on the floor picked (13 Oct): its comparison, and Take
 
 
 func _init() -> void:
@@ -159,6 +160,8 @@ func _init() -> void:
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.ditching = true
+	_inv.accepts = ["floor"]              # a thing dragged off the floor (13 Oct)
+	_inv.dropped.connect(func(data): if str(data.get("src", "")) == "floor": _take_floor(int(data["id"])))
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
@@ -168,6 +171,8 @@ func _init() -> void:
 	_crates = CratesPanel.new()
 	_crates.build(GRID_W, PICK_H)
 	_crates.toggled.connect(_toggle_crates)
+	_crates.floor_take.connect(_take_floor)
+	_crates.floor_picked.connect(_pick_floor)
 	_crates.position = Vector2(GRID_X, PICK_Y)
 	_crates.visible = false
 	add_child(_crates)
@@ -301,7 +306,7 @@ func show_state(s) -> void:
 	_tiles(_take_tiles, [["Tins", Fmt.money_forms(m["cash"])], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
-		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
+		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m["cleared"] else "Pack full: a better find swaps in") if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates under the pack once the site's cleared, where the pick panel sits while nothing's picked (a pick
 	# brings the panel back over them: the review, 13 Oct - a 3x3 vest wouldn't fit a pack cut to two rows)
@@ -327,7 +332,11 @@ func show_state(s) -> void:
 	if way_out:
 		_button.text = "Getting out · %s" % Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"]))))     # the seconds each frame; the restyle below only when it starts
 	# the price before the clear changes only as the run's clock caps it (the review, 10 Oct)
-	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d" % _rig_pick, str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
+	if _floor_pick >= 0 and not sim.floor_items().any(func(x): return int(x["id"]) == _floor_pick):
+		_floor_pick = -1                      # taken, or the run's over
+	if _inv.selected >= 0 or _rig_pick >= 0:
+		_floor_pick = -1                      # a pick in the pack or the rig takes over
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d|f%d|%d" % [_rig_pick, _floor_pick, sim.floor_items().size()], str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
 		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
 	if sig == _shown:
 		return
@@ -496,7 +505,7 @@ func _show_pick(m: Dictionary) -> void:
 		var lines := ["A rifle is four cells by one, armour three by three, a med or a part one"]
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
-			lines.append("Full: a better find swaps out the cheapest thing at least its size")
+			lines.append("Full: ditch to take from the floor; a kill's drop swaps the cheapest" if sim.by_hand(m) else "Full: a better find swaps out the cheapest thing at least its size")
 			lines.append("Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
 		else:
 			lines.append("%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"])
@@ -509,8 +518,23 @@ func _show_pick(m: Dictionary) -> void:
 		tail = [Items.fitted_words(it), Items.ammo_words(it).to_lower().replace("smg", "SMG")]
 	elif Items.is_attachment(it) and not Items.is_socketable(it):
 		tail = Items.att_words(it, true, true)
-	_pick.show_pick(it, sim, "The pick · in the pack", tail)
+	var on_floor: bool = _floor_pick >= 0 and int(it["id"]) == _floor_pick
+	_pick.show_pick(it, sim, "The pick · on the floor" if on_floor else "The pick · in the pack", tail)
 	var buttons := []
+	if on_floor:
+		# off the floor (13 Oct): its comparison, and Take when there's room
+		var fitted_f = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
+		if fitted_f != null:
+			_pick.show_fitted(fitted_f, sim, "Fitted now", "")
+			var vf: Array = PickPanel.verdict_for(sim, it)
+			_pick.set_verdict(vf[0], vf[1], PickPanel.deltas_for(sim, it, fitted_f))
+		else:
+			_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()], ["%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]])
+		var fits: bool = sim.floor_fits(it)
+		if not fits:
+			_pick.set_hint_options(["No room in the pack: ditch something first (%d cells)" % Items.size(it), "No room in the pack"])
+		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
+		return
 	if Items.rig_item(it):
 		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
@@ -587,6 +611,10 @@ func _rig_to_pack() -> void:
 
 
 func _picked_item(m: Dictionary) -> Dictionary:
+	if _floor_pick >= 0:
+		for it in sim.floor_items():
+			if int(it["id"]) == _floor_pick:
+				return it
 	if _inv.selected < 0:
 		return {}
 	for it in m["found"]:
@@ -770,6 +798,29 @@ func _equip_pick() -> void:
 
 
 func _on_pick_acted() -> void:
+	acted.emit()
+
+
+## Off the floor into the pack (13 Oct): dragged, double-clicked or Take; no room, it stays and says so.
+func _take_floor(id: int) -> void:
+	if sim == null or not sim.on_mission():
+		return
+	if sim.take_floor(id):
+		if _floor_pick == id:
+			_floor_pick = -1
+			view_crates = true                # back to the crates for the next
+	elif juice != null:
+		juice.toast("No room in the pack", "bad")
+	_shown = ""
+	acted.emit()
+
+
+func _pick_floor(id: int) -> void:
+	_floor_pick = id
+	_inv.selected = -1
+	_rig_pick = -1
+	view_crates = false
+	_shown = ""
 	acted.emit()
 
 

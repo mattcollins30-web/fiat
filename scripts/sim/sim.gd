@@ -27,6 +27,7 @@ var yard_open := 1                 # the columns opened, for good: a move doesn'
 var yard_seen := {}                # what the Yard has been looked at with buyable ("key/col", "key/rN"): the rail's badge is for the rest
 var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
+var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
 var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
 var hardcore := false              # a death ends the Yard, stash and all
 var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the Clinic treats it; "" for none
@@ -4540,6 +4541,8 @@ func set_leave_full(on: bool) -> bool:
 	if mission == null:
 		return false
 	mission["leave_full"] = on
+	if on:
+		take_all()                            # the floor's into the pack first (13 Oct)
 	if on and mission["cleared"] and pack_used(mission) >= capacity():
 		_extract()
 	return true
@@ -5312,22 +5315,30 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	if capture:
 		return {"it": it, "said": said}
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
-	_land(m, it, said)
+	_land(m, it, said, not from_kill and not crate.is_empty() and by_hand(m))
 	return {"it": shown, "said": said}
 
 
-## A find rolled, into the pack: its line in the log, and a gun's box of rounds while the Fence is shut.
-func _land(m: Dictionary, it: Dictionary, said := "") -> void:
+## A find rolled, into the pack - or onto the floor, a search's by hand (13 Oct) - its line in the log, and a gun's box
+## of rounds while the Fence is shut.
+func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void:
 	if said != "":
 		log_event(said)
-	_place_find(m, it)
+	if to_floor:
+		m["floor"] = m.get("floor", [])
+		m["floor"].append(it)
+	else:
+		_place_find(m, it)
 	# a gun found while the Fence is shut comes with a box of its own rounds (13 Oct, the ammo trap: rounds are sold
 	# at the Fence only, and a gun with none is a club)
 	if (it["slot"] == "Primary" or it["slot"] == "Secondary") and not room_open("fence") and it.get("rule", "") != "weed_burner":
 		var type: String = Items.ammo_type(it)
 		var box: Dictionary = ammo_box(type) if not (type in ["", "none"]) else {}
 		if not box.is_empty():
-			_place_find(m, _plain(Data.AMMO, str(box["name"])))
+			if to_floor:
+				m["floor"].append(_plain(Data.AMMO, str(box["name"])))
+			else:
+				_place_find(m, _plain(Data.AMMO, str(box["name"])))
 
 
 ## A find into the pack: joined to a stack it fits, a cell of its own if there's room, else in place of the cheapest
@@ -5566,7 +5577,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			if k == 0 and not cr.is_empty() and int(cr["done"]) == 0 and cr.has("held"):
 				got = {"it": cr["held"]["it"].duplicate(true)}     # what the dog nosed: the crate's first find, as found
 				m["finds"] = int(m.get("finds", 0)) + 1
-				_land(m, cr["held"]["it"], str(cr["held"].get("said", "")))
+				_land(m, cr["held"]["it"], str(cr["held"].get("said", "")), by_hand(m))
 			else:
 				got = _find(m, t, false, cd)
 			if not cr.is_empty() and not got.is_empty():
@@ -5611,6 +5622,10 @@ func ditch(id: int) -> bool:
 				var bits: int = scrap_of(it)
 				mission["scrap"] = int(mission.get("scrap", 0)) + bits     # ditched for scrap (34): what comes home of it
 				log_event("Ditched: %s%s" % [it["base"].to_lower(), (", %d scrap" % bits) if bits > 0 else ""])
+				# onto the floor (13 Oct): it can be taken back while you're there, the scrap with it
+				it["ditch_scrap"] = bits
+				mission["floor"] = mission.get("floor", [])
+				mission["floor"].append(it)
 			return true
 	return false
 
@@ -5621,6 +5636,87 @@ func ditch_commons() -> int:
 	var n := 0
 	for it in mission["found"].duplicate():
 		if it["rarity"] == 0 and not Items.is_deeds(it) and ditch(it["id"]):
+			n += 1
+	return n
+
+
+# ------------------------------------------------------------------ the floor (13 Oct, Matt)
+
+## A search's finds by hand: on the floor, for the player to take - not on an auto-run, "Fill up, then go", away,
+## a dry run, or for the bot.
+func by_hand(m: Dictionary) -> bool:
+	return loot_by_hand and auto_tier < 0 and not m.get("leave_full", false) and not away_on and not m.get("dry", false)
+
+
+func floor_items() -> Array:
+	return mission.get("floor", []) if mission != null else []
+
+
+## Whether a thing on the floor goes in the pack: a cell for it, or a stack it joins.
+func floor_fits(it: Dictionary) -> bool:
+	if mission == null:
+		return false
+	if pack_used(mission) + Items.size(it) <= capacity():
+		return true
+	if Items.stacks(it):
+		for f in mission["found"]:
+			if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
+				return true
+	return false
+
+
+## Off the floor into the pack: only if it fits (no swapping - the player chose it); a stack joins what it can, the rest
+## stays down. A thing ditched comes back with its scrap.
+func take_floor(id: int) -> bool:
+	if mission == null:
+		return false
+	var fl: Array = floor_items()
+	for k in range(fl.size()):
+		if int(fl[k]["id"]) != id:
+			continue
+		var it: Dictionary = fl[k]
+		if not floor_fits(it):
+			return false
+		if it.has("ditch_scrap") and Items.stacks(it) and pack_used(mission) + Items.size(it) > capacity():
+			var room := 0
+			for f in mission["found"]:
+				if Items.same_stack(f, it):
+					room += maxi(0, Items.stack_cap(f) - Items.stack_size(f))
+			if room < Items.stack_size(it):
+				return false                      # a ditched stack comes back whole or not at all: its scrap with it (the review)
+		if Items.stacks(it):
+			for f in mission["found"]:
+				if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
+					var moved: int = mini(Items.stack_cap(f) - Items.stack_size(f), Items.stack_size(it))
+					Items.set_stack(f, Items.stack_size(f) + moved)
+					Items.set_stack(it, Items.stack_size(it) - moved)
+			if Items.stack_size(it) <= 0:
+				fl.remove_at(k)
+				_untake_scrap(it)
+				return true
+			if pack_used(mission) + Items.size(it) > capacity():
+				return true                       # some joined; the rest stays on the floor
+		fl.remove_at(k)
+		mission["found"].append(it)
+		_untake_scrap(it)
+		_read(it)
+		return true
+	return false
+
+
+func _untake_scrap(it: Dictionary) -> void:
+	if it.has("ditch_scrap"):
+		mission["scrap"] = maxi(0, int(mission.get("scrap", 0)) - int(it["ditch_scrap"]))
+		it.erase("ditch_scrap")
+
+
+## Everything on the floor that fits, the dearest first: "Fill up, then go" picks up what was left down.
+func take_all() -> int:
+	var n := 0
+	var fl: Array = floor_items().duplicate()
+	fl.sort_custom(func(a, b): return int(a["value"]) > int(b["value"]))
+	for it in fl:
+		if not it.has("ditch_scrap") and take_floor(int(it["id"])):
 			n += 1
 	return n
 
@@ -5723,6 +5819,7 @@ func _extract() -> void:
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack full, and %s counts as cleared" % Words.mid(t["name"]))
+	m["left"] = int(m["left"]) + m.get("floor", []).filter(func(x): return not x.has("ditch_scrap")).size()     # what was left on the floor: passed over
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= 2.0                      # The lot: a full pack pays double
@@ -7434,6 +7531,8 @@ func load_dict(d: Dictionary) -> void:
 			crate_items.append_array(q.get("finds", []))
 			if q.has("held"):
 				crate_items.append(q["held"]["it"])
+	if mission != null:
+		crate_items.append_array(mission.get("floor", []))
 	for it in _all_items() + crate_items:
 		it["id"] = int(it["id"])
 		it["rarity"] = int(it["rarity"])

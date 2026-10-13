@@ -4284,3 +4284,10 @@ starts with a Claw hammer: 12 a second like the nail gun was, no rounds, never f
 behind its tier's best gun now: the Spiked bat 20 to 17 a second, the Breaker bar, Demolition bar, Rescue axe and Door
 ram a tenth down (the smoke holds every melee base under 0.9 of its tier's best gun). The Rounds tile reads "none
 needed" for melee. The title's New camp line and the Yard's first line say a hammer.
+
+**The floor (13 Oct, Matt).** By hand, a search's finds wait on the site's floor - the row under the crates, newest
+first, nine a page - and go into the pack only when the player drags one there or double-clicks it, and only if it fits
+(no swapping: the player chose it). A click shows its comparison with Take. What's left is passed over when you go.
+Kill drops still go straight in. A thing ditched mid-run lands on the floor with its scrap paid, and comes back without
+it (a ditched stack whole or not at all). "Fill up, then go" picks up what fits, dearest first, and from then on finds
+go straight in, as on an auto-run, away, and for the bot (Bot.step sets loot_by_hand off). The pack-full lines say so.

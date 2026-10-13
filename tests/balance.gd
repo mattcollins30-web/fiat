@@ -54,6 +54,7 @@ func _init() -> void:
 		_probe()
 		return
 	var sim = Sim.new()
+	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
 	sim.set_class(cls)
 	var bot = Bot.new()
@@ -120,6 +121,7 @@ func _all_classes(hours: float) -> void:
 	print("class      | bank at | lvl | £ in hand | runs KIA | keystones | kit")
 	for c in Data.CLASSES:
 		var sim = Sim.new()
+		sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 		sim.start()
 		sim.set_class(c["name"])
 		var bot = Bot.new()
@@ -161,6 +163,7 @@ func _elements(hours: float, forced: String) -> void:
 					cls = c["name"]
 					break
 		var sim = Sim.new()
+		sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 		sim.start()
 		sim.set_class(cls)
 		var bot = Bot.new()
@@ -200,6 +203,7 @@ func _elements(hours: float, forced: String) -> void:
 ## depths cleared by the hour, the odds at every open tier at the end.
 func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	var sim = Sim.new()
+	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
 	if seed != 0:
 		sim.rng.seed = seed
@@ -417,6 +421,7 @@ func _ladder_read(sim, push: float) -> Dictionary:
 ## fresh yard with a big sample. One process, seconds.
 func _probe() -> void:
 	var sim = Sim.new()
+	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
 	sim.set_class("Doorman")                 # no class loot share: the plain read is plain
 	var g := {"build": "probe"}

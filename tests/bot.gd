@@ -37,6 +37,7 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 func step(sim) -> int:
+	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	# away a third of the time (Matt, 9 Oct): one hour in three counts as the player off the machine, so Overtime
 	# and the Generator's rank pay on it as they would for someone who idles
 	sim.away_on = fmod(sim.elapsed, AWAY_EVERY) >= AWAY_EVERY * (1.0 - AWAY_SHARE)

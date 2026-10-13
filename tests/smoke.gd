@@ -4617,7 +4617,7 @@ func _idle_checks(main) -> void:
 	sim.deploy(3)
 	sim.mission["found"] = []
 	sim.extract_now()
-	_check(not sim.stash.has(junk) and sim.stash.has(keep_ammo) and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
+	_check(not sim.stash.has(junk) and sim.stash.any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
 	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
 	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The Fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
 	main._armoury._toggle(0)
@@ -7330,7 +7330,7 @@ func _crates_checks(main) -> void:
 	var run = main._run
 	_check(run._crates.visible and not run._pick.visible and run._inv.page_rows == run._inv.ROWS, "the crates are not up in the pick panel's place, the pack whole")
 	_check(run._crates._head.text.begins_with("THE CRATES · 0 OF %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()), "the crates' head reads '%s'" % run._crates._head.text)
-	_check(run._fight["bar_text"].text.begins_with("Crate 1 of %d" % m["crates"].size()), "the fight bar does not name the crate: '%s'" % run._fight["bar_text"].text)
+	_check(run._fight["bar_text"].text.begins_with("Crate %d of %d" % [int(m["crate_i"]) + 1, m["crates"].size()]), "the fight bar does not name the crate: '%s'" % run._fight["bar_text"].text)     # a locked first one passed over (13 Oct)
 	_check(run._crates.position.y >= run._inv.position.y + run._inv.size.y and run._crates.position.y + run._crates.size.y <= Pal.ROOM_H, "the crates panel overlaps the pack or runs off the room")
 	_check_fit(main, "Run (the crates)")
 	# the pictures inside their tiles (a TextureRect sized before its expand mode keeps the texture's 64 px)
@@ -7351,7 +7351,7 @@ func _crates_checks(main) -> void:
 	_check(sim.on_mission() and int(m["crate_i"]) > first_i and int(first["done"]) == int(first["searches"]), "the first crate did not open in its searches: %d of %d, on %d" % [int(first["done"]), int(first["searches"]), int(m["crate_i"])])
 	_check(first["finds"].size() > 0 and first["finds"].size() <= int(m.get("finds", 0)) - finds0, "the first crate kept %d finds against %d found" % [first["finds"].size(), int(m.get("finds", 0)) - finds0])
 	main.refresh()
-	_check(run._crates._finds_head.text.begins_with("OUT OF THE ") or run._crates._finds_head.text.begins_with("IN THE "), "the reveal's head reads '%s'" % run._crates._finds_head.text)
+	_check(run._crates._finds_head.text.begins_with("ON THE FLOOR") or run._crates._finds_head.text.begins_with("STRAIGHT INTO THE PACK"), "the reveal's head reads '%s'" % run._crates._finds_head.text)
 	_check_fit(main, "Run (a crate open)")
 	# the toggle (13 Oct, Matt): one search bar at a time - the crates up, the fight box's bar gone; its click away,
 	# the pick and the bar back; a pick shows its comparison; a new search opens on the crates whatever was picked
@@ -7374,6 +7374,46 @@ func _crates_checks(main) -> void:
 		main.refresh()
 		_check(run._crates.visible and not run._pick.visible, "a new search with a pick held did not open on the crates")
 		run._inv.selected = -1
+	# the floor (13 Oct, Matt): by hand, a search's finds wait on the floor; taken into the pack only if they fit; a
+	# thing ditched lands there with its scrap and comes back without it; the row shows them; a click compares, Take
+	# takes; "Fill up, then go" picks up what fits; what's left is passed over at the door; the bot takes as it goes
+	_check(sim.by_hand(m) and not sim.floor_items().is_empty(), "a search by hand left nothing on the floor")
+	_check(m["found"].all(func(x): return not m["crates"].any(func(q): return q["finds"].any(func(f): return int(f["id"]) == int(x["id"]) and not Items.stacks(x)))), "a search by hand put a find straight in the pack")
+	main.refresh()
+	_check(run._crates._finds_head.text.begins_with("ON THE FLOOR") and run._crates._cells[0].visible and run._crates._floor_ids[0] >= 0, "the floor's row does not show the floor: '%s'" % run._crates._finds_head.text)
+	_check_fit(main, "Run (the floor)")
+	var fl0: Dictionary = sim.floor_items().back()
+	run._pick_floor(int(fl0["id"]))
+	main.refresh()
+	_check(run._pick.visible and not run._crates.visible and run._pick._kickers[0].text.to_lower().contains("on the floor") and run._pick._buttons[0].visible and run._pick._buttons[0].text == "Take", "a click on the floor did not show its comparison and Take: %s" % run._pick._kickers[0].text)
+	_check_fit(main, "Run (a pick on the floor)")
+	var fits0: bool = sim.floor_fits(fl0)
+	var found_n: int = m["found"].size()
+	run._take_floor(int(fl0["id"]))
+	main.refresh()
+	_check(fits0 == (not sim.floor_items().has(fl0) or Items.stacks(fl0)) and (not fits0 or m["found"].size() >= found_n), "Take did not move the thing off the floor when it fit, or did when it didn't")
+	if not m["found"].is_empty():
+		var back: Dictionary = m["found"].back()
+		var scrap0: int = int(m.get("scrap", 0))
+		if not Items.is_deeds(back) and sim.ditch(int(back["id"])):
+			_check(sim.floor_items().has(back) and int(m.get("scrap", 0)) >= scrap0, "a ditched thing did not land on the floor")
+			_check(sim.take_floor(int(back["id"])) and m["found"].has(back) and int(m.get("scrap", 0)) == scrap0, "taking a ditched thing back did not give its scrap back: %d, %d" % [int(m.get("scrap", 0)), scrap0])
+	# no room: it stays down
+	var hold_cap_pack = sim.equipped["Backpack"]
+	var floor_n: int = sim.floor_items().size()
+	if floor_n > 0:
+		var cells_free: int = sim.capacity() - sim.pack_used(m)
+		var big: Dictionary = sim.floor_items()[0]
+		if Items.size(big) > cells_free and not Items.stacks(big):
+			_check(not sim.take_floor(int(big["id"])) and sim.floor_items().size() == floor_n, "a thing too big for the pack was taken")
+	sim.equipped["Backpack"] = hold_cap_pack
+	# the bot's way: straight in
+	sim.loot_by_hand = false
+	_check(not sim.by_hand(m), "the bot's searches go on the floor")
+	sim.loot_by_hand = true
+	m["leave_full"] = true
+	_check(not sim.by_hand(m), "Fill up, then go still leaves finds on the floor")
+	m["leave_full"] = false
 	# a stack found shows what was found, not what was left once it joined the pack's (the review, 13 Oct)
 	for q in m["crates"]:
 		for f in q["finds"]:

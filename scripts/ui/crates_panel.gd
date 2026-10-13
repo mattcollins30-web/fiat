@@ -11,6 +11,8 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const Inventory := preload("res://scripts/ui/inventory.gd")
+const Items := preload("res://scripts/sim/items.gd")
 
 const PAD := 18
 const SHOWN := 7                   # crates in the row at once: a long queue slides along it
@@ -20,7 +22,8 @@ const ART := 52
 const ROW_Y := 40
 const FINDS_HEAD_Y := ROW_Y + TILE_H + 8
 const FINDS_Y := FINDS_HEAD_Y + 24
-const FINDS_MAX := 12              # cells in the reveal row, the ? among them
+const FINDS_MAX := 9               # cells in the floor's row, the ? among them; the pages' arrows past them
+const ARROW := 44
 const BAR_Y := FINDS_Y + Pal.CELL + 8
 const BAR_H := 24
 const NEXT_Y := BAR_Y + BAR_H + 4
@@ -31,6 +34,8 @@ const TINT := {"cardboard": Color("b08a5a"), "ammo_tin": Color("7d8c4a"), "jewel
 	"medicine": Color("d8dde2"), "filing": Color("8f9aa6"), "safe": Color("6b7178"), "military": Color("5f7a45")}
 
 signal toggled                     # the bar pressed: back to the pick (13 Oct, Matt: one search bar at a time)
+signal floor_picked(id: int)       # a thing on the floor pressed: its comparison (13 Oct, the floor)
+signal floor_take(id: int)         # double-clicked: into the pack
 
 var _head: Label
 var _aside: Label
@@ -45,6 +50,14 @@ var _fill: Panel
 var _bar_text: Label
 var _next: Label
 var _bar_button: Button
+var _floor_ids: Array = []         # the ids in the row's cells, -1 for none
+var _page := 0
+var _prev: Button
+var _next_page: Button
+var _page_label: Label
+var _press_at := Vector2.ZERO
+var _press_cell := -1
+var _floor_items := {}             # id -> the thing, for the drag's picture
 
 
 func _init() -> void:
@@ -90,10 +103,19 @@ func build(w: float, h: float = HEIGHT) -> void:
 	for k in range(FINDS_MAX):
 		var c := ItemCell.new()
 		c.position = Vector2(PAD + k * (Pal.CELL + 8), FINDS_Y)
-		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.visible = false
+		c.gui_input.connect(_cell_input.bind(k))
 		add_child(c)
 		_cells.append(c)
+		_floor_ids.append(-1)
+	# the floor's pages: past ten things, the arrows at the row's end
+	_prev = UI.button(self, Rect2(PAD + inner - 2 * ARROW - 8, FINDS_Y + 10, ARROW, ARROW), false)
+	_prev.text = "‹"
+	_prev.pressed.connect(func(): _page = maxi(0, _page - 1); _shown_sig = "")
+	_next_page = UI.button(self, Rect2(PAD + inner - ARROW, FINDS_Y + 10, ARROW, ARROW), false)
+	_next_page.text = "›"
+	_next_page.pressed.connect(func(): _page += 1; _shown_sig = "")
+	_page_label = UI.label(self, Rect2(PAD + inner - 2 * ARROW - 8 - 64, FINDS_Y + 10, 60, ARROW), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
 	_query = UI.panel(self, Rect2(PAD, FINDS_Y, Pal.CELL, Pal.CELL), UI.box(Pal.BG, 6, 2, Pal.ACCENT))
 	_query_mark = UI.label(_query, Rect2(0, 0, Pal.CELL * 0.62, Pal.CELL), "?", "SemiBold", 30, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER)
 	_query_glass = TextureRect.new()
@@ -201,30 +223,52 @@ func show_crates(sim, m: Dictionary) -> void:
 			edge = Pal.tone_color(Pal.item_tone(q["held"]["it"]))      # the dog's nose: the best find's rarity on the shut crate
 		(t["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = edge
 		(t["panel"].get_theme_stylebox("panel") as StyleBoxFlat).set_border_width_all(2 if (current or held != "") else 1)
-	# the reveal: what came out of the crate last searched - the one in hand once it's given something, else the last
-	var shown_i: int = i if (not all_open and int(cs[i]["done"]) > 0) else i - 1
-	while shown_i >= 0 and cs[shown_i].get("passed", false):
-		shown_i -= 1                       # a locked one passed over gave nothing
-	var finds: Array = cs[shown_i]["finds"] if shown_i >= 0 and shown_i < n else []
 	var searching_now: bool = not all_open and not gang_on
-	if shown_i >= 0 and shown_i < n:
-		var nm: String = str(cs[shown_i]["name"]).to_upper()
-		_finds_head.text = ("IN THE %s" % nm) if shown_i == i else ("OUT OF THE %s" % nm)
-		if finds.is_empty():
-			_finds_head.text += " · NOTHING"
+	var by_hand: bool = sim.by_hand(m)
+	var finds: Array = []
+	if by_hand:
+		# the floor (13 Oct, Matt): everything the site's given, newest first, for the taking; left behind when you go
+		finds = sim.floor_items().duplicate()
+		finds.reverse()
+		UI.fit(_finds_head, ["ON THE FLOOR · %s · DRAG TO THE PACK, OR DOUBLE-CLICK · LEFT BEHIND WHEN YOU GO" % _things(finds.size()),
+			"ON THE FLOOR · %s · DRAG TO THE PACK, OR DOUBLE-CLICK" % _things(finds.size()), "ON THE FLOOR · %s" % _things(finds.size())])
 	else:
-		_finds_head.text = "IN THE %s" % str(cs[i]["name"]).to_upper() if not all_open and n > 0 else ""
+		# the auto-run, "Fill up, then go", away: straight into the pack; the row shows the crate last searched
+		var shown_i: int = i if (not all_open and int(cs[i]["done"]) > 0) else i - 1
+		while shown_i >= 0 and cs[shown_i].get("passed", false):
+			shown_i -= 1                   # a locked one passed over gave nothing
+		finds = cs[shown_i]["finds"] if shown_i >= 0 and shown_i < n else []
+		var nm: String = str(cs[shown_i]["name"]).to_upper() if shown_i >= 0 and shown_i < n else ""
+		_finds_head.text = ("STRAIGHT INTO THE PACK · OUT OF THE %s" % nm) if nm != "" else "STRAIGHT INTO THE PACK"
 	var room: int = FINDS_MAX - (1 if searching_now else 0)
-	var from: int = maxi(0, finds.size() - room)
+	var pages: int = maxi(1, ceili(float(finds.size()) / float(room)))
+	_page = clampi(_page, 0, pages - 1) if by_hand else 0
+	var from: int = _page * room if by_hand else maxi(0, finds.size() - room)
+	_prev.visible = by_hand and pages > 1
+	_next_page.visible = by_hand and pages > 1
+	_page_label.visible = by_hand and pages > 1
+	_prev.disabled = _page == 0
+	_next_page.disabled = _page >= pages - 1
+	_page_label.text = "%d / %d" % [_page + 1, pages]
+	var sig: String = "%d|%d|%s|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x): return [int(x["id"]), Items.stack_size(x)]).hash(), sim.equipped.hash()]     # the counts and the arrows too (the review)
 	var x: float = PAD
+	_floor_items = {}
 	for k in range(FINDS_MAX):
 		var c = _cells[k]
 		var f: int = from + k
 		c.visible = f < finds.size() and k < room
+		_floor_ids[k] = int(finds[f]["id"]) if c.visible and by_hand else -1
+		c.mouse_filter = Control.MOUSE_FILTER_STOP if _floor_ids[k] >= 0 else Control.MOUSE_FILTER_IGNORE
 		if c.visible:
-			c.show_item(finds[f], false, Vector2(Pal.CELL, Pal.CELL))
+			if sig != _shown_sig:
+				c.show_item(finds[f], false, Vector2(Pal.CELL, Pal.CELL))
+				if by_hand:
+					c.set_upgrade(sim.is_upgrade(finds[f]))     # the arrow: better than what's worn
 			c.position.x = x
 			x += Pal.CELL + 8
+			if by_hand:
+				_floor_items[int(finds[f]["id"])] = finds[f]
+	_shown_sig = sig
 	_query.visible = searching_now
 	_query.position.x = x
 	# the bar: the search in hand, or why it waits
@@ -264,6 +308,42 @@ func show_crates(sim, m: Dictionary) -> void:
 	UI.fit(_next, [line + gang, line])
 
 
+var _shown_sig := ""
+var _click_token := 0
+const DOUBLE_S := 0.3
+
+
+static func _things(n: int) -> String:
+	return "NOTHING YET" if n == 0 else ("1 THING" if n == 1 else "%d THINGS" % n)
+
+
+## A floor cell: a press and a move is a drag to the pack, a double-click takes it, a click shows its comparison.
+func _cell_input(event: InputEvent, k: int) -> void:
+	var id: int = _floor_ids[k]
+	if id < 0:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.double_click:
+			_press_cell = -1
+			_click_token += 1                  # the click waiting to show the comparison is the double-click's
+			floor_take.emit(id)
+		elif event.pressed:
+			_press_at = event.position
+			_press_cell = k
+		elif _press_cell == k:
+			_press_cell = -1
+			# a click shows the comparison - once it's plain it wasn't the first of a double-click
+			_click_token += 1
+			var token: int = _click_token
+			if is_inside_tree():
+				get_tree().create_timer(DOUBLE_S).timeout.connect(func(): if token == _click_token: floor_picked.emit(id))
+			else:
+				floor_picked.emit(id)
+	elif event is InputEventMouseMotion and _press_cell == k and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) and event.position.distance_to(_press_at) > 10.0:
+		_press_cell = -1
+		_cells[k].force_drag({"id": id, "src": "floor"}, Inventory.drag_preview(_floor_items.get(id, {})))
+
+
 func text_nodes() -> Array:
 	var out: Array = [_head, _aside, _finds_head, _bar_text, _next]
 	for t in _tiles:
@@ -272,4 +352,9 @@ func text_nodes() -> Array:
 	for c in _cells:
 		if c.visible:
 			out.append_array(c.text_nodes())
+	for b in [_prev, _next_page]:
+		if b.visible:
+			out.append(b)
+	if _page_label.visible:
+		out.append(_page_label)
 	return out
