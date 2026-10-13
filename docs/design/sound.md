@@ -99,3 +99,15 @@ and change how the radio reads - left out unless Matt wants them.
 - sound.gd: one table from event to id, a few players so sounds overlap (a shot under a gang arriving), each with
   its volume; loops crossfade; the old thirteen fall back where a new one isn't there.
 - The smoke: every id in the table has a file or a fallback; sounds off plays nothing.
+
+## Built (13 Oct): the manifest and the batch
+- tools/make_sound_manifest.py writes tools/sound_manifest.json: the list above (sell/buy, the five elements, the finds
+  and the ending split one a file), 71 sounds, 110 files - the busy ones (shots, swings, hits, kills, clicks) in two or
+  three takes - about 330 s in all. Two added for the run view: `incoming` (their shots smacking into the wall by you)
+  and `duck` (dropping behind it). Loops (the places, the heartbeat, the watch) sent with `loop`.
+- tools/eleven_batch.py on Matt's machine: POST https://api.elevenlabs.io/v1/sound-generation, model
+  eleven_text_to_sound_v2, mp3_44100_128; the key from tools/elevenlabs_secret.txt (gitignored), sent only as the
+  `xi-api-key` header; skips what's on disk; --dry-run, --only, --force. Out to art/sound_new/.
+- The key: Restrict Key on, Sound Effects access on, everything else off.
+- Next: sound.gd's table (event to sound, a take at random, several players, loops crossfading), the old thirteen as the
+  fallback; the smoke checks every id has a file or a fallback.

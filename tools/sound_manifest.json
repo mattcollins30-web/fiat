@@ -1,0 +1,890 @@
+{
+ "_readme": [
+  "FIAT SOUNDS (13 Oct, docs/design/sound.md): ElevenLabs sound effects, one job a file, art/sound_new/<id>.mp3. Busy sounds have takes (_1, _2, _3) the game picks between.",
+  "Run on Matt's machine: python tools/eleven_batch.py   (--dry-run lists and totals the seconds; --only <id or sound>; --force remakes). The key: tools/elevenlabs_secret.txt, one line, never committed."
+ ],
+ "output_format": "mp3_44100_128",
+ "model_id": "eleven_text_to_sound_v2",
+ "jobs": [
+  {
+   "id": "amb_outskirts",
+   "sound": "amb_outskirts",
+   "text": "Wind over overgrown allotments at the edge of a town, a crow calling now and then, a dog barking far off, a wire fence ticking in the wind. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "amb_estate",
+   "sound": "amb_estate",
+   "text": "The hum of a tower block estate at dusk, a car alarm far off, a shopping trolley rattling over paving somewhere, distant shouting that fades. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "amb_town",
+   "sound": "amb_town",
+   "text": "An empty high street, a metal shop shutter banging in the wind, pigeons, litter scraping along the pavement. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "amb_city",
+   "sound": "amb_city",
+   "text": "An empty motorway with nothing on it, wind across concrete, a helicopter far off, a siren that starts and stops. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "amb_yard",
+   "sound": "amb_yard",
+   "text": "A camp at night: a brazier crackling, a radio murmuring in another room, a kettle starting to boil, wind against corrugated iron. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "rain",
+   "sound": "rain",
+   "text": "Steady rain on corrugated metal roofs and puddles in a yard. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "fog",
+   "sound": "fog",
+   "text": "Muffled stillness in thick fog, water dripping from gutters, a foghorn very far off. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "night",
+   "sound": "night",
+   "text": "A town at night: crickets, a fox screaming far off, one streetlight buzzing. A continuous field recording, no single event dominating, no music, no voices speaking words.",
+   "duration_seconds": 30.0,
+   "loop": true,
+   "prompt_influence": 0.35
+  },
+  {
+   "id": "shot_improvised_1",
+   "sound": "shot_improvised",
+   "text": "A pneumatic nail gun firing once: a hard clack and a short hiss of air. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_improvised_2",
+   "sound": "shot_improvised",
+   "text": "A pneumatic nail gun firing once: a hard clack and a short hiss of air. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_improvised_3",
+   "sound": "shot_improvised",
+   "text": "A pneumatic nail gun firing once: a hard clack and a short hiss of air. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_pistol_1",
+   "sound": "shot_pistol",
+   "text": "A single pistol shot outdoors, short and flat, a little slap back off brick walls. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_pistol_2",
+   "sound": "shot_pistol",
+   "text": "A single pistol shot outdoors, short and flat, a little slap back off brick walls. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_pistol_3",
+   "sound": "shot_pistol",
+   "text": "A single pistol shot outdoors, short and flat, a little slap back off brick walls. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_shotgun_1",
+   "sound": "shot_shotgun",
+   "text": "A single shotgun blast outdoors followed by the pump action racking. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_shotgun_2",
+   "sound": "shot_shotgun",
+   "text": "A single shotgun blast outdoors followed by the pump action racking. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_shotgun_3",
+   "sound": "shot_shotgun",
+   "text": "A single shotgun blast outdoors followed by the pump action racking. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_rifle_1",
+   "sound": "shot_rifle",
+   "text": "A single rifle shot outdoors, a sharp crack with a short echo down a street. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_rifle_2",
+   "sound": "shot_rifle",
+   "text": "A single rifle shot outdoors, a sharp crack with a short echo down a street. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_rifle_3",
+   "sound": "shot_rifle",
+   "text": "A single rifle shot outdoors, a sharp crack with a short echo down a street. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_smg_1",
+   "sound": "shot_smg",
+   "text": "A short three-round burst from a submachine gun outdoors. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_smg_2",
+   "sound": "shot_smg",
+   "text": "A short three-round burst from a submachine gun outdoors. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shot_smg_3",
+   "sound": "shot_smg",
+   "text": "A short three-round burst from a submachine gun outdoors. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_melee_1",
+   "sound": "swing_melee",
+   "text": "A heavy blunt swing through the air and a dull thud into a body. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_melee_2",
+   "sound": "swing_melee",
+   "text": "A heavy blunt swing through the air and a dull thud into a body. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_melee_3",
+   "sound": "swing_melee",
+   "text": "A heavy blunt swing through the air and a dull thud into a body. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_blade_1",
+   "sound": "swing_blade",
+   "text": "A blade whipping through the air and biting into cloth and flesh. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_blade_2",
+   "sound": "swing_blade",
+   "text": "A blade whipping through the air and biting into cloth and flesh. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "swing_blade_3",
+   "sound": "swing_blade",
+   "text": "A blade whipping through the air and biting into cloth and flesh. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "incoming_1",
+   "sound": "incoming",
+   "text": "Gunshots from across a street aimed at the listener, bullets smacking into a brick wall close by and chips of brick falling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "incoming_2",
+   "sound": "incoming",
+   "text": "Gunshots from across a street aimed at the listener, bullets smacking into a brick wall close by and chips of brick falling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "incoming_3",
+   "sound": "incoming",
+   "text": "Gunshots from across a street aimed at the listener, bullets smacking into a brick wall close by and chips of brick falling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "duck_1",
+   "sound": "duck",
+   "text": "Someone dropping into a crouch behind a low brick wall: a jacket rustling, a knee scraping concrete, a sharp breath. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "duck_2",
+   "sound": "duck",
+   "text": "Someone dropping into a crouch behind a low brick wall: a jacket rustling, a knee scraping concrete, a sharp breath. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "dry_click",
+   "sound": "dry_click",
+   "text": "The hollow click of an empty gun's trigger, then nothing. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "reload_1",
+   "sound": "reload",
+   "text": "A pistol magazine slapped into the grip and the slide racked. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.8,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "reload_2",
+   "sound": "reload",
+   "text": "A pistol magazine slapped into the grip and the slide racked. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.8,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "hit_taken_1",
+   "sound": "hit_taken",
+   "text": "A man grunting in pain as a hit lands and jacket fabric tears. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "hit_taken_2",
+   "sound": "hit_taken",
+   "text": "A man grunting in pain as a hit lands and jacket fabric tears. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "hit_taken_3",
+   "sound": "hit_taken",
+   "text": "A man grunting in pain as a hit lands and jacket fabric tears. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "guard_break",
+   "sound": "guard_break",
+   "text": "A crack like thick safety glass giving way, a shield breaking. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "kill_1",
+   "sound": "kill",
+   "text": "A body falling heavily onto wet tarmac. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "kill_2",
+   "sound": "kill",
+   "text": "A body falling heavily onto wet tarmac. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "kill_3",
+   "sound": "kill",
+   "text": "A body falling heavily onto wet tarmac. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "gang_arrives_1",
+   "sound": "gang_arrives",
+   "text": "Several people running closer down a street, trainers on tarmac, rough shouts getting nearer. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "gang_arrives_2",
+   "sound": "gang_arrives",
+   "text": "Several people running closer down a street, trainers on tarmac, rough shouts getting nearer. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "head_door",
+   "sound": "head_door",
+   "text": "A heavy metal door kicked open and banging against a wall, one gruff shout. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "head_down",
+   "sound": "head_down",
+   "text": "A big man falling to the ground and one long last breath out. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "burn_1",
+   "sound": "burn",
+   "text": "A whoosh of flame catching on clothing and crackling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "burn_2",
+   "sound": "burn",
+   "text": "A whoosh of flame catching on clothing and crackling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "bleed_1",
+   "sound": "bleed",
+   "text": "A wet slash and a spatter. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "bleed_2",
+   "sound": "bleed",
+   "text": "A wet slash and a spatter. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "poison_1",
+   "sound": "poison",
+   "text": "A thick hiss of gas from a canister and a cough. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "poison_2",
+   "sound": "poison",
+   "text": "A thick hiss of gas from a canister and a cough. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shock_1",
+   "sound": "shock",
+   "text": "A sharp electric snap and buzz, a taser arcing. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "shock_2",
+   "sound": "shock",
+   "text": "A sharp electric snap and buzz, a taser arcing. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "frost_1",
+   "sound": "frost",
+   "text": "Ice crackling and creaking as it forms quickly. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "frost_2",
+   "sound": "frost",
+   "text": "Ice crackling and creaking as it forms quickly. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "grenade",
+   "sound": "grenade",
+   "text": "A grenade pin pulled, a throw, a moment, then a heavy muffled blast down the street. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "med_use",
+   "sound": "med_use",
+   "text": "A sticking plaster torn off its backing and a small pill bottle cap unscrewed. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "low_hp",
+   "sound": "low_hp",
+   "text": "A slow, heavy human heartbeat, muffled. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": true,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "clock_warn",
+   "sound": "clock_warn",
+   "text": "A wristwatch ticking loudly and steadily, close to the ear. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": true,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "way_out",
+   "sound": "way_out",
+   "text": "A door shoved open with a shoulder and running footsteps away. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "extract",
+   "sound": "extract",
+   "text": "A van's side door sliding shut and the engine pulling away. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "death",
+   "sound": "death",
+   "text": "A man falling to the ground and a handheld radio's hiss cutting out to silence. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 2.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_cardboard_1",
+   "sound": "crate_cardboard",
+   "text": "Cardboard box flaps torn open and things shifted inside. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_cardboard_2",
+   "sound": "crate_cardboard",
+   "text": "Cardboard box flaps torn open and things shifted inside. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_ammo_tin_1",
+   "sound": "crate_ammo_tin",
+   "text": "A steel ammunition tin's latch snapped open and the lid lifted. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_ammo_tin_2",
+   "sound": "crate_ammo_tin",
+   "text": "A steel ammunition tin's latch snapped open and the lid lifted. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_jewellery",
+   "sound": "crate_jewellery",
+   "text": "A small jewellery box's hinge creaking open and a single tinkling music-box note. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_toolbox_1",
+   "sound": "crate_toolbox",
+   "text": "A metal toolbox clattering open, its trays sliding out, tools rattling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_toolbox_2",
+   "sound": "crate_toolbox",
+   "text": "A metal toolbox clattering open, its trays sliding out, tools rattling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_medicine",
+   "sound": "crate_medicine",
+   "text": "A mirrored bathroom cabinet door squeaking open, pill bottles rattling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_filing",
+   "sound": "crate_filing",
+   "text": "A steel filing cabinet drawer rolling out on its runners and papers rustling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_safe",
+   "sound": "crate_safe",
+   "text": "A safe's combination dial clicking round and a heavy steel door swinging open. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.4,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_military",
+   "sound": "crate_military",
+   "text": "A crowbar prising nails out of a wooden military crate, the lid coming free. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.4,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_locked",
+   "sound": "crate_locked",
+   "text": "A padlock rattled hard on a hasp that doesn't give. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.7,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "crate_keys",
+   "sound": "crate_keys",
+   "text": "A ring of keys jingling and one key turning in a padlock, which clicks open. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "search_tick_1",
+   "sound": "search_tick",
+   "text": "Hands rummaging quickly through things in a box. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "search_tick_2",
+   "sound": "search_tick",
+   "text": "Hands rummaging quickly through things in a box. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "search_tick_3",
+   "sound": "search_tick",
+   "text": "Hands rummaging quickly through things in a box. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "picked_clean",
+   "sound": "picked_clean",
+   "text": "A last drawer pushed shut, then quiet. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "find_common",
+   "sound": "find_common",
+   "text": "A small object set down: a soft wooden thunk. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "find_rare",
+   "sound": "find_rare",
+   "text": "A small bright metallic chime, like a spoon on a glass. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.8,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "find_unique",
+   "sound": "find_unique",
+   "text": "A deep resonant bell struck once and ringing out. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.4,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "take_1",
+   "sound": "take",
+   "text": "A rucksack zip pulled shut quickly. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "take_2",
+   "sound": "take",
+   "text": "A rucksack zip pulled shut quickly. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "ditch_1",
+   "sound": "ditch",
+   "text": "Something dropped on concrete. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "ditch_2",
+   "sound": "ditch",
+   "text": "Something dropped on concrete. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "no_room",
+   "sound": "no_room",
+   "text": "A dull bump and a rucksack strap pulled tight. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "dog_sniff",
+   "sound": "dog_sniff",
+   "text": "A dog sniffing eagerly at a box and giving a short huff. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "ui_click_1",
+   "sound": "ui_click",
+   "text": "A soft card-stock click. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "ui_click_2",
+   "sound": "ui_click",
+   "text": "A soft card-stock click. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "ui_click_3",
+   "sound": "ui_click",
+   "text": "A soft card-stock click. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "ui_tab_1",
+   "sound": "ui_tab",
+   "text": "A sheet of paper turned over. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "ui_tab_2",
+   "sound": "ui_tab",
+   "text": "A sheet of paper turned over. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "equip_1",
+   "sound": "equip",
+   "text": "A buckle fastened and cloth settling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "equip_2",
+   "sound": "equip",
+   "text": "A buckle fastened and cloth settling. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "sell",
+   "sound": "sell",
+   "text": "A few coins dropped into a tin. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "buy",
+   "sound": "buy",
+   "text": "A tin of coins tipped out onto a wooden counter. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "craft",
+   "sound": "craft",
+   "text": "A bench vice tightened and a few light hammer taps on metal. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "build",
+   "sound": "build",
+   "text": "A short burst of hammering and a hand saw on timber. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.6,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "level_up",
+   "sound": "level_up",
+   "text": "A match struck and a small fire catching and growing. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "point_spent",
+   "sound": "point_spent",
+   "text": "A pencil tick on paper. A short, soft, clean interface sound for a game menu, quiet and understated, no music.",
+   "duration_seconds": 0.5,
+   "loop": false,
+   "prompt_influence": 0.6
+  },
+  {
+   "id": "heal_clinic",
+   "sound": "heal_clinic",
+   "text": "A hospital curtain drawn on its rail and a pen scratching on a clipboard. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "radio_on",
+   "sound": "radio_on",
+   "text": "Radio static tuning through noise until it settles on a clear carrier. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "radio_code",
+   "sound": "radio_code",
+   "text": "An old radio dial clicking through stations, fragments of static. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 0.9,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "gate_open",
+   "sound": "gate_open",
+   "text": "A heavy padlock and chain dropping off a gate onto the ground. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 1.2,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "the_end_burn",
+   "sound": "the_end_burn",
+   "text": "Paper catching fire and burning steadily. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 3.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  },
+  {
+   "id": "the_end_sell",
+   "sound": "the_end_sell",
+   "text": "A door closing quietly and a latch clicking. Close, dry and real, recorded on location in a grey post-collapse British town. No music, no voices speaking words.",
+   "duration_seconds": 3.0,
+   "loop": false,
+   "prompt_influence": 0.5
+  }
+ ]
+}
