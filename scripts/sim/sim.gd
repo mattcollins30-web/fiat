@@ -2281,7 +2281,13 @@ func rounds_for(gun: Dictionary) -> int:
 
 func has_rounds(gun: Dictionary) -> bool:
 	if _trying:
-		return true                          # a try-on weighs every gun fed: the rounds are a trip to the rig, not the gun
+		# a try-on weighs a gun fed when its rounds are a trip to the rig: in the stash or the rig, or at the Fence to buy
+		# (13 Oct, the ammo trap: with the Fence shut, Equip if better swapped the nail gun for a rifle nobody had rounds
+		# for, and the runner fought with their fists)
+		var type: String = Items.ammo_type(gun)
+		if type in ["", "none"] or gun.get("rule", "") == "weed_burner" or room_open("fence"):
+			return true
+		return rounds_for(gun) > 0 or stash.any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == type)
 	if Items.ammo_type(gun) == "none" or gun.get("rule", "") == "weed_burner":
 		return true                          # a bat never runs dry; the burner takes nothing
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
@@ -5276,6 +5282,19 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
+	_place_find(m, it)
+	# a gun found while the Fence is shut comes with a box of its own rounds (13 Oct, the ammo trap: rounds are sold
+	# at the Fence only, and a gun with none is a club)
+	if (it["slot"] == "Primary" or it["slot"] == "Secondary") and not room_open("fence") and it.get("rule", "") != "weed_burner":
+		var type: String = Items.ammo_type(it)
+		var box: Dictionary = ammo_box(type) if not (type in ["", "none"]) else {}
+		if not box.is_empty():
+			_place_find(m, _plain(Data.AMMO, str(box["name"])))
+
+
+## A find into the pack: joined to a stack it fits, a cell of its own if there's room, else in place of the cheapest
+## thing its size if it's worth more, else passed over.
+func _place_find(m: Dictionary, it: Dictionary) -> void:
 	if Items.stacks(it):
 		for f in m["found"]:
 			if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
@@ -5900,6 +5919,19 @@ func front_fight() -> float:
 	return _cmp_cache["ff"]
 
 
+## The rounds' types to hand, when the Fence is shut (a try-on reads a gun fed only then: the verdicts follow them).
+func _rounds_on_hand() -> String:
+	if room_open("fence"):
+		return ""
+	var types := {}
+	for it in rig + stash:
+		if Items.is_ammo(it):
+			types[Items.base_of(it)["type"]] = true
+	var k: Array = types.keys()
+	k.sort()
+	return ",".join(k)
+
+
 ## The fight being pushed: the open site that hits hardest at its set depth (the campaign's newest site, the
 ## endgame's deepest ladder). The kit doesn't move it; the depths and the clears do.
 var _front_key := 0
@@ -5983,7 +6015,7 @@ func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review), and a run's bonus armour
 	var bonus: float = float(mission.get("bonus_armour", 0.0)) if mission != null else 0.0
-	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier()])     # the front: the body's figure reads the fight being pushed
+	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand()])     # the front: the body's figure reads the fight being pushed
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
@@ -6068,7 +6100,35 @@ func equip_best(slot: String) -> bool:
 	if equipped[slot] != null:
 		stash.append(equipped[slot])
 	equipped[slot] = best
+	_feed(best)
 	return true
+
+
+## A gun put on with its rounds in the stash and none in the rig: a box of them to the rig, a stack of rounds no gun
+## fires going back to the stash for the room (13 Oct, the review: Equip if better put the rifle on and the runner went
+## out with its box still in the stash).
+func _feed(gun: Dictionary) -> void:
+	var type: String = Items.ammo_type(gun)
+	if mission != null or type in ["", "none"] or rounds_for(gun) > 0:
+		return
+	var box := {}
+	for it in stash:
+		if Items.is_ammo(it) and Items.base_of(it)["type"] == type:
+			box = it
+			break
+	if box.is_empty():
+		return
+	if not rig_room(Items.size(box)):
+		var fired: Array = []
+		for s in ["Primary", "Secondary"]:
+			if equipped[s] != null:
+				fired.append(Items.ammo_type(equipped[s]))
+		for it in rig.duplicate():
+			if Items.is_ammo(it) and not (Items.base_of(it)["type"] in fired):
+				leave(it["id"])
+				if rig_room(Items.size(box)):
+					break
+	take(box["id"])
 
 
 ## A particular stash item, by id, into its slot; what was fitted goes to the stash.

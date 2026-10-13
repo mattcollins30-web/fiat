@@ -10768,6 +10768,33 @@ func _gates_checks(main) -> void:
 	back.load_dict(fresh.to_dict())
 	_check(back.unlocked == ["clinic"], "the rooms opened didn't survive a save: %s" % str(back.unlocked))
 	_check(not ("The vet's bag" in sim.book_pages()) and not ("The deeds" in sim.book_pages()), "a head's thing is a page in the drawer")
+	# the ammo trap (13 Oct): with the Fence shut, a gun with no rounds to hand is no upgrade, and one with them is read fed;
+	# a gun found while it's shut comes with a box of its own rounds
+	var dry = load("res://scripts/sim/sim.gd").new()
+	dry.start()
+	_set_cls(dry, "Doorman")
+	var rifle: Dictionary = dry._plain("Primary", "Garage-built rifle")
+	dry.stash_put(rifle)
+	_check(dry.compare(rifle) != 1, "a rifle with no rounds anywhere reads better than the fed nail gun")
+	var box: Dictionary = dry.ammo_box(Items.ammo_type(rifle))
+	dry.stash_put(dry._plain(Data.AMMO, str(box["name"])))
+	_check(dry.compare(rifle) == 1, "a rifle with its rounds in the stash doesn't read better than the nail gun: %d" % dry.compare(rifle))
+	_check(dry.equip_best("Primary") and dry.equipped["Primary"]["id"] == rifle["id"] and dry.has_rounds(rifle), "Equip if better put the rifle on without its rounds in the rig")
+	dry.hp = dry.max_hp()
+	dry.deploy(0)
+	var guns := 0
+	var boxed := true
+	for k in range(400):
+		var before: Array = dry.mission["found"].duplicate()
+		dry.mission["found"] = []
+		dry._find(dry.mission, dry.mission["t"])
+		for f in dry.mission["found"]:
+			if (f["slot"] == "Primary" or f["slot"] == "Secondary") and not (Items.ammo_type(f) in ["", "none"]):
+				guns += 1
+				boxed = boxed and dry.mission["found"].any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == Items.ammo_type(f))
+		dry.mission["found"] = before
+	_check(guns > 0 and boxed, "a gun found with the Fence shut came without its rounds (%d guns)" % guns)
+	dry.extract_now()
 	print("gates ok: shut on a fresh camp, the rail, the jobs, each head's thing, the lines, the deeds off the Manager, saves")
 	main.new_game()                              # the rest of the smoke starts from a fresh camp, as it always did
 	_open_camp(main.sim)

@@ -4208,3 +4208,11 @@ an unbeaten head at 0.65 (Matt's recorded odds) and farms what's cleared at 0.88
 fed, so Equip if better (and the bot) can swap the nail gun for a gun with no rounds and fall to fists. Four 1.5-2 h
 Drifter reads: three ran the campaign (the Bank at 0:39-1:09, done at 0:57-1:25), one stalled at the Allotments on
 3 dmg/s for the whole read. Options in the reply.
+
+**The ammo trap fixed (13 Oct, Matt: 1 and 2).** With the Fence shut, a try-on reads a gun fed only if its rounds are in
+the rig or the stash (the arrow, Equip if better and the bot alike), and Equip if better moves a box of them to the rig;
+a gun found while the Fence is shut comes with a box of its own rounds. Four 1.5 h Drifter reads after: all four ran the
+campaign (the Bank at 0:43-1:00, the Barracks at 1:06-1:17). The smoke checks the rifle with no rounds, with them, and
+put on by Equip if better. tools/smoke.bat runs Godot through tools/run_limited.ps1: killed past 25 minutes, or when the
+log ends on a script error and goes quiet three minutes - the watcher never waits for ever again (no restart needed:
+the watcher calls smoke.bat afresh each time).
