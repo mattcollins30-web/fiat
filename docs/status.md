@@ -4303,3 +4303,9 @@ Bin: it goes for the scrap a ditch gives, gone for good; a unique or set piece a
 the deeds. With the Fence shut, Select-many's button bins the plain things ("Bin 4: 32 scrap"). Two smoke flakes the
 hammer start shook loose fixed in the tests: the junk run's nails go to the rig now there's a free pouch; the Craft
 view's piece picked by its cell, not its place in the list.
+
+**Parked (13 Oct, Matt's playtest, not fixed yet): a gate's "before" line keeps playing after its room's open.** The
+medic's "Anyone near Top Farm: the keeper there has a vet's bag" still runs on the radio line with the Clinic open. The
+cause: radio_line.gd's loop (`_next_line`) plays every line in `sim.heard` in turn, and a gate's "before" line stays
+heard. The fix: the loop skips a `<head>/before` line once every room its head opens is open (the "after" lines stay);
+the smoke asserts it - open the Clinic, and the medic's before line never comes round again.
