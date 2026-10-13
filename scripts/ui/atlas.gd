@@ -69,7 +69,7 @@ func _init(h: float) -> void:
 	var top := UI.panel(self, Rect2(0, 0, W, BAND_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	top.clip_contents = true
 	_band = Band.new(W, BAND_H, 4)
-	_band.set_site("the map")
+	_band.set_site("the map")                 # the band's art (art/places/the_map.png): the Dial (13 Oct) keeps the map's picture
 	top.add_child(_band)
 	for c in range(Data.ATLAS_COLUMNS.size()):
 		var y: float = LANES_Y + c * (LANE_H + LANE_GAP)
@@ -145,7 +145,7 @@ func _init(h: float) -> void:
 	_take = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), true)
 	_take.pressed.connect(_on_take)
 	_reset = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
-	_reset.text = "Start the map again"
+	_reset.text = "Start the Dial again"
 	_reset.pressed.connect(_on_reset)
 
 
@@ -182,7 +182,7 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	var free: int = sim.atlas_free()
-	_band.set_words("The map · the endgame's tree", "The map", "%d" % free, ["of %d point%s free" % [sim.atlas_points, "" if sim.atlas_points == 1 else "s"], "of %d free" % sim.atlas_points, "free"])
+	_band.set_words("The Dial · the endgame's tree", "The Dial", "%d" % free, ["of %d point%s free" % [sim.atlas_points, "" if sim.atlas_points == 1 else "s"], "of %d free" % sim.atlas_points, "free"])
 	_band.set_right(["A point a new depth,", "past the first, any site.", "Holds on every site."])
 	var zones := []
 	for z in range(Data.ZONES.size()):
@@ -239,7 +239,7 @@ func _show_panel() -> void:
 	_take.visible = not a.is_empty()
 	_chips.visible = not a.is_empty()
 	if a.is_empty():
-		_title.text = "The map"
+		_title.text = "The Dial"
 		_words.position.x = PAD
 		_words.size.x = W - 2 * PAD
 		UI.fit(_words, [Words.MAP["empty"] % [sim.convoy_depth(), sim.pinnacle_depth(2), sim.pinnacle_depth(5), sim.pinnacle_depth(8)], Words.MAP["empty_short"] % sim.convoy_depth(), "Pick a node above."])

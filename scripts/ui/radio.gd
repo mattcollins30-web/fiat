@@ -197,7 +197,7 @@ func show_state(s) -> void:
 	if view == "map" and not sim.campaign_done():
 		view = "air"
 	_views[0].text = "The air"
-	_views[1].text = "The map" if sim.campaign_done() else "The map · locked"
+	_views[1].text = "The Dial" if sim.campaign_done() else "The Dial · locked"     # the endgame's tree (13 Oct, Matt: was the map)
 	_views[1].disabled = not sim.campaign_done()
 	UI.style_button(_views[0], view == "air")
 	UI.style_button(_views[1], view == "map")

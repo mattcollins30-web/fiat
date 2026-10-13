@@ -5404,7 +5404,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
 		if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES:     # the map's points from the Streets on (12 Oct)
 			atlas_points += 1
-			log_event("A point on the map.")
+			log_event("A point on the Dial.")
 	if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
 		best_dig = {"site": t["name"], "tier": m["tier"], "depth": t["depth"], "yard": yard_moves + 1}     # the ladder's, not the campaign's
 	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)

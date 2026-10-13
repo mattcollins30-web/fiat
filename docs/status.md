@@ -4246,3 +4246,6 @@ faster Cycle helmet is rightly better than the slow Visored one).
 military crate comes locked 15% of the time, over and above the site's searches. Without the Caretaker's Keys a locked
 crate is passed over (a grey padlock; the head says "· 2 LOCKED"); with them it opens (an amber padlock), its finds a
 quality up (+0.25). The Keys keep their event every run; their words say "every locked crate opens".
+
+**The endgame map is the Dial (13 Oct, Matt).** The Radio's second tab, its band and title, Head start's words and the
+log's point line say the Dial. The rail's The Map (the sites) stays; the band keeps the map's picture.

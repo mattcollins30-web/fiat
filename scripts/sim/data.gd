@@ -1550,7 +1550,7 @@ const CONTRACT_PASS_NOTES := 5     # the second turn-down in a run; doubling aft
 const MATE_RUNS := 5
 const MATE_NOTES := 400            # a unique from the mate, times the tier
 
-## The map: the endgame's own tree. A point for every new depth cleared on
+## The Dial (the map until 13 Oct, Matt): the endgame's own tree. A point for every new depth cleared on
 ## any site past the first; spent on how the sites run, for every site.
 ## The map at thirty-six (endgame part 4, 7 Oct): three columns of twelve - the
 ## sites, the crews, the air - each a chain (a node needs the one before it
@@ -1604,8 +1604,8 @@ const ATLAS := [
 		"sum": "The first", "figures": ["as they come", "+25% damage"], "sentence": "The first of every gang is marked: a quarter more damage to him."},
 	{"key": "long_memory", "column": 1, "name": "Long memory", "max": 1, "words": "A crew's head's price is paid once a depth: every run back at that depth is free",
 		"sum": "Head's price", "figures": ["every run", "once a depth"], "sentence": "Pay a head's price at a depth once; he comes out for nothing at that depth after."},
-	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a map point",
-		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the map gains a point."},
+	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a point on the Dial",
+		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the Dial gains a point."},
 	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the Services from depth 10, not 12",
 		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the Services two depths sooner."},
 	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
