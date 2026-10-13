@@ -27,3 +27,9 @@ search bar under those.
 A test frame first (tools/pixellab_fight_test_manifest.json, art/fight_test/): the Parade's plate, its near cover, one
 gang member standing, firing and going down, the runner's hands with an old revolver. Claude composes the frame from
 them for Matt to judge before anything's built or the full art list is written.
+
+## The test frame (13 Oct)
+docs/design/mockups/fight_frame_test.png: the six test pieces composed at the run screen's size - a fight (one far in a
+doorway, one by the car firing, one close popping up), a hit (the jolt, the red edges, the number), a kill (the one by
+the car going down), the search (panned along, the crates' own art in the street). The plate, the cover and the hands
+work as they came; the standing figure carries a strip of its doorway (the next run: "no doorway, nothing behind him").
