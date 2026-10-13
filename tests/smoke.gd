@@ -7923,12 +7923,20 @@ func _run_view_checks(main) -> void:
 	# the far one stands further down the street than the middle one, smaller, wholly in the frame
 	# every site's three: the far one above the wall, smaller than the middle one, in frame, clear of the other two
 	var keys: Array = [""] + RunView.SITE_FAR.keys()
+	# the tables' own (what F3/F5 has saved is Matt's call, checked only for being in the frame, below)
+	var placed: Dictionary = RunView.saved_sites().duplicate(true)
+	RunView.use_saved({})
+	for key in placed:
+		for k in range(3):
+			var row: Array = placed[key][k]
+			_check(float(row[0]) >= 0.0 and float(row[0]) <= RunView.W and float(row[1]) > 0.0 and float(row[1]) <= RunView.H + 40.0 and float(row[2]) > 0.05 and float(row[2]) < 2.0, "%s's placed %d is off the frame: %s" % [key, k, str(row)])
 	for key in keys:
 		var mid: Dictionary = RunView.site_slot(key, 0)
 		var nr: Dictionary = RunView.site_slot(key, 1)
 		var far: Dictionary = RunView.site_slot(key, 2)
 		_check(far["foot"].y < mid["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "%s: the far one isn't down the street: %s against %s" % [key, str(far), str(mid)])
 		_check(absf(far["foot"].x - mid["foot"].x) > 40.0 and absf(far["foot"].x - nr["foot"].x) > 50.0 and absf(mid["foot"].x - nr["foot"].x) > 80.0, "%s: two of them stand in front of each other: %s %s %s" % [key, str(mid["foot"]), str(nr["foot"]), str(far["foot"])])
+	RunView.use_saved(placed)
 	var mid: Dictionary = RunView.SLOTS[0]
 	# the middle one near the centre; the near one left of your gun - most of him clear of every gun's hands (Matt, 13 Oct)
 	_check(absf(mid["foot"].x - RunView.W / 2.0) < 45.0, "the middle one isn't near the centre: %s" % str(mid))
@@ -8105,10 +8113,75 @@ func _run_view_checks(main) -> void:
 	_check(absf(float(v.state()["search_p"]) - 0.5) < 0.01, "the glass's ring isn't the search: %.2f" % float(v.state()["search_p"]))
 	_check(run._fight["track"].position.y >= run.VIEW_SEARCH_Y and run._six[0]["key"].text == "Gang in", "the search bar is not under the six while searching")
 	_check_fit(main, "Run (the run view, the search)")
+	_placement_checks(main, v)
 	sim.extract_now()
 	sim.load_dict(saved)
 	main.refresh()
 	print("the run view ok: the frame, the gang up, a kill, a hit, the search, the bars and the six, the fit")
+
+
+## The placement tool (13 Oct, Matt: Greenhorn's F3/F5): F3 holds the fight still with all three standing on their slots;
+## a drag moves one's feet, its corner sizes it (feet kept); F5 saves the site's three, and the view reads them after.
+func _placement_checks(main, v) -> void:
+	if not v.can_place():
+		print("the placement tool: not on a site with its own art here, not checked")
+		return
+	var sim = main.sim
+	var p = v._placer
+	var keep_path: String = p.save_path
+	p.save_path = "user://smoke_fight_slots.tres"
+	var saved0: Dictionary = RunView.saved_sites().duplicate(true)
+	p.toggle()
+	_check(v.placing and p.visible and v._figs.all(func(f): return f["state"] == "up"), "F3 didn't hold the fight with all three up")
+	var run = main._run
+	_check(not run._fight["track"].visible and not run._runner["track"].visible and not run._fight["head"].visible and not run._search_button.visible, "the bars and the head stayed over the frame while placing")
+	var t0: float = sim.elapsed
+	main._process(0.5)
+	_check(is_equal_approx(sim.elapsed, t0), "the game ran on while placing")
+	v._process(0.05)
+	# a drag moves the middle one's feet by the drag
+	var foot0: Vector2 = v.slot_of(0)["foot"]
+	var r0: Rect2 = p.rect_of(0)
+	var grab: Vector2 = r0.position + r0.size * Vector2(0.5, 0.3)
+	p.press(grab)
+	p.move(grab + Vector2(20, 6))
+	p.release()
+	_check(v.slot_of(0)["foot"] == foot0 + Vector2(20, 6), "a drag didn't move the middle one: %s from %s" % [str(v.slot_of(0)["foot"]), str(foot0)])
+	# its corner sizes the near one, its feet kept
+	var s1: Dictionary = v.slot_of(1).duplicate()
+	var r1: Rect2 = p.rect_of(1)
+	p.press(r1.end - Vector2(2, 2))
+	p.move(r1.end - Vector2(2, 2) + Vector2(0, 30))
+	p.release()
+	_check(v.slot_of(1)["scale"] > s1["scale"] * 1.05 and v.slot_of(1)["foot"] == s1["foot"], "the corner didn't size the near one with its feet kept: %s" % str(v.slot_of(1)))
+	v._process(0.05)
+	var nr: TextureRect = v._figs[1]["rect"]
+	_check(absf(nr.position.y + RunView.used_of(nr.texture).end.y * nr.scale.y - s1["foot"].y) < 1.5, "the near one isn't drawn where it's being put")
+	# F5: the site's three saved, read from then on
+	var want: Array = [v.slot_of(0).duplicate(), v.slot_of(1).duplicate(), v.slot_of(2).duplicate()]
+	_check(p.save() == OK and FileAccess.file_exists(p.save_path), "F5 didn't save")
+	var back = load(p.save_path)
+	_check(back != null and back.sites.has(v._site_key) and is_equal_approx(float(back.sites[v._site_key][0][0]), want[0]["foot"].x), "the save doesn't hold the middle one: %s" % (str(back.sites) if back != null else "nothing"))
+	p.toggle()
+	_check(not v.placing and v.slot_of(0)["foot"] == want[0]["foot"] and is_equal_approx(v.slot_of(1)["scale"], snappedf(want[1]["scale"], 0.001)), "after F3 the view doesn't stand them where they were saved")
+	main._process(0.1)
+	_check(sim.elapsed > t0, "the game didn't run on after placing")
+	_check(run._runner["track"].visible and run._fight["head"].visible, "the bars didn't come back after placing")     # their bar's own rule (the crates up) decides it
+	# leaving the run screen while placing lets the tool go, and the game runs on (the review: a room click froze it)
+	p.toggle()
+	var room0: String = main.room
+	main.show_room(main.ARMOURY)
+	v._process(0.05)
+	var t1: float = sim.elapsed
+	main._process(0.2)
+	_check(not v.placing and not p.visible and sim.elapsed > t1, "leaving the run screen kept the tool on and the game held")
+	main.show_room(room0)
+	# put it back: the real file untouched, the view on it again
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(p.save_path))
+	p.save_path = keep_path
+	RunView.use_saved(saved0)
+	main.refresh()
+	print("placement ok: F3 holds the fight, a drag moves, the corner sizes, F5 saves and the view reads it")
 
 
 ## The full art wired (13 Oct): each site its own plate and cover (else the Parade's test pair), the cover's drawn top on

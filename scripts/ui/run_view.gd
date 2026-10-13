@@ -15,6 +15,9 @@ const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 ## screen shows what your gun's done since the last one here, on the one it hit.
 signal shot_fired(at: Vector2)
 
+## The placement tool on or off: the run screen clears what it lays over the frame (bars, chips, the head) while it's on.
+signal placing_changed(on: bool)
+
 const W := 588
 const H := 262
 const DIR := "res://art/fight_test/%s.png"
@@ -226,21 +229,117 @@ func _init() -> void:
 	_marker = UI.label(self, Rect2(0, 0, 24, 24), "✕", "Bold", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	UI.shadow(_marker)
 	_marker.visible = false
+	_placer = preload("res://scripts/ui/fight_placement.gd").new()
+	_placer.view = self
+	_placer.size = Vector2(W, H)
+	add_child(_placer)
 
 
 ## A slot on this site: the far one's on the site's own ground when its own plate's up.
 func slot_of(k: int) -> Dictionary:
+	if placing and _edit.size() == 3:
+		return _edit[k]
 	return site_slot(_site_key if _own_site else "", k)
 
 
-## A site's slot k ("" for the test plate's): its own where it has one, the common one else.
+## A site's slot k ("" for the test plate's): where F3/F5 put it (data/fight_slots.tres), else its own in the tables
+## below, else the common one.
 static func site_slot(key: String, k: int) -> Dictionary:
+	var placed: Dictionary = saved_sites()
+	if placed.has(key) and placed[key] is Array and placed[key].size() == 3:
+		var row: Array = placed[key][k]
+		return {"foot": Vector2(float(row[0]), float(row[1])), "scale": float(row[2]), "lit": SLOTS[k]["lit"]}
 	if k == 2 and SITE_FAR.has(key):
 		return {"foot": SITE_FAR[key][0], "scale": SITE_FAR[key][1], "lit": SLOTS[2]["lit"]}
 	var own: Dictionary = (SITE_MID if k == 0 else SITE_NEAR) if k < 2 else {}
 	if own.has(key):
 		return {"foot": own[key], "scale": SLOTS[k]["scale"], "lit": SLOTS[k]["lit"]}
 	return SLOTS[k]
+
+
+## What F3/F5 has saved (data/fight_slots.tres), read once; use_saved() after a save.
+const SLOTS_FILE := "res://data/fight_slots.tres"
+static var _saved_sites = null
+static func saved_sites() -> Dictionary:
+	if _saved_sites == null:
+		_saved_sites = {}
+		if ResourceLoader.exists(SLOTS_FILE):
+			var r = load(SLOTS_FILE)
+			if r != null and r.get("sites") is Dictionary:
+				_saved_sites = r.sites
+	return _saved_sites
+
+
+static func use_saved(sites: Dictionary) -> void:
+	_saved_sites = sites
+
+
+# ------------------------------------------------------------------ the placement tool (F3, debug builds)
+
+var placing := false                      # F3's on: the fight holds still, the three stand where they're being put
+var _edit: Array = []                     # the three slots as they're being dragged
+var _placer: Control                      # fight_placement.gd
+
+
+## Whether F3 can start here: a debug build, the run screen up, a site with its own art (its slots are its own).
+func can_place() -> bool:
+	return OS.is_debug_build() and _shown() and _own_site
+
+
+func set_placing(on: bool) -> void:
+	placing = on
+	placing_changed.emit(on)
+	if on:
+		_edit = []
+		for k in range(3):
+			_edit.append(site_slot(_site_key, k).duplicate())
+		for k in range(_figs.size()):
+			var f: Dictionary = _figs[k]
+			if not f.has("who"):
+				f["who"] = "a"
+			f["boss"] = ""
+			f["state"] = "up"
+			f["t"] = 0.0
+		_duck = 0.0
+		_duck_t = 0.0
+	else:
+		_edit = []
+		for k in range(_figs.size()):
+			_set_state(k, "")                 # the fight picks up as it was: as many come in as are on you
+
+
+func set_slot(k: int, foot: Vector2, scale: float) -> void:
+	if k >= 0 and k < _edit.size():
+		_edit[k] = {"foot": foot, "scale": scale, "lit": SLOTS[k]["lit"]}
+
+
+## Placing: the plate at rest, all three standing on their slots, nothing firing, flashing or burning.
+func _place_tick() -> void:
+	_plate.position = PLATE_AT
+	_cover.position = Vector2(COVER_X, _cover_y)
+	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y - 1)
+	_hands.position = _hands_at
+	_marker.visible = false
+	_red.modulate.a = 0.0
+	for k in range(_figs.size()):
+		var f: Dictionary = _figs[k]
+		var r: TextureRect = f["rect"]
+		var slot: Dictionary = slot_of(k)
+		r.visible = true
+		r.texture = _fig_tex(f, "stand")
+		if r.texture != null:
+			r.size = r.texture.get_size()
+		r.modulate.a = 1.0
+		r.scale = Vector2(slot["scale"], slot["scale"])
+		var u: Rect2 = used_of(r.texture)
+		var anchor: Vector2 = Vector2(u.get_center().x, u.end.y) if u.size.y > 0.0 else Vector2(r.size.x * 0.5, r.size.y)
+		r.position = slot["foot"] - anchor * slot["scale"]
+		r.self_modulate = Color(slot["lit"], slot["lit"], slot["lit"], 1.0)
+		_arcs[k].visible = false
+		for el in f["fx"]:
+			f["fx"][el].emitting = false
+	if _placer != null:
+		_placer.queue_redraw()
 
 
 ## The site's plate and cover (its own, else the Parade's test pair), and the wall's fill cut from the cover.
@@ -420,6 +519,8 @@ func _vignette(c := Color(0.75, 0.1, 0.08), strength := 0.85) -> Texture2D:
 
 ## What the sim says, each refresh: how many are on you, kills, your HP, the search's crates.
 func show_state(sim, m: Dictionary) -> void:
+	if placing:
+		return                                   # F3's on: the fight holds still
 	if sim.runs_total != _run_seen:
 		_run_seen = sim.runs_total                # a new run: nobody up, nothing to drop
 		_kills_seen = int(m["kills"])
@@ -521,7 +622,12 @@ func _set_state(k: int, s: String) -> void:
 
 func _process(dt: float) -> void:
 	if not _shown():
+		if placing and _placer != null:
+			_placer.toggle()                     # off the run screen (a room, the title, a new camp): the tool lets go (the review)
 		return                                   # off the run screen: nothing ticks (the review: a run ended mid-fight kept its flames going)
+	if placing:
+		_place_tick()
+		return
 	# the figures: as many up as are on you, popping in front first; each fires now and then while you're under fire
 	var up := 0
 	for f in _figs:

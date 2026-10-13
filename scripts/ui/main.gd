@@ -403,6 +403,8 @@ func layout(s: Vector2) -> void:
 func _process(delta: float) -> void:
 	if sim == null or _menu.visible:
 		return
+	if _run != null and _run._view != null and _run._view.placing and _run._view._shown():
+		return                              # the fight's placement tool (F3) holds the game still
 	sim.advance(delta * speed)
 	sim.tick_played(delta)              # the player's own time at the game, for the playtest record (11 Oct)
 	if sim.camp_lost:

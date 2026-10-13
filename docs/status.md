@@ -4381,3 +4381,12 @@ middle one left of the sofa, the near one right of it, the far one over on the r
 middle and near ones further left, the far one between. A figure coming in fades in where it stands (0.35 s) - no more
 rising up through the floor - its flames fading in with it. The smoke checks every site's three apart and on their
 ground, and a figure half way in half there with its feet down. The City's sites wait for Matt's playtest.
+
+**The fight's placement tool, F3/F5 (13 Oct, Matt: "Greenhorn's F3/F5 - each enemy a zone I can drag and drop").**
+scripts/ui/fight_placement.gd, cut from Greenhorn's hotspot_placement_overlay.gd to what the run view needs. Debug
+builds only; on the run screen, on a site with its own art: F3 holds the game (the sim stops), clears the bars and chips
+off the frame, and stands all three of the gang on their slots, outlined and named (middle, near, far) with a dot at
+their feet. Drag to move one's feet; its bottom-right corner or the mouse wheel sizes it, feet kept. F5 saves the site's
+three to data/fight_slots.tres (a Resource, so it ships in an export; other sites kept), F4 prints them, F3 again lets
+the game go on. Saved spots win over the tables (SITE_FAR/MID/NEAR, SLOTS). Leaving the run screen lets the tool go.
+The smoke drives it end to end against a user:// file. Matt's saved spots are checked only for being in the frame.

@@ -204,6 +204,7 @@ func _init() -> void:
 func _view_make() -> void:
 	_view = RunView.new()
 	_view.shot_fired.connect(_on_view_shot)
+	_view.placing_changed.connect(_on_placing)
 	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
 	_left.add_child(_view)
 	_left.move_child(_view, _band.get_index() + 1)
@@ -239,6 +240,8 @@ func show_state(s) -> void:
 	sim = s
 	if not sim.on_mission():
 		return
+	if _view != null and _view.placing:
+		return                            # the placement tool holds the frame clear (_on_placing)
 	var m: Dictionary = sim.mission
 	var t: Dictionary = m["t"]
 	if _inv.selected >= 0 or _rig_picked().is_empty():
@@ -803,6 +806,15 @@ func _view_numbers(m: Dictionary) -> void:
 			_number_at = float(m["elapsed"])
 	if _pending_at >= 0.0 and not _view.fighting() and float(m["elapsed"]) - _pending_at >= 1.0:
 		_release_hits(_scatter(FIGHT_BAR_Y))
+
+
+## The placement tool (F3): what the run screen lays over the frame stands aside while the figures are being put, so
+## they're seen whole and nothing takes the mouse from the tool; the next refresh puts it all back as it should be.
+func _on_placing(on: bool) -> void:
+	for n in [_fight["track"], _runner["track"], _fight["key"], _fight["chips"], _runner["key"], _runner["chips"], _fight["head"], _search_button]:
+		n.visible = not on
+	if not on and sim != null and sim.on_mission():
+		show_state(sim)
 
 
 ## A shot in the frame: what's held comes out on the one it hit (in the panel's space, off the chips and bars).
