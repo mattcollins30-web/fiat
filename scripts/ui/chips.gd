@@ -99,6 +99,19 @@ func _place(items: Array, rows: int, shortest: bool) -> void:
 	size.y = _rows_used * (CHIP_H + ROW_GAP) - ROW_GAP
 
 
+## The chips as laid: the room they take in their own space, the hidden ones not counted (13 Oct, for the run view's
+## numbers to keep off them).
+func used_rect() -> Rect2:
+	var r := Rect2()
+	var first := true
+	for p in _panels:
+		if p.visible:
+			var pr := Rect2(p.position, p.size)
+			r = pr if first else r.merge(pr)
+			first = false
+	return r
+
+
 ## One chip a row, each the row's width: the name in its tone, the words muted
 ## beside it; `rows` at most, the rest dropped from the end.
 func show_rows(items: Array, rows := MAX) -> void:

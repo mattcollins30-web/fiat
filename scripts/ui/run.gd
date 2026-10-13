@@ -24,6 +24,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
+const Juice := preload("res://scripts/ui/juice.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -768,10 +769,42 @@ func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sign: String, b
 func _scatter(bar_y: float) -> Vector2:
 	var local := Vector2(BOXED_X + 30 + randf() * (BOXED_W - 90), bar_y - 6 + randf_range(-16.0, 16.0))     # over the bar, never the face
 	if _view != null:
-		# the run view: over the bar where it's moved to (the review, 13 Oct), theirs or yours by the row asked for
-		var tr: Control = _fight["track"] if bar_y == FIGHT_BAR_Y else _runner["track"]
-		local = Vector2(tr.position.x + 20 + randf() * maxf(10.0, tr.size.x - 60), tr.position.y + (BAR_H + 12 if bar_y == FIGHT_BAR_Y else -10) + randf_range(-8.0, 8.0))
+		# the run view (Matt, 13 Oct: the numbers sat on the chips and the bars): your hits rise off the one you hit,
+		# what you take from the frame's foot, right of your bar; a spot whose rise crosses a bar, a chip or a key is
+		# tried again, a few times, then the frame's clear middle
+		var keep: Array = _keep_out()
+		var them: bool = bar_y == FIGHT_BAR_Y
+		var ok := false
+		for k in range(12):
+			local = _view.position + (_view.hit_spot() if them else Vector2(randf_range(OVER_W + 40, RunView.W - 60), RunView.H - 40 + randf_range(-10.0, 4.0)))
+			if keep.all(func(r): return not r.intersects(_number_path(local))):
+				ok = true
+				break
+		if not ok:
+			# the frame's middle right: under their chips, over yours, however many rows of either (the review)
+			local = _view.position + Vector2(randf_range(OVER_W + 40, RunView.W - 60), randf_range(146.0, 152.0))
 	return _left.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
+
+
+## Where a number starting at `at` (the panel's space) goes over its life: its words' width, its drift, its rise.
+func _number_path(at: Vector2) -> Rect2:
+	return Rect2(at.x - 60, at.y - Juice.NUMBER_RISE, 120, 36 + Juice.NUMBER_RISE)     # a big number's width and its drift
+
+
+## What the numbers keep off in the run view, in the panel's space: both bars, the head, the keys, the chips as laid.
+func _keep_out() -> Array:
+	var out := []
+	for c in [_fight["track"], _runner["track"]]:
+		out.append(Rect2(c.position, c.size))
+	var hd: Label = _fight["head"]
+	out.append(Rect2(hd.position, Vector2(UI.text_width(hd, hd.text), hd.size.y)))
+	for d in [_fight, _runner]:
+		if d["key"].visible:
+			out.append(Rect2(d["key"].position, Vector2(KEY_W - 8, Chips.CHIP_H)))
+		if d["chips"].visible:
+			var u: Rect2 = d["chips"].used_rect()
+			out.append(Rect2(d["chips"].position + u.position, u.size))
+	return out
 
 
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.

@@ -293,6 +293,17 @@ func _process(dt: float) -> void:
 	_red.modulate.a = _red_a
 
 
+## Where a hit of yours shows its number, in the frame's space: on one that's up, about its chest; with nobody up,
+## the street's middle (13 Oct, Matt: the numbers off the chips, on the one you're hitting).
+func hit_spot() -> Vector2:
+	var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
+	if ups.is_empty():
+		return Vector2(randf_range(300.0, 500.0), randf_range(130.0, 160.0))
+	var r: TextureRect = _figs[ups[randi() % ups.size()]]["rect"]
+	var sz: Vector2 = r.size * r.scale
+	return r.position + Vector2(sz.x * 0.5 + randf_range(-12.0, 12.0), sz.y * randf_range(0.3, 0.55))
+
+
 ## For the tests: what's up, the pan, the red.
 func figures_up() -> int:
 	var n := 0

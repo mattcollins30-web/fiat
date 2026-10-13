@@ -34,6 +34,7 @@ static func _player_saves() -> Dictionary:
 	return out
 const Sim := preload("res://scripts/sim/sim.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
+const Juice := preload("res://scripts/ui/juice.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -4739,13 +4740,17 @@ func _juice_checks(main) -> void:
 	sim.equipped["Helmet"] = hold
 	var you_y: float = main._run._left.global_position.y + main._run.RUNNER_BAR_Y
 	var them_y: float = main._run._left.global_position.y + main._run.FIGHT_BAR_Y
-	if main._run._view != null:          # the run view: the bars moved over the frame (13 Oct)
-		you_y = main._run._left.global_position.y + main._run._runner["track"].position.y - 10
-		them_y = main._run._left.global_position.y + main._run._fight["track"].position.y + main._run.BAR_H + 12
 	var reds: Array = main._juice._numbers.filter(func(n): return n["label"].text.begins_with("−") or n["label"].text.begins_with("+"))
-	_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 40), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
 	var whites: Array = main._juice._numbers.filter(func(n): return not (n["label"].text.begins_with("−") or n["label"].text.begins_with("+")))
-	_check(whites.all(func(n): return n["from"] > them_y - main._juice.global_position.y - 40 and n["from"] < them_y - main._juice.global_position.y + 40), "the hits are not on their bar")
+	if main._run._view != null:
+		# the run view (13 Oct): yours from the frame's foot, theirs inside the frame; _run_view_checks keeps them off the chips
+		var vr: Rect2 = main._run._view.get_global_rect()
+		var jy: float = main._juice.global_position.y
+		_check(reds.all(func(n): return n["from"] + jy > vr.end.y - 70 and n["from"] + jy < vr.end.y), "the red and green are not at the frame's foot")
+		_check(whites.all(func(n): return n["from"] + jy > vr.position.y and n["from"] + jy < vr.end.y), "the hits are not in the frame")
+	else:
+		_check(reds.all(func(n): return n["from"] > you_y - main._juice.global_position.y - 40 and n["from"] < you_y - main._juice.global_position.y + 40), "the red and green are not on your bar (them %.0f, you %.0f)" % [them_y, you_y])
+		_check(whites.all(func(n): return n["from"] > them_y - main._juice.global_position.y - 40 and n["from"] < them_y - main._juice.global_position.y + 40), "the hits are not on their bar")
 	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
 	rare["rarity"] = 2
 	sim.mission["found"].append(rare)
@@ -7746,6 +7751,34 @@ func _run_view_checks(main) -> void:
 	for k in range(4):
 		v._process(0.1)
 	_check(float(v.state()["duck"]) > 0.3, "the runner never ducks: %s" % str(v.state()))
+	# the numbers keep off the bars, the head, the keys and the chips (Matt, 13 Oct: they sat on "On you"), with
+	# something on both sides so both rows of chips show; the keep-out drawn here from the nodes, not run's own list
+	# and again with your chips as wide as they get (a med in use too), which leaves the frame's foot no room (the review)
+	m["dots"] = {"fire": 50.0, "poison": 50.0, "bleed": 50.0}
+	m["my_dots"] = {"fire": 50.0, "poison": 50.0, "bleed": 50.0}
+	for wide in [false, true]:
+		m["using"] = {"name": "First aid kit", "left": 9.0, "heal": 1.0} if wide else null
+		main.refresh()
+		_check(run._fight["chips"].visible and run._runner["chips"].visible, "the chips did not show for the numbers' check")
+		var keep: Array = []
+		for c in [run._fight["track"], run._runner["track"]]:
+			keep.append(c.get_global_rect())
+		for d in [run._fight, run._runner]:
+			for p in d["chips"]._panels:
+				if p.visible:
+					keep.append(p.get_global_rect())
+		var jz: Vector2 = run.juice.global_position if run.juice != null else Vector2.ZERO
+		var crossed: Array = []
+		for k in range(60):
+			for bar_y in [run.FIGHT_BAR_Y, run.RUNNER_BAR_Y]:
+				var at: Vector2 = run._scatter(bar_y) + jz               # back to the screen's space
+				var path := Rect2(at.x - 30, at.y - Juice.NUMBER_RISE, 60, 30 + Juice.NUMBER_RISE)
+				if keep.any(func(r): return r.intersects(path)):
+					crossed.append(at)
+		_check(crossed.is_empty(), "%d of 120 numbers rise across a bar or a chip (%s): %s" % [crossed.size(), "wide chips" if wide else "three a side", str(crossed.slice(0, 4))])
+	m["using"] = null
+	m["dots"] = {}
+	m["my_dots"] = {}
 	# a hit reddens the edges
 	sim.hp -= sim.max_hp() * 0.1
 	main.refresh()
