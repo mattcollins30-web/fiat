@@ -302,7 +302,9 @@ func _build() -> void:
 	_speed_label.visible = false
 	_radio_line = RadioLine.new()
 	_radio_line.position = Vector2(0, Pal.TOP_H)
-	_radio_line.pressed.connect(func(): show_room(COMMS))
+	_radio_line.pressed.connect(func():
+		if not room_shut(COMMS):
+			show_room(COMMS))
 	add_child(_radio_line)
 	_juice = Juice.new()
 	add_child(_juice)
@@ -768,8 +770,14 @@ func _to_title_no_save() -> void:
 
 
 func show_room(name: String) -> void:
-	room = name
+	room = name if not room_shut(name) else MISSIONS      # a shut room isn't there to go to (13 Oct, the gates)
 	refresh()
+
+
+## The rooms a head opens (13 Oct, docs/design/campaign_gates.md): shut until his thing comes home.
+const ROOM_KEY := {MEDIC: "clinic", MARKET: "fence", OVERVIEW: "yard", COMMS: "radio", WORKSHOP: "workshop"}
+func room_shut(name: String) -> bool:
+	return sim != null and ROOM_KEY.has(name) and not sim.room_open(ROOM_KEY[name])
 
 
 # ------------------------------------------------------------------ showing
@@ -782,6 +790,8 @@ func refresh() -> void:
 		_asked_runner = true
 		_choose_runner()
 	_radio_line.set_sim(sim)
+	if room_shut(room):
+		room = MISSIONS                       # a new camp starts in a Yard that isn't yours yet: the Map
 	_toast_new_lines()
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins
@@ -806,6 +816,8 @@ func refresh() -> void:
 	for name in ROOMS:
 		var b = _rail_buttons[name]
 		b.set_selected(name == room)
+		b.set_shut(room_shut(name))
+		b.tooltip_text = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[name]]) if room_shut(name) else ""     # what opens it (the review)
 		b.show_status(_rail_status(name))
 	# the Lock-up, the Caravan, the Bench and Runs are screens of their own,
 	# in the grid's place: Runs is the tiers between runs and the live run
@@ -987,6 +999,8 @@ func _time_of_day(stamp: float) -> String:
 
 
 func _rail_status(name: String) -> Dictionary:
+	if room_shut(name):
+		return {"badge": "Shut", "badge_tone": ""}     # until a head's thing comes home (13 Oct)
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
 	match name:
 		OVERVIEW:

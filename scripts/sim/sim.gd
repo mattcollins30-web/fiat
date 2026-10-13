@@ -82,6 +82,9 @@ var runner_runs := 0               # this runner's runs so far
 var record := {"since": 0.0, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": 0}
 var seen: Dictionary = {}          # "tier/depth" -> true once the site's line has been given
 var deeds_found := false           # the Bank's vault, opened once
+## The rooms a head has opened (13 Oct, docs/design/campaign_gates.md): the clinic, the fence, the yard, the radio, the
+## workshop. A bare sim has them all (the tests, the tools); a fresh camp (start) has none.
+var unlocked: Array = Data.ROOMS_SHUT.duplicate()
 var ending := ""                   # what became of the deeds: burned, sold, held
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
@@ -142,6 +145,7 @@ func _init() -> void:
 ## A fresh camp: a starter loadout, the first stock on the market.
 func start() -> void:
 	rng.randomize()
+	unlocked = []                          # a fresh camp: every room a head opens is shut
 	_starter_loadout()
 	restock()
 	came_back_seen()
@@ -994,7 +998,7 @@ func contract_items(c: Dictionary) -> Array:
 
 
 func can_hand_in(k: int) -> bool:
-	if mission != null or k < 0 or k >= contracts.size():
+	if not room_open("fence") or mission != null or k < 0 or k >= contracts.size():
 		return false
 	var c: Dictionary = contracts[k]
 	return contract_items(c).size() >= int(c["count"])
@@ -1126,7 +1130,7 @@ func _mate_item() -> Dictionary:
 
 
 func can_buy_mate() -> bool:
-	if mission != null or mate.is_empty() or notes < int(mate["notes"]):
+	if not room_open("fence") or mission != null or mate.is_empty() or notes < int(mate["notes"]):
 		return false
 	var it := _mate_item()
 	return not it.is_empty() and stash_fits(it)
@@ -1204,7 +1208,7 @@ func move_yard(trade := "") -> bool:
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
-		"came_back": came_back.duplicate(true)}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
+		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
 		for i in range(words.size()):
 			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
@@ -1249,6 +1253,7 @@ func move_yard(trade := "") -> bool:
 	trades = keep["trades"]
 	book = keep["book"]
 	heard = keep["heard"]
+	unlocked = keep["unlocked"]           # the rooms the heads opened stay open: the Yard moves, not the town's memory (13 Oct)
 	shelf = keep["shelf"]
 	shelf_tier = keep["shelf_tier"]
 	tree = yard_tree
@@ -1370,6 +1375,68 @@ func sky_words(i: int) -> String:
 
 # ------------------------------------------------------------------ the papers as the book
 
+## Whether a room a head opens is open (the clinic, the fence, the yard, the radio, the workshop); any other is.
+func room_open(key: String) -> bool:
+	return not (key in Data.ROOMS_SHUT) or key in unlocked
+
+
+## The room a Yard building serves ("" for one that serves none): the Bench is the Workshop's.
+static func building_room(key: String) -> String:
+	return {"bench": "workshop", "clinic": "clinic", "fence": "fence", "radio": "radio"}.get(key, "")
+
+
+## Every room open (the tests' camps).
+func unlock_all() -> void:
+	unlocked = Data.ROOMS_SHUT.duplicate()
+
+
+## The deeds in the stash or the pack (a second drop is never wanted then).
+func _deeds_held(m: Dictionary) -> bool:
+	for it in stash + Array(m.get("found", [])):
+		if Items.is_deeds(it):
+			return true
+	return false
+
+
+## A head's thing: its room opens (at the drop; again a no-op home), the log and the radio say so; true unless it's
+## kept (the deeds are, for the ending).
+func _home_gate(it: Dictionary) -> bool:
+	var room: String = Items.opens(it)
+	if room == "":
+		return false
+	if not (room in unlocked):
+		unlocked.append(room)
+		chron("open", {"room": room})
+		if not _dry_on:
+			log_event(Words.GATES[room])
+			for b in Data.BOSSES:
+				if b.get("opens", {}).has(room):
+					_hear_gate(str(b["name"]) + "/after")
+	return not Items.is_deeds(it)
+
+
+## A gate's line on the radio, once (its key in what's heard).
+func _hear_gate(gate: String) -> void:
+	for k in range(Words.RADIO.size()):
+		var r: Dictionary = Words.RADIO[k]
+		if str(r.get("gate", "")) == gate:
+			var key := "%s/%d" % [r["voice"], k]
+			if not (key in heard) and not _dry_on:
+				heard.append(key)
+				log_event(Words.RADIO_LEAD + str(r["text"]))
+			return
+
+
+## The line before a room opens: once its head's site is open and the room isn't.
+func _gate_lines() -> void:
+	for b in Data.BOSSES:
+		var shut := false
+		for room in b.get("opens", {}):
+			shut = shut or not room_open(str(room))
+		if shut and tier_open(int(b["tier"])):
+			_hear_gate(str(b["name"]) + "/before")
+
+
 ## A paper picked up is read, and goes in the drawer by name, once, in the order found.
 func _read(it: Dictionary) -> void:
 	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
@@ -1389,7 +1456,7 @@ func _read(it: Dictionary) -> void:
 func book_pages() -> Array:
 	var out: Array = []
 	for b in Data.BASES[Data.PAPER]:
-		if b["name"] != "The deeds":
+		if b["name"] != "The deeds" and Items.opens({"slot": Data.PAPER, "base": b["name"]}) == "":     # nor a head's thing (13 Oct)
 			out.append(b["name"])
 	return out
 
@@ -1504,7 +1571,7 @@ func scrap_of(it: Dictionary) -> int:
 
 ## A stash item broken down at the Bench for its scrap. Gone for good.
 func scrap_item(id: int) -> bool:
-	if mission != null:
+	if mission != null or not room_open("workshop"):
 		return false
 	for it in stash:
 		if it["id"] == id:
@@ -1613,6 +1680,8 @@ func build_option(kind: String, name: String) -> Dictionary:
 ## Build it: the scrap goes, what it wants goes (a box's rounds off the stash's stacks, one off a socketable's
 ## stack, a med), and the thing lands in the stash. A gun built is Common, plain, and fires nails.
 func build(kind: String, name: String) -> bool:
+	if not room_open("workshop"):
+		return false
 	var o := build_option(kind, name)
 	if o.is_empty() or not o["ok"]:
 		return false
@@ -1673,7 +1742,7 @@ func _take_one(base_name: String) -> void:
 
 
 func can_craft(id: int, kind: String, stat := "") -> bool:
-	if mission != null:
+	if mission != null or not room_open("workshop"):     # shut until the Quartermaster's tool roll (13 Oct)
 		return false
 	var cost := craft_cost(item_by_id(id), kind, stat)
 	if cost < 0:
@@ -2314,6 +2383,8 @@ func ammo_price(type: String) -> int:
 
 
 func buy_ammo(type: String) -> bool:
+	if not room_open("fence"):
+		return false
 	var b := ammo_box(type)
 	if b.is_empty() or cash < ammo_price(type) or not (stash_room(1) or yard_has("racks") or _stack_room(_plain(Data.AMMO, b["name"]))):
 		return false
@@ -2561,7 +2632,7 @@ func insure_cost(i: int) -> int:
 
 
 func can_insure(i: int) -> bool:
-	return mission == null and tier_open(i) and cash >= insure_cost(i) and loadout_value() > 0
+	return room_open("fence") and mission == null and tier_open(i) and cash >= insure_cost(i) and loadout_value() > 0
 
 
 func set_insure(on: bool) -> void:
@@ -2947,6 +3018,8 @@ func word_craft_cost(i: int, key: String) -> int:
 
 ## Why a craft can't be done now ("" if it can).
 func word_craft_block(i: int, key: String) -> String:
+	if not room_open("radio"):
+		return "The Radio isn't on the air yet"     # until the Quartermaster's set (13 Oct)
 	if mission != null:
 		return "The runner is out"
 	if not juiceable(i):
@@ -3192,6 +3265,10 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	var b := Data.yard_building(key)
 	if b.is_empty() or col < 0 or col >= b["picks"].size() or not (side in ["a", "b"]):
 		return "no such upgrade"
+	if not room_open("yard"):
+		return "The Yard isn't yours yet"     # until the Manager's deeds (13 Oct)
+	if not room_open(building_room(key)):
+		return "Opens with %s" % Words.GATES["shut"][building_room(key)]     # a building for a shut room waits on it
 	if mission != null:
 		return "The runner is out"
 	if col >= yard_cols():
@@ -3245,6 +3322,10 @@ func yard_rank_block(key: String) -> String:
 	var b := Data.yard_building(key)
 	if b.is_empty():
 		return "no such building"
+	if not room_open("yard"):
+		return "The Yard isn't yours yet"
+	if not room_open(building_room(key)):
+		return "Opens with %s" % Words.GATES["shut"][building_room(key)]
 	if mission != null:
 		return "The runner is out"
 	if yard_cols() < Data.YARD_COLS:
@@ -3683,6 +3764,8 @@ func boss_cost(i: int) -> int:
 	if is_convoy(i):
 		var total := 0
 		for b in Data.BOSSES:
+			if int(b["zone"]) < 1:
+				continue                              # the Gamekeeper doesn't ride the convoy
 			total += int(b["notes"]) * depth[i]       # the plain three: they come light (Matt, 8 Oct; it was the full-strength rate, 2,160 at depth 8)
 		return total
 	var b := boss_of(i)
@@ -3867,13 +3950,14 @@ func effective(i: int) -> Dictionary:
 		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, CONVOY_DPS of their fire): the crews stayed with the load
 		var queue: Array = []
 		for cb in Data.BOSSES:
-			queue.append(boss_form(cb, e, false, true))
+			if int(cb["zone"]) >= 1:                  # the three crews; the Gamekeeper stays on his farm (13 Oct)
+				queue.append(boss_form(cb, e, false, true))
 		e["boss"] = queue[0]
 		e["boss_queue"] = queue.slice(1)
 		e["convoy"] = true
 	elif not b.is_empty() and boss_armed.get(i, false):
 		e["boss"] = boss_form(b, e, is_pinnacle(i))
-	elif walks and not zone_boss(int(base["zone"])).is_empty():     # no crew on the Outskirts: nobody walks (the review)
+	elif walks and not zone_boss(int(base["zone"])).is_empty():     # the zone's head walks (the Gamekeeper on the Outskirts since 13 Oct)
 		e["boss"] = boss_form(zone_boss(int(base["zone"])), e, false)     # The Manager walks: the zone's head on every run, free (formed as an armed head is, before the words)
 	for name in e["intel"]:
 		if name == "Night":
@@ -5095,6 +5179,28 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			m["found"].append(it2)
 			_read(it2)
 			log_event("And a second: %s." % it2["unique"])
+	if pool.is_empty():
+		log_event("%s is down. %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", "")])     # a head with no unique of his own (the Gamekeeper)
+	# the rooms he holds (13 Oct): the drop is the sign (Matt) - his thing opens its room there and then. The deeds
+	# come home in the pack whatever it holds, for the ending, and drop again while there's no ending and none held (a
+	# death lost them, or a save from before the gates hadn't had them); the rest open their room and go to it.
+	if not m.get("convoy", false):
+		for room in head.get("opens", {}):
+			var thing := _plain(Data.PAPER, str(head["opens"][room]))
+			if Items.is_deeds(thing):
+				if ending != "" or _deeds_held(m):
+					continue
+				thing["deeds"] = true
+				if not deeds_found:
+					deeds_found = true
+					chron("deeds", {})
+				log_event(Words.DEEDS["found"])
+				m["found"].append(thing)
+			elif room_open(str(room)):
+				continue
+			else:
+				log_event("Found: %s." % thing["base"])
+			_home_gate(thing)
 	if first and campaign_done():
 		log_event(Words.YARD["campaign"])
 
@@ -5251,13 +5357,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.site_cleared(t["name"]))
 	else:
 		log_event("%s cleared. Picking it over; more will come" % t["name"])
-	if m["tier"] == Data.BANK and not deeds_found:
-		deeds_found = true
-		chron("deeds", {})
-		var deeds := _plain(Data.PAPER, "The deeds")
-		deeds["deeds"] = true
-		m["found"].append(deeds)            # whatever the pack holds, this comes too
-		log_event(Words.DEEDS["found"])
+	# the deeds come off the Manager now, not the Bank's first clear (13 Oct, Matt): see the boss's things
 
 
 ## Picked over inside a run (29): the searches a site gives in full before its
@@ -5479,6 +5579,8 @@ func _extract() -> void:
 			elif not stash_put(it):
 				log_event("No room for the %s: left at the gate" % str(it["base"]).to_lower())
 			continue
+		if _home_gate(it):
+			continue                         # a head's thing: its room opens, and it stays there (13 Oct)
 		if Items.is_deeds(it):
 			stash.append(it)                 # whatever the room: the deeds come home
 			stashed += 1
@@ -5619,6 +5721,8 @@ func _kia() -> void:
 		log_event("Dead in %s. %s" % [Words.mid(t["name"]), Words.FENCE["paid_out"]])
 		if yard_has("insurance_desk") and not m["found"].is_empty():
 			for it in m["found"]:
+				if _home_gate(it):
+					continue                     # a head's thing opens its room (13 Oct)
 				stash.append(it)                 # the Fence's Insurance desk: the pack comes home too
 				if Items.is_deeds(it) and ending == "":
 					ending = "held"
@@ -5641,7 +5745,8 @@ func _kia() -> void:
 		for it in m["found"]:
 			if sell_price(it) > sell_price(best):
 				best = it
-		stash.append(best)
+		if not _home_gate(best):
+			stash.append(best)
 		last_report["carried"] = Items.full_name(best)
 		last_report["left"] = int(last_report["left"]) - 1
 		log_event("The dog came home with %s" % (Items.full_name(best) if best.has("unique") else Items.full_name(best).to_lower()))
@@ -6262,7 +6367,7 @@ func gamble_price(kind: String) -> int:
 
 
 func can_gamble(kind: String) -> bool:
-	return mission == null and kind in gamble and cash >= gamble_price(kind) and stash_room(1)     # room for one cell at least: the roll's own size is checked when it lands
+	return room_open("fence") and mission == null and kind in gamble and cash >= gamble_price(kind) and stash_room(1)     # room for one cell at least: the roll's own size is checked when it lands
 
 
 ## Pay, and the thing turns up in the stash: a random one of the kind, rolled at the top tier opened
@@ -6327,6 +6432,8 @@ func price(it: Dictionary) -> int:
 
 
 func buy(i: int) -> bool:
+	if not room_open("fence"):
+		return false
 	if i >= market.size() or not (stash_fits(market[i]) or _stack_room(market[i])) or cash < price(market[i]):
 		return false
 	cash -= price(market[i])
@@ -6336,6 +6443,8 @@ func buy(i: int) -> bool:
 
 
 func sell(it: Dictionary) -> bool:
+	if not room_open("fence"):
+		return false                          # the Fence is shut until the Carpet Man's ledger (13 Oct)
 	if not _remove(it):
 		return false
 	_earn(float(sell_price(it)))
@@ -6447,9 +6556,10 @@ func sell_junk() -> int:
 	var got := 0.0
 	for it in stash.duplicate():
 		if is_junk(it):
-			got += sell_price(it)
-			sell(it)
-			n += 1
+			var p: int = sell_price(it)
+			if sell(it):
+				got += p
+				n += 1
 	if n > 0:
 		log_event("The Fence took the junk: %d thing%s, %s." % [n, "" if n == 1 else "s", _cash_words(got)])
 	return n
@@ -6518,6 +6628,8 @@ func clinic_price(it: Dictionary) -> int:
 
 
 func buy_clinic(id: int) -> bool:
+	if not room_open("clinic"):
+		return false                          # the Clinic is shut until the Gamekeeper's vet's bag (13 Oct)
 	for k in range(clinic.size()):
 		if clinic[k]["id"] == id:
 			var it: Dictionary = clinic[k]
@@ -6552,6 +6664,8 @@ func med_price(base: Dictionary) -> int:
 
 
 func buy_med(name: String) -> bool:
+	if not room_open("clinic"):
+		return false
 	for b in med_stock():
 		if b["name"] == name:
 			if cash < med_price(b) or not (stash_room(1) or yard_has("racks")):
@@ -6603,11 +6717,11 @@ func needs_treating() -> bool:
 
 
 func can_heal() -> bool:
-	return mission == null and hp < max_hp() - 0.5 and cash >= heal_cost()
+	return room_open("clinic") and mission == null and hp < max_hp() - 0.5 and cash >= heal_cost()
 
 
 func can_treat_wound() -> bool:
-	return mission == null and wound != "" and cash >= wound_cost()
+	return room_open("clinic") and mission == null and wound != "" and cash >= wound_cost()
 
 
 func heal() -> bool:
@@ -6631,7 +6745,7 @@ func treat_wound() -> bool:
 
 
 func treat() -> bool:
-	if mission != null or not needs_treating() or cash < treat_cost():
+	if not room_open("clinic") or mission != null or not needs_treating() or cash < treat_cost():     # the Clinic's (13 Oct)
 		return false
 	chron("treat", {"cost": treat_cost(), "wound": wound, "hp": int(hp), "max": int(max_hp())})
 	cash -= treat_cost()
@@ -6682,6 +6796,8 @@ func radio_next() -> Dictionary:
 			continue
 		if r.has("lorries") and lorries < int(r["lorries"]):
 			continue
+		if r.has("gate") or (r.has("room") and not room_open(str(r["room"]))):
+			continue                              # a gate's line is said at its gate; a room's voice once it's open (13 Oct)
 		return {"key": key, "voice": r["voice"], "text": r["text"]}
 	return {}
 
@@ -6696,7 +6812,10 @@ static func radio_line(key: String) -> Dictionary:
 
 ## Every RADIO_EVERY runs home the radio comes on: the next line, into the log and the Caravan's list.
 func _radio_after_run() -> void:
-	if _dry_on or runs_total % Data.RADIO_EVERY != 0:
+	if _dry_on:
+		return
+	_gate_lines()                             # a room's line before it opens, the run its head's site opens (13 Oct)
+	if runs_total % Data.RADIO_EVERY != 0:
 		return
 	var r := radio_next()
 	if r.is_empty():
@@ -6825,7 +6944,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -7002,6 +7121,10 @@ func load_dict(d: Dictionary) -> void:
 		record = d["record"].duplicate()
 	seen = d.get("seen", {})
 	deeds_found = bool(d.get("deeds_found", false))
+	if d.has("unlocked"):
+		unlocked = Array(d["unlocked"])
+	else:
+		unlocked = Data.ROOMS_SHUT.duplicate()   # a save from before the gates (13 Oct) played with every room open: it keeps them
 	ending = str(d.get("ending", ""))
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
@@ -7056,6 +7179,12 @@ func load_dict(d: Dictionary) -> void:
 	# a save from before the city: the zones it had cleared count as complete
 	if bb.is_empty() and bool(d.get("depot_cleared", false)):
 		bosses_beaten[1] = true              # the Estate (index 1 since the Outskirts)
+	# a save from before the Gamekeeper (13 Oct): an Outskirts cleared had nobody to beat, so he counts as beaten
+	if not d.has("unlocked") and not bosses_beaten[0]:
+		var outskirts_done := true
+		for i in Data.ZONES[0]["tiers"]:
+			outskirts_done = outskirts_done and int(Array(d.get("best_depth", []))[i] if i < Array(d.get("best_depth", [])).size() else 0) > 0
+		bosses_beaten[0] = outskirts_done
 	elapsed = float(d.get("elapsed", 0.0))
 	events = d.get("events", [])
 	Items._next_id = maxi(Items._next_id, int(d.get("next_id", 1)))

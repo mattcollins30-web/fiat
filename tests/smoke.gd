@@ -99,7 +99,7 @@ func _outskirts_checks(main) -> void:
 		_check(Words.SITES.has(Data.TIERS[i]["name"]), "%s has no words" % Data.TIERS[i]["name"])
 	_check(Data.TIERS[Data.BANK]["name"] == "The Bank" and Data.TIERS[Data.CONVOY_TIER]["name"] == "The Services", "the Bank or the Services moved off its index")
 	for b in Data.BOSSES:
-		_check(int(Data.TIERS[int(b["tier"])]["zone"]) == int(b["zone"]) and int(b["zone"]) >= 1, "%s is not at his own zone's site" % b["name"])
+		_check(int(Data.TIERS[int(b["tier"])]["zone"]) == int(b["zone"]) and int(b["tier"]) == Data.ZONES[int(b["zone"])]["tiers"].back(), "%s is not at his own zone's last site" % b["name"])
 	var fresh = Sim.new()
 	fresh.start()
 	_check(fresh.tier_open(0) and not fresh.tier_open(1) and not fresh.tier_open(3) and fresh.zone_open(0) and not fresh.zone_open(1), "a new yard does not start at the Allotments alone")
@@ -107,7 +107,9 @@ func _outskirts_checks(main) -> void:
 	fresh.best_depth[1] = 1
 	_check(fresh.tier_open(2) and not fresh.zone_open(1), "the Estate opened before Top Farm was cleared")
 	fresh.best_depth[2] = 1
-	_check(fresh.zone_complete(0) and fresh.zone_open(1) and fresh.tier_open(3) and fresh.zone_boss(0).is_empty(), "the Outskirts cleared did not open the Estate (it has no crew)")
+	_check(not fresh.zone_open(1) and str(fresh.zone_boss(0).get("name", "")) == "The Gamekeeper", "the Estate opened with the Gamekeeper standing (13 Oct)")
+	fresh.bosses_beaten[0] = true
+	_check(fresh.zone_complete(0) and fresh.zone_open(1) and fresh.tier_open(3), "the Outskirts cleared and the Gamekeeper down did not open the Estate")
 	_check(Sim.lv_at(3, 1) == 1 and Sim.lv_at(11, 1) == 9 and Sim.lv_at(0, 1) == 1 and Sim.lv_at(0, 6) == 3, "a site's level does not read past the Outskirts")
 	_check(fresh.salvage_kinds().is_empty(), "the Outskirts drop salvage")
 	# a save from before the Outskirts: nine sites, three zones, the Bank at 5
@@ -166,6 +168,8 @@ func _init() -> void:
 	_player_saves_before = _player_saves()
 	root.add_child(main)
 	main.new_game()
+	_gates_checks(main)                          # the shut rooms on a fresh camp, before the smoke opens them all (13 Oct)
+	_open_camp(main.sim)
 	var sim = main.sim
 	_set_cls(sim, "Doorman")
 	_check(sim.cls == "Doorman", "sim.cls == 'Doorman'")
@@ -672,6 +676,7 @@ func _slots_offline_hardcore(main) -> void:
 	# hardcore: a KIA ends the camp
 	main.new_game(true)
 	sim = main.sim
+	_open_camp(sim)
 	_check(sim.hardcore, "new_game(true) is not hardcore")
 	sim.deploy(0)
 	sim._kia()
@@ -1045,6 +1050,8 @@ func _campaign_checks(main) -> void:
 		sim.bosses_beaten[z] = false
 	for k in range(Data.TIERS.size()):
 		sim.best_depth[k] = 1
+	_check(not sim.zone_open(1), "the Estate opened with the Gamekeeper standing")
+	sim.bosses_beaten[0] = true                 # the Gamekeeper down (13 Oct): the Estate's is the test
 	_check(sim.zone_open(1) and not sim.zone_open(2), "the Town opened with every Estate site cleared but its boss standing")
 	_check(not sim.campaign_done(), "the campaign read as done with no boss beaten")
 	sim.set_depth(3, 2)
@@ -1146,6 +1153,8 @@ func _narrative_checks(main) -> void:
 	_check(sim.tier_open(bank), "the Bank did not open with every depth cleared")
 	sim.seen.erase("%d/1" % bank)              # the bot's run may have walked it already
 	sim.deeds_found = false                     # and found the deeds (13 Oct)
+	sim.unlocked.erase("yard")                  # the deeds come off the Manager while the Yard isn't yours (13 Oct)
+	sim.boss_armed[bank] = true
 	sim.deploy(bank)
 	_check(sim.on_mission(), "could not set off for the Bank")
 	_check(sim.events.back()[1] == Words.site_line("The Bank", 1), "setting off for the Bank gave no site line: %s" % sim.events.back()[1])
@@ -1154,7 +1163,13 @@ func _narrative_checks(main) -> void:
 	for it in sim.mission["found"]:
 		if Items.is_deeds(it):
 			deeds = it
-	_check(not deeds.is_empty(), "clearing the Bank did not drop the deeds (found before %s, tier %d, BANK %d, seen %s)" % [str(sim.deeds_found), int(sim.mission["tier"]), Data.BANK, str(sim.seen.keys().filter(func(k): return str(k).begins_with("%d/" % Data.BANK) or str(k).begins_with("cleared/")))])
+	_check(deeds.is_empty(), "clearing the Bank dropped the deeds: they're the Manager's now (13 Oct)")
+	if sim.mission.has("boss"):
+		sim._boss_down(sim.mission, sim.mission["t"])
+	for it in sim.mission["found"]:
+		if Items.is_deeds(it):
+			deeds = it
+	_check(not deeds.is_empty(), "the Manager down did not drop the deeds (found before %s, tier %d, BANK %d, seen %s)" % [str(sim.deeds_found), int(sim.mission["tier"]), Data.BANK, str(sim.seen.keys().filter(func(k): return str(k).begins_with("%d/" % Data.BANK) or str(k).begins_with("cleared/")))])
 	if deeds.is_empty():
 		sim.extract_now()
 		sim.load_dict(save)
@@ -1173,10 +1188,14 @@ func _narrative_checks(main) -> void:
 	sim.deeds_found = false
 	sim.ending = ""
 	sim.hp = sim.max_hp()
+	sim.unlocked.erase("yard")
+	sim.boss_armed[bank] = true
 	sim.deploy(bank)
 	sim._clear(sim.mission, sim.mission["t"])
+	if sim.mission.has("boss"):
+		sim._boss_down(sim.mission, sim.mission["t"])
 	sim.extract_now()
-	_check(sim.ending == "held", "bringing the deeds home did not end: %s" % sim.ending)
+	_check(sim.ending == "held" and sim.room_open("yard"), "bringing the deeds home did not end, or the Yard isn't open: %s" % sim.ending)
 	var held := {}
 	for it in sim.stash:
 		if Items.is_deeds(it):
@@ -3705,14 +3724,15 @@ func _pinnacle_checks(main) -> void:
 	var convoy_cost: int = sim.boss_cost(Data.CONVOY_TIER)
 	var three := 0
 	for b in Data.BOSSES:
-		three += int(b["notes"]) * Data.CONVOY_DEPTH                # the plain three (8 Oct)
+		if int(b["zone"]) >= 1:
+			three += int(b["notes"]) * Data.CONVOY_DEPTH            # the plain three (8 Oct); the Gamekeeper doesn't ride (13 Oct)
 	_check(convoy_cost == three, "the convoy's price is %d, not the three heads' %d" % [convoy_cost, three])
 	sim.arm_boss(Data.CONVOY_TIER, true)
 	sim.words[Data.CONVOY_TIER] = []      # the plain site: the heads are formed before the words multiply the site
 	var ec: Dictionary = sim.effective(Data.CONVOY_TIER)
 	_check(ec.get("convoy", false) and ec["boss_queue"].size() == 2 and not ec["boss"]["pinnacle"], "the convoy is not three in a row, come light")
-	var cm_hp: float = float(ec["hp"]) * float(Data.BOSSES[0]["hp"]) * Data.CONVOY_HP
-	var cm_dps: float = float(ec["dps"]) * float(Data.BOSSES[0]["dps"]) * Data.CONVOY_DPS
+	var cm_hp: float = float(ec["hp"]) * float(Data.BOSSES[1]["hp"]) * Data.CONVOY_HP
+	var cm_dps: float = float(ec["dps"]) * float(Data.BOSSES[1]["dps"]) * Data.CONVOY_DPS
 	_check(is_equal_approx(float(ec["boss"]["hp"]), cm_hp) and is_equal_approx(float(ec["boss"]["dps"]), cm_dps), "the convoy's first head is not light and tired: %.0f/%.1f against %.0f/%.1f" % [float(ec["boss"]["hp"]), float(ec["boss"]["dps"]), cm_hp, cm_dps])
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(3)
@@ -4532,7 +4552,11 @@ func _next_checks(main) -> void:
 	fresh.deploy(0)                              # a new yard starts at the Outskirts (12 Oct)
 	fresh.extract_now()
 	_check(fresh.next_words().begins_with("The Allotments hasn't") or fresh.next_words().begins_with("The Garden Centre hasn't"), "after the first run the next site is not named: %s" % fresh.next_words())
-	for i in [0, 1, 2, 3, 4, 5]:
+	for i in [0, 1, 2]:
+		fresh.best_depth[i] = 1
+	_check(fresh.next_words() == Words.NEXT["head"] % ["The Gamekeeper", "Top Farm"], "the Outskirts' head is not named: %s" % fresh.next_words())     # 13 Oct
+	fresh.bosses_beaten[0] = true
+	for i in [3, 4, 5]:
 		fresh.best_depth[i] = 1
 	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on the Map", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
 	fresh.bosses_beaten[1] = true
@@ -9057,7 +9081,7 @@ func _radio_juice_checks(main) -> void:
 	var notes_w: int = sim.notes
 	sim.hp = sim.max_hp()
 	sim.deploy(6)
-	_check(tw.has("boss") and str(tw["boss"]["name"]) == str(Data.BOSSES[1]["name"]) and sim.on_mission() and sim.notes == notes_w and sim.mission.has("boss"), "The Manager walks did not bring the Town's head for free: %s, notes %d → %d" % [str(tw.get("boss", {})), notes_w, sim.notes])
+	_check(tw.has("boss") and str(tw["boss"]["name"]) == str(Data.BOSSES[2]["name"]) and sim.on_mission() and sim.notes == notes_w and sim.mission.has("boss"), "The Manager walks did not bring the Town's head for free: %s, notes %d → %d" % [str(tw.get("boss", {})), notes_w, sim.notes])
 	sim.extract_now()
 	if sim.on_mission():
 		sim._extract()
@@ -9692,6 +9716,7 @@ func _chronicle_checks() -> void:
 		_check(run.has(f), "a run line has no '%s': %s" % [f, str(run.keys())])
 	_check(s.train_node("Muscle/0"), "Muscle/0 did not train for the record: %s" % s.train_block("Muscle/0"))
 	_check(kinds.call().get("train", 0) == 1, "training wrote no line")
+	s.unlock_all()                               # the Yard's the Manager's deeds on a real camp (13 Oct)
 	_check(s.yard_pick("generator", 0, "a"), "the generator pick did not buy: %s" % s.yard_pick_block("generator", 0, "a"))
 	_check(kinds.call().get("yard", 0) == 1, "a yard pick wrote no line")
 	# the clock at the game: a snapshot each SNAP_S played, none between
@@ -9762,6 +9787,7 @@ func _chronicle_checks() -> void:
 ## through JSON with the file, as on the player's machine.
 func _record_file_checks(main) -> void:
 	main.new_game()
+	_open_camp(main.sim)
 	var rec: String = main.record_file()
 	_check(rec == SMOKE_SAVE.get_basename() + ".record.jsonl", "the smoke's record is at %s" % rec)
 	_check(main.sim.chronicle.is_empty() and PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count >= 1, "a new game's save did not write its start to the record: %d in the file, %d counted, %d waiting" % [PlaytestRead.read_record(rec).size(), main.sim.chron_count, main.sim.chronicle.size()])
@@ -9798,6 +9824,7 @@ func _record_file_checks(main) -> void:
 	_check(not kept.is_empty(), "the autosave's record was not kept aside when the slot came in")
 	# a new game starts an empty record and keeps the old one
 	main.new_game()
+	_open_camp(main.sim)
 	_check(PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count <= 2, "a new game's record holds the last game's lines: %d" % PlaytestRead.read_record(rec).size())
 
 
@@ -10476,7 +10503,8 @@ func _lore_checks(main) -> void:
 	y.runs_total = 3 * Data.RADIO_EVERY
 	y._radio_after_run()
 	_check(y.heard == ["loop/0", "loop/1"] and y.radio_next().is_empty(), "the Outskirts' radio is past its gate: %s, next %s" % [str(y.heard), str(y.radio_next())])
-	var last: Dictionary = Words.RADIO.back()
+	var story: Array = Words.RADIO.filter(func(r): return not r.has("gate") and not r.has("room"))     # the gates' and the rooms' lines aren't the story (13 Oct)
+	var last: Dictionary = story.back()
 	_check(last.has("lorries") and str(last["text"]).contains("Let it be done"), "the radio's story doesn't close on the decree")
 	for r in Words.RADIO:
 		_check(Words.RADIO_VOICES.has(r["voice"]) and Words.RADIO_SHORT.has(r["voice"]) and str(r["text"]).ends_with(".") and (r.has("zone") or r.has("lorries")), "a radio line is off: %s" % str(r))
@@ -10667,3 +10695,86 @@ func _codes_checks(main) -> void:
 		_check(g._glyph.texture != null and not UI.glyph_mono(g.GLYPH_OF[g.room]), "the rail's %s glyph is missing or a line drawing" % g.room)
 	_check(main._top_glyphs["cash"].texture != null and not UI.glyph_mono("tins"), "the top bar's tin is missing")
 	print("codes ok: the papers say where, no word on the Radio or the cards, the rail's glyphs and the tin")
+
+
+## The gates (13 Oct, Matt; docs/design/campaign_gates.md): a fresh camp's Clinic, Fence, Yard, Radio and Workshop shut -
+## the rail says Shut and won't open them, the sim won't do their jobs; each head drops his thing, home it opens his
+## room with a line on the radio before and after; the deeds off the Manager, not the Bank; a death that loses the
+## thing brings it back next time; a save from before keeps its rooms; a move keeps them.
+func _gates_checks(main) -> void:
+	var sim = main.sim
+	_check(sim.unlocked.is_empty(), "a fresh camp has rooms open: %s" % str(sim.unlocked))
+	main.refresh()
+	_check(main.room == main.MISSIONS, "a fresh camp starts in a shut Yard: %s" % main.room)
+	for name in [main.MEDIC, main.MARKET, main.OVERVIEW, main.COMMS, main.WORKSHOP]:
+		var b = main._rail_buttons[name]
+		_check(b.disabled and b._badge.visible and b._badge_label.text == "Shut", "the rail's %s isn't shut" % name)
+		main.show_room(name)
+		_check(main.room == main.MISSIONS, "a shut %s opened" % name)
+	for name in [main.RUNNER, main.ARMOURY, main.MISSIONS, main.BARRACKS]:
+		_check(not main._rail_buttons[name].disabled, "%s is shut on a fresh camp" % name)
+	_check_fit(main, "the Map (a fresh camp, the rooms shut)")
+	sim.hp = sim.max_hp() * 0.5
+	sim.cash = 100000.0
+	var spare: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim.stash_put(spare)
+	_check(not sim.can_heal() and not sim.sell(spare) and not sim.buy(0) and not sim.can_word_craft(3, "tune") and sim.yard_pick_block("bench", 0, "a") == "The Yard isn't yours yet" and not sim.can_craft(spare["id"], "reroll"), "a shut room's job was done")
+	# the Yard open before the rooms its buildings serve: those wait on their rooms (the review)
+	sim.unlocked = ["yard"]
+	_check(sim.yard_pick_block("clinic", 0, "a").begins_with("Opens with") and sim.yard_pick_block("bench", 0, "a").begins_with("Opens with") and not sim.yard_pick_block("stash", 0, "a").begins_with("Opens with"), "a building for a shut room could be built: %s" % sim.yard_pick_block("clinic", 0, "a"))
+	sim.unlocked = []
+	# each head: his site open says the line before; down, his thing in the pack; home, the room and the line after
+	for b in Data.BOSSES:
+		var bt: int = int(b["tier"])
+		for i in range(bt + 1):
+			sim.best_depth[i] = maxi(sim.best_depth[i], 1)
+		for z in range(int(b["zone"])):
+			sim.bosses_beaten[z] = true
+		var before_heard: int = sim.heard.size()
+		sim.runs_total = 1
+		sim._radio_after_run()
+		var said_before: bool = sim.heard.size() > before_heard and str(sim.events.back()[1]).begins_with(Words.RADIO_LEAD)
+		_check(said_before, "%s's line before wasn't said with his site open" % b["name"])
+		sim.hp = sim.max_hp()
+		sim.boss_armed[bt] = true
+		sim.deploy(bt)
+		sim.mission["cleared"] = true
+		_check(sim.on_mission() and sim.mission.has("boss") and str(sim.mission["boss"]["name"]) == str(b["name"]), "%s didn't come out" % b["name"])
+		if not (sim.on_mission() and sim.mission.has("boss")):
+			continue
+		var heard_before: int = sim.heard.size()
+		sim._boss_down(sim.mission, sim.mission["t"])
+		for room in b["opens"]:
+			_check(sim.room_open(str(room)), "%s's %s didn't open the %s at the drop" % [b["name"], b["opens"][room], room])
+		var things: Array = sim.mission["found"].filter(func(it): return Items.opens(it) != "")
+		_check(things.size() == (1 if b["opens"].has("yard") else 0), "%s's things in the pack: %d (only the deeds come home)" % [b["name"], things.size()])
+		sim.extract_now()
+		_check(sim.heard.size() > heard_before, "%s's line after wasn't said" % b["name"])
+	_check(sim.unlocked.size() == Data.ROOMS_SHUT.size() and sim.stash.any(func(it): return Items.is_deeds(it)), "not every room opened, or the deeds didn't come home: %s" % str(sim.unlocked))
+	_check(sim.stash.all(func(it): return Items.opens(it) == "" or Items.is_deeds(it)), "a head's thing other than the deeds was stashed")
+	main.refresh()
+	for name in [main.MEDIC, main.MARKET, main.OVERVIEW, main.COMMS, main.WORKSHOP]:
+		_check(not main._rail_buttons[name].disabled and main._rail_buttons[name]._badge_label.text != "Shut", "the rail's %s is still shut" % name)
+	# a save from before the gates keeps every room; a save with them keeps what it has; a move keeps them
+	var d: Dictionary = sim.to_dict()
+	d.erase("unlocked")
+	var old = load("res://scripts/sim/sim.gd").new()
+	old.load_dict(d)
+	_check(old.unlocked.size() == Data.ROOMS_SHUT.size(), "a save from before the gates lost its rooms")
+	var fresh = load("res://scripts/sim/sim.gd").new()
+	fresh.start()
+	fresh.unlocked = ["clinic"]
+	var back = load("res://scripts/sim/sim.gd").new()
+	back.load_dict(fresh.to_dict())
+	_check(back.unlocked == ["clinic"], "the rooms opened didn't survive a save: %s" % str(back.unlocked))
+	_check(not ("The vet's bag" in sim.book_pages()) and not ("The deeds" in sim.book_pages()), "a head's thing is a page in the drawer")
+	print("gates ok: shut on a fresh camp, the rail, the jobs, each head's thing, the lines, the deeds off the Manager, saves")
+	main.new_game()                              # the rest of the smoke starts from a fresh camp, as it always did
+	_open_camp(main.sim)
+
+
+## The smoke's camps as they were before the gates (13 Oct): every room open, and the Outskirts' head counted down, so
+## the Estate waits only on the Outskirts' sites as the older checks expect. The gates' own check runs on a shut camp.
+func _open_camp(sim) -> void:
+	sim.unlock_all()
+	sim.bosses_beaten[0] = true

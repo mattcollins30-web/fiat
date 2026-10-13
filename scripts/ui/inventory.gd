@@ -207,7 +207,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		_sell_button.text = "Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
-	_sell_button.disabled = chosen.is_empty()
+	_sell_button.disabled = chosen.is_empty() or (not ditching and not sim.room_open("fence"))     # the Fence buys; shut till the Carpet Man (13 Oct)
 	# pack the items first-fit into the columns, never across a page's edge
 	_placed = _pack(items, page_rows)
 	var reach := 0

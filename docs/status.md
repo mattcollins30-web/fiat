@@ -4194,3 +4194,17 @@ Needs the editor opened once before an export: the new PNGs have no .import yet.
 **The rail's order and names (13 Oct, Matt).** Stats, The Kit (was Runner), The Map (was Runs), Training, The Clinic,
 The Fence, Workshop, The Yard, Radio. The Caravan's gone from the words (Training, the drawer in Training). The Map's
 card heads "ON THE AIR" (the sky and the codes). A painted rail glyph sits on a lighter stamp.
+
+**The campaign's gates built (13 Oct, docs/design/campaign_gates.md).** A fresh camp has the Clinic, the Fence, the Yard,
+the Radio and the Workshop shut (the rail says Shut, says what opens it, won't go there; the sim won't do their jobs; a
+new camp starts on the Map). A new Outskirts head, the Gamekeeper (Top Farm, soft), and each head's things: his drop
+opens his room there and then (Matt: the drop is the sign); the deeds come off the Manager now, not the Bank's first
+clear, come home for the ending, and drop again while there's no ending and none held. A line on the radio before each
+gate (once the head's site is open) and after; the medic's and the Fence's own lines in the turn once their rooms open.
+A Yard building for a shut room waits on it. The convoy is still the three crews. Saves from before keep every room; a
+move keeps them. The bot pays the Clinic whenever it's open and the price is there twice over, takes a first clear or
+an unbeaten head at 0.65 (Matt's recorded odds) and farms what's cleared at 0.88.
+**Open, to Matt: the ammo trap.** Rounds are only sold at the Fence, shut till the Carpet Man; a try-on reads every gun
+fed, so Equip if better (and the bot) can swap the nail gun for a gun with no rounds and fall to fists. Four 1.5-2 h
+Drifter reads: three ran the campaign (the Bank at 0:39-1:09, done at 0:57-1:25), one stalled at the Allotments on
+3 dmg/s for the whole read. Options in the reply.

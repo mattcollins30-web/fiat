@@ -76,6 +76,18 @@ func _place() -> void:
 		_name.position.y = floorf((h - 36) / 2.0)
 
 
+## A room a head hasn't opened yet (13 Oct): not pressable, its name and glyph dimmed, "Shut" under the name.
+var _shut := false
+func set_shut(on: bool) -> void:
+	if on == _shut:
+		return
+	_shut = on
+	disabled = on
+	mouse_default_cursor_shape = Control.CURSOR_ARROW if on else Control.CURSOR_POINTING_HAND
+	_name.modulate.a = 0.45 if on else 1.0
+	_stamp.modulate.a = 0.45 if on else 1.0
+
+
 func set_selected(on: bool) -> void:
 	if on != _selected:
 		_selected = on

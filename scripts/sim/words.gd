@@ -19,8 +19,8 @@ const OPENING := [
 ## gate is open: a zone open ("zone"), or lorries beaten ("lorries"). The official loop wears down, a pirate comes on in
 ## the town, the army's net crackles in the city; the notes' story runs through all three and closes on the loop.
 ## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
-const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net"}
-const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net"}
+const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net", "medic": "The Clinic, on the CB", "fence": "The Fence, on the CB"}
+const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net", "medic": "The medic", "fence": "The Fence"}
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [
 	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
@@ -40,7 +40,43 @@ const RADIO := [
 	{"voice": "net", "lorries": 4, "text": "Exchange to commence on a date to be announced. Old notes at par from registered holders only."},
 	{"voice": "kev", "lorries": 5, "text": "Registered holders. That's the crews. That's who they were holding it all for. Not for them. For whoever comes back."},
 	{"voice": "loop", "lorries": 6, "text": "This is a recorded message. A new currency will be issued. Its value is as stated. By order. Let it be done."},
+	# the gates (13 Oct, Matt: a line before each room opens and one after; "gate": the head and when - never in the turn)
+	{"voice": "medic", "zone": 0, "gate": "The Gamekeeper/before", "text": "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't work with nothing."},
+	{"voice": "medic", "zone": 0, "gate": "The Gamekeeper/after", "text": "Got the bag. The Clinic's open. Come in hurt, not dead; I can't do anything about dead."},
+	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/before", "text": "The Carpet Man keeps a book of who buys what. Bring me that book and I'll open up shop."},
+	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/after", "text": "The book's here. I'm open. Tins only, and don't ask me where any of it came from."},
+	{"voice": "kev", "zone": 2, "gate": "The Manager/before", "text": "The Bank's got deeds in the vault. Every house on the estate. Somebody could set up somewhere with those."},
+	{"voice": "kev", "zone": 2, "gate": "The Manager/after", "text": "Somebody's got the deeds out of the Bank. Somebody's got themselves a yard."},
+	{"voice": "net", "zone": 3, "gate": "The Quartermaster/before", "text": "Quartermaster to all stations: the set and the armourer's roll stay in stores. Nobody signs them out."},
+	{"voice": "kev", "zone": 3, "gate": "The Quartermaster/after", "text": "There's an army set on this frequency now. Hello, whoever you are. I hear you've a workshop, too."},
+	# the Clinic's and the Fence's own (13 Oct, Matt): in the turn once their room is open ("room")
+	{"voice": "medic", "zone": 0, "room": "clinic", "text": "Bandages are boiled, not new. Don't ask."},
+	{"voice": "medic", "zone": 0, "room": "clinic", "text": "If it's bleeding, bring it in. If it's stopped, bring it in faster."},
+	{"voice": "medic", "zone": 0, "room": "clinic", "text": "I had a shift pattern once. Now I have a queue."},
+	{"voice": "medic", "zone": 0, "room": "clinic", "text": "Whoever took the paracetamol off the shelf: that was the shelf."},
+	{"voice": "fence", "zone": 1, "room": "fence", "text": "Buying: anything. Selling: what you sold me last week."},
+	{"voice": "fence", "zone": 1, "room": "fence", "text": "Tins only. Notes go to the radio man, not me."},
+	{"voice": "fence", "zone": 1, "room": "fence", "text": "Somebody brings me the same kettle every Tuesday. I keep buying it."},
+	{"voice": "fence", "zone": 1, "room": "fence", "text": "Prices are what they are. Complain to the Bank."},
 ]
+
+## The heads' things (13 Oct): what each is, on its card.
+const GATE_ITEMS := {
+	"The vet's bag": "The keeper's, for the dogs. Everything a vet carries, and the medic says that's most of what a doctor does.",
+	"The Carpet Man's ledger": "Who bought what, and who paid. The Fence will want this more than anyone.",
+	"A military radio": "Army issue, the set the lorry never delivered. It reaches further than Kev does.",
+	"The armourer's tool roll": "Punches, a hammer, a cleaning rod, and the gun oil gone into the canvas. A workshop in a roll.",
+}
+
+## A room opening, in the log (13 Oct): the head's thing home, the room with it.
+const GATES := {
+	"clinic": "The vet's bag goes to the medic. The Clinic's open.",
+	"fence": "The ledger goes to the Fence. He's open for business.",
+	"yard": "The deeds are the Yard's. Build on it.",
+	"radio": "The set's on the Radio's bench. The Radio's on the air.",
+	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
+	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the Carpet Man's ledger", "yard": "the Manager's deeds", "radio": "the Quartermaster's set", "workshop": "the Quartermaster's tool roll"},
+}
 
 ## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.
 const GANGS := [
@@ -345,6 +381,7 @@ const DEEDS := {
 
 ## The crews' heads: a line when they come out, a line when they go down.
 const BOSSES := {
+	"The Gamekeeper": {"armed": "The dogs hear you before he does. Then he does.", "out": "He comes along the hedge with the gun broken over his arm. He closes it.", "down": "The dogs sit. They were never his, he only fed them."},
 	"The Carpet Man": {"armed": "Word goes to the warehouse that you're coming. He puts the kettle on.", "out": "He's brought the whole warehouse.", "down": "The warehouse crew go quiet. Somebody else will have the car park by morning."},
 	"The Manager": {"armed": "The branch is told to expect you. He has the staff tidy the counters.", "out": "He's in a suit. It fits.", "down": "The staff stop. Nobody's told them what to do next, and he isn't going to."},
 	"The Quartermaster": {"armed": "The depot's gate is left open for you. That's not a kindness.", "out": "He signs for you.", "down": "The depot's unlocked. Nobody's counting any more."},
@@ -787,6 +824,8 @@ static func item_words(base: String, code := true) -> String:
 		return SET_PIECES[base]
 	if base == DEEDS["name"]:
 		return DEEDS["words"]
+	if GATE_ITEMS.has(base):
+		return GATE_ITEMS[base]
 	for p in PAPERS:
 		if p["name"] == base:
 			return (str(p["code"]) + " " if p.has("code") and code else "") + str(p["words"])     # where its code is, first (13 Oct, Matt: the papers carry the radio codes)

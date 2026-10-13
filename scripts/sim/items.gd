@@ -687,6 +687,18 @@ static func is_paper(it: Dictionary) -> bool:
 	return it["slot"] == Data.PAPER
 
 
+## The room a head's own thing opens ("" for anything else): the vet's bag the clinic, the deeds the yard (13 Oct).
+static func opens(it: Dictionary) -> String:
+	if it.get("slot", "") != Data.PAPER:
+		return ""
+	for b in Data.BOSSES:
+		var o: Dictionary = b.get("opens", {})
+		for room in o:
+			if str(o[room]) == str(it["base"]):
+				return str(room)
+	return ""
+
+
 static func is_deeds(it: Dictionary) -> bool:
 	return it["slot"] == Data.PAPER and it["base"] == "The deeds"
 

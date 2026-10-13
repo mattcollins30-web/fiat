@@ -10,6 +10,8 @@ const Items := preload("res://scripts/sim/items.gd")
 
 const PUSH := 0.88             # the pass (6-7 Oct): at 0.75 the bot bailed under a quarter one run in four, at 0.85 one in eight, at 0.9 one in 33-47 on four builds, against Matt's one in seventeen
 const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four builds
+const FIRST := 0.65            # a site not yet cleared, or a head not yet beaten, is taken at this (13 Oct, Matt's recorded odds: 17 of 22 runs at 100%, every first clear and head at 0.42-0.83, the median two in three); what's cleared is farmed at PUSH
+const CLINIC_SPARE := 2.0      # the Clinic paid whenever its price is in hand this many times over (13 Oct: Matt paid 26-380 a visit and never waited out his HP)
 const RUSH := true             # the campaign as a person plays it (12 Oct, Matt's fire Drifter: one run a site, depth 1, straight to the next when it reads PUSH): no climbing until the campaign's done; the endgame climbs as before
 const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
@@ -43,12 +45,13 @@ func step(sim) -> int:
 	# whole before the pick: treated when the cash is there three times over,
 	# rested otherwise; under 70% it waits. Whole every time, the odds read once
 	# a kit rather than once a mission (the reader's key carries the HP)
-	if sim.hp < sim.max_hp() * 0.7:
-		if not (sim.cash > sim.treat_cost() * 3.0 and sim.treat()):
-			sim.advance(60.0)
-			return -1
-	elif sim.needs_treating() and sim.cash > sim.treat_cost() * 3.0:
-		sim.treat()                       # the wound seen to on return, when the cash is there (30)
+	# the Clinic first, as a person does (13 Oct): treated whenever it's open and the price is there twice over;
+	# rested otherwise, and under 70% it waits
+	if sim.needs_treating() and sim.room_open("clinic") and sim.cash > sim.treat_cost() * CLINIC_SPARE and sim.treat():
+		pass
+	elif sim.hp < sim.max_hp() * 0.7:
+		sim.advance(60.0)
+		return -1
 	elif sim.hp < sim.max_hp():
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	var t := pick_tier(sim)
@@ -489,8 +492,15 @@ func pick_tier(sim) -> int:
 				continue
 			while sim.depth[i] > 1 and sim.survival(i) < PUSH:
 				sim.set_depth(i, sim.depth[i] - 1)
+			var head: Dictionary = sim.boss_of(i)
+			if not head.is_empty() and sim.best_depth[i] > 0 and not sim.bosses_beaten[int(head["zone"])] and sim.can_arm_boss(i):
+				sim.arm_boss(i, true)               # a head not yet beaten, at a person's odds (the review: farmed sites never armed him)
+				if sim.survival(i) >= FIRST:
+					best = i
+					break
+				sim.arm_boss(i, false)
 			var odds: float = sim.survival(i)
-			if odds >= PUSH:
+			if odds >= (FIRST if sim.best_depth[i] <= 0 else PUSH):     # a first clear at a person's odds; what's cleared, farmed at PUSH
 				best = i
 				break
 			if odds >= best_odds:
@@ -503,7 +513,7 @@ func pick_tier(sim) -> int:
 	var b: Dictionary = sim.boss_of(best)
 	if not b.is_empty() and sim.best_depth[best] > 0 and (not sim.bosses_beaten[int(b["zone"])] or (sim.notes >= sim.boss_cost(best) * 2 and sim.notes - sim.boss_cost(best) >= _notes_kept(sim))):
 		sim.arm_boss(best, true)
-		if sim.survival(best) < PUSH:
+		if sim.survival(best) < (FIRST if not sim.bosses_beaten[int(b["zone"])] else PUSH):     # a head not yet beaten at a person's odds (13 Oct)
 			sim.arm_boss(best, false)
 	elif not b.is_empty():
 		sim.arm_boss(best, false)
@@ -530,7 +540,7 @@ func pick_tier(sim) -> int:
 			if sim.can_insure(best):
 				sim.set_insure(true)         # the ending, insured
 			return best
-	if sim.survival(best) < PUSH:
+	if sim.survival(best) < (FIRST if sim.best_depth[best] <= 0 or sim.boss_armed.get(best, false) else PUSH):
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
 	return best
 
@@ -801,8 +811,7 @@ func _buy_upgrade(sim) -> void:
 	if element != "":
 		for i in range(sim.market.size()):
 			var it: Dictionary = sim.market[i]
-			if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0 and sim.cash >= sim.price(it) + 500 and _socket_wanting(sim) != "":
-				sim.buy(i)
+			if Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0 and sim.cash >= sim.price(it) + 500 and _socket_wanting(sim) != "" and sim.buy(i):
 				bought.append([sim.elapsed, "%s for £%d" % [it["base"].to_lower(), sim.price(it)]])
 				break
 	for i in range(sim.market.size()):
