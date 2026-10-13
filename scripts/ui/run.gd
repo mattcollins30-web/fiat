@@ -280,7 +280,7 @@ func show_state(s) -> void:
 		_runner["chips"].show_chips(on_you)
 	_show_rig()
 	# the take
-	_tiles(_take_tiles, [["Cash", [Fmt.money(m["cash"])]], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
+	_tiles(_take_tiles, [["Tins", Fmt.money_forms(m["cash"])], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))

@@ -67,10 +67,10 @@ const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"
 const TOP_SALVAGE := ["copper", "steel", "army"]
 const TOP_TONE := {"scrap": Color("eceded"), "copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}
 const TOP_TIP := {"notes": "Notes: the Radio's currency", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Yard",
-	"steel": "Safe steel: salvage from the Town's depths, for the Yard", "army": "Army surplus: salvage from the City's depths, for the Yard", "cash": "Cash",
+	"steel": "Safe steel: salvage from the Town's depths, for the Yard", "army": "Army surplus: salvage from the City's depths, for the Yard", "cash": "Tins: what everything's paid in",
 	"where": "Where the runner is"}
 const TOP_WORST := {
-	"cash": "£9,999,999",
+	"cash": "9,999,999",
 	"notes": "999,999",
 	"scrap": "999,999",
 	"copper": "9,999",
@@ -492,9 +492,9 @@ func show_title() -> void:
 	var saved := FileAccess.file_exists(save_file)
 	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
 			"action": load_game.bind(save_file), "enabled": saved, "glyph": "menu_continue"})
-	items.append({"name": "New camp", "detail": "One runner, a nail gun, £150",
+	items.append({"name": "New camp", "detail": "One runner, a nail gun, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
-	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, cash, everything",
+	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, tins, everything",
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
@@ -772,7 +772,7 @@ func refresh() -> void:
 		_choose_runner()
 	_toast_new_lines()
 	_sound.follow(sim)
-	_top_labels["cash"].text = Fmt.money(sim.cash)
+	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins
 	_top_labels["notes"].text = Fmt.num(sim.notes)
 	_top_labels["scrap"].text = Fmt.num(sim.scrap)
 	for k in TOP_SALVAGE:
@@ -1019,9 +1019,9 @@ func _town_purse() -> Dictionary:
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d zones open" % [open_zones, Data.ZONES.size()], "lines": zlines,
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
-		"right": {"kicker": "The purse", "lines": [["Cash", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
+		"right": {"kicker": "The purse", "lines": [["Tins", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
-			"note": "Cash goes off; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
+			"note": "Tins go off; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
@@ -1137,7 +1137,7 @@ func _confirm_move() -> void:
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
 	var floor_next: int = mini(sim.yard_moves + 1, Data.LADDER_FLOOR_MAX)
-	_menu.open("Move the Yard?", "A yard that's moved finds rarer things and more cash (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
+	_menu.open("Move the Yard?", "A yard that's moved finds rarer things and more tins (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
 
 
 ## The Yard's trade: one element comes with the move, and every class after

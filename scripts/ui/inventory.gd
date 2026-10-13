@@ -203,7 +203,10 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		worth += sim.sell_price(_item(id))
 		cells += Items.size(_item(id))
 	_sell_button.visible = many
-	_sell_button.text = ("Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]) if ditching else ("Sell %d: %s" % [chosen.size(), Fmt.money(worth)])
+	if ditching:
+		_sell_button.text = "Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]
+	else:
+		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
 	_sell_button.disabled = chosen.is_empty()
 	# pack the items first-fit into the columns, never across a page's edge
 	_placed = _pack(items, page_rows)

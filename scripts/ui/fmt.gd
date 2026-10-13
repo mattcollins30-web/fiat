@@ -5,7 +5,7 @@ extends RefCounted
 ## (bricks, homes, square metres) come with its sim.
 
 const MINUS := "−"
-const CURRENCY := "£"
+const UNIT := "tins"                # what everything is paid in (13 Oct, Matt: a game about a collapse, paid in cash, made no sense)
 
 
 ## A plain quantity: 1,234 · 12,345 · 1.2M from a million up. Clade's biomass.
@@ -39,26 +39,50 @@ static func group(n: int) -> String:
 	return (MINUS if n < 0 else "") + s + out
 
 
-## £4,816 · −£360 · £12.4M from ten million up.
+## 4,816 tins · −360 tins · 1 tin · 12.4M tins from ten million up.
 static func money(x: float) -> String:
 	if not is_finite(x):
 		return "—"
 	var sign := MINUS if x < -0.5 else ""
 	var a := absf(x)
 	if a >= 1e7:
-		return "%s%s%.1fM" % [sign, CURRENCY, a / 1e6]
-	return "%s%s%s" % [sign, CURRENCY, group(int(round(a)))]
+		return "%s%.1fM %s" % [sign, a / 1e6, UNIT]
+	var n := int(round(a))
+	return "%s%s %s" % [sign, group(n), "tin" if n == 1 else UNIT]
 
 
-## Income a second: +£12/s, +£1.20/s under ten pounds, +£1,234/s.
+## A figure short: 950 · 4.8k · 48k · 1.2M (the tiles and buttons a full "4,816 tins" runs past).
+static func short_num(x: float) -> String:
+	var a := absf(x)
+	var sign := MINUS if x < -0.5 else ""
+	if a >= 999500.0:
+		return "%s%.1fM" % [sign, a / 1e6]
+	if a >= 1e4:
+		return "%s%.0fk" % [sign, a / 1e3]
+	if a >= 1e3:
+		return "%s%.1fk" % [sign, a / 1e3]
+	return "%s%d" % [sign, int(round(a))]
+
+
+## Money short: "4.8k tins"; under a thousand as money() says it.
+static func money_k(x: float) -> String:
+	return money(x) if absf(x) < 1e3 else "%s %s" % [short_num(x), UNIT]
+
+
+## Money long to short, for UI.fit: "4,816 tins", "4.8k tins", "4.8k".
+static func money_forms(x: float) -> Array:
+	return [money(x), money_k(x), short_num(x)]
+
+
+## Income a second: +12 tins/s, +1.20 tins/s under ten, +1,234 tins/s.
 static func per_s(x: float) -> String:
 	if not is_finite(x):
 		return "—"
 	var sign := MINUS if x < -0.005 else "+"
 	var a := absf(x)
 	if a < 10.0:
-		return "%s%s%.2f/s" % [sign, CURRENCY, a]
-	return "%s%s%s/s" % [sign, CURRENCY, group(int(round(a)))]
+		return "%s%.2f %s/s" % [sign, a, UNIT]
+	return "%s%s %s/s" % [sign, group(int(round(a))), UNIT]
 
 
 ## When a save was made, in local time: 21 Sep, 15:02.
@@ -69,7 +93,7 @@ static func when(unix: float) -> String:
 	return "%d %s, %02d:%02d" % [d["day"], months[d["month"] - 1], d["hour"], d["minute"]]
 
 
-## +£840 / −£1,650 for ledger lines.
+## +840 tins / −1,650 tins for ledger lines.
 static func signed_money(x: float) -> String:
 	return ("+" if x >= 0 else "") + money(x)
 

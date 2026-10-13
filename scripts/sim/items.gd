@@ -799,10 +799,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 		var label: String = str(d.get("short" if short else "label", a["stat"]))
 		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] == "loot_per_lot"
 		var line: String
-		if a["stat"] == "cash_per_kill":
-			line = "+£%d %s" % [a["value"], label]
-		else:
-			line = "+%d%s %s" % [a["value"], "%" if pct else "", label]
+		line = "+%d%s %s" % [a["value"], "%" if pct else "", label]
 		if tiers and a.has("tier"):
 			line += " · T%d" % int(a["tier"])
 		out.append(line)
@@ -915,7 +912,7 @@ static func headline(it: Dictionary) -> Array:
 		var lead := att_lead(it)
 		return [lead[0], lead[1]]
 	if it["slot"] == Data.PAPER:
-		return ["£%d" % int(it["value"]), "to the Fence"]
+		return ["%d tins" % int(it["value"]), "at the Fence"]
 	if it["slot"] == Data.CHARM:
 		return ["+%.0f%%" % find(it), "loot quality"]
 	return ["%d" % capacity(it), "capacity"]
@@ -936,7 +933,7 @@ static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var size := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
-			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% cash"]]:
+			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > size:
 			size = absf(v)
@@ -952,7 +949,7 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
-			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "cash from every kill", "cash"]]:
+			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
 			var sign: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
@@ -966,7 +963,7 @@ static func socket_words(it: Dictionary) -> String:
 	if b.has("salt"):
 		return "A socketable: packed into any socket, +%d armour" % int(b["salt"])
 	if b.has("wire_pct"):
-		return "A socketable: in any socket, +%d%% cash from every kill" % int(b["wire_pct"])
+		return "A socketable: in any socket, +%d%% tins from every kill" % int(b["wire_pct"])
 	for ty in ["fire", "frost", "poison", "shock"]:
 		if b.has("conv_%s_pct" % ty):
 			return "A socketable: in any socket, %d%% of your hits land as %s" % [int(b["conv_%s_pct" % ty]), ty]

@@ -11,7 +11,7 @@ extends RefCounted
 ## The opening: a new camp's first lines in the log, before the Yard is set. Said once.
 const OPENING := [
 	"The money went on a Tuesday. The cards first, then the machines. By the Thursday nobody would take the notes.",
-	"By the Friday the Fence was the only one still open, and he paid in cash. Nobody asked what that meant any more.",
+	"By the Friday the Fence was the only one still open, and he paid in tins. Nobody asked what money meant any more.",
 	"The crews kept the notes anyway. Nobody knows what for.",
 ]
 
@@ -74,13 +74,13 @@ static func mid(name: String) -> String:
 const FENCE := {
 	"visit": [
 		"Everything's for sale. That's the one thing that hasn't changed.",
-		"I pay cash. Don't ask where I get it.",
+		"I pay in tins. Don't ask where I get them.",
 		"You bring, I price. The price is the price.",
 		"The crew in the Bank buy off me too. Different prices.",
 		"I knew your last one. Didn't know them long.",
 		"Nothing's worth what it was. Some things are worth more.",
 	],
-	"sold": ["That'll do.", "I've had worse through here.", "Someone will want that.", "Cash. Count it if you like."],
+	"sold": ["That'll do.", "I've had worse through here.", "Someone will want that.", "Tins. Count them if you like."],
 	"bought": ["It's yours. It was someone's.", "No returns.", "Mind how you go with that."],
 	"shelf": "More shelf. Same stock, more of it.",
 	"contract": ["That's what I asked for. Here's what I said.", "Good. Someone's waiting on these.", "Done. I'll have another for you."],

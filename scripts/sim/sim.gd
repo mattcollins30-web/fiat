@@ -2833,7 +2833,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"no_meds":
 			return "no meds on the run"
 		"no_kill_cash":
-			return "no cash from kills"
+			return "no tins from kills"
 		"clock_half":
 			return "the clock halved"
 		"boss_walks":
@@ -2841,7 +2841,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"drop":
 			return "finds +" + pc.call(e["drop"])
 		"cash":
-			return "cash +" + pc.call(e["cash"])
+			return "tins +" + pc.call(e["cash"])
 		"xp":
 			return "XP +" + pc.call(e["xp"])
 		"rarity":
@@ -2888,7 +2888,7 @@ func word_total_words(i: int) -> Array:
 	if g["rarity"] > 0.005:
 		gw.append("quality +%d%%" % int(round(g["rarity"] * 100.0)))
 	if g["cash"] > 1.005:
-		gw.append("cash +" + pc.call(g["cash"]))
+		gw.append("tins +" + pc.call(g["cash"]))
 	if g["xp"] > 1.005:
 		gw.append("XP +" + pc.call(g["xp"]))
 	if g["loot_tier"] > 0:
@@ -2917,7 +2917,7 @@ func word_total_words(i: int) -> Array:
 	if float(b.get("soaked", 0.0)) > 0.005:
 		bw.append("your res −%d" % int(round(float(b["soaked"]) * 100.0)))
 	for f in b["flags"]:
-		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill cash", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
+		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill tins", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
 	return [" · ".join(gw), " · ".join(bw)]
 
 
@@ -3199,7 +3199,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	if yard_side(key, col) == side:
 		return "Built"
 	if cash < yard_pick_cost(key, col):
-		return "Short of cash"
+		return "Short of tins"
 	if int(salvage.get(b["salvage"], 0)) < yard_pick_salvage(key, col):
 		return "Wants %d %s" % [yard_pick_salvage(key, col), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
 	return ""
@@ -3250,7 +3250,7 @@ func yard_rank_block(key: String) -> String:
 	if yard_cols() < Data.YARD_COLS:
 		return Data.YARD_GATES[Data.YARD_COLS - 1]
 	if cash < yard_rank_cost(key):
-		return "Short of cash"
+		return "Short of tins"
 	if int(salvage.get(b["salvage"], 0)) < yard_rank_salvage(key):
 		return "Wants %d %s" % [yard_rank_salvage(key), Data.SALVAGE_NAMES[b["salvage"]].to_lower()]
 	return ""
@@ -5700,7 +5700,13 @@ func _refund_runner_trees() -> void:
 
 
 func _cash_words(x: float) -> String:
-	return "£%d" % int(round(x))
+	var n := int(round(x))
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return "%s%s%s tin%s" % ["−" if n < 0 else "", s, out, "" if n == 1 else "s"]     # grouped as the screens say it
 
 
 # ------------------------------------------------------------------ the armoury

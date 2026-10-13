@@ -563,7 +563,7 @@ func _show_panel() -> void:
 				var d_dps: float = _dps_with(gun, it) - Items.dps(gun)
 				if absf(d_dps) >= 0.5:
 					deltas.append([d_dps, "%.0f dmg/s" % absf(d_dps)])
-				for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% cash"]]:
+				for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
 					var dv: float = Items.att_stat(it, pair[0]) - (Items.att_stat(cur, pair[0]) if cur != null else 0.0)
 					if absf(dv) >= 0.5:
 						deltas.append([dv, "%.0f%s" % [absf(dv), pair[1]]])

@@ -987,7 +987,7 @@ func _fence_screen(main) -> void:
 	for o in main._fence._offers:
 		if o["pay"].visible:
 			shown_offers += 1
-			_check(o["pay"].text.begins_with("Pay £") and o["kind"].text != "", "an offer tile is blank: '%s' / '%s'" % [o["kind"].text, o["pay"].text])
+			_check(o["pay"].text.contains("tin") and o["kind"].text != "", "an offer tile is blank: '%s' / '%s'" % [o["kind"].text, o["pay"].text])
 	_check(shown_offers == sim.gamble.size(), "the offer tiles do not match the offer: %d for %s" % [shown_offers, str(sim.gamble)])
 	_check_fit(main, "Fence (the word)")
 	if not sim.gamble.is_empty():
@@ -1241,7 +1241,7 @@ func _narrative_checks(main) -> void:
 	# the A style on the vendors: the band with the face, the name and the figure; the line under it; the tabs in the band's foot; the sections
 	var fv = main._fence
 	# the rooms' one band across the top (10 Oct, Bands-U A): the kicker names the vendor, the figure in gold, no title line
-	_check(fv._band.title.text == "" and fv._band.headline.text.begins_with("£") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
+	_check(fv._band.title.text == "" and fv._band.headline.text.contains("tin") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
 	_check(fv._said[0].text != "" and fv._side.position.y + fv._said[0].position.y >= fv.BAND_H, "the Fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._side.position.y + fv._said[0].position.y])
 	var ftab_x := 0.0
 	for t in fv._tabs:
@@ -1386,7 +1386,7 @@ func _run_screen(main) -> void:
 	_check(main._run._pick.button_texts().has("Ditch"), "picking a find did not offer Ditch: %s" % str(main._run._pick.button_texts()))
 	_check_fit(main, "Run (pick)")
 	var rh = main._run._pick._heads[0]
-	_check(rh.visible and not main._run._pick._empty_title.visible and rh._title.text != "" and rh._chips[0].visible and main._run._pick._tag_labels[0].text.begins_with("£"), "the run's pick has no head or price tag: %s / %s" % [rh._title.text, main._run._pick._tag_labels[0].text])
+	_check(rh.visible and not main._run._pick._empty_title.visible and rh._title.text != "" and rh._chips[0].visible and main._run._pick._tag_labels[0].text.contains("tin"), "the run's pick has no head or price tag: %s / %s" % [rh._title.text, main._run._pick._tag_labels[0].text])
 	_pick_boxes_check(main._run._pick, "the run's pick")
 	main._run._ditch_pick()
 	_check(sim.mission["found"].size() == n_before - 1, "Ditch did not drop the find")
@@ -1695,7 +1695,7 @@ func _craft_view_checks(main) -> void:
 	_check(ws._piece_chips.words(1) == "Level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
 	_check(ws._affix_rows[0]["tag"].text == "T2" and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
 	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
-	_check(ws._job_tiles[0]["price"].text.begins_with("£") and not ws._job_tiles[0]["button"].disabled, "the re-roll tile is not priced and live: %s" % ws._job_tiles[0]["price"].text)
+	_check(ws._job_tiles[0]["price"].text.contains("tin") and not ws._job_tiles[0]["button"].disabled, "the re-roll tile is not priced and live: %s" % ws._job_tiles[0]["price"].text)
 	_check(ws._job_tiles[4]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[4]["price"].text)
 	_check(ws._job_tiles[5]["price"].text.begins_with("+") and ws._job_tiles[5]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[5]["price"].text)
 	_check(ws._affix_buttons.all(func(b): return not b.visible), "the affix jobs are up with no affix picked")
@@ -1704,7 +1704,7 @@ func _craft_view_checks(main) -> void:
 	ws._pick_affix(0)
 	_check(ws.sel_stat == "hp" and ws._affix_buttons[0].visible and ws._affix_buttons[1].visible, "picking the first affix did not show its two jobs")
 	_check(ws._affix_buttons[1].position.x + ws._affix_buttons[1].size.x <= ws.BODY_W - ws.PAD + 0.5, "the affix jobs run off the piece card")
-	_check(ws._affix_buttons[0].text.contains("£") and ws._affix_buttons[1].text.contains("£"), "the affix jobs carry no price")
+	_check(ws._affix_buttons[0].text.contains("tin") and ws._affix_buttons[1].text.contains("tin"), "the affix jobs carry no price")
 	_check_fit(main, "Workshop (craft, affix picked)")
 	# the job runs in the room: a re-roll keeps the count, the foot says what was done
 	var before_affixes: int = piece["affixes"].size()
@@ -4104,6 +4104,7 @@ func _move_checks(main) -> void:
 	_recycle_checks(main)
 	_book_checks(main)
 	_lore_checks(main)
+	_tins_checks(main)
 	_places_checks(main)
 	_faces_checks(main)
 	_stack_checks(main)
@@ -6066,6 +6067,9 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 		if not (n is Control) or n.text == "" or not _showing(n):
 			continue
 		live.append(n)
+		if n.text.contains("£"):
+			push_error("%s: '%s' shows pounds; everything is paid in tins (13 Oct)" % [where, n.text])
+			bad += 1
 		var room := 32.0 if n is Button else 0.0
 		var w: float = UI.text_width(n, n.text) + room
 		if w > n.size.x + 0.5:
@@ -7365,7 +7369,7 @@ func _yard_wide_checks(main) -> void:
 	main.refresh()
 	_check(sim.yard_cols() >= 1 and yt.tile("bench", 0, "a")["look"] == "open" and (sim.yard_cols() > 1 or yt.tile("bench", 1, "a")["look"] == "shut"), "the fresh Yard's columns are off: %d open, %s / %s" % [sim.yard_cols(), yt.tile("bench", 0, "a")["look"], yt.tile("bench", 1, "a")["look"]])
 	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "", "the rail's Upgrade badge is lit with no cash")
-	_check(sim.yard_pick_block("bench", 0, "a") == "Short of cash", "a pick with no cash: '%s'" % sim.yard_pick_block("bench", 0, "a"))
+	_check(sim.yard_pick_block("bench", 0, "a") == "Short of tins", "a pick with no cash: '%s'" % sim.yard_pick_block("bench", 0, "a"))
 	_check(sim.yard_pick_block("bench", 5 - 1, "a") == Data.YARD_GATES[4] or sim.yard_cols() >= 5, "a shut column's block is not its gate: '%s'" % sim.yard_pick_block("bench", 4, "a"))
 	# pick, build, the other side dim, a refit for half; the badge is news only (9 Oct): lit for what's newly
 	# buyable or a column opened since the Yard was looked at, cleared by looking
@@ -8579,7 +8583,7 @@ func _fill_up_checks(main) -> void:
 	for piece in [rn._runner["head"], rn._runner["track"], rn._runner["tiles"][3]["panel"], rn._runner["note"]]:
 		_check(rb.encloses(Rect2(piece.position, piece.size)), "the runner's box does not hold its %s" % piece.name)
 	_check(fb.end.y + 8 <= rb.position.y and fb.position.y >= rn.BAND_H and rb.end.y < rn.RIG_HEAD_Y, "the fight's and the runner's boxes are not apart: %s / %s" % [str(fb), str(rb)])
-	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Cash", "the run's tiles are off")
+	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Tins", "the run's tiles are off")
 	# the faces (10 Oct, Run-P A): each in its box at the left, clear of the head, the tiles, the bar and the chips;
 	# a face shows art or the drawn figure, never neither
 	for pair in [[rn._fight_face, fb, rn._fight, "fight"], [rn._runner_face, rb, rn._runner, "runner"]]:
@@ -10066,6 +10070,8 @@ func _came_back_checks(main) -> void:
 	var cheap: Dictionary = sim._plain("Helmet", "Cycle helmet")
 	sim._came_back_find(cheap)
 	_check(int(sim.came_back["find"]["id"]) == int(find["id"]), "the card's find is not the dearest")
+	sim.came_back["firsts"] = []              # what the two runs read on the way (13 Oct: a P45 and a pawn ticket) is not the test's
+	sim.came_back["more"] = 0
 	for k in range(6):
 		sim.chron("clear", {"site": "Test site %d" % k, "depth": 2 + k, "first": k == 0})
 	_check(sim.came_back["firsts"].size() == sim.CAME_BACK_FIRSTS and int(sim.came_back["more"]) >= 2, "the firsts did not cap: %s" % str(sim.came_back["firsts"]))
@@ -10537,3 +10543,25 @@ func _lore_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the lore ok: the opening, the radio's order and gates, the gangs, the wall, the traits, the new papers, the radio page and its pill")
+
+
+## Tins at their worst (13 Oct, the reviewer: "4,816 tins" runs past what "£4,816" fitted): the Clinic's tiles and
+## buttons at level 50 with a wound, the run's take tile at six figures, the Fence's offers, all fitting.
+func _tins_checks(main) -> void:
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	sim.wound = "armour"
+	sim.hp = sim.max_hp() * 0.5
+	sim.cash = 999999.0
+	main.show_room(main.MEDIC)
+	main.refresh()
+	_check(sim.wound_cost() >= 1000, "the worst wound is too cheap to test: %d" % sim.wound_cost())
+	_check_fit(main, "Clinic (level 50, a wound, tins at their widest)")
+	_check(Fmt.money(1.0) == "1 tin" and Fmt.money(4816.0) == "4,816 tins" and Fmt.money_k(4816.0) == "4.8k tins" and Fmt.money(12.4e6) == "12.4M tins", "the tins read wrong: %s / %s / %s / %s" % [Fmt.money(1.0), Fmt.money(4816.0), Fmt.money_k(4816.0), Fmt.money(12.4e6)])
+	main.show_room(main.MARKET)
+	main.refresh()
+	_check_fit(main, "Fence (tins at their widest)")
+	sim.load_dict(saved)
+	main.refresh()
+	print("tins ok: the Clinic and the Fence at level 50 with a wound")

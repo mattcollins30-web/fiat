@@ -410,7 +410,7 @@ func _show_finds() -> void:
 	var cash: float = sim.tree_sum("cash_pct") + sim.charm_cash()
 	var notes: float = sim._affix_sum("notes_pct")
 	_set_bar(c["bars"][0], "Loot quantity", qty / 100.0, signed_pct(qty), Pal.GOOD)
-	_set_bar(c["bars"][1], "Cash", cash / 100.0, signed_pct(cash), Pal.GOOD)
+	_set_bar(c["bars"][1], "Tins", cash / 100.0, signed_pct(cash), Pal.GOOD)
 	_set_bar(c["bars"][2], "Notes", notes / 100.0, signed_pct(notes), Pal.GOOD)
 	var search_faster: float = (1.0 - sim.search_s({}) / sim.SEARCH_S) * 100.0
 	var patrol_later: float = (sim.patrol_s({}) / sim.PATROL_S - 1.0) * 100.0 if not sim.has_node("never_there") else 0.0
@@ -474,7 +474,7 @@ func _show_last() -> void:
 	_set_row(rows[0], "Where", [t["name"], str(t["name"]).trim_prefix("The ")])
 	_set_row(rows[1], "Kills · gangs", ["%d · %d" % [r["kills"], int(r.get("patrols", 0))]])
 	_set_row(rows[2], "Loot", ["%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]])
-	_set_row(rows[3], "Cash · scrap", ["%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]])
+	_set_row(rows[3], "Tins · scrap", ["%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]])
 	_set_row(rows[4], "Took", [Fmt.mss(r["time"])])
 	var status: String = ""
 	if dead:

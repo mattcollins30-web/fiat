@@ -254,7 +254,7 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 		if side_built == "" and c >= cols:
 			gate_said = true
 		var cl: Label = lane["tiles"][c][0]["cost"]
-		UI.fit(cl, [cost, cost.get_slice(" ", cost.count(" "))] if cost != "" else [""])
+		UI.fit(cl, ([cost, cost.trim_suffix(" tins")] if cost.ends_with(" tins") else [cost, cost.get_slice(" ", cost.count(" "))]) if cost != "" else [""])     # a price keeps its figure short, not "tins"
 		cl.add_theme_color_override("font_color", Pal.TEXT_2 if c < cols else Pal.TEXT_3)
 	var r: Dictionary = lane["rank"]
 	var rank_open: bool = cols >= COLS
@@ -270,10 +270,10 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 		(r["pips"][k].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if k < lit else Pal.CARD_LINE
 
 
-## "£16,000", "£160k": a tile's price, short.
+## "16,000 tins", "160k tins": a tile's price, short.
 static func _short_money(x: int) -> String:
 	if x >= 100000:
-		return "£%dk" % int(round(x / 1000.0))
+		return "%dk tins" % int(round(x / 1000.0))
 	return Fmt.money(x)
 
 

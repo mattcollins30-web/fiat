@@ -263,6 +263,15 @@ static func style_button(b: Button, primary: bool, tone := "") -> void:
 ## The first of `options` that fits the label's box becomes its text; the last
 ## is the fallback. Lines that carry item words are built this way - long form,
 ## short form, a count - so nothing ever trails off into an ellipsis.
+## A button's text: the first option that fits with its padding (the smoke's 32 px), else the last.
+static func fit_button(b: Button, options: Array) -> void:
+	for o in options:
+		if text_width(b, o) + 32.0 <= b.size.x:
+			b.text = o
+			return
+	b.text = options.back() if not options.is_empty() else ""
+
+
 static func fit(l: Label, options: Array) -> void:
 	for o in options:
 		if text_width(l, o) <= l.size.x:

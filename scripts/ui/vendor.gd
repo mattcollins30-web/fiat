@@ -305,7 +305,7 @@ func show_state(s) -> void:
 		for t in _side_tiles_c:
 			if t["panel"].visible and t["key"].text == "Heal":
 				var hurt_now: bool = sim.hp < sim.max_hp() - 0.5
-				UI.set_tile(t, "Heal", [Fmt.money(sim.heal_cost())] if hurt_now else ["not needed", "fit"], Pal.TEXT if hurt_now else Pal.TEXT_2)
+				UI.set_tile(t, "Heal", Fmt.money_forms(sim.heal_cost()) if hurt_now else ["not needed", "fit"], Pal.TEXT if hurt_now else Pal.TEXT_2)
 	var sig := _signature()
 	if sig == _shown:
 		return
@@ -388,7 +388,7 @@ func _show_deals() -> void:
 		_mate_buy.disabled = not sim.can_buy_mate()
 
 
-## A pay's colour: cash in gold, notes in the paper's, scrap grey, a salvage in its own.
+## A pay's colour: tins in gold, notes in the paper's, scrap grey, a salvage in its own.
 static func _pay_colour(c: Dictionary) -> Color:
 	match str(c["pay"]):
 		"cash":
@@ -426,7 +426,10 @@ func _show_word() -> void:
 			UI.fit(o["kind"], [kd["words"], kd.get("short", kd["words"])])
 			o["sub"].text = "sealed · any rarity"
 			o["pay"].visible = true
-			o["pay"].text = "Pay %s" % Fmt.money(sim.gamble_price(kinds[k]))
+			var pay_words: String = Fmt.money(sim.gamble_price(kinds[k]))
+			o["pay"].text = "Pay %s" % pay_words
+			if UI.text_width(o["pay"], o["pay"].text) + 32.0 > o["pay"].size.x:
+				o["pay"].text = pay_words            # "Pay 1,132 tins" ran past its button (13 Oct, tins): the price alone
 			o["pay"].disabled = not sim.can_gamble(kinds[k])
 			o["kind"].add_theme_color_override("font_color", Pal.TEXT)
 		else:
@@ -581,8 +584,8 @@ func _show_side() -> void:
 			t["panel"].visible = true
 		var hurt: bool = sim.hp < sim.max_hp() - 0.5
 		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
-		UI.set_tile(_side_tiles_c[1], "Heal", [Fmt.money(sim.heal_cost())] if hurt else ["not needed", "fit"], Pal.TEXT if hurt else Pal.TEXT_2)
-		UI.set_tile(_side_tiles_c[2], "The wound", [Fmt.money(sim.wound_cost()) if sim.wound != "" else "none"], Pal.TEXT if sim.wound != "" else Pal.TEXT_2)
+		UI.set_tile(_side_tiles_c[1], "Heal", Fmt.money_forms(sim.heal_cost()) if hurt else ["not needed", "fit"], Pal.TEXT if hurt else Pal.TEXT_2)
+		UI.set_tile(_side_tiles_c[2], "The wound", Fmt.money_forms(sim.wound_cost()) if sim.wound != "" else ["none"], Pal.TEXT if sim.wound != "" else Pal.TEXT_2)
 		var cpicks: int = 0
 		for c in range(5):
 			if sim.yard_side("clinic", c) != "":
@@ -594,6 +597,10 @@ func _show_side() -> void:
 		var out: bool = sim.on_mission()
 		_side_button(0, y, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Fit"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
 		_side_button(1, y, "The runner is out" if out else ("The wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
+		if not out and hurt:
+			UI.fit_button(_side_buttons[0], Fmt.money_forms(sim.heal_cost()).map(func(m): return "Heal (%s)" % m))
+		if not out and sim.wound != "":
+			UI.fit_button(_side_buttons[1], Fmt.money_forms(sim.wound_cost()).map(func(m): return "The wound (%s)" % m) + ["Wound: %s" % Fmt.short_num(sim.wound_cost())])
 		if full and not out:
 			_side_buttons[0].text = "Fit for duty"
 		y += 48 + 8
@@ -645,7 +652,7 @@ func _show_side() -> void:
 	var twr := (INNER - (nr - 1) * TILE_GAP) / float(nr)
 	for r in range(nr):
 		var tone: Color = Pal.TEXT if r == 0 else Pal.tone_color(Pal.rarity_tone(r))
-		_side_tile(r, PAD + r * (twr + TILE_GAP), y, twr, Data.RARITY_SHORT[r], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r]), str(counts[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)     # the short names: five tiles across, "Uncommon" would not fit
+		_side_tile(r, PAD + r * (twr + TILE_GAP), y, twr, Data.RARITY_SHORT[r], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r]), "%d · %s" % [counts[r], Fmt.money_k(worth[r])], Fmt.money_k(worth[r]), Fmt.short_num(worth[r]), str(counts[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)     # the short names: five tiles across, "Uncommon" would not fit
 	y += UI.TILE_H + 12
 	_heads[1].position.y = y
 	_heads[1].text = "BY THE BOX · TO THE STASH"

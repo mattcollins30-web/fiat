@@ -4157,3 +4157,13 @@ unique's pink (★); each of the 44 uniques has a `short` form in Data.UNIQUES, 
 off (the item head's chips lay again all short then: `show_chips(..., shorten)`, the item head only - the Caravan's sum
 keeps its own order, the reviewer's catch). The smoke checks every unique at every head width shows its rule first and
 every affix. Armour % reads "armour" now, flat armour "arm" (they read alike in the deltas).
+
+**Tins (13 Oct, docs/design/campaign_gates.md).** Everything is paid in tins on screen: Fmt.money "4,816 tins" / "1 tin" /
+"12.4M tins", short forms "4.8k tins" and "4.8k" (Fmt.money_k, money_forms) for the tiles and buttons that "£4,816" fitted
+and the unit outgrew (the multi-sell button, the Clinic's Heal and wound, the run's take tile, the Fence's rarity tiles;
+UI.fit_button); the top bar shows the bare figure by its glyph; the Words, Data labels and lore lines that meant the game's
+money say tins (the pre-collapse lines about real cash stay); "Every tin", "Found tins". Internal keys stay `cash`. The
+smoke fails any label showing £, and checks the Clinic and the Fence at level 50 with a wound. The tin glyph waits on the
+campaign manifest (art/ui_new/tins.png). Flakes fixed: the came-back card's firsts (papers read on the test's two runs).
+Open: a toast with no full stop or comma to cut at can run past its box ("One of them is in the last Doorman's
+hand-me-down nail gun.") - seen once, not from tins; to Matt.

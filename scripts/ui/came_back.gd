@@ -81,7 +81,7 @@ func show_state(s) -> void:
 	var lv0: int = int(cb.get("lv_from", sim.level()))
 	var cash: float = float(cb["cash"])
 	var xp: float = float(cb["xp"])
-	UI.set_tile(_tiles[0], "Cash", ["+" + Fmt.money(cash), Fmt.money(cash), "£" + _short(cash)], Pal.GOOD if cash > 0.0 else Pal.TEXT)
+	UI.set_tile(_tiles[0], "Tins", ["+" + Fmt.money(cash), Fmt.money(cash), _short(cash)], Pal.GOOD if cash > 0.0 else Pal.TEXT)
 	UI.set_tile(_tiles[1], "XP", ["+" + Fmt.num(xp), Fmt.num(xp), _short(xp)])
 	UI.set_tile(_tiles[2], "Items", ["%d" % int(cb["items"])])
 	UI.set_tile(_tiles[3], "Level", ["%d → %d" % [lv0, sim.level()], "%d" % sim.level()] if sim.level() > lv0 else ["%d" % sim.level()], Pal.GOOD if sim.level() > lv0 else Pal.TEXT)
