@@ -1,0 +1,116 @@
+{
+ "_readme": [
+  "FIAT FIGHT TEST (13 Oct, docs/design/fight_art.md): one Time Crisis frame for the Parade to judge the look before the run view is built - the plate, the near cover, one gang member three ways (standing, firing, going down), the runner's hands and gun. art/fight_test/, nothing the game reads yet; Claude composes the frame from them.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_test_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_test/parade_plate.png",
+   "width": 688,
+   "height": 296,
+   "no_background": false,
+   "seed": 94000,
+   "style_image": "res://art/places/the_parade.png",
+   "description": "A first-person view at crouching eye level down a run-down British shopping parade, as if from behind cover in a light-gun arcade game: shop fronts on both sides with dark doorways and boarded windows (a laundrette, a bookmaker, an off-licence, a chip shop), a burnt-out car slewed across the middle of the street, bins and a fallen shopping trolley, wet tarmac, the far end of the street in haze. Nobody in the scene, empty and waiting. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the background plate: the Parade, where the gang pops up",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight_test/parade_cover.png",
+   "width": 688,
+   "height": 112,
+   "no_background": true,
+   "seed": 94001,
+   "style_image": "res://art/places/the_parade.png",
+   "description": "The top of a low wall of grimy red brick with a broken concrete coping, seen very close from behind, running across the whole width of the frame at the bottom, as the cover a player crouches behind in a light-gun arcade game; moss in the joints, a crisp packet caught on it. Only the wall, nothing above it. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the near cover across the frame's foot",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight_test/gang_stand.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 94002,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "A young estate gang member in a grey hoodie with the hood up, a scarf over the lower face, tracksuit bottoms and dirty trainers, standing in a doorway holding a spiked baseball bat low at his side, wary. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "a gang member, standing (the pop-up's first frame)",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight_test/gang_fire.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 94002,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "The same young estate gang member in a grey hoodie with the hood up, a scarf over the lower face, tracksuit bottoms and dirty trainers, aiming a sawn-off shotgun straight at the viewer with both hands, a bright muzzle flash at the barrel. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "a gang member, firing at you",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight_test/gang_down.png",
+   "width": 128,
+   "height": 192,
+   "no_background": true,
+   "seed": 94002,
+   "style_image": "res://art/people/the_carpet_man.png",
+   "description": "The same young estate gang member in a grey hoodie with the hood up and tracksuit bottoms, hit and falling backwards, arms flung out, his spiked bat dropping from his hand. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "a gang member, hit and going down",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/fight_test/hands_revolver.png",
+   "width": 256,
+   "height": 192,
+   "no_background": true,
+   "seed": 94003,
+   "style_image": "res://art/items/old_revolver.png",
+   "description": "First-person view of the player's own two hands in fingerless wool gloves gripping an old revolver, held out forward and slightly up from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Only the hands and the gun, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands and gun, bottom right",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  }
+ ]
+}
