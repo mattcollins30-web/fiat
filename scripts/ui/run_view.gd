@@ -19,10 +19,20 @@ const ZONE_KEYS := ["the_outskirts", "the_estate", "the_town", "the_city"]
 const COVER_TOP := H - 48                         # where a cover's drawn top sits, whatever its picture's height
 ## The three depths: where a figure stands (its feet, in the frame), its scale, how lit.
 const SLOTS := [
-	{"foot": Vector2(340, 211), "scale": 0.62, "lit": 0.9},     # mid: by the car - the first on you
-	{"foot": Vector2(501, 232), "scale": 0.95, "lit": 1.0},     # near: close, popping up
-	{"foot": Vector2(206, 167), "scale": 0.32, "lit": 0.72},    # far: down the street at the kerb (Matt, 13 Oct: it stood too near, too small)
+	{"foot": Vector2(255, 211), "scale": 0.62, "lit": 0.9},     # mid: the middle ground, in from the right (Matt, 13 Oct: more centre)
+	{"foot": Vector2(405, 232), "scale": 0.95, "lit": 1.0},     # near: close, left of your gun (Matt: it stood behind it)
+	{"foot": Vector2(322, 172), "scale": 0.3, "lit": 0.72},     # far: the Parade's test plate's; each site's own below
 ]
+## Each site's far one, on its own ground (Matt, 13 Oct: "doesn't sit on the floor"): its feet where the plate's floor is,
+## a long way off, and its size for that distance - read off each plate.
+const SITE_FAR := {     # down the middle where the ground goes away, between the middle one and the near one
+	"the_allotments": [Vector2(318, 152), 0.26], "the_garden_centre": [Vector2(330, 154), 0.24],
+	"top_farm": [Vector2(320, 154), 0.25], "ransacked_streets": [Vector2(322, 184), 0.28],
+	"the_parade": [Vector2(320, 178), 0.30], "the_retail_park": [Vector2(322, 152), 0.24],
+	"the_pleasure_park": [Vector2(322, 170), 0.28], "shopping_centre": [Vector2(322, 182), 0.31],
+	"the_bank": [Vector2(325, 175), 0.42], "the_services": [Vector2(318, 165), 0.24],
+	"the_hospital": [Vector2(318, 154), 0.24], "the_barracks": [Vector2(322, 174), 0.26],
+}
 ## The search's crates on the ground (Matt, 13 Oct: they floated): the one being opened near on the left, the next two
 ## further down the street, each its feet on the tarmac and a shadow under it.
 const CRATE_SPOTS := [
@@ -35,7 +45,7 @@ const PAN := 50.0
 const COVER_Y := H - 72
 const COVER_X := -20.0                    # the cover's left at no pan: its 688 still past the right edge at the search's pan (x1.4)
 const HANDS_AT := Vector2(W - 235, H - 178)
-const HANDS_SCALE := 0.85
+const HANDS_SCALE := 0.8
 const HANDS_CORNER := Vector2(W + 6, H + 6)     # where the hands' drawn bottom-right sits: each gun's picture in the corner
 const DOWN_S := 0.7                       # a kill's fall
 const POP_S := 0.25                       # a figure popping up from behind
@@ -49,6 +59,7 @@ var _site_key := "-"                      # the site the plate and cover are of
 var _zone_key := "the_estate"             # its zone's gang
 var _boss_key := ""                       # the head when he's out, "" else
 var _cover_y := COVER_Y
+var _own_site := false                     # the site's own plate is up (its far slot with it)
 var _hands_at := HANDS_AT                 # the hands' top-left for the gun's picture                   # the cover's top-left y: its drawn top at COVER_TOP
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
 var _crates: Array = []                   # the crates in the street while searching
@@ -208,10 +219,19 @@ func _init() -> void:
 	_marker.visible = false
 
 
+## A slot on this site: the far one's on the site's own ground when its own plate's up.
+func slot_of(k: int) -> Dictionary:
+	if k == 2 and _own_site and SITE_FAR.has(_site_key):
+		var f: Array = SITE_FAR[_site_key]
+		return {"foot": f[0], "scale": f[1], "lit": SLOTS[2]["lit"]}
+	return SLOTS[k]
+
+
 ## The site's plate and cover (its own, else the Parade's test pair), and the wall's fill cut from the cover.
 func _site(key: String) -> void:
 	_site_key = key
 	var own: bool = tex(key + "_plate") != null and tex(key + "_cover") != null     # the site's pair, or the Parade's: never one of each
+	_own_site = own
 	_plate.texture = tex(key + "_plate") if own else tex("parade_plate")
 	if _plate.texture != null:
 		_plate.size = _plate.texture.get_size()
@@ -499,7 +519,7 @@ func _process(dt: float) -> void:
 			up += 1
 	for k in range(SLOTS.size()):
 		var f: Dictionary = _figs[k]
-		var slot: Dictionary = SLOTS[k]
+		var slot: Dictionary = slot_of(k)
 		var r: TextureRect = f["rect"]
 		var fdt: float = dt * (FROST_SLOW if _them_fx.get("frost", false) and f["state"] in ["pop", "up"] else 1.0)
 		f["t"] += fdt
@@ -576,7 +596,7 @@ func _process(dt: float) -> void:
 			if p.emitting != want:
 				p.emitting = want
 			if want:
-				var s: float = SLOTS[k]["scale"]
+				var s: float = slot_of(k)["scale"]
 				p.scale = Vector2(s, s) * 1.6
 				p.emission_rect_extents = Vector2(sz.x * 0.28, sz.y * (0.3 if el == "fire" else 0.35)) / p.scale
 				p.position = r.position + Vector2(sz.x * 0.5, sz.y * (0.55 if el == "fire" else 0.45))

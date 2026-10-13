@@ -4816,7 +4816,7 @@ func _sound_checks(main) -> void:
 	var p: Dictionary = snd.playing()
 	_check(p["ambient"] == "amb_estate" and p["rain"] and p["music"] == "music_fight", "the estate, the rain and the fight's music are not playing out on the estate: %s" % str(p))
 	snd.clear_cued()
-	sim.advance(2.0)
+	sim.advance(3.0)                           # a hammer swings every two seconds and more
 	main.refresh()
 	_check(snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"), "the gun did not go off: %s" % str(snd.cued()))
 	snd.clear_cued()
@@ -7862,9 +7862,48 @@ func _run_view_checks(main) -> void:
 	_check(fimg.get_height() == cimg.get_height() - y72 and fimg.get_pixel(5, 0) == cimg.get_pixel(5, y72) and fimg.get_pixel(300, fimg.get_height() - 1) == cimg.get_pixel(300, cimg.get_height() - 1), "the wall's fill isn't the cover's bricks: %dx%d" % [fimg.get_width(), fimg.get_height()])
 	v._duck_t = 0.0
 	# the far one stands further down the street than the middle one, smaller, wholly in the frame
-	var far: Dictionary = RunView.SLOTS[2]
 	var mid: Dictionary = RunView.SLOTS[0]
-	_check(far["foot"].y < mid["foot"].y - 25 and far["scale"] < mid["scale"] * 0.6 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "the far one isn't down the street: %s against %s" % [str(far), str(mid)])
+	var fars: Array = [RunView.SLOTS[2]]
+	for key in RunView.SITE_FAR:
+		fars.append({"foot": RunView.SITE_FAR[key][0], "scale": RunView.SITE_FAR[key][1], "site": key})
+	for far in fars:
+		_check(far["foot"].y < mid["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "the far one isn't down the street: %s against %s" % [str(far), str(mid)])
+		var nx: float = RunView.SLOTS[1]["foot"].x
+		_check(absf(far["foot"].x - mid["foot"].x) > 50.0 and absf(far["foot"].x - nx) > 60.0, "the far one stands behind the middle one or the near one: %s" % str(far))
+	# the middle one near the centre; the near one left of your gun - most of him clear of every gun's hands (Matt, 13 Oct)
+	_check(absf(mid["foot"].x - RunView.W / 2.0) < 45.0, "the middle one isn't near the centre: %s" % str(mid))
+	var near: Dictionary = RunView.SLOTS[1]
+	var stand: Texture2D = RunView.tex_of(["gang_the_estate_a_stand", "gang_stand"])
+	var su: Rect2 = RunView.used_of(stand)
+	var nrect := Rect2(near["foot"] - Vector2(su.get_center().x - su.position.x, su.size.y) * near["scale"], su.size * near["scale"])
+	nrect.end.y = minf(nrect.end.y, RunView.COVER_TOP)          # below the wall's top he's behind it anyway
+	for ty in ["pistol", "shotgun", "rifle", "smg", "improvised", "melee", "blade", "revolver"]:
+		var ht: Texture2D = RunView.tex("hands_" + ty)
+		if ht == null:
+			continue
+		# what of him is drawn that the hands' drawn pixels cover, sampled every few pixels (a raised hammer's box is mostly air)
+		var hu: Rect2 = RunView.used_of(ht)
+		var h_at: Vector2 = RunView.HANDS_CORNER - hu.end * RunView.HANDS_SCALE
+		var n_at: Vector2 = near["foot"] - Vector2(su.get_center().x, su.end.y) * near["scale"]
+		var himg: Image = ht.get_image()
+		var nimg: Image = stand.get_image()
+		var drawn := 0
+		var covered := 0
+		var y := nrect.position.y
+		while y < nrect.end.y:
+			var x := nrect.position.x
+			while x < nrect.end.x:
+				var np: Vector2 = (Vector2(x, y) - n_at) / near["scale"]
+				if np.x >= 0 and np.y >= 0 and np.x < nimg.get_width() and np.y < nimg.get_height() and nimg.get_pixelv(Vector2i(np)).a > 0.5:
+					drawn += 1
+					var hp: Vector2 = (Vector2(x, y) - h_at) / RunView.HANDS_SCALE
+					if hp.x >= 0 and hp.y >= 0 and hp.x < himg.get_width() and hp.y < himg.get_height() and himg.get_pixelv(Vector2i(hp)).a > 0.5:
+						covered += 1
+				x += 3.0
+			y += 3.0
+		_check(drawn > 50, "the near one's sampling found nothing drawn (%d)" % drawn)
+		var hidden: float = float(covered) / maxf(1.0, float(drawn))
+		_check(hidden < 0.35, "the %s's hands hide %.0f%% of the near one" % [ty, hidden * 100.0])
 	# the numbers keep off the bars, the head, the keys and the chips (Matt, 13 Oct: they sat on "On you"), with
 	# something on both sides so both rows of chips show; the keep-out drawn here from the nodes, not run's own list
 	# and again with your chips as wide as they get (a med in use too), which leaves the frame's foot no room (the review)
@@ -8036,9 +8075,9 @@ func _full_art_checks(main, v) -> void:
 	for k in range(v._figs.size()):
 		var r: TextureRect = v._figs[k]["rect"]
 		var u: Rect2 = RunView.used_of(r.texture)
-		var sc: float = RunView.SLOTS[k]["scale"]
+		var sc: float = v.slot_of(k)["scale"]
 		var feet: float = r.position.y + u.end.y * sc
-		_check(absf(feet - (RunView.SLOTS[k]["foot"].y - RunView.DUCK_SCENE * v._duck)) < 1.5, "figure %d's feet at %.0f, its slot's at %.0f" % [k, feet, RunView.SLOTS[k]["foot"].y])
+		_check(absf(feet - (v.slot_of(k)["foot"].y - RunView.DUCK_SCENE * v._duck)) < 1.5, "figure %d's feet at %.0f, its slot's at %.0f" % [k, feet, v.slot_of(k)["foot"].y])
 	# the head when he's out, if he's drawn
 	for b in Data.BOSSES:
 		var hk: String = RunView.site_key(str(b["name"]))
