@@ -4427,8 +4427,8 @@ func _tick(dt: float) -> void:
 			if auto_tier >= 0 or m.get("leave_full", false):
 				_extract()                  # auto-run, or "fill up then go", leaves as the gang arrives
 				return
-	if (auto_tier >= 0 or m.get("leave_full", false)) and m["cleared"] and pack_used(m) >= capacity():
-		_extract()
+	if (auto_tier >= 0 or m.get("leave_full", false)) and m["cleared"] and (pack_used(m) >= capacity() or crates_done(m)):
+		_extract()                           # the pack full, or every crate open: nothing more to stay for
 
 
 ## The run's clock (9 Oct, docs/design/timers.md): a site's budget, the same for every build - so many seconds a
@@ -5213,13 +5213,16 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 
 ## A find. `from_kill`: what they were carrying - guns, armour, a helmet, a
 ## rig. From a look: what the site holds - attachments, meds, packs, and a
-## share of gear left lying about.
-func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
-	m["finds"] = int(m.get("finds", 0)) + 1    # every find, stacked, swapped or left: the count the tests read
+## share of gear left lying about. `crate`, a Data.CRATES entry: its lean and its quality (13 Oct). `capture`: rolled,
+## not landed - the dog's sniff rolls a crate's best find at the clear and lands it when the crate's opened. Returns
+## {"it": the find, "said": its log line}, or {} for none.
+func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary = {}, capture := false) -> Dictionary:
+	if not capture:
+		m["finds"] = int(m.get("finds", 0)) + 1    # every find, stacked, swapped or left: the count the tests read (a nosed one counts when it lands)
 	if has_node("all_or_nothing"):
 		m["skipped"] = int(m.get("skipped", 0)) + 1
 		if m["skipped"] % 2 == 0:
-			return                        # half as much is found
+			return {}                     # half as much is found
 	# the site's own shape of find: its slot weights, and its leanings to
 	# meds, ammo, parts and papers
 	var site: Dictionary = Data.TIERS[int(t["tier"])]
@@ -5244,6 +5247,11 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 			slot = Data.AMMO
 		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)) + (Data.ATT_DROP + tree_sum("att_share") / 100.0) * float(shape.get("att", 1.0)) + Data.AMMO_DROP * 0.5 * float(shape.get("ammo", 1.0)) + Data.GRENADE_DROP:
 			slot = Data.GRENADE                   # a grenade lying about (32)
+	# the crate's lean (13 Oct): an ammo tin's finds mostly rounds, a military crate's guns and armour
+	if not crate.is_empty() and crate.has("slots") and rng.randf() < float(crate.get("lean", 0.0)):
+		slot = str(crate["slots"][rng.randi_range(0, crate["slots"].size() - 1)])
+	var said := ""
+	var quality: float = rarity_bonus() + float(t.get("rarity", 0.0)) + float(crate.get("rarity", 0.0))
 	var it: Dictionary
 	var loose: Array = loose_at(int(t["depth"]), int(t["loot_tier"]))     # those whose range takes the find's tier (12 Oct)
 	var pieces: Array = set_pieces_at(int(t["depth"]))
@@ -5251,17 +5259,17 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
 	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
 		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
-		log_event("Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]])
-	elif t["depth"] >= 2 and not loose.is_empty() and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1):
+		said = "Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]]
+	elif t["depth"] >= 2 and not loose.is_empty() and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1) * float(crate.get("unique", 1.0)):
 		it = Items.roll_unique(pick_unique(loose, int(t["loot_tier"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the band's weight picks
-		log_event("Found: %s" % it["unique"])
+		said = "Found: %s" % it["unique"]
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
 		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)))
-		log_event("Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()])
+		said = "Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()]
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
-		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
@@ -5273,15 +5281,26 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false) -> void:
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
-		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
 			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
-		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, rarity_bonus() + float(t.get("rarity", 0.0)), has_node("all_or_nothing"), has_rule("lucky_cap"),
+		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
+	if capture:
+		return {"it": it, "said": said}
+	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
+	_land(m, it, said)
+	return {"it": shown, "said": said}
+
+
+## A find rolled, into the pack: its line in the log, and a gun's box of rounds while the Fence is shut.
+func _land(m: Dictionary, it: Dictionary, said := "") -> void:
+	if said != "":
+		log_event(said)
 	_place_find(m, it)
 	# a gun found while the Fence is shut comes with a box of its own rounds (13 Oct, the ammo trap: rounds are sold
 	# at the Fence only, and a gun with none is a club)
@@ -5377,44 +5396,116 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	else:
 		log_event("%s cleared. Picking it over; more will come" % t["name"])
 	# the deeds come off the Manager now, not the Bank's first clear (13 Oct, Matt): see the boss's things
+	if not m.has("crates"):
+		_roll_crates(m, t)                    # the search: the site's crates, in the dice's order (13 Oct); a Ghost's rolled at its first search
 
 
-## Picked over inside a run (29): the searches a site gives in full before its
-## finds thin. By depth, and quantity bonuses push it.
+## The searches a cleared site's crates add up to (29; the crates since 13 Oct): by depth, and quantity pushes it.
 func thin_after(t: Dictionary) -> int:
 	var n: float = Data.THIN_AFTER + Data.THIN_PER_DEPTH * int(t["depth"])
 	return int(roundf(n * (1.0 + maxf(0.0, loot_bonus()))))
 
 
-## The share of a search's finds still there, 1 until thin_after, then a fifth
-## less a search to the floor.
-func thinning(m: Dictionary, t: Dictionary) -> float:
-	# the searches in full only grow through a run (a med used would shrink the quantity bonus): the best figure yet holds
-	m["thin_after"] = maxi(int(m.get("thin_after", 0)), thin_after(t))
-	var past: int = maxi(0, int(m["searches"]) - int(m["thin_after"]))
-	return clampf(1.0 - Data.THIN_STEP * past, Data.THIN_FLOOR, 1.0)
-
-
 ## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
 func gang_held(m: Dictionary) -> bool:
-	return m["patrols"] == 0 and yard_has("hold_fire") and pack_used(m) < capacity() and not m.get("dry", false)
+	return m["patrols"] == 0 and yard_has("hold_fire") and pack_used(m) < capacity() and not m.get("dry", false) and not crates_done(m)     # picked clean: nothing left to wait for (13 Oct)
 
 
-## Nothing alive on the site: a cache every SEARCH_S.
+# ------------------------------------------------------------------ the crates (13 Oct, docs/design/search_crates.md)
+
+## A crate's line in Data.CRATES by its key; {} for none.
+static func crate_def(key: String) -> Dictionary:
+	for c in Data.CRATES:
+		if c["key"] == key:
+			return c
+	return {}
+
+
+## The Kennel's top rank (Matt, 13 Oct): the dog noses what's in a crate before it's opened.
+func dog_sniffs() -> bool:
+	return yard_has("pack") or yard_has("champion")
+
+
+## A site's crates' weights: the crate's own, the site's leaning (its shape, its own crates), the depth.
+func crate_weights(t: Dictionary) -> Dictionary:
+	var site: Dictionary = Data.TIERS[int(t["tier"])]
+	var shape: Dictionary = site["shape"]
+	var own: Dictionary = Data.CRATE_SITES.get(str(site["name"]), {})
+	var out := {}
+	for c in Data.CRATES:
+		if int(site["zone"]) < int(c.get("from_zone", 0)):
+			continue
+		var w: float = float(c["w"]) * (float(shape.get(c["shape"], 1.0)) if c.has("shape") else 1.0) + float(c.get("depth_w", 0.0)) * maxi(0, int(t["depth"]) - 1)
+		out[c["key"]] = w * float(own.get(c["key"], 1.0))
+	return out
+
+
+## The crates rolled at the clear: the dice's order, their searches adding up to thin_after. With the dog's nose,
+## each crate's first find is rolled now and shown on it shut.
+func _roll_crates(m: Dictionary, t: Dictionary) -> void:
+	var w: Dictionary = crate_weights(t)
+	var total_w := 0.0
+	for k in w:
+		total_w += float(w[k])
+	var queue: Array = []
+	var total := 0
+	var target: int = maxi(1, thin_after(t))
+	while total < target:
+		var x: float = rng.randf() * total_w
+		var key: String = str(w.keys()[0])
+		for k in w:
+			x -= float(w[k])
+			if x <= 0.0:
+				key = str(k)
+				break
+		var c: Dictionary = crate_def(key)
+		queue.append({"key": key, "name": c["name"], "searches": int(c["searches"]), "done": 0, "finds": []})
+		total += int(c["searches"])
+	m["crates"] = queue
+	m["crate_i"] = 0
+	if dog_sniffs():
+		for q in queue:
+			var held: Dictionary = _find(m, t, false, crate_def(str(q["key"])), true)
+			if not held.is_empty():
+				q["held"] = held
+
+
+## The crate being opened; {} once they're all open (or before the clear).
+func crate_now(m: Dictionary) -> Dictionary:
+	var cs: Array = m.get("crates", [])
+	var i: int = int(m.get("crate_i", 0))
+	return cs[i] if i < cs.size() else {}
+
+
+## Every crate open: the site's picked over, nothing more to find.
+func crates_done(m: Dictionary) -> bool:
+	return m.has("crates") and crate_now(m).is_empty() and not m.get("crates_off", false)
+
+
+## Nothing alive on the site: the crate being opened gives a search every search_s, its finds as before (finds by
+## quantity, the dogs, the Scavenger), leaning to its kind. `crates_off` (the balance read): no crates, no end.
 func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
+	var off: bool = m.get("crates_off", false)
+	if not off and not m.has("crates"):
+		_roll_crates(m, t)                    # a run that started searching (Ghost), or a save from before the crates
+	var cr: Dictionary = {} if off else crate_now(m)
+	if not off and cr.is_empty():
+		m["search"] = 0.0
+		return                                # picked over: every crate open
 	m["search"] += dt
 	var every := search_s(t)
 	while m["search"] >= every:
 		m["search"] -= every
 		m["searches"] += 1
+		var cd: Dictionary = {} if cr.is_empty() else crate_def(str(cr["key"]))
 		if has_node("sheet_metal"):
 			_guard_add(m, max_hp() * 0.06)       # Sheet metal: every cache searched
-		if rng.randf() < Data.NOTES_SEARCH:
+		if rng.randf() < Data.NOTES_SEARCH * float(cd.get("notes", 1.0)):
 			m["notes"] = int(m.get("notes", 0)) + rng.randi_range(1, 2)
-		if rng.randf() < Data.SCRAP_SEARCH:
+		if rng.randf() < Data.SCRAP_SEARCH * float(cd.get("scrap", 1.0)):
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
-		# every find this search is one of the share still there (29): past thin_after, each is a roll
-		var thin := thinning(m, t)
+		if cd.get("tins", false):
+			m["cash"] += float(t["cash"]) * rng.randf_range(1.0, 3.0) * inflation()     # a safe: a handful of tins
 		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (1 if yard_has("a_dog") else 0) + (1 if yard_has("second_dog") else 0) + (2 if yard_has("pack") else 0) + (1 if has_rule("postman") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
@@ -5424,8 +5515,25 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["extra"] -= 1.0
 			finds += 1
 		for k in range(finds):
-			if thin >= 1.0 or rng.randf() < thin:
-				_find(m, t)
+			var got: Dictionary
+			if k == 0 and not cr.is_empty() and int(cr["done"]) == 0 and cr.has("held"):
+				got = {"it": cr["held"]["it"].duplicate(true)}     # what the dog nosed: the crate's first find, as found
+				m["finds"] = int(m.get("finds", 0)) + 1
+				_land(m, cr["held"]["it"], str(cr["held"].get("said", "")))
+			else:
+				got = _find(m, t, false, cd)
+			if not cr.is_empty() and not got.is_empty():
+				cr["finds"].append(got["it"])
+		if cr.is_empty():
+			continue
+		cr["done"] = int(cr["done"]) + 1
+		if int(cr["done"]) >= int(cr["searches"]):
+			m["crate_i"] = int(m.get("crate_i", 0)) + 1
+			cr = crate_now(m)
+			if cr.is_empty():
+				m["search"] = 0.0
+				log_event("%s picked clean: every crate open" % t["name"])
+				return
 
 
 ## Drop something from the pack mid-run to make room: the cheapest thing, or
@@ -5563,7 +5671,7 @@ func _extract() -> void:
 	var m: Dictionary = mission
 	var t := tier(m["tier"])
 	var timed_out: bool = m.get("timed_out", false)
-	if m.get("ghost_pending", false) and pack_used(m) >= capacity() and not timed_out:     # out of time is no clear, kept pack or not
+	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or crates_done(m)) and not timed_out:     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack full, and %s counts as cleared" % Words.mid(t["name"]))
@@ -7269,7 +7377,16 @@ func load_dict(d: Dictionary) -> void:
 				if not mission.has("clock"):
 					mission["clock"] = clock_budget(mission["t"])     # a run from before the clock (9 Oct): the site's, from now
 					mission["clock_max"] = mission["clock"]
-	for it in _all_items():
+	var crate_items: Array = []
+	if mission != null and mission.has("crates"):
+		mission["crate_i"] = int(mission.get("crate_i", 0))
+		for q in mission["crates"]:
+			q["searches"] = int(q["searches"])
+			q["done"] = int(q["done"])
+			crate_items.append_array(q.get("finds", []))
+			if q.has("held"):
+				crate_items.append(q["held"]["it"])
+	for it in _all_items() + crate_items:
 		it["id"] = int(it["id"])
 		it["rarity"] = int(it["rarity"])
 		it["tier"] = int(it["tier"])

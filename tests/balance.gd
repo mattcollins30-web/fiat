@@ -450,7 +450,7 @@ func _probe() -> void:
 			sim.hp = sim.max_hp()
 			m["remaining"] = 0
 			m["searches"] = mini(m["searches"], s0 + 400)
-			m["thin_after"] = 100000          # the searches in full: the quantity read, not the thinning
+			m["crates_off"] = true            # no crates: the quantity read, searches without an end
 			sim.advance(1.0)
 		per[pair[0]] = float(int(m.get("finds", 0)) - f0) / maxf(1.0, float(m["searches"] - s0))
 		sim.extract_now()

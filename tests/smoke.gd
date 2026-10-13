@@ -3973,6 +3973,9 @@ func _craft_checks(main) -> void:
 			_check(str(sim.last_craft["words"]).begins_with(was_line + " → ") or str(sim.last_craft["words"]) == "Re-rolled one: no change", "one's words: '%s'" % str(sim.last_craft["words"]))
 	# a worn piece: the Workshop works on it in place, and won't scrap it off the runner
 	var worn_gun = sim.equipped["Primary"]
+	if worn_gun != null and sim.craft_cost(worn_gun, "add") < 0 and not worn_gun.has("unique") and not worn_gun.has("set"):
+		worn_gun = sim._plain("Primary", str(worn_gun["base"]))     # a worn gun at the top rarity takes no affix: a plain one of it worn for the check (the run's dice, 13 Oct)
+		sim.equipped["Primary"] = worn_gun
 	if worn_gun != null and not worn_gun.has("unique") and not worn_gun.has("set"):
 		main._open_workshop(worn_gun["id"])
 		_check(main.room == main.WORKSHOP and main._workshop._selected_item() == worn_gun, "the Workshop did not pick the worn gun")
@@ -6196,7 +6199,7 @@ func _loot_roll_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
-	_thinning_checks(main)
+	_crates_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
 	_top_works_checks(main)
@@ -7282,62 +7285,166 @@ func _wound_checks(main) -> void:
 	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the Yard, the Clinic's price and cure, the save, the death")
 
 
-## 29: picked over inside a run. After thin_after searches a site's finds thin a fifth a search to the floor;
-## deeper sites and quantity bonuses give more searches in full; the Searching bar says so.
-func _thinning_checks(main) -> void:
+## The crates (13 Oct, docs/design/search_crates.md): a cleared site's search is its crates, in the dice's order, their
+## searches adding up to thin_after (depth and quantity push it); each crate's finds lean to its kind; all open, the
+## site's picked clean - nothing more found, and the auto-run and "Fill up" go; the Kennel's top rank noses each
+## crate's best find at the clear and it's the crate's first; the panel under the pack shows it all and fits; the
+## save keeps the crates.
+func _crates_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
 	var hold_pack = sim.equipped["Backpack"]
+	var hold_kennel: String = sim.yard_side("kennel", 4)
+	_yard_set(sim, "kennel", 4, "")
 	sim.equipped["Backpack"] = null
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("The rat man/"))
+	sim.auto_tier = -1
 	sim.set_depth(3, 1)
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	var t: Dictionary = m["t"]
 	var n: int = sim.thin_after(t)
 	_check(n >= Data.THIN_AFTER, "thin_after at depth 1 reads %d" % n)
-	m["searches"] = 0
-	_check(sim.thinning(m, t) == 1.0, "a fresh site is thinning already")
-	m["searches"] = n
-	_check(sim.thinning(m, t) == 1.0, "the site thins before its searches are up")
-	m["searches"] = n + 1
-	_check(is_equal_approx(sim.thinning(m, t), 1.0 - Data.THIN_STEP), "the first thinned search reads %.2f" % sim.thinning(m, t))
-	m["searches"] = n + 100
-	_check(is_equal_approx(sim.thinning(m, t), Data.THIN_FLOOR), "the floor reads %.2f" % sim.thinning(m, t))
-	# the bar says so, and fits
 	m["remaining"] = 0
 	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0
+	m["leave_full"] = false
+	sim._roll_crates(m, t)
+	var total := 0
+	var keys_ok := true
+	for q in m["crates"]:
+		total += int(q["searches"])
+		keys_ok = keys_ok and not sim.crate_def(str(q["key"])).is_empty() and int(q["done"]) == 0
+		_check(str(q["key"]) != "military", "a military crate on the Streets (the estate's before the town)")
+	_check(keys_ok and total >= n and total < n + 4, "the crates' searches add to %d against %d" % [total, n])
+	_check(sim.crate_now(m) == m["crates"][0] and not sim.crates_done(m), "the first crate is not the one in hand")
+	# the panel: under the pack, the pack two rows a page, and it fits with nothing open
 	main.show_room(main.MISSIONS)
 	main.refresh()
-	_check(main._run._fight["bar_text"].text.begins_with("Thinned out: finds at %d%%" % int(roundf(Data.THIN_FLOOR * 100.0))), "the bar does not say the site is thinned out: '%s'" % main._run._fight["bar_text"].text)
-	_check_fit(main, "Run (thinned out)")
-	m["searches"] = n + 1
+	var run = main._run
+	_check(run._crates.visible and not run._pick.visible and run._inv.page_rows == run._inv.ROWS, "the crates are not up in the pick panel's place, the pack whole")
+	_check(run._crates._head.text == "THE CRATES · 0 OF %d OPEN" % m["crates"].size(), "the crates' head reads '%s'" % run._crates._head.text)
+	_check(run._fight["bar_text"].text.begins_with("Crate 1 of %d" % m["crates"].size()), "the fight bar does not name the crate: '%s'" % run._fight["bar_text"].text)
+	_check(run._crates.position.y >= run._inv.position.y + run._inv.size.y and run._crates.position.y + run._crates.size.y <= Pal.ROOM_H, "the crates panel overlaps the pack or runs off the room")
+	_check_fit(main, "Run (the crates)")
+	# the pictures inside their tiles (a TextureRect sized before its expand mode keeps the texture's 64 px)
+	var tile_box := Rect2(Vector2.ZERO, run._crates._tiles[0]["panel"].size)
+	for tl in run._crates._tiles:
+		for part in ["art", "glass", "name", "pips"]:
+			var rc := Rect2(tl[part].position, tl[part].size)
+			_check(tile_box.encloses(rc), "a crate tile's %s runs out of it: %s in %s" % [part, str(rc), str(tile_box)])
+	_check(Rect2(Vector2.ZERO, run._crates._query.size).encloses(Rect2(run._crates._query_glass.position, run._crates._query_glass.size)), "the ? cell's magnifier runs out of it")
+	# opening: the first crate's searches, its finds kept on it, then the next in hand
+	var first: Dictionary = m["crates"][0]
+	var finds0: int = int(m.get("finds", 0))
+	for k in range(int(4.0 * sim.search_s(t)) + 4):
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+		if not sim.on_mission() or int(m["crate_i"]) >= 1:
+			break
+	_check(sim.on_mission() and int(m["crate_i"]) == 1 and int(first["done"]) == int(first["searches"]), "the first crate did not open in its searches: %d of %d, on %d" % [int(first["done"]), int(first["searches"]), int(m["crate_i"])])
+	_check(first["finds"].size() > 0 and first["finds"].size() <= int(m.get("finds", 0)) - finds0, "the first crate kept %d finds against %d found" % [first["finds"].size(), int(m.get("finds", 0)) - finds0])
 	main.refresh()
-	_check(main._run._fight["bar_text"].text.begins_with("Thinning: finds at"), "the bar does not say the site is thinning: '%s'" % main._run._fight["bar_text"].text)
-	_check_fit(main, "Run (thinning)")
-	# at the floor, a hundred searches bring about the floor's share of what a fresh site would
-	m["searches"] = n + 100
+	_check(run._crates._finds_head.text.begins_with("OUT OF THE ") or run._crates._finds_head.text.begins_with("IN THE "), "the reveal's head reads '%s'" % run._crates._finds_head.text)
+	_check_fit(main, "Run (a crate open)")
+	# a pick brings the pick panel back over the crates; letting it go, the crates again
+	if not m["found"].is_empty():
+		run._inv.selected = int(m["found"][0]["id"])
+		main.refresh()
+		_check(run._pick.visible and not run._crates.visible, "a pick did not bring the pick panel over the crates")
+		run._inv.selected = -1
+		main.refresh()
+		_check(run._crates.visible and not run._pick.visible, "the crates did not come back with the pick let go")
+	# a stack found shows what was found, not what was left once it joined the pack's (the review, 13 Oct)
+	for q in m["crates"]:
+		for f in q["finds"]:
+			if Items.is_ammo(f):
+				_check(int(f["rounds"]) > 0, "a crate shows %s found with %d rounds" % [f["base"], int(f["rounds"])])
+	# a clear on a site already searching (a Ghost's first gang beaten) keeps its crates
+	var queue_before: Array = m["crates"]
+	sim._clear(m, m["t"])
+	_check(m["crates"] == queue_before and int(m["crate_i"]) == 1, "a second clear rolled the crates again")
+	# the save keeps them
+	var mid: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var crate_i: int = int(m["crate_i"])
+	var count: int = m["crates"].size()
+	sim.load_dict(mid)
+	m = sim.mission
+	_check(m != null and m.has("crates") and m["crates"].size() == count and m["crate_i"] is int and m["crate_i"] == crate_i and m["crates"][0]["searches"] is int,
+		"the save did not keep the crates")
+	main.refresh()
+	# all open: picked clean, nothing more found
 	m["patrol_timer"] = -1e9
-	m["event_at"] = -1.0                  # no event lands a gang on the search
-	sim.auto_tier = -1
-	m["leave_full"] = false
-	var found0: int = int(m.get("finds", 0))
-	var s0: int = m["searches"]
-	for k in range(int(70.0 * sim.search_s(t))):
+	m["event_at"] = -1.0
+	for k in range(int((total + 2) * sim.search_s(m["t"])) + 4):
 		sim.hp = sim.max_hp()
 		m["remaining"] = 0
 		sim.advance(1.0)
-		if not sim.on_mission() or m["searches"] - s0 >= 60:
+		if not sim.on_mission() or sim.crates_done(m):
 			break
-	_check(sim.on_mission(), "the run ended under the thinning check: %s / %s" % [str(sim.last_report.get("outcome", "")), str(sim.events.slice(maxi(0, sim.events.size() - 3)).map(func(e): return e[1]))])
+	_check(sim.on_mission() and sim.crates_done(m), "the crates did not all open")
 	if sim.on_mission():
-		var finds_each: int = 1 + (1 if (sim.has_node("scavenger") or sim.has_node("quiet_hands")) else 0) + (1 if sim.yard_has("a_dog") else 0) + (1 if sim.yard_has("second_dog") else 0) + (2 if sim.yard_has("pack") else 0) + (1 if sim.has_rule("postman") else 0)
-		var per: float = float(int(m.get("finds", 0)) - found0) / maxf(1.0, float(m["searches"] - s0))
-		_check(m["searches"] - s0 >= 20 and per < float(finds_each) * 0.8, "at the floor a search still brings %.2f of %d (%d searches)" % [per, finds_each, m["searches"] - s0])
-		sim.extract_now()
-	# deeper sites and quantity give more searches in full; the figure ratchets through a run
+		var f_done: int = int(m.get("finds", 0))
+		var s_done: int = int(m["searches"])
+		for k in range(int(3.0 * sim.search_s(m["t"])) + 2):
+			sim.hp = sim.max_hp()
+			m["remaining"] = 0
+			sim.advance(1.0)
+		_check(sim.on_mission() and int(m.get("finds", 0)) == f_done and int(m["searches"]) == s_done, "a picked-clean site still finds: %d → %d" % [f_done, int(m.get("finds", 0))])
+		main.refresh()
+		_check(run._crates._head.text == "THE CRATES · ALL %d OPEN" % m["crates"].size() and run._fight["bar_text"].text.begins_with("Picked clean"), "picked clean does not read so: '%s' / '%s'" % [run._crates._head.text, run._fight["bar_text"].text])
+		_check_fit(main, "Run (picked clean)")
+		# "Fill up, then go" goes: nothing more to stay for
+		m["leave_full"] = true
+		sim.advance(0.5)
+		_check(not sim.on_mission(), "Fill up, then go stayed on a picked-clean site")
+	# the leans: an ammo tin's finds mostly rounds, a medicine cabinet's meds
+	sim.deploy(3)
+	m = sim.mission
+	for pair in [["ammo_tin", Data.AMMO, 0.55], ["medicine", Data.MEDICAL, 0.45], ["filing", Data.PAPER, 0.3]]:
+		var hit := 0
+		var all := 0
+		for k in range(300):
+			var got: Dictionary = sim._find(m, m["t"], false, sim.crate_def(pair[0]), true)
+			if got.is_empty():
+				continue
+			all += 1
+			hit += 1 if got["it"]["slot"] == pair[1] else 0
+		_check(all > 0 and float(hit) / float(all) >= float(pair[2]), "a %s's finds are %d of %d %s" % [pair[0], hit, all, pair[1]])
+	# a site's own: the Barracks' military crates, the Bank's safes, none of either in the Outskirts
+	var w_barracks: Dictionary = sim.crate_weights({"tier": Data.TIERS.size() - 1, "depth": 1})
+	var w_bank: Dictionary = sim.crate_weights({"tier": 8, "depth": 1})
+	var w_allot: Dictionary = sim.crate_weights({"tier": 0, "depth": 1})
+	_check(w_barracks.get("military", 0.0) > w_barracks.get("toolbox", 0.0) and w_bank.get("safe", 0.0) > w_bank.get("toolbox", 0.0), "the Barracks' or the Bank's own crates don't lead: %s / %s" % [str(w_barracks), str(w_bank)])
+	_check(not w_allot.has("military") and not w_allot.has("safe"), "a safe or a military crate in the Outskirts: %s" % str(w_allot))
+	_check(sim.crate_weights({"tier": 8, "depth": 6})["safe"] > w_bank["safe"], "depth did not grow the safes")
+	sim.extract_now()
+	# the dog's nose (the Kennel's top rank): each crate's best find rolled at the clear, shown, and the crate's first
+	_yard_set(sim, "kennel", 4, "a")
+	_check(sim.dog_sniffs(), "the Kennel's top rank does not nose the crates")
+	sim.deploy(3)
+	m = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
+	m["event_at"] = -1.0
+	sim._roll_crates(m, m["t"])
+	_check(m["crates"].all(func(q): return q.has("held")), "a crate with nothing nosed in it")
+	var held_id: int = int(m["crates"][0]["held"]["it"]["id"])
+	for k in range(int(2.0 * sim.search_s(m["t"])) + 4):
+		sim.hp = sim.max_hp()
+		sim.advance(1.0)
+		if not sim.on_mission() or int(m["crates"][0]["done"]) >= 1:
+			break
+	_check(sim.on_mission() and m["crates"][0]["finds"].size() > 0 and int(m["crates"][0]["finds"][0]["id"]) == held_id, "the nosed find was not the crate's first")
+	main.refresh()
+	_check(run._crates._aside.text == "the dog's nose on them", "the panel does not say the dog's on them: '%s'" % run._crates._aside.text)
+	_check_fit(main, "Run (the dog's nose)")
+	sim.extract_now()
+	# depth and quantity push the searches
 	sim.deploy(3)
 	m = sim.mission
 	var shallow: int = sim.thin_after(m["t"])
@@ -7346,20 +7453,16 @@ func _thinning_checks(main) -> void:
 	var heavy: Dictionary = sim._plain("Backpack", Data.BASES["Backpack"][0]["name"])
 	heavy["affixes"] = [{"stat": "loot_pct", "value": 100, "tier": 5}]
 	sim.equipped["Backpack"] = heavy
-	_check(sim.thin_after(m["t"]) == expect.call(int(m["t"]["depth"])) and sim.thin_after(m["t"]) > shallow, "+100%% quantity did not push the searches: %d from %d" % [sim.thin_after(m["t"]), shallow])
-	var heavy_n: int = sim.thin_after(m["t"])
-	sim.thinning(m, m["t"])
-	sim.equipped["Backpack"] = null
-	sim.thinning(m, m["t"])
-	_check(int(m["thin_after"]) == heavy_n, "the searches in full did not hold when the quantity bonus went: %d, not %d" % [int(m["thin_after"]), heavy_n])
+	_check(sim.thin_after(m["t"]) > shallow, "+100%% quantity did not push the searches: %d from %d" % [sim.thin_after(m["t"]), shallow])
 	var deeper: Dictionary = m["t"].duplicate()
 	deeper["depth"] = int(m["t"]["depth"]) + 3
-	_check(sim.thin_after(deeper) == expect.call(int(deeper["depth"])) and sim.thin_after(deeper) > shallow, "depth did not push the searches: %d from %d" % [sim.thin_after(deeper), shallow])
+	_check(sim.thin_after(deeper) > sim.thin_after(m["t"]), "depth did not push the searches")
 	sim.extract_now()
 	sim.equipped["Backpack"] = hold_pack
+	_yard_set(sim, "kennel", 4, hold_kennel)
 	sim.load_dict(saved)
 	main.refresh()
-	print("thinning ok: the searches in full, the fifth a search, the floor, the bar, depth and quantity")
+	print("crates ok: the queue, the panel, the opening, the save, picked clean, the leans, the sites' own, the dog's nose, depth and quantity")
 
 
 ## The Yard as lanes (9 Oct, docs/design/yard.md): eight buildings, five columns of two picks and a rank; a tile
@@ -8786,8 +8889,9 @@ func _leave_checks(main) -> void:
 	m["event_at"] = -1.0
 	var bot = Bot.new()
 	_check(not bot.should_leave(sim), "the bot leaves a fresh cleared site")
-	m["searches"] = int(m.get("thin_after", 0)) + sim.thin_after(m["t"]) + 20     # picked over: the finds at the floor
-	_check(sim.thinning(m, m["t"]) <= Data.THIN_FLOOR, "the leave check's site is not picked over: %.2f" % sim.thinning(m, m["t"]))
+	sim._roll_crates(m, m["t"])
+	m["crate_i"] = m["crates"].size()          # picked clean: every crate open (13 Oct)
+	_check(sim.crates_done(m), "the leave check's site is not picked clean")
 	_check(bot.should_leave(sim), "the bot stays on a picked-over site")
 	sim.extract_now()
 	sim.load_dict(saved)

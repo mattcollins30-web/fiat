@@ -85,7 +85,7 @@ func should_leave(sim) -> bool:
 	var m: Dictionary = sim.mission
 	if m.has("boss") and m["boss"]["alive"]:
 		return false                      # a head or the lorry still standing: the run is for him, picked over or not (the eighteenth read left the convoy at 12 of 16 with the pack "full")
-	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.thinning(m, m["t"]) <= Data.THIN_FLOOR
+	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.crates_done(m)
 
 
 ## Between missions: fit the best of every slot and mount, spend points, buy

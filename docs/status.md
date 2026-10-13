@@ -4216,3 +4216,20 @@ campaign (the Bank at 0:43-1:00, the Barracks at 1:06-1:17). The smoke checks th
 put on by Equip if better. tools/smoke.bat runs Godot through tools/run_limited.ps1: killed past 25 minutes, or when the
 log ends on a script error and goes quiet three minutes - the watcher never waits for ever again (no restart needed:
 the watcher calls smoke.bat afresh each time).
+
+**The search as crates built (13 Oct, docs/design/search_crates.md; Matt: mockup B, a filing cabinet for papers, a
+jewellery box for charms, the endgame map is the Dial).** A cleared site rolls its crates: the dice's order, no pick,
+their searches adding to what the thinning gave in full (6 + 2 a depth, quantity pushes it); each search of the crate
+in hand gives the usual finds, leaning to its kind (an ammo tin's rounds, a toolbox's parts and scrap, a medicine
+cabinet's meds, a filing cabinet's papers and notes, a jewellery box's charms, a safe's tins and notes and doubled
+unique odds, a military crate's guns and armour a quality up). The thinning is gone: all open, the site's picked clean
+and nothing more is found; the auto-run, "Fill up, then go" and the bot go then, a Ghost counts it its clear, the
+Lookout's Hold fire stops holding. The sites lean: the Bank's safes, the Barracks' and the Services' military crates,
+the Shopping Centre's jewellery, the Hospital's medicine; no safe before the Estate, no military crate before the Town;
+depth adds both. The Kennel's top rank noses each crate's best find at the clear: its rarity on the shut crate, the
+next line says it, and it's that crate's first find. The run screen: the crates in the pick panel's place while nothing's
+picked (a pick brings the panel back - the review: a pack cut to two rows split a 3x3 vest), the row of crates, what came
+out of the last one, a ? under the magnifier, the bar, and "Next: a safe, three searches. The next gang's due in 0:34."
+The fight box's bar names the crate. Crates save with the run. Placeholder line crates in each crate's colour until the
+art's in: tools/pixellab_crates_manifest.json (sixteen, each shut and open, art/crates/). Fight drops not touched yet:
+the balance pass. The Dial not renamed yet.

@@ -1951,13 +1951,31 @@ const RECYCLE_KEEP := 12
 const RECOVER_H := 2.0
 const WORN_DROP := 0.5             # drops lose this much at fully picked over
 const WORN_CASH := 0.3
-## Picked over inside a run (29): after THIN_AFTER searches on a site (more by
-## depth, and quantity bonuses push it) each search's finds thin by THIN_STEP,
-## down to THIN_FLOOR of them.
+## The crates (13 Oct, Matt; docs/design/search_crates.md): a cleared site's search is its crates, opened in the
+## dice's order, each so many searches; all open, it's picked over. The crates' searches add up to THIN_AFTER +
+## THIN_PER_DEPTH a depth (quantity pushes it), what the thinning gave in full before.
 const THIN_AFTER := 6
 const THIN_PER_DEPTH := 2
-const THIN_STEP := 0.2
-const THIN_FLOOR := 0.4
+## A crate: its searches; `lean`, the share of its finds that come from `slots` (else the site's own find);
+## `notes`/`scrap`, its odds of those against a plain search; `tins`, a handful of the site's cash a search; `unique`,
+## the odds of a unique; `rarity`, added to the finds' quality; `w`, its weight on a site; `from_zone` the first
+## zone it's met in, `depth_w` its weight added a depth past the first; `shape` the site's leaning that grows it.
+const CRATES := [
+	{"key": "cardboard", "name": "Cardboard box", "short": "Cardboard", "searches": 1, "w": 4.0},
+	{"key": "ammo_tin", "name": "Ammo tin", "searches": 1, "w": 1.5, "shape": "ammo", "lean": 0.7, "slots": ["Ammo"]},
+	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.5},
+	{"key": "toolbox", "name": "Toolbox", "searches": 2, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 2.5},
+	{"key": "medicine", "name": "Medicine cabinet", "short": "Medicine", "searches": 2, "w": 1.2, "shape": "med", "lean": 0.6, "slots": ["Medical"]},
+	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 2.0},
+	{"key": "safe", "name": "Safe", "searches": 3, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 3.0, "tins": true, "unique": 2.0},
+	{"key": "military", "name": "Military crate", "short": "Military", "searches": 4, "w": 0.4, "from_zone": 2, "depth_w": 0.3, "lean": 0.6,
+		"slots": ["Primary", "Secondary", "Helmet", "Armour"], "rarity": 0.25},
+]
+## A site's own crates, its weights times these: the Bank's safes, the Barracks' military crates.
+const CRATE_SITES := {
+	"The Bank": {"safe": 6.0}, "The Barracks": {"military": 5.0}, "The Services": {"military": 2.0, "ammo_tin": 1.5},
+	"Shopping Centre": {"jewellery": 2.5}, "The Hospital": {"medicine": 1.5},
+}
 const CLOCK_START := 9.0
 const NIGHT_FROM := 21.0
 const NIGHT_TO := 6.0

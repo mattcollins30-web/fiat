@@ -1,4 +1,4 @@
-# The search as crates (13 Oct, Matt; design, not built)
+# The search as crates (13 Oct, Matt; built 13 Oct)
 
 The search was a bar to wait out. Now a cleared site shows its **crates**, opened one at a time in the order they come
 (rng - the player doesn't pick), each one search or more, its finds revealed one by one under a magnifier, Tarkov-style.
@@ -35,6 +35,18 @@ line on what's next ("a military crate, four searches; the next gang's due in 0:
   Scavenger and the Postman's Bag add a find a crate; the Caretaker's Keys "every cache opens" (locked crates?).
 - Auto-run and away: unchanged - the crates open in their order, the leave rules as now.
 
-## Next
-The crate list settled with Matt; a mockup of the run screen (where the row sits, the magnifier, the reveal); the
-build; the art (a manifest: each crate shut and open); then the balance pass with the drops adjusted.
+## Settled (13 Oct, Matt)
+Mockup B. The list as above plus a Jewellery box (1 search, charms), the Filing cabinet carrying the papers and their
+codes. The Kennel's top rank is the fifth column (the pack or Champion), either pick.
+
+## As built (13 Oct)
+- Data.CRATES (searches, lean, notes/scrap odds, a safe's tins, unique odds, quality, weight, first zone, weight a
+  depth) and Data.CRATE_SITES (a site's own). sim: `_roll_crates` at the clear (or the first search, a Ghost's),
+  `crate_now`, `crates_done`, `dog_sniffs`, `crate_weights`; `_find` takes the crate and can roll without landing
+  (the nose); `_land` logs and places. The thinning (THIN_STEP, THIN_FLOOR, `thinning`) is gone.
+- Picked clean ends the site's finds; the auto-run and "Fill up, then go" leave, a Ghost counts it the clear, Hold fire
+  lets the gang come.
+- The panel (scripts/ui/crates_panel.gd) takes the pick panel's place on the run screen while nothing's picked; the
+  pack keeps its seven rows. Up to seven crates show, the window sliding with the one in hand.
+- Not yet: the codes adding crates (Delivery day's military crates), the Caretaker's Keys and locked crates, the art
+  (tools/pixellab_crates_manifest.json), fight drops brought down (the balance pass).

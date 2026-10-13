@@ -22,6 +22,7 @@ const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -95,6 +96,7 @@ var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): i
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
+var _crates                        # the crates (crates_panel.gd): under the pack once the site's cleared, in the pick panel's place while nothing's picked
 
 
 func _init() -> void:
@@ -157,6 +159,11 @@ func _init() -> void:
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
+	_crates = CratesPanel.new()
+	_crates.build(GRID_W, PICK_H)
+	_crates.position = Vector2(GRID_X, PICK_Y)
+	_crates.visible = false
+	add_child(_crates)
 	_pick = PickPanel.new(GRID_W, PICK_H)
 	_pick.position = Vector2(GRID_X, PICK_Y)
 	_pick.acted.connect(_on_pick_acted)
@@ -246,9 +253,11 @@ func show_state(s) -> void:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
 		_tiles(_fight["tiles"], [["Next gang", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
-		var thin: float = sim.thinning(m, t)
-		var search_words: String = "Searching" if thin >= 1.0 else (("Thinned out: finds at %d%%" if is_equal_approx(thin, Data.THIN_FLOOR) else "Thinning: finds at %d%%") % int(roundf(thin * 100.0)))
-		_bar(_fight, clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "good" if thin >= 1.0 else "warn")
+		# the crates (13 Oct): the one in hand, or picked clean
+		var cr: Dictionary = sim.crate_now(m)
+		var search_words: String = "Searching" if not m.has("crates") else ("Picked clean: every crate open" if cr.is_empty() else
+			"Crate %d of %d · %s" % [int(m.get("crate_i", 0)) + 1, m["crates"].size(), str(cr["name"]).to_lower()])
+		_bar(_fight, 1.0 if sim.crates_done(m) else clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "warn" if sim.crates_done(m) else "good")
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
 	var g: float = sim.guard()
@@ -285,6 +294,13 @@ func show_state(s) -> void:
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		("Pack full: a better find swaps in" if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
+	# the crates under the pack once the site's cleared, where the pick panel sits while nothing's picked (a pick
+	# brings the panel back over them: the review, 13 Oct - a 3x3 vest wouldn't fit a pack cut to two rows)
+	var crates_on: bool = m.has("crates") and not m.get("crates_off", false) and _picked_item(m).is_empty() and _rig_picked().is_empty()
+	_crates.visible = crates_on
+	_pick.visible = not crates_on
+	if crates_on:
+		_crates.show_crates(sim, m)
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
@@ -763,6 +779,8 @@ func text_nodes() -> Array:
 		if b.visible:
 			out.append(b)
 	out.append_array(_inv.text_nodes())
+	if _crates.visible:
+		out.append_array(_crates.text_nodes())
 	return out
 
 
