@@ -4266,3 +4266,10 @@ gates green. Red: the bank's band (0.6-1.4 h, 2.3x), the keystone and capstone h
 0.7 an hour) - all bot timing; the ladders' spread (Poacher as frost 13 past the barracks both reads, 9-11 the pass
 before); deaths and wounds, on Matt's save. tests/balance.gd's probe sets the Gamekeeper down (it hung on the Estate's
 gate).
+
+**The crate art is in, and the pass read again (13 Oct).** Matt's sixteen crates (art/crates/, shut and open) draw on
+the crates panel as they are; the editor makes their .import files before an export. The third pass: green as the second
+but the ladders' spread now Paramedic as poison 12 (Poacher as frost 12 and 11: it moves build to build at 11-13 since
+the crates, 9-11 before); the bank's band 0.6-1.8 h. Both plain Doorman reads held at the Carpet Man for three hours (the
+Retail Park cleared at 0.8 and 2.1 h, the Town at 4.2 and 3.9), one of them at 6 damage a second for half an hour of it -
+rounds out with the Fence shut, the ammo trap's edge. To Matt with the playtest.
