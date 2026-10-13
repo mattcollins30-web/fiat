@@ -2854,6 +2854,15 @@ func word_effect(name: String, t: int) -> Dictionary:
 				elif side == "pay":
 					a *= 1.0 + boost
 				out[k] = float(out.get(k, 0.0)) + a
+			elif k == "crates":
+				# a crate's weight on the site (13 Oct): a multiplier each, grown by the tier and the Radio's boost
+				var cr: Dictionary = out.get("crates", {})
+				for key in v:
+					var x: float = pow(float(v[key]), pw)
+					if boost > 0.0:
+						x = 1.0 + (x - 1.0) * (1.0 + boost)
+					cr[key] = float(cr.get(key, 1.0)) * x
+				out["crates"] = cr
 			elif k == "contact" or k == "loot_tier":
 				var c: int = int(v)
 				if side == "bite" and jam:
@@ -2923,6 +2932,12 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 			return "XP +" + pc.call(e["xp"])
 		"rarity":
 			return "quality +%d%%" % int(round(float(e["rarity"]) * 100.0))
+		"crates":
+			var bits: Array = []
+			for key in e.get("crates", {}):
+				var nm: String = str(crate_def(key).get("name", key)).to_lower()
+				bits.append("%s%s ×%s" % [nm, "es" if nm.ends_with("x") else "s", ("%.1f" % float(e["crates"][key])).trim_suffix(".0")])
+			return ", ".join(bits)
 		"loot_tier":
 			var n: int = int(e["loot_tier"])
 			return "loot a tier up" if n == 1 else "loot %d tiers up" % n
@@ -4001,6 +4016,10 @@ func effective(i: int) -> Dictionary:
 		e["pool"] = maxi(1, int(round(float(e["pool"]) * float(m.get("pool", 1.0)))))
 		e["armour"] *= float(m.get("armour", 1.0))
 		e["soaked"] = float(e.get("soaked", 0.0)) + float(m.get("soaked", 0.0))     # the Water cannon (12 Oct): your resists down
+		for key in m.get("crates", {}):
+			if not e.has("crates"):
+				e["crates"] = {}
+			e["crates"][key] = float(e["crates"].get(key, 1.0)) * float(m["crates"][key])     # a code's crates (13 Oct)
 		for f in ["no_meds", "no_kill_cash", "boss_walks"]:
 			if m.get(f, false):
 				e[f] = true
@@ -5431,12 +5450,13 @@ func crate_weights(t: Dictionary) -> Dictionary:
 	var site: Dictionary = Data.TIERS[int(t["tier"])]
 	var shape: Dictionary = site["shape"]
 	var own: Dictionary = Data.CRATE_SITES.get(str(site["name"]), {})
+	var coded: Dictionary = t.get("crates", {})          # the site's codes (13 Oct): more of a kind, and a kind it wouldn't have yet
 	var out := {}
 	for c in Data.CRATES:
-		if int(site["zone"]) < int(c.get("from_zone", 0)):
+		if int(site["zone"]) < int(c.get("from_zone", 0)) and not coded.has(c["key"]):
 			continue
 		var w: float = float(c["w"]) * (float(shape.get(c["shape"], 1.0)) if c.has("shape") else 1.0) + float(c.get("depth_w", 0.0)) * maxi(0, int(t["depth"]) - 1)
-		out[c["key"]] = w * float(own.get(c["key"], 1.0))
+		out[c["key"]] = w * float(own.get(c["key"], 1.0)) * float(coded.get(c["key"], 1.0))
 	return out
 
 

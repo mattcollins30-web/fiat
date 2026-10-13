@@ -4233,3 +4233,11 @@ out of the last one, a ? under the magnifier, the bar, and "Next: a safe, three 
 The fight box's bar names the crate. Crates save with the run. Placeholder line crates in each crate's colour until the
 art's in: tools/pixellab_crates_manifest.json (sixteen, each shut and open, art/crates/). Fight drops not touched yet:
 the balance pass. The Dial not renamed yet.
+
+**Codes add crates (13 Oct, Matt).** A code's pay can carry crates: their weight on the site times its figure, grown by
+the code's tier and the Radio's boost, and a crate the site wouldn't have yet, it has. Delivery day, Squaddies and
+Kitted out bring military crates; Bailiffs, Overdrawn, Lock-ins and Foreclosure safes; Pawned, Shoplifters and
+Everyone's in jewellery boxes; Laid off and Curfew filing cabinets; Checkpoints ammo tins; Wired toolboxes; Cutters
+medicine cabinets. The code's pay says so ("military crates ×2"); the site's totals line doesn't add them up yet. The
+smoke's upgrade-arrow check now uses helmets without pace (it flaked: on a front that can't touch the runner, the
+faster Cycle helmet is rightly better than the slow Visored one).

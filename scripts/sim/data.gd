@@ -1793,7 +1793,8 @@ const MODIFIERS := [
 ## the book; "zone" known once a site of `zone` is cleared at depth 2; "deep" taught by its paper, heard only at
 ## `depth` or deeper. The bite's keys: hp, dps, pool (the pack), patrol (<1 sooner), pace, search, contact,
 ## armour (yours), type/share, res/res_add, no_meds, no_kill_cash, clock (seconds), boss_walks. The pay's:
-## drop (finds), rarity (quality), cash, xp, loot_tier.
+## drop (finds), rarity (quality), cash, xp, loot_tier, crates (13 Oct: a crate's weight on the site times this, its
+## tier's power like a multiplier; a crate the site wouldn't have yet, it has).
 const WORD_TIER_DEPTH := [2, 8, 15]          # depth for tiers I, II, III
 const WORD_TIER_POW := [1.0, 1.75, 2.5, 3.5] # I, II, III, IV (Twist's)
 const WORD_TIER_NAMES := ["I", "II", "III", "IV"]
@@ -1802,36 +1803,36 @@ const WORD_POOLS := {"zone": 0.4, "general": 0.5, "deep": 0.1}
 const WORDS := [
 	{"name": "Numbers", "learn": "start", "bite": {"hp": 1.4}, "pay": {"drop": 1.3}},
 	{"name": "Tooled up", "learn": "start", "bite": {"dps": 1.3}, "pay": {"rarity": 0.25}},
-	{"name": "Delivery day", "learn": "start", "bite": {"patrol": 0.7}, "pay": {"cash": 1.4}},
+	{"name": "Delivery day", "learn": "start", "bite": {"patrol": 0.7}, "pay": {"cash": 1.4, "crates": {"military": 2.0}}},
 	{"name": "Ex-army", "learn": "start", "bite": {"hp": 1.2, "dps": 1.2}, "pay": {"xp": 1.4}},
-	{"name": "Bailiffs", "learn": "paper", "paper": "A council tax reminder", "bite": {"pool": 1.3}, "pay": {"cash": 1.3}},
-	{"name": "Laid off", "learn": "paper", "paper": "A P45", "bite": {"contact": 1}, "pay": {"xp": 1.5}},
+	{"name": "Bailiffs", "learn": "paper", "paper": "A council tax reminder", "bite": {"pool": 1.3}, "pay": {"cash": 1.3, "crates": {"safe": 2.0}}},
+	{"name": "Laid off", "learn": "paper", "paper": "A P45", "bite": {"contact": 1}, "pay": {"xp": 1.5, "crates": {"filing": 2.0}}},
 	{"name": "Long odds", "learn": "paper", "paper": "A betting slip", "bite": {"dps": 1.5}, "pay": {"rarity": 0.4}},
-	{"name": "Pawned", "learn": "paper", "paper": "A pawn ticket", "bite": {"armour": 0.75}, "pay": {"drop": 1.35}},
-	{"name": "Overdrawn", "learn": "paper", "paper": "A bank statement", "bite": {"no_kill_cash": true}, "pay": {"drop": 1.6, "rarity": 0.3}},
+	{"name": "Pawned", "learn": "paper", "paper": "A pawn ticket", "bite": {"armour": 0.75}, "pay": {"drop": 1.35, "crates": {"jewellery": 2.5}}},
+	{"name": "Overdrawn", "learn": "paper", "paper": "A bank statement", "bite": {"no_kill_cash": true}, "pay": {"drop": 1.6, "rarity": 0.3, "crates": {"safe": 2.5}}},
 	{"name": "Hungry", "learn": "paper", "paper": "A food bank voucher", "bite": {"search": 1.5}, "pay": {"drop": 1.4}},
 	{"name": "Burners", "learn": "paper", "paper": "A mortgage offer", "bite": {"type": "fire", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
-	{"name": "Cutters", "learn": "paper", "paper": "A school report", "bite": {"type": "bleed", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
-	{"name": "Wired", "learn": "paper", "paper": "A lottery ticket", "bite": {"type": "shock", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2}},
+	{"name": "Cutters", "learn": "paper", "paper": "A school report", "bite": {"type": "bleed", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2, "crates": {"medicine": 2.0}}},
+	{"name": "Wired", "learn": "paper", "paper": "A lottery ticket", "bite": {"type": "shock", "share": 0.33}, "pay": {"drop": 1.2, "cash": 1.2, "crates": {"toolbox": 2.0}}},
 	{"name": "Jacketed", "learn": "paper", "paper": "A wage slip", "bite": {"res": "fire", "res_add": 0.4}, "pay": {"cash": 1.3}},
 	{"name": "Rubbered", "learn": "paper", "paper": "A parking ticket", "bite": {"res": "shock", "res_add": 0.4}, "pay": {"cash": 1.3}},
 	{"name": "Hardened", "learn": "paper", "paper": "An eviction notice", "bite": {"res": "physical", "res_add": 0.3}, "pay": {"cash": 1.3}},
 	{"name": "Night owls", "learn": "paper", "paper": "A boarding pass", "bite": {"pace": 0.8}, "pay": {"rarity": 0.5}},
-	{"name": "Everyone's in", "learn": "paper", "paper": "A Christmas list", "bite": {"pool": 1.25, "patrol": 0.8}, "pay": {"drop": 1.4, "xp": 1.2}},
+	{"name": "Everyone's in", "learn": "paper", "paper": "A Christmas list", "bite": {"pool": 1.25, "patrol": 0.8}, "pay": {"drop": 1.4, "xp": 1.2, "crates": {"jewellery": 1.5}}},
 	{"name": "Dogs off the lead", "learn": "zone", "zone": 1, "bite": {"patrol": 0.8, "pace": 0.9}, "pay": {"drop": 1.3}},
 	{"name": "Kids on bikes", "learn": "zone", "zone": 1, "bite": {"contact": 1}, "pay": {"cash": 1.25}},
-	{"name": "Lock-ins", "learn": "zone", "zone": 1, "bite": {"search": 1.3}, "pay": {"rarity": 0.3}},
+	{"name": "Lock-ins", "learn": "zone", "zone": 1, "bite": {"search": 1.3}, "pay": {"rarity": 0.3, "crates": {"safe": 1.5}}},
 	{"name": "Security", "learn": "zone", "zone": 2, "bite": {"res": "physical", "res_add": 0.2, "hp": 1.2}, "pay": {"cash": 1.35}},
 	{"name": "Market day", "learn": "zone", "zone": 2, "bite": {"pool": 1.4}, "pay": {"cash": 1.4}},
-	{"name": "Shoplifters", "learn": "zone", "zone": 2, "bite": {"patrol": 0.75}, "pay": {"drop": 1.35}},
-	{"name": "Squaddies", "learn": "zone", "zone": 3, "bite": {"dps": 1.4}, "pay": {"xp": 1.6}},
-	{"name": "Checkpoints", "learn": "zone", "zone": 3, "bite": {"pace": 0.85, "hp": 1.2}, "pay": {"rarity": 0.4}},
-	{"name": "Kitted out", "learn": "zone", "zone": 3, "depth": 8, "bite": {"res": "all", "res_add": 0.25}, "pay": {"rarity": 0.5}},
+	{"name": "Shoplifters", "learn": "zone", "zone": 2, "bite": {"patrol": 0.75}, "pay": {"drop": 1.35, "crates": {"jewellery": 2.0}}},
+	{"name": "Squaddies", "learn": "zone", "zone": 3, "bite": {"dps": 1.4}, "pay": {"xp": 1.6, "crates": {"military": 2.0}}},
+	{"name": "Checkpoints", "learn": "zone", "zone": 3, "bite": {"pace": 0.85, "hp": 1.2}, "pay": {"rarity": 0.4, "crates": {"ammo_tin": 2.0}}},
+	{"name": "Kitted out", "learn": "zone", "zone": 3, "depth": 8, "bite": {"res": "all", "res_add": 0.25}, "pay": {"rarity": 0.5, "crates": {"military": 2.5}}},
 	{"name": "Water cannon", "learn": "zone", "zone": 3, "depth": 10, "bite": {"soaked": 0.3}, "pay": {"drop": 1.4}},     # over the cap (12 Oct): your resists down, so the overflow defends
 	{"name": "Rationed", "learn": "deep", "paper": "A ration book", "depth": 12, "bite": {"no_meds": true}, "pay": {"drop": 2.0}},
-	{"name": "Curfew", "learn": "deep", "paper": "A council minute", "depth": 18, "bite": {"pool": 2.0, "patrol": 0.75}, "pay": {"drop": 1.8, "cash": 1.8}},
+	{"name": "Curfew", "learn": "deep", "paper": "A council minute", "depth": 18, "bite": {"pool": 2.0, "patrol": 0.75}, "pay": {"drop": 1.8, "cash": 1.8, "crates": {"filing": 2.0}}},
 	{"name": "Last bus", "learn": "deep", "paper": "A bus timetable, amended", "depth": 24, "bite": {"clock_half": true}, "pay": {"rarity": 1.2}},
-	{"name": "Foreclosure", "learn": "deep", "paper": "A letter to the Bank", "depth": 30, "bite": {"hp": 2.5}, "pay": {"loot_tier": 2}},
+	{"name": "Foreclosure", "learn": "deep", "paper": "A letter to the Bank", "depth": 30, "bite": {"hp": 2.5}, "pay": {"loot_tier": 2, "crates": {"safe": 3.0}}},
 	{"name": "Everyone's here", "learn": "deep", "paper": "A list of names", "depth": 40, "bite": {"pool": 3.0, "contact": 2}, "pay": {"drop": 2.5, "xp": 2.0}},
 	{"name": "The Manager walks", "learn": "deep", "paper": "The Manager's note", "depth": 50, "bite": {"boss_walks": true}, "pay": {}},
 ]

@@ -7421,6 +7421,17 @@ func _crates_checks(main) -> void:
 	_check(w_barracks.get("military", 0.0) > w_barracks.get("toolbox", 0.0) and w_bank.get("safe", 0.0) > w_bank.get("toolbox", 0.0), "the Barracks' or the Bank's own crates don't lead: %s / %s" % [str(w_barracks), str(w_bank)])
 	_check(not w_allot.has("military") and not w_allot.has("safe"), "a safe or a military crate in the Outskirts: %s" % str(w_allot))
 	_check(sim.crate_weights({"tier": 8, "depth": 6})["safe"] > w_bank["safe"], "depth did not grow the safes")
+	# a code's crates (13 Oct): Delivery day brings military crates, even to a site that wouldn't have them yet; its
+	# tier grows it; the pay says so
+	var dd: Dictionary = sim.word_effect("Delivery day", 1)
+	_check(is_equal_approx(float(dd.get("crates", {}).get("military", 0.0)), 2.0) and float(sim.word_effect("Delivery day", 2)["crates"]["military"]) > 2.0, "Delivery day's crates read %s" % str(dd.get("crates", {})))
+	var w_coded: Dictionary = sim.crate_weights({"tier": 0, "depth": 1, "crates": dd["crates"]})
+	_check(w_coded.get("military", 0.0) > 0.0 and not w_coded.has("safe"), "a code's military crate is not on an Outskirts site: %s" % str(w_coded))
+	_check(is_equal_approx(float(sim.crate_weights({"tier": 11, "depth": 1, "crates": dd["crates"]})["military"]), 2.0 * float(w_barracks["military"])), "a code did not double the Barracks' military crates")
+	_check(str(sim.word_words("Delivery day", 1)[1]).contains("military crates ×2") and str(sim.word_words("Pawned", 1)[1]).contains("jewellery boxes ×2.5"), "the pay does not say the crates: '%s' / '%s'" % [sim.word_words("Delivery day", 1)[1], sim.word_words("Pawned", 1)[1]])
+	for w in Data.WORDS:
+		for key in w["pay"].get("crates", {}):
+			_check(not sim.crate_def(key).is_empty(), "%s names a crate there isn't: %s" % [w["name"], key])
 	sim.extract_now()
 	# the dog's nose (the Kennel's top rank): each crate's best find rolled at the clear, shown, and the crate's first
 	_yard_set(sim, "kennel", 4, "a")
@@ -10001,8 +10012,10 @@ func _upgrade_arrow_checks(main) -> void:
 	while not sim.stash_room(12) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	sim.equipped["Helmet"] = sim._plain("Helmet", "Hard hat")
-	var better: Dictionary = sim._plain("Helmet", "Visored helmet")
-	var worse: Dictionary = sim._plain("Helmet", "Cycle helmet")
+	# no pace on any of them (13 Oct): a slower helmet's spare reads faster, and on a front that can't touch the runner
+	# the faster one is the better - the check flaked on the Visored helmet and the Cycle helmet
+	var better: Dictionary = sim._plain("Helmet", "Army helmet")
+	var worse: Dictionary = sim._plain("Helmet", "Hard hat")
 	sim.stash_put(better)
 	sim.stash_put(worse)
 	main.show_room(main.ARMOURY)
