@@ -4674,7 +4674,7 @@ func _shoot(main) -> void:
 	v._duck = 0.0
 	v._duck_t = 0.0
 	v._duck_next = 99.0
-	v._process(0.3)                            # anyone popping is up by now
+	v._process(RunView.POP_S + 0.1)            # anyone coming in is up by now
 	v._shot_t = 0.0
 	v._process(0.01)
 
@@ -7921,14 +7921,15 @@ func _run_view_checks(main) -> void:
 	_check(fimg.get_height() == cimg.get_height() - y72 and fimg.get_pixel(5, 0) == cimg.get_pixel(5, y72) and fimg.get_pixel(300, fimg.get_height() - 1) == cimg.get_pixel(300, cimg.get_height() - 1), "the wall's fill isn't the cover's bricks: %dx%d" % [fimg.get_width(), fimg.get_height()])
 	v._duck_t = 0.0
 	# the far one stands further down the street than the middle one, smaller, wholly in the frame
+	# every site's three: the far one above the wall, smaller than the middle one, in frame, clear of the other two
+	var keys: Array = [""] + RunView.SITE_FAR.keys()
+	for key in keys:
+		var mid: Dictionary = RunView.site_slot(key, 0)
+		var nr: Dictionary = RunView.site_slot(key, 1)
+		var far: Dictionary = RunView.site_slot(key, 2)
+		_check(far["foot"].y < mid["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "%s: the far one isn't down the street: %s against %s" % [key, str(far), str(mid)])
+		_check(absf(far["foot"].x - mid["foot"].x) > 40.0 and absf(far["foot"].x - nr["foot"].x) > 50.0 and absf(mid["foot"].x - nr["foot"].x) > 80.0, "%s: two of them stand in front of each other: %s %s %s" % [key, str(mid["foot"]), str(nr["foot"]), str(far["foot"])])
 	var mid: Dictionary = RunView.SLOTS[0]
-	var fars: Array = [RunView.SLOTS[2]]
-	for key in RunView.SITE_FAR:
-		fars.append({"foot": RunView.SITE_FAR[key][0], "scale": RunView.SITE_FAR[key][1], "site": key})
-	for far in fars:
-		_check(far["foot"].y < mid["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "the far one isn't down the street: %s against %s" % [str(far), str(mid)])
-		var nx: float = RunView.SLOTS[1]["foot"].x
-		_check(absf(far["foot"].x - mid["foot"].x) > 50.0 and absf(far["foot"].x - nx) > 60.0, "the far one stands behind the middle one or the near one: %s" % str(far))
 	# the middle one near the centre; the near one left of your gun - most of him clear of every gun's hands (Matt, 13 Oct)
 	_check(absf(mid["foot"].x - RunView.W / 2.0) < 45.0, "the middle one isn't near the centre: %s" % str(mid))
 	var near: Dictionary = RunView.SLOTS[1]
@@ -8025,6 +8026,13 @@ func _run_view_checks(main) -> void:
 	main.refresh()
 	for k in range(v._figs.size()):
 		v._set_state(k, "")
+	v._set_state(0, "pop")
+	# coming in is a fade where it stands, not a rise through the floor (Matt, 13 Oct): half way, half there, feet down
+	v._process(RunView.POP_S * 0.5)
+	var pr: TextureRect = v._figs[0]["rect"]
+	var pu: Rect2 = RunView.used_of(pr.texture)
+	var pfeet: float = pr.position.y + pu.end.y * v.slot_of(0)["scale"]
+	_check(pr.modulate.a > 0.05 and pr.modulate.a < 0.95 and absf(pfeet - (v.slot_of(0)["foot"].y - RunView.DUCK_SCENE * v._duck)) < 1.5, "a figure coming in doesn't fade in where it stands: alpha %.2f, feet %.0f" % [pr.modulate.a, pfeet])
 	v._set_state(0, "pop")
 	v._process(RunView.POP_S * 1.2)                # full pace it'd be up by now
 	_check(v._figs[0]["state"] == "pop", "a chilled figure popped up at full pace")

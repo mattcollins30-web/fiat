@@ -29,11 +29,16 @@ const SLOTS := [
 ]
 ## Each site's far one, on its own ground (Matt, 13 Oct: "doesn't sit on the floor"): its feet where the plate's floor is,
 ## a long way off, and its size for that distance - read off each plate.
+## And the middle and near ones where a site's ground wants them elsewhere (Matt's playtest, 13 Oct): the Allotments'
+## middle one right of the water butt; Ransacked Streets' middle one left of the sofa and the near one right of it;
+## the Pleasure Park's both further left.
+const SITE_MID := {"the_allotments": Vector2(288, 211), "ransacked_streets": Vector2(178, 211), "the_pleasure_park": Vector2(215, 211)}
+const SITE_NEAR := {"ransacked_streets": Vector2(322, 232), "the_pleasure_park": Vector2(362, 232)}
 const SITE_FAR := {     # down the middle where the ground goes away, between the middle one and the near one
-	"the_allotments": [Vector2(318, 152), 0.26], "the_garden_centre": [Vector2(330, 154), 0.24],
-	"top_farm": [Vector2(320, 154), 0.25], "ransacked_streets": [Vector2(322, 184), 0.28],
+	"the_allotments": [Vector2(340, 162), 0.28], "the_garden_centre": [Vector2(330, 154), 0.24],
+	"top_farm": [Vector2(320, 154), 0.25], "ransacked_streets": [Vector2(380, 182), 0.28],
 	"the_parade": [Vector2(320, 178), 0.30], "the_retail_park": [Vector2(322, 152), 0.24],
-	"the_pleasure_park": [Vector2(322, 170), 0.28], "shopping_centre": [Vector2(322, 182), 0.31],
+	"the_pleasure_park": [Vector2(288, 170), 0.28], "shopping_centre": [Vector2(322, 182), 0.31],
 	"the_bank": [Vector2(325, 175), 0.42], "the_services": [Vector2(318, 165), 0.24],
 	"the_hospital": [Vector2(318, 154), 0.24], "the_barracks": [Vector2(322, 174), 0.26],
 }
@@ -52,7 +57,7 @@ const HANDS_AT := Vector2(W - 235, H - 178)
 const HANDS_SCALE := 0.8
 const HANDS_CORNER := Vector2(W + 6, H + 6)     # where the hands' drawn bottom-right sits: each gun's picture in the corner
 const DOWN_S := 0.7                       # a kill's fall
-const POP_S := 0.25                       # a figure popping up from behind
+const POP_S := 0.35                       # a figure coming in: a fade where it stands (Matt, 13 Oct: rising up through the floor read wrong)
 const JOLT_S := 0.2
 const RED_S := 0.45
 
@@ -225,9 +230,16 @@ func _init() -> void:
 
 ## A slot on this site: the far one's on the site's own ground when its own plate's up.
 func slot_of(k: int) -> Dictionary:
-	if k == 2 and _own_site and SITE_FAR.has(_site_key):
-		var f: Array = SITE_FAR[_site_key]
-		return {"foot": f[0], "scale": f[1], "lit": SLOTS[2]["lit"]}
+	return site_slot(_site_key if _own_site else "", k)
+
+
+## A site's slot k ("" for the test plate's): its own where it has one, the common one else.
+static func site_slot(key: String, k: int) -> Dictionary:
+	if k == 2 and SITE_FAR.has(key):
+		return {"foot": SITE_FAR[key][0], "scale": SITE_FAR[key][1], "lit": SLOTS[2]["lit"]}
+	var own: Dictionary = (SITE_MID if k == 0 else SITE_NEAR) if k < 2 else {}
+	if own.has(key):
+		return {"foot": own[key], "scale": SLOTS[k]["scale"], "lit": SLOTS[k]["lit"]}
 	return SLOTS[k]
 
 
@@ -504,7 +516,7 @@ func _set_state(k: int, s: String) -> void:
 	if s in ["pop", "up"]:
 		f["boss"] = _boss_key                  # the head, if he's the one coming up
 	r.texture = _fig_tex(f, "down" if s == "down" else "stand")
-	r.modulate.a = 1.0
+	r.modulate.a = 0.0 if s == "pop" else 1.0
 
 
 func _process(dt: float) -> void:
@@ -544,9 +556,10 @@ func _process(dt: float) -> void:
 		var lift := 0.0
 		match f["state"]:
 			"pop":
-				lift = 40.0 * (1.0 - clampf(f["t"] / POP_S, 0.0, 1.0))
+				r.modulate.a = clampf(f["t"] / POP_S, 0.0, 1.0)
 				if f["t"] >= POP_S:
 					f["state"] = "up"
+					r.modulate.a = 1.0
 			"up":
 				f["next_fire"] -= fdt
 				if f["next_fire"] <= 0.0:
@@ -599,6 +612,7 @@ func _process(dt: float) -> void:
 			var want: bool = on_fig and _them_fx.get(el, false)
 			if p.emitting != want:
 				p.emitting = want
+			p.modulate.a = r.modulate.a               # coming in, its flames come in with it
 			if want:
 				var s: float = slot_of(k)["scale"]
 				p.scale = Vector2(s, s) * 1.6

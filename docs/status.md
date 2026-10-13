@@ -4374,3 +4374,10 @@ out on the first shot back up) or between shots; the ticks of what's on them sho
 apart: m.ticked_by, display only). Time away from the run screen isn't saved up for one big number. The enemies' bar
 is still the truth and drains between shots. A sound fix on the way: a load that winds the clock back reset the gun's
 and the hits' stamps with it (the gun went quiet till the clock caught up).
+
+**The second placement pass (13 Oct, Matt's playtest of the Outskirts, the Estate, the Town).** Sites can move the
+middle and near ones too (SITE_MID, SITE_NEAR): the Allotments' middle one right of the water butt; Ransacked Streets'
+middle one left of the sofa, the near one right of it, the far one over on the right pavement; the Pleasure Park's
+middle and near ones further left, the far one between. A figure coming in fades in where it stands (0.35 s) - no more
+rising up through the floor - its flames fading in with it. The smoke checks every site's three apart and on their
+ground, and a figure half way in half there with its feet down. The City's sites wait for Matt's playtest.
