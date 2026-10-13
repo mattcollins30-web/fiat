@@ -4364,3 +4364,13 @@ into the bottom-right corner by where its picture ends, at 0.85; feet on the slo
 ends. The smoke: every site resolves its pair, the cover's top, the zone's gang, feet on the slots, the heads, the
 head's arrival and fall, the hands' corner. art/fight isn't committed (Matt's); the editor must import it before an
 export, and its import stays Lossless (the feet and the cover's top read the pictures).
+
+**The figures placed, and your hits on your shots (13 Oct, Matt's playtest of the full art).** The near one left of
+your gun (405), the middle one in from the right (255), the far one on each site's own ground down the middle, read off
+each plate (SITE_FAR), between the other two; the hands at 0.8. The smoke checks every site's far spot (above the wall,
+smaller, clear of the other two) and, pixel by pixel, that no gun's hands hide a third of the near one. Your gun's hit
+numbers are held and come out on the frame's shots, on the one hit - none while you're ducked (what's dealt then comes
+out on the first shot back up) or between shots; the ticks of what's on them show as they land (the sim counts them
+apart: m.ticked_by, display only). Time away from the run screen isn't saved up for one big number. The enemies' bar
+is still the truth and drains between shots. A sound fix on the way: a load that winds the clock back reset the gun's
+and the hits' stamps with it (the gun went quiet till the clock caught up).

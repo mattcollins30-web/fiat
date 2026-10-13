@@ -100,6 +100,12 @@ var _dealt_seen_by := {}           # and by type, for the coloured numbers
 var _taken_seen_by := {}
 var _number_at := -1.0             # the run's clock when the last number came off
 var _taken_seen := 0.0             # what the red numbers have shown so far this run
+var _hit_pending := {}             # the run view: your gun's hits since its last shot in the frame, by type (13 Oct)
+var _hits_seen_by := {}            # the hits (dealt less ticks) counted into it so far
+var _ticked_seen_by := {}          # the ticks shown so far
+var _pending_at := -1.0            # the run's clock when the oldest of the held hits came in
+var _view_seen_at := -1.0          # the run's clock at the last look, to tell a look after time away
+var _view_seen_ms := 0             # and the real clock
 var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): its share in its own colour, not red
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
@@ -197,6 +203,7 @@ func _init() -> void:
 ## The run view in place of the two boxes: the frame, the bars and the chips over it, six tiles under it.
 func _view_make() -> void:
 	_view = RunView.new()
+	_view.shot_fired.connect(_on_view_shot)
 	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
 	_left.add_child(_view)
 	_left.move_child(_view, _band.get_index() + 1)
@@ -713,11 +720,18 @@ func _juice_tick(m: Dictionary) -> void:
 		_guarded_seen = 0.0
 		_healed_seen = 0.0
 		_found_seen = []
+		_hit_pending = {}
+		_hits_seen_by = {}
+		_ticked_seen_by = {}
+		_pending_at = -1.0
+		_view_seen_at = -1.0
 	var dealt: float = float(m.get("dealt", 0.0))
 	# a number every third of a second or so, not every refresh, scattered along their bar
 	# at different heights, bigger for a bigger hit - a column of them reads as nothing.
 	# One a type, in the type's colour: white for the physical, red for fire, green for poison
-	if juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0 and float(m["elapsed"]) - _number_at >= 0.3:
+	if _view != null:
+		_view_numbers(m)
+	elif juice != null and dealt - _dealt_seen >= 1.0 and m["remaining"] > 0 and float(m["elapsed"]) - _number_at >= 0.3:
 		_number_at = float(m["elapsed"])
 		_numbers_by(m.get("dealt_by", {}), _dealt_seen_by, FIGHT_BAR_Y, "", 100)
 		_dealt_seen = dealt
@@ -752,6 +766,67 @@ func _juice_tick(m: Dictionary) -> void:
 				var k: int = _inv.cell_of(it["id"])
 				if k >= 0:
 					juice.flash(_inv.cell_node(k), "set" if it.has("set") else ("good" if it.has("unique") else ""))
+
+
+## The run view's numbers (13 Oct, Matt: the white ones came with no shot, and while ducked): your gun's hits are held
+## and shown when the frame's gun goes off, on the one it hit (_on_view_shot) - down behind the wall they wait, and come
+## out together on the first shot back up. The ticks of what's on them show as they land, as ever. With nobody up to
+## shoot (a fight's last moment), what's held comes out after a second rather than never.
+func _view_numbers(m: Dictionary) -> void:
+	var by: Dictionary = m.get("dealt_by", {})
+	var ticked: Dictionary = m.get("ticked_by", {})
+	# back on the run screen after a while away (or an old save's first look): what was dealt unseen isn't saved up
+	# away: a second and more of real time since the last look, or more run clock than ×10 speed ever puts between two
+	# (the review: on F8 every look is a second of run apart)
+	var now_ms: int = Time.get_ticks_msec()
+	var away: bool = _view_seen_at < 0.0 or now_ms - _view_seen_ms > 1500 or float(m["elapsed"]) - _view_seen_at > 12.0
+	_view_seen_at = float(m["elapsed"])
+	_view_seen_ms = now_ms
+	for ty in Data.TYPES:
+		var hits: float = float(by.get(ty, 0.0)) - float(ticked.get(ty, 0.0))
+		var new: float = hits - float(_hits_seen_by.get(ty, 0.0))
+		if away:
+			_hits_seen_by[ty] = hits
+			_ticked_seen_by[ty] = float(ticked.get(ty, 0.0))
+			continue
+		if new > 0.0:
+			_hit_pending[ty] = float(_hit_pending.get(ty, 0.0)) + new
+			_hits_seen_by[ty] = hits
+			if _pending_at < 0.0:
+				_pending_at = float(m["elapsed"])
+	if juice == null:
+		return
+	if float(m["elapsed"]) - _number_at >= 0.3 and m["remaining"] > 0:
+		var before: int = juice.numbers()
+		_numbers_by(ticked, _ticked_seen_by, FIGHT_BAR_Y, "", 100)
+		if juice.numbers() != before:
+			_number_at = float(m["elapsed"])
+	if _pending_at >= 0.0 and not _view.fighting() and float(m["elapsed"]) - _pending_at >= 1.0:
+		_release_hits(_scatter(FIGHT_BAR_Y))
+
+
+## A shot in the frame: what's held comes out on the one it hit (in the panel's space, off the chips and bars).
+func _on_view_shot(at: Vector2) -> void:
+	if juice == null or _view == null:
+		return
+	var local: Vector2 = _view.position + at
+	var keep: Array = _keep_out()
+	var spot: Vector2 = _left.global_position + local - juice.global_position
+	if not keep.all(func(r): return not r.intersects(_number_path(local))):
+		spot = _scatter(FIGHT_BAR_Y)
+	_release_hits(spot)
+
+
+func _release_hits(spot: Vector2) -> void:
+	var k := 0
+	for ty in Data.TYPES:
+		var n: int = int(floor(float(_hit_pending.get(ty, 0.0))))
+		if n >= 1:
+			juice.number(spot + Vector2(22.0 * k, -10.0 * k), "%d" % n, ty, n >= 100)
+			_hit_pending[ty] = float(_hit_pending[ty]) - n
+			k += 1
+	if _hit_pending.values().all(func(v): return float(v) < 1.0):
+		_pending_at = -1.0
 
 
 ## A number a type for what's new in `by` since `seen`, each in its type's

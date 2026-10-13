@@ -4666,6 +4666,19 @@ func _idle_checks(main) -> void:
 
 ## Juice: the log's best lines as toasts under the top bar, a damage number
 ## off the run panel as the hits land, a flash on a rare in the pack.
+## The run view's gun goes off once, standing (13 Oct: your hits show on its shots): a no-op with no run view.
+func _shoot(main) -> void:
+	var v = main._run._view
+	if v == null:
+		return
+	v._duck = 0.0
+	v._duck_t = 0.0
+	v._duck_next = 99.0
+	v._process(0.3)                            # anyone popping is up by now
+	v._shot_t = 0.0
+	v._process(0.01)
+
+
 func _juice_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -4693,8 +4706,10 @@ func _juice_checks(main) -> void:
 	var n0: int = 0
 	sim.mission["t"]["hp"] = 100000.0        # a lot that takes a while, so the hits are seen landing
 	sim.mission["target_hp"] = 100000.0
-	sim.advance(2.0)
-	main.refresh()
+	for k in range(4):                         # in steps, as the screen sees a run
+		sim.advance(0.5)
+		main.refresh()
+	_shoot(main)
 	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f" % float(sim.mission.get("dealt", 0.0)))
 	# scattered: a run of numbers lands at different places, not one column; no more than one a third of a second
 	main._juice.clear_numbers()
@@ -4702,6 +4717,7 @@ func _juice_checks(main) -> void:
 	for k in range(8):
 		sim.advance(0.4)
 		main.refresh()
+		_shoot(main)
 	for n in main._juice._numbers:
 		spots["%d,%d" % [int(n["label"].position.x / 20), int(n["from"] / 8)]] = true
 	_check(main._juice.numbers() >= 4 and main._juice.numbers() <= 18 and spots.size() >= 3, "the numbers come as one column or too thick: %d numbers in %d places" % [main._juice.numbers(), spots.size()])
@@ -4729,6 +4745,7 @@ func _juice_checks(main) -> void:
 	for k in range(8):
 		sim.advance(0.5)
 		main.refresh()
+		_shoot(main)
 		for n in main._juice._numbers:                      # gathered as they come: twelve show at once, the rest go
 			colours[n["label"].get_theme_color("font_color")] = true
 	_check(colours.has(Pal.ELEMENT_COLOURS["fire"]) and colours.has(Pal.ELEMENT_COLOURS["physical"]), "the hits did not come in fire and physical colours: dealt_by %s" % str(sim.mission.get("dealt_by", {})))
@@ -4738,6 +4755,43 @@ func _juice_checks(main) -> void:
 		dealt_sum += float(sim.mission["dealt_by"][ty])
 	_check(absf(dealt_sum - float(sim.mission["dealt"])) < 1.0, "dealt by type (%.0f) does not add up to dealt (%.0f)" % [dealt_sum, float(sim.mission["dealt"])])
 	sim.equipped["Primary"] = hold_gun
+	# the run view: your hits only on its shots - none while you're down behind the wall, what was held on the first
+	# shot back up, nothing lost (Matt, 13 Oct: the white numbers ran on while the gun didn't)
+	var v = main._run._view
+	if v != null:
+		var run = main._run
+		_shoot(main)
+		run._hit_pending = {}
+		main._juice.clear_numbers()
+		var white: Color = Pal.ELEMENT_COLOURS["physical"]
+		var hits0: float = float(sim.mission["dealt_by"].get("physical", 0.0)) - float(sim.mission.get("ticked_by", {}).get("physical", 0.0))
+		v._duck_t = 5.0
+		v._process(0.5)
+		for k in range(4):
+			sim.advance(0.4)
+			main.refresh()
+			v._process(0.1)
+		var whites_down: Array = main._juice._numbers.filter(func(n): return (n["label"].get_theme_color("font_color") == white and not (str(n["label"].text).begins_with("−") or str(n["label"].text).begins_with("+"))))
+		var held: float = float(sim.mission["dealt_by"].get("physical", 0.0)) - float(sim.mission.get("ticked_by", {}).get("physical", 0.0)) - hits0
+		_check(held >= 1.0 and whites_down.is_empty(), "hits showed while ducked, or none were dealt: %d shown, %.0f dealt" % [whites_down.size(), held])
+		_check(absf(float(run._hit_pending.get("physical", 0.0)) - held) < 1.0, "what was dealt ducked isn't all held: %.1f of %.1f" % [float(run._hit_pending.get("physical", 0.0)), held])
+		_shoot(main)
+		var out: Array = main._juice._numbers.filter(func(n): return (n["label"].get_theme_color("font_color") == white and not (str(n["label"].text).begins_with("−") or str(n["label"].text).begins_with("+"))))
+		_check(out.size() == 1 and absi(int(out[0]["label"].text) - int(floor(held))) <= 1 and float(run._hit_pending.get("physical", 0.0)) < 1.0, "the first shot back up didn't bring out what was held: %s against %.0f" % [str(out.map(func(n): return n["label"].text)), held])
+		# back after time away: what was dealt unseen isn't saved up for one number
+		main._juice.clear_numbers()
+		sim.advance(15.0)
+		main.refresh()
+		_shoot(main)
+		_check(main._juice._numbers.filter(func(n): return (n["label"].get_theme_color("font_color") == white and not (str(n["label"].text).begins_with("−") or str(n["label"].text).begins_with("+")))).all(func(n): return int(n["label"].text) < int(held) + 50), "fifteen seconds away came out as one number")
+		_check(float(run._hit_pending.get("physical", 0.0)) < 1.0, "time away was held")
+		# between shots, standing: hits wait for the gun
+		main._juice.clear_numbers()
+		v._shot_t = 99.0
+		sim.advance(0.4)
+		main.refresh()
+		_check(main._juice._numbers.filter(func(n): return (n["label"].get_theme_color("font_color") == white and not (str(n["label"].text).begins_with("−") or str(n["label"].text).begins_with("+")))).is_empty(), "a hit showed with no shot")
+		v._shot_t = 0.0
 	# the counters come from the fight: regen heals, their fire takes
 	var hold = sim.equipped["Helmet"]
 	var regen_hat: Dictionary = sim._plain("Helmet", "Hard hat")
@@ -4819,6 +4873,11 @@ func _sound_checks(main) -> void:
 	sim.advance(3.0)                           # a hammer swings every two seconds and more
 	main.refresh()
 	_check(snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"), "the gun did not go off: %s" % str(snd.cued()))
+	m["dots"] = {}                             # nothing on them, so the fire below is new (a fire-converting gun leaves some)
+	m["chill_t"] = 0.0
+	m["shock_t"] = 0.0
+	snd._el_at = {}
+	main.refresh()
 	snd.clear_cued()
 	m["patrols"] = int(m.get("patrols", 0)) + 1
 	m["kills"] = int(m["kills"]) + 1

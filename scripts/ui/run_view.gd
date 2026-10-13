@@ -11,6 +11,10 @@ const Items := preload("res://scripts/sim/items.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 
+## A shot of yours lands, in the frame's space (13 Oct, Matt: the numbers came with no shot, and while ducked): the run
+## screen shows what your gun's done since the last one here, on the one it hit.
+signal shot_fired(at: Vector2)
+
 const W := 588
 const H := 262
 const DIR := "res://art/fight_test/%s.png"
@@ -640,9 +644,14 @@ func _process(dt: float) -> void:
 		if not ups.is_empty():
 			var k: int = ups[randi() % ups.size()]      # whoever's in your sights, not the same one every time
 			var r: TextureRect = _figs[k]["rect"]
-			_marker.position = r.position + Vector2(r.size.x * r.scale.x * 0.5 - 12, r.size.y * r.scale.y * randf_range(0.15, 0.45))
+			var u: Rect2 = used_of(r.texture)
+			if u.size.y <= 0.0:
+				u = Rect2(Vector2.ZERO, r.size)
+			var hit: Vector2 = r.position + Vector2(u.get_center().x, u.position.y + u.size.y * randf_range(0.15, 0.45)) * r.scale.x
+			_marker.position = hit - Vector2(12, 12)
 			_marker_t = 0.12
 			_figs[k]["hit_t"] = 0.08
+			shot_fired.emit(hit)
 	_recoil = maxf(0.0, _recoil - dt)
 	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt
 	_marker_t -= dt
@@ -719,6 +728,16 @@ func fx() -> Dictionary:
 	for el in _edges:
 		you[el] = _edges[el].modulate.a
 	return {"them": them, "tint": tint, "you": you, "arcs": _arcs.filter(func(a): return a.visible).size()}
+
+
+## Whether your gun's going off in the frame right now: someone up to shoot at, and you not down behind the wall.
+func shooting() -> bool:
+	return _firing and _duck < 0.2 and _figs.any(func(f): return f["state"] == "up")
+
+
+## Whether there's a fight on in the frame at all (down behind the wall counts): the run screen holds your hits for it.
+func fighting() -> bool:
+	return _firing and _figs.any(func(f): return f["state"] in ["pop", "up"])
 
 
 ## For the tests: what's up, the pan, the red.

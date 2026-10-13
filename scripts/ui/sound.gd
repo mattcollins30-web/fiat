@@ -349,6 +349,14 @@ func _look(sim, m: Dictionary) -> Dictionary:
 
 func _fight(sim, m: Dictionary, now: Dictionary) -> void:
 	var t: float = sim.elapsed                 # the camp's clock: always running while the run is
+	if t < _tick_at or t < _incoming_at or t < _hit_at:     # the clock went back (a load): the stamps with it
+		_tick_at = t - 10.0
+		_incoming_at = t - 10.0
+		_hit_at = t - 10.0
+		_el_at = {}
+	for ty in _el_at.keys():
+		if float(_el_at[ty]) > t:
+			_el_at.erase(ty)
 	var fighting: bool = int(m["remaining"]) > 0
 	# your gun at its rate (capped so it reads as shots, not a buzz); dry, the click
 	var gun = sim.equipped["Primary"]

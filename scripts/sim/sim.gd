@@ -4775,7 +4775,13 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	if m.has("dots"):
 		if not m.has("dealt_by"):
 			m["dealt_by"] = {}
-		ticked_on_them = _dot_tick(m["dots"], dt, m["dealt_by"])
+		var tb := {}
+		ticked_on_them = _dot_tick(m["dots"], dt, tb)
+		if not m.has("ticked_by"):
+			m["ticked_by"] = {}
+		for ty in tb:
+			m["dealt_by"][ty] = float(m["dealt_by"].get(ty, 0.0)) + tb[ty]
+			m["ticked_by"][ty] = float(m["ticked_by"].get(ty, 0.0)) + tb[ty]     # the ticks apart from the hits, for the numbers (13 Oct)
 		m["target_hp"] -= ticked_on_them
 	m["dealt"] = float(m.get("dealt", 0.0)) + landed_total + ticked_on_them    # for the numbers on the run screen
 	m["landed_rate"] = landed_total / maxf(dt, 0.001)                            # what landed this tick, a second: the top bar's damage line moves on it (8 Oct)
