@@ -4297,3 +4297,9 @@ melee down a tenth); the lorry by 6.4 h, the plain floor by 11.4 h, cash, the cl
 economy just over (Scrapper as shock 8.4 crafts an hour against 8, Poacher as poison 7.3 against 7): a toolbox's scrap
 1.8 to 1.5, to read on the next pass. The ladders' spread (Paramedic as frost 12) sits at 11-13 build to build since the
 crates - to Matt. Timing reds as before; deaths and wounds on Matt's playtest.
+
+**The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut).** A stash pick has
+Bin: it goes for the scrap a ditch gives, gone for good; a unique or set piece asks twice ("Bin it: N scrap"); never
+the deeds. With the Fence shut, Select-many's button bins the plain things ("Bin 4: 32 scrap"). Two smoke flakes the
+hammer start shook loose fixed in the tests: the junk run's nails go to the rig now there's a free pouch; the Craft
+view's piece picked by its cell, not its place in the list.

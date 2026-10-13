@@ -144,6 +144,7 @@ static func rarity_tone(it: Dictionary) -> String:
 
 func show_state(s) -> void:
 	sim = s
+	_inv.binning = not sim.room_open("fence")     # the Fence shut, Select-many bins (13 Oct)
 	_inv.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_body.selected = selected.get("slot", "") if selected.get("kind", "") == "slot" else ""
 	_body.show_state(sim)
@@ -176,7 +177,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed)]
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -286,7 +287,24 @@ func _show_panel() -> void:
 			buttons.append({"text": "Unequip", "action": sim.unequip.bind(it["slot"]), "enabled": not sim.on_mission() and sim.stash_fits(it), "primary": true})
 			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})
+	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, for its scrap; a unique or a set piece asks twice
+	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
+		var precious: bool = it.has("unique") or it.has("set")
+		var armed: bool = _bin_armed == int(it["id"])
+		buttons.append({"text": ("Bin it: %d scrap" % sim.scrap_of(it)) if armed else "Bin", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
 	_set_buttons(buttons)
+
+
+var _bin_armed := -1                   # a unique or set piece's first Bin press: the second bins it
+
+
+func _bin_press(id: int, precious: bool) -> void:
+	if precious and _bin_armed != id:
+		_bin_armed = id
+		_keep_pick = true                   # still picked: the button now says what it'll do
+		return
+	_bin_armed = -1
+	sim.bin(id)
 
 
 ## The panel's buttons, each through _press so the selection follows the item after.
@@ -430,6 +448,7 @@ func _on_equip_drop(id: int) -> void:
 
 ## The grid's pick: an id, or -1 when its bars changed or Select-many toggled.
 func _on_inv_pick(id: int) -> void:
+	_bin_armed = -1                           # a new pick: a unique's bin asks twice again (the review)
 	if id >= 0:
 		selected = {"kind": "stash", "id": id}
 	elif _inv.many or (selected.get("kind", "") == "stash" and _selected_item().is_empty()):

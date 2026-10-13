@@ -1572,6 +1572,26 @@ func scrap_of(it: Dictionary) -> int:
 	return int(float(it["value"]) / Data.SCRAP_PER_POUND) * (2 if yard_has("strip_for_parts") else 1)
 
 
+## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash thing
+## thrown out for the scrap a ditch gives, at any time, gone for good. Never the deeds (the ending's).
+func can_bin(it: Dictionary) -> bool:
+	return not it.is_empty() and not Items.is_deeds(it) and stash.has(it)
+
+
+func bin(id: int) -> bool:
+	for it in stash:
+		if int(it["id"]) == id:
+			if not can_bin(it):
+				return false
+			var bits: int = scrap_of(it)
+			_remove(it)
+			scrap += bits                     # gone for good: a binned unique isn't one of the gangs' to wear again (the review)
+			chron("bin", {"item": _chron_item(it), "scrap": bits})
+			log_event("Binned: %s%s" % [Items.full_name(it).to_lower() if not it.has("unique") else Items.full_name(it), (", %d scrap" % bits) if bits > 0 else ""])
+			return true
+	return false
+
+
 ## A stash item broken down at the Bench for its scrap. Gone for good.
 func scrap_item(id: int) -> bool:
 	if mission != null or not room_open("workshop"):

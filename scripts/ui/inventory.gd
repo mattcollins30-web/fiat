@@ -68,6 +68,7 @@ var sort := 0
 var page := 0
 var fixed_kind := ""               # set by the Workshop: only this kind, bar hidden
 var ditching := false              # set by the Run screen: Select-many ditches instead of selling
+var binning := false               # the Kit room with the Fence shut (13 Oct): Select-many bins for scrap instead
 var can_many := true               # a vendor's shelf has no Select-many
 var page_rows := ROWS              # rows a page; set_rows() for fewer
 var drag_src := ""                 # set by the owner: cells can be dragged out, carrying this name
@@ -176,7 +177,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	chosen = chosen.filter(func(id): return _has(id))
 	if selected >= 0 and not _has(selected):
 		selected = -1
-	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page]
+	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning)]
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	for it in items:
 		ups[it["id"]] = _upgrade(it)
@@ -205,9 +206,17 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	_sell_button.visible = many
 	if ditching:
 		_sell_button.text = "Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]
+	elif binning:
+		var bits := 0
+		var n := 0
+		for id in chosen:
+			if _many_bins(_item(id)):
+				bits += sim.scrap_of(_item(id))
+				n += 1
+		UI.fit_button(_sell_button, ["Bin %d: %d scrap" % [n, bits], "Bin %d" % n])
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
-	_sell_button.disabled = chosen.is_empty() or (not ditching and not sim.room_open("fence"))     # the Fence buys; shut till the Carpet Man (13 Oct)
+	_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id))))     # the Fence buys; shut till the Carpet Man (13 Oct)
 	# pack the items first-fit into the columns, never across a page's edge
 	_placed = _pack(items, page_rows)
 	var reach := 0
@@ -437,10 +446,18 @@ func _sell_chosen() -> void:
 		if not it.is_empty():
 			if ditching:
 				sim.ditch(id)
+			elif binning:
+				if _many_bins(it):
+					sim.bin(id)
 			else:
 				sim.sell(it)
 	chosen = []
 	acted.emit()
+
+
+## Select-many's bin takes the plain things: a unique or a set piece is binned one at a time, from the pick, on purpose.
+func _many_bins(it: Dictionary) -> bool:
+	return sim.can_bin(it) and not it.has("unique") and not it.has("set")
 
 
 ## For the tests: every label and visible button with text.

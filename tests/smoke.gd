@@ -1710,7 +1710,17 @@ func _craft_view_checks(main) -> void:
 			if is_same(shown[i], piece):
 				k = i
 	_check(k >= 0, "the rolled piece is not in the Craft view's grid")
-	ws._pick_cell(k)
+	main.refresh()
+	var piece_cell: int = ws._inv.cell_of(int(piece["id"]))     # its cell, not its place in the list (a bigger stash pages it: 13 Oct)
+	if piece_cell < 0:
+		for p in range(8):
+			ws._inv._turn(1)
+			main.refresh()
+			piece_cell = ws._inv.cell_of(int(piece["id"]))
+			if piece_cell >= 0:
+				break
+	_check(piece_cell >= 0, "the rolled piece has no cell in the Craft view")
+	ws._pick_cell(maxi(0, piece_cell))
 	_check(ws._piece_title.text != "Pick a piece", "picking a piece did not fill the piece card")
 	_check(ws._piece_chips.words(1) == "Level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
 	_check(ws._affix_rows[0]["tag"].text == "T2" and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
@@ -4617,7 +4627,7 @@ func _idle_checks(main) -> void:
 	sim.deploy(3)
 	sim.mission["found"] = []
 	sim.extract_now()
-	_check(not sim.stash.has(junk) and sim.stash.any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
+	_check(not sim.stash.has(junk) and (sim.stash + sim.rig).any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
 	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
 	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The Fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
 	main._armoury._toggle(0)
@@ -4938,7 +4948,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("In the drawer, in Training") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -4957,7 +4967,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._pick.button_texts().is_empty(), "the Lock-up offers a paper a button: %s" % str(main._armoury._pick.button_texts()))
+	_check(main._armoury._pick.button_texts().is_empty() or main._armoury._pick.button_texts() == ["Bin"], "the Lock-up offers a paper a button but the bin (13 Oct): %s" % str(main._armoury._pick.button_texts()))
 	sim.sell(paper)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
@@ -6200,6 +6210,7 @@ func _loot_roll_checks(main) -> void:
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_crates_checks(main)
+	_bin_checks(main)
 	_wound_checks(main)
 	_dots_chip_checks(main)
 	_top_works_checks(main)
@@ -7610,6 +7621,73 @@ func _crates_checks(main) -> void:
 					best_gun = maxf(best_gun, float(g["damage"]) * float(g["rof"]))
 			_check(best_gun <= 0.0 or float(b["damage"]) * float(b["rof"]) < best_gun * 0.9, "%s at %.0f a second is not behind its tier's best gun (%.0f)" % [b["name"], float(b["damage"]) * float(b["rof"]), best_gun])
 	print("crates ok: the queue, the panel, the opening, the save, picked clean, the leans, the sites' own, the dog's nose, depth and quantity")
+
+
+## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash pick has
+## Bin for its scrap; a unique asks twice; the deeds never; with the Fence shut, Select-many bins the plain things.
+func _bin_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var hold_unlocked = sim.unlocked.duplicate()
+	sim.unlocked.erase("fence")
+	while not sim.stash_room(12) and not sim.stash.is_empty():
+		sim.stash.pop_back()
+	var junk: Dictionary = sim._plain("Helmet", "Hard hat")
+	var prize: Dictionary = Items.roll_unique(Data.UNIQUES[0], sim.rng)
+	sim.stash_put(junk)
+	sim.stash_put(prize)
+	main.show_room(main.ARMOURY)
+	main._armoury._inv.kind = 0
+	main._armoury._inv.rarity = -1
+	main.refresh()
+	main._armoury._pick_cell(main._armoury._inv.cell_of(junk["id"]))
+	main.refresh()
+	var bin_i: int = -1
+	for k in range(main._armoury._pick._buttons.size()):
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
+			bin_i = k
+	_check(bin_i >= 0, "a stash pick has no Bin")
+	_check_fit(main, "Lock-up (the bin)")
+	var scrap0: int = int(sim.scrap)
+	if bin_i >= 0:
+		main._armoury._press(bin_i)
+		main.refresh()
+	_check(not sim.stash.has(junk) and int(sim.scrap) == scrap0 + sim.scrap_of(junk), "Bin did not throw the hard hat out for its scrap")
+	# a unique asks twice
+	main._armoury._pick_cell(main._armoury._inv.cell_of(prize["id"]))
+	main.refresh()
+	bin_i = -1
+	for k in range(main._armoury._pick._buttons.size()):
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
+			bin_i = k
+	if bin_i >= 0:
+		main._armoury._press(bin_i)
+		main.refresh()
+		_check(sim.stash.has(prize) and main._armoury._pick._buttons[bin_i].text.begins_with("Bin it"), "a unique went in the bin on the first press")
+		_check_fit(main, "Lock-up (the bin, asked)")
+		main._armoury._press(bin_i)
+		main.refresh()
+		_check(not sim.stash.has(prize), "a unique did not go in the bin on the second press")
+	else:
+		_check(false, "a unique has no Bin")
+	_check(not sim.can_bin(sim._plain(Data.PAPER, "The deeds")), "the deeds can go in the bin")
+	# Select-many with the Fence shut: Bin, the plain things only
+	var a: Dictionary = sim._plain("Helmet", "Hard hat")
+	sim.stash_put(a)
+	main._armoury._inv.many = true
+	main._armoury._inv.chosen = [a["id"]]
+	main.refresh()
+	_check(main._armoury._inv._sell_button.text.begins_with("Bin 1") and not main._armoury._inv._sell_button.disabled, "Select-many does not bin with the Fence shut: '%s'" % main._armoury._inv._sell_button.text)
+	_check_fit(main, "Lock-up (select many, the bin)")
+	main._armoury._inv._sell_chosen()
+	_check(not sim.stash.has(a), "Select-many's bin left the hard hat")
+	main._armoury._inv.many = false
+	sim.unlocked = hold_unlocked
+	sim.load_dict(saved)
+	main.refresh()
+	print("the bin ok: a pick's Bin for scrap, a unique asked twice, never the deeds, Select-many bins with the Fence shut")
 
 
 ## The Yard as lanes (9 Oct, docs/design/yard.md): eight buildings, five columns of two picks and a rank; a tile
