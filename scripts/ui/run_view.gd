@@ -8,11 +8,15 @@ extends Control
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const Data := preload("res://scripts/sim/data.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 
 const W := 588
 const H := 262
 const DIR := "res://art/fight_test/%s.png"
+const FULL_DIR := "res://art/fight/%s.png"       # the full pass (13 Oct, tools/pixellab_fight_manifest.json)
+const ZONE_KEYS := ["the_outskirts", "the_estate", "the_town", "the_city"]
+const COVER_TOP := H - 48                         # where a cover's drawn top sits, whatever its picture's height
 ## The three depths: where a figure stands (its feet, in the frame), its scale, how lit.
 const SLOTS := [
 	{"foot": Vector2(340, 211), "scale": 0.62, "lit": 0.9},     # mid: by the car - the first on you
@@ -31,7 +35,8 @@ const PAN := 50.0
 const COVER_Y := H - 72
 const COVER_X := -20.0                    # the cover's left at no pan: its 688 still past the right edge at the search's pan (x1.4)
 const HANDS_AT := Vector2(W - 235, H - 178)
-const HANDS_SCALE := 0.95
+const HANDS_SCALE := 0.85
+const HANDS_CORNER := Vector2(W + 6, H + 6)     # where the hands' drawn bottom-right sits: each gun's picture in the corner
 const DOWN_S := 0.7                       # a kill's fall
 const POP_S := 0.25                       # a figure popping up from behind
 const JOLT_S := 0.2
@@ -40,6 +45,11 @@ const RED_S := 0.45
 static var _tex := {}
 
 var _plate: TextureRect
+var _site_key := "-"                      # the site the plate and cover are of
+var _zone_key := "the_estate"             # its zone's gang
+var _boss_key := ""                       # the head when he's out, "" else
+var _cover_y := COVER_Y
+var _hands_at := HANDS_AT                 # the hands' top-left for the gun's picture                   # the cover's top-left y: its drawn top at COVER_TOP
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
 var _crates: Array = []                   # the crates in the street while searching
 var _cover: TextureRect
@@ -83,21 +93,51 @@ var _edges := {}                          # element -> its TextureRect, the fram
 var _fx_t := 0.0                          # the clock the breathing and the flicker run off
 var _arcs: Array = []                     # a Line2D a figure: shock's arc
 
-## A texture by name from the test art: imported if the editor's seen it, else read straight off the disk.
+## A texture by name: the full pass's (art/fight) first, the test's (art/fight_test) else; imported if the editor's seen
+## it, else read straight off the disk.
 static func tex(name: String) -> Texture2D:
 	if _tex.has(name):
 		return _tex[name]
-	var path: String = DIR % name
 	var t: Texture2D = null
-	if ResourceLoader.exists(path):
-		t = load(path)
-	elif FileAccess.file_exists(path):
-		var img := Image.load_from_file(ProjectSettings.globalize_path(path))
-		if img != null:
-			img.generate_mipmaps()
-			t = ImageTexture.create_from_image(img)
+	for dir in [FULL_DIR, DIR]:
+		var path: String = dir % name
+		if ResourceLoader.exists(path):
+			t = load(path)
+		elif FileAccess.file_exists(path):
+			var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+			if img != null:
+				img.generate_mipmaps()
+				t = ImageTexture.create_from_image(img)
+		if t != null:
+			break
 	_tex[name] = t
 	return t
+
+
+## The first of the names that has a picture (the site's own, then the slice's).
+static func tex_of(names: Array) -> Texture2D:
+	for n in names:
+		var t := tex(str(n))
+		if t != null:
+			return t
+	return null
+
+
+## Where a picture's drawn part ends, in its own pixels (a figure's feet, a cover's top): its used rect, cached.
+static var _used := {}
+static func used_of(t: Texture2D) -> Rect2:
+	if t == null:
+		return Rect2()
+	var key: int = t.get_instance_id()
+	if not _used.has(key):
+		var img := t.get_image()
+		_used[key] = Rect2(img.get_used_rect()) if img != null else Rect2(Vector2.ZERO, t.get_size())
+	return _used[key]
+
+
+## A site's name as its files' (The Allotments -> the_allotments).
+static func site_key(name: String) -> String:
+	return name.to_lower().replace(" ", "_").replace("'", "")
 
 
 static func has_art() -> bool:
@@ -136,20 +176,13 @@ func _init() -> void:
 		_crates.append(c)
 	# the figures stand in depth order: the far one behind, the near one in front
 	move_child(_figs[2]["rect"], _plate.get_index() + 1)
-	_cover = _rect(tex("parade_cover"))
-	_cover.position = Vector2(COVER_X, COVER_Y)
+	_cover = _rect(null)
 	_cover_fill = _rect(null)
-	var ct: Texture2D = _cover.texture
-	if ct != null:
-		# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
-		# nothing caught on it
-		var y0: int = int(ct.get_height() * 0.72)
-		_cover_fill.texture = ImageTexture.create_from_image(ct.get_image().get_region(Rect2i(0, y0, ct.get_width(), ct.get_height() - y0)))
-		_cover_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_cover_fill.stretch_mode = TextureRect.STRETCH_TILE
-		_cover_fill.size = Vector2(ct.get_width(), H)
+	_cover_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cover_fill.stretch_mode = TextureRect.STRETCH_TILE
 	move_child(_cover_fill, _cover.get_index())     # under the cover's coping
-	_hands = _rect(tex("hands_revolver"))
+	_site("")
+	_hands = _rect(null)                       # the gun's own, set by show_state (and its corner with it)
 	_hands.scale = Vector2(HANDS_SCALE, HANDS_SCALE)
 	_hands.position = HANDS_AT
 	for el in ["fire", "poison", "bleed"]:
@@ -173,6 +206,37 @@ func _init() -> void:
 	_marker = UI.label(self, Rect2(0, 0, 24, 24), "✕", "Bold", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	UI.shadow(_marker)
 	_marker.visible = false
+
+
+## The site's plate and cover (its own, else the Parade's test pair), and the wall's fill cut from the cover.
+func _site(key: String) -> void:
+	_site_key = key
+	var own: bool = tex(key + "_plate") != null and tex(key + "_cover") != null     # the site's pair, or the Parade's: never one of each
+	_plate.texture = tex(key + "_plate") if own else tex("parade_plate")
+	if _plate.texture != null:
+		_plate.size = _plate.texture.get_size()
+	var ct: Texture2D = tex(key + "_cover") if own else tex("parade_cover")
+	_cover.texture = ct
+	_cover_fill.texture = null
+	if ct == null:
+		return
+	_cover.size = ct.get_size()
+	_cover_y = COVER_TOP - used_of(ct).position.y
+	# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
+	# nothing caught on it
+	var y0: int = int(ct.get_height() * 0.72)
+	_cover_fill.texture = ImageTexture.create_from_image(ct.get_image().get_region(Rect2i(0, y0, ct.get_width(), ct.get_height() - y0)))
+	_cover_fill.size = Vector2(ct.get_width(), H)
+
+
+## A figure's picture for a pose: the head's when he's out, else the zone's member it was given, else the slice's.
+func _fig_tex(f: Dictionary, pose: String) -> Texture2D:
+	var bk: String = str(f.get("boss", ""))      # whose picture it took when it came up, not who's out now (the review)
+	if bk != "":
+		var h := tex("head_%s_%s" % [bk, pose])
+		if h != null:
+			return h
+	return tex_of(["gang_%s_%s_%s" % [_zone_key, f.get("who", "a"), pose], "gang_" + pose])
 
 
 func _rect(t: Texture2D) -> TextureRect:
@@ -330,6 +394,12 @@ func show_state(sim, m: Dictionary) -> void:
 			f["state"] = ""
 			f["rect"].visible = false
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	# the site's own art, its zone's gang, the head when he's out
+	var site: Dictionary = Data.TIERS[int(m["tier"])]
+	if site_key(str(site["name"])) != _site_key:
+		_site(site_key(str(site["name"])))
+	_zone_key = ZONE_KEYS[mini(int(site["zone"]), ZONE_KEYS.size() - 1)]
+	_boss_key = site_key(str(m["boss"]["name"])) if boss_on else ""
 	var gang: int = 0
 	if int(m["remaining"]) > 0:
 		gang = 1 if boss_on else mini(int(m["remaining"]), maxi(1, sim.contact(m["t"])))
@@ -362,7 +432,15 @@ func show_state(sim, m: Dictionary) -> void:
 	# your gun's rate, for the recoil and the marker
 	var gun = sim.equipped["Primary"]
 	_rof = maxf(0.5, minf(4.0, float(Items.base_of(gun).get("rof", 1.0)) * sim.pace())) if gun != null else 1.0
-	_hands.visible = gun != null and not Items.is_melee(gun)     # the slice has a revolver's hands; melee shows none yet
+	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"]) if gun != null else null
+	if ht != null and Items.is_melee(gun) and tex("hands_" + _hands_kind(gun)) == null:
+		ht = null                                  # no revolver for a hammer: nothing till its hands are drawn
+	if ht != _hands.texture:
+		_hands.texture = ht
+		if ht != null:
+			_hands.size = ht.get_size()
+			_hands_at = HANDS_CORNER - used_of(ht).end * HANDS_SCALE
+	_hands.visible = ht != null
 	# the search: the view pans along to the crates in the street, the next three
 	var searching: bool = int(m["remaining"]) <= 0 and m["cleared"]
 	_pan_to = PAN if searching else 0.0
@@ -397,7 +475,11 @@ func _set_state(k: int, s: String) -> void:
 	f["t"] = 0.0
 	var r: TextureRect = f["rect"]
 	r.visible = s != ""
-	r.texture = tex("gang_down") if s == "down" else tex("gang_stand")
+	if s == "pop" or (s == "up" and not f.has("who")):
+		f["who"] = "ab"[randi() % 2]           # one of the zone's two, as it comes up
+	if s in ["pop", "up"]:
+		f["boss"] = _boss_key                  # the head, if he's the one coming up
+	r.texture = _fig_tex(f, "down" if s == "down" else "stand")
 	r.modulate.a = 1.0
 
 
@@ -421,6 +503,13 @@ func _process(dt: float) -> void:
 		var r: TextureRect = f["rect"]
 		var fdt: float = dt * (FROST_SLOW if _them_fx.get("frost", false) and f["state"] in ["pop", "up"] else 1.0)
 		f["t"] += fdt
+		if f["state"] in ["pop", "up"] and str(f.get("boss", "")) != _boss_key:
+			_set_state(k, "")                        # the head's out (or gone): the gang that was up steps back for him
+			up -= 1
+			_arcs[k].visible = false
+			for el in f["fx"]:
+				f["fx"][el].emitting = false
+			continue
 		if f["state"] in ["pop", "up"] and up > _on_you:
 			_set_state(k, "")                        # the gang's thinned with no kill seen (a run ended, the way out)
 			up -= 1
@@ -441,7 +530,7 @@ func _process(dt: float) -> void:
 					f["next_fire"] = randf_range(0.8, 2.2)
 				if f["fire_t"] > 0.0:
 					f["fire_t"] -= fdt
-				r.texture = tex("gang_fire") if f["fire_t"] > 0.0 else tex("gang_stand")
+				r.texture = _fig_tex(f, "fire" if f["fire_t"] > 0.0 else "stand")
 			"down":
 				lift = -24.0 * clampf(f["t"] / DOWN_S, 0.0, 1.0)
 				r.modulate.a = 1.0 - clampf((f["t"] - DOWN_S * 0.5) / (DOWN_S * 0.5), 0.0, 1.0)
@@ -450,7 +539,9 @@ func _process(dt: float) -> void:
 		if r.texture != null:
 			r.size = r.texture.get_size()
 		r.scale = Vector2(slot["scale"], slot["scale"])
-		r.position = slot["foot"] - Vector2(r.size.x * 0.5, r.size.y) * slot["scale"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
+		var u: Rect2 = used_of(r.texture)                # the feet where the picture's drawn part ends, centred on what's drawn
+		var anchor: Vector2 = Vector2(u.get_center().x, u.end.y) if u.size.y > 0.0 else Vector2(r.size.x * 0.5, r.size.y)
+		r.position = slot["foot"] - anchor * slot["scale"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
 		var lit: float = slot["lit"]
 		if float(f.get("hit_t", 0.0)) > 0.0:
 			f["hit_t"] = float(f["hit_t"]) - dt
@@ -506,7 +597,7 @@ func _process(dt: float) -> void:
 		_jolt -= dt
 		jolt = Vector2(randf_range(-4.0, 4.0), randf_range(-3.0, 3.0))
 	_plate.position = PLATE_AT + Vector2(-_pan, -DUCK_SCENE * _duck) + jolt
-	_cover.position = Vector2(COVER_X - _pan * 1.4, COVER_Y - DUCK_COVER * _duck) + jolt * 1.5
+	_cover.position = Vector2(COVER_X - _pan * 1.4, _cover_y - DUCK_COVER * _duck) + jolt * 1.5
 	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y - 1)
 	# the crates ride the street as it pans in (the review: they stood still while the plate slid under them)
 	for k in range(_crates.size()):
@@ -533,7 +624,7 @@ func _process(dt: float) -> void:
 			_marker_t = 0.12
 			_figs[k]["hit_t"] = 0.08
 	_recoil = maxf(0.0, _recoil - dt)
-	_hands.position = HANDS_AT + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt
+	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt
 	_marker_t -= dt
 	_marker.visible = _marker_t > 0.0
 	_fx_t += dt
@@ -564,6 +655,18 @@ func _shown() -> bool:
 			return false
 		n = n.get_parent()
 	return true
+
+
+## The hands for the gun in hand: its type (a garage rifle by its rounds), a blade that bleeds by its edge.
+static func _hands_kind(gun) -> String:
+	if gun == null:
+		return ""
+	if Items.is_melee(gun):
+		return "blade" if float(Items.base_of(gun).get("conv_bleed_pct", 0)) >= 25.0 else "melee"
+	var kind: String = str(Items.base_of(gun).get("type", "improvised"))
+	if kind == "improvised" and Items.ammo_type(gun) not in ["", "improvised", "none"]:
+		kind = Items.ammo_type(gun)
+	return kind if kind in ["pistol", "shotgun", "rifle", "smg", "improvised"] else "improvised"
 
 
 ## Shock's arc: a jagged line across the figure's upper half, new each flash.

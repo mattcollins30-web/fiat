@@ -4354,3 +4354,13 @@ cover's own bricks, cut from its lower 28% and tiled); the cover starts 20 px fu
 search's pan too. The figures stand by their feet; the far one down the street at the kerb, 0.32. The crates stand on
 the ground in depth with a shadow each, riding the pan in; a magnifying glass bobs over the one being opened, its ring
 the search so far.
+
+**The fight's full art wired (13 Oct).** All 67 of the manifest's pictures landed in art/fight/ (the Garden Centre's plate
+on a retry). The run view takes each site's own plate and cover as a pair (else the Parade's test pair), the cover's drawn
+top on its line whatever its height, the wall's fill cut from it; the zone's two gang members, one picked as each comes
+up; the head drawn as himself while he's out (each figure keeps whose picture it came up with, so the last of the gang
+falls as gang and the head falls as the head); the hands for the gun's type (a blade's for a bleeding edge), each tucked
+into the bottom-right corner by where its picture ends, at 0.85; feet on the slots by where each picture's drawn part
+ends. The smoke: every site resolves its pair, the cover's top, the zone's gang, feet on the slots, the heads, the
+head's arrival and fall, the hands' corner. art/fight isn't committed (Matt's); the editor must import it before an
+export, and its import stays Lossless (the feet and the cover's top read the pictures).

@@ -7821,6 +7821,7 @@ func _run_view_checks(main) -> void:
 	var want: int = mini(3, mini(int(m["remaining"]), maxi(1, sim.contact(m["t"]))))
 	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
 	_check(not v.state()["glass"], "the glass shows in a fight")
+	_full_art_checks(main, v)
 	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
 	_check_fit(main, "Run (the run view, a gang)")
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
@@ -8002,6 +8003,110 @@ func _run_view_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the run view ok: the frame, the gang up, a kill, a hit, the search, the bars and the six, the fit")
+
+
+## The full art wired (13 Oct): each site its own plate and cover (else the Parade's test pair), the cover's drawn top on
+## its line, the zone's gang, the head when he's out, the hands for the gun, feet on the slot.
+func _full_art_checks(main, v) -> void:
+	var sim = main.sim
+	var own := 0
+	for i in range(Data.TIERS.size()):
+		var key: String = RunView.site_key(str(Data.TIERS[i]["name"]))
+		_check(RunView.tex_of([key + "_plate", "parade_plate"]) != null and RunView.tex_of([key + "_cover", "parade_cover"]) != null, "%s has no plate or cover, its own or the test's" % key)
+		if RunView.tex(key + "_plate") != null and RunView.tex(key + "_cover") != null:
+			own += 1
+	print("the run view: %d of %d sites have their own plate and cover" % [own, Data.TIERS.size()])
+	# out on the site the check's on: its plate, its cover's top on the line
+	var m: Dictionary = sim.mission
+	var key0: String = RunView.site_key(str(Data.TIERS[int(m["tier"])]["name"]))
+	_check(v._plate.texture == RunView.tex_of([key0 + "_plate", "parade_plate"]) and v._cover.texture == RunView.tex_of([key0 + "_cover", "parade_cover"]), "%s's plate or cover isn't up" % key0)
+	_check(absf(v._cover_y + RunView.used_of(v._cover.texture).position.y - RunView.COVER_TOP) < 0.5, "the cover's drawn top isn't on its line: %.0f" % (v._cover_y + RunView.used_of(v._cover.texture).position.y))
+	# the zone's gang, when it's drawn
+	var zone: String = RunView.ZONE_KEYS[int(Data.TIERS[int(m["tier"])]["zone"])]
+	if RunView.tex("gang_%s_a_stand" % zone) != null:
+		var ups: Array = v._figs.filter(func(f): return f["state"] in ["pop", "up"])
+		_check(not ups.is_empty() and ups.all(func(f): return f["rect"].texture in [RunView.tex("gang_%s_a_stand" % zone), RunView.tex("gang_%s_b_stand" % zone), RunView.tex("gang_%s_a_fire" % zone), RunView.tex("gang_%s_b_fire" % zone)]), "the gang up isn't %s's" % zone)
+	# feet on the slot: a figure that's up, not lifted or ducked, stands its drawn bottom on its foot
+	v._duck = 0.0
+	v._duck_t = 0.0
+	v._duck_next = 99.0
+	for k in range(v._figs.size()):
+		v._set_state(k, "up")
+	v._process(0.01)
+	for k in range(v._figs.size()):
+		var r: TextureRect = v._figs[k]["rect"]
+		var u: Rect2 = RunView.used_of(r.texture)
+		var sc: float = RunView.SLOTS[k]["scale"]
+		var feet: float = r.position.y + u.end.y * sc
+		_check(absf(feet - (RunView.SLOTS[k]["foot"].y - RunView.DUCK_SCENE * v._duck)) < 1.5, "figure %d's feet at %.0f, its slot's at %.0f" % [k, feet, RunView.SLOTS[k]["foot"].y])
+	# the head when he's out, if he's drawn
+	for b in Data.BOSSES:
+		var hk: String = RunView.site_key(str(b["name"]))
+		if RunView.tex("head_%s_stand" % hk) == null:
+			continue
+		v._figs[0]["boss"] = hk
+		_check(v._fig_tex(v._figs[0], "stand") == RunView.tex("head_%s_stand" % hk), "%s isn't drawn as himself" % b["name"])
+	v._figs[0]["boss"] = ""
+	v._boss_key = ""
+	# the head coming out on the last kill: the one who falls falls as himself, the head pops up as the head; and when
+	# the head's killed, he falls as the head (the review: the live key drew them as each other)
+	var gk: String = str(Data.BOSSES[0]["name"])
+	var hk0: String = RunView.site_key(gk)
+	var had_boss: bool = m.has("boss")
+	var boss0 = m.get("boss", null)
+	for k in range(v._figs.size()):
+		v._set_state(k, "")
+	v._set_state(0, "up")
+	m["boss"] = {"name": gk, "started": true, "alive": true, "hp": 1000.0}
+	m["kills"] = int(m["kills"]) + 1
+	main.refresh()
+	var fell = v._figs.filter(func(f): return f["state"] == "down")
+	_check(fell.size() == 1 and fell[0]["rect"].texture != RunView.tex("head_%s_down" % hk0), "the last of the gang fell as the head")
+	for n in range(4):
+		v._process(0.2)
+	var ups2: Array = v._figs.filter(func(f): return f["state"] in ["pop", "up"])
+	_check(ups2.size() == 1 and str(ups2[0].get("boss", "")) == hk0, "the head didn't come up as himself: %s" % str(ups2.map(func(f): return f.get("boss", ""))))
+	if RunView.tex("head_%s_stand" % hk0) != null and not ups2.is_empty():
+		_check(ups2[0]["rect"].texture in [RunView.tex("head_%s_stand" % hk0), RunView.tex("head_%s_fire" % hk0)], "the head is drawn as someone else")
+	m["boss"]["alive"] = false
+	m["kills"] = int(m["kills"]) + 1
+	main.refresh()
+	var fell2 = v._figs.filter(func(f): return f["state"] == "down" and str(f.get("boss", "")) == hk0)
+	_check(fell2.size() == 1, "the head didn't fall")
+	if RunView.tex("head_%s_down" % hk0) != null and fell2.size() == 1:
+		_check(fell2[0]["rect"].texture == RunView.tex("head_%s_down" % hk0), "the head fell as one of the gang")
+	if had_boss:
+		m["boss"] = boss0
+	else:
+		m.erase("boss")
+	main.refresh()
+	# the hands for the gun: a shotgun's, and a hammer's or none
+	var hold = sim.equipped["Primary"]
+	for pair in [["Primary", "Farmer's shotgun", "shotgun"], ["Primary", "Claw hammer", "melee"]]:
+		var g: Dictionary = sim._plain(pair[0], pair[1])
+		if g.is_empty():
+			continue
+		sim.equipped["Primary"] = g
+		main.refresh()
+		var want: Texture2D = RunView.tex("hands_" + pair[2])
+		if want != null:
+			_check(v._hands.visible and v._hands.texture == want, "the %s's hands aren't up" % pair[1])
+		elif pair[2] == "melee":
+			_check(not v._hands.visible, "a revolver's hands show for the hammer")
+	# every gun's hands in the corner: the drawn bottom-right on HANDS_CORNER (the review: a first gun on the fallback kept the old place)
+	for gname in ["Army SMG", "Nail gun", "Sawn-off"]:
+		var g2: Dictionary = sim._plain("Primary", gname)
+		sim.equipped["Primary"] = g2
+		main.refresh()
+		v._recoil = 0.0
+		v._duck = 0.0
+		v._jolt = 0.0
+		v._process(0.0)
+		if v._hands.visible:
+			var br: Vector2 = v._hands.position + RunView.used_of(v._hands.texture).end * RunView.HANDS_SCALE
+			_check(br.distance_to(RunView.HANDS_CORNER) < 1.5, "the %s's hands aren't in the corner: %s" % [gname, str(br)])
+	sim.equipped["Primary"] = hold
+	main.refresh()
 
 
 ## The Yard as lanes (9 Oct, docs/design/yard.md): eight buildings, five columns of two picks and a rank; a tile
