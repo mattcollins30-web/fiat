@@ -1013,7 +1013,8 @@ const TIERS := [
 	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 200.0, "dps": 0.4, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 6,
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
-	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 2, "xp": 3, "cash": 9,
+	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 3,     # 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
+		 "xp": 3, "cash": 9,
 		"shape": {"pool": 12, "hp": 0.9, "dps": 0.8, "patrol": 1.0, "cash": 1.2},
 		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
 	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 6, "cash": 14,
@@ -1955,7 +1956,7 @@ const WORN_CASH := 0.3
 ## The crates (13 Oct, Matt; docs/design/search_crates.md): a cleared site's search is its crates, opened in the
 ## dice's order, each so many searches; all open, it's picked over. The crates' searches add up to THIN_AFTER +
 ## THIN_PER_DEPTH a depth (quantity pushes it), what the thinning gave in full before.
-const THIN_AFTER := 6
+const THIN_AFTER := 7
 const THIN_PER_DEPTH := 2
 ## A crate: its searches; `lean`, the share of its finds that come from `slots` (else the site's own find);
 ## `notes`/`scrap`, its odds of those against a plain search; `tins`, a handful of the site's cash a search; `unique`,
@@ -1964,13 +1965,13 @@ const THIN_PER_DEPTH := 2
 const CRATES := [
 	{"key": "cardboard", "name": "Cardboard box", "short": "Cardboard", "searches": 1, "w": 4.0},
 	{"key": "ammo_tin", "name": "Ammo tin", "searches": 1, "w": 1.5, "shape": "ammo", "lean": 0.7, "slots": ["Ammo"]},
-	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "locks": true, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.5},
-	{"key": "toolbox", "name": "Toolbox", "searches": 2, "locks": true, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 2.5},
+	{"key": "jewellery", "name": "Jewellery box", "short": "Jewellery", "searches": 1, "locks": true, "w": 0.8, "lean": 0.5, "slots": ["Charm"], "notes": 1.2},
+	{"key": "toolbox", "name": "Toolbox", "searches": 2, "locks": true, "w": 1.5, "shape": "att", "lean": 0.5, "slots": ["Attachment"], "scrap": 1.8},
 	{"key": "medicine", "name": "Medicine cabinet", "short": "Medicine", "searches": 2, "locks": true, "w": 1.2, "shape": "med", "lean": 0.6, "slots": ["Medical"]},
-	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "locks": true, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 2.0},
-	{"key": "safe", "name": "Safe", "searches": 3, "locks": true, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 3.0, "tins": true, "unique": 2.0},
+	{"key": "filing", "name": "Filing cabinet", "short": "Filing", "searches": 2, "locks": true, "w": 1.0, "shape": "paper", "lean": 0.4, "slots": ["Paper"], "notes": 1.6},
+	{"key": "safe", "name": "Safe", "searches": 3, "locks": true, "w": 0.4, "from_zone": 1, "depth_w": 0.2, "notes": 2.0, "tins": true, "unique": 2.0},
 	{"key": "military", "name": "Military crate", "short": "Military", "searches": 4, "locks": true, "w": 0.4, "from_zone": 2, "depth_w": 0.3, "lean": 0.6,
-		"slots": ["Primary", "Secondary", "Helmet", "Armour"], "rarity": 0.25},
+		"slots": ["Primary", "Secondary", "Helmet", "Armour"], "rarity": 0.4},
 ]
 ## Locked crates (13 Oct, the Caretaker's Keys): a crate that `locks` comes locked CRATE_LOCK of the time, over and above
 ## the site's searches; without the Keys it's passed over, with them it opens, its finds CRATE_LOCK_RARITY better.

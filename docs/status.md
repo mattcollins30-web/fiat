@@ -4249,3 +4249,20 @@ quality up (+0.25). The Keys keep their event every run; their words say "every 
 
 **The endgame map is the Dial (13 Oct, Matt).** The Radio's second tab, its band and title, Head start's words and the
 log's point line say the Dial. The rail's The Map (the sites) stays; the band keeps the map's picture.
+
+**The balance pass after the crates (13 Oct).** Gates set before it: the summary's gates as they stand, every one green
+but the bot-timing ones (the bank's band, the keystone and capstone hours, the depth pace - Matt, 10 Oct) and the two
+read on Matt's save (deaths, wounds); and the crates' own, a site's take (finds' sell value and tins, the search and
+the kills) within 0.9-1.15 of the old search's on every site, by tests/crate_probe.gd. The probe first read the crates
+at 0.85-0.98 (they'd dropped the thinned tail) and kills are a tenth to a third of a run's take, so the fight drops
+stay as they are and the crates got the search back: THIN_AFTER 6 to 7; a safe's tins 1-3 to 0.5-2 of the site's cash
+a search; notes a jewellery box 1.5 to 1.2, a filing cabinet 2 to 1.6, a safe 3 to 2; a toolbox's scrap 2.5 to 1.8; a
+military crate's quality 0.25 to 0.4. The probe after: 0.93-1.12. The first pass read a third of the plain builds
+stalled for hours under the Retail Park on tier-2 kit (the Fence and the Workshop shut till the heads; the same on
+the code before the crates, three cloud reads each): the Parade's loot to tier 3 (the stuck seeds came through; the
+Clinic's tier-3 meds arrive a site sooner with it). The second pass: the Bank 0.4-2.9 h every build (5.8 h one plain
+Poacher read), the lorry by 5.9 h on the element builds, the plain floor by 17 h, cash, scrap, the clock and the loot
+gates green. Red: the bank's band (0.6-1.4 h, 2.3x), the keystone and capstone hours, the depth pace (three builds
+0.7 an hour) - all bot timing; the ladders' spread (Poacher as frost 13 past the barracks both reads, 9-11 the pass
+before); deaths and wounds, on Matt's save. tests/balance.gd's probe sets the Gamekeeper down (it hung on the Estate's
+gate).

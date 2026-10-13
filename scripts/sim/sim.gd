@@ -5552,7 +5552,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 		if rng.randf() < Data.SCRAP_SEARCH * float(cd.get("scrap", 1.0)):
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		if cd.get("tins", false):
-			m["cash"] += float(t["cash"]) * rng.randf_range(1.0, 3.0) * inflation()     # a safe: a handful of tins
+			m["cash"] += float(t["cash"]) * rng.randf_range(0.5, 2.0) * inflation()     # a safe: a handful of tins (the pass, 13 Oct: 1-3 read the Bank 17% over)
 		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (1 if yard_has("a_dog") else 0) + (1 if yard_has("second_dog") else 0) + (2 if yard_has("pack") else 0) + (1 if has_rule("postman") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search

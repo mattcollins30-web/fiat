@@ -437,6 +437,7 @@ func _probe() -> void:
 		sim.tree = []
 		for oi in Data.ZONES[0]["tiers"]:
 			sim.best_depth[oi] = maxi(1, int(sim.best_depth[oi]))     # the Outskirts walked, so the Streets are open (12 Oct)
+		sim.bosses_beaten[0] = true               # and the Gamekeeper down: the Estate opens on him since the gates (13 Oct)
 		sim.hp = sim.max_hp()
 		sim.deploy(Data.OUTSKIRTS_SITES)          # the Streets, as before the Outskirts (12 Oct)
 		var m: Dictionary = sim.mission
