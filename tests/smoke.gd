@@ -7737,6 +7737,7 @@ func _run_view_checks(main) -> void:
 	_check(v.visible and not run._fight["box"].visible and not run._runner["box"].visible and run._six[0]["panel"].visible, "the run view did not take the two boxes")
 	var want: int = mini(3, mini(int(m["remaining"]), maxi(1, sim.contact(m["t"]))))
 	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
+	_check(not v.state()["glass"], "the glass shows in a fight")
 	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
 	_check_fit(main, "Run (the run view, a gang)")
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
@@ -7763,6 +7764,23 @@ func _run_view_checks(main) -> void:
 	for k in range(4):
 		v._process(0.1)
 	_check(float(v.state()["duck"]) > 0.3, "the runner never ducks: %s" % str(v.state()))
+	# down behind the wall, the wall runs to the frame's foot (Matt, 13 Oct: "too short when crouching")
+	v._duck_t = 5.0
+	for k in range(10):
+		v._process(0.1)
+	var cv: TextureRect = v._cover
+	var fill: TextureRect = v._cover_fill
+	_check(v._duck > 0.95 and fill.visible and fill.texture != null and fill.position.y <= cv.position.y + cv.size.y and fill.position.y + fill.size.y >= RunView.H, "ducked, the wall stops short of the frame's foot: cover to %.0f, fill %.0f to %.0f" % [cv.position.y + cv.size.y, fill.position.y, fill.position.y + fill.size.y])
+	# and what it draws is the wall's body, the cover's own bricks from 72% down, not the whole cover again (the review)
+	var cimg: Image = cv.texture.get_image()
+	var fimg: Image = fill.texture.get_image()
+	var y72: int = int(cimg.get_height() * 0.72)
+	_check(fimg.get_height() == cimg.get_height() - y72 and fimg.get_pixel(5, 0) == cimg.get_pixel(5, y72) and fimg.get_pixel(300, fimg.get_height() - 1) == cimg.get_pixel(300, cimg.get_height() - 1), "the wall's fill isn't the cover's bricks: %dx%d" % [fimg.get_width(), fimg.get_height()])
+	v._duck_t = 0.0
+	# the far one stands further down the street than the middle one, smaller, wholly in the frame
+	var far: Dictionary = RunView.SLOTS[2]
+	var mid: Dictionary = RunView.SLOTS[0]
+	_check(far["foot"].y < mid["foot"].y - 25 and far["scale"] < mid["scale"] * 0.6 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "the far one isn't down the street: %s against %s" % [str(far), str(mid)])
 	# the numbers keep off the bars, the head, the keys and the chips (Matt, 13 Oct: they sat on "On you"), with
 	# something on both sides so both rows of chips show; the keep-out drawn here from the nodes, not run's own list
 	# and again with your chips as wide as they get (a med in use too), which leaves the frame's foot no room (the review)
@@ -7874,6 +7892,27 @@ func _run_view_checks(main) -> void:
 	for k in range(10):
 		v._process(0.2)
 	_check(v.state()["pan_to"] > 0.0 and v.state()["crates"] > 0 and v.figures_up() == 0, "the search did not pan to the crates: %s" % str(v.state()))
+	# panned, the cover still spans the frame; the crates stand on the ground, nearer is lower and bigger; the glass over
+	# the one being opened, its ring the search so far (Matt, 13 Oct)
+	_check(v._cover.position.x <= 0.0 and v._cover.position.x + v._cover.size.x >= RunView.W, "panned to the crates, the cover leaves a gap: %.0f to %.0f" % [v._cover.position.x, v._cover.position.x + v._cover.size.x])
+	for k in range(RunView.CRATE_SPOTS.size() - 1):
+		_check(RunView.CRATE_SPOTS[k]["foot"].y > RunView.CRATE_SPOTS[k + 1]["foot"].y and RunView.CRATE_SPOTS[k]["scale"] > RunView.CRATE_SPOTS[k + 1]["scale"], "the crates aren't in depth: %d against %d" % [k, k + 1])
+	# the crates ride the pan: halfway in, they're half the pan short of their spots, the plate with them
+	var pan_end: float = v._pan
+	v._pan_to = RunView.PAN * 0.5
+	v._pan = RunView.PAN * 0.5
+	v._process(0.0)
+	var c0m: Vector2 = v._crates[0].get_meta("at")
+	_check(absf(v._crates[0].position.x - (c0m.x + RunView.PAN * 0.5)) < 0.5 and absf((v._crates[0].position.x - v._plate.position.x) - (c0m.x - (RunView.PLATE_AT.x - RunView.PAN))) < 2.0, "the crates don't ride the pan: crate %.1f, plate %.1f" % [v._crates[0].position.x, v._plate.position.x])
+	v._pan = pan_end
+	v._pan_to = RunView.PAN
+	v._process(0.0)
+	var c0: TextureRect = v._crates[0]
+	var gc: Vector2 = v._glass.position + Vector2(RunView.Glass.R, RunView.Glass.R)
+	_check(v.state()["glass"] and c0.visible and gc.x >= c0.position.x - 4 and gc.x <= c0.position.x + c0.size.x * c0.scale.x + 24 and gc.y < c0.position.y, "the glass isn't over the crate being opened: glass %s, crate %s" % [str(gc), str(c0.position)])
+	m["search"] = sim.search_s(m["t"]) * 0.5
+	main.refresh()
+	_check(absf(float(v.state()["search_p"]) - 0.5) < 0.01, "the glass's ring isn't the search: %.2f" % float(v.state()["search_p"]))
 	_check(run._fight["track"].position.y >= run.VIEW_SEARCH_Y and run._six[0]["key"].text == "Gang in", "the search bar is not under the six while searching")
 	_check_fit(main, "Run (the run view, the search)")
 	sim.extract_now()

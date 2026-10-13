@@ -13,15 +13,23 @@ const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const W := 588
 const H := 262
 const DIR := "res://art/fight_test/%s.png"
-## The three depths: where a figure stands (its top-left in the frame), its scale, how lit.
+## The three depths: where a figure stands (its feet, in the frame), its scale, how lit.
 const SLOTS := [
-	{"at": Vector2(300, 92), "scale": 0.62, "lit": 0.9},     # mid: by the car - the first on you
-	{"at": Vector2(440, 50), "scale": 0.95, "lit": 1.0},     # near: close, popping up
-	{"at": Vector2(70, 95), "scale": 0.42, "lit": 0.75},     # far: in a doorway
+	{"foot": Vector2(340, 211), "scale": 0.62, "lit": 0.9},     # mid: by the car - the first on you
+	{"foot": Vector2(501, 232), "scale": 0.95, "lit": 1.0},     # near: close, popping up
+	{"foot": Vector2(206, 167), "scale": 0.32, "lit": 0.72},    # far: down the street at the kerb (Matt, 13 Oct: it stood too near, too small)
+]
+## The search's crates on the ground (Matt, 13 Oct: they floated): the one being opened near on the left, the next two
+## further down the street, each its feet on the tarmac and a shadow under it.
+const CRATE_SPOTS := [
+	{"foot": Vector2(175, 212), "scale": 0.9},
+	{"foot": Vector2(285, 201), "scale": 0.72},
+	{"foot": Vector2(372, 185), "scale": 0.55},
 ]
 const PLATE_AT := Vector2(-50, -20)       # the plate's crop for the fight; the search pans a further PAN along
 const PAN := 50.0
 const COVER_Y := H - 72
+const COVER_X := -20.0                    # the cover's left at no pan: its 688 still past the right edge at the search's pan (x1.4)
 const HANDS_AT := Vector2(W - 235, H - 178)
 const HANDS_SCALE := 0.95
 const DOWN_S := 0.7                       # a kill's fall
@@ -35,6 +43,10 @@ var _plate: TextureRect
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
 var _crates: Array = []                   # the crates in the street while searching
 var _cover: TextureRect
+var _cover_fill: TextureRect               # the wall's brick carried on down under it, for the duck (Matt: "too short when crouching")
+var _shadows: Array = []                   # a shadow under each crate
+var _glass: Control                        # the magnifying glass over the crate being opened, its ring the search's progress
+var _search_p := 0.0
 var _hands: TextureRect
 var _red: TextureRect
 var _marker: Label
@@ -116,13 +128,27 @@ func _init() -> void:
 		add_child(arc)
 		_arcs.append(arc)
 	for k in range(3):
+		var sh := _rect(_shadow_tex())
+		sh.visible = false
+		_shadows.append(sh)
 		var c := _rect(null)
 		c.visible = false
 		_crates.append(c)
 	# the figures stand in depth order: the far one behind, the near one in front
 	move_child(_figs[2]["rect"], _plate.get_index() + 1)
 	_cover = _rect(tex("parade_cover"))
-	_cover.position = Vector2(PLATE_AT.x, COVER_Y)
+	_cover.position = Vector2(COVER_X, COVER_Y)
+	_cover_fill = _rect(null)
+	var ct: Texture2D = _cover.texture
+	if ct != null:
+		# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
+		# nothing caught on it
+		var y0: int = int(ct.get_height() * 0.72)
+		_cover_fill.texture = ImageTexture.create_from_image(ct.get_image().get_region(Rect2i(0, y0, ct.get_width(), ct.get_height() - y0)))
+		_cover_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_cover_fill.stretch_mode = TextureRect.STRETCH_TILE
+		_cover_fill.size = Vector2(ct.get_width(), H)
+	move_child(_cover_fill, _cover.get_index())     # under the cover's coping
 	_hands = _rect(tex("hands_revolver"))
 	_hands.scale = Vector2(HANDS_SCALE, HANDS_SCALE)
 	_hands.position = HANDS_AT
@@ -140,6 +166,10 @@ func _init() -> void:
 	_red.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_red.modulate = Color(1, 1, 1, 0)
 	add_child(_red)
+	_glass = Glass.new()
+	_glass.ring = Pal.ACCENT
+	_glass.visible = false
+	add_child(_glass)
 	_marker = UI.label(self, Rect2(0, 0, 24, 24), "✕", "Bold", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	UI.shadow(_marker)
 	_marker.visible = false
@@ -226,6 +256,41 @@ func _emitter(el: String) -> CPUParticles2D:
 	return p
 
 
+## A soft flat ellipse: a crate's shadow on the tarmac.
+static var _shadow: Texture2D
+static func _shadow_tex() -> Texture2D:
+	if _shadow != null:
+		return _shadow
+	var img := Image.create(64, 16, false, Image.FORMAT_RGBA8)
+	for y in range(16):
+		for x in range(64):
+			var d: float = Vector2((x - 31.5) / 31.5, (y - 7.5) / 7.5).length()
+			img.set_pixel(x, y, Color(0, 0, 0, clampf(1.0 - d, 0.0, 1.0) * 0.55))
+	_shadow = ImageTexture.create_from_image(img)
+	return _shadow
+
+
+## The magnifying glass: a lens, a ring that fills with the search, a handle down to the right.
+class Glass extends Control:
+	const R := 15.0
+	var p := 0.0
+	var ring := Color.WHITE                   # the search's colour, set by the view (an inner class sees no palette)
+	func _init() -> void:
+		size = Vector2(R * 2 + 24, R * 2 + 24)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var c := Vector2(R, R)
+		var h := Vector2(0.7071, 0.7071)
+		draw_line(c + h * (R + 1), c + h * (R + 16), Color(0, 0, 0, 0.55), 7.0)         # the handle's shadow
+		draw_line(c + h * (R + 1), c + h * (R + 15), Color(0.42, 0.27, 0.16), 5.0)
+		draw_circle(c, R - 1, Color(0.75, 0.88, 1.0, 0.22))                          # the lens
+		draw_arc(c, R, 0.0, TAU, 40, Color(0, 0, 0, 0.55), 5.0)
+		draw_arc(c, R, 0.0, TAU, 40, Color(0.85, 0.85, 0.82), 3.0)
+		if p > 0.0:
+			draw_arc(c, R, -PI / 2.0, -PI / 2.0 + TAU * p, 40, ring, 3.0)      # how far the search is
+		draw_arc(c + Vector2(-4, -4), R * 0.45, PI, PI * 1.5, 8, Color(1, 1, 1, 0.6), 2.0)     # a glint
+
+
 ## A soft round dot, the particles' one picture.
 static var _dot_tex: Texture2D
 static func _dot() -> Texture2D:
@@ -307,14 +372,23 @@ func show_state(sim, m: Dictionary) -> void:
 		var j: int = ci + k
 		var c: TextureRect = _crates[k]
 		c.visible = searching and j < cs.size() and not cs[j].get("passed", false)
+		_shadows[k].visible = c.visible
 		if c.visible:
 			var pic: Array = CratesPanel.crate_texture(str(cs[j]["key"]), false)
 			c.texture = pic[0]
 			c.modulate = pic[1]
-			var s: float = [1.0, 0.8, 0.65][k]
+			var spot: Dictionary = CRATE_SPOTS[k]
+			var s: float = spot["scale"]
 			c.size = c.texture.get_size() if c.texture != null else Vector2(64, 64)
 			c.scale = Vector2(s, s)
-			c.position = [Vector2(200, 150), Vector2(320, 140), Vector2(400, 132)][k]
+			c.set_meta("at", spot["foot"] - Vector2(c.size.x * 0.5, c.size.y * 0.95) * s)       # feet on the ground (where they stand at the full pan)
+			var sh: TextureRect = _shadows[k]
+			sh.scale = Vector2(s, s)
+			sh.set_meta("at", spot["foot"] - Vector2(sh.size.x * 0.5, sh.size.y * 0.6) * s)
+	# the glass over the one being opened, its ring the search so far (nothing over a crate passed by or once picked clean)
+	var t: Dictionary = m["t"]
+	_search_p = clampf(float(m.get("search", 0.0)) / maxf(0.01, sim.search_s(t)), 0.0, 1.0) if searching else 0.0
+	_glass.visible = searching and _crates[0].visible and ci < cs.size() and not sim.crates_done(m)
 
 
 func _set_state(k: int, s: String) -> void:
@@ -376,7 +450,7 @@ func _process(dt: float) -> void:
 		if r.texture != null:
 			r.size = r.texture.get_size()
 		r.scale = Vector2(slot["scale"], slot["scale"])
-		r.position = slot["at"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
+		r.position = slot["foot"] - Vector2(r.size.x * 0.5, r.size.y) * slot["scale"] + Vector2(_pan * -0.6, lift - DUCK_SCENE * _duck)
 		var lit: float = slot["lit"]
 		if float(f.get("hit_t", 0.0)) > 0.0:
 			f["hit_t"] = float(f["hit_t"]) - dt
@@ -432,9 +506,20 @@ func _process(dt: float) -> void:
 		_jolt -= dt
 		jolt = Vector2(randf_range(-4.0, 4.0), randf_range(-3.0, 3.0))
 	_plate.position = PLATE_AT + Vector2(-_pan, -DUCK_SCENE * _duck) + jolt
-	_cover.position = Vector2(PLATE_AT.x - _pan * 1.4, COVER_Y - DUCK_COVER * _duck) + jolt * 1.5
-	for c in _crates:
-		pass
+	_cover.position = Vector2(COVER_X - _pan * 1.4, COVER_Y - DUCK_COVER * _duck) + jolt * 1.5
+	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y - 1)
+	# the crates ride the street as it pans in (the review: they stood still while the plate slid under them)
+	for k in range(_crates.size()):
+		for n in [_crates[k], _shadows[k]]:
+			if n.has_meta("at"):
+				n.position = n.get_meta("at") + Vector2(PAN - _pan, 0)
+	# the glass: over the crate being opened, bobbing a little, circling as it looks
+	if _glass.visible:
+		var c0: TextureRect = _crates[0]
+		var top: Vector2 = c0.position + Vector2(c0.size.x * c0.scale.x * 0.5, 0)
+		_glass.position = top + Vector2(10.0 + 6.0 * cos(_fx_t * 2.2), -30.0 + 4.0 * sin(_fx_t * 3.1)) - Vector2(Glass.R, Glass.R)
+		_glass.p = _search_p
+		_glass.queue_redraw()
 	# your gun: a kick back at its rate while there's someone to shoot, the marker on the one you're hitting
 	_shot_t -= dt
 	if _firing and _shot_t <= 0.0 and _duck < 0.2:
@@ -523,4 +608,4 @@ func figures_up() -> int:
 
 
 func state() -> Dictionary:
-	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck}
+	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck, "glass": _glass.visible, "search_p": _search_p}
