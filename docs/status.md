@@ -4138,3 +4138,10 @@ at a third above half HP): (1) `deltas_of` loops Data.AFFIXES, where damage_pct 
 and attachment rows), so "2% dmg" shows twice and pushes the deciding deltas (dmg <½HP, dmg 1st gang) off the line -
 dedupe by stat, plus a smoke assertion that no delta repeats; (2) a unique's rule isn't on its card - show the rule as a
 line under the chips (mockup first unless waived). Then the playtest read: the Clinic-paying bot and PUSH from his odds.
+
+**The campaign's gates designed (13 Oct, docs/design/campaign_gates.md).** Matt's design: tins for cash (a label only);
+a boss a zone opening a room each (a new Outskirts boss, the Gamekeeper, opens the Clinic; the Carpet Man the Fence; the
+Manager's deeds the Yard; the Quartermaster's military radio and tool roll the Radio and the Workshop); the papers
+carry radio codes in place of words; a live radio line under the top bar, scrolling, no speaker names, the medic and
+the Fence speaking on it once open. The art: tools/pixellab_campaign_manifest.json (16 jobs: the tin, the nine rail
+glyphs to art/ui_new, the five unlock items, the Gamekeeper). Build order in the doc; the pick panel's fixes first.
