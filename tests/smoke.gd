@@ -7791,6 +7791,75 @@ func _run_view_checks(main) -> void:
 	m["using"] = null
 	m["dots"] = {}
 	m["my_dots"] = {}
+	# the elements in engine (13 Oct, Matt): fire on them flames and warms them, poison on you greens the frame's edges
+	for k in range(v._figs.size()):
+		v._set_state(k, "up")
+	m["dots"] = {"fire": 50.0}
+	m["my_dots"] = {"poison": 50.0}
+	main.refresh()
+	for k in range(6):
+		v._process(0.1)
+	var fx: Dictionary = v.fx()
+	_check(fx["them"]["fire"] and not fx["them"]["poison"] and not fx["them"]["frost"] and fx["tint"].r > fx["tint"].b * 1.5, "fire on them did not show as fire: %s" % str(fx))
+	_check(fx["you"]["poison"] > 0.3 and fx["you"]["fire"] < 0.05, "poison on you did not edge the frame green: %s" % str(fx["you"]))
+	# chilled: blue, flakes, slower; shocked: an arc across them
+	m["dots"] = {}
+	m["my_dots"] = {}
+	m["chill_t"] = 5.0
+	main.refresh()
+	for k in range(3):
+		v._process(0.1)
+	fx = v.fx()
+	_check(fx["them"]["frost"] and not fx["them"]["fire"] and fx["tint"].b > fx["tint"].r * 1.5, "a chill on them did not show as frost: %s" % str(fx))
+	m["chill_t"] = 0.0
+	m["shock_t"] = 5.0
+	main.refresh()
+	var arcs := 0
+	for k in range(12):
+		v._process(0.05)
+		arcs = maxi(arcs, int(v.fx()["arcs"]))
+	_check(arcs > 0, "a shock on them never arced")
+	# chilled, a pop takes twice as long (the review: the slowness itself checked)
+	m["shock_t"] = 0.0
+	m["chill_t"] = 5.0
+	main.refresh()
+	for k in range(v._figs.size()):
+		v._set_state(k, "")
+	v._set_state(0, "pop")
+	v._process(RunView.POP_S * 1.2)                # full pace it'd be up by now
+	_check(v._figs[0]["state"] == "pop", "a chilled figure popped up at full pace")
+	v._process(RunView.POP_S * 1.0)
+	_check(v._figs[0]["state"] == "up", "a chilled figure never finished popping up")
+	m["chill_t"] = 0.0
+	main.refresh()
+	# a figure down takes its flames with it; nothing on anyone: nothing shown, the edges gone
+	m["shock_t"] = 0.0
+	m["dots"] = {"fire": 50.0}
+	main.refresh()
+	v._process(0.05)
+	v._set_state(0, "down")
+	v._process(0.05)
+	_check(not v._figs[0]["fx"]["fire"].emitting, "a figure going down kept burning")
+	m["dots"] = {}
+	main.refresh()
+	for k in range(10):
+		v._process(0.1)
+	fx = v.fx()
+	_check(fx["them"].values().all(func(b): return not b) and fx["you"].values().all(func(a): return a < 0.01) and fx["arcs"] == 0, "the elements did not clear: %s" % str(fx))
+	# and the fight over with fire still on the books: every emitter off
+	m["dots"] = {"fire": 50.0, "poison": 50.0, "bleed": 50.0}
+	m["chill_t"] = 5.0
+	main.refresh()
+	v._process(0.1)
+	var rem0: int = int(m["remaining"])
+	m["remaining"] = 0
+	main.refresh()
+	v._process(0.1)
+	_check(v.fx()["them"].values().all(func(b): return not b), "the elements kept going on them after the fight: %s" % str(v.fx()))
+	m["remaining"] = rem0
+	m["dots"] = {}
+	m["chill_t"] = 0.0
+	main.refresh()
 	# a hit reddens the edges
 	sim.hp -= sim.max_hp() * 0.1
 	main.refresh()
