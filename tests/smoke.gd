@@ -6736,6 +6736,7 @@ func _grenade_checks(main) -> void:
 	var shells: Dictionary = sim._plain("Ammo", "Shells") if Data.BASES.has("Ammo") else {}
 	if not shells.is_empty():
 		Items.set_stack(shells, 31)
+		var before_ids: Array = sim.stash.map(func(it): return it["id"])     # a Shells stack the smoke's runs left is not ours (13 Oct: a 150 read as a third half)
 		sim.stash.append(shells)
 		main._armoury._inv._set_kind(0)
 		main.refresh()
@@ -6746,7 +6747,7 @@ func _grenade_checks(main) -> void:
 		_check_fit(main, "Lock-up (rounds, Split)")
 		var v0: int = int(shells["value"])
 		main._armoury._press(bt.find("Split"))
-		var halves: Array = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Shells")
+		var halves: Array = sim.stash.filter(func(it): return Items.is_ammo(it) and it["base"] == "Shells" and not before_ids.has(it["id"]))
 		_check(halves.size() == 2 and Items.stack_size(shells) == 16 and halves.any(func(it): return it["id"] != shells["id"] and Items.stack_size(it) == 15), "Split did not halve the stack: %s" % str(halves.map(func(it): return Items.stack_size(it))))
 		_check(absi(int(halves[0]["value"]) + int(halves[1]["value"]) - v0) <= 1, "Split changed what the rounds are worth")
 		_check(main._armoury.selected.get("id", -1) == shells["id"], "Split lost the pick")
@@ -6754,7 +6755,7 @@ func _grenade_checks(main) -> void:
 		Items.set_stack(one, 1)
 		sim.stash.append(one)
 		_check(not sim.can_split(one["id"]), "a single round splits")
-		sim.stash = sim.stash.filter(func(it): return not (Items.is_ammo(it) and it["base"] == "Shells"))
+		sim.stash = sim.stash.filter(func(it): return before_ids.has(it["id"]) or not (Items.is_ammo(it) and it["base"] == "Shells"))
 	# the Fence's shelf carries them now and then
 	var seen := false
 	for k in range(40):
@@ -9921,6 +9922,17 @@ func _try_on_checks(main) -> void:
 	_check(cell != null and not cell._up.visible, "the pistol that costs damage carries the arrow")
 	_check(main._armoury._pick._verdict.text == "▼ Downgrade", "the verdict on the pistol reads '%s'" % main._armoury._pick._verdict.text)
 	var ds: Array = PickPanel.deltas_for(sim, mp, vans)
+	# no delta twice (13 Oct, Matt's Branch Pistol against the Van's Spare: "2% dmg" twice, from damage % listed for the
+	# guns and the attachments, and the deltas that decided it pushed off the line)
+	var branch: Dictionary = Items.roll_unique(sim._unique_named("The Branch Pistol"), sim.rng)
+	var bd: Array = PickPanel.deltas_for(sim, branch, vans)
+	var bwords: Array = bd.map(func(d): return str(d[1]).substr(str(d[1]).find(" ") + 1))     # the words after the figure
+	var dup := ""
+	for k in range(bwords.size()):
+		if bwords.find(bwords[k]) != k:
+			dup = bwords[k]
+	_check(dup == "", "a delta shows twice (%s): %s" % [dup, str(bd)])
+	_check(bd.any(func(d): return str(d[1]).ends_with("dmg <½HP")) and bd.any(func(d): return str(d[1]).ends_with("dmg 1st gang")), "the Branch Pistol's deltas miss its own: %s" % str(bd))
 	_check(not ds.is_empty() and float(ds[0][0]) < 0.0 and str(ds[0][1]).ends_with("dmg/s"), "the deltas don't lead with the damage lost: %s" % str(ds))
 	_check_fit(main, "Lock-up (a pistol against the Van's Spare)")
 	# the other way: the Van's Spare over the pistol is the upgrade, and Equip if better takes it

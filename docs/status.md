@@ -4145,3 +4145,9 @@ Manager's deeds the Yard; the Quartermaster's military radio and tool roll the R
 carry radio codes in place of words; a live radio line under the top bar, scrolling, no speaker names, the medic and
 the Fence speaking on it once open. The art: tools/pixellab_campaign_manifest.json (16 jobs: the tin, the nine rail
 glyphs to art/ui_new, the five unlock items, the Gamekeeper). Build order in the doc; the pick panel's fixes first.
+
+**The pick panel's deltas (13 Oct).** A stat listed twice in Data.AFFIXES (damage %, pace, quantity: the guns' row and
+the attachments' or charms') made its delta twice and pushed the deciding ones off the line; one delta a stat now, and the
+smoke checks the Branch Pistol against the Van's Spare shows no word twice and both rules' damage lines. The Split
+check's flake fixed (a Shells stack the smoke's runs left read as a third half). The unique's rule on its card: three
+mockups to Matt (a chip, the tail line grey, the tail line in the unique's pink), short forms needed for all 49 rules.
