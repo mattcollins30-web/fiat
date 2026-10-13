@@ -222,7 +222,7 @@ func _show_panel() -> void:
 		var taught: String = sim.word_taught_by(str(it["base"]))
 		# read on pickup (10 Oct, Matt: "where do they actually need to be learned?"): once read, say the word is known
 		var read: bool = it["base"] in sim.book
-		tail = ("from before" if taught == "" else (("read · the Radio knows %s" % taught.to_lower()) if read else ("teaches %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
+		tail = ("from before" if taught == "" else (("read · the Radio has %s" % taught.to_lower()) if read else ("the code for %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])

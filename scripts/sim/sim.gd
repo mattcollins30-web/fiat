@@ -1377,7 +1377,7 @@ func _read(it: Dictionary) -> void:
 		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
 		if taught != "" and not _dry_on:
-			log_event("%s: the Radio knows %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper teaches its word
+			log_event("%s: a code on it. The Radio has %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper carries its code (13 Oct: codes, not words)
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
 		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size(), "tier": int(it.get("tier", 0))})
@@ -2950,7 +2950,7 @@ func word_craft_block(i: int, key: String) -> String:
 	if mission != null:
 		return "The runner is out"
 	if not juiceable(i):
-		return "Words from depth 2, the campaign done"
+		return "Codes from depth 2, the campaign done"
 	var n: int = words[i].size()
 	if sealed[i] and key != "clear":
 		return "Sealed: only Clear"
@@ -2967,10 +2967,10 @@ func word_craft_block(i: int, key: String) -> String:
 				return "Only on a silent site"
 		"retune", "clear", "twist":
 			if n == 0:
-				return "No words on it"
+				return "No codes on it"
 		"hold":
 			if n < 2:
-				return "Wants two words"
+				return "Wants two codes"
 	if notes < word_craft_cost(i, key):
 		return "Short of notes"
 	return ""
@@ -3074,7 +3074,7 @@ func _twist(i: int) -> void:
 			words[i] = _roll_words(i, [], n)
 			for wd in words[i]:
 				wd["t"] = cap
-			log_event("Twisted: every word again, at tier %s" % Data.WORD_TIER_NAMES[cap - 1])
+			log_event("Twisted: every code again, at tier %s" % Data.WORD_TIER_NAMES[cap - 1])
 	sealed[i] = true
 
 

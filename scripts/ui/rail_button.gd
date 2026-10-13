@@ -16,8 +16,10 @@ const BADGE_PAD := 10           # each side of the badge's word
 const STAMP := 56               # the stamped square
 const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
-const GLYPH_OF := {"The Yard": "yard", "Stats": "stats", "Runner": "runner", "Runs": "runs", "Workshop": "bench", "Training": "caravan",
-	"Clinic": "clinic", "The Fence": "fence", "Radio": "radio"}
+## The rail's glyphs (13 Oct, the campaign manifest): art/rail/, drawn for the rooms as they're named now; the five a
+## boss opens are the things that open them (the deeds, the tool roll, the vet's bag, the ledger, the military radio).
+const GLYPH_OF := {"The Yard": "rail/yard", "Stats": "rail/stats", "Runner": "rail/runner", "Runs": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
+	"Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio"}
 
 var room: String
 var _name: Label

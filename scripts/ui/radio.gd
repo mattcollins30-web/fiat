@@ -227,9 +227,9 @@ func show_state(s) -> void:
 	UI.fit(_unit, (["sites juiced", "juiced"] if juiced != 1 else ["site juiced", "juiced"]) if on_air else ["until the depths", ""])
 	var known: int = sim.words_known().size()
 	_chips.show_chips([{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Color("c9b98f")},
-		{"tag": "Words known", "forms": ["%d of %d" % [known, Data.WORDS.size()]], "colour": Pal.TEXT_2},
+		{"tag": "Codes known", "forms": ["%d of %d" % [known, Data.WORDS.size()]], "colour": Pal.TEXT_2},
 		{"forms": [sim.sky_words(selected) if selected >= 0 else "", ""], "colour": Pal.TEXT_3},
-		{"forms": ["words stay until you change them", "they stay"], "colour": Pal.TEXT_3}], 3)
+		{"forms": ["codes stay until you change them", "they stay"], "colour": Pal.TEXT_3}], 3)
 	_show_heard()
 	for i in range(_rows.size()):
 		_show_row(i)
@@ -287,7 +287,7 @@ func _show_row(i: int) -> void:
 	var pay: String = ""
 	if sim.juiceable(i):
 		pay = sim.word_total_words(i)[0]
-	var plain: String = "silent" if sim.juiceable(i) else ("plain: words from depth 2" if sim.campaign_done() else "plain")
+	var plain: String = "silent" if sim.juiceable(i) else ("plain: codes from depth 2" if sim.campaign_done() else "plain")
 	UI.fit(r["pay"], [_cap(pay) if pay != "" else plain, _cap(pay.get_slice(" · ", 0)) if pay != "" else plain, _cap(pay.get_slice(" · ", 0).get_slice(" ", 0)) if pay != "" else plain.get_slice(":", 0)])
 	r["pay"].add_theme_color_override("font_color", Pal.GOOD if pay != "" else Pal.TEXT_3)
 
@@ -312,7 +312,7 @@ func _show_detail(on_air: bool) -> void:
 		UI.fit(_odds, [""])
 		UI.fit(_quiet[0], ["The depths open when the City's head is beaten. Until then the sites are as they are; only the sky changes them.", "The depths open when the campaign is done; until then only the sky changes a site."])
 		UI.fit(_quiet[1], [_cap(sim.sky_words(i)) + ".", ""])
-		UI.fit(_quiet[2], ["Papers you read now are kept: each teaches the Radio its word for when the depths open. %d read so far." % sim.book.size(), "%d papers read: each teaches a word." % sim.book.size()])
+		UI.fit(_quiet[2], ["Papers you read now are kept: each carries a code the Radio keeps for when the depths open. %d read so far." % sim.book.size(), "%d papers read: each carries a code." % sim.book.size()])
 		for w in _words:
 			w["panel"].visible = false
 		return
@@ -326,10 +326,10 @@ func _show_detail(on_air: bool) -> void:
 	var cap: int = sim.word_tier_cap(int(sim.depth[i]))
 	var tiers: String = ("tiers I-%s" % Data.WORD_TIER_NAMES[cap - 1]) if cap > 1 else "tier I"
 	if live:
-		UI.fit(_sub, ["%s · depth %d · %s · %d of %d words" % [zone, int(sim.depth[i]), tiers, sim.words[i].size(), sim.max_words(i)],
-			"D%d · %s · %d of %d words" % [int(sim.depth[i]), tiers, sim.words[i].size(), sim.max_words(i)], "D%d · %d of %d" % [int(sim.depth[i]), sim.words[i].size(), sim.max_words(i)], "D%d" % int(sim.depth[i])])
+		UI.fit(_sub, ["%s · depth %d · %s · %d of %d codes" % [zone, int(sim.depth[i]), tiers, sim.words[i].size(), sim.max_words(i)],
+			"D%d · %s · %d of %d codes" % [int(sim.depth[i]), tiers, sim.words[i].size(), sim.max_words(i)], "D%d · %d of %d" % [int(sim.depth[i]), sim.words[i].size(), sim.max_words(i)], "D%d" % int(sim.depth[i])])
 	else:
-		UI.fit(_sub, ["%s · depth %d · plain: words from depth 2" % [zone, int(sim.depth[i])], "D%d · words from depth 2" % int(sim.depth[i]), "D%d" % int(sim.depth[i])])
+		UI.fit(_sub, ["%s · depth %d · plain: codes from depth 2" % [zone, int(sim.depth[i])], "D%d · codes from depth 2" % int(sim.depth[i]), "D%d" % int(sim.depth[i])])
 	var odds: float = sim.odds_now(i)
 	UI.fit(_odds, ["odds %s to clear" % Fmt.pct(odds) if sim.odds_settled(i) else "reading the odds", Fmt.pct(odds) if sim.odds_settled(i) else "reading"])
 	var tw: Array = sim.word_total_words(i) if live else ["", ""]
@@ -374,11 +374,11 @@ func _hover(key: String) -> void:
 		return
 	var i := selected
 	if key == "":
-		var note: String = "Crafts cost notes × the site's depth; the words stay until you change them."
+		var note: String = "Crafts cost notes × the site's depth; the codes stay until you change them."
 		if sim.sealed[i]:
 			note = "Sealed by a Twist: nothing but Clear, at ten times the price."
 		elif not sim.juiceable(i):
-			note = "Words from depth 2: step the ladder down on the Runs screen."
+			note = "Codes from depth 2: step the ladder down on the Runs screen."
 		UI.fit(_hint, [note, note.get_slice(";", 0) + "."])
 		return
 	var cd := Data.craft_of(key)
@@ -389,8 +389,8 @@ func _hover(key: String) -> void:
 
 func _show_book(on_air: bool) -> void:
 	var known: Array = sim.words_known() if on_air else []
-	UI.fit(_book_title, ["The book · %d word%s known" % [known.size(), "" if known.size() == 1 else "s"], "The book · %d" % known.size()])
-	UI.fit(_book_note, ["a paper read teaches its word", "papers teach words", ""])
+	UI.fit(_book_title, ["The book · %d code%s known" % [known.size(), "" if known.size() == 1 else "s"], "The book · %d" % known.size()])
+	UI.fit(_book_note, ["a paper read gives its code", "papers carry codes", ""])
 	for k in range(Data.WORDS.size()):
 		var w: Dictionary = Data.WORDS[k]
 		var l: Label = _book[k]
@@ -415,7 +415,7 @@ func _show_book(on_air: bool) -> void:
 		b.visible = on_air and sim.standing_open(k)
 		if b.visible:
 			var sw: String = sim.standing[k] if k < sim.standing.size() else ""
-			b.text = ("★ %s" % sw) if sw != "" else "★ Standing word"
+			b.text = ("★ %s" % sw) if sw != "" else "★ Standing code"
 			if UI.text_width(b, b.text) + 24.0 > b.size.x:
 				b.text = "★ " + sw.get_slice(" ", 0) if sw != "" else "★ Standing"
 	_filter.visible = on_air and sim.atlas_rank("clear_air") > 0

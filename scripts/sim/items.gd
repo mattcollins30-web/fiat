@@ -1023,4 +1023,4 @@ static func paper_keep(it: Dictionary, book: Array) -> String:
 		return ""
 	if str(it.get("rule", "")) != "":
 		return "Works from the stash: keep it"
-	return "Read: safe to sell, the word stays"
+	return "Read: safe to sell, the code stays"

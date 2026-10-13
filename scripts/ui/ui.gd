@@ -158,7 +158,7 @@ static func set_head_art(d: Dictionary, tex: Texture2D) -> void:
 static func glyph_texture(name: String) -> Texture2D:
 	if _glyphs.has(name):
 		return _glyphs[name]
-	var path := "res://art/ui/%s.png" % name
+	var path := ("res://art/%s.png" if name.contains("/") else "res://art/ui/%s.png") % name     # "rail/yard": the rail's own (13 Oct)
 	var tex: Texture2D = null
 	var img: Image = null
 	if ResourceLoader.exists(path):

@@ -934,7 +934,7 @@ func _show_pages(on: bool) -> void:
 ## words, the rest a gap that says where it's found; a page at a time.
 func _drawer_branch() -> Dictionary:
 	var pages: Array = sim.book_pages()
-	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(name): return Words.item_words(name) if name in sim.book else _paper_gap(name), 2)
+	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(name): return Words.item_words(name, false) if name in sim.book else _paper_gap(name), 2)
 	for nd in branch["nodes"]:
 		nd["gap"] = not (str(nd["name"]).substr(str(nd["name"]).find(" ") + 1) in sim.book)
 	branch["found"] = sim.book.size()

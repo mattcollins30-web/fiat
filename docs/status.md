@@ -4181,3 +4181,12 @@ lines don't toast now. The 36 px came from the gaps, not the rooms: over them 24
 (LOG_GAP), the foot 24 to 12 (BOTTOM). The smoke checks the row, the rooms under it, the scroll, the queue, a real click,
 the clean start. Two old flakes fixed on the way (the bot's run finding the deeds before the deeds' check; the deeds
 counted as a common the Fence wouldn't take).
+
+**Codes, and the campaign art wired (13 Oct).** The Radio's words are codes on screen (the yard's Radio picks, the map,
+the crafts, the Radio room, the Runs card's "THE CODES", the menus; the mechanics and the keys as they were); the
+Fence's own "word in the right ear" stays his. The twenty papers that carry a code say where it's written, first on
+their card (Words.PAPERS "code"; the drawer's story leaves it off); reading one logs "a code on it. The Radio has ...".
+The art from the campaign manifest: the rail's nine glyphs from art/rail (UI.glyph "rail/yard"), the top bar's tin
+(art/ui/tins.png), the Gamekeeper's portrait in art/people (for the gates), the unlock items in art/items. The smoke
+checks every coded paper, the Radio and the Runs cards off the air and on it for the word, the rail and the tin loaded.
+Needs the editor opened once before an export: the new PNGs have no .import yet.

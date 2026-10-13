@@ -89,7 +89,7 @@ const TOP_GLYPH := 26            # the glyph before a figure (8 Oct)
 const TOP_GLYPH_GAP := 8
 const TOP_LINE_W := 180          # the line under the HP, XP and damage figures: the slots step by it, so the three sit at one gap (8 Oct)
 const TOP_CAPTION_W := 94        # "LEVEL" before the level's figure
-const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "cash"}
+const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "tins"}     # the tin (13 Oct): what everything is paid in
 const EVENT_TIME_WORST := "99:59:59"
 const SPEED_TEXT := "×10 speed (F8)"
 
@@ -1078,8 +1078,8 @@ func _choose_word(i: int, key: String, page := 0) -> void:
 		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, key, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = ("Call in a word on %s" if key == "call" else "Hold a word on %s") % sim.tier(i)["name"].to_lower()
-	_menu.open(title, "%s, and the words stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
+	var title: String = ("Call in a code on %s" if key == "call" else "Hold a code on %s") % sim.tier(i)["name"].to_lower()
+	_menu.open(title, "%s, and the codes stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
 
 
 func _do_word(i: int, key: String, name: String) -> void:
@@ -1101,7 +1101,7 @@ func _choose_book(kind: String, page := 0) -> void:
 		items.append({"name": "More", "detail": "", "action": _choose_book.bind(kind, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = "The word never heard" if kind == "filter" else "A standing word on every site"
+	var title: String = "The code never heard" if kind == "filter" else "A standing code on every site"
 	_menu.open(title, "From the book: change it any time", items, _menu.close)
 
 

@@ -4106,6 +4106,7 @@ func _move_checks(main) -> void:
 	_book_checks(main)
 	_lore_checks(main)
 	_radio_line_checks(main)
+	_codes_checks(main)
 	_tins_checks(main)
 	_places_checks(main)
 	_faces_checks(main)
@@ -4245,12 +4246,12 @@ func _book_checks(main) -> void:
 		main._armoury._shown = ""
 		main.refresh()
 		var said := " | ".join(_texts(main._armoury))
-		_check(said.contains("teaches %s" % str(pw["name"]).to_lower()) and not said.contains("the Radio knows"), "an unread paper's panel doesn't say what it teaches: %s" % said.left(300))
+		_check(said.contains("the code for %s" % str(pw["name"]).to_lower()) and not said.contains("the Radio has"), "an unread paper's panel doesn't say what it teaches: %s" % said.left(300))
 		sim._read(pp)
 		main._armoury._shown = ""
 		main.refresh()
 		said = " | ".join(_texts(main._armoury))
-		_check(said.contains("read · the Radio knows %s" % str(pw["name"]).to_lower()) and said.contains("safe to sell"), "a read paper's panel doesn't say it's known and safe to sell: %s" % said.left(300))
+		_check(said.contains("read · the Radio has %s" % str(pw["name"]).to_lower()) and said.contains("safe to sell"), "a read paper's panel doesn't say it's known and safe to sell: %s" % said.left(300))
 		_check_fit(main, "Lock-up (a read paper)")
 		main._armoury.selected = {}
 	var log_it: Dictionary = Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
@@ -4343,7 +4344,7 @@ func _places_checks(main) -> void:
 	for r in range(c["intel"].shown()):
 		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_head"].text.begins_with("THE WORD · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("THE CODES · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
 	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = sim.to_dict()
@@ -4812,7 +4813,7 @@ func _playtest_checks(main) -> void:
 	_check(c["band"]._tone == 2 or not sim.zone_open(2), "the band's tone did not follow the zone")
 	main._missions._pick_zone(1)
 	main.refresh()
-	_check(c["intel_head"].text.begins_with("THE WORD"), "the word's head is off: '%s'" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("THE CODES"), "the codes' head is off: '%s'" % c["intel_head"].text)
 	# three boxes under the band: the fight holds its tiles, the elements their chips, the word its rows and the site lines; none overlap, and the last clears the note
 	var bx: Array = c["boxes"]
 	var r0 := Rect2(bx[0].position, bx[0].size)
@@ -4910,7 +4911,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio knows laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts().is_empty(), "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("In the Caravan's drawer") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -5833,7 +5834,7 @@ func _check_fit(main, where: String) -> void:
 			bad += 1
 		if b._glyph.texture == null:
 			var gname: String = b.GLYPH_OF.get(name, "")
-			if gname == "" or FileAccess.file_exists("res://art/ui/%s.png" % gname):
+			if gname == "" or FileAccess.file_exists(("res://art/%s.png" if gname.contains("/") else "res://art/ui/%s.png") % gname):     # the loader's own rule (13 Oct, the rail's in art/rail)
 				push_error("rail %s: no glyph" % name)
 				bad += 1                         # a glyph named and painted but not shown is a bug; one not yet painted is an art gap (stats.png, 9 Oct)
 		if b._rule.visible == b.last:
@@ -10625,3 +10626,44 @@ func _radio_line_checks(main) -> void:
 	rl.set_sim(sim)
 	_check_fit(main, "the radio line")
 	print("radio line ok: the second row, the rooms under it, it moves, a line just heard next, no names, a press opens the Radio")
+
+
+## Codes, not words (13 Oct, Matt): every paper that carries a code says where it's written, first; the Radio and the
+## Runs cards say codes, never words (the Fence's word in the right ear is his own); the rail's glyphs and the tin load.
+func _codes_checks(main) -> void:
+	var sim = main.sim
+	for w in Data.WORDS:
+		if w.has("paper"):
+			var line: String = Words.item_words(str(w["paper"]))
+			_check(line.begins_with("A code "), "%s doesn't say where its code is: '%s'" % [w["paper"], line])
+	var re := RegEx.new()
+	re.compile("(?i)\\bwords?\\b")
+	# off the air and on it (the review: the campaign's Radio is the quiet view; the codes show once the depths open)
+	var saved: Dictionary = sim.to_dict()
+	for on_air in [false, true]:
+		if on_air:
+			_finish_campaign(sim)
+			sim.best_depth[3] = maxi(sim.best_depth[3], 9)
+			sim.set_depth(3, 9)
+			sim.words[3] = []
+			sim.sealed[3] = false
+			sim.notes = 100000
+			sim.word_craft(3, "tune")
+			sim.word_craft(3, "tune")
+			_check(sim.juiceable(3) and not sim.words[3].is_empty(), "the codes' check found no site on the air")
+			main._radio.selected = 3
+			main._radio.view = "air"
+		for room in [main.COMMS, main.MISSIONS]:
+			main.show_room(room)
+			main.refresh()
+			var labels := []
+			_labels_under(main._radio if room == main.COMMS else main._missions, labels)
+			for l in labels:
+				_check(re.search(str(l.text)) == null, "%s%s still says word: '%s'" % [room, " (on the air)" if on_air else "", l.text])
+			_check_fit(main, "%s (codes%s)" % [room, ", on the air" if on_air else ""])
+	sim.load_dict(saved)
+	main.refresh()
+	for g in main._rail_buttons.values():
+		_check(g._glyph.texture != null and not UI.glyph_mono(g.GLYPH_OF[g.room]), "the rail's %s glyph is missing or a line drawing" % g.room)
+	_check(main._top_glyphs["cash"].texture != null and not UI.glyph_mono("tins"), "the top bar's tin is missing")
+	print("codes ok: the papers say where, no word on the Radio or the cards, the rail's glyphs and the tin")

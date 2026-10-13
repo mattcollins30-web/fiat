@@ -262,22 +262,23 @@ const SITES := {
 # ------------------------------------------------------------------ the papers
 
 ## Found lying about: a line of the before, one cell each, worth pennies to
-## the Fence. The only place the old world speaks.
+## the Fence. The only place the old world speaks. "code": where the radio code is written on it, for the papers that
+## carry one (13 Oct, Matt: codes, not words; Data.WORDS' "paper").
 const PAPERS := [
-	{"name": "A council tax reminder", "value": 2, "words": "Final notice. The council it's from doesn't exist."},
-	{"name": "A P45", "value": 2, "words": "Someone's last day at the sorting office. Signed, dated, kept."},
-	{"name": "A betting slip", "value": 3, "words": "An accumulator on the football. Four of the five came in."},
-	{"name": "A pawn ticket", "value": 3, "words": "A wedding ring, for a week's shopping. Never collected."},
-	{"name": "A bank statement", "value": 2, "words": "In credit, to the penny, the week before."},
-	{"name": "A food bank voucher", "value": 2, "words": "Three days' worth. Stamped by the church."},
-	{"name": "A mortgage offer", "value": 3, "words": "Approved. Fixed for five years."},
-	{"name": "A school report", "value": 2, "words": "'Tries hard.' The school's in the Shopping Centre now."},
-	{"name": "A lottery ticket", "value": 4, "words": "Unchecked. The draw was the Saturday after."},
-	{"name": "A wage slip", "value": 2, "words": "A month's wages. The number means nothing; the name's been underlined."},
-	{"name": "An eviction notice", "value": 3, "words": "Fourteen days. They stayed."},
-	{"name": "A boarding pass", "value": 4, "words": "One way. The flight went; the ticket didn't."},
-	{"name": "A parking ticket", "value": 2, "words": "Issued the morning of. The car's still there."},
-	{"name": "A Christmas list", "value": 3, "words": "In a child's hand. Most of it's in the Retail Park."},
+	{"name": "A council tax reminder", "value": 2, "words": "Final notice. The council it's from doesn't exist.", "code": "A code pencilled in the payment box."},
+	{"name": "A P45", "value": 2, "words": "Someone's last day at the sorting office. Signed, dated, kept.", "code": "A code on the back, in sorting-office stamps."},
+	{"name": "A betting slip", "value": 3, "words": "An accumulator on the football. Four of the five came in.", "code": "A code where the stake should be."},
+	{"name": "A pawn ticket", "value": 3, "words": "A wedding ring, for a week's shopping. Never collected.", "code": "A code scratched under the ticket number."},
+	{"name": "A bank statement", "value": 2, "words": "In credit, to the penny, the week before.", "code": "A code ringed among the transactions."},
+	{"name": "A food bank voucher", "value": 2, "words": "Three days' worth. Stamped by the church.", "code": "A code under the church's stamp."},
+	{"name": "A mortgage offer", "value": 3, "words": "Approved. Fixed for five years.", "code": "A code in the margin of the small print."},
+	{"name": "A school report", "value": 2, "words": "'Tries hard.' The school's in the Shopping Centre now.", "code": "A code in the teacher's comments, in green."},
+	{"name": "A lottery ticket", "value": 4, "words": "Unchecked. The draw was the Saturday after.", "code": "A code where the numbers should be."},
+	{"name": "A wage slip", "value": 2, "words": "A month's wages. The number means nothing; the name's been underlined.", "code": "A code in the deductions column."},
+	{"name": "An eviction notice", "value": 3, "words": "Fourteen days. They stayed.", "code": "A code on the back, in marker."},
+	{"name": "A boarding pass", "value": 4, "words": "One way. The flight went; the ticket didn't.", "code": "A code over the barcode, in biro."},
+	{"name": "A parking ticket", "value": 2, "words": "Issued the morning of. The car's still there.", "code": "A code where the plate goes."},
+	{"name": "A Christmas list", "value": 3, "words": "In a child's hand. Most of it's in the Retail Park.", "code": "A code at the bottom, in a grown-up's hand."},
 	# the Outskirts' and the City's (12 Oct, the lore pass): found only at their own sites
 	{"name": "A seed order", "value": 2, "words": "Broad beans, onion sets, a dozen seed potatoes. Paid by cheque. Delivered after."},
 	{"name": "An allotment waiting list", "value": 2, "words": "Eleven years for a plot. Every name on it has one now."},
@@ -288,12 +289,12 @@ const PAPERS := [
 	{"name": "A leave pass", "value": 3, "words": "Seventy-two hours, from the Monday. He went home. The barracks marked him absent anyway."},
 	{"name": "A requisition", "value": 4, "words": "For the vault: one safe, Chubb, to hold currency, used. Approved. Underlined twice."},
 	# the deep ones
-	{"name": "A ration book", "value": 4, "words": "Printed after. Someone tried to run it properly, for a while."},
-	{"name": "A council minute", "value": 4, "words": "The last meeting. Item nine, the lights. There's no item ten."},
-	{"name": "A bus timetable, amended", "value": 4, "words": "In biro over the print: 'when he's up'."},
-	{"name": "A letter to the Bank", "value": 5, "words": "'I would like to withdraw.' Posted. The Bank's the one you cleared."},
-	{"name": "A list of names", "value": 5, "words": "Chalked, then written, then typed. The typed ones are crossed out."},
-	{"name": "The Manager's note", "value": 6, "words": "'Back in five.' Pinned to the inside of the vault."},
+	{"name": "A ration book", "value": 4, "words": "Printed after. Someone tried to run it properly, for a while.", "code": "A code on the inside cover."},
+	{"name": "A council minute", "value": 4, "words": "The last meeting. Item nine, the lights. There's no item ten.", "code": "A code as item ten, in pencil."},
+	{"name": "A bus timetable, amended", "value": 4, "words": "In biro over the print: 'when he's up'.", "code": "A code among the times."},
+	{"name": "A letter to the Bank", "value": 5, "words": "'I would like to withdraw.' Posted. The Bank's the one you cleared.", "code": "A code under the signature."},
+	{"name": "A list of names", "value": 5, "words": "Chalked, then written, then typed. The typed ones are crossed out.", "code": "A code against one of the names."},
+	{"name": "The Manager's note", "value": 6, "words": "'Back in five.' Pinned to the inside of the vault.", "code": "A code on the back of the note."},
 ]
 ## The drawer in the Caravan: the papers found, in the order found, are the
 ## story of the estate; nobody else is telling it.
@@ -778,7 +779,8 @@ const YARD := {
 }
 
 
-static func item_words(base: String) -> String:
+## `code`: a paper's code line first (the item's card); the drawer's story leaves it off (it tells the estate, not the radio).
+static func item_words(base: String, code := true) -> String:
 	if ITEMS.has(base):
 		return ITEMS[base]
 	if SET_PIECES.has(base):
@@ -787,7 +789,7 @@ static func item_words(base: String) -> String:
 		return DEEDS["words"]
 	for p in PAPERS:
 		if p["name"] == base:
-			return p["words"]
+			return (str(p["code"]) + " " if p.has("code") and code else "") + str(p["words"])     # where its code is, first (13 Oct, Matt: the papers carry the radio codes)
 	return ""
 
 
