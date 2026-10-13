@@ -4151,3 +4151,9 @@ the attachments' or charms') made its delta twice and pushed the deciding ones o
 smoke checks the Branch Pistol against the Van's Spare shows no word twice and both rules' damage lines. The Split
 check's flake fixed (a Shells stack the smoke's runs left read as a third half). The unique's rule on its card: three
 mockups to Matt (a chip, the tail line grey, the tail line in the unique's pink), short forms needed for all 49 rules.
+
+**A unique's rule on its card (13 Oct, Matt: chips).** Every unique's card leads its affix chips with its rule in the
+unique's pink (★); each of the 44 uniques has a `short` form in Data.UNIQUES, taken when the long one would push an affix
+off (the item head's chips lay again all short then: `show_chips(..., shorten)`, the item head only - the Caravan's sum
+keeps its own order, the reviewer's catch). The smoke checks every unique at every head width shows its rule first and
+every affix. Armour % reads "armour" now, flat armour "arm" (they read alike in the deltas).

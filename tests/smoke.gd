@@ -9933,6 +9933,21 @@ func _try_on_checks(main) -> void:
 			dup = bwords[k]
 	_check(dup == "", "a delta shows twice (%s): %s" % [dup, str(bd)])
 	_check(bd.any(func(d): return str(d[1]).ends_with("dmg <½HP")) and bd.any(func(d): return str(d[1]).ends_with("dmg 1st gang")), "the Branch Pistol's deltas miss its own: %s" % str(bd))
+	# a unique's rule on its card (13 Oct, Matt: chips): every unique, at every width an item head is drawn, shows its rule
+	# chip first and every affix after it, the rule shortened where the long form would push one off
+	var IH = load("res://scripts/ui/item_head.gd")
+	var widths: Array = [main._armoury._pick._heads[0].width, load("res://scripts/ui/vendor.gd").COL_W]
+	for w in widths:
+		var head = IH.new(w, true)
+		main.add_child(head)
+		for u in Data.UNIQUES:
+			var ui: Dictionary = Items.roll_unique(u, sim.rng)
+			head.show_item(ui, sim)
+			var want: int = 1 + Items.affix_lines(ui, false, false).size()
+			var first: String = head._affixes._labels[0].text
+			_check(head._affixes.shown() == want and (first == str(u["words"]) or first == str(u.get("short", ""))), "%s at %d px: %d of %d chips, the first '%s'" % [u["name"], w, head._affixes.shown(), want, first])
+		head.queue_free()
+	_check(str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour_pct")[0]["short"]) != str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour")[0]["short"]), "armour % and flat armour share a short name")
 	_check(not ds.is_empty() and float(ds[0][0]) < 0.0 and str(ds[0][1]).ends_with("dmg/s"), "the deltas don't lead with the damage lost: %s" % str(ds))
 	_check_fit(main, "Lock-up (a pistol against the Van's Spare)")
 	# the other way: the Van's Spare over the pistol is the upgrade, and Equip if better takes it

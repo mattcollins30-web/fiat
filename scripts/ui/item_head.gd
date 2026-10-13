@@ -153,6 +153,10 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 	var short_lines: Array = Items.affix_lines(it, true, false)
 	var n: int = lines.size()
 	var chips_a := []
+	# a unique's rule first, in its pink (13 Oct, Matt: the rule decides a unique against another, and no card said it)
+	var rule := unique_rule(it)
+	if not rule.is_empty():
+		chips_a.append({"forms": rule, "colour": Pal.UNIQUE, "tag": "★"})
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
@@ -167,8 +171,19 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 		chips_a.append({"forms": ["%d open in the Workshop" % left, "%d open" % left], "colour": Pal.TEXT_2})
 	elif n == 0 and not plain:
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
-	_affixes.show_chips(chips_a, AFFIX_ROWS)
+	_affixes.show_chips(chips_a, AFFIX_ROWS, true)
 	_affixes.visible = not chips_a.is_empty()
+
+
+## A unique's rule as chip forms, [long, short], or [] for anything else.
+static func unique_rule(it: Dictionary) -> Array:
+	if not it.has("unique"):
+		return []
+	for u in Data.UNIQUES:
+		if u["name"] == it["unique"]:
+			var long: String = str(u.get("words", ""))
+			return [long, str(u.get("short", long))] if long != "" else []
+	return []
 
 
 ## [words, tone] a chip: the slot, the type, the rarity (in its tone), the level, the cells.

@@ -61,8 +61,16 @@ static func _colour_of(c) -> Color:
 	return c if c is Color else Pal.tone_color(str(c))
 
 
-## The chips across the row, wrapping to `rows` rows; the rest dropped from the right.
-func show_chips(items: Array, rows := 1) -> void:
+## The chips across the row, wrapping to `rows` rows; the rest dropped from the right. `shorten`: when the long forms
+## leave one off, every chip takes its shortest form and they're laid again (13 Oct, the item head: a unique's rule
+## chip pushed an affix off). Off for the rest, whose own fallbacks run in their own order (the Caravan's sum).
+func show_chips(items: Array, rows := 1, shorten := false) -> void:
+	_place(items, rows, false)
+	if shorten and _shown < mini(items.size(), _n):
+		_place(items, rows, true)
+
+
+func _place(items: Array, rows: int, shortest: bool) -> void:
 	var x := 0.0
 	var row := 0
 	_shown = 0
@@ -73,6 +81,8 @@ func show_chips(items: Array, rows := 1) -> void:
 		if not on:
 			continue
 		var d := _item(items[k])
+		if shortest:
+			d["forms"] = [d["forms"].back()]
 		var w := _lay(k, d, size.x - x)
 		if w > size.x - x and x > 0.0 and row + 1 < rows:
 			row += 1
