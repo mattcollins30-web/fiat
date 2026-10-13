@@ -159,13 +159,15 @@ func start() -> void:
 
 
 func _starter_loadout() -> void:
-	equipped["Primary"] = _plain("Primary", "Hand-me-down nail gun")
+	equipped["Primary"] = _plain("Primary", START_WEAPON)     # a hammer, no rounds (13 Oct, Matt): the guns come when there's ammo for them
 	equipped["Armour"] = _plain("Armour", "Work jacket")
 	equipped["Backpack"] = _plain("Backpack", "Plastic bag")
 	equipped["Rig"] = _plain("Rig", "Bum bag")
 	for k in range(2):
 		rig.append(_plain(Data.MEDICAL, "Bandage"))
-	rig.append(_plain(Data.AMMO, "Nails"))
+
+
+const START_WEAPON := "Claw hammer"
 
 
 ## A common of this base, no affixes: the worn kit a runner arrives with.
@@ -4503,13 +4505,11 @@ func _time_out(m: Dictionary) -> void:
 					stash.append(r_it)               # what was in it goes with it
 			rig = []
 	# the hand-me-downs in their places, once every loss is in, as a new runner arrives with (no runner left with fists
-	# and a clock: a spiral); a new nail gun brings its nails
-	var start := {"Primary": "Hand-me-down nail gun", "Armour": "Work jacket", "Backpack": "Plastic bag", "Rig": "Bum bag"}
+	# and a clock: a spiral); the hammer needs no rounds (13 Oct)
+	var start := {"Primary": START_WEAPON, "Armour": "Work jacket", "Backpack": "Plastic bag", "Rig": "Bum bag"}
 	for s in lost_slots:
 		if start.has(s):
 			equipped[s] = _plain(s, start[s])
-	if "Primary" in lost_slots and rig_room(1):
-		rig.append(_plain(Data.AMMO, "Nails"))
 	var kept_pack: bool = insured and yard_has("insurance_desk")
 	var carried := ""
 	if not kept_pack and not m["found"].is_empty():

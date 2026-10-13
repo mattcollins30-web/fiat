@@ -505,7 +505,7 @@ func show_title() -> void:
 	var saved := FileAccess.file_exists(save_file)
 	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
 			"action": load_game.bind(save_file), "enabled": saved, "glyph": "menu_continue"})
-	items.append({"name": "New camp", "detail": "One runner, a nail gun, 150 tins",
+	items.append({"name": "New camp", "detail": "One runner, a hammer, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
 	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, tins, everything",
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})

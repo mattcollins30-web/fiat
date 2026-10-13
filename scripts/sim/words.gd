@@ -445,6 +445,7 @@ const UNIQUES := {
 const ITEMS := {
 	# the start
 	"Hand-me-down nail gun": "Somebody's before it was yours, and somebody's before that. Fires when it feels like it.",
+	"Claw hammer": "From the shed. It's put up shelves and taken down a fence. It'll do.",
 	"Work jacket": "A donkey jacket with the Council's name half off the back. Warm. That's the whole of it.",
 	"Plastic bag": "A bag for life, one of them. Holds nine things and the shape of the rain.",
 	# improvised
@@ -805,7 +806,7 @@ const RECYCLE := {
 
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
-	"set": "The Yard is set. One runner, a nail gun, the estate outside.",
+	"set": "The Yard is set. One runner, a hammer, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. Nobody past the ring road knows the Yard yet.",
 	"hardcore_lost": "Hardcore: the Yard goes with the runner. Someone else will have the Lock-up by morning.",

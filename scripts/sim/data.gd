@@ -43,7 +43,7 @@ const SIZE := {"Primary": [4, 1], "Secondary": [2, 1], "Helmet": [2, 2], "Armour
 const FOOTPRINTS := {
 	# melee
 	"Spiked bat": [3, 1], "Machete": [3, 1], "Pipe wrench": [2, 1], "Fire axe": [3, 1], "Bayonet on a stick": [4, 1], "Sledgehammer": [3, 1], "Breaker bar": [3, 1],
-	"Knife": [1, 1], "Knuckle duster": [1, 1], "Cosh": [1, 1],
+	"Knife": [1, 1], "Knuckle duster": [1, 1], "Cosh": [1, 1], "Claw hammer": [2, 1],
 	# short long guns
 	"Hand-me-down nail gun": [3, 1], "Nail gun": [3, 1], "Bolt gun": [3, 1], "Pipe shotgun": [3, 1], "Sawn-off": [3, 1], "Workshop SMG": [3, 1],
 	"Police carbine": [3, 1], "Army SMG": [3, 1], "Belt-fed SMG": [3, 1], "Army bullpup": [3, 1], "Workshop carbine": [3, 1],
@@ -312,7 +312,12 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		# melee: no rounds ever, slow, hard, a fifth of it bleed; in among them, so they hit you harder
 		# and their first shot lands before your first swing. Grip and head mounts of their own.
-		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 40.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
+		# the start since 13 Oct (Matt: a bat found "trivialised ammo concerns"): a hand-me-down hammer, the nail gun's
+		# 12 a second and no rounds; never found. Melee sits behind the tier's best gun from here (the Spiked bat 20 to 17,
+		# the top four a tenth or so down): rounds a trade you choose, not a trap
+		{"name": "Claw hammer", "type": "melee", "ammo": "none", "tier": 1, "damage": 24.0, "rof": 0.5, "value": 10, "conv_bleed_pct": 10, "start": true,
+			"attachments": ["grip"]},
+		{"name": "Spiked bat", "type": "melee", "ammo": "none", "tier": 1, "damage": 34.0, "rof": 0.5, "value": 30, "conv_bleed_pct": 20,
 			"attachments": ["grip", "business end"]},
 		{"name": "Machete", "type": "melee", "ammo": "none", "tier": 2, "damage": 30.0, "rof": 0.9, "value": 70, "conv_bleed_pct": 30,
 			"attachments": ["grip"]},
@@ -324,7 +329,7 @@ const BASES := {
 			"attachments": ["grip", "business end"]},
 		{"name": "Sledgehammer", "type": "melee", "ammo": "none", "tier": 5, "damage": 160.0, "rof": 0.45, "value": 420, "conv_bleed_pct": 5,
 			"attachments": ["grip", "business end"]},
-		{"name": "Breaker bar", "type": "melee", "ammo": "none", "tier": 6, "damage": 90.0, "rof": 1.2, "value": 640, "conv_bleed_pct": 15,
+		{"name": "Breaker bar", "type": "melee", "ammo": "none", "tier": 6, "damage": 82.0, "rof": 1.2, "value": 640, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
 		{"name": "Assault shotgun", "type": "shotgun", "tier": 6, "damage": 48.0, "rof": 2.4, "value": 680,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
@@ -360,11 +365,11 @@ const BASES := {
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
 		{"name": "The engineer's piece", "type": "improvised", "ammo": "smg", "tier": 9, "damage": 50.0, "rof": 3.6, "value": 1700,
 			"attachments": ["optic", "muzzle", "magazine", "handguard", "stock"]},
-		{"name": "Demolition bar", "type": "melee", "ammo": "none", "tier": 7, "damage": 100.0, "rof": 1.3, "value": 900, "conv_bleed_pct": 15,
+		{"name": "Demolition bar", "type": "melee", "ammo": "none", "tier": 7, "damage": 90.0, "rof": 1.3, "value": 900, "conv_bleed_pct": 15,
 			"attachments": ["grip", "business end"]},
-		{"name": "Rescue axe", "type": "melee", "ammo": "none", "tier": 8, "damage": 120.0, "rof": 1.3, "value": 1250, "conv_bleed_pct": 25,
+		{"name": "Rescue axe", "type": "melee", "ammo": "none", "tier": 8, "damage": 108.0, "rof": 1.3, "value": 1250, "conv_bleed_pct": 25,
 			"attachments": ["grip", "business end"]},
-		{"name": "Door ram", "type": "melee", "ammo": "none", "tier": 9, "damage": 220.0, "rof": 0.82, "value": 1700, "conv_bleed_pct": 5,
+		{"name": "Door ram", "type": "melee", "ammo": "none", "tier": 9, "damage": 195.0, "rof": 0.82, "value": 1700, "conv_bleed_pct": 5,
 			"attachments": ["grip", "business end"]},
 	],
 	"Secondary": [

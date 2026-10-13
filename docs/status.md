@@ -4278,3 +4278,9 @@ rounds out with the Fence shut, the ammo trap's edge. To Matt with the playtest.
 box's search bar is a button ("· show the crates"); the crates' own bar gives the pick back ("· show the pick"); one
 search bar shows at a time. A new search opens on the crates whatever's picked; a pick in the pack or the rig shows its
 comparison.
+
+**A hammer to start (13 Oct, Matt: a bat found "trivialised ammo concerns").** A new runner (and one who loses his kit)
+starts with a Claw hammer: 12 a second like the nail gun was, no rounds, never found; no nails in the rig. Melee sits
+behind its tier's best gun now: the Spiked bat 20 to 17 a second, the Breaker bar, Demolition bar, Rescue axe and Door
+ram a tenth down (the smoke holds every melee base under 0.9 of its tier's best gun). The Rounds tile reads "none
+needed" for melee. The title's New camp line and the Yard's first line say a hammer.

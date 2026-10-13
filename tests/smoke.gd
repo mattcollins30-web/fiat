@@ -7461,13 +7461,14 @@ func _crates_checks(main) -> void:
 	m["event_at"] = -1.0
 	sim._roll_crates(m, m["t"])
 	_check(m["crates"].all(func(q): return q.has("held")), "a crate with nothing nosed in it")
-	var held_id: int = int(m["crates"][0]["held"]["it"]["id"])
+	var nosed_q: Dictionary = sim.crate_now(m)          # the first one opened: a locked one before it is passed over without the Keys
+	var held_id: int = int(nosed_q["held"]["it"]["id"])
 	for k in range(int(2.0 * sim.search_s(m["t"])) + 4):
 		sim.hp = sim.max_hp()
 		sim.advance(1.0)
-		if not sim.on_mission() or int(m["crates"][0]["done"]) >= 1:
+		if not sim.on_mission() or int(nosed_q["done"]) >= 1:
 			break
-	_check(sim.on_mission() and m["crates"][0]["finds"].size() > 0 and int(m["crates"][0]["finds"][0]["id"]) == held_id, "the nosed find was not the crate's first")
+	_check(sim.on_mission() and nosed_q["finds"].size() > 0 and int(nosed_q["finds"][0]["id"]) == held_id, "the nosed find was not the crate's first")
 	main.refresh()
 	_check(run._crates._aside.text == "the dog's nose on them", "the panel does not say the dog's on them: '%s'" % run._crates._aside.text)
 	_check_fit(main, "Run (the dog's nose)")
@@ -7557,6 +7558,17 @@ func _crates_checks(main) -> void:
 	_yard_set(sim, "kennel", 4, hold_kennel)
 	sim.load_dict(saved)
 	main.refresh()
+	# the start (13 Oct, Matt): a hammer, no rounds to need, and melee behind the tier's best gun
+	var camp = Sim.new()
+	camp.start()
+	_check(camp.equipped["Primary"] != null and camp.equipped["Primary"]["base"] == "Claw hammer" and not camp.rig.any(func(x): return Items.is_ammo(x)), "a new camp does not start with the hammer and no rounds")
+	for b in Data.BASES["Primary"]:
+		if b["type"] == "melee" and not b.get("start", false):
+			var best_gun := 0.0
+			for g in Data.BASES["Primary"]:
+				if g["type"] != "melee" and int(g["tier"]) == int(b["tier"]) and not g.get("start", false):
+					best_gun = maxf(best_gun, float(g["damage"]) * float(g["rof"]))
+			_check(best_gun <= 0.0 or float(b["damage"]) * float(b["rof"]) < best_gun * 0.9, "%s at %.0f a second is not behind its tier's best gun (%.0f)" % [b["name"], float(b["damage"]) * float(b["rof"]), best_gun])
 	print("crates ok: the queue, the panel, the opening, the save, picked clean, the leans, the sites' own, the dog's nose, depth and quantity")
 
 
@@ -9766,7 +9778,7 @@ func _clock_checks(main) -> void:
 	_check(not sim.on_mission() and sim.last_report.get("outcome", "") == "Out of time" and sim.operators_lost == lost0 and sim.hp > 0.0, "running out of time did not end the run with the runner home: %s" % str(sim.last_report.get("outcome", "")))
 	var fresh := 0
 	for s in Data.SLOTS:
-		if sim.equipped[s] != null and sim.equipped[s]["base"] in ["Hand-me-down nail gun", "Work jacket", "Plastic bag", "Bum bag"] and int(sim.equipped[s]["rarity"]) == 0:
+		if sim.equipped[s] != null and sim.equipped[s]["base"] in [sim.START_WEAPON, "Work jacket", "Plastic bag", "Bum bag"] and int(sim.equipped[s]["rarity"]) == 0:
 			fresh += 1
 	_check(worn0 - worn1 + fresh >= Data.CLOCK_LOSE_KIT and worn1 >= worn0 - Data.CLOCK_LOSE_KIT and (not sim.stash.has(junk) or sim.yard_has("fetch")), "out of time lost %d pieces of kit (%d hand-me-downs in), or the pack came home" % [worn0 - worn1, fresh])
 	_check(sim.equipped["Primary"] != null, "out of time left the runner with no gun")
