@@ -25,13 +25,17 @@ const PAD := 20
 # the header: the face, the class and trait, the points free, the class's line; the classes top right
 const HEAD_H := Pal.BAND_H                                     # the rooms' one band (10 Oct, Bands-U A): 96 → 180
 const FACE := Pal.BAND_FACE
-const CLASS_W := 164
-const CLASS_H := 40
+# the pasts as cards (14 Oct, Matt; docs/design/mockups/class_cards_mockup.png): a face, the name, the short lines in
+# their tones (a cost red); the picked one lit, the rest dimmed; the whole sentence a tooltip
+const CLASS_W := 164                # the words column keeps the width the sum strip needs
+const CLASS_H := 122
 const CLASS_GAP := 8
-# the class's line and the notice over the classes, each on a glass pill so the art doesn't eat them (12 Oct); a lone
-# line drops to the notice's place, just over the classes, rather than leaving a gap under it
-const NOTICE_Y := HEAD_H - 16 - CLASS_H - 34
-const LINE_TOP_Y := HEAD_H - 16 - CLASS_H - 62
+const CLASS_FACE := 48
+const CLASS_SHORT := 3             # short lines a card holds
+# the line over the cards (the trait, the change's price, or the prompt) on a glass pill so the art doesn't eat it
+# (12 Oct); the class's own sentence went to the cards' tooltips (14 Oct)
+const NOTICE_Y := HEAD_H - 14 - CLASS_H - 34
+const LINE_TOP_Y := NOTICE_Y
 const PILL_H := 28                 # a hairline between two pills, 4 px over the classes
 const PILL_PAD := 12
 const PILL_GLASS := Color(0.06, 0.07, 0.08, 0.62)
@@ -99,6 +103,8 @@ var _class_line: Label
 var _notice: Label                 # under the classes: the trait's line, or the armed change's price
 var _line_pills: Array = []        # a glass pill a line, behind the class's line and the notice (12 Oct, Matt: option B, the text brighter)
 var _class_buttons: Array = []
+var _class_cards: Array = []       # a card a past: {face, name, tag, lines[]}
+var _face_q: Panel                 # no past yet: a ? in the face's place
 var _lanes: Array = []             # a slot each: {panel, bar, name, tag, gates, count, tiles: [{button, name, more, effect, id}], tree}
 var _links: Array = []             # two: {bar, chip, label}, under lanes 0 and 2
 var _also_panel: Panel
@@ -148,6 +154,9 @@ func _build_head() -> void:
 	head_band = UI.head_art(head, "The caravan")     # art/places/the_caravan.png (Rooms-B)
 	# the band as the Yard's (Bands-U A): the face at the left, the words down the shade, the classes at the foot, right
 	_face = People.rect(head, Vector2(16, (HEAD_H - FACE) / 2.0), FACE / 128.0)
+	_face_q = UI.panel(head, Rect2(16, (HEAD_H - FACE) / 2.0, FACE, FACE), UI.box(PILL_GLASS, 10, 1, Pal.CARD_LINE))
+	UI.label(_face_q, Rect2(0, 0, FACE, FACE), "?", "SemiBold", 64, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER)
+	_face_q.visible = false
 	var cx0: float = _classes_x()
 	var x0: float = _words_x()
 	var left_w: float = _words_w()
@@ -160,11 +169,26 @@ func _build_head() -> void:
 		_line_pills.append(pill)                  # made first, so the words sit on them
 	_class_line = UI.label(head, Rect2(cx0, LINE_TOP_Y, Pal.GRID_W - PAD - cx0, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)     # over the classes, right
 	for k in range(Data.CLASSES.size()):
-		var cb := UI.button(head, Rect2(cx0 + k * (CLASS_W + CLASS_GAP), HEAD_H - 16 - CLASS_H, CLASS_W, CLASS_H), false)
-		cb.text = Data.CLASSES[k]["name"]
-		cb.add_theme_font_size_override("font_size", 20)
-		cb.pressed.connect(_pick_class.bind(Data.CLASSES[k]["name"]))
+		var cd: Dictionary = Data.CLASSES[k]
+		var cb := Button.new()
+		cb.position = Vector2(cx0 + k * (CLASS_W + CLASS_GAP), HEAD_H - 14 - CLASS_H)
+		cb.size = Vector2(CLASS_W, CLASS_H)
+		cb.focus_mode = Control.FOCUS_ALL
+		cb.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		cb.tooltip_text = "%s: %s" % [cd["name"], cd["words"]]
+		cb.pressed.connect(_pick_class.bind(cd["name"]))
+		head.add_child(cb)
 		_class_buttons.append(cb)
+		var face := People.rect(cb, Vector2(8, 8), CLASS_FACE / 128.0)
+		People.show(face, str(cd["name"]))
+		var nm := UI.label(cb, Rect2(CLASS_FACE + 12, 10, CLASS_W - CLASS_FACE - 16, 26), str(cd["name"]), "SemiBold", 19, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var tag := UI.label(cb, Rect2(CLASS_FACE + 12, 37, CLASS_W - CLASS_FACE - 16, 20), "", "Medium", 14, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var lines: Array = []
+		for r in range(CLASS_SHORT):
+			lines.append(UI.label(cb, Rect2(9, CLASS_FACE + 13 + r * 17, CLASS_W - 14, 18), "", "Medium", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		for n in [nm, tag] + lines:
+			n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_class_cards.append({"face": face, "name": nm, "tag": tag, "lines": lines})
 	_notice = UI.label(head, Rect2(cx0, NOTICE_Y, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 
@@ -638,6 +662,7 @@ func _show_head() -> void:
 	var td: Dictionary = sim.trait_data()
 	var faced := People.show(_face, sim.cls)
 	_face.visible = faced
+	_face_q.visible = not faced
 	var who: String = str(cd.get("name", "No past yet"))
 	UI.fit(_kicker, [("%s · %s · Training" % [who, td["name"]]) if not td.is_empty() else "%s · Training" % who, ("%s · %s" % [who, td["name"]]) if not td.is_empty() else who, who])
 	var free: int = sim.points_free()
@@ -646,13 +671,10 @@ func _show_head() -> void:
 	_unit.position.x = _points.position.x + ceilf(UI.text_width(_points, _points.text)) + 10
 	_unit.size.x = _kicker.position.x + _kicker.size.x - _unit.position.x
 	UI.fit(_unit, ["point%s free" % ("" if sim.training_points == 1 else "s"), "free", ""])
-	UI.fit(_class_line, [str(cd.get("words", "")), ""] if not cd.is_empty() else ["Pick a past: what the runner was, and how they fight now", "Pick a past", ""])
+	_class_line.text = ""                  # the class's sentence is its card's tooltip now (14 Oct); the notice is the line
+	_class_line.visible = false
 	for k in range(Data.CLASSES.size()):
-		var cb: Button = _class_buttons[k]
-		var nm: String = Data.CLASSES[k]["name"]
-		cb.text = ("%s ✓" % nm) if sim.cls == nm else (("%s ?" % nm) if _armed == nm else nm)
-		cb.disabled = sim.on_mission() or nm == sim.cls2     # the second past's class is taken already
-		UI.style_button(cb, sim.cls == nm or _armed == nm)
+		_show_card(k)
 	_notice.add_theme_color_override("font_color", Pal.TEXT)
 	if _armed != "":
 		var cost: int = sim.class_change_cost(_armed)
@@ -662,12 +684,41 @@ func _show_head() -> void:
 		else:
 			UI.fit(_notice, ["Change to %s: %s — %s short" % [_armed, Fmt.money(cost), Fmt.money(cost - int(sim.cash))], "%s: %s short" % [_armed, Fmt.money(cost - int(sim.cash))]])
 	elif sim.cls == "":
-		UI.fit(_notice, ["Free to pick for a new runner; a change after costs the respec of the class's trees", "Free to pick for a new runner", ""])
+		UI.fit(_notice, ["Pick a past: what the runner was, and how they fight now · free for a new runner", "Pick a past · free for a new runner", "Pick a past"])
 	elif not td.is_empty():
 		UI.fit(_notice, ["%s: %s · one a runner" % [td["name"], td["words"]], "%s: %s" % [td["name"], td["words"]], td["name"]])
 	else:
 		_notice.text = ""
 	_lay_lines()
+
+
+## A past's card: lit and ticked when it's the runner's, "press again" when armed, dimmed beside a picked one,
+## greyed when it can't be picked (on a run, or the second past's class).
+func _show_card(k: int) -> void:
+	var cb: Button = _class_buttons[k]
+	var c: Dictionary = _class_cards[k]
+	var cd: Dictionary = Data.CLASSES[k]
+	var nm: String = cd["name"]
+	var mine: bool = sim.cls == nm
+	var armed: bool = _armed == nm
+	var lit: bool = mine or armed or sim.cls == ""
+	cb.disabled = sim.on_mission() or nm == sim.cls2     # the second past's class is taken already
+	var edge: Color = Pal.ACCENT if (mine or armed) else Pal.CARD_LINE
+	var w: int = 2 if (mine or armed) else 1
+	for pair in [["normal", 0.0], ["hover", 0.08], ["pressed", 0.12], ["hover_pressed", 0.12], ["disabled", 0.0]]:
+		var sb := UI.box(Color(PILL_GLASS, 0.72).lightened(float(pair[1])), 8, w, edge)
+		cb.add_theme_stylebox_override(pair[0], sb)
+	cb.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 8, 2, Pal.TEXT))
+	cb.modulate.a = 0.5 if (cb.disabled and not mine) else 1.0
+	c["face"].modulate = Color(1, 1, 1, 1.0 if lit else 0.75)
+	c["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_2)
+	c["tag"].text = "✓ your past" if mine else ("press again" if armed else "")
+	var short: Array = cd.get("short", [])
+	for r in range(CLASS_SHORT):
+		var l: Label = c["lines"][r]
+		l.text = str(short[r][0]) if r < short.size() else ""
+		var tone: Color = Pal.GOOD if (r < short.size() and short[r][1]) else Pal.BAD
+		l.add_theme_color_override("font_color", tone if lit else Pal.TEXT_3)
 
 
 ## The class's line and the notice, bottom up: a lone line sits just over the classes, where the notice would; each
@@ -819,14 +870,13 @@ func _show_links(lanes: Array, pages: bool) -> void:
 		var closed: bool = sim.has_joint(j["key"])
 		var colour := joint_colour(j)
 		(link["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = colour if closed else Color(colour, 0.4)
-		var halves := _halves(j)
 		var room: float = link_x() - 10.0 - TILES_X - 20.0
 		var l: Label = link["label"]
 		l.size.x = room
 		if closed:
-			UI.fit(l, ["⇄ JOINED · " + str(j["words"]), "⇄ JOINED · " + str(j["words"]).get_slice(":", 0).get_slice(";", 0), "⇄ JOINED"])
+			l.text = "⇄ JOINED"          # the joint's words are the halves' to say, once picked (14 Oct, Matt: "keeps it simple")
 		else:
-			UI.fit(l, ["⇄ OPEN · %s and %s, one half each: %s" % [halves[0], halves[1], str(j["words"]).to_lower()], "⇄ OPEN · %s and %s, one half each" % halves, "⇄ OPEN · one half each", "⇄ OPEN"])
+			l.text = "⇄ OPEN"
 		l.add_theme_color_override("font_color", Pal.ACCENT_TEXT if closed else colour)
 		var w: float = ceilf(UI.text_width(l, l.text)) + 20.0
 		var chip: Panel = link["chip"]
@@ -1371,7 +1421,8 @@ func text_nodes() -> Array:
 	for b in [_ascend, _retire, _train]:
 		if b.visible:
 			out.append(b)
-	out.append_array(_class_buttons)
+	for c in _class_cards:
+		out.append_array([c["name"], c["tag"]] + c["lines"])
 	for lane in _lanes:
 		if lane["panel"].visible:
 			out.append_array([lane["name"], lane["tag"], lane["gates"], lane["count"]])

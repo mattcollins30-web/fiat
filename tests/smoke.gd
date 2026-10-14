@@ -1375,7 +1375,8 @@ func _run_screen(main) -> void:
 		if c.visible:
 			var pr := Rect2(Vector2.ZERO, run_ui._left.size)
 			_check(pr.encloses(Rect2(c.position, c.size)), "a rig cell on the run screen leaves its panel: cell %s, panel %s" % [str(Rect2(c.position, c.size)), str(pr)])
-			_check(c.position.y >= run_ui.RIG_Y and c.position.y + c.size.y <= run_ui.TAKE_Y, "a rig cell sits outside the rig's row")
+			# the row's where the screen has it: under the take in a fight, under the crates in the search (14 Oct)
+			_check(c.position.y >= run_ui._rig_y and c.position.y + c.size.y <= run_ui._rig_y + Pal.CELL, "a rig cell sits outside the rig's row: %.0f, the row at %.0f" % [c.position.y, run_ui._rig_y])
 	# a pouch is the control: pressing a med's cell uses it
 	if sim.med_capacity() > 0 and sim.mission["using"] == null:
 		while not sim.rig_room(1) and not sim.rig.is_empty():
@@ -1794,7 +1795,7 @@ func _tree_rules_checks(main) -> void:
 		main.refresh()
 		var names: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
 		_check(names == table[c], "the %s's lanes are %s, not the table's" % [c, str(names)])
-		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text.begins_with("⇄ OPEN"), "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
+		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text == "⇄ OPEN", "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
 	# a runner with no class: the Yard's lane alone, and the Also row
 	sim.cls = ""
 	sim.cls2 = ""
@@ -2405,7 +2406,7 @@ func _element_checks(main) -> void:
 	_check_fit(main, "Caravan (elements, yard)")
 	var bk = main._barracks
 	_check(bk.lane_trees().map(func(x): return x["name"] if x != null else "") == ["Muscle", "Blades", "The door", "Knuckles", "The Pitch"], "the Doorman's lanes are not the table's row: %s" % str(bk.lane_trees().map(func(x): return x["name"] if x != null else "")))
-	_check(bk._links[0]["chip"].visible and bk._links[0]["label"].text.begins_with("⇄ JOINED") and bk._links[1]["label"].text.begins_with("⇄ JOINED"), "the closed joints' links do not say so: '%s' / '%s'" % [bk._links[0]["label"].text, bk._links[1]["label"].text])
+	_check(bk._links[0]["chip"].visible and bk._links[0]["label"].text == "⇄ JOINED" and bk._links[1]["label"].text == "⇄ JOINED", "the closed joints' links do not say so: '%s' / '%s'" % [bk._links[0]["label"].text, bk._links[1]["label"].text])
 	for name in bk.also_names():
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
 		bk.also_button(name).pressed.emit()
@@ -2509,6 +2510,7 @@ func _element_checks(main) -> void:
 		var cr := Rect2(cb.position, cb.size)
 		_check(not cr.intersects(sum_r) and cr.end.y <= bk.HEAD_H - 8 and cr.end.y >= bk.HEAD_H - 24, "a class button is off the band's foot or on the sum: %s" % str(cr))
 	_check(not Rect2(bk._notice.position, bk._notice.size).intersects(sum_r), "the class notice sits on the sum")
+	_class_card_checks(bk)
 	# the lines over the classes (12 Oct): as the screen stands, with no past (two lines), and with a past and no trait (one)
 	_line_pill_checks(bk, sum_r)
 	var trait_was: String = sim.runner_trait
@@ -2518,6 +2520,8 @@ func _element_checks(main) -> void:
 		sim.runner_trait = st[1]
 		bk._show_head()
 		_line_pill_checks(bk, sum_r)
+		_class_card_checks(bk)
+		_check_fit(main, "Caravan (the band, past '%s')" % st[0])
 	sim.cls = cls_was
 	sim.runner_trait = trait_was
 	bk._show_head()
@@ -9898,7 +9902,7 @@ func _yard_checks(main) -> void:
 		main._barracks.selected = ""
 		main.refresh()
 		_check(main._barracks._words.text.begins_with(tdata["name"] + ": "), "Training does not give the trait's figures: '%s'" % main._barracks._words.text)
-		_check(main._barracks._class_line.text != "" and main._barracks._class_line.visible, "Training does not keep the class's line up")
+		_check(main._barracks._class_cards.all(func(c): return c["lines"][0].text != "") and main._barracks._class_buttons.all(func(cb): return cb.visible), "Training does not keep the pasts' cards up")
 		_check_fit(main, "Caravan (trait)")
 		main.show_room(main.OVERVIEW)
 		main.refresh()
@@ -11870,6 +11874,33 @@ func _card_frame_checks(main) -> void:
 	_check(Menu._build_words() == "FIAT · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
 	print("card frames ok: the label over the card, one frame picked; the title's version")
 
+## The pasts as cards (14 Oct, Matt; mockup class_cards_mockup.png): a face, the name and the short lines inside each
+## card, in a row, none overlapping; the runner's lit and ticked; a short line for each part of the sentence (a cost red);
+## the sentence a tooltip; a ? in the face's place with no past.
+func _class_card_checks(bk) -> void:
+	var sim = bk.sim
+	for k in range(bk._class_buttons.size()):
+		var cb: Button = bk._class_buttons[k]
+		var c: Dictionary = bk._class_cards[k]
+		var cd: Dictionary = Data.CLASSES[k]
+		var box := Rect2(Vector2.ZERO, cb.size)
+		for n in [c["face"], c["name"], c["tag"]] + c["lines"]:
+			_check(box.encloses(Rect2(n.position, n.size)), "%s's card: a part runs out of it: %s" % [cd["name"], str(Rect2(n.position, n.size))])
+		_check(c["face"].visible and c["face"].texture != null, "%s's card has no face" % cd["name"])
+		var short: Array = cd.get("short", [])
+		_check(short.size() >= 2 and short.size() <= bk.CLASS_SHORT and short.size() == str(cd["words"]).split(";").size(), "%s's short lines don't match its sentence: %s" % [cd["name"], str(short)])
+		var lit: bool = sim.cls == "" or sim.cls == cd["name"] or bk._armed == cd["name"]
+		for r in range(short.size()):
+			var want: Color = (Pal.GOOD if short[r][1] else Pal.BAD) if lit else Pal.TEXT_3
+			_check(c["lines"][r].text == str(short[r][0]) and (str(short[r][0]).begins_with("−") == not short[r][1]) and c["lines"][r].get_theme_color("font_color") == want, "%s's short line %d reads '%s' in the wrong tone" % [cd["name"], r, c["lines"][r].text])
+		_check(is_equal_approx(c["face"].modulate.a, 1.0 if lit else 0.75), "%s's face is not %s beside the picked past" % [cd["name"], "lit" if lit else "dimmed"])
+		_check(cb.tooltip_text.contains(str(cd["words"])), "%s's card does not carry its sentence" % cd["name"])
+		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else "")), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
+		if k > 0:
+			_check(not Rect2(cb.position, cb.size).intersects(Rect2(bk._class_buttons[k - 1].position, bk._class_buttons[k - 1].size)), "the pasts' cards overlap")
+	_check(bk._face_q.visible == (sim.cls == ""), "the ? in the face's place shows with a past, or not without one")
+
+
 ## The lines over the classes (12 Oct): each on a pill fitted to its words, in the band, clear of the classes and the
 ## sum; a lone line sits where the notice would, just over the classes, not up a row with a gap under it.
 func _line_pill_checks(bk, sum_r: Rect2) -> void:
@@ -11886,10 +11917,8 @@ func _line_pill_checks(bk, sum_r: Rect2) -> void:
 		_check(pr.encloses(text_r) and Rect2(0, 0, Pal.GRID_W, bk.HEAD_H).encloses(pr) and not pr.intersects(sum_r), "a line's pill does not hold its words in the band: %s" % str(pr))
 		for cb in bk._class_buttons:
 			_check(not pr.intersects(Rect2(cb.position, cb.size)), "a line's pill sits on a class: %s" % str(pr))
-	if bk._notice.text == "" and bk._class_line.text != "":
-		_check(absf((bk._class_line.position.y + bk._class_line.size.y / 2.0) - (bk._notice.position.y + bk._notice.size.y / 2.0)) < 1.0, "a lone class line leaves a gap over the classes")
-	elif bk._notice.text != "" and bk._class_line.text != "":
-		_check(Rect2(bk._class_line.position, bk._class_line.size).end.y <= bk._notice.position.y + 2, "the class's line runs into the notice")
+	# one line over the cards now (14 Oct): the class's sentence is the cards' tooltip
+	_check(not bk._class_line.visible and bk._class_line.text == "", "the class's own line is back over the cards: '%s'" % bk._class_line.text)
 
 
 ## The lore pass (12 Oct, docs/design/lore.md): the opening once on a new camp, the radio's lines after every few runs

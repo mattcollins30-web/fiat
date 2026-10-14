@@ -1673,14 +1673,19 @@ const RESPEC_CASH := 50
 ## reads by key; "words" is what the Barracks says.
 const CLASSES := [
 	{"name": "Poacher", "words": "+40% damage to the first of every gang; the next gang 25% slower to arrive",
+		"short": [["+40% first hit", true], ["Gangs 25% later", true]],     # the card's lines (14 Oct, Training's cards): the words a tooltip
 		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
+		"short": [["+15% damage", true], ["+20% armour", true], ["−10% pace", false]],
 		"damage": 1.15, "armour": 1.2, "pace": 0.9},
 	{"name": "Paramedic", "words": "+10% damage; meds heal 50% more and are used by themselves under 40% HP; healing past full is Guard",
+		"short": [["+10% damage", true], ["Meds heal +50%", true], ["Self-meds, overheals", true]],
 		"damage": 1.1, "heal": 1.5, "auto_med": true, "overheal": true},     # overheal (12 Oct, docs/design/shields.md)     # +10% damage (Matt, 9 Oct, the twenty-eighth read: the slowest class to the Bank, 2.3 h on five reads)            # the pass (6 Oct): the −10% damage went; the slowest to the Bank by two hours
 	{"name": "Scrapper", "words": "Searches 25% faster; +10% loot quantity; improvised guns do 20% more damage",
+		"short": [["Searches 25% faster", true], ["+10% loot", true], ["+20% improvised", true]],
 		"search": 0.75, "loot": 0.10, "improvised": 1.2},     # improvised +20% (12 Oct, Matt's playtest: the only class with no damage in its line; the bot's Scrappers ended on an SMG, their improvised nodes idle)             # searches 30% to 25% faster, the loot back to +10% (12 Oct: +5% loot read 9.3 crafts an hour against 8 - the search pace is the source)              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
 	{"name": "Drifter", "words": "+5% damage; one fewer on you at a time; +10% pace",
+		"short": [["+5% damage", true], ["One fewer on you", true], ["+10% pace", true]],
 		"damage": 1.05,     # +15% to +5% (Matt, 9 Oct, the twenty-eighth read: with its HP back, the fastest to the Bank at 0.6 h)
 		 "contact": -1, "pace": 1.1},     # the −15% max HP went (Matt, 9 Oct, the twenty-fifth read: level 32, 272 HP and 8-10 runs an hour at hour 4 against the Doorman's 41, 354 and 25; the lorry beaten on 2 of 4 reads with the bot fixed). Before that:      # +15% damage (Matt, 8 Oct): last to the lorry on every read since the engine, 24 h merged on the twenty-second against 4-13 h for the rest; +10% read 16.1 h on three reads, six minutes over the gate
 ]

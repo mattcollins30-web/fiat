@@ -4466,3 +4466,10 @@ on you.
 - *Gangs harder, not just larger.* Each gang is one head bigger and nothing else. Raise the stakes of staying: later
   gangs drawn from the next zone's crew (its figures, its HP and damage), or a gang's heads growing with the gangs
   so far. To design with Matt before the pass - it changes numbers, so it goes in before the pass, not after.
+
+**Training's pasts as cards; the joints' links say OPEN or JOINED (14 Oct, Matt; docs/design/mockups/class_cards_mockup.png).**
+The five class buttons are cards: the past's face, its name, its short lines (Data.CLASSES "short": green, a cost
+red), the runner's lit and ticked "your past", the rest dimmed, an armed one "press again"; the whole sentence the
+card's tooltip. No past yet: a ? in the band's face and every card lit to compare. One line over them: the trait, a
+change's price, or the prompt. The links between a class lane and its element's read "⇄ OPEN" or "⇄ JOINED" and
+nothing more - the joint's words are on its halves once picked.
