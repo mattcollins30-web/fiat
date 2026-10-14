@@ -4503,6 +4503,10 @@ below starts until that save lands; then each is designed with him, one at a tim
    still owed.") goes in the paper's description. The code it carries wants a better way of being shown. Matt's
    lean: a paper stays encrypted until the Radio's open, so papers become things to hold on to that build the lore
    as they're kept. To design with him.
+   Matt, 14 Oct, with it: **the heads' room-openers come home as keepsakes.** Beating the Gamekeeper gives nothing in
+   the pack: the vet's bag opens the Clinic at the drop and "goes to the medic" ("it felt odd"). The vet's bag, the
+   Carpet Man's ledger and the Quartermaster's set and tool roll come home as things to keep, in the drawer with their
+   story, still opening their room at the drop.
 4. **The flaky scrap check.** "searches brought no scrap in 600 seconds" failed once and passed when the smoke ran
    again (14 Oct). A site picked clean before a scrap roll stops searching; the check wants a site that can't run
    dry.
@@ -4516,3 +4520,13 @@ below starts until that save lands; then each is designed with him, one at a tim
    shows their HP plus the hit damage not yet shown as a number, so it holds while a shot's being "loaded" and drops
    by the number's size as it lands. The dots keep ticking it down smoothly, their coloured segments as now. The sim's
    untouched, so no balance read moves. Smoke: the bar's drop on a shot matches the number shown, within a point.
+7. **The Gamekeeper's loot (Matt, 14 Oct: "killing him and getting absolutely nothing felt bad").** He's the one head
+   with no uniques (`"uniques": []`), so his drop is the cash, the XP, the notes and the vet's bag, which never reaches
+   the pack. He wants a loot table like the other heads': two uniques of his own, rolled at the depth he's fought at.
+   To design with Matt (a keeper's things: the shoot's gun, his coat, the dogs' whistle...), test art first, then the
+   art manifest.
+8. **"The ending" in the code means the deeds' fate, and it isn't the ending.** The game ends on the Radio (the
+   Quartermaster's set, Kev, the codes; docs/design/on_the_air.md). The deeds drop off the Manager and the City plays on
+   after the Bank. `sim.ending` ("burned", "sold", "held") and the comments that say the deeds come home "for the
+   ending" date from the build before the City. Rename them in the refactor's step 6 (e.g. `deeds_fate`), with
+   the save's key read under both names.
