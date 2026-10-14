@@ -628,6 +628,23 @@ func _slots_offline_hardcore(main) -> void:
 	main.show_title()
 	_check(main._menu.shape() == ("title" if main._menu._picture.texture != null else "card"), "the title's shape is %s" % main._menu.shape())
 	_check_fit(main, "Title")
+	# nothing lit on opening (Matt, 14 Oct: the top row always looked chosen); a key's first press lights the first row
+	_check(main._menu.lit() == -1, "the title opens with row %d lit" % main._menu.lit())
+	var down := InputEventAction.new()
+	down.action = "ui_down"
+	down.pressed = true
+	if main._menu.is_inside_tree():
+		main._menu._unhandled_input(down)
+		_check(main._menu.lit() == main._menu._first, "a key's first press didn't light the first row: %d" % main._menu.lit())
+	var behind := Button.new()
+	main.add_child(behind)
+	if behind.is_inside_tree():
+		behind.grab_focus()
+	main.show_pause()
+	_check(main._menu.lit() == -1, "the pause opens with row %d lit" % main._menu.lit())
+	if behind.is_inside_tree():
+		_check(main.get_viewport().gui_get_focus_owner() == null, "a button behind the pause kept the keys: %s" % str(main.get_viewport().gui_get_focus_owner()))
+	behind.queue_free()
 	main._menu.close()
 	sim = main.sim
 	# away three hours with auto-run on: missions ran, the log moved, the clock moved

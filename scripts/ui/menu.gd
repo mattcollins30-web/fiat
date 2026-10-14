@@ -64,6 +64,7 @@ var _kicker: Label                 # the drawer's head strip
 var _kicker_rule: Panel
 var _subs: Array[Label] = []              # the line under the heading, wrapped
 var _rows: Array[Button] = []
+var _first := -1                           # the first row that can be pressed, lit by the keys' first press
 var _stamps: Array[Panel] = []
 var _glyphs: Array[TextureRect] = []
 var _names: Array[Label] = []
@@ -255,8 +256,33 @@ func open(title, sub: String, items: Array, back := Callable(), opaque := false,
 			first = i
 	_lay_rows()
 	visible = true
-	if first >= 0 and is_inside_tree():
-		_rows[first].grab_focus()
+	_first = first
+	# nothing lit till it's asked for (Matt, 14 Oct: the top row always looked chosen): the mouse lights a row by
+	# hovering it; the keys or a pad light the first one on their first press (_unhandled_input)
+	if is_inside_tree():
+		get_viewport().gui_release_focus()     # nothing behind it keeps the keys either (the review: Enter pressed the run's button under the pause)
+	for r in _rows:
+		if r.has_focus():
+			r.release_focus()
+
+
+## The keys or a pad with nothing lit: the first press lights the first row that can be pressed, and that's all it does.
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible or _first < 0 or _first >= _rows.size():
+		return
+	if not (event.is_action_pressed("ui_down") or event.is_action_pressed("ui_up") or event.is_action_pressed("ui_focus_next")):
+		return
+	if _rows.any(func(r): return r.visible and r.has_focus()):
+		return                                 # a row's lit: the keys move between rows as ever
+	_rows[_first].grab_focus()
+	get_viewport().set_input_as_handled()
+
+
+func lit() -> int:
+	for i in range(_rows.size()):
+		if _rows[i].visible and _rows[i].has_focus():
+			return i
+	return -1
 
 
 func close() -> void:
