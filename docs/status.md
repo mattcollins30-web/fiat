@@ -4441,3 +4441,8 @@ the set coming on as the Radio opens, the deeds burned or sold (finding them no 
 checks: two causes fixed (the gun's look inside its slowest beat; a test swing with nobody standing), two found and
 guarded (the odds read with a run left on; the upgrade arrows' cache missing the front's weather and night - a real
 one), each failure message now carrying the state that would explain it.
+
+**Settings (14 Oct, Matt: a Settings row with sound, music and room intros).** The pause's Sound row is Settings: a card
+with Effects, Music and Voice (each its own bus, a press steps 100, 75, 50, 25, off and round), Room intros on or off,
+Back. The voices (the opening, On the air, the rooms' cards) are the Voice bus. An old settings file reads as it did
+(Sound off: the effects and the voice off). A pad stays on the row it pressed.

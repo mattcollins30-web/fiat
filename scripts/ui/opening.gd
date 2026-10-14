@@ -81,6 +81,7 @@ func _init(list: Array = []) -> void:
 	_hint = UI.label(self, Rect2(0, 0, 500, 30), "Click for more  ·  Esc to skip", "Regular", 22, Color(0.45, 0.45, 0.44), HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_voice = AudioStreamPlayer.new()
 	_voice.volume_db = VOICE_DB
+	_voice.bus = "Voice" if AudioServer.get_bus_index("Voice") >= 0 else "Master"     # the Settings' Voice (14 Oct)
 	add_child(_voice)
 	_black = ColorRect.new()
 	_black.color = Color.BLACK

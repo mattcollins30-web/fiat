@@ -5025,13 +5025,44 @@ func _sound_checks(main) -> void:
 	snd.set_music(true)
 	sim.extract_now()
 	main.show_pause()
-	_check(main._menu._items.any(func(i): return str(i["name"]) == "Sound: on"), "the pause menu has no sound row")
-	# its one row goes round: on, no music, off, on
-	var seen_rows := []
-	for k in range(3):
-		main._next_sound()                     # the row's turn without its save: the player's settings file isn't the smoke's
-		seen_rows.append([main._sound.enabled, main._sound.music_on])
-	_check(seen_rows == [[true, false], [false, false], [true, true]], "the sound row doesn't go round on, no music, off: %s" % str(seen_rows))
+	_check(main._menu._items.any(func(i): return str(i["name"]) == "Settings"), "the pause menu has no Settings row")
+	# the Settings (14 Oct): a volume each for the effects, the music and the voices, stepped 100, 75, 50, 25, off and
+	# round; the bus follows; effects off quiets the world; Room intros; an old file's switches read as before
+	main.show_settings()
+	var names: Array = main._menu._items.map(func(i): return str(i["name"]))
+	_check(names == ["Effects: 100%", "Music: 100%", "Voice: 100%", "Room intros: on", "Back"], "the Settings rows are off: %s" % str(names))
+	_check(main._menu.shape() == "card", "the Settings aren't the card: %s" % main._menu.shape())
+	_check_fit(main, "Settings")
+	var steps := []
+	for k in range(5):
+		main.next_setting("music")             # the row's turn without its save: the player's settings file isn't the smoke's
+		steps.append(main._sound.vols["music"])
+	_check(steps == [0.75, 0.5, 0.25, 0.0, 1.0], "the music's volume doesn't step 75, 50, 25, off and round: %s" % str(steps))
+	main.next_setting("music")
+	var mb := AudioServer.get_bus_index("Music")
+	_check(mb >= 0 and absf(AudioServer.get_bus_volume_db(mb) - linear_to_db(0.75)) < 0.01 and not AudioServer.is_bus_mute(mb), "the Music bus didn't follow its volume")
+	main._sound.vols["music"] = 1.0
+	main._sound.vols["sfx"] = 0.0
+	main._sound.apply_volumes()
+	var sb := AudioServer.get_bus_index("SFX")
+	_check(not main._sound.enabled and sb >= 0 and AudioServer.is_bus_mute(sb), "effects off didn't quiet the world")
+	main._sound.vols["sfx"] = 1.0
+	main._sound.apply_volumes()
+	_check(main._sound.enabled and not AudioServer.is_bus_mute(sb), "effects back on didn't come back")
+	var held: Dictionary = main.settings_dict()
+	main.apply_settings({"sound": false, "music": true})
+	_check(main._sound.vols["sfx"] == 0.0 and main._sound.vols["voice"] == 0.0 and main._sound.vols["music"] == 1.0, "an old file's Sound off doesn't read as the effects and the voice off: %s" % str(main._sound.vols))
+	main.apply_settings(held)
+	_check(main.settings_dict() == held, "the settings don't come back as they were saved")
+	var card = main.RoomIntro.new("map")
+	main.add_child(card)
+	_check(card._voice.bus == "Voice", "a room's card speaks on the %s bus, not the Voice" % card._voice.bus)
+	card.finish()
+	main.next_setting("intros")
+	_check(not main.room_intros, "Room intros didn't go off")
+	main.next_setting("intros")
+	_check(main.room_intros, "Room intros didn't come back on")
+	main.show_pause()
 	_check(main._menu.shape() == "drawer", "the pause is not the drawer: %s" % main._menu.shape())
 	_check_fit(main, "Paused (sound)")
 	main._menu.close()

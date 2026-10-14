@@ -58,8 +58,13 @@ const CHRON := {"equip": "equip", "level": "level_up", "train": "point_spent", "
 const CRATE_SOUND := {"cardboard": "crate_cardboard", "ammo_tin": "crate_ammo_tin", "jewellery": "crate_jewellery",
 	"toolbox": "crate_toolbox", "medicine": "crate_medicine", "filing": "crate_filing", "safe": "crate_safe", "military": "crate_military"}
 
-var enabled := true                # the pause menu's Sound: the world and the UI
-var music_on := true               # the pause menu's Music
+var enabled := true                # effects on at all (the volume above nothing): the world and the UI
+var music_on := true               # music on at all
+## The Settings' three volumes (14 Oct, Matt: the pause's Settings): effects, music, the voices (the opening, On the
+## air, the rooms' cards), each its own bus, stepped by a press. enabled and music_on follow them.
+const VOL_STEPS := [1.0, 0.75, 0.5, 0.25, 0.0]
+const BUSES := {"sfx": "SFX", "music": "Music", "voice": "Voice"}
+var vols := {"sfx": 1.0, "music": 1.0, "voice": 1.0}
 var on_title := false              # the title's up: its music
 var _streams := {}                 # path -> stream or null
 var _takes := {}                   # id -> [streams]
@@ -82,16 +87,51 @@ var _sim_seen = null               # the camp the counts are of: a load or a new
 
 
 func _init() -> void:
+	ensure_buses()
 	for k in range(POOL):
-		_pool.append(_player())
+		_pool.append(_player("SFX"))
 	for layer in ["amb", "weather", "low_hp", "clock", "music"]:
-		_loops[layer] = {"p": [_player(), _player()], "on": 0, "id": "", "db": -80.0}
+		var bus: String = "Music" if layer == "music" else "SFX"
+		_loops[layer] = {"p": [_player(bus), _player(bus)], "on": 0, "id": "", "db": -80.0}
+	apply_volumes()
 
 
-func _player() -> AudioStreamPlayer:
+func _player(bus := "SFX") -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
+	p.bus = bus
 	add_child(p)
 	return p
+
+
+## The effects', the music's and the voices' buses, under the Master, once.
+static func ensure_buses() -> void:
+	for nm in BUSES.values():
+		if AudioServer.get_bus_index(nm) < 0:
+			AudioServer.add_bus()
+			var i := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(i, nm)
+			AudioServer.set_bus_send(i, "Master")
+
+
+## Each bus at its volume (off is muted); effects off quiets the world, music off the music.
+func apply_volumes() -> void:
+	for k in BUSES:
+		var i := AudioServer.get_bus_index(BUSES[k])
+		var v: float = float(vols[k])
+		if i >= 0:
+			AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)))
+			AudioServer.set_bus_mute(i, v <= 0.0)
+	if (float(vols["sfx"]) > 0.0) != enabled:
+		set_enabled(float(vols["sfx"]) > 0.0)
+	if (float(vols["music"]) > 0.0) != music_on:
+		set_music(float(vols["music"]) > 0.0)
+
+
+## A volume's next step down, and round from off to full.
+func step(kind: String) -> void:
+	var i: int = VOL_STEPS.find(float(vols[kind]))
+	vols[kind] = VOL_STEPS[(i + 1) % VOL_STEPS.size()] if i >= 0 else 1.0
+	apply_volumes()
 
 
 func _ready() -> void:
@@ -519,6 +559,9 @@ func _hook_button(n: Node) -> void:
 
 func set_enabled(on: bool) -> void:
 	enabled = on
+	if on != (float(vols["sfx"]) > 0.0):
+		vols["sfx"] = 1.0 if on else 0.0       # the old switch, as a volume
+		apply_volumes()
 	if not on:
 		_quiet_world()
 		for p in _pool:
@@ -527,6 +570,9 @@ func set_enabled(on: bool) -> void:
 
 func set_music(on: bool) -> void:
 	music_on = on
+	if on != (float(vols["music"]) > 0.0):
+		vols["music"] = 1.0 if on else 0.0
+		apply_volumes()
 	if not on:
 		set_loop("music", "")
 

@@ -104,6 +104,7 @@ func _init(room_key: String) -> void:
 	_go_on.pressed.connect(advance)        # its own clicks, so it lights and presses like any button (Matt: "no visual register")
 	_voice = AudioStreamPlayer.new()
 	_voice.volume_db = VOICE_DB
+	_voice.bus = "Voice" if AudioServer.get_bus_index("Voice") >= 0 else "Master"     # the Settings' Voice (14 Oct)
 	add_child(_voice)
 	_fill()
 

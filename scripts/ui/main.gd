@@ -141,6 +141,7 @@ var _speed_label: Label
 var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
+var room_intros := true            # the Settings' Room intros (14 Oct): off, no room's card comes up by itself
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
 var _overlay_closed := -1          # the frame an opening or a room card closed: its Esc isn't the pause's too
 var _opening_due := false          # a new camp's opening is about to start: no room card before it (Matt: the Map's take played under it)
@@ -628,29 +629,49 @@ class CogGlyph extends Control:
 func show_pause() -> void:
 	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close, "glyph": "menu_continue"},
-		{"name": ("Sound: on" if _sound.music_on else "Sound: no music") if _sound.enabled else "Sound: off", "detail": "Sound and music, sound alone, or quiet: press to change", "action": _toggle_sound, "glyph": "menu_sound"},
+		{"name": "Settings", "detail": "Effects, music and voice volumes; the rooms' intros", "action": show_settings, "glyph": "menu_sound"},
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause), "glyph": "menu_slots"},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title, "glyph": "menu_title"},
 	], _menu.close, false, Rect2(_rail.position, _rail_panel.size))
 
 
-## The pause's one row (a menu holds five): on with the music, on without it, off - and round again.
-func _toggle_sound() -> void:
-	_next_sound()
+## The pause's Settings (14 Oct, Matt: "a Settings row ... Sound, Music and Room intros"): a volume each for the effects,
+## the music and the voices, stepped a press at a time (100, 75, 50, 25, off), and the rooms' intros on or off. Back is
+## the pause. Opened again under a press, the row that was lit stays lit (a pad).
+const SETTING_ROWS := ["sfx", "music", "voice", "intros"]
+func show_settings(lit_row := -1) -> void:
+	var items := []
+	var words := {"sfx": ["Effects", "The guns, the fights, the camp"], "music": ["Music", "The title's, the camp's, the fight's"],
+			"voice": ["Voice", "The opening, the radio, the rooms' intros"]}
+	for k in ["sfx", "music", "voice"]:
+		items.append({"name": "%s: %s" % [words[k][0], _vol_words(float(_sound.vols[k]))], "detail": words[k][1] + ": press to change",
+				"action": _press_setting.bind(k), "glyph": "menu_sound"})
+	items.append({"name": "Room intros: %s" % ("on" if room_intros else "off"), "detail": "A room's card the first time you're in it; the ? brings one back",
+			"action": _press_setting.bind("intros"), "glyph": "menu_continue"})
+	items.append({"name": "Back", "detail": "", "action": show_pause})
+	_menu.open("Settings", "A press steps each one; Esc goes back", items, show_pause)     # the card, not the drawer: its rows say what each is
+	_menu.light(lit_row)
+
+
+static func _vol_words(v: float) -> String:
+	return "off" if v <= 0.0 else "%d%%" % int(round(v * 100.0))
+
+
+func _press_setting(kind: String) -> void:
+	var lit_row: int = _menu.lit()
+	next_setting(kind)
 	_save_settings()
 	_sound.follow(sim)
-	show_pause()
+	show_settings(lit_row)
 
 
-func _next_sound() -> void:
-	if _sound.enabled and _sound.music_on:
-		_sound.set_music(false)
-	elif _sound.enabled:
-		_sound.set_enabled(false)
+## A setting's next step, without the save (the tests: the player's settings file isn't theirs).
+func next_setting(kind: String) -> void:
+	if kind == "intros":
+		room_intros = not room_intros
 	else:
-		_sound.set_enabled(true)
-		_sound.set_music(true)
+		_sound.step(kind)
 
 
 func _load_settings() -> void:
@@ -659,15 +680,30 @@ func _load_settings() -> void:
 		var d = JSON.parse_string(f.get_as_text())
 		f.close()
 		if d is Dictionary:
-			_sound.enabled = bool(d.get("sound", true))
-			_sound.music_on = bool(d.get("music", true))
+			apply_settings(d)
 
 
 func _save_settings() -> void:
 	var f := FileAccess.open(SETTINGS_FILE, FileAccess.WRITE)
 	if f != null:
-		f.store_string(JSON.stringify({"sound": _sound.enabled, "music": _sound.music_on}))
+		f.store_string(JSON.stringify(settings_dict()))
 		f.close()
+
+
+## The settings as saved: the volumes, the intros, and the old switches beside them (a build from before still reads it).
+func settings_dict() -> Dictionary:
+	return {"sound": _sound.enabled, "music": _sound.music_on, "sfx": _sound.vols["sfx"], "music_v": _sound.vols["music"],
+			"voice": _sound.vols["voice"], "intros": room_intros}
+
+
+## A settings file read in: the volumes, or an old file's switches as them (Sound off: the effects and the voice off).
+func apply_settings(d: Dictionary) -> void:
+	var old_on: bool = bool(d.get("sound", true))
+	_sound.vols["sfx"] = clampf(float(d.get("sfx", 1.0 if old_on else 0.0)), 0.0, 1.0)
+	_sound.vols["music"] = clampf(float(d.get("music_v", 1.0 if bool(d.get("music", true)) else 0.0)), 0.0, 1.0)
+	_sound.vols["voice"] = clampf(float(d.get("voice", 1.0 if old_on else 0.0)), 0.0, 1.0)
+	room_intros = bool(d.get("intros", true))
+	_sound.apply_volumes()
 
 
 func _save_and_resume() -> void:
@@ -708,7 +744,7 @@ func play_opening() -> void:
 	if _opening != null and is_instance_valid(_opening):
 		return
 	_opening = Opening.new()
-	_opening.voice_on = _sound.enabled     # Sound off: the reading unheard, the lines on its time
+	_opening.voice_on = _sound.vols["voice"] > 0.0     # Voice off: the reading unheard, the lines on its time
 	_opening.done.connect(_opening_done)
 	add_child(_opening)
 	_sound.title()
@@ -739,7 +775,7 @@ func play_air() -> void:
 	if not ("air" in sim.met):
 		sim.met.append("air")
 	_opening = Opening.new(Words.AIR_SCENES)
-	_opening.voice_on = _sound.enabled
+	_opening.voice_on = _sound.vols["voice"] > 0.0
 	_opening.done.connect(_opening_done)
 	add_child(_opening)
 
@@ -747,7 +783,7 @@ func play_air() -> void:
 ## A room's card the first time it's on screen (14 Oct): not over a menu, the opening or another card, and not the
 ## Map's while a run's on it (the run screen's in the Map's place then). The tests' camps (intro off) never see one.
 func _maybe_room_intro() -> void:
-	if not intro or sim == null or sim.camp_lost or _menu.visible or not ROOM_INTRO_KEY.has(room):
+	if not intro or not room_intros or sim == null or sim.camp_lost or _menu.visible or not ROOM_INTRO_KEY.has(room):
 		return
 	if _opening_due or (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
 		return
@@ -765,7 +801,7 @@ func show_room_intro(key: String) -> void:
 	if not (key in sim.met):
 		sim.met.append(key)
 	_room_card = RoomIntro.new(key)
-	_room_card.voice_on = _sound.enabled
+	_room_card.voice_on = _sound.vols["voice"] > 0.0
 	_room_card.met_count = sim.met.size()
 	_room_card.done.connect(func():
 		_room_card = null

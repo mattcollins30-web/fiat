@@ -278,6 +278,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+## Light row i (a menu opened again under a press: the pad stays on the row it pressed, 14 Oct).
+func light(i: int) -> void:
+	if visible and i >= 0 and i < _rows.size() and _rows[i].visible and not _rows[i].disabled and _rows[i].is_inside_tree():
+		_rows[i].grab_focus()
+
+
 func lit() -> int:
 	for i in range(_rows.size()):
 		if _rows[i].visible and _rows[i].has_focus():
