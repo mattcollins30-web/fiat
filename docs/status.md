@@ -4530,3 +4530,11 @@ below starts until that save lands; then each is designed with him, one at a tim
    after the Bank. `sim.ending` ("burned", "sold", "held") and the comments that say the deeds come home "for the
    ending" date from the build before the City. Rename them in the refactor's step 6 (e.g. `deeds_fate`), with
    the save's key read under both names.
+9. **Your muzzle flash (Matt, 14 Oct: "I don't think player muzzle flash works ... doesn't work on shotgun or bolt
+   gun").** There isn't one to work. A shot is only the kick (`_recoil`: the hands shoved 10,12 px for 0.08 s);
+   no hands picture has a flash painted in (blade, improvised, melee, pistol, rifle, shotgun, SMG all checked), and
+   the gangs' flashes are their own `_fire` frames. Proposed, in engine first as the melee swing was: a flash drawn at
+   each picture's muzzle (a point a kind, read off the art), its shape the gun's - the shotgun's wide and both
+   barrels, the bolt gun's long, the pistol's small, the SMG's quick and small, the nail gun a spark; none on a blade
+   or a hammer - on the shot's beat, with the kick. Smoke: a shot puts the flash up inside the frame at the muzzle,
+   for every gun kind. Generated flash frames only if this doesn't sell it.
