@@ -4461,8 +4461,8 @@ func _tick(dt: float) -> void:
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		m["immune_t"] = maxf(0.0, float(m["immune_t"]) - dt)     # Clean hands' grace runs down whether they're on you or not
 	if m["cleared"]:
-		if not gang_held(m):
-			m["patrol_timer"] += dt
+		if not gang_held(m) and m["remaining"] <= 0:
+			m["patrol_timer"] += dt          # only while it's quiet (14 Oct, Matt): every gang beaten gives the search its window back
 		if m["patrol_timer"] >= patrol_s(t, m["patrols"] == 0):
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1

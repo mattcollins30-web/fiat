@@ -4446,3 +4446,23 @@ one), each failure message now carrying the state that would explain it.
 with Effects, Music and Voice (each its own bus, a press steps 100, 75, 50, 25, off and round), Room intros on or off,
 Back. The voices (the opening, On the air, the rooms' cards) are the Voice bus. An old settings file reads as it did
 (Sound off: the effects and the voice off). A pad stays on the row it pressed.
+
+**The search under the fight art (14 Oct, Matt; mockups search_mockup3/4).** The crates moved from under the pack into
+the left column under the six: the take folded into their head, the tiles ("+N more" past five), the floor, the rig
+under them. The pick panel stays the pick's, so a thing on the floor compares against what's worn; the toggle's gone.
+The search's bar sits at the frame's foot in your HP bar's place till a gang comes. A crate opened is set down open at
+the front left, "Opened · N finds", for two seconds, the bar naming it. HP low puts the warning on the crates' head.
+
+**The next gang's clock holds while a gang's on you (14 Oct, Matt: "no search time before the next gang shows up which
+just compounds").** It ran through the fights: on the Allotments with the starting kit the first gang took 19 s, left
+1 s of quiet, and the gangs on you went 2, 3, 5, 8, 12, 17, 23 - one search a run. Now it counts only the quiet, so
+every gang beaten gives the search its window back; the gangs still grow and the run's clock still ticks while they're
+on you.
+
+**Parked for the next balance pass (14 Oct, Matt).**
+- *The search against the gangs.* A search takes 15 s and the gangs come 20 s apart: one search a gap on the
+  Allotments. Set the two together (and what Keen eyes / Quick hands / Fast strip and Patience / Lying up / Soft
+  ground / Head start / Never still and the affixes buy) once the gang clock's pause has been played.
+- *Gangs harder, not just larger.* Each gang is one head bigger and nothing else. Raise the stakes of staying: later
+  gangs drawn from the next zone's crew (its figures, its HP and damage), or a gang's heads growing with the gangs
+  so far. To design with Matt before the pass - it changes numbers, so it goes in before the pass, not after.

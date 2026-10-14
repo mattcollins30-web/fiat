@@ -6496,6 +6496,7 @@ func _loot_roll_checks(main) -> void:
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_crates_checks(main)
+	_gang_pause_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7577,6 +7578,40 @@ func _wound_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the Pitch, the Clinic's price and cure, the save, the death")
+
+
+## The next gang's clock (14 Oct, Matt: "no search time before the next gang shows up which just compounds"): it runs
+## only while the site's quiet - held while a gang's on you, so the next can't land on the last and every gang beaten
+## gives the search its window back.
+func _gang_pause_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.auto_tier = -1
+	sim.deploy(3)
+	var m: Dictionary = sim.mission
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["event_at"] = -1.0
+	m["leave_full"] = false
+	sim._clear(m, m["t"])
+	var due: float = sim.patrol_s(m["t"], m["patrols"] == 0)
+	m["patrol_timer"] = due - 3.0
+	m["remaining"] = 40                          # a gang too big to beat in the time
+	m["target_hp"] = float(m["t"]["hp"])
+	var patrols0: int = m["patrols"]
+	for k in range(10):
+		sim.hp = sim.max_hp()
+		sim.advance(0.5)
+	_check(sim.on_mission() and m["patrols"] == patrols0 and is_equal_approx(float(m["patrol_timer"]), due - 3.0), "the next gang's clock ran while one was on you: %.1f of %.1f, gangs %d from %d" % [float(m["patrol_timer"]), due, m["patrols"], patrols0])
+	m["remaining"] = 0
+	sim.advance(1.0)
+	_check(sim.on_mission() and float(m["patrol_timer"]) > due - 3.0, "the next gang's clock did not run on once it was quiet: %.1f" % float(m["patrol_timer"]))
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("the gangs' clock ok: held while one's on you, on again when it's quiet")
 
 
 ## The search's column (14 Oct, mockups search_mockup3/4): the crates under the six and inside the column, the rig
