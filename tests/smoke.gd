@@ -4689,6 +4689,9 @@ func _shoot(main) -> void:
 	v._duck_t = 0.0
 	v._duck_next = 99.0
 	v._process(RunView.POP_S + 0.1)            # anyone coming in is up by now
+	if not v._figs.any(func(f): return f["state"] == "up"):
+		v._figs[0]["state"] = "up"              # between gangs nobody stands; a swing needs someone to land on (14 Oct, the flaky check)
+	v._firing = true
 	v._swing = -1.0
 	v._shot_t = 0.0
 	v._process(0.01)
@@ -4886,9 +4889,16 @@ func _sound_checks(main) -> void:
 	var p: Dictionary = snd.playing()
 	_check(p["ambient"] == "amb_estate" and p["rain"] and p["music"] == "music_fight", "the estate, the rain and the fight's music are not playing out on the estate: %s" % str(p))
 	snd.clear_cued()
-	sim.advance(3.0)                           # a hammer swings every two seconds and more
-	main.refresh()
-	_check(snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"), "the gun did not go off: %s" % str(snd.cued()))
+	# in half-second looks, as the screen sees a run, up to eight seconds: the sound's slowest beat is 1 / 0.3 s, so one
+	# look at three seconds missed it now and then (14 Oct, the flaky check)
+	var went_off := false
+	for k in range(16):
+		sim.advance(0.5)
+		main.refresh()
+		if snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"):
+			went_off = true
+			break
+	_check(went_off, "the gun did not go off in eight seconds: %s" % str(snd.cued()))
 	m["dots"] = {}                             # nothing on them, so the fire below is new (a fire-converting gun leaves some)
 	m["chill_t"] = 0.0
 	m["shock_t"] = 0.0
@@ -5267,10 +5277,22 @@ func _playtest_checks(main) -> void:
 	main._read_odds()
 	var frame_ms := (Time.get_ticks_usec() - odds_t0) / 1000.0
 	_check(frame_ms < main.ODDS_MS + 150.0, "one frame's odds took %.0f ms (the brake is %.0f ms and one dry run)" % [frame_ms, main.ODDS_MS])
+	if sim.on_mission():
+		sim.extract_now()                        # the odds read only at home on the Map (main._read_odds): a run left on reads nothing (the review)
+	main.show_room(main.MISSIONS)
 	var frames := 0
+	var key_moves := {}                         # for the failure's words: a key that moves restarts the read (14 Oct)
+	var keys0 := {}
+	for i in range(Data.TIERS.size()):
+		keys0[i] = str(sim._odds_key(i))
 	while frames < 2000:
 		main._read_odds()
 		frames += 1
+		for i in range(Data.TIERS.size()):
+			var kn := str(sim._odds_key(i))
+			if kn != keys0[i]:
+				key_moves[i] = int(key_moves.get(i, 0)) + 1
+				keys0[i] = kn
 		var all_settled := true
 		for i in range(Data.TIERS.size()):
 			if sim.tier_open(i) and not sim.odds_settled(i):
@@ -5279,7 +5301,8 @@ func _playtest_checks(main) -> void:
 			break
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
-			_check(sim.odds_settled(i), "tier %d's odds never settled in %d frames" % [i, frames])
+			var oc: Array = sim._surv_cache.get(i, [])
+			_check(sim.odds_settled(i), "tier %d's odds never settled in %d frames: on a run %s, %s of %d reads (cap %d), key moved %d times, cache key now %s" % [i, frames, sim.on_mission(), str(oc[2]) if oc.size() > 2 else "none", sim.odds_runs(), sim.odds_runs_max, int(key_moves.get(i, 0)), str(oc.size() > 0 and str(oc[0]) == str(sim._odds_key(i)))])
 	main._missions._shown = ""
 	main.refresh()
 	_check_fit(main, "Runs (odds settled)")
@@ -11105,7 +11128,8 @@ func _upgrade_arrow_checks(main) -> void:
 	main.refresh()
 	var cw2 = inv.cell_node(inv.cell_of(worse["id"]))
 	var hard = inv.cell_node(inv.cell_of(sim.stash.filter(func(x): return x["base"] == "Hard hat")[0]["id"])) if sim.stash.any(func(x): return x["base"] == "Hard hat") else null
-	_check(cw2 != null and not cw2._up.visible and (hard == null or not hard._up.visible), "an arrow stayed once the better helmet went on")
+	var hats: Array = sim.stash.filter(func(x): return x["base"] == "Hard hat")
+	_check(cw2 != null and not cw2._up.visible and (hard == null or not hard._up.visible), "an arrow stayed once the better helmet went on: worn %s, the hats' verdicts %s, front %d (%s, night %s), HP %.0f of %.0f" % [str(sim.equipped["Helmet"]["base"]) if sim.equipped["Helmet"] != null else "none", str(hats.map(func(x): return sim.compare(x))), sim.front_tier(), sim.weather_of(sim.front_tier()), sim.is_night(), sim.hp, sim.max_hp()])
 	sim.load_dict(saved)
 	main.refresh()
 	_try_on_checks(main)

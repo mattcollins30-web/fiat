@@ -6319,7 +6319,8 @@ func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review), and a run's bonus armour
 	var bonus: float = float(mission.get("bonus_armour", 0.0)) if mission != null else 0.0
-	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand()])     # the front: the body's figure reads the fight being pushed
+	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
