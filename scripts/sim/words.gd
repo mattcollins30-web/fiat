@@ -32,20 +32,20 @@ const OPENING_SCENES := [
 		"They said the machines would do the work. For a while the money said so too.",
 		"Fields of servers, drinking the rivers, burning the power we couldn't afford.",
 		"The jobs went first. The money went after them."]},
-	{"year": "2032", "title": "The money", "art": "scene_4", "voice": "2032", "cues": [4.12, 7.06, 14.10, 16.26], "lines": [
+	{"year": "2032", "title": "The money", "art": "scene_4", "voice": "2032", "cues": [3.40, 6.28, 13.26, 16.48], "lines": [
 		"It didn't crash. It stopped.",
 		"The cards stopped. The banks shut for a day, then a week. The pound was paper.",
 		"Then the radio broadcasts:"],
 		"radio": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
-	{"year": "2033", "title": "Let it be done", "art": "scene_5", "voice": "2033", "cues": [4.02, 9.44, 15.36, 19.44], "lines": [
+	{"year": "2033", "title": "Let it be done", "art": "scene_5", "voice": "2033", "cues": [4.04, 9.60, 16.00, 20.14], "lines": [
 		"Nobody fired a shot. The lights just went out one town at a time.",
-		"The council stopped coming. The lorries stopped coming. The police stopped.",
+		"The council stopped coming. The lorries stopped coming. The police stopped coming.",
 		"People kept to their own. The estate kept the estate.",
 		"A new currency was promised. Its value is as stated. Let it be done."]},
-	{"year": "Now", "title": "The Pitch", "art": "scene_6", "voice": "now", "cues": [2.32, 7.48, 12.98, 14.62, 17.54], "lines": [
+	{"year": "Now", "title": "The Pitch", "art": "scene_6", "voice": "now", "cues": [2.52, 7.50, 13.46, 17.58, 20.80], "lines": [
 		"You keep a camp. A few vans, a fire, a fence of pallets.",
 		"You don't go out. Somebody does - whoever's willing, for a share of what comes back.",
-		"Tins are money now.",
+		"Tins are money now. What's in a tin is worth something.",
 		"Send them out. Bring back what you can.",
 		"When a place is picked clean, or someone wants it more than you do, you move on."]},
 ]

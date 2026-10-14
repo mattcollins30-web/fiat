@@ -39,12 +39,13 @@ The jobs went first. The money went after them.
 **4 · 2032 · The money**
 It didn't crash. It stopped.
 The cards stopped. The banks shut for a day, then a week. The pound was paper.
+Then the radio broadcasts:
 *This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day.*
 *Art: a queue outside a shuttered high-street bank, a cash machine reading Temporarily unavailable, notes in the gutter.*
 
 **5 · 2033 · Let it be done**
 Nobody fired a shot. The lights just went out one town at a time.
-The council stopped coming. The lorries stopped coming. The police stopped.
+The council stopped coming. The lorries stopped coming. The police stopped coming.
 People kept to their own. The estate kept the estate.
 A new currency was promised. Its value is as stated. Let it be done.
 *Art: an empty motorway at dusk, a jack-knifed lorry, a checkpoint of trolleys and pallets on the slip road.*
