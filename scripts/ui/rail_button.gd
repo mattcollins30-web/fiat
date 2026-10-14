@@ -18,7 +18,7 @@ const STAMP_X := 16
 const TEXT_X := STAMP_X + STAMP + 16
 ## The rail's glyphs (13 Oct, the campaign manifest): art/rail/, drawn for the rooms as they're named now; the five a
 ## boss opens are the things that open them (the deeds, the tool roll, the vet's bag, the ledger, the military radio).
-const GLYPH_OF := {"The Yard": "rail/yard", "Stats": "rail/stats", "The Kit": "rail/runner", "The Map": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
+const GLYPH_OF := {"The Pitch": "rail/yard", "Stats": "rail/stats", "The Kit": "rail/runner", "The Map": "rail/runs", "Workshop": "rail/workshop", "Training": "rail/training",
 	"The Clinic": "rail/clinic", "The Fence": "rail/fence", "Radio": "rail/radio"}
 const STAMP_PAINTED := Color("4b525a")   # a painting's stamp, lighter (13 Oct, Matt: the dark ones sank into the dark)
 

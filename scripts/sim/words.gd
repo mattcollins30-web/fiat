@@ -107,7 +107,7 @@ const GATE_ITEMS := {
 const GATES := {
 	"clinic": "The vet's bag goes to the medic. The Clinic's open.",
 	"fence": "The ledger goes to the Fence. He's open for business.",
-	"yard": "The deeds are the Yard's. Build on it.",
+	"yard": "The deeds are the Pitch's. Build on it.",
 	"radio": "The set's on the Radio's bench. The Radio's on the air.",
 	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
 	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the Carpet Man's ledger", "yard": "the Manager's deeds", "radio": "the Quartermaster's set", "workshop": "the Quartermaster's tool roll"},
@@ -158,7 +158,7 @@ const FENCE := {
 	"contract": ["That's what I asked for. Here's what I said.", "Good. Someone's waiting on these.", "Done. I'll have another for you."],
 	"gamble": ["He had one. Don't ask where.", "That's what came. No returns.", "Sealed when I got it. Sealed when you did."],
 	"insured": "I'll hold the paper on it. If they don't come back, you do.",
-	"paid_out": "Insured. The Fence held the paper; the kit's back in the Yard. The runner isn't.",
+	"paid_out": "Insured. The Fence held the paper; the kit's back on the Pitch. The runner isn't.",
 	"mate": ["He doesn't come in. He sends them with me. Don't ask.", "Notes. He still thinks they're money. So do the crews."],
 	"town": "You've been past the Retail Park, then. The Bank's got a crew. They'll know your name before you know theirs.",
 	"deeds": "I'll find a buyer. Someone always wants to be owed.",
@@ -183,19 +183,19 @@ const MEDIC := {
 ## What the runner was, before: a line each, and how they turn up at the Yard.
 const PASTS := {
 	"Poacher": {"was": "Kept the village in rabbits when the shops shut. Knows where everything hides.",
-		"arrives": "A poacher turns up at the Yard, rifle wrapped in a coat. Doesn't say where from.",
+		"arrives": "A poacher turns up at the Pitch, rifle wrapped in a coat. Doesn't say where from.",
 		"wall": "Knew where everything hid. Not this."},
 	"Doorman": {"was": "Worked the door of a club that closed the week after. Still stands like it's open.",
-		"arrives": "A doorman turns up at the Yard. Big, polite, looks at your hands first.",
+		"arrives": "A doorman turns up at the Pitch. Big, polite, looks at your hands first.",
 		"wall": "Stood in the doorway to the end. Nobody got past while he did."},
 	"Paramedic": {"was": "Stayed on the ambulances after the pay stopped. Left when the fuel did.",
-		"arrives": "A paramedic turns up at the Yard, still in the green. Asks where the kit is.",
+		"arrives": "A paramedic turns up at the Pitch, still in the green. Asks where the kit is.",
 		"wall": "Stayed with the last one. Always did."},
 	"Scrapper": {"was": "Stripped the estate's own cars for copper. Knows what everything's worth, to the penny.",
-		"arrives": "A scrapper turns up at the Yard with a trolley. Prices the Lock-up before saying hello.",
+		"arrives": "A scrapper turns up at the Pitch with a trolley. Prices the Lock-up before saying hello.",
 		"wall": "Knew what everything was worth. The Fence got the trolley."},
 	"Drifter": {"was": "Walked in from somewhere worse. Doesn't say where; doesn't plan to stay.",
-		"arrives": "A drifter turns up at the Yard. Light pack, good boots, already looking at the road.",
+		"arrives": "A drifter turns up at the Pitch. Light pack, good boots, already looking at the road.",
 		"wall": "Kept walking. Not far enough."},
 }
 
@@ -292,7 +292,7 @@ const SITES := {
 			"A motorway services. The lorries stopped here when the diesel did, and so did the drivers.",
 			"The lorry park is a town now. Every trailer's a house; every cab's a shop.",
 			"The fuel's long gone. What's in the tanks is what they fight over.",
-			"The drivers kept the CB sets. They heard your yard before they saw it.",
+			"The drivers kept the CB sets. They heard your pitch before they saw it.",
 			"The last lorry in was the Army's. It isn't here any more. They know where it went.",
 		],
 		"cleared": "The Services are quiet. The trailers are still houses; nobody's opening the doors.",
@@ -406,9 +406,9 @@ const DEEDS := {
 	"name": "The deeds", "value": 5000,
 	"words": "Every mortgage on the estate, in a fire box. The crew held the Bank for this.",
 	"found": "In the vault: a fire box. The paper on every house on the estate.",
-	"burned": "Burned in the Yard. Nobody on the estate owes anybody. Let it be done.",
+	"burned": "Burned on the Pitch. Nobody on the estate owes anybody. Let it be done.",
 	"sold": "Sold on. Someone, somewhere, is owed the estate now. Let it be done.",
-	"held": "The Yard holds the paper on every house on the estate. Let it be done.",
+	"held": "The Pitch holds the paper on every house on the estate. Let it be done.",
 }
 
 
@@ -789,9 +789,9 @@ const AWAY := {
 	"title": "Back, then.",
 	"rested": "Gone %s. The runner slept, the radio played to nobody.",
 	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s on the shelf, level %d to %d.",
-	"settled": " The Yard kept going for %s of it; the rest is just the clock.",
+	"settled": " The Pitch kept going for %s of it; the rest is just the clock.",
 	"lost": " One runner didn't come back.",
-	"prices": " The Fence's prices are up %d%% on when the Yard opened.",
+	"prices": " The Fence's prices are up %d%% on when the Pitch opened.",
 }
 const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay.", "Don't ask who for."]
 const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
@@ -811,8 +811,8 @@ const NEXT := {
 	"head": "%s is behind %s. Arm him on the Map when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. Depth is the game now; the lorry runs the Services at depth %d.",
-	"lorry": "The lorry's beaten. Move the Yard when you're ready: the next starts its ladders higher, with a free node on the Yard's tree.",
-	"moved": "A new yard, the same list on the wall. Start at the allotments.",
+	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next starts its ladders higher, with a free node on the Pitch's tree.",
+	"moved": "A new pitch, the same list on the wall. Start at the allotments.",
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
@@ -821,13 +821,13 @@ const NEXT_SHORT := {
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
 	"done": "Depth is the game now",
-	"lorry": "The lorry's beaten: move the Yard",
+	"lorry": "The lorry's beaten: move the Pitch",
 }
 const NOTES := {
 	"zones": "Heads down open the next",
 	"zones_done": "Deepest clear on each",
 	"patch": "The runner's patch",
-	"generator": "Keeps the Yard going while you're gone",
+	"generator": "Keeps the Pitch going while you're gone",
 }
 
 ## The estate recycles: what was lost turns up on someone, and comes off him.
@@ -841,14 +841,14 @@ const RECYCLE := {
 
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
-	"set": "The Yard is set. One runner, a hammer, the estate outside.",
+	"set": "The Pitch is set. One runner, a hammer, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
-	"first_run": "Out for the first time. Nobody past the ring road knows the Yard yet.",
-	"hardcore_lost": "Hardcore: the Yard goes with the runner. Someone else will have the Lock-up by morning.",
-	"campaign": "The edge of it, the estate, the town, the city. The Yard's name is known in all of them. Now it's a question of how far in you go.",
-	"moved": "The Yard moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
-	"lorry": "The Lorry's Load is yours. There's nothing left in this town that's worth the drive; the Yard can move on whenever you like.",
-	"trade": "The Yard's trade came too: %s, and anyone who runs for the Yard learns the lot of it.",
+	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
+	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Lock-up by morning.",
+	"campaign": "The edge of it, the estate, the town, the city. The Pitch's name is known in all of them. Now it's a question of how far in you go.",
+	"moved": "The Pitch moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
+	"lorry": "The Lorry's Load is yours. There's nothing left in this town that's worth the drive; the Pitch can move on whenever you like.",
+	"trade": "The Pitch's trade came too: %s, and anyone who runs for the Pitch learns the lot of it.",
 }
 
 
@@ -901,7 +901,7 @@ static func short_line(line: String) -> String:
 static func toast_tone(line: String) -> String:
 	if line.begins_with("Found: ") or line.begins_with("And a second: ") or line.contains(" Found: "):
 		return "good"
-	if line.begins_with("Level ") or line.begins_with("Not today") or line.begins_with("The Yard moves") or line.begins_with("The Yard's trade"):
+	if line.begins_with("Level ") or line.begins_with("Not today") or line.begins_with("The Pitch moves") or line.begins_with("The Pitch's trade"):
 		return "good"
 	for b in BOSSES:
 		if line.begins_with(b + " comes out") or line.begins_with(b + " is down") or line.begins_with(b + ": "):

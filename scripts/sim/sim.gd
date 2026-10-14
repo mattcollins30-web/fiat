@@ -803,7 +803,7 @@ func retire() -> bool:
 		retired.append(runner_trait)
 		while retired.size() > Data.RETIRED_MAX:
 			retired.pop_front()              # the oldest makes way
-	log_event("%s retires to the wall at level %d. The Yard keeps a little of what they were." % [cls, level()])
+	log_event("%s retires to the wall at level %d. The Pitch keeps a little of what they were." % [cls, level()])
 	runner_runs = 0
 	_record_reset()
 	for s in Data.SLOTS:
@@ -828,7 +828,7 @@ func retire() -> bool:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Yard with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Pitch with their own kit.")
 	_refund_runner_trees()
 	_dry_memo.clear()
 	return true
@@ -1203,7 +1203,7 @@ func move_yard(trade := "") -> bool:
 			uniques.append(equipped[s])
 	var yard_tree: Array = []
 	for id in tree:
-		if str(id).begins_with("The Yard/"):
+		if str(id).begins_with("The Pitch/"):
 			yard_tree.append(id)
 	var kept_share: float = 0.75 if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
@@ -3326,7 +3326,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	if b.is_empty() or col < 0 or col >= b["picks"].size() or not (side in ["a", "b"]):
 		return "no such upgrade"
 	if not room_open("yard"):
-		return "The Yard isn't yours yet"     # until the Manager's deeds (13 Oct)
+		return "The Pitch isn't yours yet"     # until the Manager's deeds (13 Oct)
 	if not room_open(building_room(key)):
 		return "Opens with %s" % Words.GATES["shut"][building_room(key)]     # a building for a shut room waits on it
 	if mission != null:
@@ -3383,7 +3383,7 @@ func yard_rank_block(key: String) -> String:
 	if b.is_empty():
 		return "no such building"
 	if not room_open("yard"):
-		return "The Yard isn't yours yet"
+		return "The Pitch isn't yours yet"
 	if not room_open(building_room(key)):
 		return "Opens with %s" % Words.GATES["shut"][building_room(key)]
 	if mission != null:
@@ -5448,7 +5448,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	_earn_points(before)
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
-		log_event("%s cleared; this Yard's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
+		log_event("%s cleared; this Pitch's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
 	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
 	if first_clear or t["depth"] > best_depth[m["tier"]]:
 		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(t["depth"]), "first": first_clear,
@@ -5976,7 +5976,7 @@ func _record_reset() -> void:
 
 
 ## The caps pass (8 Oct): every string in a save that is an old name becomes the new one, wherever it sits -
-## an item's unique, the shelf, the mate, a contract, a tree's node id ("The yard/3" to "The Yard/3").
+## an item's unique, the shelf, the mate, a contract, a tree's node id ("The yard/3", then "The Yard/3", to "The Pitch/3").
 static func _rename_old(v: Variant) -> void:
 	if v is Dictionary:
 		for k in v.keys():
@@ -5997,8 +5997,9 @@ static func _rename_old(v: Variant) -> void:
 static func _renamed(x: String) -> String:
 	if Data.RENAMES.has(x):
 		return Data.RENAMES[x]
-	if x.begins_with("The yard/"):
-		return "The Yard/" + x.trim_prefix("The yard/")
+	for old in ["The yard/", "The Yard/"]:     # the Yard became the Pitch (14 Oct)
+		if x.begins_with(old):
+			return "The Pitch/" + x.trim_prefix(old)
 	return x
 
 
@@ -6024,7 +6025,7 @@ func _kia() -> void:
 		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
 	if Words.PASTS.has(cls) and not _dry_on:
-		log_event("On the Yard's list: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
+		log_event("On the Pitch's list: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
 	runner_runs = 0
 	_record_reset()
 	if m.get("insured", false):
@@ -6097,7 +6098,7 @@ func _kia() -> void:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Yard with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Pitch with their own kit.")
 	# the dead runner's past goes with them: their class and its trees come
 	# back as points for the next to spend from the start, with a past of their
 	# own to pick. The Yard's tree and the elements' are the Yard's and stay.
@@ -7237,7 +7238,7 @@ func _came_back_line(e: Dictionary) -> void:
 		"lorry":
 			line = "The lorry beaten"
 		"move":
-			line = "The Yard moved on"
+			line = "The Pitch moved on"
 	if line != "":
 		if cb["firsts"].size() < CAME_BACK_FIRSTS:
 			cb["firsts"].append(line)

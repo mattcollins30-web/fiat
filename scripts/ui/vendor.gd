@@ -716,7 +716,7 @@ func _show_panel() -> void:
 		else:
 			_left_title.text = "The Fence"
 			if sim.inflation_pct() > 0:
-				UI.fit(_left_lines[0], ["Prices up %d%% since the Yard opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
+				UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
 			else:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
 			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), sim.market.size() if sim.yard_has("back_room") else sim.market_stock()]

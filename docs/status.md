@@ -4399,3 +4399,8 @@ a click, Space or the pad's accept moves the reading on to the next line, then t
 skips to the game. With Sound off the takes are unheard and the lines keep their time. Without a take a scene falls
 back to a fixed time a line. The smoke checks the cues against the takes, the lines on them, a press moving the take,
 and no white band at the picture's edges.
+
+**The Yard is the Pitch (14 Oct, Matt: "The Pitch is good too for the rename").** On screen only: every word the
+player reads, the room on the rail, Move the Pitch, the common tree ("The Pitch", its nodes "The Pitch/N"). Code and
+save keys keep "yard". An old save's "The Yard/N" (and the older "The yard/N") nodes load as the Pitch's. The smoke
+fails any shown label that still says "Yard".

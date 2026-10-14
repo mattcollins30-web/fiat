@@ -204,7 +204,7 @@ func _endgame(sim) -> void:
 			last_tier = -1
 			if sim.cls == "" and cls != "":
 				sim.set_class(cls)
-			bought.append([sim.elapsed, "moved the yard (%d)" % moves])
+			bought.append([sim.elapsed, "moved the pitch (%d)" % moves])
 	if sim.can_buy_mate() and sim.notes - int(sim.mate["notes"]) >= _notes_kept(sim) and sim.notes >= int(sim.mate["notes"]) * 3:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()

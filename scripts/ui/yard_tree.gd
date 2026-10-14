@@ -70,7 +70,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The yard")        # art/places/the_yard.png (Rooms-B)
-	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Yard", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Pitch", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the purse down the left under the title, on the band's shaded side, so the painting across the top is clear
@@ -79,7 +79,7 @@ func _init() -> void:
 	_chips.position = Vector2(PAD, CHIPS_Y)
 	head.add_child(_chips)
 	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, HEAD_H - 16 - Pal.BUTTON_H, MOVE_W, Pal.BUTTON_H), true)     # at the band's foot, right
-	_move.text = "Move the Yard"
+	_move.text = "Move the Pitch"
 	_move.visible = false
 	_move.pressed.connect(func(): if _move_action.is_valid(): _move_action.call())
 	for k in range(Data.YARD.size()):
@@ -187,7 +187,7 @@ func show_state(s, purse: Dictionary) -> void:
 	_shown = sig
 	var built: int = sim.yard_built()
 	var of: int = Data.YARD.size() * (COLS - 1)
-	UI.fit(_kicker, ["The Yard · yard %d" % (sim.yard_moves + 1) if sim.yard_moves > 0 else "The Yard", "The Yard"])
+	UI.fit(_kicker, ["The Pitch · no. %d" % (sim.yard_moves + 1) if sim.yard_moves > 0 else "The Pitch", "The Pitch"])
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 350 - _unit.position.x

@@ -413,7 +413,7 @@ const PANEL_WORDS := {
 	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More to lose before a bail-out.", "loot_pct": "Every search turns up a little more.",
 	"search_pct": "The picking-over goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
 	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
-	"rest_pct": "Resting at the Yard heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
+	"rest_pct": "Resting on the Pitch heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
 	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
 	"pace_pct": "The fight and the search go quicker.", "damage_low_pct": "Under half HP, every shot hits harder.",
 	"conv_fire_pct": "A share of every hit lands as fire and keeps burning.", "conv_frost_pct": "A share of every hit lands as frost and slows them.", "conv_poison_pct": "A share of every hit lands as poison and keeps working.",
@@ -712,7 +712,7 @@ func _show_lane(k: int, t) -> void:
 	elif t.get("class", "") != "":
 		UI.fit(lane["tag"], ["the %s's" % t["class"].to_lower(), t["class"]])
 	else:
-		UI.fit(lane["tag"], ["the Yard's · kept", "the Yard's"])
+		UI.fit(lane["tag"], ["the Pitch's · kept", "the Pitch's"])
 	lane["tag"].add_theme_color_override("font_color", colour if colour != Pal.CARD_LINE else Pal.TEXT_2)
 	var pts: int = sim.points_in(t["name"])
 	var next_gate := -1

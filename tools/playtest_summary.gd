@@ -142,7 +142,7 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 			"lorry":
 				ms.append([e, "The lorry beaten (%d)" % int(e.get("lorries", 1))])
 			"move":
-				ms.append([e, "The Yard moved%s" % ((" - trade: %s" % e["trade"]) if str(e.get("trade", "")) != "" else "")])
+				ms.append([e, "The Pitch moved%s" % ((" - trade: %s" % e["trade"]) if str(e.get("trade", "")) != "" else "")])
 			"level":
 				var to: int = int(e.get("to", 0))
 				for target in LEVELS:
@@ -259,7 +259,7 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 		L.append("")
 		L.append("## Hour by hour (a snapshot every ten minutes played; the first of each half hour shown)")
 		L.append("")
-		L.append("| Played | Level | Cash | In since the start | Notes | Scrap | Deepest | dmg/s | Max HP | Armour | Kit | Yard built | Map | Runs | Lost |")
+		L.append("| Played | Level | Cash | In since the start | Notes | Scrap | Deepest | dmg/s | Max HP | Armour | Kit | Pitch built | Map | Runs | Lost |")
 		L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 		var shown := {}
 		for e in snaps:
@@ -284,7 +284,7 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 				spend[k] += int(e.get("cost", 0))
 			"gamble":
 				spend["gamble"] += int(e.get("price", 0))
-	L.append("| The Yard | Ranks | The Workshop's jobs | The Fence's word | Heals | Treatment | Respecs | Class changes | The Radio (notes) |")
+	L.append("| The Pitch | Ranks | The Workshop's jobs | The Fence's word | Heals | Treatment | Respecs | Class changes | The Radio (notes) |")
 	L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	L.append("| %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %d (%d) |" % [_money(spend["yard"]), int(count.get("yard", 0)), _money(spend["yard_rank"]), int(count.get("yard_rank", 0)),
 		_money(spend["craft"]), int(count.get("craft", 0)), _money(spend["gamble"]), int(count.get("gamble", 0)), _money(spend["heal"]), int(count.get("heal", 0)),
@@ -298,7 +298,7 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	for tn in trees:
 		L.append("- %s: %d nodes" % [tn, trees[tn]])
 	L.append("")
-	L.append("The Yard, in the order built:")
+	L.append("The Pitch, in the order built:")
 	for e in ch:
 		if e["k"] == "yard":
 			L.append("- %s: %s %s (%s)" % [_when(e, by_play), e["key"], e["name"], _money(e.get("cost", 0))])

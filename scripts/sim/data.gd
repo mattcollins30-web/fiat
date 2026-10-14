@@ -1169,12 +1169,13 @@ const RENAMES := {
 	"The van keys": "The Van Keys",
 	"The van's spare": "The Van's Spare",
 	"The vicar's thermos": "The Vicar's Thermos",
-	"The yard": "The Yard",
+	"The yard": "The Pitch",
+	"The Yard": "The Pitch",          # renamed 14 Oct
 }
 
-const COMMON_TREE := "The Yard"
+const COMMON_TREE := "The Pitch"
 const TREES := [
-	{"name": "The Yard", "nodes": [
+	{"name": "The Pitch", "nodes": [
 		{"name": "Dry fire", "col": 0, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Long walks", "col": 0, "row": 1, "effect": "hp", "value": 4},
 		{"name": "Knowing the streets", "col": 1, "row": 0, "effect": "loot_pct", "value": 3},
@@ -1182,7 +1183,7 @@ const TREES := [
 		{"name": "Zeroing", "col": 1, "row": 1, "effect": "damage_pct", "value": 7},
 		{"name": "Circuits", "col": 2, "row": 1, "effect": "hp", "value": 9},
 		{"name": "Keen eyes", "col": 3, "row": 0, "effect": "search_pct", "value": 15},
-		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Rest at the Yard twice as fast"},
+		{"name": "Second wind", "col": 4, "row": 0, "effect": "second_wind", "notable": true, "words": "Rest on the Pitch twice as fast"},
 		{"name": "Stashing", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Pack horse", "col": 4, "row": 1, "effect": "pack_mule", "notable": true, "words": "The pack carries six cells more"},
 		{"name": "The dog's share", "col": 5, "row": 0, "effect": "cap_dogs_share", "capstone": true, "words": "A dead runner's rig comes home: the dog carries it"},
@@ -1622,7 +1623,7 @@ const ATLAS := [
 	{"key": "booster", "column": 2, "name": "Booster", "max": 3, "words": "Every code's pay +10% a rank",
 		"sum": "Codes pay", "figures": ["as they are", "+10%", "+20%", "+30%"], "sentence": "Every code brings a little more home, on every site."},
 	{"key": "held_frequency", "column": 2, "name": "Held frequency", "max": 1, "words": "A site's codes hold through a move",
-		"sum": "Codes", "figures": ["go with the move", "hold through it"], "sentence": "When the Yard moves, every site keeps its codes."},
+		"sum": "Codes", "figures": ["go with the move", "hold through it"], "sentence": "When the Pitch moves, every site keeps its codes."},
 	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "One more code a site",
 		"sum": "Codes a site", "figures": ["by the depth", "one more"], "sentence": "Every site carries one more code."},
 	{"key": "tip_offs", "column": 2, "name": "Tip-offs", "max": 2, "words": "Rarer finds: +5% loot quality a rank",

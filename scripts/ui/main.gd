@@ -49,7 +49,7 @@ const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
 const ODDS_MS := 5.0                # of odds work a frame on the Runs screen: the screen stays smooth, the tiers settle over a second or two
-const OVERVIEW := "The Yard"
+const OVERVIEW := "The Pitch"
 const MISSIONS := "The Map"        # the sites (13 Oct, Matt): was Runs
 const ARMOURY := "The Kit"         # the loadout (13 Oct, Matt): was Runner, the Lock-up before that
 const MEDIC := "The Clinic"        # (13 Oct, Matt)
@@ -68,8 +68,8 @@ const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "scrap", "coppe
 const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"]
 const TOP_SALVAGE := ["copper", "steel", "army"]
 const TOP_TONE := {"scrap": Color("eceded"), "copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}
-const TOP_TIP := {"notes": "Notes: the Radio's currency", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Yard",
-	"steel": "Safe steel: salvage from the Town's depths, for the Yard", "army": "Army surplus: salvage from the City's depths, for the Yard", "cash": "Tins: what everything's paid in",
+const TOP_TIP := {"notes": "Notes: the Radio's currency", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Pitch",
+	"steel": "Safe steel: salvage from the Town's depths, for the Pitch", "army": "Army surplus: salvage from the City's depths, for the Pitch", "cash": "Tins: what everything's paid in",
 	"where": "Where the runner is"}
 const TOP_WORST := {
 	"cash": "9,999,999",
@@ -513,7 +513,7 @@ func show_title() -> void:
 			"action": load_game.bind(save_file), "enabled": saved, "glyph": "menu_continue"})
 	items.append({"name": "New camp", "detail": "One runner, a hammer, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
-	items.append({"name": "New camp, hardcore", "detail": "A death ends the Yard: stash, tins, everything",
+	items.append({"name": "New camp, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
@@ -752,12 +752,12 @@ func _settle_away(away: float) -> void:
 ## Hardcore: the KIA that ended the camp. The autosave goes; the slots stay.
 func show_camp_lost() -> void:
 	var r = sim.last_report
-	var words := "The Yard is gone with the runner."
+	var words := "The Pitch is gone with the runner."
 	if r != null and r.has("lost_value"):
-		words = "Dead in %s with %s of kit on. The Yard is gone with the runner." % [Words.mid(sim.tier(r["tier"])["name"]), Fmt.money(r["lost_value"])]
+		words = "Dead in %s with %s of kit on. The Pitch is gone with the runner." % [Words.mid(sim.tier(r["tier"])["name"]), Fmt.money(r["lost_value"])]
 	_flush_record()                       # the death goes into the record, which outlives the save
 	DirAccess.remove_absolute(save_file)
-	_menu.open("The Yard is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
+	_menu.open("The Pitch is lost", words, [{"name": "Back to the title", "detail": "", "action": _to_title_no_save}], _to_title_no_save, true)
 
 
 ## The playtest record (11 Oct): the sim's lines go into a file beside the save, appended on each save, so the save
@@ -846,7 +846,7 @@ func refresh() -> void:
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
-	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "In the Yard"
+	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "On the Pitch"
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()
@@ -1080,16 +1080,16 @@ func _town_purse() -> Dictionary:
 		var names := []
 		for el in sim.trades:
 			names.append(Data.tree_of_element(el)["name"])
-		zlines.append(["Yard's trade", ", ".join(names)])
+		zlines.append(["Pitch's trade", ", ".join(names)])
 	if not sim.best_dig.is_empty():
 		# the Yard's best dig, the score across yards (the endgame, 7 Oct)
 		var site: String = str(sim.best_dig["site"]).trim_prefix("The ")
-		zlines.append(["Best dig", ["%s, depth %d · yard %d" % [site, int(sim.best_dig["depth"]), int(sim.best_dig["yard"])], "%s, depth %d" % [site, int(sim.best_dig["depth"])], "%s D%d" % [site, int(sim.best_dig["depth"])], "depth %d" % int(sim.best_dig["depth"])], "accent"])
+		zlines.append(["Best dig", ["%s, depth %d · pitch %d" % [site, int(sim.best_dig["depth"]), int(sim.best_dig["yard"])], "%s, depth %d" % [site, int(sim.best_dig["depth"])], "%s D%d" % [site, int(sim.best_dig["depth"])], "depth %d" % int(sim.best_dig["depth"])], "accent"])
 	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
 	if sim.lorry_done:
-		town_note = ["The lorry's beaten: move the Yard when you're ready", "The lorry's beaten"]
+		town_note = ["The lorry's beaten: move the Pitch when you're ready", "The lorry's beaten"]
 	var d := {
-		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · yard %d" % (sim.yard_moves + 1),
+		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · pitch %d" % (sim.yard_moves + 1),
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d zones open" % [open_zones, Data.ZONES.size()], "lines": zlines,
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
@@ -1099,7 +1099,7 @@ func _town_purse() -> Dictionary:
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
-		d["button"] = {"text": "Move the Yard", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
+		d["button"] = {"text": "Move the Pitch", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
 	return d
 
 
@@ -1176,7 +1176,7 @@ func _choose_runner() -> void:
 			if t["name"] == sim.candidates[k]:
 				tr = t
 		items.append({"name": tr.get("name", sim.candidates[k]), "detail": tr.get("words", ""), "action": _pick_runner.bind(k)})
-	_menu.open("Two turn up at the Yard", "One stays. The other moves on.", items, Callable())
+	_menu.open("Two turn up at the Pitch", "One stays. The other moves on.", items, Callable())
 
 
 func _pick_runner(k: int) -> void:
@@ -1207,11 +1207,11 @@ func _retire() -> void:
 
 func _confirm_move() -> void:
 	var items := [
-		{"name": "Move the Yard", "detail": "Start again. The uniques, the Yard's tree, the list, the wall, half the notes and the Yard's trade come. Nothing else.", "action": _pick_trade},
+		{"name": "Move the Pitch", "detail": "Start again. The uniques, the Pitch's tree, the list, the wall, half the notes and the Pitch's trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
 	var floor_next: int = mini(sim.yard_moves + 1, Data.LADDER_FLOOR_MAX)
-	_menu.open("Move the Yard?", "A yard that's moved finds rarer things and more tins (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Yard's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
+	_menu.open("Move the Pitch?", "A pitch that's moved finds rarer things and more tins (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Pitch's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
 
 
 ## The Yard's trade: one element comes with the move, and every class after
@@ -1226,7 +1226,7 @@ func _pick_trade() -> void:
 	if items.is_empty():
 		_move_yard("")
 		return
-	_menu.open("The Yard's trade", "Which trade comes with the Yard?", items, _menu.close)
+	_menu.open("The Pitch's trade", "Which trade comes with the Pitch?", items, _menu.close)
 
 
 func _move_yard(trade: String) -> void:
