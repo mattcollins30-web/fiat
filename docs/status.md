@@ -4411,3 +4411,8 @@ the narrator and Kev without), their lines read by Matt's takes in art/intro/roo
 naming the screen's parts, "Go on". A press brings the next line then closes; Esc closes; the game's held while it's
 up. Rooms met go in the save (an old save has met what it has open); not over a menu, the opening or a run's Map. The
 "?" on the rail's ROOMS heading brings the room's card back. Kev's Manager line says "a pitch" now.
+
+**The cog (14 Oct, Matt: "a cog ... top right that opens the game 'esc' key menu ... for the deck").** At the top bar's
+end: the pause, or back out of a menu, as Esc. Drawn in engine (a ring, eight teeth) until one's painted. Room for it:
+the place shrinks to its pin when the purse is full, and the HP/XP/damage lines went 180 to 160. The smoke checks the
+purse at its widest clears it, and the pause open and shut by it.

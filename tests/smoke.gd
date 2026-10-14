@@ -10446,6 +10446,17 @@ func _purse_checks(main) -> void:
 		if pl.visible:
 			_check(pl.size.x <= UI.text_width(pl, pl.text) + 4.0, "the top bar's %s box runs past its figure: %.0f for %.0f" % [k, pl.size.x, UI.text_width(pl, pl.text)])
 	_check_fit(main, "Top bar (every currency, out on a run)")
+	# the cog (14 Oct): at the bar's end, clear of the purse at its widest, the pause and back
+	var cog: Button = main._cog_btn
+	_check(cog.visible and cog.position.x + cog.size.x <= 1920.0 - 2 * Pal.MARGIN + 0.5, "the cog isn't at the top bar's end")
+	for k in main.TOP_RIGHT:
+		for n in [main._top_glyphs[k], main._top_labels[k]]:
+			if n.visible:
+				_check(n.position.x + n.size.x <= cog.position.x - 8.0, "the top bar's %s runs into the cog (%.0f > %.0f)" % [k, n.position.x + n.size.x, cog.position.x - 8.0])
+	cog.pressed.emit()
+	_check(main._menu.visible and main._menu._title.text == "Paused", "the cog didn't open the pause")
+	cog.pressed.emit()
+	_check(not main._menu.visible, "the cog didn't shut the pause again")
 	sim.extract_now()
 	sim.salvage = hold[0]
 	sim.scrap = hold[1]

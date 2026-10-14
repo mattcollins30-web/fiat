@@ -89,7 +89,8 @@ const TOP_WORST := {
 const TOP_GAP := 28
 const TOP_GLYPH := 26            # the glyph before a figure (8 Oct)
 const TOP_GLYPH_GAP := 8
-const TOP_LINE_W := 180          # the line under the HP, XP and damage figures: the slots step by it, so the three sit at one gap (8 Oct)
+const TOP_BTN := 48              # the cog at the top bar's end (14 Oct, Matt): the Esc menu, by mouse or touch (the Deck)
+const TOP_LINE_W := 160          # the line under the HP, XP and damage figures: the slots step by it, so the three sit at one gap (8 Oct)
 const TOP_CAPTION_W := 94        # "LEVEL" before the level's figure
 const TOP_GLYPH_OF := {"hp": "hp", "dps": "dps", "xp": "xp", "where": "where", "notes": "notes", "cash": "tins"}     # the tin (13 Oct): what everything is paid in
 const EVENT_TIME_WORST := "99:59:59"
@@ -142,6 +143,7 @@ var intro := true                  # the studio card before the title; the tests
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
 var _help_btn: Button              # the ? on the rail's heading: the room's card again
+var _cog_btn: Button               # the top bar's cog: the pause
 var _asked_runner := false         # the two-turn-up menu, shown once per death
 
 
@@ -220,6 +222,15 @@ func _build() -> void:
 			for c in [_top_glyphs[k], _top_labels[k]]:
 				c.tooltip_text = TOP_TIP[k]
 				c.mouse_filter = Control.MOUSE_FILTER_PASS
+	# the cog, last on the right (14 Oct): the pause, or shut it again
+	_cog_btn = UI.button(_top_row, Rect2(inner - TOP_BTN, (Pal.TOP_H - TOP_BTN) / 2.0, TOP_BTN, TOP_BTN), false)
+	_cog_btn.focus_mode = Control.FOCUS_NONE
+	_cog_btn.tooltip_text = "Menu (Esc)"
+	var cog := CogGlyph.new()
+	cog.size = Vector2(TOP_BTN, TOP_BTN)
+	cog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cog_btn.add_child(cog)
+	_cog_btn.pressed.connect(_cog_pressed)
 	# the rail as a ledger (8 Oct): one panel, a heading, the rooms as rows under hairlines; its height is the
 	# layout's (to the log's bottom), the rows sharing it
 	_rail = Control.new()
@@ -583,6 +594,28 @@ func show_slots(saving: bool, back: Callable) -> void:
 func _save_to_slot(path: String) -> void:
 	save_game(path)
 	_menu.close()
+
+
+## The top bar's cog: the pause, as Esc; with a menu up, back out of it, as Esc.
+func _cog_pressed() -> void:
+	if _room_card != null and is_instance_valid(_room_card):
+		return
+	if _menu.visible:
+		_menu.back()
+	elif sim != null:
+		show_pause()
+
+
+## A cog drawn in the top bar's glyph tone until one's painted (art/ui): a ring and eight teeth.
+class CogGlyph extends Control:
+	func _draw() -> void:
+		var c := size / 2.0
+		var col := Color("969da5")
+		draw_arc(c, 8.0, 0.0, TAU, 40, col, 4.0, true)
+		for k in range(8):
+			var a := TAU * k / 8.0
+			var d := Vector2(cos(a), sin(a))
+			draw_line(c + d * 9.0, c + d * 13.5, col, 4.5, true)
 
 
 ## The pause as a drawer over the rail (Pause B, 8 Oct): the rooms' column becomes the menu's.
@@ -1024,7 +1057,7 @@ func _lay_top_right() -> void:
 	for step in range(5):
 		_top_labels["where"].text = place.trim_prefix("Out: ") if step >= 1 else place
 		_top_labels["where"].visible = step < 3
-		var x: float = 1920.0 - 2 * Pal.MARGIN
+		var x: float = 1920.0 - 2 * Pal.MARGIN - TOP_BTN - 16     # the cog at the end
 		var first_x: float = x
 		for k in TOP_RIGHT:
 			var shown: bool = not (k in TOP_SALVAGE) or int(sim.salvage.get(k, 0)) > 0
