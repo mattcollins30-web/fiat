@@ -30,7 +30,7 @@ CRATES = [
     ("toolbox", "A realistic painted pixel-art still-life of a dented red metal cantilever toolbox, latched shut, the red paint scratched through to grey steel.",
      "A realistic painted pixel-art still-life of a dented red metal cantilever toolbox opened out, its trays fanned up and empty, the red paint scratched through to grey steel."),
     ("medicine", "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with a mirrored door, shut, a faded green cross on it, the enamel chipped.",
-     "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with its mirrored door swung open, the glass shelves inside bare, a faded green cross on the door."),
+     "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with its mirrored door swung wide open on its side hinges, the door standing out at a right angle to the cabinet so we see its thin edge and the faded green cross is turned away, the inside of the cabinet in full view: a dark empty box with two bare glass shelves. The open door and the empty inside are the most obvious things in the picture."),
     ("filing", "A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet, both drawers shut, dented, a paper label holder on each drawer.",
      "A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet with the top drawer pulled out, empty hanging file rails inside, dented."),
     ("safe", "A realistic painted pixel-art still-life of a heavy dark-grey steel office safe, its thick door shut, a brass combination dial and a chrome handle, scuffed and pry-marked.",
@@ -39,15 +39,26 @@ CRATES = [
      "A realistic painted pixel-art still-life of a long olive-green military transit crate of wooden slats with its lid prised off and leaning against it, straw packing inside and nothing else, rope handles."),
 ]
 
+# The open crate is drawn FROM the shut one (13 Oct, Matt: the ammo tins faced opposite ways at different thicknesses,
+# the filing cabinets came out different colours - "they don't read as the same items"): the shut PNG goes in as the
+# reference and the style image, and the prompt holds it to the same object.
+SAME = ("The same object as the reference image, drawn again from the identical angle and facing, at the identical size, "
+        "thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference "
+        "differ on colour, follow the reference); only now it is opened. ")
+
 jobs = []
 for k, (key, shut, opened) in enumerate(CRATES):
-    for j, (suffix, desc) in enumerate([("", shut), ("_open", opened)]):
-        jobs.append({"out": "art/crates/%s%s.png" % (key, suffix), "endpoint": "generate-image-v2", "description": desc + TAIL,
-                     "width": 64, "height": 64, "no_background": True, "seed": 93000 + k, "single": True,
-                     "style_image": REFS[k % 4], "style_options": STYLE, "_where": "the search: the %s, %s" % (key, "open" if j else "shut")})
+    shut_png = "res://art/crates/%s.png" % key
+    jobs.append({"out": "art/crates/%s.png" % key, "endpoint": "generate-image-v2", "description": shut + TAIL,
+                 "width": 64, "height": 64, "no_background": True, "seed": 93000 + k, "single": True,
+                 "style_image": REFS[k % 4], "style_options": STYLE, "_where": "the search: the %s, shut" % key})
+    jobs.append({"out": "art/crates/%s_open.png" % key, "endpoint": "generate-image-v2", "description": SAME + opened + TAIL,
+                 "width": 64, "height": 64, "no_background": True, "seed": 93000 + k, "single": True,
+                 "reference_images": [shut_png], "style_image": shut_png, "style_options": STYLE,
+                 "_where": "the search: the %s, open (drawn from the shut one)" % key})
 
 readme = [
-    "FIAT CRATES (13 Oct, docs/design/search_crates.md): the eight crates of the search, each shut and open (art/crates/, 64 x 64, shown at 52 on the run screen's crate row). The shut and open of a crate share a seed so they read as the same thing.",
+    "FIAT CRATES (13 Oct, docs/design/search_crates.md): the eight crates of the search, each shut and open (art/crates/, 64 x 64, shown at 52 on the run screen's crate row). The shut and open of a crate share a seed, and the open one is drawn from the shut PNG (reference + style image), so they read as the same thing. Redo a pair as: ++ --only <key> ++ --force (the shut is written first).",
     "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_crates_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <name> ++ --force.",
     "Regenerate with python3 tools/make_crates_manifest.py.",
 ]

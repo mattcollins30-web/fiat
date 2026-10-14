@@ -60,6 +60,7 @@
   },
   {
    "out": "art/fight_test/gang_fire.png",
+   "reference_images": ["res://art/fight_test/gang_stand.png"],
    "width": 128,
    "height": 192,
    "no_background": true,
@@ -78,6 +79,7 @@
   },
   {
    "out": "art/fight_test/gang_down.png",
+   "reference_images": ["res://art/fight_test/gang_stand.png"],
    "width": 128,
    "height": 192,
    "no_background": true,

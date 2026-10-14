@@ -1,297 +1,321 @@
 {
- "_readme": [
-  "FIAT CRATES (13 Oct, docs/design/search_crates.md): the eight crates of the search, each shut and open (art/crates/, 64 x 64, shown at 52 on the run screen's crate row). The shut and open of a crate share a seed so they read as the same thing.",
-  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_crates_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <name> ++ --force.",
-  "Regenerate with python3 tools/make_crates_manifest.py."
- ],
- "jobs": [
-  {
-   "out": "art/crates/cardboard.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a battered brown cardboard box, its flaps folded shut, parcel tape peeling, one corner crushed and water-stained. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93000,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_01.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the cardboard, shut"
-  },
-  {
-   "out": "art/crates/cardboard_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a battered brown cardboard box, its flaps pulled open and hanging, parcel tape torn, empty and dark inside, one corner crushed and water-stained. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93000,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_01.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the cardboard, open"
-  },
-  {
-   "out": "art/crates/ammo_tin.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of an olive-drab steel ammunition tin, its hinged lid latched shut, the paint chipped to bare metal at the edges, a carry handle on top. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93001,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_02.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the ammo_tin, shut"
-  },
-  {
-   "out": "art/crates/ammo_tin_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of an olive-drab steel ammunition tin with its hinged lid thrown back open, empty inside, the paint chipped to bare metal at the edges. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93001,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_02.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the ammo_tin, open"
-  },
-  {
-   "out": "art/crates/jewellery.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a small old wooden jewellery box with a tarnished brass clasp, its lid shut, faded velvet showing at the seam. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93002,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_03.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the jewellery, shut"
-  },
-  {
-   "out": "art/crates/jewellery_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a small old wooden jewellery box with its lid open, the faded pink velvet lining inside empty, a tarnished brass clasp hanging loose. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93002,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_03.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the jewellery, open"
-  },
-  {
-   "out": "art/crates/toolbox.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a dented red metal cantilever toolbox, latched shut, the red paint scratched through to grey steel. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93003,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_04.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the toolbox, shut"
-  },
-  {
-   "out": "art/crates/toolbox_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a dented red metal cantilever toolbox opened out, its trays fanned up and empty, the red paint scratched through to grey steel. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93003,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_04.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the toolbox, open"
-  },
-  {
-   "out": "art/crates/medicine.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with a mirrored door, shut, a faded green cross on it, the enamel chipped. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93004,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_01.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the medicine, shut"
-  },
-  {
-   "out": "art/crates/medicine_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with its mirrored door swung open, the glass shelves inside bare, a faded green cross on the door. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93004,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_01.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the medicine, open"
-  },
-  {
-   "out": "art/crates/filing.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet, both drawers shut, dented, a paper label holder on each drawer. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93005,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_02.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the filing, shut"
-  },
-  {
-   "out": "art/crates/filing_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet with the top drawer pulled out, empty hanging file rails inside, dented. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93005,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_02.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the filing, open"
-  },
-  {
-   "out": "art/crates/safe.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a heavy dark-grey steel office safe, its thick door shut, a brass combination dial and a chrome handle, scuffed and pry-marked. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93006,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_03.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the safe, shut"
-  },
-  {
-   "out": "art/crates/safe_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a heavy dark-grey steel office safe with its thick door hanging open, empty shelves inside, a brass combination dial, scuffed and pry-marked. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93006,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_03.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the safe, open"
-  },
-  {
-   "out": "art/crates/military.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a long olive-green military transit crate of wooden slats, its lid nailed shut, faded stencilled marks on the side, rope handles. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93007,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_04.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the military, shut"
-  },
-  {
-   "out": "art/crates/military_open.png",
-   "endpoint": "generate-image-v2",
-   "description": "A realistic painted pixel-art still-life of a long olive-green military transit crate of wooden slats with its lid prised off and leaning against it, straw packing inside and nothing else, rope handles. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "seed": 93007,
-   "single": true,
-   "style_image": "res://art/reference/items/ref_04.png",
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "_where": "the search: the military, open"
-  }
- ]
+   "_readme" : [
+      "FIAT CRATES (13 Oct, docs/design/search_crates.md): the eight crates of the search, each shut and open (art/crates/, 64 x 64, shown at 52 on the run screen's crate row). The shut and open of a crate share a seed, and the open one is drawn from the shut PNG (reference + style image), so they read as the same thing. Redo a pair as: ++ --only <key> ++ --force (the shut is written first).",
+      "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_crates_manifest.json   (++ --dry-run to list). A job whose file exists is skipped; one that came out wrong: ++ --only <name> ++ --force.",
+      "Regenerate with python3 tools/make_crates_manifest.py."
+   ],
+   "jobs" : [
+      {
+         "_where" : "the search: the cardboard, shut",
+         "description" : "A realistic painted pixel-art still-life of a battered brown cardboard box, its flaps folded shut, parcel tape peeling, one corner crushed and water-stained. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/cardboard.png",
+         "seed" : 93000,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_01.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the cardboard, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a battered brown cardboard box, its flaps pulled open and hanging, parcel tape torn, empty and dark inside, one corner crushed and water-stained. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/cardboard_open.png",
+         "reference_images" : [
+            "res://art/crates/cardboard.png"
+         ],
+         "seed" : 93000,
+         "single" : true,
+         "style_image" : "res://art/crates/cardboard.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the ammo_tin, shut",
+         "description" : "A realistic painted pixel-art still-life of an olive-drab steel ammunition tin, its hinged lid latched shut, the paint chipped to bare metal at the edges, a carry handle on top. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/ammo_tin.png",
+         "seed" : 93001,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_02.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the ammo_tin, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of an olive-drab steel ammunition tin with its hinged lid thrown back open, empty inside, the paint chipped to bare metal at the edges. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/ammo_tin_open.png",
+         "reference_images" : [
+            "res://art/crates/ammo_tin.png"
+         ],
+         "seed" : 93001,
+         "single" : true,
+         "style_image" : "res://art/crates/ammo_tin.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the jewellery, shut",
+         "description" : "A realistic painted pixel-art still-life of a small old wooden jewellery box with a tarnished brass clasp, its lid shut, faded velvet showing at the seam. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/jewellery.png",
+         "seed" : 93002,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_03.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the jewellery, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a small old wooden jewellery box with its lid open, the faded pink velvet lining inside empty, a tarnished brass clasp hanging loose. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/jewellery_open.png",
+         "reference_images" : [
+            "res://art/crates/jewellery.png"
+         ],
+         "seed" : 93002,
+         "single" : true,
+         "style_image" : "res://art/crates/jewellery.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the toolbox, shut",
+         "description" : "A realistic painted pixel-art still-life of a dented red metal cantilever toolbox, latched shut, the red paint scratched through to grey steel. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/toolbox.png",
+         "seed" : 93003,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_04.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the toolbox, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a dented red metal cantilever toolbox opened out, its trays fanned up and empty, the red paint scratched through to grey steel. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/toolbox_open.png",
+         "reference_images" : [
+            "res://art/crates/toolbox.png"
+         ],
+         "seed" : 93003,
+         "single" : true,
+         "style_image" : "res://art/crates/toolbox.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the medicine, shut",
+         "description" : "A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with a mirrored door, shut, a faded green cross on it, the enamel chipped. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/medicine.png",
+         "seed" : 93004,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_01.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the medicine, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a small white wall-mounted medicine cabinet with its mirrored door swung wide open on its side hinges, the door standing out at a right angle to the cabinet so we see its thin edge and the faded green cross is turned away, the inside of the cabinet in full view: a dark empty box with two bare glass shelves. The open door and the empty inside are the most obvious things in the picture. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/medicine_open.png",
+         "reference_images" : [
+            "res://art/crates/medicine.png"
+         ],
+         "seed" : 93004,
+         "single" : true,
+         "style_image" : "res://art/crates/medicine.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the filing, shut",
+         "description" : "A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet, both drawers shut, dented, a paper label holder on each drawer. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/filing.png",
+         "seed" : 93005,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_02.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the filing, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a grey steel two-drawer office filing cabinet with the top drawer pulled out, empty hanging file rails inside, dented. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/filing_open.png",
+         "reference_images" : [
+            "res://art/crates/filing.png"
+         ],
+         "seed" : 93005,
+         "single" : true,
+         "style_image" : "res://art/crates/filing.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the safe, shut",
+         "description" : "A realistic painted pixel-art still-life of a heavy dark-grey steel office safe, its thick door shut, a brass combination dial and a chrome handle, scuffed and pry-marked. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/safe.png",
+         "seed" : 93006,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_03.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the safe, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a heavy dark-grey steel office safe with its thick door hanging open, empty shelves inside, a brass combination dial, scuffed and pry-marked. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/safe_open.png",
+         "reference_images" : [
+            "res://art/crates/safe.png"
+         ],
+         "seed" : 93006,
+         "single" : true,
+         "style_image" : "res://art/crates/safe.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the military, shut",
+         "description" : "A realistic painted pixel-art still-life of a long olive-green military transit crate of wooden slats, its lid nailed shut, faded stencilled marks on the side, rope handles. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/military.png",
+         "seed" : 93007,
+         "single" : true,
+         "style_image" : "res://art/reference/items/ref_04.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      },
+      {
+         "_where" : "the search: the military, open (drawn from the shut one)",
+         "description" : "The same object as the reference image, drawn again from the identical angle and facing, at the identical size, thickness and proportions, in the identical paint colour, wear and damage (where these words and the reference differ on colour, follow the reference); only now it is opened. A realistic painted pixel-art still-life of a long olive-green military transit crate of wooden slats with its lid prised off and leaning against it, straw packing inside and nothing else, rope handles. One object centred and filling the frame, seen from a little above and to the side, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game icon; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and scuffed, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+         "endpoint" : "generate-image-v2",
+         "height" : 64,
+         "no_background" : true,
+         "out" : "art/crates/military_open.png",
+         "reference_images" : [
+            "res://art/crates/military.png"
+         ],
+         "seed" : 93007,
+         "single" : true,
+         "style_image" : "res://art/crates/military.png",
+         "style_options" : {
+            "color_palette" : true,
+            "detail" : true,
+            "outline" : true,
+            "shading" : true
+         },
+         "width" : 64
+      }
+   ]
 }

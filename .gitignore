@@ -10,3 +10,11 @@ _to_delete/
 *_response.json
 docs/_review.diff
 saves/
+
+# the watcher's scratch: smoke logs, flags, review diffs, balance output (14 Oct)
+docs/balance/
+# exported builds
+/Fiat.*
+# leftovers
+*.tmp
+*.stale
