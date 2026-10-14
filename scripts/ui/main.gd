@@ -19,6 +19,7 @@ const RadioScreen := preload("res://scripts/ui/radio.gd")
 const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
+const Opening := preload("res://scripts/ui/opening.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
@@ -137,6 +138,7 @@ const PREV_GAP := 48
 var _speed_label: Label
 var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
+var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var _asked_runner := false         # the two-turn-up menu, shown once per death
 
 
@@ -403,6 +405,8 @@ func layout(s: Vector2) -> void:
 func _process(delta: float) -> void:
 	if sim == null or _menu.visible:
 		return
+	if _opening != null and is_instance_valid(_opening):
+		return                              # the opening holds the game
 	if _run != null and _run._view != null and _run._view.placing and _run._view._shown():
 		return                              # the fight's placement tool (F3) holds the game still
 	sim.advance(delta * speed)
@@ -639,6 +643,24 @@ func new_game(hardcore := false) -> void:
 	_speed_label.visible = false
 	_menu.close()
 	save_game()
+	refresh()
+	if intro:
+		play_opening()
+
+
+## The opening (14 Oct, docs/design/intro.md): over everything, the game held till it's done or skipped, the title's
+## music under it.
+func play_opening() -> void:
+	if _opening != null and is_instance_valid(_opening):
+		return
+	_opening = Opening.new()
+	_opening.done.connect(_opening_done)
+	add_child(_opening)
+	_sound.title()
+
+
+func _opening_done() -> void:
+	_opening = null
 	refresh()
 
 

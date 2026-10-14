@@ -646,6 +646,7 @@ func _slots_offline_hardcore(main) -> void:
 		_check(main.get_viewport().gui_get_focus_owner() == null, "a button behind the pause kept the keys: %s" % str(main.get_viewport().gui_get_focus_owner()))
 	behind.queue_free()
 	main._menu.close()
+	_opening_checks(main)
 	sim = main.sim
 	# away three hours with auto-run on: missions ran, the log moved, the clock moved
 	sim.set_depth(3, 1)
@@ -8135,6 +8136,61 @@ func _run_view_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the run view ok: the frame, the gang up, a kill, a hit, the search, the bars and the six, the fit")
+
+
+## The opening (14 Oct, docs/design/intro.md): six scenes, the game held while they play, every line fitting its row,
+## a press bringing the next line then the next scene, Esc ending it; the art reported, not failed, till it's made.
+func _opening_checks(main) -> void:
+	var sim = main.sim
+	main.play_opening()
+	var op = main._opening
+	_check(op != null and op.scene == 0, "the opening didn't start on its first scene")
+	var t0: float = sim.elapsed
+	main._process(0.5)
+	_check(is_equal_approx(sim.elapsed, t0), "the game ran under the opening")
+	var arts := 0
+	op._place(Vector2(1920, 1080))
+	for i in range(op.scenes.size()):
+		var sc: Dictionary = op.scenes[i]
+		if ResourceLoader.exists(op.ART % sc["art"]) or FileAccess.file_exists(op.ART % sc["art"]):
+			arts += 1
+		op._go(i)
+		var all: Array = op.lines_of(i)
+		_check(all.size() <= op._lines.size(), "scene %d has more lines than rows" % i)
+		for k in range(mini(all.size(), op._lines.size())):
+			var l: Label = op._lines[k]
+			_check(UI.text_width(l, l.text) <= l.size.x - 8.0, "an opening line runs past its row: '%s'" % l.text)
+			_check(l.position.y + 48 < op._pips[0].position.y, "scene %d's lines run into the pips" % i)
+	op._go(0)
+	print("the opening: %d of %d scenes have their picture" % [arts, op.scenes.size()])
+	# presses: every line of the first scene, then on to the second
+	op.size = Vector2(1920, 1080)
+	op._fading = 0.0
+	for k in range(op.lines_of(0).size()):
+		op.advance()
+	_check(op.shown == op.lines_of(0).size(), "a press didn't bring the next line: %d" % op.shown)
+	op.advance()
+	for k in range(20):
+		op._process(0.1)
+	_check(op.scene == 1, "a press with every line up didn't move to the next scene: %d" % op.scene)
+	# left alone it plays itself through
+	op._process(0.0)
+	for k in range(1000):
+		if not is_instance_valid(op) or op._finished:
+			break
+		op._process(0.25)
+	_check(not is_instance_valid(op) or op._finished, "left alone the opening never ended")
+	_check(main._opening == null, "the game's still held after the opening")
+	main._process(0.2)
+	_check(sim.elapsed > t0, "the game didn't run on after the opening")
+	# Esc ends it at once
+	main.play_opening()
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	main._opening._input(esc)
+	_check(main._opening == null, "Esc didn't end the opening")
+	print("opening ok: six scenes, the lines fit, a press, left alone, Esc, the game held and let go")
 
 
 ## The placement tool (13 Oct, Matt: Greenhorn's F3/F5): F3 holds the fight still with all three standing on their slots;

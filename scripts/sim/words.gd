@@ -15,6 +15,38 @@ const OPENING := [
 	"The crews kept the notes anyway. Nobody knows what for.",
 ]
 
+## The opening's scenes (14 Oct, docs/design/intro.md - Matt's script): the year, the scene's name, its lines in
+## turn, its picture (art/intro/<art>.png). A line in `radio` is the loop's own, said in its colour.
+const OPENING_SCENES := [
+	{"year": "2028", "title": "Somewhere else", "art": "scene_1", "lines": [
+		"The wars were always somewhere else.",
+		"Other people's wars, paid for by bigger people. We watched them on the news.",
+		"We felt them at the till."]},
+	{"year": "2029", "title": "The bills", "art": "scene_2", "lines": [
+		"Then the petrol went up, and up again.",
+		"The heating went off in the flats. The boats kept coming; where they came from was worse.",
+		"Bread doubled. The reservoirs didn't fill."]},
+	{"year": "2031", "title": "The machines", "art": "scene_3", "lines": [
+		"They said the machines would do the work. For a while the money said so too.",
+		"Fields of servers, drinking the rivers, burning the power we couldn't afford.",
+		"The jobs went first. The money went after them."]},
+	{"year": "2032", "title": "The money", "art": "scene_4", "lines": [
+		"It didn't crash. It stopped.",
+		"The cards stopped. The banks shut for a day, then a week. The pound was paper."],
+		"radio": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
+	{"year": "2033", "title": "Let it be done", "art": "scene_5", "lines": [
+		"Nobody fired a shot. The lights just went out one town at a time.",
+		"The council stopped coming. The lorries stopped coming. The police stopped.",
+		"People kept to their own. The estate kept the estate.",
+		"A new currency was promised. Its value is as stated. Let it be done."]},
+	{"year": "Now", "title": "The Pitch", "art": "scene_6", "lines": [
+		"You keep a camp. A few vans, a fire, a fence of pallets.",
+		"You don't go out. Somebody does - whoever's willing, for a share of what comes back.",
+		"Tins are money now. What's in a tin is worth something.",
+		"Send them out. Bring back what you can.",
+		"When a place is picked clean, or someone wants it more than you do, you move on."]},
+]
+
 ## The radio: three voices on the air, a line after every few runs home (RADIO_EVERY), the first unheard one whose
 ## gate is open: a zone open ("zone"), or lorries beaten ("lorries"). The official loop wears down, a pirate comes on in
 ## the town, the army's net crackles in the city; the notes' story runs through all three and closes on the loop.
