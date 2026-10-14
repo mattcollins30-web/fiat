@@ -4560,3 +4560,21 @@ below starts until that save lands; then each is designed with him, one at a tim
     back. Built with item 6: the hit bar drops in chunks as the numbers land, the dots chip it. Smoke: a bar a figure
     up, inside the frame and clear of the head line and the chips; the hit one's numbers matching `target_hp`; the
     rest full; none on a figure down.
+12. **The Van's Spare is too strong (Matt, 14 Oct, at the Hospital as a bleed Doorman: "nothing beats the Van's Spare";
+    it makes the secondary-at-full perk "a waste of time" and "makes you skip pretty much everything").** What it is
+    (data.gd, the Carpet Man's): an old revolver whose rule `vans_spare` fires the secondary at full damage, not the
+    usual third (sim.gd's dps and the fight's share both read it), plus +18% damage, +25% on the first lot and 4 tins
+    a kill. It rolls at the depth he's fought at (12 Oct), so a deeper Carpet Man hands out a deeper copy and it never
+    falls behind. Its rule is Double tap's (the trees' notable, "The secondary fires at full damage, not a third") for
+    free, so the node is dead weight while it's worn, and a whole second gun at full outdamages any primary upgrade
+    found. To design with Matt; options to weigh: the rule weaker (the secondary at two thirds; or at full only for a
+    gang's first seconds); the +18% damage off; the rule doing something new with Double tap rather than the same (both
+    worn: the secondary fires twice); or it rolled only at the depth it first drops. It changes numbers: before the pass.
+13. **A bigger fight frame (Matt, 14 Oct: "looks great but it's a tad small").** The frame is 588 x 262 in the run's
+    left column (608 wide); the rail takes 312 of the 1920 (Pal.RAIL_W) and the pack's grid 904 (Inventory.WIDTH, a
+    cell's width fixed). Width can come off the rail: names smaller, or the rail folding to its icons with the names on
+    hover, would give the column 100-200 px, a frame about 1.2-1.3x. Height is the harder half: the column's full top
+    to bottom since the search moved into it (the rig ends 6 px over the buttons), so a taller frame wants the site's
+    band at the top (200 px: the place, the clock, the progress bar) slimmer too. The pixel art reads best at a clean
+    scale. Mockups first: rail options, the band slimmed, the frame at 1.25x, the search's column checked at its
+    fullest.
