@@ -101,7 +101,7 @@ func _init(room_key: String) -> void:
 	_go_on = UI.button(_card, Rect2(W - PAD - 220, H - PAD - 64, 220, 64), true)
 	_go_on.text = "Go on"
 	_go_on.focus_mode = Control.FOCUS_NONE
-	_go_on.mouse_filter = Control.MOUSE_FILTER_IGNORE     # a click anywhere moves it on (_input); the button shows where
+	_go_on.pressed.connect(advance)        # its own clicks, so it lights and presses like any button (Matt: "no visual register")
 	_voice = AudioStreamPlayer.new()
 	_voice.volume_db = VOICE_DB
 	add_child(_voice)
@@ -230,8 +230,11 @@ func _input(event: InputEvent) -> void:
 		elif event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_RIGHT]:
 			advance()
 		# any other key stops here too: nothing behind the card moves (the review)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		advance()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if _go_on.get_global_rect().has_point(event.position):
+			return                              # the button's own: it shows the press and moves on, once, on release
+		if event.pressed:
+			advance()                           # anywhere else on the card or round it
 	else:
 		return
 	if is_inside_tree():

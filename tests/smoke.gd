@@ -11984,6 +11984,24 @@ func _room_intro_checks(main) -> void:
 		_check(c._kicker.position.x + UI.text_width(c._title, c._title.text) <= c._card.size.x - c.PAD, "%s's card's title runs off it" % k)
 		c.finish()
 	print("room cards: %d of %d have their art" % [arts, Words.ROOM_INTROS.size()])
+	# Go on is a button of its own: it lights under the mouse and takes the click, once (Matt: "no visual register")
+	var gc = main.RoomIntro.new("clinic")
+	main.add_child(gc)
+	gc._place(Vector2(1920, 1080))
+	gc._process(0.01)
+	_check(gc._go_on.mouse_filter == Control.MOUSE_FILTER_STOP and gc._go_on.pressed.is_connected(gc.advance), "Go on doesn't take its own clicks")
+	var on_btn := InputEventMouseButton.new()
+	on_btn.button_index = MOUSE_BUTTON_LEFT
+	on_btn.pressed = true
+	on_btn.position = gc._go_on.get_global_rect().get_center()
+	gc._input(on_btn)
+	_check(gc.shown == 1, "a press on Go on was taken by the card as well as the button")
+	gc._go_on.pressed.emit()
+	_check(gc.shown == 2, "Go on's press didn't move the card on")
+	on_btn.position = Vector2(gc._card.position.x + 60, gc._card.position.y + 60)
+	gc._input(on_btn)
+	_check(gc.shown == 3, "a click on the card away from Go on didn't move it on")
+	gc.finish()
 	# the takes: a cue a line, in order, inside the take; the lines come up as they're said
 	var voiced := 0
 	for k in Words.ROOM_INTROS.keys():
@@ -12021,6 +12039,7 @@ func _room_intro_checks(main) -> void:
 	if card != null:
 		card._process(0.01)
 		_check(card.shown == 1, "the card's first line isn't up at once: %d" % card.shown)
+
 		while card.shown < card.total():
 			card.advance()
 		_check(card.shown == card.total() and main._room_card == card, "a press closed the card before its lines were up")
