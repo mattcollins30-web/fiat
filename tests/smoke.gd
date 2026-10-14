@@ -1412,7 +1412,6 @@ func _run_screen(main) -> void:
 		var box: Dictionary = sim._plain(Data.AMMO, "Nails")
 		Items.set_stack(box, 10)
 		sim.mission["found"].append(box)
-		var rounds_before: int = sim.rounds_for({"slot": "Primary", "base": "Nail gun", "affixes": [], "attachments": {}, "rarity": 0, "tier": 1})
 		_check(sim.take_from_pack(box["id"]), "rounds found did not go into the rig")
 		_check(not sim.mission["found"].has(box) or Items.stack_size(box) < 10, "the rounds stayed whole in the pack")
 		main.refresh()
@@ -1462,7 +1461,6 @@ func _class_trees(main) -> void:
 	var spent_before: int = sim.points_spent()
 	_check(not sim.can_train("Stalking/0"), "a Poacher's tree trained for a Doorman")
 	# Shotgunner is typed: it counts with a shotgun in hand and idles otherwise
-	var dmg_before: float = sim.dps()
 	var gun = sim.equipped["Primary"]
 	var shotgun := Items.roll("Primary", 1, sim.rng)
 	shotgun["base"] = "Farmer's shotgun"
@@ -1530,8 +1528,6 @@ func _charm_sockets(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	var charm: Dictionary = sim._plain("Charm", "Casino chip")
 	charm["affixes"] = [{"stat": "rarity_pct", "value": 10}]
-	var base_find: float = sim.rarity_bonus()
-	var base_cash: float = sim.charm_cash()
 	sim.equipped["Charm"] = null
 	var without: float = sim.rarity_bonus()
 	sim.stash.append(charm)
@@ -1541,7 +1537,6 @@ func _charm_sockets(main) -> void:
 	_check(sim.rarity_bonus() > without + 0.27, "the charm's magic find did not reach rarity_bonus: %.2f vs %.2f" % [sim.rarity_bonus(), without])
 	_check(sim.charm_cash() >= 15.0, "the charm's cash did not count: %.1f" % sim.charm_cash())
 	_check(Items.headline(charm)[0] == "+28%" and Items.headline(charm)[1] == "loot quality", "a charm's headline is not its magic find: %s" % str(Items.headline(charm)))
-	var worn_find: float = sim._affix_sum("rarity_pct") - 10.0     # the helmet's, if any
 	# charms roll like gear: rarities and affixes from their own list (they had rolled plain since the stacks)
 	var rolled_rare := 0
 	var rolled_stats := {}
@@ -2128,8 +2123,8 @@ func _webs_traits(main) -> void:
 	sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
 	_check(sim.can_ascend() and not sim.set_second("Poacher") and sim.set_second("Doorman"), "the second past did not take at level %d" % Data.ASCEND_LEVEL)
 	var names := []
-	for tr in sim.trees():
-		names.append(tr["name"])
+	for row in sim.trees():
+		names.append(row["name"])
 	_check(names.has("Muscle") and names.has("Stalking") and names.has("The Pitch"), "a Poacher with a Doorman's past does not see Muscle: %s" % str(names))
 	_check(sim.tree.has("Stalking/6"), "ascending refunded the Poacher's own tree")
 	_check(sim.train_node("Muscle/0"), "the second past's tree did not train")
@@ -2552,7 +2547,7 @@ func _element_checks(main) -> void:
 	_check(crowd_tags.size() == crowd_full.size(), "the crowded strip shows %d of %d" % [crowd_tags.size(), crowd_full.size()])
 	bk._shown = ""
 	main.refresh()                              # the probe above laid the long forms on the widget: lay the strip again
-	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Dots"].all(func(t): return crowd_tags.has(t)) and crowd_tags.back() == "Joints", "the crowded strip lost an element, Damage or the Joints: %s" % str(crowd_tags))
+	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Dots"].all(func(t_in): return crowd_tags.has(t_in)) and crowd_tags.back() == "Joints", "the crowded strip lost an element, Damage or the Joints: %s" % str(crowd_tags))
 	_sum_strip_check(main)
 	_check_fit(main, "Caravan (a crowded sum strip)")
 	# heavier still, in the band's three rows (Bands-U A; the reviewer): every element tree, Knuckles, a second past -
@@ -2574,7 +2569,7 @@ func _element_checks(main) -> void:
 	var heavy_tags: Array = []
 	for k in range(bk._sum_chips.shown()):
 		heavy_tags.append(bk._sum_chips._tags[k].text)
-	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Bleed"].all(func(t): return heavy_tags.has(t)) and heavy_tags.back() == "Joints" and heavy_tags.size() == bk.sum_items([]).size(), "the heaviest sum lost an element or the Joints in the band: %s" % str(heavy_tags))
+	_check(["Damage", "Fire", "Frost", "Shock", "Poison", "Bleed"].all(func(t_in): return heavy_tags.has(t_in)) and heavy_tags.back() == "Joints" and heavy_tags.size() == bk.sum_items([]).size(), "the heaviest sum lost an element or the Joints in the band: %s" % str(heavy_tags))
 	bk._shown = ""
 	main.refresh()
 	_check_fit(main, "Caravan (the heaviest sum)")
@@ -3089,10 +3084,10 @@ func _unique_rules_checks(main) -> void:
 		sim.extract_now()
 	_check(fired == 5, "the keys did not make something happen every run: %d of 5" % fired)
 	sim.equipped["Charm"] = null
-	var log := Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
-	sim.stash.append(log)
+	var log_v := Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
+	sim.stash.append(log_v)
 	_check(sim.has_rule("drivers_log") and sim.insure_cost(3) == 0, "the log in the stash did not count, or insurance isn't free")
-	sim.stash.erase(log)
+	sim.stash.erase(log_v)
 	sim.load_dict(saved)
 	print("the uniques ok: all roll with words, the depth gates, the mate's deep stock, twenty-one rules")
 	_unique_tier_checks(main)
@@ -3311,9 +3306,9 @@ func _unique_tier_checks(main) -> void:
 		if hi > lo:
 			_check(Items.score(high) > Items.score(low), "%s at T%d does not beat itself at T%d: %.1f vs %.1f" % [u["name"], hi, lo, Items.score(high), Items.score(low)])
 	# the sign past the Cosh: still a Cosh, lifted to the slot's curve
-	var sign: Dictionary = sim._unique_named("The Lollipop Lady's Sign")
-	var s4: Dictionary = Items.roll_unique(sign, sim.rng, -1, 4)
-	var s9: Dictionary = Items.roll_unique(sign, sim.rng, -1, 9)
+	var sgn: Dictionary = sim._unique_named("The Lollipop Lady's Sign")
+	var s4: Dictionary = Items.roll_unique(sgn, sim.rng, -1, 4)
+	var s9: Dictionary = Items.roll_unique(sgn, sim.rng, -1, 9)
 	_check(s9["base"] == "Cosh" and float(s9.get("lift", 1.0)) > float(s4.get("lift", 1.0)) and float(s4.get("lift", 1.0)) > 1.0 and Items.dps(s9) > Items.dps(s4), "the sign is not a lifted Cosh: %s ×%.2f" % [s9["base"], float(s9.get("lift", 1.0))])
 	# a worn copy and a better one: the better reads as an upgrade
 	for s in Data.SLOTS:
@@ -3802,10 +3797,10 @@ func _pinnacle_checks(main) -> void:
 		sim.advance(0.05)                      # goes down; the next comes out
 	_check(not m["boss"]["alive"] and m["boss_queue"].is_empty(), "the last head is still up")
 	_check(names == ["The Carpet Man", "The Manager", "The Quartermaster"], "the convoy came in the wrong order: %s" % str(names))
-	var load := false
+	var ld := false
 	for it in m["found"]:
-		load = load or it.get("unique", "") == Data.CONVOY_UNIQUE
-	_check(load and m["found"].size() >= found0 + 4, "the Lorry's Load did not come with the three drops: %d found" % (m["found"].size() - found0))
+		ld = ld or it.get("unique", "") == Data.CONVOY_UNIQUE
+	_check(ld and m["found"].size() >= found0 + 4, "the Lorry's Load did not come with the three drops: %d found" % (m["found"].size() - found0))
 	# the ending (7 Oct): the lorry beaten is written, the Yard says to move, the move lights
 	_check(sim.lorry_done and sim.lorries == 1 and sim.next_words() == Words.NEXT["lorry"] and sim.events.any(func(e): return str(e[1]).begins_with("The Lorry's Load is yours")), "the lorry beaten was not written: done %s, lorries %d, next '%s'" % [str(sim.lorry_done), sim.lorries, sim.next_words()])
 	sim.extract_now()
@@ -3946,8 +3941,8 @@ func _craft_checks(main) -> void:
 	var lo_r: int = mini(Items.tier_floor(16), Items.rarity_cap(rare))      # the floor never above the cap: a deep Rare is T3s
 	for k in range(80):
 		sim.craft(rare["id"], "one", "armour_pct")
-		var tr: int = int(rare["affixes"][0]["tier"])
-		_check(tr >= lo_r and tr <= Items.rarity_cap(rare), "re-roll one left a level-16 Rare's affix at T%d, outside T%d..T%d" % [tr, lo_r, Items.rarity_cap(rare)])
+		var row: int = int(rare["affixes"][0]["tier"])
+		_check(row >= lo_r and row <= Items.rarity_cap(rare), "re-roll one left a level-16 Rare's affix at T%d, outside T%d..T%d" % [row, lo_r, Items.rarity_cap(rare)])
 	sim.craft(rare["id"], "reroll")
 	for a in rare["affixes"]:
 		_check(int(a["tier"]) <= Items.rarity_cap(rare) and int(a["tier"]) >= lo_r, "a re-roll on a level-16 Rare gave T%d" % int(a["tier"]))
@@ -4518,7 +4513,6 @@ func _stack_checks(main) -> void:
 	var part_before: int = int(part["rounds"])
 	sim.rig[0]["rounds"] = cap_nails - 150
 	Items.set_stack(sim.rig[0], cap_nails - 150)
-	var pouches: int = sim.med_capacity()
 	while sim.rig_room(1):
 		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))       # no pouch free: only the top-up can happen
 	_check(sim.take(part["id"]) and int(sim.rig[0]["rounds"]) == cap_nails and int(part["rounds"]) == part_before - 150 and sim.stash.has(part), "the take did not top up the rig's stack and leave the rest: rig %d, stash %d" % [int(sim.rig[0]["rounds"]), int(part["rounds"])])
@@ -4535,12 +4529,10 @@ func _stack_checks(main) -> void:
 	var m: Dictionary = sim.mission
 	m["found"] = [sim._plain(Data.AMMO, "Shells")]
 	var fake: Dictionary = sim._plain(Data.AMMO, "Shells")
-	var t: Dictionary = m["t"]
 	# a find of shells through the pack rule
 	if sim.pack_used(m) + 1 <= sim.capacity():
 		sim.stash_put(fake)         # not the pack; just to use the roll - the merge below is the real check
 	var found_box: Dictionary = sim._plain(Data.AMMO, "Shells")
-	var packed: int = m["found"].size()
 	# call the pack rule the way _find does
 	var it2: Dictionary = found_box
 	if Items.stacks(it2):
@@ -4611,7 +4603,6 @@ func _next_checks(main) -> void:
 	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on the Map", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
 	fresh.bosses_beaten[1] = true
 	_check(fresh.next_words() == Words.NEXT["site"] % "The Pleasure Park", "the town's first site is not named: %s" % fresh.next_words())
-	var n0: int = fresh.events.size()
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(0)
 	fresh.extract_now()
@@ -4709,7 +4700,6 @@ func _juice_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	main.refresh()
-	var before: int = main._juice.toasts().size()
 	sim.log_event("Found: Lucky Cap")
 	sim.log_event("Trained: Stance")
 	main.refresh()
@@ -5002,7 +4992,6 @@ func _playtest_checks(main) -> void:
 	_check(sim.hp_shown() <= sim.max_hp_shown(), "HP a fraction under full reads past the max: %d of %d" % [sim.hp_shown(), sim.max_hp_shown()])
 	var worn = sim.equipped["Armour"]
 	sim.equipped["Armour"] = sim._plain("Armour", "Stab vest")
-	var hp_before: float = sim.hp
 	var big: Dictionary = sim._plain("Armour", "Riot suit")
 	big["affixes"] = [{"stat": "hp", "value": 200.0, "tier": 5}]
 	sim.equipped["Armour"] = big
@@ -5216,11 +5205,9 @@ func _playtest_checks(main) -> void:
 	var odds_t0 := Time.get_ticks_usec()
 	main.refresh()
 	var refresh_ms := (Time.get_ticks_usec() - odds_t0) / 1000.0
-	var open_tiers := 0
 	var settled_at_once := 0
 	for i in range(Data.TIERS.size()):
 		if sim.tier_open(i):
-			open_tiers += 1
 			if sim.odds_settled(i):
 				settled_at_once += 1
 	_check(settled_at_once == 0, "a refresh of the Runs screen read the odds itself (%d settled)" % settled_at_once)
@@ -6151,7 +6138,7 @@ func _check_fit(main, where: String) -> void:
 				var rail := Rect2(main._rail.position, main._rail_panel.size)
 				_check(pr.is_equal_approx(rail), "%s menu: the drawer is not the rail's rect (%s vs %s)" % [where, pr, rail])
 				_check(mn._kicker.visible and mn._kicker.text.begins_with("PAUSED"), "%s menu: the drawer's kicker is '%s'" % [where, mn._kicker.text])
-				_check(mn._items.all(func(it): return true) and mn._details[0].text == "" and mn._details[1].text == "", "%s menu: the drawer's rows carry details" % where)
+				_check(mn._items.all(func(_it): return true) and mn._details[0].text == "" and mn._details[1].text == "", "%s menu: the drawer's rows carry details" % where)
 			_:
 				_check(mn._title.visible, "%s menu: the card has no heading" % where)
 	bad += _check_nodes(main._juice.text_nodes(), [], where + " toasts")
@@ -6169,7 +6156,7 @@ func _check_fit(main, where: String) -> void:
 ## panels placed by the shell's layout can still be at their birth positions,
 ## so rects across panels don't compare.
 func _check_buttons_clear(main, labels: Array, where: String) -> int:
-	var UI = load("res://scripts/ui/ui.gd")
+	var UI_v = load("res://scripts/ui/ui.gd")
 	var buttons := []
 	_buttons_under(main, buttons)
 	var bad := 0
@@ -6180,7 +6167,7 @@ func _check_buttons_clear(main, labels: Array, where: String) -> int:
 				continue
 			if l.has_meta("over_art") and l.get_index() > b.get_index():
 				continue                         # a caption drawn over an item's art on purpose (the loadout's cards)
-			var x: Rect2 = br.intersection(Rect2(l.position, l.size).intersection(_text_rect_local(l, UI)))
+			var x: Rect2 = br.intersection(Rect2(l.position, l.size).intersection(_text_rect_local(l, UI_v)))
 			if x.size.x > 2.0 and x.size.y > 2.0:
 				push_error("%s: the button '%s' sits on '%s' (%.0f × %.0f px)" % [where, b.text, l.text, x.size.x, x.size.y])
 				bad += 1
@@ -6188,8 +6175,8 @@ func _check_buttons_clear(main, labels: Array, where: String) -> int:
 
 
 ## A label's text rect in its parent's space: its width at its alignment, the font's height centred.
-static func _text_rect_local(n: Control, UI) -> Rect2:
-	var tw: float = UI.text_width(n, n.text)
+static func _text_rect_local(n: Control, UI_v) -> Rect2:
+	var tw: float = UI_v.text_width(n, n.text)
 	var f: Font = n.get_theme_font("font")
 	var th: float = f.get_height(n.get_theme_font_size("font_size"))
 	var x := n.position.x
@@ -6212,10 +6199,10 @@ static func _buttons_under(n: Node, out: Array) -> void:
 ## Width alone: the text fits its box. (A menu over a room puts its words over
 ## the room's, so the sweep doesn't judge overlap.)
 func _check_widths(nodes: Array, where: String) -> int:
-	var UI = load("res://scripts/ui/ui.gd")
+	var UI_v = load("res://scripts/ui/ui.gd")
 	var bad := 0
 	for n in nodes:
-		var w: float = UI.text_width(n, n.text) + (32.0 if n is Button else 0.0)
+		var w: float = UI_v.text_width(n, n.text) + (32.0 if n is Button else 0.0)
 		if w > n.size.x + 0.5:
 			push_error("%s: '%s' needs %.0f px, has %.0f (%s)" % [where, n.text, w, n.size.x, _chain(n)])
 			bad += 1
@@ -6266,13 +6253,13 @@ static func _screen_pos(n: Node) -> Vector2:
 
 
 ## Where a label's text sits on screen: its width at its alignment, its box's height.
-static func _text_rect(n: Control, UI) -> Rect2:
+static func _text_rect(n: Control, UI_v) -> Rect2:
 	# positions are walked up by hand: headless, a child's cached global
 	# transform can lag a parent that moved since the last frame
 	var r := Rect2(_screen_pos(n), n.size)
 	if n is Button:
 		return r                          # a button's background covers whatever is under it
-	var tw: float = UI.text_width(n, n.text)
+	var tw: float = UI_v.text_width(n, n.text)
 	# the text's own height, centred in the box: a descender past the box's
 	# edge is drawn there whether the box ends or not
 	var f: Font = n.get_theme_font("font")
@@ -6289,12 +6276,12 @@ static func _text_rect(n: Control, UI) -> Rect2:
 ## The checks for one set of nodes. `pairs` are [label, value] that share a
 ## line: their widths are added. Returns how many failed.
 func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
-	var UI = load("res://scripts/ui/ui.gd")
+	var UI_v = load("res://scripts/ui/ui.gd")
 	var bad := 0
 	for pair in pairs:
 		if pair[0].text == "" or pair[1].text == "":
 			continue
-		var w: float = UI.text_width(pair[0], pair[0].text) + 16 + UI.text_width(pair[1], pair[1].text)
+		var w: float = UI_v.text_width(pair[0], pair[0].text) + 16 + UI_v.text_width(pair[1], pair[1].text)
 		if w > maxf(pair[0].size.x, pair[1].size.x) + 0.5:
 			push_error("%s: line '%s' + '%s' needs %.0f px, has %.0f" % [where, pair[0].text, pair[1].text, w, maxf(pair[0].size.x, pair[1].size.x)])
 			bad += 1
@@ -6310,15 +6297,15 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 			push_error("%s: '%s' still says the Yard; it's the Pitch (14 Oct)" % [where, n.text])
 			bad += 1
 		var room := 32.0 if n is Button else 0.0
-		var w: float = UI.text_width(n, n.text) + room
+		var w: float = UI_v.text_width(n, n.text) + room
 		if w > n.size.x + 0.5:
 			push_error("%s: '%s' needs %.0f px, has %.0f" % [where, n.text, w, n.size.x])
 			bad += 1
 		var parent = n.get_parent()
 		if parent is Control:
-			var tr := _text_rect(n, UI)
+			var row := _text_rect(n, UI_v)
 			var pr := Rect2(_screen_pos(parent), parent.size)
-			if tr.position.y < pr.position.y - 4.0 or tr.end.y > pr.end.y + 4.0:
+			if row.position.y < pr.position.y - 4.0 or row.end.y > pr.end.y + 4.0:
 				push_error("%s: '%s' runs out of its box top to bottom" % [where, n.text])
 				bad += 1
 	# no text on top of any other text: the rect each label's text occupies,
@@ -6329,7 +6316,7 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 			var b = live[j]
 			if a.is_ancestor_of(b) or b.is_ancestor_of(a):
 				continue
-			var x: Rect2 = _text_rect(a, UI).intersection(_text_rect(b, UI))
+			var x: Rect2 = _text_rect(a, UI_v).intersection(_text_rect(b, UI_v))
 			# a font's height carries a few px of line spacing past the glyphs
 			if x.size.x > 2.0 and x.size.y > 6.0:
 				push_error("%s: '%s' sits on '%s' (%.0f × %.0f px)" % [where, a.text, b.text, x.size.x, x.size.y])
@@ -6530,10 +6517,8 @@ func _retire_checks(main) -> void:
 	_check(not sim.can_retire(), "a runner under level %d could retire" % Data.RETIRE_LEVEL)
 	sim.xp = Data.xp_for_level(Data.RETIRE_LEVEL)
 	_check(sim.can_retire(), "a level %d runner cannot retire" % Data.RETIRE_LEVEL)
-	var hp_full: float = sim.max_hp()
 	var worn = sim.equipped["Armour"]
 	var past_n: int = sim.past.size()
-	var stash_n: int = sim.stash.size()
 	_check(sim.retire(), "retire() refused")
 	_check(sim.past.size() == past_n + 1 and sim.past.back()["end"] == "retired" and sim.past.back()["class"] == "Doorman", "the wall does not say retired: %s" % str(sim.past.back()))
 	_check(sim.retired == ["Tough"] and sim.cls == "" and sim.candidates.size() == 2 and sim.xp == 0.0, "retirement did not reset the runner and keep the trait: %s / %s / %s" % [str(sim.retired), sim.cls, str(sim.candidates)])
@@ -6611,7 +6596,6 @@ func _contract_material_checks(main) -> void:
 		_check(sim.contract_worth(probe_c) > 0.0, "a %s ask is worth nothing to price" % slot)
 	var deep_c := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 30, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
 	_check(sim.contract_worth(deep_c) > 0.0, "a deep ask at level 30 is worth nothing to price")
-	var takings: float = sim.a_runs_takings()
 	var prim := {"kind": "gear", "slot": "Primary", "rarity": 2, "count": 2, "level": 0, "stat": "", "pay": "", "amount": 0, "salvage": ""}
 	var helm: Dictionary = prim.duplicate()
 	helm["slot"] = "Helmet"
@@ -6808,7 +6792,6 @@ func _grade_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	var hp_rounds: Dictionary = {}
 	for b in Data.BASES[Data.AMMO]:
 		if b.has("conv_bleed_pct") or b.has("conv_fire_pct") or b.has("conv_frost_pct") or b.has("first_pct"):
 			var it: Dictionary = sim._plain(Data.AMMO, b["name"])
@@ -7038,8 +7021,8 @@ func _pick_boxes_check(pick, where: String) -> void:
 			var nr: Rect2 = Rect2(n.position, n.size)
 			_check(r.encloses(nr), "%s: %s sits outside its box: %s against %s" % [where, n.name if n.name != "" else "a node", str(nr), str(r)])
 		if pick._tags[k].visible:
-			var tr: Rect2 = Rect2(pick._tags[k].position, pick._tags[k].size)
-			_check(r.encloses(tr), "%s: the price tag sits outside its box: %s against %s" % [where, str(tr), str(r)])
+			var row: Rect2 = Rect2(pick._tags[k].position, pick._tags[k].size)
+			_check(r.encloses(row), "%s: the price tag sits outside its box: %s against %s" % [where, str(row), str(r)])
 
 
 func _bench_pick_checks(main) -> void:
@@ -7914,7 +7897,6 @@ func _run_view_checks(main) -> void:
 	_check_fit(main, "Run (the run view, a gang)")
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
 	# a kill drops one - any of them, not the first every time (Matt, 13 Oct)
-	var up0: int = v.figures_up()
 	m["kills"] = int(m["kills"]) + 1
 	main.refresh()
 	v._process(0.05)
@@ -7960,11 +7942,11 @@ func _run_view_checks(main) -> void:
 			var row: Array = placed[key][k]
 			_check(float(row[0]) >= 0.0 and float(row[0]) <= RunView.W and float(row[1]) > 0.0 and float(row[1]) <= RunView.H + 40.0 and float(row[2]) > 0.05 and float(row[2]) < 2.0, "%s's placed %d is off the frame: %s" % [key, k, str(row)])
 	for key in keys:
-		var mid: Dictionary = RunView.site_slot(key, 0)
+		var mid_in: Dictionary = RunView.site_slot(key, 0)
 		var nr: Dictionary = RunView.site_slot(key, 1)
 		var far: Dictionary = RunView.site_slot(key, 2)
-		_check(far["foot"].y < mid["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "%s: the far one isn't down the street: %s against %s" % [key, str(far), str(mid)])
-		_check(absf(far["foot"].x - mid["foot"].x) > 40.0 and absf(far["foot"].x - nr["foot"].x) > 50.0 and absf(mid["foot"].x - nr["foot"].x) > 80.0, "%s: two of them stand in front of each other: %s %s %s" % [key, str(mid["foot"]), str(nr["foot"]), str(far["foot"])])
+		_check(far["foot"].y < mid_in["foot"].y - 25 and far["foot"].y < RunView.COVER_TOP - 20 and far["scale"] < mid_in["scale"] * 0.8 and far["foot"].x - 64 * far["scale"] >= 0 and far["foot"].y - 192 * far["scale"] >= 0, "%s: the far one isn't down the street: %s against %s" % [key, str(far), str(mid_in)])
+		_check(absf(far["foot"].x - mid_in["foot"].x) > 40.0 and absf(far["foot"].x - nr["foot"].x) > 50.0 and absf(mid_in["foot"].x - nr["foot"].x) > 80.0, "%s: two of them stand in front of each other: %s %s %s" % [key, str(mid_in["foot"]), str(nr["foot"]), str(far["foot"])])
 	RunView.use_saved(placed)
 	var mid: Dictionary = RunView.SLOTS[0]
 	# the middle one near the centre; the near one left of your gun - most of him clear of every gun's hands (Matt, 13 Oct)
@@ -8007,7 +7989,10 @@ func _run_view_checks(main) -> void:
 	m["dots"] = {"fire": 50.0, "poison": 50.0, "bleed": 50.0}
 	m["my_dots"] = {"fire": 50.0, "poison": 50.0, "bleed": 50.0}
 	for wide in [false, true]:
-		m["using"] = {"name": "First aid kit", "left": 9.0, "heal": 1.0} if wide else null
+		if wide:
+			m["using"] = {"name": "First aid kit", "left": 9.0, "heal": 1.0}
+		else:
+			m["using"] = null
 		main.refresh()
 		_check(run._fight["chips"].visible and run._runner["chips"].visible, "the chips did not show for the numbers' check")
 		var keep: Array = []
@@ -8189,6 +8174,7 @@ func _opening_checks(main) -> void:
 				var c: Color = img.get_pixel(x, y)
 				if minf(c.r, minf(c.g, c.b)) > 0.94:
 					whites += 1
+			@warning_ignore("integer_division")
 			_check(whites < (img.get_width() / 8) * 0.6, "scene %d's picture shows a white band at row %d" % [i, y])
 	# the reading: each scene's cues one a line, in order, inside its take; the lines come up as they're said
 	var voiced := 0
@@ -9525,7 +9511,6 @@ func _rail_order_checks(main) -> void:
 
 ## Place art (9 Oct): a painted site shows in its band, a painted zone behind its tab; none painted, the skyline.
 func _place_art_checks(main) -> void:
-	var sim = main.sim
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(1)
 	main._missions._shown = ""
@@ -9768,7 +9753,6 @@ func _fill_up_checks(main) -> void:
 	_check(m.get("leave_full", false) and main._run._button2.text.begins_with("Filling up"), "the button did not set the run to fill up then go")
 	_check_fit(main, "Run (fill up)")
 	# a gang arriving ends it
-	var runs_before: int = sim.runs_total
 	m["patrol_timer"] = sim.patrol_s(m["t"], true) + 1.0
 	sim.advance(1.0)
 	_check(not sim.on_mission() and sim.last_report["outcome"] != "Dead", "fill up then go did not leave as the gang came: %s" % str(sim.last_report.get("outcome", "")))
@@ -9970,7 +9954,7 @@ func _gamble_checks(main) -> void:
 	sim.candidates = []
 	sim.auto_equip = false
 	sim.restock()
-	_check(sim.gamble.size() == Data.GAMBLE_SHOWN and sim.gamble.all(func(k): return not sim.gamble_kind(k).is_empty()), "the Fence's offer is not %d kinds: %s" % [Data.GAMBLE_SHOWN, str(sim.gamble)])
+	_check(sim.gamble.size() == Data.GAMBLE_SHOWN and sim.gamble.all(func(k_in): return not sim.gamble_kind(k_in).is_empty()), "the Fence's offer is not %d kinds: %s" % [Data.GAMBLE_SHOWN, str(sim.gamble)])
 	var before: Array = sim.gamble.duplicate()
 	var rotated := false
 	for k in range(12):
@@ -10024,7 +10008,7 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	for kk in sim.gamble:
 		var kd: Dictionary = sim.gamble_kind(kk)
-		var fits: bool = Data.UNIQUES.any(func(u): return not u.has("site") and not u.get("boss", false) and u["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u["base"]).get("type", "") == kd["type"]) and Items.unique_fits(u, sim.shop_unique_tier()))   # the chase is never the Fence's (part 3); its range takes the deepest tier dug (12 Oct)
+		var fits: bool = Data.UNIQUES.any(func(u_in): return not u_in.has("site") and not u_in.get("boss", false) and u_in["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u_in["base"]).get("type", "") == kd["type"]) and Items.unique_fits(u_in, sim.shop_unique_tier()))   # the chase is never the Fence's (part 3); its range takes the deepest tier dug (12 Oct)
 		var u: Dictionary = sim.gamble_buy(kk, 0.0)
 		_check(not u.is_empty() and (u.has("unique") == fits) and u["slot"] == kd["slot"], "the unique roll on %s gave %s (a unique fits: %s)" % [kk, str(u.get("unique", u.get("base", "nothing"))), str(fits)])
 		break
@@ -10062,8 +10046,7 @@ func _gamble_checks(main) -> void:
 ## The starting kit is the worst kit in the game (Matt, 6 Oct): a pair of its
 ## own under the pool, never found, so every base in the pool beats the start
 ## of its slot on its own figures and the first find is somebody's upgrade.
-func _start_kit_checks(main) -> void:
-	var sim = main.sim
+func _start_kit_checks(_main) -> void:
 	var fresh = Sim.new()
 	fresh.start()
 	var start := {"Primary": fresh.equipped["Primary"]["base"], "Armour": fresh.equipped["Armour"]["base"], "Backpack": fresh.equipped["Backpack"]["base"]}
@@ -10165,7 +10148,6 @@ func _radio_juice_checks(main) -> void:
 	_check(not sim.can_word_craft(3, "broadcast") and not sim.can_word_craft(3, "tune") and sim.word_craft_block(3, "tune").begins_with("Full"), "a full site takes another word")
 	var held: String = sim.words[3][1]["w"]
 	_check(sim.word_craft(3, "hold", held) and sim.words[3].size() == 4 and held in sim.word_names(3), "Hold lost the held word: %s" % str(sim.words[3]))
-	var before: Array = sim.word_names(3)
 	_check(sim.word_craft(3, "retune") and sim.words[3].size() == 4, "Retune changed the count")
 	_check(sim.word_craft(3, "clear") and sim.words[3].is_empty(), "Clear left words on")
 	_check(sim.word_craft(3, "tune") and sim.words[3].size() == 1, "Tune in did not add one")
@@ -10832,10 +10814,10 @@ func _chronicle_checks() -> void:
 	var s = Sim.new()
 	s.start()
 	var kinds := func() -> Dictionary:
-		var k := {}
+		var k_in := {}
 		for e in s.chronicle:
-			k[e["k"]] = int(k.get(e["k"], 0)) + 1
-		return k
+			k_in[e["k"]] = int(k_in.get(e["k"], 0)) + 1
+		return k_in
 	s.cash += 100000.0
 	s.set_class("Doorman")
 	_check(kinds.call().get("class", 0) == 1, "a class change wrote no line: %s" % str(kinds.call()))
@@ -11135,17 +11117,17 @@ func _try_on_checks(main) -> void:
 		for u in Data.UNIQUES:
 			var ui: Dictionary = Items.roll_unique(u, sim.rng)
 			head.show_item(ui, sim)
-			var want: int = 1 + Items.affix_lines(ui, false, false).size()     # the rule and every affix; a base's element chip after them, if there's room
+			var want_in: int = 1 + Items.affix_lines(ui, false, false).size()     # the rule and every affix; a base's element chip after them, if there's room
 			var first: String = head._affixes._labels[0].text
-			_check(head._affixes.shown() >= want and (first == str(u["words"]) or first == str(u.get("short", ""))), "%s at %d px: %d of %d chips, the first '%s'" % [u["name"], w, head._affixes.shown(), want, first])
+			_check(head._affixes.shown() >= want_in and (first == str(u["words"]) or first == str(u.get("short", ""))), "%s at %d px: %d of %d chips, the first '%s'" % [u["name"], w, head._affixes.shown(), want_in, first])
 		# a base that turns its hits to an element says so on a chip in the element's colour, first under the headline,
 		# with the rarity and level still on top at the longest rarity (14 Oct, Matt: the claw hammer bleeds and its card
 		# didn't say)
 		var conv_n := 0
 		for slot in Data.BASES.keys():
 			for b in Data.BASES[slot]:
-				var want: Array = IH.conv_chips({"slot": slot, "base": b["name"]})
-				if want.is_empty():
+				var want_in: Array = IH.conv_chips({"slot": slot, "base": b["name"]})
+				if want_in.is_empty():
 					continue
 				var it: Dictionary = sim._plain(slot, b["name"])
 				if it.is_empty():
@@ -11157,8 +11139,8 @@ func _try_on_checks(main) -> void:
 				var leveled: bool = not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it))
 				_check(seen.has(Items.rarity_name(it)) and (not leveled or seen.any(func(t): return str(t).begins_with("Level "))), "%s at %d px lost its rarity or level: %s" % [b["name"], w, str(seen)])
 				var first: String = head._affixes._labels[0].text     # a plain base, no affixes: its element chip first
-				_check(head._affixes.shown() >= 1 and first in want[0]["forms"], "%s at %d px doesn't lead with '%s': '%s'" % [b["name"], w, want[0]["forms"][1], first])
-				_check(head._affixes._labels[0].get_theme_color("font_color") == want[0]["colour"], "%s's element chip isn't in its colour" % b["name"])
+				_check(head._affixes.shown() >= 1 and first in want_in[0]["forms"], "%s at %d px doesn't lead with '%s': '%s'" % [b["name"], w, want_in[0]["forms"][1], first])
+				_check(head._affixes._labels[0].get_theme_color("font_color") == want_in[0]["colour"], "%s's element chip isn't in its colour" % b["name"])
 		_check(conv_n > 0, "no base with an element share was checked")
 		head.queue_free()
 	_check(str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour_pct")[0]["short"]) != str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour")[0]["short"]), "armour % and flat armour share a short name")
@@ -11257,7 +11239,6 @@ func _came_back_checks(main) -> void:
 	_check(not main._missions._came.visible, "the card shows with no run since Seen")
 	sim.survival(3)
 	_check(int(sim.came_back["runs"]) == 0, "a dry run added to what came back")
-	var cash0: float = sim.cash
 	for k in range(2):
 		sim.hp = sim.max_hp()
 		sim.deploy(3)
@@ -11688,8 +11669,8 @@ func _lore_checks(main) -> void:
 		_check(z < Words.GANGS.size() and gl.begins_with(Words.GANGS[z]["name"] + ", 3 of them. "), "%s's gang line is off: '%s'" % [Data.ZONES[z]["name"], gl])
 	for cd in Data.CLASSES:
 		_check(Words.PASTS.has(cd["name"]) and str(Words.PASTS[cd["name"]].get("wall", "")).ends_with("."), "the %s has no line on the wall" % cd["name"])
-	for tr in Data.TRAITS:
-		_check(Words.TRAITS.has(tr["name"]) and str(Words.TRAITS[tr["name"]]).ends_with("."), "the %s trait has no line" % tr["name"])
+	for row2 in Data.TRAITS:
+		_check(Words.TRAITS.has(row2["name"]) and str(Words.TRAITS[row2["name"]]).ends_with("."), "the %s trait has no line" % row2["name"])
 	# the new papers: each at its own site, with its words
 	for pair in [["A seed order", "The Allotments"], ["An allotment waiting list", "The Allotments"], ["A loyalty card", "The Garden Centre"], ["A milk quota letter", "Top Farm"],
 			["A delivery note", "The Services"], ["A drug chart", "The Hospital"], ["A leave pass", "The Barracks"], ["A requisition", "The Barracks"]]:
@@ -12010,11 +11991,11 @@ func _room_intro_checks(main) -> void:
 	# every card: its lines and tiles, its words inside their boxes, its art
 	var arts := 0
 	for k in Words.ROOM_INTROS.keys():
-		var d: Dictionary = Words.ROOM_INTROS[k]
+		var d_in: Dictionary = Words.ROOM_INTROS[k]
 		var c = main.RoomIntro.new(k)
 		main.add_child(c)
 		c._place(Vector2(1920, 1080))
-		_check(d["lines"].size() >= 1 and d["lines"].size() <= c._lines.size() and d["tiles"].size() == 3, "%s's card has %d lines and %d tiles" % [k, d["lines"].size(), d["tiles"].size()])
+		_check(d_in["lines"].size() >= 1 and d_in["lines"].size() <= c._lines.size() and d_in["tiles"].size() == 3, "%s's card has %d lines and %d tiles" % [k, d_in["lines"].size(), d_in["tiles"].size()])
 		if c._art.texture != null:
 			arts += 1
 		for l in c._lines:
@@ -12044,18 +12025,18 @@ func _room_intro_checks(main) -> void:
 	# the takes: a cue a line, in order, inside the take; the lines come up as they're said
 	var voiced := 0
 	for k in Words.ROOM_INTROS.keys():
-		var d: Dictionary = Words.ROOM_INTROS[k]
-		_check(d.has("cues") and d["cues"].size() == d["lines"].size(), "%s's card's cues aren't one a line" % k)
-		for i in range(1, d.get("cues", []).size()):
-			_check(float(d["cues"][i]) > float(d["cues"][i - 1]), "%s's card's cues go backwards" % k)
+		var d_in: Dictionary = Words.ROOM_INTROS[k]
+		_check(d_in.has("cues") and d_in["cues"].size() == d_in["lines"].size(), "%s's card's cues aren't one a line" % k)
+		for i in range(1, d_in.get("cues", []).size()):
+			_check(float(d_in["cues"][i]) > float(d_in["cues"][i - 1]), "%s's card's cues go backwards" % k)
 		var c = main.RoomIntro.new(k)
 		if c.voiced():
 			voiced += 1
-			_check(float(d["cues"].back()) < c._vlen, "%s's last cue is past its take (%.1f s)" % [k, c._vlen])
+			_check(float(d_in["cues"].back()) < c._vlen, "%s's last cue is past its take (%.1f s)" % [k, c._vlen])
 			c._process(0.05)
 			_check(c.shown == 1, "%s's first line isn't up as it's said" % k)
-			if d["lines"].size() > 1:
-				c._process(float(d["cues"][1]) - 0.3)
+			if d_in["lines"].size() > 1:
+				c._process(float(d_in["cues"][1]) - 0.3)
 				_check(c.shown == 1, "%s's second line came up before it's said" % k)
 				c._process(0.4)
 				_check(c.shown == 2, "%s's second line didn't come up as it's said" % k)

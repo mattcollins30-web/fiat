@@ -36,6 +36,7 @@ const WIDTH := Inventory.SIDE_W    # 608
 const HEIGHT := 648                            # the column (the pack's map went, 10 Oct: 516 → 648); each card its own height, below
 const GLASS := Pal.PANEL
 const FIGURE := Color(Pal.CARD_LINE, 0.7)      # the runner, flat, until art/body.png is made
+@warning_ignore("integer_division")
 const FIGURE_X := PAD + LEFT_W + (WIDTH - 2 * PAD - LEFT_W - RIGHT_W) / 2     # between the columns: 262..442
 ## The figure fills the room between the columns (Matt, 10 Oct: his redrawn figure "looks too small"): the drawing's
 ## transparent margin is cropped off and what's left is scaled to the gap's height or width, whichever binds.
@@ -141,6 +142,7 @@ func _init() -> void:
 	# every past's figure drawn the same height, centred in the gap (Matt, 12 Oct: the redrawn five "even them out"):
 	# the widest drawing fills the gap's width and the rest take its height, so heads and feet line up
 	var tall := _figure_tall()
+	@warning_ignore("integer_division")
 	_figure.position = Vector2(FIGURE_X - FIGURE_W / 2, FIGURE_Y + (FIGURE_H - tall) / 2.0)
 	_figure.size = Vector2(FIGURE_W, tall)
 	add_child(_figure)
@@ -167,16 +169,16 @@ func _init() -> void:
 		cell.gui_input.connect(_cell_input.bind(slot))
 		cell.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.add_child(cell)
-		var name := UI.label(zone, Rect2(2, 0, r.size.x - 4, TOP_STRIP - 1), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var nm := UI.label(zone, Rect2(2, 0, r.size.x - 4, TOP_STRIP - 1), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var item: Array = []                     # "Empty" on an empty card; a full one's name is the art's (and its tooltip)
 		for i in range(3):
 			item.append(UI.label(zone, Rect2(10, TOP_STRIP + (r.size.y - TOP_STRIP) / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
 		var fig := UI.label(zone, Rect2(10, r.size.y - 25, r.size.x - 20, 24), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-		for l in [name, item[0], item[1], item[2], fig]:
+		for l in [nm, item[0], item[1], item[2], fig]:
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			l.set_meta("over_art", true)          # a caption over the card's art, drawn above it: the button-clear check lets it be
 			UI.shadow(l)
-		_boxes[slot] = {"zone": zone, "outline": outline, "name": name, "cell": cell, "item": item, "fig": fig}
+		_boxes[slot] = {"zone": zone, "outline": outline, "name": nm, "cell": cell, "item": item, "fig": fig}
 
 
 ## The drawing without its transparent margin, so the figure, not the canvas, is what's scaled to fit.

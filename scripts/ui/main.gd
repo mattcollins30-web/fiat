@@ -188,10 +188,8 @@ func _build() -> void:
 	var widths := {}
 	for k in TOP_KEYS + ["class"]:
 		var weight: String = "SemiBold" if k in ["level", "cash"] else "Medium"
-		var size: int = Pal.TITLE if k == "level" else Pal.FLOOR
-		widths[k] = ceilf(UI.font(weight, k != "where").get_string_size(TOP_WORST[k], HORIZONTAL_ALIGNMENT_LEFT, -1, size).x) + 4
-	var slot_w := func(k: String) -> float:
-		return float(widths[k]) + (TOP_GLYPH + TOP_GLYPH_GAP if TOP_GLYPH_OF.has(k) else 0.0)
+		var sz: int = Pal.TITLE if k == "level" else Pal.FLOOR
+		widths[k] = ceilf(UI.font(weight, k != "where").get_string_size(TOP_WORST[k], HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x) + 4
 	# the left group, in order
 	var x := 0.0
 	_top_caption = UI.label(_top_row, Rect2(x, 0, TOP_CAPTION_W - 8, Pal.TOP_H), "LEVEL", "Medium", Pal.FLOOR, Pal.TEXT_3)
@@ -249,17 +247,18 @@ func _build() -> void:
 		if sim != null and not _menu.visible and ROOM_INTRO_KEY.has(room):
 			show_room_intro(ROOM_INTRO_KEY[room]))
 	for i in range(ROOMS.size()):
-		var name: String = ROOMS[i]
-		var b = RailButton.new(name)
+		var nm: String = ROOMS[i]
+		var b = RailButton.new(nm)
 		b.position = Vector2(0, Pal.RAIL_HEAD_H + i * (Pal.RAIL_BTN_H + Pal.RAIL_GAP))
 		b.last = i == ROOMS.size() - 1
-		b.pressed.connect(show_room.bind(name))
+		b.pressed.connect(show_room.bind(nm))
 		_rail.add_child(b)
-		_rail_buttons[name] = b
+		_rail_buttons[nm] = b
 	_grid = Control.new()
 	add_child(_grid)
 	for i in range(Pal.MAX_CARDS):
 		var c = Card.new()
+		@warning_ignore("integer_division")
 		c.position = Vector2((i % Pal.COLS) * (Pal.CARD_W + Pal.CARD_GAP), (i / Pal.COLS) * (Pal.CARD_H + Pal.CARD_GAP))
 		c.acted.connect(refresh)
 		_grid.add_child(c)
@@ -893,8 +892,8 @@ func _to_title_no_save() -> void:
 	show_title()
 
 
-func show_room(name: String) -> void:
-	room = name if not room_shut(name) else MISSIONS      # a shut room isn't there to go to (13 Oct, the gates)
+func show_room(nm: String) -> void:
+	room = nm if not room_shut(nm) else MISSIONS      # a shut room isn't there to go to (13 Oct, the gates)
 	refresh()
 
 
@@ -903,8 +902,8 @@ const ROOM_KEY := {MEDIC: "clinic", MARKET: "fence", OVERVIEW: "yard", COMMS: "r
 ## Each room's card (14 Oct, docs/design/room_intros.md): Words.ROOM_INTROS by the room's code key.
 const ROOM_INTRO_KEY := {MISSIONS: "map", ARMOURY: "kit", RUNNER: "stats", BARRACKS: "training", MEDIC: "clinic",
 		MARKET: "fence", WORKSHOP: "workshop", OVERVIEW: "yard", COMMS: "radio"}
-func room_shut(name: String) -> bool:
-	return sim != null and ROOM_KEY.has(name) and not sim.room_open(ROOM_KEY[name])
+func room_shut(nm: String) -> bool:
+	return sim != null and ROOM_KEY.has(nm) and not sim.room_open(ROOM_KEY[nm])
 
 
 # ------------------------------------------------------------------ showing
@@ -941,12 +940,12 @@ func refresh() -> void:
 	_lay_top_right()
 	if room == OVERVIEW:
 		sim.yard_mark_seen()                  # before the rail is painted: the badge never shows on the Yard while it's open
-	for name in ROOMS:
-		var b = _rail_buttons[name]
-		b.set_selected(name == room)
-		b.set_shut(room_shut(name))
-		b.tooltip_text = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[name]]) if room_shut(name) else ""     # what opens it (the review)
-		b.show_status(_rail_status(name))
+	for nm in ROOMS:
+		var b = _rail_buttons[nm]
+		b.set_selected(nm == room)
+		b.set_shut(room_shut(nm))
+		b.tooltip_text = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[nm]]) if room_shut(nm) else ""     # what opens it (the review)
+		b.show_status(_rail_status(nm))
 	# the Lock-up, the Caravan, the Bench and Runs are screens of their own,
 	# in the grid's place: Runs is the tiers between runs and the live run
 	# with the pack grid while the runner is out
@@ -1077,7 +1076,7 @@ func _lay_top_right() -> void:
 			if not shown:
 				continue
 			var l: Label = _top_labels[k]
-			var text_w: float = ceilf(UI.text_width(l, l.text)) if l.visible else -TOP_GLYPH_GAP
+			var text_w: float = ceilf(UI.text_width(l, l.text)) if l.visible else float(-TOP_GLYPH_GAP)
 			if l.visible:
 				l.size.x = text_w + 2.0                       # the box its figure, so its tooltip covers nothing beside it
 				l.position.x = x - l.size.x
@@ -1126,11 +1125,11 @@ func _time_of_day(stamp: float) -> String:
 	return "%02d:%02d" % [d["hour"], d["minute"]]
 
 
-func _rail_status(name: String) -> Dictionary:
-	if room_shut(name):
+func _rail_status(nm: String) -> Dictionary:
+	if room_shut(nm):
 		return {"badge": "Shut", "badge_tone": ""}     # until a head's thing comes home (13 Oct)
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
-	match name:
+	match nm:
 		OVERVIEW:
 			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
 			return {"badge": "Upgrade" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
@@ -1144,11 +1143,11 @@ func _rail_status(name: String) -> Dictionary:
 			return {"badge": "" if full or sim.on_mission() else "Hurt", "badge_tone": "warn"}
 		MARKET:
 			# the contracts were easy to miss as a tab: the rail says when one's ready (they pay currency only, 9 Oct)
-			var ready := 0
+			var is_ready := 0
 			for k in range(sim.contracts.size()):
 				if sim.can_hand_in(k):
-					ready += 1
-			return {"badge": "Ready" if ready > 0 else "", "badge_tone": "good"}
+					is_ready += 1
+			return {"badge": "Ready" if is_ready > 0 else "", "badge_tone": "good"}
 	return {}
 
 
@@ -1213,9 +1212,9 @@ func _choose_word(i: int, key: String, page := 0) -> void:
 	var items := []
 	var per := 4
 	for k in range(page * per, mini(options.size(), (page + 1) * per)):
-		var name: String = options[k]
-		var ww: Array = sim.word_words(name, maxi(1, sim.word_tier_cap(int(sim.depth[i]))))
-		items.append({"name": name, "detail": "%s · %s" % [ww[0], ww[1]], "action": _do_word.bind(i, key, name)})
+		var nm: String = options[k]
+		var ww: Array = sim.word_words(nm, maxi(1, sim.word_tier_cap(int(sim.depth[i]))))
+		items.append({"name": nm, "detail": "%s · %s" % [ww[0], ww[1]], "action": _do_word.bind(i, key, nm)})
 	if (page + 1) * per < options.size():
 		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, key, page + 1)})
 	else:
@@ -1224,8 +1223,8 @@ func _choose_word(i: int, key: String, page := 0) -> void:
 	_menu.open(title, "%s, and the codes stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
 
 
-func _do_word(i: int, key: String, name: String) -> void:
-	sim.word_craft(i, key, name)
+func _do_word(i: int, key: String, nm: String) -> void:
+	sim.word_craft(i, key, nm)
 	_menu.close()
 	refresh()
 
@@ -1237,8 +1236,8 @@ func _choose_book(kind: String, page := 0) -> void:
 	var items := []
 	var per := 4
 	for k in range(page * per, mini(options.size(), (page + 1) * per)):
-		var name: String = options[k]
-		items.append({"name": name if name != "" else "None", "detail": "" if name == "" else "%s · %s" % sim.word_words(name, 1), "action": _set_book.bind(kind, name)})
+		var nm: String = options[k]
+		items.append({"name": nm if nm != "" else "None", "detail": "" if nm == "" else "%s · %s" % sim.word_words(nm, 1), "action": _set_book.bind(kind, nm)})
 	if (page + 1) * per < options.size():
 		items.append({"name": "More", "detail": "", "action": _choose_book.bind(kind, page + 1)})
 	else:
@@ -1247,11 +1246,11 @@ func _choose_book(kind: String, page := 0) -> void:
 	_menu.open(title, "From the book: change it any time", items, _menu.close)
 
 
-func _set_book(kind: String, name: String) -> void:
+func _set_book(kind: String, nm: String) -> void:
 	if kind == "filter":
-		sim.set_filtered(name)
+		sim.set_filtered(nm)
 	else:
-		sim.set_standing(int(kind.trim_prefix("standing")), name)
+		sim.set_standing(int(kind.trim_prefix("standing")), nm)
 	_menu.close()
 	refresh()
 
@@ -1260,11 +1259,11 @@ func _set_book(kind: String, name: String) -> void:
 func _choose_runner() -> void:
 	var items := []
 	for k in range(sim.candidates.size()):
-		var tr: Dictionary = {}
+		var row: Dictionary = {}
 		for t in Data.TRAITS:
 			if t["name"] == sim.candidates[k]:
-				tr = t
-		items.append({"name": tr.get("name", sim.candidates[k]), "detail": tr.get("words", ""), "action": _pick_runner.bind(k)})
+				row = t
+		items.append({"name": row.get("name", sim.candidates[k]), "detail": row.get("words", ""), "action": _pick_runner.bind(k)})
 	_menu.open("Two turn up at the Pitch", "One stays. The other moves on.", items, Callable())
 
 
@@ -1361,11 +1360,11 @@ func _open_build_kind(kind: String, page: int) -> void:
 	_menu.open(title, "%d scrap in hand" % sim.scrap, items, _open_builds.bind(0))
 
 
-func _build_one(kind: String, name: String) -> void:
-	if sim.build(kind, name):
+func _build_one(kind: String, nm: String) -> void:
+	if sim.build(kind, nm):
 		_menu.close()
 		refresh()
-		_juice.toast("Built: %s" % name.to_lower(), "good")
+		_juice.toast("Built: %s" % nm.to_lower(), "good")
 
 
 ## The Runner room's Workshop button on a piece (9 Oct): the Workshop's Craft view with it picked, worn or
@@ -1396,7 +1395,7 @@ func _choose_second() -> void:
 	_menu.open("A second past", "Opens that class's first tree beside yours. Changing it refunds it.", items, _menu.close)
 
 
-func _set_second(name: String) -> void:
-	sim.set_second(name)
+func _set_second(nm: String) -> void:
+	sim.set_second(nm)
 	_menu.close()
 	refresh()

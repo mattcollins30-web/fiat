@@ -17,6 +17,7 @@ const H := Pal.CARD_H                                        # 424
 const PAD := Pal.PAD
 const INNER := W - 2 * PAD
 const COL_GAP := 24
+@warning_ignore("integer_division")
 const COL_W := (INNER - COL_GAP) / 2                         # 348
 const KICK_Y := 112
 const LINES_Y := KICK_Y + 30
@@ -71,7 +72,7 @@ func show_data(d: Dictionary) -> void:
 	_title.text = str(d.get("title", ""))
 	_headline.text = str(d.get("headline", ""))
 	_unit.text = str(d.get("unit", ""))
-	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10 if _headline.text != "" else PAD
+	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10 if _headline.text != "" else float(PAD)
 	for k in range(2):
 		var col: Dictionary = d.get("left" if k == 0 else "right", {})
 		_kickers[k].text = str(col.get("kicker", "")).to_upper()

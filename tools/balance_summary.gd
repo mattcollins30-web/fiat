@@ -128,12 +128,12 @@ func _init() -> void:
 
 	# no reds: the odds reader at every open tier
 	if not full.is_empty():
-		var reds: Array = []
+		var reds_in: Array = []
 		for b in full:
 			for o in b.get("odds", []):
 				if float(o[1]) < ODDS_FLOOR:
-					reds.append("%s T%d %.0f%%" % [b["build"], int(o[0]), float(o[1]) * 100.0])
-		rows.append(["No reds", "no open tier under %.0f%%" % (ODDS_FLOOR * 100.0), "; ".join(reds) if not reds.is_empty() else "every open tier at or over the floor", reds.is_empty()])
+					reds_in.append("%s T%d %.0f%%" % [b["build"], int(o[0]), float(o[1]) * 100.0])
+		rows.append(["No reds", "no open tier under %.0f%%" % (ODDS_FLOOR * 100.0), "; ".join(reds_in) if not reds_in.is_empty() else "every open tier at or over the floor", reds_in.is_empty()])
 
 	# the probe's two
 	if not probe.is_empty():
@@ -229,7 +229,10 @@ func _init() -> void:
 		var t2: String = "; ".join(off) if not off.is_empty() else "every build in the band"
 		if not unread.is_empty():
 			t2 += " (campaign not done: " + ", ".join(unread) + ")"
-		rows.append(["The ladders' spread", "at the first lorry, the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], t2, null if (off.is_empty() and not unread.is_empty()) else off.is_empty()])
+		var spread_ok: Variant = null          # unread with nothing off: not judged
+		if not (off.is_empty() and not unread.is_empty()):
+			spread_ok = off.is_empty()
+		rows.append(["The ladders' spread", "at the first lorry, the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], t2, spread_ok])
 	else:
 		rows.append(["The lorry", "beaten by hour %.0f, every build" % LORRY_BY, "no lorry in these reads (an older balance.gd)", null])
 		rows.append(["The ladders' spread", "the streets' deepest depth at the bot's odds %d to %d past the barracks'" % [SPREAD[0], SPREAD[1]], "not read", null])
@@ -447,6 +450,7 @@ func _median(vals: Array) -> float:
 	var n := v.size()
 	if n == 0:
 		return 0.0
+	@warning_ignore("integer_division")
 	return float(v[n / 2]) if n % 2 == 1 else (float(v[n / 2 - 1]) + float(v[n / 2])) / 2.0
 
 

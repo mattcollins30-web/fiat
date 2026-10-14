@@ -473,7 +473,7 @@ func pick_tier(sim) -> int:
 		for i in range(Data.TIERS.size()):
 			if sim.tier_open(i):
 				order.append(i)
-		order.sort_custom(func(a, b): return _aim_level(sim, a) > _aim_level(sim, b))
+		order.sort_custom(func(a, b_in): return _aim_level(sim, a) > _aim_level(sim, b_in))
 		for i in order:
 			if sim.depth[i] > sim.best_depth[i] and sim.depth[i] > 1 and sim.survival(i) < PUSH:
 				sim.set_depth(i, maxi(1, sim.best_depth[i]))

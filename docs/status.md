@@ -4422,3 +4422,10 @@ hammer's or a blade's picture splits where a clean column parts the off hand fro
 back, chops toward the one it's hitting round the forearm, and settles, a streak following the head. The hit - its
 marker, its number - lands on the chop, not as the swing starts; none if the hands go down behind the wall mid-swing.
 Guns keep their kick. Generated swing frames only if this doesn't sell it.
+
+**The warnings cleared, and a check for them (14 Oct, Matt: the editor's Debugger full of GDScript warnings; "a way
+of checking in the future and clearing before commits").** All 278 in the game's scripts fixed in code: whole-number
+divisions marked as meant, locals that shadowed a property or a function renamed, unused locals and parameters gone or
+underscored, mixed ternaries and float-to-int narrowing typed properly, a signal never sent removed. tools/gdlint.py
+asks Godot's own language server for every warning in the project (the smoke, headless, can't see them); it reads 0,
+and runs before each commit from now on.

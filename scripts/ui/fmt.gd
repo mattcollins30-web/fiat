@@ -43,25 +43,25 @@ static func group(n: int) -> String:
 static func money(x: float) -> String:
 	if not is_finite(x):
 		return "—"
-	var sign := MINUS if x < -0.5 else ""
+	var sgn := MINUS if x < -0.5 else ""
 	var a := absf(x)
 	if a >= 1e7:
-		return "%s%.1fM %s" % [sign, a / 1e6, UNIT]
+		return "%s%.1fM %s" % [sgn, a / 1e6, UNIT]
 	var n := int(round(a))
-	return "%s%s %s" % [sign, group(n), "tin" if n == 1 else UNIT]
+	return "%s%s %s" % [sgn, group(n), "tin" if n == 1 else UNIT]
 
 
 ## A figure short: 950 · 4.8k · 48k · 1.2M (the tiles and buttons a full "4,816 tins" runs past).
 static func short_num(x: float) -> String:
 	var a := absf(x)
-	var sign := MINUS if x < -0.5 else ""
+	var sgn := MINUS if x < -0.5 else ""
 	if a >= 999500.0:
-		return "%s%.1fM" % [sign, a / 1e6]
+		return "%s%.1fM" % [sgn, a / 1e6]
 	if a >= 1e4:
-		return "%s%.0fk" % [sign, a / 1e3]
+		return "%s%.0fk" % [sgn, a / 1e3]
 	if a >= 1e3:
-		return "%s%.1fk" % [sign, a / 1e3]
-	return "%s%d" % [sign, int(round(a))]
+		return "%s%.1fk" % [sgn, a / 1e3]
+	return "%s%d" % [sgn, int(round(a))]
 
 
 ## Money short: "4.8k tins"; under a thousand as money() says it.
@@ -78,11 +78,11 @@ static func money_forms(x: float) -> Array:
 static func per_s(x: float) -> String:
 	if not is_finite(x):
 		return "—"
-	var sign := MINUS if x < -0.005 else "+"
+	var sgn := MINUS if x < -0.005 else "+"
 	var a := absf(x)
 	if a < 10.0:
-		return "%s%.2f %s/s" % [sign, a, UNIT]
-	return "%s%s %s/s" % [sign, group(int(round(a))), UNIT]
+		return "%s%.2f %s/s" % [sgn, a, UNIT]
+	return "%s%s %s/s" % [sgn, group(int(round(a))), UNIT]
 
 
 ## When a save was made, in local time: 21 Sep, 15:02.
@@ -105,6 +105,7 @@ static func pct(x: float) -> String:
 ## m:ss for countdowns and the run clock.
 static func mss(seconds: float) -> String:
 	var s := int(max(0.0, seconds))
+	@warning_ignore("integer_division")
 	return "%d:%02d" % [s / 60, s % 60]
 
 
@@ -113,6 +114,7 @@ static func clock(seconds: float) -> String:
 	var s := int(max(0.0, seconds))
 	if s < 3600:
 		return mss(s)
+	@warning_ignore("integer_division")
 	return "%d:%02d:%02d" % [s / 3600, (s % 3600) / 60, s % 60]
 
 
@@ -136,8 +138,10 @@ static func hours_short(h: float) -> String:
 static func away(seconds: float) -> String:
 	var s := int(seconds)
 	if s >= 3600:
+		@warning_ignore("integer_division")
 		return "%d h %d m" % [s / 3600, (s % 3600) / 60]
 	if s >= 60:
+		@warning_ignore("integer_division")
 		return "%d m" % (s / 60)
 	return "%d s" % s
 

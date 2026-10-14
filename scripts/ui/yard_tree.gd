@@ -38,6 +38,7 @@ const COLS := 6
 const TILE := 48
 const PAIR_GAP := 8
 const RANK_W := 210
+@warning_ignore("integer_division")
 const COL_W := (Pal.GRID_W - TILES_X - 8 - RANK_W) / (COLS - 1)
 const GLYPH := 28
 const PIP := 8
@@ -110,6 +111,7 @@ func _init() -> void:
 		r["cost"] = UI.label(self, Rect2(rx + TILE + 10, y + 25, RANK_W - TILE - 24, 20), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
 		r["pips"] = []
 		for pi in range(5):
+			@warning_ignore("integer_division")
 			r["pips"].append(UI.panel(self, Rect2(rx + TILE + 10 + pi * (PIP + PIP_GAP), y + 48, PIP, PIP), UI.box(Pal.CARD_LINE, PIP / 2)))
 		_lanes.append(lane)
 	var strip := UI.panel(self, Rect2(0, STRIP_Y, Pal.GRID_W, STRIP_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
@@ -297,11 +299,11 @@ func _show_strip(purse: Dictionary) -> void:
 	if selected.get("rank", false):
 		UI.fit(_title, ["%s · rank %d" % [b["name"], sim.yard_rank(key)], str(b["name"])])
 		UI.fit(_words, ["%s. Bought again and again; each rank dearer than the last." % b["rank"]["words"], str(b["rank"]["words"]) + "."])
-		var why: String = sim.yard_rank_block(key)
-		var price: String = "Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]
-		UI.fit(_other, [price + ("" if why == "" else " · " + why), price, "%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]])
+		var why_in: String = sim.yard_rank_block(key)
+		var price_in: String = "Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]
+		UI.fit(_other, [price_in + ("" if why_in == "" else " · " + why_in), price_in, "%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]])
 		_build.text = "Buy rank %d" % (sim.yard_rank(key) + 1)
-		_build.disabled = why != ""
+		_build.disabled = why_in != ""
 		return
 	var c: int = int(selected["col"])
 	var side: String = selected["side"]

@@ -132,6 +132,7 @@ func _init() -> void:
 	_page_next.pressed.connect(_turn.bind(1))
 	# the container itself: an outline per cell, in rows of COLS
 	for k in range(COLS * ROWS):
+		@warning_ignore("integer_division")
 		var o := UI.panel(self, Rect2((k % COLS) * (CELL + GAP), GRID_Y + (k / COLS) * (CELL + GAP), CELL, CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
 		o.visible = false
 		o.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -272,9 +273,11 @@ static func _pack(list: Array, rows_a_page: int) -> Dictionary:
 		var w := mini(f.x, COLS)
 		var h := f.y
 		var y := 0
-		var placed := false
-		while not placed:
+		var placed_v := false
+		while not placed_v:
+			@warning_ignore("integer_division")
 			if h <= rows_a_page and (y / rows_a_page) != ((y + h - 1) / rows_a_page):
+				@warning_ignore("integer_division")
 				y = ((y / rows_a_page) + 1) * rows_a_page      # over the page edge: start the next page
 			for x in range(COLS - w + 1):
 				var free := true
@@ -290,7 +293,7 @@ static func _pack(list: Array, rows_a_page: int) -> Dictionary:
 						for dx in range(w):
 							taken[Vector2i(x + dx, y + dy)] = true
 					out[it["id"]] = Rect2i(x, y, w, h)
-					placed = true
+					placed_v = true
 					break
 			y += 1
 	return out

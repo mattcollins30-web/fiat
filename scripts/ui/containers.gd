@@ -5,11 +5,10 @@ extends Control
 ## else; it takes drops from the stash and gives drags back to it, and a
 ## press on a pouch selects what's in it. The pack's empty map went (Matt, 10 Oct: never usable, never full - what
 ## a run brings goes to the stash; the Backpack card and the strip say its cells).
-## Signals: `picked(id)` for a pouch, `take(id)` and `leave(id)` for drops.
+## Signals: `picked(id)` for a pouch, `take(id)` for drops.
 
 signal picked(id: int)
 signal take(id: int)
-signal leave(id: int)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -43,6 +42,7 @@ var _rg := Pal.CELL_GAP
 
 
 func _rig_at(k: int) -> Vector2:
+	@warning_ignore("integer_division")
 	return Vector2((k % RIG_COLS) * (_rc + _rg), (k / RIG_COLS) * (_rc + _rg))
 
 
@@ -116,11 +116,11 @@ func show_state(s) -> void:
 	# the free pouches' outlines: as many as the rig has free, in the first places nothing sits in
 	var free_left: int = maxi(0, cap - sim.rig_used())
 	for k in range(RIG_MAX):
-		var show: bool = taken.has(k)
-		if not show and free_left > 0:
-			show = true
+		var showing2: bool = taken.has(k)
+		if not showing2 and free_left > 0:
+			showing2 = true
 			free_left -= 1
-		_rig_outlines[k].visible = show and k < RIG_MAX
+		_rig_outlines[k].visible = showing2 and k < RIG_MAX
 		_rig_outlines[k].position = _rig_at(k)
 		_rig_outlines[k].size = Vector2(_rc, _rc)
 	for k in range(RIG_MAX):

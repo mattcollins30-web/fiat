@@ -47,7 +47,9 @@ const TILES_X := LABEL_W + 12
 const COLS := 6
 const TILE_GAP := 6
 const ROW_GAP := 4
+@warning_ignore("integer_division")
 const TILE_W := (Pal.GRID_W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS     # 219
+@warning_ignore("integer_division")
 const TILE_H := (LANE_H - 2 * TILE_TOP - ROW_GAP) / 2                          # 44
 const LANE_NODES := 12                                         # tiles a lane holds (a tree has eleven)
 ## A node as a glyph (9 Oct, Tree-G A): a square tile, a notable round, a keystone a diamond, the capstone a bigger
@@ -74,6 +76,7 @@ const WORDS_UNDER_Y := 50          # a node's sentence, under its title
 # the drawer and the shelf take the lanes' whole area: three columns of cards
 const PAGE_COLS := 3
 const PAGE_GAP := 6
+@warning_ignore("integer_division")
 const PAGE_W := (Pal.GRID_W - (PAGE_COLS - 1) * PAGE_GAP) / PAGE_COLS
 const PAGE_CELLS := 24
 const NAME_H := 36
@@ -592,15 +595,15 @@ func also_names() -> Array:
 	return out
 
 
-static func _is_pages(name: String) -> bool:
-	return name == "The drawer" or name == "The shelf" or name == "The radio"
+static func _is_pages(nm: String) -> bool:
+	return nm == "The drawer" or nm == "The shelf" or nm == "The radio"
 
 
 ## The pages over the lanes, by the Also chip's name.
-func _branch_for(name: String) -> Dictionary:
-	if name == "The drawer":
+func _branch_for(nm: String) -> Dictionary:
+	if nm == "The drawer":
 		return _drawer_branch()
-	if name == "The radio":
+	if nm == "The radio":
 		return _radio_branch()
 	return _shelf_branch()
 
@@ -646,10 +649,10 @@ func _show_head() -> void:
 	UI.fit(_class_line, [str(cd.get("words", "")), ""] if not cd.is_empty() else ["Pick a past: what the runner was, and how they fight now", "Pick a past", ""])
 	for k in range(Data.CLASSES.size()):
 		var cb: Button = _class_buttons[k]
-		var name: String = Data.CLASSES[k]["name"]
-		cb.text = ("%s ✓" % name) if sim.cls == name else (("%s ?" % name) if _armed == name else name)
-		cb.disabled = sim.on_mission() or name == sim.cls2     # the second past's class is taken already
-		UI.style_button(cb, sim.cls == name or _armed == name)
+		var nm: String = Data.CLASSES[k]["name"]
+		cb.text = ("%s ✓" % nm) if sim.cls == nm else (("%s ?" % nm) if _armed == nm else nm)
+		cb.disabled = sim.on_mission() or nm == sim.cls2     # the second past's class is taken already
+		UI.style_button(cb, sim.cls == nm or _armed == nm)
 	_notice.add_theme_color_override("font_color", Pal.TEXT)
 	if _armed != "":
 		var cost: int = sim.class_change_cost(_armed)
@@ -670,7 +673,7 @@ func _show_head() -> void:
 ## The class's line and the notice, bottom up: a lone line sits just over the classes, where the notice would; each
 ## line that has words gets its pill, fitted to them.
 func _lay_lines() -> void:
-	_class_line.position.y = LINE_TOP_Y if _notice.text != "" else NOTICE_Y + (_notice.size.y - _class_line.size.y) / 2.0
+	_class_line.position.y = float(LINE_TOP_Y) if _notice.text != "" else NOTICE_Y + (_notice.size.y - _class_line.size.y) / 2.0
 	var lines: Array[Label] = [_class_line, _notice]
 	for k in range(2):
 		var l: Label = lines[k]
@@ -715,12 +718,6 @@ func _show_lane(k: int, t) -> void:
 		UI.fit(lane["tag"], ["the Pitch's · kept", "the Pitch's"])
 	lane["tag"].add_theme_color_override("font_color", colour if colour != Pal.CARD_LINE else Pal.TEXT_2)
 	var pts: int = sim.points_in(t["name"])
-	var next_gate := -1
-	for c in range(COLS):
-		var g: int = Data.gate(t, c, mine)
-		if g > pts:
-			next_gate = g
-			break
 	UI.fit(lane["gates"], ["%d point%s in" % [pts, "" if pts == 1 else "s"], "%d in" % pts])     # the gates say what opens next (Tree-J B)
 	_lay_gates(k)
 	lane["conn"].queue_redraw()
@@ -799,11 +796,11 @@ func _show_lane(k: int, t) -> void:
 
 
 ## A node's name cut to its first word when the tile won't take it.
-static func _short_name(name: String) -> String:
-	var words: PackedStringArray = name.split(" ", false)
+static func _short_name(nm: String) -> String:
+	var words: PackedStringArray = nm.split(" ", false)
 	if words.size() > 2 and words[0].length() <= 3:
 		return "%s %s" % [words[0], words[1]]      # "The long ..." keeps its noun: "The long", never "The"
-	return words[0] if words.size() > 1 else name
+	return words[0] if words.size() > 1 else nm
 
 
 ## The two links: under a class lane, to its element's lane, in the fourth column. Solid and filled when the
@@ -865,26 +862,26 @@ func _show_also() -> void:
 			b.visible = false
 			a["name"] = ""
 			continue
-		var name: String = names[k]
-		a["name"] = name
-		var t := Data.tree_named(name)
-		var words := name
-		var short := name
+		var nm: String = names[k]
+		a["name"] = nm
+		var t := Data.tree_named(nm)
+		var words := nm
+		var short := nm
 		if t.has("element"):
-			words = "%s · %s" % [name, t["element"]]
+			words = "%s · %s" % [nm, t["element"]]
 		elif t.get("class", "") != "":
-			words = "%s · %s" % [name, t["class"].to_lower()]
-		elif _is_pages(name):
+			words = "%s · %s" % [nm, t["class"].to_lower()]
+		elif _is_pages(nm):
 			# the drawer and the shelf carry their counts, and the page when one's open over the lanes
-			var br0: Dictionary = _branch_for(name)
+			var br0: Dictionary = _branch_for(nm)
 			var found: int = int(br0["found"])
 			var total: int = int(br0["total"])
-			words = "%s · %d of %d" % [name, found, total]
-			if alt == name:
+			words = "%s · %d of %d" % [nm, found, total]
+			if alt == nm:
 				var br: Dictionary = br0
 				if int(br["pages"]) > 1:
 					words += " · page %d of %d" % [int(br["page"]) + 1, int(br["pages"])]
-			short = "%s %d/%d" % [name.get_slice(" ", 1).capitalize(), found, total]
+			short = "%s %d/%d" % [nm.get_slice(" ", 1).capitalize(), found, total]
 		var w: float = ceilf(UI.text_width(b, words)) + 36.0
 		if x + w > right:
 			words = short
@@ -893,7 +890,7 @@ func _show_also() -> void:
 		b.text = words
 		b.position.x = x
 		b.size.x = w
-		UI.style_button(b, alt == name)
+		UI.style_button(b, alt == nm)
 		x += w + 8.0
 
 
@@ -915,6 +912,7 @@ func _show_pages(on: bool) -> void:
 			continue
 		var nd: Dictionary = branch["nodes"][k]
 		b.visible = true
+		@warning_ignore("integer_division")
 		b.position = Vector2((k / rows) * (PAGE_W + PAGE_GAP), LANES_Y + (k % rows) * (row_h + PAGE_GAP))
 		b.size = Vector2(PAGE_W, row_h)
 		c["name"].add_theme_font_override("font", UI.font("SemiBold" if nd["words"] != "" and not nd.get("gap", false) else "Regular", false))
@@ -934,7 +932,7 @@ func _show_pages(on: bool) -> void:
 ## words, the rest a gap that says where it's found; a page at a time.
 func _drawer_branch() -> Dictionary:
 	var pages: Array = sim.book_pages()
-	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(name): return Words.item_words(name, false) if name in sim.book else _paper_gap(name), 2)
+	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(nm): return Words.item_words(nm, false) if nm in sim.book else _paper_gap(nm), 2)
 	for nd in branch["nodes"]:
 		nd["gap"] = not (str(nd["name"]).substr(str(nd["name"]).find(" ") + 1) in sim.book)
 	branch["found"] = sim.book.size()
@@ -942,11 +940,11 @@ func _drawer_branch() -> Dictionary:
 
 
 ## Where an unfound paper turns up: its one site, or the depth it's found from.
-func _paper_gap(name: String) -> String:
-	var site: String = Items.exclusive_to(name)
+func _paper_gap(nm: String) -> String:
+	var site: String = Items.exclusive_to(nm)
 	if site != "":
 		return Words.BOOK["gap_site"] % Words.mid(site)
-	var d: int = int(Items.base_named(Data.PAPER, name).get("depth", 0))
+	var d: int = int(Items.base_named(Data.PAPER, nm).get("depth", 0))
 	return Words.BOOK["gap_deep"] % d if d > 0 else Words.BOOK["gap"]
 
 
@@ -967,11 +965,11 @@ func _shelf_branch() -> Dictionary:
 		names.append(c["name"])
 		if not c["found"]:
 			gaps[c["name"]] = c["where"]
-	for name in sim.shelf:
-		if not (name in names):
-			names.append(name)
+	for nm in sim.shelf:
+		if not (nm in names):
+			names.append(nm)
 	var branch := _pages_branch("The shelf", names, Data.UNIQUES.size(), Words.SHELF["empty"],
-		func(name): return gaps[name] if gaps.has(name) else _shelf_words(name), 3)
+		func(nm): return gaps[nm] if gaps.has(nm) else _shelf_words(nm), 3)
 	for nd in branch["nodes"]:
 		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
 	branch["found"] = sim.shelf.size()
@@ -979,14 +977,15 @@ func _shelf_branch() -> Dictionary:
 
 
 ## A found unique's words on the shelf: the best tier of it found first (12 Oct, uniques by tier), then who it was.
-func _shelf_words(name: String) -> String:
-	var t: int = int(sim.shelf_tier.get(name, 0))
-	return ("Best T%d. " % t if t > 0 else "") + str(Words.UNIQUES.get(name, ""))
+func _shelf_words(nm: String) -> String:
+	var t: int = int(sim.shelf_tier.get(nm, 0))
+	return ("Best T%d. " % t if t > 0 else "") + str(Words.UNIQUES.get(nm, ""))
 
 
 ## A page of a list: a card a name with `lines` of words under it, as many as the lanes' area takes.
 func _pages_branch(title: String, list: Array, total: int, empty: String, words: Callable, lines: int, label := Callable()) -> Dictionary:
 	var row_h: int = NAME_H + lines * WORD_H + 4
+	@warning_ignore("integer_division")
 	var rows: int = maxi(1, (LANES_H + PAGE_GAP) / (row_h + PAGE_GAP))
 	var per: int = mini(PAGE_CELLS, rows * PAGE_COLS)
 	var pages: int = maxi(1, ceili(float(list.size()) / per))
@@ -1014,7 +1013,7 @@ func sum_items_raw() -> Array:
 	return sum_items([], false)
 
 
-func sum_items(_lanes: Array, fit := true) -> Array:
+func sum_items(_lanes_v: Array, fit := true) -> Array:
 	# every figure from every trained tree, notables and "also" figures included, typed ones only with their gun in
 	# hand (9 Oct, Matt: "may as well be consistent" - Spray's +25% was left out while it counted in the fight)
 	var sums := {}
@@ -1029,9 +1028,9 @@ func sum_items(_lanes: Array, fit := true) -> Array:
 	var converted := 0.0
 	for el in Data.ELEMENTS:
 		converted += sim.tree_sum("conv_%s_pct" % el)
-	var scale: float = 100.0 / converted if converted > 100.0 else 1.0     # past the whole hit the shares are cut back together, as the fight does
+	var sc: float = 100.0 / converted if converted > 100.0 else 1.0     # past the whole hit the shares are cut back together, as the fight does
 	for el in Data.ELEMENTS:
-		var conv: float = sim.tree_sum("conv_%s_pct" % el) * scale
+		var conv: float = sim.tree_sum("conv_%s_pct" % el) * sc
 		var inc: float = sim.tree_sum("%s_pct" % el)
 		if conv <= 0.0 and inc <= 0.0:
 			continue
@@ -1047,7 +1046,7 @@ func sum_items(_lanes: Array, fit := true) -> Array:
 	var pen: float = sim.tree_sum("phys_pen")
 	var bust: bool = sim.has_node("bust_them_up")
 	if phys_inc > 0.0 or pen > 0.0 or bust:
-		var share: float = 100.0 if bust else maxf(0.0, 100.0 - converted * scale)
+		var share: float = 100.0 if bust else maxf(0.0, 100.0 - converted * sc)
 		var ignores: String = "ignores their armour" if bust else ("ignores %.0f%%" % pen if pen > 0.0 else "")
 		# only the parts that are something (the reviewer's catch: a pen-only build read "+0%")
 		var long: Array = []
@@ -1108,9 +1107,9 @@ func sum_items(_lanes: Array, fit := true) -> Array:
 	for dropped in range(SUM_DROP.size() + 1):
 		tries.append([2, dropped])
 	var last_cut: Array = items
-	for tr in tries:
-		var level: int = tr[0]
-		var gone: Array = SUM_DROP.slice(0, tr[1])
+	for row2 in tries:
+		var level: int = row2[0]
+		var gone: Array = SUM_DROP.slice(0, row2[1])
 		var cut: Array = []
 		for it in items:
 			if str(it.get("tag", "")) in gone:
@@ -1206,7 +1205,7 @@ func _show_panel() -> void:
 	_respec.text = "Respec for %s" % Fmt.money(sim.respec_cost())
 	_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
-	var x := Pal.GRID_W - PAD
+	var x: float = Pal.GRID_W - PAD
 	x -= _respec.size.x
 	_respec.position.x = x
 	_ascend.visible = sim.cls != "" and (sim.can_ascend() or sim.cls2 != "")
@@ -1297,9 +1296,9 @@ func tile_for(id: String) -> Button:
 
 
 ## An Also chip's button by name, or null (for the tests).
-func also_button(name: String) -> Button:
+func also_button(nm: String) -> Button:
 	for a in _also:
-		if a["name"] == name and a["button"].visible:
+		if a["name"] == nm and a["button"].visible:
 			return a["button"]
 	return null
 
@@ -1309,9 +1308,9 @@ func _pick_also_at(k: int) -> void:
 
 
 ## An Also chip: its tree in the Yard's lane (the drawer and the shelf over the lanes); pressed again, the Yard back.
-func pick_also(name: String) -> void:
+func pick_also(nm: String) -> void:
 	_armed = ""
-	alt = "" if alt == name else name
+	alt = "" if alt == nm else nm
 	drawer_page = 0
 	_shown = ""
 	show_state(sim)
@@ -1325,18 +1324,18 @@ func _turn_page() -> void:
 
 ## A class button: free for a runner with no class (or nothing in the class trees); otherwise the first press
 ## arms it and the header names the price, the second changes (9 Oct: a click was a free respec).
-func _pick_class(name: String) -> void:
-	if sim.on_mission() or name == sim.cls or name == sim.cls2:
+func _pick_class(nm: String) -> void:
+	if sim.on_mission() or nm == sim.cls or nm == sim.cls2:
 		_armed = ""
 		show_state(sim)
 		return
-	if sim.class_change_cost(name) > 0 and _armed != name:
-		_armed = name
+	if sim.class_change_cost(nm) > 0 and _armed != nm:
+		_armed = nm
 		_armed_cls = sim.cls
 		show_state(sim)
 		return
 	_armed = ""
-	if sim.set_class(name):
+	if sim.set_class(nm):
 		selected = ""
 		alt = ""
 		acted.emit()

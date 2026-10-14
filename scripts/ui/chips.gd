@@ -148,8 +148,8 @@ func _lay(k: int, d: Dictionary, room: float) -> float:
 	tg.size.x = tag_w
 	var w := 0.0
 	var tails: Array = d.get("tail", [""])
-	for words in d["forms"]:
-		l.text = str(words)
+	for words_v in d["forms"]:
+		l.text = str(words_v)
 		var lw := ceilf(UI.text_width(l, l.text))
 		# the tail: its first form that fits beside the words; none when none does
 		tl.text = ""

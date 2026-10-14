@@ -54,6 +54,7 @@ const AFFIX_BTN_H := 40            # the picked affix's two jobs, a row under th
 const JOB_COLS := 2
 const JOB_H := 104                 # a job tile
 const JOB_GAP := 8
+@warning_ignore("integer_division")
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
 const JOBS := ["reroll", "add", "socket", "strip", "bump", "scrap"]
 const JOB_NAMES := {"bump": "Raise the level", "scrap": "Scrap it"}
@@ -138,6 +139,7 @@ func _init() -> void:
 		b.pressed.connect(_pick_affix.bind(k))
 		_piece.add_child(b)
 		var r := {"button": b, "stat": ""}
+		@warning_ignore("integer_division")
 		r["dot"] = UI.panel(b, Rect2(10, AFFIX_H / 2 - 4, 8, 8), UI.box(Pal.TEXT_2, 4))
 		r["label"] = UI.label(b, Rect2(26, 0, BODY_W - 2 * PAD - 80, AFFIX_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		r["tag"] = UI.label(b, Rect2(BODY_W - 2 * PAD - 40, 0, 50, AFFIX_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -155,6 +157,7 @@ func _init() -> void:
 	var jy := 40
 	for k in range(JOBS.size()):
 		var b := Button.new()
+		@warning_ignore("integer_division")
 		b.position = Vector2(PAD + (k % JOB_COLS) * (JOB_W + JOB_GAP), jy + (k / JOB_COLS) * (JOB_H + JOB_GAP))
 		b.size = Vector2(JOB_W, JOB_H)
 		b.text = ""
@@ -176,6 +179,7 @@ func _init() -> void:
 	_jobs.size.y = fy + FOOT_H + 14
 	# the Guns view: a card a gun - the slot and figure, the name and its chips, the mounts as tiles
 	var y := TOP
+	@warning_ignore("integer_division")
 	var tw := (BODY_W - 2 * PAD - ROW_GAP * (TILE_COLS - 1)) / TILE_COLS
 	for slot in GUNS:
 		var g := {}
@@ -191,6 +195,7 @@ func _init() -> void:
 		var ty := CARD_PAD + HEAD_LINE_H + NAME_H + CHIPS_H
 		for k in range(TILES):
 			var b := Button.new()
+			@warning_ignore("integer_division")
 			b.position = Vector2(PAD + (k % TILE_COLS) * (tw + ROW_GAP), ty + (k / TILE_COLS) * (UI.TILE_H + ROW_GAP))
 			b.size = Vector2(tw, UI.TILE_H)
 			b.text = ""
@@ -206,6 +211,7 @@ func _init() -> void:
 		_guns[slot] = g
 	# the sockets view: the same shape, four groups, two rows each
 	y = TOP
+	@warning_ignore("integer_division")
 	var sw := (BODY_W - 2 * PAD - 2 * ROW_GAP) / 3     # three across (9 Oct): the Yard's Third socket cuts a third
 	for slot in Data.SOCKET_SLOTS:
 		var g := {}
@@ -436,6 +442,7 @@ func _all_attachments(socketables: bool) -> Array:
 
 
 func _signature() -> String:
+	@warning_ignore("integer_division")
 	var parts := [view, sel_slot, sel_mount, str(sel_id), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", ""))]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
@@ -702,7 +709,7 @@ func _show_craft(it: Dictionary) -> void:
 			var costs := [sim.craft_cost(it, "one", sel_stat), sim.craft_cost(it, "lock", sel_stat)]
 			var forms := [["Re-roll this one", "Re-roll it", "This one"], ["Keep it, re-roll the rest", "Re-roll the rest", "The rest"]]
 			for f in range(3):
-				var x := PAD
+				var x: float = PAD
 				for i in range(2):
 					var b := _affix_buttons[i]
 					b.visible = costs[i] >= 0

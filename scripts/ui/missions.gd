@@ -17,6 +17,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 
 const COL_GAP := 16
+@warning_ignore("integer_division")
 const COL_W := (Pal.GRID_W - 2 * COL_GAP) / 3                 # 501
 const PAD := 20
 const INNER := COL_W - 2 * PAD                                # 461
@@ -73,6 +74,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the zones, as a row of buttons across the top
+	@warning_ignore("integer_division")
 	var zw := (Pal.GRID_W - COL_GAP * (Data.ZONES.size() - 1)) / Data.ZONES.size()
 	for z in range(Data.ZONES.size()):
 		var art := TextureRect.new()             # the zone's painted art behind its tab (9 Oct), when there is one
@@ -197,6 +199,7 @@ func show_state(s) -> void:
 	var settled := ""
 	for i in range(Data.TIERS.size()):
 		settled += "1" if sim.odds_settled(i) else "0"
+	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
@@ -348,23 +351,23 @@ func _pick_zone(z: int) -> void:
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
 ## the effect as the tail, whole then cut by clause with "+N". Shared with the radio.
-static func word_rows(sim, names: Array, tiers := {}) -> Array:
+static func word_rows(sim_v, names: Array, tiers := {}) -> Array:
 	var out := []
-	for name in names:
-		if tiers.has(name):
+	for nm in names:
+		if tiers.has(nm):
 			# a Radio word (9 Oct): its tier as the tag, its bite and pay as the tail, amber - it bites for what it pays
-			var t: int = int(tiers[name])
-			var ww: Array = sim.word_words(name, t)
+			var t: int = int(tiers[nm])
+			var ww: Array = sim_v.word_words(nm, t)
 			var tail := [str(ww[0]) + " · " + str(ww[1]), str(ww[0]).get_slice(", ", 0) + " · " + str(ww[1]).get_slice(", ", 0), str(ww[1]).get_slice(", ", 0)]
-			out.append({"forms": [name], "tag": Data.WORD_TIER_NAMES[clampi(t, 1, 4) - 1], "colour": Pal.WARN, "tail": tail})
+			out.append({"forms": [nm], "tag": Data.WORD_TIER_NAMES[clampi(t, 1, 4) - 1], "colour": Pal.WARN, "tail": tail})
 			continue
-		var m: Dictionary = sim.modifier(name)
+		var m: Dictionary = sim_v.modifier(nm)
 		var clauses: PackedStringArray = str(m["words"]).split(", ", false)
 		var forms := []
 		for n in range(clauses.size(), 0, -1):
 			forms.append(", ".join(clauses.slice(0, n)) + ((" +%d" % (clauses.size() - n)) if n < clauses.size() else ""))
 		var tone := word_tone(m)
-		out.append({"forms": [name], "colour": Pal.tone_color(tone) if tone != "" else Pal.TEXT_2, "tail": forms})
+		out.append({"forms": [nm], "colour": Pal.tone_color(tone) if tone != "" else Pal.TEXT_2, "tail": forms})
 	return out
 
 

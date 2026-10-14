@@ -44,6 +44,7 @@ func _init() -> void:
 	_corner.visible = false
 	_up = UI.label(self, Rect2(0, 0, UP, UP), "▲", "SemiBold", 11, Pal.GOOD, HORIZONTAL_ALIGNMENT_CENTER)
 	_up.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	@warning_ignore("integer_division")
 	_up.add_theme_stylebox_override("normal", UI.box(Color(Pal.BG, 0.85), UP / 2, 1, Pal.GOOD))
 	_up.visible = false
 
@@ -102,11 +103,12 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 			_corner.add_theme_font_size_override("font_size", (9 if tiny else 11) if small else Pal.CELL_TEXT)
 			var n: int = int(it["rounds"]) if Items.is_ammo(it) else int(it["count"])
 			if small and n >= 1000:
+				@warning_ignore("integer_division")
 				_corner.text = "%.1fk" % (n / 1000.0) if (n < 10000 and not tiny) else "%dk" % (n / 1000)
 			# a small pouch: the count laid over the whole cell, bottom right (a label won't go under its font's line height)
 			_corner.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM if small else VERTICAL_ALIGNMENT_CENTER
-			_corner.position = Vector2(0, 0 if small else size.y - 20)
-			_corner.size = Vector2(size.x - 2, size.y if small else 18)
+			_corner.position = Vector2(0, 0.0 if small else size.y - 20)
+			_corner.size = Vector2(size.x - 2, size.y if small else 18.0)
 			_corner.visible = true
 		return
 	_art.visible = false

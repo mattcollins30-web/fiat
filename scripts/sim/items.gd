@@ -51,11 +51,11 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 	# affixes roll, and the rarity sets the cap (a Legendary from the first site is five T5s on a tier-1 base)
 	# the item's level: the site's (its tier and depth: the endgame, 7 Oct) when the find is a site's, else the
 	# base's tier and the depth as before (the shelf, the gamble, the Clinic)
-	var ilvl: int = level if level >= 0 else int(base["tier"]) + maxi(0, depth)
+	var ilvl_v: int = level if level >= 0 else int(base["tier"]) + maxi(0, depth)
 	var affixes: Array = []
 	var picked := pick_affixes(slot, int(Data.RARITIES[r]["affixes"]), rng)
 	for a in picked:
-		affixes.append(roll_affix(a, ilvl, rng, 0, int(Data.RARITIES[r]["tier"])))
+		affixes.append(roll_affix(a, ilvl_v, rng, 0, int(Data.RARITIES[r]["tier"])))
 	var attachments := {}
 	for name in base.get("attachments", []):
 		attachments[name] = null
@@ -75,7 +75,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,
-		"attachments": attachments, "tier": base["tier"], "ilvl": ilvl,
+		"attachments": attachments, "tier": base["tier"], "ilvl": ilvl_v,
 		"value": int(round(base["value"] * Data.RARITIES[r]["value"])),
 	}
 	if slot == Data.AMMO:
@@ -343,20 +343,20 @@ static func pick_affixes(slot: String, n: int, rng: RandomNumberGenerator, have:
 
 
 ## The best tier an item level opens: T1 always, T5 from level TIER_CAP[4].
-static func tier_cap(ilvl: int) -> int:
+static func tier_cap(ilvl_v: int) -> int:
 	var best := 1
 	for k in range(Data.TIER_CAP.size()):
-		if ilvl >= int(Data.TIER_CAP[k]):
+		if ilvl_v >= int(Data.TIER_CAP[k]):
 			best = k + 1
 	return best
 
 
 ## The floor an item level puts under a drop's affix tiers: T1 until TIER_FLOOR[1], T2 from there, and so
 ## on; never above the cap the rarity gives (a Common from the deep is still one T1).
-static func tier_floor(ilvl: int) -> int:
+static func tier_floor(ilvl_v: int) -> int:
 	var lo := 1
 	for k in range(Data.TIER_FLOOR.size()):
-		if ilvl >= int(Data.TIER_FLOOR[k]):
+		if ilvl_v >= int(Data.TIER_FLOOR[k]):
 			lo = k + 1
 	return lo
 
@@ -364,9 +364,9 @@ static func tier_floor(ilvl: int) -> int:
 ## A tier from the ones open, the better the rarer.
 ## A tier between the level's floor and the cap, by weight. The cap is the rarity's on a drop
 ## (`rarity_cap` > 0), the level's at the Bench.
-static func roll_tier(ilvl: int, rng: RandomNumberGenerator, rarity_cap := 0) -> int:
-	var cap := rarity_cap if rarity_cap > 0 else tier_cap(ilvl)
-	var lo := mini(tier_floor(ilvl), cap)
+static func roll_tier(ilvl_v: int, rng: RandomNumberGenerator, rarity_cap_v := 0) -> int:
+	var cap := rarity_cap_v if rarity_cap_v > 0 else tier_cap(ilvl_v)
+	var lo := mini(tier_floor(ilvl_v), cap)
 	var total := 0.0
 	for t in range(lo, cap + 1):
 		total += float(Data.TIER_WEIGHT[t - 1])
@@ -391,24 +391,24 @@ static func tier_range(a: Dictionary, tier: int) -> Array:
 	return [from, maxi(from, to)]
 
 
-static func roll_affix(a: Dictionary, ilvl: int, rng: RandomNumberGenerator, tier := 0, rarity_cap := 0, top := false) -> Dictionary:
-	var t := tier if tier > 0 else roll_tier(ilvl, rng, rarity_cap)
+static func roll_affix(a: Dictionary, ilvl_v: int, rng: RandomNumberGenerator, tier := 0, rarity_cap_v := 0, top := false) -> Dictionary:
+	var t := tier if tier > 0 else roll_tier(ilvl_v, rng, rarity_cap_v)
 	var r := tier_range(a, t)
 	var lo: int = int(ceil((r[0] + r[1]) / 2.0)) if top else int(r[0])      # the Bench's Masterwork (9 Oct): the top half of the tier
-	return {"stat": a["stat"], "value": int(round(rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl))), "tier": t}
+	return {"stat": a["stat"], "value": int(round(rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl_v))), "tier": t}
 
 
 ## The deep drop's edge (7 Oct): an affix's value times this at an item level - nothing to ILVL_FROM, ILVL_SCALE a level
 ## past it, no top - so a depth-20 find of a tier beats a depth-10 one, and the chase never ends.
-static func ilvl_mult(ilvl: int) -> float:
-	return 1.0 + Data.ILVL_SCALE * maxi(0, ilvl - Data.ILVL_FROM)
+static func ilvl_mult(ilvl_v: int) -> float:
+	return 1.0 + Data.ILVL_SCALE * maxi(0, ilvl_v - Data.ILVL_FROM)
 
 
 ## A fixed affix list (a unique's, a set piece's) at an item level: the values scaled as a drop's would be.
-static func _scaled(affixes: Array, ilvl: int) -> Array:
+static func _scaled(affixes: Array, ilvl_v: int) -> Array:
 	var out: Array = affixes.duplicate(true)
 	for a in out:
-		a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl)))
+		a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl_v)))
 	return out
 
 
@@ -943,16 +943,16 @@ static func grade_words(b: Dictionary) -> String:
 ## An attachment's headline: its biggest effect.
 static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
-	var size := 0.0
+	var sz := 0.0
 	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
 			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
 		var v := att_stat(it, pair[0])
-		if absf(v) > size:
-			size = absf(v)
-			var sign: String = "+" if v > 0 else "−"
+		if absf(v) > sz:
+			sz = absf(v)
+			var sgn: String = "+" if v > 0 else "−"
 			if pair[0].begins_with("conv_"):
-				sign = ""                     # "15% of hits as fire" is a share, not a bonus
-			best = ["%s%.0f%s" % [sign, absf(v), "%" if pair[1].begins_with("%") else ""], pair[1].trim_prefix("%").strip_edges()]
+				sgn = ""                     # "15% of hits as fire" is a share, not a bonus
+			best = ["%s%.0f%s" % [sgn, absf(v), "%" if pair[1].begins_with("%") else ""], pair[1].trim_prefix("%").strip_edges()]
 	return best
 
 
@@ -964,8 +964,8 @@ static func att_words(it: Dictionary, short := false, base_only := false) -> Str
 			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
-			var sign: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
-			out.append("%s%.0f%s %s" % [sign, absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
+			var sgn: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
+			out.append("%s%.0f%s %s" % [sgn, absf(v), "" if pair[0] == "salt" else "%", pair[2] if short else pair[1]])
 	return ", ".join(out)
 
 

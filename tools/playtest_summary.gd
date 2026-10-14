@@ -246,12 +246,14 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 				continue
 			var regens: Array = these.map(func(e): return float(e.get("regen", 0.0)))
 			regens.sort()
+			@warning_ignore("integer_division")
 			L.append("| %s (%.0f-%.0f%%) | %d | %d | %s | %s | %.1f |" % [band[2], 100.0 * float(band[0]), minf(100.0, 100.0 * float(band[1])), these.size(),
 				these.filter(func(e): return e.get("outcome", "") == "Dead").size(), _pct(these.filter(func(e): return e.get("wounded", false)).size(), these.size()),
 				_pct(these.filter(func(e): return e.get("outcome", "") == "Cut and run").size(), these.size()), regens[regens.size() / 2]])
 		var odds_all: Array = read_runs.map(func(e): return float(e["odds"]))
 		odds_all.sort()
 		L.append("")
+		@warning_ignore("integer_division")
 		L.append("Median odds at the gate: %.0f%%; the lowest taken: %.0f%%; %d of %d runs read." % [100.0 * odds_all[odds_all.size() / 2], 100.0 * odds_all[0], read_runs.size(), runs.size()])
 	# ---- hour by hour
 	var snaps: Array = ch.filter(func(e): return e["k"] == "snap")

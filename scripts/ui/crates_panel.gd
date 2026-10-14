@@ -96,9 +96,9 @@ func build(w: float, h: float = HEIGHT) -> void:
 		lock.size = Vector2(24, 24)
 		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(lock)
-		var name := UI.label(p, Rect2(4, ART + 2, tw - 8, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+		var nm := UI.label(p, Rect2(4, ART + 2, tw - 8, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
 		var pips := UI.label(p, Rect2(4, TILE_H - 25, tw - 8, 23), "", "SemiBold", 12, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
-		_tiles.append({"panel": p, "art": art, "name": name, "pips": pips, "tick": tick, "glass": glass, "lock": lock})
+		_tiles.append({"panel": p, "art": art, "name": nm, "pips": pips, "tick": tick, "glass": glass, "lock": lock})
 	_finds_head = UI.head(self, Rect2(PAD, FINDS_HEAD_Y, inner, UI.HEAD_H), "")
 	for k in range(FINDS_MAX):
 		var c := ItemCell.new()
@@ -148,8 +148,8 @@ func build(w: float, h: float = HEIGHT) -> void:
 
 ## A crate's picture: its art if it's painted (open or shut), else the line glyph in the crate's colour.
 static func crate_texture(key: String, open: bool) -> Array:
-	for name in (["crates/%s_open" % key, "crates/%s" % key] if open else ["crates/%s" % key]):
-		var tex: Texture2D = UI.glyph_texture(name)
+	for nm in (["crates/%s_open" % key, "crates/%s" % key] if open else ["crates/%s" % key]):
+		var tex: Texture2D = UI.glyph_texture(nm)
 		if tex != null:
 			return [tex, Color.WHITE]
 	return [NodeGlyphs.texture("crate"), TINT.get(key, Pal.TEXT_2)]
@@ -250,7 +250,7 @@ func show_crates(sim, m: Dictionary) -> void:
 	_prev.disabled = _page == 0
 	_next_page.disabled = _page >= pages - 1
 	_page_label.text = "%d / %d" % [_page + 1, pages]
-	var sig: String = "%d|%d|%s|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x): return [int(x["id"]), Items.stack_size(x)]).hash(), sim.equipped.hash()]     # the counts and the arrows too (the review)
+	var sig: String = "%d|%d|%s|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x_in): return [int(x_in["id"]), Items.stack_size(x_in)]).hash(), sim.equipped.hash()]     # the counts and the arrows too (the review)
 	var x: float = PAD
 	_floor_items = {}
 	for k in range(FINDS_MAX):

@@ -822,8 +822,8 @@ func retire() -> bool:
 	auto_tier = -1
 	_starter_loadout()
 	var pool: Array = []
-	for tr in Data.TRAITS:
-		pool.append(tr["name"])
+	for row in Data.TRAITS:
+		pool.append(row["name"])
 	pool.shuffle()
 	candidates = [pool[0], pool[1]]
 	if promised != "":
@@ -940,8 +940,8 @@ func _contract_floor(c: Dictionary) -> void:
 		return
 	match str(c.get("pay", "")):
 		"cash":
-			var price: float = float(sell_price({"value": int(round(worth))}))
-			c["amount"] = maxi(int(c["amount"]), int(round(price * Data.CONTRACT_OVER_FENCE / 10.0)) * 10)
+			var price_v: float = float(sell_price({"value": int(round(worth))}))
+			c["amount"] = maxi(int(c["amount"]), int(round(price_v * Data.CONTRACT_OVER_FENCE / 10.0)) * 10)
 		"scrap":
 			c["amount"] = maxi(int(c["amount"]), int(ceil(worth / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))
 
@@ -1118,8 +1118,8 @@ func _unique_named(name: String) -> Dictionary:
 func roll_mate() -> Dictionary:
 	var at := shop_unique_tier()
 	var u: Dictionary = pick_unique(loose_uniques(deepest()), at, true)    # his deep stock opens as you go deeper
-	var tier: int = Items.unique_tier(u, at)
-	return {"unique": u["name"], "tier": tier, "notes": Data.MATE_NOTES * tier}
+	var tier_v: int = Items.unique_tier(u, at)
+	return {"unique": u["name"], "tier": tier_v, "notes": Data.MATE_NOTES * tier_v}
 
 
 ## The tier a shop's unique comes at (the mate, the Back room, a gamble): the loot tier of the deepest site dug.
@@ -1370,6 +1370,7 @@ func site_state(i: int) -> String:
 		return Words.SKY["fresh"]
 	var back: float = recover_s() - (elapsed - float(worn[i]))
 	var mins: int = int(ceil(back / 60.0))
+	@warning_ignore("integer_division")
 	var when := ("%dh%02d" % [mins / 60, mins % 60]) if mins >= 60 else ("%d min" % mins)
 	return (Words.SKY["worn"] if w > 0.5 else Words.SKY["settling"]) % when
 
@@ -1568,14 +1569,14 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 			if Items.ilvl(it) >= int(it["tier"]) + bump_cap():
 				return -1
 			return int(Data.CRAFT[kind]["notes"]) * Items.ilvl(it)
-	var price: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(it) * (int(it["rarity"]) + 1)
+	var price_v: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(it) * (int(it["rarity"]) + 1)
 	if kind == "one":
 		for a in it["affixes"]:
 			if a["stat"] == stat:
-				price *= int(a.get("tier", 1))     # the better the tier, the dearer
+				price_v *= int(a.get("tier", 1))     # the better the tier, the dearer
 	if yard_has("cheap_parts"):
-		price = int(round(price * 0.75))      # the Bench's Cheap parts
-	return _inf(price)
+		price_v = int(round(price_v * 0.75))      # the Bench's Cheap parts
+	return _inf(price_v)
 
 
 func craft_in_notes(kind: String) -> bool:
@@ -1701,7 +1702,7 @@ func build_options(kind: String) -> Array:
 	return out
 
 
-func _build_entry(kind: String, name: String, cost: int, from: String, from_n: int, has_from: bool, why: String, tier: int) -> Dictionary:
+func _build_entry(kind: String, name: String, cost: int, from: String, from_n: int, has_from: bool, why: String, tier_v: int) -> Dictionary:
 	# room for what it makes (the eighteenth read, 8 Oct: a bot built a box a run for thirty hours and the stash sat at
 	# 327 of 234 with every find dropped): a box or a grade needs a stack with room or a cell, a med or a grenade a cell
 	var made_slot: String = Data.AMMO if (kind == "box" or kind == "grade") else (Data.MEDICAL if kind == "med" else (Data.GRENADE if kind == "grenade" else "Primary"))
@@ -1709,7 +1710,7 @@ func _build_entry(kind: String, name: String, cost: int, from: String, from_n: i
 	var ok: bool = has_from and scrap >= cost and mission == null and room
 	if why == "" and not ok:
 		why = "The runner is out" if mission != null else ("No room in the stash" if not room else "Short of scrap")
-	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier}
+	return {"kind": kind, "name": name, "scrap": cost, "from": from, "from_n": from_n, "ok": ok, "why": why, "tier": tier_v}
 
 
 func build_option(kind: String, name: String) -> Dictionary:
@@ -1765,9 +1766,9 @@ func _take_rounds(base_name: String, n: int) -> void:
 	for st in stacks:
 		if left <= 0:
 			break
-		var take: int = mini(left, int(st["rounds"]))
-		Items.set_stack(st, int(st["rounds"]) - take)
-		left -= take
+		var take_v: int = mini(left, int(st["rounds"]))
+		Items.set_stack(st, int(st["rounds"]) - take_v)
+		left -= take_v
 		if int(st["rounds"]) <= 0:
 			stash.erase(st)
 
@@ -1819,23 +1820,23 @@ func craft(id: int, kind: String, stat := "") -> bool:
 		"bump":
 			it["ilvl"] = mini(int(it["tier"]) + bump_cap(), Items.ilvl(it) + bump_levels())
 	# what the Bench did, in words the player can check against the piece
-	var words := _craft_words(it, kind, stat, before, sockets_before, level_before)
-	last_craft = {"id": id, "kind": kind, "words": words}
+	var words_v := _craft_words(it, kind, stat, before, sockets_before, level_before)
+	last_craft = {"id": id, "kind": kind, "words": words_v}
 	chron("craft", {"kind": kind, "stat": stat, "cost": cost, "item": _chron_item(it), "worn": not stash.has(it)})
 	if not stash.has(it):
 		_surv_cache = {}                       # a job on worn kit (the Workshop, 9 Oct): the odds read it again, the id is the same
 		_dry_memo.clear()
 	if craft_in_notes(kind):
 		notes -= cost
-		log_event("In the Workshop, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words])
+		log_event("In the Workshop, for %d notes, %s: %s" % [cost, it["base"].to_lower(), words_v])
 	else:
 		cash -= float(cost)
-		log_event("In the Workshop, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words])
+		log_event("In the Workshop, for %s, %s: %s" % [_cash_words(float(cost)), it["base"].to_lower(), words_v])
 	return true
 
 
 ## "Added +12% damage · T2", "Re-rolled: +4% damage · T1, +2 HP/s · T1 → ...".
-func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, sockets_before: int, level_before: int) -> String:
+func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, _sockets_before: int, level_before: int) -> String:
 	var after: Array = Items.affix_lines(it, false, true)
 	match kind:
 		"add":
@@ -1913,6 +1914,7 @@ func atlas_col(key: String) -> int:
 		if int(a["column"]) != lane:
 			continue
 		if a["key"] == key:
+			@warning_ignore("integer_division")
 			return k / 2
 		k += 1
 	return -1
@@ -2301,11 +2303,11 @@ func pace() -> float:
 
 
 func _pace_raw() -> float:
-	var worn := 0.0
+	var worn_v := 0.0
 	for s in Data.SLOTS:
 		if equipped[s] != null:
-			worn += Items.base_pace(equipped[s])
-	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
+			worn_v += Items.base_pace(equipped[s])
+	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn_v) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
 		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (0.85 if has_node("physical_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0) * wound_mult("pace")
 
 
@@ -2493,12 +2495,12 @@ func loose_uniques(at_depth: int) -> Array:
 ## band's weight picks (levelling 10, core 4, chase 1). {} when none can drop there; `any` falls back (a shop's:
 ## something is always on offer) to the ones the tier has outgrown, held at their top, and only then the whole pool -
 ## never a deeper one than the player's dug to when an outgrown one will do (the reviewer's catch).
-func pick_unique(pool: Array, tier: int, any := false) -> Dictionary:
-	var fits: Array = pool.filter(func(u): return Items.unique_fits(u, tier))
+func pick_unique(pool: Array, tier_v: int, any := false) -> Dictionary:
+	var fits: Array = pool.filter(func(u): return Items.unique_fits(u, tier_v))
 	if fits.is_empty():
 		if not any or pool.is_empty():
 			return {}
-		fits = pool.filter(func(u): return u.has("range") and int(u["range"][1]) < tier)
+		fits = pool.filter(func(u): return u.has("range") and int(u["range"][1]) < tier_v)
 		if fits.is_empty():
 			fits = pool
 	var total := 0.0
@@ -2515,10 +2517,10 @@ func pick_unique(pool: Array, tier: int, any := false) -> Dictionary:
 ## The loose uniques a find can drop: gated at its depth or shallower, the range taking its tier. Cached: the table
 ## never changes, and _find reads it every find.
 var _loose_at := {}
-func loose_at(at_depth: int, tier: int) -> Array:
-	var key := at_depth * 100 + tier
+func loose_at(at_depth: int, tier_v: int) -> Array:
+	var key := at_depth * 100 + tier_v
 	if not _loose_at.has(key):
-		_loose_at[key] = loose_uniques(at_depth).filter(func(u): return Items.unique_fits(u, tier))
+		_loose_at[key] = loose_uniques(at_depth).filter(func(u): return Items.unique_fits(u, tier_v))
 	return _loose_at[key]
 
 
@@ -3680,11 +3682,11 @@ func strip(slot: String, mount: String) -> bool:
 
 ## The stash's attachments that go on this mount, best first.
 ## The stash's parts for a mount, best first; `gun_type` given, only the ones that go on that type of gun.
-func attachments_for(mount: String, gun_type := "") -> Array:
+func attachments_for(mount: String, gun_type_v := "") -> Array:
 	var out: Array = []
 	for it in stash:
 		if Items.is_attachment(it) and (it["mount"] == mount or (mount.begins_with("socket") and it["mount"] == "socket")):
-			if gun_type == "" or Items.att_fits(it, gun_type):
+			if gun_type_v == "" or Items.att_fits(it, gun_type_v):
 				out.append(it)
 	out.sort_custom(func(a, b): return Items.score(a) > Items.score(b))
 	return out
@@ -3875,9 +3877,9 @@ func is_convoy(i: int) -> bool:
 
 ## A boss as they come at this tier and depth: the crew's head, or at full strength.
 func boss_form(b: Dictionary, e: Dictionary, pinnacle: bool, convoy := false) -> Dictionary:
-	var hp: float = e["hp"] * float(b["hp"]) * (Data.PINNACLE_HP if pinnacle else 1.0) * (Data.CONVOY_HP if convoy else 1.0)
-	var dps: float = e["dps"] * float(b["dps"]) * (Data.PINNACLE_DPS if pinnacle else 1.0) * (Data.CONVOY_DPS if convoy else 1.0)
-	return {"name": b["name"], "hp": hp, "dps": dps, "zone": int(b["zone"]), "pinnacle": pinnacle}
+	var hp_v: float = e["hp"] * float(b["hp"]) * (Data.PINNACLE_HP if pinnacle else 1.0) * (Data.CONVOY_HP if convoy else 1.0)
+	var dps_v: float = e["dps"] * float(b["dps"]) * (Data.PINNACLE_DPS if pinnacle else 1.0) * (Data.CONVOY_DPS if convoy else 1.0)
+	return {"name": b["name"], "hp": hp_v, "dps": dps_v, "zone": int(b["zone"]), "pinnacle": pinnacle}
 
 
 func can_arm_boss(i: int) -> bool:
@@ -3928,17 +3930,17 @@ static func lv_at(i: int, d: int) -> int:
 
 ## The gear tier a level draws bases from: the streets reach the city's bases at depth 9, the Barracks from depth 1.
 ## Past the campaign's six (10 Oct, docs/design/deep_guns.md): a deep tier a step from level 12, 16 and 20.
-static func loot_tier_at(level: int) -> int:
-	var t: int = clampi(int(floor(level * Data.CAMPAIGN_TIER / 9.0)), 1, Data.CAMPAIGN_TIER)
+static func loot_tier_at(level_v: int) -> int:
+	var t: int = clampi(int(floor(level_v * Data.CAMPAIGN_TIER / 9.0)), 1, Data.CAMPAIGN_TIER)
 	for at in Data.DEEP_TIER_LEVELS:
-		if level >= int(at):
+		if level_v >= int(at):
 			t += 1
 	return mini(t, Data.MAX_TIER)
 
 
 ## The top a tier-up can reach at a level: a campaign site's "a tier up" stays in the campaign's six.
-static func loot_cap(level: int) -> int:
-	return Data.CAMPAIGN_TIER if level < int(Data.DEEP_TIER_LEVELS[0]) else Data.MAX_TIER
+static func loot_cap(level_v: int) -> int:
+	return Data.CAMPAIGN_TIER if level_v < int(Data.DEEP_TIER_LEVELS[0]) else Data.MAX_TIER
 
 
 ## The tier as it will be fought: depth and intel applied. Every multiplier
@@ -4275,9 +4277,9 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	_dry_memo = {}
 	_dry_on = true
 	_gang_arrives(m)                          # Guard at the first gang, as a run (12 Oct); after the memo's reset (the review)
-	var guard := 0
+	var guard_v := 0
 	_dry_min_hp = 1.0
-	while guard < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
+	while guard_v < 450 and not m.get("dead", false):    # fifteen minutes of fighting is a loss
 		_tick(DRY_STEP)
 		prof["dry_ticks"] += 1
 		_dry_min_hp = minf(_dry_min_hp, hp / maxf(max_hp(), 1.0))
@@ -4291,8 +4293,8 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		# a player who patches up under 40%, like the Use button
 		if m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 			use_med(first_med()["id"])
-		guard += 1
-	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard < 450     # out of time reads as dead
+		guard_v += 1
+	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard_v < 450     # out of time reads as dead
 	_dry_on = false
 	hp = keep["hp"]
 	xp = keep["xp"]
@@ -4523,15 +4525,15 @@ func _time_out(m: Dictionary) -> void:
 	if auto_tier >= 0:
 		auto_tier = -1                         # out of time stops the auto-run, as a wound or a death does: no run after run lost
 		log_event("Auto-run stopped")
-	var worn: Array = []
+	var worn_v: Array = []
 	for s in Data.SLOTS:
 		if equipped[s] != null:
-			worn.append(s)
+			worn_v.append(s)
 	var lost: Array = []
 	var lost_slots: Array = []
-	for k in range(mini(Data.CLOCK_LOSE_KIT, worn.size())):
-		var s: String = worn[rng.randi_range(0, worn.size() - 1)]
-		worn.erase(s)
+	for k in range(mini(Data.CLOCK_LOSE_KIT, worn_v.size())):
+		var s: String = worn_v[rng.randi_range(0, worn_v.size() - 1)]
+		worn_v.erase(s)
 		lost_slots.append(s)
 		var it: Dictionary = equipped[s]
 		equipped[s] = null
@@ -4547,10 +4549,10 @@ func _time_out(m: Dictionary) -> void:
 			rig = []
 	# the hand-me-downs in their places, once every loss is in, as a new runner arrives with (no runner left with fists
 	# and a clock: a spiral); the hammer needs no rounds (13 Oct)
-	var start := {"Primary": START_WEAPON, "Armour": "Work jacket", "Backpack": "Plastic bag", "Rig": "Bum bag"}
+	var start_v := {"Primary": START_WEAPON, "Armour": "Work jacket", "Backpack": "Plastic bag", "Rig": "Bum bag"}
 	for s in lost_slots:
-		if start.has(s):
-			equipped[s] = _plain(s, start[s])
+		if start_v.has(s):
+			equipped[s] = _plain(s, start_v[s])
 	var kept_pack: bool = insured and yard_has("insurance_desk")
 	var carried := ""
 	if not kept_pack and not m["found"].is_empty():
@@ -4590,16 +4592,16 @@ func set_leave_full(on: bool) -> bool:
 
 ## HP back, counted for the run screen's green numbers (regen, a med, life on a kill). What heals past full is Guard
 ## for the Paramedic, and the `overflow` share of it for a med with that line; `med` marks a med's heal.
-func _heal(m: Dictionary, amount: float, med := false, overflow := 0.0) -> void:
+func _heal(m: Dictionary, amount: float, _med := false, overflow := 0.0) -> void:
 	var before := hp
 	hp = minf(max_hp(), hp + amount)
 	m["healed"] = float(m.get("healed", 0.0)) + (hp - before)
 	# Guard (12 Oct, docs/design/shields.md): what heals past full - all of it the Paramedic's, a med's `overflow`
 	# share anyone's
-	var past: float = maxf(0.0, amount - (hp - before))
+	var past_v: float = maxf(0.0, amount - (hp - before))
 	var share: float = 1.0 if class_data().get("overheal", false) else overflow
-	if past > 0.0 and share > 0.0:
-		_guard_add(m, past * minf(1.0, share))
+	if past_v > 0.0 and share > 0.0:
+		_guard_add(m, past_v * minf(1.0, share))
 
 
 ## Guard (12 Oct, docs/design/shields.md): a second bar over HP that their fire takes first. Its cap: GUARD_SHARE of
@@ -4686,9 +4688,9 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			log_event("%s %s" % [Words.EVENTS["convoy"], Words.EVENTS["convoy_notes"]])
 		"trapped":
 			var pool: Array = []
-			for tr in Data.TRAITS:
-				if tr["name"] != runner_trait:
-					pool.append(tr["name"])
+			for row in Data.TRAITS:
+				if row["name"] != runner_trait:
+					pool.append(row["name"])
 			promised = pool[rng.randi_range(0, pool.size() - 1)]
 			log_event(Words.EVENTS["trapped"])
 		"cache":
@@ -4939,7 +4941,7 @@ func phys_resist(r: float) -> float:
 
 ## The joints' payoffs on your hit (9 Oct, docs/design/trees.md §3): what a closed joint adds to a tick of
 ## your fire, after the hit's types have landed.
-func _joints_on_hit(m: Dictionary, t: Dictionary, landed_total: float, held: String, dt: float) -> void:
+func _joints_on_hit(m: Dictionary, _t: Dictionary, landed_total: float, held: String, dt: float) -> void:
 	if landed_total <= 0.0:
 		return
 	if not m.has("dots"):
@@ -5234,10 +5236,10 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
 		# the last of the convoy: the Lorry's Load comes home too, and the Yard's ending is written (7 Oct)
-		var load := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
-		m["found"].append(load)
-		_read(load)
-		log_event("The convoy's done. Found: %s" % load["unique"])
+		var ld := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
+		m["found"].append(ld)
+		_read(ld)
+		log_event("The convoy's done. Found: %s" % ld["unique"])
 		if not lorry_done:
 			lorry_done = true
 			lorries += 1
@@ -5809,7 +5811,7 @@ func way_out_s(t: Dictionary, m = null) -> float:
 
 ## The gang at the door: the site's own (its words on it), the size of the gangs after a clear's first - the Flares,
 ## Trapline and the Poacher's snare shrink it as they shrink those.
-func door_gang(t: Dictionary) -> int:
+func door_gang(_t: Dictionary) -> int:
 	var size: int = maxi(1, PATROL_BASE - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
 	if has_rule("scouts_whistle"):
 		size = 1
@@ -6093,8 +6095,8 @@ func _kia() -> void:
 	restock()
 	# two turn up; one is who was brought home from a run, if anyone was
 	var pool: Array = []
-	for tr in Data.TRAITS:
-		pool.append(tr["name"])
+	for row in Data.TRAITS:
+		pool.append(row["name"])
 	pool.shuffle()
 	candidates = [pool[0], pool[1]]
 	if promised != "":
@@ -6845,6 +6847,7 @@ func split_stack(id: int) -> bool:
 	for where in [stash, rig]:
 		for it in where:
 			if it["id"] == id:
+				@warning_ignore("integer_division")
 				var half: int = Items.stack_size(it) / 2
 				var off: Dictionary = Items.one_of(it)
 				Items.set_stack(off, half)
@@ -6959,7 +6962,6 @@ func _idle_tidy() -> void:
 	if auto_equip:
 		var changed := []
 		for s in Data.SLOTS:
-			var was = equipped[s]
 			if equip_best(s):
 				changed.append(Items.full_name(equipped[s]))
 		if not changed.is_empty():
@@ -7282,11 +7284,11 @@ func tick_played(delta: float) -> void:
 
 ## What a snapshot holds: the purse, the runner, the reach, the spend.
 func snap_line() -> Dictionary:
-	var deepest := 0
+	var deepest_v := 0
 	for d in best_depth:
-		deepest = maxi(deepest, int(d))
+		deepest_v = maxi(deepest_v, int(d))
 	return {"cash": int(cash), "cash_in": int(cash_in), "notes": notes, "scrap": scrap, "salvage": salvage.duplicate(), "xp": int(xp),
-		"best_tier": best_tier, "best_depth": best_depth.duplicate(), "deepest": deepest, "points": training_points, "spent": points_spent(),
+		"best_tier": best_tier, "best_depth": best_depth.duplicate(), "deepest": deepest_v, "points": training_points, "spent": points_spent(),
 		"yard_built": yard_built(), "atlas": atlas_spent(), "stash": stash.size(), "dps": snappedf(dps(), 0.1), "max_hp": int(max_hp()),
 		"mit": snappedf(mitigation(), 0.001), "runs": runs_total, "lost": operators_lost, "kit": loadout_value()}
 
@@ -7346,7 +7348,10 @@ static func _shift_sites(d: Dictionary) -> void:
 	front.call("boss_paid", [])
 	for key in ["weather", "bosses_beaten"]:
 		if d.has(key) and d[key] is Array:
-			d[key].push_front("" if key == "weather" else true)
+			if key == "weather":
+				d[key].push_front("")
+			else:
+				d[key].push_front(true)
 	d["best_tier"] = int(d.get("best_tier", 0)) + n
 	if int(d.get("auto_tier", -1)) >= 0:
 		d["auto_tier"] = int(d["auto_tier"]) + n

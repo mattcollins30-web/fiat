@@ -38,6 +38,7 @@ const PAD := 20
 const INNER := BODY_W - 2 * PAD
 const LINE_H := 30
 const PANEL_LINES := 4
+@warning_ignore("integer_division")
 const COL_W := (GRID_W - 3 * PAD) / 2
 const TAB_H := 40                                             # the tabs, along the band's foot, right
 const TAB_W := 160
@@ -46,6 +47,7 @@ const TOP := 44                                               # the side column'
 const TILE_GAP := 8
 const SIDE_TILES := 11            # five rarities, five boxes, the shelf (the pass, 6 Oct)
 const WORD_Y := PAD + 38 + 28 + 12 + UI.HEAD_H + 4                # the offer row's top, under the title, the line and its head
+@warning_ignore("integer_division")
 const OFFER_W := (GRID_W - 2 * PAD - 4 * TILE_GAP) / 5
 const OFFER_H := 180
 const LAST_Y := WORD_Y + OFFER_H + 16 + UI.HEAD_H + 4             # the last word's item head
@@ -315,15 +317,15 @@ func show_state(s) -> void:
 	UI.style_button(_tabs[0], showing == "shelf")
 	UI.style_button(_tabs[1], showing == "stash")
 	if kind == "fence":
-		var ready := 0
+		var is_ready := 0
 		for k in range(sim.contracts.size()):
 			if sim.can_hand_in(k):
-				ready += 1
-		if ready > 0:
-			_tabs[2].text = "Contracts ✓%d" % ready
+				is_ready += 1
+		if is_ready > 0:
+			_tabs[2].text = "Contracts ✓%d" % is_ready
 		else:
 			_tab_text(_tabs[2], ["Contracts (%d)" % sim.contracts.size(), "Contracts"])
-		UI.style_button(_tabs[2], showing == "contracts", "good" if (ready > 0 and showing != "contracts") else "")
+		UI.style_button(_tabs[2], showing == "contracts", "good" if (is_ready > 0 and showing != "contracts") else "")
 		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
 		UI.style_button(_tabs[3], showing == "word")
 		_show_deals()
@@ -334,11 +336,11 @@ func show_state(s) -> void:
 
 ## The Fence's contracts: what's wanted, what it pays, what you have, what turning one down costs.
 func _show_deals() -> void:
-	var ready := 0
+	var is_ready := 0
 	for k in range(sim.contracts.size()):
 		if sim.can_hand_in(k):
-			ready += 1
-	UI.fit(_deal_head, ["%d open · %d ready" % [sim.contracts.size(), ready], "%d · %d ready" % [sim.contracts.size(), ready]])
+			is_ready += 1
+	UI.fit(_deal_head, ["%d open · %d ready" % [sim.contracts.size(), is_ready], "%d · %d ready" % [sim.contracts.size(), is_ready]])
 	var pc: int = sim.pass_cost()
 	UI.fit(_deal_pass, ["A turn-down this run: free; then %d, %d, %d notes" % [Data.CONTRACT_PASS_NOTES, Data.CONTRACT_PASS_NOTES * 2, Data.CONTRACT_PASS_NOTES * 4], "A turn-down: free", "free"] if pc == 0 else ["The next turn-down: %d notes; free again after a run" % pc, "Next turn-down: %d notes" % pc, "%d notes" % pc])
 	_deal_pass.add_theme_color_override("font_color", Pal.GOOD if pc == 0 else Pal.TEXT_2)
@@ -579,7 +581,7 @@ func _show_side() -> void:
 	if kind == "clinic":
 		_show_treatment()
 		var full: bool = sim.hp >= sim.max_hp() - 0.5 and sim.wound == ""
-		var y: float = TOP + UI.HEAD_H + 2 + 24 + 6
+		var y_in: float = TOP + UI.HEAD_H + 2 + 24 + 6
 		for t in _side_tiles_c:
 			t["panel"].visible = true
 		var hurt: bool = sim.hp < sim.max_hp() - 0.5
@@ -591,41 +593,42 @@ func _show_side() -> void:
 			if sim.yard_side("clinic", c) != "":
 				cpicks += 1
 		UI.set_tile(_side_tiles_c[3], "The Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
-		y += UI.TILE_H + 10
+		y_in += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
 		var out: bool = sim.on_mission()
-		_side_button(0, y, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Fit"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
-		_side_button(1, y, "The runner is out" if out else ("The wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
+		_side_button(0, y_in, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Fit"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
+		_side_button(1, y_in, "The runner is out" if out else ("The wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
 		if not out and hurt:
 			UI.fit_button(_side_buttons[0], Fmt.money_forms(sim.heal_cost()).map(func(m): return "Heal (%s)" % m))
 		if not out and sim.wound != "":
 			UI.fit_button(_side_buttons[1], Fmt.money_forms(sim.wound_cost()).map(func(m): return "The wound (%s)" % m) + ["Wound: %s" % Fmt.short_num(sim.wound_cost())])
 		if full and not out:
 			_side_buttons[0].text = "Fit for duty"
-		y += 48 + 8
+		y_in += 48 + 8
 		# your meds, by kind: what each heals for you, and how many there are
-		y += 8
-		_heads[1].position.y = y
+		y_in += 8
+		_heads[1].position.y = y_in
 		_heads[1].text = "YOUR MEDS · IN THE STASH, WHAT EACH DOES FOR YOU"
 		_heads[1].visible = true
-		y += UI.HEAD_H + 2
-		var counts := {}
+		y_in += UI.HEAD_H + 2
+		var counts_in := {}
 		var order := []
 		for it in sim.stash:
 			if Items.is_medical(it):
-				if not counts.has(it["base"]):
-					counts[it["base"]] = {"n": 0, "it": it}
+				if not counts_in.has(it["base"]):
+					counts_in[it["base"]] = {"n": 0, "it": it}
 					order.append(it["base"])
-				counts[it["base"]]["n"] += 1
+				counts_in[it["base"]]["n"] += 1
 		for k in range(_med_tiles.size()):
 			var t: Dictionary = _med_tiles[k]
-			t["panel"].position.y = y + (k / 2) * (UI.TILE_H + TILE_GAP)
+			@warning_ignore("integer_division")
+			t["panel"].position.y = y_in + (k / 2) * (UI.TILE_H + TILE_GAP)
 			if k < order.size():
-				var it: Dictionary = counts[order[k]]["it"]
+				var it: Dictionary = counts_in[order[k]]["it"]
 				var heal: float = Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0)
 				t["panel"].visible = true
-				UI.set_tile(t, "%s ×%d" % [order[k], counts[order[k]]["n"]], ["heals %.0f over %.0f s" % [heal, sim.use_time(it)], "heals %.0f" % heal])
+				UI.set_tile(t, "%s ×%d" % [order[k], counts_in[order[k]]["n"]], ["heals %.0f over %.0f s" % [heal, sim.use_time(it)], "heals %.0f" % heal])
 			elif k == order.size():
 				t["panel"].visible = true
 				UI.set_tile(t, "The rig", ["%d of %d pouches" % [sim.rig_used(), sim.med_capacity()], "%d of %d" % [sim.rig_used(), sim.med_capacity()]] if sim.med_capacity() > 0 else ["no rig fitted"], Pal.TEXT if sim.med_capacity() > 0 else Pal.TEXT_3)
@@ -664,6 +667,7 @@ func _show_side() -> void:
 	var types := ["improvised", "shotgun", "rifle", "smg", "pistol"]
 	for n in range(types.size()):
 		var box: Dictionary = sim.ammo_box(types[n])
+		@warning_ignore("integer_division")
 		_side_tile(k, PAD + (n % 3) * (tw3 + TILE_GAP), y + (n / 3) * (UI.TILE_H + TILE_GAP), tw3, "%s ×%d" % [box["name"], int(box["rounds"])], [Fmt.money(sim.ammo_price(types[n]))], Pal.TEXT,
 			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and (sim.stash_room(1) or sim.yard_has("racks")))
 		k += 1
@@ -671,11 +675,11 @@ func _show_side() -> void:
 	y += 2 * UI.TILE_H + TILE_GAP + 12
 	# the contracts, in brief: the tab has the lot
 	_heads[2].position.y = y
-	var ready := 0
+	var is_ready := 0
 	for c in range(sim.contracts.size()):
 		if sim.can_hand_in(c):
-			ready += 1
-	_heads[2].text = ("THE CONTRACTS · %d OPEN, %d READY" % [sim.contracts.size(), ready]) if not sim.contracts.is_empty() else "THE CONTRACTS · NONE OPEN"
+			is_ready += 1
+	_heads[2].text = ("THE CONTRACTS · %d OPEN, %d READY" % [sim.contracts.size(), is_ready]) if not sim.contracts.is_empty() else "THE CONTRACTS · NONE OPEN"
 	_heads[2].visible = true
 
 
@@ -706,8 +710,8 @@ func _show_panel() -> void:
 						order.append(m["base"])
 					counts[m["base"]] += 1
 				var words := []
-				for name in order:
-					words.append(name if counts[name] == 1 else "%s ×%d" % [name, counts[name]])
+				for nm in order:
+					words.append(nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
 				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
 				UI.fit(_left_lines[2], ["Taken out again in the Kit, from the rig", "Taken out in the Kit"])
@@ -800,7 +804,7 @@ func _say(it: Dictionary) -> void:
 
 
 func _lay_buttons() -> void:
-	var x := GRID_W - PAD
+	var x: float = GRID_W - PAD
 	for i in range(_buttons.size() - 1, -1, -1):
 		if _buttons[i].visible:
 			x -= _buttons[i].size.x
@@ -904,7 +908,6 @@ func _side_press(i: int) -> void:
 
 func _press(i: int) -> void:
 	var it := _selected_item()
-	var was_n: int = sim.stash.size()
 	var was_cash: float = sim.cash
 	if _actions[i].is_valid():
 		_actions[i].call()

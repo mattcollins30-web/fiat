@@ -101,17 +101,17 @@ static func place_texture(name: String) -> Texture2D:
 ## A room's heading as a band (10 Oct, Rooms-B; Matt: replicate the Clinic's and the Fence's art for every other
 ## room): its painted place under the heading's words, covering it from the centre, shaded from the left so the words
 ## read; nothing until the place is painted (art/places/<slug>.png, the rooms manifest). Returns {art, shade, place}.
-static func head_art(head: Panel, place: String) -> Dictionary:
-	head.clip_contents = true
+static func head_art(head_v: Panel, place: String) -> Dictionary:
+	head_v.clip_contents = true
 	var d := {"place": place}
 	var art := TextureRect.new()
 	art.position = Vector2(1, 1)
-	art.size = head.size - Vector2(2, 2)                         # inside the heading's line, which the other cards keep
+	art.size = head_v.size - Vector2(2, 2)                         # inside the heading's line, which the other cards keep
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_child(art)
-	head.move_child(art, 0)
+	head_v.add_child(art)
+	head_v.move_child(art, 0)
 	var g := Gradient.new()
 	g.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
 	g.colors = PackedColorArray([Color(Pal.CARD, 0.94), Color(Pal.CARD, 0.6), Color(Pal.CARD, 0.15)])
@@ -124,15 +124,15 @@ static func head_art(head: Panel, place: String) -> Dictionary:
 	var shade := TextureRect.new()
 	shade.texture = gt
 	shade.position = Vector2(1, 1)
-	shade.size = head.size - Vector2(2, 2)
+	shade.size = head_v.size - Vector2(2, 2)
 	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	shade.stretch_mode = TextureRect.STRETCH_SCALE
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_child(shade)
-	head.move_child(shade, 1)
+	head_v.add_child(shade)
+	head_v.move_child(shade, 1)
 	d["art"] = art
 	d["shade"] = shade
-	head.child_entered_tree.connect(func(n): if n is Label and art.visible: shadow(n))     # the heading's words come after
+	head_v.child_entered_tree.connect(func(n): if n is Label and art.visible: shadow(n))     # the heading's words come after
 	set_head_art(d, place_texture(place))
 	return d
 
@@ -179,6 +179,7 @@ static func _is_mono(img: Image) -> bool:
 	if img.is_compressed():
 		img = img.duplicate()
 		img.decompress()
+	@warning_ignore("integer_division")
 	var step: int = maxi(1, img.get_width() / 16)
 	for y in range(0, img.get_height(), step):
 		for x in range(0, img.get_width(), step):

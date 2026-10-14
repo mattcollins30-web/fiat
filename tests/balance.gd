@@ -186,9 +186,6 @@ func _elements(hours: float, forced: String) -> void:
 				if key < 0.0 and sim.tree.has("%s/6" % t["name"]):
 					key = sim.elapsed
 		var per: Dictionary = sim.type_dps()
-		var total := 0.0
-		for ty in per:
-			total += float(per[ty])
 		print("%-7s | %-9s | %7s | %8s | %3d | %3.0f%% | %5.0f | %3d %3d | %s | %s" % [el, cls, _hm(bank) if bank >= 0.0 else "never", _hm(key) if key >= 0.0 else "never", sim.level(),
 				float(sim.conversion()[el]) * 100.0, float(per[el]), runs, kias, sim.best_depth, _kit(sim)])
 		for b in bot.bought:
@@ -201,12 +198,12 @@ func _elements(hours: float, forced: String) -> void:
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
 ## depths cleared by the hour, the odds at every open tier at the end.
-func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
+func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	var sim = Sim.new()
 	sim.loot_by_hand = false            # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.start()
-	if seed != 0:
-		sim.rng.seed = seed
+	if seed_v != 0:
+		sim.rng.seed = seed_v
 	sim.set_class(cls)
 	sim.fast_memo = true                  # the run reads its kit once in thirty seconds, as a dry run does (8 Oct)
 	sim.odds_runs_max = 24                # and the odds at twenty-four dry runs a read, glasses or not (the verdict at PUSH is the same; the number shown is the player's)
@@ -333,6 +330,7 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	g["top_bench"] = 14000                       # the old top Bench's price: the summary's cash-held yardstick when nothing was earned
 	g["dearest_build"] = Data.BUILD_GUN * 3
 	g["elapsed_h"] = snappedf(sim.elapsed / 3600.0, 0.01)
+	@warning_ignore("integer_division")
 	g["wall_s"] = (Time.get_ticks_msec() - t0) / 1000
 	g["kit"] = _kit(sim)
 	g["bails"] = bot.bails
@@ -353,6 +351,7 @@ func _gate(hours: float, cls: String, element: String, seed := 0) -> void:
 	# where the wall went, in seconds: the bot's step holds the odds reads (survival: the dry runs, their snapshots)
 	# and the real run's ticks; the tidy is the fitting, selling and building; the ladder reads are their own
 	var pr: Dictionary = sim.prof
+	@warning_ignore("integer_division")
 	g["prof"] = {"step_s": step_us / 1000000, "tidy_s": tidy_us / 1000000, "ladder_s": ladder_us / 1000000,
 		"surv_s": int(pr["surv_us"]) / 1000000, "surv_calls": pr["surv_calls"], "surv_reads": pr["surv_reads"],
 		"dry_runs": pr["dry_runs"], "dry_ticks": pr["dry_ticks"], "snap_s": int(pr["snap_us"]) / 1000000,
@@ -400,6 +399,7 @@ func _ladder_read(sim, push: float) -> Dictionary:
 		var lo := 0
 		var hi := 31
 		while hi - lo > 1:
+			@warning_ignore("integer_division")
 			var d: int = (lo + hi) / 2
 			sim.depth[i] = d
 			sim._surv_cache.erase(i)
@@ -494,4 +494,5 @@ func _kit(sim) -> String:
 
 
 func _hm(s: float) -> String:
+	@warning_ignore("integer_division")
 	return "%d:%02d" % [int(s) / 3600, (int(s) % 3600) / 60]

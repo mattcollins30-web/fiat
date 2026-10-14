@@ -61,6 +61,7 @@ func _init() -> void:
 		_nows.append(UI.label(self, Rect2(x, y + 3, EFFECT_W, EFFECT_H), "", "Regular", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false))
 		_nexts.append(UI.label(self, Rect2(x, y + 3 + EFFECT_H, EFFECT_W, EFFECT_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		x += EFFECT_W + COL_GAP
+		@warning_ignore("integer_division")
 		var b := UI.button(self, Rect2(x, y + (ROW_H - BUTTON_H) / 2, BUTTON_W, BUTTON_H), false)
 		b.pressed.connect(_press.bind(i))
 		_buttons.append(b)
@@ -72,7 +73,7 @@ func show_jobs(title: String, headline: String, unit: String, jobs: Array, statu
 	_title.text = title
 	_headline.text = headline
 	_unit.text = unit
-	_unit.position.x = PAD + ceilf(UI.text_width(_headline, headline)) + 10 if headline != "" else PAD
+	_unit.position.x = PAD + ceilf(UI.text_width(_headline, headline)) + 10 if headline != "" else float(PAD)
 	UI.fit(_status, [status, status.get_slice(";", 0)])
 	for i in range(ROWS):
 		var on: bool = i < jobs.size()

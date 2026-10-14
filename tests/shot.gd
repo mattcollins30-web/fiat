@@ -12,7 +12,7 @@ var _wait := 0
 func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	var path := "res://tests/matt.save" if args.is_empty() else args[0]
-	_rooms = args[1].split(",") if args.size() > 1 else ["missions"]
+	_rooms = Array(args[1].split(",")) if args.size() > 1 else ["missions"]
 	_out = args[2] if args.size() > 2 else "res://shots"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_out))
 	main = load("res://scripts/ui/main.gd").new()

@@ -72,23 +72,23 @@ func _init() -> void:
 
 # ------------------------------------------------------------------ building
 
-func _card(name: String, col: int, y: float, h: float, title: String) -> Dictionary:
+func _card(nm: String, col: int, y: float, h: float, title: String) -> Dictionary:
 	var c := {"x": float(COL_X[col]), "y": y, "w": float(COL_W[col]), "h": h}
 	c["panel"] = UI.panel(self, Rect2(c["x"], y, c["w"], h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	c["title"] = UI.head(self, Rect2(c["x"] + PAD, y + 10, c["w"] - 2 * PAD, UI.HEAD_H), title)
 	c["headline"] = UI.label(self, Rect2(c["x"] + PAD, y + 36, 200, 50), "", "SemiBold", Pal.HEADLINE, Pal.TEXT)
 	c["unit"] = UI.label(self, Rect2(c["x"] + PAD, y + 46, c["w"] - 2 * PAD, 36), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	cards[name] = c
+	cards[nm] = c
 	return c
 
 
-func _card_wide(name: String, y: float, h: float, title: String) -> Dictionary:
+func _card_wide(nm: String, y: float, h: float, title: String) -> Dictionary:
 	var c := {"x": 0.0, "y": y, "w": float(W), "h": h}
 	c["panel"] = UI.panel(self, Rect2(0, y, W, h), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	c["title"] = UI.head(self, Rect2(PAD, y + 10, 300, UI.HEAD_H), title)
 	c["headline"] = UI.label(self, Rect2(PAD, y + 30, 80, 46), "", "SemiBold", Pal.HEADLINE, Pal.TEXT)
 	c["unit"] = UI.label(self, Rect2(PAD, y + 40, 160, 36), "", "Medium", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	cards[name] = c
+	cards[nm] = c
 	return c
 
 
@@ -197,6 +197,7 @@ func _build_record() -> void:
 	var glyphs := ["skull", "dmg", "cash", "gem"]
 	for k in range(4):
 		var tx: float = c["x"] + PAD + (k % 2) * (tw + GAP)
+		@warning_ignore("integer_division")
 		var ty: float = y + 40 + (k / 2) * (TILE_H + GAP)
 		var t := {}
 		t["panel"] = UI.panel(self, Rect2(tx, ty, tw, TILE_H), UI.box(Pal.BG, 6))
@@ -314,7 +315,7 @@ func _show_runner(lv: int) -> void:
 	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
 
 
-func _show_attack(lv: int, dps: float) -> void:
+func _show_attack(_lv: int, dps: float) -> void:
 	var c: Dictionary = cards["attack"]
 	_headline(c, "%.0f" % dps, "dmg/s", Pal.ACCENT)
 	var cd: Dictionary = sim.class_data()

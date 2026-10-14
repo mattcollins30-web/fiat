@@ -36,6 +36,7 @@ func _init() -> void:
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		t.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		@warning_ignore("integer_division")
 		t.size = Vector2(MARK_W, MARK_W / 2)
 		_mark = t
 	else:

@@ -33,7 +33,7 @@ var _bar_label: Label
 var _tone := 0
 var _seed := 0
 var _fade_to := Pal.CARD
-var _left := PAD                      # where the words start: past a portrait when one sits at the left
+var _left: float = PAD               # where the words start: past a portrait when one sits at the left
 var _under := false                   # the headline under the title, the unit beside it
 var _right_any := false               # right-hand lines showing: the unit keeps clear of them
 var _art: TextureRect                 # the site's painted art (9 Oct), over the skyline when there is one

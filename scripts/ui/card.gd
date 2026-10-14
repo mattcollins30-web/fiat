@@ -265,6 +265,7 @@ func show_data(d: Dictionary) -> void:
 			b.visible = false
 			_actions[i] = Callable()
 			continue
+		@warning_ignore("integer_division")
 		var row := i / 2
 		var pair := buttons.slice(row * 2, row * 2 + 2)
 		var widths := _button_widths(pair)
@@ -325,17 +326,17 @@ func _show_bar(bar) -> int:
 		_bar_setup(Callable(), false, false, false)
 		return 0
 	var action: Callable = bar.get("action", Callable())
-	var ready: bool = action.is_valid() and bar.get("ready", false)
-	_bar_setup(action, bar.get("enabled", true), ready, float(bar.get("repeat", 0.0)))
+	var is_ready: bool = action.is_valid() and bar.get("ready", false)
+	_bar_setup(action, bar.get("enabled", true), is_ready, float(bar.get("repeat", 0.0)))
 	var tone: String = bar.get("tone", "")
 	(_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if tone == "" else Pal.tone_color(tone)
 	var target := Pal.INNER * clampf(float(bar.get("fill", 0.0)), 0.0, 1.0)
-	if ready:
+	if is_ready:
 		target = Pal.INNER                    # the whole bar is the button, its text dark across it
 	if _fill_tween != null:
 		_fill_tween.kill()
 		_fill_tween = null
-	if smooth_bars and bar.get("smooth", false) and not ready and target > _fill_w and is_inside_tree():
+	if smooth_bars and bar.get("smooth", false) and not is_ready and target > _fill_w and is_inside_tree():
 		_fill_tween = create_tween()
 		_fill_tween.tween_method(_set_fill, _fill_w, target, since)
 	else:
@@ -358,15 +359,15 @@ func _set_fill(fw: float) -> void:
 
 ## Whether the bar is a button, and how it looks: the main button when its job
 ## waits for a click, the plain track otherwise.
-func _bar_setup(action: Callable, enabled: bool, ready: bool, repeat: float) -> void:
+func _bar_setup(action: Callable, enabled: bool, is_ready: bool, repeat: float) -> void:
 	var live := action.is_valid()
 	_bar_action = action
 	_bar_repeat = repeat if live else 0.0
-	_bar_ready = ready
+	_bar_ready = is_ready
 	_track.disabled = not (live and enabled)
 	_track.mouse_filter = Control.MOUSE_FILTER_STOP if live else Control.MOUSE_FILTER_IGNORE
 	_track.focus_mode = Control.FOCUS_ALL if live else Control.FOCUS_NONE
-	var look := ("ready" if enabled else "off") if ready else ""
+	var look := ("ready" if enabled else "off") if is_ready else ""
 	if look != _bar_look:
 		_style_track(look)
 	_bar_on.add_theme_color_override("font_color", Pal.TEXT_3 if look == "off" else Pal.ACCENT_TEXT)

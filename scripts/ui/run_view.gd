@@ -70,7 +70,7 @@ var _plate: TextureRect
 var _site_key := "-"                      # the site the plate and cover are of
 var _zone_key := "the_estate"             # its zone's gang
 var _boss_key := ""                       # the head when he's out, "" else
-var _cover_y := COVER_Y
+var _cover_y: float = COVER_Y
 var _own_site := false                     # the site's own plate is up (its far slot with it)
 var _hands_at := HANDS_AT                 # the hands' top-left for the gun's picture                   # the cover's top-left y: its drawn top at COVER_TOP
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
@@ -139,12 +139,12 @@ var _arcs: Array = []                     # a Line2D a figure: shock's arc
 
 ## A texture by name: the full pass's (art/fight) first, the test's (art/fight_test) else; imported if the editor's seen
 ## it, else read straight off the disk.
-static func tex(name: String) -> Texture2D:
-	if _tex.has(name):
-		return _tex[name]
+static func tex(nm: String) -> Texture2D:
+	if _tex.has(nm):
+		return _tex[nm]
 	var t: Texture2D = null
 	for dir in [FULL_DIR, DIR]:
-		var path: String = dir % name
+		var path: String = dir % nm
 		if ResourceLoader.exists(path):
 			t = load(path)
 		elif FileAccess.file_exists(path):
@@ -154,7 +154,7 @@ static func tex(name: String) -> Texture2D:
 				t = ImageTexture.create_from_image(img)
 		if t != null:
 			break
-	_tex[name] = t
+	_tex[nm] = t
 	return t
 
 
@@ -180,8 +180,8 @@ static func used_of(t: Texture2D) -> Rect2:
 
 
 ## A site's name as its files' (The Allotments -> the_allotments).
-static func site_key(name: String) -> String:
-	return name.to_lower().replace(" ", "_").replace("'", "")
+static func site_key(nm: String) -> String:
+	return nm.to_lower().replace(" ", "_").replace("'", "")
 
 
 static func has_art() -> bool:
@@ -345,9 +345,9 @@ func set_placing(on: bool) -> void:
 			_set_state(k, "")                 # the fight picks up as it was: as many come in as are on you
 
 
-func set_slot(k: int, foot: Vector2, scale: float) -> void:
+func set_slot(k: int, foot: Vector2, sc: float) -> void:
 	if k >= 0 and k < _edit.size():
-		_edit[k] = {"foot": foot, "scale": scale, "lit": SLOTS[k]["lit"]}
+		_edit[k] = {"foot": foot, "scale": sc, "lit": SLOTS[k]["lit"]}
 
 
 ## Placing: the plate at rest, all three standing on their slots, nothing firing, flashing or burning.
@@ -543,6 +543,7 @@ static func _dot() -> Texture2D:
 
 ## The edges a hit brings (red), or an element on you brings (its colour): clear in the middle, coloured at the edge.
 func _vignette(c := Color(0.75, 0.1, 0.08), strength := 0.85) -> Texture2D:
+	@warning_ignore("integer_division")
 	var img := Image.create(W / 4, H / 4, false, Image.FORMAT_RGBA8)
 	for y in range(img.get_height()):
 		for x in range(img.get_width()):
@@ -582,12 +583,12 @@ func show_state(sim, m: Dictionary) -> void:
 	# what's on them, and on you: the chips' own thresholds (sim.dots_on_them, run.gd's "On you")
 	var dots: Dictionary = m.get("dots", {})
 	var mine: Dictionary = m.get("my_dots", {})
-	var fighting: bool = int(m["remaining"]) > 0
+	var fighting_v: bool = int(m["remaining"]) > 0
 	for el in ["fire", "poison", "bleed"]:
-		_them_fx[el] = fighting and float(dots.get(el, 0.0)) > 0.5
+		_them_fx[el] = fighting_v and float(dots.get(el, 0.0)) > 0.5
 		_you_fx[el] = float(mine.get(el, 0.0)) > 0.5
-	_them_fx["frost"] = fighting and float(m.get("chill_t", 0.0)) > 0.0
-	_them_fx["shock"] = fighting and float(m.get("shock_t", 0.0)) > 0.0
+	_them_fx["frost"] = fighting_v and float(m.get("chill_t", 0.0)) > 0.0
+	_them_fx["shock"] = fighting_v and float(m.get("shock_t", 0.0)) > 0.0
 	# a kill: the one in front goes down
 	if int(m["kills"]) > _kills_seen:
 		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
@@ -799,7 +800,7 @@ func _process(dt: float) -> void:
 	_shot_t -= dt
 	if _firing and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
 		_shot_t = 1.0 / _rof
-		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "up")
+		var ups: Array = range(SLOTS.size()).filter(func(k_in): return _figs[k_in]["state"] == "up")
 		var k: int = ups[randi() % ups.size()] if not ups.is_empty() else -1     # whoever's in your sights, not the same one every time
 		if _melee:
 			_swing = 0.0                             # the hit lands on the chop (_swing_step)
@@ -946,6 +947,7 @@ static func _split_of(t: Texture2D) -> Dictionary:
 			if n < best_n:
 				best_n = n
 				best = x
+		@warning_ignore("integer_division")
 		if best > 0 and best_n * 2 <= h / 50:
 			out["x"] = best
 		# the tip: the weapon's highest drawn pixel right of the split
@@ -966,10 +968,10 @@ static func _split_of(t: Texture2D) -> Dictionary:
 class Streak extends Control:
 	var view
 	func _draw() -> void:
-		var tr: Array = view._trail
-		for i in range(1, tr.size()):
-			var a: float = 1.0 - float(tr[i][1]) / view.STREAK_S
-			draw_line(tr[i - 1][0], tr[i][0], Color(1, 1, 1, 0.45 * a), lerpf(2.0, 12.0, a), true)
+		var row: Array = view._trail
+		for i in range(1, row.size()):
+			var a: float = 1.0 - float(row[i][1]) / view.STREAK_S
+			draw_line(row[i - 1][0], row[i][0], Color(1, 1, 1, 0.45 * a), lerpf(2.0, 12.0, a), true)
 
 
 ## Where a hit of yours shows its number, in the frame's space: on one that's up, about its chest; with nobody up,

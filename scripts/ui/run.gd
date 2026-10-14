@@ -311,9 +311,9 @@ func show_state(s) -> void:
 			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
-		var on_you: int = mini(m["remaining"], sim.contact(t))
+		var on_you_in: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
-		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you, m["remaining"] - on_you]) if m["remaining"] > on_you else "%d" % on_you, "%d" % on_you]],
+		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
 			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
@@ -445,6 +445,7 @@ func show_state(s) -> void:
 	_button2.text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
 	UI.style_button(_button2, false, "good" if (filling and not auto) else "")
 	if _button2.visible:
+		@warning_ignore("integer_division")
 		_button.size.x = (INNER - 12) / 2
 		_button2.position.x = PAD + _button.size.x + 12
 		_button2.size.x = INNER - _button.size.x - 12
@@ -843,12 +844,12 @@ func _release_hits(spot: Vector2) -> void:
 
 ## A number a type for what's new in `by` since `seen`, each in its type's
 ## colour, scattered along the panel; whole points only, the rest carried.
-func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sign: String, big_at: int) -> void:
+func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sgn: String, big_at: int) -> void:
 	for ty in Data.TYPES:
 		var total: float = float(by.get(ty, 0.0))
 		var n: int = int(floor(total - float(seen.get(ty, 0.0))))
 		if n >= 1:
-			juice.number(_scatter(bar_y), "%s%d" % [sign, n], ty, n >= big_at)
+			juice.number(_scatter(bar_y), "%s%d" % [sgn, n], ty, n >= big_at)
 			seen[ty] = float(seen.get(ty, 0.0)) + n
 
 
@@ -900,7 +901,9 @@ func _show_rig() -> void:
 	# one row of full cells to eight, one row of smaller to twelve, two rows past that (the generator's row): the same 64 px tall
 	var rows: int = 1 if cap <= 12 else 2
 	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
+	@warning_ignore("integer_division")
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+	@warning_ignore("integer_division")
 	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
 	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the

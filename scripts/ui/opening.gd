@@ -183,11 +183,14 @@ static func _trimmed(tex: Texture2D) -> Texture2D:
 			var c := img.get_pixel(x, y)
 			if minf(c.r, minf(c.g, c.b)) > 0.94:
 				n += 1
+		@warning_ignore("integer_division")
 		return n > (w / 4) * 0.6
 	var top := 0
+	@warning_ignore("integer_division")
 	while top < h / 4 and white_row.call(top):
 		top += 1
 	var bot := h - 1
+	@warning_ignore("integer_division")
 	while bot > h * 3 / 4 and white_row.call(bot):
 		bot -= 1
 	if top == 0 and bot == h - 1:

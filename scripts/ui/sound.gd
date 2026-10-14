@@ -118,8 +118,8 @@ func _load(path: String) -> AudioStream:
 
 
 ## The old placeholder by name (the tests, and the fallback).
-func stream(name: String) -> AudioStream:
-	return _load(OLD_DIR % name)
+func stream(nm: String) -> AudioStream:
+	return _load(OLD_DIR % nm)
 
 
 ## A sound's takes: <id> and <id>_1.. from the new files, else the old placeholder it replaces, else none.
@@ -127,8 +127,8 @@ func takes(id: String) -> Array:
 	if _takes.has(id):
 		return _takes[id]
 	var out: Array = []
-	for name in [id] + range(1, TAKES + 1).map(func(n): return "%s_%d" % [id, n]):
-		var s := _load(NEW_DIR % name)
+	for nm in [id] + range(1, TAKES + 1).map(func(n): return "%s_%d" % [id, n]):
+		var s := _load(NEW_DIR % nm)
 		if s != null:
 			out.append(s)
 	if out.is_empty() and SOUNDS.get(id, {}).has("old"):
@@ -401,7 +401,7 @@ func _gun_sound(gun: Dictionary) -> String:
 	return "shot_" + kind if SOUNDS.has("shot_" + kind) else "shot_improvised"
 
 
-func _search(sim, m: Dictionary, now: Dictionary) -> void:
+func _search(_sim, m: Dictionary, now: Dictionary) -> void:
 	var cs: Array = m.get("crates", [])
 	if now["passed"] > _seen["passed"]:
 		cue("crate_locked")

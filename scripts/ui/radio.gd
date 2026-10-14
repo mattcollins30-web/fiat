@@ -171,8 +171,10 @@ func _init() -> void:
 	var rows: int = int(ceil(Data.WORDS.size() / float(BOOK_COLS)))
 	for k in range(Data.WORDS.size()):
 		var col: int = k % BOOK_COLS
-		var row: int = k / BOOK_COLS
-		_book.append(UI.label(book, Rect2(PAD + col * (bw + 6), 42 + row * ((BOOK_H - 50) / rows), bw, 23), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+		@warning_ignore("integer_division")
+		var row_v: int = k / BOOK_COLS
+		@warning_ignore("integer_division")
+		_book.append(UI.label(book, Rect2(PAD + col * (bw + 6), 42 + row_v * ((BOOK_H - 50) / rows), bw, 23), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	# the air's whole room in one holder, so the map can take the room (12 Oct: the map moved here from Runs)
 	_air = Control.new()
 	_air.size = size
@@ -342,16 +344,16 @@ func _show_detail(on_air: bool) -> void:
 		w["panel"].visible = on
 		if not on:
 			continue
-		var name: String = act[k][0]
+		var nm: String = act[k][0]
 		var tier: int = int(act[k][1])
-		var standing: bool = not (name in sim.word_names(i))
+		var standing: bool = not (nm in sim.word_names(i))
 		(w["badge"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = TIER_COLOURS[clampi(tier, 1, 4) - 1]
 		w["badge_label"].text = Data.WORD_TIER_NAMES[clampi(tier, 1, 4) - 1]
-		UI.fit(w["name"], [name])
-		var ww: Array = sim.word_words(name, tier)
+		UI.fit(w["name"], [nm])
+		var ww: Array = sim.word_words(nm, tier)
 		UI.fit(w["bite"], ["▲ " + _cap(ww[0]), "▲ " + _cap(ww[0].get_slice(", ", 0))])
 		UI.fit(w["pay"], ["● " + _cap(ww[1]), "● " + _cap(ww[1].get_slice(", ", 0))])
-		var learn: String = str(Data.word_of(name)["learn"])
+		var learn: String = str(Data.word_of(nm)["learn"])
 		var pool: String = "standing" if standing else {"start": "general", "paper": "general", "zone": "zone", "deep": "deep"}[learn]
 		UI.fit(w["pool"], [pool])
 		w["pool"].add_theme_color_override("font_color", Pal.ACCENT if standing else POOL_COLOURS.get(learn, Pal.TEXT_3))
@@ -394,10 +396,10 @@ func _show_book(on_air: bool) -> void:
 	for k in range(Data.WORDS.size()):
 		var w: Dictionary = Data.WORDS[k]
 		var l: Label = _book[k]
-		var name: String = w["name"]
-		if name in known:
-			var tag: String = "  ✕" if (name == sim.filtered and sim.atlas_rank("clear_air") > 0) else ("  ★" if name in sim.standing else "")
-			UI.fit(l, [name + tag, name])
+		var nm: String = w["name"]
+		if nm in known:
+			var tag: String = "  ✕" if (nm == sim.filtered and sim.atlas_rank("clear_air") > 0) else ("  ★" if nm in sim.standing else "")
+			UI.fit(l, [nm + tag, nm])
 			l.add_theme_color_override("font_color", POOL_COLOURS.get(str(w["learn"]), Pal.TEXT_2))
 		else:
 			var how: String = "· · ·"

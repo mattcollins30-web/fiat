@@ -241,6 +241,7 @@ func _write_sheet(out_path: String, images: Array, flip: bool) -> void:
 		var c: Image = cells[i]
 		c.convert(Image.FORMAT_RGBA8)
 		var x: int = (i % columns) * (cell_w + GUTTER)
+		@warning_ignore("integer_division")
 		var y: int = (i / columns) * (cell_h + GUTTER)
 		sheet.blit_rect(c, Rect2i(0, 0, c.get_width(), c.get_height()), Vector2i(x, y))
 	var target: String = "res://%s/%s_sheet.%s" % [out_path.get_base_dir(), out_path.get_file().get_basename(), out_path.get_extension()]
@@ -280,6 +281,7 @@ func _write_clip_sheet(out_path: String, first_frame_path: String, frames: Array
 		var c: Image = cells[i]
 		# A frame the API returned at another size sits in its cell's
 		# bottom-centre (the feet), clipped to the cell.
+		@warning_ignore("integer_division")
 		var at := Vector2i((i % columns) * cell.x + (cell.x - c.get_width()) / 2, (i / columns) * cell.y + cell.y - c.get_height())
 		sheet.blit_rect(c, Rect2i(0, 0, mini(c.get_width(), cell.x), mini(c.get_height(), cell.y)), at)
 	var target: String = "res://" + out_path

@@ -187,11 +187,11 @@ static func _build_words() -> String:
 ## With `confirm` set, the first press arms the row and shows it; the second acts. `opaque` hides
 ## the game behind (the title screen, the lost camp); otherwise it dims it. `dock` (a Rect2 in the
 ## viewport, the rail's) makes the drawer; `picture` puts the title's painting behind (the title shape). `title` is a String, or an Array of forms, long to short, the first that fits shown.
-func open(title, sub: String, items: Array, back := Callable(), opaque := false, dock := Rect2(), picture := false) -> void:
+func open(title, sub_v: String, items: Array, back_v := Callable(), opaque := false, dock := Rect2(), picture := false) -> void:
 	assert(items.size() <= ROWS, "a menu holds five rows")
 	_items = items
 	_armed = -1
-	_back = back
+	_back = back_v
 	_dock = dock
 	_backdrop.visible = opaque
 	_picture.visible = opaque and picture and _picture.texture != null     # the title alone stands on the painting; the lost camp's card is on the plain ground, its words up
@@ -202,7 +202,7 @@ func open(title, sub: String, items: Array, back := Callable(), opaque := false,
 	_foot_right.visible = _shape == "title"
 	_dim.visible = not opaque
 	UI.fit(_title, title if title is Array else [title])
-	UI.wrap(_subs, sub)
+	UI.wrap(_subs, sub_v)
 	# the shapes: the title's column carries no panel (the rows sit on it); the drawer is the rail's
 	# panel edged gold with a kicker; the card is the card
 	match _shape:
@@ -226,7 +226,7 @@ func open(title, sub: String, items: Array, back := Callable(), opaque := false,
 	if _shape == "drawer":
 		var kick: String = str(title if title is String else title[0]).to_upper()
 		_kicker.size.x = dock.size.x - 44
-		UI.fit(_kicker, [kick + (" · " + sub.to_upper() if sub != "" else ""), kick])
+		UI.fit(_kicker, [kick + (" · " + sub_v.to_upper() if sub_v != "" else ""), kick])
 		_kicker_rule.size.x = dock.size.x
 	# a sub over more than one line pushes the rows down
 	_rows_y = DRAWER_HEAD_H if _shape == "drawer" else (0 if _shape == "title" else maxi(ROWS_Y, SUB_Y + sub_lines() * SUB_H + 48))
@@ -311,7 +311,7 @@ func _lay_rows() -> void:
 		b.size = Vector2(_row_w, h)
 		_stamps[i].position.y = floorf((h - STAMP) / 2.0)
 		# the name centred in a plain row, up with its detail under in a full one
-		_names[i].position.y = floorf((h - 36) / 2.0) if _details[i].text == "" else 12
+		_names[i].position.y = floorf((h - 36) / 2.0) if _details[i].text == "" else 12.0
 		_details[i].position.y = 48
 		_details2[i].position.y = 48 + DETAIL_H
 		_rules[i].position.y = h - 1
@@ -386,10 +386,10 @@ func _style(b: Button) -> void:
 	for pair in [["normal", Color.TRANSPARENT], ["hover", Pal.RAIL_HOVER], ["pressed", Pal.CARD],
 			["hover_pressed", Pal.CARD], ["disabled", Color.TRANSPARENT]]:
 		b.add_theme_stylebox_override(pair[0], UI.box(pair[1], 0))
-	var lit := UI.box(Pal.CARD, 0)
-	lit.border_width_left = 4
-	lit.border_color = Pal.ACCENT
-	b.add_theme_stylebox_override("focus", lit)
+	var lit_v := UI.box(Pal.CARD, 0)
+	lit_v.border_width_left = 4
+	lit_v.border_color = Pal.ACCENT
+	b.add_theme_stylebox_override("focus", lit_v)
 
 
 ## For tests/ui_check.gd.

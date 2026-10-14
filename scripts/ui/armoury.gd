@@ -39,6 +39,7 @@ const PANEL_H := Pal.ROOM_H - PANEL_Y                         # 304
 const PANEL_PAD := 20
 const PANEL_LINES := 6             # figure, what it takes, three affixes with their tiers, the swap word
 const LINE_H := 26
+@warning_ignore("integer_division")
 const COL_W := (GRID_W - 3 * PANEL_PAD) / 2                   # each half of the compare panel
 
 var sim
@@ -87,7 +88,6 @@ func _init() -> void:
 	_containers.position = Vector2(0, CONTAINERS_Y)
 	_containers.picked.connect(_on_rig_pick)
 	_containers.take.connect(_on_take)
-	_containers.leave.connect(_on_leave)
 	add_child(_containers)
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
@@ -105,12 +105,15 @@ func _init() -> void:
 
 
 ## For the tests: the panel's buttons, and the idle toggles (the same buttons, with nothing picked).
+@warning_ignore("unused_private_class_variable")
 var _buttons: Array:
 	get:
 		return _pick._buttons
+@warning_ignore("unused_private_class_variable")
 var _toggles: Array:
 	get:
 		return [_pick._buttons[0], _pick._buttons[1], _pick._buttons[2]]
+@warning_ignore("unused_private_class_variable")
 var _head:
 	get:
 		return _pick._heads[0]
@@ -126,8 +129,8 @@ static func _counted(items: Array) -> String:
 			order.append(it["base"])
 		counts[it["base"]] += 1
 	var out := []
-	for name in order:
-		out.append(name if counts[name] == 1 else "%s ×%d" % [name, counts[name]])
+	for nm in order:
+		out.append(nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
 	return ", ".join(out)
 
 

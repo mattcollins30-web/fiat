@@ -29,7 +29,9 @@ const TILES_X := LABEL_W + 10
 const COLS := 6
 const TILE_GAP := 6
 const ROW_GAP := 4
+@warning_ignore("integer_division")
 const TILE_W := (W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS
+@warning_ignore("integer_division")
 const TILE_H := (LANE_H - 14 - ROW_GAP) / 2
 const SUM_Y := LANES_Y + 3 * LANE_H + 2 * LANE_GAP + 12
 const SUM_H := 10 + Chips.CHIP_H + 10
@@ -84,6 +86,7 @@ func _init(h: float) -> void:
 		for k in range(nodes.size()):
 			var a: Dictionary = nodes[k]
 			var key: String = a["key"]
+			@warning_ignore("integer_division")
 			var col: int = k / 2
 			var row: int = k % 2
 			var alone: bool = k == nodes.size() - 1 and row == 0
@@ -125,6 +128,7 @@ func _init(h: float) -> void:
 			var n: int = int(a["max"]) if int(a["max"]) > 1 else 0
 			var px0: float = rc.position.x + (side - (n * PIP + (n - 1) * PIP_GAP)) / 2.0
 			for j in range(n):
+				@warning_ignore("integer_division")
 				pips.append(UI.panel(self, Rect2(px0 + j * (PIP + PIP_GAP), rc.position.y + side + 4, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE)))
 			t["pips"] = pips
 			_tiles[key] = t
@@ -155,8 +159,8 @@ static func _passive(key: String) -> Dictionary:
 
 ## A node's look, the tree's (Tree-G): taken filled and gold-edged, its glyph gold; open white; locked dim; the
 ## picked one ringed white. A one-rank node is round.
-func _style(b: Button, look: String, round := false, picked := false) -> void:
-	var r: int = int(b.size.x / 2.0) if round else 8
+func _style(b: Button, look: String, rnd := false, picked := false) -> void:
+	var r: int = int(b.size.x / 2.0) if rnd else 8
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		var sb: StyleBoxFlat
 		match look:
@@ -204,6 +208,7 @@ func show_state(s) -> void:
 		var open: bool = sim.atlas_open(key)
 		var figs: Array = a["figures"]
 		for k in range(t["pips"].size()):
+			@warning_ignore("integer_division")
 			t["pips"][k].add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < rank else Color.TRANSPARENT, PIP / 2, 1, Pal.ACCENT if k < rank else Pal.CARD_LINE))
 		var look: String = "taken" if rank > 0 else ("open" if open else "locked")
 		t["look"] = look

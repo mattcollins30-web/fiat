@@ -77,7 +77,7 @@ func _init(w := 440, small := false) -> void:
 ## `tail` follows the headline: "takes SMG rounds · 600 carried". `extra` is a
 ## line for the fourth row when there's no open affix to say (a set's words).
 ## `cells`: the cells chip, left off where the panel's kicker carries the cells.
-func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> void:
+func show_item(it: Dictionary, _sim, tail = "", extra = "", cells := true) -> void:
 	UI.fit(_title, [Items.full_name(it), it["base"]])
 	# the chips: what it is, in the order a player asks
 	var chips := _chip_words(it, cells)

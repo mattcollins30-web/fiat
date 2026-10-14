@@ -58,6 +58,7 @@ var _hint_options: Array = []      # the hint's forms, long to short: fitted to 
 func _init(width: int, height: int) -> void:
 	w = width
 	h = height
+	@warning_ignore("integer_division")
 	col_w = (w - 3 * PAD) / 2
 	foot_y = h - 8 - FOOT_H
 	size = Vector2(w, h)
@@ -316,7 +317,7 @@ static func verdict_for(sim, it: Dictionary) -> Array:
 static func deltas_for(sim, it: Dictionary, fitted: Dictionary) -> Array:
 	var out: Array = deltas_of(it, fitted)
 	if Data.SLOT_SCORE.get(str(it["slot"]), "") == "dps":
-		out = out.filter(func(d): return not str(d[1]).ends_with("dmg/s"))
+		out = out.filter(func(d_in): return not str(d_in[1]).ends_with("dmg/s"))
 		var d: float = sim.fit_value(it) - sim.fit_value({}, str(it["slot"]))
 		if absf(d) >= 0.05:
 			out.push_front([d, ("%.1f dmg/s" if absf(d) < 10.0 else "%.0f dmg/s") % absf(d)])
