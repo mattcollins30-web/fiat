@@ -76,6 +76,8 @@ var _seen := {}                    # what the last look saw of the run
 var _chron_seen := -1
 var _cash_seen := -1.0
 var _buttons_hooked := false
+var _ending_seen := ""              # the deeds' fate last heard: burned or sold sound once, as it happens (14 Oct)
+var _dry_seen := false             # the gun was dry at the last look: rounds again is a reload
 var _sim_seen = null               # the camp the counts are of: a load or a new camp starts them again
 
 
@@ -286,6 +288,10 @@ func follow(sim) -> void:
 		_incoming_at = sim.elapsed
 		_hit_at = -10.0
 		_el_at = {}
+		_dry_seen = _dry(sim)
+		var g0 = sim.equipped["Primary"]
+		if g0 != null and Items.ammo_type(g0) not in ["", "none"] and not _dry_seen:
+			cue("reload")                        # out with a loaded gun (14 Oct: the reload made, never played)
 		return
 	var now: Dictionary = _look(sim, m)
 	_fight(sim, m, now)
@@ -344,7 +350,13 @@ func _look(sim, m: Dictionary) -> Dictionary:
 		"searches": int(m.get("searches", 0)), "crate_i": int(m.get("crate_i", 0)), "crates": cs.size(),
 		"passed": cs.filter(func(c): return c.get("passed", false)).size(), "done": sim.crates_done(m) if m.has("crates") else false,
 		"floor": m.get("floor", []).map(func(it): return it["id"]), "ditched": m.get("floor", []).filter(func(it): return it.has("ditch_scrap")).map(func(it): return it["id"]),
-		"found": m["found"].map(func(it): return it["id"])}
+		"found": m["found"].map(func(it): return it["id"]), "thrown": int(m.get("thrown", 0))}
+
+
+## Whether the gun in hand takes rounds and has none.
+func _dry(sim) -> bool:
+	var gun = sim.equipped["Primary"]
+	return gun != null and Items.ammo_type(gun) not in ["", "none"] and sim.rounds_for(gun) <= 0
 
 
 func _fight(sim, m: Dictionary, now: Dictionary) -> void:
@@ -364,8 +376,14 @@ func _fight(sim, m: Dictionary, now: Dictionary) -> void:
 		var rof: float = maxf(0.3, minf(4.0, float(Items.base_of(gun).get("rof", 1.0)) * sim.pace()))
 		if t - _tick_at >= 1.0 / rof:
 			_tick_at = t
-			var dry: bool = Items.ammo_type(gun) not in ["", "none"] and sim.rounds_for(gun) <= 0
-			cue("dry_click" if dry else _gun_sound(gun))
+			cue("dry_click" if _dry(sim) else _gun_sound(gun))
+	# dry, then rounds again: a reload (14 Oct)
+	var dry_now: bool = _dry(sim)
+	if _dry_seen and not dry_now and gun != null and Items.ammo_type(gun) not in ["", "none"]:
+		cue("reload")
+	_dry_seen = dry_now
+	if now["thrown"] > int(_seen.get("thrown", 0)):
+		cue("grenade")
 	# theirs at you, now and then
 	if fighting and t - _incoming_at >= randf_range(1.2, 2.6):
 		_incoming_at = t
@@ -401,8 +419,11 @@ func _gun_sound(gun: Dictionary) -> String:
 	return "shot_" + kind if SOUNDS.has("shot_" + kind) else "shot_improvised"
 
 
-func _search(_sim, m: Dictionary, now: Dictionary) -> void:
+func _search(sim, m: Dictionary, now: Dictionary) -> void:
 	var cs: Array = m.get("crates", [])
+	# the crates rolled at the clear, the Kennel's dog at them (14 Oct)
+	if now["crates"] > 0 and int(_seen.get("crates", 0)) == 0 and sim.dog_sniffs():
+		cue("dog_sniff")
 	if now["passed"] > _seen["passed"]:
 		cue("crate_locked")
 	# a crate taken in hand: its own sound, and the keys first if it was locked
@@ -442,6 +463,7 @@ func _camp(sim) -> void:
 		_sim_seen = sim
 		_chron_seen = count
 		_cash_seen = sim.cash
+		_ending_seen = sim.ending
 		return
 	var said := false
 	if count > _chron_seen:
@@ -453,12 +475,23 @@ func _camp(sim) -> void:
 				cue("death" if str(e.get("outcome", "")) == "Dead" else "extract")
 				said = true
 			elif k == "deeds":
-				cue("the_end_burn")
+				said = true                        # found: the find's own sound says it; the fire is for burning them (14 Oct)
+			elif k == "open" and str(e.get("room", "")) == "radio":
+				cue("radio_on")                    # the set comes on: static to a carrier, for the Radio's door
 				said = true
 			elif CHRON.has(k):
 				cue(CHRON[k])
 				said = true
 		_chron_seen = count
+	# the deeds' fate, as it's decided: burned, the fire; sold, a door shut quietly (14 Oct: the sale made, never played)
+	if sim.ending != _ending_seen:
+		if sim.ending == "burned":
+			cue("the_end_burn")
+			said = true
+		elif sim.ending == "sold":
+			cue("the_end_sell")
+			said = true
+		_ending_seen = sim.ending
 	if sim.mission == null and not said and sim.cash > _cash_seen + 0.5:
 		cue("sell")
 	_cash_seen = sim.cash

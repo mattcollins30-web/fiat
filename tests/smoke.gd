@@ -4902,6 +4902,33 @@ func _sound_checks(main) -> void:
 	main.refresh()
 	for want in ["gang_arrives", "kill", "hit_taken", "burn"]:
 		_check(want in snd.cued(), "%s didn't sound: %s" % [want, str(snd.cued())])
+	# the sounds made and never played (14 Oct): a grenade thrown, the duck behind the wall, a dry gun given rounds
+	snd.clear_cued()
+	m["thrown"] = int(m.get("thrown", 0)) + 1
+	main.refresh()
+	_check("grenade" in snd.cued(), "a grenade thrown made no sound: %s" % str(snd.cued()))
+	if main._run._view != null:
+		snd.clear_cued()
+		main._run._view.ducked.emit()
+		_check("duck" in snd.cued(), "the duck made no sound: %s" % str(snd.cued()))
+	var hold_gun = sim.equipped["Primary"]
+	var hold_rig: Array = sim.rig.duplicate()
+	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
+	sim.rig = sim.rig.filter(func(it): return not Items.is_ammo(it))
+	main.refresh()                             # dry
+	snd.clear_cued()
+	sim.rig.append(sim._plain(Data.AMMO, "Nails"))
+	main.refresh()
+	_check("reload" in snd.cued(), "a dry gun given rounds made no reload: %s" % str(snd.cued()))
+	snd.clear_cued()
+	sim.equipped["Primary"] = hold_gun          # the hammer back: no reload for a swap to a gun with no rounds to load
+	sim.rig = hold_rig
+	main.refresh()
+	_check(not ("reload" in snd.cued()), "a swap to the hammer sounded as a reload")
+	# no room in the pack for something off the floor: the bump and the strap
+	snd.clear_cued()
+	main._run._take_floor(-12345)
+	_check("no_room" in snd.cued(), "no room in the pack made no sound: %s" % str(snd.cued()))
 	# low on HP: the heartbeat; the clock's last ten seconds: the watch
 	sim.hp = sim.max_hp() * 0.2
 	m["clock"] = 8.0
@@ -4914,9 +4941,14 @@ func _sound_checks(main) -> void:
 	m["remaining"] = 0
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
+	snd._seen["crates"] = 0
+	sim._yard_set = {"pack": true}             # the Kennel's top rank: the dog at the crates (14 Oct)
+	sim._yard_dirty = false
 	sim._roll_crates(m, m["t"])
 	snd.clear_cued()
 	main.refresh()
+	_check("dog_sniff" in snd.cued(), "the dog at the crates made no sound: %s" % str(snd.cued()))
+	sim._yard_dirty = true
 	_check(snd.playing()["music"] == "music_search" and snd.playing()["low_hp"] == "" and snd.playing()["clock"] == "", "the search's music isn't up, or the heartbeat or watch stayed: %s" % str(snd.playing()))
 	_check(snd.cued().any(func(c): return str(c).begins_with("crate_")), "taking a crate in hand made no sound: %s" % str(snd.cued()))
 	var rare: Dictionary = sim._plain("Helmet", "Hard hat")
@@ -4941,6 +4973,26 @@ func _sound_checks(main) -> void:
 	sim.cash += 100.0
 	main.refresh()
 	_check(not ("sell" in snd.cued()), "the cash a chronicled moment brought sounded as a sale: %s" % str(snd.cued()))
+	# the Radio's door: the set coming on, not the other rooms' door; the deeds found say nothing of fire; burned, the
+	# fire; sold, the door shut quietly (14 Oct)
+	snd.clear_cued()
+	sim.chron("open", {"room": "radio"})
+	main.refresh()
+	_check("radio_on" in snd.cued() and not ("gate_open" in snd.cued()), "the Radio opening didn't sound as the set: %s" % str(snd.cued()))
+	snd.clear_cued()
+	sim.chron("deeds", {})
+	main.refresh()
+	_check(not ("the_end_burn" in snd.cued()), "finding the deeds sounded as burning them")
+	var hold_end: String = sim.ending
+	for pair in [["burned", "the_end_burn"], ["sold", "the_end_sell"]]:
+		sim.ending = ""
+		main.refresh()
+		snd.clear_cued()
+		sim.ending = pair[0]
+		main.refresh()
+		_check(pair[1] in snd.cued(), "the deeds %s made no %s: %s" % [pair[0], pair[1], str(snd.cued())])
+	sim.ending = hold_end
+	main.refresh()
 	# a button clicks
 	snd.clear_cued()
 	var b := Button.new()

@@ -335,6 +335,7 @@ func _build() -> void:
 	add_child(_juice)
 	_run.juice = _juice
 	_sound = Sound.new()
+	_run.sound = _sound
 	add_child(_sound)
 	_load_settings()
 	_menu = Menu.new()

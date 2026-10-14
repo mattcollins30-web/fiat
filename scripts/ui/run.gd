@@ -95,6 +95,7 @@ var _rig_cells: Array = []         # ItemCells, one a pouch, in the Runner panel
 var _rig_pick := -1                # a stack of rounds picked in the rig (11 Oct): shown in the pick panel, Into the pack
 var _rig_outlines: Array = []
 var juice = null                   # the shell's, for numbers and flashes; null in a bare test
+var sound = null                   # the shell's, for the duck and no room (14 Oct); null in a bare test
 var _dealt_seen := 0.0             # what the numbers have shown so far this run
 var _dealt_seen_by := {}           # and by type, for the coloured numbers
 var _taken_seen_by := {}
@@ -204,6 +205,9 @@ func _init() -> void:
 func _view_make() -> void:
 	_view = RunView.new()
 	_view.shot_fired.connect(_on_view_shot)
+	_view.ducked.connect(func():
+		if sound != null:
+			sound.cue("duck"))
 	_view.placing_changed.connect(_on_placing)
 	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
 	_left.add_child(_view)
@@ -1010,8 +1014,11 @@ func _take_floor(id: int) -> void:
 		if _floor_pick == id:
 			_floor_pick = -1
 			view_crates = true                # back to the crates for the next
-	elif juice != null:
-		juice.toast("No room in the pack", "bad")
+	else:
+		if juice != null:
+			juice.toast("No room in the pack", "bad")
+		if sound != null:
+			sound.cue("no_room")
 	_shown = ""
 	acted.emit()
 

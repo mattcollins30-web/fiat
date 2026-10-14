@@ -17,6 +17,7 @@ signal shot_fired(at: Vector2)
 
 ## The placement tool on or off: the run screen clears what it lays over the frame (bars, chips, the head) while it's on.
 signal placing_changed(on: bool)
+signal ducked                             # down behind the wall: the duck's sound (14 Oct)
 
 const W := 588
 const H := 262
@@ -602,6 +603,8 @@ func show_state(sim, m: Dictionary) -> void:
 		_jolt = JOLT_S
 		_red_a = 1.0
 		if sim.hp < _hp_seen - sim.max_hp() * 0.05 and _duck_t <= 0.0:
+			if _duck_t <= 0.0 and _firing:
+				ducked.emit()                         # only a duck you see (the review)
 			_duck_t = randf_range(0.6, 1.0)          # a big one: down behind the wall
 	_hp_seen = sim.hp
 	# your gun's rate, for the recoil and the marker
@@ -770,6 +773,7 @@ func _process(dt: float) -> void:
 		_duck_next -= dt
 		if _duck_next <= 0.0 and _duck_t <= 0.0:
 			_duck_t = randf_range(0.7, 1.3)
+			ducked.emit()
 			_duck_next = randf_range(3.5, 6.5)
 	if _duck_t > 0.0:
 		_duck_t -= dt
