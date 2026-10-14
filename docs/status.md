@@ -4538,3 +4538,15 @@ below starts until that save lands; then each is designed with him, one at a tim
    barrels, the bolt gun's long, the pistol's small, the SMG's quick and small, the nail gun a spark; none on a blade
    or a hammer - on the shot's beat, with the kick. Smoke: a shot puts the flash up inside the frame at the muzzle,
    for every gun kind. Generated flash frames only if this doesn't sell it.
+10. **A full pack's swap judges by worn kit, not tins (Matt, 14 Oct: a 6-pouch rig in the pack, an upgrade on his bum
+    bag, was swapped out for an epic school bag worse than the legendary one he wore).** Today (`_place_find`) a find
+    into a full pack takes the place of the cheapest thing its size if it sells for more, blind to what's worn and to
+    what in the pack is an upgrade. Agreed (Matt, 14 Oct):
+    - **By hand:** a full pack sends a drop to the floor (as the search's finds go), so nothing is swapped without
+      the player.
+    - **On an auto-run and "Fill up, then go":** a find swaps in only if it beats what's worn in its slot
+      (`is_upgrade`), and a thing in the pack that's itself an upgrade is never swapped out.
+    It moves the auto-runs' take (fewer swaps), so it lands before the pass. Smoke: by hand, a drop into a full pack
+    lands on the floor and the pack's unchanged; on auto, a non-upgrade find never swaps, an upgrade in the pack never
+    leaves, an upgrade find swaps the cheapest non-upgrade its size. The note under the pack ("Pack full: a better find
+    swaps in") says the new rule.
