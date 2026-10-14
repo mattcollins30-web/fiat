@@ -21,9 +21,12 @@ SCENES = [
      "frequencies, a stub of pencil; at the edge, the dial of an army radio set glowing amber. Close and intimate, the "
      "dark all around."),
 ]
+# a scene rerolled: a new seed, so --force doesn't draw the same picture again (14 Oct: air_2)
+REROLL = {"air_2": 10}
 jobs = []
 for n, (out, style, what) in enumerate(SCENES):
-    jobs.append({"out": "art/intro/%s.png" % out, "width": 640, "height": 360, "no_background": False, "seed": 97100 + n,
+    jobs.append({"out": "art/intro/%s.png" % out, "width": 640, "height": 360, "no_background": False,
+                 "seed": 97100 + n + REROLL.get(out, 0),
                  "style_image": "res://art/places/%s.png" % style, "description": what + " " + TAIL,
                  "_where": "on the air, scene %d" % (n + 1), "endpoint": "generate-image-v2", "single": True,
                  "style_options": STYLE})
