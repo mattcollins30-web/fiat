@@ -4508,3 +4508,11 @@ below starts until that save lands; then each is designed with him, one at a tim
    dry.
 5. **From the gang-clock change**, already parked above for the pass: the search against the gangs, and gangs harder,
    not just larger.
+6. **Their HP bar: the hits in chunks, the dots chipping (Matt, 14 Oct: "dots damage should chip away at it and then
+   the big chunks you take off as flat damage should come off the health bar as displayed").** Why it reads wrong:
+   the sim takes your fire off their HP a little every tick (`landed_total`, your damage a second times the tick), so
+   the bar slides down smoothly like a dot. The numbers, meanwhile, come out in lumps as the gun's shots land in the
+   frame (`_hit_pending`, `_release_hits`). The bar and the numbers disagree. Proposed, the display alone: the bar
+   shows their HP plus the hit damage not yet shown as a number, so it holds while a shot's being "loaded" and drops
+   by the number's size as it lands. The dots keep ticking it down smoothly, their coloured segments as now. The sim's
+   untouched, so no balance read moves. Smoke: the bar's drop on a shot matches the number shown, within a point.
