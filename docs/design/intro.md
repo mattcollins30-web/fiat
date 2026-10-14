@@ -20,7 +20,7 @@ The register is the game's: short, plain, British, past tense, nobody named, not
 
 **1 · 2028 · Somewhere else**
 The wars were always somewhere else.
-Other people's wars, paid for by bigger people. We watched them on the news.
+Other people's wars. Their reasons, their profits, our money. We watched them on the news.
 We felt them at the till.
 *Art: a front room at night, a television showing a burning city far away; on the table, a supermarket receipt.*
 

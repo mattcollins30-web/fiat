@@ -20,9 +20,9 @@ const OPENING := [
 ## reading of it (art/intro/voice/<voice>.mp3); `cues`: when in it each line starts, in seconds (read off the takes'
 ## word timings) - the lines come up as they're said.
 const OPENING_SCENES := [
-	{"year": "2028", "title": "Somewhere else", "art": "scene_1", "voice": "2028", "cues": [4.68, 7.70, 13.36], "lines": [
+	{"year": "2028", "title": "Somewhere else", "art": "scene_1", "voice": "2028", "cues": [3.82, 7.34, 14.50], "lines": [
 		"The wars were always somewhere else.",
-		"Other people's wars, paid for by bigger people. We watched them on the news.",
+		"Other people's wars. Their reasons, their profits, our money. We watched them on the news.",
 		"We felt them at the till."]},
 	{"year": "2029", "title": "The bills", "art": "scene_2", "voice": "2029", "cues": [3.74, 7.48, 13.80], "lines": [
 		"Then the petrol went up, and up again.",
