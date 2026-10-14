@@ -98,9 +98,9 @@ var _recoil := 0.0
 ## new art. The weapon's arm (the picture split from the off hand where there's a clean gap between them) winds back,
 ## chops toward the one it's hitting and settles, round the forearm; the hit - its marker, its number - lands on the
 ## chop, and a streak follows the head through it. A gun keeps its kick.
-const SWING_BACK := 0.24                  # radians, the wind-up (clockwise: the head back and up)
+const SWING_BACK := 0.12                  # radians, the wind-up (clockwise: the head back; more lift than lean, so it stays in frame)
 const SWING_FWD := -0.46                  # the chop (anticlockwise: the head down toward them)
-const SWING_LIFT := Vector2(8, -10)       # the wind-up's lift, in the picture's pixels
+const SWING_LIFT := Vector2(-6, -18)      # the wind-up's lift, in the picture's pixels
 const SWING_LUNGE := Vector2(-40, 14)     # the chop's reach toward the street
 const SWING_UP := 0.35                    # the swing's share winding up
 const SWING_CONTACT := 0.55               # where in it the chop lands
@@ -838,7 +838,7 @@ func _land_hit(k: int) -> void:
 
 ## A swing's frame: wind up, chop, settle; the hit on the chop - on the one it was at, or whoever's up if they've gone.
 func _swing_step(dt: float) -> void:
-	var arm: Control = _hand_r if _hand_r.visible else _hands
+	var arm: Control = _hand_r
 	for i in range(_trail.size() - 1, -1, -1):
 		_trail[i][1] += dt
 		if _trail[i][1] > STREAK_S:
@@ -882,43 +882,44 @@ func _swing_step(dt: float) -> void:
 ## The weapon's tip in the frame's space, where it is this frame.
 func tip_point() -> Vector2:
 	var sp: Dictionary = _split_of(_hands.texture)
-	if _hand_r.visible:
-		return _hands.get_transform() * (_hand_r.get_transform() * (sp["tip"] - Vector2(sp["x"], 0)))
-	return _hands.get_transform() * sp["tip"]
+	return _hands.get_transform() * (_hand_r.get_transform() * (sp["tip"] - Vector2(sp["x"], 0)))
 
 
 ## A melee picture in two where a clean column parts the off hand from the weapon's (fewer than 1 in 50 of its rows
-## drawn on), the arm swinging round its forearm; with no clean column the whole picture swings. A gun: none of it.
+## drawn on), the arm swinging round its forearm; with no clean column the whole picture swings, as the one part. The
+## pivot is the part's, never the hands' own: a pivot on the scaled hands moved them off their corner (Matt, 14 Oct).
 func _set_swing_parts(t: Texture2D) -> void:
 	_swing = -1.0
 	_swing_off = Vector2.ZERO
 	_trail.clear()
 	_hands.rotation = 0.0
+	_hands.pivot_offset = Vector2.ZERO
 	_hand_r.rotation = 0.0
+	var parts := false
 	var split := false
 	if _melee and t != null:
 		var sp: Dictionary = _split_of(t)
-		_hands.pivot_offset = sp["pivot"]
-		if sp["x"] > 0:
-			split = true
-			var w: float = t.get_size().x
-			var h: float = t.get_size().y
+		parts = true
+		split = sp["x"] > 0
+		var w: float = t.get_size().x
+		var h: float = t.get_size().y
+		if split:
 			var al := AtlasTexture.new()
 			al.atlas = t
 			al.region = Rect2(0, 0, sp["x"], h)
-			var ar := AtlasTexture.new()
-			ar.atlas = t
-			ar.region = Rect2(sp["x"], 0, w - sp["x"], h)
 			_hand_l.texture = al
 			_hand_l.size = al.region.size
 			_hand_l.position = Vector2.ZERO
-			_hand_r.texture = ar
-			_hand_r.size = ar.region.size
-			_hand_r.position = Vector2(sp["x"], 0)
-			_hand_r.pivot_offset = sp["pivot"] - Vector2(sp["x"], 0)
+		var ar := AtlasTexture.new()
+		ar.atlas = t
+		ar.region = Rect2(sp["x"], 0, w - sp["x"], h)
+		_hand_r.texture = ar
+		_hand_r.size = ar.region.size
+		_hand_r.position = Vector2(sp["x"], 0)
+		_hand_r.pivot_offset = sp["pivot"] - Vector2(sp["x"], 0)
 	_hand_l.visible = split
-	_hand_r.visible = split
-	_hands.self_modulate.a = 0.0 if split else 1.0    # its two halves draw it
+	_hand_r.visible = parts
+	_hands.self_modulate.a = 0.0 if parts else 1.0    # its parts draw it
 
 
 static func _split_of(t: Texture2D) -> Dictionary:

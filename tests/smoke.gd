@@ -8414,6 +8414,16 @@ func _full_art_checks(main, v) -> void:
 		sim.equipped["Primary"] = hammer
 		main.refresh()
 		_check(v._melee and v._hand_r.visible and v._hand_l.visible and v._hands.self_modulate.a < 0.01, "the hammer's arm isn't apart from the off hand")
+		# where it's drawn, not just its position: in the corner, and the weapon's tip in frame (Matt, 14 Oct: off the right)
+		v._recoil = 0.0
+		v._jolt = 0.0
+		v._duck = 0.0
+		v._swing = -1.0
+		v._process(0.0)
+		var drawn_br: Vector2 = v._hands.get_transform() * RunView.used_of(v._hands.texture).end
+		_check(drawn_br.distance_to(RunView.HANDS_CORNER) < 1.5, "the hammer's hands aren't drawn in the corner: %s" % str(drawn_br))
+		var tip0: Vector2 = v.tip_point()
+		_check(tip0.x <= RunView.W - 12.0 and tip0.y >= 0.0, "the hammer's head is out of frame at rest: %s" % str(tip0))
 		var shots := [0]
 		var count := func(_at): shots[0] += 1
 		v.shot_fired.connect(count)
@@ -8429,8 +8439,10 @@ func _full_art_checks(main, v) -> void:
 		var sl: float = v._swing_len
 		v._process(sl * RunView.SWING_UP - 0.01)
 		_check(v._hand_r.rotation > 0.1 and shots[0] == 0, "no wind-up before the chop: %.2f" % v._hand_r.rotation)
+		_check(v.tip_point().x <= RunView.W - 12.0 and v.tip_point().y >= 0.0, "the hammer's head leaves the frame winding up: %s" % str(v.tip_point()))
 		v._process(sl * (RunView.SWING_CONTACT - RunView.SWING_UP))
 		_check(shots[0] == 1 and v._hand_r.rotation < -0.2, "the chop didn't land once, forward: %d hits, %.2f" % [shots[0], v._hand_r.rotation])
+		_check(v.tip_point().x <= RunView.W - 12.0 and v.tip_point().x >= 0.0, "the hammer's head is out of frame on the chop: %s" % str(v.tip_point()))
 		_check(not v._trail.is_empty(), "no streak behind the chop")
 		v._shot_t = 99.0
 		v._process(sl)
