@@ -4473,3 +4473,38 @@ red), the runner's lit and ticked "your past", the rest dimmed, an armed one "pr
 card's tooltip. No past yet: a ? in the band's face and every card lit to compare. One line over them: the trait, a
 change's price, or the prompt. The links between a class lane and its element's read "⇄ OPEN" or "⇄ JOINED" and
 nothing more - the joint's words are on its halves once picked.
+
+## Parked for before the balance pass (14 Oct, Matt)
+
+Matt, 14 Oct: "everything here gets parked for before the balance pass and we don't touch anything until I provide an
+endgame save (game breaking bugs aside)." He's playing the exported build to the endgame as a bleed Doorman. Nothing
+below starts until that save lands; then each is designed with him, one at a time, before the pass.
+
+1. **The odds, faster.** A profiled read (Doorman as physical, 4 h, 160 s of wall in the cloud): the odds took about
+   140 s, 87% of it, and the real runs 13 s. They played 3,758 dry runs, 159,547 ticks against the game's 13,908,
+   about 15 a read. Every site read 100% by the end. Proposed: stop a read early when the first dry runs all agree,
+   and keep a read longer while nothing it depends on has changed (124 of 381 calls were already cache hits).
+   Expected: a read in a third to a quarter of the wall, timed before and after. The bot pushes on the odds, so this
+   moves its results; it lands before the pass, never in it. The cards' odds in the game get quicker with it.
+2. **The refactor** (the plan given Matt, 14 Oct), each step its own commit, proved by a fixed-seed fingerprint
+   (every run's outcome, loot, tins, XP and times identical before and after) as well as the smoke:
+   1. The fingerprint, and dead code: `has_node("plates")` and `has_node("headshots")` read nodes the trees no
+      longer have, plus whatever else the editor finds unused.
+   2. The effects' numbers into data. 151 of sim.gd's 276 has_node / has_rule / yard_has / joint / atlas lines carry
+      their number inline. They move to their entries in data.gd, so the pass tunes one table. A smoke check flags
+      a node the data has and the sim never reads, or the reverse.
+   3. sim.gd (7,636 lines) split by system (the fight, the search, the economy, the Yard, the trees, the save) behind
+      the same Sim the UI calls.
+   4. smoke.gd (12,452 lines) split by area, with a way to run one area alone.
+   5. The run's 85 keys in one list, the smoke checking nothing reads a key outside it.
+   6. The dated history out of the comments: the why stays, the when is in git and here.
+3. **The papers, a full pass.** From Matt's playtest: a paper's pick still says "In the drawer, in Training", and the
+   papers no longer live there. The flavour line (e.g. "The garden centre's. Nine stamps of ten. The free coffee's
+   still owed.") goes in the paper's description. The code it carries wants a better way of being shown. Matt's
+   lean: a paper stays encrypted until the Radio's open, so papers become things to hold on to that build the lore
+   as they're kept. To design with him.
+4. **The flaky scrap check.** "searches brought no scrap in 600 seconds" failed once and passed when the smoke ran
+   again (14 Oct). A site picked clean before a scrap roll stops searching; the check wants a site that can't run
+   dry.
+5. **From the gang-clock change**, already parked above for the pass: the search against the gangs, and gangs harder,
+   not just larger.
