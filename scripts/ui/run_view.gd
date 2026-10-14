@@ -53,6 +53,12 @@ const CRATE_SPOTS := [
 	{"foot": Vector2(285, 201), "scale": 0.72},
 	{"foot": Vector2(372, 185), "scale": 0.55},
 ]
+## The crate just opened (14 Oct, Matt: "the open versions of the boxes don't actually show"): set down open at the
+## front left, a little bigger than the rest, its finds named over it, for OPEN_S; it fades its last OPEN_FADE_S, and goes
+## at once when a gang comes. Mockup docs/design/mockups/search_mockup4.png.
+const OPEN_SPOT := {"foot": Vector2(72, 214), "scale": 1.2}
+const OPEN_S := 2.0
+const OPEN_FADE_S := 0.5
 const PLATE_AT := Vector2(-50, -20)       # the plate's crop for the fight; the search pans a further PAN along
 const PAN := 50.0
 const COVER_Y := H - 72
@@ -79,6 +85,15 @@ var _crates: Array = []                   # the crates in the street while searc
 var _cover: TextureRect
 var _cover_fill: TextureRect               # the wall's brick carried on down under it, for the duck (Matt: "too short when crouching")
 var _shadows: Array = []                   # a shadow under each crate
+var _open_c: TextureRect                   # the crate just opened, open (OPEN_SPOT)
+var _open_sh: TextureRect
+var _open_tag: Label                       # "Opened · 2 finds" over it
+var _open_left := 0.0                      # its seconds still up
+var _open := {}                            # {name, key, finds} while it's up
+var _open_for = null                       # the queue and the crate in hand it last saw: a step on is an opening
+var _open_ci := -1
+var _open_seen := 0.0                      # the game's clock at the last look: a step on seen long after isn't "just"
+const OPEN_FRESH_S := 2.0
 var _glass: Control                        # the magnifying glass over the crate being opened, its ring the search's progress
 var _search_p := 0.0
 var _hands: TextureRect
@@ -219,6 +234,10 @@ func _init() -> void:
 		var c := _rect(null)
 		c.visible = false
 		_crates.append(c)
+	_open_sh = _rect(_shadow_tex())
+	_open_sh.visible = false
+	_open_c = _rect(null)
+	_open_c.visible = false
 	# the figures stand in depth order: the far one behind, the near one in front
 	move_child(_figs[2]["rect"], _plate.get_index() + 1)
 	_cover = _rect(null)
@@ -260,6 +279,9 @@ func _init() -> void:
 	_red.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_red.modulate = Color(1, 1, 1, 0)
 	add_child(_red)
+	_open_tag = UI.label(self, Rect2(0, 0, 160, 22), "", "Medium", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	UI.shadow(_open_tag)
+	_open_tag.visible = false
 	_glass = Glass.new()
 	_glass.ring = Pal.ACCENT
 	_glass.visible = false
@@ -648,6 +670,50 @@ func show_state(sim, m: Dictionary) -> void:
 	var t: Dictionary = m["t"]
 	_search_p = clampf(float(m.get("search", 0.0)) / maxf(0.01, sim.search_s(t)), 0.0, 1.0) if searching else 0.0
 	_glass.visible = searching and _crates[0].visible and ci < cs.size() and not sim.crates_done(m)
+	# the one just opened: the queue's step on (past any passed over) puts the last opened down, open
+	if not is_same(_open_for, cs):
+		_open_for = cs                           # a new search (or none): nothing just opened
+		_open_ci = ci
+		_open_left = 0.0
+	elif ci > _open_ci:
+		var j: int = ci - 1
+		while j >= _open_ci and j >= 0 and cs[j].get("passed", false):
+			j -= 1
+		var was: int = _open_ci
+		_open_ci = ci
+		var fresh: bool = sim.elapsed - _open_seen <= OPEN_FRESH_S      # back from another room, the opening's old news (the review)
+		if fresh and j >= maxi(0, was) and j < cs.size() and not cs[j].get("passed", false):
+			_show_open(cs[j])
+	_open_seen = sim.elapsed
+	if not searching:
+		_open_left = 0.0                         # a gang: it goes at once
+	_open_c.visible = _open_left > 0.0
+	_open_sh.visible = _open_c.visible
+	_open_tag.visible = _open_c.visible
+
+
+## The crate just opened, set down open at OPEN_SPOT for OPEN_S.
+func _show_open(q: Dictionary) -> void:
+	var pic: Array = CratesPanel.crate_texture(str(q["key"]), true)
+	_open_c.texture = pic[0]
+	_open_c.modulate = pic[1]
+	var s: float = OPEN_SPOT["scale"]
+	_open_c.size = _open_c.texture.get_size() if _open_c.texture != null else Vector2(64, 64)
+	_open_c.scale = Vector2(s, s)
+	_open_c.set_meta("at", OPEN_SPOT["foot"] - Vector2(_open_c.size.x * 0.5, _open_c.size.y * 0.95) * s)
+	_open_sh.scale = Vector2(s, s)
+	_open_sh.set_meta("at", OPEN_SPOT["foot"] - Vector2(_open_sh.size.x * 0.5, _open_sh.size.y * 0.6) * s)
+	var n: int = q.get("finds", []).size()
+	_open_tag.text = "Opened · " + CratesPanel.finds_words(n)
+	_open_tag.size.x = UI.text_width(_open_tag, _open_tag.text) + 16
+	_open_tag.set_meta("at", Vector2(OPEN_SPOT["foot"].x - _open_tag.size.x * 0.5, OPEN_SPOT["foot"].y - _open_c.size.y * 0.95 * s - _open_tag.size.y - 2))
+	_open = {"name": str(q["name"]), "key": str(q["key"]), "finds": n}
+	_open_left = OPEN_S
+
+
+## The crate just opened while it's up ({name, key, finds}), or {}: the search bar names it for its moment.
+func opened() -> Dictionary:
+	return _open if _open_left > 0.0 else {}
 
 
 func _set_state(k: int, s: String) -> void:
@@ -793,6 +859,15 @@ func _process(dt: float) -> void:
 		for n in [_crates[k], _shadows[k]]:
 			if n.has_meta("at"):
 				n.position = n.get_meta("at") + Vector2(PAN - _pan, 0)
+	# the one just opened rides the pan with them, fading its last moment
+	if _open_left > 0.0:
+		_open_left = maxf(0.0, _open_left - dt)
+		var a: float = clampf(_open_left / OPEN_FADE_S, 0.0, 1.0)
+		for n in [_open_c, _open_sh, _open_tag]:
+			n.visible = _open_left > 0.0
+			if n.has_meta("at"):
+				n.position = n.get_meta("at") + Vector2(PAN - _pan, 0)
+			n.modulate.a = a
 	# the glass: over the crate being opened, bobbing a little, circling as it looks
 	if _glass.visible:
 		var c0: TextureRect = _crates[0]
@@ -1063,4 +1138,4 @@ func figures_up() -> int:
 
 
 func state() -> Dictionary:
-	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck, "glass": _glass.visible, "search_p": _search_p}
+	return {"on_you": _on_you, "up": figures_up(), "pan_to": _pan_to, "red": _red_a, "crates": _crates.filter(func(c): return c.visible).size(), "duck": _duck, "glass": _glass.visible, "search_p": _search_p, "open": _open_left > 0.0 and _open_c.visible}

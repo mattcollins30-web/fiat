@@ -34,6 +34,7 @@ static func _player_saves() -> Dictionary:
 	return out
 const Sim := preload("res://scripts/sim/sim.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
+const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
@@ -7578,11 +7579,49 @@ func _wound_checks(main) -> void:
 	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the Pitch, the Clinic's price and cure, the save, the death")
 
 
+## The search's column (14 Oct, mockups search_mockup3/4): the crates under the six and inside the column, the rig
+## under them and clear of the buttons, the floor's cells, its ? and its pages inside the panel and off each other, the
+## take's tiles and note folded away.
+func _search_layout(main, where: String) -> void:
+	var run = main._run
+	if not run._crates.visible:
+		_check(false, where + ": the crates are not up")
+		return
+	var cr := Rect2(run._crates.position, run._crates.size)
+	var six_end: float = run.VIEW_ROW_Y + UI.TILE_H if run._view != null else 0.0
+	_check(Rect2(Vector2.ZERO, run._left.size).encloses(cr) and cr.position.y >= six_end, "%s: the crates leave the column or sit on the six: %s" % [where, str(cr)])
+	_check(run._rig_head.position.y >= cr.end.y and run._rig_head.visible, "%s: the rig's head is over the crates (%.0f against %.0f)" % [where, run._rig_head.position.y, cr.end.y])
+	var top := 1e9
+	var bottom := 0.0
+	for k in range(run._rig_cells.size()):
+		for n in [run._rig_cells[k], run._rig_outlines[k]]:
+			if n.visible:
+				top = minf(top, n.position.y)
+				bottom = maxf(bottom, n.position.y + n.size.y)
+	_check(bottom <= run._button.position.y and (bottom == 0.0 or top >= run._rig_head.position.y + run._rig_head.size.y), "%s: the rig runs %.0f to %.0f, the buttons at %.0f" % [where, top, bottom, run._button.position.y])
+	_check(not run._take_head.visible and not run._note.visible and run._take_tiles.all(func(tl): return not tl["panel"].visible), where + ": the take's tiles are still up under the crates")
+	var box := Rect2(Vector2.ZERO, run._crates.size)
+	var shown: Array = []
+	for c in run._crates._cells + [run._crates._query]:
+		if c.visible:
+			shown.append(Rect2(c.position, c.size))
+	for t in run._crates._tiles + [{"panel": run._crates._more}]:
+		if t["panel"].visible:
+			shown.append(Rect2(t["panel"].position, t["panel"].size))
+	for b in [run._crates._prev, run._crates._next_page, run._crates._page_label]:
+		if b.visible:
+			shown.append(Rect2(b.position, b.size))
+	for a in range(shown.size()):
+		_check(box.encloses(shown[a]), "%s: %s runs out of the crates panel" % [where, str(shown[a])])
+		for b in range(a + 1, shown.size()):
+			_check(not shown[a].intersects(shown[b]), "%s: %s and %s overlap in the crates panel" % [where, str(shown[a]), str(shown[b])])
+
+
 ## The crates (13 Oct, docs/design/search_crates.md): a cleared site's search is its crates, in the dice's order, their
 ## searches adding up to thin_after (depth and quantity push it); each crate's finds lean to its kind; all open, the
 ## site's picked clean - nothing more found, and the auto-run and "Fill up" go; the Kennel's top rank noses each
-## crate's best find at the clear and it's the crate's first; the panel under the pack shows it all and fits; the
-## save keeps the crates.
+## crate's best find at the clear and it's the crate's first; the crates in the left column under the six (14 Oct),
+## the rig under them and the pick panel beside, show it all and fit; the save keeps the crates.
 func _crates_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -7621,15 +7660,23 @@ func _crates_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	var run = main._run
-	_check(run._crates.visible and not run._pick.visible and run._inv.page_rows == run._inv.ROWS, "the crates are not up in the pick panel's place, the pack whole")
-	_check(run._crates._head.text.begins_with("THE CRATES · 0 OF %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()), "the crates' head reads '%s'" % run._crates._head.text)
-	_check(run._fight["bar_text"].text.begins_with("Crate %d of %d" % [int(m["crate_i"]) + 1, m["crates"].size()]), "the fight bar does not name the crate: '%s'" % run._fight["bar_text"].text)     # a locked first one passed over (13 Oct)
-	_check(run._crates.position.y >= run._inv.position.y + run._inv.size.y and run._crates.position.y + run._crates.size.y <= Pal.ROOM_H, "the crates panel overlaps the pack or runs off the room")
+	_check(run._crates.visible and run._pick.visible and run._crates.get_parent() == run._left and run._inv.page_rows == run._inv.ROWS, "the crates are not in the left column with the pick panel beside, the pack whole")
+	_check(run._crates._head.text.contains("0 OF %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()) and run._crates._head.text.contains("PACK %d OF %d" % [sim.pack_used(m), sim.capacity()]), "the crates' head reads '%s'" % run._crates._head.text)
+	_check(run._fight["bar_text"].text.begins_with(str(sim.crate_now(m)["name"])), "the search bar does not name the crate in hand: '%s'" % run._fight["bar_text"].text)     # a locked first one passed over (13 Oct)
+	_search_layout(main, "the crates")
 	_check_fit(main, "Run (the crates)")
+	# HP low with the take's note folded away: the warning on the crates' head (the review)
+	sim.hp = sim.max_hp() * 0.2
+	main.refresh()
+	_check(run._crates._head.text.begins_with("HP LOW") and not run._note.visible, "HP low under the crates does not warn: '%s'" % run._crates._head.text)
+	_check_fit(main, "Run (the crates, HP low)")
+	sim.hp = sim.max_hp()
+	main.refresh()
+	_check(not run._crates._head.text.begins_with("HP LOW"), "the warning stayed on the crates' head with HP back")
 	# the pictures inside their tiles (a TextureRect sized before its expand mode keeps the texture's 64 px)
 	var tile_box := Rect2(Vector2.ZERO, run._crates._tiles[0]["panel"].size)
 	for tl in run._crates._tiles:
-		for part in ["art", "glass", "name", "pips"]:
+		for part in ["art", "glass", "lock", "name", "pips"]:
 			var rc := Rect2(tl[part].position, tl[part].size)
 			_check(tile_box.encloses(rc), "a crate tile's %s runs out of it: %s in %s" % [part, str(rc), str(tile_box)])
 	_check(Rect2(Vector2.ZERO, run._crates._query.size).encloses(Rect2(run._crates._query_glass.position, run._crates._query_glass.size)), "the ? cell's magnifier runs out of it")
@@ -7639,33 +7686,43 @@ func _crates_checks(main) -> void:
 	for k in range(int(4.0 * sim.search_s(t)) + 4):
 		sim.hp = sim.max_hp()
 		sim.advance(1.0)
+		main.refresh()                       # the view looks as it plays: an opening seen at once is "just opened"
 		if not sim.on_mission() or int(m["crate_i"]) > first_i:
 			break
 	_check(sim.on_mission() and int(m["crate_i"]) > first_i and int(first["done"]) == int(first["searches"]), "the first crate did not open in its searches: %d of %d, on %d" % [int(first["done"]), int(first["searches"]), int(m["crate_i"])])
 	_check(first["finds"].size() > 0 and first["finds"].size() <= int(m.get("finds", 0)) - finds0, "the first crate kept %d finds against %d found" % [first["finds"].size(), int(m.get("finds", 0)) - finds0])
 	main.refresh()
 	_check(run._crates._finds_head.text.begins_with("ON THE FLOOR") or run._crates._finds_head.text.begins_with("STRAIGHT INTO THE PACK"), "the reveal's head reads '%s'" % run._crates._finds_head.text)
-	_check_fit(main, "Run (a crate open)")
-	# the toggle (13 Oct, Matt): one search bar at a time - the crates up, the fight box's bar gone; its click away,
-	# the pick and the bar back; a pick shows its comparison; a new search opens on the crates whatever was picked
-	_check(run._crates.visible and not run._fight["track"].visible and not run._search_button.visible, "with the crates up the fight box still shows its search bar")
-	run._crates.toggled.emit()
-	main.refresh()
-	_check(run._pick.visible and not run._crates.visible and run._fight["track"].visible and run._search_button.visible, "the crates' bar did not give the pick and the search bar back")
-	_check(run._fight["bar_text"].text.contains("Crate ") and Rect2(Vector2.ZERO, run._fight["track"].size).has_point(run._search_button.position - run._fight["track"].position + Vector2(1, 1)), "the search bar is not the toggle: '%s'" % run._fight["bar_text"].text)
-	_check_fit(main, "Run (the search bar, the pick)")
-	run._search_button.pressed.emit()
-	main.refresh()
-	_check(run._crates.visible and not run._pick.visible and not run._fight["track"].visible, "the search bar did not open the crates")
+	# the one just opened (14 Oct, Matt: "a small view of it open"): its tile reads opened, and in the frame it's set
+	# down open, the bar naming it, for its moment; then gone, the bar back on the one in hand
+	var first_k: int = first_i - clampi(int(m["crate_i"]) - 1, 0, maxi(0, m["crates"].size() - CratesPanel.SHOWN))
+	_check(first_k < 0 or first_k >= CratesPanel.SHOWN or (run._crates._more.visible and first_k == CratesPanel.SHOWN - 1) or run._crates._tiles[first_k]["pips"].text == "opened", "the opened crate's tile does not say so")
+	var v = run._view
+	if v != null:
+		_check(v.state()["open"] and str(v.opened().get("name", "")) == str(first["name"]) and int(v.opened()["finds"]) == first["finds"].size(), "the crate just opened is not set down open in the frame: %s" % str(v.opened()))
+		_check(v._open_c.texture == CratesPanel.crate_texture(str(first["key"]), true)[0], "the crate just opened is not in its open art")
+		main.refresh()
+		_check(run._fight["bar_text"].text.begins_with(str(first["name"]) + " opened"), "the search bar does not name the crate just opened: '%s'" % run._fight["bar_text"].text)
+		v._process(0.0)
+		_check(Rect2(Vector2.ZERO, Vector2(RunView.W, RunView.H)).encloses(Rect2(v._open_tag.position, v._open_tag.size)) and v._open_tag.position.y + v._open_tag.size.y <= run.OVER_Y - run.FIGHT_BOX_Y, "the opened crate's tag leaves the frame or sits on the bar")
+		_check_fit(main, "Run (a crate open)")
+		v._process(RunView.OPEN_S + 0.1)
+		main.refresh()
+		_check(not v.state()["open"] and not v._open_c.visible and not run._fight["bar_text"].text.contains(" opened"), "the crate just opened stayed past its moment: '%s'" % run._fight["bar_text"].text)
+		# a gang comes: it goes at once
+		v._show_open(first)
+		m["remaining"] = 2
+		main.refresh()
+		_check(not v.state()["open"], "the crate just opened stayed up through a gang")
+		m["remaining"] = 0
+		main.refresh()
+	_check_fit(main, "Run (a crate open, after)")
+	# the pick panel stays the pick's (14 Oct, Matt): a pick in the pack compares there with the crates still up
 	if not m["found"].is_empty():
 		run._inv.selected = int(m["found"][0]["id"])
 		run._on_inv_pick(int(m["found"][0]["id"]))
 		main.refresh()
-		_check(run._pick.visible and not run._crates.visible, "a pick did not show its comparison over the crates")
-		var next_q: Array = m["crates"].duplicate()
-		m["crates"] = next_q                     # a new search (Matt, 13 Oct: a rig still picked when the fight ended hid the crates)
-		main.refresh()
-		_check(run._crates.visible and not run._pick.visible, "a new search with a pick held did not open on the crates")
+		_check(run._pick.visible and run._crates.visible, "a pick hid the crates or the pick panel")
 		run._inv.selected = -1
 	# the floor (13 Oct, Matt): by hand, a search's finds wait on the floor; taken into the pack only if they fit; a
 	# thing ditched lands there with its scrap and comes back without it; the row shows them; a click compares, Take
@@ -7678,7 +7735,7 @@ func _crates_checks(main) -> void:
 	var fl0: Dictionary = sim.floor_items().back()
 	run._pick_floor(int(fl0["id"]))
 	main.refresh()
-	_check(run._pick.visible and not run._crates.visible and run._pick._kickers[0].text.to_lower().contains("on the floor") and run._pick._buttons[0].visible and run._pick._buttons[0].text == "Take", "a click on the floor did not show its comparison and Take: %s" % run._pick._kickers[0].text)
+	_check(run._pick.visible and run._crates.visible and run._pick._kickers[0].text.to_lower().contains("on the floor") and run._pick._buttons[0].visible and run._pick._buttons[0].text == "Take", "a click on the floor did not show its comparison and Take: %s" % run._pick._kickers[0].text)
 	_check_fit(main, "Run (a pick on the floor)")
 	var fits0: bool = sim.floor_fits(fl0)
 	var found_n: int = m["found"].size()
@@ -7733,9 +7790,18 @@ func _crates_checks(main) -> void:
 		sim.hp = sim.max_hp()
 		m["remaining"] = 0
 		sim.advance(1.0)
+		main.refresh()
 		if not sim.on_mission() or sim.crates_done(m):
 			break
 	_check(sim.on_mission() and sim.crates_done(m), "the crates did not all open")
+	if sim.on_mission() and run._view != null:
+		# the last one opened is named for its moment too, then picked clean (the review)
+		var last_j: int = m["crates"].size() - 1
+		while last_j >= 0 and m["crates"][last_j].get("passed", false):
+			last_j -= 1
+		main.refresh()
+		_check(last_j < 0 or run._fight["bar_text"].text.begins_with(str(m["crates"][last_j]["name"]) + " opened"), "the last crate's opening is not named: '%s'" % run._fight["bar_text"].text)
+		run._view._process(RunView.OPEN_S + 0.1)
 	if sim.on_mission():
 		var f_done: int = int(m.get("finds", 0))
 		var s_done: int = int(m["searches"])
@@ -7745,7 +7811,7 @@ func _crates_checks(main) -> void:
 			sim.advance(1.0)
 		_check(sim.on_mission() and int(m.get("finds", 0)) == f_done and int(m["searches"]) == s_done, "a picked-clean site still finds: %d → %d" % [f_done, int(m.get("finds", 0))])
 		main.refresh()
-		_check(run._crates._head.text.begins_with("THE CRATES · ALL %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()) and run._fight["bar_text"].text.begins_with("Picked clean"), "picked clean does not read so: '%s' / '%s'" % [run._crates._head.text, run._fight["bar_text"].text])
+		_check(run._crates._head.text.contains("ALL %d OPEN" % m["crates"].filter(func(q): return not q.get("locked", false)).size()) and run._fight["bar_text"].text.begins_with("Picked clean"), "picked clean does not read so: '%s' / '%s'" % [run._crates._head.text, run._fight["bar_text"].text])
 		_check_fit(main, "Run (picked clean)")
 		# "Fill up, then go" goes: nothing more to stay for
 		m["leave_full"] = true
@@ -7833,7 +7899,7 @@ func _crates_checks(main) -> void:
 	_check(open_total >= sim.thin_after(m["t"]), "the locked crates ate the site's searches: %d of %d" % [open_total, sim.thin_after(m["t"])])
 	_check(not sim.crate_now(m).get("locked", false), "a locked crate is in hand without the Keys")
 	main.refresh()
-	_check(run._crates._head.text.ends_with("· %d LOCKED" % locked_n), "the head does not count the locked: '%s'" % run._crates._head.text)
+	_check(run._crates._head.text.contains("%d LOCKED" % locked_n), "the head does not count the locked: '%s'" % run._crates._head.text)
 	_check_fit(main, "Run (locked crates)")
 	var steps := 0
 	while sim.on_mission() and not sim.crates_done(m) and steps < 4000:
@@ -8205,7 +8271,6 @@ func _run_view_checks(main) -> void:
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
 	sim._roll_crates(m, m["t"])
-	run.view_crates = false
 	main.refresh()
 	for k in range(10):
 		v._process(0.2)
@@ -8231,8 +8296,40 @@ func _run_view_checks(main) -> void:
 	m["search"] = sim.search_s(m["t"]) * 0.5
 	main.refresh()
 	_check(absf(float(v.state()["search_p"]) - 0.5) < 0.01, "the glass's ring isn't the search: %.2f" % float(v.state()["search_p"]))
-	_check(run._fight["track"].position.y >= run.VIEW_SEARCH_Y and run._six[0]["key"].text == "Gang in", "the search bar is not under the six while searching")
+	# the search's bar in the HP bar's place, the frame's width (14 Oct, Matt); a gang puts their HP bar and yours back
+	_check(is_equal_approx(run._fight["track"].position.y, run.OVER_Y) and is_equal_approx(run._fight["track"].size.x, run.INNER) and not run._runner["track"].visible and run._six[0]["key"].text == "Gang in", "the search bar is not at the frame's foot in the HP bar's place")
+	_search_layout(main, "the run view, the search")
 	_check_fit(main, "Run (the run view, the search)")
+	m["remaining"] = 2
+	main.refresh()
+	_check(run._runner["track"].visible and is_equal_approx(run._runner["track"].position.y, run.OVER_Y) and run._fight["track"].position.y < run.OVER_Y - run.BAR_H and run._fight["bar_text"].text.begins_with("Their HP"), "a gang did not bring your HP bar back: their bar at %.0f" % run._fight["track"].position.y)
+	_search_layout(main, "the run view, a gang in the search")
+	_check_fit(main, "Run (the run view, a gang in the search)")
+	m["remaining"] = 0
+	main.refresh()
+	_check(not run._runner["track"].visible and is_equal_approx(run._fight["track"].position.y, run.OVER_Y), "the gang gone, the search bar did not come back in the HP bar's place")
+	# a full rig and a floor past a row: nothing on the buttons, the floor's pages clear of its cells
+	var rig0: Array = sim.rig.duplicate()
+	var floor0: Array = sim.floor_items().duplicate()
+	if not sim.rig.is_empty() and Items.size(sim.rig[0]) == 1:
+		while sim.rig_used() < mini(sim.med_capacity(), Data.RIG_CAP):
+			var one: Dictionary = sim.rig[0].duplicate(true)
+			one["id"] = Items._next_id
+			Items._next_id += 1
+			sim.rig.append(one)
+	var proto: Dictionary = sim._plain("Helmet", "Army helmet")
+	for k in range(14):
+		var f: Dictionary = proto.duplicate(true)
+		f["id"] = Items._next_id
+		Items._next_id += 1
+		m["floor"] = sim.floor_items() + [f]
+	main.refresh()
+	_check(run._crates._prev.visible, "fourteen things on the floor and no pages")
+	_search_layout(main, "a full rig, the floor paged")
+	_check_fit(main, "Run (a full rig, the floor paged)")
+	sim.rig = rig0
+	m["floor"] = floor0
+	main.refresh()
 	_placement_checks(main, v)
 	sim.extract_now()
 	sim.load_dict(saved)
@@ -8377,7 +8474,7 @@ func _placement_checks(main, v) -> void:
 	p.toggle()
 	_check(v.placing and p.visible and v._figs.all(func(f): return f["state"] == "up"), "F3 didn't hold the fight with all three up")
 	var run = main._run
-	_check(not run._fight["track"].visible and not run._runner["track"].visible and not run._fight["head"].visible and not run._search_button.visible, "the bars and the head stayed over the frame while placing")
+	_check(not run._fight["track"].visible and not run._runner["track"].visible and not run._fight["head"].visible, "the bars and the head stayed over the frame while placing")
 	var t0: float = sim.elapsed
 	main._process(0.5)
 	_check(is_equal_approx(sim.elapsed, t0), "the game ran on while placing")
@@ -8409,7 +8506,8 @@ func _placement_checks(main, v) -> void:
 	_check(not v.placing and v.slot_of(0)["foot"] == want[0]["foot"] and is_equal_approx(v.slot_of(1)["scale"], snappedf(want[1]["scale"], 0.001)), "after F3 the view doesn't stand them where they were saved")
 	main._process(0.1)
 	_check(sim.elapsed > t0, "the game didn't run on after placing")
-	_check(run._runner["track"].visible and run._fight["head"].visible, "the bars didn't come back after placing")     # their bar's own rule (the crates up) decides it
+	# one bar at the frame's foot: your HP, or the search's in its place (14 Oct)
+	_check(run._fight["track"].visible and run._fight["head"].visible and run._runner["track"].visible != is_equal_approx(run._fight["track"].position.y, run.OVER_Y), "the bars didn't come back after placing")
 	# leaving the run screen while placing lets the tool go, and the game runs on (the review: a room click froze it)
 	p.toggle()
 	var room0: String = main.room

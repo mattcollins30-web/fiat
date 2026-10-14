@@ -72,6 +72,12 @@ const VIEW_W := INNER + 2 * BOX_PAD                           # 588
 const VIEW_ROW_Y := FIGHT_BOX_Y + RunView.H + 8
 const VIEW_SEARCH_Y := VIEW_ROW_Y + UI.TILE_H + 8
 const OVER_W := 300                                           # a bar laid over the frame
+# the search (14 Oct, Matt; mockups search_mockup3/4): the crates under the six where the rig and the take sit in a
+# fight, the rig under them, the take folded into the crates' head; the search's bar over the frame in the HP bar's place
+const CRATES_Y := VIEW_SEARCH_Y - 2
+const RIG_SEARCH_HEAD_Y := CRATES_Y + CratesPanel.HEIGHT + 4
+const RIG_SEARCH_Y := RIG_SEARCH_HEAD_Y + UI.HEAD_H + 2
+const OVER_Y := FIGHT_BOX_Y + RunView.H - BAR_H - 10            # the bar at the frame's foot: your HP, or the search
 
 var sim
 var _left: Panel                   # the column: the band and the sections
@@ -111,10 +117,8 @@ var _guarded_seen := 0.0           # what Guard's numbers have shown (12 Oct): i
 var _healed_seen := 0.0            # and the green
 var _hp_at := -1.0
 var _found_seen: Array = []        # the finds the flashes have seen
-var _crates                        # the crates (crates_panel.gd): under the pack once the site's cleared, in the pick panel's place
-var view_crates := false           # the toggle (13 Oct, Matt): the search bar shows the crates, the crates' bar the pick again; one bar at a time
-var _crates_for = null             # the run's crates the view last opened on: a new search opens on the crates
-var _search_button: Button         # over the fight box's bar while it's the search's
+var _crates                        # the crates (crates_panel.gd): in the left column once the site's cleared, the rig under them
+var _rig_y: float = RIG_Y          # the rig's row: under the take in a fight, under the crates in the search
 var _floor_pick := -1              # a thing on the floor picked (13 Oct): its comparison, and Take
 var _view = null                   # the run view (run_view.gd), when its art is there; else the boxes as they were
 var _six: Array = []               # the six figures under the frame
@@ -182,17 +186,13 @@ func _init() -> void:
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)
 	add_child(_inv)
-	_search_button = _bar_button(_fight["track"])
-	_search_button.tooltip_text = "Show the crates"
-	_search_button.pressed.connect(_toggle_crates)
 	_crates = CratesPanel.new()
-	_crates.build(GRID_W, PICK_H)
-	_crates.toggled.connect(_toggle_crates)
+	_crates.build(INNER)
 	_crates.floor_take.connect(_take_floor)
 	_crates.floor_picked.connect(_pick_floor)
-	_crates.position = Vector2(GRID_X, PICK_Y)
+	_crates.position = Vector2(PAD, CRATES_Y)
 	_crates.visible = false
-	add_child(_crates)
+	_left.add_child(_crates)
 	_pick = PickPanel.new(GRID_W, PICK_H)
 	_pick.position = Vector2(GRID_X, PICK_Y)
 	_pick.acted.connect(_on_pick_acted)
@@ -220,7 +220,7 @@ func _view_make() -> void:
 	_fight["head"].position = Vector2(PAD, FIGHT_BOX_Y + 6)
 	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
 	UI.shadow(_fight["head"])
-	_bar_place(_runner, Rect2(PAD, FIGHT_BOX_Y + RunView.H - BAR_H - 10, OVER_W, BAR_H))
+	_bar_place(_runner, Rect2(PAD, OVER_Y, OVER_W, BAR_H))
 	_fight["key"].position = Vector2(PAD, FIGHT_BOX_Y + 62)
 	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + 62)
 	_runner["key"].position = Vector2(PAD, FIGHT_BOX_Y + RunView.H - BAR_H - 14 - Chips.CHIP_H)
@@ -324,22 +324,20 @@ func show_state(s) -> void:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
 		_tiles(_fight["tiles"], [["Next gang", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
-		# the crates (13 Oct): the one in hand, or picked clean
-		var cr: Dictionary = sim.crate_now(m)
-		var search_words: String = "Searching" if not m.has("crates") else ("Picked clean: every crate open" if cr.is_empty() else
-			"Crate %d of %d · %s" % [int(m.get("crate_i", 0)) + 1, m["crates"].size(), str(cr["name"]).to_lower()])
-		_bar(_fight, 1.0 if sim.crates_done(m) else clampf(m["search"] / sim.search_s(t), 0.0, 1.0), search_words, "warn" if sim.crates_done(m) else "good")
-		if m.has("crates") and UI.text_width(_fight["bar_text"], search_words + " · show the crates") <= _fight["w"] - 16:
-			_fight["bar_text"].text = search_words + " · show the crates"     # the bar's a button (13 Oct): it says so
+	var search_state: bool = not boss_on and not way_out and m["remaining"] <= 0
 	if _view != null:
-		# the run view: their bar over the frame in a fight, the search's under the six while it's searching
-		var search_state: bool = not boss_on and not way_out and m["remaining"] <= 0
+		# the run view: their bar over the frame in a fight; while it's searching the search's at the frame's foot,
+		# the whole width, in your HP bar's place (14 Oct, Matt: "switch back to HP when a gang enters")
 		if search_state:
-			_bar_place(_fight, Rect2(VIEW_X, VIEW_SEARCH_Y, VIEW_W, BAR_H))
+			_bar_place(_fight, Rect2(PAD, OVER_Y, INNER, BAR_H))
 		else:
 			_bar_place(_fight, Rect2(PAD, FIGHT_BOX_Y + 32, OVER_W, BAR_H))
-		_search_button.position = _fight["track"].position
-		_search_button.size = _fight["track"].size
+		_runner["track"].visible = not search_state
+	if search_state:
+		# the crates (13 Oct): the one in hand and the next, the one just opened for its moment, or picked clean
+		var bf: Array = CratesPanel.bar_forms(sim, m, _view.opened() if _view != null else {})
+		_bar(_fight, float(bf[0]), str(bf[1][0]), str(bf[2]))
+		UI.fit(_fight["bar_text"], bf[1])
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
 	var g: float = sim.guard()
@@ -382,29 +380,33 @@ func show_state(s) -> void:
 	_runner["note"].visible = false
 	if not on_you.is_empty():
 		_runner["chips"].show_chips(on_you)
-	_show_rig()
 	# the take
 	_tiles(_take_tiles, [["Tins", Fmt.money_forms(m["cash"])], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m["cleared"] else "Pack full: a better find swaps in") if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
-	# the crates under the pack once the site's cleared, where the pick panel sits while nothing's picked (a pick
-	# brings the panel back over them: the review, 13 Oct - a 3x3 vest wouldn't fit a pack cut to two rows)
-	# the crates (13 Oct, Matt): a toggle, the search bar opening them and the crates' bar giving the pick back - one
-	# search bar shown at a time; a new search opens on the crates, whatever was picked when the fight ended
-	var has_crates: bool = m.has("crates") and not m.get("crates_off", false)
-	if has_crates and not is_same(_crates_for, m["crates"]):
-		_crates_for = m["crates"]
-		view_crates = true
-	var crates_on: bool = has_crates and view_crates
-	var searching_bar: bool = has_crates and m["remaining"] <= 0 and not boss_on and not way_out
-	_fight["track"].visible = not (crates_on and searching_bar)
-	_search_button.visible = searching_bar and not crates_on
+	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
+	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
+	# them; the pick panel stays the pick's, so a thing on the floor compares against what's worn
+	var crates_on: bool = m.has("crates") and not m.get("crates_off", false) and not way_out
 	_crates.visible = crates_on
-	_pick.visible = not crates_on
+	_take_head.visible = not crates_on
+	for tl in _take_tiles:
+		tl["panel"].visible = not crates_on
+	_note.visible = not crates_on
+	_rig_y = RIG_SEARCH_Y if crates_on else RIG_Y
+	_rig_head.position.y = RIG_SEARCH_HEAD_Y if crates_on else RIG_HEAD_Y
+	_show_rig()
 	if crates_on:
 		_crates.show_crates(sim, m)
+		_crates.warn("HP low: get out or lose it all" if low else "")     # the note's warning, on the crates' head while the note's folded away (the review)
+	if _view == null:
+		# the boxes without the frame's art: the runner box's foot (its outline, the "On you" chips) would sit under the crates
+		_runner["box"].visible = not crates_on
+		if crates_on:
+			_runner["key"].visible = false
+			_runner["chips"].visible = false
 	# the pack
 	_inv.show_items(sim, m["found"], sim.pack_used(m), sim.capacity(), "Pack")
 	_juice_tick(m)
@@ -816,7 +818,7 @@ func _view_numbers(m: Dictionary) -> void:
 ## The placement tool (F3): what the run screen lays over the frame stands aside while the figures are being put, so
 ## they're seen whole and nothing takes the mouse from the tool; the next refresh puts it all back as it should be.
 func _on_placing(on: bool) -> void:
-	for n in [_fight["track"], _runner["track"], _fight["key"], _fight["chips"], _runner["key"], _runner["chips"], _fight["head"], _search_button]:
+	for n in [_fight["track"], _runner["track"], _fight["key"], _fight["chips"], _runner["key"], _runner["chips"], _fight["head"]]:
 		n.visible = not on
 	if not on and sim != null and sim.on_mission():
 		show_state(sim)
@@ -908,7 +910,7 @@ func _show_rig() -> void:
 	@warning_ignore("integer_division")
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
 	@warning_ignore("integer_division")
-	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), RIG_Y + (pos / per_row) * (cell + Pal.CELL_GAP))
+	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
 	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the
 	# gap a wide kit left at a row's end; nothing past the cap (the cells follow the rig's order, so the first that finds no run stops the rest)
@@ -958,7 +960,6 @@ func _rig_pressed(k: int) -> void:
 			var id: int = int(sim.rig[k]["id"])
 			_rig_pick = -1 if _rig_pick == id else id
 			_inv.selected = -1
-			view_crates = false               # its comparison shows: the crates are the search bar's click away
 		elif Items.is_medical(sim.rig[k]):
 			sim.use_med(sim.rig[k]["id"])
 		elif Items.is_grenade(sim.rig[k]):
@@ -1013,7 +1014,6 @@ func _take_floor(id: int) -> void:
 	if sim.take_floor(id):
 		if _floor_pick == id:
 			_floor_pick = -1
-			view_crates = true                # back to the crates for the next
 	else:
 		if juice != null:
 			juice.toast("No room in the pack", "bad")
@@ -1027,38 +1027,12 @@ func _pick_floor(id: int) -> void:
 	_floor_pick = id
 	_inv.selected = -1
 	_rig_pick = -1
-	view_crates = false
 	_shown = ""
 	acted.emit()
 
 
 func _on_inv_pick(_id: int) -> void:
-	view_crates = false                   # a pick shows its comparison: the crates are a click on the search bar away
 	acted.emit()
-
-
-## The search bar's toggle (13 Oct, Matt): the crates, or the pick.
-func _toggle_crates() -> void:
-	view_crates = not view_crates
-	_shown = ""                           # the pick panel redraws when it comes back
-	acted.emit()
-
-
-## A flat button over a bar: the bar shows through, the pointer says it's pressable.
-func _bar_button(track: Control) -> Button:
-	var b := Button.new()
-	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
-	b.position = track.position
-	b.size = track.size
-	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	b.add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.06), 6))
-	b.add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.1), 6))
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	track.get_parent().add_child(b)
-	b.visible = false
-	return b
 
 
 func _on_inv_acted() -> void:
@@ -1069,7 +1043,11 @@ func _on_inv_acted() -> void:
 func text_nodes() -> Array:
 	var out: Array = _pick.text_nodes()
 	out.append_array(_band.text_nodes())
-	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _runner["bar_text"], _rig_head, _take_head, _note])
+	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _rig_head])
+	if _runner["track"].visible:
+		out.append(_runner["bar_text"])
+	if _take_head.visible:
+		out.append_array([_take_head, _note])
 	if _runner["note"].visible:
 		out.append(_runner["note"])
 	for d in [_fight, _runner]:
@@ -1077,7 +1055,8 @@ func text_nodes() -> Array:
 			out.append(d["key"])
 			out.append_array(d["chips"].text_nodes())
 	for t in (_six if _view != null else _fight["tiles"] + _runner["tiles"]) + _take_tiles:
-		out.append_array([t["key"], t["value"]])
+		if t["panel"].visible or t in _six:
+			out.append_array([t["key"], t["value"]])
 	for b in [_button, _button2]:
 		if b.visible:
 			out.append(b)
