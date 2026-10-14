@@ -4550,3 +4550,13 @@ below starts until that save lands; then each is designed with him, one at a tim
     lands on the floor and the pack's unchanged; on auto, a non-upgrade find never swaps, an upgrade in the pack never
     leaves, an upgrade find swaps the cheapest non-upgrade its size. The note under the pack ("Pack full: a better find
     swaps in") says the new rule.
+11. **A bar over each of them (Matt, 14 Oct: "it's odd having 3 enemies and one bar shared"; option A of
+    docs/design/mockups/hpbars_mockup.png).** The bar was never shared: the sim fights them one at a time, and "Their
+    HP" is the one being hit (`target_hp`); the others on screen are untouched. Agreed: a small bar over each figure
+    in the frame, sized to it, following it as it moves and falls. The one being hit is outlined amber, with its HP
+    over it ("83 / 120") and the dots' shares at its end; the rest show full till their turn; one walking in for a
+    gang bigger than three comes up with a fresh bar. The bar across the top of the frame goes; the gang's head and
+    "On them" stay, "On them" moving up into its place. The head (a boss) gets the same bar, bigger, not the top bar
+    back. Built with item 6: the hit bar drops in chunks as the numbers land, the dots chip it. Smoke: a bar a figure
+    up, inside the frame and clear of the head line and the chips; the hit one's numbers matching `target_hp`; the
+    rest full; none on a figure down.
