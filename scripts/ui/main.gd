@@ -654,6 +654,7 @@ func play_opening() -> void:
 	if _opening != null and is_instance_valid(_opening):
 		return
 	_opening = Opening.new()
+	_opening.voice_on = _sound.enabled     # Sound off: the reading unheard, the lines on its time
 	_opening.done.connect(_opening_done)
 	add_child(_opening)
 	_sound.title()

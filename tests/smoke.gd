@@ -8145,6 +8145,8 @@ func _opening_checks(main) -> void:
 	main.play_opening()
 	var op = main._opening
 	_check(op != null and op.scene == 0, "the opening didn't start on its first scene")
+	if op.is_inside_tree() and op._vlen > 0.0 and op.voice_on:
+		_check(op._voice.playing, "the first scene's reading isn't playing (the review: it started before the tree)")
 	var t0: float = sim.elapsed
 	main._process(0.5)
 	_check(is_equal_approx(sim.elapsed, t0), "the game ran under the opening")
@@ -8163,6 +8165,43 @@ func _opening_checks(main) -> void:
 			_check(l.position.y + 48 < op._pips[0].position.y, "scene %d's lines run into the pips" % i)
 	op._go(0)
 	print("the opening: %d of %d scenes have their picture" % [arts, op.scenes.size()])
+	# no white band the generator left shows at the picture's top or foot (14 Oct)
+	for i in range(op.scenes.size()):
+		op._go(i)
+		var tx: Texture2D = op._pic.texture
+		if tx == null:
+			continue
+		var img: Image = tx.get_image()
+		for y in [0, img.get_height() - 1]:
+			var whites := 0
+			for x in range(0, img.get_width(), 8):
+				var c: Color = img.get_pixel(x, y)
+				if minf(c.r, minf(c.g, c.b)) > 0.94:
+					whites += 1
+			_check(whites < (img.get_width() / 8) * 0.6, "scene %d's picture shows a white band at row %d" % [i, y])
+	# the reading: each scene's cues one a line, in order, inside its take; the lines come up as they're said
+	var voiced := 0
+	for i in range(op.scenes.size()):
+		var sc: Dictionary = op.scenes[i]
+		_check(sc.has("cues") and sc["cues"].size() == op.lines_of(i).size(), "scene %d's cues aren't one a line" % i)
+		for k in range(1, sc.get("cues", []).size()):
+			_check(float(sc["cues"][k]) > float(sc["cues"][k - 1]), "scene %d's cues go backwards" % i)
+		op._go(i)
+		if op.voiced():
+			voiced += 1
+			_check(float(sc["cues"].back()) < op._vlen, "scene %d's last cue is past its reading (%.1f s)" % [i, op._vlen])
+	print("the opening: %d of %d scenes have their reading" % [voiced, op.scenes.size()])
+	op._go(0)
+	if op.voiced():
+		op._fading = 0.0
+		var c0: float = float(op.scenes[0]["cues"][0])
+		op._process(c0 - 0.5)
+		_check(op.shown == 0, "a line came up before it's said: %d" % op.shown)
+		op._process(0.6)
+		_check(op.shown == 1, "the first line didn't come up as it's said: %d" % op.shown)
+		op.advance()
+		_check(op.shown == 2 and is_equal_approx(op._vt, float(op.scenes[0]["cues"][1])), "a press didn't take the reading to the next line: %d, %.2f" % [op.shown, op._vt])
+		op._go(0)
 	# presses: every line of the first scene, then on to the second
 	op.size = Vector2(1920, 1080)
 	op._fading = 0.0

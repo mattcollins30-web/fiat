@@ -4390,3 +4390,12 @@ their feet. Drag to move one's feet; its bottom-right corner or the mouse wheel 
 three to data/fight_slots.tres (a Resource, so it ships in an export; other sites kept), F4 prints them, F3 again lets
 the game go on. Saved spots win over the tables (SITE_FAR/MID/NEAR, SLOTS). Leaving the run screen lets the tool go.
 The smoke drives it end to end against a user:// file. Matt's saved spots are checked only for being in the frame.
+
+**The opening (14 Oct, Matt: "new game -> fade from black to an art sequence").** scripts/ui/opening.gd, on New Game
+before the first screen: six scenes (2028, 2029, 2031, 2032, 2033, Now - the Pitch), each a picture from
+art/intro/scene_N.png (the white bands the generator left trimmed off) and its lines from words.gd's OPENING_SCENES,
+read aloud by Matt's takes in art/intro/voice/. Each line comes up on its cue in the take (read off a word-timing pass);
+a click, Space or the pad's accept moves the reading on to the next line, then the next scene; Esc or the pad's cancel
+skips to the game. With Sound off the takes are unheard and the lines keep their time. Without a take a scene falls
+back to a fixed time a line. The smoke checks the cues against the takes, the lines on them, a press moving the take,
+and no white band at the picture's edges.
