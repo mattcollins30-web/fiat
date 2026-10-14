@@ -142,6 +142,7 @@ var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
+var _opening_due := false          # a new camp's opening is about to start: no room card before it (Matt: the Map's take played under it)
 var _help_btn: Button              # the ? on the rail's heading: the room's card again
 var _cog_btn: Button               # the top bar's cog: the pause
 var _asked_runner := false         # the two-turn-up menu, shown once per death
@@ -689,7 +690,9 @@ func new_game(hardcore := false) -> void:
 	_speed_label.visible = false
 	_menu.close()
 	save_game()
+	_opening_due = intro
 	refresh()
+	_opening_due = false
 	if intro:
 		play_opening()
 
@@ -716,7 +719,7 @@ func _opening_done() -> void:
 func _maybe_room_intro() -> void:
 	if not intro or sim == null or sim.camp_lost or _menu.visible or not ROOM_INTRO_KEY.has(room):
 		return
-	if (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
+	if _opening_due or (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
 		return
 	if room == MISSIONS and sim.on_mission():
 		return

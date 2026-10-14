@@ -12063,6 +12063,17 @@ func _room_intro_checks(main) -> void:
 		all_in = all_in and (k in sim.met)
 	_check(all_in, "an old save's open rooms weren't counted met: %s" % str(sim.met))
 	_check(sim.to_dict().has("met"), "the save doesn't keep the rooms met")
+	# a new camp: the opening alone, the Map's card only once it's done (14 Oct, Matt: the Map's take under the opening)
+	var old_sim = main.sim
+	main.new_game()
+	_check(main._opening != null and main._room_card == null, "a room's card came up with the opening on a new camp")
+	if main._opening != null:
+		main._opening.finish()
+	_check(main._room_card != null and main._room_card.key == "map", "the Map's card didn't follow the opening")
+	if main._room_card != null:
+		main._room_card.finish()
+	main.sim = old_sim
+	main.save_game()
 	main.intro = false
 	main.show_room(room0)
-	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves")
+	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves, after the opening")
