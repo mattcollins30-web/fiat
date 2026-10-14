@@ -647,6 +647,7 @@ func _slots_offline_hardcore(main) -> void:
 	behind.queue_free()
 	main._menu.close()
 	_opening_checks(main)
+	_room_intro_checks(main)
 	sim = main.sim
 	# away three hours with auto-run on: missions ran, the log moved, the clock moved
 	sim.set_depth(3, 1)
@@ -11903,3 +11904,108 @@ func _gates_checks(main) -> void:
 func _open_camp(sim) -> void:
 	sim.unlock_all()
 	sim.bosses_beaten[0] = true
+
+
+## The rooms' first-visit cards (14 Oct, docs/design/room_intros.md).
+func _room_intro_checks(main) -> void:
+	var sim = main.sim
+	var room0: String = main.room
+	_check(main.ROOM_INTRO_KEY.size() == main.ROOMS.size() and Words.ROOM_INTROS.size() == main.ROOMS.size(), "a room has no card, or a card no room")
+	# every card: its lines and tiles, its words inside their boxes, its art
+	var arts := 0
+	for k in Words.ROOM_INTROS.keys():
+		var d: Dictionary = Words.ROOM_INTROS[k]
+		var c = main.RoomIntro.new(k)
+		main.add_child(c)
+		c._place(Vector2(1920, 1080))
+		_check(d["lines"].size() >= 1 and d["lines"].size() <= c._lines.size() and d["tiles"].size() == 3, "%s's card has %d lines and %d tiles" % [k, d["lines"].size(), d["tiles"].size()])
+		if c._art.texture != null:
+			arts += 1
+		for l in c._lines:
+			l.modulate.a = 1.0
+		_check(_check_nodes(c.text_nodes(), [], "%s's card" % k) == 0, "%s's card has words out of their boxes" % k)
+		_check(c._kicker.position.x + UI.text_width(c._title, c._title.text) <= c._card.size.x - c.PAD, "%s's card's title runs off it" % k)
+		c.finish()
+	print("room cards: %d of %d have their art" % [arts, Words.ROOM_INTROS.size()])
+	# the takes: a cue a line, in order, inside the take; the lines come up as they're said
+	var voiced := 0
+	for k in Words.ROOM_INTROS.keys():
+		var d: Dictionary = Words.ROOM_INTROS[k]
+		_check(d.has("cues") and d["cues"].size() == d["lines"].size(), "%s's card's cues aren't one a line" % k)
+		for i in range(1, d.get("cues", []).size()):
+			_check(float(d["cues"][i]) > float(d["cues"][i - 1]), "%s's card's cues go backwards" % k)
+		var c = main.RoomIntro.new(k)
+		if c.voiced():
+			voiced += 1
+			_check(float(d["cues"].back()) < c._vlen, "%s's last cue is past its take (%.1f s)" % [k, c._vlen])
+			c._process(0.05)
+			_check(c.shown == 1, "%s's first line isn't up as it's said" % k)
+			if d["lines"].size() > 1:
+				c._process(float(d["cues"][1]) - 0.3)
+				_check(c.shown == 1, "%s's second line came up before it's said" % k)
+				c._process(0.4)
+				_check(c.shown == 2, "%s's second line didn't come up as it's said" % k)
+		c.free()
+	print("room cards: %d of %d have their take" % [voiced, Words.ROOM_INTROS.size()])
+	# the tests' camps (intro off) never see one
+	sim.met = []
+	main.show_room(main.ARMOURY)
+	_check(main._room_card == null, "a room's card came up with the intros off")
+	# a first visit: the card, the room met, the game held
+	main.intro = true
+	main.show_room(main.RUNNER)
+	main.show_room(main.ARMOURY)
+	var card = main._room_card
+	_check(card != null and card.key == "stats", "a first visit to Stats brought no card (or the wrong one): %s" % (card.key if card != null else "none"))
+	_check("stats" in sim.met, "the card's room wasn't counted met")
+	var t0: float = sim.elapsed
+	main._process(0.5)
+	_check(is_equal_approx(sim.elapsed, t0), "the game ran under a room's card")
+	if card != null:
+		card._process(0.01)
+		_check(card.shown == 1, "the card's first line isn't up at once: %d" % card.shown)
+		while card.shown < card.total():
+			card.advance()
+		_check(card.shown == card.total() and main._room_card == card, "a press closed the card before its lines were up")
+		card.advance()
+	_check(main._room_card != null and main._room_card.key == "kit", "after Stats' card, the Kit's (where the player went) didn't follow")
+	if main._room_card != null:
+		main._room_card.finish()
+	_check(main._room_card == null, "the card didn't let go")
+	main._process(0.5)
+	_check(sim.elapsed > t0, "the game didn't run on after the card")
+	# met: no card the second time; the top bar's ? brings it back; Esc closes it
+	main.show_room(main.RUNNER)
+	_check(main._room_card == null, "a met room's card came up again")
+	main._help_btn.pressed.emit()
+	_check(main._room_card != null and main._room_card.key == "stats", "the ? didn't bring the room's card back")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	if main._room_card != null:
+		main._room_card._input(esc)
+	_check(main._room_card == null, "Esc didn't close the card")
+	var head_w: float = UI.text_width(main._rail_head, main._rail_head.text)
+	_check(main._help_btn.position.x >= main._rail_head.position.x + head_w + 16 and main._help_btn.position.x + main._help_btn.size.x <= Pal.RAIL_W, "the ? isn't clear of the rail's heading, inside the rail")
+	# not over a menu: it waits till the menu's gone
+	sim.met.erase("kit")
+	main.show_pause()
+	main.show_room(main.ARMOURY)
+	_check(main._room_card == null, "a room's card came up over the pause")
+	main._menu.close()
+	main.refresh()
+	_check(main._room_card != null and main._room_card.key == "kit", "the card didn't come up once the menu went")
+	if main._room_card != null:
+		main._room_card.finish()
+	# a save from before the cards has met what it has open
+	var d: Dictionary = sim.to_dict()
+	d.erase("met")
+	sim.load_dict(d)
+	var all_in := true
+	for k in Words.ROOM_INTRO_FIRST + sim.unlocked:
+		all_in = all_in and (k in sim.met)
+	_check(all_in, "an old save's open rooms weren't counted met: %s" % str(sim.met))
+	_check(sim.to_dict().has("met"), "the save doesn't keep the rooms met")
+	main.intro = false
+	main.show_room(room0)
+	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves")

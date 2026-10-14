@@ -4404,3 +4404,10 @@ and no white band at the picture's edges.
 player reads, the room on the rail, Move the Pitch, the common tree ("The Pitch", its nodes "The Pitch/N"). Code and
 save keys keep "yard". An old save's "The Yard/N" (and the older "The yard/N") nodes load as the Pitch's. The smoke
 fails any shown label that still says "Yard".
+
+**The rooms' first visits (14 Oct, docs/design/room_intros.md).** scripts/ui/room_intro.gd: the first time each of the
+nine rooms is on screen, a card over it - the room's place art, who runs it (the medic's and the Fence's portraits;
+the narrator and Kev without), their lines read by Matt's takes in art/intro/rooms/ on cues read off them, three tiles
+naming the screen's parts, "Go on". A press brings the next line then closes; Esc closes; the game's held while it's
+up. Rooms met go in the save (an old save has met what it has open); not over a menu, the opening or a run's Map. The
+"?" on the rail's ROOMS heading brings the room's card back. Kev's Manager line says "a pitch" now.

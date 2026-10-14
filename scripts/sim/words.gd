@@ -50,6 +50,52 @@ const OPENING_SCENES := [
 		"When a place is picked clean, or someone wants it more than you do, you move on."]},
 ]
 
+## The rooms' first visits (14 Oct, docs/design/room_intros.md): who speaks (a portrait's slug, or "" for the
+## narrator), the line under the name, their lines, three tiles naming the screen's parts, the take's name in
+## art/intro/rooms/ and its cues (read off Matt's takes, 14 Oct; with no take the lines go on the clock). Keyed by the room's code key, which a save keeps.
+const ROOM_INTROS := {
+	"map": {"room": "The Map", "face": "", "title": "Where the runner goes", "voice": "map", "cues": [0.0, 5.64], "lines": [
+		"The town, from the ring road in. Every site on it was somebody's once.",
+		"Pick one. Send the runner. They come back with what they carry, or they don't."],
+		"tiles": [["Sites", "Where to go, and the odds"], ["Depth", "Deeper pays, hits harder"], ["The heads", "Each one opens a room"]]},
+	"kit": {"room": "The Kit", "face": "", "title": "What the runner takes", "voice": "kit", "cues": [0.0, 3.58], "lines": [
+		"What the runner takes out is all they've got.",
+		"What stays behind is the stash. What's worn out there can be lost out there."],
+		"tiles": [["The body", "What's worn"], ["The rig", "Pouches, meds first"], ["The stash", "What's kept back"]]},
+	"stats": {"room": "Stats", "face": "", "title": "The runner, on paper", "voice": "stats", "cues": [0.0], "lines": [
+		"The runner, on paper. What they hit for, what they can take, what they've done."],
+		"tiles": [["Attack", "What they hit for"], ["Defence", "What they can take"], ["The record", "What they've done"]]},
+	"training": {"room": "Training", "face": "", "title": "The caravan at the back", "voice": "training", "cues": [0.0, 7.22], "lines": [
+		"The caravan at the back. Whoever runs for you sleeps here, and gets better here.",
+		"Their past decides what they can learn. The Pitch's tree stays when they don't."],
+		"tiles": [["Their past", "What they were, before"], ["Their trees", "What they can learn"], ["The Pitch's tree", "Kept when they go"]]},
+	"clinic": {"room": "The Clinic", "face": "medic", "title": "The medic", "voice": "clinic", "cues": [0.0, 4.60, 7.58, 12.74], "lines": [
+		"Sit down. Don't bleed on that, it's the only clean one.",
+		"Resting on the Pitch heals, slowly.",
+		"I'm quicker, I cost tins and I'm the only one that can heal a lasting wound.",
+		"Meds go in the rig. Your runner takes them first when it gets bad out there."],
+		"tiles": [["Treatment", "Heal faster, for tins"], ["The shelf", "Meds to buy, new each run"], ["Your meds", "In the rig, used under fire"]]},
+	"fence": {"room": "The Fence", "face": "fence", "title": "The Fence", "voice": "fence", "cues": [0.0, 5.44, 9.10], "lines": [
+		"Everything's for sale. That's the one thing that hasn't changed.",
+		"You bring, I price. The price is the price.",
+		"Want steady work? I've got contracts."],
+		"tiles": [["Sell", "Finds, for tins"], ["Buy", "The shelf, and sealed lots"], ["Contracts", "What he wants, what he pays"]]},
+	"workshop": {"room": "Workshop", "face": "", "title": "The bench", "voice": "workshop", "cues": [0.0, 6.46], "lines": [
+		"The armourer's roll, laid out on the bench. Proper tools, for once.",
+		"Guns get better here, part by part."],
+		"tiles": [["Jobs", "Work done on a part"], ["Mounts", "What goes on the gun"], ["The Bench", "Its own upgrades"]]},
+	"yard": {"room": "The Pitch", "face": "", "title": "Yours, on paper", "voice": "pitch", "cues": [0.0, 4.84], "lines": [
+		"The deeds say it's yours. Paper's about all anyone still agrees on.",
+		"Build on it. What's built here comes with you when you move."],
+		"tiles": [["The buildings", "What's been built"], ["Ranks", "Each building, better"], ["Moving on", "Once the lorry's beaten"]]},
+	"radio": {"room": "Radio", "face": "", "title": "Kev", "voice": "radio", "cues": [0.0, 5.34, 11.14], "lines": [
+		"Kev here. Well, you know that. You've got a set now.",
+		"Everything worth hearing comes over this. Most of it isn't worth hearing.",
+		"Keep listening anyway."],
+		"tiles": [["On the air", "What's being said"], ["Who's talking", "The voices out there"], ["Heard so far", "Every line, kept"]]},
+}
+const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from the start; an old save has met them
+
 ## The radio: three voices on the air, a line after every few runs home (RADIO_EVERY), the first unheard one whose
 ## gate is open: a zone open ("zone"), or lorries beaten ("lorries"). The official loop wears down, a pirate comes on in
 ## the town, the army's net crackles in the city; the notes' story runs through all three and closes on the loop.
@@ -81,7 +127,7 @@ const RADIO := [
 	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/before", "text": "The Carpet Man keeps a book of who buys what. Bring me that book and I'll open up shop."},
 	{"voice": "fence", "zone": 1, "gate": "The Carpet Man/after", "text": "The book's here. I'm open. Tins only, and don't ask me where any of it came from."},
 	{"voice": "kev", "zone": 2, "gate": "The Manager/before", "text": "The Bank's got deeds in the vault. Every house on the estate. Somebody could set up somewhere with those."},
-	{"voice": "kev", "zone": 2, "gate": "The Manager/after", "text": "Somebody's got the deeds out of the Bank. Somebody's got themselves a yard."},
+	{"voice": "kev", "zone": 2, "gate": "The Manager/after", "text": "Somebody's got the deeds out of the Bank. Somebody's got themselves a pitch."},
 	{"voice": "net", "zone": 3, "gate": "The Quartermaster/before", "text": "Quartermaster to all stations: the set and the armourer's roll stay in stores. Nobody signs them out."},
 	{"voice": "kev", "zone": 3, "gate": "The Quartermaster/after", "text": "There's an army set on this frequency now. Hello, whoever you are. I hear you've a workshop, too."},
 	# the Clinic's and the Fence's own (13 Oct, Matt): in the turn once their room is open ("room")

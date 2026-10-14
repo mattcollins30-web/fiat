@@ -20,6 +20,7 @@ const RailButton := preload("res://scripts/ui/rail_button.gd")
 const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Opening := preload("res://scripts/ui/opening.gd")
+const RoomIntro := preload("res://scripts/ui/room_intro.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
@@ -139,6 +140,8 @@ var _speed_label: Label
 var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
+var _room_card = null              # a room's first-visit card (14 Oct), while it's up
+var _help_btn: Button              # the ? on the rail's heading: the room's card again
 var _asked_runner := false         # the two-turn-up menu, shown once per death
 
 
@@ -224,6 +227,14 @@ func _build() -> void:
 	_rail_panel = UI.panel(_rail, Rect2(0, 0, Pal.RAIL_W, Pal.RAIL_HEAD_H + ROOMS.size() * Pal.RAIL_BTN_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_rail_head = UI.label(_rail, Rect2(22, 0, Pal.RAIL_W - 44, Pal.RAIL_HEAD_H), "ROOMS", "Medium", Pal.FLOOR, Pal.TEXT_3)
 	UI.panel(_rail, Rect2(0, Pal.RAIL_HEAD_H - 1, Pal.RAIL_W, 1), UI.box(Pal.CARD_LINE, 0))
+	# the ? at the heading's end (14 Oct): the room's card again
+	_help_btn = UI.button(_rail, Rect2(Pal.RAIL_W - 48 - 6, 5, 48, Pal.RAIL_HEAD_H - 10), false)
+	_help_btn.text = "?"
+	_help_btn.focus_mode = Control.FOCUS_NONE
+	_help_btn.tooltip_text = "What this room is for"
+	_help_btn.pressed.connect(func():
+		if sim != null and not _menu.visible and ROOM_INTRO_KEY.has(room):
+			show_room_intro(ROOM_INTRO_KEY[room]))
 	for i in range(ROOMS.size()):
 		var name: String = ROOMS[i]
 		var b = RailButton.new(name)
@@ -407,6 +418,8 @@ func _process(delta: float) -> void:
 		return
 	if _opening != null and is_instance_valid(_opening):
 		return                              # the opening holds the game
+	if _room_card != null and is_instance_valid(_room_card):
+		return                              # so does a room's card
 	if _run != null and _run._view != null and _run._view.placing and _run._view._shown():
 		return                              # the fight's placement tool (F3) holds the game still
 	sim.advance(delta * speed)
@@ -665,6 +678,35 @@ func _opening_done() -> void:
 	refresh()
 
 
+## A room's card the first time it's on screen (14 Oct): not over a menu, the opening or another card, and not the
+## Map's while a run's on it (the run screen's in the Map's place then). The tests' camps (intro off) never see one.
+func _maybe_room_intro() -> void:
+	if not intro or sim == null or sim.camp_lost or _menu.visible or not ROOM_INTRO_KEY.has(room):
+		return
+	if (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
+		return
+	if room == MISSIONS and sim.on_mission():
+		return
+	var key: String = ROOM_INTRO_KEY[room]
+	if not (key in sim.met):
+		show_room_intro(key)
+
+
+## The card, met or not (the top bar's ?).
+func show_room_intro(key: String) -> void:
+	if _room_card != null and is_instance_valid(_room_card):
+		return
+	if not (key in sim.met):
+		sim.met.append(key)
+	_room_card = RoomIntro.new(key)
+	_room_card.voice_on = _sound.enabled
+	_room_card.met_count = sim.met.size()
+	_room_card.done.connect(func():
+		_room_card = null
+		refresh())
+	add_child(_room_card)
+
+
 func save_game(path := "") -> void:
 	if path == "":
 		path = save_file
@@ -815,6 +857,9 @@ func show_room(name: String) -> void:
 
 ## The rooms a head opens (13 Oct, docs/design/campaign_gates.md): shut until his thing comes home.
 const ROOM_KEY := {MEDIC: "clinic", MARKET: "fence", OVERVIEW: "yard", COMMS: "radio", WORKSHOP: "workshop"}
+## Each room's card (14 Oct, docs/design/room_intros.md): Words.ROOM_INTROS by the room's code key.
+const ROOM_INTRO_KEY := {MISSIONS: "map", ARMOURY: "kit", RUNNER: "stats", BARRACKS: "training", MEDIC: "clinic",
+		MARKET: "fence", WORKSHOP: "workshop", OVERVIEW: "yard", COMMS: "radio"}
 func room_shut(name: String) -> bool:
 	return sim != null and ROOM_KEY.has(name) and not sim.room_open(ROOM_KEY[name])
 
@@ -832,6 +877,7 @@ func refresh() -> void:
 	if room_shut(room):
 		room = MISSIONS                       # a new camp starts in a Yard that isn't yours yet: the Map
 	_toast_new_lines()
+	_maybe_room_intro()
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins
 	_top_labels["notes"].text = Fmt.num(sim.notes)

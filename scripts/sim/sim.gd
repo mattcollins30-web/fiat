@@ -86,6 +86,7 @@ var deeds_found := false           # the Bank's vault, opened once
 ## The rooms a head has opened (13 Oct, docs/design/campaign_gates.md): the clinic, the fence, the yard, the radio, the
 ## workshop. A bare sim has them all (the tests, the tools); a fresh camp (start) has none.
 var unlocked: Array = Data.ROOMS_SHUT.duplicate()
+var met: Array = []                # the rooms whose first-visit card has been shown (14 Oct): Words.ROOM_INTROS keys
 var ending := ""                   # what became of the deeds: burned, sold, held
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
@@ -148,6 +149,7 @@ func _init() -> void:
 func start() -> void:
 	rng.randomize()
 	unlocked = []                          # a fresh camp: every room a head opens is shut
+	met = []
 	_starter_loadout()
 	restock()
 	came_back_seen()
@@ -1212,7 +1214,7 @@ func move_yard(trade := "") -> bool:
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
-		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
+		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
 		for i in range(words.size()):
 			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
@@ -1257,6 +1259,7 @@ func move_yard(trade := "") -> bool:
 	trades = keep["trades"]
 	book = keep["book"]
 	heard = keep["heard"]
+	met = keep["met"]                     # a move doesn't introduce the rooms again
 	unlocked = keep["unlocked"]           # the rooms the heads opened stay open: the Yard moves, not the town's memory (13 Oct)
 	shelf = keep["shelf"]
 	shelf_tier = keep["shelf_tier"]
@@ -7310,7 +7313,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -7491,6 +7494,10 @@ func load_dict(d: Dictionary) -> void:
 		unlocked = Array(d["unlocked"])
 	else:
 		unlocked = Data.ROOMS_SHUT.duplicate()   # a save from before the gates (13 Oct) played with every room open: it keeps them
+	if d.has("met"):
+		met = Array(d["met"])
+	else:
+		met = Words.ROOM_INTRO_FIRST + unlocked.duplicate()     # a save from before the room cards (14 Oct): it's met what it has open
 	ending = str(d.get("ending", ""))
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
