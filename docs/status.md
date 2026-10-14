@@ -4429,3 +4429,15 @@ divisions marked as meant, locals that shadowed a property or a function renamed
 underscored, mixed ternaries and float-to-int narrowing typed properly, a signal never sent removed. tools/gdlint.py
 asks Godot's own language server for every warning in the project (the smoke, headless, can't see them); it reads 0,
 and runs before each commit from now on.
+
+**On the air (14 Oct, docs/design/on_the_air.md).** The campaign's close and the endgame's door: the Quartermaster's set
+home, the Radio open, and Kev on it in three scenes - Channel 19 (the set), Long wave (everywhere else gone dark, the
+army's lorries), The codes (the papers' codes are frequencies; deeper, more to hear). The opening's player
+(Opening.new(Words.AIR_SCENES)): Matt's pictures (art/intro/air_N.png) and Kev's takes (art/intro/voice/air_N.mp3) on cues
+read off them. Once, at home, before the Radio's own card; never for a save that had met the Radio.
+
+**The seven silent sounds wired, and the flaky checks (14 Oct).** grenade, reload, duck, no room, the dog at the crates,
+the set coming on as the Radio opens, the deeds burned or sold (finding them no longer plays the fire). The four flaky
+checks: two causes fixed (the gun's look inside its slowest beat; a test swing with nobody standing), two found and
+guarded (the odds read with a run left on; the upgrade arrows' cache missing the front's weather and night - a real
+one), each failure message now carrying the state that would explain it.

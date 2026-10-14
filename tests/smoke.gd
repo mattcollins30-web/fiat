@@ -8307,6 +8307,29 @@ func _opening_checks(main) -> void:
 	if main._menu.visible:
 		main._menu.close()
 	print("opening ok: six scenes, the lines fit, a press, left alone, Esc, the game held and let go")
+	# On the air (14 Oct): the same player with Kev's scenes - a cue a line, in order, inside each take; the lines fit
+	var air = main.Opening.new(Words.AIR_SCENES)
+	main.add_child(air)
+	air._place(Vector2(1920, 1080))
+	var air_voiced := 0
+	var air_art := 0
+	for i in range(air.scenes.size()):
+		var sc: Dictionary = air.scenes[i]
+		air._go(i)
+		if air._pic.texture != null:
+			air_art += 1
+		_check(sc.has("cues") and sc["cues"].size() == air.lines_of(i).size(), "On the air's scene %d has its cues off its lines" % i)
+		for k in range(1, sc.get("cues", []).size()):
+			_check(float(sc["cues"][k]) > float(sc["cues"][k - 1]), "On the air's scene %d's cues go backwards" % i)
+		var all: Array = air.lines_of(i)
+		for k in range(mini(all.size(), air._lines.size())):
+			var l: Label = air._lines[k]
+			_check(UI.text_width(l, l.text) <= l.size.x - 8.0, "an On the air line runs past its row: '%s'" % l.text)
+		if air.voiced():
+			air_voiced += 1
+			_check(float(sc["cues"].back()) < air._vlen, "On the air's scene %d's last cue is past its take" % i)
+	print("on the air: %d of %d scenes have their picture, %d their reading" % [air_art, air.scenes.size(), air_voiced])
+	air.finish()
 
 
 ## The placement tool (13 Oct, Matt: Greenhorn's F3/F5): F3 holds the fight still with all three standing on their slots;
@@ -12119,7 +12142,7 @@ func _room_intro_checks(main) -> void:
 		c.free()
 	print("room cards: %d of %d have their take" % [voiced, Words.ROOM_INTROS.size()])
 	# the tests' camps (intro off) never see one
-	sim.met = []
+	sim.met = ["air"]                          # every room open here: On the air (the Radio's) has had its turn
 	main.show_room(main.ARMOURY)
 	_check(main._room_card == null, "a room's card came up with the intros off")
 	# a first visit: the card, the room met, the game held
@@ -12193,6 +12216,43 @@ func _room_intro_checks(main) -> void:
 		main._room_card.finish()
 	main.sim = old_sim
 	main.save_game()
+	sim = main.sim
+	# On the air: the Radio open at home with neither it nor its card met - Kev's scenes, once; not on a run; never for
+	# a save that's met the Radio (it had the set before they were made)
+	var met0: Array = sim.met.duplicate()
+	var unlocked0: Array = sim.unlocked.duplicate()
+	sim.met = sim.met.filter(func(x): return x != "air" and x != "radio")
+	if not ("radio" in sim.unlocked):
+		sim.unlocked.append("radio")
+	if sim.on_mission():
+		sim.extract_now()
+	main.refresh()
+	_check(main._opening != null and main._opening.scenes == Words.AIR_SCENES and "air" in sim.met, "the Radio open at home didn't play On the air")
+	var t_air: float = sim.elapsed
+	main._process(0.5)
+	_check(is_equal_approx(sim.elapsed, t_air), "the game ran under On the air")
+	if main._opening != null:
+		main._opening.finish()
+	if main._room_card != null:
+		main._room_card.finish()
+	main.refresh()
+	_check(main._opening == null, "On the air came back after it was done")
+	sim.met = sim.met.filter(func(x): return x != "air")
+	sim.met.append("radio")
+	main.refresh()
+	_check(main._opening == null, "On the air played for a camp that had met the Radio")
+	sim.met = sim.met.filter(func(x): return x != "radio")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	main.refresh()
+	_check(main._opening == null, "On the air played on a run")
+	sim.extract_now()
+	if main._opening != null:
+		main._opening.finish()
+	if main._room_card != null:
+		main._room_card.finish()
+	sim.met = met0
+	sim.unlocked = unlocked0
 	main.intro = false
 	main.show_room(room0)
-	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves, after the opening")
+	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves, after the opening, On the air")

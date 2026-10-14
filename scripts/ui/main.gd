@@ -720,6 +720,30 @@ func _opening_done() -> void:
 	refresh()
 
 
+## On the air (14 Oct, docs/design/on_the_air.md): the Quartermaster's set home and the Radio open, Kev's three scenes,
+## once, at home, before the Radio's own card. In the opening's place, so everything that waits for the opening waits for
+## it. A save that's met the Radio already (it had the set before these were made) never sees them.
+func _maybe_air() -> void:
+	if not intro or sim == null or sim.camp_lost or _menu.visible or sim.on_mission():
+		return
+	if (_opening != null and is_instance_valid(_opening)) or (_room_card != null and is_instance_valid(_room_card)):
+		return
+	if not sim.room_open("radio") or "air" in sim.met or "radio" in sim.met:
+		return
+	play_air()
+
+
+func play_air() -> void:
+	if _opening != null and is_instance_valid(_opening):
+		return
+	if not ("air" in sim.met):
+		sim.met.append("air")
+	_opening = Opening.new(Words.AIR_SCENES)
+	_opening.voice_on = _sound.enabled
+	_opening.done.connect(_opening_done)
+	add_child(_opening)
+
+
 ## A room's card the first time it's on screen (14 Oct): not over a menu, the opening or another card, and not the
 ## Map's while a run's on it (the run screen's in the Map's place then). The tests' camps (intro off) never see one.
 func _maybe_room_intro() -> void:
@@ -920,6 +944,7 @@ func refresh() -> void:
 	if room_shut(room):
 		room = MISSIONS                       # a new camp starts in a Yard that isn't yours yet: the Map
 	_toast_new_lines()
+	_maybe_air()
 	_maybe_room_intro()
 	_sound.follow(sim)
 	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins

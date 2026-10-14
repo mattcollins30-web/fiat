@@ -44,7 +44,10 @@ var _vt := 0.0                         # how far into the reading
 var voice_on := true                   # the pause menu's Sound: off, the lines still keep the reading's time, unheard
 
 
-func _init() -> void:
+## `list`: the scenes to play - the opening's, or On the air's (Words.AIR_SCENES, 14 Oct).
+func _init(list: Array = []) -> void:
+	if not list.is_empty():
+		scenes = list
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_bg = ColorRect.new()
 	_bg.color = Color.BLACK

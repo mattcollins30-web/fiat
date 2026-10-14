@@ -50,6 +50,23 @@ const OPENING_SCENES := [
 		"When a place is picked clean, or someone wants it more than you do, you move on."]},
 ]
 
+## On the air (14 Oct, docs/design/on_the_air.md): the campaign's close, the endgame's door - the Quartermaster's set
+## comes home and Kev, on it, says what's out there. The opening's player: a heading (a frequency, a name), Kev's lines on
+## his takes' cues (art/intro/voice/air_N.mp3, read off them; he doesn't read the headings).
+const AIR_SCENES := [
+	{"year": "Channel 19", "title": "The set", "art": "air_1", "voice": "air_1", "cues": [0.0, 7.56], "lines": [
+		"Kev here. Properly, this time. That's a military set you've got - it hears a long way.",
+		"I've had two years listening from the other end. You'd better hear what I hear."]},
+	{"year": "Long wave", "title": "Everywhere else", "art": "air_2", "voice": "air_2", "cues": [0.0, 8.84, 14.06], "lines": [
+		"Swansea's gone quiet. Bristol's one big checkpoint. Nobody's answered from London since the spring.",
+		"It isn't just the UK, everywhere else has gone dark too.",
+		"The only ones still moving are the army. Their lorries run every night, and nobody knows what's in them."]},
+	{"year": "The codes", "title": "Deeper", "art": "air_3", "voice": "air_3", "cues": [0.0, 6.90, 12.70], "lines": [
+		"Those papers you keep finding. The codes on them aren't codes - they're frequencies.",
+		"Somebody wrote them down so the right people could listen. Tune one in and it tells you where to dig.",
+		"The deeper you go, the more you'll hear. Go carefully. Somebody's always listening back."]},
+]
+
 ## The rooms' first visits (14 Oct, docs/design/room_intros.md): who speaks (a portrait's slug, or "" for the
 ## narrator), the line under the name, their lines, three tiles naming the screen's parts, the take's name in
 ## art/intro/rooms/ and its cues (read off Matt's takes, 14 Oct; with no take the lines go on the clock). Keyed by the room's code key, which a save keeps.
