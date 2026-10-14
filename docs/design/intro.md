@@ -1,4 +1,4 @@
-# The opening (14 Oct, Matt; design, not built)
+# The opening (14 Oct, Matt; agreed - the script with his one edit, the Pitch)
 
 Matt: on a new game, fade from black into an art sequence that sets the tone in five scenes - Fallout 2's opening as
 the model. Real-world threads, no world war, no bang: proxy wars backed by the big powers, an energy shock driving
@@ -25,7 +25,7 @@ We felt them at the till.
 *Art: a front room at night, a television showing a burning city far away; on the table, a supermarket receipt.*
 
 **2 · 2029 · The bills**
-Then the gas went up, and up again.
+Then the petrol went up, and up again.
 The heating went off in the flats. The boats kept coming; where they came from was worse.
 Bread doubled. The reservoirs didn't fill.
 *Art: a terraced street in winter, the windows dark; a queue outside a church hall food bank; a dry reservoir beyond.*
@@ -49,7 +49,7 @@ People kept to their own. The estate kept the estate.
 A new currency was promised. Its value is as stated. Let it be done.
 *Art: an empty motorway at dusk, a jack-knifed lorry, a checkpoint of trolleys and pallets on the slip road.*
 
-**6 · Now · The camp** (the name to pick - see below)
+**6 · Now · The Pitch**
 You keep a camp. A few vans, a fire, a fence of pallets.
 You don't go out. Somebody does - whoever's willing, for a share of what comes back.
 Tins are money now. What's in a tin is worth something.
@@ -58,7 +58,7 @@ Send them out. Bring back what you can. When a place is picked clean, or someone
 
 ## The camp's name (the Yard's, everywhere it's said)
 The Yard reads as fixed and owned - the opening says you move on. Options:
-- **The Pitch** (leaning): what Travellers and market traders call the ground you set up on and leave; reads
+- **The Pitch** (Matt, 14 Oct: picked): what Travellers and market traders call the ground you set up on and leave; reads
   British and temporary; "Move the Pitch", "turns up at the Pitch", "The deeds are the Pitch's. Build on it."
 - **The Lay-by**: where you'd stop off a road; bleaker, a little comic.
 - **The Compound**: harder, more held; doesn't say temporary.

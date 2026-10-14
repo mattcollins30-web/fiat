@@ -1,0 +1,116 @@
+{
+ "_readme": [
+  "FIAT THE OPENING (14 Oct, docs/design/intro.md): six scenes, 640x360, shown at 3x drifting. art/intro/.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_intro_manifest.json   (++ --dry-run; one wrong: ++ --only <name> ++ --force)."
+ ],
+ "jobs": [
+  {
+   "out": "art/intro/scene_1.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97000,
+   "style_image": "res://art/places/the_estate.png",
+   "description": "Inside a small British council flat's front room at night, lit only by a television. On the screen, a city burning far away, smoke and tracer fire. On the coffee table in front of it, a long supermarket receipt and an energy bill. A sofa with a blanket, net curtains, a radiator. Nobody in the room. Ordinary, quiet, still comfortable - the last normal evening. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 1",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/intro/scene_2.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97001,
+   "style_image": "res://art/places/ransacked_streets.png",
+   "description": "A British terraced street in winter at dusk, frost on the cars, every window dark - no heating, no lights. A long queue of people in coats outside a church hall with a hand-written food bank sign that can't be read. A petrol station's price board glowing at the end of the street. Beyond the rooftops, a reservoir with its banks showing, half empty. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 2",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/intro/scene_3.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97002,
+   "style_image": "res://art/places/the_city.png",
+   "description": "A vast grey windowless data centre on the edge of a British town, rows of cooling units humming, pylons marching to it across the fields, a shrunken reservoir beside it with cracked mud banks. In the foreground, a closed office block with its lights still on and nobody inside, a car park with three cars. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 3",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/intro/scene_4.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97003,
+   "style_image": "res://art/places/the_bank.png",
+   "description": "A British high street by day, overcast. A long anxious queue outside a shuttered bank with its steel shutters down. A cash machine in the wall with its screen dark. Banknotes blowing in the gutter, a dropped wallet, a police officer standing apart, unsure. Shops with sale signs that can't be read. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 4",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/intro/scene_5.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97004,
+   "style_image": "res://art/places/the_services.png",
+   "description": "An empty British motorway at dusk, no cars moving in either direction, the overhead gantry signs dark. A jack-knifed lorry across two lanes, its trailer doors open and empty. On the slip road, a rough checkpoint of shopping trolleys, pallets and a burnt-out car, a small fire, two hooded figures watching. Town lights in the distance going out one by one. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 5",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  },
+  {
+   "out": "art/intro/scene_6.png",
+   "width": 640,
+   "height": 360,
+   "no_background": false,
+   "seed": 97005,
+   "style_image": "res://art/places/the_caravan.png",
+   "description": "A makeshift camp at night on waste ground at the edge of a dead British town: two old vans and a horsebox, a brazier burning, a fence of stacked pallets and corrugated sheet, a tarpaulin on poles, jerry cans and crates. One figure stands at the gap in the fence, back to the viewer, looking out at the dark town and its broken streetlights. Firelight warm against the cold blue night. Realistic painted pixel art, wide cinematic composition with room to pan, soft light, muted cool northern palette, worn and lived-in, Britain; no black outlines, not anime, not a cartoon, not glossy; no text, no logos, no readable writing.",
+   "_where": "the opening, scene 6",
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   }
+  }
+ ]
+}
