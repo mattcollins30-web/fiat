@@ -294,23 +294,30 @@ func advance() -> void:
 func _input(event: InputEvent) -> void:
 	if _finished:
 		return
+	# the press is used up before anything closes: finish() leaves the tree, and an Esc not marked then went on to
+	# the game and opened the pause under the Map's card (Matt, 14 Oct)
+	var vp: Viewport = get_viewport() if is_inside_tree() else null
 	if event.is_action_pressed("ui_cancel") and not (event is InputEventKey):
+		if vp != null:
+			vp.set_input_as_handled()
 		finish()                                # a pad's back (the review: the Deck)
 		return
 	if event.is_action_pressed("ui_accept") and not (event is InputEventKey):
+		if vp != null:
+			vp.set_input_as_handled()
 		advance()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if vp != null:
+			vp.set_input_as_handled()
 		if event.keycode == KEY_ESCAPE:
 			finish()
 		elif event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_RIGHT]:
 			advance()
-		if is_inside_tree():
-			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if vp != null:
+			vp.set_input_as_handled()
 		advance()
-		if is_inside_tree():
-			get_viewport().set_input_as_handled()
 
 
 func finish() -> void:

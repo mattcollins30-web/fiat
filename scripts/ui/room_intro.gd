@@ -220,25 +220,29 @@ func advance() -> void:
 func _input(event: InputEvent) -> void:
 	if _finished:
 		return
+	var vp: Viewport = get_viewport() if is_inside_tree() else null     # marked before anything closes (finish leaves the tree)
 	if event.is_action_pressed("ui_cancel") and not (event is InputEventKey):
+		if vp != null:
+			vp.set_input_as_handled()
 		finish()
 	elif event.is_action_pressed("ui_accept") and not (event is InputEventKey):
+		if vp != null:
+			vp.set_input_as_handled()
 		advance()
 	elif event is InputEventKey and event.pressed and not event.echo:
+		if vp != null:
+			vp.set_input_as_handled()        # any other key stops here too: nothing behind the card moves (the review)
 		if event.keycode == KEY_ESCAPE:
 			finish()
 		elif event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_RIGHT]:
 			advance()
-		# any other key stops here too: nothing behind the card moves (the review)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if _go_on.get_global_rect().has_point(event.position):
 			return                              # the button's own: it shows the press and moves on, once, on release
+		if vp != null:
+			vp.set_input_as_handled()
 		if event.pressed:
 			advance()                           # anywhere else on the card or round it
-	else:
-		return
-	if is_inside_tree():
-		get_viewport().set_input_as_handled()
 
 
 func finish() -> void:

@@ -142,6 +142,7 @@ var _menu
 var intro := true                  # the studio card before the title; the tests turn it off
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
+var _overlay_closed := -1          # the frame an opening or a room card closed: its Esc isn't the pause's too
 var _opening_due := false          # a new camp's opening is about to start: no room card before it (Matt: the Map's take played under it)
 var _help_btn: Button              # the ? on the rail's heading: the room's card again
 var _cog_btn: Button               # the top bar's cog: the pause
@@ -513,6 +514,10 @@ func _toast_new_lines() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
+			if _overlay_closed == Engine.get_process_frames():
+				if is_inside_tree():
+					get_viewport().set_input_as_handled()     # the same Esc that just skipped the opening or shut a card (Matt, 14 Oct)
+				return
 			if _menu.visible:
 				_menu.back()
 			elif sim != null:
@@ -711,6 +716,7 @@ func play_opening() -> void:
 
 func _opening_done() -> void:
 	_opening = null
+	_overlay_closed = Engine.get_process_frames()
 	refresh()
 
 
@@ -739,6 +745,7 @@ func show_room_intro(key: String) -> void:
 	_room_card.met_count = sim.met.size()
 	_room_card.done.connect(func():
 		_room_card = null
+		_overlay_closed = Engine.get_process_frames()
 		refresh())
 	add_child(_room_card)
 

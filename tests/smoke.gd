@@ -8240,6 +8240,11 @@ func _opening_checks(main) -> void:
 	esc.pressed = true
 	main._opening._input(esc)
 	_check(main._opening == null, "Esc didn't end the opening")
+	# the same Esc doesn't go on to open the pause (Matt, 14 Oct: the pause came up under the Map's card)
+	main._unhandled_input(esc)
+	_check(not main._menu.visible, "the Esc that skipped the opening opened the pause too")
+	if main._menu.visible:
+		main._menu.close()
 	print("opening ok: six scenes, the lines fit, a press, left alone, Esc, the game held and let go")
 
 
@@ -12073,6 +12078,10 @@ func _room_intro_checks(main) -> void:
 	if main._room_card != null:
 		main._room_card._input(esc)
 	_check(main._room_card == null, "Esc didn't close the card")
+	main._unhandled_input(esc)
+	_check(not main._menu.visible, "the Esc that shut a room's card opened the pause too")
+	if main._menu.visible:
+		main._menu.close()
 	var head_w: float = UI.text_width(main._rail_head, main._rail_head.text)
 	_check(main._help_btn.position.x >= main._rail_head.position.x + head_w + 16 and main._help_btn.position.x + main._help_btn.size.x <= Pal.RAIL_W, "the ? isn't clear of the rail's heading, inside the rail")
 	# not over a menu: it waits till the menu's gone
