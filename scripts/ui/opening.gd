@@ -150,7 +150,7 @@ func _go(i: int) -> void:
 		l.modulate.a = 0.0
 		var radio: bool = sc.has("radio") and k == all.size() - 1
 		l.add_theme_color_override("font_color", Color(0.55, 0.55, 0.53) if radio else Color(0.92, 0.92, 0.9))
-		l.add_theme_font_size_override("font_size", 28 if radio else 34)     # 2 down (14 Oct, Matt)
+		l.add_theme_font_size_override("font_size", 26 if radio else 30)     # down twice (14 Oct, Matt: "smaller again")
 	_lay_lines()
 	for k in range(_pips.size()):
 		_pips[k].add_theme_stylebox_override("panel", UI.box(Color(0.86, 0.86, 0.84) if k == i else Color(0.28, 0.28, 0.28), 5))
