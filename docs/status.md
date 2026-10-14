@@ -4578,3 +4578,15 @@ below starts until that save lands; then each is designed with him, one at a tim
     band at the top (200 px: the place, the clock, the progress bar) slimmer too. The pixel art reads best at a clean
     scale. Mockups first: rail options, the band slimmed, the frame at 1.25x, the search's column checked at its
     fullest.
+14. **The odds don't count the events (Matt's first death, 14 Oct: the Services at depth 5, the card at 100%).** The
+    dry runs behind a card start with `"event_at": -1.0`, so no event ever happens in them. His run: a convoy came
+    through (four more heads, `_event`'s "convoy"), four wounds in twenty seconds, three bandages and a first aid kit,
+    dead at 82 s with 13 of 16 down. The card said 100% and the run read "odds 1.0". To design with Matt: roll the
+    events into the dry runs at their real chance, or keep the odds event-free and say so on the card ("before any
+    surprises"). The first is honest and costs odds time (item 1 helps); it moves the bot's pushes, so before the pass.
+15. **The Fence's gamble out-gears the drops (a balance note, from the same save).** 25 gambles at 300-393 tins; out of
+    them came The Paramedic's Bumbag (a unique, 3,300), the Sniper rifle and the Scoped .308 he fought with, the Full
+    bergen, the Casino chip. The price sat at a flat 300 until level 20. For the pass's loot gates: what a tin spent
+    at the gamble buys against what a run finds.
+16. **"Wounded again" reads as stacking.** A second wound replaces the first (one at a time, `_wound`), but the log says
+    "Wounded again: armour −10%" four times in a fight. The words: "Wounded: armour −10% (replaces pace)".
