@@ -160,6 +160,11 @@ func show_item(it: Dictionary, sim, tail = "", extra = "", cells := true) -> voi
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})
+	# what its base does to every hit, in the element's colour, after the affixes - first with none, and the one left
+	# off before an affix when a full unique runs out of room (14 Oct, Matt: the claw hammer bleeds and its card didn't
+	# say; the top row had no room for it beside a long rarity)
+	for c in conv_chips(it):
+		chips_a.append({"forms": c["forms"], "colour": c["colour"]})
 	# after them, as muted chips: the open slots ("1 open at the Bench"), a set's words in the set's tone, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
 	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it)
@@ -184,6 +189,20 @@ static func unique_rule(it: Dictionary) -> Array:
 			var long: String = str(u.get("words", ""))
 			return [long, str(u.get("short", long))] if long != "" else []
 	return []
+
+
+## A base's share of every hit as an element, as affix-row chips in the element's colour: "10% of hits as bleed",
+## short "10% bleed"; one a kind it has. A part's own figure says it already, so none for a part.
+static func conv_chips(it: Dictionary) -> Array:
+	var out := []
+	if it["slot"] == Data.ATTACHMENT:
+		return out
+	var b: Dictionary = Items.base_of(it)
+	for el in ["fire", "frost", "poison", "shock", "bleed"]:
+		var v: float = float(b.get("conv_%s_pct" % el, 0))
+		if v > 0.0:
+			out.append({"forms": ["%d%% of hits as %s" % [int(round(v)), el], "%d%% %s" % [int(round(v)), el]], "colour": Pal.ELEMENT_COLOURS[el], "el": el})
+	return out
 
 
 ## [words, tone] a chip: the slot, the type, the rarity (in its tone), the level, the cells.

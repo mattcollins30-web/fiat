@@ -11135,9 +11135,31 @@ func _try_on_checks(main) -> void:
 		for u in Data.UNIQUES:
 			var ui: Dictionary = Items.roll_unique(u, sim.rng)
 			head.show_item(ui, sim)
-			var want: int = 1 + Items.affix_lines(ui, false, false).size()
+			var want: int = 1 + Items.affix_lines(ui, false, false).size()     # the rule and every affix; a base's element chip after them, if there's room
 			var first: String = head._affixes._labels[0].text
-			_check(head._affixes.shown() == want and (first == str(u["words"]) or first == str(u.get("short", ""))), "%s at %d px: %d of %d chips, the first '%s'" % [u["name"], w, head._affixes.shown(), want, first])
+			_check(head._affixes.shown() >= want and (first == str(u["words"]) or first == str(u.get("short", ""))), "%s at %d px: %d of %d chips, the first '%s'" % [u["name"], w, head._affixes.shown(), want, first])
+		# a base that turns its hits to an element says so on a chip in the element's colour, first under the headline,
+		# with the rarity and level still on top at the longest rarity (14 Oct, Matt: the claw hammer bleeds and its card
+		# didn't say)
+		var conv_n := 0
+		for slot in Data.BASES.keys():
+			for b in Data.BASES[slot]:
+				var want: Array = IH.conv_chips({"slot": slot, "base": b["name"]})
+				if want.is_empty():
+					continue
+				var it: Dictionary = sim._plain(slot, b["name"])
+				if it.is_empty():
+					continue
+				conv_n += 1
+				it["rarity"] = Data.RARITIES.size() - 1
+				head.show_item(it, sim)
+				var seen: Array = range(IH.CHIPS).filter(func(j): return head._chips[j].visible).map(func(j): return head._chip_labels[j].text)
+				var leveled: bool = not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it))
+				_check(seen.has(Items.rarity_name(it)) and (not leveled or seen.any(func(t): return str(t).begins_with("Level "))), "%s at %d px lost its rarity or level: %s" % [b["name"], w, str(seen)])
+				var first: String = head._affixes._labels[0].text     # a plain base, no affixes: its element chip first
+				_check(head._affixes.shown() >= 1 and first in want[0]["forms"], "%s at %d px doesn't lead with '%s': '%s'" % [b["name"], w, want[0]["forms"][1], first])
+				_check(head._affixes._labels[0].get_theme_color("font_color") == want[0]["colour"], "%s's element chip isn't in its colour" % b["name"])
+		_check(conv_n > 0, "no base with an element share was checked")
 		head.queue_free()
 	_check(str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour_pct")[0]["short"]) != str(Data.AFFIXES.filter(func(a): return a["stat"] == "armour")[0]["short"]), "armour % and flat armour share a short name")
 	_check(not ds.is_empty() and float(ds[0][0]) < 0.0 and str(ds[0][1]).ends_with("dmg/s"), "the deltas don't lead with the damage lost: %s" % str(ds))
