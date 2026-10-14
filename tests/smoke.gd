@@ -4698,8 +4698,11 @@ func _shoot(main) -> void:
 	v._duck_t = 0.0
 	v._duck_next = 99.0
 	v._process(RunView.POP_S + 0.1)            # anyone coming in is up by now
+	v._swing = -1.0
 	v._shot_t = 0.0
 	v._process(0.01)
+	if v._swing >= 0.0:
+		v._process(v._swing_len * RunView.SWING_CONTACT)     # a melee swing's hit lands on the chop
 
 
 func _juice_checks(main) -> void:
@@ -8404,6 +8407,49 @@ func _full_art_checks(main, v) -> void:
 		if v._hands.visible:
 			var br: Vector2 = v._hands.position + RunView.used_of(v._hands.texture).end * RunView.HANDS_SCALE
 			_check(br.distance_to(RunView.HANDS_CORNER) < 1.5, "the %s's hands aren't in the corner: %s" % [gname, str(br)])
+	# a melee swing (14 Oct, Matt: "the action just hangs"): the hammer's arm apart from the off hand, no hit as it winds
+	# up, one on the chop with a streak behind it, the arm back where it was after; a gun keeps its kick
+	var hammer: Dictionary = sim._plain("Primary", "Claw hammer")
+	if not hammer.is_empty() and RunView.tex("hands_melee") != null:
+		sim.equipped["Primary"] = hammer
+		main.refresh()
+		_check(v._melee and v._hand_r.visible and v._hand_l.visible and v._hands.self_modulate.a < 0.01, "the hammer's arm isn't apart from the off hand")
+		var shots := [0]
+		var count := func(_at): shots[0] += 1
+		v.shot_fired.connect(count)
+		v._duck = 0.0
+		v._duck_t = 0.0
+		v._duck_next = 99.0
+		v._firing = true
+		v._figs[0]["state"] = "up"
+		v._swing = -1.0
+		v._shot_t = 0.0
+		v._process(0.01)
+		_check(v._swing >= 0.0 and shots[0] == 0, "the swing hit as it began, or never began")
+		var sl: float = v._swing_len
+		v._process(sl * RunView.SWING_UP - 0.01)
+		_check(v._hand_r.rotation > 0.1 and shots[0] == 0, "no wind-up before the chop: %.2f" % v._hand_r.rotation)
+		v._process(sl * (RunView.SWING_CONTACT - RunView.SWING_UP))
+		_check(shots[0] == 1 and v._hand_r.rotation < -0.2, "the chop didn't land once, forward: %d hits, %.2f" % [shots[0], v._hand_r.rotation])
+		_check(not v._trail.is_empty(), "no streak behind the chop")
+		v._shot_t = 99.0
+		v._process(sl)
+		_check(v._swing < 0.0 and is_zero_approx(v._hand_r.rotation) and v._swing_off == Vector2.ZERO and shots[0] == 1, "the arm didn't settle back after the swing")
+		# down behind the wall mid-swing: no hit on the chop
+		v._shot_t = 0.0
+		v._process(0.01)
+		v._duck = 1.0
+		v._duck_t = 5.0
+		v._process(sl)
+		_check(shots[0] == 1, "a swing landed with the hands down behind the wall")
+		v._duck = 0.0
+		v._duck_t = 0.0
+		v.shot_fired.disconnect(count)
+		var gun3: Dictionary = sim._plain("Primary", "Farmer's shotgun")
+		if not gun3.is_empty():
+			sim.equipped["Primary"] = gun3
+			main.refresh()
+			_check(not v._melee and not v._hand_r.visible and v._hands.self_modulate.a > 0.99 and is_zero_approx(v._hands.rotation), "a gun kept the hammer's swing parts")
 	sim.equipped["Primary"] = hold
 	main.refresh()
 

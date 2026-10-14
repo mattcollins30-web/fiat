@@ -4416,3 +4416,9 @@ up. Rooms met go in the save (an old save has met what it has open); not over a 
 end: the pause, or back out of a menu, as Esc. Drawn in engine (a ring, eight teeth) until one's painted. Room for it:
 the place shrinks to its pin when the purse is full, and the HP/XP/damage lines went 180 to 160. The smoke checks the
 purse at its widest clears it, and the pause open and shut by it.
+
+**The melee swing (14 Oct, Matt: "we need an attack frame for melee ... the action just hangs"; in engine first).** A
+hammer's or a blade's picture splits where a clean column parts the off hand from the weapon's; the weapon's arm winds
+back, chops toward the one it's hitting round the forearm, and settles, a streak following the head. The hit - its
+marker, its number - lands on the chop, not as the swing starts; none if the hands go down behind the wall mid-swing.
+Guns keep their kick. Generated swing frames only if this doesn't sell it.

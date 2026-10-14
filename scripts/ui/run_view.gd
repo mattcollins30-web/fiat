@@ -94,6 +94,27 @@ var _shot_t := 0.0
 var _rof := 1.0
 var _firing := false
 var _recoil := 0.0
+## A melee weapon's swing (14 Oct, Matt: "we need an attack frame for melee ... the action just hangs"): in engine, no
+## new art. The weapon's arm (the picture split from the off hand where there's a clean gap between them) winds back,
+## chops toward the one it's hitting and settles, round the forearm; the hit - its marker, its number - lands on the
+## chop, and a streak follows the head through it. A gun keeps its kick.
+const SWING_BACK := 0.24                  # radians, the wind-up (clockwise: the head back and up)
+const SWING_FWD := -0.46                  # the chop (anticlockwise: the head down toward them)
+const SWING_LIFT := Vector2(8, -10)       # the wind-up's lift, in the picture's pixels
+const SWING_LUNGE := Vector2(-40, 14)     # the chop's reach toward the street
+const SWING_UP := 0.35                    # the swing's share winding up
+const SWING_CONTACT := 0.55               # where in it the chop lands
+const STREAK_S := 0.16                    # a streak point's life
+var _melee := false
+var _hand_l: TextureRect                  # the off hand, still (a melee picture split in two)
+var _hand_r: TextureRect                  # the weapon's arm, swinging
+var _swing := -1.0                        # time into a swing; below 0 none
+var _swing_len := 0.3
+var _swing_k := -1                        # the one it's at
+var _swing_off := Vector2.ZERO            # the hands' shift through it
+var _streak: Control                      # the head's path through the chop
+var _trail: Array = []                    # [point in the frame, age]
+static var _splits := {}                  # a picture's split column, its pivot and the weapon's tip
 var _marker_t := 0.0
 var _run_seen := -1
 var _duck := 0.0                          # 0 up, 1 down behind the wall (13 Oct, Matt: "you never duck")
@@ -208,6 +229,22 @@ func _init() -> void:
 	_hands = _rect(null)                       # the gun's own, set by show_state (and its corner with it)
 	_hands.scale = Vector2(HANDS_SCALE, HANDS_SCALE)
 	_hands.position = HANDS_AT
+	_streak = Streak.new()
+	_streak.view = self
+	_streak.size = Vector2(W, H)
+	_streak.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_streak)
+	move_child(_streak, _hands.get_index())  # behind the hands
+	for side in ["l", "r"]:
+		var h := TextureRect.new()
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		h.visible = false
+		_hands.add_child(h)
+		if side == "l":
+			_hand_l = h
+		else:
+			_hand_r = h
 	for el in ["fire", "poison", "bleed"]:
 		var e := TextureRect.new()
 		e.texture = _vignette(Pal.ELEMENT_COLOURS[el], 0.7)
@@ -572,11 +609,14 @@ func show_state(sim, m: Dictionary) -> void:
 	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"]) if gun != null else null
 	if ht != null and Items.is_melee(gun) and tex("hands_" + _hands_kind(gun)) == null:
 		ht = null                                  # no revolver for a hammer: nothing till its hands are drawn
-	if ht != _hands.texture:
+	var melee: bool = ht != null and Items.is_melee(gun)
+	if ht != _hands.texture or melee != _melee:
 		_hands.texture = ht
+		_melee = melee
 		if ht != null:
 			_hands.size = ht.get_size()
 			_hands_at = HANDS_CORNER - used_of(ht).end * HANDS_SCALE
+		_set_swing_parts(ht)
 	_hands.visible = ht != null
 	# the search: the view pans along to the crates in the street, the next three
 	var searching: bool = int(m["remaining"]) <= 0 and m["cleared"]
@@ -757,23 +797,21 @@ func _process(dt: float) -> void:
 		_glass.queue_redraw()
 	# your gun: a kick back at its rate while there's someone to shoot, the marker on the one you're hitting
 	_shot_t -= dt
-	if _firing and _shot_t <= 0.0 and _duck < 0.2:
+	if _firing and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
 		_shot_t = 1.0 / _rof
-		_recoil = 0.08
 		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "up")
-		if not ups.is_empty():
-			var k: int = ups[randi() % ups.size()]      # whoever's in your sights, not the same one every time
-			var r: TextureRect = _figs[k]["rect"]
-			var u: Rect2 = used_of(r.texture)
-			if u.size.y <= 0.0:
-				u = Rect2(Vector2.ZERO, r.size)
-			var hit: Vector2 = r.position + Vector2(u.get_center().x, u.position.y + u.size.y * randf_range(0.15, 0.45)) * r.scale.x
-			_marker.position = hit - Vector2(12, 12)
-			_marker_t = 0.12
-			_figs[k]["hit_t"] = 0.08
-			shot_fired.emit(hit)
+		var k: int = ups[randi() % ups.size()] if not ups.is_empty() else -1     # whoever's in your sights, not the same one every time
+		if _melee:
+			_swing = 0.0                             # the hit lands on the chop (_swing_step)
+			_swing_len = clampf(0.75 / _rof, 0.24, 0.42)
+			_swing_k = k
+		else:
+			_recoil = 0.08
+			if k >= 0:
+				_land_hit(k)
+	_swing_step(dt)
 	_recoil = maxf(0.0, _recoil - dt)
-	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt
+	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt + _swing_off * HANDS_SCALE
 	_marker_t -= dt
 	_marker.visible = _marker_t > 0.0
 	_fx_t += dt
@@ -783,6 +821,154 @@ func _process(dt: float) -> void:
 		e.modulate.a = move_toward(e.modulate.a, target, dt * 2.5)
 	_red_a = maxf(0.0, _red_a - dt / RED_S)
 	_red.modulate.a = _red_a
+
+
+## A hit on figure k: the marker on them, their flash, and the number's cue (run.gd's _on_view_shot).
+func _land_hit(k: int) -> void:
+	var r: TextureRect = _figs[k]["rect"]
+	var u: Rect2 = used_of(r.texture)
+	if u.size.y <= 0.0:
+		u = Rect2(Vector2.ZERO, r.size)
+	var hit: Vector2 = r.position + Vector2(u.get_center().x, u.position.y + u.size.y * randf_range(0.15, 0.45)) * r.scale.x
+	_marker.position = hit - Vector2(12, 12)
+	_marker_t = 0.12
+	_figs[k]["hit_t"] = 0.08
+	shot_fired.emit(hit)
+
+
+## A swing's frame: wind up, chop, settle; the hit on the chop - on the one it was at, or whoever's up if they've gone.
+func _swing_step(dt: float) -> void:
+	var arm: Control = _hand_r if _hand_r.visible else _hands
+	for i in range(_trail.size() - 1, -1, -1):
+		_trail[i][1] += dt
+		if _trail[i][1] > STREAK_S:
+			_trail.remove_at(i)
+	if _swing < 0.0:
+		_streak.queue_redraw()
+		return
+	var p0: float = _swing / _swing_len
+	_swing += dt
+	var p: float = _swing / _swing_len
+	if p0 < SWING_CONTACT and p >= SWING_CONTACT and _duck < 0.2:     # gone down behind the wall mid-swing: no hit (the review); it's held for the next
+		var k: int = _swing_k
+		if k < 0 or _figs[k]["state"] != "up":
+			var ups: Array = range(SLOTS.size()).filter(func(i): return _figs[i]["state"] == "up")
+			k = ups[0] if not ups.is_empty() else -1
+		if k >= 0:
+			_land_hit(k)
+		_jolt = maxf(_jolt, 0.05)                 # the knock of it
+	var ang := 0.0
+	if p < SWING_UP:
+		var e: float = ease(p / SWING_UP, 0.5)
+		ang = SWING_BACK * e
+		_swing_off = SWING_LIFT * e
+	elif p < SWING_CONTACT:
+		var e: float = ease((p - SWING_UP) / (SWING_CONTACT - SWING_UP), 2.2)
+		ang = lerpf(SWING_BACK, SWING_FWD, e)
+		_swing_off = SWING_LIFT.lerp(SWING_LUNGE, e)
+	elif p < 1.0:
+		var e: float = ease((p - SWING_CONTACT) / (1.0 - SWING_CONTACT), -1.6)
+		ang = lerpf(SWING_FWD, 0.0, e)
+		_swing_off = SWING_LUNGE.lerp(Vector2.ZERO, e)
+	else:
+		_swing = -1.0
+		_swing_off = Vector2.ZERO
+	arm.rotation = ang
+	if p >= SWING_UP * 0.8 and p <= SWING_CONTACT + 0.12:
+		_trail.append([tip_point(), 0.0])
+	_streak.queue_redraw()
+
+
+## The weapon's tip in the frame's space, where it is this frame.
+func tip_point() -> Vector2:
+	var sp: Dictionary = _split_of(_hands.texture)
+	if _hand_r.visible:
+		return _hands.get_transform() * (_hand_r.get_transform() * (sp["tip"] - Vector2(sp["x"], 0)))
+	return _hands.get_transform() * sp["tip"]
+
+
+## A melee picture in two where a clean column parts the off hand from the weapon's (fewer than 1 in 50 of its rows
+## drawn on), the arm swinging round its forearm; with no clean column the whole picture swings. A gun: none of it.
+func _set_swing_parts(t: Texture2D) -> void:
+	_swing = -1.0
+	_swing_off = Vector2.ZERO
+	_trail.clear()
+	_hands.rotation = 0.0
+	_hand_r.rotation = 0.0
+	var split := false
+	if _melee and t != null:
+		var sp: Dictionary = _split_of(t)
+		_hands.pivot_offset = sp["pivot"]
+		if sp["x"] > 0:
+			split = true
+			var w: float = t.get_size().x
+			var h: float = t.get_size().y
+			var al := AtlasTexture.new()
+			al.atlas = t
+			al.region = Rect2(0, 0, sp["x"], h)
+			var ar := AtlasTexture.new()
+			ar.atlas = t
+			ar.region = Rect2(sp["x"], 0, w - sp["x"], h)
+			_hand_l.texture = al
+			_hand_l.size = al.region.size
+			_hand_l.position = Vector2.ZERO
+			_hand_r.texture = ar
+			_hand_r.size = ar.region.size
+			_hand_r.position = Vector2(sp["x"], 0)
+			_hand_r.pivot_offset = sp["pivot"] - Vector2(sp["x"], 0)
+	_hand_l.visible = split
+	_hand_r.visible = split
+	_hands.self_modulate.a = 0.0 if split else 1.0    # its two halves draw it
+
+
+static func _split_of(t: Texture2D) -> Dictionary:
+	if t == null:
+		return {"x": 0, "pivot": Vector2.ZERO, "tip": Vector2.ZERO}
+	var key: int = t.get_instance_id()
+	if _splits.has(key):
+		return _splits[key]
+	var w: int = int(t.get_size().x)
+	var h: int = int(t.get_size().y)
+	var out := {"x": 0, "pivot": Vector2(w * 0.92, h * 1.02), "tip": Vector2(w * 0.7, 0)}
+	var img := t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img = img.duplicate()
+			img.decompress()
+		var best := -1
+		var best_n := h
+		for x in range(int(w * 0.4), int(w * 0.75)):
+			var n := 0
+			for y in range(0, h, 2):
+				if img.get_pixel(x, y).a > 0.1:
+					n += 1
+			if n < best_n:
+				best_n = n
+				best = x
+		if best > 0 and best_n * 2 <= h / 50:
+			out["x"] = best
+		# the tip: the weapon's highest drawn pixel right of the split
+		for y in range(h):
+			var found := false
+			for x in range(maxi(out["x"], int(w * 0.4)), w):
+				if img.get_pixel(x, y).a > 0.3:
+					out["tip"] = Vector2(x, y)
+					found = true
+					break
+			if found:
+				break
+	_splits[key] = out
+	return out
+
+
+## The head's streak through the chop: a fading, thinning line along the trail.
+class Streak extends Control:
+	var view
+	func _draw() -> void:
+		var tr: Array = view._trail
+		for i in range(1, tr.size()):
+			var a: float = 1.0 - float(tr[i][1]) / view.STREAK_S
+			draw_line(tr[i - 1][0], tr[i][0], Color(1, 1, 1, 0.45 * a), lerpf(2.0, 12.0, a), true)
 
 
 ## Where a hit of yours shows its number, in the frame's space: on one that's up, about its chest; with nobody up,
