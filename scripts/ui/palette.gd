@@ -110,14 +110,6 @@ const LINE_H := 32
 const BUTTON_H := 56
 
 
-static func place_bg(place: String) -> Color:
-	return PLACE_BG.get(place, BG)
-
-
-static func place_panel(place: String) -> Color:
-	return PLACE_PANEL.get(place, PANEL)
-
-
 static func tier_color(tier: int) -> Color:
 	return TIER_COLOURS[clampi(tier, 1, TIER_COLOURS.size()) - 1]
 

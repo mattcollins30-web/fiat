@@ -146,8 +146,22 @@ func _init() -> void:
 
 
 ## A fresh camp: a starter loadout, the first stock on the market.
+## The fingerprint's dice (15 Oct, tests/fingerprint.gd): with `fixed_seed` set, a new camp and a loaded one
+## (a Yard's move is both) roll fixed dice instead of fresh ones, so a refactor can be proved to move nothing.
+static var fixed_seed := 0
+static var _seed_n := 0
+
+
+func _reseed() -> void:
+	if fixed_seed == 0:
+		rng.randomize()
+		return
+	_seed_n += 1
+	rng.seed = fixed_seed + _seed_n
+
+
 func start() -> void:
-	rng.randomize()
+	_reseed()
 	unlocked = []                          # a fresh camp: every room a head opens is shut
 	met = []
 	_starter_loadout()
@@ -329,14 +343,14 @@ func _mitigation_under(t: Dictionary) -> float:
 		f = float(mission["t"].get("armour", 1.0))
 	if f >= 1.0 or has_rule("nans_cardigan"):
 		return mitigation()
-	var a := armour() * (1.25 if has_node("plates") else 1.0) * cm("armour") * f
+	var a := armour() * cm("armour") * f
 	return a / (a + Data.ARMOUR_K)
 
 
 func _mitigation_raw() -> float:
 	if has_rule("nans_cardigan"):
 		return 0.0                               # no armour at all
-	var a := armour() * (1.25 if has_node("plates") else 1.0) * cm("armour")
+	var a := armour() * cm("armour")
 	return a / (a + Data.ARMOUR_K)
 
 
@@ -577,17 +591,6 @@ func incoming_shares(t: Dictionary) -> Dictionary:
 	return out
 
 
-## What's on you, for the run panel: "burning, bleeding".
-func dots_on_you() -> Array:
-	var out := []
-	if mission == null:
-		return out
-	for ty in ["fire", "poison", "bleed"]:
-		if float(mission.get("my_dots", {}).get(ty, 0.0)) > 0.5:
-			out.append({"fire": "burning", "poison": "poisoned", "bleed": "bleeding"}[ty])
-	return out
-
-
 ## What's on them, as [words, tone] pairs for the chips: burning, poisoned, bleeding, chilled, shocked.
 func dots_on_them() -> Array:
 	var out := []
@@ -606,7 +609,7 @@ func dots_on_them() -> Array:
 
 ## Loot the pack can bring back.
 func capacity() -> int:
-	var extra := (6 if has_node("pack_mule") else 0) + int(tree_sum("pack_cells"))
+	var extra := (6 if has_node("pack_mule") else 0)
 	var base := 2 if equipped["Backpack"] == null else maxi(1, Items.capacity(equipped["Backpack"]))
 	return int((base + extra) * (2 if has_node("hoarder") else 1) * (1.5 if has_rule("the_float") else 1.0))
 
@@ -2171,11 +2174,6 @@ func points_in(tree_name: String) -> int:
 	return n
 
 
-## A tree's column is open: what's spent in the tree has reached its gate.
-func column_open(tree_name: String, col: int) -> bool:
-	return points_in(tree_name) >= Data.gate(Data.tree_named(tree_name), col, my_classes())
-
-
 ## Why a node can't be trained now, in words, or "" when it can (the Training screen's line, the tests').
 ## `ignore_points`: everything but the points free - the screen draws a node it could reach with more points as open.
 func train_block(id: String, ignore_points := false) -> String:
@@ -3425,17 +3423,6 @@ func _yard_setting_off() -> void:
 		hp = max_hp()
 	if yard_has("field_kit") and rig_room(1):
 		rig.append(_plain(Data.MEDICAL, "Bandage"))
-
-
-## Whether anything in the Yard can be built now: a pick in an open column with nothing built there, or a rank.
-func yard_any_buyable() -> bool:
-	for b in Data.YARD:
-		for c in range(b["picks"].size()):
-			if yard_side(b["key"], c) == "" and can_yard_pick(b["key"], c, "a"):
-				return true
-		if can_yard_rank(b["key"]):
-			return true
-	return false
 
 
 ## What's buyable now, by id: an open column with nothing built ("key/col"), a rank ("key/rN", N the next).
@@ -4706,7 +4693,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var swing := rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	var headshot := 1.0
 	if m["fresh"]:
-		headshot += (0.25 if has_node("headshots") else 0.0) + (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
+		headshot += (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
 	if m["fresh"] and yard_has("range_cards"):
 		headshot += 0.5                       # the Lookout's Range cards: the first shot on every gang half again
@@ -6571,15 +6558,6 @@ func rig_tops_up(it: Dictionary) -> bool:
 	return false
 
 
-## Whether a stack of rounds would top up the rig's own stack entirely, with no pouch.
-func rig_stack_room(it: Dictionary) -> bool:
-	var left: int = Items.stack_size(it)
-	for r in rig:
-		if Items.same_stack(r, it):
-			left -= Items.stack_cap(r) - Items.stack_size(r)
-	return left <= 0
-
-
 func _take_from(src: Array, id: int) -> bool:
 	for it in src:
 		if it["id"] == id and Items.rig_item(it):
@@ -6967,13 +6945,6 @@ func _idle_tidy() -> void:
 				changed.append(Items.full_name(equipped[s]))
 		if not changed.is_empty():
 			log_event("Put on: %s." % ", ".join(changed))
-
-
-## The stash's unequipped items, dearest first, for the market's sell cards.
-func stash_by_value() -> Array:
-	var out := stash.duplicate()
-	out.sort_custom(func(a, b): return a["value"] > b["value"])
-	return out
 
 
 # ------------------------------------------------------------------ the medic tent
@@ -7568,7 +7539,7 @@ func load_dict(d: Dictionary) -> void:
 	elapsed = float(d.get("elapsed", 0.0))
 	events = d.get("events", [])
 	Items._next_id = maxi(Items._next_id, int(d.get("next_id", 1)))
-	rng.randomize()
+	_reseed()
 	# JSON turns ints to floats; the sim's counters want ints back
 	if mission != null:
 		if not mission.has("cleared"):

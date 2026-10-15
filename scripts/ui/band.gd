@@ -223,12 +223,6 @@ func _lay_compact() -> void:
 		UI.fit(unit, _unit_forms)
 
 
-## Where the right-hand lines start: lower when something sits over them (the Bench's upgrade button).
-func right_from(y: float) -> void:
-	for k in range(RIGHT_LINES):
-		right[k].position.y = y + k * 24
-
-
 ## The right-hand lines, top right; up to three, the rest dropped.
 func set_right(lines: Array) -> void:
 	var any := false

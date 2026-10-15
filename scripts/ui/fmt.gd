@@ -74,28 +74,12 @@ static func money_forms(x: float) -> Array:
 	return [money(x), money_k(x), short_num(x)]
 
 
-## Income a second: +12 tins/s, +1.20 tins/s under ten, +1,234 tins/s.
-static func per_s(x: float) -> String:
-	if not is_finite(x):
-		return "—"
-	var sgn := MINUS if x < -0.005 else "+"
-	var a := absf(x)
-	if a < 10.0:
-		return "%s%.2f %s/s" % [sgn, a, UNIT]
-	return "%s%s %s/s" % [sgn, group(int(round(a))), UNIT]
-
-
 ## When a save was made, in local time: 21 Sep, 15:02.
 static func when(unix: float) -> String:
 	var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
 	var d := Time.get_datetime_dict_from_unix_time(int(unix) + bias)
 	var months := ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 	return "%d %s, %02d:%02d" % [d["day"], months[d["month"] - 1], d["hour"], d["minute"]]
-
-
-## +840 tins / −1,650 tins for ledger lines.
-static func signed_money(x: float) -> String:
-	return ("+" if x >= 0 else "") + money(x)
 
 
 static func pct(x: float) -> String:
@@ -127,13 +111,6 @@ static func hours(h: float) -> String:
 	return "%d hours" % int(round(h))
 
 
-## The same, short, for buttons: 8 h, 30 m.
-static func hours_short(h: float) -> String:
-	if h < 1.0:
-		return "%d m" % int(round(h * 60.0))
-	return "%d h" % int(round(h))
-
-
 ## Time away: 5 h 46 m, 12 m, 40 s.
 static func away(seconds: float) -> String:
 	var s := int(seconds)
@@ -161,24 +138,6 @@ static func times(x: float) -> String:
 ## A count and its noun: 1 shift, 3 shifts.
 static func count(n: int, noun: String) -> String:
 	return "%s %s" % [group(n), noun if n == 1 else noun + "s"]
-
-
-## A job's pace against the first: ×1, ×1.5, ×1.25 - two places at most, as the
-## tree states its ranks, so a card and the tree agree.
-static func pace_level(x: float) -> String:
-	return ("×%.2f" % x).rstrip("0").rstrip(".")
-
-
-## A countdown in whole weeks: 12 weeks, 1 week - never 0 while something's left.
-static func in_weeks(x: float) -> String:
-	var n := maxi(1, ceili(x / 7.0 - 1e-6))
-	return "%d week%s" % [n, "" if n == 1 else "s"]
-
-
-## A countdown in whole days: 12 days, 1 day - never 0 while something's left.
-static func in_days(x: float) -> String:
-	var n := maxi(1, ceili(x - 1e-6))
-	return "1 day" if n == 1 else "%d days" % n
 
 
 ## The calendar: a site day since the run began, as a date - 14 Mar 2027.

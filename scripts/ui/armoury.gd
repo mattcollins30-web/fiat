@@ -119,21 +119,6 @@ var _head:
 		return _pick._heads[0]
 
 
-## "Bandage ×5, Medkit" - items by name with counts.
-static func _counted(items: Array) -> String:
-	var counts := {}
-	var order := []
-	for it in items:
-		if not counts.has(it["base"]):
-			counts[it["base"]] = 0
-			order.append(it["base"])
-		counts[it["base"]] += 1
-	var out := []
-	for nm in order:
-		out.append(nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
-	return ", ".join(out)
-
-
 ## The body's slots, in order, for the tests.
 func row_names() -> Array:
 	return Data.SLOTS.duplicate()
@@ -191,13 +176,6 @@ func _signature() -> String:
 	for it in sim.stash:
 		parts.append(str(it["id"]))
 	return "|".join(parts)
-
-
-func _affix_words(it: Dictionary) -> String:
-	var a := Items.affix_lines(it, true)
-	if a.is_empty():
-		return Items.rarity_name(it)
-	return ", ".join(a)
 
 
 ## The compare panel (Pick-A): the pick on the left, what's fitted in its slot

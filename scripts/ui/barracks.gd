@@ -493,18 +493,6 @@ static func _chip_words(nd: Dictionary) -> String:
 	return "Notable"
 
 
-## A plain node's figure, with its type: "+10% fire, SMGs".
-static func _effect_words(nd: Dictionary) -> String:
-	if nd.get("capstone", false):
-		return "Capstone"
-	if nd.get("keystone", false):
-		return "Keystone"
-	var w: String = EFFECT_WORDS[nd["effect"]] % nd.get("value", 0) if EFFECT_WORDS.has(nd.get("effect", "")) else "Notable"
-	if nd.has("type"):
-		w += ", " + type_words(nd)
-	return w
-
-
 ## The colour of a tree's lane: its element's, the accent for a class's, the line for the Yard's.
 static func lane_colour(t: Dictionary) -> Color:
 	if t.has("element"):
@@ -844,14 +832,6 @@ func _show_lane(k: int, t) -> void:
 		tile["name"].text = ""
 		tile["effect"].text = ""
 	UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
-
-
-## A node's name cut to its first word when the tile won't take it.
-static func _short_name(nm: String) -> String:
-	var words: PackedStringArray = nm.split(" ", false)
-	if words.size() > 2 and words[0].length() <= 3:
-		return "%s %s" % [words[0], words[1]]      # "The long ..." keeps its noun: "The long", never "The"
-	return words[0] if words.size() > 1 else nm
 
 
 ## The two links: under a class lane, to its element's lane, in the fourth column. Solid and filled when the

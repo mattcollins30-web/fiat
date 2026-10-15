@@ -149,11 +149,6 @@ static func crate_texture(key: String, open: bool) -> Array:
 	return [NodeGlyphs.texture("crate"), TINT.get(key, Pal.TEXT_2)]
 
 
-## "four searches", "one search".
-static func searches_words(n: int) -> String:
-	return "%s search%s" % [WORDS[n] if n < WORDS.size() else str(n), "" if n == 1 else "es"]
-
-
 ## What the dog smells in a shut crate: "something Rare", "a unique"; "" for nothing nosed.
 static func nosed(q: Dictionary) -> String:
 	if not q.has("held"):

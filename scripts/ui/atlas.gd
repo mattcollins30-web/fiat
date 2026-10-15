@@ -44,7 +44,6 @@ const PIP_GAP := 4
 # its column, the ranks as pips under it, a one-rank node round, the lane's keystone bigger and alone; the words are
 # the panel's and the tooltip's
 const NODE := 52
-const NODE_BIG := 64
 const KEY_SIDE := 46                # a keystone's diamond: a 46 px square turned 45° (65 across), the Training tree's mark
 const ROW_Y := [2, 72]              # the two rows' tops in a 140 px lane: a tile and its pips, each row inside the lane
 const GLYPH := 30

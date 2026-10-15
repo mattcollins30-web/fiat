@@ -32,7 +32,6 @@ const AMMO := "Ammo"
 const PAPER := "Paper"
 const PAPER_DROP := 0.06           # the share of a site's finds that are papers
 const RADIO_EVERY := 3             # the radio comes on every this many runs home (12 Oct, the lore pass): the next line heard
-const AMMO_FOR := {"improvised": "Nails", "shotgun": "Shells", "rifle": "Rifle rounds", "smg": "SMG rounds", "pistol": "Pistol rounds", "none": ""}
 
 ## An item's footprint in cells, W x H - what it takes in the stash and the
 ## pack, and the size its picture is drawn at (64 px a cell). The slot gives
@@ -605,11 +604,6 @@ const BASES := {
 }
 const AMMO_PRICE := 1.5             # the Fence's markup on a standard box
 const AMMO_DROP := 0.22             # the share of a kill's drops that are rounds; a look's is half that
-## Where loot comes from. A kill drops what they carried; a look over the
-## site turns up what's lying there. Meds are rare either way; attachments
-## are the site's. The weights are the lists: a slot listed twice is twice as likely.
-const KILL_SLOTS := ["Primary", "Primary", "Secondary", "Helmet", "Armour", "Armour", "Rig"]
-const SITE_SLOTS := ["Backpack", "Rig", "Secondary", "Helmet", "Primary", "Armour"]
 const MED_PRICE := 1.5            # the Clinic's markup on a common med
 const MED_DROP := 0.08            # the share of finds that are medical
 const GRENADE_DROP := 0.04        # the share of a look's finds that are grenades (32)
@@ -629,7 +623,6 @@ const MELEE_WAIT := 1.0            # seconds: their first shot lands before your
 const SOCKET_SLOTS := ["Primary", "Secondary", "Helmet", "Armour"]
 const SOCKET_MAX := 2
 const SOCKET_ODDS := [0.45, 0.4, 0.15]     # 0, 1, 2 sockets
-const SOCKET_WORDS := {"conv_fire_pct": "fire", "conv_frost_pct": "frost", "conv_poison_pct": "poison", "conv_shock_pct": "shock", "salt": "salt", "wire_pct": "wire"}
 
 ## Damage types. A hit is split by type (`Sim.conversion`), each share
 ## multiplied by its own increased and more, cut by their resist to it, and
@@ -999,7 +992,6 @@ const ZONES := [
 	{"name": "The City", "words": "The Services on the motorway, the Hospital, the Barracks the lorries never reached", "tiers": [9, 10, 11]},
 ]
 const OUTSKIRTS_SITES := 3         # the sites before the Streets: a site's level is its index past these and its depth (Streets, depth 1: level 1)
-const ZONE := "The Estate"
 ## A site: its campaign numbers (depth 1), its shape at the endgame (how the
 ## depth curve is bent for it - many and thin, or few and hard; gangs often
 ## or rarely; cash-heavy), and its drops: which slots its finds favour, a gun
@@ -1095,7 +1087,6 @@ const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an i
 const ILVL_FROM := 15
 const CONVOY_TIER := 9             # the Services
 const CONVOY_UNIQUE := "The Lorry's Load"
-const BOSS_HP_MULT := 1.0          # boss HP = site hp × boss "hp"; scales with the curve past the campaign
 const NOTES_KILL := 1              # notes a kill, times the depth factor
 const NOTES_SEARCH := 0.3          # chance a search turns up a note or two
 const NOTES_BOSS := 5              # notes a boss kill, times depth
@@ -1532,7 +1523,6 @@ const BUILD_GRENADE := 12           # with the element's socketable; the nail bo
 ## a tier up, or it stays shut).
 const EVENT_ODDS := 0.3
 const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
-const EVENT_CACHE_BENCH := 2        # the Bench level that opens a cache
 const EVENTS := ["convoy", "trapped", "cache"]
 
 ## Contracts (9 Oct, docs/design/contracts.md): the Fence wants gear - so many of a slot at a rarity, a deep
@@ -1905,8 +1895,7 @@ const BASE_HP := 100.0
 const HP_PER_LEVEL := 6.0
 const DMG_PER_LEVEL := 0.02
 const UNARMED_DPS := 3.0          # fists; a mission with no gun is a bad idea
-const REST_HP_PER_S := 0.5        # the Medic Tent, for free, slowly
-const TREAT_CASH_PER_HP := 2.0    # or paid for, at once
+const TREAT_CASH_PER_HP := 2.0    # the Clinic's healing, paid for at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the Clinic treats it for
 ## WOUND_CASH a level. One at a time; a second replaces it.
@@ -1914,7 +1903,6 @@ const WOUND_AT := 0.33            # 0.35 read 31-44% wounded and 0.30 2-9% (Matt
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
 const WOUND_CASH := 20
-const STASH_CAP := 40
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling
 

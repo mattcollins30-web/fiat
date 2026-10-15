@@ -471,12 +471,6 @@ func _pick_view(v: String) -> void:
 	acted.emit()
 
 
-## The tests' hands on the map: a rank of a passive, and the map started again.
-func _rank(key: String) -> void:
-	_atlas.selected = key
-	_atlas._on_take()
-
-
 func _reset_map() -> void:
 	_atlas._on_reset()
 

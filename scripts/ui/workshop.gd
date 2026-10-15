@@ -61,7 +61,6 @@ const JOB_NAMES := {"bump": "Raise the level", "scrap": "Scrap it"}
 const JOB_WORDS := {"bump": "Three levels up: the worst tiers stop rolling", "scrap": "Broken down for the builds; gone for good"}
 const FOOT_H := 44
 const GUNS := ["Primary", "Secondary"]
-const ROWS_A_GUN := 5              # the most mounts a gun has
 
 var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var sim
@@ -405,13 +404,6 @@ static func _short_names(base: String) -> Array:
 		out.append(words[0])
 	out.append(words[0].substr(0, 6) if not words.is_empty() else base)
 	return out
-
-
-## "optics, muzzles and grips".
-static func _and(words: Array) -> String:
-	if words.size() <= 1:
-		return "" if words.is_empty() else str(words[0])
-	return ", ".join(words.slice(0, words.size() - 1)) + " and " + str(words.back())
 
 
 ## The gun's own mounts, in the Bench's order, sockets apart.

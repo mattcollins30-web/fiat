@@ -4631,3 +4631,11 @@ is its own commit: design or mockup where it needs one, the smoke, the reviewer,
 12. Gates set first. The campaign's length measured against Matt's 14 Oct save (the Bank at 47 min, the Quartermaster
     at 67, first death at 82, as a fire Drifter's Bank was 47 too) and its target agreed; the search against the gangs
     (item 5), the gamble's worth (item 15), the loot tables' numbers (item 17), the signals' ladder. Then one pass.
+
+**A1: the fingerprint and dead code (15 Oct).** tests/fingerprint.gd plays four bot builds for three simulated hours
+on fixed dice (the fourth by hand, through a save and a load every eighth run), hashing every run's outcome, kills,
+loot, tins, XP and time and each build's end state (ids stripped). Run in the cloud workspace before and after each
+refactor step: the hash must not move. One fix made it possible: a Yard's move rolled fresh dice mid-read (start() and
+load_dict() both randomised); `Sim.fixed_seed` (0 in the game, so unchanged there) gives them fixed ones. Removed, with
+the hash unmoved (b687fd57…, 340 lines): 22 functions nothing called, 12 constants nothing read, and three dead terms -
+`has_node("plates")` and `has_node("headshots")` (no tree has either) and `tree_sum("pack_cells")` (no node gives it).

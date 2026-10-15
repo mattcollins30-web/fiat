@@ -297,10 +297,6 @@ static func full_name(it: Dictionary) -> String:
 	return it["base"]
 
 
-static func is_unique(it: Dictionary) -> bool:
-	return it.has("unique")
-
-
 # ------------------------------------------------------------------ affixes and tiers
 
 ## The affixes a slot can roll.
@@ -512,10 +508,6 @@ static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumbe
 	it["piece"] = piece["name"]
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[2]["value"] * 1.5))
 	return it
-
-
-static func is_set(it: Dictionary) -> bool:
-	return it.has("set")
 
 
 static func set_named(name: String) -> Dictionary:

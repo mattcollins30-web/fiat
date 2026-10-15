@@ -639,7 +639,6 @@ func show_pause() -> void:
 ## The pause's Settings (14 Oct, Matt: "a Settings row ... Sound, Music and Room intros"): a volume each for the effects,
 ## the music and the voices, stepped a press at a time (100, 75, 50, 25, off), and the rooms' intros on or off. Back is
 ## the pause. Opened again under a press, the row that was lit stays lit (a pad).
-const SETTING_ROWS := ["sfx", "music", "voice", "intros"]
 func show_settings(lit_row := -1) -> void:
 	var items := []
 	var words := {"sfx": ["Effects", "The guns, the fights, the camp"], "music": ["Music", "The title's, the camp's, the fight's"],
