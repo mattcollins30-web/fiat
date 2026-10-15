@@ -4772,3 +4772,15 @@ screen yet) the auto-run's rule holds. On an auto-run, "Fill up, then go", away 
 what's worn, or a paper, swaps in, for the cheapest thing at least its size that isn't one (or a head's thing);
 anything else is passed over; an upgrade in the pack never leaves. The pack's notes say so. Expect the bot's and
 away-time's takings to dip a little against earlier reads (fewer valuable swaps). Fingerprint 55119646.
+
+**B8.4: the loot tables (15 Oct; parked items 15, 17; the read at docs/design/loot_read.md, after at
+loot_read_after.md; Matt's picks).** The read (tests/loot_read.gd): drops were one rarity campaign-wide (~60% common,
+6% epic or better); the gamble never common and a fifth epic or better but at a low level (wear 7 at the City against
+the drops' 25), so it out-geared them; uniques never dropped loose in the campaign and then flooded the signals (1 kill
+in 10 at depth 6). Now: a zone's quality on its drops' rarity (the Outskirts nothing, the Estate +15%, the Town +30%,
+the City +45%: ~61% common there down to ~47%); the gamble at your deepest site's level (never past what the runner can
+wear) and its quality off (commons still out; epic or better ~7%); a loose unique from the Town on at 1 find in 200,
++1% a depth past the first, never past 1 in 25 (a Safe's double too); set pieces never past 1 in 50. Melee stays in
+the drops (Matt: the wrench that saved a dry run). **For Matt:** at depth 1 the Hospital and the Barracks (loot tier 6)
+have no loose unique whose range takes their tier, so the City's trickle comes only from the Services; widening a
+"core" unique's range would fill it.

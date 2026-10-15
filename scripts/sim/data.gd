@@ -723,6 +723,14 @@ const ATTACHMENTS := [
 ## at depth (UNIQUE_DROP a find, times the depth past the first). The things a
 ## build is found around. `rule` is a flag the sim reads like a keystone's.
 const UNIQUE_DROP := 0.01
+## The loot tables (15 Oct, the loot read, Matt's picks): a loose unique from the Town on at UNIQUE_CAMPAIGN a find,
+## growing UNIQUE_DROP a depth past the first and never past UNIQUE_CAP; set pieces, SET_DROP a depth, to SET_CAP; and
+## a zone's quality on the rarity roll (the Outskirts' nothing to the City's +45%), so a City drop is rarer.
+const UNIQUE_CAMPAIGN := 0.005
+const UNIQUE_FROM_ZONE := 2
+const UNIQUE_CAP := 0.04
+const SET_CAP := 0.02
+const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.45]
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but a paper has a band and a range of tiers. It drops at
 ## the find's loot tier inside its range, on the best base of its slot (and gun type) at that tier; a loose one only where
 ## the find's tier is inside its range, the band's weight picking among those that can.
@@ -2140,7 +2148,7 @@ const GAMBLE_SHOWN := 5             # kinds on offer at once, of the eleven
 const GAMBLE_RUNS := 2.0            # the price, in runs' pay on the top open tier
 const GAMBLE_STEP := 0.15           # the most one run home moves the gamble's base, up or down (13 Oct)
 const GAMBLE_FLOOR := 300           # and never under this, at the opening day's prices
-const GAMBLE_QUALITY := 0.5         # the Fence's quality on the roll (+50%: the rarity weights compound by rank)
+const GAMBLE_QUALITY := 0.0         # the Fence's quality on the roll (15 Oct, the loot read: was +50%, a fifth epic or better; never common still)
 const GAMBLE_UNIQUE := 0.02         # the chance any gamble is a unique of the kind
 const STARTING_CASH := 150
 ## Money that goes off. The Fence's prices rise with the Yard's hours - every

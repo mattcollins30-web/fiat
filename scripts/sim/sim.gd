@@ -1412,6 +1412,19 @@ func recover_s() -> float:
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
+## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
+## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
+func gamble_level() -> int:
+	return clampi(deepest_site_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1) / float(Data.WEAR_PER_ILVL))))
+
+
+## A loose unique a find (15 Oct, the loot read): a trickle from the Town on, growing with the depth, capped.
+func unique_odds(t: Dictionary) -> float:
+	var z: int = int(Data.TIERS[int(t["tier"])]["zone"])
+	var base: float = Data.UNIQUE_CAMPAIGN if z >= Data.UNIQUE_FROM_ZONE else 0.0
+	return minf(Data.UNIQUE_CAP, base + Data.UNIQUE_DROP * maxi(0, int(t["depth"]) - 1))
+
+
 ## A search's find at a site being a paper (the Map's Papers tile, 15 Oct; the find's own roll).
 func paper_odds(i: int) -> float:
 	var shape: Dictionary = Data.TIERS[i]["shape"]
@@ -4116,6 +4129,7 @@ func effective(i: int) -> Dictionary:
 		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
+	e["rarity"] += Data.ZONE_QUALITY[int(base["zone"])]     # a zone's quality (15 Oct, the loot read): a City drop is rarer than an Outskirts one
 	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night()
 	if night_run:
 		var night := modifier("Night")
@@ -5868,10 +5882,10 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
 		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
 		said = "Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]]
-	elif t["depth"] >= 2 and not loose.is_empty() and rng.randf() < Data.UNIQUE_DROP * (t["depth"] - 1) * float(crate.get("unique", 1.0)):
+	elif not loose.is_empty() and rng.randf() < minf(Data.UNIQUE_CAP, unique_odds(t) * float(crate.get("unique", 1.0))):     # a Safe's double, inside the cap (the review)
 		it = Items.roll_unique(pick_unique(loose, int(t["loot_tier"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the band's weight picks
 		said = "Found: %s" % it["unique"]
-	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < Data.SET_DROP * (t["depth"] - 1):
+	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < minf(Data.SET_CAP, Data.SET_DROP * (t["depth"] - 1)):
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
 		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)))
 		said = "Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()]
@@ -7322,10 +7336,9 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 		var gu := pick_unique(fits, shop_unique_tier())
 		if not gu.is_empty():
 			return Items.roll_unique(gu, rng, -1, shop_unique_tier())     # one whose range takes the deepest tier dug; else a plain roll
-	var t := top_tier()
 	var it: Dictionary = {}
 	for tries in range(40):
-		it = Items.roll(k["slot"], gear_tier(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, maxi(0, best_depth[t] - 1))
+		it = Items.roll(k["slot"], gear_tier(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, 0, gamble_level())     # at your deepest site's level, as its drops (15 Oct, the loot read)
 		if k["type"] == "" or Items.base_of(it).get("type", "") == k["type"]:
 			return it
 	# the type never came up: the kind's lowest base, with the roll's affixes on it

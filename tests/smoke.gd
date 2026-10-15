@@ -6596,6 +6596,7 @@ func _loot_roll_checks(main) -> void:
 	_keepsake_checks(main)
 	_vans_checks(main.sim)
 	_full_pack_checks(main.sim)
+	_loot_table_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7937,6 +7938,30 @@ func _signal_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
+
+
+## The loot tables (15 Oct, the loot read, Matt's picks): a zone's quality on its drops' rarity; a loose unique from the
+## Town on, growing with the depth, capped; set pieces capped; the gamble at the deepest site's level, never common.
+func _loot_table_checks(sim) -> void:
+	var saved: Dictionary = sim.to_dict()
+	for i in range(Data.TIERS.size()):
+		sim.depth[i] = 1
+	var z0: float = float(sim.effective(0)["rarity"])
+	var z3: float = float(sim.effective(Data.TIERS.size() - 1)["rarity"])
+	_check(z3 - z0 >= Data.ZONE_QUALITY[3] - 0.001, "the City's drops aren't rarer than the Outskirts': %.2f against %.2f" % [z3, z0])
+	var town: int = int(Data.ZONES[2]["tiers"][0])
+	_check(sim.unique_odds({"tier": 0, "depth": 1}) == 0.0 and is_equal_approx(sim.unique_odds({"tier": town, "depth": 1}), Data.UNIQUE_CAMPAIGN) and is_equal_approx(sim.unique_odds({"tier": town, "depth": 40}), Data.UNIQUE_CAP),
+		"a loose unique's odds: %.4f, %.4f, %.4f" % [sim.unique_odds({"tier": 0, "depth": 1}), sim.unique_odds({"tier": town, "depth": 1}), sim.unique_odds({"tier": town, "depth": 40})])
+	var lv: int = sim.gamble_level()
+	_check(lv <= sim.deepest_site_level() and Items.wear_level({"slot": "Primary", "base": "", "tier": 1, "ilvl": lv}) <= maxi(1, sim.level()), "the gamble's level %d is past what the runner can wear" % lv)
+	var ok := true
+	for n in range(40):
+		var it: Dictionary = sim.roll_gamble(Data.GAMBLE_KINDS[n % Data.GAMBLE_KINDS.size()], 0.99)
+		if int(it.get("rarity", 0)) == 0 or (not it.has("unique") and Items.ilvl(it) != lv):
+			ok = false
+	_check(ok, "a gamble rolled common, or off the deepest site's level (%d)" % lv)
+	sim.load_dict(saved)
+	print("the loot tables ok: the zones' quality, the uniques' trickle and cap, the gamble at the deepest level")
 
 
 ## A full pack (15 Oct, parked item 10, agreed with Matt): by hand a drop goes to the floor and the pack's unchanged; on
