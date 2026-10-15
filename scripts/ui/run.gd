@@ -227,8 +227,8 @@ func _view_make() -> void:
 	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
 	UI.shadow(_fight["head"])
 	_bar_place(_runner, Rect2(PAD, OVER_Y, OVER_W, BAR_H))
-	_fight["key"].position = Vector2(PAD, FIGHT_BOX_Y + 62)
-	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + 62)
+	_fight["key"].position = Vector2(PAD, FIGHT_BOX_Y + 34)          # in the top bar's place: their HP's over each of them (item 11)
+	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + 34)
 	_runner["key"].position = Vector2(PAD, FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H)
 	_runner["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H)
 	for k in [_fight["key"], _runner["key"]]:
@@ -339,10 +339,9 @@ func show_state(s) -> void:
 	if _view != null:
 		# the run view: their bar over the frame in a fight; while it's searching the search's at the frame's foot,
 		# the whole width, in your HP bar's place (14 Oct, Matt: "switch back to HP when a gang enters")
-		if search_state:
-			_bar_place(_fight, Rect2(PAD, OVER_Y, INNER, BAR_H))
-		else:
-			_bar_place(_fight, Rect2(PAD, FIGHT_BOX_Y + 32, OVER_W, BAR_H))
+		# in a fight their HP is a bar over each of them (15 Oct, item 11): the top bar goes, "On them" up into its place
+		_bar_place(_fight, Rect2(PAD, OVER_Y, INNER, BAR_H))
+		_fight["track"].visible = search_state
 		_runner["track"].visible = not search_state
 	if search_state:
 		# the crates (13 Oct): the one in hand and the next, the one just opened for its moment, or picked clean
@@ -372,6 +371,7 @@ func show_state(s) -> void:
 			var on_now: int = mini(m["remaining"], sim.contact(t))
 			_fight["head"].text += " · %d ON YOU%s" % [on_now, (" · %d MORE" % (m["remaining"] - on_now)) if m["remaining"] > on_now else ""]
 		_view.show_state(sim, m)
+		_fig_bars()
 	# on them: the chips under their bar; nothing while there's no one to be on
 	var them: Array = sim.dots_on_them()
 	_fight["key"].visible = not them.is_empty()
@@ -864,6 +864,26 @@ func _release_hits(spot: Vector2) -> void:
 			k += 1
 	if _hit_pending.values().all(func(v): return float(v) < 1.0):
 		_pending_at = -1.0
+	_fig_bars()                              # the bar drops by the number as it comes out (item 6)
+
+
+## Their HP to the bars over them (15 Oct, items 6 and 11): the one you're hitting's HP with your hits not yet out as
+## numbers held on it, so the bar drops in the numbers' chunks as they land and the dots chip it in between.
+func _fig_bars() -> void:
+	if _view == null or sim == null or not sim.on_mission():
+		return
+	var m: Dictionary = sim.mission
+	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
+	var of: float = float(m["boss"]["hp"]) if boss_on else float(m["t"]["hp"])
+	_view.set_bars(clampf(float(m["target_hp"]) + held_hits(), 0.0, of), of, m.get("dots", {}), boss_on)
+
+
+## Your hits not yet out as numbers: held on their bar till the shot lands.
+func held_hits() -> float:
+	var held := 0.0
+	for ty in _hit_pending:
+		held += maxf(0.0, float(_hit_pending[ty]))
+	return held
 
 
 ## A number a type for what's new in `by` since `seen`, each in its type's
@@ -907,7 +927,8 @@ func _number_path(at: Vector2) -> Rect2:
 func _keep_out() -> Array:
 	var out := []
 	for c in [_fight["track"], _runner["track"]]:
-		out.append(Rect2(c.position, c.size))
+		if c.visible:
+			out.append(Rect2(c.position, c.size))
 	var hd: Label = _fight["head"]
 	out.append(Rect2(hd.position, Vector2(UI.text_width(hd, hd.text), hd.size.y)))
 	for d in [_fight, _runner]:

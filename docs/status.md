@@ -4813,3 +4813,14 @@ under the six. Smoke: the frame's scale and place, the rail folded with its tool
 and the log beside it, the slim band at its widest with nothing on anything. **For Matt to look at:** the frame's own
 text (a crate's finds over the open one) is drawn scaled with it; if it reads soft, its size goes up and its scale
 comes off.
+
+**C10.2: a bar over each of them, the hits in chunks (15 Oct; parked items 11 and 6, as agreed; hpbars_mockup.png A).**
+In a fight their HP is a small bar over each figure in the frame, following it: the one you're hitting outlined amber,
+its HP over it ("83 / 120"), the dots' shares at its end and the skull when they'll finish it; the rest full till
+their turn; the head's bigger; none on one falling. The bar across the top went ("On them" moved up into its place);
+it stays the search's bar at the frame's foot. Your shots land on the one with the amber bar, a kill drops it, the
+next is any of the rest (Matt, 13 Oct: not the first every time), and the numbers rise off it. The bar holds your hits
+till their number lands and drops by it; the dots chip it in between (display only: the sim and the odds untouched).
+The bars are drawn at the screen's pixels over the scaled frame, so the words stay crisp. Smoke: a bar a figure up,
+in the frame, clear of the head line and the chips; the hit one's HP and words; the rest full; a held hit then out;
+a kill.

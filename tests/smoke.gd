@@ -8869,6 +8869,50 @@ func _bin_checks(main) -> void:
 ## The run view (13 Oct, Time Crisis; docs/design/fight_art.md): with its art there, the frame takes the two boxes; the
 ## six figures under it; the gang up as many as are on you; a kill drops one; a hit reddens the edges; the search pans
 ## to the crates; their bar over the frame in a fight, the search's under the six; it all fits.
+## A bar over each of them (15 Oct, items 11 and 6; hpbars_mockup.png A): a bar a figure up, in the frame, clear of
+## the head line and the chips; the one you're hitting its HP (your hits held till their number's out), the rest full;
+## none on one falling; a kill drops the one you were hitting; the bar drops by a number as it lands.
+func _fig_bar_checks(main) -> void:
+	var run = main._run
+	var v = run._view
+	var sim = main.sim
+	var m: Dictionary = sim.mission
+	for k in range(8):
+		v._process(0.1)
+	main.refresh()
+	v._process(0.0)
+	var bs: Array = v.bars()
+	_check(bs.size() == v.figures_up() and bs.size() > 0 and bs.filter(func(b): return b["hit"]).size() == 1, "a bar a figure up, one hit: %d bars, %d up, %d hit" % [bs.size(), v.figures_up(), bs.filter(func(b): return b["hit"]).size()])
+	var frame := Rect2(0, 0, RunView.W, RunView.H)
+	var keep: Array = run._keep_out()
+	for b in bs:
+		var rr: Rect2 = b["rect"]
+		var on_run := Rect2(v.position + rr.position * run.VIEW_SCALE, rr.size * run.VIEW_SCALE)
+		_check(frame.encloses(rr) and keep.all(func(r): return not r.intersects(on_run)), "a figure's bar is out of the frame or on the head line or the chips: %s" % str(rr))
+		var of: float = float(m["t"]["hp"])
+		var want: float = clampf((float(m["target_hp"]) + run.held_hits()) / of, 0.0, 1.0) if b["hit"] else 1.0
+		_check(absf(float(b["share"]) - want) < 0.02, "figure %d's bar reads %.2f, not %.2f" % [b["k"], float(b["share"]), want])
+	var tag: Label = v.hp_words()
+	_check(tag.visible and tag.text == "%d / %d" % [ceili(clampf(float(m["target_hp"]) + run.held_hits(), 0.0, float(m["t"]["hp"]))), int(round(float(m["t"]["hp"])))] and UI.text_width(tag, tag.text) <= tag.size.x, "the HP over the one you're hitting reads '%s'" % tag.text)
+	# a number held, then out: the bar holds it, then drops by it
+	run._hit_pending = {"physical": float(m["t"]["hp"]) * 0.25}
+	m["target_hp"] = float(m["t"]["hp"]) * 0.6
+	run._fig_bars()
+	v._process(0.0)
+	var held: float = v.bars().filter(func(b): return b["hit"])[0]["share"]
+	run._release_hits(Vector2(100, 100))
+	v._process(0.0)
+	var out: float = v.bars().filter(func(b): return b["hit"])[0]["share"]
+	_check(absf(held - 0.85) < 0.02 and absf(out - 0.6) < 0.02, "the bar doesn't hold a hit till its number, then drop by it: %.2f then %.2f" % [held, out])
+	# a kill drops the one you were hitting, and its bar goes with it
+	var hit_k: int = v._target_k
+	m["kills"] = int(m["kills"]) + 1
+	main.refresh()
+	v._process(0.0)
+	_check(v._figs[hit_k]["state"] == "down" and not v.bars().any(func(b): return b["k"] == hit_k), "a kill didn't drop the one you were hitting, or its bar stayed on it")
+	print("the bars over them ok: one a figure, the one hit its HP and the rest full, held hits, a kill")
+
+
 ## The bigger frame (15 Oct, Matt: frame_mockup_B, "B it is"): on the run the rail folds to its glyphs and the run and
 ## the log take the width; the frame drawn at the column's width, its own 588 x 262 space scaled; the band slim over it;
 ## off the run the rail as it was.
@@ -8937,7 +8981,8 @@ func _run_view_checks(main) -> void:
 	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
 	_check(not v.state()["glass"], "the glass shows in a fight")
 	_full_art_checks(main, v)
-	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
+	_check(not run._fight["track"].visible and run._six[0]["key"].text == "Fire in", "the top bar shows in a fight (their HP is over each of them), or the six don't lead with Incoming")
+	_fig_bar_checks(main)
 	_check_fit(main, "Run (the run view, a gang)")
 	_frame_checks(main)
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
@@ -9042,7 +9087,8 @@ func _run_view_checks(main) -> void:
 		_check(run._fight["chips"].visible and run._runner["chips"].visible, "the chips did not show for the numbers' check")
 		var keep: Array = []
 		for c in [run._fight["track"], run._runner["track"]]:
-			keep.append(c.get_global_rect())
+			if c.visible:
+				keep.append(c.get_global_rect())     # their top bar's gone in a fight (15 Oct, item 11)
 		for d in [run._fight, run._runner]:
 			for p in d["chips"]._panels:
 				if p.visible:
@@ -9175,7 +9221,7 @@ func _run_view_checks(main) -> void:
 	_check_fit(main, "Run (the run view, the search)")
 	m["remaining"] = 2
 	main.refresh()
-	_check(run._runner["track"].visible and is_equal_approx(run._runner["track"].position.y, run.OVER_Y) and run._fight["track"].position.y < run.OVER_Y - run.BAR_H and run._fight["bar_text"].text.begins_with("Their HP"), "a gang did not bring your HP bar back: their bar at %.0f" % run._fight["track"].position.y)
+	_check(run._runner["track"].visible and is_equal_approx(run._runner["track"].position.y, run.OVER_Y) and not run._fight["track"].visible, "a gang did not bring your HP bar back, or the search's stayed over it")
 	_search_layout(main, "the run view, a gang in the search")
 	_check_fit(main, "Run (the run view, a gang in the search)")
 	m["remaining"] = 0
@@ -10805,7 +10851,7 @@ func _fill_up_checks(main) -> void:
 	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart
 	var fb := Rect2(rn._fight["box"].position, rn._fight["box"].size)
 	var rb := Rect2(rn._runner["box"].position, rn._runner["box"].size)
-	for piece in [rn._fight["head"], rn._fight["track"], rn._fight["tiles"][3]["panel"]]:
+	for piece in [rn._fight["head"], rn._fight["tiles"][3]["panel"]] + ([rn._fight["track"]] if rn._view == null else []):     # with the frame their HP's over each of them (item 11)
 		_check(fb.encloses(Rect2(piece.position, piece.size)), "the fight's box does not hold its %s" % piece.name)
 	for piece in [rn._runner["head"], rn._runner["track"], rn._runner["tiles"][3]["panel"], rn._runner["note"]]:
 		_check(rb.encloses(Rect2(piece.position, piece.size)), "the runner's box does not hold its %s" % piece.name)

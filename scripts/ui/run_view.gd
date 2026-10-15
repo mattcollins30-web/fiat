@@ -10,6 +10,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 ## A shot of yours lands, in the frame's space (13 Oct, Matt: the numbers came with no shot, and while ducked): the run
 ## screen shows what your gun's done since the last one here, on the one it hit.
@@ -152,6 +153,17 @@ var _you_fx := {}                         # element -> true while it's on you
 var _edges := {}                          # element -> its TextureRect, the frame's edges in its colour
 var _fx_t := 0.0                          # the clock the breathing and the flicker run off
 var _arcs: Array = []                     # a Line2D a figure: shock's arc
+## A bar over each of them (15 Oct, Matt: "it's odd having 3 enemies and one bar shared"; hpbars_mockup.png A): the one
+## you're hitting outlined amber with its HP over it and the dots' shares at its end, the rest full till their turn; the
+## head's bigger. Drawn on a layer scaled back to the screen's pixels, so the words stay crisp in the scaled frame.
+var _bars_layer: Control
+var _target_k := -1                       # the one you're hitting: your shots land on it, a kill drops it
+var _bar_info := {"hp": 1.0, "of": 1.0, "dots": {}, "boss": false}
+var _hp_tag: Label                        # "83 / 120" over the one you're hitting
+const BAR_H := 9
+const BAR_H_HIT := 12
+const BAR_H_HEAD := 14
+const BAR_W_HEAD := 170.0
 
 ## A texture by name: the full pass's (art/fight) first, the test's (art/fight_test) else; imported if the editor's seen
 ## it, else read straight off the disk.
@@ -279,6 +291,17 @@ func _init() -> void:
 	_red.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_red.modulate = Color(1, 1, 1, 0)
 	add_child(_red)
+	_bars_layer = Control.new()
+	_bars_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_bars_layer)
+	for f in _figs:
+		var fb := FigBar.new()
+		fb.visible = false
+		_bars_layer.add_child(fb)
+		f["bar"] = fb
+	_hp_tag = UI.label(_bars_layer, Rect2(0, 0, 120, 24), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	UI.shadow(_hp_tag)
+	_hp_tag.visible = false
 	_open_tag = UI.label(self, Rect2(0, 0, 160, 22), "", "Medium", Pal.CELL_TEXT, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
 	UI.shadow(_open_tag)
 	_open_tag.visible = false
@@ -349,6 +372,7 @@ func can_place() -> bool:
 func set_placing(on: bool) -> void:
 	placing = on
 	placing_changed.emit(on)
+	_bars_layer.visible = not on              # the tool holds the frame clear
 	if on:
 		_edit = []
 		for k in range(3):
@@ -588,6 +612,7 @@ func show_state(sim, m: Dictionary) -> void:
 		_hp_seen = sim.hp
 		_duck = 0.0
 		_duck_t = 0.0
+		_target_k = -1
 		for f in _figs:
 			f["state"] = ""
 			f["rect"].visible = false
@@ -616,9 +641,12 @@ func show_state(sim, m: Dictionary) -> void:
 	if int(m["kills"]) > _kills_seen:
 		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
 		for n in range(mini(int(m["kills"]) - _kills_seen, ups.size())):
-			var pick: int = ups[randi() % ups.size()]      # any of them, not the first every time (Matt, 13 Oct)
+			# the one you were hitting first (its bar ran out); any of the rest past it (Matt, 13 Oct: not the first every time)
+			var pick: int = _target_k if _target_k in ups else ups[randi() % ups.size()]
 			ups.erase(pick)
 			_set_state(pick, "down")
+			if pick == _target_k:
+				_target_k = -1
 		_kills_seen = int(m["kills"])
 	# a hit on you: the jolt and the red, a hundredth of your HP or more
 	if _hp_seen >= 0.0 and sim.hp < _hp_seen - sim.max_hp() * 0.01:
@@ -762,7 +790,7 @@ func _process(dt: float) -> void:
 			for el in f["fx"]:
 				f["fx"][el].emitting = false
 			continue
-		if f["state"] in ["pop", "up"] and up > _on_you:
+		if f["state"] in ["pop", "up"] and up > _on_you and not (k == _target_k and _on_you > 0):     # the one being hit stays (the review)
 			_set_state(k, "")                        # the gang's thinned with no kill seen (a run ended, the way out)
 			up -= 1
 			_arcs[k].visible = false
@@ -834,6 +862,7 @@ func _process(dt: float) -> void:
 				p.scale = Vector2(s, s) * 1.6
 				p.emission_rect_extents = Vector2(sz.x * 0.28, sz.y * (0.3 if el == "fire" else 0.35)) / p.scale
 				p.position = r.position + Vector2(sz.x * 0.5, sz.y * (0.55 if el == "fire" else 0.45))
+	_lay_bars()
 	# ducking: now and then under fire, and on a big hit - the wall comes up, the gun goes down, no shots
 	if _firing:
 		_duck_next -= dt
@@ -880,7 +909,9 @@ func _process(dt: float) -> void:
 	if _firing and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
 		_shot_t = 1.0 / _rof
 		var ups: Array = range(SLOTS.size()).filter(func(k_in): return _figs[k_in]["state"] == "up")
-		var k: int = ups[randi() % ups.size()] if not ups.is_empty() else -1     # whoever's in your sights, not the same one every time
+		var k: int = _target_k if _target_k in ups else (ups[randi() % ups.size()] if not ups.is_empty() else -1)     # the one whose bar is going down
+		if _target_k >= 0 and _figs[_target_k]["state"] == "pop":
+			k = -1                                   # still coming in: the kick, the hit lands once it's up (the review)
 		if _melee:
 			_swing = 0.0                             # the hit lands on the chop (_swing_step)
 			_swing_len = clampf(0.75 / _rof, 0.24, 0.42)
@@ -901,6 +932,109 @@ func _process(dt: float) -> void:
 		e.modulate.a = move_toward(e.modulate.a, target, dt * 2.5)
 	_red_a = maxf(0.0, _red_a - dt / RED_S)
 	_red.modulate.a = _red_a
+
+
+## Their HP for the bars (run.gd, each look and each number out): `hp` the one you're hitting's as shown (the hits not
+## yet out as numbers held on it), `of` a whole one's, `dots` {type: HP still to tick off}, `boss` the head's.
+func set_bars(hp: float, of: float, dots: Dictionary, boss: bool) -> void:
+	_bar_info = {"hp": hp, "of": maxf(1.0, of), "dots": dots, "boss": boss}
+
+
+## The bars over each of them, where they stand this frame: the one you're hitting picked if it went (any of them up),
+## its bar its HP, the others full; none on one falling or gone; in the frame, over the figure's head.
+func _lay_bars() -> void:
+	var s: float = scale.x if scale.x > 0.0 else 1.0
+	_bars_layer.scale = Vector2(1.0 / s, 1.0 / s)
+	if _target_k < 0 or not (_figs[_target_k]["state"] in ["pop", "up"]):
+		var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "up")
+		if ups.is_empty():
+			ups = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] == "pop")
+		_target_k = ups[randi() % ups.size()] if not ups.is_empty() else -1
+	_hp_tag.visible = false
+	for k in range(_figs.size()):
+		var f: Dictionary = _figs[k]
+		var fb: FigBar = f["bar"]
+		var r: TextureRect = f["rect"]
+		fb.visible = _firing and f["state"] in ["pop", "up"] and r.texture != null
+		if not fb.visible:
+			continue
+		var hit: bool = k == _target_k
+		var head: bool = bool(_bar_info["boss"]) and str(f.get("boss", "")) != ""
+		var u: Rect2 = used_of(r.texture)
+		if u.size.y <= 0.0:
+			u = Rect2(Vector2.ZERO, r.size)
+		var top: Vector2 = r.position + Vector2(u.get_center().x, u.position.y) * r.scale.x     # the head of the figure, in the frame
+		var w: float = BAR_W_HEAD if head else clampf(u.size.x * r.scale.x * s * 0.75, 48.0, 120.0)
+		var h: float = BAR_H_HEAD if head else (BAR_H_HIT if hit else BAR_H)
+		var at := Vector2(top.x * s - w * 0.5, top.y * s - h - 8.0)
+		var tag_h: float = 24.0 if hit else 0.0
+		at.x = clampf(at.x, 6.0, W * s - w - 6.0)
+		at.y = clampf(at.y, 6.0 + tag_h, H * s - h - 6.0)
+		fb.position = at
+		fb.size = Vector2(w, h)
+		fb.modulate.a = r.modulate.a
+		var of: float = float(_bar_info["of"])
+		fb.share = clampf(float(_bar_info["hp"]) / of, 0.0, 1.0) if hit else 1.0
+		var dots := {}
+		var ticking := 0.0
+		if hit:
+			for ty in _bar_info["dots"]:
+				dots[ty] = maxf(0.0, float(_bar_info["dots"][ty])) / of
+				ticking += maxf(0.0, float(_bar_info["dots"][ty]))
+		fb.dots = dots
+		fb.hit = hit
+		fb.finish = hit and float(_bar_info["hp"]) > 0.0 and ticking >= float(_bar_info["hp"])     # the skull (11 Oct): the dots will finish them
+		fb.queue_redraw()
+		if hit:
+			_hp_tag.text = "%d / %d" % [ceili(float(_bar_info["hp"])), int(round(of))]
+			_hp_tag.size.x = ceilf(UI.text_width(_hp_tag, _hp_tag.text)) + 8.0
+			_hp_tag.position = Vector2(clampf(at.x + w * 0.5 - _hp_tag.size.x * 0.5, 4.0, W * s - _hp_tag.size.x - 4.0), at.y - tag_h)
+			_hp_tag.modulate.a = r.modulate.a
+			_hp_tag.visible = true
+
+
+## For the tests: each bar up, in the frame's own space ({k, rect, share, hit, words}), and the HP's words.
+func bars() -> Array:
+	var out := []
+	var s: float = scale.x if scale.x > 0.0 else 1.0
+	for k in range(_figs.size()):
+		var fb: FigBar = _figs[k]["bar"]
+		if fb.visible:
+			out.append({"k": k, "rect": Rect2(fb.position / s, fb.size / s), "share": fb.share, "hit": fb.hit, "state": _figs[k]["state"]})
+	return out
+
+
+func hp_words() -> Label:
+	return _hp_tag
+
+
+## One of them's bar: the track, their HP in the bad tone, the dots' shares at its end, amber round the one you're hitting.
+class FigBar extends Control:
+	var share := 1.0
+	var dots := {}
+	var hit := false
+	var finish := false
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		draw_style_box(UI.box(Color(Pal.BG, 0.88), 3, 2 if hit else 1, Pal.ACCENT if hit else Color(Pal.TEXT_3, 0.8)), r.grow(2.0))
+		var fw: float = roundf(size.x * share)
+		draw_rect(Rect2(0, 0, fw, size.y), Pal.tone_color("bad"))
+		var right: float = fw
+		for ty in Data.TYPES:
+			var a: float = float(dots.get(ty, 0.0))
+			if a <= 0.0:
+				continue
+			var sw: float = minf(right, floorf(size.x * a))
+			if sw >= 1.0:
+				draw_rect(Rect2(right - sw, 0, sw, size.y), Pal.tone_color(ty) if ty != "physical" else Pal.TEXT_3)
+				right -= sw
+		if finish:
+			var sk: float = size.y + 6.0
+			draw_texture_rect(NodeGlyphs.texture("skull"), Rect2(-sk - 4.0, (size.y - sk) * 0.5, sk, sk), false, Color(Pal.TEXT, 0.95))
 
 
 ## A hit on figure k: the marker on them, their flash, and the number's cue (run.gd's _on_view_shot).
@@ -933,7 +1067,7 @@ func _swing_step(dt: float) -> void:
 		var k: int = _swing_k
 		if k < 0 or _figs[k]["state"] != "up":
 			var ups: Array = range(SLOTS.size()).filter(func(i): return _figs[i]["state"] == "up")
-			k = ups[0] if not ups.is_empty() else -1
+			k = _target_k if _target_k in ups else (ups[0] if not ups.is_empty() else -1)
 		if k >= 0:
 			_land_hit(k)
 		_jolt = maxf(_jolt, 0.05)                 # the knock of it
@@ -1059,7 +1193,7 @@ func hit_spot() -> Vector2:
 	var ups: Array = range(SLOTS.size()).filter(func(k): return _figs[k]["state"] in ["pop", "up"])
 	if ups.is_empty():
 		return Vector2(randf_range(300.0, 500.0), randf_range(130.0, 160.0))
-	var r: TextureRect = _figs[ups[randi() % ups.size()]]["rect"]
+	var r: TextureRect = _figs[_target_k if _target_k in ups else ups[randi() % ups.size()]]["rect"]     # off the one being hit (its bar)
 	var sz: Vector2 = r.size * r.scale
 	return r.position + Vector2(sz.x * 0.5 + randf_range(-12.0, 12.0), sz.y * randf_range(0.3, 0.55))
 
