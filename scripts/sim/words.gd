@@ -185,6 +185,9 @@ const RADIO := [
 ]
 
 ## The heads' things (13 Oct): what each is, on its card.
+## The heads' things as keepsakes (15 Oct, Matt: the vet's bag "goes to the medic" felt odd): in the pack at the drop,
+## then in the drawer, with what they opened.
+const KEEPSAKE := "A keepsake: it opened %s"
 const GATE_ITEMS := {
 	"The vet's bag": "The keeper's, for the dogs. Everything a vet carries, and the medic says that's most of what a doctor does.",
 	"The Carpet Man's ledger": "Who bought what, and who paid. The Fence will want this more than anyone.",
@@ -525,6 +528,8 @@ const BOSSES := {
 
 ## Who they were.
 const UNIQUES := {
+	"The Keeper's Twelve-Bore": "For the vermin, he said, and he meant it about everyone. It's been cleaned every night for forty years.",
+	"The Keeper's Wax Jacket": "Waxed till it's armour. Thorns, teeth and the shoot's own lead have all been off it.",
 	"Grandad's Shotgun": "Sixty years in a cupboard under the stairs. He kept it for rabbits. He never said whose grandad.",
 	"The Postman's Bag": "He kept the round going for a year after the last letter. People gave him things to carry.",
 	"The Doorman's Jacket": "The club shut; he stood on the door of the Shopping Centre instead. Nobody told him to.",

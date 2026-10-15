@@ -4753,3 +4753,11 @@ a head's charm at full strength) still drop on signals deep enough at that site.
 watch: Kev's story papers come home twice as often. The Dial's keystone The lorry's route: a signal can roll three
 over your reach, not two (the decoder's band a depth wider at the top). The Dial's empty line says where its points
 come from (a new reach), not the convoy's depth.
+
+**B8.1: the heads' keepsakes and the Gamekeeper's loot (15 Oct; parked items 3, 7).** A head's thing that opens a room
+(the vet's bag, the Carpet Man's ledger, the military radio, the armourer's tool roll) now lands in the pack at the
+drop - "Found: The vet's bag" - and opens its room there and then, as before; home, it goes to the drawer as a
+keepsake, not the stash ("The keeper's, for the dogs. A keepsake: it opened the Clinic."), first in the drawer. The
+Gamekeeper has his own two (Matt's pick): The Keeper's Twelve-Bore (a pump shotgun: every kill is 3% of your HP back;
++12% damage, +15% on the first lot) and The Keeper's Wax Jacket (poison and bleed on you do half; +10 armour, +15 HP),
+levels 1-4, rolled at the depth he's fought at as the other heads' are. Test art: their bases' until the manifest.

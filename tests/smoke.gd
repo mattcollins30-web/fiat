@@ -4323,7 +4323,7 @@ func _book_checks(main) -> void:
 	_check(bk.also_names().has("The drawer") and bk.also_button("The drawer") != null, "the drawer is not in the Also row")
 	bk.pick_also("The drawer")
 	main.refresh()
-	_check(bk.also_button("The drawer").text.contains("2 of %d" % pages.size()), "the drawer's chip is off: %s" % bk.also_button("The drawer").text)
+	_check(bk.also_button("The drawer").text.contains("2 of %d" % (pages.size() + Words.GATE_ITEMS.size())), "the drawer's chip is off: %s" % bk.also_button("The drawer").text)
 	# the drawer reads in the story's order (12 Oct): every page, the found ones with their words, the rest a gap saying where
 	_check(bk._cells[0]["name"].text == "1. %s" % pages[0] and bk._cells[1]["name"].text == "2. A P45" and bk._cells[2]["name"].text == "3. A betting slip", "the drawer's cards are off: %s / %s / %s" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text, bk._cells[2]["name"].text])
 	_check(bk._cells[1]["lines"][0].text != "" and not bk._cells[1]["lines"][0].text.begins_with("Not found"), "the paper's words are not under its name")
@@ -6593,6 +6593,7 @@ func _loot_roll_checks(main) -> void:
 	_paper_crypt_checks(main)
 	_signal_checks(main)
 	_story_checks(main)
+	_keepsake_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7934,6 +7935,67 @@ func _signal_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
+
+
+## The heads' keepsakes and the Gamekeeper's loot (15 Oct, parked items 3 and 7): his two uniques in his pool and one
+## dropping; the vet's bag in the pack at the drop, the Clinic open there and then, in the drawer after and never the
+## stash; the Twelve-Bore's kill heals 3%; the Wax Jacket halves poison on you.
+func _keepsake_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var gk: Dictionary = sim.zone_boss(0)
+	_check(gk.get("uniques", []).size() == 2 and gk["uniques"].all(func(n): return not sim._unique_named(n).is_empty()), "the Gamekeeper's pool: %s" % str(gk.get("uniques", [])))
+	sim.unlocked.erase("clinic")
+	sim.keepsakes = []
+	sim.hp = sim.max_hp()
+	sim.deploy(2)
+	var m: Dictionary = sim.mission
+	m["boss"] = {"name": gk["name"], "zone": 0, "alive": true, "hp": 1.0, "started": true}
+	var n0: int = m["found"].size()
+	sim._boss_down(m, m["t"])
+	var got: Array = m["found"].slice(n0).map(func(x): return str(x.get("unique", x["base"])))
+	_check(sim.room_open("clinic") and "The vet's bag" in sim.keepsakes and "The vet's bag" in got and got.any(func(x): return x in gk["uniques"]), "the Gamekeeper's drop: %s, keepsakes %s" % [str(got), str(sim.keepsakes)])
+	sim.extract_now()
+	_check(not sim.stash.any(func(x): return str(x["base"]) == "The vet's bag"), "the vet's bag went into the stash")
+	main.show_room(main.BARRACKS)
+	main._barracks.pick_also("The drawer")
+	main.refresh()
+	var dr: Dictionary = main._barracks._drawer_branch()
+	_check(str(dr["nodes"][0]["name"]).ends_with("The vet's bag") and str(dr["nodes"][0]["words"]).contains("Clinic"), "the drawer doesn't lead with the keepsake: %s" % str(dr["nodes"][0]))
+	_check_fit(main, "the drawer with a keepsake")
+	main._barracks.pick_also("")
+	# the Twelve-Bore: a kill heals 3% of HP
+	sim.equipped["Primary"] = Items.roll_unique(sim._unique_named("The Keeper's Twelve-Bore"), sim.rng)
+	sim._dry_memo.clear()
+	sim.hp = sim.max_hp() * 0.5
+	sim.deploy(0)
+	var h0: float = sim.hp
+	sim._kill(sim.mission, sim.mission["t"])
+	_check(is_equal_approx(sim.hp - h0, sim.max_hp() * Data.FX["rule/keepers_gun"] + sim._affix_sum("life_per_kill")), "the Twelve-Bore's kill healed %.1f of %.0f" % [sim.hp - h0, sim.max_hp()])
+	sim.extract_now()
+	# the Wax Jacket: poison on you does half
+	var loss := []
+	for wear_it in [false, true]:
+		sim.equipped["Armour"] = Items.roll_unique(sim._unique_named("The Keeper's Wax Jacket"), sim.rng) if wear_it else sim._plain("Armour", "Work jacket")
+		sim._dry_memo.clear()
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var mm: Dictionary = sim.mission
+		mm["t"]["dps"] = 0.0
+		mm["remaining"] = 50
+		mm["target_hp"] = 1e9
+		mm["my_dots"] = {"poison": 50.0}
+		var hb: float = sim.hp
+		sim._tick(1.0)
+		loss.append(hb - sim.hp)
+		sim.extract_now()
+	_check(loss[0] > 0.0 and is_equal_approx(loss[1], loss[0] * Data.FX["rule/keepers_wax"]), "the Wax Jacket's poison: %s" % str(loss))
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("the keepsakes ok: the Gamekeeper's two, the vet's bag in the pack and the drawer, never the stash; the Twelve-Bore heals, the Wax Jacket halves")
 
 
 ## Kev's story (15 Oct, endgame_radio.md §3): a beat's three papers go in together and make its signal - its site and
@@ -12721,7 +12783,9 @@ func _gates_checks(main) -> void:
 		for room in b["opens"]:
 			_check(sim.room_open(str(room)), "%s's %s didn't open the %s at the drop" % [b["name"], b["opens"][room], room])
 		var things: Array = sim.mission["found"].filter(func(it): return Items.opens(it) != "")
-		_check(things.size() == (1 if b["opens"].has("yard") else 0), "%s's things in the pack: %d (only the deeds come home)" % [b["name"], things.size()])
+		_check(things.size() == b["opens"].size(), "%s's things in the pack: %d of %d (the deeds, and the keepsakes since 15 Oct)" % [b["name"], things.size(), b["opens"].size()])
+		for th in things:
+			_check(Items.is_deeds(th) or str(th["base"]) in sim.keepsakes, "%s's %s isn't a keepsake" % [b["name"], th["base"]])
 		sim.extract_now()
 		_check(sim.heard.size() > heard_before, "%s's line after wasn't said" % b["name"])
 	_check(sim.unlocked.size() == Data.ROOMS_SHUT.size() and sim.stash.any(func(it): return Items.is_deeds(it)), "not every room opened, or the deeds didn't come home: %s" % str(sim.unlocked))

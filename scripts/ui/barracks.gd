@@ -692,7 +692,7 @@ func show_state(s) -> void:
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier)]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size())]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -1032,12 +1032,20 @@ func _show_pages(on: bool) -> void:
 ## The drawer: every paper in the story's order (12 Oct, the lore pass: read like a book), the found ones with their
 ## words, the rest a gap that says where it's found; a page at a time.
 func _drawer_branch() -> Dictionary:
-	var pages: Array = sim.book_pages()
-	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(nm): return Words.item_words(nm, false) if nm in sim.book else _paper_gap(nm), 2)
+	var pages: Array = sim.keepsakes + sim.book_pages()     # the heads' keepsakes first (15 Oct), then the papers
+	var branch := _pages_branch("The drawer", pages, pages.size(), Words.BOOK["empty"], func(nm): return _keepsake_words(nm) if nm in sim.keepsakes else (Words.item_words(nm, false) if nm in sim.book else _paper_gap(nm)), 2)
 	for nd in branch["nodes"]:
-		nd["gap"] = not (str(nd["name"]).substr(str(nd["name"]).find(" ") + 1) in sim.book)
-	branch["found"] = sim.book.size()
+		var nm: String = str(nd["name"]).substr(str(nd["name"]).find(" ") + 1)
+		nd["gap"] = not (nm in sim.book or nm in sim.keepsakes)
+	branch["found"] = sim.book.size() + sim.keepsakes.size()
+	branch["total"] = sim.book_pages().size() + Words.GATE_ITEMS.size()
 	return branch
+
+
+## A keepsake's words: what it is, and the room it opened.
+func _keepsake_words(nm: String) -> String:
+	var room: String = Items.opens({"slot": Data.PAPER, "base": nm})
+	return "%s. %s." % [str(Words.GATE_ITEMS.get(nm, "")).get_slice(". ", 0).trim_suffix("."), Words.KEEPSAKE % ("the " + room.capitalize())]     # its first sentence: a drawer's two lines
 
 
 ## Where an unfound paper turns up: its one site, or the depth it's found from.

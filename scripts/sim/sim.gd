@@ -54,6 +54,7 @@ var retired: Array = []            # the traits on the wall (36): a third of eac
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
 var heard: Array = []                # the radio's lines heard, in order (12 Oct, the lore pass): voice/index keys
+var keepsakes: Array = []          # the heads' things kept (15 Oct): the vet's bag, the ledger, the radio, the tool roll
 var shelf: Array = []              # the uniques found, by name, in the order found: the shelf in the Caravan
 var shelf_tier: Dictionary = {}    # a unique's name -> the best tier of it found (12 Oct, uniques by tier)
 var worn: Array = []               # per tier: the elapsed second it was last cleared, or -1 - a picked-over site comes back over RECOVER_H
@@ -1242,7 +1243,7 @@ func move_yard(trade := "") -> bool:
 	var keep := {"past": past, "retired": retired.duplicate(), "deeds_fate": deeds_fate, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
+		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "keepsakes": keepsakes.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
@@ -1298,6 +1299,7 @@ func move_yard(trade := "") -> bool:
 	met = keep["met"]                     # a move doesn't introduce the rooms again
 	unlocked = keep["unlocked"]           # the rooms the heads opened stay open: the Yard moves, not the town's memory (13 Oct)
 	shelf = keep["shelf"]
+	keepsakes = keep["keepsakes"]
 	shelf_tier = keep["shelf_tier"]
 	tree = yard_tree
 	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
@@ -1457,6 +1459,8 @@ func _home_gate(it: Dictionary) -> bool:
 	if not (room in unlocked):
 		unlocked.append(room)
 		chron("open", {"room": room})
+		if not Items.is_deeds(it) and not (str(it["base"]) in keepsakes):
+			keepsakes.append(str(it["base"]))     # the drawer keeps it (15 Oct)
 		if room == "radio":
 			_read_held()
 		if not _dry_on:
@@ -1507,7 +1511,7 @@ func _gate_lines() -> void:
 ## A paper picked up is read, and goes in the drawer by name, once, in the order found - once the Radio's open to read
 ## it (15 Oct: encrypted till then; the Radio reads every one held when it opens).
 func _read(it: Dictionary, quiet := false) -> void:
-	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book) and room_open("radio") and story_of(it) < 0:     # Kev's aren't the drawer's (the review)
+	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book) and room_open("radio") and story_of(it) < 0 and Items.opens(it) == "":     # Kev's aren't the drawer's (the review)
 		book.append(it["base"])
 		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
@@ -5415,6 +5419,12 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var fire_pool: float = float(m["my_dots"].get("fire", 0.0))
 	var ticked_by := {}
 	var ticked: float = _dot_tick(m["my_dots"], dt, ticked_by)
+	if has_rule("keepers_wax"):
+		for ty in ["poison", "bleed"]:
+			if ticked_by.has(ty):
+				var cut: float = float(ticked_by[ty]) * (1.0 - Data.FX["rule/keepers_wax"])     # the Keeper's Wax Jacket
+				ticked_by[ty] = float(ticked_by[ty]) - cut
+				ticked -= cut
 	if has_rule("vicars_thermos") and fire_pool > 0.0:
 		var fire_tick: float = fire_pool - float(m["my_dots"].get("fire", 0.0))
 		ticked -= fire_tick
@@ -5687,7 +5697,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
-	_heal(m, _affix_sum("life_per_kill") + (max_hp() * Data.FX["rule/ladle.kill_heal"] if has_rule("ladle") else 0.0) + (max_hp() * Data.FX["node/cap_iron"] if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
+	_heal(m, _affix_sum("life_per_kill") + (max_hp() * Data.FX["rule/keepers_gun"] if has_rule("keepers_gun") else 0.0) + (max_hp() * Data.FX["rule/ladle.kill_heal"] if has_rule("ladle") else 0.0) + (max_hp() * Data.FX["node/cap_iron"] if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
 	if m.get("dry", false):
 		return                               # a dry run: the fight only, nothing earned
 	var gain: float = t["xp"] * (Data.FX["node/hit_and_run.kill_pay"] if has_node("hit_and_run") else 1.0)
@@ -5793,6 +5803,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 				continue
 			else:
 				log_event("Found: %s." % thing["base"])
+				m["found"].append(thing)          # in the pack to see, a keepsake home (15 Oct): the room opens here, the thing goes to the drawer
 			_home_gate(thing)
 	if first and campaign_done():
 		log_event(Words.YARD["campaign"])
@@ -6420,6 +6431,7 @@ func _extract() -> void:
 				log_event("No room for the %s: left at the gate" % str(it["base"]).to_lower())
 			continue
 		if _home_gate(it):
+			stashed += 1                     # home, as a keepsake: not left behind (the review)
 			continue                         # a head's thing: its room opens, and it stays there (13 Oct)
 		if Items.is_deeds(it):
 			stash.append(it)                 # whatever the room: the deeds come home
@@ -7830,7 +7842,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
@@ -7988,6 +8000,7 @@ func load_dict(d: Dictionary) -> void:
 	book = Array(d.get("book", []))
 	heard = Array(d.get("heard", []))
 	shelf = Array(d.get("shelf", []))
+	keepsakes = Array(d.get("keepsakes", []))
 	shelf_tier = {}
 	for k in d.get("shelf_tier", {}):
 		shelf_tier[str(k)] = int(d["shelf_tier"][k])

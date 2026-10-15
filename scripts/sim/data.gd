@@ -740,6 +740,11 @@ const UNIQUES := [
 	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap", "band": "levelling", "range": [1, 4],
 		"words": "Finds are half as likely to be common", "short": "Half the commons", "affixes": [{"stat": "loot_pct", "value": 20}, {"stat": "cash_per_kill", "value": 6}]},
 	# the bosses' - only from them; their rules are the affixes, for now
+	# the Gamekeeper's (15 Oct, Matt: "killing him and getting absolutely nothing felt bad")
+	{"name": "The Keeper's Twelve-Bore", "slot": "Primary", "base": "Pump shotgun", "rule": "keepers_gun", "band": "levelling", "range": [1, 4], "boss": true,
+		"words": "Every kill is 3% of your HP back", "short": "A kill heals 3%", "affixes": [{"stat": "damage_pct", "value": 12}, {"stat": "first_lot_pct", "value": 15}]},
+	{"name": "The Keeper's Wax Jacket", "slot": "Armour", "base": "Padded jacket", "rule": "keepers_wax", "band": "levelling", "range": [1, 4], "boss": true,
+		"words": "Poison and bleed on you do half", "short": "Your poison, bleed: half", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 15}]},
 	{"name": "The Van's Spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "band": "levelling", "range": [3, 6], "boss": true,
 		"words": "The secondary fires at full damage, always", "short": "Secondary always at full", "affixes": [{"stat": "damage_pct", "value": 18}, {"stat": "first_lot_pct", "value": 25}, {"stat": "cash_per_kill", "value": 4}]},
 	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "band": "levelling", "range": [3, 6], "boss": true,
@@ -990,7 +995,9 @@ const FX := {
 	"rule/grandads": 2.0,     # Grandad's Shotgun: The first of every gang takes triple
 	"rule/gritters_keys": 2.0,     # The Gritter's Keys: A chill holds as long as you fire; chilled, they take double frost
 	"rule/jump_leads": 0.33,     # Jump Leads: A third of your damage as shock; shock on one of them is shock on all of them
-	"rule/ladle.kill_heal": 0.1,     # The Dinner Lady's Ladle: Every kill is a tenth of your HP back; meds do nothing
+	"rule/ladle.kill_heal": 0.1,
+	"rule/keepers_gun": 0.03,     # The Keeper's Twelve-Bore: every kill is 3% of your HP back
+	"rule/keepers_wax": 0.5,     # The Keeper's Wax Jacket: poison and bleed on you do half     # The Dinner Lady's Ladle: Every kill is a tenth of your HP back; meds do nothing
 	"rule/managers_pen": 2,     # The Manager's Pen: Notes come in twos: every note found is two
 	"rule/rat_mans_overalls": 0.5,     # The Rat Man's Overalls: Poison stacks without end and ticks twice as fast
 	"rule/sergeants_whistle.damage": 1.6,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
@@ -1247,7 +1254,7 @@ const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5,
 const BOSSES := [
 	{"zone": 0, "name": "The Gamekeeper", "tier": 2, "hp": 5.0, "dps": 2.0, "notes": 10,     # the Outskirts' edge: soft
 		"words": "Top Farm's shoot had a keeper. It still has. He walks the hedges with the dogs and a gun, and he kept the vet's bag.",
-		"uniques": [], "opens": {"clinic": "The vet's bag"}},
+		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
 	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 10.0, "dps": 3.0, "notes": 20,
 		"words": "The crew in the carpet warehouse have a leader. He had a van and a lock-up before; he has the car park now.",
 		"uniques": ["The Van's Spare", "Underlay"], "opens": {"fence": "The Carpet Man's ledger"}},
