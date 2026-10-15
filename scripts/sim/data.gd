@@ -746,7 +746,7 @@ const UNIQUES := [
 	{"name": "The Keeper's Wax Jacket", "slot": "Armour", "base": "Padded jacket", "rule": "keepers_wax", "band": "levelling", "range": [1, 4], "boss": true,
 		"words": "Poison and bleed on you do half", "short": "Your poison, bleed: half", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 15}]},
 	{"name": "The Van's Spare", "slot": "Secondary", "base": "Old revolver", "rule": "vans_spare", "band": "levelling", "range": [3, 6], "boss": true,
-		"words": "The secondary fires at full damage, always", "short": "Secondary always at full", "affixes": [{"stat": "damage_pct", "value": 18}, {"stat": "first_lot_pct", "value": 25}, {"stat": "cash_per_kill", "value": 4}]},
+		"words": "The secondary fires at two thirds, not a third", "short": "Secondary at two thirds", "affixes": [{"stat": "first_lot_pct", "value": 25}, {"stat": "cash_per_kill", "value": 4}]},     # 15 Oct, Matt: was at full and +18% damage - "nothing beats the Van's Spare"; Double tap takes it to full
 	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "band": "levelling", "range": [3, 6], "boss": true,
 		"words": "The first two seconds of every gang land on the underlay", "short": "Each gang's first 2 s soaked", "affixes": [{"stat": "armour", "value": 30}, {"stat": "hp", "value": 25}, {"stat": "speed_pct", "value": 6}]},
 	{"name": "The Manager's Coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "band": "core", "range": [5, 8], "boss": true,
@@ -996,6 +996,7 @@ const FX := {
 	"rule/gritters_keys": 2.0,     # The Gritter's Keys: A chill holds as long as you fire; chilled, they take double frost
 	"rule/jump_leads": 0.33,     # Jump Leads: A third of your damage as shock; shock on one of them is shock on all of them
 	"rule/ladle.kill_heal": 0.1,
+	"rule/vans_spare": 2.0 / 3.0,     # The Van's Spare: the secondary at two thirds behind the primary, not a third
 	"rule/keepers_gun": 0.03,     # The Keeper's Twelve-Bore: every kill is 3% of your HP back
 	"rule/keepers_wax": 0.5,     # The Keeper's Wax Jacket: poison and bleed on you do half     # The Dinner Lady's Ladle: Every kill is a tenth of your HP back; meds do nothing
 	"rule/managers_pen": 2,     # The Manager's Pen: Notes come in twos: every note found is two

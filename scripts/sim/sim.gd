@@ -295,7 +295,7 @@ func _dps(parts) -> float:
 	if primary_live:
 		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (Data.FX["node/cap_jerry"] if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"])   # Jerry-rigged: something improvised hits half again as hard
 	if secondary_live:
-		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) / (1.0 if (has_node("double_tap") or has_rule("vans_spare") or not primary_live) else 3.0)
+		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) * secondary_share(primary_live)
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
 			sec *= Data.FX["rule/branch_pistol"]
 		d += sec
@@ -316,6 +316,16 @@ func _dps(parts) -> float:
 		parts.merge({"guns": d, "level": Data.DMG_PER_LEVEL * (level() - 1), "pct": pct / 100.0, "attack": _affix_sum("attack_pct") / 100.0,
 			"past": cm("damage"), "trait": trait_mult("damage"), "growth": growth_mult()}, true)
 	return d * (1.0 + Data.DMG_PER_LEVEL * (level() - 1) + pct / 100.0) * (1.0 + _affix_sum("attack_pct") / 100.0) * cm("damage") * trait_mult("damage") * growth_mult()
+
+
+## What the secondary fires behind the primary: a third; all of it with Double tap or the primary dry; two thirds with
+## the Van's Spare (15 Oct, Matt: was all of it).
+func secondary_share(primary_live: bool) -> float:
+	if not primary_live or has_node("double_tap"):
+		return 1.0
+	if has_rule("vans_spare"):
+		return Data.FX["rule/vans_spare"]
+	return 1.0 / 3.0
 
 
 ## The class's own gun: the Scrapper's improvised guns do 20% more (12 Oct); 1 for any other gun or class.
@@ -5318,7 +5328,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	# the secondary spends what it fires: its full rate when it's the gun in
 	# hand (the primary dry or gone, or Double tap), a third while it backs the primary
 	if equipped["Secondary"] != null and has_rounds(equipped["Secondary"]):
-		var share: float = 1.0 if (not primary_live or has_node("double_tap") or has_rule("vans_spare")) else 1.0 / 3.0
+		var share: float = secondary_share(primary_live)
 		_spend_rounds(equipped["Secondary"], Items.base_of(equipped["Secondary"])["rof"] * pace() * t["pace"] * dt * share)
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	while m["target_hp"] <= 0.0 and m["remaining"] > 0:

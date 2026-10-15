@@ -4761,3 +4761,7 @@ keepsake, not the stash ("The keeper's, for the dogs. A keepsake: it opened the 
 Gamekeeper has his own two (Matt's pick): The Keeper's Twelve-Bore (a pump shotgun: every kill is 3% of your HP back;
 +12% damage, +15% on the first lot) and The Keeper's Wax Jacket (poison and bleed on you do half; +10 armour, +15 HP),
 levels 1-4, rolled at the depth he's fought at as the other heads' are. Test art: their bases' until the manifest.
+
+**B8.2: the Van's Spare cut (15 Oct; parked item 12, Matt's pick).** Its rule fires the secondary at two thirds behind
+the primary, not all of it (the usual third; Double tap or a dry primary still all of it, so the node counts again
+with it worn); its +18% damage is gone; +25% on the first lot and 4 tins a kill stay. sim.secondary_share holds the rule.

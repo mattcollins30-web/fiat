@@ -6594,6 +6594,7 @@ func _loot_roll_checks(main) -> void:
 	_signal_checks(main)
 	_story_checks(main)
 	_keepsake_checks(main)
+	_vans_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7937,6 +7938,22 @@ func _signal_checks(main) -> void:
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
 
 
+## The Van's Spare cut (15 Oct, parked item 12, Matt's pick): the secondary at two thirds behind the primary, not all of
+## it; Double tap, or the primary dry, still all of it; no +damage of its own.
+func _vans_checks(sim) -> void:
+	var saved: Dictionary = sim.to_dict()
+	sim.tree = sim.tree.filter(func(id): return not str(sim.node(id).get("effect", "")).contains("double_tap"))
+	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
+	sim.equipped["Secondary"] = vans
+	sim._dry_memo.clear()
+	_check(is_equal_approx(sim.secondary_share(true), 2.0 / 3.0) and sim.secondary_share(false) == 1.0, "the Van's Spare's share: %.3f with the primary, %.3f without" % [sim.secondary_share(true), sim.secondary_share(false)])
+	_check(not vans["affixes"].any(func(a): return str(a["stat"]) == "damage_pct"), "the Van's Spare still carries +damage")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Old revolver")
+	_check(is_equal_approx(sim.secondary_share(true), 1.0 / 3.0), "a plain secondary's share: %.3f" % sim.secondary_share(true))
+	sim.load_dict(saved)
+	print("the Van's Spare ok: two thirds, all of it with Double tap or a dry primary, no +damage")
+
+
 ## The heads' keepsakes and the Gamekeeper's loot (15 Oct, parked items 3 and 7): his two uniques in his pool and one
 ## dropping; the vet's bag in the pack at the drop, the Clinic open there and then, in the drawer after and never the
 ## stash; the Twelve-Bore's kill heals 3%; the Wax Jacket halves poison on you.
@@ -7987,9 +8004,10 @@ func _keepsake_checks(main) -> void:
 		mm["remaining"] = 50
 		mm["target_hp"] = 1e9
 		mm["my_dots"] = {"poison": 50.0}
-		var hb: float = sim.hp
+		mm["guard"] = 0.0                     # Guard soaks what lands: the poison alone, as it reaches HP
+		mm["taken_by"] = {}
 		sim._tick(1.0)
-		loss.append(hb - sim.hp)
+		loss.append(float(mm["taken_by"].get("poison", 0.0)))
 		sim.extract_now()
 	_check(loss[0] > 0.0 and is_equal_approx(loss[1], loss[0] * Data.FX["rule/keepers_wax"]), "the Wax Jacket's poison: %s" % str(loss))
 	sim.load_dict(saved)
@@ -11911,7 +11929,7 @@ func _try_on_checks(main) -> void:
 	vans["attachments"] = {"optic": null}
 	sim.equipped["Secondary"] = vans
 	var mp: Dictionary = sim._plain("Secondary", "Machine pistol")
-	mp["affixes"] = [{"stat": "damage_pct", "value": 10.0, "tier": 2}]
+	mp["affixes"] = [{"stat": "damage_pct", "value": 4.0, "tier": 2}]     # 15 Oct: the Van's Spare at two thirds; a +10% pistol now beats it, rightly
 	sim.stash_put(mp)
 	_check(Items.score(mp) > Items.score(vans), "the case no longer stands: the pistol's own score is under the Van's Spare's")
 	var before: float = sim.fit_value({}, "Secondary")
