@@ -8213,7 +8213,7 @@ func _story_checks(main) -> void:
 	_check_fit(main, "the Radio with Kev's papers")
 	var sg: Dictionary = sim.decrypt(ids)
 	var b0: Dictionary = Data.STORY_BEATS[0]
-	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and sim.signal_level(sg) == maxi(sim.reach, sim.lv_at(int(sg["site"]), 2)), "the first beat's signal: %s" % str(sg))
+	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and sim.signal_level(sg) == maxi(maxi(Data.REACH_START, sim.reach - Data.STORY_UNDER), sim.lv_at(int(sg["site"]), 2)), "the first beat's signal: %s" % str(sg))
 	var e: Dictionary = sim.signal_read(0)
 	_check(e.has("boss") and e["boss"].get("pinnacle", false), "the first beat's signal has no head at full strength: %s" % str(e.get("boss", {})))
 	main._radio._shown = ""

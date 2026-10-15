@@ -4874,3 +4874,9 @@ the site is fought, juiced, looted and counted at the depth that level is on the
 The reach rises past a win at or over it (`signal_level`). The Radio speaks in levels ("Level 14", "A signal at level
 12-16", a card's "Level 14 (depth 6) · 2 over your reach"); the bot runs the highest level that reads PUSH.
 SAVE_VERSION 3 (the rule: old saves shown incompatible).
+
+**D4: Kev's beats five levels under the reach (15 Oct).** D3's read (summary_d3.md): reach 17-33 on every element
+build, Kev's story still not finished on any (one build two beats in). Read off the end saves: the odds fall from
+100% to 0% in two levels, and a beat's head at full strength is about three levels' worth, so a beat at the reach was
+never winnable. Data.STORY_UNDER 5: a beat's signal comes five levels under your reach. Also seen once in the smoke
+and not again on a rerun: "an arrow stayed once the better helmet went on" (the parked flake, 13 Oct).

@@ -4423,12 +4423,12 @@ func decrypt(ids: Array) -> Dictionary:
 	return sig
 
 
-## A beat's signal: its site and crew, at your reach; the head at full strength, or the depot's convoy.
+## A beat's signal: its site and crew, STORY_UNDER levels under your reach; the head at full strength, or the depot's convoy.
 func _story_signal(beat: int, papers: Array) -> Dictionary:
 	var b: Dictionary = Data.STORY_BEATS[beat]
 	signal_seq += 1
 	var convoy: bool = bool(b.get("convoy", false))
-	var sig := {"id": signal_seq, "site": int(b["site"]), "zone": int(b["zone"]), "depth": depth_for_level(int(b["site"]), maxi(Data.REACH_START, reach)), "codes": [], "papers": papers,
+	var sig := {"id": signal_seq, "site": int(b["site"]), "zone": int(b["zone"]), "depth": depth_for_level(int(b["site"]), maxi(Data.REACH_START, reach - Data.STORY_UNDER)), "codes": [], "papers": papers,
 		"head": not convoy, "convoy": false, "convoy_fight": convoy, "line": 0, "story": beat}
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "story": beat, "papers": papers.duplicate()})

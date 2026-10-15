@@ -2235,6 +2235,8 @@ const PAPER_DEEPER_AT := 2
 const SIGNAL_PAPERS := 3
 const SIGNALS_HELD := 3
 const REACH_START := 10                      # a level: the campaign tops at 9 (the Barracks at depth 1); the first signal's at 10
+const STORY_UNDER := 5                       # Kev's beats come this many levels under your reach (D4: the head at full strength is
+                                             # three levels' worth, and the odds fall from 100% to 0% in two; at the reach no build won one)
 ## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
 ## under the reach, so there's always one to win for the gear (the baseline: every build stalled with three it couldn't
 ## run and the campaign's kit); under the reach a win pays its drops and its story paper, not reach.
