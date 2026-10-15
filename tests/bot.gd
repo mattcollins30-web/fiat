@@ -266,6 +266,20 @@ func _endgame(sim) -> void:
 ## The Radio (15 Oct): signals made while there's room - Kev's beat when its three are held, else three papers, the
 ## rare first - and, the Radio full with none worth running, the worst held binned for a fresh roll.
 func _make_signals(sim) -> void:
+	# three held and none to run, and papers for another: a player bins the worst (never Kev's) for a fresh roll (D2)
+	if sim.signals.size() >= Data.SIGNALS_HELD and _pick_signal(sim) < 0 and sim.signal_papers().filter(func(x): return sim.story_of(x) < 0).size() >= Data.SIGNAL_PAPERS:
+		var worst := -1
+		var wo := 2.0
+		for k in range(sim.signals.size()):
+			if int(sim.signal_at(k).get("story", -1)) >= 0:
+				continue
+			var o: float = float(sim.signal_odds(k)[0])
+			if o < wo:
+				wo = o
+				worst = k
+		if worst >= 0:
+			bought.append([sim.elapsed, "binned a signal: depth %d at %.0f%%" % [int(sim.signal_at(worst)["depth"]), wo * 100.0]])
+			sim.bin_signal(worst)
 	var guard := 0
 	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
 		guard += 1
@@ -287,7 +301,7 @@ func _make_signals(sim) -> void:
 
 
 ## The held signal to run: the deepest that reads PUSH (Kev's at a head's odds, FIRST); -1 for none - the campaign's
-## sites farmed meanwhile, for the kit and the papers. Nothing binned: the next roll is round the same reach.
+## sites farmed meanwhile, for the kit and the papers. Three held and none to run: _make_signals bins the worst (D2).
 func _pick_signal(sim) -> int:
 	var best := -1
 	for k in range(sim.signals.size()):

@@ -2232,7 +2232,10 @@ const PAPER_DEEPER_AT := 2
 const SIGNAL_PAPERS := 3
 const SIGNALS_HELD := 3
 const REACH_START := 2                       # depth 1 is the campaign's; the first signal's at 2
-const SIGNAL_ROLL := [[-1, 0.2], [0, 0.6], [1, 0.15], [2, 0.05]]     # the depth round the reach: [step, odds]
+## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
+## under the reach, so there's always one to win for the gear (the baseline: every build stalled with three it couldn't
+## run and the campaign's kit); under the reach a win pays its drops and its story paper, not reach.
+const SIGNAL_ROLL := [[-3, 0.1], [-2, 0.15], [-1, 0.2], [0, 0.4], [1, 0.1], [2, 0.05]]
 const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
 const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
 ## Kev's story (15 Oct, §3): three beats, each a story signal made of its beat's three papers - a fixed site and crew

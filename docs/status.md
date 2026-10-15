@@ -4855,3 +4855,14 @@ tests/balance.gd reads them (`_gate_firsts`, `_longest_gap`, the gang clock in t
 tools/balance_summary.gd judges them (a never counts as later than any in a build's median); tools/balance.bat runs
 24 h a build and the loot read; tools/playtest_summary.gd reads the same from play. Old gates retired with what they
 measured (the keystone and capstone hours, depth pace, the lorry, the ladders' spread).
+
+**D2: signals roll under the reach too (15 Oct; Matt: "go with your recommendation").** The baseline (docs/balance/
+summary_d1_baseline.md, 9 reds): every build made its signals in the first two hours, then held three it couldn't run
+(0-12% at level 50 in campaign kit) and made none for 22 hours; Kev's story never began. SIGNAL_ROLL now reaches three
+under the reach ([-3 .1, -2 .15, -1 .2, 0 .4, +1 .1, +2 .05]): a win under it pays drops and the story paper's chance,
+not reach. The bot, holding three it can't run with papers for another, bins the worst (never Kev's), as a player
+would. Read (summary_d2.md): reach 7-25 (was 3-17), 50-102 signals made; papers now run out; the story still never.
+**Found:** a signal's depth isn't a difficulty - a site's level is its index past the Outskirts plus the depth, so
+depth 20 is level 17 on the Allotments and 28 on the Barracks. The bot climbs reach on the soft sites; Kev's beats
+sit on the Services and the Barracks at the reach, levels above anything it can win (the Services at depth 12 reads
+0% at level 50 where the Allotments at depth 20 reads 100%). For Matt.
