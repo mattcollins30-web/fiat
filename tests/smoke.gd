@@ -4408,7 +4408,7 @@ func _book_checks(main) -> void:
 		main._armoury._shown = ""
 		main.refresh()
 		said = " | ".join(_texts(main._armoury))
-		_check(said.contains("read · the Radio has %s" % str(pw["name"]).to_lower()) and said.contains("safe to sell"), "a read paper's panel doesn't say it's known and safe to sell: %s" % said.left(300))
+		_check(said.contains("read · the Radio has %s" % str(pw["name"]).to_lower()) and said.contains("Carries %s" % str(pw["name"]).to_lower()), "a read paper's panel doesn't say it's known and the code it carries: %s" % said.left(300))
 		_check_fit(main, "Lock-up (a read paper)")
 		main._armoury.selected = {}
 	var log_it: Dictionary = Items.roll_unique(sim._unique_named("The Lorry Driver's Log"), sim.rng)
@@ -5312,7 +5312,7 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
 	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
-	_check(main._armoury._pick._right_title.text.begins_with("In the drawer, in Training") and main._armoury._pick._right_lines[0].text.begins_with("Read"), "a read paper's line is off: %s" % main._armoury._pick._right_title.text)
+	_check(main._armoury._pick._right_title.text.begins_with("Carries"), "a read paper's line is off: %s / %s" % [main._armoury._pick._right_title.text, main._armoury._pick._right_lines[0].text])     # the Radio's, not the drawer's (15 Oct)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
 	main.show_room(main.MARKET)
@@ -5323,7 +5323,7 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	main._fence._stash._pick(main._fence._stash.cell_of(paper["id"]))
 	main.refresh()
-	_check(main._fence._right_title.text == "The drawer" and main._fence._right_lines[0].text.begins_with("Read") or main._fence._right_lines[0].text == "In the drawer", "a paper at the Fence: %s / %s" % [main._fence._right_title.text, main._fence._right_lines[0].text])
+	_check(main._fence._right_title.text == "The Radio" and main._fence._right_lines[0].text.begins_with("Carries"), "a paper at the Fence: %s / %s" % [main._fence._right_title.text, main._fence._right_lines[0].text])
 	_check_fit(main, "Fence (a paper)")
 	main._fence._stash.kind = 0
 	main._fence._show("shelf")
@@ -6591,6 +6591,7 @@ func _loot_roll_checks(main) -> void:
 	_gang_pause_checks(main)
 	_gear_gate_checks(main)
 	_training_gate_checks(main)
+	_paper_crypt_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7816,6 +7817,51 @@ func _gear_gate_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("gear gated by level ok: the padlock and its level, Equip at, the arrow and Equip if better pass it, at the level it goes on; an old save refused")
+
+
+## The papers encrypted till the Radio (15 Oct): a code-carrying paper held before the Radio's open isn't read, its pick
+## says "Encrypted" and its words hide the code; the Radio opening reads every paper held at once. Papers roll common
+## to rare, no higher.
+func _paper_crypt_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.unlocked.erase("radio")
+	sim.book = []
+	var base := ""
+	for p in Words.PAPERS:
+		if p.has("code") and sim.word_taught_by(str(p["name"])) != "":
+			base = str(p["name"])
+			break
+	var pp: Dictionary = sim._plain(Data.PAPER, base)
+	sim.stash_put(pp)
+	sim._read(pp)
+	_check(not (base in sim.book) and sim.paper_lines(pp)[0] == "Encrypted", "a paper read before the Radio: in the book %s, '%s'" % [str(base in sim.book), sim.paper_lines(pp)[0]])
+	_check(Words.paper_words(base, false).begins_with(Words.PAPER_LOCKED) and not Words.paper_words(base, true).begins_with(Words.PAPER_LOCKED), "a paper's code isn't hidden before the Radio: '%s'" % Words.paper_words(base, false))
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": pp["id"]}
+	main.refresh()
+	_check(main._armoury._pick._words.text.begins_with(Words.PAPER_LOCKED), "the Kit's pick shows an encrypted paper's code: '%s'" % main._armoury._pick._words.text)
+	_check_fit(main, "the Kit with an encrypted paper")
+	_check(main._armoury._head._tail.text.contains("encrypted") and not main._armoury._head._tail.text.contains("the code for"), "the Kit's pick line names an encrypted paper's code: '%s'" % main._armoury._head._tail.text)
+	sim.sell_commons()
+	_check(sim.stash.has(pp), "selling the commons sold a paper (the endgame's keys, 15 Oct)")
+	sim._home_gate(sim._plain(Data.PAPER, "A military radio"))
+	_check(sim.room_open("radio") and base in sim.book and sim.paper_lines(pp)[0] == "The Radio" and sim.paper_lines(pp)[1].begins_with("Carries"), "the Radio opening didn't read the paper held: %s / %s" % [str(sim.book), str(sim.paper_lines(pp))])
+	main.refresh()
+	_check_fit(main, "the Kit with a read paper")
+	var rr := RandomNumberGenerator.new()
+	rr.seed = 7
+	var top := 0
+	for k in range(400):
+		var it: Dictionary = Items.roll(Data.PAPER, 1, rr, 2.0)
+		top = maxi(top, int(it["rarity"]))
+	_check(top == Data.PAPER_RARITY_MAX, "papers roll to rarity %d, not %d" % [top, Data.PAPER_RARITY_MAX])
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("the papers encrypted ok: unread and hidden till the Radio, read at once when it opens, common to rare")
 
 
 ## Training's gating (15 Oct, gating_training.png): an element tree's columns from the third want 6 in its class tree,

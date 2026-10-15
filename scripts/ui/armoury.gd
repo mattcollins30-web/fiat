@@ -165,7 +165,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level())]     # the level: a padlock comes off (15 Oct)
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -204,7 +204,10 @@ func _show_panel() -> void:
 		var taught: String = sim.word_taught_by(str(it["base"]))
 		# read on pickup (10 Oct, Matt: "where do they actually need to be learned?"): once read, say the word is known
 		var read: bool = it["base"] in sim.book
-		tail = ("from before" if taught == "" else (("read · the Radio has %s" % taught.to_lower()) if read else ("the code for %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
+		if not sim.room_open("radio") and taught != "":
+			tail = "a code, encrypted"           # till the Radio's open (15 Oct)
+		else:
+			tail = ("from before" if taught == "" else (("read · the Radio has %s" % taught.to_lower()) if read else ("the code for %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])
@@ -220,8 +223,8 @@ func _show_panel() -> void:
 	if Items.rig_item(it):
 		buttons = _show_medical(it)
 	elif Items.is_paper(it):
-		_pick.show_right_words("The drawer" if not Items.is_deeds(it) else "The deeds", "Held, sold or burned" if Items.is_deeds(it) else ("In the drawer, in Training" if it["base"] in sim.book else "Not read yet"),
-			[Items.paper_keep(it, sim.book), "The Fence buys papers"])
+		var pl: Array = sim.paper_lines(it)
+		_pick.show_right_words(pl[0], pl[1], [pl[2]])
 	elif Items.is_attachment(it):
 		if Items.is_socketable(it):
 			_pick.show_right_words("The Workshop", "Fitted in the Workshop", [["Sockets view: into any socket", "Into any socket"], Items.socket_words(it).get_slice(": ", 1)])

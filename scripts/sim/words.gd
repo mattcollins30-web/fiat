@@ -119,6 +119,7 @@ const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from th
 ## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
 const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net", "medic": "The Clinic, on the CB", "fence": "The Fence, on the CB"}
 const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net", "medic": "The medic", "fence": "The Fence"}
+const RADIO_READ := "The Radio reads your papers: %d codes on them"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [
 	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
@@ -916,6 +917,19 @@ const YARD := {
 
 
 ## `code`: a paper's code line first (the item's card); the drawer's story leaves it off (it tells the estate, not the radio).
+## A paper's words (15 Oct): its flavour, and its code once the Radio's open to read it; before, the code's encrypted.
+static func paper_words(base: String, radio_open: bool) -> String:
+	for p in PAPERS:
+		if p["name"] == base:
+			if not p.has("code"):
+				return str(p["words"])
+			return (str(p["code"]) if radio_open else str(PAPER_LOCKED)) + " " + str(p["words"])
+	return item_words(base)
+
+
+const PAPER_LOCKED := "A code in the margin, encrypted."
+
+
 static func item_words(base: String, code := true) -> String:
 	if ITEMS.has(base):
 		return ITEMS[base]

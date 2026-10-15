@@ -1441,6 +1441,8 @@ func _home_gate(it: Dictionary) -> bool:
 	if not (room in unlocked):
 		unlocked.append(room)
 		chron("open", {"room": room})
+		if room == "radio":
+			_read_held()
 		if not _dry_on:
 			log_event(Words.GATES[room])
 			for b in Data.BOSSES:
@@ -1486,19 +1488,46 @@ func _gate_lines() -> void:
 			_hear_gate(str(b["name"]) + "/before")
 
 
-## A paper picked up is read, and goes in the drawer by name, once, in the order found.
-func _read(it: Dictionary) -> void:
-	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book):
+## A paper picked up is read, and goes in the drawer by name, once, in the order found - once the Radio's open to read
+## it (15 Oct: encrypted till then; the Radio reads every one held when it opens).
+func _read(it: Dictionary, quiet := false) -> void:
+	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book) and room_open("radio"):
 		book.append(it["base"])
 		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
-		if taught != "" and not _dry_on:
+		if taught != "" and not _dry_on and not quiet:
 			log_event("%s: a code on it. The Radio has %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper carries its code (13 Oct: codes, not words)
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
 		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size(), "tier": int(it.get("tier", 0))})
 	if it.has("unique") and not Items.is_paper(it):
 		shelf_tier[it["unique"]] = maxi(int(shelf_tier.get(it["unique"], 0)), int(it.get("tier", 0)))
+
+
+## The Radio open (15 Oct): every paper held is read at once, the codes on them in one line.
+func _read_held() -> void:
+	var before: int = book.size()
+	var held: Array = stash.duplicate()
+	if mission != null:
+		held.append_array(mission["found"])
+	for it in held:
+		_read(it, true)
+	if book.size() > before and not _dry_on:
+		log_event(Words.RADIO_READ % (book.size() - before))
+
+
+## What a paper's pick says on the right (15 Oct; the papers' parked item: it said "In the drawer, in Training"):
+## [title, line, line].
+func paper_lines(it: Dictionary) -> Array:
+	if Items.is_deeds(it):
+		return ["The deeds", "Held, sold or burned", ""]
+	if str(it.get("rule", "")) != "":
+		return ["The drawer", "Works from the stash", "Keep it"]     # a unique's rule paper (the Lorry Driver's Log)
+	if not room_open("radio"):
+		return ["Encrypted", "Read once the Radio's open", "Keep it: a key to the endgame"]
+	var code: String = word_taught_by(str(it["base"]))
+	return ["The Radio", "Carries %s" % code.to_lower() if code != "" else "No code: a line of the before",
+		"Rare: rolls a signal deeper" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "Three make a signal"]
 
 
 ## Every paper there is to find, deep ones last.
@@ -5447,7 +5476,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
 			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
-	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
+	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set") and slot != Data.PAPER:
 		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if Items.score(again) > Items.score(it):
@@ -5775,7 +5804,7 @@ func ditch_commons() -> int:
 		return 0
 	var n := 0
 	for it in mission["found"].duplicate():
-		if it["rarity"] == 0 and not Items.is_deeds(it) and ditch(it["id"]):
+		if it["rarity"] == 0 and not Items.is_paper(it) and ditch(it["id"]):     # nor the papers, the endgame's keys (15 Oct)
 			n += 1
 	return n
 
@@ -6977,7 +7006,7 @@ func _remove(it: Dictionary) -> bool:
 func sell_rarity(r: int) -> int:
 	var n := 0
 	for it in stash.duplicate():
-		if it["rarity"] == r and not Items.is_deeds(it):     # the deeds are sold on purpose or not at all
+		if it["rarity"] == r and not Items.is_paper(it):     # the deeds are sold on purpose or not at all; a paper's a key to the endgame (15 Oct): one at a time
 			sell(it)
 			n += 1
 	return n

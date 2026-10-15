@@ -71,7 +71,7 @@ static func roll(slot: String, max_tier: int, rng: RandomNumberGenerator, rarity
 		for k in range(n):
 			attachments["socket %d" % (k + 1)] = null
 	if slot == Data.AMMO or slot == Data.PAPER or slot == Data.GRENADE or (slot == Data.ATTACHMENT and base.get("mount", "") == "socket"):
-		r = 0                             # a box is a box; a letter is a letter; a bottle is a bottle; a grenade is a grenade
+		r = mini(r, Data.PAPER_RARITY_MAX) if slot == Data.PAPER else 0     # a box is a box; a bottle a bottle; a grenade a grenade; a paper rare or plain (15 Oct: a rare one rolls its signal deeper)
 		affixes = []
 	var it := {
 		"id": _next_id, "slot": slot, "base": base["name"], "rarity": r, "affixes": affixes,

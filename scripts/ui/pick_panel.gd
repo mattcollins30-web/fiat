@@ -122,7 +122,12 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 	_tag(0, Fmt.money(sim.sell_price(it)))
 	_heads[0].visible = true
 	_heads[0].show_item(it, sim, tail, extra, false)
-	_words.text = Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])
+	if it.has("unique"):
+		_words.text = Words.UNIQUES.get(it["unique"], Words.item_words(it["base"]))
+	elif Items.is_paper(it):
+		_words.text = Words.paper_words(it["base"], sim.room_open("radio"))     # the code encrypted till the Radio (15 Oct)
+	else:
+		_words.text = Words.item_words(it["base"])
 
 
 ## The right column as the fitted item, laid the same as the pick.

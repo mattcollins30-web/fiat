@@ -769,8 +769,8 @@ func _sell_spares(sim) -> void:
 		if med_cells > 12:
 			sim.sell(it)
 	for it in sim.stash.duplicate():
-		if Items.is_medical(it):
-			continue
+		if Items.is_medical(it) or Items.is_paper(it):
+			continue                      # a paper's a key to the endgame now (15 Oct): kept
 		if Items.is_ammo(it):
 			var fired := false
 			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:

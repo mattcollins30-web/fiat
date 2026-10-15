@@ -758,15 +758,10 @@ func _show_panel() -> void:
 		UI.fit(_right_title, ["Fitted in the Workshop, Sockets view", "Fitted in the Workshop"])
 		UI.wrap([_right_lines[0], _right_lines[1]], Items.socket_words(it))
 	elif Items.is_paper(it):
-		_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
-		if Items.is_deeds(it):
-			UI.fit(_right_lines[0], ["Held, sold or burned"])
-		elif it["base"] in sim.book:
-			UI.fit(_right_lines[0], ["Read, and kept in the drawer in Training", "Read; in the drawer", "In the drawer"])
-			if selected.get("kind", "") == "stash":     # only one the runner holds: a shelf paper isn't theirs to sell
-				UI.fit(_right_lines[1], [Items.paper_keep(it, sim.book), "Keep it" if str(it.get("rule", "")) != "" else "Safe to sell"])     # Matt, 10 Oct
-		else:
-			_right_lines[0].text = "Not read yet"
+		var pl: Array = sim.paper_lines(it)     # the Radio's, not the drawer's (15 Oct)
+		_right_title.text = pl[0]
+		UI.fit(_right_lines[0], [pl[1], pl[1].get_slice(":", 0)])
+		UI.fit(_right_lines[1], [pl[2], pl[2].get_slice(":", 0)])
 	elif it.has("mount"):
 		_right_title.text = "Fitted in the Workshop"
 		_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
@@ -802,7 +797,7 @@ func _button(i: int, text: String, action: Callable, enabled: bool) -> void:
 
 ## The item's own line, under the figures: who it was, where it came from.
 func _say(it: Dictionary) -> void:
-	UI.fit_sentences(_words[0], "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else Words.item_words(it["base"])))
+	UI.fit_sentences(_words[0], "" if it.is_empty() else (Words.UNIQUES.get(it["unique"], Words.item_words(it["base"])) if it.has("unique") else (Words.paper_words(it["base"], sim.room_open("radio")) if Items.is_paper(it) else Words.item_words(it["base"]))))
 	_words[1].text = ""
 
 

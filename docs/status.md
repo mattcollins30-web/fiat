@@ -4696,3 +4696,12 @@ second past's line with its bar ("Second past at level 30 · 20 in Muscle: 4 of 
 place. The bot banks no points for a level's wait. The smoke's mechanics areas (joints, keystones, capstones, the
 move's trade) turn the gates off (`sim.core_gates`, not saved, always on in the game) and `only training_gate`
 checks them.
+
+**B7.1: the papers encrypted till the Radio (15 Oct; endgame_radio.md §2, the papers' parked item 3).** A paper found
+before the Quartermaster opens the Radio isn't read: its code is "A code in the margin, encrypted.", its pick says
+"Encrypted · Read once the Radio's open · Keep it: a key to the endgame" (not "In the drawer, in Training"), and the
+Kit's line "a code, encrypted". When the Radio opens it reads every paper held at once ("The Radio reads your
+papers: N codes on them"). Read, a paper says the code it carries ("Carries laid off") and "Three make a signal".
+Papers roll common to rare now (Data.PAPER_RARITY_MAX); a rare one will roll its signal one deeper. The bulk sells
+and Ditch commons pass papers over, and the bot keeps them. Still possible one at a time, for Matt to call: selling
+one, scrapping one, a Fence contract that takes papers.

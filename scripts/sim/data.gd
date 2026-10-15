@@ -2189,6 +2189,10 @@ const SOCKET_STACK := 10
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50
+## The papers (15 Oct, the Radio's endgame): rolled common to rare, no higher; a rare one (PAPER_DEEPER_AT) rolls its
+## signal one deeper.
+const PAPER_RARITY_MAX := 2
+const PAPER_DEEPER_AT := 2
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.
