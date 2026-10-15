@@ -421,6 +421,7 @@ func show_state(s) -> void:
 		_floor_pick = -1                      # a pick in the pack or the rig takes over
 	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d|f%d|%d" % [_rig_pick, _floor_pick, sim.floor_items().size()], str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
 		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
+	sig += "|L%d" % sim.level()             # a level mid-run takes a pick's padlock off (15 Oct, the review)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -625,6 +626,8 @@ func _show_pick(m: Dictionary) -> void:
 		var fits: bool = sim.floor_fits(it)
 		if not fits:
 			_pick.set_hint_options(["No room in the pack: ditch something first (%d cells)" % Items.size(it), "No room in the pack"])
+		elif sim.wear_lock(it) > 0:
+			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
 		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
 		return
 	if Items.rig_item(it):
@@ -646,15 +649,19 @@ func _show_pick(m: Dictionary) -> void:
 		else:
 			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
 		var can: bool = sim.can_equip_from_pack(it["id"])
-		# the foot's hint: no rounds for it (the try-on counts it fed, 11 Oct), no room for what comes off, or both
+		var lock: int = sim.wear_lock(it)
+		# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct), no
+		# room for what comes off, or both
 		var hints: Array = []
 		if Items.is_gun(it) and not sim.has_rounds(it):
 			hints.append("No rounds for it in the rig")
-		if not can and fitted != null:
+		if not can and fitted != null and lock == 0:
 			hints.append("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
-		if not hints.is_empty():
+		if lock > 0:
+			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
+		elif not hints.is_empty():
 			_pick.set_hint_options(_hint_forms(hints))
-		buttons.append({"text": "Equip", "action": _equip_pick, "enabled": can, "primary": true})
+		buttons.append({"text": "Equip at %d" % lock if lock > 0 else "Equip", "action": _equip_pick, "enabled": can, "primary": true})
 	else:
 		_pick.show_right_words("", "", [])
 	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": true, "primary": buttons.is_empty()})

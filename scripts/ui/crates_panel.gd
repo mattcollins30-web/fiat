@@ -302,7 +302,7 @@ func show_crates(sim, m: Dictionary) -> void:
 	_prev.disabled = _page == 0
 	_next_page.disabled = _page >= pages - 1
 	_page_label.text = "%d / %d" % [_page + 1, pages]
-	var sig: String = "%d|%d|%s|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x_in): return [int(x_in["id"]), Items.stack_size(x_in)]).hash(), sim.equipped.hash()]     # the counts and the arrows too (the review)
+	var sig: String = "%d|%d|%s|%d|%d|%d|%d" % [from, room, str(by_hand), finds.size(), finds.map(func(x_in): return [int(x_in["id"]), Items.stack_size(x_in)]).hash(), sim.equipped.hash(), sim.level()]     # the counts and the arrows too (the review); the locks as the level comes
 	var x: float = 0.0
 	_floor_items = {}
 	for k in range(_cells.size()):
@@ -316,6 +316,7 @@ func show_crates(sim, m: Dictionary) -> void:
 				c.show_item(finds[f], false, Vector2(Pal.CELL, Pal.CELL))
 				if by_hand:
 					c.set_upgrade(sim.is_upgrade(finds[f]))     # the arrow: better than what's worn
+					c.set_locked(sim.wear_lock(finds[f]))       # or the padlock: over the runner's level (15 Oct)
 			c.position.x = x
 			x += Pal.CELL + 8
 			if by_hand:

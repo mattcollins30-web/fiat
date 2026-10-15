@@ -1801,7 +1801,7 @@ func _craft_view_checks(main) -> void:
 	_check(piece_cell >= 0, "the rolled piece has no cell in the Craft view")
 	ws._pick_cell(maxi(0, piece_cell))
 	_check(ws._piece_title.text != "Pick a piece", "picking a piece did not fill the piece card")
-	_check(ws._piece_chips.words(1) == "Level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
+	_check(ws._piece_chips.words(1) == "Item level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
 	_check(ws._affix_rows[0]["tag"].text == "T2" and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
 	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
 	_check(ws._job_tiles[0]["price"].text.contains("tin") and not ws._job_tiles[0]["button"].disabled, "the re-roll tile is not priced and live: %s" % ws._job_tiles[0]["price"].text)
@@ -4074,7 +4074,7 @@ func _craft_checks(main) -> void:
 		if sim.craft_cost(it, kind) >= 0 and sim.craft(it["id"], kind):
 			words_seen[kind] = str(sim.last_craft["words"])
 	_check(words_seen.get("reroll", "").begins_with("Re-rolled: ") and words_seen.get("reroll", "").contains(" → "), "re-roll's words: '%s'" % words_seen.get("reroll", ""))
-	_check(not words_seen.has("bump") or (words_seen["bump"].begins_with("Level ") and words_seen["bump"].contains(" → ")), "bump's words: '%s'" % words_seen.get("bump", ""))
+	_check(not words_seen.has("bump") or (words_seen["bump"].begins_with("Item level ") and words_seen["bump"].contains(" → ")), "bump's words: '%s'" % words_seen.get("bump", ""))
 	if not it["affixes"].is_empty() and sim.craft_cost(it, "one", it["affixes"][0]["stat"]) >= 0:
 		var was_line: String = Items.affix_lines(it, false, true)[0]
 		if sim.craft(it["id"], "one", it["affixes"][0]["stat"]):
@@ -6563,6 +6563,7 @@ func _loot_roll_checks(main) -> void:
 	_crates_checks(main)
 	_fx_checks()
 	_gang_pause_checks(main)
+	_gear_gate_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7717,6 +7718,77 @@ func _gang_pause_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("the gangs' clock ok: held while one's on you, on again when it's quiet")
+
+
+## Gear gated by level (15 Oct, signals_kit.png): a piece over the runner's level stays in the stash, greyed under a
+## padlock with its level; Equip waits ("Equip at 25"), Equip if better and the arrow pass it over, the junk rules keep
+## it; at the level it goes on. And a save from before the update isn't loaded: its slot says so.
+func _gear_gate_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.xp = Data.xp_for_level(15)
+	var bases: Array = Data.BASES["Primary"]
+	var big: Dictionary = sim._plain("Primary", bases[bases.size() - 1]["name"])
+	big["ilvl"] = 9
+	_check(Items.wear_level(big) == 25 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not 25 and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
+	_check(Items.wear_level({"slot": Data.MEDICAL, "base": "x", "tier": 6, "ilvl": 9}) == 1, "a med carries a level to wear")
+	sim.equipped["Primary"] = sim._plain("Primary", bases[0]["name"])
+	sim.stash_put(big)
+	_check(sim.wear_lock(big) == 25 and not sim.can_wear(big) and not sim.can_equip_item(big["id"]) and not sim.equip_item(big["id"]), "a level 25 gun goes on a level 15 runner")
+	_check(not sim.equip_best("Primary") or sim.equipped["Primary"]["id"] != big["id"], "Equip if better put on a gun over the runner's level")
+	_check(not sim.is_upgrade(big), "a gun over the runner's level carries the arrow")
+	sim.junk_upto = Data.RARITIES.size() - 1
+	_check(sim.compare(big) != 1 or not sim.is_junk(big), "the junk rules would sell an upgrade waiting for its level")
+	sim.junk_upto = -1
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": big["id"]}
+	main.refresh()
+	var cell = main._armoury._inv.cell_node(main._armoury._inv.cell_of(big["id"]))
+	_check(cell != null and cell._lock.visible and cell._lock.text == "25" and not cell._up.visible and is_equal_approx(cell._art.modulate.a if cell._art.visible else cell._lines[0].modulate.a, cell.LOCKED_FADE), "the locked gun's cell has no padlock, its level or its grey")
+	if cell != null:
+		var cr := Rect2(Vector2.ZERO, cell.size)
+		_check(cr.encloses(Rect2(cell._lock.position, cell._lock.size)), "the padlock leaves its cell: %s in %s" % [str(Rect2(cell._lock.position, cell._lock.size)), str(cr)])
+	var pick = main._armoury._pick
+	_check(pick._verdict.text == "Level 25 to wear", "the locked gun's verdict reads '%s'" % pick._verdict.text)
+	_check(pick._buttons[0].text == "Equip at 25" and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
+	_check(pick._words.text.begins_with("Level 25 to wear"), "the locked gun's line reads '%s'" % pick._words.text)
+	_check_fit(main, "the kit with a locked gun")
+	# the Fence's shelf: a piece over the level reads its level, never "Better" (the review)
+	var shelf_gun: Dictionary = big.duplicate(true)
+	shelf_gun["id"] = Items._next_id
+	Items._next_id += 1
+	sim.market.push_front(shelf_gun)
+	main.show_room(main.MARKET)
+	main._fence._show("shelf")
+	main.refresh()
+	main._fence.selected = {"kind": "shelf", "id": shelf_gun["id"]}
+	main.refresh()
+	_check(main._fence._right_lines[2].text == "Level 25 to wear", "a locked gun on the shelf reads '%s'" % main._fence._right_lines[2].text)
+	sim.market.erase(shelf_gun)
+	main.show_room(main.ARMOURY)
+	main._armoury.selected = {"kind": "stash", "id": big["id"]}
+	main.refresh()
+	sim.xp = Data.xp_for_level(25)
+	main.refresh()
+	cell = main._armoury._inv.cell_node(main._armoury._inv.cell_of(big["id"]))
+	_check(sim.can_equip_item(big["id"]) and cell != null and not cell._lock.visible and pick._buttons[0].text == "Equip", "at level 25 the gun is still locked")
+	_check(sim.equip_item(big["id"]) and sim.equipped["Primary"]["id"] == big["id"], "at level 25 the gun doesn't go on")
+	# a save from before the update: not loaded, and its slot says so
+	var old := SMOKE_SLOT % 3
+	var f := FileAccess.open(old, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": main.SAVE_VERSION - 1, "saved": 0.0, "sim": sim.to_dict()}))
+	f.close()
+	_check(main._save_words(old) == main.OLD_SAVE, "an old save's slot reads '%s'" % main._save_words(old))
+	var was = main.sim
+	main.load_game(old)
+	_check(main.sim == was, "an old save was loaded")
+	DirAccess.remove_absolute(old)
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("gear gated by level ok: the padlock and its level, Equip at, the arrow and Equip if better pass it, at the level it goes on; an old save refused")
 
 
 ## The search's column (14 Oct, mockups search_mockup3/4): the crates under the six and inside the column, the rig
@@ -11505,7 +11577,7 @@ func _try_on_checks(main) -> void:
 				head.show_item(it, sim)
 				var seen: Array = range(IH.CHIPS).filter(func(j): return head._chips[j].visible).map(func(j): return head._chip_labels[j].text)
 				var leveled: bool = not (Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it))
-				_check(seen.has(Items.rarity_name(it)) and (not leveled or seen.any(func(t): return str(t).begins_with("Level "))), "%s at %d px lost its rarity or level: %s" % [b["name"], w, str(seen)])
+				_check(seen.has(Items.rarity_name(it)) and (not leveled or seen.any(func(t): return (str(t).begins_with("Level ") or str(t).begins_with("Item level ")))), "%s at %d px lost its rarity or level: %s" % [b["name"], w, str(seen)])
 				var first: String = head._affixes._labels[0].text     # a plain base, no affixes: its element chip first
 				_check(head._affixes.shown() >= 1 and first in want_in[0]["forms"], "%s at %d px doesn't lead with '%s': '%s'" % [b["name"], w, want_in[0]["forms"][1], first])
 				_check(head._affixes._labels[0].get_theme_color("font_color") == want_in[0]["colour"], "%s's element chip isn't in its colour" % b["name"])

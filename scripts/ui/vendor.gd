@@ -747,6 +747,9 @@ func _show_panel() -> void:
 		var c: int = sim.compare(it)      # tried on (11 Oct), as the Lock-up's verdict
 		_right_lines[2].text = "Sidegrade" if c == 0 else ("▲ Better than it" if c > 0 else "▼ Worse than it")
 		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if c == 0 else (Pal.GOOD if c > 0 else Pal.BAD))
+		if sim.wear_lock(it) > 0:
+			_right_lines[2].text = "Level %d to wear" % sim.wear_lock(it)     # gear gated by level (15 Oct): it waits
+			_right_lines[2].add_theme_color_override("font_color", Pal.BAD)
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):

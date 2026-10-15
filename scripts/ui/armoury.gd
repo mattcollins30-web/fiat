@@ -165,7 +165,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed)]
+	var parts := [str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level())]     # the level: a padlock comes off (15 Oct)
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -243,14 +243,18 @@ func _show_panel() -> void:
 				_pick.show_fitted(fitted, sim, "Fitted now", ftail)
 				var v: Array = PickPanel.verdict_for(sim, it)
 				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
-			buttons.append({"text": "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
-			# the foot's hint: no rounds for it (the try-on counts it fed, 11 Oct), no room for what comes off, or both
+			var lock: int = sim.wear_lock(it)
+			buttons.append({"text": "Equip at %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
+			# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct),
+			# no room for what comes off, or both
 			var hints: Array = []
 			if Items.is_gun(it) and not sim.has_rounds(it):
 				hints.append("No rounds for it in the rig")
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				hints.append("No room in the stash for what comes off")
-			if not hints.is_empty():
+			if lock > 0:
+				_pick.set_hint_options(PickPanel.lock_hints(sim, it))
+			elif not hints.is_empty():
 				_pick.set_hint_options(_hint_forms(hints))
 			if not it.has("unique") and not it.has("set"):
 				buttons.append({"text": "Workshop", "action": func(): bench.emit(it["id"]), "enabled": not sim.on_mission() and sim.room_open("workshop"), "primary": false})

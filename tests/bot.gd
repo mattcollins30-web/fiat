@@ -403,7 +403,7 @@ func _hold_the_element(sim) -> void:
 	var cur = sim.equipped["Primary"]
 	var best := {}
 	for it in sim.stash:
-		if it["slot"] == "Primary" and (best.is_empty() or _elem_score(it) > _elem_score(best)):
+		if it["slot"] == "Primary" and sim.can_wear(it) and (best.is_empty() or _elem_score(it) > _elem_score(best)):
 			best = it
 	if best.is_empty():
 		return
@@ -445,7 +445,7 @@ func _hold_the_type(sim, type: String) -> void:
 		return
 	var best := {}
 	for it in sim.stash:
-		if it["slot"] == "Primary" and Items.base_of(it).get("type", "") == type and (best.is_empty() or Items.score(it) > Items.score(best)):
+		if it["slot"] == "Primary" and sim.can_wear(it) and Items.base_of(it).get("type", "") == type and (best.is_empty() or Items.score(it) > Items.score(best)):
 			best = it
 	if best.is_empty():
 		return
@@ -817,8 +817,8 @@ func _buy_upgrade(sim) -> void:
 				break
 	for i in range(sim.market.size()):
 		var it: Dictionary = sim.market[i]
-		if Items.is_attachment(it) or Items.rig_item(it):
-			continue
+		if Items.is_attachment(it) or Items.rig_item(it) or not sim.can_wear(it):
+			continue                       # gear over the runner's level waits (15 Oct): not bought to wear yet
 		var cur = sim.equipped[it["slot"]]
 		var g: float = sim.upgrade_gain(it) if sim.compare(it) == 1 else 0.0     # tried on (11 Oct), as the player's arrow
 		if element != "" and it["slot"] == "Primary":

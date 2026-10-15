@@ -304,12 +304,23 @@ static func deltas_of(it: Dictionary, fitted: Dictionary) -> Array:
 
 ## The verdict for a pick against what's worn, tried on (sim.compare, 11 Oct): [words, tone].
 static func verdict_for(sim, it: Dictionary) -> Array:
+	if sim.wear_lock(it) > 0:
+		return ["Level %d to wear" % sim.wear_lock(it), "bad"]     # gear gated by level (15 Oct): the deltas still say what it would do
 	match sim.compare(it):
 		1:
 			return ["▲ Upgrade", "good"]
 		-1:
 			return ["▼ Downgrade", "bad"]
 	return ["Sidegrade", "warn"]
+
+
+## The foot's line for gear over the runner's level (15 Oct, signals_kit.png), longest first; [] when it can be worn.
+static func lock_hints(sim, it: Dictionary) -> Array:
+	var lv: int = sim.wear_lock(it)
+	if lv <= 0:
+		return []
+	return ["Level %d to wear, your runner's %d: kept, stashed and sold as any other; it waits for the level" % [lv, sim.level()],
+		"Level %d to wear, your runner's %d: it waits for the level" % [lv, sim.level()], "Level %d to wear" % lv]
 
 
 ## The deltas, a gun's damage read as the runner's with it on (its own figure alone missed what a damage % on the

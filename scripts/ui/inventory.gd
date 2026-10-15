@@ -180,9 +180,11 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		selected = -1
 	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning)]
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
+	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
 		ups[it["id"]] = _upgrade(it)
-		sig += ",%d:%d%s" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else ""]     # a stack redraws as it fills; an arrow as the kit changes
+		locks[it["id"]] = sim.wear_lock(it) if sim != null else 0
+		sig += ",%d:%d%s%d" % [it["id"], Items.stack_size(it), "^" if ups[it["id"]] else "", locks[it["id"]]]     # a stack redraws as it fills; an arrow as the kit changes; a lock as the level comes
 	if sig == _shown:
 		return
 	_shown = sig
@@ -246,6 +248,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		c.position = Vector2(r.position.x * (CELL + GAP), GRID_Y + (r.position.y - top) * (CELL + GAP))
 		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected)
 		c.set_upgrade(ups[it["id"]])
+		c.set_locked(locks[it["id"]])
 		k += 1
 	while k < _cells.size():
 		_cells[k].visible = false

@@ -8,6 +8,7 @@ extends Button
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const Items := preload("res://scripts/sim/items.gd")
 
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Backpack": "PCK",
@@ -23,6 +24,11 @@ var _up: Label                     # the upgrade's arrow (11 Oct): top right, on
 const UP := 18                     # the arrow's disc
 const UP_NUDGE := 6                # a one-row cell's words, moved down out of the arrow's corner
 var _nudged := false
+var _lock: Label                   # gear over the runner's level (15 Oct, signals_kit.png): a padlock and its level, red, top right
+var _lock_icon: TextureRect
+const LOCK_H := 18
+const LOCK_ICON := 12
+const LOCKED_FADE := 0.4           # the piece greyed under its padlock
 
 
 func _init() -> void:
@@ -47,6 +53,45 @@ func _init() -> void:
 	@warning_ignore("integer_division")
 	_up.add_theme_stylebox_override("normal", UI.box(Color(Pal.BG, 0.85), UP / 2, 1, Pal.GOOD))
 	_up.visible = false
+	_lock = UI.label(self, Rect2(0, 0, 40, LOCK_H), "", "SemiBold", 11, Pal.BAD, HORIZONTAL_ALIGNMENT_RIGHT)
+	var sb := UI.box(Color(Pal.BG, 0.9), 4, 1, Pal.BAD)
+	sb.content_margin_left = LOCK_ICON + 5
+	sb.content_margin_right = 4
+	_lock.add_theme_stylebox_override("normal", sb)
+	_lock.visible = false
+	_lock_icon = TextureRect.new()
+	_lock_icon.texture = NodeGlyphs.texture("lock")
+	_lock_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_lock_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_lock_icon.modulate = Pal.BAD
+	_lock_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lock_icon.position = Vector2(3, (LOCK_H - LOCK_ICON) / 2.0)
+	_lock_icon.size = Vector2(LOCK_ICON, LOCK_ICON)
+	_lock.add_child(_lock_icon)
+
+
+## Gear too high to wear (15 Oct, gear gated by level; mockup signals_kit.png): greyed, and a padlock with the level
+## it waits for, top right where an upgrade's arrow would go (a locked piece never shows one). 0 takes it off.
+func set_locked(lv: int) -> void:
+	var on := lv > 0
+	_lock.visible = on
+	var fade := Color(1, 1, 1, LOCKED_FADE if on else 1.0)
+	_art.modulate = fade
+	for l in _lines:
+		l.modulate = fade
+	_corner.modulate = fade
+	if not on:
+		return
+	_up.visible = false
+	_lock.text = "%d" % lv
+	_lock.size = Vector2(ceilf(UI.text_width(_lock, _lock.text)) + LOCK_ICON + 9, LOCK_H)
+	_lock.position = Vector2(size.x - _lock.size.x - 2, 2)
+	_lock.move_to_front()
+	if not _nudged and not _art.visible and size.y < 100.0:
+		_nudged = true
+		for l in _lines:
+			if l.visible:
+				l.position.y += UP_NUDGE
 
 
 ## The upgrade's arrow on or off: better than what's worn in its slot (sim.is_upgrade). Off by default, so the
@@ -77,6 +122,7 @@ static func rarity_tone(it: Dictionary) -> String:
 func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	id = it["id"]
 	_up.visible = false
+	set_locked(0)
 	_nudged = false
 	var f := Items.footprint(it)
 	size = box if box != Vector2.ZERO else Vector2(px(f.x), px(f.y))
@@ -181,4 +227,6 @@ func text_nodes() -> Array:
 		out.append(_corner)
 	if _up.visible:
 		out.append(_up)
+	if _lock.visible:
+		out.append(_lock)
 	return out

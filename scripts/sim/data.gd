@@ -2179,6 +2179,10 @@ const SOCKET_STACK := 10
 
 ## XP a level: Melvor's curve, like Clade.
 const MAX_LEVEL := 50
+## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
+## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
+## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.
+const WEAR_PER_ILVL := 3
 const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
 const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12

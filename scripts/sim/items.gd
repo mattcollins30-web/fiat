@@ -412,6 +412,14 @@ static func ilvl(it: Dictionary) -> int:
 	return int(it.get("ilvl", it["tier"]))
 
 
+## The runner's level a piece needs to be worn (15 Oct, gear gated by level): only what goes in a body slot; rounds,
+## meds, parts and papers carry no level.
+static func wear_level(it: Dictionary) -> int:
+	if not (str(it.get("slot", "")) in Data.SLOTS):
+		return 1
+	return clampi(ilvl(it) * Data.WEAR_PER_ILVL - (Data.WEAR_PER_ILVL - 1), 1, Data.MAX_LEVEL)
+
+
 ## The bench: the affixes rolled again (the count kept), one of them rolled
 ## again (its tier mostly kept; up a step sometimes, down a step less often,
 ## the odds narrowing as the tier rises), one more added, all of them off.

@@ -1895,7 +1895,7 @@ func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, _so
 		"strip":
 			return "Stripped: %s gone" % ", ".join(before)
 		"bump":
-			return "Level %d → %d: nothing under T%d rolls" % [level_before, Items.ilvl(it), mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it))]
+			return "Item level %d → %d: nothing under T%d rolls" % [level_before, Items.ilvl(it), mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it))]
 	return Data.CRAFT[kind]["name"]
 
 
@@ -6427,7 +6427,7 @@ func equip_best(slot: String) -> bool:
 	var best := {}
 	var bs := -INF
 	for it in stash:
-		if it["slot"] == slot and compare(it) == 1:
+		if it["slot"] == slot and can_wear(it) and compare(it) == 1:
 			var v := fit_value(it)
 			if v > bs:
 				best = it
@@ -6495,7 +6495,7 @@ func can_equip_item(id: int) -> bool:
 	for it in stash:
 		if it["id"] == id:
 			var slot: String = it["slot"]
-			if not equipped.has(slot):
+			if not equipped.has(slot) or not can_wear(it):
 				return false
 			if equipped[slot] == null:
 				return true
@@ -6521,7 +6521,7 @@ func can_equip_from_pack(id: int) -> bool:
 	for it in mission["found"]:
 		if it["id"] == id:
 			var slot: String = it["slot"]
-			if not equipped.has(slot) or Items.is_deeds(it):
+			if not equipped.has(slot) or Items.is_deeds(it) or not can_wear(it):
 				return false
 			# the room is read with the found piece on: a smaller backpack or rig found must still hold what's carried
 			var was = equipped[slot]
@@ -6940,12 +6940,23 @@ func is_junk(it: Dictionary) -> bool:
 		return false
 	if str(it.get("slot", "")) in JUNK_KEEPS.get(junk_keep, []):
 		return false
-	return not is_upgrade(it)
+	return compare(it) != 1              # an upgrade waiting for its level is kept too
 
 
-## Better than what's worn, tried on (compare): the compare's "▲ Upgrade", the stash's arrow, the junk rules' keep.
+## Better than what's worn, tried on (compare), and wearable now: the compare's "▲ Upgrade", the stash's arrow.
 func is_upgrade(it: Dictionary) -> bool:
-	return compare(it) == 1
+	return can_wear(it) and compare(it) == 1
+
+
+## Gear gated by level (15 Oct): whether the runner is level enough to put it on.
+func can_wear(it: Dictionary) -> bool:
+	return Items.wear_level(it) <= level()
+
+
+## The level a piece waits for, or 0 when it can be worn now: the padlock's number.
+func wear_lock(it: Dictionary) -> int:
+	var w: int = Items.wear_level(it)
+	return w if w > level() else 0
 
 
 ## The idle junk run, by the junk rules (is_junk).

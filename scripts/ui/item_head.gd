@@ -237,7 +237,8 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 	if not plain or int(it["rarity"]) > 0:
 		out.append([Items.rarity_name(it), rarity_tone])
 	if not plain:
-		out.append(["Level %d" % Items.ilvl(it), ""])
+		# worn gear: the runner's level it needs (15 Oct, gear gated by level); a part: its item level, the Bench's figure
+		out.append(["Level %d" % Items.wear_level(it), ""] if slot in Data.SLOTS else ["Item level %d" % Items.ilvl(it), ""])
 	var cells: int = Items.size(it)
 	if cells > 1 and cells_chip:
 		out.append(["%d cells" % cells, ""])

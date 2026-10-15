@@ -4673,3 +4673,14 @@ four come back over 70%, or all four die. Measured, Doorman as physical, 4 h gat
 odds 53 s -> 27 s; a fixed camp's dry run 17.9 -> 9.5 ms. The fingerprint moves for the events and the four-run stop
 (the bots push on the odds): new baseline **c2cf909a…** (302 lines). The bots' campaign shifts with it; the pass
 measures it fresh.
+
+**B5: gear gated by level (15 Oct; endgame_radio.md §5, signals_kit.png).** Every worn piece has a level to wear: its
+item level x3 - 2 (Data.WEAR_PER_ILVL, Matt's pick: the first sites' gear at 1, the Quartermaster's, item level 9, at
+25; to 50), one figure for the pass. Over the runner's level it's carried, stashed and sold as any other and can't go
+on: Equip, Equip if better, a drag onto the body and Equip from the pack all wait. Greyed in the grids under a red
+padlock with its level; the pick reads "Level N to wear", the foot "Level N to wear, your runner's L", the button
+"Equip at N"; no upgrade arrow, and the Fence's shelf says the level, not "Better"; the junk rules keep an upgrade that
+waits. The gear chip is the level to wear; parts and the Workshop say "Item level". The gamble rolls as it did - the
+gating holds its top pulls. The bot buys and holds only what it can wear. **Old saves (Matt, 15 Oct, standing rule):
+no conversions** - SAVE_VERSION 2, an older save isn't loaded and its slot says "From before an update: can't be
+loaded". Checked in the smoke (`only gear_gate`).

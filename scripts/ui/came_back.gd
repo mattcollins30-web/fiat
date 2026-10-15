@@ -100,6 +100,7 @@ func show_state(s) -> void:
 		_cell.show_item(f, false, Vector2(Pal.CELL, Pal.CELL))
 		var where := _where(f)
 		_cell.set_upgrade(where == "stash" and sim.is_upgrade(f))
+		_cell.set_locked(sim.wear_lock(f) if where == "stash" else 0)
 		var full: String = Items.full_name(f)
 		UI.fit(_find_name, [full, str(f["base"])])
 		var worth: String = Fmt.money(float(f.get("value", 0)))

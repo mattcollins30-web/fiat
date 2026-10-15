@@ -665,7 +665,7 @@ func _show_craft(it: Dictionary) -> void:
 		_piece_title.size.x = BODY_W - 2 * PAD - ceilf(UI.text_width(_piece_figure, fig)) - 16
 		UI.fit(_piece_title, [Items.full_name(it), it["base"]])
 		var floor_t: int = mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it))
-		var chips := [[Items.rarity_name(it), Pal.tone_color(rarity_tone(it)) if rarity_tone(it) != "" else Pal.TEXT_2], ["Level %d" % Items.ilvl(it), Pal.TEXT_2],
+		var chips := [[Items.rarity_name(it), Pal.tone_color(rarity_tone(it)) if rarity_tone(it) != "" else Pal.TEXT_2], ["Item level %d" % Items.ilvl(it), Pal.TEXT_2],
 			{"forms": ["Rolls T%d to T%d" % [floor_t, Items.rarity_cap(it)], "T%d–T%d" % [floor_t, Items.rarity_cap(it)]], "colour": Pal.TEXT_2}]
 		if it["slot"] in Data.SOCKET_SLOTS:
 			var n := Items.sockets(it)

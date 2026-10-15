@@ -45,7 +45,9 @@ const SLOT_FILE := "user://fiat_slot%d.save"    # saves the player makes
 var save_file := SAVE_FILE
 var slot_file := SLOT_FILE
 const SLOTS := 3
-const SAVE_VERSION := 1
+## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
+## no conversions; its slot says so). 2: gear gated by level.
+const SAVE_VERSION := 2
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -541,7 +543,7 @@ func show_title() -> void:
 	var items := []
 	var saved := FileAccess.file_exists(save_file)
 	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
-			"action": load_game.bind(save_file), "enabled": saved, "glyph": "menu_continue"})
+			"action": load_game.bind(save_file), "enabled": saved and _save_ok(_read_save(save_file)), "glyph": "menu_continue"})
 	items.append({"name": "New camp", "detail": "One runner, a hammer, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
 	items.append({"name": "New camp, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
@@ -557,10 +559,20 @@ func _save_words(path: String) -> String:
 	var d := _read_save(path)
 	if d.is_empty():
 		return ""
+	if not _save_ok(d):
+		return OLD_SAVE
 	var sd: Dictionary = d["sim"]
 	var played: float = float(sd.get("elapsed", 0.0))
 	return "Level %d · %s · %s · %s%s" % [Data.level_for_xp(float(sd.get("xp", 0.0))), Fmt.money(float(sd.get("cash", 0.0))),
 			Fmt.away(played), Fmt.when(float(d.get("saved", 0.0))), " · hardcore" if sd.get("hardcore", false) else ""]
+
+
+const OLD_SAVE := "From before an update: can't be loaded"
+
+
+## Whether a save is this build's: an older one isn't loaded.
+func _save_ok(d: Dictionary) -> bool:
+	return not d.is_empty() and int(d.get("version", 0)) >= SAVE_VERSION
 
 
 func _slots_words() -> String:
@@ -593,7 +605,7 @@ func show_slots(saving: bool, back: Callable) -> void:
 			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": _save_to_slot.bind(path),
 					"confirm": "Overwrite this slot - press again" if used else ""})
 		else:
-			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": load_game.bind(path), "enabled": used})
+			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": load_game.bind(path), "enabled": used and _save_ok(_read_save(path))})
 	items.append({"name": "Back", "detail": "", "action": back})
 	_menu.open("Save to a slot" if saving else "Load a slot", "Saves the player makes; the game autosaves on its own", items, back)
 
@@ -831,7 +843,7 @@ func load_game(path := "") -> void:
 	if path == "":
 		path = save_file
 	var d := _read_save(path)
-	if d.is_empty():
+	if not _save_ok(d):
 		return
 	if path != save_file:
 		# a slot: it carries on as the autosave, so its record becomes the autosave's (the one there kept beside)
