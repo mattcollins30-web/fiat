@@ -241,7 +241,7 @@ func _max_hp_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			m += Items.affix_total(equipped[s], "hp")
-	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult() * (1.0 + (0.1 if yard_has("theatre") else 0.0) + 0.03 * yard_rank("clinic"))
+	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult() * (1.0 + (Data.FX["yard/theatre"] if yard_has("theatre") else 0.0) + Data.FX["yard_rank/clinic"] * yard_rank("clinic"))
 
 
 ## Damage a second: the primary, a third of the secondary, the level, the affixes.
@@ -265,11 +265,11 @@ func _dps(parts) -> float:
 	var primary_live := equipped["Primary"] != null and has_rounds(equipped["Primary"])
 	var secondary_live := equipped["Secondary"] != null and has_rounds(equipped["Secondary"])
 	if primary_live:
-		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (1.5 if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"])   # Jerry-rigged: something improvised hits half again as hard
+		d += Items.dps(equipped["Primary"]) * (1.0 + grade_bonus(equipped["Primary"]) / 100.0) * (Data.FX["node/cap_jerry"] if (has_node("cap_jerry") and gun_type() == "improvised") else 1.0) * _class_gun_mult(equipped["Primary"])   # Jerry-rigged: something improvised hits half again as hard
 	if secondary_live:
 		var sec := Items.dps(equipped["Secondary"]) * (1.0 + grade_bonus(equipped["Secondary"]) / 100.0) * _class_gun_mult(equipped["Secondary"]) / (1.0 if (has_node("double_tap") or has_rule("vans_spare") or not primary_live) else 3.0)
 		if has_rule("branch_pistol") and hp < max_hp() * 0.5:
-			sec *= 2.0
+			sec *= Data.FX["rule/branch_pistol"]
 		d += sec
 	if d <= 0.0:
 		d = Data.UNARMED_DPS
@@ -281,7 +281,7 @@ func _dps(parts) -> float:
 	pct += _affix_sum("damage_per_att") * fitted
 	# conditional: under half HP; on the first lot (the fight before the clear)
 	if hp < max_hp() * 0.5:
-		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (40.0 if has_node("walking_wounded") else 0.0)
+		pct += _affix_sum("damage_low_pct") + tree_sum("damage_low_pct") + (Data.FX["node/walking_wounded.damage_low"] if has_node("walking_wounded") else 0.0)
 	if mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)):
 		pct += _affix_sum("first_lot_pct")
 	if parts != null:
@@ -303,7 +303,7 @@ func armour() -> float:
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
 		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission)) + float(mission.get("bonus_armour", 0.0))
-	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (0.8 if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
+	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (Data.FX["node/shock_more.armour"] if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
 
 
 ## The wound's cut on a stat: a tenth off the one it names, nothing off the rest.
@@ -376,7 +376,7 @@ func _conversion_raw() -> Dictionary:
 		out[ty] = maxf(0.0, share)
 		total += out[ty]
 	if has_rule("jump_leads"):
-		out["shock"] += 0.33
+		out["shock"] += Data.FX["rule/jump_leads"]
 		total += 0.33
 	if has_node("bust_them_up"):
 		for ty in Data.ELEMENTS:
@@ -404,7 +404,7 @@ func _increased_raw(ty: String) -> float:
 	var inc: float = _affix_sum("%s_pct" % ty) + tree_sum("%s_pct" % ty) + _affix_sum("%s_proofed" % ty)
 	inc += over_cap(ty) * (2.0 if has_node("proof_" + ty) else 1.0)     # over the cap (12 Oct): what's past it is that element's damage
 	if ty == "physical" and has_node("thick_skinned"):
-		inc += clampf((armour() - Data.THICK_SKIN_FROM) / 10.0, 0.0, Data.OVER_CAP)     # Thick-skinned: armour past 200, a tenth of it
+		inc += clampf((armour() - Data.THICK_SKIN_FROM) / Data.FX["node/thick_skinned.armour_per_pct"], 0.0, Data.OVER_CAP)     # Thick-skinned: armour past 200, a tenth of it
 	return inc
 
 
@@ -418,19 +418,19 @@ func _more_raw(ty: String) -> float:
 	if has_node("%s_more" % ty):
 		m *= 1.4
 	if ty == "frost" and has_node("frost_freeze"):
-		m *= 0.5
+		m *= Data.FX["node/frost_freeze"]
 	if ty == "bleed" and has_rule("butchers_steel"):
-		m *= 2.0
+		m *= Data.FX["rule/butchers_steel"]
 	if ty == "shock" and has_rule("tester"):
-		m *= 0.5
+		m *= Data.FX["rule/tester"]
 	if has_rule("sergeants_whistle"):
-		m *= 1.6
+		m *= Data.FX["rule/sergeants_whistle.damage"]
 	if (ty == "fire" or ty == "shock") and yard_has("arc_lamps"):
-		m *= 1.1                                  # the Generator's Arc lamps
+		m *= Data.FX["yard/arc_lamps"]                                  # the Generator's Arc lamps
 	if (ty == "poison" or ty == "bleed") and yard_has("ratter"):
-		m *= 1.1                                  # the Kennel's Ratter
+		m *= Data.FX["yard/ratter"]                                  # the Kennel's Ratter
 	if has_set_rule("army"):
-		m *= 1.3
+		m *= Data.FX["set/army.damage"]
 	return m
 
 
@@ -441,9 +441,9 @@ func dot_seconds(ty: String, theirs := true) -> float:
 	if not theirs:
 		return s
 	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and (tree.has("Blades/3") or has_set_rule("carpet"))):
-		s *= 2.0
+		s *= Data.FX["set/carpet.bleed_s"]
 	if ty == "poison" and has_rule("rat_mans_overalls"):
-		s *= 0.5                                 # the overalls: the same pool, twice as fast
+		s *= Data.FX["rule/rat_mans_overalls"]                                 # the overalls: the same pool, twice as fast
 	return s
 
 
@@ -452,7 +452,7 @@ func dot_stacks(ty: String, theirs := true) -> int:
 	if not theirs:
 		return n
 	if ty == "poison" and has_node("poison_stacks"):
-		n = 15
+		n = Data.FX["node/poison_stacks"]
 	if ty == "poison" and (has_rule("rat_mans_bag") or has_rule("rat_mans_overalls")):
 		n = 999
 	if ty == "bleed" and (has_node("bleed_forever") or has_rule("butchers_apron")):
@@ -469,7 +469,7 @@ func chill_amount() -> float:
 
 func shock_amount() -> float:
 	if has_rule("substation_key"):
-		return 0.6                               # the Substation Key: shocked, they take 60% more
+		return Data.FX["rule/substation_key"]                               # the Substation Key: shocked, they take 60% more
 	return 0.4 if tree.has("Live/3") else Data.SHOCK
 
 
@@ -609,17 +609,17 @@ func dots_on_them() -> Array:
 
 ## Loot the pack can bring back.
 func capacity() -> int:
-	var extra := (6 if has_node("pack_mule") else 0)
+	var extra := (Data.FX["node/pack_mule"] if has_node("pack_mule") else 0)
 	var base := 2 if equipped["Backpack"] == null else maxi(1, Items.capacity(equipped["Backpack"]))
-	return int((base + extra) * (2 if has_node("hoarder") else 1) * (1.5 if has_rule("the_float") else 1.0))
+	return int((base + extra) * (Data.FX["node/hoarder.capacity"] if has_node("hoarder") else 1) * (Data.FX["rule/the_float.capacity"] if has_rule("the_float") else 1.0))
 
 
 ## Meds the rig can carry. No rig, no meds.
 func med_capacity() -> int:
 	if equipped["Rig"] == null or has_rule("the_float"):
 		return 0
-	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (2 if has_rule("issue_webbing") else 1)
-	n += (4 if yard_has("rig_wiring") else 0) + (Data.RIG_ROW if yard_has("battery") else 0)    # the Generator's picks
+	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (Data.FX["rule/issue_webbing"] if has_rule("issue_webbing") else 1)
+	n += (Data.FX["yard/rig_wiring"] if yard_has("rig_wiring") else 0) + (Data.RIG_ROW if yard_has("battery") else 0)    # the Generator's picks
 	return mini(n, Data.RIG_CAP)
 
 
@@ -641,7 +641,7 @@ func loot_bonus() -> float:
 		b += _affix_sum("loot_per_lot") * mission["patrols"] / 100.0
 	b += _affix_sum("loot_per_med") * rig.size() / 100.0
 	if has_node("poison_more"):
-		b -= 0.2                                 # the rat's share
+		b -= Data.FX["node/poison_more.quantity"]                                 # the rat's share
 	return b
 
 
@@ -649,11 +649,11 @@ func loot_bonus() -> float:
 func rarity_bonus() -> float:
 	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
 		+ yard_quality() / 100.0       # the dog knows what's worth carrying (27)
-	return r * (2.0 if has_rule("bookies_pencil") else 1.0)
+	return r * (Data.FX["rule/bookies_pencil.rarity"] if has_rule("bookies_pencil") else 1.0)
 
 
 func sell_price(it: Dictionary) -> int:
-	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (20.0 if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (2.0 if has_node("buyers_market") else 1.0)))
+	return int(round(it["value"] * inflation() * (1.0 + (tree_sum("sell_pct") + set_stat("sell_pct") + (Data.FX["joint/scrapper_fire.sell"] if has_joint("scrapper_fire") else 0.0) + yard_sell_pct()) / 100.0) * (Data.FX["node/buyers_market.sell"] if has_node("buyers_market") else 1.0)))
 
 
 ## HP for the screens: whole points, rounded the same way both sides, never past the max.
@@ -1026,7 +1026,7 @@ func hand_in(k: int) -> bool:
 			cash_in += float(c["amount"])
 			paid = _cash_words(float(c["amount"]))
 		"notes":
-			var n_paid: int = int(c["amount"]) * (2 if yard_has("fixer") else 1)     # the Fence's Fixer
+			var n_paid: int = int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1)     # the Fence's Fixer
 			notes += n_paid
 			paid = "%d notes" % n_paid
 		"scrap":
@@ -1101,7 +1101,7 @@ func contract_pay_words(c: Dictionary) -> String:
 		"cash":
 			return _cash_words(float(c["amount"]))
 		"notes":
-			return "%d notes" % (int(c["amount"]) * (2 if yard_has("fixer") else 1))     # what the hand-in pays, the Fixer's double with it
+			return "%d notes" % (int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1))     # what the hand-in pays, the Fixer's double with it
 		"scrap":
 			return "%d scrap" % int(c["amount"])
 		"salvage":
@@ -1210,7 +1210,7 @@ func move_yard(trade := "") -> bool:
 	for id in tree:
 		if str(id).begins_with("The Pitch/"):
 			yard_tree.append(id)
-	var kept_share: float = 0.75 if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
+	var kept_share: float = Data.FX["yard/dry_store"] if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
 	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
@@ -1363,7 +1363,7 @@ func wear(i: int) -> float:
 
 ## How long a picked-over site takes to come back: RECOVER_H, half again as fast a rank of Worn in.
 func recover_s() -> float:
-	return Data.RECOVER_H * 3600.0 / (1.0 + 0.5 * atlas_rank("worn_in"))
+	return Data.RECOVER_H * 3600.0 / (1.0 + Data.FX["atlas/worn_in"] * atlas_rank("worn_in"))
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
@@ -1578,7 +1578,7 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 			if a["stat"] == stat:
 				price_v *= int(a.get("tier", 1))     # the better the tier, the dearer
 	if yard_has("cheap_parts"):
-		price_v = int(round(price_v * 0.75))      # the Bench's Cheap parts
+		price_v = int(round(price_v * Data.FX["yard/cheap_parts"]))      # the Bench's Cheap parts
 	return _inf(price_v)
 
 
@@ -1592,7 +1592,7 @@ func craft_in_notes(kind: String) -> bool:
 func scrap_of(it: Dictionary) -> int:
 	if it.is_empty() or Items.is_deeds(it):
 		return 0
-	return int(float(it["value"]) / Data.SCRAP_PER_POUND) * (2 if yard_has("strip_for_parts") else 1)
+	return int(float(it["value"]) / Data.SCRAP_PER_POUND) * (Data.FX["yard/strip_for_parts"] if yard_has("strip_for_parts") else 1)
 
 
 ## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash thing
@@ -1810,7 +1810,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 		"lock":
 			Items.reroll_affixes(it, rng, stat, yard_has("masterwork"), yard_has("two_locks"))
 		"one":
-			if Items.reroll_one(it, stat, rng, 2.0 if yard_has("steady_hands") else 1.0, yard_has("fine_tuning"), yard_has("masterwork")) == 0:
+			if Items.reroll_one(it, stat, rng, Data.FX["yard/steady_hands"] if yard_has("steady_hands") else 1.0, yard_has("fine_tuning"), yard_has("masterwork")) == 0:
 				return false
 		"add":
 			if not Items.add_affix(it, rng, yard_has("masterwork")):
@@ -2266,13 +2266,13 @@ func contact(t: Dictionary) -> int:
 		return 1
 	if has_rule("gritters_hopper") and mission != null and float(mission.get("chill_t", 0.0)) > 0.0:
 		return 1                                 # chilled gangs come one at a time
-	return maxi(1, (2 if has_node("overwatch") else CONTACT) + int(t.get("contact", 0)) + int(class_data().get("contact", 0)) + (2 if has_rule("sergeants_whistle") else 0) - (1 if has_set_rule("army") else 0))
+	return maxi(1, (Data.FX["node/overwatch"] if has_node("overwatch") else CONTACT) + int(t.get("contact", 0)) + int(class_data().get("contact", 0)) + (Data.FX["rule/sergeants_whistle.contact"] if has_rule("sergeants_whistle") else 0) - (Data.FX["set/army.contact"] if has_set_rule("army") else 0))
 
 
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
-	return SEARCH_S * (0.5 if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (2.0 if has_node("never_there") else 1.0) * trait_mult("search") \
-		* (1.0 - 0.1 * atlas_rank("deeper_pockets"))
+	return SEARCH_S * (Data.FX["rule/miners_lamp"] if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (Data.FX["node/never_there.search"] if has_node("never_there") else 1.0) * trait_mult("search") \
+		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_rank("deeper_pockets"))
 
 
 ## Seconds to the next lot. The first lot waits for the lookout too; "never
@@ -2280,20 +2280,20 @@ func search_s(t: Dictionary) -> float:
 func patrol_s(t: Dictionary, first := false) -> float:
 	if has_node("never_there"):
 		return INF
-	var base := (30.0 if has_node("quiet_feet") else PATROL_S) * float(t.get("patrol", 1.0)) * cm("patrol")
+	var base := (Data.FX["node/quiet_feet"] if has_node("quiet_feet") else PATROL_S) * float(t.get("patrol", 1.0)) * cm("patrol")
 	base *= 1.0 + (_fitted_sum("patrol_pct") + tree_sum("patrol_pct") + _affix_sum("patrol_pct")) / 100.0
 	base *= yard_patrol()
 	if first:
-		base *= (1.0 + (0.5 if yard_has("spotter") else 0.0) + (0.5 if yard_has("lookout_post") else 0.0)) * (2.0 if has_node("early_doors") else 1.0)
+		base *= (1.0 + (Data.FX["yard/spotter"] if yard_has("spotter") else 0.0) + (Data.FX["yard/lookout_post"] if yard_has("lookout_post") else 0.0)) * (Data.FX["node/early_doors"] if has_node("early_doors") else 1.0)
 	if has_node("loud"):
-		base *= 0.6
-	return base * trait_mult("patrol") * (1.0 + 0.1 * atlas_rank("quiet_roads")) * (2.0 if has_rule("lollipop") else 1.0)
+		base *= Data.FX["node/loud.patrol"]
+	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_rank("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0)
 
 
 func use_time(it: Dictionary) -> float:
 	if has_node("field_surgery"):
 		return 0.0
-	return Items.use_time(it) * (0.5 if has_node("triage") else 1.0) * maxf(0.3, 1.0 - (tree_sum("med_speed_pct") + _affix_sum("med_speed_pct")) / 100.0) * (1.3 if has_node("bleed_more") else 1.0)
+	return Items.use_time(it) * (Data.FX["node/triage"] if has_node("triage") else 1.0) * maxf(0.3, 1.0 - (tree_sum("med_speed_pct") + _affix_sum("med_speed_pct")) / 100.0) * (Data.FX["node/bleed_more.med_time"] if has_node("bleed_more") else 1.0)
 
 
 func pace() -> float:
@@ -2305,8 +2305,8 @@ func _pace_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			worn_v += Items.base_pace(equipped[s])
-	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn_v) / 100.0) * cm("pace") * (0.75 if has_node("one_at_a_time") else 1.0) * (0.7 if has_node("hoarder") else 1.0) * trait_mult("pace") \
-		* (1.25 if has_rule("van_keys") else 1.0) * (0.85 if has_node("frost_more") else 1.0) * (0.85 if has_node("physical_more") else 1.0) * (1.4 if has_rule("the_float") else 1.0) * wound_mult("pace")
+	return (1.0 + (_affix_sum("speed_pct") + _fitted_sum("speed_pct") + tree_sum("pace_pct") + worn_v) / 100.0) * cm("pace") * (Data.FX["node/one_at_a_time.pace"] if has_node("one_at_a_time") else 1.0) * (Data.FX["node/hoarder.pace"] if has_node("hoarder") else 1.0) * trait_mult("pace") \
+		* (Data.FX["rule/van_keys"] if has_rule("van_keys") else 1.0) * (Data.FX["node/frost_more.pace"] if has_node("frost_more") else 1.0) * (Data.FX["node/physical_more.pace"] if has_node("physical_more") else 1.0) * (Data.FX["rule/the_float.pace"] if has_rule("the_float") else 1.0) * wound_mult("pace")
 
 
 # ------------------------------------------------------------------ ammo
@@ -2591,8 +2591,8 @@ func charm_cash() -> float:
 # ------------------------------------------------------------------ the stash
 
 func stash_cap() -> int:
-	return Data.STASH_CELLS + (40 if yard_has("shelving") else 0) + (50 if yard_has("another_unit") else 0) + (60 if yard_has("lock_up") else 0) \
-		+ (100 if yard_has("annex") else 0) + 20 * yard_rank("stash")
+	return Data.STASH_CELLS + (Data.FX["yard/shelving"] if yard_has("shelving") else 0) + (Data.FX["yard/another_unit"] if yard_has("another_unit") else 0) + (Data.FX["yard/lock_up"] if yard_has("lock_up") else 0) \
+		+ (Data.FX["yard/annex"] if yard_has("annex") else 0) + Data.FX["yard_rank/stash"] * yard_rank("stash")
 
 
 ## Whether a stash item takes no cells: the Stash's Racks (rounds, meds, grenades), Wall of fame (uniques and set
@@ -2634,23 +2634,23 @@ func pack_used(m: Dictionary) -> int:
 # ------------------------------------------------------------------ the camp's upgrades
 
 func rest_rate() -> float:
-	var base: float = Data.REST_BASE + (0.5 if yard_has("beds") else 0.0) + (1.0 if yard_has("ward") else 0.0)
-	return base * (2.0 if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0)
+	var base: float = Data.REST_BASE + (Data.FX["yard/beds"] if yard_has("beds") else 0.0) + (Data.FX["yard/ward"] if yard_has("ward") else 0.0)
+	return base * (Data.FX["node/second_wind"] if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0)
 
 
 ## The Clinic's shelf and the Fence's, by the Yard's picks.
 func clinic_stock() -> int:
-	return Data.CLINIC_STOCK + (4 if yard_has("shelf") else 0) + (6 if yard_has("stockroom") else 0)
+	return Data.CLINIC_STOCK + (Data.FX["yard/shelf"] if yard_has("shelf") else 0) + (Data.FX["yard/stockroom"] if yard_has("stockroom") else 0)
 
 
 func market_stock() -> int:
-	return Data.MARKET_STOCK + (2 if yard_has("stall") else 0) + (3 if yard_has("shopfront") else 0)
+	return Data.MARKET_STOCK + (Data.FX["yard/stall"] if yard_has("stall") else 0) + (Data.FX["yard/shopfront"] if yard_has("shopfront") else 0)
 
 
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
 func _earn(x: float) -> void:
 	if away_on and x > 0.0:
-		x *= 1.0 + (0.25 if yard_has("overtime") else 0.0) + 0.03 * yard_rank("generator")     # the Generator's Overtime and rank: cash made while you're away
+		x *= 1.0 + (Data.FX["yard/overtime.away"] if yard_has("overtime") else 0.0) + Data.FX["yard_rank/generator"] * yard_rank("generator")     # the Generator's Overtime and rank: cash made while you're away
 	cash += x
 	_takings_run += x
 	cash_in += x
@@ -2676,7 +2676,7 @@ func a_runs_takings() -> float:
 func insure_cost(i: int) -> int:
 	if has_rule("drivers_log"):
 		return 0
-	return int(ceil(loadout_value() * inflation() * Data.INSURE_RATE * depth[i] * (0.5 if yard_has("strongroom") else 1.0) / 10.0)) * 10
+	return int(ceil(loadout_value() * inflation() * Data.INSURE_RATE * depth[i] * (Data.FX["yard/strongroom"] if yard_has("strongroom") else 1.0) / 10.0)) * 10
 
 
 func can_insure(i: int) -> bool:
@@ -2712,7 +2712,7 @@ func max_words(i: int) -> int:
 			n = int(row[1])
 	if n == 0:
 		return 0
-	return n + atlas_rank("long_wave") + (1 if yard_has("long_range") else 0)
+	return n + atlas_rank("long_wave") + (Data.FX["yard/long_range"] if yard_has("long_range") else 0)
 
 
 ## The book's words: the four the depths open with, every paper's read, every zone's once a site of it is
@@ -2877,7 +2877,7 @@ func word_effect(name: String, t: int) -> Dictionary:
 		return out
 	var pw: float = float(Data.WORD_TIER_POW[clampi(t, 1, 4) - 1])
 	var jam: bool = yard_has("jammer")
-	var boost: float = (0.5 if yard_has("military_band") else 0.0) + 0.05 * yard_rank("radio") + 0.1 * atlas_rank("booster")
+	var boost: float = (Data.FX["yard/military_band"] if yard_has("military_band") else 0.0) + Data.FX["yard_rank/radio"] * yard_rank("radio") + Data.FX["atlas/booster"] * atlas_rank("booster")
 	for side in ["bite", "pay"]:
 		var part: Dictionary = w[side]
 		for k in part:
@@ -3071,9 +3071,9 @@ func word_craft_cost(i: int, key: String) -> int:
 	if c.is_empty():
 		return 0
 	var v: float = float(c["cost"]) * maxf(1.0, float(depth[i]))
-	v *= (1.0 - 0.15 * atlas_rank("good_reception")) * (0.75 if yard_has("scanner") else 1.0)
+	v *= (1.0 - Data.FX["atlas/good_reception"] * atlas_rank("good_reception")) * (Data.FX["yard/scanner"] if yard_has("scanner") else 1.0)
 	if key == "call":
-		v *= 1.0 - 0.25 * atlas_rank("early_word")
+		v *= 1.0 - Data.FX["atlas/early_word"] * atlas_rank("early_word")
 	if key == "clear" and sealed[i]:
 		v *= Data.SEALED_CLEAR
 	return maxi(1, int(ceil(v)))
@@ -3506,24 +3506,24 @@ func _yard_grew(before: Dictionary) -> void:
 
 ## The Kennel's quality; the gangs' lateness from the Kennel and the Lookout; the odds' dry runs; the sales.
 func yard_quality() -> float:
-	return (5.0 if yard_has("good_nose") else 0.0) + (10.0 if yard_has("pedigree") else 0.0) + (20.0 if yard_has("champion") else 0.0) + 2.0 * yard_rank("kennel")
+	return (Data.FX["yard/good_nose"] if yard_has("good_nose") else 0.0) + (Data.FX["yard/pedigree"] if yard_has("pedigree") else 0.0) + (Data.FX["yard/champion"] if yard_has("champion") else 0.0) + Data.FX["yard_rank/kennel"] * yard_rank("kennel")
 
 
 func yard_patrol() -> float:
-	return (1.2 if yard_has("guard_dog") else 1.0) * (1.1 if yard_has("tripwires") else 1.0) * (1.1 if yard_has("watch_rota") else 1.0) \
-		* (1.2 if yard_has("crows_nest") else 1.0) * (1.0 + 0.02 * yard_rank("lookout"))
+	return (Data.FX["yard/guard_dog"] if yard_has("guard_dog") else 1.0) * (Data.FX["yard/tripwires"] if yard_has("tripwires") else 1.0) * (Data.FX["yard/watch_rota"] if yard_has("watch_rota") else 1.0) \
+		* (Data.FX["yard/crows_nest"] if yard_has("crows_nest") else 1.0) * (1.0 + Data.FX["yard_rank/lookout"] * yard_rank("lookout"))
 
 
 func odds_runs() -> int:
-	return 60 if yard_has("glasses") else Data.ODDS_RUNS
+	return Data.FX["yard/glasses"] if yard_has("glasses") else Data.ODDS_RUNS
 
 
 func yard_sell_pct() -> float:
-	return (10.0 if yard_has("haggling") else 0.0) + (25.0 if yard_has("dealers_cut") else 0.0) + 2.0 * yard_rank("fence")
+	return (Data.FX["yard/haggling"] if yard_has("haggling") else 0.0) + (Data.FX["yard/dealers_cut"] if yard_has("dealers_cut") else 0.0) + Data.FX["yard_rank/fence"] * yard_rank("fence")
 
 
 func contracts_open() -> int:
-	return Data.CONTRACTS_OPEN + (2 if yard_has("orders") else 0)
+	return Data.CONTRACTS_OPEN + (Data.FX["yard/orders"] if yard_has("orders") else 0)
 
 
 ## The Yard's lanes from a save; a save from before them maps its buildings' levels onto the picks that match,
@@ -3563,7 +3563,7 @@ func mount_open(_mount: String) -> bool:
 
 
 func socket_max() -> int:
-	return Data.SOCKET_MAX + (1 if yard_has("third_socket") else 0)
+	return Data.SOCKET_MAX + (Data.FX["yard/third_socket"] if yard_has("third_socket") else 0)
 
 
 func bump_cap() -> int:
@@ -3571,7 +3571,7 @@ func bump_cap() -> int:
 
 
 func bump_levels() -> int:
-	return Data.BUMP_LEVELS * (2 if yard_has("overbump") else 1)
+	return Data.BUMP_LEVELS * (Data.FX["yard/overbump"] if yard_has("overbump") else 1)
 
 
 ## Why a stash attachment cannot go on a fitted gun's mount: "" when it can.
@@ -3844,12 +3844,12 @@ static func _softened(m: Dictionary, f: float) -> Dictionary:
 ## The depth a crew's head comes at full strength from on a site: PINNACLE_DEPTH for the site's zone (level 14 on his
 ## own site), a depth deeper for every move made (the ending climbs with the loop), two sooner with Full strength.
 func pinnacle_depth(i: int) -> int:
-	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - 2 * atlas_rank("full_strength")
+	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - Data.FX["atlas/full_strength"] * atlas_rank("full_strength")
 
 
 ## The depth the lorry runs the Services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
 func convoy_depth() -> int:
-	return Data.CONVOY_DEPTH + yard_moves - 2 * atlas_rank("lorrys_route") - (2 if yard_has("lorry_watch") else 0)
+	return Data.CONVOY_DEPTH + yard_moves - Data.FX["atlas/lorrys_route"] * atlas_rank("lorrys_route") - (Data.FX["yard/lorry_watch"] if yard_has("lorry_watch") else 0)
 
 
 ## From pinnacle_depth(i) a crew's head comes at full strength.
@@ -3967,25 +3967,25 @@ func effective(i: int) -> Dictionary:
 	if night_run:
 		var night := modifier("Night")
 		if not yard_has("floodlights"):     # the Generator's Floodlights: night's finds without its slow feet
-			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (0.5 if yard_has("night_set") else 1.0)   # the Radio's Night set: the slower feet halved
-		e["rarity"] += night.get("rarity", 0.0) * (1.5 if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
+			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (Data.FX["yard/night_set"] if yard_has("night_set") else 1.0)   # the Radio's Night set: the slower feet halved
+		e["rarity"] += night.get("rarity", 0.0) * (Data.FX["atlas/after_dark"] if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
 		e["intel"].append("Night")
 	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
-	e["drop"] *= 1.0 + 0.1 * atlas_rank("easy_pickings")
-	e["cash"] *= (1.0 + 0.1 * atlas_rank("every_penny")) * (1.5 if atlas_rank("heavy_crews") > 0 else 1.0)
-	e["xp"] *= (1.0 + 0.1 * atlas_rank("wages")) * (1.5 if atlas_rank("heavy_crews") > 0 else 1.0)
-	e["pace"] *= 1.0 + 0.05 * atlas_rank("short_cuts")
-	e["contact"] += (1 if atlas_rank("heavy_crews") > 0 else 0) - (1 if atlas_rank("open_ground") > 0 else 0)
-	e["rarity"] += 0.05 * atlas_rank("tip_offs")
+	e["drop"] *= 1.0 + Data.FX["atlas/easy_pickings"] * atlas_rank("easy_pickings")
+	e["cash"] *= (1.0 + Data.FX["atlas/every_penny"] * atlas_rank("every_penny")) * (Data.FX["atlas/heavy_crews.cash"] if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["xp"] *= (1.0 + Data.FX["atlas/wages"] * atlas_rank("wages")) * (Data.FX["atlas/heavy_crews.xp"] if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["pace"] *= 1.0 + Data.FX["atlas/short_cuts"] * atlas_rank("short_cuts")
+	e["contact"] += (Data.FX["atlas/heavy_crews.contact"] if atlas_rank("heavy_crews") > 0 else 0) - (Data.FX["atlas/open_ground"] if atlas_rank("open_ground") > 0 else 0)
+	e["rarity"] += Data.FX["atlas/tip_offs"] * atlas_rank("tip_offs")
 	if atlas_rank("local_knowledge") > 0:
 		e["loot_tier"] = mini(loot_cap(lv), int(e["loot_tier"]) + 1)
 	if night_run and yard_has("dead_air"):
-		e["patrol"] *= 1.25                  # the Radio's Dead air
+		e["patrol"] *= Data.FX["yard/dead_air"]                  # the Radio's Dead air
 	var sky: String = weather_of(i)
 	if sky != "":
 		e["intel"].append(sky)               # applied with the words below, softened by the Radio's Weather set
 	if sky != "" and yard_has("forecast"):
-		e["cash"] *= 1.2                     # the Radio's forecast: a run under the weather pays
+		e["cash"] *= Data.FX["yard/forecast"]                     # the Radio's forecast: a run under the weather pays
 	var w := wear(i)
 	if w > 0.0:
 		e["drop"] *= 1.0 - Data.WORN_DROP * w
@@ -4016,7 +4016,7 @@ func effective(i: int) -> Dictionary:
 			continue                              # the clock's night is applied above
 		var m := modifier(name)
 		if yard_has("weather_set"):
-			m = _softened(m, 0.5)               # the Radio's Weather set: the sky's word bites half as hard
+			m = _softened(m, Data.FX["yard/weather_set"])               # the Radio's Weather set: the sky's word bites half as hard
 		e["hp"] *= m.get("hp", 1.0)
 		e["xp"] *= m.get("xp", 1.0)
 		e["cash"] *= m.get("cash", 1.0)
@@ -4246,12 +4246,12 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	prof["snap_us"] += Time.get_ticks_usec() - p0
 	rng = r
 	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
+	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	var m := {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": false, "clock": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
-		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
+		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0, "event": "", "event_at": -1.0, "dry": true,
 	}
 	if t.has("boss"):
 		m["boss"] = _boss_entry(t["boss"])
@@ -4321,12 +4321,12 @@ func deploy(i: int) -> void:
 		log_event("Insured for %s. %s" % [_cash_words(insure_cost(i)), Words.FENCE["insured"]])
 	insure_next = false
 	_yard_setting_off()                       # before the run's record of its starting HP
-	var pool: int = int(t["pool"]) - (1 if has_node("trapline") else 0) - (1 if has_joint("poacher_frost") else 0) - (1 if yard_has("flares") else 0)
+	var pool: int = int(t["pool"]) - (Data.FX["node/trapline.heads"] if has_node("trapline") else 0) - (Data.FX["joint/poacher_frost.heads"] if has_joint("poacher_frost") else 0) - (Data.FX["yard/flares.heads"] if yard_has("flares") else 0)
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured, "clock": clock_budget(t), "clock_max": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false, "odds_seen": odds_seen,
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
-		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": 2.0 if has_joint("poacher_frost") else 0.0,
+		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
 	if has_node("cap_ghost") and not t.has("boss"):
 		mission["remaining"] = 0              # Ghost: the first gang never comes; the run starts at the search
@@ -4458,14 +4458,14 @@ func _tick(dt: float) -> void:
 			m["sustain_t"] = 0.0
 			_gang_arrives(m)
 			var grown: int = 0 if has_node("cap_dead_quiet") else m["patrols"] - 1      # Dead quiet: every gang the size of the first
-			var size: int = maxi(1, PATROL_BASE + grown - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
+			var size: int = maxi(1, PATROL_BASE + grown - (Data.FX["node/trapline.heads"] if has_node("trapline") else 0) + (Data.FX["node/loud.gang"] if has_node("loud") else 0) - (Data.FX["rule/wardens_hat.gang"] if has_rule("wardens_hat") else 0))
 			if has_rule("scouts_whistle"):
 				size = 1
 			if yard_has("flares"):
-				size = maxi(1, size - 1)     # the Lookout's Flares: every gang a head short
+				size = maxi(1, size - Data.FX["yard/flares.heads"])     # the Lookout's Flares: every gang a head short
 			if has_joint("poacher_frost"):
-				size = maxi(1, size - 1)     # the Poacher's snare, joined: every gang one head short, and chilled
-				m["chill_t"] = 2.0
+				size = maxi(1, size - Data.FX["joint/poacher_frost.heads"])     # the Poacher's snare, joined: every gang one head short, and chilled
+				m["chill_t"] = Data.FX["joint/poacher_frost.chill_s"]
 			if has_node("cap_poached"):
 				_find(m, t)                  # Poached: they arrive already light
 			if has_node("hit_and_run"):
@@ -4594,8 +4594,8 @@ func _heal(m: Dictionary, amount: float, _med := false, overflow := 0.0) -> void
 ## Guard (12 Oct, docs/design/shields.md): a second bar over HP that their fire takes first. Its cap: GUARD_SHARE of
 ## max HP (half with Transfusion), grown by Overtime and `guard_pct`. It lasts the run.
 func guard_cap() -> float:
-	var share: float = Data.GUARD_SHARE * (2.0 if has_node("cap_transfusion") else 1.0)
-	return max_hp() * share * (1.0 + (_affix_sum("guard_pct") + (50.0 if has_node("overtime") else 0.0)) / 100.0)
+	var share: float = Data.GUARD_SHARE * (Data.FX["node/cap_transfusion"] if has_node("cap_transfusion") else 1.0)
+	return max_hp() * share * (1.0 + (_affix_sum("guard_pct") + (Data.FX["node/overtime.guard"] if has_node("overtime") else 0.0)) / 100.0)
 
 
 func guard() -> float:
@@ -4615,7 +4615,7 @@ func guard_sources() -> Array:
 		out.append("overheal")
 	if has_node("cap_transfusion"):
 		out.append("a med fills it")
-	var gang: float = (15.0 if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
+	var gang: float = (Data.FX["node/squared_up"] if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
 	if gang > 0.0:
 		out.append("%d%% a gang" % int(round(gang)))
 	if has_node("in_the_hide"):
@@ -4631,7 +4631,7 @@ func guard_sources() -> Array:
 
 ## A gang arriving (the first, a patrol, the convoy's, the door's): Squared up and the `guard_gang` lines.
 func _gang_arrives(m: Dictionary) -> void:
-	var share: float = (15.0 if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
+	var share: float = (Data.FX["node/squared_up"] if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
 	if share > 0.0:
 		_guard_add(m, max_hp() * share / 100.0)
 
@@ -4696,11 +4696,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		headshot += (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
 	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
 	if m["fresh"] and yard_has("range_cards"):
-		headshot += 0.5                       # the Lookout's Range cards: the first shot on every gang half again
+		headshot += Data.FX["yard/range_cards"]                       # the Lookout's Range cards: the first shot on every gang half again
 	if m["fresh"] and atlas_rank("marked_men") > 0:
 		headshot += 0.25
 	if m["fresh"] and has_rule("grandads"):
-		headshot += 2.0
+		headshot += Data.FX["rule/grandads"]
 	if m["fresh"] and (has_node("one_shot") or has_rule("lollipop")):
 		m["target_hp"] = 0.0              # the first of the lot drops where it stands
 	if has_rule("starting_pistol") and not m.get("opened", false) and m["remaining"] > 0 and float(m["target_hp"]) > 0.0:
@@ -4733,11 +4733,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			r_ty = phys_resist(r_ty)                  # Knuckles: the Doorman's knuckles and Bust them up get through their jackets
 		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
 		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
-			landed *= 2.0                             # Shatter: a chilled target takes double from the physical
+			landed *= Data.FX["node/cap_shatter"]                             # Shatter: a chilled target takes double from the physical
 		if ty == "frost" and has_rule("gritters_keys") and float(m.get("chill_t", 0.0)) > 0.0:
-			landed *= 2.0                             # the Gritter's Keys: chilled, they take double frost
+			landed *= Data.FX["rule/gritters_keys"]                             # the Gritter's Keys: chilled, they take double frost
 		if ty == "bleed" and has_node("cap_bleed_out"):
-			landed *= 1.5                             # Bleed out: bleeds half again as hard
+			landed *= Data.FX["node/cap_bleed_out"]                             # Bleed out: bleeds half again as hard
 		var single := landed                      # what one of them takes, before a spread
 		if has_node("melee_sweep"):
 			landed *= crowd_on_you                # Through the lot: a swing hits everyone on you
@@ -4805,7 +4805,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["kill_shocked"] = float(m.get("shock_t", 0.0)) > 0.0
 		m["kill_burning"] = float(m.get("dots", {}).get("fire", 0.0)) > 0.0
 		if has_node("cap_flattened") and float(type_dps().get("physical", 0.0)) > 0.0:
-			m["flat_t"] = 2.0                        # Flattened: the plain put them down; the next of them fire at half for two seconds
+			m["flat_t"] = Data.FX["node/cap_flattened"]                        # Flattened: the plain put them down; the next of them fire at half for two seconds
 		m.erase("full_dose")
 		var carried := {}
 		if (has_rule("rat_mans_bag") or has_node("cap_lingers")) and m.get("dots", {}).has("poison"):
@@ -4856,11 +4856,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	elif not m["fresh"]:
 		m["grace"] = 0.0
 	if on_you >= 3 and has_node("bodyline"):
-		incoming *= 0.5
+		incoming *= Data.FX["node/bodyline"]
 	if on_you >= 3:
 		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
 	if on_you >= 3 and has_rule("doormans"):
-		incoming *= 0.75
+		incoming *= Data.FX["rule/doormans"]
 	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
@@ -4894,7 +4894,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		tick_by[ty] = float(tick_by.get(ty, 0.0)) + float(ticked_by[ty])
 	incoming += ticked / maxf(dt, 0.001)
 	if has_node("cap_held"):
-		incoming = minf(incoming, max_hp() * 0.1)       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
+		incoming = minf(incoming, max_hp() * Data.FX["node/cap_held"])       # Held: no second of their fire, their shots and what they left on you, takes more than a tenth
 	m["last_incoming"] = incoming
 	var above: bool = hp >= max_hp() * Data.WOUND_AT
 	var on_hp: float = _take(m, incoming * dt)
@@ -4957,7 +4957,7 @@ func _dot_top_up(dots: Dictionary, ty: String, add: float, rate_cap: float) -> v
 ## more from the SMG.
 func _joint_hit_mult(m: Dictionary, held: String) -> float:
 	if has_joint("drifter_fire") and held == "smg" and float(m.get("dots", {}).get("fire", 0.0)) > 0.0:
-		return 1.25
+		return Data.FX["joint/drifter_fire"]
 	return 1.0
 
 
@@ -4966,11 +4966,11 @@ func _joints_on_incoming(m: Dictionary, chilled: bool, dt: float) -> float:
 	var f := 1.0
 	var held := gun_type()
 	if has_joint("paramedic_frost") and chilled:
-		f *= 0.7                                  # chilled gangs do 30% less to you
+		f *= Data.FX["joint/paramedic_frost.taken"]                                  # chilled gangs do 30% less to you
 	if has_joint("doorman_bleed") and float(m.get("dots", {}).get("bleed", 0.0)) > 0.0:
-		f *= 0.8                                  # bleeding gangs do 20% less
+		f *= Data.FX["joint/doorman_bleed"]                                  # bleeding gangs do 20% less
 	if has_joint("doorman_physical") and (held == "shotgun" or held == "melee"):
-		f *= 0.75                                 # every shell and swing staggers: they fire 25% slower
+		f *= Data.FX["joint/doorman_physical"]                                 # every shell and swing staggers: they fire 25% slower
 	var stagger := tree_sum("stagger")
 	if stagger > 0.0 and float(type_dps().get("physical", 0.0)) > 0.0:
 		f *= maxf(0.0, 1.0 - stagger / 100.0)     # Stagger: your hits slow their fire
@@ -4998,7 +4998,7 @@ func _dot_fill(m: Dictionary, ty: String) -> void:
 func dot_fill_stacks(ty: String) -> int:
 	var n := dot_stacks(ty, true)
 	if ty == "poison" and n >= 999:
-		n = 15 if has_node("poison_stacks") else int(Data.DOTS[ty]["stacks"])
+		n = Data.FX["node/poison_stacks"] if has_node("poison_stacks") else int(Data.DOTS[ty]["stacks"])
 	return n
 
 
@@ -5011,7 +5011,7 @@ func _dose(m: Dictionary) -> void:
 ## What a med heals this runner, before the max HP caps it: its own figure through the past, the trait, the trees,
 ## the nodes, the rules, the set and the Yard. The rig's hover, the pick panel and the heal itself all read this.
 func med_heal(it: Dictionary) -> float:
-	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (0.5 if has_node("walking_wounded") else 1.0) * (0.0 if has_rule("ladle") else 1.0) * (2.0 if has_set_rule("ambulance") else 1.0) * (1.25 if yard_has("med_lab") else 1.0) * (1.5 if has_rule("paramedics_bumbag") else 1.0)
+	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (Data.FX["node/walking_wounded.heal"] if has_node("walking_wounded") else 1.0) * (Data.FX["rule/ladle.med_heal"] if has_rule("ladle") else 1.0) * (Data.FX["set/ambulance.heal"] if has_set_rule("ambulance") else 1.0) * (Data.FX["yard/med_lab"] if yard_has("med_lab") else 1.0) * (Data.FX["rule/paramedics_bumbag"] if has_rule("paramedics_bumbag") else 1.0)
 
 
 ## A med in words: "+42 HP over 3 s" (at once with Field surgery).
@@ -5065,7 +5065,7 @@ func dot_depth(theirs := true) -> float:
 
 ## How long a chill or a shock holds on them: the Plumber's Belt doubles it (12 Oct).
 func status_s(s: float) -> float:
-	return s * (2.0 if has_rule("plumbers_belt") else 1.0)
+	return s * (Data.FX["rule/plumbers_belt"] if has_rule("plumbers_belt") else 1.0)
 
 
 ## The Arsonist's Rig: a petrol bomb's worth of fire on everyone on you, through the model.
@@ -5105,7 +5105,7 @@ func use_grenade(id: int) -> bool:
 			r = 0.0
 		var single: float = float(b["damage"]) * (1.0 + increased(ty) / 100.0) * more(ty) * (1.0 - r) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
 		if ty == "bleed" and has_node("cap_bleed_out"):
-			single *= 1.5                     # Bleed out: a nail bomb's bleed, half again too
+			single *= Data.FX["node/cap_bleed_out"]                     # Bleed out: a nail bomb's bleed, half again too
 		var crowd: int = mini(m["remaining"], contact(t))
 		var landed: float = single * crowd
 		rig.remove_at(k)
@@ -5137,7 +5137,7 @@ func _patch(m: Dictionary, dt: float) -> void:
 		m["using"]["left"] -= dt                 # Overtime: with Guard up, a med takes half the time
 	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
 		var hp_was := hp
-		_heal(m, m["using"]["heal"] * (1.2 if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true, float(m["using"].get("overflow", 0.0)))
+		_heal(m, m["using"]["heal"] * (Data.FX["joint/paramedic_frost.heal"] if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true, float(m["using"].get("overflow", 0.0)))
 		if has_node("cap_transfusion"):
 			m["guard"] = guard_cap()             # Transfusion: a med fills Guard to the top
 		m["using"]["gained"] = hp - hp_was     # what it healed, after the max HP caps it (the log's figure)
@@ -5157,17 +5157,17 @@ func _patch(m: Dictionary, dt: float) -> void:
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
 	m["kills"] += 1
-	_heal(m, _affix_sum("life_per_kill") + (max_hp() * 0.1 if has_rule("ladle") else 0.0) + (max_hp() * 0.1 if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
+	_heal(m, _affix_sum("life_per_kill") + (max_hp() * Data.FX["rule/ladle.kill_heal"] if has_rule("ladle") else 0.0) + (max_hp() * Data.FX["node/cap_iron"] if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
 	if m.get("dry", false):
 		return                               # a dry run: the fight only, nothing earned
-	var gain: float = t["xp"] * (1.5 if has_node("hit_and_run") else 1.0)
+	var gain: float = t["xp"] * (Data.FX["node/hit_and_run.kill_pay"] if has_node("hit_and_run") else 1.0)
 	m["xp"] += gain
 	var before := level()
 	xp += gain
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
-	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (0.5 if has_rule("bookies_pencil") else 1.0) * (2.0 if has_set_rule("bank") else 1.0) \
-		* (0.8 if has_node("light_fingers") else 1.0) * (1.5 if has_rule("managers_coat") else 1.0) * trait_mult("cash")
+	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (Data.FX["rule/bookies_pencil.cash"] if has_rule("bookies_pencil") else 1.0) * (Data.FX["set/bank.kill_cash"] if has_set_rule("bank") else 1.0) \
+		* (Data.FX["node/light_fingers.cash"] if has_node("light_fingers") else 1.0) * (Data.FX["rule/managers_coat"] if has_rule("managers_coat") else 1.0) * trait_mult("cash")
 	if not has_rule("managers_coat"):
 		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
 	var dd: int = int(t.get("depth", 1))
@@ -5177,7 +5177,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 		m["salvage"][kind] = int(m["salvage"].get(kind, 0)) + 1      # the deep sites' salvage (9 Oct), home with the run
 	if has_node("quiet_hands"):
 		return
-	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (1.3 if has_node("loud") else 1.0) * (1.0 + 0.1 * atlas_rank("their_own_kit")) * pay:
+	if has_node("nothing_wasted") or (has_joint("scrapper_fire") and m.get("kill_burning", false)) or rng.randf() < t["drop"] * (1.0 + loot_bonus()) * (Data.FX["node/loud.drop"] if has_node("loud") else 1.0) * (1.0 + Data.FX["atlas/their_own_kit"] * atlas_rank("their_own_kit")) * pay:
 		if has_rule("qm_ledger"):
 			var up: Dictionary = t.duplicate()
 			up["loot_tier"] = mini(loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))), int(t["loot_tier"]) + 1)     # signed for: a tier up
@@ -5188,7 +5188,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 
 ## The old paper money: every kill carries some, more the deeper you are.
 func notes_a_kill(t: Dictionary) -> int:
-	return (int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0) * (1.0 + _affix_sum("notes_pct") / 100.0))) + atlas_rank("paid_in_notes")) * (2 if has_rule("wardens_hat") else 1)
+	return (int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0) * (1.0 + _affix_sum("notes_pct") / 100.0))) + atlas_rank("paid_in_notes")) * (Data.FX["rule/wardens_hat.notes"] if has_rule("wardens_hat") else 1)
 
 
 ## The crew's head is down: their drop, the notes they held, the zone's boss beaten.
@@ -5203,7 +5203,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	xp += t["xp"] * 10.0
 	_earn_points(before)
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
-	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + 0.5 * atlas_rank("bounties"))))
+	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))
 	if b.get("pinnacle", false) and atlas_rank("head_start") > 0:
 		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
 		log_event(Words.MAP["head_start"] % b["name"])
@@ -5292,9 +5292,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		elif kind < Data.MED_DROP * 0.5 * float(shape.get("med", 1.0)) + Data.AMMO_DROP * float(shape.get("ammo", 1.0)):
 			slot = Data.AMMO
 	else:
-		if rng.randf() < Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (3.0 if has_node("light_fingers") else 1.0) * (2.0 if yard_has("tracker") else 1.0):
+		if rng.randf() < Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0):
 			slot = Data.PAPER
-		elif rng.randf() < Data.CHARM_DROP * (2.0 if yard_has("tracker") else 1.0):
+		elif rng.randf() < Data.CHARM_DROP * (Data.FX["yard/tracker.charms"] if yard_has("tracker") else 1.0):
 			slot = Data.CHARM
 		elif kind < Data.MED_DROP * float(shape.get("med", 1.0)):
 			slot = Data.MEDICAL
@@ -5327,7 +5327,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
 			var mine := Items.ammo_type(equipped["Primary"])
@@ -5339,12 +5339,12 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
 		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
 			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set"):
 		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), 0.33 + 0.1667 * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	if capture:
@@ -5433,7 +5433,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	_wearing_off(m)
 	worn[m["tier"]] = elapsed
 	worn_depth[m["tier"]] = depth[m["tier"]]
-	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (2.0 if has_node("stand") else 1.0)
+	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (Data.FX["node/stand"] if has_node("stand") else 1.0)
 	m["xp"] += bonus
 	var before := level()
 	xp += bonus
@@ -5599,7 +5599,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		if cd.get("tins", false):
 			m["cash"] += float(t["cash"]) * rng.randf_range(0.5, 2.0) * inflation()     # a safe: a handful of tins (the pass, 13 Oct: 1-3 read the Bank 17% over)
-		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (1 if yard_has("a_dog") else 0) + (1 if yard_has("second_dog") else 0) + (2 if yard_has("pack") else 0) + (1 if has_rule("postman") else 0)
+		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/second_dog"] if yard_has("second_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
@@ -5799,13 +5799,13 @@ func way_out_s(t: Dictionary, m = null) -> float:
 ## The gang at the door: the site's own (its words on it), the size of the gangs after a clear's first - the Flares,
 ## Trapline and the Poacher's snare shrink it as they shrink those.
 func door_gang(_t: Dictionary) -> int:
-	var size: int = maxi(1, PATROL_BASE - (1 if has_node("trapline") else 0) + (1 if has_node("loud") else 0) - (1 if has_rule("wardens_hat") else 0))
+	var size: int = maxi(1, PATROL_BASE - (Data.FX["node/trapline.heads"] if has_node("trapline") else 0) + (Data.FX["node/loud.gang"] if has_node("loud") else 0) - (Data.FX["rule/wardens_hat.gang"] if has_rule("wardens_hat") else 0))
 	if has_rule("scouts_whistle"):
 		size = 1
 	if yard_has("flares"):
-		size = maxi(1, size - 1)
+		size = maxi(1, size - Data.FX["yard/flares.heads"])
 	if has_joint("poacher_frost"):
-		size = maxi(1, size - 1)
+		size = maxi(1, size - Data.FX["joint/poacher_frost.heads"])
 	return size
 
 
@@ -5822,7 +5822,7 @@ func _start_way_out(m: Dictionary) -> void:
 	m["remaining"] = size
 	m["target_hp"] = float(t["hp"])
 	m["dots"] = {}
-	m["chill_t"] = 2.0 if has_joint("poacher_frost") else 0.0
+	m["chill_t"] = Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0
 	m["shock_t"] = 0.0
 	m["fresh"] = true
 	m.erase("opened")
@@ -5857,7 +5857,7 @@ func _extract() -> void:
 	m["left"] = int(m["left"]) + m.get("floor", []).filter(func(x): return not x.has("ditch_scrap")).size()     # what was left on the floor: passed over
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
-		m["cash"] *= 2.0                      # The lot: a full pack pays double
+		m["cash"] *= Data.FX["node/cap_the_lot"]                      # The lot: a full pack pays double
 	_earn(float(m["cash"]))
 	var base0: float = a_gamble_base()
 	gamble_base = clampf(lerp(base0, _takings_run, 0.25), base0 * (1.0 - Data.GAMBLE_STEP), base0 * (1.0 + Data.GAMBLE_STEP))     # before takings moves: the first run starts from its stand-in
@@ -5871,9 +5871,9 @@ func _extract() -> void:
 	if has_rule("lorrys_load"):
 		run_notes += maxi(0, capacity() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
 	if has_rule("managers_pen"):
-		run_notes *= 2
+		run_notes *= Data.FX["rule/managers_pen"]
 	if has_rule("drivers_log"):
-		run_notes *= 2
+		run_notes *= Data.FX["rule/drivers_log"]
 	notes += run_notes
 	if yard_has("bins"):
 		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
@@ -6660,7 +6660,7 @@ func _restock_market() -> void:
 		if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 			it = Items.roll(Data.SLOTS[rng.randi_range(0, Data.SLOTS.size() - 1)], t, rng)
 		if yard_has("arms_dealer") and not Items.is_ammo(it) and not Items.is_grenade(it):
-			it = Items.roll(it["slot"], loot_tier_at(deepest_site_level()), rng, 0.0, false, false, "", "", 0.33, 0, deepest_site_level())     # the Fence's Arms dealer
+			it = Items.roll(it["slot"], loot_tier_at(deepest_site_level()), rng, 0.0, false, false, "", "", Data.FX["yard/arms_dealer"], 0, deepest_site_level())     # the Fence's Arms dealer
 		market.append(it)
 	if yard_has("back_room"):
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
@@ -6713,7 +6713,7 @@ func a_gamble_base() -> float:
 func gamble_price(kind: String) -> int:
 	if gamble_kind(kind).is_empty():
 		return -1
-	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_gamble_base() * Data.GAMBLE_RUNS) * (0.5 if yard_has("gamblers_table") else 1.0)))
+	return int(round(maxf(float(_inf(Data.GAMBLE_FLOOR)), a_gamble_base() * Data.GAMBLE_RUNS) * (Data.FX["yard/gamblers_table"] if yard_has("gamblers_table") else 1.0)))
 
 
 func can_gamble(kind: String) -> bool:
@@ -6778,7 +6778,7 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 func price(it: Dictionary) -> int:
 	if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 		return ammo_price(str(Items.base_of(it)["type"]))
-	return _inf(it["value"] * Data.MARKET_MARKUP * (2.0 if has_node("buyers_market") else 1.0))
+	return _inf(it["value"] * Data.MARKET_MARKUP * (Data.FX["node/buyers_market.buy"] if has_node("buyers_market") else 1.0))
 
 
 func buy(i: int) -> bool:
@@ -7047,7 +7047,7 @@ func heal_cost() -> int:
 
 
 func wound_cost() -> int:
-	return int(ceil(Data.WOUND_CASH * level() * _treat_rate() * (0.5 if yard_has("surgery") else 1.0))) if wound != "" else 0
+	return int(ceil(Data.WOUND_CASH * level() * _treat_rate() * (Data.FX["yard/surgery"] if yard_has("surgery") else 1.0))) if wound != "" else 0
 
 
 ## Both at once: what the bot pays, and the old button.

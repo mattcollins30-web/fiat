@@ -818,6 +818,189 @@ const UNIQUES := [
 	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [4, 7], "depth": 6,
 		"words": "Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long", "short": "Dots ×2 deep and long", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
 ]
+## The effects' numbers (15 Oct, refactor A2): every figure a tree node, a unique's or a set's rule, a joint, a
+## Yard pick or rank and a map node puts into the sim, in one table, so the balance pass tunes them here. Key:
+## "kind/id", ".what" after it where one effect has more than one number. Sim reads Data.FX["..."]; the
+## figures are as they were in sim.gd (the fingerprint unmoved). What each is comes from the data's own words.
+const FX := {
+	# node
+	"node/bleed_more.med_time": 1.3,     # Blood up: Bleed does 40% more; your meds 30% slower
+	"node/buyers_market.buy": 2.0,     # Buyer's market: The Fence pays double; buying costs double
+	"node/buyers_market.sell": 2.0,     # Buyer's market: The Fence pays double; buying costs double
+	"node/cap_transfusion": 2.0,     # Transfusion: Guard holds twice as much, and a med fills it to the top
+	"node/early_doors": 2.0,     # Early doors: The first gang takes twice as long to come
+	"node/frost_more.pace": 0.85,     # Cold hands: Frost does 40% more; pace −15%
+	"node/hit_and_run.kill_pay": 1.5,     # Hit and run: Leaves as the first gang arrives, the loot kept; every kill pays 50% more
+	"node/hoarder.capacity": 2,     # Hoarder: The pack carries double; −30% pace
+	"node/hoarder.pace": 0.7,     # Hoarder: The pack carries double; −30% pace
+	"node/light_fingers.cash": 0.8,     # Light fingers: Papers three times as often; tins −20%
+	"node/light_fingers.papers": 3.0,     # Light fingers: Papers three times as often; tins −20%
+	"node/loud.drop": 1.3,     # Loud: Gangs come sooner and one head bigger; +30% drops
+	"node/loud.gang": 1,     # Loud: Gangs come sooner and one head bigger; +30% drops
+	"node/never_there.search": 2.0,     # Never there: No gang ever comes; searching takes twice as long
+	"node/one_at_a_time.pace": 0.75,     # One at a time: Only one of a gang can ever fire on you at once; pace −25%
+	"node/overtime.guard": 50.0,     # Overtime: Guard holds 50% more; with Guard up, meds take half the time
+	"node/pack_mule": 6,     # Pack horse: The pack carries six cells more
+	"node/physical_more.pace": 0.85,     # Heavy: Physical does 40% more; pace −15%
+	"node/second_wind": 2.0,     # Second wind: Rest on the Pitch twice as fast
+	"node/squared_up": 15.0,     # Squared up: Every gang, as they arrive: Guard of 15% of your max HP
+	"node/stand": 2.0,     # Stand and fight: No leaving before the fight is won; the bonus for winning it is doubled
+	"node/trapline.heads": 1,     # Trapline: Every gang arrives one head short, the first included
+	"node/triage": 0.5,     # Triage: Meds take half the time
+	"node/walking_wounded.damage_low": 40.0,     # Walking wounded: Under half HP: +40% damage; meds heal half
+	"node/walking_wounded.heal": 0.5,     # Walking wounded: Under half HP: +40% damage; meds heal half
+	# rule
+	"rule/bookies_pencil.cash": 0.5,     # The Bookie's Pencil: Loot quality doubled; tins halved
+	"rule/bookies_pencil.rarity": 2.0,     # The Bookie's Pencil: Loot quality doubled; tins halved
+	"rule/issue_webbing": 2,     # Issue Webbing: Every pouch holds two
+	"rule/ladle.med_heal": 0.0,     # The Dinner Lady's Ladle: Every kill is a tenth of your HP back; meds do nothing
+	"rule/lollipop": 2.0,     # The Lollipop Lady's Sign: Stop: the first of every gang drops where it stands; gangs come half as often
+	"rule/managers_coat": 1.5,     # The Manager's Coat: Tins half again; no notes - he doesn't take paper
+	"rule/miners_lamp": 0.5,     # The Miner's Lamp: Searches take half as long
+	"rule/paramedics_bumbag": 1.5,     # The Paramedic's Bumbag: Meds heal half again; one is used for you under 40% HP
+	"rule/plumbers_belt": 2.0,     # The Plumber's Belt: Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long
+	"rule/postman": 1,     # The Postman's Bag: Every search finds one more
+	"rule/sergeants_whistle.contact": 2,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
+	"rule/the_float.capacity": 1.5,     # The Float: Pace +40% and the pack half again; you carry no meds
+	"rule/the_float.pace": 1.4,     # The Float: Pace +40% and the pack half again; you carry no meds
+	"rule/van_keys": 1.25,     # The Van Keys: You drive: pace +25%
+	"rule/wardens_hat.gang": 1,     # A Traffic Warden's Hat: Every gang arrives one short; every kill's notes doubled
+	"rule/wardens_hat.notes": 2,     # A Traffic Warden's Hat: Every gang arrives one short; every kill's notes doubled
+	# set
+	"set/ambulance.heal": 2.0,     # The Ambulance's: meds heal double
+	"set/army.contact": 1,     # The Army's: one fewer on you at once
+	"set/bank.kill_cash": 2.0,     # The Bank's: tins from kills doubled
+	# joint
+	"joint/poacher_frost.heads": 1,     # Every gang arrives chilled, and one head short
+	"joint/scrapper_fire.sell": 20.0,     # A kill while it burns always drops something; finds sell for 20% more
+	# yard
+	"yard/a_dog": 1,     # A dog: One more find every search
+	"yard/annex": 100,     # Annex: A hundred more cells in the stash
+	"yard/another_unit": 50,     # Another unit: Fifty more cells in the stash
+	"yard/beds": 0.5,     # Beds: Resting heals half an HP a second more
+	"yard/champion": 20.0,     # Champion: Twenty per cent better finds
+	"yard/crows_nest": 1.2,     # Crow's nest: Every gang takes a fifth longer to arrive
+	"yard/dealers_cut": 25.0,     # Dealer's cut: Everything sells for a quarter more
+	"yard/fixer": 2,     # Fixer: Contracts that pay notes pay twice the notes
+	"yard/flares.heads": 1,     # Flares: Every gang arrives one head short
+	"yard/gamblers_table": 0.5,     # Gambler's table: Every gamble costs half
+	"yard/good_nose": 5.0,     # A good nose: Five per cent better finds
+	"yard/guard_dog": 1.2,     # Guard dog: It hears them coming: every gang a fifth later
+	"yard/haggling": 10.0,     # Haggling: Everything sells for a tenth more
+	"yard/lock_up": 60,     # Lock-up: Sixty more cells in the stash
+	"yard/long_range": 1,     # Long range: A site carries one more code
+	"yard/lookout_post": 0.5,     # Lookout post: The first gang takes half as long again to arrive, on top
+	"yard/lorry_watch": 2,     # Lorry watch: The convoy comes two depths shallower
+	"yard/med_lab": 1.25,     # Med lab: Every med heals a quarter more
+	"yard/military_band": 0.5,     # Military band: Every code's reward - tins, XP, drops, quality - half again
+	"yard/night_set": 0.5,     # Night set: Night's slower feet halved
+	"yard/orders": 2,     # Orders: Five contracts open, not three
+	"yard/overbump": 2,     # Overbump: A bump raises an item six levels, not three
+	"yard/overtime.away": 0.25,     # Overtime: Tins found while you're away come in a quarter higher
+	"yard/pack": 2,     # The pack: Two more finds every search
+	"yard/pedigree": 10.0,     # Pedigree: Ten per cent better finds
+	"yard/rig_wiring": 4,     # Rig wiring: Four more pouches on the rig
+	"yard/scanner": 0.75,     # Scanner: Every craft at the Radio a quarter cheaper
+	"yard/second_dog": 1,     # Second dog: One more find every search
+	"yard/shelf": 4,     # Shelf: Ten meds on the Clinic's shelf, not six
+	"yard/shelving": 40,     # Shelving: Forty more cells in the stash
+	"yard/shopfront": 3,     # Shopfront: Three more things on the Fence's shelf
+	"yard/spotter": 0.5,     # Spotter: The first gang takes half as long again to arrive
+	"yard/stall": 2,     # Stall: Two more things on the Fence's shelf
+	"yard/stockroom": 6,     # Stockroom: Six more meds on the Clinic's shelf
+	"yard/strip_for_parts": 2,     # Strip for parts: Scrapping gives twice the scrap
+	"yard/strongroom": 0.5,     # Strongroom: Insuring a run costs half
+	"yard/surgery": 0.5,     # Surgery: Treating a wound costs half
+	"yard/theatre": 0.1,     # Theatre: Ten per cent more max HP
+	"yard/third_socket": 1,     # Third socket: A third socket can be cut in a gun or armour
+	"yard/tracker.charms": 2.0,     # Tracker: Papers and charms turn up twice as often
+	"yard/tracker.papers": 2.0,     # Tracker: Papers and charms turn up twice as often
+	"yard/tripwires": 1.1,     # Tripwires: Every gang takes a tenth longer to arrive
+	"yard/ward": 1.0,     # Ward: Resting heals an HP a second more
+	"yard/watch_rota": 1.1,     # Watch rota: Every gang takes a tenth longer to arrive
+	# yard_rank
+	"yard_rank/clinic": 0.03,     # a rank of the Yard's clinic
+	"yard_rank/fence": 2.0,     # a rank of the Yard's fence
+	"yard_rank/generator": 0.03,     # a rank of the Yard's generator
+	"yard_rank/kennel": 2.0,     # a rank of the Yard's kennel
+	"yard_rank/lookout": 0.02,     # a rank of the Yard's lookout
+	"yard_rank/radio": 0.05,     # a rank of the Yard's radio
+	"yard_rank/stash": 20,     # a rank of the Yard's stash
+	# atlas
+	"atlas/after_dark": 1.5,     # After dark: Every site is Night, and Night's rarer finds half again
+	"atlas/booster": 0.1,     # Booster: Every code's pay +10% a rank
+	"atlas/bounties": 0.5,     # Bounties: The notes a head holds, half again a rank
+	"atlas/deeper_pockets": 0.1,     # Deeper pockets: Searches 10% quicker a rank
+	"atlas/early_word": 0.25,     # Early code: Call in a quarter cheaper a rank
+	"atlas/easy_pickings": 0.1,     # Easy pickings: Drops +10% a rank
+	"atlas/every_penny": 0.1,     # Every tin: Tins +10% a rank
+	"atlas/full_strength": 2,     # Full strength: A head comes at full strength from depth 8, not 10
+	"atlas/good_reception": 0.15,     # Good reception: Every craft at the Radio 15% cheaper a rank
+	"atlas/heavy_crews.cash": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
+	"atlas/heavy_crews.contact": 1,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
+	"atlas/heavy_crews.xp": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
+	"atlas/lorrys_route": 2,     # The lorry's route: The lorry runs the Services from depth 10, not 12
+	"atlas/open_ground": 1,     # Open ground: One fewer on you at a time
+	"atlas/picked_over.base": 0.33,     # a site's own things: the share of finds before the map's Picked over
+	"atlas/picked_over": 0.1667,     # Picked over: A site's own things turn up more: a third of finds, then half, then two-thirds
+	"atlas/quiet_roads": 0.1,     # Quiet roads: Gangs come 10% later a rank
+	"atlas/short_cuts": 0.05,     # Short cuts: Pace +5% a rank
+	"atlas/their_own_kit": 0.1,     # Their own kit: A kill drops something 10% more often a rank
+	"atlas/tip_offs": 0.05,     # Tip-offs: Rarer finds: +5% loot quality a rank
+	"atlas/wages": 0.1,     # Wages: XP +10% a rank
+	"atlas/worn_in": 0.5,     # Worn in: A picked-over site comes back half again as fast a rank
+	# the second pass: figures in a statement under an effect, and a ternary with more to its condition
+	"joint/doorman_bleed": 0.8,     # Every shell and swing opens a bleed; bleeding gangs do 20% less to you
+	"joint/doorman_physical": 0.75,     # Every shell and swing staggers: the gangs on you fire 25% slower
+	"joint/drifter_fire": 1.25,     # Your bursts ignite: burning gangs take 25% more from SMGs
+	"joint/paramedic_frost.heal": 1.2,     # Chilled gangs do 30% less to you; meds heal 20% more while one is
+	"joint/paramedic_frost.taken": 0.7,     # Chilled gangs do 30% less to you; meds heal 20% more while one is
+	"joint/poacher_frost.chill_s": 2.0,     # Every gang arrives chilled, and one head short
+	"node/bodyline": 0.5,     # Bodyline: With three on you, you take half the damage
+	"node/cap_bleed_out": 1.5,     # Bleed out (capstone): bleed builds half again
+	"node/cap_flattened": 2.0,     # Flattened: A kill with the plain staggers the next gang: they fire at half for two seconds
+	"node/cap_held": 0.1,     # Held: No second of their fire takes more than a tenth of you
+	"node/cap_iron": 0.1,     # Iron: Under half HP, every kill heals a tenth of you
+	"node/cap_jerry": 1.5,     # Jerry-rigged: Something improvised hits half again as hard
+	"node/cap_shatter": 2.0,     # Shatter (capstone): a chilled target takes double from the physical
+	"node/cap_the_lot": 2.0,     # The lot: A pack that comes home full pays double tins
+	"node/frost_freeze": 0.5,     # Frozen solid: Chilled gangs fire at 15%; your frost does half damage
+	"node/loud.patrol": 0.6,     # Loud: Gangs come sooner and one head bigger; +30% drops
+	"node/overwatch": 2,     # Chokepoints: Only two of a gang can fire on you at once, not three
+	"node/poison_more.quantity": 0.2,     # Rat's share: Poison does 40% more; loot quantity −20%
+	"node/poison_stacks": 15,     # Builds: Poison stacks to fifteen, not five
+	"node/quiet_feet": 30.0,     # Quiet feet: The next gang comes every 30 seconds, not 20
+	"node/shock_more.armour": 0.8,     # Earthed: Shock does 40% more; armour −20%
+	"node/thick_skinned.armour_per_pct": 10.0,     # Thick-skinned: every 10 armour past 200 is +1% physical
+	"rule/branch_pistol": 2.0,     # The Branch Pistol: Under half HP the secondary fires twice as fast
+	"rule/butchers_steel": 2.0,     # The Butcher's Steel: Bleed does double, and a bleed carries to the next of them
+	"rule/doormans": 0.75,     # The Doorman's Jacket: With three on you, take a quarter less
+	"rule/drivers_log": 2,     # The Lorry Driver's Log: Notes found doubled; insurance is free
+	"rule/grandads": 2.0,     # Grandad's Shotgun: The first of every gang takes triple
+	"rule/gritters_keys": 2.0,     # The Gritter's Keys: A chill holds as long as you fire; chilled, they take double frost
+	"rule/jump_leads": 0.33,     # Jump Leads: A third of your damage as shock; shock on one of them is shock on all of them
+	"rule/ladle.kill_heal": 0.1,     # The Dinner Lady's Ladle: Every kill is a tenth of your HP back; meds do nothing
+	"rule/managers_pen": 2,     # The Manager's Pen: Notes come in twos: every note found is two
+	"rule/rat_mans_overalls": 0.5,     # The Rat Man's Overalls: Poison stacks without end and ticks twice as fast
+	"rule/sergeants_whistle.damage": 1.6,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
+	"rule/substation_key": 0.6,     # The Substation Key: Shock on one of them is shock on all; shocked, they take 60% more
+	"rule/tester": 0.5,     # The Electrician's Tester: Shocked stays shocked until they're down; shock does half
+	"set/army.damage": 1.3,     # The Army's: everything you do does 30% more
+	"set/carpet.bleed_s": 2.0,     # The Carpet Man's: bleeds last twice as long
+	"yard/arc_lamps": 1.1,     # Arc lamps: Fire and shock do a tenth more
+	"yard/arms_dealer": 0.33,     # Arms dealer: The shelf rolls at your deepest site's level
+	"yard/cheap_parts": 0.75,     # Cheap parts: Every job at the Bench costs a quarter less
+	"yard/dead_air": 1.25,     # Dead air: At Night the gangs come a quarter later
+	"yard/dry_store": 0.75,     # Dry store: A move keeps three quarters of the notes and scrap, not half
+	"yard/forecast": 1.2,     # The forecast: A run under rain or fog brings a fifth more tins home
+	"yard/glasses": 60,     # Glasses: The odds shown are read from sixty dry runs, not twenty-four
+	"yard/range_cards": 0.5,     # Range cards: The first shot on every gang does half again
+	"yard/ratter": 1.1,     # Ratter: Poison and bleed do a tenth more
+	"yard/steady_hands": 2.0,     # Steady hands: Re-rolling one affix: twice the chance it goes up a tier
+	"yard/weather_set": 0.5,     # Weather set: Rain and fog bite half as hard
+}
+
+
 ## Sets: whose gear it was. A piece is a fixed base with its own name and a
 ## couple of fixed affixes, rolled like a unique, drawn in the set's own
 ## tint; the bonuses come at two pieces worn and at the full set - stats,

@@ -6500,6 +6500,7 @@ func _loot_roll_checks(main) -> void:
 	main.refresh()
 	print("the loot roll ok: quantity reaches searches, the dog adds quality, quantity is out of the rarity roll")
 	_crates_checks(main)
+	_fx_checks()
 	_gang_pause_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
@@ -7582,6 +7583,45 @@ func _wound_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the Pitch, the Clinic's price and cure, the save, the death")
+
+
+## The effects' numbers in one table (15 Oct, refactor A2): every Data.FX key names something the data has (a tree
+## node's effect, a unique's or a set's rule, a joint, a Yard pick or building, a map node), and the sim reads every
+## key - a figure moved into the table and orphaned, or a table row for a node since cut, says so here.
+func _fx_checks() -> void:
+	var have := {"node": {}, "rule": {}, "set": {}, "joint": {}, "yard": {}, "yard_rank": {}, "atlas": {}}
+	for t in Data.TREES + Data.ELEMENT_TREES:
+		for nd in t["nodes"]:
+			if nd.has("effect"):
+				have["node"][str(nd["effect"])] = true
+	for u in Data.UNIQUES:
+		if u.has("rule"):
+			have["rule"][str(u["rule"])] = true
+	for st in Data.SETS:
+		for n in st["bonuses"]:
+			if st["bonuses"][n].has("rule"):
+				have["set"][str(st["bonuses"][n]["rule"])] = true
+	for j in Data.JOINTS:
+		have["joint"][str(j["key"])] = true
+	for b in Data.YARD:
+		have["yard_rank"][str(b["key"])] = true
+		for col in b["picks"]:
+			for pk in col:
+				have["yard"][str(pk["id"])] = true
+	for a in Data.ATLAS:
+		have["atlas"][str(a["key"])] = true
+	var src := FileAccess.get_file_as_string("res://scripts/sim/sim.gd")
+	var bad: Array = []
+	for k in Data.FX:
+		var kind: String = str(k).get_slice("/", 0)
+		var id: String = str(k).get_slice("/", 1).get_slice(".", 0)
+		if not have.has(kind) or not have[kind].has(id):
+			bad.append("%s (no %s called %s)" % [k, kind, id])
+		elif not src.contains('Data.FX["%s"]' % k):
+			bad.append("%s (the sim never reads it)" % k)
+	_check(bad.is_empty(), "the effects' table is off: %s" % ", ".join(bad))
+	_check(Data.FX.size() >= 160, "the effects' table has shrunk to %d rows" % Data.FX.size())
+	print("the effects' table ok: %d rows, every one the data's and read by the sim" % Data.FX.size())
 
 
 ## The next gang's clock (14 Oct, Matt: "no search time before the next gang shows up which just compounds"): it runs

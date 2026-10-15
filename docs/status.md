@@ -4629,7 +4629,8 @@ is its own commit: design or mockup where it needs one, the smoke, the reviewer,
 
 **D. The balance pass**
 12. Gates set first. The campaign's length measured against Matt's 14 Oct save (the Bank at 47 min, the Quartermaster
-    at 67, first death at 82, as a fire Drifter's Bank was 47 too) and its target agreed; the search against the gangs
+    at 67, first death at 82, as a fire Drifter's Bank was 47 too) against its target: **twice that, the
+    Quartermaster about 2 h 15 by hand** (Matt, 15 Oct: "aim for 2x campaign as it stands and see how it feels"); the search against the gangs
     (item 5), the gamble's worth (item 15), the loot tables' numbers (item 17), the signals' ladder. Then one pass.
 
 **A1: the fingerprint and dead code (15 Oct).** tests/fingerprint.gd plays four bot builds for three simulated hours
@@ -4639,3 +4640,12 @@ refactor step: the hash must not move. One fix made it possible: a Yard's move r
 load_dict() both randomised); `Sim.fixed_seed` (0 in the game, so unchanged there) gives them fixed ones. Removed, with
 the hash unmoved (b687fd57…, 340 lines): 22 functions nothing called, 12 constants nothing read, and three dead terms -
 `has_node("plates")` and `has_node("headshots")` (no tree has either) and `tree_sum("pack_cells")` (no node gives it).
+
+**A2: the effects' numbers in one table (15 Oct).** `Data.FX`, 167 rows keyed "kind/id[.what]" (node, rule, set,
+joint, yard, yard_rank, atlas), each with the data's own words: 181 figures sim.gd had inline under has_node,
+has_rule, yard_has, has_joint, has_set_rule, atlas_rank and yard_rank now read from it - the ternaries, the per-rank
+steps, and a lone figure under an `if` on one effect. Left inline: neutral values (0, 1), the 999 sentinels, and
+figures inside a condition with more than one number to it (about 20, listed by the review for the pass to judge).
+The fingerprint is unmoved (b687fd57…). The smoke checks every key names something the data has and the sim reads
+every key. One effect, one row: Trapline's, the Flares' and the Poacher's snare's "a head short" each one row for
+the clear and the gangs; Picked over's base is in with its step.
