@@ -110,7 +110,7 @@ var lorry_done := false            # the convoy beaten in this yard (7 Oct); the
 var lorries := 0                   # across every yard: how many times
 var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
 var signals: Array = []            # the Radio's signals held (15 Oct): [{id, site, zone, depth, codes, papers, head, convoy, line}]
-var reach := Data.REACH_START       # the deepest signal beaten, plus one
+var reach := Data.REACH_START       # a level: the highest signal beaten, plus one (D3)
 var signal_seq := 0
 var story_beat := 0                 # Kev's story: the beats beaten (0-3); past the third the depot comes round again
 var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
@@ -2874,7 +2874,7 @@ func word_tier_cap(d: int) -> int:
 func max_words(i: int) -> int:
 	var n := 0
 	for row in Data.WORD_MAX_DEPTH:
-		if int(depth[i]) >= int(row[0]):
+		if site_depth(i) >= int(row[0]):
 			n = int(row[1])
 	if not _sig.is_empty() and int(_sig["site"]) == i:
 		n = maxi(n, _sig["codes"].size())     # a signal's papers' codes, every one (15 Oct)
@@ -2976,7 +2976,7 @@ func _roll_word(i: int, exclude: Array) -> Dictionary:
 ## A rolled word's tier: the depth's top half the time (three in four with the map's Strong signal), a lower one
 ## otherwise; Strong signal's second rank lets the top go one past the depth's.
 func _roll_tier(i: int) -> int:
-	var cap := word_tier_cap(int(depth[i]))
+	var cap := word_tier_cap(site_depth(i))
 	if atlas_rank("strong_signal") >= 2:
 		cap = mini(3, cap + 1)
 	if cap <= 1:
@@ -3004,7 +3004,7 @@ func _roll_words(i: int, keep: Array, n: int) -> Array:
 ## The tier a word works at on its site now: what it rolled, held to what the depth allows (a site run shallower
 ## than it was juiced at works shallower); Twist's tier IV works only where III does.
 func word_tier_now(i: int, t: int) -> int:
-	var cap := word_tier_cap(int(depth[i]))
+	var cap := word_tier_cap(site_depth(i))
 	if atlas_rank("strong_signal") >= 2:
 		cap = mini(3, cap + 1)
 	if t >= 4 and cap >= 3:
@@ -3027,7 +3027,7 @@ func active_words(i: int) -> Array:
 	for k in range(standing.size()):
 		var sw: String = standing[k]
 		if sw != "" and standing_open(k) and knows_word(sw) and not (sw in names):
-			out.append([sw, maxi(1, word_tier_cap(int(depth[i])))])
+			out.append([sw, maxi(1, word_tier_cap(site_depth(i)))])
 			names.append(sw)
 	return out
 
@@ -3364,7 +3364,7 @@ func _twist(i: int) -> void:
 				if w["learn"] == "deep" and not (w["name"] in word_names(i)):
 					deep.append(w["name"])
 			if not deep.is_empty():
-				var wd := {"w": deep[rng.randi_range(0, deep.size() - 1)], "t": maxi(1, word_tier_cap(int(depth[i])))}
+				var wd := {"w": deep[rng.randi_range(0, deep.size() - 1)], "t": maxi(1, word_tier_cap(site_depth(i)))}
 				if words[i].size() >= max_words(i):
 					words[i][rng.randi_range(0, words[i].size() - 1)] = wd
 				else:
@@ -3373,7 +3373,7 @@ func _twist(i: int) -> void:
 		2:
 			log_event("Twisted: nothing changes")
 		3:
-			var cap := maxi(1, word_tier_cap(int(depth[i])))
+			var cap := maxi(1, word_tier_cap(site_depth(i)))
 			var n: int = words[i].size()
 			words[i] = _roll_words(i, [], n)
 			for wd in words[i]:
@@ -4108,6 +4108,7 @@ func effective(i: int) -> Dictionary:
 	var base: Dictionary = Data.TIERS[i]
 	var d: int = depth[i]
 	var lv: int = lv_at(i, d)
+	d = site_depth(i)                        # a signal's: its level's on the hardest site, whatever site it's on (D3, the review)
 	var e := {
 		"name": base["name"], "tier": i, "depth": d, "level": lv, "pool": int(base["pool"]),
 		"hp": base["hp"] * pow(1.0 + Data.DEPTH_HOSTILE, d - 1),
@@ -4363,7 +4364,7 @@ func story_held() -> Array:
 	return out
 
 
-## The depths three papers would roll: the reach's band, one deeper for a rare paper.
+## The levels three papers would roll: the reach's band, one higher for a rare paper (D3: levels, not depths).
 func signal_band(ids: Array) -> Array:
 	var lo: int = reach + int(Data.SIGNAL_ROLL[0][0])
 	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) + (int(Data.FX["atlas/lorrys_route"]) if atlas_rank("lorrys_route") > 0 else 0)
@@ -4411,13 +4412,14 @@ func decrypt(ids: Array) -> Dictionary:
 	if step == int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) and atlas_rank("lorrys_route") > 0 and rng.randf() < 0.5:
 		step += int(Data.FX["atlas/lorrys_route"])     # The lorry's route: the top of the band a depth further, half the time it's reached
 	signal_seq += 1
-	var sig := {"id": signal_seq, "site": rng.randi_range(0, Data.TIERS.size() - 1), "zone": rng.randi_range(0, Data.ZONES.size() - 1),
-		"depth": maxi(Data.REACH_START, reach + step + up), "codes": codes, "papers": papers,
+	var site: int = rng.randi_range(0, Data.TIERS.size() - 1)
+	var sig := {"id": signal_seq, "site": site, "zone": rng.randi_range(0, Data.ZONES.size() - 1),
+		"depth": depth_for_level(site, maxi(Data.REACH_START, reach + step + up)), "codes": codes, "papers": papers,
 		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS, "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS,
 		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1)}
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "codes": codes.duplicate(), "papers": papers.duplicate()})
-	log_event(Words.SIGNAL_MADE % [Words.mid(str(Data.TIERS[int(sig["site"])]["name"])), int(sig["depth"])])
+	log_event(Words.SIGNAL_MADE % [Words.mid(str(Data.TIERS[int(sig["site"])]["name"])), signal_level(sig)])
 	return sig
 
 
@@ -4426,7 +4428,7 @@ func _story_signal(beat: int, papers: Array) -> Dictionary:
 	var b: Dictionary = Data.STORY_BEATS[beat]
 	signal_seq += 1
 	var convoy: bool = bool(b.get("convoy", false))
-	var sig := {"id": signal_seq, "site": int(b["site"]), "zone": int(b["zone"]), "depth": maxi(Data.REACH_START, reach), "codes": [], "papers": papers,
+	var sig := {"id": signal_seq, "site": int(b["site"]), "zone": int(b["zone"]), "depth": depth_for_level(int(b["site"]), maxi(Data.REACH_START, reach)), "codes": [], "papers": papers,
 		"head": not convoy, "convoy": false, "convoy_fight": convoy, "line": 0, "story": beat}
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "story": beat, "papers": papers.duplicate()})
@@ -4449,8 +4451,32 @@ func signal_words(sg: Dictionary) -> Array:
 		return out
 	var codes: Array = []
 	for c in sg["codes"]:
-		codes.append({"w": str(c), "t": maxi(1, word_tier_cap(int(sg["depth"])))})
+		codes.append({"w": str(c), "t": maxi(1, word_tier_cap(tier_depth(signal_level(sg))))})
 	return codes
+
+
+## The depth site `i` is fought, juiced and counted at: its own, or with a signal on it the depth its level is on the
+## hardest site (D3, the review: a level's fight, its words, its loot and its clears the same on every site).
+func site_depth(i: int) -> int:
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		return tier_depth(lv_at(i, int(depth[i])))
+	return int(depth[i])
+
+
+## A signal's level: its site's at its depth (D3: what the reach counts).
+func signal_level(sg: Dictionary) -> int:
+	return lv_at(int(sg["site"]), int(sg["depth"]))
+
+
+## The depth that puts site `i` at level `lv`; never under 2 (depth 1 is the campaign's).
+static func depth_for_level(i: int, lv: int) -> int:
+	return maxi(2, lv - (i - Data.OUTSKIRTS_SITES))
+
+
+## A level's codes' tier, read as the hardest site's depth at it (the Barracks: the tiers' depths as they always were
+## on the campaign's last site), so a signal's codes are its level's whatever the site.
+static func tier_depth(lv: int) -> int:
+	return maxi(1, lv - (Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES))
 
 
 ## The Radio's crafts on a held signal (15 Oct, signals_radio.png): Tune in, Retune and Twist, as a site's were - laid
@@ -4627,9 +4653,9 @@ func deploy_signal(k: int) -> bool:
 func _signal_done(m: Dictionary, died := false) -> void:
 	if not m.has("signal") or _sig.is_empty():
 		return
-	var d: int = int(_sig["depth"])
+	var d: int = signal_level(_sig)
 	var won: bool = bool(m["cleared"]) and not died and not m.get("ghost_pending", false) and not bool(m.get("timed_out", false)) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
-	chron("signal_done", {"id": int(_sig["id"]), "depth": d, "won": won})
+	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
 	if won and d >= reach:
 		reach = d + 1
 		atlas_points += 1

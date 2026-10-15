@@ -47,7 +47,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)

@@ -4866,3 +4866,11 @@ would. Read (summary_d2.md): reach 7-25 (was 3-17), 50-102 signals made; papers 
 depth 20 is level 17 on the Allotments and 28 on the Barracks. The bot climbs reach on the soft sites; Kev's beats
 sit on the Services and the Barracks at the reach, levels above anything it can win (the Services at depth 12 reads
 0% at level 50 where the Allotments at depth 20 reads 100%). For Matt.
+
+**D3: reach is a level (15 Oct; Matt chose it).** A signal rolls a level round the reach (REACH_START 10: the campaign
+tops at 9) and lands at the depth that puts its site at that level (`depth_for_level`, never under 2); with it laid on,
+the site is fought, juiced, looted and counted at the depth that level is on the hardest site (`site_depth`,
+`tier_depth`: the Barracks' depth at that level), so a level is the same fight on every site - Kev's beats included.
+The reach rises past a win at or over it (`signal_level`). The Radio speaks in levels ("Level 14", "A signal at level
+12-16", a card's "Level 14 (depth 6) · 2 over your reach"); the bot runs the highest level that reads PUSH.
+SAVE_VERSION 3 (the rule: old saves shown incompatible).

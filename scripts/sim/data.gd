@@ -2227,11 +2227,14 @@ const MAX_LEVEL := 50
 const PAPER_RARITY_MAX := 2
 const PAPER_DEEPER_AT := 2
 ## Signals (15 Oct, endgame_radio.md §1-4): three papers decrypt at the Radio into one mission - a campaign site at
-## random, a crew from any zone, a depth rolled round your reach, each paper's code. Held a few at a time, seen
-## before they're run, gone once run (a lost run loses it). Your reach: the deepest signal beaten, plus one.
+## random, a crew from any zone, a level rolled round your reach, each paper's code. Held a few at a time, seen
+## before they're run, gone once run (a lost run loses it). Your reach: the highest level of a signal beaten, plus one.
+## D3 (15 Oct, Matt: "reach is a level"): a site's level is its place past the Outskirts plus its depth, so a depth was
+## no difficulty (depth 20 level 17 on the Allotments, 28 on the Barracks); a signal now lands at the depth that puts
+## its site at the rolled level, every site alike, Kev's included.
 const SIGNAL_PAPERS := 3
 const SIGNALS_HELD := 3
-const REACH_START := 2                       # depth 1 is the campaign's; the first signal's at 2
+const REACH_START := 10                      # a level: the campaign tops at 9 (the Barracks at depth 1); the first signal's at 10
 ## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
 ## under the reach, so there's always one to win for the gear (the baseline: every build stalled with three it couldn't
 ## run and the campaign's kit); under the reach a win pays its drops and its story paper, not reach.

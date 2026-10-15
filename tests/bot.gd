@@ -278,7 +278,7 @@ func _make_signals(sim) -> void:
 				wo = o
 				worst = k
 		if worst >= 0:
-			bought.append([sim.elapsed, "binned a signal: depth %d at %.0f%%" % [int(sim.signal_at(worst)["depth"]), wo * 100.0]])
+			bought.append([sim.elapsed, "binned a signal: level %d at %.0f%%" % [sim.signal_level(sim.signal_at(worst)), wo * 100.0]])
 			sim.bin_signal(worst)
 	var guard := 0
 	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
@@ -297,7 +297,7 @@ func _make_signals(sim) -> void:
 			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
 		if sim.decrypt(ids).is_empty():
 			break
-		bought.append([sim.elapsed, "a signal from three papers: depth %d" % int(sim.signals.back()["depth"])])
+		bought.append([sim.elapsed, "a signal from three papers: level %d" % sim.signal_level(sim.signals.back())])
 
 
 ## The held signal to run: the deepest that reads PUSH (Kev's at a head's odds, FIRST); -1 for none - the campaign's
@@ -308,7 +308,7 @@ func _pick_signal(sim) -> int:
 		var sg: Dictionary = sim.signal_at(k)
 		var o: float = float(sim.signal_odds(k)[0])
 		var need: float = FIRST if int(sg.get("story", -1)) >= 0 else PUSH
-		if o >= need and (best < 0 or int(sg["depth"]) > int(sim.signal_at(best)["depth"])):
+		if o >= need and (best < 0 or sim.signal_level(sg) > sim.signal_level(sim.signal_at(best))):
 			best = k
 	return best
 

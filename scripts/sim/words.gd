@@ -140,9 +140,9 @@ const STORY := [
 	{"found": "%s: the depot's. One more step (%d of 3).", "made": "Kev: \"That's the depot. The convoy's due. Stop it and we see what they've been moving all along.\"",
 		"won": "Kev: \"So that's the load. All of it, all this time. Keep the radio on. There'll be more of them.\""},
 ]
-const SIGNAL_MADE := "A signal: a fix on %s, depth %d"
+const SIGNAL_MADE := "A signal: a fix on %s, level %d"
 const SIGNAL_BINNED := "The signal on %s, binned"
-const SIGNAL_REACH := "A signal beaten at depth %d: your reach is %d"
+const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
 const SIGNAL_LOST := "The signal's gone with the run"
 const RADIO_READ := "The Radio reads your papers: %d codes on them"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)

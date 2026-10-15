@@ -7860,7 +7860,7 @@ func _signal_checks(main) -> void:
 	_check(sim.decrypt_block(ids.slice(0, 2)) != "" and sim.decrypt_block(ids) == "", "the decoder's block: '%s' with two, '%s' with three" % [sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids)])
 	var band: Array = sim.signal_band(ids)
 	var sg: Dictionary = sim.decrypt(ids)
-	_check(not sg.is_empty() and sim.signals.size() == 1 and int(sg["depth"]) >= int(band[0]) and int(sg["depth"]) <= int(band[1]) and sg["codes"].size() == 3 and sim.signal_papers().size() == 3,
+	_check(not sg.is_empty() and sim.signals.size() == 1 and ((sim.signal_level(sg) >= int(band[0]) and sim.signal_level(sg) <= int(band[1])) or int(sg["depth"]) == 2) and sg["codes"].size() == 3 and sim.signal_papers().size() == 3,
 		"a signal made wrong: %s (band %s), %d papers left" % [str(sg), str(band), sim.signal_papers().size()])
 	# a rare paper: one deeper
 	var rare_ids: Array = sim.signal_papers().map(func(x): return int(x["id"]))
@@ -7870,7 +7870,7 @@ func _signal_checks(main) -> void:
 	var i: int = int(sg["site"])
 	var d0: int = int(sim.depth[i])
 	var e: Dictionary = sim.signal_read(0)
-	_check(int(e["depth"]) == int(sg["depth"]) and int(sim.depth[i]) == d0 and sim._sig.is_empty(), "a signal's read left its site at depth %d (was %d), %s" % [int(sim.depth[i]), d0, str(e.get("depth", -1))])
+	_check(int(e["level"]) == sim.signal_level(sg) and int(e["depth"]) == sim.tier_depth(sim.signal_level(sg)) and int(sim.depth[i]) == d0 and sim._sig.is_empty(), "a signal's read left its site at depth %d (was %d), %s" % [int(sim.depth[i]), d0, str(e.get("depth", -1))])
 	# its odds: read a few runs at a time to settled, apart from the site's own, which stay settled (the review)
 	var budget_was: int = sim.odds_budget
 	sim.odds_budget = 0
@@ -7893,7 +7893,7 @@ func _signal_checks(main) -> void:
 	rd._toggle_paper(1)
 	rd._toggle_paper(2)
 	main.refresh()
-	_check(rd.chosen.size() == 3 and not rd._decrypt.disabled and rd._make.text.begins_with("A signal at depth"), "three papers picked don't arm the decoder: %s, '%s'" % [str(rd.chosen), rd._make.text])
+	_check(rd.chosen.size() == 3 and not rd._decrypt.disabled and rd._make.text.begins_with("A signal at level"), "three papers picked don't arm the decoder: %s, '%s'" % [str(rd.chosen), rd._make.text])
 	_check_fit(main, "the Radio's decoder, three in")
 	rd._on_decrypt()
 	main.refresh()
@@ -7915,6 +7915,7 @@ func _signal_checks(main) -> void:
 	var sg0: Dictionary = sim.signals[0]
 	var si: int = int(sg0["site"])
 	var sd: int = int(sg0["depth"])
+	var r_won: int = sim.reach
 	var pts: int = sim.atlas_points
 	_check(sim.deploy_signal(0) and sim.on_mission() and sim.mission.has("signal") and int(sim.depth[si]) == sd and sim.signals.size() == Data.SIGNALS_HELD - 1, "a signal didn't set off: depth %d of %d" % [int(sim.depth[si]), sd])
 	sim.mission["remaining"] = 0
@@ -7922,7 +7923,8 @@ func _signal_checks(main) -> void:
 		sim.mission["boss"]["alive"] = false
 	sim._clear(sim.mission, sim.mission["t"])
 	sim.extract_now()
-	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sd < Data.REACH_START or sim.reach == maxi(Data.REACH_START, sd + 1)) and sim.atlas_points >= pts, "a signal won: reach %d after depth %d, site at %d, points %d from %d" % [sim.reach, sd, int(sim.depth[si]), sim.atlas_points, pts])
+	var sl: int = sim.lv_at(si, sd)
+	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sl < r_won or sim.reach == sl + 1) and sim.atlas_points >= pts, "a signal won: reach %d after level %d (depth %d), site at %d, points %d from %d" % [sim.reach, sl, sd, int(sim.depth[si]), sim.atlas_points, pts])
 	# run one and lose it: the reach stays, the signal's gone
 	var r0: int = sim.reach
 	_check(sim.deploy_signal(0), "the second signal didn't set off")
@@ -8211,7 +8213,7 @@ func _story_checks(main) -> void:
 	_check_fit(main, "the Radio with Kev's papers")
 	var sg: Dictionary = sim.decrypt(ids)
 	var b0: Dictionary = Data.STORY_BEATS[0]
-	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and int(sg["depth"]) == sim.reach, "the first beat's signal: %s" % str(sg))
+	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and sim.signal_level(sg) == maxi(sim.reach, sim.lv_at(int(sg["site"]), 2)), "the first beat's signal: %s" % str(sg))
 	var e: Dictionary = sim.signal_read(0)
 	_check(e.has("boss") and e["boss"].get("pinnacle", false), "the first beat's signal has no head at full strength: %s" % str(e.get("boss", {})))
 	main._radio._shown = ""
