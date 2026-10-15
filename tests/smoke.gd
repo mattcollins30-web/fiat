@@ -282,7 +282,7 @@ func _init() -> void:
 	main.show_room(main.ARMOURY)
 	var gear_k := -1
 	for k in range(sim.stash.size()):
-		if not Items.is_medical(sim.stash[k]) and not Items.is_attachment(sim.stash[k]):
+		if str(sim.stash[k]["slot"]) in Data.SLOTS and sim.can_wear(sim.stash[k]):     # gear it can put on (a paper was picked once papers stayed; 15 Oct)
 			gear_k = k
 			break
 	if gear_k >= 0:
@@ -6595,6 +6595,7 @@ func _loot_roll_checks(main) -> void:
 	_story_checks(main)
 	_keepsake_checks(main)
 	_vans_checks(main.sim)
+	_full_pack_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7936,6 +7937,70 @@ func _signal_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
+
+
+## A full pack (15 Oct, parked item 10, agreed with Matt): by hand a drop goes to the floor and the pack's unchanged; on
+## an auto-run (and "Fill up, then go") a find that isn't an upgrade never swaps, an upgrade in the pack never leaves,
+## an upgrade find swaps the cheapest thing its size that isn't one.
+func _full_pack_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var by_hand_was: bool = sim.loot_by_hand
+	sim.auto_tier = -1
+	sim.away_on = false
+	sim.equipped["Armour"] = sim._plain("Armour", Data.BASES["Armour"].back()["name"])
+	sim.equipped["Helmet"] = null
+	sim._dry_memo.clear()
+	var junk: Dictionary = sim._plain("Armour", "Stab vest")       # worse than what's worn
+	var up: Dictionary = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])     # nothing worn there: an upgrade
+	_check(not sim.is_upgrade(junk) and sim.is_upgrade(up), "the fixture: junk an upgrade %s, the helmet %s" % [str(sim.is_upgrade(junk)), str(sim.is_upgrade(up))])
+	for hand in [true, false]:
+		sim.loot_by_hand = hand
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var m: Dictionary = sim.mission
+		m["leave_full"] = not hand
+		if hand:
+			m["crates"] = []                  # the search on: the floor's on screen
+		m["found"] = []
+		var guard := 0
+		while sim.pack_used(m) + Items.size(junk) <= sim.capacity() and guard < 50:
+			var j: Dictionary = junk.duplicate(true)
+			j["id"] = 900000 + guard
+			m["found"].append(j)
+			guard += 1
+		while sim.pack_used(m) < sim.capacity() and guard < 80:
+			var med: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+			med["id"] = 950000 + guard
+			m["found"].append(med)             # topped up to the last cell: full is full
+			guard += 1
+		var fill: Array = m["found"].map(func(x): return int(x["id"]))
+		if hand:
+			var f0: int = m.get("floor", []).size()
+			var drop: Dictionary = up.duplicate(true)
+			drop["id"] = 910000
+			sim._place_find(m, drop)
+			_check(m["found"].map(func(x): return int(x["id"])) == fill and m.get("floor", []).size() == f0 + 1, "by hand a full pack's drop didn't go to the floor: by hand %s, floor %d from %d" % [str(sim.by_hand(m)), m.get("floor", []).size(), f0])
+		else:
+			var j2: Dictionary = junk.duplicate(true)
+			j2["id"] = 920000
+			var left0: int = int(m["left"])
+			sim._place_find(m, j2)
+			_check(m["found"].map(func(x): return int(x["id"])) == fill and int(m["left"]) == left0 + 1, "on auto a non-upgrade swapped into a full pack")
+			var u1: Dictionary = up.duplicate(true)
+			u1["id"] = 930000
+			sim._place_find(m, u1)
+			_check(m["found"].any(func(x): return int(x["id"]) == 930000), "on auto an upgrade didn't swap into a full pack")
+			var u2: Dictionary = up.duplicate(true)
+			u2["id"] = 940000
+			var n_junk: int = m["found"].filter(func(x): return not sim.is_upgrade(x)).size()
+			sim._place_find(m, u2)
+			_check(m["found"].any(func(x): return int(x["id"]) == 930000) and (n_junk == 0 or m["found"].any(func(x): return int(x["id"]) == 940000)), "on auto an upgrade in the pack was swapped out, or the second didn't take the junk's place")
+		sim.extract_now()
+	sim.loot_by_hand = by_hand_was
+	sim.load_dict(saved)
+	print("a full pack ok: by hand to the floor; on auto only an upgrade swaps in, and never out")
 
 
 ## The Van's Spare cut (15 Oct, parked item 12, Matt's pick): the secondary at two thirds behind the primary, not all of

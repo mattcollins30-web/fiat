@@ -4765,3 +4765,10 @@ levels 1-4, rolled at the depth he's fought at as the other heads' are. Test art
 **B8.2: the Van's Spare cut (15 Oct; parked item 12, Matt's pick).** Its rule fires the secondary at two thirds behind
 the primary, not all of it (the usual third; Double tap or a dry primary still all of it, so the node counts again
 with it worn); its +18% damage is gone; +25% on the first lot and 4 tins a kill stay. sim.secondary_share holds the rule.
+
+**B8.3: a full pack's swap (15 Oct; parked item 10, as agreed).** By hand, once the search is on, a find into a full
+pack goes to the floor - nothing is swapped without the player; in the fight before the clear (the floor isn't on
+screen yet) the auto-run's rule holds. On an auto-run, "Fill up, then go", away and for the bot: only an upgrade on
+what's worn, or a paper, swaps in, for the cheapest thing at least its size that isn't one (or a head's thing);
+anything else is passed over; an upgrade in the pack never leaves. The pack's notes say so. Expect the bot's and
+away-time's takings to dip a little against earlier reads (fewer valuable swaps). Fingerprint 55119646.

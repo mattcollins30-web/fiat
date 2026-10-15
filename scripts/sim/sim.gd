@@ -5927,8 +5927,11 @@ func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void
 				_place_find(m, _plain(Data.AMMO, str(box["name"])))
 
 
-## A find into the pack: joined to a stack it fits, a cell of its own if there's room, else in place of the cheapest
-## thing its size if it's worth more, else passed over.
+## A find into the pack: joined to a stack it fits, a cell of its own if there's room. Full (15 Oct, Matt: a 6-pouch rig,
+## an upgrade on his bum bag, swapped out for an epic school bag worse than the one he wore): by hand, to the floor -
+## nothing's swapped without the player (in the fight, before the floor's on screen, the auto-run's rule); on an
+## auto-run or "Fill up, then go", only an upgrade on what's worn (or a
+## paper, the endgame's keys) swaps in, for the cheapest thing at least its size that isn't one; else passed over.
 func _place_find(m: Dictionary, it: Dictionary) -> void:
 	if Items.stacks(it):
 		for f in m["found"]:
@@ -5942,18 +5945,29 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 		m["found"].append(it)
 		_read(it)
 		return
-	# the pack is full: the find takes the place of the cheapest thing at
-	# least its size, if it's worth more; anything else is passed over
+	if by_hand(m) and m.has("crates"):
+		m["floor"] = m.get("floor", [])
+		m["floor"].append(it)                 # the player's to take, or leave - once the search is on and the floor's on screen (the review)
+		return
+	if not _pack_keeps(it):
+		m["left"] += 1
+		return
 	var cheapest := -1
 	for k in range(m["found"].size()):
-		if Items.size(m["found"][k]) >= Items.size(it) and (cheapest < 0 or m["found"][k]["value"] < m["found"][cheapest]["value"]):
+		var f: Dictionary = m["found"][k]
+		if Items.size(f) >= Items.size(it) and not _pack_keeps(f) and Items.opens(f) == "" and (cheapest < 0 or f["value"] < m["found"][cheapest]["value"]):
 			cheapest = k
-	if cheapest >= 0 and it["value"] > m["found"][cheapest]["value"]:
+	if cheapest >= 0:
 		m["found"][cheapest] = it
 		m["swapped"] = m.get("swapped", 0) + 1
 		_read(it)
 	else:
 		m["left"] += 1
+
+
+## What a full pack holds on to on an auto-run (15 Oct): an upgrade on what's worn, a paper, the deeds.
+func _pack_keeps(it: Dictionary) -> bool:
+	return Items.is_paper(it) or is_upgrade(it)
 
 
 ## A find's slot, from the site's own weights (a kill carries what was worn;
