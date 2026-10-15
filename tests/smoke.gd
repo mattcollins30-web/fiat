@@ -9601,10 +9601,9 @@ func _yard_pick_checks(main) -> void:
 	_check(sim.word_craft_cost(3, "retune") == maxi(1, int(ceil(18.0 * 0.75))) and rc0 == 18, "the Scanner did not take a quarter off: %d from %d" % [sim.word_craft_cost(3, "retune"), rc0])
 	on.call("radio", 2, "b")
 	_check(sim.word_craft(3, "tune") and sim.words[3].size() == 1, "Tune in with Two channels did not add one word: %s" % str(sim.words[3]))
-	var cd0: int = sim.convoy_depth()
 	var mw0: int = sim.max_words(3)
 	on.call("radio", 3, "a")
-	_check(sim.convoy_depth() == cd0 - 2, "Lorry watch did not bring the convoy up two")
+	_check(sim.yard_has("lorry_watch") and float(Data.FX["yard/lorry_watch"]) == 2.0, "Lorry watch isn't on, or isn't twice Kev's papers")     # 15 Oct
 	on.call("radio", 3, "b")
 	_check(sim.max_words(3) == mw0 + 1 and mw0 == 4, "Long range did not add a word: %d from %d" % [sim.max_words(3), mw0])
 	sim.words[3] = []
@@ -10173,9 +10172,9 @@ func _map_nodes_checks(main) -> void:
 	sim.extract_now()
 	_check(sim.atlas_points == pts + 1, "Head start did not pay a point for a head at full strength")
 	_check(int(m.get("notes", 0)) >= Data.NOTES_BOSS * 3 * 2, "Bounties did not double the head's notes: %d" % int(m.get("notes", 0)))
-	_check(sim.convoy_depth() == Data.CONVOY_DEPTH, "the lorry moved before its route")
+	var hi0: int = int(sim.signal_band([])[1])
 	take.call(["lorrys_route"])
-	_check(sim.convoy_depth() == Data.CONVOY_DEPTH - 2, "The lorry's route did not bring the lorry two sooner")
+	_check(int(sim.signal_band([])[1]) == hi0 + 1, "The lorry's route did not widen the decoder's band at the top: %d from %d" % [int(sim.signal_band([])[1]), hi0])     # 15 Oct
 	# the air (9 Oct): the juicing lane, each read through the sim on the streets at depth 2
 	sim.yard_picks.erase("radio")              # the Radio's Scanner and band read alone elsewhere
 	sim.yard_ranks = {}

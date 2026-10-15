@@ -482,8 +482,8 @@ const HEARD := {
 ## The map at thirty-six (7 Oct).
 const MAP := {
 	"head_start": "%s at full strength: the Dial gains a point.",
-	"empty": "Pick a node above. The lorry runs the Services at depth %d; the crews' heads come at full strength at depth %d, %d and %d of their own sites.",
-	"empty_short": "The lorry runs the Services at depth %d.",
+	"empty": "Pick a node above. The points come from your reach: a signal beaten past it is a point.",
+	"empty_short": "A point a new reach.",
 	"needs": "Needs %s first",
 	"column_count": "%d of %d ranks",
 }

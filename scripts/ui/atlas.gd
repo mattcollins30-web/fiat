@@ -246,7 +246,7 @@ func _show_panel() -> void:
 		_title.text = "The Dial"
 		_words.position.x = PAD
 		_words.size.x = W - 2 * PAD
-		UI.fit(_words, [Words.MAP["empty"] % [sim.convoy_depth(), sim.pinnacle_depth(2), sim.pinnacle_depth(5), sim.pinnacle_depth(8)], Words.MAP["empty_short"] % sim.convoy_depth(), "Pick a node above."])
+		UI.fit(_words, [Words.MAP["empty"], Words.MAP["empty_short"], "Pick a node above."])
 	else:
 		var rank: int = sim.atlas_rank(selected)
 		var figs: Array = a["figures"]
@@ -279,7 +279,7 @@ func _show_panel() -> void:
 		_words.size.x = room
 		var a2: Dictionary = _passive(selected)
 		if a2.is_empty():
-			UI.fit(_words, [Words.MAP["empty_short"] % sim.convoy_depth(), "Pick a node above."])
+			UI.fit(_words, [Words.MAP["empty_short"], "Pick a node above."])
 		else:
 			UI.fit(_words, [str(a2["sentence"]), str(a2["words"]), ""])
 

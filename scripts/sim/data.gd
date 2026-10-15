@@ -151,7 +151,7 @@ const YARD := [
 		 {"id": "dead_air", "name": "Dead air", "short": "Night gangs later", "words": "At Night the gangs come a quarter later"}],
 		[{"id": "scanner", "name": "Scanner", "short": "Crafts −25%", "words": "Every craft at the Radio a quarter cheaper"},
 		 {"id": "two_channels", "name": "Two channels", "short": "Rolls twice", "words": "Tune in and Retune roll twice and keep the better"}],
-		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Convoy 2 shallower", "words": "The convoy comes two depths shallower"},
+		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Kev's papers ×2", "words": "Kev's story papers come home twice as often"},     # 15 Oct, Matt: was the old convoy two shallower
 		 {"id": "long_range", "name": "Long range", "short": "A code more", "words": "A site carries one more code"}],
 		[{"id": "jammer", "name": "Jammer", "short": "Codes bite half", "words": "Every code's bite - their health, their fire, more on you - is halved"},
 		 {"id": "military_band", "name": "Military band", "short": "Rewards ×1.5", "words": "Every code's reward - tins, XP, drops, quality - half again"}]],
@@ -901,7 +901,7 @@ const FX := {
 	"yard/lock_up": 60,     # Lock-up: Sixty more cells in the stash
 	"yard/long_range": 1,     # Long range: A site carries one more code
 	"yard/lookout_post": 0.5,     # Lookout post: The first gang takes half as long again to arrive, on top
-	"yard/lorry_watch": 2,     # Lorry watch: The convoy comes two depths shallower
+	"yard/lorry_watch": 2.0,     # Lorry watch: Kev's story papers come home twice as often
 	"yard/med_lab": 1.25,     # Med lab: Every med heals a quarter more
 	"yard/military_band": 0.5,     # Military band: Every code's reward - tins, XP, drops, quality - half again
 	"yard/night_set": 0.5,     # Night set: Night's slower feet halved
@@ -950,7 +950,7 @@ const FX := {
 	"atlas/heavy_crews.cash": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/heavy_crews.contact": 1,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/heavy_crews.xp": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
-	"atlas/lorrys_route": 2,     # The lorry's route: The lorry runs the Services from depth 10, not 12
+	"atlas/lorrys_route": 1,     # The lorry's route: the decoder's band a depth wider at the top
 	"atlas/open_ground": 1,     # Open ground: One fewer on you at a time
 	"atlas/picked_over.base": 0.33,     # a site's own things: the share of finds before the map's Picked over
 	"atlas/picked_over": 0.1667,     # Picked over: A site's own things turn up more: a third of finds, then half, then two-thirds
@@ -1807,8 +1807,8 @@ const ATLAS := [
 		"sum": "Head's price", "figures": ["every run", "once a depth"], "sentence": "Pay a head's price at a depth once; he comes out for nothing at that depth after."},
 	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a point on the Dial",
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the Dial gains a point."},
-	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "The lorry runs the Services from depth 10, not 12",
-		"sum": "The lorry", "figures": ["from depth 12", "from depth 10"], "sentence": "You know the lorry's route: the convoy runs the Services two depths sooner."},
+	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "A signal can roll three over your reach, not two",
+		"sum": "The decoder", "figures": ["to reach +2", "to reach +3"], "sentence": "You know the lorry's route: a signal can roll a depth further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
 	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
 	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Every craft at the Radio 15% cheaper a rank",
 		"sum": "Crafts", "figures": ["full price", "15% less", "30% less"], "sentence": "Every craft at the Radio comes cheaper."},

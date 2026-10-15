@@ -3986,9 +3986,9 @@ func pinnacle_depth(i: int) -> int:
 	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - Data.FX["atlas/full_strength"] * atlas_rank("full_strength")
 
 
-## The depth the lorry runs the Services from: CONVOY_DEPTH, a depth deeper a move, two sooner with The lorry's route.
+## The depth the old Services' convoy ran from (the depot's signal now, 15 Oct): CONVOY_DEPTH, a depth deeper a move.
 func convoy_depth() -> int:
-	return Data.CONVOY_DEPTH + yard_moves - Data.FX["atlas/lorrys_route"] * atlas_rank("lorrys_route") - (Data.FX["yard/lorry_watch"] if yard_has("lorry_watch") else 0)
+	return Data.CONVOY_DEPTH + yard_moves     # the old Services' convoy (the depot's signal now, 15 Oct); its two shortcuts went to the signals
 
 
 ## From pinnacle_depth(i) a crew's head comes at full strength.
@@ -4325,7 +4325,7 @@ func story_held() -> Array:
 ## The depths three papers would roll: the reach's band, one deeper for a rare paper.
 func signal_band(ids: Array) -> Array:
 	var lo: int = reach + int(Data.SIGNAL_ROLL[0][0])
-	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0])
+	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) + (int(Data.FX["atlas/lorrys_route"]) if atlas_rank("lorrys_route") > 0 else 0)
 	var up: int = 1 if _papers_rare(ids) else 0
 	return [maxi(Data.REACH_START, lo + up), hi + up]
 
@@ -4367,6 +4367,8 @@ func decrypt(ids: Array) -> Dictionary:
 		step = int(row[0])
 		if x <= 0.0:
 			break
+	if step == int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) and atlas_rank("lorrys_route") > 0 and rng.randf() < 0.5:
+		step += int(Data.FX["atlas/lorrys_route"])     # The lorry's route: the top of the band a depth further, half the time it's reached
 	signal_seq += 1
 	var sig := {"id": signal_seq, "site": rng.randi_range(0, Data.TIERS.size() - 1), "zone": rng.randi_range(0, Data.ZONES.size() - 1),
 		"depth": maxi(Data.REACH_START, reach + step + up), "codes": codes, "papers": papers,
@@ -4598,7 +4600,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		chron("story", {"beat": beat})
 		log_event(Words.STORY[beat]["won"])
 		story_beat = mini(story_beat + 1, Data.STORY_BEATS.size())
-	elif won and rng.randf() < Data.STORY_DROP:
+	elif won and rng.randf() < Data.STORY_DROP * (Data.FX["yard/lorry_watch"] if yard_has("lorry_watch") else 1.0):     # the Radio's Lorry watch
 		_story_find()
 	_sig_off()
 

@@ -4748,3 +4748,8 @@ Yard's Radio pick Lorry watch and the Dial's keystone The lorry's route both bri
 longer exists (the depot's signal replaced it) - they want new effects; the Map's depth-based uniques (a site's own,
 a head's charm at full strength) still drop on signals deep enough at that site. Depth-based balance figures
 (depth_clears, the ladder read) still print; a signal's clear reads as its random site's depth.
+
+**The two lorry perks, given new jobs (15 Oct, Matt: "I'll take your suggestions").** The Yard's Radio pick Lorry
+watch: Kev's story papers come home twice as often. The Dial's keystone The lorry's route: a signal can roll three
+over your reach, not two (the decoder's band a depth wider at the top). The Dial's empty line says where its points
+come from (a new reach), not the convoy's depth.

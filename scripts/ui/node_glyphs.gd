@@ -111,7 +111,7 @@ const PICK_GLYPH := {
 	"stall": "quantity", "haggling": "cash", "shopfront": "quantity", "orders": "pen", "back_room": "gem", "fixer": "pen",
 	"gamblers_table": "dice", "insurance_desk": "armour", "arms_dealer": "dmg", "dealers_cut": "cash",
 	"weather_set": "half", "night_set": "quiet", "forecast": "cash", "dead_air": "clock", "scanner": "wrench", "two_channels": "dice",
-	"lorry_watch": "depth", "long_range": "loud", "jammer": "half", "military_band": "cash",
+	"lorry_watch": "pen", "long_range": "loud", "jammer": "half", "military_band": "cash",
 	"twelve_hours": "clock", "rig_wiring": "pack", "a_day": "clock", "floodlights": "quiet", "battery": "pack", "overtime": "cash",
 	"two_days": "clock", "arc_lamps": "fire", "grid": "clock", "charger": "hp",
 	"spotter": "clock", "glasses": "dice", "lookout_post": "clock", "range_cards": "first", "hold_fire": "pack", "tripwires": "clock",
