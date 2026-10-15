@@ -2271,6 +2271,18 @@ static var _xp_table: Array = []
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
 const XP_SCALE := 2.4
+## D11: past the campaign the scale eases, XP_SCALE at XP_TAPER_FROM to XP_TAPER_END at XP_TAPER_TO and on: the reads had
+## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
+const XP_TAPER_FROM := 22
+const XP_TAPER_TO := 40
+const XP_TAPER_END := 0.4
+
+
+static func xp_scale(l: int) -> float:
+	if l <= XP_TAPER_FROM:
+		return XP_SCALE
+	var f: float = clampf(float(l - XP_TAPER_FROM) / float(XP_TAPER_TO - XP_TAPER_FROM), 0.0, 1.0)
+	return lerpf(XP_SCALE, XP_TAPER_END, f)
 
 
 static func xp_for_level(level: int) -> float:
@@ -2278,7 +2290,7 @@ static func xp_for_level(level: int) -> float:
 		_xp_table.append(0.0)
 	while _xp_table.size() < maxi(level, MAX_LEVEL):        # the curve runs on past the cap: the paragon levels (7 Oct)
 		var l: int = _xp_table.size()
-		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0 * XP_SCALE))
+		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0 * xp_scale(l)))
 	return _xp_table[maxi(level, 1) - 1]
 
 

@@ -4938,3 +4938,10 @@ tenth of the pay.
 **D10: papers twice as common (15 Oct).** PAPER_DROP 0.12 (was 0.06; the 15 Oct note had it the endgame's
 bottleneck). The review's tidies: the Lorry's route's Dial figures and sentence in levels (+1/+2, "a level further");
 the bot's farm read fresh after a Yard move.
+
+**D10's read (summary_d10.md, 8 reds; 22 minutes):** the loot tables green; Kev's story on six (the rest by 10-15 h);
+the signals' gaps down to 1-2 h; retirement never on nine (level 35-50 at 24 h); the Quartermaster 2.7 h median on one
+read a build (two Poachers at 5.8 and 7.6 h pull it - one read's noise).
+
+**D11: the XP curve eases past the campaign (15 Oct).** `Data.xp_scale(l)`: x2.4 to level 22, easing to x0.4 by 40 and
+on: level 30 at about 29k XP (was 32k), 40 at 51k (89k), 50 at 76k (243k). The campaign's levels unchanged.
