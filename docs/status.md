@@ -4598,6 +4598,10 @@ below starts until that save lands; then each is designed with him, one at a tim
     47 min, the Quartermaster at 67, kitted out by the end. Being designed now: docs/design/endgame_radio.md (the
     Radio's missions in place of the depth buttons, and gear gated by level). Sets (data.gd SETS, six, from depth 5
     to 15, 0.4% a find a depth past the first) are one of its hooks.
+19. **For the art pass (Matt, 15 Oct): the fight's guns, down the sight.** Along with the new uniques' art (the
+    Keeper's Twelve-Bore and Wax Jacket, test art from their bases till then), redraw the fight art for the improvised
+    guns, the SMGs and the pistols: "the rifle and shotgun for example read correctly down the sight but the ones I
+    listed are side on and look plain weird". Parked for the art pass.
 
 ## The running order to the next playtest (15 Oct, Matt: "backlog + balance before I play again")
 
@@ -4784,3 +4788,15 @@ wear) and its quality off (commons still out; epic or better ~7%); a loose uniqu
 the drops (Matt: the wrench that saved a dry run). **For Matt:** at depth 1 the Hospital and the Barracks (loot tier 6)
 have no loose unique whose range takes their tier, so the City's trickle comes only from the Services; widening a
 "core" unique's range would fill it.
+
+**B9: gangs harder, not just larger (15 Oct; parked item 5, its second half).** From the second gang on, a gang can be
+the next zone's crew: 20% a gang past the first, to 80% (Data.GANG_NEXT_STEP, GANG_NEXT_MAX). Their heads are 1.6x the
+site's HP and 1.5x its fire (GANG_NEXT_HP, GANG_NEXT_DPS), their fire made of the next zone's types and resists at the
+site's depth, the site's words still on top; the City's own "hard core" past the last. The log says so ("The High
+Street lot, 4 of them, in from the town."). The run holds the site's own aside while they stand and takes it back
+when they're down (`_gang_harder`, `t_home`, through a save). The first gang never; the clear's fight and the odds
+untouched (the odds read to the clear). Fingerprint b5f5db65…. **For the balance pass:** a harder gang pays the
+site's XP, cash, notes and drops (about 2.4x the risk for the same pay, a push to leave), and brings no extra clock
+(the clock counts gangs at the site's HP, so late searching runs out of time sooner); a convoy event arriving while
+one stands fights at their stats (rare: the event usually comes before the clear); the fight art still draws the
+site's own gang.

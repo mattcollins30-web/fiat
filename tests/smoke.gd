@@ -6597,6 +6597,7 @@ func _loot_roll_checks(main) -> void:
 	_vans_checks(main.sim)
 	_full_pack_checks(main.sim)
 	_loot_table_checks(main.sim)
+	_harder_gang_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7967,6 +7968,74 @@ func _loot_table_checks(sim) -> void:
 ## A full pack (15 Oct, parked item 10, agreed with Matt): by hand a drop goes to the floor and the pack's unchanged; on
 ## an auto-run (and "Fill up, then go") a find that isn't an upgrade never swaps, an upgrade in the pack never leaves,
 ## an upgrade find swaps the cheapest thing its size that isn't one.
+## B9 (15 Oct): a later gang can be the next zone's crew - harder a head, hotter, their fire the next zone's - said so
+## as they come, held while they stand, the site's own again when they're down, through a save; the City's own past the last.
+func _harder_gang_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var auto_was: int = sim.auto_tier
+	sim.auto_tier = -1
+	sim.away_on = false
+	_check(sim.gang_next_odds(1) == 0.0 and is_equal_approx(sim.gang_next_odds(2), Data.GANG_NEXT_STEP) and sim.gang_next_odds(50) == Data.GANG_NEXT_MAX, "the odds a gang: first %.2f, second %.2f, fiftieth %.2f" % [sim.gang_next_odds(1), sim.gang_next_odds(2), sim.gang_next_odds(50)])
+	sim.hp = sim.max_hp()
+	sim.deploy(0)                                   # the Allotments: the Outskirts' field lads; next, the Estate's
+	var m: Dictionary = sim.mission
+	var home: Dictionary = m["t"]
+	m["patrols"] = 2
+	sim._gang_harder(m)
+	var h: Dictionary = m["t"]
+	_check(not is_same(h, home) and is_same(m.get("t_home"), home), "the harder gang didn't hold the site's own aside")
+	_check(is_equal_approx(float(h["hp"]), float(home["hp"]) * Data.GANG_NEXT_HP) and is_equal_approx(float(h["dps"]), float(home["dps"]) * Data.GANG_NEXT_DPS), "harder a head: hp %.1f from %.1f, fire %.2f from %.2f" % [float(h["hp"]), float(home["hp"]), float(h["dps"]), float(home["dps"])])
+	_check(int(h.get("hard_zone", -1)) == 1 and float(h["types"].get("bleed", 0.0)) > 0.0 and not home["types"].has("bleed"), "the Estate's fire: zone %d, types %s (the site's %s)" % [int(h.get("hard_zone", -1)), str(h["types"]), str(home["types"])])
+	_check(float(home["hp"]) == float(sim.effective(0)["hp"]) and not home.has("hard_zone"), "the site's own was changed by the harder gang")
+	var line: String = sim.gang_line(m, 3)
+	_check(line.begins_with(Words.GANGS[1]["name"]) and "in from the estate" in line, "the harder gang's line: %s" % line)
+	# through a save, standing
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	sim.load_dict(d)
+	m = sim.mission
+	_check(m != null and m.has("t_home") and m["t_home"]["depth"] is int and int(m["t"].get("hard_zone", -1)) == 1 and is_equal_approx(float(m["t"]["hp"]), float(m["t_home"]["hp"]) * Data.GANG_NEXT_HP), "a harder gang through a save: %s" % str(m.get("t", {}).get("hard_zone", "none") if m != null else "no run"))
+	# down: the site's own again
+	m["cleared"] = true
+	m["remaining"] = 1
+	m["target_hp"] = -1.0
+	sim._fight(m, m["t"], 0.05)
+	_check(not m.has("t_home") and not m["t"].has("hard_zone") and is_equal_approx(float(m["t"]["hp"]), float(sim.effective(0)["hp"])), "the harder gang down, the site's own didn't come back: %s" % str(m["t"].get("hard_zone", "none")))
+	# the patrol arriving rolls it: at the cap's odds, most of a dozen come harder, and the first never does
+	var hard := 0
+	for k in range(12):
+		m["remaining"] = 0
+		m["target_hp"] = 0.0
+		if m.has("t_home"):
+			m["t"] = m["t_home"]
+			m.erase("t_home")
+		m["patrols"] = 40
+		m["patrol_timer"] = 1e9
+		sim._tick(0.01)
+		if m["t"].has("hard_zone"):
+			hard += 1
+			_check(is_equal_approx(float(m["target_hp"]), float(m["t"]["hp"])), "a harder gang's first head came at the site's HP: %.1f, theirs %.1f" % [float(m["target_hp"]), float(m["t"]["hp"])])
+	_check(hard >= 4, "a dozen gangs at the cap's odds, %d harder" % hard)
+	m["remaining"] = 0
+	if m.has("t_home"):
+		m["t"] = m["t_home"]
+		m.erase("t_home")
+	m["patrols"] = 0
+	m["patrol_timer"] = 1e9
+	sim._tick(0.01)
+	_check(not m["t"].has("hard_zone") and int(m["patrols"]) == 1, "the first gang came harder")
+	# the City's own, past the last
+	m["remaining"] = 0
+	m["t"]["crew_zone"] = 3
+	sim._gang_harder(m)
+	_check(int(m["t"].get("hard_zone", -1)) == 3 and "the hard core" in sim.gang_line(m, 2) and Words.GANGS[3]["name"] in sim.gang_line(m, 2), "the City's past the last: %s" % sim.gang_line(m, 2))
+	sim.extract_now()
+	sim.auto_tier = auto_was
+	sim.load_dict(saved)
+	print("harder gangs ok: the next zone's crew, harder and hotter, said so, held while they stand, through a save; the City's own past the last")
+
+
 func _full_pack_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()

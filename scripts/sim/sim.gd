@@ -4227,7 +4227,16 @@ func effective(i: int) -> Dictionary:
 		if m.get("clock_half", false):
 			e["clock_half"] = true
 	# what their fire is made of, and what they resist: the zone's, grown by depth, and the words
-	var zone: Dictionary = Data.ZONE_TYPES[int(_sig["zone"]) if sig_here else int(base["zone"])]     # a signal's crew is from any zone (15 Oct)
+	e["crew_zone"] = int(_sig["zone"]) if sig_here else int(base["zone"])     # a signal's crew is from any zone (15 Oct)
+	var crew: Array = _crew_types(int(e["crew_zone"]), d, wfx)
+	e["types"] = crew[0]
+	e["res"] = crew[1]
+	return e
+
+
+## A crew's fire by type and what they resist: their zone's, grown by depth `d`, and the words' `wfx` on top. [types, res]
+func _crew_types(zone_i: int, d: int, wfx: Array) -> Array:
+	var zone: Dictionary = Data.ZONE_TYPES[zone_i]
 	var types := {}
 	for ty in zone["types"]:
 		types[ty] = minf(Data.ZONE_SHARE_CAP, float(zone["types"][ty]) + Data.ZONE_GROW * (d - 1))
@@ -4252,9 +4261,7 @@ func effective(i: int) -> Dictionary:
 	types["physical"] = 1.0 - elemental
 	for ty in res:
 		res[ty] = minf(Data.RESIST_ENEMY_CAP, res[ty])
-	e["types"] = types
-	e["res"] = res
-	return e
+	return [types, res]
 
 
 func modifier(name: String) -> Dictionary:
@@ -5027,6 +5034,9 @@ func _tick(dt: float) -> void:
 			if has_node("hit_and_run"):
 				_extract()                  # out when the first gang comes
 				return
+			if m["remaining"] <= 0 and rng.randf() < gang_next_odds(int(m["patrols"])):
+				_gang_harder(m)                     # B9 (15 Oct): the next zone's crew, harder a head
+				t = m["t"]
 			m["remaining"] += size
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
@@ -5396,6 +5406,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			return
 		m["target_hp"] = 0.0
 		m["last_incoming"] = 0.0
+		if m.has("t_home"):
+			m["t"] = m["t_home"]               # the harder gang down (B9): the site's own again
+			m.erase("t_home")
 		m["my_dots"] = {}                    # the picking over: nothing ticks on you
 		if not m["cleared"] or m.get("ghost_pending", false):
 			m["ghost_pending"] = false
@@ -7703,12 +7716,45 @@ func snapshot() -> Dictionary:
 
 var events_total := 0              # every line ever logged, counted (the log keeps twenty)
 ## A gang as it arrives (12 Oct, the lore pass): the zone's gang by name, how many, and a line of theirs, in turn.
+## A harder gang (B9) is the next zone's, said so; the City's own hard core past the last.
 func gang_line(m: Dictionary, size: int) -> String:
 	var z: int = zone_of(int(m.get("tier", 0)))
+	var hard: int = int(m["t"].get("hard_zone", -1)) if m.get("t", null) is Dictionary else -1
+	if hard >= 0:
+		z = hard
 	if z < 0 or z >= Words.GANGS.size():
 		return "Another gang, %d of them" % size
 	var g: Dictionary = Words.GANGS[z]
-	return "%s, %d of them. %s" % [g["name"], size, Words.rotate(g["arrive"], int(m.get("patrols", 0)) + runs_total)]
+	var said: String = Words.rotate(g["arrive"], int(m.get("patrols", 0)) + runs_total)
+	if hard >= 0:
+		var from: String = Words.GANG_HARD_CORE if m.has("t_home") and hard == int(m["t_home"].get("crew_zone", -1)) else Words.GANG_IN_FROM % str(Data.ZONES[hard]["name"]).to_lower()
+		return "%s, %d of them, %s. %s" % [g["name"], size, from, said]
+	return "%s, %d of them. %s" % [g["name"], size, said]
+
+
+## The chance the `n`th gang of a run is the next zone's crew (B9): none for the first, a step a gang past it, to the cap.
+func gang_next_odds(n: int) -> float:
+	return clampf(float(n - 1) * Data.GANG_NEXT_STEP, 0.0, Data.GANG_NEXT_MAX)
+
+
+## The next zone's crew (B9, 15 Oct): the run's site as it is, its heads GANG_NEXT_HP harder and GANG_NEXT_DPS hotter, their
+## fire and resists the next zone's at the site's depth with the words on top (the City's own, past the last). Held while
+## the gang stands; the site comes back when they're down.
+func _gang_harder(m: Dictionary) -> void:
+	var home: Dictionary = m.get("t_home", m["t"])
+	var h: Dictionary = home.duplicate()
+	var z: int = mini(Data.ZONE_TYPES.size() - 1, int(home.get("crew_zone", zone_of(int(m.get("tier", 0))))) + 1)
+	var wfx: Array = []
+	for w in home.get("word_tiers", {}):
+		wfx.append(word_effect(w, int(home["word_tiers"][w])))
+	var crew: Array = _crew_types(z, int(home.get("depth", 1)), wfx)
+	h["hp"] = float(home["hp"]) * Data.GANG_NEXT_HP
+	h["dps"] = float(home["dps"]) * Data.GANG_NEXT_DPS
+	h["types"] = crew[0]
+	h["res"] = crew[1]
+	h["hard_zone"] = z
+	m["t_home"] = home
+	m["t"] = h
 
 
 ## The zone a site is in, or -1.
@@ -8161,6 +8207,8 @@ func load_dict(d: Dictionary) -> void:
 			else:
 				for k in ["pool", "loot_tier", "contact", "depth", "tier"]:
 					mission["t"][k] = int(mission["t"][k])
+					if mission.has("t_home"):
+						mission["t_home"][k] = int(mission["t_home"][k])     # a harder gang standing (B9)
 				if not mission.has("clock"):
 					mission["clock"] = clock_budget(mission["t"])     # a run from before the clock (9 Oct): the site's, from now
 					mission["clock_max"] = mission["clock"]

@@ -662,6 +662,12 @@ const ZONE_TYPES := [
 	{"types": {"shock": 0.15, "fire": 0.15}, "res": {"fire": 0.2, "shock": 0.2, "physical": 0.2, "frost": 0.1, "poison": 0.15}},   # the city: army kit, greatcoats, gas masks (poison 0.15, 12 Oct: the poison builds ran the loop to 9-15 moves, fire and shock 1-6; bleed stays open - every zone leaves one, the band check)
 ]
 const ZONE_GROW := 0.02
+## Harder gangs (B9, 15 Oct): from the second gang on, a gang can be the next zone's crew - their HP, their fire and
+## what it's made of; the City's are its own hard core, as hard. The chance climbs a step a gang past the first.
+const GANG_NEXT_STEP := 0.2
+const GANG_NEXT_MAX := 0.8
+const GANG_NEXT_HP := 1.6
+const GANG_NEXT_DPS := 1.5
 const ZONE_SHARE_CAP := 0.6
 const RESIST_DEPTH := 8            # from here, the zone's own resists (what it wears and what it throws) rise a step a depth; the rest stay open
 const RESIST_DEPTH_STEP := 0.015

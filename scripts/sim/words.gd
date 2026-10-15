@@ -206,6 +206,9 @@ const GATES := {
 }
 
 ## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.
+## A harder gang (B9): the next zone's crew come in, or the City's past the last.
+const GANG_IN_FROM := "in from %s"
+const GANG_HARD_CORE := "the hard core"
 const GANGS := [
 	{"name": "The field lads", "arrive": ["Wellies, a billhook, a dog somewhere behind.", "They come over the hedge, not round it.", "Mud to the knee. They've been waiting."]},
 	{"name": "The Parade boys", "arrive": ["Hoods up.", "One of them's filming it.", "They knew you were coming. Somebody always says."]},
