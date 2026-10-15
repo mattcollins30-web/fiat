@@ -6905,6 +6905,7 @@ func _build_checks(main) -> void:
 	m["cleared"] = true
 	m["patrol_timer"] = -1e9
 	m["event_at"] = -1.0
+	m["crates_off"] = true                    # a site that can't be picked clean before a scrap roll (15 Oct, item 4: the flake)
 	var guard := 0
 	while int(m.get("scrap", 0)) == 0 and guard < 600:
 		sim.hp = sim.max_hp()
@@ -7617,9 +7618,13 @@ func _wound_checks(main) -> void:
 			_check(is_equal_approx(now[st], was[st] * (1.0 - Data.WOUND_PCT / 100.0)), "the wound did not cut %s: %.2f from %.2f" % [st, now[st], was[st]])
 		else:
 			_check(is_equal_approx(now[st], was[st]), "the wound cut %s too: %.2f from %.2f" % [st, now[st], was[st]])
-	# a second replaces the first: still one
+	# a second replaces the first: still one, and the log says what it replaced (15 Oct, item 16: "Wounded again" read as stacking)
+	var first_w: String = sim.wound
 	sim._wound(m)
 	_check(sim.wound in Data.WOUND_STATS, "the second wound is off: '%s'" % sim.wound)
+	var wline: String = str(sim.events.back()[1])
+	var want_after: String = " (the same wound: one at a time)" if sim.wound == first_w else " (replaces %s)" % ("max HP" if first_w == "hp" else first_w)
+	_check(wline == sim.wound_words() + want_after and not wline.contains("again"), "a second wound's line: '%s'" % wline)
 	# the run says so and fits
 	main.show_room(main.MISSIONS)
 	main.refresh()

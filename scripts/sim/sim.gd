@@ -366,7 +366,13 @@ func _wound(m: Dictionary) -> void:
 	_dry_memo.clear()
 	if wound == "hp":
 		hp = minf(hp, max_hp())
-	log_event(("Wounded again: %s" if was != "" else "Wounded: %s") % wound_words().trim_prefix("Wounded: "))
+	# one at a time (15 Oct, parked item 16: "Wounded again" four times read as stacking): a second says what it replaced
+	var after: String = ""
+	if was == wound:
+		after = " (the same wound: one at a time)"
+	elif was != "":
+		after = " (replaces %s)" % ("max HP" if was == "hp" else was)
+	log_event(wound_words() + after)
 
 
 ## The share of incoming damage the armour stops.

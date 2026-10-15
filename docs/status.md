@@ -4831,3 +4831,8 @@ shotgun's wide and both barrels, the bolt gun's long, the pistol's small, the SM
 spark; none on a blade or a hammer, or on a stand-in picture. Drawn additive, at least one frame however slow the
 frames. The improvised, SMG and pistol pictures are to be redrawn down the sight (item 19): their muzzle points move
 with them. Smoke: each kind's flash on a drawn pixel of its gun, in the frame, for its moment; none on a blade.
+
+**C11: the small ones (15 Oct; parked items 16 and 4).** A second wound's line says what it replaced ("Wounded: armour
+−10% (replaces pace)", or "(the same wound: one at a time)"), never "Wounded again", which read as stacking. The
+smoke's scrap check searches a site that can't be picked clean before a scrap roll (`crates_off`), so its flake is
+gone. **Group C done**; next is D, the balance pass.
