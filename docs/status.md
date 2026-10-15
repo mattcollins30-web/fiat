@@ -4945,3 +4945,12 @@ read a build (two Poachers at 5.8 and 7.6 h pull it - one read's noise).
 
 **D11: the XP curve eases past the campaign (15 Oct).** `Data.xp_scale(l)`: x2.4 to level 22, easing to x0.4 by 40 and
 on: level 30 at about 29k XP (was 32k), 40 at 51k (89k), 50 at 76k (243k). The campaign's levels unchanged.
+
+**D11's read (summary_d11x2.md, two reads a build, 10 reds):** the Manager 1.8 h; the Quartermaster 2.4 h median
+(2.1-5.1), level 23-34 at him; the Radio's gaps; story late on three, retirement off on four; the Paramedic-frost
+gang clock 1.9; the Scrappers' cash; the plain Doorman and Scrapper never past the Carpet Man - over-levelled for the
+Estate, D9's falloff cut their pay to a tenth, a poverty spiral.
+
+**D12: the falloff reads your furthest progress, not just your level (16 Oct).** `over_level_share` caps your level's
+site at the deepest site you've cleared (or the reach less one once a signal's won): a build held at a wall farms its
+last sites at full pay. Smoke: the held-at-a-wall case.

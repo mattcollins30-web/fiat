@@ -3456,9 +3456,13 @@ func deepest_dug() -> int:
 ## cleared, put the gamble a level past every drop the runner had seen).
 ## What a site of level `lv` pays you (D9, 15 Oct, Matt: "fall off past 5 levels"): whole up to OVER_LEVEL_FREE site levels
 ## under you, OVER_LEVEL_STEP less a level past that, never under OVER_LEVEL_FLOOR. Your level read as a site's - the
-## item level you wear at, so the Quartermaster at level 21 is his own site's (9) and the campaign pays whole through it.
+## item level you wear at - and never past the furthest you've got (D12: the deepest site cleared, or the highest
+## signal won): a runner held at the Carpet Man was paid a tenth for the Estate he was stuck in, and never got out.
 func over_level_share(lv: int) -> float:
-	var mine: float = (level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var reached: int = deepest_cleared_level()
+	if reach > Data.REACH_START:
+		reached = maxi(reached, reach - 1)
+	var mine: float = minf((level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL, float(reached))
 	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE
 	return clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, beyond), Data.OVER_LEVEL_FLOOR, 1.0)
 

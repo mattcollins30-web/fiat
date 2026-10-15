@@ -7962,12 +7962,23 @@ func _over_level_checks(sim) -> void:
 	var whole: Dictionary = sim.effective(Data.BANK)
 	_check(is_equal_approx(float(whole["over_level"]), 1.0), "a level-1 runner is paid short at the Bank: %.2f" % float(whole["over_level"]))
 	sim.xp = Data.xp_for_level(50)
+	var reach0: int = sim.reach
+	sim.reach = 30                              # signals won to level 29: the runner's got far past the Bank
 	var low: Dictionary = sim.effective(Data.BANK)
-	var mine: float = (50.0 + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var mine: float = minf((50.0 + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL, 29.0)
 	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
 	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"])),
 		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"])])
 	_check(sim.over_level_share(int(low["level"]) + 100) == 1.0 and sim.over_level_share(-100) == Data.OVER_LEVEL_FLOOR, "the share isn't whole over you or floored far under")
+	# held at a wall (D12): a level-50 runner who hasn't got past the Estate is paid whole there
+	sim.reach = Data.REACH_START
+	var bd0: Array = sim.best_depth.duplicate()
+	for i in range(sim.best_depth.size()):
+		sim.best_depth[i] = 1 if i <= 4 else 0
+	var held: float = sim.over_level_share(2)
+	_check(is_equal_approx(held, 1.0), "a runner held at the Carpet Man is paid %.2f in the Estate" % held)
+	sim.best_depth = bd0
+	sim.reach = reach0
 	sim.xp = xp0
 	print("over-levelled ok: whole to five under, less a level past, floored; XP and tins")
 
