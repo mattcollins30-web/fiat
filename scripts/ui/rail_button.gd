@@ -30,6 +30,9 @@ var _badge: Panel
 var _badge_label: Label
 var _rule: Panel                # the hairline under the row
 var _selected := false
+var _dot: Panel                 # folded (15 Oct): the badge as a dot on the stamp's corner, its word in the tooltip
+var folded := false
+var shut_words := ""            # what opens a shut room, for the tooltip
 var last := false:              # the last row: no hairline under it (set after the row is built, so the rule follows it)
 	set(v):
 		last = v
@@ -50,6 +53,9 @@ func _init(room_name: String) -> void:
 	_badge_label = UI.label(_badge, Rect2(0, 0, 96, 30), "", "SemiBold", Pal.FLOOR, Pal.ACCENT_TEXT,
 			HORIZONTAL_ALIGNMENT_CENTER, false)
 	_badge.visible = false
+	_dot = UI.panel(self, Rect2(STAMP_X + STAMP - 12, 0, 18, 18), UI.box(Pal.WARN, 9, 2, Pal.PANEL))
+	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dot.visible = false
 	_rule = UI.panel(self, Rect2(0, Pal.RAIL_BTN_H - 1, Pal.RAIL_W, 1), UI.box(Pal.RAIL_RULE, 0))
 	set_row_height(Pal.RAIL_BTN_H)
 	_style(false)
@@ -61,8 +67,33 @@ func set_row_height(h: float) -> void:
 	size.y = h
 	custom_minimum_size.y = h
 	_stamp.position.y = floorf((h - STAMP) / 2.0)
+	_dot.position.y = _stamp.position.y - 6
 	_rule.position.y = h - 1
 	_place()
+
+
+## Folded to the glyph (15 Oct, the run on screen; frame_mockup_B): the stamp alone in a row Pal.RAIL_FOLDED_W wide,
+## the name and the badge's word in the tooltip, the badge a dot in its tone on the stamp's corner.
+func set_folded(on: bool) -> void:
+	folded = on
+	var w: float = Pal.RAIL_FOLDED_W if on else Pal.RAIL_W
+	custom_minimum_size.x = w            # the minimum first: a size under it doesn't take
+	size.x = w
+	_rule.size.x = w
+	_name.visible = not on
+	_badge.visible = _badge_label.text != "" and not on
+	_dot.visible = _badge_label.text != "" and on and not _shut     # the badge follows the fold at once, not a refresh later (the review)
+	_place()
+	_tip()
+
+
+func _tip() -> void:
+	var lines: Array = []
+	if folded:
+		lines.append(room + ((" · " + _badge_label.text) if _badge_label.text != "" else ""))
+	if shut_words != "":
+		lines.append(shut_words)
+	tooltip_text = "\n".join(lines)
 
 
 ## The name centred in the row; with a badge, the name up and the badge under it.
@@ -96,8 +127,12 @@ func set_selected(on: bool) -> void:
 
 func show_status(d: Dictionary) -> void:
 	var word: String = d.get("badge", "")
-	_badge.visible = word != ""
+	_badge.visible = word != "" and not folded
 	_badge_label.text = word
+	_dot.visible = word != "" and folded and not _shut      # a shut room is dimmed, its word in the tooltip
+	if _dot.visible:
+		(_dot.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.tone_color(d.get("badge_tone", "warn"))
+	_tip()
 	if word != "":
 		# the pill hugs its word, under the name
 		var w := ceilf(UI.text_width(_badge_label, word)) + 2 * BADGE_PAD
@@ -130,4 +165,4 @@ func badge_gap() -> float:
 
 
 func text_nodes() -> Array:
-	return [_name, _badge_label]
+	return [] if folded else [_name, _badge_label]

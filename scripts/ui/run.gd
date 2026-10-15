@@ -26,14 +26,14 @@ const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const RunView := preload("res://scripts/ui/run_view.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 
-const BODY_W := Inventory.SIDE_W                              # 608
+const BODY_W := Pal.RUN_W - Inventory.WIDTH - 24               # 832: the run beside the folded rail (15 Oct, frame_mockup_B)
 const GAP := 24
 const GRID_X := BODY_W + GAP
 const GRID_W := Inventory.WIDTH                                # 904
 const GRID_H := Inventory.HEIGHT                               # 588
 const PICK_Y := GRID_H + GAP                                  # 612
 const PICK_H := Pal.ROOM_H - PICK_Y                           # 304
-const BAND_H := 200                                           # the site's art band at the top of the column
+const BAND_H := 100                                           # the site's band at the top of the column, slim (15 Oct, frame_mockup_B)
 const RIG_MAX := Data.RIG_CAP                                 # the rig never shows past the sim's cap (24)
 const PAD := 20
 const INNER := BODY_W - 2 * PAD
@@ -60,7 +60,7 @@ const RUNNER_BAR_Y := RUNNER_Y + UI.HEAD_H + 2
 const RUNNER_TILES_Y := RUNNER_BAR_Y + BAR_H + 6
 const RUNNER_NOTE_Y := RUNNER_TILES_Y + UI.TILE_H + 2
 const RUNNER_BOX_H := RUNNER_NOTE_Y + LINE_H + BOX_PAD - RUNNER_BOX_Y
-const RIG_HEAD_Y := RUNNER_BOX_Y + RUNNER_BOX_H + SECTION_GAP
+const RIG_HEAD_Y := FIGHT_BOX_Y + 430 + SECTION_GAP              # under the frame and the six (VIEW_ROW_Y + TILE_H; the boxes, without the art, end above it)
 const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
 const TAKE_Y := RIG_Y + Pal.CELL + SECTION_GAP
 const TAKE_TILES_Y := TAKE_Y + UI.HEAD_H + 2
@@ -68,8 +68,12 @@ const NOTE_Y := TAKE_TILES_Y + UI.TILE_H + 10                 # the run's own li
 const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 # the run view (13 Oct, Time Crisis): the frame over both boxes, the six figures under it, the search bar under those
 const VIEW_X := PAD - BOX_PAD
-const VIEW_W := INNER + 2 * BOX_PAD                           # 588
-const VIEW_ROW_Y := FIGHT_BOX_Y + RunView.H + 8
+const VIEW_W := INNER + 2 * BOX_PAD                           # 812
+## The frame scaled up to the column (15 Oct, Matt: "a tad small"; frame_mockup_B): the run view's own 588 x 262
+## space drawn at VIEW_SCALE, so its slots, its plates and the placement tool keep their numbers.
+const VIEW_SCALE := VIEW_W * 1.0 / RunView.W                  # 812 / 588
+const VIEW_H := 362                                           # RunView.H * VIEW_SCALE, rounded (the smoke holds them together)
+const VIEW_ROW_Y := FIGHT_BOX_Y + VIEW_H + 8
 const VIEW_SEARCH_Y := VIEW_ROW_Y + UI.TILE_H + 8
 const OVER_W := 300                                           # a bar laid over the frame
 # the search (14 Oct, Matt; mockups search_mockup3/4): the crates under the six where the rig and the take sit in a
@@ -77,7 +81,7 @@ const OVER_W := 300                                           # a bar laid over 
 const CRATES_Y := VIEW_SEARCH_Y - 2
 const RIG_SEARCH_HEAD_Y := CRATES_Y + CratesPanel.HEIGHT + 4
 const RIG_SEARCH_Y := RIG_SEARCH_HEAD_Y + UI.HEAD_H + 2
-const OVER_Y := FIGHT_BOX_Y + RunView.H - BAR_H - 10            # the bar at the frame's foot: your HP, or the search
+const OVER_Y := FIGHT_BOX_Y + VIEW_H - BAR_H - 10            # the bar at the frame's foot: your HP, or the search
 
 var sim
 var _left: Panel                   # the column: the band and the sections
@@ -125,10 +129,11 @@ var _six: Array = []               # the six figures under the frame
 
 
 func _init() -> void:
-	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
+	size = Vector2(Pal.RUN_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_left = UI.panel(self, Rect2(0, 0, BODY_W, Pal.ROOM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_band = Band.new(BODY_W, BAND_H)
+	_band.slim()
 	_left.add_child(_band)
 	# the run's clock (9 Oct, Clock-A): a thin bar under the kills, draining as it runs
 	_clock_track = UI.panel(_band, Rect2(PAD, BAND_H - 11, BODY_W - 2 * PAD, 6), UI.box(Color(Pal.BG, 0.85), 3))
@@ -210,6 +215,7 @@ func _view_make() -> void:
 			sound.cue("duck"))
 	_view.placing_changed.connect(_on_placing)
 	_view.position = Vector2(VIEW_X, FIGHT_BOX_Y)
+	_view.scale = Vector2(VIEW_SCALE, VIEW_SCALE)
 	_left.add_child(_view)
 	_left.move_child(_view, _band.get_index() + 1)
 	for n in [_fight["box"], _runner["box"], _fight_face["frame"], _runner_face["frame"], _runner["head"]]:
@@ -223,8 +229,8 @@ func _view_make() -> void:
 	_bar_place(_runner, Rect2(PAD, OVER_Y, OVER_W, BAR_H))
 	_fight["key"].position = Vector2(PAD, FIGHT_BOX_Y + 62)
 	_fight["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + 62)
-	_runner["key"].position = Vector2(PAD, FIGHT_BOX_Y + RunView.H - BAR_H - 14 - Chips.CHIP_H)
-	_runner["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + RunView.H - BAR_H - 14 - Chips.CHIP_H)
+	_runner["key"].position = Vector2(PAD, FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H)
+	_runner["chips"].position = Vector2(PAD + KEY_W, FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H)
 	for k in [_fight["key"], _runner["key"]]:
 		k.add_theme_color_override("font_color", Pal.TEXT)
 		UI.shadow(k)
@@ -284,15 +290,20 @@ func show_state(s) -> void:
 			if b["nodes"][k].get("capstone", false) and sim.tree.has("%s/%d" % [b["name"], k]):
 				caps.append(b["nodes"][k]["name"])
 	var cap_line: String = ("◆◆ " + ", ".join(caps)) if not caps.is_empty() else ""
-	if cap_line != "" and UI.text_width(_band.right[2], cap_line) > _band.RIGHT_W:
-		cap_line = "◆◆ %d capstones" % caps.size()
+	var caps_short: String = "◆◆ %d capstones" % caps.size()
 	# the pool as it stands: the site's, and whatever came after - a convoy's crew counts (8 Oct, Matt: "11 of 10
 	# down ... level doesn't count as complete"; the convoy event had put four on the pool and the bar read the site's)
 	var convoy_in: bool = str(m.get("event_done", "")) == "convoy"
 	var gangs: String = "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]
 	if convoy_in:
 		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
-	_band.set_right(["%s in · clock %s" % [Fmt.mss(m["elapsed"]), Fmt.mss(ceilf(clock_max))], gangs, cap_line])
+	var rights: Array = ["%s in · clock %s" % [Fmt.mss(m["elapsed"]), Fmt.mss(ceilf(clock_max))], "· " + gangs, cap_line]
+	_band.set_right(rights)
+	for short in [caps_short, "◆◆ %d" % caps.size(), ""]:     # nothing, at the very widest (the way out, a convoy): the kicker and the clock first
+		if cap_line == "" or UI.text_width(_band.right[2], _band.right[2].text) <= _band.right[2].size.x:
+			break
+		rights[2] = short                    # the capstones' names where they fit beside the kicker, else how many, else none
+		_band.set_right(rights)
 	var of: int = maxi(1, int(m["kills"]) + int(m["remaining"])) if not m["cleared"] else int(t["pool"])
 	if m.get("way_out", false):
 		var door: int = maxi(1, int(m.get("way_out_gang", 1)))
@@ -835,7 +846,7 @@ func _on_placing(on: bool) -> void:
 func _on_view_shot(at: Vector2) -> void:
 	if juice == null or _view == null:
 		return
-	var local: Vector2 = _view.position + at
+	var local: Vector2 = _view.position + at * VIEW_SCALE
 	var keep: Array = _keep_out()
 	var spot: Vector2 = _left.global_position + local - juice.global_position
 	if not keep.all(func(r): return not r.intersects(_number_path(local))):
@@ -877,13 +888,13 @@ func _scatter(bar_y: float) -> Vector2:
 		var them: bool = bar_y == FIGHT_BAR_Y
 		var ok := false
 		for k in range(12):
-			local = _view.position + (_view.hit_spot() if them else Vector2(randf_range(OVER_W + 40, RunView.W - 60), RunView.H - 40 + randf_range(-10.0, 4.0)))
+			local = _view.position + (_view.hit_spot() * VIEW_SCALE if them else Vector2(randf_range(OVER_W + 40, VIEW_W - 60), VIEW_H - 40 + randf_range(-10.0, 4.0)))
 			if keep.all(func(r): return not r.intersects(_number_path(local))):
 				ok = true
 				break
 		if not ok:
 			# the frame's middle right: under their chips, over yours, however many rows of either (the review)
-			local = _view.position + Vector2(randf_range(OVER_W + 40, RunView.W - 60), randf_range(146.0, 152.0))
+			local = _view.position + Vector2(randf_range(OVER_W + 40, VIEW_W - 60), randf_range(146.0, 152.0) * VIEW_SCALE)
 	return _left.global_position + local - (juice.global_position if juice != null else Vector2.ZERO)
 
 

@@ -4800,3 +4800,16 @@ site's XP, cash, notes and drops (about 2.4x the risk for the same pay, a push t
 (the clock counts gangs at the site's HP, so late searching runs out of time sooner); a convoy event arriving while
 one stands fights at their stats (rare: the event usually comes before the clear); the fight art still draws the
 site's own gang.
+
+**C10.1: the bigger fight frame (15 Oct; parked item 13; Matt: "B it is", docs/design/mockups/frame_mockup_B.png, A
+beside it).** On a run the rail folds to its glyphs (Pal.RAIL_FOLDED_W, 88 px): a room's name, its badge's word and
+what opens a shut one on hover; a badge a dot in its tone on the stamp's corner; shut rooms dimmed. The run and the log
+under it take the width (Pal.RUN_W, 1760); every other room has the rail as it was, and the pause drawer keeps the
+unfolded rail's shape. The run's column is 832 (was 608): the frame drawn 1.38x at 812 x 362 (about twice the area),
+its own 588 x 262 space scaled, so the slots, the plates and the placement tool keep their numbers; the site's band
+slim at 100 (was 200): the place and the clock on one row, the depth, the capstones and the time and gangs under it,
+the bar. The capstones fall back to a count, then nothing, at the band's widest. The rig and the take in a fight sit
+under the six. Smoke: the frame's scale and place, the rail folded with its tooltips and back off the run, the run
+and the log beside it, the slim band at its widest with nothing on anything. **For Matt to look at:** the frame's own
+text (a crate's finds over the open one) is drawn scaled with it; if it reads soft, its size goes up and its scale
+comes off.

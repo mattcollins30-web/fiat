@@ -40,6 +40,7 @@ var _art: TextureRect                 # the site's painted art (9 Oct), over the
 var _art_fade: TextureRect            # its shade: a touch at the top for the title, the fade into the card at the foot
 var _compact := false                 # a room's short band (10 Oct, Rooms-B): the title and the headline on one row
 var _room := false                    # a room's art band (10 Oct, Bands-U A): the Yard's layout, the art shaded from the left
+var _slim := false                    # the run's slim band (15 Oct, frame_mockup_B): two rows and the bar
 
 
 ## `w` × `h` at the parent's top left; `tone` picks the sky; `fade_to` is the panel colour under it.
@@ -148,6 +149,7 @@ func headline_under_title(on: bool) -> void:
 		unit.position.x = _left
 		unit.size.x = size.x - _left - PAD
 		_fit_unit()
+	_lay_slim()
 
 
 ## A portrait `w` wide sits at the band's left: the words start past it.
@@ -209,6 +211,7 @@ func _lay_room() -> void:
 
 func _lay_compact() -> void:
 	_lay_room()
+	_lay_slim()
 	if not _compact:
 		return
 	title.position = Vector2(_left, size.y - 52)
@@ -221,6 +224,56 @@ func _lay_compact() -> void:
 	unit.size = Vector2(maxf(40.0, size.x - unit.position.x - PAD - (RIGHT_W + 12 if _right_any else 0)), 36)
 	if not _unit_forms.is_empty():
 		UI.fit(unit, _unit_forms)
+
+
+## The run's slim band (15 Oct, Matt: frame_mockup_B; 100 px for a bigger frame under it): the title and, right, the
+## headline with its unit on the top row; the kicker, the third line and, right, the first two lines on the second;
+## the bar along the foot. The third line's box is what's left between the kicker and the first two.
+func slim(on := true) -> void:
+	_slim = on
+	if on:
+		headline.add_theme_font_size_override("font_size", Pal.TITLE)
+		unit.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG + 2)
+		for l in right:
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_lay_slim()
+
+
+const SLIM_ROW2 := 36                 # the slim band's second row
+func _lay_slim() -> void:
+	if not _slim:
+		return
+	var w: float = size.x
+	title.position = Vector2(_left, 0)
+	title.size = Vector2(ceilf(UI.text_width(title, title.text)) + 4, 40)
+	headline.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var hw: float = ceilf(UI.text_width(headline, headline.text))
+	var room: float = w - PAD - (title.position.x + title.size.x + 24) - hw - 16
+	if not _unit_forms.is_empty():
+		unit.text = str(_unit_forms.back())
+		for o in _unit_forms:
+			if UI.text_width(unit, str(o)) + 2 <= room:
+				unit.text = str(o)
+				break
+	var uw: float = ceilf(UI.text_width(unit, unit.text)) + 2
+	# the headline's box the line the two make (the rule the tests read), the unit at its end
+	headline.size = Vector2(hw + 16 + uw, 40)
+	headline.position = Vector2(w - PAD - headline.size.x, 0)
+	unit.size = Vector2(uw, 26)
+	unit.position = Vector2(headline.position.x + hw + 16, 10)
+	var x: float = w - PAD
+	for k in [1, 0]:
+		var rw: float = ceilf(UI.text_width(right[k], right[k].text)) + 2 if right[k].text != "" else 0.0
+		right[k].size = Vector2(rw, 24)
+		right[k].position = Vector2(x - rw, SLIM_ROW2)
+		if rw > 0.0:
+			x -= rw + 6
+	kicker.position = Vector2(_left, SLIM_ROW2)
+	kicker.size = Vector2(ceilf(UI.text_width(kicker, kicker.text)) + 4, 24)
+	right[2].position = Vector2(kicker.position.x + kicker.size.x + 16, SLIM_ROW2)
+	right[2].size = Vector2(maxf(0.0, x - right[2].position.x), 24)
+	bar.position.y = size.y - 12 - 24
 
 
 ## The right-hand lines, top right; up to three, the rest dropped.

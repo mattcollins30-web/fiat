@@ -6332,7 +6332,7 @@ func _check_fit(main, where: String) -> void:
 				_check(not FileAccess.file_exists(mn.WORDMARK_ART) or (mn._wordmark.visible and mn._wordmark.texture != null and mn._wordmark.texture.get_size() == Vector2(154, 72)), "%s menu: the wordmark did not load from %s (%s)" % [where, mn.WORDMARK_ART, str(mn._wordmark.texture.get_size()) if mn._wordmark.texture != null else "null"])
 			"drawer":
 				# the drawer is the rail's rect exactly, its kicker up, names only
-				var rail := Rect2(main._rail.position, main._rail_panel.size)
+				var rail := Rect2(main._rail.position, Vector2(Pal.RAIL_W, main._rail_panel.size.y))     # the rail unfolded's, folded or not (15 Oct)
 				_check(pr.is_equal_approx(rail), "%s menu: the drawer is not the rail's rect (%s vs %s)" % [where, pr, rail])
 				_check(mn._kicker.visible and mn._kicker.text.begins_with("PAUSED"), "%s menu: the drawer's kicker is '%s'" % [where, mn._kicker.text])
 				_check(mn._items.all(func(_it): return true) and mn._details[0].text == "" and mn._details[1].text == "", "%s menu: the drawer's rows carry details" % where)
@@ -8869,6 +8869,50 @@ func _bin_checks(main) -> void:
 ## The run view (13 Oct, Time Crisis; docs/design/fight_art.md): with its art there, the frame takes the two boxes; the
 ## six figures under it; the gang up as many as are on you; a kill drops one; a hit reddens the edges; the search pans
 ## to the crates; their bar over the frame in a fight, the search's under the six; it all fits.
+## The bigger frame (15 Oct, Matt: frame_mockup_B, "B it is"): on the run the rail folds to its glyphs and the run and
+## the log take the width; the frame drawn at the column's width, its own 588 x 262 space scaled; the band slim over it;
+## off the run the rail as it was.
+func _frame_checks(main) -> void:
+	var run = main._run
+	var v = run._view
+	main.layout(Vector2(1920, 1080))
+	_check(is_equal_approx(run.VIEW_SCALE, float(run.VIEW_W) / RunView.W) and run.VIEW_H == int(round(RunView.H * run.VIEW_SCALE)) and v.scale.is_equal_approx(Vector2(run.VIEW_SCALE, run.VIEW_SCALE)), "the frame's scale: %.3f, %d high, drawn at %s" % [run.VIEW_SCALE, run.VIEW_H, str(v.scale)])
+	var fr := Rect2(v.global_position, Vector2(RunView.W, RunView.H) * v.scale)
+	var col := Rect2(run._left.global_position, run._left.size)
+	_check(col.encloses(fr) and fr.size.x >= 800.0 and fr.position.y >= run._band.global_position.y + run._band.size.y and fr.end.y + 8.0 <= run._six[0]["panel"].global_position.y + 0.5, "the frame %s isn't in the column %s under the band, over the six" % [str(fr), str(col)])
+	_check(main.rail_folded and is_equal_approx(main._rail_panel.size.x, Pal.RAIL_FOLDED_W) and main._rail_buttons.values().all(func(b): return b.size.x == Pal.RAIL_FOLDED_W and not b._name.visible and b.tooltip_text.begins_with(b.room)), "on a run the rail isn't folded to its glyphs, names on hover")
+	var rail_end: float = main._rail.global_position.x + Pal.RAIL_FOLDED_W
+	_check(is_equal_approx(run.global_position.x, rail_end + Pal.MARGIN) and run.global_position.x + run.size.x <= 1920.0 - Pal.MARGIN + 0.5 and is_equal_approx(run.size.x, Pal.RUN_W), "the run isn't beside the folded rail at its width: x %.0f, w %.0f" % [run.global_position.x, run.size.x])
+	_check(is_equal_approx(main._events.global_position.x, run.global_position.x) and is_equal_approx(main._events.size.x, Pal.RUN_W), "the log isn't under the run at its width")
+	# the slim band at its widest: the way out, a convoy and gangs, capstones - every line fits, nothing on anything
+	var bd = run._band
+	bd.set_words("Depth 14 · The Estate · the way out", "Ransacked Streets", "12:59", ["to the way out · see them off", "see them off", "left"], Pal.ACCENT)
+	bd.set_right(["12:59 in · clock 14:59", "· convoy, 12 gangs", "◆◆ Poached, Dead quiet, Spread"])
+	for short in ["◆◆ 3 capstones", "◆◆ 3", ""]:
+		if UI.text_width(bd.right[2], bd.right[2].text) <= bd.right[2].size.x:
+			break
+		bd.set_right(["12:59 in · clock 14:59", "· convoy, 12 gangs", short])
+	var labels: Array = [bd.title, bd.headline, bd.unit, bd.kicker, bd.right[0], bd.right[1], bd.right[2]]
+	for l in labels:
+		_check(UI.text_width(l, l.text) <= l.size.x + 0.5 and l.position.x >= 0.0 and l.position.x + l.size.x <= bd.size.x + 0.5 and l.position.y + l.size.y <= bd.bar.position.y + 2.0, "the slim band's '%s' doesn't fit its row: %.0f in %.0f at %s" % [l.text, UI.text_width(l, l.text), l.size.x, str(l.position)])
+	for i in range(labels.size()):
+		for j in range(i + 1, labels.size()):
+			var a: Label = labels[i]
+			var b: Label = labels[j]
+			if (a == bd.headline and b == bd.unit) or a.text == "" or b.text == "":
+				continue
+			var ra := Rect2(a.position, Vector2(UI.text_width(a, a.text), a.size.y))
+			var rb := Rect2(b.position, Vector2(UI.text_width(b, b.text), b.size.y))
+			_check(not ra.grow(-2.0).intersects(rb.grow(-2.0)), "the slim band's '%s' sits on '%s'" % [a.text, b.text])
+	main.refresh()
+	# off the run, the rail as it was
+	main.show_room(main.RUNNER)
+	main.refresh()
+	_check(not main.rail_folded and is_equal_approx(main._rail_panel.size.x, Pal.RAIL_W) and main._rail_buttons.values().all(func(b): return b.size.x == Pal.RAIL_W and b._name.visible) and is_equal_approx(main._events.size.x, Pal.GRID_W), "off the run the rail didn't unfold")
+	main.show_room(main.MISSIONS)
+	main.refresh()
+
+
 func _run_view_checks(main) -> void:
 	var run = main._run
 	if run._view == null:
@@ -8895,6 +8939,7 @@ func _run_view_checks(main) -> void:
 	_full_art_checks(main, v)
 	_check(run._fight["track"].position.y < run.FIGHT_BOX_Y + RunView.H and run._six[0]["key"].text == "Fire in", "their bar is not over the frame in a fight, or the six don't lead with Incoming")
 	_check_fit(main, "Run (the run view, a gang)")
+	_frame_checks(main)
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")
 	# a kill drops one - any of them, not the first every time (Matt, 13 Oct)
 	m["kills"] = int(m["kills"]) + 1

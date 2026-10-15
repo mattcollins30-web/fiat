@@ -148,6 +148,9 @@ var _room_card = null              # a room's first-visit card (14 Oct), while i
 var _overlay_closed := -1          # the frame an opening or a room card closed: its Esc isn't the pause's too
 var _opening_due := false          # a new camp's opening is about to start: no room card before it (Matt: the Map's take played under it)
 var _help_btn: Button              # the ? on the rail's heading: the room's card again
+var _rail_rule: Panel              # the hairline under the heading
+var rail_folded := false           # the rail at its glyphs while the run's on screen (15 Oct, frame_mockup_B)
+var _x0 := 0.0                     # the layout's left edge, for the fold
 var _cog_btn: Button               # the top bar's cog: the pause
 var _asked_runner := false         # the two-turn-up menu, shown once per death
 
@@ -240,7 +243,7 @@ func _build() -> void:
 	add_child(_rail)
 	_rail_panel = UI.panel(_rail, Rect2(0, 0, Pal.RAIL_W, Pal.RAIL_HEAD_H + ROOMS.size() * Pal.RAIL_BTN_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	_rail_head = UI.label(_rail, Rect2(22, 0, Pal.RAIL_W - 44, Pal.RAIL_HEAD_H), "ROOMS", "Medium", Pal.FLOOR, Pal.TEXT_3)
-	UI.panel(_rail, Rect2(0, Pal.RAIL_HEAD_H - 1, Pal.RAIL_W, 1), UI.box(Pal.CARD_LINE, 0))
+	_rail_rule = UI.panel(_rail, Rect2(0, Pal.RAIL_HEAD_H - 1, Pal.RAIL_W, 1), UI.box(Pal.CARD_LINE, 0))
 	# the ? at the heading's end (14 Oct): the room's card again
 	_help_btn = UI.button(_rail, Rect2(Pal.RAIL_W - 48 - 6, 5, 48, Pal.RAIL_HEAD_H - 10), false)
 	_help_btn.text = "?"
@@ -410,6 +413,7 @@ func layout(s: Vector2) -> void:
 		var b = _rail_buttons[ROOMS[i]]
 		b.position.y = Pal.RAIL_HEAD_H + i * row_h
 		b.set_row_height(row_h)
+	_x0 = x0
 	_grid.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, band_y)
 	_yard_tree.position = _grid.position
 	_radio.position = _grid.position
@@ -417,13 +421,30 @@ func layout(s: Vector2) -> void:
 	_barracks.position = _grid.position
 	_missions.position = _grid.position
 	_workshop.position = _grid.position
-	_run.position = _grid.position
+	_run.position = Vector2(x0 + Pal.RAIL_FOLDED_W + Pal.MARGIN, band_y)     # beside the folded rail: it only shows folded
 	_fence.position = _grid.position
 	_clinic.position = _grid.position
 	_stats.position = _grid.position
 	# the log sits under the grid, bottom right; the rail runs the full height beside it
 	_events.position = Vector2(x0 + Pal.RAIL_W + Pal.MARGIN, s.y - Pal.BOTTOM - Pal.EVENTS_H)
+	_lay_fold()
 	_menu.layout(s)
+
+
+## The rail folded or not (15 Oct, Matt: frame_mockup_B, "B it is"): while the run's on screen the rail is its glyphs,
+## Pal.RAIL_FOLDED_W wide, the names on hover, and the run and the log under it take the width (Pal.RUN_W); every
+## other room has the rail as it was.
+func _lay_fold() -> void:
+	var w: float = Pal.RAIL_FOLDED_W if rail_folded else Pal.RAIL_W
+	_rail_panel.size.x = w
+	_rail_rule.size.x = w
+	_rail_head.visible = not rail_folded
+	_help_btn.position.x = floorf((w - _help_btn.size.x) / 2.0) if rail_folded else w - _help_btn.size.x - 6
+	for nm in ROOMS:
+		_rail_buttons[nm].set_folded(rail_folded)
+	_events.position.x = _x0 + w + Pal.MARGIN
+	_events.size.x = Pal.RUN_W if rail_folded else Pal.GRID_W
+	_speed_label.position.x = _events.size.x - 20 - _speed_label.size.x
 
 
 # ------------------------------------------------------------------ the clock
@@ -648,7 +669,7 @@ func show_pause() -> void:
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause), "glyph": "menu_slots"},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title, "glyph": "menu_title"},
-	], _menu.close, false, Rect2(_rail.position, _rail_panel.size))
+	], _menu.close, false, Rect2(_rail.position, Vector2(Pal.RAIL_W, _rail_panel.size.y)))     # the rail unfolded's shape, folded or not (15 Oct)
 
 
 ## The pause's Settings (14 Oct, Matt: "a Settings row ... Sound, Music and Room intros"): a volume each for the effects,
@@ -1020,13 +1041,16 @@ func refresh() -> void:
 		var b = _rail_buttons[nm]
 		b.set_selected(nm == room)
 		b.set_shut(room_shut(nm))
-		b.tooltip_text = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[nm]]) if room_shut(nm) else ""     # what opens it (the review)
+		b.shut_words = ("Opens with %s" % Words.GATES["shut"][ROOM_KEY[nm]]) if room_shut(nm) else ""     # what opens it (the review)
 		b.show_status(_rail_status(nm))
 	# the Lock-up, the Caravan, the Bench and Runs are screens of their own,
 	# in the grid's place: Runs is the tiers between runs and the live run
 	# with the pack grid while the runner is out
 	var missions_screen: bool = room == MISSIONS and not sim.on_mission()
 	var run_screen: bool = room == MISSIONS and sim.on_mission()
+	if run_screen != rail_folded:
+		rail_folded = run_screen
+		_lay_fold()
 	_armoury.visible = room == ARMOURY
 	_barracks.visible = room == BARRACKS
 	_workshop.visible = room == WORKSHOP
@@ -1084,7 +1108,7 @@ func refresh() -> void:
 	_prev_time.position.x = tx
 	var px: float = tx + ceilf(UI.text_width(_prev_time, _prev_time.text)) + 16
 	_prev_label.position.x = px
-	_prev_label.size.x = Pal.GRID_W - 20 - px - (_speed_label.size.x + 20 if _speed_label.visible else 0.0)
+	_prev_label.size.x = _events.size.x - 20 - px - (_speed_label.size.x + 20 if _speed_label.visible else 0.0)
 	var forms: Array = _by_sentence(str(ev[jp][1])) if jp >= 0 else [""]
 	UI.fit(_prev_label, forms)
 	if UI.text_width(_prev_label, _prev_label.text) > _prev_label.size.x:
