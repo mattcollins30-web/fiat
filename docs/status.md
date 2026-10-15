@@ -4844,3 +4844,14 @@ Jacket, 192 x 192) to art/items/, which the game picks up by name; the pistol's,
 redrawn down the sight (the rifle's hands as the reference) to art/fight_new/, to be looked at and copied over
 art/fight/hands_<kind>.png. Every other unique already has its own picture. **After the balance pass:** the muzzle
 flash's points and directions (RunView.MUZZLE) read again off the new hands, if they need it.
+
+**D1: the balance pass's gates, set (15 Oct; docs/design/balance_gates.md, Matt approved).** Fifteen gates for twice
+the campaign as it stands, the bot read at 0.85 of a hand's time (the 13 Oct reads against Matt's save; his playtest
+re-measures it): the Manager at 1.1-1.6 h and the Quartermaster at 1.6-2.3 h (bot), the builds within 2x, level 18-22
+at him and 30 within two hours after, the Radio's ladder (a signal every 20 min, reach every 45, to hour 12), Kev's
+story by 10, level 50 between 12 and 24, no reds, two searches a gap between gangs, staying costs, the loot read's
+tables and the gamble under the drops, cash and scrap. Deaths and wounds are judged at the playtest, shown beside.
+tests/balance.gd reads them (`_gate_firsts`, `_longest_gap`, the gang clock in the end odds loop);
+tools/balance_summary.gd judges them (a never counts as later than any in a build's median); tools/balance.bat runs
+24 h a build and the loot read; tools/playtest_summary.gd reads the same from play. Old gates retired with what they
+measured (the keystone and capstone hours, depth pace, the lorry, the ladders' spread).

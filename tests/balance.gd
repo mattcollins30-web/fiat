@@ -194,6 +194,39 @@ func _elements(hours: float, forced: String) -> void:
 	quit(0)
 
 
+## The firsts the pass's gates read (15 Oct, docs/design/balance_gates.md), each the hour it first came true.
+func _gate_firsts(sim, g: Dictionary, loose_seen: bool) -> void:
+	var h: float = snappedf(sim.elapsed / 3600.0, 0.01)
+	if float(g["manager_at"]) < 0.0 and sim.bosses_beaten[2]:
+		g["manager_at"] = h
+	if float(g["qm_at"]) < 0.0 and sim.bosses_beaten[3]:
+		g["qm_at"] = h
+		g["level_at_qm"] = sim.level()
+		g["loose_unique_by_qm"] = loose_seen
+	if float(g["lv30_at"]) < 0.0 and sim.level() >= 30:
+		g["lv30_at"] = h
+	if float(g["lv50_at"]) < 0.0 and sim.level() >= 50:
+		g["lv50_at"] = h
+	if float(g["radio_at"]) < 0.0 and sim.room_open("radio"):
+		g["radio_at"] = h
+	if float(g["story_at"]) < 0.0 and sim.story_beat >= Data.STORY_BEATS.size():
+		g["story_at"] = h
+
+
+## The longest stretch in hours from `from_h` to `to_h` with none of `times` in it; -1 when it never started.
+static func _longest_gap(from_h: float, to_h: float, times: Array) -> float:
+	if from_h < 0.0 or to_h <= from_h:
+		return -1.0
+	var pts: Array = times.filter(func(t): return float(t) > from_h and float(t) <= to_h)
+	pts.sort()
+	var last: float = from_h
+	var worst := 0.0
+	for t in pts:
+		worst = maxf(worst, float(t) - last)
+		last = float(t)
+	return snappedf(maxf(worst, to_h - last), 0.01)
+
+
 ## The one-build read the pass runs eleven of at once (tools/balance.bat): the half-hour lines as the plain
 ## read, then a GATES line of JSON the summary parses - when the bank fell, the keystone and the capstone,
 ## the deaths, the wounded runs, the cash against the top bench, the scrap against the dearest build, the
@@ -215,7 +248,16 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	print("Fiat gate read: %.0f h, %s" % [hours, build])
 	print("h:mm | tier (depth) surv | lvl | cash | stash | loadout £ | dps | hp | runs KIA | last 30 min: missions, £ earned, items")
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
-		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0}
+		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0,
+		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
+		"manager_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
+		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0}
+	var boss_uniques: Dictionary = {}
+	for u in Data.UNIQUES:
+		if u.get("boss", false):
+			boss_uniques[str(u["name"])] = true
+	var loose_seen := false
+	var reach_seen: int = sim.reach
 	var next_mark := 1800.0
 	var mark_runs := 0
 	var mark_cash := 0.0
@@ -231,6 +273,11 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	while sim.elapsed < hours * 3600.0 and Time.get_ticks_msec() - t0 < 7200000:     # two hours of wall: thirty-two simulated hours run under an hour with the bot reading one site a pick
 		var items_before: int = sim.stash.size()
 		var lost_before: int = sim.operators_lost
+		var uniques_before: Dictionary = {}
+		if not loose_seen and float(g["qm_at"]) < 0.0:
+			for it in sim.stash + sim.equipped.values() + sim.rig:
+				if it is Dictionary and it.has("unique"):
+					uniques_before[int(it["id"])] = true
 		var p0 := Time.get_ticks_usec()
 		var t: int = bot.step(sim)
 		step_us += Time.get_ticks_usec() - p0
@@ -247,6 +294,15 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 			mark_items += sim.stash.size() - items_before
 			if float(g["bank_at"]) < 0.0 and sim.best_depth[Data.BANK] > 0:
 				g["bank_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+			var gangs: int = int(r.get("patrols", 0))
+			if gangs >= 3:
+				g["gang3_runs"] += 1              # stayed into the third gang: did it leave by the fifth (gate 11)
+				if gangs <= 5:
+					g["left_by5"] += 1
+			if not loose_seen and float(g["qm_at"]) < 0.0:
+				for it in sim.stash + sim.equipped.values() + sim.rig:
+					if it is Dictionary and it.has("unique") and not boss_uniques.has(str(it["unique"])) and not uniques_before.has(int(it["id"])):
+						loose_seen = true         # a campaign's loose unique off a run (gate 12): not a head's, not bought (the tidy's after)
 			for i in range(Data.TIERS.size()):
 				var key := "%d/%d" % [i, sim.best_depth[i]]
 				if sim.best_depth[i] > 0 and not depth_seen.has(key):
@@ -269,6 +325,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 					g["keystone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
+		_gate_firsts(sim, g, loose_seen)
+		if sim.reach != reach_seen:
+			reach_seen = sim.reach
+			g["reach_log"].append([snappedf(sim.elapsed / 3600.0, 0.01), sim.reach])
 		if scrap_16 < 0.0 and sim.elapsed >= 16.0 * 3600.0:
 			scrap_16 = float(int(sim.scrap) + int(g.get("scrap_spent", 0)))
 		if sim.elapsed >= next_mark:
@@ -286,6 +346,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	# the ladder's depths are depth pace's business, and the bot leaves its site dug deep
 	g["cash_earned"] = sim.cash_in       # all of it, the fence's money with the runs': the cash row reads hours of income in hand, and the sinks are priced off the same
 	var odds := []
+	var gang_clock := []
 	var hp0: float = sim.hp
 	sim.hp = sim.max_hp()                 # read whole: the last run may have left it hurt, and the reader keys on the HP
 	var boxes: Array = []                 # and armed: a gun with a few rounds left reads 0% (the dry run burns them in seconds)
@@ -306,6 +367,9 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 				sim.arm_boss(i, false)        # and no boss left armed from an earlier pick: the campaign's odds are the site's
 			var s: float = sim.survival(i)
 			odds.append([i, snappedf(s, 0.001)])
+			if i <= 5:
+				var te: Dictionary = sim.effective(i)
+				gang_clock.append([i, snappedf(minf(99.0, sim.patrol_s(te) / maxf(0.01, sim.search_s(te))), 0.01)])     # Never there: no gangs (INF isn't JSON)     # searches in a gap between gangs (gate 10)
 			if s < 0.6:
 				_odds_detail(sim, i, s)
 			sim.words[i] = intel0
@@ -314,6 +378,12 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 		sim.rig.erase(box)
 	sim.hp = hp0
 	g["odds"] = odds
+	g["gang_clock"] = gang_clock
+	# the Radio's ladder from its opening to hour 12 (gate 6): the longest stretch without a signal made, and without reach
+	var to_h: float = minf(12.0, sim.elapsed / 3600.0)
+	var sig_h: Array = bot.bought.filter(func(x): return str(x[1]).begins_with("a signal")).map(func(x): return float(x[0]) / 3600.0)
+	g["signal_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, sig_h)
+	g["reach_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, g["reach_log"].map(func(x): return float(x[0])))
 	g["cash_end"] = int(sim.cash)
 	g["cash_per_h"] = snappedf(float(g.get("cash_earned", 0.0)) / maxf(0.01, sim.elapsed / 3600.0), 1.0)
 	g["notes_end"] = int(sim.notes)

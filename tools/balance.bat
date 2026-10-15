@@ -1,6 +1,6 @@
 @echo off
 rem The balance pass, in one command: every gate read at once, then the summary.
-rem   tools\balance.bat           sixteen simulated hours a build (the lorry's gate; twenty minutes of wall each)
+rem   tools\balance.bat           twenty-four simulated hours a build (the pass's gates, 15 Oct: retirement by 24)
 rem   tools\balance.bat 8         eight hours a build
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build (the final pass, 8 Oct)
 rem Runs thirty-one Godot jobs side by side, twice each build (one run is a noisy
@@ -15,7 +15,7 @@ rem _console.exe so the output reaches the files), else "godot" on the PATH.
 setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 set HOURS=%1
-if "%HOURS%"=="" set HOURS=16
+if "%HOURS%"=="" set HOURS=24
 set READS=%2
 if "%READS%"=="" set READS=2
 set PLAIN_HOURS=%HOURS%
@@ -44,6 +44,9 @@ for /l %%S in (1,1,%READS%) do (
 )
 set /a N+=1
 start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- 0 probe > docs\balance\probe.txt 2>&1 & echo done > docs\balance\probe.done"
+rem the loot read (15 Oct): gates 12 and 13 read its tables, docs\balance\loot_read.md
+set /a N+=1
+start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/loot_read.gd > docs\balance\loot_read.log 2>&1 & echo done > docs\balance\loot_read.done"
 
 echo %N% reads running, %HOURS% simulated hours an element build (%PLAIN_HOURS% a plain one), %READS% reads each. Waiting.
 :wait
