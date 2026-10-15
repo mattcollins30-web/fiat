@@ -5,7 +5,25 @@ and the Radio's codes are bolted onto them. Instead: the campaign stays the camp
 make on the Radio, out of the papers you've kept, with Kev reading what comes back. Gear is gated by level so the
 campaign lasts and you aren't endgame-kitted when it ends.
 
-Nothing here is agreed yet. Each section ends with what's to decide.
+**Agreed (Matt, 15 Oct):** the shape (§1), the signal and its name (§2), Kev's story (§3), the reach (§4), gating gear
+(§5). "We're essentially just copying PoE's map system with our own twist." A death: **the top gear simply waits** -
+"the same as any other game where you drop stuff, roll a new class and have to level the new one to wear the stuff you
+farmed with the other class." Gear too high to wear is greyed out with a padlock. The rest of §2-5's open questions
+take the recommended answers: three papers a signal; a rarer paper rolls one deeper; signals sit on the Radio, a few
+held, seen before they're run; a lost run loses the signal.
+
+Mockups (15 Oct): docs/design/mockups/signals_map.png (the campaign's cards), signals_radio.png (the Radio: the papers,
+the decoder, the signals held), signals_kit.png (gear too high to wear).
+
+**What we're borrowing (the sweep, 15 Oct):**
+- PoE 1's maps: one-use keys in 16 tiers; a map drops maps of its tier or under, a boss up to two over, so the ladder
+  feeds itself; crafting a map adds mods that make it harder and pay more; completing maps buys the atlas's tree.
+- PoE 2's waystones: the same keys on an atlas where each node is one attempt (fail it and route round); towers and
+  tablets juice an area; the pinnacle needs three keys from three factions' lieutenants.
+- Ours: papers are the waystones, and you choose them (each brings its own code) instead of rolling orbs on one. A
+  signal drops papers, the deeper the rarer, so it feeds itself as PoE's maps do. Kev's story signals are the three
+  keys: three story papers make the beat's mission. The juicing we have (the atlas map, standing codes, Twist) is
+  PoE's crafting and tablets already.
 
 ## 1. The shape
 
@@ -82,9 +100,7 @@ What this fixes, from Matt's save:
 - The campaign's sites drop at their own levels, so the City's gear comes in the City.
 
 To decide:
-- **A death.** A dead runner's replacement starts at level 1, keeping the training points. With gating, they can't
-  wear what's in the stash. Options: the new runner arrives at the old one's level less a share, or a share of the
-  Yard's levels carries over, or the stash's top gear waits. (This is the big one.)
+- **A death.** Settled: the top gear waits for the new runner's level.
 - Does the gamble roll at your level (as now), or under it?
 - Show the level on every item and an "at level N" lock on the compare, in red when it's over.
 
@@ -102,3 +118,24 @@ parts, each with its checks, before the balance pass.
 2. Mockups: the Radio's decrypt (three papers in, a signal out), a signal's card, the lock on gear.
 3. Build in parts: gating gear; the papers encrypted; signals and reach in place of the depth buttons; Kev's story
    signals; the bot and the reader.
+
+## 8. Training's gating (draft, for the next session)
+
+Matt, 15 Oct: "like Last Epoch, you need certain levels in one tree to be able to progress in the other or even the
+same one. Put points into your core speciality to allow the higher end skill usage."
+
+Where we are: a point a level, MAX_LEVEL 50 (paragon levels past it: +2% damage and HP each, no top), the second past
+at ASCEND_LEVEL 30, retirement at RETIRE_LEVEL 30. Gating today is inside a tree only: a column opens on 60% of what
+the columns before it cost (GATE_SHARE). Nothing gates one tree on another.
+
+Last Epoch: a mastery tree only opens after 20 points in the base class tree; half of every mastery tree is open to
+all, the other half only to the mastery chosen; skills unlock by level and by points in the class; a bar shows the
+points still to spend before the next node or skill.
+
+The draft for us:
+- **The class tree is the core.** Its element tree's later columns need points in the class tree: columns 3-4 at 6,
+  columns 5-6 at 12, the capstone at 18. The joint (column 4) needs both halves' trees past their gate.
+- **The second past** at 30 opens only with 20 points in the first class tree (Last Epoch's 20).
+- **Levels on the top nodes:** keystones at 20, capstones at 30, so the campaign can't hand them out early.
+- A bar on each lane: "6 more in Muscle to open this".
+Mockups once the numbers are agreed.
