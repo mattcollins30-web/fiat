@@ -4836,3 +4836,11 @@ with them. Smoke: each kind's flash on a drawn pixel of its gun, in the frame, f
 −10% (replaces pace)", or "(the same wound: one at a time)"), never "Wounded again", which read as stacking. The
 smoke's scrap check searches a site that can't be picked clean before a scrap roll (`crates_off`), so its flake is
 gone. **Group C done**; next is D, the balance pass.
+
+**The art pass manifest (15 Oct, Matt: "provide art manifest now so I can run in the background", then the balance
+pass, then the muzzle flash looked at again).** tools/make_art_pass_manifest.py writes
+tools/pixellab_art_pass_manifest.json, five jobs: the Gamekeeper's two uniques (the Twelve-Bore, 256 x 64; the Wax
+Jacket, 192 x 192) to art/items/, which the game picks up by name; the pistol's, the SMG's and the nail gun's hands
+redrawn down the sight (the rifle's hands as the reference) to art/fight_new/, to be looked at and copied over
+art/fight/hands_<kind>.png. Every other unique already has its own picture. **After the balance pass:** the muzzle
+flash's points and directions (RunView.MUZZLE) read again off the new hands, if they need it.

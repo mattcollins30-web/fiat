@@ -1,0 +1,81 @@
+"""The parked art pass (15 Oct, Matt: "provide art manifest now so I can run in the background"; status.md item 19).
+Writes tools/pixellab_art_pass_manifest.json, five jobs:
+- the Gamekeeper's two uniques (B8.1, on their bases' pictures till now) to art/items/, where the game finds them by
+  name (Items.art: a unique's own picture first);
+- the fight's hands for the pistol, the SMG and the improvised guns redrawn down the sight, as the rifle's and the
+  shotgun's read (Matt: "the ones I listed are side on and look plain weird"), to art/fight_new/ - looked at first,
+  then copied over art/fight/hands_<kind>.png (the muzzle flash's points are read again off them after).
+
+Run: python tools/make_art_pass_manifest.py, then
+  godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_art_pass_manifest.json
+(++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)."""
+import json
+
+STYLE = {"color_palette": True, "outline": True, "detail": True, "shading": True}
+ITEM_TAIL = ("One object centred and filling the frame, soft directional overcast daylight, natural material rendering "
+             "with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, "
+             "not a glossy video-game item; the look of a real object photographed on a grey day in a country that has "
+             "run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, "
+             "no hands, no person, no text, no logos, a plain dark neutral background.")
+FIGHT_TAIL = ("Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, "
+              "post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.")
+# the rifle's and the shotgun's read right: the gun aimed away up the frame, foreshortened, seen from behind along it
+SIGHT = ("seen from behind and just above as the player aims it, the muzzle pointing straight away from the viewer up "
+         "and into the frame toward its centre, the gun foreshortened along its length like a rifle shouldered in a "
+         "first-person game - not side-on, not across the frame")
+HANDS_HEAD = "First-person view of the player's own two hands in fingerless wool gloves "
+HANDS_FOOT = (", coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a "
+              "worn work jacket at the wrists. Only the hands and what they hold, coming in from the bottom right edge. ")
+
+JOBS = [
+    {"out": "art/items/the_keeper_s_twelve_bore.png", "width": 256, "height": 64, "seed": 70300,
+     "style_image": "res://art/reference/items/ref_01.png",
+     "description": "A realistic painted pixel-art still-life of a single gamekeeper's twelve-bore pump-action shotgun, "
+                    "seen exactly side-on with the muzzle pointing left, laid level and filling the frame left to right: a "
+                    "walnut stock oiled dark by forty years of hands, a cracked leather sling, the blueing worn silver at "
+                    "the pump, three brass-capped cartridges held to the stock by a band of inner tube. " + ITEM_TAIL,
+     "_where": "unique: The Keeper's Twelve-Bore (the Gamekeeper's, B8.1; on the Pump shotgun's picture till now)"},
+    {"out": "art/items/the_keeper_s_wax_jacket.png", "width": 192, "height": 192, "seed": 70301,
+     "style_image": "res://art/reference/items/ref_03.png",
+     "description": "A realistic painted pixel-art still-life of a single gamekeeper's waxed cotton field jacket, hung "
+                    "flat as if on a hook, seen from the front, filling the frame top to bottom: olive gone nearly black "
+                    "with rewaxing, a brown corduroy collar worn shiny, big bellows pockets sagging with cartridges, a "
+                    "tear at the elbow stitched shut with fishing line, a game pocket at the back bulging. " + ITEM_TAIL,
+     "_where": "unique: The Keeper's Wax Jacket (the Gamekeeper's, B8.1; on the Padded jacket's picture till now)"},
+    {"out": "art/fight_new/hands_pistol.png", "width": 256, "height": 192, "seed": 95135,
+     "style_image": "res://art/items/old_revolver.png",
+     "description": HANDS_HEAD + "holding an old revolver in a two-handed grip, arms out, " + SIGHT + ", the front "
+                    "sight and the top of the cylinder showing, one thumb over the other" + HANDS_FOOT + FIGHT_TAIL,
+     "_where": "your hands: pistol, down the sight (was side-on)"},
+    {"out": "art/fight_new/hands_smg.png", "width": 256, "height": 192, "seed": 95136,
+     "style_image": "res://art/items/army_smg.png",
+     "description": HANDS_HEAD + "holding a compact submachine gun shouldered, one hand on the pistol grip and one "
+                    "under the fore-end, the magazine hanging below, " + SIGHT + HANDS_FOOT + FIGHT_TAIL,
+     "_where": "your hands: smg, down the sight (was side-on)"},
+    {"out": "art/fight_new/hands_improvised.png", "width": 256, "height": 192, "seed": 95137,
+     "style_image": "res://art/items/hand_me_down_nail_gun.png",
+     "description": HANDS_HEAD + "holding a battered nail gun out in front like a pistol, both hands on it, its nose "
+                    "aimed, " + SIGHT + ", the nail magazine along its underside, its air hose trailing back past the "
+                    "wrist and out of the frame at the bottom" + HANDS_FOOT + FIGHT_TAIL,
+     "_where": "your hands: improvised (the nail gun), down the sight (was side-on)"},
+]
+
+out = []
+for j in JOBS:
+    job = {"out": j["out"], "width": j["width"], "height": j["height"], "no_background": True, "seed": j["seed"],
+           "style_image": j["style_image"], "description": j["description"], "_where": j["_where"],
+           "endpoint": "generate-image-v2", "single": True, "style_options": STYLE}
+    if "fight_new" in j["out"]:
+        job["reference_images"] = ["res://art/fight/hands_rifle.png"]     # the one that reads: its angle and its hands
+    out.append(job)
+
+readme = [
+    "FIAT ART PASS (15 Oct, Matt; status.md item 19): the Gamekeeper's two uniques to art/items/ (the game picks them up "
+    "by name), and the pistol's, the SMG's and the nail gun's hands redrawn down the sight to art/fight_new/.",
+    "Look at art/fight_new/ first; copy the ones that read over art/fight/hands_<kind>.png (or say, and Claude will). The "
+    "muzzle flash's points (RunView.MUZZLE) are read off them again after.",
+    "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_art_pass_manifest.json   "
+    "(++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force).",
+]
+json.dump({"_readme": readme, "jobs": out}, open("tools/pixellab_art_pass_manifest.json", "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+print("%d jobs -> tools/pixellab_art_pass_manifest.json" % len(out))
