@@ -8869,6 +8869,44 @@ func _bin_checks(main) -> void:
 ## The run view (13 Oct, Time Crisis; docs/design/fight_art.md): with its art there, the frame takes the two boxes; the
 ## six figures under it; the gang up as many as are on you; a kill drops one; a hit reddens the edges; the search pans
 ## to the crates; their bar over the frame in a fight, the search's under the six; it all fits.
+## Your muzzle flash (15 Oct, item 9): every gun kind's at its picture's muzzle - a drawn pixel of the gun, in the
+## frame - for its moment, then gone; none on a blade or a hammer.
+func _flash_checks(main) -> void:
+	var v = main._run._view
+	for kind in RunView.MUZZLE:
+		var ht: Texture2D = RunView.tex("hands_" + kind)
+		if ht == null:
+			continue
+		v._kind = kind
+		v._melee = false
+		v._hands.texture = ht
+		v._hands.size = ht.get_size()
+		v._hands.visible = true
+		v._hands_at = RunView.HANDS_CORNER - RunView.used_of(ht).end * RunView.HANDS_SCALE
+		v._hands.position = v._hands_at
+		v.fire_flash()
+		var fs: Dictionary = v.flash_state()
+		var mz: Vector2 = RunView.MUZZLE[kind]["at"]
+		var img: Image = ht.get_image()
+		var drawn := false
+		for dx in range(-3, 4):
+			for dy in range(-3, 4):
+				var q := Vector2i(int(mz.x) + dx, int(mz.y) + dy)
+				if q.x >= 0 and q.y >= 0 and q.x < img.get_width() and q.y < img.get_height() and img.get_pixelv(q).a > 0.5:
+					drawn = true
+		_check(fs["up"] and Rect2(0, 0, RunView.W, RunView.H).has_point(fs["at"]) and drawn and fs["at"].is_equal_approx(v._hands.position + mz * RunView.HANDS_SCALE), "the %s's flash isn't at its muzzle in the frame: %s (drawn there: %s)" % [kind, str(fs["at"]), str(drawn)])
+		v._flash_step(1.0)
+		_check(v.flash_state()["up"], "the %s's flash went before its first frame was drawn" % kind)
+		v._flash_step(1.0)
+		_check(not v.flash_state()["up"], "the %s's flash stayed up past its moment" % kind)
+	v._melee = true
+	v.fire_flash()
+	_check(not v.flash_state()["up"], "a blade or a hammer flashed")
+	v._melee = false
+	main.refresh()
+	print("the muzzle flash ok: each gun at its muzzle, for its moment; none on a blade")
+
+
 ## A bar over each of them (15 Oct, items 11 and 6; hpbars_mockup.png A): a bar a figure up, in the frame, clear of
 ## the head line and the chips; the one you're hitting its HP (your hits held till their number's out), the rest full;
 ## none on one falling; a kill drops the one you were hitting; the bar drops by a number as it lands.
@@ -8983,6 +9021,7 @@ func _run_view_checks(main) -> void:
 	_full_art_checks(main, v)
 	_check(not run._fight["track"].visible and run._six[0]["key"].text == "Fire in", "the top bar shows in a fight (their HP is over each of them), or the six don't lead with Incoming")
 	_fig_bar_checks(main)
+	_flash_checks(main)
 	_check_fit(main, "Run (the run view, a gang)")
 	_frame_checks(main)
 	_check(not run._fight_face["art"].visible and not run._runner_face["art"].visible, "the faces' pictures show over the run view (Matt, 13 Oct)")

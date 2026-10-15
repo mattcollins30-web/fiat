@@ -123,6 +123,19 @@ const SWING_UP := 0.35                    # the swing's share winding up
 const SWING_CONTACT := 0.55               # where in it the chop lands
 const STREAK_S := 0.16                    # a streak point's life
 var _melee := false
+## Your muzzle flash (15 Oct, parked item 9: "doesn't work on shotgun or bolt gun" - there wasn't one): at each picture's
+## muzzle (read off the art, in its pixels), its shape the gun's, on the shot's beat with the kick; none on a blade or
+## a hammer. The improvised pictures, the SMG's and the pistol's are to be redrawn down the sight (the art pass): their
+## points move with them.
+const MUZZLE := {
+	"pistol": {"at": Vector2(65, 72), "dir": Vector2(-1, -0.05), "len": 20.0, "wide": 9.0, "s": 0.06},
+	"rifle": {"at": Vector2(38, 50), "dir": Vector2(-1, -0.42), "len": 38.0, "wide": 8.0, "s": 0.07},
+	"shotgun": {"at": Vector2(27, 43), "dir": Vector2(-1, -0.36), "len": 30.0, "wide": 16.0, "s": 0.08, "barrels": 2},
+	"smg": {"at": Vector2(34, 80), "dir": Vector2(-1, 0.0), "len": 14.0, "wide": 7.0, "s": 0.04},
+	"improvised": {"at": Vector2(36, 108), "dir": Vector2(-0.5, 0.85), "len": 10.0, "wide": 10.0, "s": 0.05, "spark": true},
+}
+var _kind := ""                           # the hands' kind (_hands_kind), for the flash
+var _flash: Control
 var _hand_l: TextureRect                  # the off hand, still (a melee picture split in two)
 var _hand_r: TextureRect                  # the weapon's arm, swinging
 var _swing := -1.0                        # time into a swing; below 0 none
@@ -309,6 +322,10 @@ func _init() -> void:
 	_glass.ring = Pal.ACCENT
 	_glass.visible = false
 	add_child(_glass)
+	_flash = Flash.new()
+	_flash.visible = false
+	add_child(_flash)
+	move_child(_flash, _hands.get_index() + 1)     # over the gun's end
 	_marker = UI.label(self, Rect2(0, 0, 24, 24), "✕", "Bold", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	UI.shadow(_marker)
 	_marker.visible = false
@@ -373,6 +390,7 @@ func set_placing(on: bool) -> void:
 	placing = on
 	placing_changed.emit(on)
 	_bars_layer.visible = not on              # the tool holds the frame clear
+	_flash.visible = false
 	if on:
 		_edit = []
 		for k in range(3):
@@ -664,6 +682,7 @@ func show_state(sim, m: Dictionary) -> void:
 	if ht != null and Items.is_melee(gun) and tex("hands_" + _hands_kind(gun)) == null:
 		ht = null                                  # no revolver for a hammer: nothing till its hands are drawn
 	var melee: bool = ht != null and Items.is_melee(gun)
+	_kind = _hands_kind(gun) if gun != null else ""
 	if ht != _hands.texture or melee != _melee:
 		_hands.texture = ht
 		_melee = melee
@@ -918,11 +937,13 @@ func _process(dt: float) -> void:
 			_swing_k = k
 		else:
 			_recoil = 0.08
+			fire_flash()
 			if k >= 0:
 				_land_hit(k)
 	_swing_step(dt)
 	_recoil = maxf(0.0, _recoil - dt)
 	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt + _swing_off * HANDS_SCALE
+	_flash_step(dt)
 	_marker_t -= dt
 	_marker.visible = _marker_t > 0.0
 	_fx_t += dt
@@ -1035,6 +1056,86 @@ class FigBar extends Control:
 		if finish:
 			var sk: float = size.y + 6.0
 			draw_texture_rect(NodeGlyphs.texture("skull"), Rect2(-sk - 4.0, (size.y - sk) * 0.5, sk, sk), false, Color(Pal.TEXT, 0.95))
+
+
+## A shot's flash at the gun's muzzle: its kind's shape for its moment (none on a blade, a hammer or no picture).
+func fire_flash() -> void:
+	if _melee or not _hands.visible or not MUZZLE.has(_kind) or tex("hands_" + _kind) == null:
+		_flash.visible = false                   # a stand-in picture's muzzle is somewhere else (the review)
+		return
+	var mz: Dictionary = MUZZLE[_kind]
+	_flash.kind = mz
+	_flash.left = float(mz["s"])
+	_flash.seed_v = randi()
+	_flash.visible = true
+	_flash.fresh = true
+	_flash.position = muzzle_point()
+	_flash.queue_redraw()
+
+
+func _flash_step(dt: float) -> void:
+	if not _flash.visible:
+		return
+	if _flash.fresh:
+		_flash.fresh = false                     # drawn at least the frame it fired, however slow the frames (the review)
+	else:
+		_flash.left -= dt
+	if _flash.left <= 0.0 or _melee or not _hands.visible:
+		_flash.visible = false
+		return
+	_flash.position = muzzle_point()
+	_flash.queue_redraw()
+
+
+## Where the gun's muzzle is in the frame this moment (the hands' picture, its scale, the kick), or the hands' corner.
+func muzzle_point() -> Vector2:
+	if not MUZZLE.has(_kind):
+		return _hands.position
+	return _hands.position + MUZZLE[_kind]["at"] * HANDS_SCALE
+
+
+## For the tests: the flash up, where, and the kind it's drawn as.
+func flash_state() -> Dictionary:
+	return {"up": _flash.visible, "at": _flash.position, "kind": _kind}
+
+
+## The flash: a hot core and a cone of fire along the barrel (two for the double-barrel), or a spark's few lines.
+class Flash extends Control:
+	var kind := {}
+	var left := 0.0
+	var seed_v := 0
+	var fresh := false
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var mat := CanvasItemMaterial.new()
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		material = mat
+
+	func _draw() -> void:
+		if kind.is_empty():
+			return
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_v
+		var d: Vector2 = Vector2(kind["dir"]).normalized()
+		var n := Vector2(-d.y, d.x)
+		var ln: float = float(kind["len"]) * rng.randf_range(0.85, 1.15)
+		var wd: float = float(kind["wide"])
+		if kind.get("spark", false):
+			for i in range(6):
+				var a: float = d.angle() + rng.randf_range(-1.1, 1.1)
+				var l: float = ln * rng.randf_range(0.6, 1.4)
+				draw_line(Vector2.ZERO, Vector2.from_angle(a) * l, Color(1.0, 0.85, 0.45, 0.95), 1.5, true)
+			draw_circle(Vector2.ZERO, 3.0, Color(1.0, 0.95, 0.8, 0.9))
+			return
+		var barrels: int = int(kind.get("barrels", 1))
+		for b in range(barrels):
+			var o: Vector2 = n * (float(b) - (barrels - 1) * 0.5) * wd * 0.45
+			var outer := PackedVector2Array([o + n * wd * 0.5, o + d * ln * 0.55 + n * wd * 0.6, o + d * ln, o + d * ln * 0.55 - n * wd * 0.6, o - n * wd * 0.5])
+			draw_colored_polygon(outer, Color(1.0, 0.55, 0.15, 0.75))
+			var core := PackedVector2Array([o + n * wd * 0.25, o + d * ln * 0.6, o - n * wd * 0.25])
+			draw_colored_polygon(core, Color(1.0, 0.92, 0.6, 0.95))
+		draw_circle(Vector2.ZERO, wd * 0.45, Color(1.0, 0.97, 0.85, 0.9))
 
 
 ## A hit on figure k: the marker on them, their flash, and the number's cue (run.gd's _on_view_shot).

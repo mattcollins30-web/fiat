@@ -4824,3 +4824,10 @@ till their number lands and drops by it; the dots chip it in between (display on
 The bars are drawn at the screen's pixels over the scaled frame, so the words stay crisp. Smoke: a bar a figure up,
 in the frame, clear of the head line and the chips; the hit one's HP and words; the rest full; a held hit then out;
 a kill.
+
+**C10.3: your muzzle flash (15 Oct; parked item 9).** A flash at each gun picture's muzzle (the point read off the
+art: `RunView.MUZZLE`), on the shot's beat with the kick, following the gun through the kick and the duck: the
+shotgun's wide and both barrels, the bolt gun's long, the pistol's small, the SMG's quick and small, the nail gun a
+spark; none on a blade or a hammer, or on a stand-in picture. Drawn additive, at least one frame however slow the
+frames. The improvised, SMG and pistol pictures are to be redrawn down the sight (item 19): their muzzle points move
+with them. Smoke: each kind's flash on a drawn pixel of its gun, in the frame, for its moment; none on a blade.
