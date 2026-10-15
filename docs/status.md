@@ -4660,3 +4660,16 @@ sim) but every moved function's state reads become `sim.` reads and the save rea
 before the pass for navigation alone. smoke.gd split into files - possible (a base of the helpers, areas on it),
 left: the one-area runs got the time it was for. A run-keys list - `m` holds the modifiers' dicts too, so a check
 would be noise; a one-off scan found the one real case (bonus_armour).
+
+**A4: the odds quicker, and the events in them (15 Oct; items 1 and 14 done).** A dry run's tick about 45% cheaper,
+exactly (the same fights to the tick, the fingerprint unmoved by it): the damage figure kept while nothing it reads
+moves (keyed on which ammo stacks have rounds, not their count, which moves every tick); the set bonuses read once a
+run, not twice a tick by `contact()`; a tick's rounds taken off the stack at once, not a rig scan a round; `level()`
+read once an XP. The memos clear on a train, a respec and a class change (the review). Then two that change what the
+odds say: **the events now roll in the dry runs** at their real chance, on the odds' own dice, as a run rolls them - a
+convoy's extra lot counts; a cache is loot, so skipped; one that falls after the clear still isn't counted (a dry run
+ends at the clear). And the gate's reads (only theirs: the Map's own number reads on) settle at four runs when all
+four come back over 70%, or all four die. Measured, Doorman as physical, 4 h gate in the cloud: wall 63 s -> 36 s, the
+odds 53 s -> 27 s; a fixed camp's dry run 17.9 -> 9.5 ms. The fingerprint moves for the events and the four-run stop
+(the bots push on the odds): new baseline **c2cf909a…** (302 lines). The bots' campaign shifts with it; the pass
+measures it fresh.

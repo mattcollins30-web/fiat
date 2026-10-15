@@ -211,7 +211,14 @@ func _plain(slot: String, base: String) -> Dictionary:
 # ------------------------------------------------------------------ the operator
 
 func level() -> int:
-	return Data.level_for_xp(xp)
+	if xp != _level_xp:
+		_level_xp = xp
+		_level_at = Data.level_for_xp(xp)        # read a few times a tick: the curve's walk once an XP (15 Oct, A4)
+	return _level_at
+
+
+var _level_xp := -1.0
+var _level_at := 1
 
 
 ## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top. The Yard's, not the runner's:
@@ -248,7 +255,22 @@ func _max_hp_raw() -> float:
 ## Damage a second: the primary while it has rounds, else the secondary at full
 ## (a third of it behind the primary, or all of it with Double tap), else fists.
 func dps() -> float:
-	return _dps(null)
+	if _trying or not (_dry_on or (fast_memo and mission != null)):
+		return _dps(null)
+	# the odds' runs and the reader's (15 Oct, refactor A4): the figure read twice a tick (dps, type_dps), so kept
+	# while nothing it reads has moved - each gun fed or not and by what, HP either side of half, the first lot, the
+	# XP, the kit (not the rounds' count: that moves every tick; which stacks have any decides the feed)
+	var feed := []
+	for it in rig:
+		if it["slot"] == Data.AMMO and int(it["rounds"]) > 0:
+			feed.append(it["base"])
+	var k := [feed, hp < max_hp() * 0.5, mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)), xp, wound, _kit_ids()]
+	var c = _dry_memo.get("dps")
+	if c != null and c[0] == k:
+		return c[1]
+	var v := _dps(null)
+	_dry_memo["dps"] = [k, v]
+	return v
 
 
 ## Damage a second in its parts (10 Oct, the Stats sheet's chain): {guns, level, pct, attack, past, trait, growth},
@@ -699,6 +721,7 @@ func cm(key: String) -> float:
 func set_class(name: String) -> bool:
 	if mission != null or name == cls or name == cls2:
 		return false                       # the second past's class is taken already: a change to it would lose the second past
+	_dry_memo.clear()
 	for c in Data.CLASSES:
 		if c["name"] == name:
 			# a change costs the respec of what it gives back (9 Oct: clicking a class was a free respec); a new runner picks free
@@ -1972,6 +1995,7 @@ func can_ascend() -> bool:
 func set_second(name: String) -> bool:
 	if not can_ascend() or name == cls or name == cls2:
 		return false
+	_dry_memo.clear()
 	for c in Data.CLASSES:
 		if c["name"] == name:
 			cls2 = name
@@ -2214,6 +2238,7 @@ func can_train(id: String) -> bool:
 func train_node(id: String) -> bool:
 	if not can_train(id):
 		return false
+	_dry_memo.clear()                     # the memos read the tree (A4's review)
 	var nd: Dictionary = node(id)
 	var paid: int = node_cost(id)
 	tree.append(id)
@@ -2238,6 +2263,7 @@ func respec_cost() -> int:
 func respec() -> bool:
 	if tree.is_empty() or cash < respec_cost():
 		return false
+	_dry_memo.clear()
 	var paid := respec_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": points_spent()})
@@ -2408,8 +2434,11 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 		if stack.is_empty():
 			m["fired"][t] = 0.0
 			return
-		stack["rounds"] = int(stack["rounds"]) - 1
-		m["fired"][t] -= 1.0
+		# the tick's rounds off the one stack at once (A4: a scan of the rig a round was a quarter of a dry run's tick);
+		# the feed only changes when a stack runs out
+		var n: int = mini(int(m["fired"][t]), int(stack["rounds"]))
+		stack["rounds"] = int(stack["rounds"]) - n
+		m["fired"][t] -= float(n)
 		if int(stack["rounds"]) <= 0:
 			rig.erase(stack)
 			_dry_memo.erase("conversion")   # the grade's share goes with the stack (33), in a dry run too
@@ -3706,6 +3735,10 @@ func set_count(name: String) -> int:
 
 ## The set bonuses in force: every threshold at or under the count.
 func set_bonuses() -> Array:
+	return _memo("set_bonuses", _set_bonuses_raw)     # read by contact() twice a tick, and the sums (A4)
+
+
+func _set_bonuses_raw() -> Array:
 	var out: Array = []
 	for st in Data.SETS:
 		var n := set_count(st["name"])
@@ -4142,6 +4175,8 @@ var odds_runs_max := 0
 var odds_time_ms := 0.0
 var _odds_t0 := 0
 const EARLY_RUNS := 8
+const EARLY_FEW := 4
+const EARLY_FEW_HP := 0.7
 var _dry_min_hp := 1.0               # the last dry run's lowest HP, as a share of the max
 ## Where the time goes (8 Oct, the pass at an hour): counts and microseconds the balance gate prints. Cheap
 ## enough to leave on: a few adds a tick.
@@ -4210,6 +4245,10 @@ func survival(i: int) -> float:
 			c[3] += 1
 		c[2] += 1
 		c[5] = minf(float(c[5]), _dry_min_hp)
+		if c[2] == EARLY_FEW and (c[3] == EARLY_FEW and float(c[5]) >= EARLY_FEW_HP or c[3] == 0) and odds_runs_max > 0 and not boss_armed.get(i, false):
+			c[3] = runs if c[3] > 0 else 0   # (15 Oct, refactor A4) the gate's read only: four clean - none under 70% - or four dead says it sooner; the Map's own number reads on
+			c[2] = runs
+			break
 		if c[2] == EARLY_RUNS and (c[3] == EARLY_RUNS and float(c[5]) >= 0.5 or c[3] == 0):
 			c[3] = runs if c[3] > 0 else 0   # plainly settled: the rest of the lookout's runs would say the same
 			c[2] = runs
@@ -4242,7 +4281,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	prof["dry_runs"] += 1
 	var t := effective(i)
 	var keep := {"hp": hp, "xp": xp, "rig": rig.duplicate(true), "events": events.duplicate(true), "mission": mission,
-		"rng": rng, "promised": promised, "training_points": training_points, "best_level": best_level, "insure_next": insure_next}
+		"rng": rng, "promised": promised, "training_points": training_points, "best_level": best_level, "insure_next": insure_next, "events_total": events_total}
 	prof["snap_us"] += Time.get_ticks_usec() - p0
 	rng = r
 	_yard_setting_off()                       # the Charger and the Field kit read in the odds too (kept and put back above)
@@ -4259,6 +4298,12 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 		for q in t.get("boss_queue", []):
 			m["boss_queue"].append(_boss_entry(q))
 		m["convoy"] = t.get("convoy", false)
+	# what may happen on the way, on the odds' own dice, as deploy rolls it (15 Oct, refactor A4: the odds missed a
+	# convoy's extra lot; parked item 14). Only one that comes before the clear plays: a dry run ends at the clear,
+	# so a convoy in the search still isn't in the odds
+	if rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys"):
+		m["event"] = Data.EVENTS[rng.randi_range(0, Data.EVENTS.size() - 1)]
+		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
 	mission = m
 	_dry_rules = _snapshot_rules()
 	_dry_memo = {}
@@ -4293,6 +4338,7 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	training_points = keep["training_points"]
 	best_level = keep["best_level"]
 	insure_next = keep["insure_next"]
+	events_total = keep["events_total"]
 	return alive
 
 
@@ -4681,6 +4727,8 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			promised = pool[rng.randi_range(0, pool.size() - 1)]
 			log_event(Words.EVENTS["trapped"])
 		"cache":
+			if m.get("dry", false):
+				return                        # the odds: a cache is loot, not the fight (A4)
 			# a cache is always opened now (9 Oct: the Bench's levels went - it wanted Bench 2)
 			var up: Dictionary = t.duplicate()
 			up["loot_tier"] = mini(loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))), int(t["loot_tier"]) + 1)
