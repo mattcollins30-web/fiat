@@ -138,4 +138,5 @@ The draft for us:
 - **The second past** at 30 opens only with 20 points in the first class tree (Last Epoch's 20).
 - **Levels on the top nodes:** keystones at 20, capstones at 30, so the campaign can't hand them out early.
 - A bar on each lane: "6 more in Muscle to open this".
-Mockups once the numbers are agreed.
+Mockup: docs/design/mockups/gating_training.png. **Retirement moves to level 50 (Matt, 15 Oct)**, not 30. The level
+cap stays at 50 until Matt has played a save to the cap and through the Radio's loop; then decide whether it rises.

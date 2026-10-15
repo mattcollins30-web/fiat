@@ -4598,3 +4598,36 @@ below starts until that save lands; then each is designed with him, one at a tim
     47 min, the Quartermaster at 67, kitted out by the end. Being designed now: docs/design/endgame_radio.md (the
     Radio's missions in place of the depth buttons, and gear gated by level). Sets (data.gd SETS, six, from depth 5
     to 15, 0.4% a find a depth past the first) are one of its hooks.
+
+## The running order to the next playtest (15 Oct, Matt: "backlog + balance before I play again")
+
+The items above, the Radio's endgame (docs/design/endgame_radio.md) and Training's gating, built in this order. Each
+is its own commit: design or mockup where it needs one, the smoke, the reviewer, the fingerprint once it exists.
+
+**A. The ground first** (no player-facing change; makes everything after safer and quicker)
+1. The fingerprint and dead code (item 2, step 1).
+2. The effects' numbers into data (item 2, step 2).
+3. sim.gd split by system, smoke.gd by area with one-area runs (item 2, steps 3-4); the run's keys in one list and
+   `ending` renamed (items 2.5, 8) ride along.
+4. The odds: quicker reads, and the events in them (items 1, 14).
+
+**B. The structure** (changes numbers: all before the pass)
+5. Gear gated by level: the level to wear, the padlock (endgame_radio.md §5; signals_kit.png).
+6. Training's gating and retirement at 50 (§8; gating_training.png).
+7. The Radio's endgame, in parts: the papers encrypted till the Radio, each carrying its code (item 3); the depth
+   buttons off the campaign (signals_map.png); the decoder and signals with the reach (signals_radio.png); Kev's story
+   signals and their papers; full-strength heads and the convoy moved onto signals; the bot making signals; old saves
+   converted to a reach.
+8. Loot: the heads' keepsakes (item 3), the Gamekeeper's own (item 7), the Van's Spare (item 12), the full pack's
+   swap (item 10), then the loot tables read whole (item 17).
+9. Gangs harder, not just larger (item 5, its second half).
+
+**C. The fight's feel** (no numbers)
+10. The bigger frame first (item 13, mockups), then the bar over each of them with the hits in chunks (items 6, 11)
+    and the muzzle flash (item 9) on it.
+11. The small ones: the wound's words (item 16), the scrap flake (item 4).
+
+**D. The balance pass**
+12. Gates set first. The campaign's length measured against Matt's 14 Oct save (the Bank at 47 min, the Quartermaster
+    at 67, first death at 82, as a fire Drifter's Bank was 47 too) and its target agreed; the search against the gangs
+    (item 5), the gamble's worth (item 15), the loot tables' numbers (item 17), the signals' ladder. Then one pass.
