@@ -47,6 +47,7 @@ const VIEW_Y := 88
 const HEARD_X := 470
 const HEARD_Y := HEAD_H - 44
 const BITE := Color("ee7663")
+const STORY := Color("8fb3d9")      # Kev's story's papers and signals (the mockup's blue)
 const PAY := Color("62bd8f")
 
 var head_band := {}
@@ -300,7 +301,8 @@ func show_state(s) -> void:
 	UI.fit(_sub, ["The deepest signal you've beaten, plus one", "Your deepest signal, plus one", ""] if on_air else ["", ""])
 	_chips.show_chips([{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Color("c9b98f")},
 		{"tag": "Papers", "forms": ["%d" % have.size()], "colour": Pal.TEXT_2},
-		{"tag": "Signals", "forms": ["%d of %d held" % [sim.signals.size(), Data.SIGNALS_HELD], "%d/%d" % [sim.signals.size(), Data.SIGNALS_HELD]], "colour": Pal.TEXT_2}], 1)
+		{"tag": "Signals", "forms": ["%d of %d held" % [sim.signals.size(), Data.SIGNALS_HELD], "%d/%d" % [sim.signals.size(), Data.SIGNALS_HELD]], "colour": Pal.TEXT_2},
+		{"tag": "Kev's story", "forms": ["%d of %d" % [mini(sim.story_beat, Data.STORY_BEATS.size()), Data.STORY_BEATS.size()]], "colour": STORY}], 1)
 	_chips.visible = on_air
 	_show_heard()
 	for b in [_papers_box, _decoder_box, _signals_box]:
@@ -369,13 +371,25 @@ func _show_papers() -> void:
 		var rare: bool = int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT
 		UI.fit(r["name"], [str(it["base"]) + (" · rare" if rare else "")])
 		r["name"].add_theme_color_override("font_color", Pal.tone_color(Pal.item_tone(it)) if int(it.get("rarity", 0)) > 0 else Pal.TEXT)
-		var cw: Array = code_words(str(it["base"]))
-		UI.fit(r["code"], ([str(cw[0][0]) + " · one deeper"] if rare else []) + cw[0])
-		r["code"].add_theme_color_override("font_color", cw[1])
+		var beat: int = sim.story_of(it)
+		if beat >= 0:
+			var bn: String = str(Data.STORY_BEATS[beat]["name"]).to_lower()
+			UI.fit(r["code"], ["Kev's story · %s · %d of 3 found" % [bn, sim.story_held().size()] if beat == sim.story_now() else "Kev's story · %s" % bn, "Kev's story"])
+			r["code"].add_theme_color_override("font_color", STORY)
+		else:
+			var cw: Array = code_words(str(it["base"]))
+			UI.fit(r["code"], ([str(cw[0][0]) + " · one deeper"] if rare else []) + cw[0])
+			r["code"].add_theme_color_override("font_color", cw[1])
 		var on: bool = int(it["id"]) in chosen
-		r["badge"].visible = on
-		r["button"].add_theme_stylebox_override("normal", UI.box(Pal.CARD, 7, 2 if on else 1, Pal.ACCENT if on else Pal.CARD_LINE))
-		r["button"].add_theme_stylebox_override("hover", UI.box(Pal.BUTTON, 7, 2 if on else 1, Pal.ACCENT if on else Pal.CARD_LINE))
+		r["badge"].visible = on or beat >= 0
+		r["badge"].text = "IN" if on else "STORY"
+		r["badge"].size.x = 34 if on else 62
+		r["badge"].position.x = r["button"].size.x - 12 - r["badge"].size.x
+		r["badge"].add_theme_color_override("font_color", Pal.ACCENT if on else STORY)
+		r["badge"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 4, 1, Pal.ACCENT if on else STORY))
+		var edge: Color = Pal.ACCENT if on else (STORY if beat >= 0 else Pal.CARD_LINE)
+		r["button"].add_theme_stylebox_override("normal", UI.box(Pal.CARD, 7, 2 if on else 1, edge))
+		r["button"].add_theme_stylebox_override("hover", UI.box(Pal.BUTTON, 7, 2 if on else 1, edge))
 	_paper_prev.visible = pages > 1
 	_paper_next.visible = pages > 1
 	_paper_page.visible = pages > 1
@@ -402,6 +416,8 @@ func _show_decoder() -> void:
 		UI.fit(sl["name"], [str(it["base"]) + (" · rare" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "")] if on else ["A paper from the left"])
 		sl["name"].add_theme_color_override("font_color", Pal.TEXT if on else Pal.TEXT_3)
 		var cw: Array = code_words(str(it["base"])) if on else [[""], Pal.TEXT_3]
+		if on and sim.story_of(it) >= 0:
+			cw = [["Kev's story · %s" % str(Data.STORY_BEATS[sim.story_of(it)]["name"]).to_lower(), "Kev's story"], STORY]
 		UI.fit(sl["code"], cw[0])
 	var band: Array = sim.signal_band(chosen)
 	UI.fit(_make, ["A signal at depth %d-%d" % [band[0], band[1]], "Depth %d-%d" % [band[0], band[1]]])
@@ -427,7 +443,11 @@ func _show_signals(od: Array) -> void:
 	var sg: Dictionary = sim.signal_at(selected)
 	var e: Dictionary = sim.signal_read(selected)
 	var site: String = str(Data.TIERS[int(sg["site"])]["name"])
-	UI.fit(_card_kicker, ["Signal %02d · a fix on %s" % [int(sg["id"]), Words.mid(site)], "Signal %02d" % int(sg["id"])])
+	var beat: int = int(sg.get("story", -1))
+	if beat >= 0:
+		UI.fit(_card_kicker, ["Kev's story · %s · a fix on %s" % [Data.STORY_BEATS[beat]["name"], Words.mid(site)], "Kev's story · %s" % Data.STORY_BEATS[beat]["name"]])
+	else:
+		UI.fit(_card_kicker, ["Signal %02d · a fix on %s" % [int(sg["id"]), Words.mid(site)], "Signal %02d" % int(sg["id"])])
 	UI.fit(_card_title, [site])
 	var d: int = int(sg["depth"])
 	var rel: String = "at your reach" if d == sim.reach else (("%d over your reach" % (d - sim.reach)) if d > sim.reach else ("%d under your reach" % (sim.reach - d)))
@@ -448,14 +468,21 @@ func _show_signals(od: Array) -> void:
 			chips.append({"forms": [str(parts[1]), str(parts[1]).get_slice(", ", 0)], "colour": PAY})
 	if bool(sg.get("head", false)):
 		chips.append({"forms": ["Extra: %s at full strength" % sim.zone_boss(int(sg["zone"])).get("name", "their head"), "Extra: a head"], "colour": Pal.WARN})
+	if bool(sg.get("convoy_fight", false)):
+		chips.append({"forms": ["The convoy: three heads, one after another, and the load", "The convoy"], "colour": Pal.WARN})
 	if bool(sg.get("convoy", false)):
 		chips.append({"forms": ["Extra: a convoy may come", "Extra: a convoy"], "colour": Pal.WARN})
 	if bool(sg.get("sealed", false)):
 		chips.append({"forms": ["Sealed", "Sealed"], "colour": Pal.TEXT_3})
 	if chips.is_empty():
 		chips.append({"forms": ["No codes: a plain fix", "No codes"], "colour": Pal.TEXT_3})
+	if beat >= 0:
+		chips.push_front({"forms": ["Kev's story: %s" % Data.STORY_BEATS[beat]["name"], "Kev's story"], "colour": STORY})
 	_card_codes.show_chips(chips, 3, true)
-	UI.wrap([_card_kev, _card_kev2], "KEV  \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()]))
+	if beat >= 0:
+		UI.wrap([_card_kev, _card_kev2], str(Words.STORY[beat]["made"]).replace("Kev: ", "KEV  "))
+	else:
+		UI.wrap([_card_kev, _card_kev2], "KEV  \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()]))
 	for c in _crafts:
 		var cd: Dictionary = Data.craft_of(c["key"])
 		var why: String = sim.signal_craft_block(selected, c["key"])

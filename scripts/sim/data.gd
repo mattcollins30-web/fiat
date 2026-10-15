@@ -554,6 +554,17 @@ const BASES := {
 		{"name": "A letter to the Bank", "tier": 1, "value": 5, "depth": 30},
 		{"name": "A list of names", "tier": 1, "value": 5, "depth": 40},
 		{"name": "The Manager's note", "tier": 1, "value": 6, "depth": 50},
+		# Kev's story (15 Oct, endgame_radio.md §3): three papers a beat, found once the Radio's on the air, that only
+		# matter together - tier 5, as the deeds: never a search's roll
+		{"name": "A tachograph disc", "tier": 5, "value": 6, "story": 0},
+		{"name": "A route card", "tier": 5, "value": 6, "story": 0},
+		{"name": "A fuel receipt", "tier": 5, "value": 6, "story": 0},
+		{"name": "A movement order", "tier": 5, "value": 8, "story": 1},
+		{"name": "A ration chit", "tier": 5, "value": 8, "story": 1},
+		{"name": "A signals log", "tier": 5, "value": 8, "story": 1},
+		{"name": "A gate pass", "tier": 5, "value": 10, "story": 2},
+		{"name": "A loading manifest", "tier": 5, "value": 10, "story": 2},
+		{"name": "A depot plan", "tier": 5, "value": 10, "story": 2},
 		{"name": "The deeds", "tier": 5, "value": 5000},
 		# the gates (13 Oct, docs/design/campaign_gates.md): a head's own, home in the pack whatever it holds; each opens a room
 		{"name": "The vet's bag", "tier": 5, "value": 0},           # tier 5, as the deeds: never a paper's roll
@@ -2202,6 +2213,15 @@ const REACH_START := 2                       # depth 1 is the campaign's; the fi
 const SIGNAL_ROLL := [[-1, 0.2], [0, 0.6], [1, 0.15], [2, 0.05]]     # the depth round the reach: [step, odds]
 const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
 const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
+## Kev's story (15 Oct, §3): three beats, each a story signal made of its beat's three papers - a fixed site and crew
+## at your reach, the crew's head at full strength; the third is the depot, the lorry's convoy (the old Services at
+## depth 8). A signal beaten past the Radio's open has STORY_DROP to bring the beat's next paper home.
+const STORY_BEATS := [
+	{"key": "route", "name": "Where they go", "site": 9, "zone": 2},
+	{"key": "army", "name": "Whose they are", "site": 11, "zone": 3},
+	{"key": "depot", "name": "The depot", "site": 9, "zone": 3, "convoy": true},
+]
+const STORY_DROP := 0.5
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.

@@ -131,6 +131,15 @@ const SIGNAL_LINES := [
 	"Every one of these papers came out of a lorry's cab. They're writing it all down.",
 ]
 const RADIO_QUIET := ["Nothing on the air yet: the Quartermaster holds the set.", "The papers you find are kept: each carries a code, encrypted till the Radio's open."]
+## Kev's story (15 Oct): a beat's line when its paper comes home, when its signal's made, and when it's beaten.
+const STORY := [
+	{"found": "%s: one of Kev's. The route's in it somewhere (%d of 3).", "made": "Kev: \"Three of them, and they say the same thing. They run a route. Here's where it goes.\"",
+		"won": "Kev: \"Same lorries, same road, every week. Not looters. Somebody's running this. Find me who.\""},
+	{"found": "%s: army paper. Kev will want it (%d of 3).", "made": "Kev: \"It's the army's. Still giving orders, still feeding men. The Garrison. Go and ask them.\"",
+		"won": "Kev: \"The Garrison, and they answer to somebody at the end of the road. A depot. That's where the load goes.\""},
+	{"found": "%s: the depot's. One more step (%d of 3).", "made": "Kev: \"That's the depot. The convoy's due. Stop it and we see what they've been moving all along.\"",
+		"won": "Kev: \"So that's the load. All of it, all this time. Keep the radio on. There'll be more of them.\""},
+]
 const SIGNAL_MADE := "A signal: a fix on %s, depth %d"
 const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at depth %d: your reach is %d"
@@ -438,6 +447,15 @@ const PAPERS := [
 	{"name": "A delivery note", "value": 4, "words": "Forty bales, paper, on pallets. Signed for at the Services by someone who printed their name."},
 	{"name": "A drug chart", "value": 3, "words": "Bed nine, four-hourly. The last dose is signed for. Nobody's signed the page after."},
 	{"name": "A leave pass", "value": 3, "words": "Seventy-two hours, from the Monday. He went home. The barracks marked him absent anyway."},
+	{"name": "A tachograph disc", "value": 6, "words": "Eleven hours on the road, two stops, the same two as last week. Kev's story: where they go."},
+	{"name": "A route card", "value": 6, "words": "Junction numbers in pencil, a circle round the Services. Kev's story: where they go."},
+	{"name": "A fuel receipt", "value": 6, "words": "Four hundred litres of diesel, paid in notes, the old ones. Kev's story: where they go."},
+	{"name": "A movement order", "value": 8, "words": "Signed by a major who should be dead. Three lorries, nights only. Kev's story: whose they are."},
+	{"name": "A ration chit", "value": 8, "words": "Forty men, fourteen days, from stores. Somebody's still feeding an army. Kev's story: whose they are."},
+	{"name": "A signals log", "value": 8, "words": "Call signs, times, a frequency circled: Kev's. Kev's story: whose they are."},
+	{"name": "A gate pass", "value": 10, "words": "Valid for the depot, one vehicle, the bearer and his load. Kev's story: the depot."},
+	{"name": "A loading manifest", "value": 10, "words": "Crate after crate, and at the bottom, in a different hand: the load. Kev's story: the depot."},
+	{"name": "A depot plan", "value": 10, "words": "The yard, the sheds, the gate, and an X where the lorries stop. Kev's story: the depot."},
 	{"name": "A requisition", "value": 4, "words": "For the vault: one safe, Chubb, to hold currency, used. Approved. Underlined twice."},
 	# the deep ones
 	{"name": "A ration book", "value": 4, "words": "Printed after. Someone tried to run it properly, for a while.", "code": "A code on the inside cover."},
@@ -475,7 +493,7 @@ const SHELF := {
 	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is
 	"own_gap": "%s, depth %d and past. A rule only that depth gives.",
 	"head_gap": "%s at full strength, depth %d of his site. The charm only he carries.",
-	"lorry_gap": "The lorry at depth %d of %s. The pack it comes home with.",
+	"lorry_gap": "Kev's last beat: the depot's convoy. The pack it comes home with.",
 	"own_found": "Only %s has it. It drops nowhere else.",
 	"own_note": "Depth %d: its own, %s",
 }
@@ -890,7 +908,7 @@ const NEXT := {
 	"site": "%s hasn't been cleared. That's where the next lot are.",
 	"head": "%s is behind %s. Arm him on the Map when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
-	"done": "The town's yours. Depth is the game now; the lorry runs the Services at depth %d.",
+	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
 	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next starts its ladders higher, with a free node on the Pitch's tree.",
 	"moved": "A new pitch, the same list on the wall. Start at the allotments.",
 }
@@ -900,7 +918,7 @@ const NEXT_SHORT := {
 	"contract": "A contract's ready",
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
-	"done": "Depth is the game now",
+	"done": "The Radio's the game now",
 	"lorry": "The lorry's beaten: move the Pitch",
 }
 const NOTES := {

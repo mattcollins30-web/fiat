@@ -4705,7 +4705,7 @@ func _next_checks(main) -> void:
 	fresh.extract_now()
 	_check(not fresh.events.slice(n1).any(func(ev): return str(ev[1]).begins_with("The Pleasure Park hasn't")), "the log said the same thing twice")
 	_finish_campaign(sim)
-	_check(sim.next_words() == Words.NEXT["done"] % sim.convoy_depth() and sim.next_words().contains("depth %d" % Data.CONVOY_DEPTH), "the campaign done has no line, or the lorry's depth is not the figure: %s" % sim.next_words())
+	_check(sim.next_words() == Words.NEXT["done"] and sim.next_words().contains("Radio"), "the campaign done doesn't point at the Radio: %s" % sim.next_words())     # signals, 15 Oct
 	main.show_room(main.OVERVIEW)
 	_check_fit(main, "The Pitch (what's next)")
 	sim.load_dict(saved)
@@ -6592,6 +6592,7 @@ func _loot_roll_checks(main) -> void:
 	_training_gate_checks(main)
 	_paper_crypt_checks(main)
 	_signal_checks(main)
+	_story_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7926,6 +7927,74 @@ func _signal_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
+
+
+## Kev's story (15 Oct, endgame_radio.md §3): a beat's three papers go in together and make its signal - its site and
+## crew at your reach, the head at full strength; never mixed with another paper; beaten, the story moves on; the
+## third beat is the depot's convoy, the three heads in a row; a signal beaten can bring the beat's next paper home.
+func _story_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	if not ("radio" in sim.unlocked):
+		sim.unlocked.append("radio")
+	_finish_campaign(sim)
+	sim.signals = []
+	sim.story_beat = 0
+	for it in sim.signal_papers():
+		sim.stash.erase(it)
+	var names: Array = sim.story_papers(0)
+	_check(names.size() == 3, "the first beat has %d papers" % names.size())
+	for nm in names:
+		sim.stash_put(sim._plain(Data.PAPER, nm))
+	var plain: Dictionary = sim._plain(Data.PAPER, "A P45")
+	sim.stash_put(plain)
+	var ids: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) == 0).map(func(x): return int(x["id"]))
+	var mixed: Array = [ids[0], ids[1], int(plain["id"])]
+	_check(sim.decrypt_block(mixed).begins_with("Kev's papers"), "a story paper mixed with another: '%s'" % sim.decrypt_block(mixed))
+	_check(sim.story_held().size() == 3 and sim.decrypt_block(ids) == "", "the beat's three: held %d, '%s'" % [sim.story_held().size(), sim.decrypt_block(ids)])
+	main.show_room(main.COMMS)
+	main._radio._shown = ""
+	main.refresh()
+	_check_fit(main, "the Radio with Kev's papers")
+	var sg: Dictionary = sim.decrypt(ids)
+	var b0: Dictionary = Data.STORY_BEATS[0]
+	_check(int(sg.get("story", -1)) == 0 and int(sg["site"]) == int(b0["site"]) and int(sg["zone"]) == int(b0["zone"]) and bool(sg["head"]) and int(sg["depth"]) == sim.reach, "the first beat's signal: %s" % str(sg))
+	var e: Dictionary = sim.signal_read(0)
+	_check(e.has("boss") and e["boss"].get("pinnacle", false), "the first beat's signal has no head at full strength: %s" % str(e.get("boss", {})))
+	main._radio._shown = ""
+	main.refresh()
+	_check(main._radio._card_kicker.text.begins_with("Kev's story"), "the story signal's card: '%s'" % main._radio._card_kicker.text)
+	_check_fit(main, "the Radio, a story signal")
+	# beaten: the story moves on
+	sim.hp = sim.max_hp()
+	_check(sim.deploy_signal(0), "the story signal didn't set off")
+	sim.mission["remaining"] = 0
+	if sim.mission.has("boss"):
+		sim.mission["boss"]["alive"] = false
+	sim._clear(sim.mission, sim.mission["t"])
+	sim.extract_now()
+	_check(sim.story_beat == 1 and sim.story_now() == 1, "the story didn't move on: beat %d" % sim.story_beat)
+	_check(not (names[0] in sim.book), "a story paper went in the drawer's book")
+	# a signal beaten brings the beat's next paper now and then
+	var before: int = sim.story_held().size()
+	sim._story_find()
+	_check(sim.story_held().size() == before + 1, "no story paper came home: %d from %d" % [sim.story_held().size(), before])
+	# the depot: the convoy
+	sim.story_beat = 2
+	for nm in sim.story_papers(2):
+		sim.stash_put(sim._plain(Data.PAPER, nm))
+	var dids: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) == 2).map(func(x): return int(x["id"]))
+	var dg: Dictionary = sim.decrypt(dids)
+	_check(bool(dg.get("convoy_fight", false)) and not bool(dg["head"]), "the depot's signal isn't the convoy: %s" % str(dg))
+	var k: int = sim.signals.find(dg)
+	var de: Dictionary = sim.signal_read(k)
+	_check(de.get("convoy", false) and de.get("boss_queue", []).size() >= 1, "the depot's read has no convoy: %s" % str(de.keys()))
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("Kev's story ok: a beat's three together, never mixed, its site and crew and head, the story on, a paper home, the depot's convoy")
 
 
 ## The papers encrypted till the Radio (15 Oct): a code-carrying paper held before the Radio's open isn't read, its pick

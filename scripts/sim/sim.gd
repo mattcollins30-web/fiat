@@ -111,6 +111,7 @@ var paragon_banked := 0            # the paragon levels of the runners before, k
 var signals: Array = []            # the Radio's signals held (15 Oct): [{id, site, zone, depth, codes, papers, head, convoy, line}]
 var reach := Data.REACH_START       # the deepest signal beaten, plus one
 var signal_seq := 0
+var story_beat := 0                 # Kev's story: the beats beaten (0-3); past the third the depot comes round again
 var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
@@ -1243,7 +1244,7 @@ func move_yard(trade := "") -> bool:
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
-		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq,
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
@@ -1266,6 +1267,7 @@ func move_yard(trade := "") -> bool:
 	signals = keep["signals"]             # the Radio's held signals and your reach move with the Yard (15 Oct)
 	reach = keep["reach"]
 	signal_seq = keep["signal_seq"]
+	story_beat = keep["story_beat"]
 	paragon_banked = keep["paragon_banked"]
 	chronicle = keep["chronicle"]
 	chron_count = keep["chron_count"]
@@ -1505,7 +1507,7 @@ func _gate_lines() -> void:
 ## A paper picked up is read, and goes in the drawer by name, once, in the order found - once the Radio's open to read
 ## it (15 Oct: encrypted till then; the Radio reads every one held when it opens).
 func _read(it: Dictionary, quiet := false) -> void:
-	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book) and room_open("radio"):
+	if Items.is_paper(it) and not Items.is_deeds(it) and not (it["base"] in book) and room_open("radio") and story_of(it) < 0:     # Kev's aren't the drawer's (the review)
 		book.append(it["base"])
 		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
@@ -1537,6 +1539,8 @@ func paper_lines(it: Dictionary) -> Array:
 		return ["The deeds", "Held, sold or burned", ""]
 	if str(it.get("rule", "")) != "":
 		return ["The drawer", "Works from the stash", "Keep it"]     # a unique's rule paper (the Lorry Driver's Log)
+	if story_of(it) >= 0:
+		return ["Kev's story", str(Data.STORY_BEATS[story_of(it)]["name"]), "Its three together make the beat's signal"]
 	if not room_open("radio"):
 		return ["Encrypted", "Read once the Radio's open", "Keep it: a key to the endgame"]
 	var code: String = word_taught_by(str(it["base"]))
@@ -1548,7 +1552,7 @@ func paper_lines(it: Dictionary) -> Array:
 func book_pages() -> Array:
 	var out: Array = []
 	for b in Data.BASES[Data.PAPER]:
-		if b["name"] != "The deeds" and Items.opens({"slot": Data.PAPER, "base": b["name"]}) == "":     # nor a head's thing (13 Oct)
+		if b["name"] != "The deeds" and Items.opens({"slot": Data.PAPER, "base": b["name"]}) == "" and not b.has("story"):     # nor a head's thing (13 Oct), nor Kev's (15 Oct)
 			out.append(b["name"])
 	return out
 
@@ -2681,7 +2685,7 @@ func shelf_chase() -> Array:
 			for b in Data.BOSSES:
 				if int(b["zone"]) == int(u["pinnacle"]):
 					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], pinnacle_depth(int(b["tier"]))]})
-	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"] % [convoy_depth(), Data.TIERS[Data.CONVOY_TIER]["name"].to_lower()]})
+	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"]})     # the depot's, Kev's last beat (15 Oct)
 	return out
 
 
@@ -4136,7 +4140,7 @@ func effective(i: int) -> Dictionary:
 	var sig_here: bool = not _sig.is_empty() and int(_sig["site"]) == i
 	if sig_here and bool(_sig.get("head", false)) and not zone_boss(int(_sig["zone"])).is_empty():
 		e["boss"] = boss_form(zone_boss(int(_sig["zone"])), e, true)     # a signal's extra: the crew's head at full strength
-	elif boss_armed.get(i, false) and is_convoy(i):
+	elif (boss_armed.get(i, false) and is_convoy(i)) or (sig_here and bool(_sig.get("convoy_fight", false))):     # the depot's signal: the convoy (15 Oct)
 		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, CONVOY_DPS of their fire): the crews stayed with the load
 		var queue: Array = []
 		for cb in Data.BOSSES:
@@ -4269,7 +4273,53 @@ func decrypt_block(ids: Array) -> String:
 		if not (int(id) in have) or seen_ids.has(int(id)):
 			return "three papers from the stash"
 		seen_ids[int(id)] = true
+	var beats := {}
+	var bases := {}
+	for it in stash:
+		if int(it["id"]) in ids:
+			beats[story_of(it)] = true
+			bases[str(it["base"])] = true
+	if beats.size() > 1 or (beats.has(-1) == false and bases.size() < Data.SIGNAL_PAPERS):
+		return "Kev's papers go in together, the three of a beat"
+	if not beats.has(-1) and not beats.has(story_now()):
+		return "not the beat Kev's on"
 	return ""
+
+
+## Kev's story (15 Oct): a paper's beat, or -1 for any other.
+static func story_of(it: Dictionary) -> int:
+	if not Items.is_paper(it):
+		return -1
+	return int(Items.base_named(Data.PAPER, str(it["base"])).get("story", -1))
+
+
+## The beat Kev's on: the next unbeaten, the depot again once all three are.
+func story_now() -> int:
+	return mini(story_beat, Data.STORY_BEATS.size() - 1)
+
+
+## A beat's three papers, by name.
+static func story_papers(beat: int) -> Array:
+	var out: Array = []
+	for b in Data.BASES[Data.PAPER]:
+		if int(b.get("story", -1)) == beat:
+			out.append(str(b["name"]))
+	return out
+
+
+## Which of the beat Kev's on are held (stash or pack), by name.
+func story_held() -> Array:
+	var held: Array = stash.duplicate()
+	if mission != null:
+		held.append_array(mission["found"])
+	var out: Array = []
+	for sg in signals:
+		if int(sg.get("story", -1)) == story_now():
+			return story_papers(story_now())     # the beat's signal is held already: nothing more to find (the review)
+	for it in held:
+		if story_of(it) == story_now() and not (str(it["base"]) in out):
+			out.append(str(it["base"]))
+	return out
 
 
 ## The depths three papers would roll: the reach's band, one deeper for a rare paper.
@@ -4301,9 +4351,15 @@ func decrypt(ids: Array) -> Dictionary:
 			if code != "" and not (code in codes):
 				codes.append(code)
 	var up: int = 1 if _papers_rare(ids) else 0
+	var beat: int = -1
+	for it in stash:
+		if int(it["id"]) in ids:
+			beat = story_of(it)
 	for it in stash.duplicate():
 		if int(it["id"]) in ids:
 			_remove(it)
+	if beat >= 0:
+		return _story_signal(beat, papers)
 	var x := rng.randf()
 	var step := 0
 	for row in Data.SIGNAL_ROLL:
@@ -4322,9 +4378,23 @@ func decrypt(ids: Array) -> Dictionary:
 	return sig
 
 
+## A beat's signal: its site and crew, at your reach; the head at full strength, or the depot's convoy.
+func _story_signal(beat: int, papers: Array) -> Dictionary:
+	var b: Dictionary = Data.STORY_BEATS[beat]
+	signal_seq += 1
+	var convoy: bool = bool(b.get("convoy", false))
+	var sig := {"id": signal_seq, "site": int(b["site"]), "zone": int(b["zone"]), "depth": maxi(Data.REACH_START, reach), "codes": [], "papers": papers,
+		"head": not convoy, "convoy": false, "convoy_fight": convoy, "line": 0, "story": beat}
+	signals.append(sig)
+	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "story": beat, "papers": papers.duplicate()})
+	log_event(Words.STORY[beat]["made"])
+	return sig
+
+
 func _sig_ints(sg: Dictionary) -> void:
 	for k in ["id", "site", "zone", "depth", "line"]:
 		sg[k] = int(sg.get(k, 0))
+	sg["story"] = int(sg.get("story", -1))
 
 
 ## A signal's codes as a site carries them, [{w, t}]: its papers' at the depth's tier, or as the Radio's crafts left them.
@@ -4511,7 +4581,26 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		log_event(Words.SIGNAL_REACH % [d, reach])
 	elif not won:
 		log_event(Words.SIGNAL_LOST)
+	var beat: int = int(_sig.get("story", -1))
+	if won and beat >= 0 and beat == story_now():
+		chron("story", {"beat": beat})
+		log_event(Words.STORY[beat]["won"])
+		story_beat = mini(story_beat + 1, Data.STORY_BEATS.size())
+	elif won and rng.randf() < Data.STORY_DROP:
+		_story_find()
 	_sig_off()
+
+
+## A signal beaten brings home the next of the beat's papers not held, now and then (STORY_DROP).
+func _story_find() -> void:
+	var held: Array = story_held()
+	for nm in story_papers(story_now()):
+		if not (nm in held):
+			var it := _plain(Data.PAPER, nm)
+			stash.append(it)                  # home with the run, whatever the room: Kev's
+			_read(it)
+			log_event(Words.STORY[story_now()]["found"] % [nm, held.size() + 1])
+			return
 
 
 func on_mission() -> bool:
@@ -7728,7 +7817,7 @@ func _state() -> Dictionary:
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
-		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq,
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -7926,6 +8015,7 @@ func load_dict(d: Dictionary) -> void:
 		_sig_ints(sg)
 	reach = int(d.get("reach", Data.REACH_START))
 	signal_seq = int(d.get("signal_seq", 0))
+	story_beat = int(d.get("story_beat", 0))
 	_sig = {}
 	if mission != null and mission.get("signal", null) is Dictionary:
 		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it

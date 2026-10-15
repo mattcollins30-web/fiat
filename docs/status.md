@@ -4723,3 +4723,15 @@ reader making signals (B7.4) - until then the bots still climb the old per-site 
 signal's clear still raises its site's best depth (the Yard's columns, the deepest site level the contracts and the
 Arms dealer read follow the signals, as intended), and its salvage and zone codes are the site's zone's, not the
 crew's.
+
+**B7.3: Kev's story (15 Oct; endgame_radio.md §3).** Three beats, each three papers found only once the Radio's on
+the air (a signal beaten brings the beat's next missing paper home half the time; none while the beat's signal is
+held): Where they go (a tachograph disc, a route card, a fuel receipt), Whose they are (a movement order, a ration
+chit, a signals log), The depot (a gate pass, a loading manifest, a depot plan). A beat's three go in the decoder
+together, never mixed with another paper, and make its signal: a fixed site and crew at your reach (the Services with
+the Town's crew; the Barracks with the City's), the crew's head at full strength; the third is the depot's convoy -
+the three heads in a row and the Lorry's Load, the old Services-at-depth-8 fight, now the only way to the lorry (it
+still counts once a Yard for the lorry's prestige). Beaten, the story moves on, with Kev's line; past the third the
+depot comes round again. On the Radio: the papers carry a STORY badge and "Kev's story · where they go · 2 of 3
+found", the card says the beat, the band counts the story. Kev's papers aren't the drawer's. The Map's and the next
+step's lorry lines point at the Radio and Kev's depot. Scenes in the On the air style for the beats wait on art.
