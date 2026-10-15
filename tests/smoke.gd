@@ -7918,6 +7918,13 @@ func _signal_checks(main) -> void:
 	_check(sim.deploy_signal(0), "the second signal didn't set off")
 	sim._kia()
 	_check(not sim.on_mission() and sim.reach == r0 and sim.signals.size() == Data.SIGNALS_HELD - 2 and sim._sig.is_empty(), "a lost signal: reach %d from %d, %d held" % [sim.reach, r0, sim.signals.size()])
+	# the bot makes signals from its papers (B7.4)
+	sim.signals = []
+	for b in bases.slice(0, 3):
+		sim.stash_put(sim._plain(Data.PAPER, b))
+	var bt = Bot.new()
+	bt._make_signals(sim)
+	_check(sim.signals.size() >= 1 and bt.bought.any(func(x): return str(x[1]).begins_with("a signal")), "the bot made no signal from its papers: %d" % sim.signals.size())
 	# the Map: no depth's −/+ on any site
 	sim.load_dict(saved)
 	main.show_room(main.MISSIONS)
@@ -10579,9 +10586,9 @@ func _fill_up_checks(main) -> void:
 	print("fill up, then go ok")
 
 
-## The bot's dig rule: past the campaign it keeps to the site it has dug
-## deepest while that reads PUSH at its depth, and digs it a depth when it
-## reads CLIMB; a weak runner falls back to the ordinary pick.
+## The bot's pick past the campaign (15 Oct: the depths are the signals'): every site at its campaign self, the one
+## that reads PUSH worth the most - its level and its papers - farmed between signals; no climbing; a head left armed
+## comes off at the next pick; a weak runner still picks what reads PUSH.
 func _dig_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -10591,10 +10598,9 @@ func _dig_checks(main) -> void:
 	sim.auto_equip = false
 	for i in range(Data.TIERS.size()):
 		sim.best_depth[i] = 1
+		sim.depth[i] = 1
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = true
-	sim.best_depth[8] = 3
-	sim.depth[8] = 3
 	sim.xp = Data.xp_for_level(90)
 	for s in ["Primary", "Armour", "Helmet"]:
 		sim.equipped[s] = sim._plain(s, Data.BASES[s].back()["name"])
@@ -10609,53 +10615,28 @@ func _dig_checks(main) -> void:
 	sim.odds_budget = 0                   # the odds in full: the shell reads them a few dry runs a frame, and two reads a moment apart differ
 	_check(sim.campaign_done(), "the dig check did not finish the campaign")
 	_check(sim.has_rounds(sim.equipped["Primary"]), "the dig check's gun is dry")
-	# the rule (the endgame, 7 Oct): while the lorry stands the Services come first when they read PUSH;
-	# the lorry beaten, the site that reads PUSH at the highest level (the Barracks at depth 1 over the Bank at 3)
-	sim.lorry_done = false
 	var t: int = bot.pick_tier(sim)
-	_check(t == Data.CONVOY_TIER and sim.survival(t) >= Bot.PUSH, "past the campaign the bot did not go for the Services while the lorry stands: T%d (odds %.2f)" % [t, sim.survival(t)])
-	sim.lorry_done = true
-	t = bot.pick_tier(sim)
-	# the rule, not the state: no site that reads PUSH as it stands sits at a higher level (the odds read by the night, the weather and the words)
-	var higher := -1
+	var better := -1
 	for i in range(Data.TIERS.size()):
-		if sim.tier_open(i) and sim.site_level(i) > sim.site_level(t) and sim.survival(i) >= Bot.PUSH:
-			higher = i
-	_check(sim.survival(t) >= Bot.PUSH and higher < 0, "with the lorry beaten the bot did not run the highest level that reads PUSH: T%d at depth %d (odds %.2f), T%d reads PUSH higher" % [t, sim.depth[t], sim.survival(t), higher])
+		if sim.tier_open(i) and bot._aim_level(sim, i) > bot._aim_level(sim, t) and sim.survival(i) >= Bot.PUSH:
+			better = i
+	_check(sim.survival(t) >= Bot.PUSH and better < 0 and sim.depth[t] == 1, "past the campaign the bot did not farm the site worth most that reads PUSH: T%d at depth %d (odds %.2f), T%d better" % [t, sim.depth[t], sim.survival(t), better])
 	bot.last_tier = t
-	var d0: int = sim.depth[t]
-	var climbs: bool = sim.survival(t) >= Bot.CLIMB
 	bot._climb(sim)
-	_check(sim.depth[t] == (d0 + 1 if climbs else d0), "the bot's climb did not follow CLIMB: depth %d from %d, odds %.2f" % [sim.depth[t], d0, sim.survival(t)])
-	# at the lorry's depth the climb waits for the lorry
-	sim.best_depth[Data.CONVOY_TIER] = Data.CONVOY_DEPTH + 1
-	sim.depth[Data.CONVOY_TIER] = Data.CONVOY_DEPTH
-	sim.lorry_done = false
-	bot.last_tier = Data.CONVOY_TIER
-	bot._climb(sim)
-	_check(sim.depth[Data.CONVOY_TIER] == Data.CONVOY_DEPTH, "the bot dug past the lorry it had not beaten")
-	sim.best_depth[Data.CONVOY_TIER] = 1
-	sim.depth[Data.CONVOY_TIER] = 1
-	sim.lorry_done = true
-	# a boss left armed on another tier is turned off by the next pick: the sim
-	# keeps the toggle on after a run, and a tier read with a boss in reads red
-	# for the rest of a run (the twelfth read's T8 at 0% with 700 dps against 4.8)
+	_check(sim.depth[t] == 1, "the bot climbed a campaign site past the campaign: depth %d" % sim.depth[t])
+	# a boss left armed on another tier is turned off by the next pick (the twelfth read's T8 at 0%)
 	sim.boss_armed[11] = true
-	sim.lorry_done = false                # the pick is the Services: the Barracks' head must come off
 	t = bot.pick_tier(sim)
-	_check(t != 8 and not sim.boss_armed.get(8, false), "the bot's pick left the Quartermaster armed on T8 (picked T%d)" % t)
-	sim.lorry_done = true
-	bot.last_tier = t
-	# a runner that can't hold the depth steps back and picks as before: no
-	# armour, no meds, level 3 - under at T5 whatever the tree
+	_check(t == 11 or not sim.boss_armed.get(11, false), "the bot's pick left the Quartermaster armed on T11 (picked T%d)" % t)
+	sim.boss_armed.clear()
+	# a weak runner still picks what reads PUSH, or the best it can and rests
 	sim.equipped["Primary"]["affixes"] = []
 	sim.equipped["Armour"] = null
 	sim.equipped["Helmet"] = null
 	sim.xp = Data.xp_for_level(3)
 	sim.hp = sim.max_hp()
 	t = bot.pick_tier(sim)
-	_check(sim.survival(t) >= Bot.PUSH and (t != 8 or sim.depth[8] == 1), "a weak runner past the campaign did not pick a site that reads PUSH: T%d, site depth %d, odds %.2f" % [t, sim.depth[t], sim.survival(t)])
-	sim.lorry_done = false
+	_check(t >= 0 and sim.depth[t] == 1, "a weak runner past the campaign picked T%d at depth %d" % [t, sim.depth[t]])
 	sim.boss_armed.clear()
 	sim.odds_budget = budget0
 	sim.load_dict(saved)

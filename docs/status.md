@@ -4735,3 +4735,16 @@ still counts once a Yard for the lorry's prestige). Beaten, the story moves on, 
 depot comes round again. On the Radio: the papers carry a STORY badge and "Kev's story · where they go · 2 of 3
 found", the card says the beat, the band counts the story. Kev's papers aren't the drawer's. The Map's and the next
 step's lorry lines point at the Radio and Kev's depot. Scenes in the On the air style for the beats wait on art.
+
+**B7.4: the bot and the reader on signals (15 Oct).** Past the campaign the bot makes a signal whenever it has three
+papers and room (Kev's beat when its three are held, else three plain papers, the rare first), runs the deepest held
+that reads PUSH (Kev's at FIRST, a head's odds; insured at the signal's depth, sim.signal_insure_cost), and otherwise
+farms the campaign site worth most that reads PUSH - its level and its papers (the Bank's three times) - at depth 1.
+No more climbing, no lorry arming, no notes or Lorry watch saved for the old convoy. GATES gains reach, story_beat,
+signals_made and papers_held. A nine-hour probe (Doorman as physical): the campaign done at ~1 h 30, the reach 9 by
+2 h and 20 by 9 h, Kev's story not reached - **papers are the bottleneck** (two plain papers in two hours of farming at
+one in 16 finds): the pass's to tune (PAPER_DROP, the story's drop). **For Matt, left in the game and now dead:** the
+Yard's Radio pick Lorry watch and the Dial's keystone The lorry's route both bring the old convoy shallower, and it no
+longer exists (the depot's signal replaced it) - they want new effects; the Map's depth-based uniques (a site's own,
+a head's charm at full strength) still drop on signals deep enough at that site. Depth-based balance figures
+(depth_clears, the ladder read) still print; a signal's clear reads as its random site's depth.

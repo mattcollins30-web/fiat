@@ -55,9 +55,25 @@ func step(sim) -> int:
 		return -1
 	elif sim.hp < sim.max_hp():
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
-	var t := pick_tier(sim)
-	last_tier = t
-	sim.deploy(t)
+	# the endgame (15 Oct): the Radio's signals - made when there are papers, run when one reads its odds; else a
+	# campaign site farmed for the papers
+	var t := -1
+	if sim.campaign_done() and sim.room_open("radio"):
+		_make_signals(sim)
+		var k := _pick_signal(sim)
+		if k >= 0:
+			t = int(sim.signal_at(k)["site"])
+			last_tier = -1                    # a signal's site is random: the endgame's tidy reads the farm it'll run next (the review)
+			var ins: int = sim.signal_insure_cost(k)
+			if ins >= 0 and sim.cash >= ins * 3:
+				sim.set_insure(true)
+			if not sim.deploy_signal(k):
+				sim.set_insure(false)
+				t = -1
+	if t < 0:
+		t = pick_tier(sim)
+		last_tier = t
+		sim.deploy(t)
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
 		sim.advance(1.0)
@@ -245,6 +261,42 @@ func _endgame(sim) -> void:
 	_bench_worn(sim)
 	_build_one(sim)
 	_gamble_one(sim)
+
+
+## The Radio (15 Oct): signals made while there's room - Kev's beat when its three are held, else three papers, the
+## rare first - and, the Radio full with none worth running, the worst held binned for a fresh roll.
+func _make_signals(sim) -> void:
+	var guard := 0
+	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
+		guard += 1
+		var story: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) == sim.story_now())
+		var ids: Array = []
+		if sim.story_held().size() == Data.SIGNAL_PAPERS and story.size() >= Data.SIGNAL_PAPERS:
+			var seen := {}
+			for it in story:
+				if not seen.has(str(it["base"])):
+					seen[str(it["base"])] = true
+					ids.append(int(it["id"]))
+		else:
+			var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+			plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
+			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
+		if sim.decrypt(ids).is_empty():
+			break
+		bought.append([sim.elapsed, "a signal from three papers: depth %d" % int(sim.signals.back()["depth"])])
+
+
+## The held signal to run: the deepest that reads PUSH (Kev's at a head's odds, FIRST); -1 for none - the campaign's
+## sites farmed meanwhile, for the kit and the papers. Nothing binned: the next roll is round the same reach.
+func _pick_signal(sim) -> int:
+	var best := -1
+	for k in range(sim.signals.size()):
+		var sg: Dictionary = sim.signal_at(k)
+		var o: float = float(sim.signal_odds(k)[0])
+		var need: float = FIRST if int(sg.get("story", -1)) >= 0 else PUSH
+		if o >= need and (best < 0 or int(sg["depth"]) > int(sim.signal_at(best)["depth"])):
+			best = k
+	return best
 
 
 ## The fence's gamble as a flush player takes it: one a run at most, the kind of the primary's type
@@ -475,18 +527,9 @@ func pick_tier(sim) -> int:
 				order.append(i)
 		order.sort_custom(func(a, b_in): return _aim_level(sim, a) > _aim_level(sim, b_in))
 		for i in order:
-			if sim.depth[i] > sim.best_depth[i] and sim.depth[i] > 1 and sim.survival(i) < PUSH:
-				sim.set_depth(i, maxi(1, sim.best_depth[i]))
-			if sim.survival(i) >= PUSH:
+			if sim.survival(i) >= PUSH:          # every site at its campaign self (15 Oct): the highest that holds, for its papers
 				best = i
 				break
-		if best < 0:
-			for i in order:
-				while sim.depth[i] > 1 and sim.survival(i) < PUSH:
-					sim.set_depth(i, sim.depth[i] - 1)
-				if sim.survival(i) >= PUSH:
-					best = i
-					break
 	if best < 0:
 		for i in range(Data.TIERS.size() - 1, -1, -1):
 			if not sim.tier_open(i):
@@ -558,27 +601,19 @@ func _reserve(sim) -> float:
 ## Drifter's bench spent every run's take as it came, never held the price, never bought it, and sat under the
 ## convoy's depth for 32 hours). A player who knows the lorry is the ending saves for the pick that brings it near.
 const LORRY_WATCH_COL := 3
-func _lorry_watch_saving(sim) -> float:
-	if sim.lorry_done or not sim.campaign_done() or LORRY_WATCH_COL >= sim.yard_cols() or sim.yard_side("radio", LORRY_WATCH_COL) != "":
-		return 0.0
-	return float(sim.yard_pick_cost("radio", LORRY_WATCH_COL)) + 500.0
+func _lorry_watch_saving(_sim) -> float:
+	return 0.0                                # the lorry's the depot's signal now (15 Oct): the convoy's depth no longer matters
 
 
 ## The notes kept back for the lorry once the services stand at its depth (the nineteenth read: three yards read the
 ## convoy at 1.00 and sat at 844-1,679 notes against its 1,680-2,160, the rest gone on the mate and the heads).
-func _notes_kept(sim) -> int:
-	if sim.lorry_done or not sim.campaign_done() or sim.best_depth[Data.CONVOY_TIER] < sim.convoy_depth() - 1:
-		return 0
-	var hold: int = sim.depth[Data.CONVOY_TIER]
-	sim.depth[Data.CONVOY_TIER] = maxi(hold, sim.convoy_depth())
-	var cost: int = sim.boss_cost(Data.CONVOY_TIER)
-	sim.depth[Data.CONVOY_TIER] = hold
-	return cost
+func _notes_kept(_sim) -> int:
+	return 0                                  # the lorry's the depot's signal now (15 Oct): its papers paid, no notes kept for it
 
 
-## What a site is worth running past the campaign: its level, and the services first while the lorry stands.
-func _aim_level(sim, i: int) -> int:
-	return sim.site_level(i) + (100 if (i == Data.CONVOY_TIER and not sim.lorry_done) else 0)
+## What a site is worth running past the campaign: its level, and its papers (the Bank's three times).
+func _aim_level(sim, i: int) -> float:
+	return sim.site_level(i) + sim.paper_odds(i) * 100.0
 
 
 ## A boss left armed on a tier the bot moved on from would read that tier red
@@ -594,8 +629,8 @@ func _disarm_stale(sim) -> void:
 ## tier just run alone: a player digs where they play, and every tier read
 ## costs the lookout's dry runs.
 func _climb(sim) -> void:
-	if RUSH and not sim.campaign_done():
-		return                                # the campaign first, at depth 1, as a person plays it (12 Oct)
+	if RUSH or sim.campaign_done():
+		return                                # the campaign at depth 1, as a person plays it (12 Oct); past it the signals climb (15 Oct)
 	var i := last_tier
 	if i == Data.CONVOY_TIER and sim.is_convoy(i) and not sim.lorry_done:
 		return                                # at the lorry's depth: beat it before digging past it

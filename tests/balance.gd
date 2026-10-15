@@ -341,6 +341,11 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	g["lorries"] = sim.lorries
 	g["moves"] = bot.moves
 	g["services_depth"] = int(sim.best_depth[Data.CONVOY_TIER])
+	# the Radio's endgame (15 Oct): the reach, Kev's story, the signals made and the papers held
+	g["reach"] = sim.reach
+	g["story_beat"] = sim.story_beat
+	g["signals_made"] = bot.bought.filter(func(x): return str(x[1]).begins_with("a signal")).size()
+	g["papers_held"] = sim.signal_papers().size()
 	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
 	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
 	if first_ladder.is_empty() and sim.campaign_done():

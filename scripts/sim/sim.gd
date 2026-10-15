@@ -4548,6 +4548,18 @@ func signal_odds_now(k: int) -> Array:
 	return out
 
 
+## The insurance on a held signal, at its depth (as deploy charges it), or -1 when it can't be insured.
+func signal_insure_cost(k: int) -> int:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty():
+		return -1
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var c: int = insure_cost(i) if can_insure(i) else -1
+	_sig_off()
+	return c
+
+
 ## Run a held signal: laid on its site for the run, gone from the Radio whatever happens.
 func deploy_signal(k: int) -> bool:
 	var sg := signal_at(k)
