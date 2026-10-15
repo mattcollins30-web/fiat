@@ -4705,3 +4705,21 @@ papers: N codes on them"). Read, a paper says the code it carries ("Carries laid
 Papers roll common to rare now (Data.PAPER_RARITY_MAX); a rare one will roll its signal one deeper. The bulk sells
 and Ditch commons pass papers over, and the bot keeps them. Still possible one at a time, for Matt to call: selling
 one, scrapping one, a Fence contract that takes papers.
+
+**B7.2: signals (15 Oct; endgame_radio.md §1-4, signals_radio.png, signals_map.png).** The Radio's air is the
+endgame now. Three papers (read, in the stash; not the deeds, a head's thing or a unique's rule paper) decrypt into a
+signal: a campaign site at random, a crew from any of the four zones (their fire's types and resists), a depth rolled
+round your reach (-1 20%, 0 60%, +1 15%, +2 5%; one deeper with a rare paper; never under 2), each paper's code at
+the depth's tier, and the extras rolled (15% the crew's head at full strength, free; 15% a convoy's crew on the way),
+with a line from Kev. Three held at most, seen before they're run (the card: Them, their fire, the finds' level, the
+codes' bite and pay, the odds read in the frame's budget, Tune in / Retune / Twist in notes, Set off, Bin it). Run,
+it's gone; beaten at your reach or past it raises the reach (the deepest beaten, plus one; it starts at 2) and pays a
+point on the Dial (the per-site "a new depth" point is gone); lost (a death, out of time, cut and run, the head left
+standing, a Ghost that never cleared) the reach stays. The signal is laid on its site for a read or a run and taken
+off after; the site stays its campaign self (its own codes, seal, wear). The Map has no depth's −/+: its tiles are
+Them, Their fire, Fight · clock, Finds (the level), Papers (1 in N finds) and The site. Kept through a Yard move:
+the signals held and the reach. **Not yet:** Kev's story signals and the lorry (B7.3); the bot and the balance
+reader making signals (B7.4) - until then the bots still climb the old per-site depths internally. For Matt: a
+signal's clear still raises its site's best depth (the Yard's columns, the deepest site level the contracts and the
+Arms dealer read follow the signals, as intended), and its salvage and zone codes are the site's zone's, not the
+crew's.

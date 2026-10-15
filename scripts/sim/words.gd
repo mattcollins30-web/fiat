@@ -119,6 +119,22 @@ const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from th
 ## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
 const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net", "medic": "The Clinic, on the CB", "fence": "The Fence, on the CB"}
 const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net", "medic": "The medic", "fence": "The Fence"}
+## Signals (15 Oct): Kev on what a fix tells him, one a signal; and the Radio's log lines.
+const SIGNAL_LINES := [
+	"Same three lorries, twice this week, both times nights. Whatever's in them, they don't want it seen in the day.",
+	"That's a convoy's call sign on a council frequency. Somebody's lending them the masts.",
+	"They stop there to fill up. Diesel, and something that needs keeping cold.",
+	"Four on the road, three came back. I'd like to know where the fourth went.",
+	"Army net, plain as day. They don't even bother with the code any more.",
+	"The fix is old, a week maybe. Whoever was there might still be.",
+	"They changed the route. Means somebody's been watching it. Means us, probably.",
+	"Every one of these papers came out of a lorry's cab. They're writing it all down.",
+]
+const RADIO_QUIET := ["Nothing on the air yet: the Quartermaster holds the set.", "The papers you find are kept: each carries a code, encrypted till the Radio's open."]
+const SIGNAL_MADE := "A signal: a fix on %s, depth %d"
+const SIGNAL_BINNED := "The signal on %s, binned"
+const SIGNAL_REACH := "A signal beaten at depth %d: your reach is %d"
+const SIGNAL_LOST := "The signal's gone with the run"
 const RADIO_READ := "The Radio reads your papers: %d codes on them"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [

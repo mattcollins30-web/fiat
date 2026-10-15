@@ -2193,6 +2193,15 @@ const MAX_LEVEL := 50
 ## signal one deeper.
 const PAPER_RARITY_MAX := 2
 const PAPER_DEEPER_AT := 2
+## Signals (15 Oct, endgame_radio.md §1-4): three papers decrypt at the Radio into one mission - a campaign site at
+## random, a crew from any zone, a depth rolled round your reach, each paper's code. Held a few at a time, seen
+## before they're run, gone once run (a lost run loses it). Your reach: the deepest signal beaten, plus one.
+const SIGNAL_PAPERS := 3
+const SIGNALS_HELD := 3
+const REACH_START := 2                       # depth 1 is the campaign's; the first signal's at 2
+const SIGNAL_ROLL := [[-1, 0.2], [0, 0.6], [1, 0.15], [2, 0.05]]     # the depth round the reach: [step, odds]
+const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
+const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.

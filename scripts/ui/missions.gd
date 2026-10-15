@@ -232,35 +232,30 @@ func show_state(s) -> void:
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = ("Tier %d · %s · level %d" % [k + 1, Data.ZONES[zone]["name"], int(t["level"])]) if sim.campaign_done() else ("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]])
+			var kicker: String = "Tier %d · %s · level %d" % [k + 1, Data.ZONES[zone]["name"], int(t["level"])]     # the level always: the finds' level to wear (15 Oct)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 		else:
 			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "clear tier %d first" % k, Pal.TEXT_3)
-		# the depth ladder is the endgame's: until the campaign's done it reads as such
-		var endgame: bool = sim.campaign_done()
-		c["depth_down"].visible = endgame
-		c["depth_up"].visible = endgame
-		c["depth_down"].disabled = not is_open or sim.on_mission() or t["depth"] <= 1
-		c["depth_up"].disabled = not is_open or sim.on_mission() or t["depth"] > sim.best_depth[i]
+		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
+		c["depth_down"].visible = false
+		c["depth_up"].visible = false
+		var p_odds: float = sim.paper_odds(i)
 		var tiles: Array = [
 			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight · clock", ["%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "over %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
-			["Finds" if endgame else "Drops", (["level %d · tier %d gear" % [t["level"], t["loot_tier"]], "level %d gear" % t["level"], "level %d" % t["level"]]) if endgame else ["tier %d gear" % t["loot_tier"], "tier %d" % t["loot_tier"]]],
-			["Depth", [("%d of %d" % [t["depth"], sim.best_depth[i] + 1]), "%d/%d" % [t["depth"], sim.best_depth[i] + 1]] if endgame else ["Locked"]],
-			["Rewards", ["×%.1f" % pow(1.0 + Data.DEPTH_REWARD, t["depth"] - 1)]],
+			["Finds", ["level %d gear" % t["level"], "level %d" % t["level"]]],
+			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
+			["The site", [sim.site_state(i), sim.site_state(i).get_slice(" · ", 0)]],
 		]
-		if sim.wear(i) > 0.0:
-			var state: String = sim.site_state(i)
-			tiles[5] = ["The site", [state, state.get_slice(" · ", 0)]]
 		for r in range(6):
 			UI.set_tile(c["tiles"][r], tiles[r][0], tiles[r][1], Pal.TEXT if is_open else Pal.TEXT_3)
 		if is_open and sim.estimate(i) > sim.clock_of(i):
 			UI.set_tile(c["tiles"][2], tiles[2][0], tiles[2][1], Pal.BAD)     # a fight that won't fit the clock: the DPS check, failed
 		# the figure keeps clear of the −/+ when the ladder's open
 		for l in [c["tiles"][DEPTH_TILE]["value"], c["tiles"][DEPTH_TILE]["key"]]:
-			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20 - ((DEPTH_BTN + 8) if endgame else 0)
+			l.size.x = c["tiles"][DEPTH_TILE]["panel"].size.x - 20
 		UI.set_tile(c["tiles"][DEPTH_TILE], tiles[DEPTH_TILE][0], tiles[DEPTH_TILE][1], Pal.TEXT if is_open else Pal.TEXT_3)
 		_show_chips(c, t, is_open)
 		# what they resist, a chip an element in its colour, the same shape as what they fire; "nothing" when they don't
@@ -277,7 +272,7 @@ func show_state(s) -> void:
 			if not (nm in names):
 				names.append(nm)                 # the Radio's words first, the sky's after
 		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
-		var radio: String = ("%d code%s from the Radio" % [wtiers.size(), "" if wtiers.size() == 1 else "s"]) if sim.juiceable(i) else ("codes from depth 2" if sim.campaign_done() else "a plain site")
+		var radio: String = ("%d code%s from the Radio" % [wtiers.size(), "" if wtiers.size() == 1 else "s"]) if sim.juiceable(i) else "a plain site"     # codes live on signals (15 Oct)
 		UI.fit(c["intel_head"], ["ON THE AIR · %s · %s" % [sim.sky_words(i), radio], "ON THE AIR · %s" % sim.sky_words(i), "ON THE AIR"])     # the sky and the codes (13 Oct, Matt)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
@@ -315,8 +310,6 @@ func show_state(s) -> void:
 			UI.fit(c["note"], ["%s wants %d notes; you have %d" % [boss["name"], sim.boss_cost(i), sim.notes], "%s: %d notes" % [boss["name"], sim.boss_cost(i)], "Not enough notes"])
 		elif auto:
 			c["note"].text = "Rests to 95%, leaves when the next gang comes"
-		elif endgame and _station_words(i) != "":
-			UI.fit(c["note"], [_station_words(i), _station_words(i).get_slice(" · ", 0), _station_words(i).get_slice(" · ", 0).replace(" at full strength", ", full strength"), _station_words(i).get_slice(":", 0)])
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")

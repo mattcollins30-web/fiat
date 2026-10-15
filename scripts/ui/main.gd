@@ -271,7 +271,6 @@ func _build() -> void:
 	add_child(_yard_tree)
 	_radio = RadioScreen.new()
 	_radio.acted.connect(refresh)
-	_radio.choose.connect(_choose_word)
 	_radio.choose_book.connect(_choose_book)
 	_radio.visible = false
 	add_child(_radio)
@@ -480,6 +479,10 @@ func _read_odds() -> void:
 		return
 	sim.odds_time_ms = ODDS_MS
 	sim.odds_frame_start()
+	if room == COMMS and not sim.signals.is_empty():
+		sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
+		sim.odds_time_ms = 0.0
+		return
 	var order: Array = []
 	for i in Data.ZONES[_missions.zone]["tiers"] if _missions.zone < Data.ZONES.size() else []:
 		order.append(i)

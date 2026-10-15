@@ -108,6 +108,10 @@ var yard_moves := 0                # how many times the Yard has moved (the pres
 var lorry_done := false            # the convoy beaten in this yard (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
 var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
+var signals: Array = []            # the Radio's signals held (15 Oct): [{id, site, zone, depth, codes, papers, head, convoy, line}]
+var reach := Data.REACH_START       # the deepest signal beaten, plus one
+var signal_seq := 0
+var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the Fence holds the paper on the kit
@@ -1239,6 +1243,7 @@ func move_yard(trade := "") -> bool:
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq,
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
@@ -1258,6 +1263,9 @@ func move_yard(trade := "") -> bool:
 	yard_moves = keep["moves"]
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
+	signals = keep["signals"]             # the Radio's held signals and your reach move with the Yard (15 Oct)
+	reach = keep["reach"]
+	signal_seq = keep["signal_seq"]
 	paragon_banked = keep["paragon_banked"]
 	chronicle = keep["chronicle"]
 	chron_count = keep["chron_count"]
@@ -1390,6 +1398,12 @@ func recover_s() -> float:
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
+## A search's find at a site being a paper (the Map's Papers tile, 15 Oct; the find's own roll).
+func paper_odds(i: int) -> float:
+	var shape: Dictionary = Data.TIERS[i]["shape"]
+	return Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0)
+
+
 func site_state(i: int) -> String:
 	var w := wear(i)
 	if w <= 0.0:
@@ -2825,6 +2839,8 @@ func max_words(i: int) -> int:
 	for row in Data.WORD_MAX_DEPTH:
 		if int(depth[i]) >= int(row[0]):
 			n = int(row[1])
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		n = maxi(n, _sig["codes"].size())     # a signal's papers' codes, every one (15 Oct)
 	if n == 0:
 		return 0
 	return n + atlas_rank("long_wave") + (Data.FX["yard/long_range"] if yard_has("long_range") else 0)
@@ -4117,7 +4133,10 @@ func effective(i: int) -> Dictionary:
 		if Data.word_of(aw[0])["bite"].has("boss_walks"):
 			walks = true
 	var b := boss_of(i)
-	if boss_armed.get(i, false) and is_convoy(i):
+	var sig_here: bool = not _sig.is_empty() and int(_sig["site"]) == i
+	if sig_here and bool(_sig.get("head", false)) and not zone_boss(int(_sig["zone"])).is_empty():
+		e["boss"] = boss_form(zone_boss(int(_sig["zone"])), e, true)     # a signal's extra: the crew's head at full strength
+	elif boss_armed.get(i, false) and is_convoy(i):
 		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, CONVOY_DPS of their fire): the crews stayed with the load
 		var queue: Array = []
 		for cb in Data.BOSSES:
@@ -4176,7 +4195,7 @@ func effective(i: int) -> Dictionary:
 		if m.get("clock_half", false):
 			e["clock_half"] = true
 	# what their fire is made of, and what they resist: the zone's, grown by depth, and the words
-	var zone: Dictionary = Data.ZONE_TYPES[int(base["zone"])]
+	var zone: Dictionary = Data.ZONE_TYPES[int(_sig["zone"]) if sig_here else int(base["zone"])]     # a signal's crew is from any zone (15 Oct)
 	var types := {}
 	for ty in zone["types"]:
 		types[ty] = minf(Data.ZONE_SHARE_CAP, float(zone["types"][ty]) + Data.ZONE_GROW * (d - 1))
@@ -4221,6 +4240,278 @@ func set_depth(i: int, d: int) -> void:
 		if campaign_done() and best_depth[i] > 0 and atlas_rank("lie_of_the_land") > 0:
 			top += 1                          # The lie of the land: one past the deepest cleared
 		depth[i] = clampi(d, 1, top)
+
+
+# ------------------------------------------------------------------ signals (15 Oct, the Radio's endgame)
+
+## The papers a signal can be made of: read papers in the stash, not the deeds, a head's thing or a unique's rule paper.
+func signal_papers() -> Array:
+	var out: Array = []
+	for it in stash:
+		if Items.is_paper(it) and not Items.is_deeds(it) and Items.opens(it) == "" and not it.has("unique"):
+			out.append(it)
+	return out
+
+
+## Why three papers can't be decrypted now, or "".
+func decrypt_block(ids: Array) -> String:
+	if not room_open("radio"):
+		return "the Radio's shut"
+	if not campaign_done():
+		return "the campaign first"
+	if signals.size() >= Data.SIGNALS_HELD:
+		return "%d signals held: run or bin one" % Data.SIGNALS_HELD
+	if ids.size() != Data.SIGNAL_PAPERS:
+		return "three papers in"
+	var have: Array = signal_papers().map(func(x): return int(x["id"]))
+	var seen_ids := {}
+	for id in ids:
+		if not (int(id) in have) or seen_ids.has(int(id)):
+			return "three papers from the stash"
+		seen_ids[int(id)] = true
+	return ""
+
+
+## The depths three papers would roll: the reach's band, one deeper for a rare paper.
+func signal_band(ids: Array) -> Array:
+	var lo: int = reach + int(Data.SIGNAL_ROLL[0][0])
+	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0])
+	var up: int = 1 if _papers_rare(ids) else 0
+	return [maxi(Data.REACH_START, lo + up), hi + up]
+
+
+func _papers_rare(ids: Array) -> bool:
+	for it in stash:
+		if int(it["id"]) in ids and int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT:
+			return true
+	return false
+
+
+## Three papers in, a signal out: the papers spent, the place, the crew, the depth and the extras rolled, each paper's
+## code on it. {} if it can't be made.
+func decrypt(ids: Array) -> Dictionary:
+	if decrypt_block(ids) != "":
+		return {}
+	var papers: Array = []
+	var codes: Array = []
+	for it in stash.duplicate():
+		if int(it["id"]) in ids:
+			papers.append(str(it["base"]))
+			var code: String = word_taught_by(str(it["base"]))
+			if code != "" and not (code in codes):
+				codes.append(code)
+	var up: int = 1 if _papers_rare(ids) else 0
+	for it in stash.duplicate():
+		if int(it["id"]) in ids:
+			_remove(it)
+	var x := rng.randf()
+	var step := 0
+	for row in Data.SIGNAL_ROLL:
+		x -= float(row[1])
+		step = int(row[0])
+		if x <= 0.0:
+			break
+	signal_seq += 1
+	var sig := {"id": signal_seq, "site": rng.randi_range(0, Data.TIERS.size() - 1), "zone": rng.randi_range(0, Data.ZONES.size() - 1),
+		"depth": maxi(Data.REACH_START, reach + step + up), "codes": codes, "papers": papers,
+		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS, "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS,
+		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1)}
+	signals.append(sig)
+	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "codes": codes.duplicate(), "papers": papers.duplicate()})
+	log_event(Words.SIGNAL_MADE % [Words.mid(str(Data.TIERS[int(sig["site"])]["name"])), int(sig["depth"])])
+	return sig
+
+
+func _sig_ints(sg: Dictionary) -> void:
+	for k in ["id", "site", "zone", "depth", "line"]:
+		sg[k] = int(sg.get(k, 0))
+
+
+## A signal's codes as a site carries them, [{w, t}]: its papers' at the depth's tier, or as the Radio's crafts left them.
+func signal_words(sg: Dictionary) -> Array:
+	if sg.has("words"):
+		var out: Array = []
+		for wd in sg["words"]:
+			out.append({"w": str(wd["w"]), "t": int(wd["t"])})
+		return out
+	var codes: Array = []
+	for c in sg["codes"]:
+		codes.append({"w": str(c), "t": maxi(1, word_tier_cap(int(sg["depth"])))})
+	return codes
+
+
+## The Radio's crafts on a held signal (15 Oct, signals_radio.png): Tune in, Retune and Twist, as a site's were - laid
+## on its site for the craft, the codes it leaves kept on the signal.
+const SIGNAL_CRAFTS := ["tune", "retune", "twist"]
+
+
+func signal_craft_block(k: int, key: String) -> String:
+	var sg := signal_at(k)
+	if sg.is_empty() or not (key in SIGNAL_CRAFTS):
+		return "no such signal"
+	if not _sig.is_empty():
+		return "The runner is out"
+	_sig_on(sg)
+	var why: String = word_craft_block(int(sg["site"]), key)
+	_sig_off()
+	return why
+
+
+func signal_craft_cost(k: int, key: String) -> int:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty():
+		return 0
+	_sig_on(sg)
+	var c: int = word_craft_cost(int(sg["site"]), key)
+	_sig_off()
+	return c
+
+
+func signal_craft(k: int, key: String) -> bool:
+	if signal_craft_block(k, key) != "":
+		return false
+	var sg := signal_at(k)
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var ok: bool = word_craft(i, key)
+	if ok:
+		sg["words"] = words[i].duplicate(true)
+		sg["sealed"] = sealed[i]
+	_sig_off()
+	return ok
+
+
+## A held signal by its place on the Radio, or {}.
+func signal_at(k: int) -> Dictionary:
+	return signals[k] if k >= 0 and k < signals.size() else {}
+
+
+## A held signal, off the Radio: its papers stay spent.
+func bin_signal(k: int) -> bool:
+	if signal_at(k).is_empty():
+		return false
+	log_event(Words.SIGNAL_BINNED % Words.mid(str(Data.TIERS[int(signals[k]["site"])]["name"])))
+	signals.remove_at(k)
+	return true
+
+
+## The signal laid on its site - its depth, its codes at the depth's tier, its crew read by effective() - for a read
+## or a run; _sig_off() puts the site back. One at a time.
+func _sig_on(sg: Dictionary) -> void:
+	var i: int = int(sg["site"])
+	sg["was"] = {"depth": depth[i], "words": words[i].duplicate(true), "sealed": sealed[i], "armed": boss_armed.get(i, false),
+		"worn": worn[i], "worn_depth": worn_depth[i]}     # a signal's run doesn't wear the campaign site (the review)
+	depth[i] = int(sg["depth"])
+	words[i] = signal_words(sg)
+	sealed[i] = bool(sg.get("sealed", false))
+	boss_armed[i] = false
+	_sig = sg
+
+
+func _sig_off() -> void:
+	if _sig.is_empty():
+		return
+	var i: int = int(_sig["site"])
+	var was: Dictionary = _sig.get("was", {})
+	depth[i] = int(was.get("depth", 1))
+	var back: Array = []
+	for wd in was.get("words", []):
+		back.append({"w": str(wd["w"]), "t": int(wd["t"])})     # through a save the tiers came back floats (the review)
+	words[i] = back
+	sealed[i] = bool(was.get("sealed", false))
+	boss_armed[i] = bool(was.get("armed", false))
+	if was.has("worn"):
+		worn[i] = was["worn"]
+		worn_depth[i] = int(was["worn_depth"])
+	_sig.erase("was")
+	_sig = {}
+
+
+## A held signal as it would run: its site's figures (effective) with it laid on.
+func signal_read(k: int) -> Dictionary:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty():
+		return {}
+	_sig_on(sg)
+	var e := effective(int(sg["site"]))
+	_sig_off()
+	return e
+
+
+## A held signal's odds, read a few dry runs at a time as a site's are (odds_budget, the frame's brake): its own read,
+## kept by the signal's id apart from its site's. [odds so far, settled].
+var _sig_odds := {}
+
+
+func signal_odds(k: int) -> Array:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty():
+		return [0.0, false]
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var home = _surv_cache.get(i, null)
+	if _sig_odds.has(int(sg["id"])):
+		_surv_cache[i] = _sig_odds[int(sg["id"])]
+	else:
+		_surv_cache.erase(i)
+	var o: float = survival(i)
+	var done: bool = odds_settled(i)
+	_sig_odds[int(sg["id"])] = _surv_cache[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	_sig_off()
+	return [o, done]
+
+
+## The odds read so far, without running any (the Radio's card, as odds_now is the Map's).
+func signal_odds_now(k: int) -> Array:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty() or not _sig_odds.has(int(sg["id"])):
+		return [0.0, false]
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var c: Array = _sig_odds[int(sg["id"])]
+	var out: Array = [float(c[1]), int(c[2]) >= odds_runs()] if c[0] == _odds_key(i) else [0.0, false]
+	_sig_off()
+	return out
+
+
+## Run a held signal: laid on its site for the run, gone from the Radio whatever happens.
+func deploy_signal(k: int) -> bool:
+	var sg := signal_at(k)
+	if sg.is_empty() or not can_deploy() or not _sig.is_empty():
+		return false
+	_sig_on(sg)
+	deploy(int(sg["site"]))
+	if mission == null:
+		_sig_off()
+		return false
+	signals.remove_at(k)
+	mission["signal"] = sg
+	if bool(sg.get("convoy", false)) and str(mission.get("event", "")) == "":
+		mission["event"] = "convoy"            # the extra: a convoy's crew joins on the way
+		mission["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
+	chron("signal_run", {"id": int(sg["id"]), "depth": int(sg["depth"])})
+	return true
+
+
+## A signal's run over: beaten (cleared, its head down if it had one) at your reach or past it raises the reach and pays
+## a point on the Dial; the site goes back to its campaign self.
+func _signal_done(m: Dictionary, died := false) -> void:
+	if not m.has("signal") or _sig.is_empty():
+		return
+	var d: int = int(_sig["depth"])
+	var won: bool = bool(m["cleared"]) and not died and not m.get("ghost_pending", false) and not bool(m.get("timed_out", false)) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
+	chron("signal_done", {"id": int(_sig["id"]), "depth": d, "won": won})
+	if won and d >= reach:
+		reach = d + 1
+		atlas_points += 1
+		log_event(Words.SIGNAL_REACH % [d, reach])
+	elif not won:
+		log_event(Words.SIGNAL_LOST)
+	_sig_off()
 
 
 func on_mission() -> bool:
@@ -4288,7 +4579,8 @@ func _odds_key(i: int) -> Array:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second (rounded: a rest to full that
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
-	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(words[i]), str(standing), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids()]
+	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(words[i]), str(standing), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids(),
+		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0]     # a signal laid on the site reads apart from it (15 Oct)
 
 
 ## A figure in steps of 2%: the odds don't move for less.
@@ -4437,7 +4729,8 @@ func deploy(i: int) -> void:
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
 	var t := effective(i)
-	if t.has("boss") and not (t.get("boss_walks", false) and not boss_armed.get(i, false)):
+	var sig_head: bool = not _sig.is_empty() and int(_sig["site"]) == i     # a signal's head comes with it: the papers paid
+	if t.has("boss") and not sig_head and not (t.get("boss_walks", false) and not boss_armed.get(i, false)):
 		var cost := boss_cost(i)
 		if notes < cost:
 			return
@@ -5426,7 +5719,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		elif kind < Data.MED_DROP * 0.5 * float(shape.get("med", 1.0)) + Data.AMMO_DROP * float(shape.get("ammo", 1.0)):
 			slot = Data.AMMO
 	else:
-		if rng.randf() < Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0):
+		if rng.randf() < paper_odds(int(t["tier"])):
 			slot = Data.PAPER
 		elif rng.randf() < Data.CHARM_DROP * (Data.FX["yard/tracker.charms"] if yard_has("tracker") else 1.0):
 			slot = Data.CHARM
@@ -5581,8 +5874,9 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
 	if t["depth"] > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = t["depth"]
-		log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
-		if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES:     # the map's points from the Streets on (12 Oct)
+		if not m.has("signal"):
+			log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
+		if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
 			atlas_points += 1
 			log_event("A point on the Dial.")
 	if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
@@ -6058,6 +6352,7 @@ func _extract() -> void:
 		"clock_used": snappedf(float(m.get("clock_used", 0.0)), 0.1), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
 		"cleared": bool(m["cleared"]), "pack": pack_used(m), "cap": capacity()})
 	_record_run(m)
+	_signal_done(m)
 	mission = null
 	_idle_tidy()
 	_say_next()
@@ -6204,6 +6499,7 @@ func _kia() -> void:
 	xp = 0.0
 	wound = ""                           # theirs, gone with them
 	hp = Data.BASE_HP
+	_signal_done(m, true)
 	mission = null
 	auto_tier = -1
 	if hardcore:
@@ -7432,6 +7728,7 @@ func _state() -> Dictionary:
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -7624,6 +7921,15 @@ func load_dict(d: Dictionary) -> void:
 	lorries = int(d.get("lorries", 0))
 	paragon_banked = int(d.get("paragon_banked", 0))
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
+	signals = d.get("signals", []).duplicate(true)
+	for sg in signals:
+		_sig_ints(sg)
+	reach = int(d.get("reach", Data.REACH_START))
+	signal_seq = int(d.get("signal_seq", 0))
+	_sig = {}
+	if mission != null and mission.get("signal", null) is Dictionary:
+		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it
+		_sig_ints(_sig)
 	notes = int(d.get("notes", 0))
 	scrap = int(d.get("scrap", 0))
 	takings = float(d.get("takings", 0.0))

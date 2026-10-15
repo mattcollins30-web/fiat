@@ -5190,8 +5190,7 @@ func _playtest_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	if not sim.campaign_done():
-		_check(c["tiles"][main._missions.DEPTH_TILE]["value"].text == "Locked" and not c["depth_up"].visible and not c["depth_down"].visible, "the depth tile does not read Locked with its buttons hidden before the campaign's done")
+	_check(c["tiles"][main._missions.DEPTH_TILE]["key"].text == "Papers" and c["tiles"][main._missions.DEPTH_TILE]["value"].text.begins_with("1 in") and not c["depth_up"].visible and not c["depth_down"].visible, "the Papers tile is off, or the depth's −/+ show: '%s'" % c["tiles"][main._missions.DEPTH_TILE]["value"].text)     # 15 Oct, signals_map.png
 	_check_fit(main, "Runs (locked)")
 	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
 	var band0 = c["band"]
@@ -6592,6 +6591,7 @@ func _loot_roll_checks(main) -> void:
 	_gear_gate_checks(main)
 	_training_gate_checks(main)
 	_paper_crypt_checks(main)
+	_signal_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7817,6 +7817,115 @@ func _gear_gate_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("gear gated by level ok: the padlock and its level, Equip at, the arrow and Equip if better pass it, at the level it goes on; an old save refused")
+
+
+## Signals (15 Oct, endgame_radio.md, signals_radio.png): three papers decrypt into a held signal - a campaign site, a
+## crew from any zone, a depth in the reach's band (one deeper with a rare paper), each paper's code; the papers
+## spent; three held at most. Read, the site carries it and goes back; run, it's gone from the Radio, the site carries
+## it for the run and goes back after; beaten at the reach it raises the reach and pays a point on the Dial; lost, the
+## reach stays. The Map has no depth's −/+. The Radio's three columns, their words in their boxes.
+func _signal_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	if not ("radio" in sim.unlocked):
+		sim.unlocked.append("radio")
+	_finish_campaign(sim)
+	_check(sim.campaign_done(), "the signals' area wants the campaign done")
+	sim.signals = []
+	sim.reach = Data.REACH_START
+	for it in sim.signal_papers():
+		sim.stash.erase(it)
+	var bases: Array = []
+	for p in Words.PAPERS:
+		if p.has("code") and sim.word_taught_by(str(p["name"])) != "" and bases.size() < 6:
+			bases.append(str(p["name"]))
+	for b in bases:
+		sim.stash_put(sim._plain(Data.PAPER, b))
+	var ps: Array = sim.signal_papers()
+	_check(ps.size() == 6, "six papers in the stash, %d for a signal" % ps.size())
+	var ids: Array = ps.slice(0, 3).map(func(x): return int(x["id"]))
+	_check(sim.decrypt_block(ids.slice(0, 2)) != "" and sim.decrypt_block(ids) == "", "the decoder's block: '%s' with two, '%s' with three" % [sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids)])
+	var band: Array = sim.signal_band(ids)
+	var sg: Dictionary = sim.decrypt(ids)
+	_check(not sg.is_empty() and sim.signals.size() == 1 and int(sg["depth"]) >= int(band[0]) and int(sg["depth"]) <= int(band[1]) and sg["codes"].size() == 3 and sim.signal_papers().size() == 3,
+		"a signal made wrong: %s (band %s), %d papers left" % [str(sg), str(band), sim.signal_papers().size()])
+	# a rare paper: one deeper
+	var rare_ids: Array = sim.signal_papers().map(func(x): return int(x["id"]))
+	sim.signal_papers()[0]["rarity"] = Data.PAPER_DEEPER_AT
+	_check(sim.signal_band(rare_ids)[0] == sim.signal_band(ids)[0] + 1 or sim.signal_band(rare_ids)[1] == band[1] + 1, "a rare paper doesn't roll a signal deeper: %s" % str(sim.signal_band(rare_ids)))
+	# read: the site carries it, then goes back
+	var i: int = int(sg["site"])
+	var d0: int = int(sim.depth[i])
+	var e: Dictionary = sim.signal_read(0)
+	_check(int(e["depth"]) == int(sg["depth"]) and int(sim.depth[i]) == d0 and sim._sig.is_empty(), "a signal's read left its site at depth %d (was %d), %s" % [int(sim.depth[i]), d0, str(e.get("depth", -1))])
+	# its odds: read a few runs at a time to settled, apart from the site's own, which stay settled (the review)
+	var budget_was: int = sim.odds_budget
+	sim.odds_budget = 0
+	sim.survival(i)
+	_check(sim.odds_settled(i), "a site's own odds didn't settle")
+	sim.odds_budget = 4
+	for n in range(40):
+		sim.signal_odds(0)
+	_check(sim.signal_odds_now(0)[1] and sim.odds_settled(i), "a signal's odds: settled %s, the site's own still settled %s" % [str(sim.signal_odds_now(0)[1]), str(sim.odds_settled(i))])
+	sim.odds_budget = budget_was
+	# the Radio's screen
+	main.show_room(main.COMMS)
+	var rd = main._radio
+	rd.chosen = []
+	rd._shown = ""
+	main.refresh()
+	_check(rd._card.visible and rd._card_title.text == str(Data.TIERS[i]["name"]) and rd._papers_box.visible, "the Radio doesn't show the signal held: '%s'" % rd._card_title.text)
+	_check_fit(main, "the Radio's signals")
+	rd._toggle_paper(0)
+	rd._toggle_paper(1)
+	rd._toggle_paper(2)
+	main.refresh()
+	_check(rd.chosen.size() == 3 and not rd._decrypt.disabled and rd._make.text.begins_with("A signal at depth"), "three papers picked don't arm the decoder: %s, '%s'" % [str(rd.chosen), rd._make.text])
+	_check_fit(main, "the Radio's decoder, three in")
+	rd._on_decrypt()
+	main.refresh()
+	_check(sim.signals.size() == 2 and rd.chosen.is_empty(), "the decoder's button made no signal: %d held" % sim.signals.size())
+	# three held at most
+	for b in bases.slice(0, 3):
+		sim.stash_put(sim._plain(Data.PAPER, b))
+	sim.decrypt(sim.signal_papers().slice(0, 3).map(func(x): return int(x["id"])))
+	for b in bases.slice(0, 3):
+		sim.stash_put(sim._plain(Data.PAPER, b))
+	_check(sim.signals.size() == Data.SIGNALS_HELD and sim.decrypt_block(sim.signal_papers().slice(0, 3).map(func(x): return int(x["id"]))).contains("held"), "a fourth signal can be held")
+	# a craft on a held signal: its codes change on the signal, the site's own stay
+	var before_w: Array = sim.signal_words(sim.signals[0])
+	sim.notes += 1000
+	var site_words: Array = sim.words[int(sim.signals[0]["site"])].duplicate(true)
+	_check(sim.signal_craft(0, "retune") and sim.signals[0].has("words") and sim.words[int(sim.signals[0]["site"])] == site_words, "Retune on a signal: %s -> %s, the site's %s" % [str(before_w), str(sim.signal_words(sim.signals[0])), str(sim.words[int(sim.signals[0]["site"])])])
+	# run one and win it: the reach goes up, the site goes back
+	sim.hp = sim.max_hp()
+	var sg0: Dictionary = sim.signals[0]
+	var si: int = int(sg0["site"])
+	var sd: int = int(sg0["depth"])
+	var pts: int = sim.atlas_points
+	_check(sim.deploy_signal(0) and sim.on_mission() and sim.mission.has("signal") and int(sim.depth[si]) == sd and sim.signals.size() == Data.SIGNALS_HELD - 1, "a signal didn't set off: depth %d of %d" % [int(sim.depth[si]), sd])
+	sim.mission["remaining"] = 0
+	if sim.mission.has("boss"):
+		sim.mission["boss"]["alive"] = false
+	sim._clear(sim.mission, sim.mission["t"])
+	sim.extract_now()
+	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sd < Data.REACH_START or sim.reach == maxi(Data.REACH_START, sd + 1)) and sim.atlas_points >= pts, "a signal won: reach %d after depth %d, site at %d, points %d from %d" % [sim.reach, sd, int(sim.depth[si]), sim.atlas_points, pts])
+	# run one and lose it: the reach stays, the signal's gone
+	var r0: int = sim.reach
+	_check(sim.deploy_signal(0), "the second signal didn't set off")
+	sim._kia()
+	_check(not sim.on_mission() and sim.reach == r0 and sim.signals.size() == Data.SIGNALS_HELD - 2 and sim._sig.is_empty(), "a lost signal: reach %d from %d, %d held" % [sim.reach, r0, sim.signals.size()])
+	# the Map: no depth's −/+ on any site
+	sim.load_dict(saved)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	for c in main._missions._cols:
+		_check(not c["depth_up"].visible and not c["depth_down"].visible, "a Map card still has the depth's −/+")
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("signals ok: three papers in, one held out, the band and the rare, read and put back, the Radio's columns, three held, Retune on a signal, won and the reach up, lost and gone, no depth's −/+")
 
 
 ## The papers encrypted till the Radio (15 Oct): a code-carrying paper held before the Radio's open isn't read, its pick
@@ -9764,7 +9873,7 @@ func _site_level_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c6: Dictionary = main._missions._cols[0]       # the Services, the city's first
-	_check(c6["note"].text.contains("the lorry") or sim.hp < sim.max_hp() * 0.5, "the Services' card does not name the lorry: '%s'" % c6["note"].text)
+	_check(not c6["note"].text.contains("Depth"), "the Services' card still names a depth's station: '%s'" % c6["note"].text)     # the depths are the signals' (15 Oct)
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(1)
 	_site_unique_checks(main)
@@ -9898,7 +10007,7 @@ func _site_unique_checks(main) -> void:
 	main.refresh()
 	var c8: Dictionary = main._missions._cols[2]
 	_check(main._missions._station_words(11).contains("Depth 6: its own, The Quartermaster's Manual"), "the Barracks' station words do not name its own: '%s'" % main._missions._station_words(11))
-	_check(c8["note"].text != "" or sim.hp < sim.max_hp() * 0.5, "the Barracks' note is empty with its own unfound")
+	_check(not c8["note"].text.contains("Depth"), "the Barracks' card still names a depth's station: '%s'" % c8["note"].text)
 	_check_fit(main, "Runs (a site's own)")
 	sim.shelf = ["The Quartermaster's Manual"]
 	_check(not main._missions._station_words(11).contains("its own"), "the Barracks' station words still name its own once found")
@@ -10713,12 +10822,9 @@ func _start_kit_checks(_main) -> void:
 ## seals; the words' bite and pay and their flags in the run; they stay through a run and a save; the screen.
 func _radio_juice_checks(main) -> void:
 	var sim = main.sim
-	# the band (Bands-U A): the book's rows a label apart at least, the sites' list inside the room, the detail's crafts inside it
+	# the band (Bands-U A); the Radio's three columns inside the room (15 Oct: the signals')
 	var rdo = main._radio
-	var bstep: float = rdo._book[rdo.BOOK_COLS].position.y - rdo._book[0].position.y if rdo._book.size() > rdo.BOOK_COLS else 99.0
-	_check(bstep >= rdo._book[0].size.y and rdo.HEAD_H == Pal.BAND_H, "the Radio's book rows overlap: a step of %.1f for %.0f px labels" % [bstep, rdo._book[0].size.y])
-	var last_row: Button = rdo._rows.back()["button"]
-	_check(last_row.position.y + last_row.size.y <= Pal.ROOM_H, "the Radio's last site runs out of the room")
+	_check(rdo.HEAD_H == Pal.BAND_H and rdo.SIGNALS_X + rdo.SIGNALS_W <= Pal.GRID_W and rdo.BODY_Y + rdo.BODY_H <= Pal.ROOM_H, "the Radio's columns run out of the room")
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
@@ -10728,7 +10834,7 @@ func _radio_juice_checks(main) -> void:
 		_check(sim.words_known().is_empty() and not sim.juiceable(3) and sim.active_words(3).is_empty() and not ("Numbers" in sim.effective(3)["intel"]) and not sim.can_word_craft(3, "tune"), "a campaign site carries the Radio's words")
 		sim.words[3] = []
 		main.show_room(main.COMMS)
-		_check(main._radio._quiet[0].visible and main._radio._title.text == "Nothing on the air", "the Radio does not say nothing's on the air in the campaign")
+		_check(main._radio._quiet[0].visible and main._radio._headline.text == "Quiet", "the Radio does not say nothing's on the air in the campaign")
 		_check_fit(main, "Radio (the campaign)")
 	_finish_campaign(sim)
 	sim.atlas = {}
@@ -10876,33 +10982,19 @@ func _radio_juice_checks(main) -> void:
 	sim.sealed[3] = false
 	sim.words[3] = []
 	sim.set_depth(3, 9)
-	main.show_room(main.COMMS)
+	# a site's codes, crafted in the sim (the Radio's screen crafts signals now, 15 Oct; _signal_checks)
 	var rd = main._radio
-	rd._pick(3)
+	_check(sim.word_craft(3, "broadcast") and sim.words[3].size() == 4, "a broadcast on a deep site: %s" % str(sim.words[3]))
+	main.show_room(main.COMMS)
 	main.refresh()
-	_check(rd.visible and rd.row(3)["button"].visible and not rd._quiet[0].visible and rd.craft_button("broadcast") != null and not rd.craft_button("broadcast").disabled and rd.craft_button("retune").disabled, "the Radio's crafts don't match the site: broadcast %s, retune %s" % [str(rd.craft_button("broadcast").disabled), str(rd.craft_button("retune").disabled)])
-	_check_fit(main, "Radio (a silent site)")
-	rd._craft("broadcast")
-	main.refresh()
-	_check(sim.words[3].size() == 4 and rd.word_row(3)["panel"].visible and rd.word_row(0)["badge_label"].text in ["I", "II"] and rd.word_row(0)["bite"].text.begins_with("▲") and rd.word_row(0)["pay"].text.begins_with("●"), "the Radio's word rows are off after a broadcast: %s" % str(sim.words[3]))
-	_check(rd._get.text != "Nothing yet" and rd._bring.text != "Nothing yet", "the totals are empty on a juiced site")
-	_check_fit(main, "Radio (juiced)")
-	rd._craft("call")
-	_check(not main._menu.visible, "Call in opened its chooser on a full site")
-	sim.words[3] = sim.words[3].slice(0, 2)
-	main.refresh()
-	rd._craft("call")
-	_check(main._menu.visible, "Call in did not open the chooser")
-	main._menu.close()
-	rd._craft("hold")
-	_check(main._menu.visible, "Hold did not open the chooser")
-	main._menu.close()
+	_check(rd.visible and not rd._quiet[0].visible and rd._papers_box.visible, "the Radio isn't on the air once the campaign's done")
+	_check_fit(main, "Radio (on the air)")
 	sim.atlas_points = 40
 	for k in ["good_reception", "good_reception", "clear_air", "booster", "booster", "booster", "long_wave", "tip_offs", "tip_offs", "strong_signal", "strong_signal", "early_word", "early_word", "held_frequency", "relay"]:
 		sim.rank_atlas(k)
 	_check(sim.atlas_rank("relay") == 1, "the air lane did not open to the Relay")
 	main.refresh()
-	_check(rd._stand[0].visible and rd._filter.visible, "the book has no standing word or filter button")
+	_check(rd._stand[0].visible and rd._filter.visible, "the Radio has no standing word or filter button")
 	main._choose_book("standing0")
 	_check(main._menu.visible, "the standing word's chooser did not open")
 	main._menu.close()
