@@ -217,6 +217,7 @@ func _endgame(sim) -> void:
 			cls = sim.cls                  # the plain reads never set it: remember the class the move unpicks
 		if sim.move_yard():
 			moves += 1
+			_farm_at = -1e9                   # the new yard's farm read fresh (the review)
 			last_tier = -1
 			if sim.cls == "" and cls != "":
 				sim.set_class(cls)

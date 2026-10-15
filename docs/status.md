@@ -4929,3 +4929,12 @@ and tins a level past, never under OVER_LEVEL_FLOOR 10%; the rest of the site as
 cards (a line for the UI, for Matt). Two smoke flakes fixed, not accepted: the upgrade arrow's hats are the two it put
 there, by id (a magic hard hat the camp already had could rightly carry the arrow); the odds-settle loop waits 6000
 frames (2000 flaked on the Barracks' long dry runs with the machine still loaded).
+
+**D9's read (summary_d9.md, 8 reds; the pass back to 25 minutes):** the Manager 1.3 h and the Quartermaster 2.1 h
+green, level 20-24 at him on most; Kev's story on six; retirement never on eight - the levels stall from hour 4 (the
+Drifter 35 at 4 h, 43 at 24 h): the Radio waits hours for papers between signals, so the bot farms the campaign at a
+tenth of the pay.
+
+**D10: papers twice as common (15 Oct).** PAPER_DROP 0.12 (was 0.06; the 15 Oct note had it the endgame's
+bottleneck). The review's tidies: the Lorry's route's Dial figures and sentence in levels (+1/+2, "a level further");
+the bot's farm read fresh after a Yard move.

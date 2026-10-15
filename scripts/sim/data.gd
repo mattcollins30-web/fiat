@@ -30,7 +30,7 @@ const AMMO := "Ammo"
 ## Papers: a line of the before, found lying about, a cell each, pennies at
 ## the Fence. Their words live in words.gd; the deeds are the one that matters.
 const PAPER := "Paper"
-const PAPER_DROP := 0.06           # the share of a site's finds that are papers
+const PAPER_DROP := 0.12           # the share of a site's finds that are papers (D10: 0.06 left the Radio waiting hours between signals)
 const RADIO_EVERY := 3             # the radio comes on every this many runs home (12 Oct, the lore pass): the next line heard
 
 ## An item's footprint in cells, W x H - what it takes in the stash and the
@@ -969,7 +969,7 @@ const FX := {
 	"atlas/heavy_crews.cash": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/heavy_crews.contact": 1,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/heavy_crews.xp": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
-	"atlas/lorrys_route": 1,     # The lorry's route: the decoder's band a depth wider at the top
+	"atlas/lorrys_route": 1,     # The lorry's route: the decoder's band a level wider at the top
 	"atlas/open_ground": 1,     # Open ground: One fewer on you at a time
 	"atlas/picked_over.base": 0.33,     # a site's own things: the share of finds before the map's Picked over
 	"atlas/picked_over": 0.1667,     # Picked over: A site's own things turn up more: a third of finds, then half, then two-thirds
@@ -1830,7 +1830,7 @@ const ATLAS := [
 	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a point on the Dial",
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the Dial gains a point."},
 	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "A signal can roll two over your reach, not one",
-		"sum": "The decoder", "figures": ["to reach +2", "to reach +3"], "sentence": "You know the lorry's route: a signal can roll a depth further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
+		"sum": "The decoder", "figures": ["to reach +1", "to reach +2"], "sentence": "You know the lorry's route: a signal can roll a level further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
 	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
 	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Every craft at the Radio 15% cheaper a rank",
 		"sum": "Crafts", "figures": ["full price", "15% less", "30% less"], "sentence": "Every craft at the Radio comes cheaper."},
