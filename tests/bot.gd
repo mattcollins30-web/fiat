@@ -67,9 +67,14 @@ func step(sim) -> int:
 			var ins: int = sim.signal_insure_cost(k)
 			if ins >= 0 and sim.cash >= ins * 3:
 				sim.set_insure(true)
+			var sg_lv: int = sim.signal_level(sim.signal_at(k))
+			var sg_tags: String = _sig_tags(sim.signal_at(k))
+			var sg_odds: float = float(sim.signal_odds(k)[0])
 			if not sim.deploy_signal(k):
 				sim.set_insure(false)
 				t = -1
+			else:
+				ran_signal = [sg_lv, sg_odds, sim.reach, sg_tags]
 	if t < 0:
 		t = pick_tier(sim)
 		last_tier = t
@@ -86,7 +91,25 @@ func step(sim) -> int:
 		guard += 1
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still
+	if not ran_signal.is_empty():
+		bought.append([sim.elapsed, "ran a signal: level %d at %.0f%%, reach %d -> %d%s" % [ran_signal[0], float(ran_signal[1]) * 100.0, ran_signal[2], sim.reach, ran_signal[3]]])
+		ran_signal = []
 	return t
+var ran_signal: Array = []
+
+
+## A signal's extras for the log: its site, the head, a convoy, its codes.
+func _sig_tags(sg: Dictionary) -> String:
+	var out: String = " (site %d" % int(sg.get("site", 0))
+	if bool(sg.get("head", false)):
+		out += ", head"
+	if bool(sg.get("convoy", false)) or bool(sg.get("convoy_fight", false)):
+		out += ", convoy"
+	if int(sg.get("story", -1)) >= 0:
+		out += ", Kev's"
+	if not (sg.get("codes", []) as Array).is_empty():
+		out += ", codes " + ",".join(PackedStringArray((sg["codes"] as Array).map(func(c): return str(c))))
+	return out + ")"
 
 
 ## When the bot leaves a run: under a quarter HP; or with the site cleared,
@@ -209,14 +232,19 @@ func _endgame(sim) -> void:
 				worst = name
 				worst_v = v
 		sim.set_filtered(worst)
-	# the lorry beaten: the yard moves on (the loop), the class put back, and the campaign again from the floor
+	# the lorry beaten: the yard moves on (the loop), the class put back, and the campaign again from the floor - once
+	# the runner's at the wall's level (D13): a move resets the runner, and one at the lorry (hour 5-6) cut the Radio's
+	# ladder and level 50 off for the hours the campaign took again; a player with a runner climbing doesn't move yet
 	if sim.lorry_done and lorry_at < 0.0:
 		lorry_at = sim.elapsed / 3600.0
-	if sim.lorry_done and sim.can_move_yard():
+	if sim.lorry_done and sim.level() >= Data.RETIRE_LEVEL and not _at_wall:
+		_at_wall = true                   # a tidy at the wall's level first, so the read sees level 50 before the move resets it (the review)
+	elif sim.lorry_done and _at_wall and sim.can_move_yard():
 		if cls == "":
 			cls = sim.cls                  # the plain reads never set it: remember the class the move unpicks
 		if sim.move_yard():
 			moves += 1
+			_at_wall = false
 			_farm_at = -1e9                   # the new yard's farm read fresh (the review)
 			last_tier = -1
 			if sim.cls == "" and cls != "":
@@ -264,6 +292,9 @@ func _endgame(sim) -> void:
 	_gamble_one(sim)
 
 
+var _at_wall := false
+
+
 ## The farm the endgame's tidy reads for its words (15 Oct, the pass's wall): pick_tier reads every site's odds, a third
 ## of a tidy's time once signals run (after one the site's random, so last_tier's gone every tidy); kept ten minutes.
 var _farm_at := -1e9
@@ -286,12 +317,16 @@ func _make_signals(sim) -> void:
 		for k in range(sim.signals.size()):
 			if int(sim.signal_at(k).get("story", -1)) >= 0:
 				continue
-			var o: float = float(sim.signal_odds(k)[0])
+			var read: Array = sim.signal_odds(k)
+			if not bool(read[1]):
+				worst = -1                    # odds still being read: nothing binned on a part-read (D13: fresh signals went at "0%")
+				break
+			var o: float = float(read[0])
 			if o < wo:
 				wo = o
 				worst = k
 		if worst >= 0:
-			bought.append([sim.elapsed, "binned a signal: level %d at %.0f%%" % [sim.signal_level(sim.signal_at(worst)), wo * 100.0]])
+			bought.append([sim.elapsed, "binned a signal: level %d at %.0f%%%s" % [sim.signal_level(sim.signal_at(worst)), wo * 100.0, _sig_tags(sim.signal_at(worst))]])
 			sim.bin_signal(worst)
 	var guard := 0
 	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
@@ -761,15 +796,22 @@ func _next_in(sim, b: Dictionary) -> String:
 
 func _restock_meds(sim) -> void:
 	_restock_rounds(sim)
-	while sim.rig_room(1):
+	var guard := 0
+	while sim.rig_room(1) and guard < 40:
+		guard += 1
 		var took := false
+		var small := false
 		for it in sim.stash:
 			if Items.is_medical(it):
-				took = sim.take(it["id"])
-				break
+				small = small or Items.size(it) <= 1
+				if sim.take(it["id"]):
+					took = true
+					break
 		if took:
 			continue
-		if sim.cash < 200.0 or not sim.buy_med("Bandage"):
+		# a bandage only when the stash has no one-cell med (D13: a kit too big for the room left was tried, refused and
+		# a bandage bought for the stash, again and again - a hundred, the cash gone and the stash full, papers left lying)
+		if small or sim.cash < 200.0 or not sim.buy_med("Bandage"):
 			return
 
 

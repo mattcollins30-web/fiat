@@ -4954,3 +4954,20 @@ Estate, D9's falloff cut their pay to a tenth, a poverty spiral.
 **D12: the falloff reads your furthest progress, not just your level (16 Oct).** `over_level_share` caps your level's
 site at the deepest site you've cleared (or the reach less one once a signal's won): a build held at a wall farms its
 last sites at full pay. Smoke: the held-at-a-wall case.
+
+**D12's read (summary_d12.md, one read a build, 7 reds; 14 minutes):** the plain floor green; the gang clock green;
+retirement at hour 4-6 on five (the falloff cap read the reach after the campaign too - the review's catch, fixed below).
+
+**D12, the review:** the cap holds only while the campaign isn't done (a runner who's finished it and wins no signal
+was paid whole on the City forever); the reach term gone with it. Smoke: the campaign-done case, the held case's step.
+
+**D13: three bot faults that stalled the Radio (16 Oct).** Read off one Drifter's log in the cloud:
+- the bandage flood: `_restock_meds` tried the stash's first med (a four-cell kit, no room), failed and bought a
+  bandage for the stash, over and over - a hundred, the cash gone, the stash full, no pickups and so no papers for
+  hours. Now every med is tried and a bandage bought only when the stash has no one-cell med;
+- signals binned on a part-read: a fresh signal read "0%" before its odds were run; nothing's binned now until every
+  held one's settled (and `odds_settled` reads the gate's 24-run cap as `survival()` does, or a build with the Glasses
+  never settled);
+- the move at the lorry: the bot moved the Yard the moment the lorry fell (hour 5-6), a new runner at level 1 - the
+  ladder and level 50 cut off for the hours the campaign took again. It moves at level 50 now, a tidy after it's seen.
+- Signal runs logged in the read ("ran a signal: level, odds, reach a -> b").

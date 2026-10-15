@@ -3459,10 +3459,9 @@ func deepest_dug() -> int:
 ## item level you wear at - and never past the furthest you've got (D12: the deepest site cleared, or the highest
 ## signal won): a runner held at the Carpet Man was paid a tenth for the Estate he was stuck in, and never got out.
 func over_level_share(lv: int) -> float:
-	var reached: int = deepest_cleared_level()
-	if reach > Data.REACH_START:
-		reached = maxi(reached, reach - 1)
-	var mine: float = minf((level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL, float(reached))
+	var mine: float = (level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	if not campaign_done():
+		mine = minf(mine, float(deepest_cleared_level()))     # held at a wall: its last sites pay whole (D12)
 	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE
 	return clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, beyond), Data.OVER_LEVEL_FLOOR, 1.0)
 
@@ -4841,7 +4840,8 @@ func survival(i: int) -> float:
 
 ## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).
 func odds_settled(i: int) -> bool:
-	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= odds_runs()
+	var runs: int = odds_runs() if odds_runs_max <= 0 else mini(odds_runs(), odds_runs_max)     # the read's cap as survival() runs it (D13 review)
+	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= runs
 
 
 ## The fight alone, run through the real fight code on a scratch mission with
