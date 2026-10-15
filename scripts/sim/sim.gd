@@ -87,7 +87,7 @@ var deeds_found := false           # the Bank's vault, opened once
 ## workshop. A bare sim has them all (the tests, the tools); a fresh camp (start) has none.
 var unlocked: Array = Data.ROOMS_SHUT.duplicate()
 var met: Array = []                # the rooms whose first-visit card has been shown (14 Oct): Words.ROOM_INTROS keys
-var ending := ""                   # what became of the deeds: burned, sold, held
+var deeds_fate := ""               # what became of the deeds: burned, sold, held ("ending" in a save from before 15 Oct)
 var bosses_beaten: Array = []      # per zone: the crew's head is down
 var boss_armed: Dictionary = {}    # tier -> true: the next run there takes the boss on
 var notes := 0                     # the old paper money: the crews still take it
@@ -105,7 +105,7 @@ var mate := {}                     # the Fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
 var yard_moves := 0                # how many times the Yard has moved (the prestige)
-var lorry_done := false            # the convoy beaten in this yard: the endgame's ending (7 Oct); the move lights on it
+var lorry_done := false            # the convoy beaten in this yard (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
 var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
@@ -302,7 +302,7 @@ func armour() -> float:
 			a += Items.armour(equipped[s])
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
-		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission)) + float(mission.get("bonus_armour", 0.0))
+		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission))
 	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (Data.FX["node/shock_more.armour"] if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
 
 
@@ -1211,7 +1211,7 @@ func move_yard(trade := "") -> bool:
 		if str(id).begins_with("The Pitch/"):
 			yard_tree.append(id)
 	var kept_share: float = Data.FX["yard/dry_store"] if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
-	var keep := {"past": past, "retired": retired.duplicate(), "ending": ending, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
+	var keep := {"past": past, "retired": retired.duplicate(), "deeds_fate": deeds_fate, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(),
@@ -1228,7 +1228,7 @@ func move_yard(trade := "") -> bool:
 	load_dict(fresh.to_dict())
 	past = keep["past"]
 	retired = keep["retired"]             # the wall moves with the Yard (36)
-	ending = keep["ending"]
+	deeds_fate = keep["deeds_fate"]
 	hardcore = keep["hardcore"]
 	notes = keep["notes"]
 	scrap = keep["scrap"]                 # scrap moves with the Yard the way notes do (34)
@@ -1410,7 +1410,7 @@ func _deeds_held(m: Dictionary) -> bool:
 
 
 ## A head's thing: its room opens (at the drop; again a no-op home), the log and the radio say so; true unless it's
-## kept (the deeds are, for the ending).
+## kept (the deeds are, for their fate: held, sold or burned).
 func _home_gate(it: Dictionary) -> bool:
 	var room: String = Items.opens(it)
 	if room == "":
@@ -1596,7 +1596,7 @@ func scrap_of(it: Dictionary) -> int:
 
 
 ## The Kit room's bin (13 Oct, Matt's playtest: the stash full with the Fence and the Workshop shut): a stash thing
-## thrown out for the scrap a ditch gives, at any time, gone for good. Never the deeds (the ending's).
+## thrown out for the scrap a ditch gives, at any time, gone for good. Never the deeds (theirs is a choice of its own).
 func can_bin(it: Dictionary) -> bool:
 	return not it.is_empty() and not Items.is_deeds(it) and stash.has(it)
 
@@ -3842,7 +3842,7 @@ static func _softened(m: Dictionary, f: float) -> Dictionary:
 
 
 ## The depth a crew's head comes at full strength from on a site: PINNACLE_DEPTH for the site's zone (level 14 on his
-## own site), a depth deeper for every move made (the ending climbs with the loop), two sooner with Full strength.
+## own site), a depth deeper for every move made (the endgame climbs with the loop), two sooner with Full strength.
 func pinnacle_depth(i: int) -> int:
 	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - Data.FX["atlas/full_strength"] * atlas_rank("full_strength")
 
@@ -4543,7 +4543,7 @@ func _time_out(m: Dictionary) -> void:
 	var kept_pack: bool = insured and yard_has("insurance_desk")
 	var carried := ""
 	if not kept_pack and not m["found"].is_empty():
-		var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it))     # the deeds come home whatever: _extract writes the ending
+		var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it))     # the deeds come home whatever: _extract writes their fate
 		var rest: Array = m["found"].filter(func(it): return not Items.is_deeds(it))
 		if yard_has("fetch") and not rest.is_empty():
 			var best: Dictionary = rest[0]
@@ -5222,7 +5222,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		elif b.get("pinnacle", false) and int(u.get("pinnacle", -1)) == int(b["zone"]):
 			pool.append(u)                    # at full strength, their charm is in the pool
 	if m.get("convoy", false) and m.get("boss_queue", []).is_empty():
-		# the last of the convoy: the Lorry's Load comes home too, and the Yard's ending is written (7 Oct)
+		# the last of the convoy: the Lorry's Load comes home too, and the lorry's done for this Yard (7 Oct)
 		var ld := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		m["found"].append(ld)
 		_read(ld)
@@ -5245,13 +5245,13 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	if pool.is_empty():
 		log_event("%s is down. %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", "")])     # a head with no unique of his own (the Gamekeeper)
 	# the rooms he holds (13 Oct): the drop is the sign (Matt) - his thing opens its room there and then. The deeds
-	# come home in the pack whatever it holds, for the ending, and drop again while there's no ending and none held (a
+	# come home in the pack whatever it holds, for their fate, and drop again while it's undecided and none held (a
 	# death lost them, or a save from before the gates hadn't had them); the rest open their room and go to it.
 	if not m.get("convoy", false):
 		for room in head.get("opens", {}):
 			var thing := _plain(Data.PAPER, str(head["opens"][room]))
 			if Items.is_deeds(thing):
-				if ending != "" or _deeds_held(m):
+				if deeds_fate != "" or _deeds_held(m):
 					continue
 				thing["deeds"] = true
 				if not deeds_found:
@@ -5651,7 +5651,7 @@ func ditch(id: int) -> bool:
 			mission["found"].remove_at(k)
 			mission["ditched"] = int(mission.get("ditched", 0)) + 1
 			if Items.is_deeds(it):
-				ending = "burned"
+				deeds_fate = "burned"
 				log_event(Words.DEEDS["burned"])
 			else:
 				var bits: int = scrap_of(it)
@@ -5893,8 +5893,8 @@ func _extract() -> void:
 		if Items.is_deeds(it):
 			stash.append(it)                 # whatever the room: the deeds come home
 			stashed += 1
-			if ending == "":
-				ending = "held"
+			if deeds_fate == "":
+				deeds_fate = "held"
 				log_event(Words.DEEDS["held"])
 		elif stash_put(it):
 			stashed += 1
@@ -6034,8 +6034,8 @@ func _kia() -> void:
 				if _home_gate(it):
 					continue                     # a head's thing opens its room (13 Oct)
 				stash.append(it)                 # the Fence's Insurance desk: the pack comes home too
-				if Items.is_deeds(it) and ending == "":
-					ending = "held"
+				if Items.is_deeds(it) and deeds_fate == "":
+					deeds_fate = "held"
 					log_event(Words.DEEDS["held"])
 			m["pack_kept"] = true
 			last_report["left"] = int(m["left"])
@@ -6060,8 +6060,8 @@ func _kia() -> void:
 		last_report["carried"] = Items.full_name(best)
 		last_report["left"] = int(last_report["left"]) - 1
 		log_event("The dog came home with %s" % (Items.full_name(best) if best.has("unique") else Items.full_name(best).to_lower()))
-		if Items.is_deeds(best) and ending == "":
-			ending = "held"                  # the deeds, carried home: held all the same
+		if Items.is_deeds(best) and deeds_fate == "":
+			deeds_fate = "held"                  # the deeds, carried home: held all the same
 			log_event(Words.DEEDS["held"])
 	for s in Data.SLOTS:
 		equipped[s] = null
@@ -6304,9 +6304,8 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 ## (armour a free cell), the Yard (the Clinic's HP), the trades, and whether a run is on.
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
-	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review), and a run's bonus armour
-	var bonus: float = float(mission.get("bonus_armour", 0.0)) if mission != null else 0.0
-	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, bonus, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
+	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -6801,7 +6800,7 @@ func sell(it: Dictionary) -> bool:
 	if it.has("unique"):
 		_lose(it, "", "fence")                # he said someone would want it; later someone has it
 	if Items.is_deeds(it):
-		ending = "sold"
+		deeds_fate = "sold"
 		log_event(Words.DEEDS["sold"])
 	return true
 
@@ -7287,7 +7286,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "ending": ending, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -7475,7 +7474,7 @@ func load_dict(d: Dictionary) -> void:
 		met = Array(d["met"])
 	else:
 		met = Words.ROOM_INTRO_FIRST + unlocked.duplicate()     # a save from before the room cards (14 Oct): it's met what it has open
-	ending = str(d.get("ending", ""))
+	deeds_fate = str(d.get("deeds_fate", d.get("ending", "")))     # the old saves' name for it
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
 	paragon_banked = int(d.get("paragon_banked", 0))

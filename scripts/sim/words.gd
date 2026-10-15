@@ -1,6 +1,6 @@
 extends RefCounted
 ## Everything the game says that isn't a number: the people's lines, the
-## sites' lines, the papers, the uniques' pasts, the ending, and a line for
+## sites' lines, the papers, the uniques' pasts, the deeds, and a line for
 ## every item. The voice is docs/design/narrative.md's: British, flat, dry;
 ## the money words everywhere; nobody explains the collapse; the worst
 ## things said shortest. Words only - no rules live here.
@@ -464,7 +464,7 @@ const SHELF := {
 }
 
 ## The deeds: what the Bank was holding. Dropped once, when the Bank is
-## first cleared; two cells; the ending is what you do with it.
+## first cleared; two cells; what you do with them is yours.
 const DEEDS := {
 	"name": "The deeds", "value": 5000,
 	"words": "Every mortgage on the estate, in a fire box. The crew held the Bank for this.",

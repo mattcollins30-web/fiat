@@ -81,7 +81,7 @@ var _seen := {}                    # what the last look saw of the run
 var _chron_seen := -1
 var _cash_seen := -1.0
 var _buttons_hooked := false
-var _ending_seen := ""              # the deeds' fate last heard: burned or sold sound once, as it happens (14 Oct)
+var _deeds_fate_seen := ""              # the deeds' fate last heard: burned or sold sound once, as it happens (14 Oct)
 var _dry_seen := false             # the gun was dry at the last look: rounds again is a reload
 var _sim_seen = null               # the camp the counts are of: a load or a new camp starts them again
 
@@ -503,7 +503,7 @@ func _camp(sim) -> void:
 		_sim_seen = sim
 		_chron_seen = count
 		_cash_seen = sim.cash
-		_ending_seen = sim.ending
+		_deeds_fate_seen = sim.deeds_fate
 		return
 	var said := false
 	if count > _chron_seen:
@@ -524,14 +524,14 @@ func _camp(sim) -> void:
 				said = true
 		_chron_seen = count
 	# the deeds' fate, as it's decided: burned, the fire; sold, a door shut quietly (14 Oct: the sale made, never played)
-	if sim.ending != _ending_seen:
-		if sim.ending == "burned":
+	if sim.deeds_fate != _deeds_fate_seen:
+		if sim.deeds_fate == "burned":
 			cue("the_end_burn")
 			said = true
-		elif sim.ending == "sold":
+		elif sim.deeds_fate == "sold":
 			cue("the_end_sell")
 			said = true
-		_ending_seen = sim.ending
+		_deeds_fate_seen = sim.deeds_fate
 	if sim.mission == null and not said and sim.cash > _cash_seen + 0.5:
 		cue("sell")
 	_cash_seen = sim.cash

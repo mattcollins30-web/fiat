@@ -178,6 +178,10 @@ func _init() -> void:
 	_check(sim.cls == "Doorman", "sim.cls == 'Doorman'")
 	_check(sim.cash == float(Data.STARTING_CASH), "sim.cash == float(Data.STARTING_CASH)")
 	_check(sim.equipped["Primary"] != null, "sim.equipped['Primary'] != null")
+	var only: Array = _only_areas()
+	if not only.is_empty():
+		_run_only(main, only)
+		return
 	_rarity_tone_checks(sim)
 	for r in main.ROOMS:
 		main.show_room(r)
@@ -596,6 +600,55 @@ func _init() -> void:
 	_worst_case(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
+	_finish()
+
+
+## One area alone (15 Oct, refactor A3): `-- only crates gang_pause fx` sets the camp up and runs those areas'
+## checks (each a `_<area>_checks`), with no bot run before them: seconds, not minutes, while working on one thing.
+## The whole smoke is still the one before a commit - an area alone starts from a fresh camp, not the bot's.
+func _only_areas() -> Array:
+	var args := OS.get_cmdline_user_args()
+	var i := args.find("only")
+	return [] if i < 0 else Array(args.slice(i + 1))
+
+
+func _run_only(main, only: Array) -> void:
+	# a camp some way in, as the bot's run would leave it: every site cleared once, every head down, a runner of some level
+	var sim = main.sim
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.depot_cleared = true
+	sim.xp = maxf(sim.xp, Data.xp_for_level(15))
+	sim.hp = sim.max_hp()
+	main.refresh()
+	for area in only:
+		var fn := "_%s_checks" % str(area)
+		var info: Array = get_method_list().filter(func(mi): return mi["name"] == fn)
+		if info.is_empty():
+			_check(false, "no area called %s (no %s)" % [area, fn])
+			continue
+		var params: Array = info[0]["args"]
+		print("only: %s" % area)
+		var what: String = str(params[0]["name"]) if params.size() == 1 else ""
+		if params.is_empty():
+			call(fn)
+		elif what in ["sim", "_sim"]:
+			call(fn, main.sim)
+		elif what in ["main", "_main"]:
+			call(fn, main)
+		elif what == "bk":
+			main.show_room(main.BARRACKS)
+			main.refresh()
+			call(fn, main._barracks)
+		else:
+			_check(false, "%s takes more than the camp; run it in the whole smoke" % fn)
+	_finish()
+
+
+## The end of a run, whole or one area: the player's saves untouched, the smoke's own gone, the verdict.
+func _finish() -> void:
 	# the player's own saves are as they were, and the smoke's are gone
 	_check(_player_saves() == _player_saves_before, "the smoke touched the player's saves: %s -> %s" % [str(_player_saves_before), str(_player_saves())])
 	for path in [SMOKE_SAVE, SMOKE_SLOT % 1, SMOKE_SLOT % 2, SMOKE_SLOT % 3]:
@@ -1204,11 +1257,11 @@ func _narrative_checks(main) -> void:
 		still = still or Items.is_deeds(it)
 	_check(still, "Ditch commons burned the deeds")
 	sim.ditch(deeds["id"])
-	_check(sim.ending == "burned", "burning the deeds did not end: %s" % sim.ending)
+	_check(sim.deeds_fate == "burned", "burning the deeds did not end: %s" % sim.deeds_fate)
 	sim.extract_now()
 	# held: the same again, out with them
 	sim.deeds_found = false
-	sim.ending = ""
+	sim.deeds_fate = ""
 	sim.hp = sim.max_hp()
 	sim.unlocked.erase("yard")
 	sim.boss_armed[bank] = true
@@ -1217,7 +1270,15 @@ func _narrative_checks(main) -> void:
 	if sim.mission.has("boss"):
 		sim._boss_down(sim.mission, sim.mission["t"])
 	sim.extract_now()
-	_check(sim.ending == "held" and sim.room_open("yard"), "bringing the deeds home did not end, or the Pitch isn't open: %s" % sim.ending)
+	_check(sim.deeds_fate == "held" and sim.room_open("yard"), "bringing the deeds home did not end, or the Pitch isn't open: %s" % sim.deeds_fate)
+	# a save from before 15 Oct calls it "ending": it loads under its new name
+	var now_d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var old_d: Dictionary = now_d.duplicate(true)
+	old_d.erase("deeds_fate")
+	old_d["ending"] = "sold"
+	sim.load_dict(old_d)
+	_check(sim.deeds_fate == "sold", "an old save's \"ending\" did not load as the deeds' fate: '%s'" % sim.deeds_fate)
+	sim.load_dict(now_d)
 	var held := {}
 	for it in sim.stash:
 		if Items.is_deeds(it):
@@ -1225,10 +1286,10 @@ func _narrative_checks(main) -> void:
 	_check(not held.is_empty(), "the deeds did not reach the stash")
 	_check(sim.sell_commons() >= 0 and sim.stash.has(held), "sell commons sold the deeds")
 	# sold
-	sim.ending = ""
+	sim.deeds_fate = ""
 	var cash_before: float = sim.cash
 	sim.sell(held)
-	_check(sim.ending == "sold" and sim.cash > cash_before, "selling the deeds did not end, or did not pay")
+	_check(sim.deeds_fate == "sold" and sim.cash > cash_before, "selling the deeds did not end, or did not pay")
 	# the past: a death writes a runner down
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -4998,15 +5059,15 @@ func _sound_checks(main) -> void:
 	sim.chron("deeds", {})
 	main.refresh()
 	_check(not ("the_end_burn" in snd.cued()), "finding the deeds sounded as burning them")
-	var hold_end: String = sim.ending
+	var hold_end: String = sim.deeds_fate
 	for pair in [["burned", "the_end_burn"], ["sold", "the_end_sell"]]:
-		sim.ending = ""
+		sim.deeds_fate = ""
 		main.refresh()
 		snd.clear_cued()
-		sim.ending = pair[0]
+		sim.deeds_fate = pair[0]
 		main.refresh()
 		_check(pair[1] in snd.cued(), "the deeds %s made no %s: %s" % [pair[0], pair[1], str(snd.cued())])
-	sim.ending = hold_end
+	sim.deeds_fate = hold_end
 	main.refresh()
 	# a button clicks
 	snd.clear_cued()
@@ -7381,8 +7442,8 @@ func _top_works_checks(main) -> void:
 	# the deeds carried home are held all the same
 	sim.load_dict(saved)
 	_yard_set(sim, "kennel", 2, "a")
-	var hold_ending: String = sim.ending
-	sim.ending = ""
+	var hold_ending: String = sim.deeds_fate
+	sim.deeds_fate = ""
 	sim.deploy(3)
 	m = sim.mission
 	var deeds: Dictionary = sim._plain(Data.PAPER, "The deeds")
@@ -7390,8 +7451,8 @@ func _top_works_checks(main) -> void:
 	m["found"] = [deeds]
 	sim.hp = 0.0
 	sim._kia()
-	_check(sim.ending == "held" and sim.stash.back().get("deeds", false), "the deeds carried home were not held: '%s'" % sim.ending)
-	sim.ending = hold_ending
+	_check(sim.deeds_fate == "held" and sim.stash.back().get("deeds", false), "the deeds carried home were not held: '%s'" % sim.deeds_fate)
+	sim.deeds_fate = hold_ending
 	# the works card reads the rules and fits
 	main.show_room(main.OVERVIEW)
 	main.refresh()
@@ -9290,7 +9351,7 @@ func _endgame_move_checks(main) -> void:
 	_check(sim.can_move_yard() and sim.move_yard(), "the Pitch could not move after the lorry")
 	_check(sim.yard_moves == 1 and sim.lorries == lorries0 and sim.best_dig == dig0 and not sim.lorry_done, "the move lost the score: moves %d, lorries %d, dig %s, lorry %s" % [sim.yard_moves, sim.lorries, str(sim.best_dig), str(sim.lorry_done)])
 	_check(sim.ladder_floor() == 1 and sim.free_yard_nodes() == 1, "the move's floor and free nodes are off: %d / %d" % [sim.ladder_floor(), sim.free_yard_nodes()])
-	_check(sim.convoy_depth() == Data.CONVOY_DEPTH + 1 and sim.pinnacle_depth(11) == int(Data.PINNACLE_DEPTH[3]) + 1, "the ending did not climb a depth with the move: lorry %d, barracks' head %d" % [sim.convoy_depth(), sim.pinnacle_depth(11)])
+	_check(sim.convoy_depth() == Data.CONVOY_DEPTH + 1 and sim.pinnacle_depth(11) == int(Data.PINNACLE_DEPTH[3]) + 1, "the convoy and the heads did not climb a depth with the move: lorry %d, barracks' head %d" % [sim.convoy_depth(), sim.pinnacle_depth(11)])
 	_check(is_equal_approx(sim.lorry_mult(), pow(Data.LORRY_MULT, sim.lorries)) and sim.lorries >= 1, "the lorry's multiplier is off: %.2f for %d" % [sim.lorry_mult(), sim.lorries])
 	_check(sim.paragon_banked == paragon_before and sim.paragon() == paragon_before and sim.level() == 1, "the move did not bank the paragon: banked %d of %d, runner level %d" % [sim.paragon_banked, paragon_before, sim.level()])
 	var yard_ids: Array = []

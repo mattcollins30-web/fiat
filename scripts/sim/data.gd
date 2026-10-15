@@ -522,7 +522,7 @@ const BASES := {
 		{"name": "Gold sovereign", "tier": 9, "find": 36, "cash": 36, "value": 2700},
 	],
 	## Papers: the before, on paper. Worth their value to the Fence and nothing
-	## else; the deeds are dropped by the Bank once and are the ending.
+	## else; the deeds are dropped by the Bank once; what's done with them is the player's.
 	"Paper": [
 		{"name": "A council tax reminder", "tier": 1, "value": 2},
 		{"name": "A P45", "tier": 1, "value": 2},

@@ -4649,3 +4649,14 @@ figures inside a condition with more than one number to it (about 20, listed by 
 The fingerprint is unmoved (b687fd57…). The smoke checks every key names something the data has and the sim reads
 every key. One effect, one row: Trapline's, the Flares' and the Poacher's snare's "a head short" each one row for
 the clear and the gangs; Picked over's base is in with its step.
+
+**A3 (15 Oct).** `ending` is `deeds_fate` (the game ends on the Radio; the deeds are a choice: held, sold or burned),
+read from an old save's "ending"; the player's "Held, sold or burned: the ending" lost "the ending". A dead read
+went: `mission.get("bonus_armour")`, never written. The smoke runs one area alone: `godot --path . -s
+tests/smoke.gd -- only crates fx gang_pause` (a camp set some way in, no bot run, seconds; the whole smoke is still
+the one before a commit). The fingerprint unmoved. **Not done, with reasons:** sim.gd split by system - an
+inheritance chain can't, the systems call each other both ways; composition can (each system an object holding the
+sim) but every moved function's state reads become `sim.` reads and the save reaches into each, too much churn
+before the pass for navigation alone. smoke.gd split into files - possible (a base of the helpers, areas on it),
+left: the one-area runs got the time it was for. A run-keys list - `m` holds the modifiers' dicts too, so a check
+would be noise; a one-off scan found the one real case (bonus_armour).

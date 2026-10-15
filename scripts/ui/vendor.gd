@@ -757,7 +757,7 @@ func _show_panel() -> void:
 	elif Items.is_paper(it):
 		_right_title.text = "The drawer" if not Items.is_deeds(it) else "The deeds"
 		if Items.is_deeds(it):
-			UI.fit(_right_lines[0], ["Held, sold or burned: the ending", "Held, sold or burned"])
+			UI.fit(_right_lines[0], ["Held, sold or burned"])
 		elif it["base"] in sim.book:
 			UI.fit(_right_lines[0], ["Read, and kept in the drawer in Training", "Read; in the drawer", "In the drawer"])
 			if selected.get("kind", "") == "stash":     # only one the runner holds: a shelf paper isn't theirs to sell

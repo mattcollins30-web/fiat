@@ -13,7 +13,7 @@ const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four 
 const FIRST := 0.65            # a site not yet cleared, or a head not yet beaten, is taken at this (13 Oct, Matt's recorded odds: 17 of 22 runs at 100%, every first clear and head at 0.42-0.83, the median two in three); what's cleared is farmed at PUSH
 const CLINIC_SPARE := 2.0      # the Clinic paid whenever its price is in hand this many times over (13 Oct: Matt paid 26-380 a visit and never waited out his HP)
 const RUSH := true             # the campaign as a person plays it (12 Oct, Matt's fire Drifter: one run a site, depth 1, straight to the next when it reads PUSH): no climbing until the campaign's done; the endgame climbs as before
-const LORRY_ODDS := 0.6        # the ending is taken at better than even, the kit insured (7 Oct)
+const LORRY_ODDS := 0.6        # the lorry is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
 var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
 var lorry_ok := false          # what that read said: the lorry is armed on it without reading again (a pick disarms everything first)
@@ -539,7 +539,7 @@ func pick_tier(sim) -> int:
 		if lorry_ok and sim.notes >= sim.boss_cost(best):
 			sim.arm_boss(best, true)
 			if sim.can_insure(best):
-				sim.set_insure(true)         # the ending, insured
+				sim.set_insure(true)         # the lorry, insured
 			return best
 	if sim.survival(best) < (FIRST if sim.best_depth[best] <= 0 or sim.boss_armed.get(best, false) else PUSH):
 		sim.advance((sim.max_hp() - sim.hp) / maxf(sim.rest_rate(), 0.1))
