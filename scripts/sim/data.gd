@@ -2257,6 +2257,11 @@ const STORY_DROP := 0.5
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.
+## Over-levelled (D9, 15 Oct, Matt; the D8 read: a level-50 Scrapper farmed the Bank at depth 1 in three-second runs at full
+## pay): past OVER_LEVEL_FREE site levels under you a site pays OVER_LEVEL_STEP less XP and tins a level, to OVER_LEVEL_FLOOR.
+const OVER_LEVEL_FREE := 5.0
+const OVER_LEVEL_STEP := 0.15
+const OVER_LEVEL_FLOOR := 0.1
 const WEAR_PER_ILVL := 2.5           # D8 (gates 2 and 4): x3 left the City's drops (wear 19-25) past the runner who'd cleared
                                      # the Town, so the campaign waited on levels - the Quartermaster at 2.6 h, at level 23-27
 const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6

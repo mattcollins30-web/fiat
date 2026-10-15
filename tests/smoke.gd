@@ -5407,7 +5407,7 @@ func _playtest_checks(main) -> void:
 	var keys0 := {}
 	for i in range(Data.TIERS.size()):
 		keys0[i] = str(sim._odds_key(i))
-	while frames < 2000:
+	while frames < 6000:                        # 2000 flaked on the Barracks' long dry runs with the machine still loaded (15 Oct)
 		main._read_odds()
 		frames += 1
 		for i in range(Data.TIERS.size()):
@@ -6598,6 +6598,7 @@ func _loot_roll_checks(main) -> void:
 	_full_pack_checks(main.sim)
 	_loot_table_checks(main.sim)
 	_harder_gang_checks(main.sim)
+	_over_level_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7951,6 +7952,26 @@ func _signal_checks(main) -> void:
 
 ## The loot tables (15 Oct, the loot read, Matt's picks): a zone's quality on its drops' rarity; a loose unique from the
 ## Town on, growing with the depth, capped; set pieces capped; the gamble at the deepest site's level, never common.
+## D9 (15 Oct, Matt): a site well under you pays less - whole to five site levels under, 15% less a level past, never
+## under 10%; your level read as the item level you wear at; the XP and the tins both, the rest of the site as it was.
+func _over_level_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var xp0: float = sim.xp
+	sim.xp = Data.xp_for_level(1)
+	var whole: Dictionary = sim.effective(Data.BANK)
+	_check(is_equal_approx(float(whole["over_level"]), 1.0), "a level-1 runner is paid short at the Bank: %.2f" % float(whole["over_level"]))
+	sim.xp = Data.xp_for_level(50)
+	var low: Dictionary = sim.effective(Data.BANK)
+	var mine: float = (50.0 + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
+	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"])),
+		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"])])
+	_check(sim.over_level_share(int(low["level"]) + 100) == 1.0 and sim.over_level_share(-100) == Data.OVER_LEVEL_FLOOR, "the share isn't whole over you or floored far under")
+	sim.xp = xp0
+	print("over-levelled ok: whole to five under, less a level past, floored; XP and tins")
+
+
 func _loot_table_checks(sim) -> void:
 	var saved: Dictionary = sim.to_dict()
 	for i in range(Data.TIERS.size()):
@@ -12198,11 +12219,14 @@ func _upgrade_arrow_checks(main) -> void:
 	for slot in Data.SLOTS:
 		var c = main._armoury._body._boxes[slot]["cell"]
 		_check(not c._up.visible, "a worn %s carries the arrow" % slot)
+	var was_worn: Dictionary = sim.equipped["Helmet"]
 	sim.equip_item(better["id"])
 	main.refresh()
 	var cw2 = inv.cell_node(inv.cell_of(worse["id"]))
-	var hard = inv.cell_node(inv.cell_of(sim.stash.filter(func(x): return x["base"] == "Hard hat")[0]["id"])) if sim.stash.any(func(x): return x["base"] == "Hard hat") else null
-	var hats: Array = sim.stash.filter(func(x): return x["base"] == "Hard hat")
+	# the plain hat that came off, by its id: a hard hat the camp already had (a magic one off a run) can beat the
+	# Army helmet and rightly carry the arrow - the flake of 13 and 15 Oct
+	var hard = inv.cell_node(inv.cell_of(int(was_worn["id"]))) if sim.stash.has(was_worn) else null
+	var hats: Array = [worse] + ([was_worn] if sim.stash.has(was_worn) else [])
 	_check(cw2 != null and not cw2._up.visible and (hard == null or not hard._up.visible), "an arrow stayed once the better helmet went on: worn %s, the hats' verdicts %s, front %d (%s, night %s), HP %.0f of %.0f" % [str(sim.equipped["Helmet"]["base"]) if sim.equipped["Helmet"] != null else "none", str(hats.map(func(x): return sim.compare(x))), sim.front_tier(), sim.weather_of(sim.front_tier()), sim.is_night(), sim.hp, sim.max_hp()])
 	sim.load_dict(saved)
 	main.refresh()

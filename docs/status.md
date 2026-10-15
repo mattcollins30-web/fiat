@@ -4918,3 +4918,14 @@ waiting on levels. The bot's endgame tidy re-picks the site it farms every ten s
 (`_farm_tier`: a third of a tidy). Iteration reads one a build (the flag "24 1", 16 jobs); the final read two.
 The smoke flaked once on "tier 11's odds never settled in 2000 frames" right after the balance read (the machine
 still loaded) and passed on the rerun.
+
+**D8's read (summary_d8.md; one read a build, Scrapper as fire killed at 15 h):** the Quartermaster 2.5 h median at
+level 20-28 (most now 20-23); a loose unique by him on 7 of 9; cash green; Kev's story late on five; the wall about 30
+minutes for every read but the Scrapper's - level 50 by hour 5, then the Bank at depth 1 in three-second runs.
+
+**D9: a site well under you pays less (15 Oct; Matt: "fall off past 5 levels").** `over_level_share`: your level read
+as a site's (the item level you wear at), whole to OVER_LEVEL_FREE 5 site levels under, OVER_LEVEL_STEP 15% less XP
+and tins a level past, never under OVER_LEVEL_FLOOR 10%; the rest of the site as it was. Not yet shown on the Map's
+cards (a line for the UI, for Matt). Two smoke flakes fixed, not accepted: the upgrade arrow's hats are the two it put
+there, by id (a magic hard hat the camp already had could rightly carry the arrow); the odds-settle loop waits 6000
+frames (2000 flaked on the Barracks' long dry runs with the machine still loaded).

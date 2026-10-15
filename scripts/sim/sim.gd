@@ -3454,6 +3454,15 @@ func deepest_dug() -> int:
 ## The deepest site's level (its tier and its depth): the Gunsmith's and the Arms dealer's.
 ## The deepest level among the sites cleared (D6, the gamble's gate: the next zone's first site, open and not yet
 ## cleared, put the gamble a level past every drop the runner had seen).
+## What a site of level `lv` pays you (D9, 15 Oct, Matt: "fall off past 5 levels"): whole up to OVER_LEVEL_FREE site levels
+## under you, OVER_LEVEL_STEP less a level past that, never under OVER_LEVEL_FLOOR. Your level read as a site's - the
+## item level you wear at, so the Quartermaster at level 21 is his own site's (9) and the campaign pays whole through it.
+func over_level_share(lv: int) -> float:
+	var mine: float = (level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE
+	return clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, beyond), Data.OVER_LEVEL_FLOOR, 1.0)
+
+
 func deepest_cleared_level() -> int:
 	var lv := 1
 	for i in range(depth.size()):
@@ -4147,6 +4156,10 @@ func effective(i: int) -> Dictionary:
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
 	e["rarity"] += Data.ZONE_QUALITY[int(base["zone"])]     # a zone's quality (15 Oct, the loot read): a City drop is rarer than an Outskirts one
+	var share: float = over_level_share(lv)
+	e["xp"] *= share                         # D9 (Matt): a site well under you pays less XP and fewer tins
+	e["cash"] *= share
+	e["over_level"] = share
 	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night()
 	if night_run:
 		var night := modifier("Night")
