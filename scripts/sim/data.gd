@@ -1648,9 +1648,19 @@ static func joint_in(cls: String, tree_name: String) -> Dictionary:
 	return {}
 
 const ASCEND_LEVEL := 30
+## Training's gating (15 Oct, Matt: "like Last Epoch"; endgame_radio.md §8, gating_training.png). The class tree is
+## the core: an element tree's columns from CORE_GATES' column want so many points in the class tree its joint is in
+## (the class's first tree off its pair), its capstone CORE_CAPSTONE; the second past wants ASCEND_CORE in the first
+## class tree; keystones open at KEYSTONE_LEVEL, capstones at CAPSTONE_LEVEL, every tree.
+const CORE_GATES := [[2, 6], [4, 12]]
+const CORE_CAPSTONE := 18
+const ASCEND_CORE := 20
+const KEYSTONE_LEVEL := 20
+const CAPSTONE_LEVEL := 30
 ## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the Yard keeps RETIRE_SHARE of their
 ## trait for good, up to RETIRED_MAX retired (the oldest makes way), their kit stays, their trees refund.
-const RETIRE_LEVEL := 30
+## 50, the cap (Matt, 15 Oct: not 30).
+const RETIRE_LEVEL := 50
 const RETIRE_SHARE := 1.0 / 3.0
 const RETIRED_MAX := 3
 

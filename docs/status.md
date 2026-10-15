@@ -4684,3 +4684,15 @@ waits. The gear chip is the level to wear; parts and the Workshop say "Item leve
 gating holds its top pulls. The bot buys and holds only what it can wear. **Old saves (Matt, 15 Oct, standing rule):
 no conversions** - SAVE_VERSION 2, an older save isn't loaded and its slot says "From before an update: can't be
 loaded". Checked in the smoke (`only gear_gate`).
+
+**B6: Training's gating, retirement at 50 (15 Oct; endgame_radio.md §8, gating_training.png).** The class tree is the
+core, as Last Epoch's: an element tree's third and fourth columns want 6 points in its core (the class tree its joint
+is in for this runner, or the first class tree off the pair), the fifth and sixth 12, its capstone 18
+(Data.CORE_GATES, CORE_CAPSTONE). Keystones open at level 20, capstones at 30, in every tree. The second past at 30
+wants 20 in the first class tree. Retirement at 50 (the cap stays 50 until Matt's full save). On the screen: a
+padlocked pill in the gap before each locked band ("6 in Muscle", a bar under the first), "Lv 20" / "Lv 30" by each
+keystone and capstone (red till the level, green with a tick), the node's line saying why, and from level 20 the
+second past's line with its bar ("Second past at level 30 · 20 in Muscle: 4 of 20") in the runners-before line's
+place. The bot banks no points for a level's wait. The smoke's mechanics areas (joints, keystones, capstones, the
+move's trade) turn the gates off (`sim.core_gates`, not saved, always on in the game) and `only training_gate`
+checks them.

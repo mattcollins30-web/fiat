@@ -1517,6 +1517,7 @@ func _run_screen(main) -> void:
 ## upgrades buy.
 func _class_trees(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	_set_cls(sim, "Doorman")
 	sim.training_points += 20
 	_check(sim.trees().size() == 3 + Data.ELEMENT_TREES.size() and sim.trees()[1]["name"] == "The Pitch", "a Doorman does not see three trees with the Pitch's in the middle, and the elements'")
@@ -1578,6 +1579,7 @@ func _class_trees(main) -> void:
 		main.show_room(main.BARRACKS)
 		_check_fit(main, "Caravan (%s)" % c["name"])
 	_set_cls(sim, "Doorman")
+	sim.core_gates = true
 	print("class trees, keystone and pitch upgrades ok")
 	_tree_rules_checks(main)
 	_webs_traits(main)
@@ -1841,6 +1843,7 @@ func _craft_view_checks(main) -> void:
 ## presses, free for a new runner; the camp's high-water mark; an old save's trees back as points, once.
 func _tree_rules_checks(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
@@ -1990,6 +1993,7 @@ func _tree_rules_checks(main) -> void:
 	bk._armed = ""
 	bk._shown = ""
 	main.refresh()
+	sim.core_gates = true
 	print("tree rules ok: the lanes, ten joints, a class change's price and presses, the high-water mark, the old saves")
 	_joint_payoff_checks(main)
 
@@ -2147,6 +2151,7 @@ func _joint_payoff_checks(main) -> void:
 ## past from level 30; two runners turn up when one dies.
 func _webs_traits(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	var saved: Dictionary = sim.to_dict()
 	_set_cls(sim, "Poacher")
 	sim.respec()
@@ -2219,6 +2224,7 @@ func _webs_traits(main) -> void:
 	_check(sim.runner_trait == "Wary" and sim.candidates.is_empty(), "picking the second runner did not take")
 	_check(sim.trait_mult("patrol") > 1.1, "Wary's gangs come no later")
 	sim.load_dict(saved)
+	sim.core_gates = true
 	print("webs, the second past and traits ok")
 	_element_checks(main)
 	_element_bot_checks(main)
@@ -2231,6 +2237,18 @@ func _webs_traits(main) -> void:
 ## carries the element, seats the element's socketable, and sends the primary
 ## to the Bench until the element's affixes are on it. Then the band: at
 ## depth 30 on every site, some build still lands most of its damage.
+## Trains a tree's nodes, cheapest columns first, until `n` points are in it (or nothing more will train).
+func _train_to(sim, tree_name: String, n: int) -> void:
+	var t: Dictionary = Data.tree_named(tree_name)
+	sim.training_points += n * 2
+	var moved := true
+	while sim.points_in(tree_name) < n and moved:
+		moved = false
+		for i in range(t["nodes"].size()):
+			if sim.points_in(tree_name) < n and sim.train_node("%s/%d" % [tree_name, i]):
+				moved = true
+
+
 func _element_bot_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
@@ -2252,9 +2270,11 @@ func _element_bot_checks(main) -> void:
 			# three points and double cost: one node, one spare saved, not spent on the class
 			_check(sim.points_free() == 1, "the off-affinity %s bot did not save its odd point: %d free" % [el, sim.points_free()])
 			sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
+			_train_to(sim, sim.first_tree(), Data.ASCEND_CORE)     # the second past wants 20 in the first tree (15 Oct)
 			bot._second_past_for(sim)
 			_check(sim.cls2 != "" and sim.affinity(el), "the %s bot did not take a second past with the affinity: %s" % [el, sim.cls2])
-		sim.training_points += 40
+		sim.training_points += 80                 # the core's 12 and the keystone's level 20 too (15 Oct)
+		sim.xp = maxf(sim.xp, Data.xp_for_level(Data.ASCEND_LEVEL))
 		bot._train_tree(sim)
 		# the keystone wants a joint closed there: a class half on show for it (the runner's, or the second past's first tree's)
 		var closable := false
@@ -2349,6 +2369,7 @@ func _element_bot_checks(main) -> void:
 
 func _element_checks(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	var saved: Dictionary = sim.to_dict()
 	_set_cls(sim, "Drifter")
 	sim.respec()
@@ -2677,6 +2698,7 @@ func _element_checks(main) -> void:
 		main.refresh()
 		_check(bk._shown.contains(sim.gun_type()), "the Caravan's signature does not carry the gun in hand")
 	sim.load_dict(saved)
+	sim.core_gates = true
 	print("the elements ok: affinities, double cost, the gates, the joints and their payoffs, the second past's joint, Spreads, Frozen solid, Builds, Won't stop, Knuckles, the Caravan's lanes")
 	_capstone_checks(main)
 	_melee_checks(main)
@@ -2686,6 +2708,7 @@ func _element_checks(main) -> void:
 ## 28: a capstone a tree, past the keystone, wanting the keystone and every notable, a quarter of the tree again (a third until the pass).
 func _capstone_checks(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
@@ -2817,6 +2840,7 @@ func _capstone_checks(main) -> void:
 	sim.extract_now()
 	sim.load_dict(saved)
 	main.refresh()
+	sim.core_gates = true
 	print("the capstones ok: one a tree, the cost, the gate, Poached, the tile, the band, Dead quiet, Ghost, Held, Iron")
 
 
@@ -4160,6 +4184,7 @@ func _craft_checks(main) -> void:
 ## list and half the notes come; the rest starts again; the move's bonus.
 func _move_checks(main) -> void:
 	var sim = main.sim
+	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	var saved: Dictionary = sim.to_dict()
 	sim.load_dict(saved)
 	_check(not sim.can_move_yard() or sim.campaign_done(), "the Pitch moves before the campaign")
@@ -4230,6 +4255,7 @@ func _move_checks(main) -> void:
 	sim.load_dict(d)
 	_check(sim.yard_moves == 1 and sim.trades == ["poison"], "the move and its trade did not survive a save")
 	sim.load_dict(saved)
+	sim.core_gates = true
 	print("moving the Pitch ok: the uniques, the tree, the list, the notes, the bonus, the Pitch's trade")
 	_sink_checks(main)
 	_inflation_checks(main)
@@ -6564,6 +6590,7 @@ func _loot_roll_checks(main) -> void:
 	_fx_checks()
 	_gang_pause_checks(main)
 	_gear_gate_checks(main)
+	_training_gate_checks(main)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7789,6 +7816,125 @@ func _gear_gate_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("gear gated by level ok: the padlock and its level, Equip at, the arrow and Equip if better pass it, at the level it goes on; an old save refused")
+
+
+## Training's gating (15 Oct, gating_training.png): an element tree's columns from the third want 6 in its class tree,
+## from the fifth 12, the capstone 18; keystones at level 20, capstones at 30; the second past at 30 wants 20 in the
+## first class tree; retirement at 50. On the screen: a padlocked pill in the gap before each band, inside the lane and
+## clear of the tiles; "Lv 20" by a keystone; the second past's line and its bar.
+func _training_gate_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.set_class("Doorman")
+	sim.cls2 = ""
+	sim.tree = []
+	sim.training_points = 400
+	sim.xp = Data.xp_for_level(15)
+	_check(Data.RETIRE_LEVEL == 50 and Data.MAX_LEVEL >= Data.RETIRE_LEVEL, "retirement isn't at 50: %d" % Data.RETIRE_LEVEL)
+	var core: String = sim.core_tree("Blades")
+	_check(core == "Muscle" and sim.first_tree() == "Muscle", "Blades' core reads '%s', the first tree '%s'" % [core, sim.first_tree()])
+	var bt: Dictionary = Data.tree_named("Blades")
+	var col2 := ""
+	var key_id := ""
+	var cap_id := ""
+	for i in range(bt["nodes"].size()):
+		var nd: Dictionary = bt["nodes"][i]
+		if int(nd.get("col", 0)) == 2 and col2 == "":
+			col2 = "Blades/%d" % i
+		if nd.get("keystone", false):
+			key_id = "Blades/%d" % i
+		if nd.get("capstone", false):
+			cap_id = "Blades/%d" % i
+	# Blades' first two columns, to their gates
+	for i in range(bt["nodes"].size()):
+		if int(bt["nodes"][i].get("col", 0)) < 2:
+			sim.train_node("Blades/%d" % i)
+	_check(sim.train_block(col2).begins_with("opens at 6 in Muscle"), "Blades' third column with nothing in Muscle: '%s'" % sim.train_block(col2))
+	var mt: Dictionary = Data.tree_named("Muscle")
+	var k := 0
+	while sim.points_in("Muscle") < 6 and k < mt["nodes"].size():
+		sim.train_node("Muscle/%d" % k)
+		k += 1
+	_check(sim.points_in("Muscle") >= 6 and sim.train_block(col2) == "", "Blades' third column with %d in Muscle: '%s'" % [sim.points_in("Muscle"), sim.train_block(col2)])
+	# keystones and capstones wait for their levels, everything else met
+	var t_was: Array = sim.tree.duplicate()
+	for i in range(mt["nodes"].size()):
+		var nd: Dictionary = mt["nodes"][i]
+		if not nd.get("keystone", false) and not nd.get("capstone", false) and Data.for_classes(nd, sim.my_classes()):
+			sim.tree.append("Muscle/%d" % i)
+	var mkey := ""
+	var mcap := ""
+	for i in range(mt["nodes"].size()):
+		if mt["nodes"][i].get("keystone", false):
+			mkey = "Muscle/%d" % i
+		if mt["nodes"][i].get("capstone", false):
+			mcap = "Muscle/%d" % i
+	_check(sim.train_block(mkey, true) == "opens at level %d" % Data.KEYSTONE_LEVEL, "a keystone at level 15: '%s'" % sim.train_block(mkey, true))
+	sim.xp = Data.xp_for_level(Data.KEYSTONE_LEVEL)
+	_check(sim.train_block(mkey, true) == "", "a keystone at level 20: '%s'" % sim.train_block(mkey, true))
+	sim.tree.append(mkey)
+	_check(sim.train_block(mcap, true) == "opens at level %d" % Data.CAPSTONE_LEVEL, "a capstone at level 20: '%s'" % sim.train_block(mcap, true))
+	_check(key_id != "" and cap_id != "", "Blades has no keystone or capstone")
+	_check(sim.core_need(bt, sim.node(cap_id)) == Data.CORE_CAPSTONE and sim.core_need(bt, sim.node(key_id)) == 12 and sim.core_need(mt, sim.node(mkey)) == 0, "the core's needs read %d (capstone), %d (keystone), %d (a class tree's)" % [sim.core_need(bt, sim.node(cap_id)), sim.core_need(bt, sim.node(key_id)), sim.core_need(mt, sim.node(mkey))])
+	# the second past: level 30, then 20 in Muscle
+	sim.tree = t_was
+	sim.xp = Data.xp_for_level(Data.ASCEND_LEVEL)
+	_check(sim.points_in("Muscle") < Data.ASCEND_CORE and not sim.can_ascend() and sim.ascend_block().begins_with("at 20 in Muscle"), "the second past at level 30 with %d in Muscle: '%s'" % [sim.points_in("Muscle"), sim.ascend_block()])
+	# the screen: pills and tags placed, the second past's line
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	var bk = main._barracks
+	bk._shown = ""
+	bk.show_state(sim)
+	var font: Font = UI.font("SemiBold", true)
+	var pills := 0
+	for lane in bk._lanes:
+		if lane["tree"] == null:
+			continue
+		for cd in lane.get("core_at", []):
+			pills += 1
+			var r: Rect2 = bk.core_pill_rect(cd, font)
+			_check(Rect2(0, 0, Pal.GRID_W, bk.LANE_H).encloses(r) and r.end.x <= bk.core_gap_end(int(cd["c"])) + 0.5, "a core pill leaves its gap: %s ('%s')" % [str(r), cd["words"]])
+			for tile in lane["tiles"]:
+				if tile["button"].visible:
+					var tile_r := Rect2(tile["button"].position - Vector2(0, bk.lane_y(bk._lanes.find(lane))), tile["button"].size)
+					_check(not r.intersects(tile_r), "a core pill sits on a tile: %s on %s" % [str(r), str(tile_r)])
+	_check(pills >= 2, "no core pills on the element lanes (%d)" % pills)
+	var tags := 0
+	for lane in bk._lanes:
+		tags += lane.get("lv_at", []).size()
+	_check(tags >= 2, "no level tags by the keystones and capstones (%d)" % tags)
+	bk.selected = ""
+	bk._shown = ""
+	bk.show_state(sim)
+	_check(bk._past.text.begins_with("Second past") and bk._past_bar.visible, "the second past's line reads '%s'" % bk._past.text)
+	_check_fit(main, "Training with its gates")
+	while sim.points_in("Muscle") < Data.ASCEND_CORE:
+		var before: int = sim.points_in("Muscle")
+		for i in range(mt["nodes"].size()):
+			if sim.train_node("Muscle/%d" % i):
+				break
+		if sim.points_in("Muscle") == before:
+			break
+	_check(sim.points_in("Muscle") < Data.ASCEND_CORE or sim.can_ascend(), "20 in Muscle at level 30 and still no second past: '%s'" % sim.ascend_block())
+	# a keystones-first bot under level 20 still spends once a tree's next node is its keystone (the review)
+	sim.tree = []
+	sim.xp = Data.xp_for_level(15)
+	_train_to(sim, "Muscle", 1)
+	for i in range(mt["nodes"].size()):
+		if int(mt["nodes"][i].get("col", 0)) < int(sim.node(mkey).get("col", 0)) and Data.for_classes(mt["nodes"][i], sim.my_classes()):
+			sim.tree.append("Muscle/%d" % i)
+	sim.training_points = sim.points_spent() + 10
+	var kb = Bot.new()
+	kb.keystones_first = true
+	kb._train_tree(sim)
+	_check(sim.points_free() < 10, "a keystones-first bot at level 15 banked its points for a keystone at 20: %d free" % sim.points_free())
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("training's gating ok: the core's 6, 12 and 18, keystones at 20 and capstones at 30, the second past on 20 in the first tree, retirement at 50, the pills and tags placed")
 
 
 ## The search's column (14 Oct, mockups search_mockup3/4): the crates under the six and inside the column, the rig

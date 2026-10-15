@@ -1988,8 +1988,57 @@ func choose_runner(k: int) -> bool:
 
 
 ## The second past: a different class, from level ASCEND_LEVEL, for its first tree.
+## Training's 15 Oct gates (the core's points, the keystones' and capstones' levels, the second past's 20) on; only the
+## smoke's mechanics areas turn them off, to test a joint or a keystone without the build behind it. Not saved.
+var core_gates := true
+
+
 func can_ascend() -> bool:
-	return level() >= Data.ASCEND_LEVEL and cls != "" and mission == null
+	return ascend_block() == "" and mission == null
+
+
+## Why the second past can't be taken yet, or "": the level, then the points in the first class tree (15 Oct).
+func ascend_block() -> String:
+	if cls == "":
+		return "no past yet"
+	if level() < Data.ASCEND_LEVEL:
+		return "at level %d" % Data.ASCEND_LEVEL
+	var first: String = first_tree()
+	if core_gates and points_in(first) < Data.ASCEND_CORE:
+		return "at %d in %s (%d now)" % [Data.ASCEND_CORE, first, points_in(first)]
+	return ""
+
+
+## The runner's first class tree, by name ("Muscle"), or "".
+func first_tree() -> String:
+	var ts: Array = Data.trees_for(cls)
+	return str(ts[0]["name"]) if not ts.is_empty() and ts[0].get("class", "") == cls else ""
+
+
+## An element tree's core (15 Oct): the class tree its joint is in for this runner, on show - the most-trained, with a second
+## past's - or the first class tree off the pair. "" for a tree that isn't an element's.
+func core_tree(tree_name: String) -> String:
+	if not Data.tree_named(tree_name).has("element"):
+		return ""
+	var best := ""
+	for c in my_classes():
+		var j: Dictionary = Data.joint_in(c, tree_name)
+		if not j.is_empty() and _on_show(str(j["tree"])) and (best == "" or points_in(str(j["tree"])) > points_in(best)):     # a second past's other tree isn't one it has
+			best = str(j["tree"])
+	return best if best != "" else first_tree()
+
+
+## The points in the core an element tree's node wants (CORE_GATES, CORE_CAPSTONE), 0 for none.
+static func core_need(t: Dictionary, nd: Dictionary) -> int:
+	if not t.has("element"):
+		return 0
+	if nd.get("capstone", false):
+		return Data.CORE_CAPSTONE
+	var need := 0
+	for g in Data.CORE_GATES:
+		if int(nd.get("col", 0)) >= int(g[0]):
+			need = int(g[1])
+	return need
 
 
 func set_second(name: String) -> bool:
@@ -2216,6 +2265,14 @@ func train_block(id: String, ignore_points := false) -> String:
 	var g: int = Data.gate(t, col, my_classes())
 	if points_in(parts[0]) < g:
 		return "opens at %d in %s (%d now)" % [g, parts[0], points_in(parts[0])]
+	var need: int = core_need(t, n) if core_gates else 0
+	var core: String = core_tree(parts[0]) if need > 0 else ""
+	if core != "" and points_in(core) < need:
+		return "opens at %d in %s (%d now)" % [need, core, points_in(core)]     # the core first (15 Oct)
+	if core_gates and n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
+		return "opens at level %d" % Data.KEYSTONE_LEVEL
+	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
+		return "opens at level %d" % Data.CAPSTONE_LEVEL
 	if t.has("element") and col >= Data.ELEMENT_GATED_COL and not _tops_open(parts[0]):
 		return "wants a joint closed in %s" % parts[0]
 	if n.get("capstone", false):

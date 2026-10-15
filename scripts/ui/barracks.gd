@@ -121,6 +121,8 @@ var _words: Label
 var _words2: Label                  # a node's sentence, its second line (the review: four buttons leave ~450 px)
 var _node_forms: Array = []          # a node's sentence in its forms, fitted once the buttons have their places
 var _past: Label
+var _past_bar: Panel                # the second past's points, under way (15 Oct)
+var _past_fill: Panel
 var _train: Button
 var _respec: Button
 var _ascend: Button
@@ -260,6 +262,24 @@ func _lay_gates(k: int) -> void:
 		var g: int = Data.gate(t, c, mine)
 		var gp := gate_pos(c)
 		lane["gate_at"].append({"c": c, "n": g, "lit": pts >= g, "x": gp.x, "y": gp.y})
+	# the core's locks (15 Oct, gating_training.png): an element tree's later columns want points in its class tree - a
+	# pill over each band's first boundary, the first unmet with how far along it is
+	lane["core_at"] = []
+	var core: String = sim.core_tree(t["name"]) if sim.core_gates else ""
+	if core != "":
+		var now: int = sim.points_in(core)
+		var first := true
+		for b in range(Data.CORE_GATES.size()):
+			var c0: int = int(Data.CORE_GATES[b][0])
+			var need: int = int(Data.CORE_GATES[b][1])
+			var cap: bool = b == Data.CORE_GATES.size() - 1 and now >= need and now < Data.CORE_CAPSTONE
+			if cap:
+				need = Data.CORE_CAPSTONE           # the band's met: the capstone's 18 in its place
+			if now >= need:
+				continue
+			var forms: Array = ["%d in %s · %d now" % [need, core, now], "%d in %s" % [need, core], "%d · %d now" % [need, now], "%d" % need] if first else ["%d in %s" % [need, core], "%d" % need]
+			lane["core_at"].append({"c": c0, "need": need, "now": now, "forms": forms, "words": forms[0], "bar": first, "x": gate_pos(c0).x, "y": CORE_PILL_Y})
+			first = false
 
 
 ## Each column's rows into the gate before the next, and out of it: curves, and the gate a numbered disc.
@@ -287,6 +307,48 @@ func _draw_gates(k: int) -> void:
 		var s := str(gd["n"])
 		var sw: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 		conn.draw_string(font, gp + Vector2(-sw / 2.0, 5.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, tone if lit else Pal.TEXT_2)
+	for cd in lane.get("core_at", []):
+		var r := core_pill_rect(cd, font)
+		cd["rect"] = r
+		conn.draw_style_box(UI.box(Color(Pal.BG, 0.95), 6, 1, Pal.CARD_LINE), r)
+		conn.draw_texture_rect(NodeGlyphs.texture("lock"), Rect2(r.position + Vector2(6, (r.size.y - 13) / 2.0 - (1.5 if cd["bar"] else 0.0)), Vector2(13, 13)), false, Pal.TEXT_2)
+		conn.draw_string(font, r.position + Vector2(24, 16), str(cd["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, CORE_FONT, Pal.TEXT)
+		if cd["bar"]:
+			var bw: float = r.size.x - 30
+			var bar := Rect2(r.position + Vector2(24, r.size.y - 6), Vector2(bw, 3))
+			conn.draw_rect(bar, Pal.CARD_LINE)
+			conn.draw_rect(Rect2(bar.position, Vector2(bw * clampf(float(cd["now"]) / float(cd["need"]), 0.0, 1.0), 3)), Pal.ACCENT)
+	for lv in lane.get("lv_at", []):
+		conn.draw_string(font, Vector2(lv["x"], lv["y"]), str(lv["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, LV_FONT, Pal.GOOD if lv["lit"] else Pal.BAD)
+
+
+const CORE_PILL_H := 26.0
+const CORE_PILL_Y := LANE_H - CORE_PILL_H - 3.0     # the core's pill: under the gate's disc, over the bottom row's rails, clear of a Lv tag
+const CORE_FONT := 13
+const LV_FONT := 12
+
+
+## A core pill's place in its lane: in the gap before its band, from just past the last column's cost to short of
+## the band's first tile; as wide as its words.
+## The words are the longest of its forms that fit the gap (cd["words"] set to them).
+static func core_pill_rect(cd: Dictionary, font: Font) -> Rect2:
+	var room: float = core_gap_end(int(cd["c"])) - core_gap_x(int(cd["c"]))
+	var w := 0.0
+	for f in cd["forms"]:
+		cd["words"] = str(f)
+		w = 24 + font.get_string_size(str(f), HORIZONTAL_ALIGNMENT_LEFT, -1, CORE_FONT).x + 8
+		if w <= room:
+			break
+	return Rect2(core_gap_x(int(cd["c"])), CORE_PILL_Y, w, CORE_PILL_H)
+
+
+## The gap before column `c` a core pill may take: [from, to], clear of the costs and the tiles.
+static func core_gap_x(c: int) -> float:
+	return TILES_X + (c - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0 + NODE / 2.0 + 3.0 + COST_W + 4.0
+
+
+static func core_gap_end(c: int) -> float:
+	return TILES_X + c * (TILE_W + TILE_GAP) + TILE_W / 2.0 - NODE / 2.0 - 4.0
 
 
 ## Where a rail into column `c`'s row at lane-local `y` ends: just short of the tile, or of a joint half's mark at
@@ -412,6 +474,9 @@ func _build_panel() -> void:
 	_words2 = UI.label(_panel, Rect2(PAD, WORDS_UNDER_Y + 28, Pal.GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var by: float = PANEL_H - 12 - Pal.BUTTON_H
 	_past = UI.label(_panel, Rect2(PAD, by, Pal.GRID_W - 2 * PAD - 520, Pal.BUTTON_H), "", "Regular", Pal.FLOOR - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_past_bar = UI.panel(_panel, Rect2(0, 0, 10, 6), UI.box(Pal.CARD_LINE, 3))
+	_past_fill = UI.panel(_past_bar, Rect2(0, 0, 0, 6), UI.box(Pal.ACCENT, 3))
+	_past_bar.visible = false
 	_train = UI.button(_panel, Rect2(0, by, 200, Pal.BUTTON_H), true)
 	_train.pressed.connect(_on_train)
 	_respec = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
@@ -781,6 +846,7 @@ func _show_lane(k: int, t) -> void:
 						rows[o] = rows[i]
 				rows[i] = want
 	lane["rows"] = rows
+	lane["lv_at"] = []      # the level a keystone or capstone opens at (15 Oct): "Lv 20" over its left, red till then
 	lane["marked"] = {}     # "col:y" of each shown joint mark, so its rail stops at the mark
 	for i in range(mini(t["nodes"].size(), LANE_NODES)):
 		var nd: Dictionary = t["nodes"][i]
@@ -831,6 +897,11 @@ func _show_lane(k: int, t) -> void:
 		tile["joint"].add_theme_color_override("font_color", edge if edge != Color.TRANSPARENT else Pal.BAD)
 		tile["name"].text = ""
 		tile["effect"].text = ""
+		if kind in ["keystone", "capstone"] and not is_taken and not theirs:
+			var at: int = Data.KEYSTONE_LEVEL if kind == "keystone" else Data.CAPSTONE_LEVEL
+			var lit: bool = sim.level() >= at
+			lane["lv_at"].append({"words": ("Lv %d ✓" % at) if lit else ("Lv %d" % at), "lit": lit, "id": id,
+				"x": rc.position.x + rc.size.x / 2.0 - half - 34.0, "y": rc.position.y + rc.size.y / 2.0 - half + 6.0})
 	UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
 
 
@@ -1261,8 +1332,29 @@ func _show_panel() -> void:
 	# the runners before, in what's left beside the buttons: on the class's panel, not under a node
 	_past.size.x = x - 12 - _past.position.x
 	_past.visible = selected == ""
+	_past_bar.visible = false
 	if selected == "":
 		_show_past()
+
+
+## While the second past waits (15 Oct, gating_training.png): its level and the points in the first tree, a bar after,
+## from ASCEND_LINE_FROM; the runners before have the line till then.
+const ASCEND_LINE_FROM := 20
+func _show_ascend_line() -> bool:
+	if sim.cls == "" or sim.cls2 != "" or sim.ascend_block() == "" or sim.level() < ASCEND_LINE_FROM:
+		return false                       # the runners before have the line until it starts to matter
+	var first: String = sim.first_tree()
+	var now: int = sim.points_in(first)
+	UI.fit(_past, ["Second past at level %d · %d in %s: %d of %d" % [Data.ASCEND_LEVEL, Data.ASCEND_CORE, first, now, Data.ASCEND_CORE],
+		"Second past: level %d, %d in %s" % [Data.ASCEND_LEVEL, Data.ASCEND_CORE, first], "Second past at %d" % Data.ASCEND_LEVEL])
+	var tw: float = ceilf(UI.text_width(_past, _past.text))
+	var room: float = _past.size.x - tw - 14
+	_past_bar.visible = room >= 60.0
+	if _past_bar.visible:
+		_past_bar.position = Vector2(_past.position.x + tw + 14, _past.position.y + (_past.size.y - 6) / 2.0)
+		_past_bar.size = Vector2(minf(180.0, room), 6)
+		_past_fill.size = Vector2(_past_bar.size.x * clampf(float(now) / Data.ASCEND_CORE, 0.0, 1.0), 6)
+	return true
 
 
 ## A node's sentence under its title over two lines `w` wide: the longest form that wraps into them whole.
@@ -1289,6 +1381,8 @@ static func _as_sentence(x: String) -> String:
 
 ## The runners before this one, newest first: who, how long, how it ended.
 func _show_past() -> void:
+	if _show_ascend_line():
+		return
 	if sim.past.is_empty():
 		UI.fit(_past, [Words.PASTS[sim.cls]["was"] if Words.PASTS.has(sim.cls) else "", ""])
 		return

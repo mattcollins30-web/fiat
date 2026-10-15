@@ -687,8 +687,8 @@ func _next_in(sim, b: Dictionary) -> String:
 		if sim.tree.has(id):
 			continue
 		var why: String = sim.train_block(id, true)
-		if why != "" and not why.begins_with("opens at"):
-			continue
+		if why != "" and (not why.begins_with("opens at") or why.begins_with("opens at level")):
+			continue                      # a level's wait (15 Oct) isn't saved for: the points go elsewhere meanwhile
 		var nd: Dictionary = b["nodes"][i]
 		var key: int = int(nd.get("col", 0)) * 10 + int(nd.get("row", 0))
 		if key < best_key:
