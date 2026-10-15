@@ -732,7 +732,7 @@ const UNIQUE_DROP := 0.01
 ## The loot tables (15 Oct, the loot read, Matt's picks): a loose unique from the Town on at UNIQUE_CAMPAIGN a find,
 ## growing UNIQUE_DROP a depth past the first and never past UNIQUE_CAP; set pieces, SET_DROP a depth, to SET_CAP; and
 ## a zone's quality on the rarity roll (the Outskirts' nothing to the City's +45%), so a City drop is rarer.
-const UNIQUE_CAMPAIGN := 0.005
+const UNIQUE_CAMPAIGN := 0.01     # D6: 0.005 put a loose unique by the Quartermaster on 2-4 builds in 10
 const UNIQUE_FROM_ZONE := 2
 const UNIQUE_CAP := 0.04
 const SET_CAP := 0.02

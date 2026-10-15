@@ -8,14 +8,14 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const N := 600
 # [the point, sites open to (index), the runner's level there (Matt's 14 Oct save, the bot's for the endgame), signal depth]
-const POINTS := [["Outskirts done", 2, 6, 1], ["Estate done", 5, 14, 1], ["Town done", 8, 21, 1], ["City done", 11, 26, 1], ["Signals, reach 6", 11, 34, 6], ["Signals, reach 12", 11, 45, 12]]
+const POINTS := [["Outskirts done", 2, 5, 1], ["Estate done", 5, 11, 1], ["Town done", 8, 17, 1], ["City done", 11, 22, 1], ["Signals, level 14", 11, 30, 6], ["Signals, level 20", 11, 40, 12]]     # D6: the levels the D5 read reached them at; a signal's level on the Barracks
 
 
 func _init() -> void:
 	seed(11)
 	Sim.fixed_seed = 11
 	var out: Array = ["# The loot read (%s)" % Time.get_date_string_from_system(), "",
-		"%d rolls a source. Rarity: C/U/R/E/L share. Wear: the level to wear's median, and the share a runner of that point's level can't wear yet. Gear only for wear (rounds, meds, parts and papers carry no level)." % N, ""]
+		"%d rolls a source. Rarity: C/U/R/E/L share of the gear. Wear: the level to wear's median, and the share a runner of that point's level can't wear yet. Gear only for wear (rounds, meds, parts and papers carry no level)." % N, ""]
 	for p in POINTS:
 		var sim = Sim.new()
 		sim.start()
@@ -67,7 +67,8 @@ func _row(name: String, items: Array, lv: int) -> String:
 	var uniques := 0
 	var sets := 0
 	for it in items:
-		rar[mini(4, int(it.get("rarity", 0)))] += 1
+		if str(it["slot"]) in Data.SLOTS:
+			rar[mini(4, int(it.get("rarity", 0)))] += 1     # the gear's rarity (D6): rounds and meds have none worth reading
 		if it.has("unique"):
 			uniques += 1
 		if it.has("set"):
@@ -80,5 +81,5 @@ func _row(name: String, items: Array, lv: int) -> String:
 	wears.sort()
 	var n: float = maxf(1.0, items.size())
 	var gear: int = wears.size()
-	return "| %s | %s | %d%% | %s | %d%% | %d | %d |" % [name, "/".join(rar.map(func(x): return "%d" % roundi(100.0 * x / n))), roundi(100.0 * gear / n),
+	return "| %s | %s | %d%% | %s | %d%% | %d | %d |" % [name, "/".join(rar.map(func(x): return "%d" % roundi(100.0 * x / maxf(1.0, gear)))), roundi(100.0 * gear / n),
 		str(wears[int(wears.size() / 2.0)]) if gear > 0 else "-", roundi(100.0 * locked / maxf(1.0, gear)), uniques, sets]

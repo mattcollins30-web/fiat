@@ -4887,3 +4887,14 @@ him (27-38), retirement (3-8 h), the Radio's ladder's gaps, the loot tables, the
 
 **D5: the XP curve x2.4 (15 Oct; gate 4).** Data.XP_SCALE 2.4 on every level's cost: the curve doubles every seven
 levels, so level 28's XP comes at level 20. The try-on smoke's runner levelled to wear the Van's Spare it rolls.
+
+**D5's read (summary_d5.md, 10 reds):** the Manager green at 1.6 h; the Quartermaster 2.5 h (just past 2.3), level
+20-32 at him (median about 25); retirement green on eight of ten (13-20 h); Kev's story on 6 of 20 reads; the gang
+clock back under 2 (1.7) with the slower pace.
+
+**D6: the loot gates, the gamble, the gang clock (15 Oct).** The gamble draws at the deepest site *cleared*
+(`deepest_cleared_level`): the next zone's first site, open and not yet cleared, had put it a level past every drop.
+The loot read counts rarity over the gear alone (rounds and meds have no rarity worth reading; the Services' ammo
+made the City read more common than the Town), its points at the levels D5 reached them, its signals by level; the
+City's epic-or-better gate restated for gear, 8-16% (5-10% of every find was that). A loose unique 1 find in 100 from
+the Town (was 1 in 200: by the Quartermaster on 2-4 builds of 10). PATROL_S 24 (was 20): two searches a gap.

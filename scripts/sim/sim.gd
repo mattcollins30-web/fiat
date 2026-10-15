@@ -1421,7 +1421,7 @@ func recover_s() -> float:
 ## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
 ## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
 func gamble_level() -> int:
-	return clampi(deepest_site_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1) / float(Data.WEAR_PER_ILVL))))
+	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1) / float(Data.WEAR_PER_ILVL))))
 
 
 ## A loose unique a find (15 Oct, the loot read): a trickle from the Town on, growing with the depth, capped.
@@ -3452,6 +3452,16 @@ func deepest_dug() -> int:
 
 
 ## The deepest site's level (its tier and its depth): the Gunsmith's and the Arms dealer's.
+## The deepest level among the sites cleared (D6, the gamble's gate: the next zone's first site, open and not yet
+## cleared, put the gamble a level past every drop the runner had seen).
+func deepest_cleared_level() -> int:
+	var lv := 1
+	for i in range(depth.size()):
+		if int(best_depth[i]) > 0:
+			lv = maxi(lv, lv_at(i, int(best_depth[i])))
+	return lv
+
+
 func deepest_site_level() -> int:
 	var lv := 1
 	for i in range(depth.size()):
@@ -3932,7 +3942,7 @@ func loadout_value() -> int:
 const VARIANCE := 0.25
 const CONTACT := 3                 # hostiles firing at once; the rest wait their turn
 const SEARCH_S := 15.0
-const PATROL_S := 20.0
+const PATROL_S := 24.0          # D6 (gate 10): 20 left 1.6-1.9 searches a gap on the early sites
 const PATROL_BASE := 2
 const SURVIVAL_RUNS := 40
 const AUTO_REST := 0.95            # auto-run redeploys at this share of max HP
