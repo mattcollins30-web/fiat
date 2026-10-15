@@ -7771,11 +7771,12 @@ func _gear_gate_checks(main) -> void:
 	var bases: Array = Data.BASES["Primary"]
 	var big: Dictionary = sim._plain("Primary", bases[bases.size() - 1]["name"])
 	big["ilvl"] = 9
-	_check(Items.wear_level(big) == 25 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not 25 and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
+	var W: int = Items.wear_level(big)          # the Quartermaster's item level's: 21 at x2.5 (D8; 25 at x3)
+	_check(W == int(round(9 * Data.WEAR_PER_ILVL - (Data.WEAR_PER_ILVL - 1.0))) and W > 15 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not the item level's and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
 	_check(Items.wear_level({"slot": Data.MEDICAL, "base": "x", "tier": 6, "ilvl": 9}) == 1, "a med carries a level to wear")
 	sim.equipped["Primary"] = sim._plain("Primary", bases[0]["name"])
 	sim.stash_put(big)
-	_check(sim.wear_lock(big) == 25 and not sim.can_wear(big) and not sim.can_equip_item(big["id"]) and not sim.equip_item(big["id"]), "a level 25 gun goes on a level 15 runner")
+	_check(sim.wear_lock(big) == W and not sim.can_wear(big) and not sim.can_equip_item(big["id"]) and not sim.equip_item(big["id"]), "a level 25 gun goes on a level 15 runner")
 	_check(not sim.equip_best("Primary") or sim.equipped["Primary"]["id"] != big["id"], "Equip if better put on a gun over the runner's level")
 	_check(not sim.is_upgrade(big), "a gun over the runner's level carries the arrow")
 	sim.junk_upto = Data.RARITIES.size() - 1
@@ -7785,14 +7786,14 @@ func _gear_gate_checks(main) -> void:
 	main._armoury.selected = {"kind": "stash", "id": big["id"]}
 	main.refresh()
 	var cell = main._armoury._inv.cell_node(main._armoury._inv.cell_of(big["id"]))
-	_check(cell != null and cell._lock.visible and cell._lock.text == "25" and not cell._up.visible and is_equal_approx(cell._art.modulate.a if cell._art.visible else cell._lines[0].modulate.a, cell.LOCKED_FADE), "the locked gun's cell has no padlock, its level or its grey")
+	_check(cell != null and cell._lock.visible and cell._lock.text == str(W) and not cell._up.visible and is_equal_approx(cell._art.modulate.a if cell._art.visible else cell._lines[0].modulate.a, cell.LOCKED_FADE), "the locked gun's cell has no padlock, its level or its grey")
 	if cell != null:
 		var cr := Rect2(Vector2.ZERO, cell.size)
 		_check(cr.encloses(Rect2(cell._lock.position, cell._lock.size)), "the padlock leaves its cell: %s in %s" % [str(Rect2(cell._lock.position, cell._lock.size)), str(cr)])
 	var pick = main._armoury._pick
-	_check(pick._verdict.text == "Level 25 to wear", "the locked gun's verdict reads '%s'" % pick._verdict.text)
-	_check(pick._buttons[0].text == "Equip at 25" and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
-	_check(pick._words.text.begins_with("Level 25 to wear"), "the locked gun's line reads '%s'" % pick._words.text)
+	_check(pick._verdict.text == "Level %d to wear" % W, "the locked gun's verdict reads '%s'" % pick._verdict.text)
+	_check(pick._buttons[0].text == "Equip at %d" % W and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
+	_check(pick._words.text.begins_with("Level %d to wear" % W), "the locked gun's line reads '%s'" % pick._words.text)
 	_check_fit(main, "the kit with a locked gun")
 	# the Fence's shelf: a piece over the level reads its level, never "Better" (the review)
 	var shelf_gun: Dictionary = big.duplicate(true)
@@ -7804,12 +7805,12 @@ func _gear_gate_checks(main) -> void:
 	main.refresh()
 	main._fence.selected = {"kind": "shelf", "id": shelf_gun["id"]}
 	main.refresh()
-	_check(main._fence._right_lines[2].text == "Level 25 to wear", "a locked gun on the shelf reads '%s'" % main._fence._right_lines[2].text)
+	_check(main._fence._right_lines[2].text == "Level %d to wear" % W, "a locked gun on the shelf reads '%s'" % main._fence._right_lines[2].text)
 	sim.market.erase(shelf_gun)
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": big["id"]}
 	main.refresh()
-	sim.xp = Data.xp_for_level(25)
+	sim.xp = Data.xp_for_level(W)
 	main.refresh()
 	cell = main._armoury._inv.cell_node(main._armoury._inv.cell_of(big["id"]))
 	_check(sim.can_equip_item(big["id"]) and cell != null and not cell._lock.visible and pick._buttons[0].text == "Equip", "at level 25 the gun is still locked")

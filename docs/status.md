@@ -4907,3 +4907,14 @@ and past the reach can't be won and the bot waits on papers to bin them.
 **D7: the band under the reach, the City's quality, the trickle (15 Oct).** SIGNAL_ROLL four under to one over (was
 three under to two over; the Lorry's route reads "two over your reach, not one"); the City's ZONE_QUALITY .38 (was
 .45); a loose unique 1 find in 50 from the Town.
+
+**D7's read (summary_d7.md, 10 reds):** Kev's story green on 7 of 10 builds (was 1); retirement worse (five never by
+24 h); the Quartermaster still 2.6 h at level 23-27; the City's gear 16.2% epic or better (just over 16); the wall 45
+minutes (the endgame now runs all 24 hours: four times the odds reads, and 31 jobs on the laptop at once).
+
+**D8: gear worn sooner; the pass quicker (15 Oct).** WEAR_PER_ILVL 2.5 (was 3; Matt's x3 of 15 Oct, a figure for the
+pass): the Quartermaster's item level wears at 21 (was 25), the City's drops at 16-21 (19-25), so the campaign stops
+waiting on levels. The bot's endgame tidy re-picks the site it farms every ten simulated minutes, not every run
+(`_farm_tier`: a third of a tidy). Iteration reads one a build (the flag "24 1", 16 jobs); the final read two.
+The smoke flaked once on "tier 11's odds never settled in 2000 frames" right after the balance read (the machine
+still loaded) and passed on the rerun.

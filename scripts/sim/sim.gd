@@ -1421,7 +1421,7 @@ func recover_s() -> float:
 ## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
 ## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
 func gamble_level() -> int:
-	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1) / float(Data.WEAR_PER_ILVL))))
+	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL)))
 
 
 ## A loose unique a find (15 Oct, the loot read): a trickle from the Town on, growing with the depth, capped.

@@ -231,7 +231,7 @@ func _endgame(sim) -> void:
 	if sim.campaign_done():
 		# the tier it'll run: the one just run (8 Oct, the pass at an hour: a full pick here, every site read, and
 		# the word it put on changed that site's key so the step's pick read it all again - two picks a run)
-		var t: int = last_tier if last_tier >= 0 and sim.tier_open(last_tier) else pick_tier(sim)
+		var t: int = last_tier if last_tier >= 0 and sim.tier_open(last_tier) else _farm_tier(sim)
 		for key in ["broadcast", "tune"]:
 			if _cleared_at.get(t, -1) == sim.depth[t] or sim.survival(t) < PUSH:
 				break                     # words that had to be cleared at this depth aren't put back on it (the twenty-fifth read: a plain Drifter broadcast, cleared and broadcast again on the services 270 times)
@@ -261,6 +261,18 @@ func _endgame(sim) -> void:
 	_bench_worn(sim)
 	_build_one(sim)
 	_gamble_one(sim)
+
+
+## The farm the endgame's tidy reads for its words (15 Oct, the pass's wall): pick_tier reads every site's odds, a third
+## of a tidy's time once signals run (after one the site's random, so last_tier's gone every tidy); kept ten minutes.
+var _farm_at := -1e9
+var _farm := 0
+func _farm_tier(sim) -> int:
+	if sim.elapsed - _farm_at >= FARM_KEEP_S or not sim.tier_open(_farm):
+		_farm = pick_tier(sim)
+		_farm_at = sim.elapsed
+	return _farm
+const FARM_KEEP_S := 600.0
 
 
 ## The Radio (15 Oct): signals made while there's room - Kev's beat when its three are held, else three papers, the
