@@ -4590,3 +4590,11 @@ below starts until that save lands; then each is designed with him, one at a tim
     at the gamble buys against what a run finds.
 16. **"Wounded again" reads as stacking.** A second wound replaces the first (one at a time, `_wound`), but the log says
     "Wounded again: armour −10%" four times in a fight. The words: "Wounded: armour −10% (replaces pace)".
+17. **The loot tables (Matt, 14 Oct: "firstly inconsistent").** From his save: the gamble out-geared the drops (item
+    15); uniques roll at the depth their head's fought at, so the strong ones never fall behind (item 12); a melee
+    weapon dropping saved a run gone dry ("some emergent gameplay") - keep melee in the drops as the fallback. A full
+    read of what each site, crate, kill and the gamble hands out, then one design.
+18. **The campaign's and the endgame's length (Matt, 14-15 Oct: "a design question not a balance one").** The Bank at
+    47 min, the Quartermaster at 67, kitted out by the end. Being designed now: docs/design/endgame_radio.md (the
+    Radio's missions in place of the depth buttons, and gear gated by level). Sets (data.gd SETS, six, from depth 5
+    to 15, 0.4% a find a depth past the first) are one of its hooks.
