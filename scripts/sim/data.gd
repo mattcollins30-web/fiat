@@ -732,11 +732,11 @@ const UNIQUE_DROP := 0.01
 ## The loot tables (15 Oct, the loot read, Matt's picks): a loose unique from the Town on at UNIQUE_CAMPAIGN a find,
 ## growing UNIQUE_DROP a depth past the first and never past UNIQUE_CAP; set pieces, SET_DROP a depth, to SET_CAP; and
 ## a zone's quality on the rarity roll (the Outskirts' nothing to the City's +45%), so a City drop is rarer.
-const UNIQUE_CAMPAIGN := 0.01     # D6: 0.005 put a loose unique by the Quartermaster on 2-4 builds in 10
+const UNIQUE_CAMPAIGN := 0.02     # D6-7: 0.005 and 0.01 put a loose unique by the Quartermaster on 2-4 builds in 10
 const UNIQUE_FROM_ZONE := 2
 const UNIQUE_CAP := 0.04
 const SET_CAP := 0.02
-const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.45]
+const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.38]     # D7: the City at .45 read 18% epic or better in its gear (gate 12: 8-16%)
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but a paper has a band and a range of tiers. It drops at
 ## the find's loot tier inside its range, on the best base of its slot (and gun type) at that tier; a loose one only where
 ## the find's tier is inside its range, the band's weight picking among those that can.
@@ -1829,7 +1829,7 @@ const ATLAS := [
 		"sum": "Head's price", "figures": ["every run", "once a depth"], "sentence": "Pay a head's price at a depth once; he comes out for nothing at that depth after."},
 	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a point on the Dial",
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the Dial gains a point."},
-	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "A signal can roll three over your reach, not two",
+	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "A signal can roll two over your reach, not one",
 		"sum": "The decoder", "figures": ["to reach +2", "to reach +3"], "sentence": "You know the lorry's route: a signal can roll a depth further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
 	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
 	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Every craft at the Radio 15% cheaper a rank",
@@ -2240,7 +2240,9 @@ const STORY_UNDER := 5                       # Kev's beats come this many levels
 ## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
 ## under the reach, so there's always one to win for the gear (the baseline: every build stalled with three it couldn't
 ## run and the campaign's kit); under the reach a win pays its drops and its story paper, not reach.
-const SIGNAL_ROLL := [[-3, 0.1], [-2, 0.15], [-1, 0.2], [0, 0.4], [1, 0.1], [2, 0.05]]
+## D7: four under to one over (was three under to two over): the odds fall from 100% to 0% in two levels, so the
+## rolls at and past the reach were all unwinnable and the D5 read's held three read 0% at the end of every build.
+const SIGNAL_ROLL := [[-4, 0.15], [-3, 0.2], [-2, 0.2], [-1, 0.2], [0, 0.15], [1, 0.1]]
 const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
 const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
 ## Kev's story (15 Oct, §3): three beats, each a story signal made of its beat's three papers - a fixed site and crew

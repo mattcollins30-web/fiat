@@ -4898,3 +4898,12 @@ The loot read counts rarity over the gear alone (rounds and meds have no rarity 
 made the City read more common than the Town), its points at the levels D5 reached them, its signals by level; the
 City's epic-or-better gate restated for gear, 8-16% (5-10% of every find was that). A loose unique 1 find in 100 from
 the Town (was 1 in 200: by the Quartermaster on 2-4 builds of 10). PATROL_S 24 (was 20): two searches a gap.
+
+**D6's read (summary_d6.md, 8 reds):** the gamble and the gang clock green; the Manager 1.6 h green; the Quartermaster
+2.6 h (past 2.3) at level 23-28; Kev's story on few reads; the City's gear 18% epic or better; a loose unique by him on
+4 of 10. The end saves: every build held three signals at 0% - the odds fall from 100% to 0% in two levels, so rolls at
+and past the reach can't be won and the bot waits on papers to bin them.
+
+**D7: the band under the reach, the City's quality, the trickle (15 Oct).** SIGNAL_ROLL four under to one over (was
+three under to two over; the Lorry's route reads "two over your reach, not one"); the City's ZONE_QUALITY .38 (was
+.45); a loose unique 1 find in 50 from the Town.
