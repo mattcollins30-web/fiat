@@ -4880,3 +4880,10 @@ build, Kev's story still not finished on any (one build two beats in). Read off 
 100% to 0% in two levels, and a beat's head at full strength is about three levels' worth, so a beat at the reach was
 never winnable. Data.STORY_UNDER 5: a beat's signal comes five levels under your reach. Also seen once in the smoke
 and not again on a rerun: "an arrow stayed once the better helmet went on" (the parked flake, 13 Oct).
+
+**D4's read (summary_d4.md, 9 reds, was 12):** Kev's story finished on 7 of the 20 element reads (4.2-18.4 h), the
+gang clock and the builds' band green. Still red: the pace (the Manager 0.9 h, the Quartermaster 1.5 h), the level at
+him (27-38), retirement (3-8 h), the Radio's ladder's gaps, the loot tables, the gamble, cash.
+
+**D5: the XP curve x2.4 (15 Oct; gate 4).** Data.XP_SCALE 2.4 on every level's cost: the curve doubles every seven
+levels, so level 28's XP comes at level 20. The try-on smoke's runner levelled to wear the Van's Spare it rolls.

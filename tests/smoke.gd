@@ -12220,6 +12220,7 @@ func _try_on_checks(main) -> void:
 	while not sim.stash_room(12) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	var vans: Dictionary = Items.roll_unique(sim._unique_named("The Van's Spare"), sim.rng)
+	sim.xp = maxf(sim.xp, Data.xp_for_level(Items.wear_level(vans)))     # a runner who can wear it (D5: the levels come slower)
 	vans["base"] = "Old revolver"            # the case as Matt met it (11 Oct), on its old body: tiered (12 Oct) it rolls at T3 or up
 	vans["tier"] = 2
 	vans["attachments"] = {"optic": null}

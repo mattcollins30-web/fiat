@@ -2260,6 +2260,9 @@ const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
 const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12
 static var _xp_table: Array = []
+## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
+## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
+const XP_SCALE := 2.4
 
 
 static func xp_for_level(level: int) -> float:
@@ -2267,7 +2270,7 @@ static func xp_for_level(level: int) -> float:
 		_xp_table.append(0.0)
 	while _xp_table.size() < maxi(level, MAX_LEVEL):        # the curve runs on past the cap: the paragon levels (7 Oct)
 		var l: int = _xp_table.size()
-		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0))
+		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0 * XP_SCALE))
 	return _xp_table[maxi(level, 1) - 1]
 
 
