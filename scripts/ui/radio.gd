@@ -47,6 +47,8 @@ const VIEW_Y := 88
 const HEARD_X := 470
 const HEARD_Y := HEAD_H - 44
 const BITE := Color("ee7663")
+const KEV_H := 96                  # Kev's pile, under the decoder
+const KEV := Color("f0a868")        # Kev's voice's colour (the radio line's mockup, approved 16 Oct)
 const STORY := Color("8fb3d9")      # Kev's story's papers and signals (the mockup's blue)
 const PAY := Color("62bd8f")
 
@@ -88,6 +90,10 @@ var _make_sub: Label
 var _make_sub2: Label
 var _decrypt: Button
 var _decrypt_note: Label
+var _kev_box: Panel                 # Kev's pile (16 Oct): a plain paper for notes
+var _kev_head: Label
+var _kev_line: Label
+var _kev: Button
 # the signals
 var _signals_box: Panel
 var _signals_title: Label
@@ -167,10 +173,10 @@ func _build_papers() -> void:
 		r["badge"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 4, 1, Pal.ACCENT))
 		_paper_rows.append(r)
 	var py: float = HEAD_ROW_H + PAPERS_MAX * (PAPER_H + PAPER_GAP)
-	_paper_prev = UI.button(_papers_box, Rect2(14, py, 40, 32), false)
+	_paper_prev = UI.button(_papers_box, Rect2(14, py, 44, 32), false)     # 44: the arrow needs 42 (16 Oct, the smoke with a page of 30)
 	_paper_prev.text = "‹"
 	_paper_prev.pressed.connect(func(): _turn(-1))
-	_paper_next = UI.button(_papers_box, Rect2(14 + 104, py, 40, 32), false)
+	_paper_next = UI.button(_papers_box, Rect2(14 + 104, py, 44, 32), false)
 	_paper_next.text = "›"
 	_paper_next.pressed.connect(func(): _turn(1))
 	_paper_page = UI.label(_papers_box, Rect2(14 + 46, py, 56, 32), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
@@ -209,6 +215,14 @@ func _build_decoder() -> void:
 	_decrypt.text = "Decrypt"
 	_decrypt.pressed.connect(_on_decrypt)
 	_decrypt_note = UI.label(_decoder_box, Rect2(14, my + MAKE_H + 14 + 62, iw, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
+	# Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece, and no signal from either)
+	var ky: float = my + MAKE_H + 14 + 62 + 30
+	_kev_box = UI.panel(_decoder_box, Rect2(14, ky, iw, KEV_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
+	_kev_head = UI.label(_kev_box, Rect2(12, 6, iw - 24, 20), "KEV'S PILE · A PLAIN PAPER, NEVER HIS STORY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kev_line = UI.label(_kev_box, Rect2(12, 26, iw - 24, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kev = UI.button(_kev_box, Rect2(12, 52, iw - 24, 36), false)
+	_kev.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
+	_kev.pressed.connect(_on_kev)
 
 
 func _build_signals() -> void:
@@ -358,7 +372,11 @@ func _show_papers() -> void:
 	var pages: int = maxi(1, ceili(float(papers.size()) / PAPERS_MAX))
 	paper_page = clampi(paper_page, 0, pages - 1)
 	UI.fit(_papers_title, ["THE PAPERS · %d" % papers.size()])
-	UI.fit(_papers_sub, ["Decrypted here: each carries its code; pick three", "Each carries its code", ""] if not papers.is_empty() else ["None held: they're found searching, the Bank's most", "None held", ""])
+	# the two kinds, each with its count of the three (16 Oct): a story piece never hides that the plain ones are short
+	var plain: int = papers.filter(func(x): return sim.story_of(x) < 0).size()
+	var story: int = sim.story_held().size()
+	var kinds: String = "Plain %d of 3%s" % [mini(plain, Data.SIGNAL_PAPERS), (" · Kev's story %d of 3" % story) if story > 0 else ""]
+	UI.fit(_papers_sub, [kinds + " · pick three", kinds, "Plain %d" % plain] if not papers.is_empty() else ["None held: they're found searching, or off Kev's pile", "None held", ""])
 	for k in range(PAPERS_MAX):
 		var r: Dictionary = _paper_rows[k]
 		var n: int = paper_page * PAPERS_MAX + k
@@ -427,6 +445,14 @@ func _show_decoder() -> void:
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
 	var note: String = ("The papers are spent · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == "three papers in" else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
+	var kb: String = sim.kev_block()
+	UI.fit(_kev_line, [Words.KEV_PILE, "\"Bring me notes and I'll see what's in the pile.\"", ""])
+	_kev.disabled = kb != ""
+	var price: int = sim.kev_price()
+	if kb == "" or kb == "%d notes" % price:
+		UI.fit_button(_kev, ["Ask Kev · %d notes (you have %d)" % [price, sim.notes], "Ask Kev · %d notes" % price, "Ask Kev"])
+	else:
+		UI.fit_button(_kev, ["Ask Kev · %s" % kb, "Ask Kev"])
 
 
 func _show_signals(od: Array) -> void:
@@ -546,6 +572,12 @@ func _on_decrypt() -> void:
 	acted.emit()
 
 
+func _on_kev() -> void:
+	sim.ask_kev()
+	_shown = ""
+	acted.emit()
+
+
 func _on_set_off() -> void:
 	if sim.deploy_signal(selected):
 		selected = 0
@@ -608,7 +640,7 @@ func text_nodes() -> Array:
 			out.append(l)
 	if not _papers_box.visible:
 		return out
-	out.append_array([_papers_title, _papers_sub, _decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _signals_title])
+	out.append_array([_papers_title, _papers_sub, _decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _signals_title, _kev_head, _kev_line, _kev])
 	for r in _paper_rows:
 		if r["button"].visible:
 			out.append_array([r["name"], r["code"]])

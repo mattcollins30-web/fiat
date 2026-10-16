@@ -5293,6 +5293,10 @@ coded ones' words opened "A code in the margin, encrypted".
    signal deeper); **never a story piece** - those stay earned on the signals. And the Radio's papers show the two
    kinds side by side, each with its count of the three and where the next comes from. Mockup on the UI pass canvas.
    A number-changer: in with 9, 10 and 13 before the balance read; the price is the read's to set.
+   **Done (16 Oct):** `kev_price` / `kev_block` / `ask_kev` (the campaign first, as a signal; deep papers on `dug_depth`'s
+   scale, the review), Kev's box under the decoder, the papers' line counting plain and Kev's; the bot buys the rest of
+   a signal; the playtest read counts Kev's notes. Smoke: `_kev_checks`. (The papers' page arrows 40 to 44 px: the smoke
+   with 30 papers caught them short.)
 20. **Decrypt, animated (16 Oct, Matt: "a decrypt animation ... the panel to the right shows some codes").** On Decrypt:
    the three papers fade off toward the panel; the panel's lines come in as `ItemHead.GARBLE` glyphs flickering,
    then lock left to right one line after another (the fix, the site, the level and gear level, an extra, the codes

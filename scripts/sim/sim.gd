@@ -1642,6 +1642,52 @@ func paper_lines(it: Dictionary) -> Array:
 		"Rare: rolls a signal deeper" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "Three make a signal"]
 
 
+## Kev's papers (16 Oct): a plain paper from the pile for notes - KEV_RUNS runs' notes on the top open site.
+func kev_price() -> int:
+	return maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[top_tier()]["pool"]) * Data.NOTES_KILL))
+
+
+## Why Kev can't sell one now, or "".
+func kev_block() -> String:
+	if not room_open("radio"):
+		return "the Radio's shut"
+	if not campaign_done():
+		return "the campaign first"            # as a signal: before it, a paper's for its code, and the drops bring those
+	if mission != null:
+		return "the runner's out"
+	if notes < kev_price():
+		return "%d notes" % kev_price()
+	if not stash_room(1):
+		return "no room in the stash"
+	return ""
+
+
+## Pay the notes, a plain paper in the stash: rolled as a find at the deepest site's level and depth (a rare one still
+## rolls a signal deeper), never Kev's story, the deeds or a head's thing. Logged and read into the book. {} when not.
+func ask_kev() -> Dictionary:
+	if kev_block() != "":
+		return {}
+	var pages: Array = book_pages()
+	var deep := 1
+	for i in range(best_depth.size()):
+		deep = maxi(deep, dug_depth(i))     # the drops' scale, the Barracks' depth at the level (the review: a site's own depth ran far ahead)
+	var it: Dictionary = {}
+	for tries in range(40):
+		it = Items.roll(Data.PAPER, 1, rng, 0.0, false, false, "", "", 0.33, deep, gamble_level())
+		if str(it["base"]) in pages:
+			break
+		it = {}
+	if it.is_empty() or not (stash_fits(it) or _stack_room(it)):
+		return {}
+	var cost: int = kev_price()
+	notes -= cost
+	stash_put(it)
+	_read(it)
+	chron("kev", {"price": cost, "item": _chron_item(it)})
+	log_event("%s %s" % [Words.KEV_SOLD, Items.full_name(it).to_lower()])
+	return it
+
+
 ## Every paper there is to find, deep ones last.
 func book_pages() -> Array:
 	var out: Array = []

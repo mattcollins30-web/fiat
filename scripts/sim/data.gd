@@ -2263,6 +2263,11 @@ const PAPER_DEEPER_AT := 2
 ## no difficulty (depth 20 level 17 on the Allotments, 28 on the Barracks); a signal now lands at the depth that puts
 ## its site at the rolled level, every site alike, Kev's included.
 const SIGNAL_PAPERS := 3
+## Kev's papers (16 Oct, Matt's playtest: two plain papers and a story piece, and neither kind made a signal): the Radio
+## sells a plain paper for notes - this many runs' notes on the top open site (a kill a note at depth 1), never under
+## KEV_FLOOR - rolled as a find there; never one of Kev's story. First figures; the balance read sets them.
+const KEV_RUNS := 2.0
+const KEV_FLOOR := 10
 const SIGNALS_HELD := 3
 const REACH_START := 10                      # a level: the campaign tops at 9 (the Barracks at depth 1); the first signal's at 10
 const STORY_UNDER := 5                       # Kev's beats come this many levels under your reach (D4: the head at full strength is

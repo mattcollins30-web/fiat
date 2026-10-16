@@ -369,6 +369,14 @@ func _make_signals(sim) -> void:
 					ids.append(int(it["id"]))
 		else:
 			var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+			# short of three with the notes for Kev's pile (16 Oct): a player buys the rest of a signal
+			while plain.size() < Data.SIGNAL_PAPERS and sim.campaign_done() and sim.kev_block() == "":
+				var price: int = sim.kev_price()
+				var got: Dictionary = sim.ask_kev()
+				if got.is_empty():
+					break
+				bought.append([sim.elapsed, "off Kev's pile: %s for %d notes" % [str(got["base"]).to_lower(), price]])
+				plain = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
 			plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
 			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
 		if sim.decrypt(ids).is_empty():

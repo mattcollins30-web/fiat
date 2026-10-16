@@ -285,7 +285,7 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	L.append("")
 	L.append("## Where the money and the points went")
 	L.append("")
-	var spend := {"yard": 0, "yard_rank": 0, "craft": 0, "gamble": 0, "heal": 0, "treat": 0, "respec": 0, "class": 0, "word": 0}
+	var spend := {"yard": 0, "yard_rank": 0, "craft": 0, "gamble": 0, "heal": 0, "treat": 0, "respec": 0, "class": 0, "word": 0, "kev": 0}
 	var count := {}
 	for e in ch:
 		var k: String = e["k"]
@@ -295,11 +295,13 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 				spend[k] += int(e.get("cost", 0))
 			"gamble":
 				spend["gamble"] += int(e.get("price", 0))
-	L.append("| The Pitch | Ranks | The Workshop's jobs | The Fence's word | Heals | Treatment | Respecs | Class changes | The Radio (notes) |")
-	L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-	L.append("| %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %d (%d) |" % [_money(spend["yard"]), int(count.get("yard", 0)), _money(spend["yard_rank"]), int(count.get("yard_rank", 0)),
+			"kev":
+				spend["kev"] += int(e.get("price", 0))
+	L.append("| The Pitch | Ranks | The Workshop's jobs | The Fence's word | Heals | Treatment | Respecs | Class changes | The Radio (notes) | Kev's papers (notes) |")
+	L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	L.append("| %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %s (%d) | %d (%d) | %d (%d) |" % [_money(spend["yard"]), int(count.get("yard", 0)), _money(spend["yard_rank"]), int(count.get("yard_rank", 0)),
 		_money(spend["craft"]), int(count.get("craft", 0)), _money(spend["gamble"]), int(count.get("gamble", 0)), _money(spend["heal"]), int(count.get("heal", 0)),
-		_money(spend["treat"]), int(count.get("treat", 0)), _money(spend["respec"]), int(count.get("respec", 0)), _money(spend["class"]), int(count.get("class", 0)), spend["word"], int(count.get("word", 0))])
+		_money(spend["treat"]), int(count.get("treat", 0)), _money(spend["respec"]), int(count.get("respec", 0)), _money(spend["class"]), int(count.get("class", 0)), spend["word"], int(count.get("word", 0)), spend["kev"], int(count.get("kev", 0))])
 	L.append("")
 	L.append("Trained, tree by tree:")
 	var trees := {}

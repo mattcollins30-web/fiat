@@ -1472,6 +1472,8 @@ func _run_screen(main) -> void:
 		main.refresh()
 		_check_fit(main, "Run (med taken)")
 		# rounds top up the rig's stack of the same type
+		while not sim.rig_room(1) and not sim.rig.is_empty():
+			sim.rig.pop_back()                      # a pouch free: the gate's top-up (16 Oct) can leave the rig full
 		var box: Dictionary = sim._plain(Data.AMMO, "Nails")
 		Items.set_stack(box, 10)
 		sim.mission["found"].append(box)
@@ -6702,6 +6704,7 @@ func _loot_roll_checks(main) -> void:
 	_gear_gate_checks(main)
 	_training_gate_checks(main)
 	_paper_crypt_checks(main)
+	_kev_checks(main)
 	_signal_checks(main)
 	_story_checks(main)
 	_keepsake_checks(main)
@@ -8606,6 +8609,65 @@ func _paper_crypt_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	main.refresh()
 	print("the papers encrypted ok: unread and hidden till the Radio, read at once when it opens, common to rare")
+
+
+## Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece made no signal): a plain paper for notes, the
+## price his, never a story piece, read into the book; the Radio's button and its lines; short of notes, the button off
+## and the price on it; the papers' line counts the two kinds.
+func _kev_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	if not sim.room_open("radio"):
+		sim._home_gate(sim._plain(Data.PAPER, "A military radio"))
+	_check(sim.campaign_done() or sim.kev_block() == "the campaign first", "Kev sells before the campaign's done: '%s'" % sim.kev_block())
+	for i in range(Data.TIERS.size()):
+		sim.best_depth[i] = maxi(1, int(sim.best_depth[i]))     # the campaign done, as a signal wants it (load_dict puts it back)
+	for z in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[z] = true
+	sim.depot_cleared = true
+	_check(sim.campaign_done(), "the campaign isn't done for Kev's checks")
+	while not sim.stash_room(2) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	var price: int = sim.kev_price()
+	_check(price >= Data.KEV_FLOOR and price == maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[sim.top_tier()]["pool"]))), "Kev's price is %d" % price)
+	sim.notes = price * 40
+	var pages: Array = sim.book_pages()
+	var bought := 0
+	for k in range(30):
+		var n0: int = sim.notes
+		var it: Dictionary = sim.ask_kev()
+		if it.is_empty():
+			break
+		bought += 1
+		_check(Items.is_paper(it) and str(it["base"]) in pages and sim.story_of(it) < 0 and not Items.is_deeds(it), "Kev sold %s" % str(it.get("base", "")))
+		_check(n0 - sim.notes == price and str(it["base"]) in sim.book, "Kev's paper cost %d notes (not %d) or went unread" % [n0 - sim.notes, price])
+		if k == 0:
+			_check(sim.events.back()[1].begins_with(Words.KEV_SOLD), "Kev's sale wasn't logged: '%s'" % sim.events.back()[1])
+	_check(bought >= 20, "Kev sold %d of 30 with the notes and room" % bought)
+	main.show_room(main.COMMS)
+	var kept_view: String = main._radio.view
+	main._radio._pick_view("air")              # the papers and the decoder, not the Dial (the campaign done opens on the map)
+	main._radio._shown = ""
+	main.refresh()
+	var rd = main._radio
+	_check(rd._kev.visible and not rd._kev.disabled and rd._kev.text.begins_with("Ask Kev"), "the Radio's Ask Kev is '%s', %s" % [rd._kev.text, "off" if rd._kev.disabled else "on"])
+	_check(rd._papers_sub.text.begins_with("Plain"), "the papers' line doesn't count the plain ones: '%s'" % rd._papers_sub.text)
+	_check_fit(main, "Radio (Kev's pile)")
+	sim.notes = price - 1
+	rd._shown = ""
+	main.refresh()
+	_check(rd._kev.disabled and rd._kev.text.contains("%d notes" % price), "short of notes, Ask Kev reads '%s', %s" % [rd._kev.text, "off" if rd._kev.disabled else "on"])
+	_check(sim.ask_kev().is_empty() and sim.notes == price - 1, "Kev sold a paper on credit")
+	var kb := Rect2(rd._kev_box.global_position, rd._kev_box.size)
+	var dbox := Rect2(rd._decoder_box.global_position, rd._decoder_box.size)
+	_check(dbox.encloses(kb), "Kev's pile leaves the decoder's column: %s in %s" % [str(kb), str(dbox)])
+	main._radio.view = kept_view
+	sim.load_dict(saved)
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	print("Kev's pile ok: %d papers at %d notes, plain only, read, logged; the button and its price" % [bought, price])
 
 
 ## Training's gating (15 Oct, gating_training.png): an element tree's columns from the third want 6 in its class tree,
