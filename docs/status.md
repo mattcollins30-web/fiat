@@ -5267,6 +5267,12 @@ coded ones' words opened "A code in the margin, encrypted".
    fit, so a pick and its compare beside it can read "+14 bleed res" against "+19 bleed resist". The item head's
    affix chips take the short form always; the shorts read over once for any that only make sense long (with
    item 3's and 12's chip pass), and the smoke checks two heads side by side use one form.
+18. **Papers: no price, and the story's line whole (16 Oct, Matt: "remove tin price from all papers - adds nothing").**
+   A paper's pick shows its worth twice - the kicker's "8 tins" and the headline "6 tins at the Fence"; both go for
+   every paper (the headline becomes what the paper is: Kev's story, a code, encrypted). The right column's third line
+   (`Sim.paper_lines`, "Its three together make the beat's signal") is fit to one line and clips; it wraps, with an
+   assertion that no paper's lines are cut. And a story paper's tail says "no code: a line of the before" - true of
+   the code, wrong of the paper: it says Kev's story's beat instead.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
