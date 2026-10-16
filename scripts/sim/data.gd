@@ -1258,7 +1258,9 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## The endgame's depth curve: once the campaign is done, every site fights
 ## at the depth's numbers bent by its shape, so the choice between sites is
 ## what they drop, not how hard they are. Depth 2 is the first rung.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.14, "reward": 0.10, "rarity": 0.10}
+## D15: grow 0.14 to 0.11 - the reach is the runner's power against this slope (signals since D3), and at 14% a level
+## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.11, "reward": 0.10, "rarity": 0.10}
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that

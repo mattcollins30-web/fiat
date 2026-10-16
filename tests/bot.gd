@@ -862,6 +862,9 @@ func _restock_rounds(sim) -> void:
 					break
 
 
+const AMMO_STACKS_KEPT := 6
+
+
 func _sell_spares(sim) -> void:
 	var keep_type: String = TYPE_OF.get(sim.cls, "") if keystones_first else ""
 	# meds: a dozen cells' worth stay, the dearest; the rig can't carry more and they pile up otherwise
@@ -871,6 +874,20 @@ func _sell_spares(sim) -> void:
 	for it in meds:
 		med_cells += Items.size(it)
 		if med_cells > 12:
+			sim.sell(it)
+	# rounds a gun fires: the six fullest stacks a type stay (D15: a bleed Doorman's stash held 176 stacks, full, and
+	# picked nothing up - no papers - for the last ten hours of the read)
+	var by_type := {}
+	for it in sim.stash:
+		if Items.is_ammo(it):
+			var ty: String = str(Items.base_of(it)["type"])
+			if not by_type.has(ty):
+				by_type[ty] = []
+			by_type[ty].append(it)
+	for ty in by_type:
+		var stacks: Array = by_type[ty]
+		stacks.sort_custom(func(a, b_in): return int(a.get("rounds", 0)) > int(b_in.get("rounds", 0)))
+		for it in stacks.slice(AMMO_STACKS_KEPT):
 			sim.sell(it)
 	for it in sim.stash.duplicate():
 		if Items.is_medical(it) or Items.is_paper(it):

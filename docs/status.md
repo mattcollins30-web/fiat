@@ -4980,3 +4980,12 @@ four in five at 0% - all on the City's and the Hospital's sites, won on the Outs
 alone, bent by its site's shape (the site's campaign floor - 4200 x 1.25^13 on the Barracks against the curve's 3200 x
 1.14^13 - made a City site's level 22 seven times the Allotments'). XP_TAPER_END 2.4: x2.4 on (level 50 at 243k XP).
 Smoke: the same level on the Allotments and the Barracks reads the shapes' ratio.
+
+**D14's read (summary_d14.md, 5 reds):** Kev's story green on all ten; signals made every 8-30 min on most; the reach
+still stands 2-7 hours at a time; level 50 from 6.6 h to never; the Scrappers level 28-30 at the Quartermaster.
+
+**D15 (16 Oct).** The review of D14: a signal's pay is the curve's too (a City site's level paid more), and a signal's
+clear keeps its site's own depth (`_clear` wrote the Barracks-scale depth against the site, so the cleared level read
+low - the gamble, the Fence's uniques, the contracts' asks). CURVE grow 0.14 to 0.11: the reach is the runner's power
+against that slope. The bot keeps six stacks of rounds a type (a bleed Doorman's and a frost Poacher's stash held 176
+stacks, full, and picked nothing up - no papers - for the read's last ten hours). Smoke: a signal's clear keeps its depth.

@@ -4156,9 +4156,9 @@ func effective(i: int) -> Dictionary:
 		var on_sig: bool = not _sig.is_empty() and int(_sig["site"]) == i
 		e["hp"] = float(c["hp"]) * g * float(shape["hp"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
 		e["dps"] = float(c["dps"]) * g * float(shape["dps"]) if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
-		e["xp"] = maxf(float(e["xp"]), float(c["xp"]) * r)
-		e["cash"] = maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
-		e["drop"] = maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))
+		e["xp"] = float(c["xp"]) * r if on_sig else maxf(float(e["xp"]), float(c["xp"]) * r)     # and its pay (the review)
+		e["cash"] = float(c["cash"]) * r * float(shape.get("cash", 1.0)) if on_sig else maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
+		e["drop"] = float(c["drop"]) + Data.DEPTH_DROP * (d - 2) if on_sig else maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))
 		e["loot_tier"] = loot_tier_at(lv)
 		e["rarity"] = float(c["rarity"]) * (d - 1)
 		e["patrol"] = float(shape.get("patrol", 1.0))
@@ -6096,19 +6096,20 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
 		log_event("%s cleared; this Pitch's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
+	var cd: int = int(depth[m["tier"]])     # the site's own depth: a signal's t["depth"] is its level's on the Barracks (D3), not this site's (D14 review)
 	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
-	if first_clear or t["depth"] > best_depth[m["tier"]]:
-		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(t["depth"]), "first": first_clear,
+	if first_clear or cd > best_depth[m["tier"]]:
+		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(cd), "first": first_clear,
 			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
-	if t["depth"] > best_depth[m["tier"]]:
-		best_depth[m["tier"]] = t["depth"]
+	if cd > best_depth[m["tier"]]:
+		best_depth[m["tier"]] = cd
 		if not m.has("signal"):
-			log_event("%s cleared at depth %d; depth %d is open" % [t["name"], t["depth"], t["depth"] + 1])
-		if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
+			log_event("%s cleared at depth %d; depth %d is open" % [t["name"], cd, cd + 1])
+		if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
 			atlas_points += 1
 			log_event("A point on the Dial.")
-	if t["depth"] >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (t["depth"] > int(best_dig.get("depth", 0)) or (t["depth"] == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
-		best_dig = {"site": t["name"], "tier": m["tier"], "depth": t["depth"], "yard": yard_moves + 1}     # the ladder's, not the campaign's
+	if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (cd > int(best_dig.get("depth", 0)) or (cd == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
+		best_dig = {"site": t["name"], "tier": m["tier"], "depth": cd, "yard": yard_moves + 1}     # the ladder's, not the campaign's
 	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)
 		depot_cleared = true
 	if not seen.has("cleared/%d" % m["tier"]):
