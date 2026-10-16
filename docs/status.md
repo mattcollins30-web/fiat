@@ -5256,6 +5256,12 @@ coded ones' words opened "A code in the margin, encrypted".
    it's clear" (just "left"). Kept: the site's name, the time left and its bar, the kills bar, the gangs / convoy line
    and the capstones. The way out keeps its own unit ("to the way out · see them off"). The fit check over the band
    with the shorter words.
+16. **The run's runner panel, below the band (16 Oct, Matt's playtest).** `run.gd`'s fight tiles, the rig and the take:
+   art on each tile (Matt's painted `dps`, `hp` and `cash` icons where they fit; Their fire, Kills, Armour, Rounds new,
+   with the art pass); "Fire in" becomes "Their fire", as the site card says it; the rig's cells at twice the size in
+   one row, each keeping its width (they read as thumbnails now); the take one strip - tins with the icon, the pack's
+   fill as a bar, "passed over" and "swapped" small; the hint ("Leaving keeps the loot") under the button, so the
+   space under it goes to the rig. Mockup on the UI pass canvas; a fit check that a rig cell is never under 56 px.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
