@@ -5053,3 +5053,10 @@ never on four (47-49 at 24 h), at 9.9 h on one; the reach's longest stretch 92-4
 the crew's HP over the pool made them hang on the pool's size. Back to the shape's HP on a signal (the soft sites'
 many and the hard sites' few come to much the same crew HP); the shape's fire alone dropped (x0.7 to x1.4, the spread
 that let the reach run ahead). XP_TAPER_END 3.6 to 3.2.
+
+**D22's read (summary_d22.md, 7 reds):** a shock Scrapper held at the Estate to hour 22 again (its first hour's
+element gun at half the damage, never swapped back); level at the Quartermaster 23-29 on five; level 50 7.2-7.9 h on
+two, never on four; the reach's longest stretch 116-411 min; one read's cash over and one 0% end site.
+
+**D23 (16 Oct).** The bot keeps its element's gun only while it's within ELEM_DPS_FLOOR 0.8 of the damage it had: a
+swap under that goes back. The two-read confirmation read next.

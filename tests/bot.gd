@@ -549,7 +549,10 @@ func _hold_the_element(sim) -> void:
 	if best.is_empty():
 		return
 	if cur == null or _elem_score(best) > _elem_score(cur):
-		sim.equip_item(best["id"])
+		var was_dps: float = sim.dps()
+		var was_id: int = int(cur["id"]) if cur != null else -1
+		if sim.equip_item(best["id"]) and was_id >= 0 and sim.dps() < was_dps * ELEM_DPS_FLOOR:
+			sim.equip_item(was_id)            # D23: the element's gun, but not at half the damage - a shock Scrapper took one at an hour and held the Estate's wall for twenty
 
 
 ## At the second past, a class with the element's affinity when the first
@@ -891,6 +894,7 @@ func _restock_rounds(sim) -> void:
 
 const AMMO_STACKS_KEPT := 6
 const HELD_READ_S := 1200.0
+const ELEM_DPS_FLOOR := 0.8
 const PAPERS_KEPT := 30
 var _held_at := {}
 
