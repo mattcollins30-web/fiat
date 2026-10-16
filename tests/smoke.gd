@@ -1582,6 +1582,7 @@ func _class_trees(main) -> void:
 	sim.core_gates = true
 	print("class trees, keystone and pitch upgrades ok")
 	_tree_rules_checks(main)
+	_tree_effect_checks(main.sim)
 	_webs_traits(main)
 	_pool_checks(sim)
 
@@ -1836,6 +1837,63 @@ func _craft_view_checks(main) -> void:
 	_check(not ws._piece.visible and not ws._jobs.visible, "the piece card stayed up on the Guns view")
 	sim.load_dict(saved)
 	print("craft view ok: stash gear only, the piece card, the priced tiles, an affix's jobs, a job in the room")
+
+
+## Every tree node's effect has a reader (16 Oct: Fumes, Cumulative and Nicked carried dot_pct and nothing read it from
+## the tree): the sim's own source names each effect - a tree_sum, a has_node, or one of the element families' patterns
+## ("%s_pct", "conv_%s_pct", "proof_" + the element) - and a damage-over-time node grows a burn as the same stat on gear.
+func _tree_effect_checks(sim) -> void:
+	var src := FileAccess.get_file_as_string("res://scripts/sim/sim.gd") + FileAccess.get_file_as_string("res://scripts/sim/items.gd")
+	var els := ["fire", "frost", "poison", "shock", "bleed", "physical"]
+	var orphans := []
+	for t in Data.TREES + Data.ELEMENT_TREES:
+		for n in t["nodes"]:
+			var e := str(n.get("effect", ""))
+			if e == "":
+				continue
+			var read := src.contains('tree_sum("%s")' % e) or src.contains('has_node("%s")' % e) or src.contains('node_active("%s")' % e)
+			for el in els:
+				if e == "%s_pct" % el:
+					read = read or src.contains('tree_sum("%s_pct" % ty)')
+				if e == "conv_%s_pct" % el:
+					read = read or src.contains('tree_sum("conv_%s_pct" % ty)')
+				if e == "proof_%s" % el:
+					read = read or src.contains('has_node("proof_" + ty)')
+			if not read and not (e in orphans):
+				orphans.append("%s (%s)" % [e, n["name"]])
+	_check(orphans.is_empty(), "tree effects nothing reads: %s" % ", ".join(orphans))
+	# Fumes: +20% to a burn's growth, as 20% dot_pct on gear gives
+	var keep_tree: Array = sim.tree.duplicate()
+	var keep_cls: String = sim.cls
+	sim.cls = "Drifter"
+	sim.tree = []
+	var a := {}
+	sim._dot_add(a, "fire", 100.0, 1.0e9)
+	var fumes := -1
+	var petrol: Dictionary = Data.tree_named("Petrol")
+	for k in range(petrol["nodes"].size()):
+		if str(petrol["nodes"][k].get("effect", "")) == "dot_pct":
+			fumes = k
+	sim.tree = ["Petrol/%d" % fumes]
+	var b := {}
+	sim._dot_add(b, "fire", 100.0, 1.0e9)
+	var gear: float = sim._affix_sum("dot_pct")      # what the kit already carries: the node adds to it, as an affix would
+	var want: float = float(a["fire"]) * (1.0 + (gear + float(petrol["nodes"][fumes]["value"])) / 100.0) / (1.0 + gear / 100.0)
+	_check(fumes >= 0 and is_equal_approx(float(b["fire"]), want), "Fumes didn't grow the burn: %.2f, wanted %.2f" % [float(b.get("fire", 0.0)), want])
+	# and only theirs: a burn on the runner (their fire's, in my_dots) doesn't grow with the runner's own node
+	var kept_mission = sim.mission
+	var mine: Dictionary = {}
+	sim.mission = {"my_dots": mine}            # only the pool's identity is read: no run is started for it
+	sim._dot_add(mine, "fire", 100.0, 1.0e9)
+	var with_node: float = float(mine.get("fire", 0.0))
+	sim.tree = []
+	mine.clear()
+	sim._dot_add(mine, "fire", 100.0, 1.0e9)
+	sim.mission = kept_mission
+	_check(with_node > 0.0 and is_equal_approx(with_node, float(mine.get("fire", 0.0))), "Fumes grew a burn on the runner: %.2f against %.2f" % [with_node, float(mine.get("fire", 0.0))])
+	sim.tree = keep_tree
+	sim.cls = keep_cls
+	print("tree effects all read; Fumes grows the burn on them, not on you ok")
 
 
 ## The trees' rules (9 Oct, docs/design/trees.md §8): the lanes match the table; every joint's two halves in

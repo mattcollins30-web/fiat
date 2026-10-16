@@ -608,7 +608,7 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	var d: Dictionary = Data.DOTS[ty]
 	var theirs: bool = mission == null or not is_same(dots, mission.get("my_dots"))     # the same dictionary, not equal contents: two empty pools read alike (12 Oct)
 	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs)
-	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + _affix_sum("dot_pct") / 100.0))
+	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + (_affix_sum("dot_pct") + (tree_sum("dot_pct") if theirs else 0.0)) / 100.0))     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
 
 
 ## What the dots deal this tick, draining their pools.

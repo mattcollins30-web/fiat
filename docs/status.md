@@ -5248,6 +5248,9 @@ coded ones' words opened "A code in the margin, encrypted".
    burn pool from 100 landed the same 50 with it as without. Every other node effect has a reader. Fix: the tree's
    share in `_dot_add`; and a smoke check that every effect in `Data` trees moves a number when trained (an orphan
    can't recur). Matt parked it for after the playtest (16 Oct). Moves the dot builds' numbers: a balance read after.
+   **Done (16 Oct):** the tree's share in `_dot_add`, on their pools only (the review: `_dot_add` fills `my_dots` too);
+   `_tree_effect_checks` reads every node effect's reader in the source and Fumes grows a burn on them, not on you.
+   Open, for Matt: a `dot_pct` affix on the runner's gear has always grown the dots on the runner too.
 14. **One damage figure that holds everything (16 Oct, Matt: "hard to gauge what anything in the petrol tree actually
    does for my damage").** `dps()` is the hits alone (guns x level, affixes, attack); a burn, poison or bleed is extra
    and shown nowhere, so a DoT node reads as nothing. To design together (mockups): the headline damage a second
