@@ -5081,3 +5081,10 @@ then a wall: a roll over the reach set it to the roll's level plus one, two and 
 **D25 (16 Oct).** A signal won at or past the reach raises it one level, not to the signal's level plus one. The D23
 review: the element bot reads its element gun's damage on a try-on (`fit_value`) rather than swapping and swapping back
 every tidy (two chronicle lines and the caches cleared a tidy).
+
+**D25's two-read (summary_d25x2.md, 30 reads, 3 reds):** level at the Quartermaster green on all ten (19-22); the
+Bank 1.5 h, the Quartermaster 2.1 h; the reach's longest stretch down to 101-302 min (120-144 on four); but level 50 at
+7.7-11.4 h on eight (every signal winnable, every one paying) and signals every 43-82 min on seven (papers short); the
+band 1.5-3.7 h on its slowest read.
+
+**D26 (16 Oct).** XP_TAPER_END 3.0 to 5.0 (levels 30-50 about x1.6 the XP). PAPER_DROP 0.12 to 0.18.

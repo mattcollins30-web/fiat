@@ -30,7 +30,9 @@ const AMMO := "Ammo"
 ## Papers: a line of the before, found lying about, a cell each, pennies at
 ## the Fence. Their words live in words.gd; the deeds are the one that matters.
 const PAPER := "Paper"
-const PAPER_DROP := 0.12           # the share of a site's finds that are papers (D10: 0.06 left the Radio waiting hours between signals)
+## The share of a site's finds that are papers (D10: 0.06 left the Radio waiting hours between signals; D26: 0.12 to 0.18 -
+## with every signal winnable after D25 they went faster than the papers came, a signal every 43-82 min on seven).
+const PAPER_DROP := 0.18
 const RADIO_EVERY := 3             # the radio comes on every this many runs home (12 Oct, the lore pass): the next line heard
 
 ## An item's footprint in cells, W x H - what it takes in the stash and the
@@ -2280,7 +2282,7 @@ const XP_SCALE := 2.9     # D19: 2.4 to 2.9 - level 23-26 at the Quartermaster o
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 3.0     # D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
+const XP_TAPER_END := 5.0     # D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
 
 
 static func xp_scale(l: int) -> float:
