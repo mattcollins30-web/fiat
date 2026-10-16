@@ -5250,6 +5250,12 @@ coded ones' words opened "A code in the margin, encrypted".
    and shown nowhere, so a DoT node reads as nothing. To design together (mockups): the headline damage a second
    includes the dots at their steady rate; the Stats sheet's chain splits it (hits, then burn / poison / bleed); and a
    tree node says what it would add ("+N a second, +M%"), worked by the try-on as an item's compare is.
+15. **The run's band, simpler (16 Oct, Matt: "too much info here now ... keep that panel simple").** `run.gd`'s band
+   (around line 262): the kicker "Depth 1 · The City" goes; the right column's "1:38 in · clock 7:12" goes (the
+   clock's headline, time left, is the one clock kept); the unit loses "ticks while they're on you" / "stopped while
+   it's clear" (just "left"). Kept: the site's name, the time left and its bar, the kills bar, the gangs / convoy line
+   and the capstones. The way out keeps its own unit ("to the way out · see them off"). The fit check over the band
+   with the shorter words.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
