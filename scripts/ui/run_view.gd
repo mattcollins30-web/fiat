@@ -128,11 +128,11 @@ var _melee := false
 ## a hammer. The improvised pictures, the SMG's and the pistol's are to be redrawn down the sight (the art pass): their
 ## points move with them.
 const MUZZLE := {
-	"pistol": {"at": Vector2(65, 72), "dir": Vector2(-1, -0.05), "len": 20.0, "wide": 9.0, "s": 0.06},
+	"pistol": {"at": Vector2(124, 31), "dir": Vector2(0.05, -1), "len": 16.0, "wide": 9.0, "s": 0.06},     # 16 Oct: off the new hands (the revolver held up and away)
 	"rifle": {"at": Vector2(38, 50), "dir": Vector2(-1, -0.42), "len": 38.0, "wide": 8.0, "s": 0.07},
 	"shotgun": {"at": Vector2(27, 43), "dir": Vector2(-1, -0.36), "len": 30.0, "wide": 16.0, "s": 0.08, "barrels": 2},
-	"smg": {"at": Vector2(34, 80), "dir": Vector2(-1, 0.0), "len": 14.0, "wide": 7.0, "s": 0.04},
-	"improvised": {"at": Vector2(36, 108), "dir": Vector2(-0.5, 0.85), "len": 10.0, "wide": 10.0, "s": 0.05, "spark": true},
+	"smg": {"at": Vector2(77, 47), "dir": Vector2(-1, -0.12), "len": 10.0, "wide": 6.0, "s": 0.04},     # the suppressor's end: a short flash
+	"improvised": {"at": Vector2(115, 24), "dir": Vector2(-0.8, -0.6), "len": 10.0, "wide": 10.0, "s": 0.05, "spark": true},     # the nail gun's nose
 }
 var _kind := ""                           # the hands' kind (_hands_kind), for the flash
 var _flash: Control

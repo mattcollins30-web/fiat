@@ -5157,3 +5157,8 @@ worn at any level, never lost (the clock, a death, a lot sale, Equip if better),
 read. Smoke: `_mythic_checks` (the seven and their words, the pools, the roll's rate on fixed dice and the main dice
 untouched, none twice, any level, each rule, never lost to the clock). The review's: the Cap without keystones, the Van
 x4 (not endless), a worn mythic never swapped or lot-sold, the shelf's total without them.
+
+**The art in (16 Oct).** Matt reimported in the editor, applied docs/muzzle_after_reimport.diff (the muzzle points on
+the new pistol, SMG and improvised hands; the smoke's flash check now wants open air 6 px ahead of each muzzle - the
+old points sat on the arm and passed) and generated the seven mythic pictures (tools/pixellab_items_mythics_manifest.
+json); the full smoke passes. All seven read as their objects at their footprints.

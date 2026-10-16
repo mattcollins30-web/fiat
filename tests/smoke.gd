@@ -9066,7 +9066,12 @@ func _flash_checks(main) -> void:
 				var q := Vector2i(int(mz.x) + dx, int(mz.y) + dy)
 				if q.x >= 0 and q.y >= 0 and q.x < img.get_width() and q.y < img.get_height() and img.get_pixelv(q).a > 0.5:
 					drawn = true
-		_check(fs["up"] and Rect2(0, 0, RunView.W, RunView.H).has_point(fs["at"]) and drawn and fs["at"].is_equal_approx(v._hands.position + mz * RunView.HANDS_SCALE), "the %s's flash isn't at its muzzle in the frame: %s (drawn there: %s)" % [kind, str(fs["at"]), str(drawn)])
+		# and it fires into open air: a few pixels on along its direction, nothing drawn (16 Oct: the new hands moved every
+		# muzzle and the old points sat on the arm, in open air behind the gun, and still passed)
+		var ahead: Vector2 = mz + (RunView.MUZZLE[kind]["dir"] as Vector2).normalized() * 6.0
+		var qa := Vector2i(int(ahead.x), int(ahead.y))
+		var clear: bool = qa.x < 0 or qa.y < 0 or qa.x >= img.get_width() or qa.y >= img.get_height() or img.get_pixelv(qa).a < 0.5
+		_check(fs["up"] and Rect2(0, 0, RunView.W, RunView.H).has_point(fs["at"]) and drawn and clear and fs["at"].is_equal_approx(v._hands.position + mz * RunView.HANDS_SCALE), "the %s's flash isn't at its muzzle in the frame: %s (drawn there: %s, open air ahead: %s)" % [kind, str(fs["at"]), str(drawn), str(clear)])
 		v._flash_step(1.0)
 		_check(v.flash_state()["up"], "the %s's flash went before its first frame was drawn" % kind)
 		v._flash_step(1.0)
