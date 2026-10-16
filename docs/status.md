@@ -5221,6 +5221,15 @@ coded ones' words opened "A code in the margin, encrypted".
    - **A "rounds short" chip** on the site pick when the rig's rounds won't last the site's heads at the runner's fire.
    - **The time-out's line says it all:** the rig's contents went with it, and the lost pieces may turn up on a gang
      member later (`loose_kit`), so the loss doesn't read as final.
+10. **A site's gear level, as the runner wears it, and finds he can use (16 Oct, Matt's playtest).** The site card's
+   Finds tile and kicker (`missions.gd:235, 248`) show the site's item level - the Bank's "level 6 gear" - while
+   `Items.wear_level` asks level 14 of it (ilvl x WEAR_PER_ILVL - 1.5); the Radio's card (`radio.gd:463`) already
+   converts. Matt: "if the bank says it drops level 6 gear then my expectation is that i need to be level 6" - the
+   formula stays, the card says the level to wear it. And every find rolls at the site's item level exactly, so a runner
+   under it brings home a stash he can't wear. Agreed: **20% of gear finds roll at the highest item level the runner
+   can wear now, capped at the site's** (the Bank at level 10: level-9 gear), the card reading the range ("level 9-14
+   gear"); uniques, sets and mythics as now. A sim change that moves gear supply: smoke, reviewer, and a bot balance
+   read for the gates after; an assertion that the card's level is `wear_level` of the site's finds.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
