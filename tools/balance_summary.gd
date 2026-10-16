@@ -27,7 +27,8 @@ const REACH_GAP := 3.0          # and the reach never more than 3 h without a le
 const REACH_RATE := 1.0         # and on average a level an hour or better
 const LADDER_TO := 12.0
 const STORY_BY := 10.0          # Kev's three beats done by this hour
-const LV50 := [12.0, 24.0]      # level 50 not before, and by
+const LV50 := [12.0, 24.0]      # level 50 not before, and by - on the median element read (Matt, 16 Oct)
+const LV50_FLOOR := 8.0         # and no read before this
 const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it stands
 const SEARCHES_A_GAP := 2.0     # the Outskirts' and the Estate's sites at depth 1: searches in a gap between gangs
 const TIMEOUTS := 0.05          # runs out of time, under one in twenty
@@ -96,7 +97,7 @@ func _init() -> void:
 	full = full.filter(func(b): return str(b.get("element", "")) != "")
 
 	_pace_rows(rows, full)
-	_ladder_rows(rows, full)
+	_ladder_rows(rows, full, reads.filter(func(b): return str(b.get("element", "")) != ""))
 	# 9: no reds
 	if not full.is_empty():
 		var reds_in: Array = []
@@ -244,7 +245,7 @@ func _pace_rows(rows: Array, full: Array) -> void:
 
 
 ## Gates 6-8: the Radio's ladder, Kev's story, retirement.
-func _ladder_rows(rows: Array, full: Array) -> void:
+func _ladder_rows(rows: Array, full: Array, el_reads: Array) -> void:
 	if full.is_empty():
 		return
 	var off: Array = []
@@ -257,32 +258,37 @@ func _ladder_rows(rows: Array, full: Array) -> void:
 		if float(bd.get("radio_at", -1.0)) >= LADDER_TO:
 			off.append("%s: the Radio opened at %s, after hour %.0f" % [bd["build"], _hours(float(bd["radio_at"])), LADDER_TO])
 			continue
-		if sg < 0.0 or rg < 0.0 or sg > SIGNAL_GAP + 0.001 or rg > REACH_GAP + 0.001 or rr < REACH_RATE - 0.001:
-			off.append("%s: signals %s, reach %s longest, %.1f an hour" % [bd["build"], _mins(sg), _mins(rg), rr])
-	rows.append(["6. The Radio's ladder", "from the Radio's opening to hour %.0f, a signal at least every %d min (the longest stretch); the reach %.0f level an hour or better on average, and never %.0f h without one" % [LADDER_TO, int(SIGNAL_GAP * 60.0), REACH_RATE, REACH_GAP],
-		("off: " + "; ".join(off)) if not off.is_empty() else "every build (signals/reach longest/reach an hour): " + ", ".join(all_t), off.is_empty()])
+		if sg < 0.0 or sg > SIGNAL_GAP + 0.001 or rr < REACH_RATE - 0.001:
+			off.append("%s: signals %s, %.1f an hour" % [bd["build"], _mins(sg), rr])
+	# the reach's longest stretch on the median read of them all (Matt, 16 Oct: the spread is read to read, not build to build)
+	var stretches: Array = el_reads.map(func(g): return float(g.get("reach_gap_h", -1.0))).map(func(v): return INF if v < 0.0 else v)
+	var med_rg: float = _median(stretches) if not stretches.is_empty() else INF
+	if med_rg > REACH_GAP + 0.001:
+		off.append("the reach's longest stretch on the median read %s (over %.0f h)" % [_mins(-1.0 if is_inf(med_rg) else med_rg), REACH_GAP])
+	rows.append(["6. The Radio's ladder", "from the Radio's opening to hour %.0f, every build: a signal at least every %d min (the longest stretch) and the reach %.0f level an hour or better on average; the median read never %.0f h without a level" % [LADDER_TO, int(SIGNAL_GAP * 60.0), REACH_RATE, REACH_GAP],
+		("off: " + "; ".join(off)) if not off.is_empty() else "every build (signals/reach longest/reach an hour): %s; the median read's longest %s" % [", ".join(all_t), _mins(med_rg)], off.is_empty()])
 	var late: Array = []
 	for bd in full:
 		var h := float(bd.get("story_at", -1.0))
 		if h < 0.0 or h > STORY_BY:
 			late.append("%s %s" % [bd["build"], _hours(h)])
 	rows.append(["7. Kev's story", "the three beats done by hour %.0f" % STORY_BY, ("late: " + ", ".join(late)) if not late.is_empty() else "every build", late.is_empty()])
-	var off50: Array = []
-	var short: Array = []
-	for bd in full:
-		var h := float(bd.get("lv50_at", -1.0))
-		var ran := float(bd.get("elapsed_h", bd["hours"]))
-		if h < 0.0 and ran < LV50[1]:
-			short.append(bd["build"])
-		elif h < LV50[0] or h > LV50[1]:
-			off50.append("%s %s" % [bd["build"], _hours(h)])
-	var ok50: Variant = null                 # unread in a short read with nothing off
-	if short.is_empty() or not off50.is_empty():
-		ok50 = off50.is_empty()
-	var t50: String = ("off: " + ", ".join(off50)) if not off50.is_empty() else "every build in the band"
+	# level 50 by the median of every element read, a never counted later than any, and no read before LV50_FLOOR
+	# (Matt, 16 Oct: the same build lands either side of the window read to read)
+	var short: Array = el_reads.filter(func(g): return float(g.get("lv50_at", -1.0)) < 0.0 and float(g.get("elapsed_h", g["hours"])) < LV50[1])
+	var at50: Array = el_reads.map(func(g): return float(g.get("lv50_at", -1.0))).map(func(v): return INF if v < 0.0 else v)
+	var med50: float = _median(at50) if not at50.is_empty() else INF
+	var early: Array = el_reads.filter(func(g): return float(g.get("lv50_at", -1.0)) >= 0.0 and float(g["lv50_at"]) < LV50_FLOOR).map(func(g): return "%s %s" % [g["build"], _hours(float(g["lv50_at"]))])
+	var nevers: int = at50.filter(func(v): return is_inf(v)).size()
+	var ok50: Variant = null                 # unread when the reads were short
+	if short.is_empty():
+		ok50 = med50 >= LV50[0] and med50 <= LV50[1] and early.is_empty()
+	var t50: String = "the median read %s (%d of %d reads never)" % [_hours(-1.0 if is_inf(med50) else med50), nevers, at50.size()]
+	if not early.is_empty():
+		t50 += "; before %.0f h: %s" % [LV50_FLOOR, ", ".join(early)]
 	if not short.is_empty():
-		t50 += " (not reached in a read shorter than %.0f h: %s)" % [LV50[1], ", ".join(short)]
-	rows.append(["8. Retirement", "level 50 not before hour %.0f and by hour %.0f" % [LV50[0], LV50[1]], t50, ok50])
+		t50 += " (reads shorter than %.0f h: not judged)" % LV50[1]
+	rows.append(["8. Retirement", "level 50 on the median element read not before hour %.0f and by hour %.0f, and no read before hour %.0f" % [LV50[0], LV50[1], LV50_FLOOR], t50, ok50])
 
 
 ## Gates 10-11: the gang clock and staying.

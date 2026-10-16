@@ -5128,3 +5128,9 @@ Scrappers, 24-25) and the cash sink (one read) red on single reads against D28's
 24 h, and the same build lands either side of the window (a fire Drifter 8.2 h and never; a frost Paramedic 17.9 h
 and never): the spread is read to read, not build to build, so no one XP setting holds both reads of every build in
 12-24 h. Stopped for Matt's call on gates 6 and 8 (16 Oct, morning).
+
+**Gates 6 and 8 by the median (16 Oct, Matt: "judge by the median").** Gate 8: level 50 on the median element read
+(a never counts later than any) between hour 12 and 24, and no read before hour 8. Gate 6: per build the signals (20
+min) and the reach's pace (a level an hour); the reach's 3 h longest stretch on the median read. D29's reads under
+them: retirement green (the median read 16.9 h, 7 of 20 never); gate 6 red on one build's signals (37 min, the move at
+hour 8); the band, two Scrappers' levels and one cash read red as single reads (green on D28). The confirmation next.

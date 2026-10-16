@@ -21,9 +21,9 @@ not the game (10 Oct: real play calibrates the bot's timings).
 | 3 | **The builds' band** | the slowest element build's Quartermaster within 2x the fastest | classes differ by design, not by luck |
 | 4 | **Levels against the campaign** | level 18-22 at the Quartermaster (the core's capstone 18, keystones and the second past at 20) | gating by level (B5, B6) lands where the campaign ends |
 | 5 | **The capstone** | level 30 within 2 h of the Quartermaster, every element build | the first goal past the campaign |
-| 6 | **The Radio's ladder** | from the Radio's opening to hour 12: a signal made at least every 20 min (the longest stretch); the reach a level an hour or better on average, and never 3 h without one (Matt, 16 Oct: was +1 every 45 min) | the endgame moves; papers never the only wall (the B7 note); the reach is the kit's power against the curve, so it comes in steps, not a metronome |
+| 6 | **The Radio's ladder** | from the Radio's opening to hour 12, every build: a signal made at least every 20 min (the longest stretch) and the reach a level an hour or better on average; the median read never 3 h without a level (Matt, 16 Oct: was +1 every 45 min, every read) | the endgame moves; papers never the only wall (the B7 note); the reach is the kit's power against the curve, so it comes in steps, not a metronome |
 | 7 | **Kev's story** | the three beats done by hour 10, every element build | the ending is reachable (was the lorry by 16) |
-| 8 | **Retirement** | level 50 not before hour 12, and by hour 24 on the element builds | 50 is a long goal, not a wall |
+| 8 | **Retirement** | level 50 between hour 12 and 24 on the median element read (a never counts later than any), and no read before hour 8 (Matt, 16 Oct: the same build lands either side read to read) | 50 is a long goal, not a wall |
 | 9 | **No reds** | every open site at depth 1 at 60% or better in the kit as it stands | kept |
 | 10 | **The gang clock** | on the Outskirts and the Estate at depth 1, at least two searches in a gap between gangs; under 5% of runs out of time | the search against the gangs (parked 14 Oct); the clock kept |
 | 11 | **Staying costs** | from gang 3 on, a run that stays loses HP fast enough that the bot leaves by gang 5 at least half the time | harder gangs (B9) bite |
