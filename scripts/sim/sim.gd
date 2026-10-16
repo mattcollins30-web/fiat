@@ -4705,7 +4705,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	var won: bool = bool(m["cleared"]) and not died and not m.get("ghost_pending", false) and not bool(m.get("timed_out", false)) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
 	if won and d >= reach:
-		reach = d + 1
+		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
 		log_event(Words.SIGNAL_REACH % [d, reach])
 	elif not won:

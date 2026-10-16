@@ -5071,3 +5071,13 @@ the two Scrappers; the reach's longest stretch 188-387 min (signals every 8-16 m
 XP_TAPER_END 3.2 to 3.0. The art: the new hands (pistol, SMG, improvised) aren't in the game yet - Godot's import cache
 (.godot/imported) still holds the 13 Oct pictures until the editor opens; the muzzle points for the new art, with a
 smoke check that each fires into open air, wait in docs/muzzle_after_reimport.diff (`git apply`, after a reimport).
+
+**D24's two-read (summary_d24x2.md, 30 reads, 4 reds):** Kev's story green on all ten; the band green; the
+Quartermaster 2.4 h (one tenth over); level at the Quartermaster off on two (23, 25); level 50 never on one, 8.4-11.9 h
+on three; the reach's longest stretch 140-384 min. Read off the logs: the reach climbs 1.6-3.9 levels an hour on
+average from the Radio to hour 12 (reach 26-44 by then) - three to five times the gate's pace - but in a burst and
+then a wall: a roll over the reach set it to the roll's level plus one, two and three at a time.
+
+**D25 (16 Oct).** A signal won at or past the reach raises it one level, not to the signal's level plus one. The D23
+review: the element bot reads its element gun's damage on a try-on (`fit_value`) rather than swapping and swapping back
+every tidy (two chronicle lines and the caches cleared a tidy).

@@ -7943,7 +7943,7 @@ func _signal_checks(main) -> void:
 	sim.extract_now()
 	var sl: int = sim.lv_at(si, sd)
 	_check(int(sim.best_depth[si]) >= sd and sim.deepest_cleared_level() >= sl, "a signal's clear kept depth %d on its site (it ran at %d) - the cleared level %d under its %d" % [int(sim.best_depth[si]), sd, sim.deepest_cleared_level(), sl])
-	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sl < r_won or sim.reach == sl + 1) and sim.atlas_points >= pts, "a signal won: reach %d after level %d (depth %d), site at %d, points %d from %d" % [sim.reach, sl, sd, int(sim.depth[si]), sim.atlas_points, pts])
+	_check(not sim.on_mission() and int(sim.depth[si]) == 1 and sim._sig.is_empty() and (sl < r_won or sim.reach == r_won + 1) and sim.atlas_points >= pts, "a signal won: reach %d after level %d (depth %d), site at %d, points %d from %d" % [sim.reach, sl, sd, int(sim.depth[si]), sim.atlas_points, pts])
 	# run one and lose it: the reach stays, the signal's gone
 	var r0: int = sim.reach
 	_check(sim.deploy_signal(0), "the second signal didn't set off")
