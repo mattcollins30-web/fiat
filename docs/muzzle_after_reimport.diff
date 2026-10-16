@@ -1,0 +1,33 @@
+--- a/scripts/ui/run_view.gd	2026-10-16 04:57:02.241256303 +0100
++++ b/scripts/ui/run_view.gd	2026-10-16 04:57:02.255950158 +0100
+@@ -128,11 +128,11 @@
+ ## a hammer. The improvised pictures, the SMG's and the pistol's are to be redrawn down the sight (the art pass): their
+ ## points move with them.
+ const MUZZLE := {
+-	"pistol": {"at": Vector2(65, 72), "dir": Vector2(-1, -0.05), "len": 20.0, "wide": 9.0, "s": 0.06},
++	"pistol": {"at": Vector2(124, 31), "dir": Vector2(0.05, -1), "len": 16.0, "wide": 9.0, "s": 0.06},     # 16 Oct: off the new hands (the revolver held up and away)
+ 	"rifle": {"at": Vector2(38, 50), "dir": Vector2(-1, -0.42), "len": 38.0, "wide": 8.0, "s": 0.07},
+ 	"shotgun": {"at": Vector2(27, 43), "dir": Vector2(-1, -0.36), "len": 30.0, "wide": 16.0, "s": 0.08, "barrels": 2},
+-	"smg": {"at": Vector2(34, 80), "dir": Vector2(-1, 0.0), "len": 14.0, "wide": 7.0, "s": 0.04},
+-	"improvised": {"at": Vector2(36, 108), "dir": Vector2(-0.5, 0.85), "len": 10.0, "wide": 10.0, "s": 0.05, "spark": true},
++	"smg": {"at": Vector2(77, 47), "dir": Vector2(-1, -0.12), "len": 10.0, "wide": 6.0, "s": 0.04},     # the suppressor's end: a short flash
++	"improvised": {"at": Vector2(115, 24), "dir": Vector2(-0.8, -0.6), "len": 10.0, "wide": 10.0, "s": 0.05, "spark": true},     # the nail gun's nose
+ }
+ var _kind := ""                           # the hands' kind (_hands_kind), for the flash
+ var _flash: Control
+--- a/tests/smoke.gd	2026-10-16 04:57:02.243186109 +0100
++++ b/tests/smoke.gd	2026-10-16 04:57:02.257886938 +0100
+@@ -8962,7 +8962,12 @@
+ 				var q := Vector2i(int(mz.x) + dx, int(mz.y) + dy)
+ 				if q.x >= 0 and q.y >= 0 and q.x < img.get_width() and q.y < img.get_height() and img.get_pixelv(q).a > 0.5:
+ 					drawn = true
+-		_check(fs["up"] and Rect2(0, 0, RunView.W, RunView.H).has_point(fs["at"]) and drawn and fs["at"].is_equal_approx(v._hands.position + mz * RunView.HANDS_SCALE), "the %s's flash isn't at its muzzle in the frame: %s (drawn there: %s)" % [kind, str(fs["at"]), str(drawn)])
++		# and it fires into open air: a few pixels on along its direction, nothing drawn (16 Oct: the new hands moved every
++		# muzzle and the old points sat on the arm, in open air behind the gun, and still passed)
++		var ahead: Vector2 = mz + (RunView.MUZZLE[kind]["dir"] as Vector2).normalized() * 6.0
++		var qa := Vector2i(int(ahead.x), int(ahead.y))
++		var clear: bool = qa.x < 0 or qa.y < 0 or qa.x >= img.get_width() or qa.y >= img.get_height() or img.get_pixelv(qa).a < 0.5
++		_check(fs["up"] and Rect2(0, 0, RunView.W, RunView.H).has_point(fs["at"]) and drawn and clear and fs["at"].is_equal_approx(v._hands.position + mz * RunView.HANDS_SCALE), "the %s's flash isn't at its muzzle in the frame: %s (drawn there: %s, open air ahead: %s)" % [kind, str(fs["at"]), str(drawn), str(clear)])
+ 		v._flash_step(1.0)
+ 		_check(v.flash_state()["up"], "the %s's flash went before its first frame was drawn" % kind)
+ 		v._flash_step(1.0)

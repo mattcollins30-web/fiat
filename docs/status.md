@@ -5060,3 +5060,14 @@ two, never on four; the reach's longest stretch 116-411 min; one read's cash ove
 
 **D23 (16 Oct).** The bot keeps its element's gun only while it's within ELEM_DPS_FLOOR 0.8 of the damage it had: a
 swap under that goes back. The two-read confirmation read next.
+
+**D23's two-read (summary_d23x2.md, 30 reads, 4 reds; 21 minutes):** the Bank 1.4 h, the Quartermaster 2.0 h, the
+band 1.8-3.1 h - green; the plain floor, the cash sink, scrap, loot, the gang clock, no reds - green. Red: level at the
+Quartermaster on two (23, 26); Kev's story never on two (a beat lost - one cut and run before its head came out - and
+its papers to find again); level 50 never on four (one read of each in the window, the other at 44-48), 10.5-11.8 h on
+the two Scrappers; the reach's longest stretch 188-387 min (signals every 8-16 min on eight of ten).
+
+**D24 (16 Oct).** The bot never cuts and runs on a head's run (`_clock_short` skips a mission with a boss).
+XP_TAPER_END 3.2 to 3.0. The art: the new hands (pistol, SMG, improvised) aren't in the game yet - Godot's import cache
+(.godot/imported) still holds the 13 Oct pictures until the editor opens; the muzzle points for the new art, with a
+smoke check that each fires into open air, wait in docs/muzzle_after_reimport.diff (`git apply`, after a reimport).

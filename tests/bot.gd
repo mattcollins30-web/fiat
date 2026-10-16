@@ -140,8 +140,8 @@ func should_leave(sim) -> bool:
 ## there's still time to fight the door's gang - out, as a player does, rather than lose two pieces of kit to it.
 func _clock_short(sim) -> bool:
 	var m: Dictionary = sim.mission
-	if m.get("way_out", false) or m.get("dry", false) or int(m["remaining"]) <= 0 or not m.has("clock"):
-		return false
+	if m.get("way_out", false) or m.get("dry", false) or int(m["remaining"]) <= 0 or not m.has("clock") or m.has("boss"):
+		return false                      # a head's run is for the head (D24: a Kev's beat cut and run before its head came out lost its papers)
 	var used: float = float(m.get("clock_used", 0.0))
 	if used < 90.0 or int(m["kills"]) < 4:
 		return false                      # the first kills come slow: read the rate once there's one to read
