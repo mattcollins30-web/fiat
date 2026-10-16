@@ -5273,6 +5273,14 @@ coded ones' words opened "A code in the margin, encrypted".
    (`Sim.paper_lines`, "Its three together make the beat's signal") is fit to one line and clips; it wraps, with an
    assertion that no paper's lines are cut. And a story paper's tail says "no code: a line of the before" - true of
    the code, wrong of the paper: it says Kev's story's beat instead.
+19. **Kev's papers: a gamble for papers at the Radio (16 Oct, Matt's playtest).** Five papers, a signal made of three,
+   and it won a story piece: two plain and one of Kev's left, and neither kind makes a signal (`decrypt_block`: any
+   three plain, or a beat's three together), so the papers stall till a plain one drops. Agreed: "Ask Kev" at the
+   Radio buys a plain paper for **notes** (the Radio's own money; about two runs' notes on the deepest site, as
+   `GAMBLE_RUNS` prices the Fence's in tins), rolled at `gamble_level()` with a find's rarity (a rare one rolls a
+   signal deeper); **never a story piece** - those stay earned on the signals. And the Radio's papers show the two
+   kinds side by side, each with its count of the three and where the next comes from. Mockup on the UI pass canvas.
+   A number-changer: in with 9, 10 and 13 before the balance read; the price is the read's to set.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
