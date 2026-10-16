@@ -5262,6 +5262,16 @@ coded ones' words opened "A code in the margin, encrypted".
    and shown nowhere, so a DoT node reads as nothing. To design together (mockups): the headline damage a second
    includes the dots at their steady rate; the Stats sheet's chain splits it (hits, then burn / poison / bleed); and a
    tree node says what it would add ("+N a second, +M%"), worked by the try-on as an item's compare is.
+   **Done (16 Oct):** `sim.damage_split()` - the hits by type (`type_dps`) and each dot's settled rate, rate x ratio x
+   grow (worked against `_dot_add` / `_dot_tick` in the smoke: a pool fed for 200 s deals the split's burn). The total
+   is the top bar's figure (the split in its tip: the slot's fixed width has no room for the mockup's "N of it burns"),
+   the Armoury strip's, the run's "Your fire" x pace, and the Stats sheet's headline with "321 from hits · 31 burning"
+   under the chain (its last row now "= base", the hits before the types' increases; first shot moved to the status).
+   A node's chip reads "For you: +N a second (+M%)" or, trained, "Adds +N", by `node_damage_gain` (the tree with it
+   and without; none when it adds nothing). **Found building it:** a fire or bleed pool (one stack) already sat at
+   its cap, so `dot_pct` - Fumes, Nicked, the affix - only filled it sooner: about +0 in a long fight. Matt: "make the
+   change but don't balance after" - the cap grows with `dot_grow()` too (in `_dot_add` and `_dot_fill`), so +20% is
+   +20% burn. The dot builds' numbers move: balanced after his next playtest, with its new numbers.
 15. **The run's band, simpler (16 Oct, Matt: "too much info here now ... keep that panel simple").** `run.gd`'s band
    (around line 262): the kicker "Depth 1 · The City" goes; the right column's "1:38 in · clock 7:12" goes (the
    clock's headline, time left, is the one clock kept); the unit loses "ticks while they're on you" / "stopped while

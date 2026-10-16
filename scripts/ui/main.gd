@@ -1025,7 +1025,11 @@ func refresh() -> void:
 		_top_labels[k].text = Fmt.num(int(sim.salvage.get(k, 0)))
 	_top_labels["level"].text = ("%d +%d" % [sim.level(), sim.paragon()]) if sim.paragon() > 0 else ("%d" % sim.level())
 	_top_labels["hp"].text = ("%d / %d +%d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(sim.guard()))]) if sim.guard() >= 0.5 else "%d / %d" % [sim.hp_shown(), sim.max_hp_shown()]     # Guard (12 Oct)
-	_top_labels["dps"].text = "%.0f dmg/s" % sim.dps()
+	var split: Dictionary = sim.damage_split()
+	_top_labels["dps"].text = "%.0f dmg/s" % float(split["total"])     # one figure, the hits and the dots' burn together (16 Oct, item 14)
+	for c in [_top_glyphs["dps"], _top_labels["dps"]]:
+		c.tooltip_text = sim.split_words(split)
+		c.mouse_filter = Control.MOUSE_FILTER_PASS
 	_top_labels["xp"].text = _xp_words()
 	_top_lines["hp"][1].size.x = _top_lines["hp"][0].size.x * clampf(sim.hp / maxf(sim.max_hp(), 1.0), 0.0, 1.0)
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()

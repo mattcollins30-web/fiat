@@ -536,6 +536,47 @@ func type_dps() -> Dictionary:
 	return out
 
 
+## Damage a second as one figure (16 Oct, item 14): the hits by type, and each dot's steady burn on top. A pool fed
+## landed × ratio × grow a second and draining over its seconds deals that a second, under its cap (the gun's rate ×
+## ratio × seconds × stacks × depth × grow) - so a dot's figure is rate × ratio × grow × min(1, stacks × depth), as
+## _dot_add and _dot_tick work it; Won't stop's bleed never drains, so it sits at the cap. `res`, when given, is their
+## resist by type (a site's), cut from each type as damage_rate does. {hits, dots: {type: dps}, dot, total}.
+func damage_split(res := {}) -> Dictionary:
+	var per := type_dps()
+	var hits := 0.0
+	var dots := {}
+	var dot := 0.0
+	var grow := dot_grow(true)
+	for ty in Data.TYPES:
+		var r := float(res.get(ty, 0.0))
+		if ty == "shock" and has_rule("sparkys_gloves"):
+			r = 0.0
+		var rate := float(per[ty]) * (1.0 - r)
+		hits += rate
+		if not Data.DOTS.has(ty) or rate <= 0.0:
+			continue
+		var cap := float(dot_stacks(ty, true)) * dot_depth(true) * (1.5 if (ty == "bleed" and has_node("cap_bleed_out")) else 1.0)
+		var f := cap * maxf(grow, 1.0) if (ty == "bleed" and has_node("bleed_forever")) else minf(grow, cap * maxf(grow, 1.0))     # Won't stop: the pool never drains, so it sits at its cap
+		dots[ty] = rate * float(Data.DOTS[ty]["ratio"]) * f
+		dot += float(dots[ty])
+	return {"hits": hits, "dots": dots, "dot": dot, "total": hits + dot}
+
+
+## damage_split in words, for the top bar's tip and the Stats sheet: "321 from hits · 31 burning", or short "Hits 321 · burn 31".
+func split_words(split: Dictionary, short := false) -> String:
+	var parts := [("Hits %.0f" if short else "%.0f from hits") % float(split["hits"])]
+	var dots: Dictionary = split["dots"]
+	for ty in ["fire", "poison", "bleed"]:
+		if float(dots.get(ty, 0.0)) >= 0.5:
+			if short:
+				parts.append("%s %.0f" % [{"fire": "burn", "poison": "poison", "bleed": "bleed"}[ty], float(dots[ty])])
+			else:
+				parts.append("%.0f %s" % [float(dots[ty]), {"fire": "burning", "poison": "poison", "bleed": "bleeding"}[ty]])
+	if parts.size() == 1:
+		return "All hits: no burn, poison or bleed" if short else "All of it hits: no burn, poison or bleed"
+	return " · ".join(parts)
+
+
 ## What lands on a target a second: each type cut by their resist to it; shocked, more of everything.
 func damage_rate(t: Dictionary, shocked := false) -> float:
 	var res: Dictionary = t.get("res", {})
@@ -607,8 +648,15 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 		return
 	var d: Dictionary = Data.DOTS[ty]
 	var theirs: bool = mission == null or not is_same(dots, mission.get("my_dots"))     # the same dictionary, not equal contents: two empty pools read alike (12 Oct)
-	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs)
-	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * (1.0 + (_affix_sum("dot_pct") + (tree_sum("dot_pct") if theirs else 0.0)) / 100.0))     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
+	var grow: float = dot_grow(theirs)
+	# the cap grows with it (16 Oct, Matt): a one-stack burn sat at its cap, so +% dot damage only filled it sooner
+	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs) * maxf(grow, 1.0)
+	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * grow)     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
+
+
+## A dot's growth: the kit's dot_pct, and the trees' on them only.
+func dot_grow(theirs := true) -> float:
+	return 1.0 + (_affix_sum("dot_pct") + (tree_sum("dot_pct") if theirs else 0.0)) / 100.0
 
 
 ## What the dots deal this tick, draining their pools.
@@ -2490,6 +2538,30 @@ func train_block(id: String, ignore_points := false) -> String:
 ## a closed joint there; a class's half is that class's alone.
 func can_train(id: String) -> bool:
 	return train_block(id) == ""
+
+
+## What a node adds to the one damage figure (16 Oct, item 14): damage_split's total with it and without it - taken
+## for one not yet trained, taken off for one that is - with the guns fed as they are, so it reads against the top
+## bar's figure. The memos read the tree, so they're set aside while it's changed. [added a second, as a share of the
+## figure without it]; [0, 0] for a node with no damage in it.
+func node_damage_gain(id: String) -> Array:
+	var kept_memo := _dry_memo
+	_dry_memo = {}
+	var had: bool = tree.has(id)
+	var now: float = float(damage_split()["total"])
+	var keep: Array = tree.duplicate()             # put back as it was: the order is the order taken (the review)
+	if had:
+		tree.erase(id)
+	else:
+		tree.append(id)
+	_dry_memo = {}
+	var other: float = float(damage_split()["total"])
+	tree = keep
+	_dry_memo = kept_memo
+	var with_it: float = now if had else other
+	var without: float = other if had else now
+	var add: float = with_it - without
+	return [add, add / without if without > 0.0 else 0.0]
 
 
 func train_node(id: String) -> bool:
@@ -5822,7 +5894,7 @@ func _dot_fill(m: Dictionary, ty: String) -> void:
 		m["dots"] = {}
 	var t: Dictionary = m["t"]
 	var rate: float = float(type_dps()[ty]) * (1.0 - float(t.get("res", {}).get(ty, 0.0))) * pace() * float(t["pace"])
-	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_fill_stacks(ty) * dot_depth(true)
+	var cap: float = rate * float(Data.DOTS[ty]["ratio"]) * dot_seconds(ty, true) * dot_fill_stacks(ty) * dot_depth(true) * maxf(dot_grow(true), 1.0)
 	m["dots"][ty] = maxf(float(m["dots"].get(ty, 0.0)), cap)
 
 

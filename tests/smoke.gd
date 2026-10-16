@@ -525,6 +525,11 @@ func _init() -> void:
 	print("tree: %d of %d points trained, %s" % [sim.tree.size(), sim.training_points, str(sim.tree.slice(0, 3))])
 	main._barracks._pick("The Pitch/0")
 	_check_fit(main, "Barracks (pick)")
+	# what a node adds to the one figure (item 14): a chip with "+N a second" when there's any, none when there isn't
+	var pitch_gain: Array = sim.node_damage_gain("The Pitch/0")
+	var node_chips: Array = _chip_texts(main._barracks._chips)
+	var says_gain: bool = node_chips.any(func(x): return str(x).contains("+%.0f" % float(pitch_gain[0])) and (str(x).contains("a second") or str(x).contains("/s")))
+	_check(says_gain == (float(pitch_gain[0]) >= 0.5), "The Pitch/0 adds %.1f a second; its chips read %s" % [float(pitch_gain[0]), str(node_chips)])
 	# the points read "N of M points free" top right, the panel says whose the node is, and no node's words are the old "for every runner the Yard sends"
 	_check(main._barracks._points.text.begins_with("%d of %d" % [sim.points_free(), sim.training_points]), "the points line reads '%s'" % main._barracks._points.text)
 	_check(not main._barracks._past.visible, "a node's strip still carries the runners before")
@@ -1893,9 +1898,40 @@ func _tree_effect_checks(sim) -> void:
 	sim._dot_add(mine, "fire", 100.0, 1.0e9)
 	sim.mission = kept_mission
 	_check(with_node > 0.0 and is_equal_approx(with_node, float(mine.get("fire", 0.0))), "Fumes grew a burn on the runner: %.2f against %.2f" % [with_node, float(mine.get("fire", 0.0))])
+	# the one figure (16 Oct, item 14): damage_split's burn is what the pool deals a second once it settles, worked
+	# against _dot_add and _dot_tick themselves; and a node's "+N a second" is the figure with it less without it
+	var conv := -1
+	for k in range(petrol["nodes"].size()):
+		if str(petrol["nodes"][k].get("effect", "")) == "conv_fire_pct" and conv < 0:
+			conv = k
+	sim.tree = ["Petrol/%d" % conv, "Petrol/%d" % fumes]
+	sim.mission = null
+	var split: Dictionary = sim.damage_split()
+	var fire_rate: float = float(sim.type_dps()["fire"])
+	var pool := {}
+	var dealt := 0.0
+	for step in range(4000):
+		sim._dot_add(pool, "fire", fire_rate * 0.05, fire_rate)
+		dealt = sim._dot_tick(pool, 0.05, {})
+	var settled: float = dealt / 0.05
+	_check(conv >= 0 and fire_rate > 0.0 and absf(settled - float(split["dots"].get("fire", 0.0))) <= 0.02 * settled, "the split's burn %.1f isn't what the pool settles to, %.1f" % [float(split["dots"].get("fire", 0.0)), settled])
+	_check(is_equal_approx(float(split["total"]), float(split["hits"]) + float(split["dot"])) and float(split["hits"]) > 0.0, "the split doesn't add up: %s" % str(split))
+	var tree_before: Array = sim.tree.duplicate()
+	var gain: Array = sim.node_damage_gain("Petrol/%d" % fumes)
+	sim.tree = ["Petrol/%d" % conv]
+	var without: float = float(sim.damage_split()["total"])
+	sim.tree = tree_before.duplicate()
+	_check(sim.tree == tree_before and is_equal_approx(float(gain[0]), float(split["total"]) - without) and float(gain[0]) > 0.0, "Fumes's +N a second isn't the figure with it less without: %s against %.1f" % [str(gain), float(split["total"]) - without])
+	var gain2: Array = sim.node_damage_gain("Petrol/%d" % conv)     # untrained the other way: taken on, then put back
+	_check(sim.tree == tree_before, "trying a trained node off reordered the tree: %s, was %s" % [str(sim.tree), str(tree_before)])
+	sim.tree = ["Petrol/%d" % fumes]
+	var gain3: Array = sim.node_damage_gain("Petrol/%d" % conv)
+	_check(sim.tree == ["Petrol/%d" % fumes] and float(gain2[0]) > 0.0 and is_equal_approx(float(gain2[0]), float(gain3[0])), "a node's gain reads differently trained (%.1f) and not (%.1f)" % [float(gain2[0]), float(gain3[0])])
+	_check(sim.split_words(split).contains("burning") and sim.split_words(split, true).begins_with("Hits "), "the split's words: %s" % sim.split_words(split))
+	sim.mission = kept_mission
 	sim.tree = keep_tree
 	sim.cls = keep_cls
-	print("tree effects all read; Fumes grows the burn on them, not on you ok")
+	print("tree effects all read; Fumes grows the burn on them, not on you; the split's burn settles as the pool does ok")
 
 
 ## The trees' rules (9 Oct, docs/design/trees.md §8): the lanes match the table; every joint's two halves in
@@ -2159,7 +2195,7 @@ func _joint_payoff_checks(main) -> void:
 	sim._joints_on_hit(m, m["t"], 10.0, "rifle", 0.1)
 	var bag_full: float = float(m["dots"]["poison"])
 	var bag_rate: float = float(sim.type_dps()["poison"]) * (1.0 - float(m["t"].get("res", {}).get("poison", 0.0))) * sim.pace() * float(m["t"]["pace"])
-	var bag_cap: float = bag_rate * float(Data.DOTS["poison"]["ratio"]) * sim.dot_seconds("poison") * sim.dot_fill_stacks("poison") * sim.dot_depth()
+	var bag_cap: float = bag_rate * float(Data.DOTS["poison"]["ratio"]) * sim.dot_seconds("poison") * sim.dot_fill_stacks("poison") * sim.dot_depth() * maxf(sim.dot_grow(), 1.0)     # the cap grows with dot_pct (16 Oct)
 	_check(m.has("full_dose") and bag_cap > 1.0 and is_equal_approx(bag_full, bag_cap), "the full dose with the Bag is not the tree's stacks: %.0f against %.0f" % [bag_full, bag_cap])
 	sim.equipped["Backpack"] = bag_was
 	# the Paramedic's poison: a med is a full stack on them; the Paramedic's frost: chilled, they do 30% less and meds heal a fifth more
@@ -11356,7 +11392,10 @@ func _yard_checks(main) -> void:
 	var fire_share: int = int(round(float(sim.conversion().get("fire", 0.0)) * 100.0))
 	var attack_chips: Array = _chip_texts(attack["chips"])
 	_check(fire_share >= 20 and attack_chips.has("Fire %d%%" % fire_share) and attack["segs"][Data.TYPES.find("fire")].visible, "with %d%% as fire the Attack chips read %s" % [fire_share, str(attack_chips)])
-	_check(attack["headline"].text == "%.0f" % sim.dps() and attack["unit"].text == "dmg/s", "the Attack headline is '%s', not the damage a second" % attack["headline"].text)
+	var split: Dictionary = sim.damage_split()
+	_check(attack["headline"].text == "%.0f" % float(split["total"]) and attack["unit"].text == "dmg/s", "the Attack headline is '%s', not the damage a second (the hits and the dots)" % attack["headline"].text)
+	_check(float(split["dot"]) > 0.0 and attack["note"].text in [sim.split_words(split), sim.split_words(split, true)] and attack["note"].text.to_lower().contains("burn"), "with a torch the Attack card's split reads '%s'" % attack["note"].text)
+	_check(main._top_labels["dps"].text == "%.0f dmg/s" % float(split["total"]) and main._top_labels["dps"].tooltip_text == sim.split_words(split), "the top bar's damage reads '%s' (tip '%s'), not the one figure" % [main._top_labels["dps"].text, main._top_labels["dps"].tooltip_text])
 	var total_row: Dictionary = attack["chain"][4]
 	_check(total_row["value"].text == "%.0f/s" % sim.dps(), "the chain's total is off: %s" % total_row["value"].text)
 	for r in attack["chain"]:

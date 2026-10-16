@@ -1275,6 +1275,9 @@ func _show_panel() -> void:
 		var items := [{"forms": [_chip_words(nd)], "colour": _effect_tone(nd)}]
 		if nd.has("type"):
 			items.append({"forms": [type_words(nd)], "colour": Pal.TEXT_2})
+		var gain: Array = sim.node_damage_gain(selected)     # what it adds to the one figure, tried on (16 Oct, item 14)
+		if float(gain[0]) >= 0.5:
+			items.append({"forms": ["%s +%.0f a second (+%.0f%%)" % ["Adds" if is_taken else "For you:", float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s (+%.0f%%)" % [float(gain[0]), float(gain[1]) * 100.0], "+%.0f/s" % float(gain[0])], "colour": Pal.GOOD})
 		_chips.visible = true
 		_chips.show_chips(items)
 		_chips.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14

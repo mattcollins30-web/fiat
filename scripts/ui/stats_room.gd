@@ -244,10 +244,11 @@ func show_state(s) -> void:
 	sim = s
 	var lv: int = sim.level()
 	var dps: float = sim.dps()
-	band.set_words("Stats · %s, level %d" % [sim.cls if sim.cls != "" else "no past yet", lv], "", "%.0f" % dps, ["dmg/s"])
+	var split: Dictionary = sim.damage_split()     # the one figure: the hits and the dots together (16 Oct, item 14)
+	band.set_words("Stats · %s, level %d" % [sim.cls if sim.cls != "" else "no past yet", lv], "", "%.0f" % float(split["total"]), ["dmg/s"])
 	People.show(_band_face, sim.cls)
 	_show_runner(lv)
-	_show_attack(lv, dps)
+	_show_attack(lv, dps, split)
 	_show_defence()
 	_show_finds()
 	_show_record()
@@ -315,9 +316,9 @@ func _show_runner(lv: int) -> void:
 	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
 
 
-func _show_attack(_lv: int, dps: float) -> void:
+func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	var c: Dictionary = cards["attack"]
-	_headline(c, "%.0f" % dps, "dmg/s", Pal.ACCENT)
+	_headline(c, "%.0f" % float(split["total"]), "dmg/s", Pal.ACCENT)
 	var cd: Dictionary = sim.class_data()
 	# how it's built (the review): dps()'s own parts, in its order - the guns (their grades and the secondary's share),
 	# the level, the affixes and the tree on top of it, the attack, the past, then the trait and growth to the total
@@ -334,7 +335,7 @@ func _show_attack(_lv: int, dps: float) -> void:
 	var on_top: float = ((1.0 + float(p["level"]) + float(p["pct"])) * (1.0 + float(p["attack"])) / (1.0 + float(p["level"])) - 1.0) * 100.0
 	_set_bar(c["chain"][2], "Affixes · tree", steps[2] / top, signed_pct(on_top), gold)
 	_set_bar(c["chain"][3], "Past", steps[3] / top, ("×%.2f" % float(p["past"])) if sim.cls != "" else "—", gold)
-	_set_bar(c["chain"][4], "= total", dps / top, "%.0f/s" % dps, Pal.ACCENT, Pal.ACCENT)
+	_set_bar(c["chain"][4], "= base", dps / top, "%.0f/s" % dps, Pal.ACCENT, Pal.ACCENT)     # before the types' own increases and the dots: the headline has those
 	# the elements dealt: one bar, a segment a type, and the chips name them
 	var conv: Dictionary = sim.conversion()
 	var x := 0.0
@@ -361,8 +362,10 @@ func _show_attack(_lv: int, dps: float) -> void:
 		chips.append(["All of it physical", ""])
 	c["chips"].show_chips(chips)
 	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
-	c["note"].text = ("Growth ×%.2f past the cap · first shot %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "First shot %s" % signed_pct(first_pct)
-	c["status"].text = "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
+	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
+	var firing: String = "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
+	var extra: String = ("growth ×%.2f · first shot %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first shot %s" % signed_pct(first_pct)
+	UI.fit(c["status"], ["%s · %s" % [firing, extra], firing])
 
 
 ## The elements the open sites fire.

@@ -308,6 +308,7 @@ func show_state(s) -> void:
 		_rig_pick = -1                    # a pack cell picked, or the stack gone: the rig's pick goes
 	var low: bool = sim.hp / sim.max_hp() <= 0.35
 	var tier_i: int = int(m["tier"])
+	var fire_now: float = float(sim.damage_split()["total"]) * sim.pace()     # your fire: the hits and the dots together (16 Oct, item 14)
 	# the band: the site, the clock as the headline, the fight's progress as the bar
 	var zone_i := 0
 	for z in range(Data.ZONES.size()):
@@ -366,19 +367,19 @@ func show_state(s) -> void:
 	_faces_off()
 	if boss_on:
 		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
-		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
+		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif way_out:
 		var door_on: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = "THE FIGHT · THE WAY OUT"
-		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]],
+		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]],
 			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
-			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]]])
+			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
@@ -404,7 +405,7 @@ func show_state(s) -> void:
 	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), hp_words, "bad" if low else "good", m.get("my_dots", {}), sim.max_hp(), g / maxf(1.0, sim.max_hp()))
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
-	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % (sim.dps() * sim.pace())]],
+	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % fire_now]],
 		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
 	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"]) else Pal.TEXT)
 	if _view != null:
@@ -412,7 +413,7 @@ func show_state(s) -> void:
 		var fighting: bool = m["remaining"] > 0
 		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
 		var first: Array = ["Their fire", ["%.1f/s" % m["last_incoming"]]] if fighting else ["Gang in", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(nx) if nx < 1e8 else "never")])]
-		_tiles(_six, [first, ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]],
+		_tiles(_six, [first, ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]],
 			["Armour", ["%.0f" % sim.armour()]], ["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]],
 			["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
 		_six[5]["value"].add_theme_color_override("font_color", _runner["tiles"][3]["value"].get_theme_color("font_color"))
