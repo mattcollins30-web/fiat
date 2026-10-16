@@ -5217,7 +5217,9 @@ coded ones' words opened "A code in the margin, encrypted".
    designed; both are in `loose_kit`. The cause: 110 slugs sat in the stash, and `_feed` only moves rounds when the rig
    has none of the type. Three changes, agreed:
    - **Top up at the start of a run:** the worn guns' rounds from the stash into the rig's spare room, not only when
-     it's empty (a sim change: smoke and reviewer).
+     it's empty (a sim change: smoke and reviewer). **Done (16 Oct):** `_top_up()` at the gate (before the insurance
+     and the odds read) and on coming home (so the card reads the rig that goes out); each gun's best grade before
+     either's second; meds kept; logged. Smoke: `_ammo_checks`. (A smoke flake seen once: `_events_checks` 3 of 40.)
    - **A "rounds short" chip** on the site pick when the rig's rounds won't last the site's heads at the runner's fire.
    - **The time-out's line says it all:** the rig's contents went with it, and the lost pieces may turn up on a gang
      member later (`loose_kit`), so the loss doesn't read as final.

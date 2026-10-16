@@ -4994,6 +4994,7 @@ func deploy(i: int) -> void:
 		return
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
+	_top_up()                                 # the worn guns' rounds from the stash, into the rig's room (16 Oct): before the insurance and the odds read
 	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
@@ -6675,6 +6676,7 @@ func _extract() -> void:
 	_idle_tidy()
 	_say_next()
 	restock()
+	_top_up()                                 # home, the rig loaded again: the card's odds read the rig that goes out (the review)
 
 
 ## The runner's record, from a run that came back (8 Oct).
@@ -7148,6 +7150,53 @@ func equip_best(slot: String) -> bool:
 	equipped[slot] = best
 	_feed(best)
 	return true
+
+
+## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash): the worn
+## guns' rounds come out of the stash into the rig, as much as its room holds - the grade the gun fires first first
+## (its build's element, then the dearer grade, as feed_stack reads them), topping a stack before taking a pouch.
+## Meds and what's in the rig already stay. Logs what went in.
+func _top_up() -> void:
+	if mission != null:
+		return
+	var lists: Array = []
+	for slot in ["Primary", "Secondary"]:
+		var gun = equipped[slot]
+		if gun == null:
+			continue
+		var t := Items.ammo_type(gun)
+		if t in ["", "none"] or gun.get("rule", "") == "weed_burner":
+			continue
+		var els: Array = build_elements() if slot == "Primary" else []
+		var stacks: Array = stash.filter(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == t and int(x.get("rounds", 0)) > 0)
+		var worth := func(x: Dictionary) -> int:
+			var b: Dictionary = Items.base_of(x)
+			var v: int = int(b.get("value", 0))
+			for e in els:
+				if float(b.get("conv_%s_pct" % e, 0)) > 0.0:
+					v += 100000
+			return v
+		stacks.sort_custom(func(a, b): return worth.call(a) > worth.call(b))
+		lists.append(stacks)
+	# each gun's first grade before either gun's second (the review: a primary's boxes took every pouch, the secondary none)
+	var order: Array = []
+	var longest := 0
+	for l in lists:
+		longest = maxi(longest, l.size())
+	for k in range(longest):
+		for l in lists:
+			if k < l.size() and not order.has(l[k]):
+				order.append(l[k])
+	var moved := 0
+	for it in order:
+		if not stash.has(it):
+			continue
+		var before: int = int(it["rounds"])
+		take(int(it["id"]))                    # all of it, some of it (a stack topped, no pouch left) or none; the next grade still tries
+		moved += before - (int(it["rounds"]) if stash.has(it) else 0)
+	if moved > 0:
+		_dry_memo.clear()
+		log_event("Topped up: %d rounds from the stash into the rig" % moved)
 
 
 ## A gun put on with its rounds in the stash and none in the rig: a box of them to the rig, a stack of rounds no gun

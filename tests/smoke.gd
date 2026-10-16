@@ -5880,6 +5880,10 @@ func _pool_checks(sim) -> void:
 func _ammo_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()
+	# the stash's rounds aside while these runs go out dry on purpose: the gate tops the rig up from it (16 Oct)
+	var kept_ammo: Array = sim.stash.filter(func(x): return Items.is_ammo(x))
+	for it in kept_ammo:
+		sim.stash.erase(it)
 	var gun = sim.equipped["Primary"]
 	var kept_rig: Array = sim.rig.duplicate()
 	sim.rig = []
@@ -5909,6 +5913,9 @@ func _ammo_checks(sim) -> void:
 	var backing: int = pistol0 - sim.rounds_for(sim.equipped["Secondary"])
 	_check(backing > 0, "a pistol backing a live primary spent no rounds over thirty seconds")
 	sim.extract_now()
+	for it in sim.stash.filter(func(x): return Items.is_ammo(x)):
+		sim.stash.erase(it)                     # what the runs brought home aside too: the gate would top the nail gun up
+		kept_ammo.append(it)
 	sim.rig = [sim._plain(Data.AMMO, "Pistol rounds")]        # the nail gun dry: the pistol is the gun in hand
 	pistol0 = sim.rounds_for(sim.equipped["Secondary"])
 	sim.hp = sim.max_hp()
@@ -5934,10 +5941,56 @@ func _ammo_checks(sim) -> void:
 	var shells_after: int = sim.stash.reduce(func(a, it): return a + (int(it.get("rounds", 0)) if Items.is_ammo(it) and Items.ammo_type(it) == "shotgun" else 0), 0)
 	_check(shells_after > shells_before and sim.cash < cash_before, "a box from the Fence did not land in the stash: %d shells then %d" % [shells_before, shells_after])
 	sim.sell(sim.stash.back())
+	# the top-up at the gate (16 Oct): a gun's rounds in the stash go into the rig's room, the build's grade first; the
+	# meds stay; a full rig takes nothing and the run still goes
+	if sim.on_mission():
+		sim.extract_now()
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.AMMO, "Shells")]
+	Items.set_stack(sim.rig[1], 10)
+	var spare: Dictionary = sim._plain(Data.AMMO, "Shells")
+	var slugs: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	sim.stash.append(spare)
+	sim.stash.append(slugs)
+	var rig_before: int = sim.rounds_for(sim.equipped["Primary"])
+	var in_stash: int = int(spare["rounds"]) + int(slugs["rounds"])
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	var rig_after: int = sim.rounds_for(sim.equipped["Primary"])
+	_check(sim.on_mission() and rig_after > rig_before, "the gate didn't top the rig up: %d rounds before, %d after, %d in the stash" % [rig_before, rig_after, in_stash])
+	_check(sim.rig.any(func(x): return str(x["base"]) == "Bandage"), "the top-up pushed the meds out of the rig")
+	_check(sim.rig.any(func(x): return str(x["base"]) == "Slugs"), "the top-up left the better grade in the stash")
+	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:")), "the top-up wasn't logged")
+	sim.extract_now()
+	for it in [spare, slugs]:
+		sim.stash.erase(it)
+	sim.rig = []
+	while sim.rig_room(1):
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.stash.append(sim._plain(Data.AMMO, "Slugs"))
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) == 0, "a full rig took rounds at the gate")
+	sim.extract_now()
+	sim.stash.pop_back()
+	# two pouches free, three boxes for the shotgun and one for the pistol: the pistol gets its box (the review)
+	sim.rig = []
+	while sim.rig_room(3):
+		sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
+	var extra: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Pistol rounds")]
+	extra[2]["rounds"] = int(extra[2]["rounds"]) - 1      # two shells stacks that don't merge whole into one pouch
+	sim.stash.append_array(extra)
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim._top_up()
+	_check(sim.rounds_for(sim.equipped["Secondary"]) > 0, "the shotgun's boxes took every pouch and the pistol went without")
+	for it in extra:
+		sim.stash.erase(it)
+	sim.equipped["Secondary"] = null
+	sim.stash.append_array(kept_ammo)
 	sim.rig = kept_rig
 	sim.equipped["Primary"] = gun
 	sim.equipped["Secondary"] = sec
-	print("ammo checks ok")
+	print("ammo checks ok; the gate tops the rig up")
 
 
 ## The highest open tier whose estimated damage taken leaves half the HP.
