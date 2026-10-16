@@ -5115,3 +5115,9 @@ level 50 at 9.3-10.1 h on four, never on two.
 it shut it binned one a pass, six a tidy, for nothing); the summary merges `reach_rate` by the median, a never if any
 read's Radio never opened. CURVE reward 0.08 to 0.05: the strong builds out-earned the rest up the reach (level 50 from
 9.3 h to never); a signal's pay now rises slower than it gets harder.
+
+**D28's two-read (summary_d28x2.md, 30 reads, 2 reds):** every campaign gate green, levels at the Quartermaster green
+on all ten. Red: gate 6 on three (the reach's longest stretch 134-344 min; signals 25 min apart on one); level 50
+never on six (41-49 at 24 h), 11.6 h on one.
+
+**D29 (16 Oct).** XP_TAPER_END 4.0 to 3.4.

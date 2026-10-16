@@ -2282,7 +2282,7 @@ const XP_SCALE := 2.9     # D19: 2.4 to 2.9 - level 23-26 at the Quartermaster o
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 4.0     # D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
+const XP_TAPER_END := 3.4     # D29 3.4 (D28's slower pay: six ended at 41-49 at 24 h); D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
 
 
 static func xp_scale(l: int) -> float:
