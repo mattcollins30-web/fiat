@@ -5134,3 +5134,12 @@ and never): the spread is read to read, not build to build, so no one XP setting
 min) and the reach's pace (a level an hour); the reach's 3 h longest stretch on the median read. D29's reads under
 them: retirement green (the median read 16.9 h, 7 of 20 never); gate 6 red on one build's signals (37 min, the move at
 hour 8); the band, two Scrappers' levels and one cash read red as single reads (green on D28). The confirmation next.
+
+**The confirmation (summary_d29x2b.md, D29's numbers, 30 reads, 2 reds):** every campaign gate green (the Bank 1.5 h,
+the Quartermaster 2.0 h, the band 1.7-2.3 h, levels 18-21 on all ten), Kev's story, loot, cash, scrap, the plain floor
+green; retirement's median read 16.6 h (4 of 20 never) but one poison Paramedic read at 7.2 h, under the 8 h floor;
+gate 6 red on three builds' signals (42-55 min) - every one of those gaps after a Yard move at level 50 (hour 7-11),
+the campaign again and the Radio shut till its Quartermaster.
+
+**The read's ladder ends at the first move (16 Oct).** balance.gd measures gate 6 (and the reach's pace) to hour 12 or
+the first Yard move, whichever is sooner: the ladder is the first Yard's. The re-read next.

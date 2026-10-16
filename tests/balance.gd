@@ -381,6 +381,11 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	g["gang_clock"] = gang_clock
 	# the Radio's ladder from its opening to hour 12 (gate 6): the longest stretch without a signal made, and without reach
 	var to_h: float = minf(12.0, sim.elapsed / 3600.0)
+	# the first Yard's ladder: a move (at level 50) starts the campaign again and shuts the Radio till its Quartermaster,
+	# which isn't a gap in the ladder (16 Oct: every signal gap over 20 min in the D29 read was after a move)
+	var moved: Array = bot.bought.filter(func(x): return str(x[1]).begins_with("moved the pitch"))
+	if not moved.is_empty():
+		to_h = minf(to_h, float(moved[0][0]) / 3600.0)
 	var sig_h: Array = bot.bought.filter(func(x): return str(x[1]).begins_with("a signal")).map(func(x): return float(x[0]) / 3600.0)
 	g["signal_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, sig_h)
 	g["reach_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, g["reach_log"].map(func(x): return float(x[0])))
