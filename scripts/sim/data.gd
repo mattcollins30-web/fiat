@@ -1258,9 +1258,9 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## The endgame's depth curve: once the campaign is done, every site fights
 ## at the depth's numbers bent by its shape, so the choice between sites is
 ## what they drop, not how hard they are. Depth 2 is the first rung.
-## D15: grow 0.14 to 0.11 - the reach is the runner's power against this slope (signals since D3), and at 14% a level
+## D15: grow 0.14 to 0.11, D19 0.08 - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.11, "reward": 0.10, "rarity": 0.10}
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.08, "reward": 0.10, "rarity": 0.10}
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that
@@ -2274,7 +2274,7 @@ const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from
 static var _xp_table: Array = []
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
-const XP_SCALE := 2.4
+const XP_SCALE := 2.9     # D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
 ## D11: past the campaign the scale eases, XP_SCALE at XP_TAPER_FROM to XP_TAPER_END at XP_TAPER_TO and on: the reads had
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22

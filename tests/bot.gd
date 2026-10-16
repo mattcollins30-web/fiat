@@ -915,7 +915,7 @@ func _sell_spares(sim) -> void:
 				by_type[ty] = []
 			by_type[ty].append(it)
 	# plain papers: the rarest thirty stay (D18: a hundred and more piled while three signals were read, a stash filling)
-	var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+	var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0) if sim.room_open("radio") else []     # before the Radio a paper's unread: kept for its code (the review)
 	plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
 	for it in plain.slice(PAPERS_KEPT):
 		sim.sell(it)

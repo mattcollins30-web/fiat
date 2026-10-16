@@ -5018,3 +5018,13 @@ Carpet Man to hour 21 (the Estate's kit, a dps of 50, nothing better dropping) a
 twenty minutes can be binned (a kit changed at the bench restarts the read, so some never settled and plain papers piled
 past a hundred); the rarest thirty plain papers kept, the rest sold. The review of D17: the dry run's convoy only when
 no other event was rolled, as on a real run.
+
+**D18's read (summary_d18.md, 5 reds; 18 minutes):** the Bank 1.5 h and the Quartermaster 2.1 h, green; signals
+every 5-14 min on all (gate 6's first half green); the band 1.6-3.4 h (2.1x); level 23-26 at the Quartermaster on seven;
+level 50 never on three element builds; the reach still stands 2.5-6.5 hours; a 0% campaign site on one read's end kit.
+
+**D19 (16 Oct).** XP_SCALE 2.4 to 2.9 (the campaign's levels, gate 4). CURVE grow 0.11 to 0.08: a signal's level is
+8% harder, not 11, against the 10% more it pays - the reach is the runner's power against this slope, and the power
+grows about a third an hour past the campaign. The D18 review: plain papers are only sold once the Radio's open
+(before it they're unread, kept for their codes). Note for Matt: the Carpet Man's change also softens his convoy head
+and a full-strength Estate head on a signal.
