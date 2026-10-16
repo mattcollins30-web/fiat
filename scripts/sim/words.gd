@@ -494,6 +494,9 @@ const MAP := {
 	"column_count": "%d of %d ranks",
 }
 
+const MYTHIC_FOUND := "A mythic: %s"
+
+
 const SHELF := {
 	"empty": "Nothing on the shelf yet. The heads carry them.",
 	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is
@@ -577,6 +580,14 @@ const UNIQUES := {
 	"The Miner's Lamp": "Off the last shift at the pit, the battery rewired. It finds the seam before you've looked.",
 	"The Paramedic's Bumbag": "Off an ambulance that stopped coming. Plasters, a foil blanket, and a habit of being there when you go down.",
 	"The Plumber's Belt": "Wrenches, PTFE tape, a blowtorch. Whatever he fixed stayed fixed. Whatever he broke stayed broken.",
+	# the mythics (16 Oct)
+	"The Last Orders": "Called at every pub in the borough on the same night. Nobody who heard the bell went home sober, or whole.",
+	"The Spare Key": "Under the mat, behind the meter, in the drainpipe. It opens everything, and it never waits its turn.",
+	"The Headmaster's Cap": "He knew every lesson in the building and taught them all at once. Put it on and so do you.",
+	"The Bomb Disposal Suit": "Forty kilos of the Army's best idea. Whatever goes off near you, you walk out of it slowly.",
+	"The Ambulance's Bag": "Off the last ambulance in the county. However much you take out of it, it's full again by the next corner.",
+	"The Removal Van": "Seven and a half tonnes and it still has room. Whatever you find goes in, and comes out better.",
+	"The Freedom of the Borough": "A scroll and a key from the Town Hall. The gangs read it, stand aside, and pay you for the privilege.",
 }
 
 

@@ -1,4 +1,4 @@
-# Mythic uniques (draft, 16 Oct - for Matt to pick and shape)
+# Mythic uniques (16 Oct - agreed by Matt, "mythics look good"; built)
 
 Matt, 16 Oct: "a really powerful unique per slot - think mythic uniques from Diablo 4 - with a flat % drop rate across
 the entire game - same drop rate in campaign as depth 9. We don't need to balance around it ... if you do get one then
@@ -38,3 +38,14 @@ the drop roll, the card's band and the art: seven item pictures in art/items at 
 3. Build: the roll, the seven rules, the band, smoke checks (the roll's rate on fixed dice, each rule's effect, the
    balance read rolling none); the reviewer; the watcher's smoke.
 4. The art manifest for the seven (tools/make_art_pass_manifest.py), test art first.
+
+## As built (16 Oct)
+
+- The Removal Van's "never fills" became **four times the pack** (MYTHIC_PACK): an endless pack paged the run's grid
+  past a hundred pages and the Lorry's Load paid notes for every empty cell of it (the review).
+- The Headmaster's Cap gives every node of the class's own trees **but their keystones** - their costs are the point
+  (Hit and run would end every run at the first gang). The tree screen still draws only what's trained.
+- A worn mythic is never swapped out by Equip if better or the bot (its rule is in no figure), never sold in a lot.
+- The card (docs/design/mythic_card.png): the band's colour (#ff5a36) on its edge and its rule chip, "Mythic" on the
+  figure line, worn at level 1. The drop logs "A mythic: <name>". Test art: each wears its base's picture until its own
+  is made.

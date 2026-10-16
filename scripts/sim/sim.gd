@@ -133,6 +133,8 @@ var chron_count := 0                 # every line ever written, the file's and t
 var played_s := 0.0                  # real seconds at the game, the player there (the shell adds them: not away, not the menu)
 var _snaps := 0
 var rng := RandomNumberGenerator.new()
+var mythic_rng := RandomNumberGenerator.new()     # the mythics' own dice (16 Oct): the one roll a find leaves every other draw where it was
+var mythics_on := true                  # off for the balance read: a read is never one (docs/design/mythics.md)
 
 
 func _init() -> void:
@@ -161,9 +163,11 @@ static var _seed_n := 0
 func _reseed() -> void:
 	if fixed_seed == 0:
 		rng.randomize()
+		mythic_rng.randomize()
 		return
 	_seed_n += 1
 	rng.seed = fixed_seed + _seed_n
+	mythic_rng.seed = fixed_seed + _seed_n + 7919
 
 
 func start() -> void:
@@ -321,8 +325,8 @@ func _dps(parts) -> float:
 ## What the secondary fires behind the primary: a third; all of it with Double tap or the primary dry; two thirds with
 ## the Van's Spare (15 Oct, Matt: was all of it).
 func secondary_share(primary_live: bool) -> float:
-	if not primary_live or has_node("double_tap"):
-		return 1.0
+	if not primary_live or has_node("double_tap") or has_rule("spare_key"):
+		return 1.0                            # the Spare Key (a mythic): at full rate, always
 	if has_rule("vans_spare"):
 		return Data.FX["rule/vans_spare"]
 	return 1.0 / 3.0
@@ -340,7 +344,7 @@ func armour() -> float:
 			a += Items.armour(equipped[s])
 	a += _affix_sum("armour_per_med") * rig.size() + _fitted_sum("salt")
 	if mission != null:
-		a += _affix_sum("armour_per_free") * maxi(0, capacity() - pack_used(mission))
+		a += _affix_sum("armour_per_free") * maxi(0, capacity_raw() - pack_used(mission))
 	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (Data.FX["node/shock_more.armour"] if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
 
 
@@ -431,6 +435,11 @@ func _conversion_raw() -> Dictionary:
 			out[ty] = 0.0
 		out["fire"] = 1.0
 		total = 1.0
+	if has_rule("last_orders"):
+		for ty in Data.ELEMENTS:
+			out[ty] = 1.0                    # the Last Orders (a mythic): every hit all of it every element, and physical too
+		out["physical"] = 1.0
+		return out
 	if total > 1.0:
 		for ty in Data.ELEMENTS:
 			out[ty] /= total
@@ -653,6 +662,12 @@ func dots_on_them() -> Array:
 
 ## Loot the pack can bring back.
 func capacity() -> int:
+	return capacity_raw() * (Data.MYTHIC_PACK if has_rule("removal_van") else 1)     # the Removal Van (a mythic): four times the pack
+
+
+## The pack as its frame and the tree make it, without the Removal Van: what the empty-cell sums read (the review: the
+## Lorry's Load paid notes for 9,999 cells).
+func capacity_raw() -> int:
 	var extra := (Data.FX["node/pack_mule"] if has_node("pack_mule") else 0)
 	var base := 2 if equipped["Backpack"] == null else maxi(1, Items.capacity(equipped["Backpack"]))
 	return int((base + extra) * (Data.FX["node/hoarder.capacity"] if has_node("hoarder") else 1) * (Data.FX["rule/the_float.capacity"] if has_rule("the_float") else 1.0))
@@ -1431,6 +1446,28 @@ func unique_odds(t: Dictionary) -> float:
 	return minf(Data.UNIQUE_CAP, base + Data.UNIQUE_DROP * maxi(0, int(t["depth"]) - 1))
 
 
+## A find's mythic (16 Oct, docs/design/mythics.md): one in MYTHIC_ODDS_IN on its own dice, wherever it is; one held
+## (worn or stashed) isn't rolled again until all seven are. {} for none.
+func mythic_roll() -> Dictionary:
+	if not mythics_on or mythic_rng.randi_range(1, Data.MYTHIC_ODDS_IN) != 1:
+		return {}
+	return mythic_pick()
+
+
+func mythic_pick() -> Dictionary:
+	var held: Array = []
+	for it in stash:
+		if it.get("mythic", false):
+			held.append(str(it["unique"]))
+	for s in Data.SLOTS:
+		if equipped[s] != null and equipped[s].get("mythic", false):
+			held.append(str(equipped[s]["unique"]))
+	var all: Array = Data.UNIQUES.filter(func(u): return u.get("mythic", false))
+	var fresh: Array = all.filter(func(u): return not (str(u["name"]) in held))
+	var pool: Array = fresh if not fresh.is_empty() else all
+	return pool[mythic_rng.randi_range(0, pool.size() - 1)] if not pool.is_empty() else {}
+
+
 ## A search's find at a site being a paper (the Map's Papers tile, 15 Oct; the find's own roll).
 func paper_odds(i: int) -> float:
 	var shape: Dictionary = Data.TIERS[i]["shape"]
@@ -2197,7 +2234,8 @@ var _eff_hash := 0
 var _closed := {}                  # joint key -> true, closed
 var _open_tops := {}               # element tree name -> true: its columns 5 and 6 work (a joint closed there, or a trade)
 func _nodes_for(effect: String) -> Array:
-	var h := hash([tree, cls, cls2, trades])
+	var cap: bool = has_rule("headmasters_cap")
+	var h := hash([tree, cls, cls2, trades, cap])
 	if h != _eff_hash or _eff_cache.is_empty():
 		_eff_cache = {"": []}
 		_closed = {}
@@ -2210,7 +2248,16 @@ func _nodes_for(effect: String) -> Array:
 			var et := Data.tree_of_element(el)
 			if not et.is_empty():
 				_open_tops[et["name"]] = true
-		for id in tree:
+		var ids: Array = tree.duplicate()
+		if cap:
+			for ct in Data.trees_for(cls, cls2):      # the Headmaster's Cap (a mythic): every node of the class's trees -
+				if str(ct.get("class", "")) == "":
+					continue                          # the class's own, not the Yard's
+				for i in range(ct.get("nodes", []).size()):
+					var cid := "%s/%d" % [ct["name"], i]
+					if not (cid in ids) and not ct["nodes"][i].get("keystone", false):
+						ids.append(cid)               # but its keystones, whose costs are the point (the review: Hit and run, Never there)
+		for id in ids:
 			var n := node(id)
 			if n.is_empty():
 				continue
@@ -2247,7 +2294,7 @@ func has_joint(key: String) -> bool:
 ## Quartermaster's Manual ("every keystone open").
 func _tops_open(tree_name: String) -> bool:
 	_nodes_for("")
-	return _open_tops.has(tree_name) or has_rule("qm_manual")
+	return _open_tops.has(tree_name) or has_rule("qm_manual") or has_rule("last_orders") or has_rule("headmasters_cap")
 
 
 ## A dry run reads the rules once: nothing worn or stashed changes while it runs.
@@ -2650,7 +2697,7 @@ func has_rule(rule: String) -> bool:
 func loose_uniques(at_depth: int) -> Array:
 	var out: Array = []
 	for u in Data.UNIQUES:
-		if not u.get("boss", false) and not u.has("site") and int(u.get("depth", 0)) <= at_depth:
+		if not u.get("boss", false) and not u.has("site") and not u.get("mythic", false) and int(u.get("depth", 0)) <= at_depth:
 			out.append(u)
 	return out
 
@@ -5064,7 +5111,8 @@ func _tick(dt: float) -> void:
 	m["elapsed"] += dt
 	if m["remaining"] > 0:
 		# the clock (9 Oct): it runs while a gang is on you, and stands while the site is clear
-		m["clock"] = float(m.get("clock", clock_budget(t))) - dt
+		if not has_rule("bomb_suit"):
+			m["clock"] = float(m.get("clock", clock_budget(t))) - dt     # the Bomb Disposal Suit (a mythic): never runs out
 		m["clock_used"] = float(m.get("clock_used", 0.0)) + dt
 		if m.get("way_out", false):
 			m["way_out_t"] = float(m["way_out_t"]) - dt
@@ -5091,13 +5139,15 @@ func _tick(dt: float) -> void:
 	# the Medic's rule: a med by itself under 40%
 	if (class_data().get("auto_med", false) or has_rule("paramedics_bumbag")) and m["using"] == null and hp < max_hp() * 0.4 and not first_med().is_empty():
 		use_med(first_med()["id"])
+	elif has_rule("ambulance_bag") and m["using"] == null and hp < max_hp() * Data.MYTHIC_AUTO_MED and not first_med().is_empty():
+		use_med(first_med()["id"])            # the Ambulance's Bag: one by itself under half
 	_patch(m, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		m["immune_t"] = maxf(0.0, float(m["immune_t"]) - dt)     # Clean hands' grace runs down whether they're on you or not
 	if m["cleared"]:
 		if not gang_held(m) and m["remaining"] <= 0:
 			m["patrol_timer"] += dt          # only while it's quiet (14 Oct, Matt): every gang beaten gives the search its window back
-		if m["patrol_timer"] >= patrol_s(t, m["patrols"] == 0):
+		if m["patrol_timer"] >= patrol_s(t, m["patrols"] == 0) and not has_rule("freedom"):     # the Freedom of the Borough (a mythic): none after the clear
 			m["patrol_timer"] = 0.0
 			m["patrols"] += 1
 			m["fresh"] = true
@@ -5164,7 +5214,7 @@ func _time_out(m: Dictionary) -> void:
 		log_event("Auto-run stopped")
 	var worn_v: Array = []
 	for s in Data.SLOTS:
-		if equipped[s] != null:
+		if equipped[s] != null and not equipped[s].get("mythic", false):     # a mythic is never lost (16 Oct)
 			worn_v.append(s)
 	var lost: Array = []
 	var lost_slots: Array = []
@@ -5193,8 +5243,8 @@ func _time_out(m: Dictionary) -> void:
 	var kept_pack: bool = insured and yard_has("insurance_desk")
 	var carried := ""
 	if not kept_pack and not m["found"].is_empty():
-		var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it))     # the deeds come home whatever: _extract writes their fate
-		var rest: Array = m["found"].filter(func(it): return not Items.is_deeds(it))
+		var keep: Array = m["found"].filter(func(it): return Items.is_deeds(it) or it.get("mythic", false))     # the deeds come home whatever: _extract writes their fate; a mythic too
+		var rest: Array = m["found"].filter(func(it): return not Items.is_deeds(it) and not it.get("mythic", false))
 		if yard_has("fetch") and not rest.is_empty():
 			var best: Dictionary = rest[0]
 			for it in rest:
@@ -5296,6 +5346,14 @@ func _take(m: Dictionary, amount: float) -> float:
 		amount -= off
 		if m["guard"] <= 0.0 and g >= guard_cap() * 0.05 and not m.get("dry", false):
 			log_event("Guard gone")              # a Guard worth the name broken, never a trickle of overheal (the review)
+	if has_rule("bomb_suit"):
+		# the Bomb Disposal Suit (a mythic): never more than a twentieth of your HP in a second of the run
+		var sec := int(float(m.get("elapsed", 0.0)))
+		if int(m.get("suit_s", -1)) != sec:
+			m["suit_s"] = sec
+			m["suit_took"] = 0.0
+		amount = minf(amount, maxf(0.0, max_hp() * Data.MYTHIC_HURT_A_SECOND - float(m["suit_took"])))
+		m["suit_took"] = float(m["suit_took"]) + amount
 	hp -= amount
 	return amount
 
@@ -5688,7 +5746,9 @@ func use_med(id: int) -> bool:
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
 			var it: Dictionary = rig[k]
-			if (has_node("second_shift") or has_set_rule("ambulance")) and not mission.get("free_med", false):
+			if has_rule("ambulance_bag"):
+				pass                           # the Ambulance's Bag (a mythic): never used up
+			elif (has_node("second_shift") or has_set_rule("ambulance")) and not mission.get("free_med", false):
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
@@ -5821,16 +5881,16 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	_heal(m, _affix_sum("life_per_kill") + (max_hp() * Data.FX["rule/keepers_gun"] if has_rule("keepers_gun") else 0.0) + (max_hp() * Data.FX["rule/ladle.kill_heal"] if has_rule("ladle") else 0.0) + (max_hp() * Data.FX["node/cap_iron"] if has_node("cap_iron") and hp < max_hp() * 0.5 else 0.0))
 	if m.get("dry", false):
 		return                               # a dry run: the fight only, nothing earned
-	var gain: float = t["xp"] * (Data.FX["node/hit_and_run.kill_pay"] if has_node("hit_and_run") else 1.0)
+	var gain: float = t["xp"] * (Data.FX["node/hit_and_run.kill_pay"] if has_node("hit_and_run") else 1.0) * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	m["xp"] += gain
 	var before := level()
 	xp += gain
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (Data.FX["rule/bookies_pencil.cash"] if has_rule("bookies_pencil") else 1.0) * (Data.FX["set/bank.kill_cash"] if has_set_rule("bank") else 1.0) \
-		* (Data.FX["node/light_fingers.cash"] if has_node("light_fingers") else 1.0) * (Data.FX["rule/managers_coat"] if has_rule("managers_coat") else 1.0) * trait_mult("cash")
+		* (Data.FX["node/light_fingers.cash"] if has_node("light_fingers") else 1.0) * (Data.FX["rule/managers_coat"] if has_rule("managers_coat") else 1.0) * trait_mult("cash") * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	if not has_rule("managers_coat"):
-		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t)
+		m["notes"] = int(m.get("notes", 0)) + notes_a_kill(t) * (int(Data.MYTHIC_PAY) if has_rule("freedom") else 1)
 	var dd: int = int(t.get("depth", 1))
 	var kind: String = Data.ZONE_SALVAGE[int(Data.TIERS[int(t["tier"])]["zone"])]
 	if kind != "" and dd >= Data.SALVAGE_DEPTH and rng.randf() < Data.SALVAGE_KILL * (dd - Data.SALVAGE_DEPTH + 1):
@@ -5936,6 +5996,9 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 ## not landed - the dog's sniff rolls a crate's best find at the clear and lands it when the crate's opened. Returns
 ## {"it": the find, "said": its log line}, or {} for none.
 func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary = {}, capture := false) -> Dictionary:
+	if has_rule("removal_van") and not m.get("dry", false):
+		t = t.duplicate()                     # the Removal Van (a mythic): every find a tier up
+		t["loot_tier"] = mini(loot_cap(int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))), int(t["loot_tier"]) + 1)
 	if not capture:
 		m["finds"] = int(m.get("finds", 0)) + 1    # every find, stacked, swapped or left: the count the tests read (a nosed one counts when it lands)
 	if has_node("all_or_nothing"):
@@ -5976,7 +6039,11 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var pieces: Array = set_pieces_at(int(t["depth"]))
 	var own: Dictionary = site_unique(int(t["tier"]))
 	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
-	if not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
+	var myth: Dictionary = mythic_roll()
+	if not myth.is_empty():
+		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere
+		said = Words.MYTHIC_FOUND % it["unique"]
+	elif not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
 		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
 		said = "Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]]
 	elif not loose.is_empty() and rng.randf() < minf(Data.UNIQUE_CAP, unique_odds(t) * float(crate.get("unique", 1.0))):     # a Safe's double, inside the cap (the review)
@@ -6109,7 +6176,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	_wearing_off(m)
 	worn[m["tier"]] = elapsed
 	worn_depth[m["tier"]] = depth[m["tier"]]
-	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (Data.FX["node/stand"] if has_node("stand") else 1.0)
+	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (Data.FX["node/stand"] if has_node("stand") else 1.0) * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	m["xp"] += bonus
 	var before := level()
 	xp += bonus
@@ -6228,7 +6295,7 @@ static func crate_for(q: Dictionary) -> Dictionary:
 
 ## Whether a run opens locked crates: the Caretaker's Keys.
 func has_keys() -> bool:
-	return has_rule("caretakers_keys")
+	return has_rule("caretakers_keys") or has_rule("freedom")     # the Freedom of the Borough: every crate opens
 
 
 ## Locked crates in hand without the Keys are passed over, marked so.
@@ -6277,7 +6344,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		if cd.get("tins", false):
 			m["cash"] += float(t["cash"]) * rng.randf_range(0.5, 2.0) * inflation()     # a safe: a handful of tins (the pass, 13 Oct: 1-3 read the Bank 17% over)
-		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/second_dog"] if yard_has("second_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0)
+		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/second_dog"] if yard_has("second_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0) + (Data.MYTHIC_SEARCH_FINDS if has_rule("removal_van") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
@@ -6547,7 +6614,7 @@ func _extract() -> void:
 		salvage[kind] = int(salvage.get(kind, 0)) + int(sv[kind])      # and its salvage (9 Oct)
 	var run_notes: int = int(m.get("notes", 0))
 	if has_rule("lorrys_load"):
-		run_notes += maxi(0, capacity() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
+		run_notes += maxi(0, capacity_raw() - pack_used(m)) * int(m["t"]["depth"])     # every empty cell is notes
 	if has_rule("managers_pen"):
 		run_notes *= Data.FX["rule/managers_pen"]
 	if has_rule("drivers_log"):
@@ -6724,11 +6791,18 @@ func _kia() -> void:
 		log_event("Dead in %s. Kit lost (%s). %s" % [Words.mid(t["name"]), _cash_words(lost), Words.RECYCLE["listed"]])
 		for s in Data.SLOTS:
 			if equipped[s] != null:
-				_lose(equipped[s], "the last %s" % cls, "runner")
+				if equipped[s].get("mythic", false):
+					stash.append(equipped[s])        # a mythic is never lost: it comes home (16 Oct)
+				else:
+					_lose(equipped[s], "the last %s" % cls, "runner")
 		if dogs_share:
 			for it in rig:
 				stash.append(it)                 # the dog's share: the rig comes home
 			log_event("The dog came home with the rig: %d pouch%s" % [rig.size(), "" if rig.size() == 1 else "es"])
+	if not m.get("pack_kept", false):
+		for it in m["found"].filter(func(x): return x.get("mythic", false)):
+			stash.append(it)                     # a mythic found on the run comes home, whatever (16 Oct)
+			m["found"].erase(it)
 	if yard_has("fetch") and not m["found"].is_empty() and not m.get("pack_kept", false):
 		# the kennel's top level (31): the dog carries the best thing in the pack home
 		var best: Dictionary = m["found"][0]
@@ -6969,8 +7043,8 @@ func compare(it: Dictionary) -> int:
 	# Spare all game: services at depth 5 at 11.6 h against 3.4 h on the same dice, the 11 Oct read)
 	if c == 1 and equipped[slot].has("unique"):
 		var kind: String = Data.SLOT_SCORE.get(slot, "")
-		if not (kind == "dps" or kind == "armour"):
-			c = 0
+		if not (kind == "dps" or kind == "armour") or equipped[slot].get("mythic", false):
+			c = 0                             # a worn mythic's rule never shows in a figure: never swapped out for one (the review)
 	_cmp_cache[ih] = c
 	return c
 
@@ -7427,8 +7501,8 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 	if x < Data.GAMBLE_UNIQUE:
 		var fits: Array = []
 		for u in Data.UNIQUES:
-			if u.has("site") or u.get("boss", false):
-				continue                                  # the chase is the ladders', never the Fence's (endgame part 3)
+			if u.has("site") or u.get("boss", false) or u.get("mythic", false):
+				continue                                  # the chase is the ladders', never the Fence's (endgame part 3); a mythic only found
 			if u["slot"] == k["slot"] and (k["type"] == "" or Items.base_named(k["slot"], u["base"]).get("type", "") == k["type"]):
 				fits.append(u)
 		var gu := pick_unique(fits, shop_unique_tier())
@@ -7552,7 +7626,7 @@ func _remove(it: Dictionary) -> bool:
 func sell_rarity(r: int) -> int:
 	var n := 0
 	for it in stash.duplicate():
-		if it["rarity"] == r and not Items.is_paper(it):     # the deeds are sold on purpose or not at all; a paper's a key to the endgame (15 Oct): one at a time
+		if it["rarity"] == r and not Items.is_paper(it) and not it.get("mythic", false):     # nor a mythic in a lot (the review)     # the deeds are sold on purpose or not at all; a paper's a key to the endgame (15 Oct): one at a time
 			sell(it)
 			n += 1
 	return n

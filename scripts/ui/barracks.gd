@@ -1077,7 +1077,7 @@ func _shelf_branch() -> Dictionary:
 	for nm in sim.shelf:
 		if not (nm in names):
 			names.append(nm)
-	var branch := _pages_branch("The shelf", names, Data.UNIQUES.size(), Words.SHELF["empty"],
+	var branch := _pages_branch("The shelf", names, Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size(), Words.SHELF["empty"],
 		func(nm): return gaps[nm] if gaps.has(nm) else _shelf_words(nm), 3)
 	for nd in branch["nodes"]:
 		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))

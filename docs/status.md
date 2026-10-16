@@ -5150,3 +5150,10 @@ read 21.0 h, no read before 8 h), no reds, the gang clock, the loot tables, the 
 plain floor. Red, left for the playtest to calibrate: levels at the Quartermaster on one (a fire Scrapper at 23, a
 level over); the reach's longest stretch on the median read 196 min (the gate 180). Every other gate held on the last
 three two-reads. Next: the mythic uniques' design and their art, then Matt's playtest of the 15-16 Oct UI.
+
+**The mythics (16 Oct, Matt: "mythics look good - lets get them in the game").** Seven, one a slot (docs/design/
+mythics.md, as built at its foot): one find in 10,000 anywhere on their own dice, none held twice before all seven,
+worn at any level, never lost (the clock, a death, a lot sale, Equip if better), off in the balance read and the loot
+read. Smoke: `_mythic_checks` (the seven and their words, the pools, the roll's rate on fixed dice and the main dice
+untouched, none twice, any level, each rule, never lost to the clock). The review's: the Cap without keystones, the Van
+x4 (not endless), a worn mythic never swapped or lot-sold, the shelf's total without them.

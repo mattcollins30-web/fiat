@@ -4360,7 +4360,7 @@ func _book_checks(main) -> void:
 	_check(sim.shelf == ["Lucky Cap", "Jump Leads"], "the shelf is not the uniques in the order found: %s" % str(sim.shelf))
 	bk.pick_also("The shelf")
 	main.refresh()
-	_check(bk.also_button("The shelf").text.contains("2 of %d" % Data.UNIQUES.size()), "the shelf's chip is off: %s" % bk.also_button("The shelf").text)
+	_check(bk.also_button("The shelf").text.contains("2 of %d" % Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size()), "the shelf's chip is off: %s" % bk.also_button("The shelf").text)
 	# the chase first (endgame part 3): thirteen gaps in TEXT_3, where each is under it; then the rest found, in order
 	var chase: Array = sim.shelf_chase()
 	_check(chase.size() == 13 and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked Streets, depth 12"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
@@ -6599,6 +6599,7 @@ func _loot_roll_checks(main) -> void:
 	_loot_table_checks(main.sim)
 	_harder_gang_checks(main.sim)
 	_over_level_checks(main.sim)
+	_mythic_checks(main.sim)
 	_bin_checks(main)
 	_run_view_checks(main)
 	_wound_checks(main)
@@ -7971,6 +7972,109 @@ func _signal_checks(main) -> void:
 ## Town on, growing with the depth, capped; set pieces capped; the gamble at the deepest site's level, never common.
 ## D9 (15 Oct, Matt): a site well under you pays less - whole to five site levels under, 15% less a level past, never
 ## under 10%; your level read as the item level you wear at; the XP and the tins both, the rest of the site as it was.
+## The mythics (16 Oct, docs/design/mythics.md): seven, one a slot, their words; outside every other pool; one find in
+## MYTHIC_ODDS_IN on their own dice, none held twice before all seven; worn at any level, never lost; each rule does
+## what it says; the bot's reads roll none.
+func _mythic_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var myths: Array = Data.UNIQUES.filter(func(u): return u.get("mythic", false))
+	var slots: Array = myths.map(func(u): return str(u["slot"]))
+	_check(myths.size() == Data.SLOTS.size() and Data.SLOTS.all(func(sl): return sl in slots) and myths.all(func(u): return Words.UNIQUES.has(u["name"]) and str(u["band"]) == "mythic"),
+		"the mythics aren't one a slot with their words: %s" % str(slots))
+	_check(not sim.loose_uniques(99).any(func(u): return u.get("mythic", false)), "a mythic is in the loose pool")
+	# the roll: their own dice, about one in MYTHIC_ODDS_IN
+	var rng0: int = sim.rng.state
+	sim.mythic_rng.seed = 4242
+	var got := 0
+	var n := Data.MYTHIC_ODDS_IN * 20
+	for k in range(n):
+		if not sim.mythic_roll().is_empty():
+			got += 1
+	_check(got >= 8 and got <= 36 and sim.rng.state == rng0, "the mythic roll: %d in %d finds (want about 20), the main dice moved %s" % [got, n, str(sim.rng.state != rng0)])
+	sim.mythics_on = false
+	var none := true
+	for k in range(Data.MYTHIC_ODDS_IN * 3):
+		none = none and sim.mythic_roll().is_empty()
+	sim.mythics_on = true
+	_check(none, "a mythic rolled with the mythics off")
+	# none held twice before all seven
+	sim.stash = []
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	var held: Array = []
+	for k in range(myths.size()):
+		var u: Dictionary = sim.mythic_pick()
+		_check(not (str(u.get("name", "")) in held), "%s picked twice before all seven" % str(u.get("name", "")))
+		held.append(str(u["name"]))
+		sim.stash.append(Items.roll_unique(u, sim.rng))
+	_check(not sim.mythic_pick().is_empty(), "with all seven held, nothing to pick")
+	# worn at any level, its own name and colour
+	sim.xp = 0.0
+	var one: Dictionary = Items.roll_unique(myths[0], sim.rng, 40, 9)
+	_check(one.get("mythic", false) and Items.wear_level(one) == 1 and sim.can_wear(one) and Items.rarity_name(one) == "Mythic" and Pal.item_tone(one) == "mythic",
+		"a mythic at level 40: wear %d, %s, %s" % [Items.wear_level(one), Items.rarity_name(one), Pal.item_tone(one)])
+	var by_rule := {}
+	for u in myths:
+		by_rule[str(u["rule"])] = Items.roll_unique(u, sim.rng)
+	var wear_one := func(rule: String) -> void:
+		for s in Data.SLOTS:
+			sim.equipped[s] = null
+		var it: Dictionary = by_rule[rule]
+		sim.equipped[it["slot"]] = it
+		sim._dry_memo.clear()
+	sim.load_dict(saved)
+	sim.stash = []
+	# the rules
+	wear_one.call("spare_key")
+	_check(is_equal_approx(sim.secondary_share(true), 1.0), "the Spare Key's secondary at %.2f" % sim.secondary_share(true))
+	wear_one.call("last_orders")
+	var cv: Dictionary = sim._conversion_raw()
+	_check(Data.ELEMENTS.all(func(e): return is_equal_approx(float(cv[e]), 1.0)) and is_equal_approx(float(cv["physical"]), 1.0) and sim._tops_open(Data.ELEMENT_TREES[0]["name"]),
+		"the Last Orders' hit: %s" % str(cv))
+	wear_one.call("removal_van")
+	_check(sim.capacity() == sim.capacity_raw() * Data.MYTHIC_PACK, "the Removal Van's pack holds %d of %d" % [sim.capacity(), sim.capacity_raw()])
+	wear_one.call("freedom")
+	_check(sim.has_keys(), "the Freedom of the Borough doesn't open the crates")
+	wear_one.call("headmasters_cap")
+	var probe := ""
+	for ct in Data.trees_for(sim.cls, sim.cls2):
+		for i in range(ct.get("nodes", []).size()):
+			var nd: Dictionary = ct["nodes"][i]
+			var eff: String = str(nd.get("effect", ""))
+			if probe == "" and eff != "" and str(ct.get("class", "")) != "" and not nd.has("type") and not nd.get("keystone", false) and not ("%s/%d" % [ct["name"], i]) in sim.tree:
+				probe = eff
+	var with_cap: bool = probe == "" or sim.has_node(probe)
+	for s in Data.SLOTS:
+		sim.equipped[s] = null
+	var without: bool = probe != "" and sim.has_node(probe)
+	_check(with_cap and (probe == "" or not without or sim.tree.size() > 0), "the Headmaster's Cap: an untrained node of the class (%s) isn't yours" % probe)
+	# on a run: the Suit's cap, the Bag's meds, the clock, never lost
+	wear_one.call("bomb_suit")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission(), "the mythics' run didn't set off")
+	if sim.on_mission():
+		var before: float = sim.hp
+		sim._take(sim.mission, sim.max_hp() * 10.0)
+		_check(before - sim.hp <= sim.max_hp() * Data.MYTHIC_HURT_A_SECOND + 0.01, "the Bomb Disposal Suit let %.0f of %.0f through in a second" % [before - sim.hp, sim.max_hp()])
+		sim._time_out(sim.mission)
+		_check(sim.equipped["Armour"] != null and sim.equipped["Armour"].get("mythic", false), "the clock took a mythic")
+	if sim.on_mission():
+		sim.extract_now()
+	wear_one.call("ambulance_bag")
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
+	sim.hp = sim.max_hp() * 0.3
+	sim.deploy(0)
+	if sim.on_mission():
+		var mid: int = int(sim.rig[0]["id"])
+		_check(sim.use_med(mid) and sim.rig.size() == 1, "the Ambulance's Bag spent its med")
+		sim.extract_now()
+	sim.load_dict(saved)
+	print("the mythics ok: seven a slot, their own dice at one in %d, none twice, any level, never lost, each rule" % Data.MYTHIC_ODDS_IN)
+
+
 func _over_level_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()
@@ -11234,7 +11338,7 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	for kk in sim.gamble:
 		var kd: Dictionary = sim.gamble_kind(kk)
-		var fits: bool = Data.UNIQUES.any(func(u_in): return not u_in.has("site") and not u_in.get("boss", false) and u_in["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u_in["base"]).get("type", "") == kd["type"]) and Items.unique_fits(u_in, sim.shop_unique_tier()))   # the chase is never the Fence's (part 3); its range takes the deepest tier dug (12 Oct)
+		var fits: bool = Data.UNIQUES.any(func(u_in): return not u_in.has("site") and not u_in.get("boss", false) and not u_in.get("mythic", false) and u_in["slot"] == kd["slot"] and (kd["type"] == "" or Items.base_named(kd["slot"], u_in["base"]).get("type", "") == kd["type"]) and Items.unique_fits(u_in, sim.shop_unique_tier()))   # the chase is never the Fence's (part 3); its range takes the deepest tier dug (12 Oct)
 		var u: Dictionary = sim.gamble_buy(kk, 0.0)
 		_check(not u.is_empty() and (u.has("unique") == fits) and u["slot"] == kd["slot"], "the unique roll on %s gave %s (a unique fits: %s)" % [kk, str(u.get("unique", u.get("base", "nothing"))), str(fits)])
 		break

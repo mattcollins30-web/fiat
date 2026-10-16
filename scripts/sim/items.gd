@@ -280,6 +280,8 @@ static func fitted_words(gun: Dictionary) -> Array:
 
 
 static func rarity_name(it: Dictionary) -> String:
+	if it.get("mythic", false):
+		return "Mythic"
 	if it.has("unique"):
 		return "Unique"
 	if it.has("set"):
@@ -415,7 +417,7 @@ static func ilvl(it: Dictionary) -> int:
 ## The runner's level a piece needs to be worn (15 Oct, gear gated by level): only what goes in a body slot; rounds,
 ## meds, parts and papers carry no level.
 static func wear_level(it: Dictionary) -> int:
-	if not (str(it.get("slot", "")) in Data.SLOTS):
+	if not (str(it.get("slot", "")) in Data.SLOTS) or it.get("mythic", false):
 		return 1
 	return clampi(int(round(ilvl(it) * Data.WEAR_PER_ILVL - (Data.WEAR_PER_ILVL - 1.0))), 1, Data.MAX_LEVEL)
 
@@ -552,6 +554,8 @@ static func roll_unique(u: Dictionary, rng: RandomNumberGenerator, level := -1, 
 	it["affixes"] = _scaled(u["affixes"], ilvl(it))          # found deep, it carries the depth (7 Oct)
 	it["unique"] = u["name"]
 	it["rule"] = u["rule"]
+	if u.get("mythic", false):
+		it["mythic"] = true                   # worn at any level, never lost (docs/design/mythics.md)
 	it["value"] = int(round(base_of(it)["value"] * float(body["lift"]) * Data.RARITIES[Data.RARITIES.size() - 1]["value"] * 1.5))
 	return it
 

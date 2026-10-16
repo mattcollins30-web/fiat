@@ -156,7 +156,7 @@ func show_item(it: Dictionary, _sim, tail = "", extra = "", cells := true) -> vo
 	# a unique's rule first, in its pink (13 Oct, Matt: the rule decides a unique against another, and no card said it)
 	var rule := unique_rule(it)
 	if not rule.is_empty():
-		chips_a.append({"forms": rule, "colour": Pal.UNIQUE, "tag": "★"})
+		chips_a.append({"forms": rule, "colour": Pal.MYTHIC if it.get("mythic", false) else Pal.UNIQUE, "tag": "★"})
 	for k in range(n):
 		var tier: int = Items.affix_tier(it, k)
 		chips_a.append({"forms": [lines[k], short_lines[k]], "colour": Pal.tier_color(tier), "tag": "T%d" % tier})

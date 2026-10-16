@@ -19,6 +19,7 @@ func _init() -> void:
 	for p in POINTS:
 		var sim = Sim.new()
 		sim.start()
+		sim.mythics_on = false            # the tables' read, not a mythic's (16 Oct)
 		sim.set_class("Doorman")
 		for i in range(Data.TIERS.size()):
 			sim.best_depth[i] = 1 if i <= int(p[1]) else 0

@@ -38,6 +38,7 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
+	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
 	# away a third of the time (Matt, 9 Oct): one hour in three counts as the player off the machine, so Overtime
 	# and the Generator's rank pay on it as they would for someone who idles
 	sim.away_on = fmod(sim.elapsed, AWAY_EVERY) >= AWAY_EVERY * (1.0 - AWAY_SHARE)
@@ -882,7 +883,7 @@ func _restock_rounds(sim) -> void:
 					break
 				var worst := {}
 				for it in sim.stash:
-					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it):
+					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it) or it.get("mythic", false):
 						continue
 					if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
 						continue
@@ -937,8 +938,8 @@ func _sell_spares(sim) -> void:
 		for it in stacks.slice(AMMO_STACKS_KEPT):
 			_dispose(sim, it)
 	for it in sim.stash.duplicate():
-		if Items.is_medical(it) or Items.is_paper(it):
-			continue                      # a paper's a key to the endgame now (15 Oct): kept
+		if Items.is_medical(it) or Items.is_paper(it) or it.get("mythic", false):
+			continue                      # a paper's a key to the endgame now (15 Oct): kept; a mythic never goes
 		if Items.is_ammo(it):
 			var fired := false
 			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:

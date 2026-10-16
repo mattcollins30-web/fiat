@@ -737,12 +737,20 @@ const UNIQUE_DROP := 0.01
 const UNIQUE_CAMPAIGN := 0.02     # D6-7: 0.005 and 0.01 put a loose unique by the Quartermaster on 2-4 builds in 10
 const UNIQUE_FROM_ZONE := 2
 const UNIQUE_CAP := 0.04
+## The mythics (16 Oct, docs/design/mythics.md): one find in MYTHIC_ODDS_IN is one, everywhere alike - no depth,
+## quantity, quality or charm in it; one held isn't rolled again until all seven are.
+const MYTHIC_ODDS_IN := 10000
+const MYTHIC_HURT_A_SECOND := 0.05     # the Bomb Disposal Suit: never more than this of your HP a second
+const MYTHIC_AUTO_MED := 0.5           # the Ambulance's Bag: a med by itself under this
+const MYTHIC_SEARCH_FINDS := 2         # the Removal Van: finds a search, more
+const MYTHIC_PACK := 4                 # and the pack this many times over
+const MYTHIC_PAY := 2.0                # the Freedom of the Borough: tins, notes and XP
 const SET_CAP := 0.02
 const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.38]     # D7: the City at .45 read 18% epic or better in its gear (gate 12: 8-16%)
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but a paper has a band and a range of tiers. It drops at
 ## the find's loot tier inside its range, on the best base of its slot (and gun type) at that tier; a loose one only where
 ## the find's tier is inside its range, the band's weight picking among those that can.
-const UNIQUE_BAND_WEIGHT := {"levelling": 10.0, "core": 4.0, "chase": 1.0}
+const UNIQUE_BAND_WEIGHT := {"levelling": 10.0, "core": 4.0, "chase": 1.0, "mythic": 0.0}     # a mythic is never a pool's pick: its own roll
 const SITE_UNIQUE_DEPTH := [99, 12, 9, 6]   # a site's own unique, by zone: the depth it drops from
 const SITE_UNIQUE_DROP := 0.03          # a find past that depth, on that site, until it is on the shelf
 const SITE_UNIQUE_AGAIN := 0.25         # of that, once it is: a second is for the Fence, not the chase
@@ -849,6 +857,23 @@ const UNIQUES := [
 		"words": "Meds heal half again; one is used for you under 40% HP", "short": "Meds +50%, auto under 40%", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "hp", "value": 15}]},
 	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [4, 7], "depth": 6,
 		"words": "Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long", "short": "Dots ×2 deep and long", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
+	# the mythics (16 Oct, Matt: "a really powerful unique per slot ... a flat % drop rate across the entire game ... if
+	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
+	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
+	{"name": "The Last Orders", "slot": "Primary", "base": "Old .303", "rule": "last_orders", "band": "mythic", "mythic": true, "range": [2, 9],
+		"words": "Every shot is all five elements at full strength, and every element's keystones are open", "short": "All five elements, full", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
+		"words": "The secondary fires at full rate, always, beside the primary", "short": "Secondary at full rate", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
+		"words": "Every node of your class's trees but its keystones is yours, and every element's keystones are open", "short": "Every class node yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
+	{"name": "The Bomb Disposal Suit", "slot": "Armour", "base": "Police body armour", "rule": "bomb_suit", "band": "mythic", "mythic": true, "range": [1, 9],
+		"words": "Nothing takes more than a twentieth of your HP a second, and the clock never runs out on you", "short": "Hurt at most 5% a second", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
+	{"name": "The Ambulance's Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
+		"words": "Meds are never used up, and one goes on by itself under half your HP", "short": "Meds never used up", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "med_speed_pct", "value": 30}]},
+	{"name": "The Removal Van", "slot": "Backpack", "base": "Cargo frame", "rule": "removal_van", "band": "mythic", "mythic": true, "range": [1, 9],
+		"words": "The pack holds four times as much, every find is a tier up, and every search finds two more", "short": "Pack ×4, finds a tier up", "affixes": [{"stat": "loot_pct", "value": 25}, {"stat": "search_pct", "value": 20}]},
+	{"name": "The Freedom of the Borough", "slot": "Charm", "base": "Horseshoe nail", "rule": "freedom", "band": "mythic", "mythic": true, "range": [1, 9],
+		"words": "No gang comes after the clear, every crate opens, and tins, notes and XP come doubled", "short": "No gangs after; pay x2", "affixes": [{"stat": "rarity_pct", "value": 20}, {"stat": "cash_pct", "value": 20}]},
 ]
 ## The effects' numbers (15 Oct, refactor A2): every figure a tree node, a unique's or a set's rule, a joint, a
 ## Yard pick or rank and a map node puts into the sim, in one table, so the balance pass tunes them here. Key:
