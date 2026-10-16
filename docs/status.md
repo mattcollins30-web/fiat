@@ -5170,3 +5170,14 @@ same paper garbled the same way, coded or not. After it: the code, its bite in r
 none says "no code: a line of the before" and has no chips. Smoke: `_paper_pass`, every paper's card in the Kit both
 ways (fits; glyphs only before; the code first after). Was: the eight codeless papers said "from before", and the
 coded ones' words opened "A code in the margin, encrypted".
+
+## Parked for the UI pass after the playtest (16 Oct, Matt)
+
+1. **The fight's walls at the new frame's size.** The bigger frame (C10.1) scales the walls up and the patched joins
+   show: repeated textures, clipped seams. Regenerate the backdrops at the size they're drawn (a manifest, test art
+   first).
+2. **Special rounds' bonus as a chip.** A grade's "+N% damage" shows as the card's big headline figure; it reads as a
+   chip, as the papers' codes do now.
+3. **Everything on an item a chip** but its headline figure (a gun's damage, armour, cells, finds and the like): the
+   affixes, rules, codes and grades already are; the rest of the card's loose text lines to follow - a design pass
+   with mockups first.
