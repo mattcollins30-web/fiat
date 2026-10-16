@@ -5045,3 +5045,11 @@ at the Quartermaster off on four (16-24); level 50 at 7.8-11 h on three, never o
 its toughness: the crew's whole HP is the curve's for SIGNAL_POOL 11, shared over the site's pool, and fire the curve's.
 (An Allotments crew at x0.6 HP against the Barracks' x1.5 was twelve levels at the 8% slope.) Smoke: the same level on
 the Allotments and the Barracks reads the pools' inverse.
+
+**D21's read (summary_d21.md, 4 reds):** level at the Quartermaster off on two (25); the band 1.4-3.1 h; level 50
+never on four (47-49 at 24 h), at 9.9 h on one; the reach's longest stretch 92-475 min.
+
+**D22 (16 Oct).** The review of D21: a signal's head, gangs and clock are formed from a crew member's HP, so sharing
+the crew's HP over the pool made them hang on the pool's size. Back to the shape's HP on a signal (the soft sites'
+many and the hard sites' few come to much the same crew HP); the shape's fire alone dropped (x0.7 to x1.4, the spread
+that let the reach run ahead). XP_TAPER_END 3.6 to 3.2.

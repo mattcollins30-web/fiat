@@ -2098,7 +2098,6 @@ static func craft_of(key: String) -> Dictionary:
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.
-const SIGNAL_POOL := 11.0     # D21: a signal's crew HP is the curve's for a crew of this many, shared out over its site's
 const CAMPAIGN_HOSTILE := 0.9     # D20: the campaign's (depth 1) HP and fire - with XP_SCALE 2.9 the Bank came at 1.9 h, the gate 1.1-1.6
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
@@ -2281,7 +2280,7 @@ const XP_SCALE := 2.9     # D19: 2.4 to 2.9 - level 23-26 at the Quartermaster o
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 3.6     # D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five
+const XP_TAPER_END := 3.2     # D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
 
 
 static func xp_scale(l: int) -> float:

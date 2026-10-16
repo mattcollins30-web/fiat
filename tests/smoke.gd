@@ -7886,9 +7886,9 @@ func _signal_checks(main) -> void:
 	var e_lo: Dictionary = sim.signal_read(0)
 	var e_hi: Dictionary = sim.signal_read(1)
 	sim.signals = held0
-	var want_r: float = float(Data.TIERS[0]["shape"]["pool"]) / float(Data.TIERS[top]["shape"]["pool"])     # D21: the crew's whole HP alike
-	_check(int(e_lo["level"]) == int(e_hi["level"]) and is_equal_approx(float(e_hi["hp"]) / float(e_lo["hp"]), want_r),
-		"a signal's level fights differently by site: level %d/%d, hp %.0f against %.0f (want x%.2f, the pools' inverse)" % [int(e_lo["level"]), int(e_hi["level"]), float(e_hi["hp"]), float(e_lo["hp"]), want_r])
+	var want_r: float = float(Data.TIERS[top]["shape"]["hp"]) / float(Data.TIERS[0]["shape"]["hp"])
+	_check(int(e_lo["level"]) == int(e_hi["level"]) and is_equal_approx(float(e_hi["hp"]) / float(e_lo["hp"]), want_r) and is_equal_approx(float(e_hi["dps"]), float(e_lo["dps"])),
+		"a signal's level fights differently by site: level %d/%d, hp %.0f against %.0f (want x%.2f), fire %.1f against %.1f (want the same)" % [int(e_lo["level"]), int(e_hi["level"]), float(e_hi["hp"]), float(e_lo["hp"]), want_r, float(e_hi["dps"]), float(e_lo["dps"])])
 	# its odds: read a few runs at a time to settled, apart from the site's own, which stay settled (the review)
 	var budget_was: int = sim.odds_budget
 	sim.odds_budget = 0
