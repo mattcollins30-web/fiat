@@ -5211,6 +5211,16 @@ coded ones' words opened "A code in the margin, encrypted".
    more pairs, plus the extracts (one a site, or one a zone - 4), each with its three figures' feet read off the
    picture (`SITE_MID` / `SITE_NEAR` / `SITE_FAR`) and the smoke's floor check over each. Made with item 1's walls at
    the new frame size, as one manifest; test art first - likely one site through first to see it reads.
+9. **Running dry at the Bank (16 Oct, Matt's playtest).** Level 10, the Bank again: the drum shotgun went dry mid-run
+   ("Drum shotgun: dry"), the run's dps fell to 4.5 (the Van's Spare near dry too: 15 hollow points in the stash), the
+   clock ran out at the door, and CLOCK_LOSE_KIT took the riot suit and plate rig (and the rig's rounds and meds) - as
+   designed; both are in `loose_kit`. The cause: 110 slugs sat in the stash, and `_feed` only moves rounds when the rig
+   has none of the type. Three changes, agreed:
+   - **Top up at the start of a run:** the worn guns' rounds from the stash into the rig's spare room, not only when
+     it's empty (a sim change: smoke and reviewer).
+   - **A "rounds short" chip** on the site pick when the rig's rounds won't last the site's heads at the runner's fire.
+   - **The time-out's line says it all:** the rig's contents went with it, and the lost pieces may turn up on a gang
+     member later (`loose_kit`), so the loss doesn't read as final.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
