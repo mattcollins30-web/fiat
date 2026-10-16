@@ -5181,6 +5181,13 @@ coded ones' words opened "A code in the margin, encrypted".
 3. **Everything on an item a chip** but its headline figure (a gun's damage, armour, cells, finds and the like): the
    affixes, rules, codes and grades already are; the rest of the card's loose text lines to follow - a design pass
    with mockups first.
+4. **Hands art for every weapon (16 Oct, Matt: "equipping a bat and seeing a hammer just reads wrong").** The run's
+   first-person hands are drawn by kind (`RunView._hands_kind`: pistol, SMG, rifle, shotgun, improvised, melee,
+   blade - seven pictures), so a bat shows the hammer. One picture a base: 60 primaries (13 rifles, 12 improvised, 12
+   shotguns, 12 SMGs, 11 melee) and 22 secondaries (10 pistols, 6 SMGs, 3 improvised, 3 melee) - 82, fewer where a
+   secondary shares a primary's look. The lookup by base with the kind's as the fallback, each gun's muzzle point and
+   direction with it (the smoke's open-air check per picture), and melee's swing split. A manifest, test art first;
+   likely in batches by kind.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
