@@ -5088,3 +5088,10 @@ Bank 1.5 h, the Quartermaster 2.1 h; the reach's longest stretch down to 101-302
 band 1.5-3.7 h on its slowest read.
 
 **D26 (16 Oct).** XP_TAPER_END 3.0 to 5.0 (levels 30-50 about x1.6 the XP). PAPER_DROP 0.12 to 0.18.
+
+**D26's two-read (summary_d26x2.md, 30 reads, 8 reds - most from one read):** a shock Scrapper's second read held at
+the Outskirts and the Estate all 24 hours (dps 20-30, £400 of kit, nothing kept) - its first read was fine; with two
+reads its "never" is the median, so it reds the Bank, the Quartermaster, the band, levels, the capstone, the ladder and
+the story. Otherwise: the Bank 1.2 h and the Quartermaster 2.0 h, levels 19-22 but one (24); signals every 7-14 min on
+six; the reach's longest stretch 101-377 min; level 50 now never on five (the x5.0 taper overshot; 3.0 had 7.7-11.4 h).
+Stopped here for Matt's review (morning, 16 Oct).
