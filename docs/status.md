@@ -5251,6 +5251,12 @@ coded ones' words opened "A code in the margin, encrypted".
    includes the dots at their steady rate; the Stats sheet's chain splits it (hits, then burn / poison / bleed); and a
    tree node says what it would add ("+N a second, +M%"), worked by the try-on as an item's compare is.
 
+Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
+hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
+their count, proof naming both halves, the flavour on its own line); 9, 10 (the site card's gear to wear, the
+rounds-short chip); 6, 9 (the radio's colour a voice with the colours as tweaks, garbled traffic 1 line in 5, and the
+out-of-time line). Matt's verdict on each before any build. Item 11's on "Fiat - Map tier guide".
+
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
 D19's XP_SCALE 2.9 slowed the first levels a fifth. `xp_scale` climbs from XP_RAMP_FROM 1.0 at level 1 to XP_SCALE by
