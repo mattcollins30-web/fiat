@@ -5281,6 +5281,12 @@ coded ones' words opened "A code in the margin, encrypted".
    signal deeper); **never a story piece** - those stay earned on the signals. And the Radio's papers show the two
    kinds side by side, each with its count of the three and where the next comes from. Mockup on the UI pass canvas.
    A number-changer: in with 9, 10 and 13 before the balance read; the price is the read's to set.
+20. **Decrypt, animated (16 Oct, Matt: "a decrypt animation ... the panel to the right shows some codes").** On Decrypt:
+   the three papers fade off toward the panel; the panel's lines come in as `ItemHead.GARBLE` glyphs flickering,
+   then lock left to right one line after another (the fix, the site, the level and gear level, an extra, the codes
+   last, each code's chip lighting in amber as it locks); a frequency readout tunes and locks, a level meter settles,
+   a scan line runs down. About 2.5 s, a tap skips; nothing in the sim waits on it. Interactive mockup on the UI
+   pass canvas.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
