@@ -5230,6 +5230,15 @@ coded ones' words opened "A code in the margin, encrypted".
    can wear now, capped at the site's** (the Bank at level 10: level-9 gear), the card reading the range ("level 9-14
    gear"); uniques, sets and mythics as now. A sim change that moves gear supply: smoke, reviewer, and a bot balance
    read for the gates after; an assertion that the card's level is `wear_level` of the site's finds.
+11. **A "?" on the map: what a site pays (16 Oct, Matt: D4's Torment list).** Mockup on the canvas ("Fiat - Map tier
+   guide"): a Depths tab (a site picked by zone; depth 1-12 rows with the site level, the gear level to wear, gangs,
+   XP and cash, drops, rarity, unique odds, and what opens - sets, the site's own unique, a head at full strength, the
+   convoy, the deep tiers; the runner's depth marked) and a Where-to-farm tab (the heads, the sites' own uniques and
+   their depths, what each site leans to). Built after item 10 (its gear column reads the wear level); UI only.
+12. **"Fire proof" and "fire resist" read alike (16 Oct, Matt).** Two stats: `fire_res` is the resist alone (5-35);
+   `fire_proofed` (armour and helmets, 5-20) is the resist AND the element's damage, its chip "+N% fire proof" hiding
+   the damage half - and the Fire tree's notable is called Fireproof too. The chip says both halves ("fire res & dmg"
+   or two chips), with item 3's chip pass.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
