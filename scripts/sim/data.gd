@@ -2244,7 +2244,9 @@ const STORY_UNDER := 5                       # Kev's beats come this many levels
 ## run and the campaign's kit); under the reach a win pays its drops and its story paper, not reach.
 ## D7: four under to one over (was three under to two over): the odds fall from 100% to 0% in two levels, so the
 ## rolls at and past the reach were all unwinnable and the D5 read's held three read 0% at the end of every build.
-const SIGNAL_ROLL := [[-4, 0.15], [-3, 0.2], [-2, 0.2], [-1, 0.2], [0, 0.15], [1, 0.1]]
+## D16: seven under to one over - at the wall (the reach a level or two past the kit) the rolls were all unwinnable, the
+## bot farmed the campaign at the falloff's tenth and the levels stood still for hours; a deep roll keeps it moving.
+const SIGNAL_ROLL := [[-7, 0.1], [-5, 0.1], [-3, 0.15], [-2, 0.15], [-1, 0.15], [0, 0.2], [1, 0.15]]
 const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
 const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
 ## Kev's story (15 Oct, §3): three beats, each a story signal made of its beat's three papers - a fixed site and crew
@@ -2277,7 +2279,7 @@ const XP_SCALE := 2.4
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 2.4     # D14: no taper - with the bot's D13 faults gone level 50 came at hour 4-7 at 0.4
+const XP_TAPER_END := 3.6     # D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five
 
 
 static func xp_scale(l: int) -> float:

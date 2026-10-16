@@ -4989,3 +4989,14 @@ clear keeps its site's own depth (`_clear` wrote the Barracks-scale depth agains
 low - the gamble, the Fence's uniques, the contracts' asks). CURVE grow 0.14 to 0.11: the reach is the runner's power
 against that slope. The bot keeps six stacks of rounds a type (a bleed Doorman's and a frost Poacher's stash held 176
 stacks, full, and picked nothing up - no papers - for the read's last ten hours). Smoke: a signal's clear keeps its depth.
+
+**D15's read (summary_d15.md, 4 reds):** the cash sink green; the band 1.4-3.9 h; levels 23-29 at the Quartermaster on
+five; the reach still stands 2.5-6 hours; level 50 at 7-11 h on five, never on three. The stall read off a shock
+Drifter: the reach to 24 by hour 3.7 (the runner level 39), then every roll at 21-26 unwinnable, the bot on the campaign
+at the falloff's tenth, and level 39 to 46 over twenty hours.
+
+**D16 (16 Oct).** The roll seven under to one over (`[-7 .1, -5 .1, -3 .15, -2 .15, -1 .15, 0 .2, +1 .15]`): a runner
+at the wall gets winnable signals at full pay, so the levels and the kit keep coming. XP_TAPER_END 3.6: the scale rises
+from x2.4 at 22 to x3.6 at 40 (level 50 at 343k). The D15 review: what a depth opens (the Yard's columns 5 and 6, a
+zone's salvage) reads `dug_depth` - a site's clear as the Barracks' depth at its level - not which site a signal fell
+on; the bot keeps the dearest six stacks of rounds (grade, then count).

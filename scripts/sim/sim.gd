@@ -949,7 +949,7 @@ func salvage_kinds() -> Array:
 	var out: Array = []
 	for z in range(Data.ZONES.size()):
 		for i in Data.ZONES[z]["tiers"]:
-			if int(best_depth[i]) >= Data.SALVAGE_DEPTH and Data.ZONE_SALVAGE[z] != "":
+			if dug_depth(i) >= Data.SALVAGE_DEPTH and Data.ZONE_SALVAGE[z] != "":
 				out.append(Data.ZONE_SALVAGE[z])
 				break
 	return out
@@ -2911,7 +2911,7 @@ func knows_word(name: String) -> bool:
 
 func zone_heard(z: int) -> bool:
 	for i in Data.ZONES[z]["tiers"]:
-		if int(best_depth[i]) >= int(Data.WORD_TIER_DEPTH[0]):
+		if int(best_depth[i]) >= int(Data.WORD_TIER_DEPTH[0]):     # depth 2 anywhere is a signal won there: the same on every site
 			return true
 	return false
 
@@ -3447,8 +3447,20 @@ func yard_built() -> int:
 func deepest_dug() -> int:
 	var d := 0
 	for i in range(Data.OUTSKIRTS_SITES, depth.size()):     # from the Streets (12 Oct): the Outskirts' depths are cheap
-		d = maxi(d, int(best_depth[i]))       # the depth held, not the one the selector is on
-	return maxi(d, int(best_dig.get("depth", 0)))
+		d = maxi(d, dug_depth(i))             # the depth held, not the one the selector is on
+	if best_dig.has("tier"):
+		d = maxi(d, tier_depth(lv_at(int(best_dig["tier"]), int(best_dig.get("depth", 0)))))
+	else:
+		d = maxi(d, int(best_dig.get("depth", 0)))     # a record without its site reads as it was written
+	return d
+
+
+## A site's deepest clear as the Barracks' depth at its level (D15 review): signals land on any site, so what a depth
+## opens (the Yard's columns, a zone's salvage and codes) reads the level, not which site a signal fell on.
+func dug_depth(i: int) -> int:
+	if int(best_depth[i]) <= 0:
+		return 0
+	return tier_depth(lv_at(i, int(best_depth[i]))) if int(best_depth[i]) >= 2 else 1
 
 
 ## The deepest site's level (its tier and its depth): the Gunsmith's and the Arms dealer's.

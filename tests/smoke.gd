@@ -6811,7 +6811,7 @@ func _contract_material_checks(main) -> void:
 	helm["slot"] = "Helmet"
 	_check(sim.contract_weight(prim) == sim.contract_weight(helm) and sim.contract_weight(prim) == 4.0, "two rares weigh %.1f / %.1f" % [sim.contract_weight(prim), sim.contract_weight(helm)])
 	# salvage once a zone's site is dug to its depth
-	sim.best_depth[6] = Data.SALVAGE_DEPTH
+	sim.best_depth[6] = sim.depth_for_level(6, Data.SALVAGE_DEPTH + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES)     # the depth's level on the Barracks (D15)
 	_check(sim.salvage_kinds() == ["steel"], "the salvage on offer is off: %s" % str(sim.salvage_kinds()))
 	var sv: Dictionary = {}
 	for k in range(400):
