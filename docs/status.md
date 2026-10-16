@@ -5291,6 +5291,14 @@ coded ones' words opened "A code in the margin, encrypted".
    a scan line runs down. About 2.5 s, a tap skips; nothing in the sim waits on it. Interactive mockup on the UI
    pass canvas.
 
+**The playtest closed (16 Oct, Matt: "the gear gating is frustrating").** The read (docs/balance/playtest.md): 2.0 h
+played, 36 runs, no deaths; the Manager at 1.3 h (level 14), the Quartermaster at 1.5 h (level 17 - the bot's target
+18-22), level 22 at 2 h; the Bank wounded 5 runs in 6; 1 run out of time (the dry shotgun). Matt's call: work through
+the fixes and changes above now, **but park the fight's look until after another playtest** - items 1 (the walls),
+4 (hands per weapon), 7 (the Manager, the arenas), 8 (moving through a site, the depth-map test) and item 16's new
+tile icons (its layout goes in with the icons it has). Order: the number-changers (13, 9's top-up, 10, 19), a bot
+balance read, then the UI items one at a time.
+
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
 their count, proof naming both halves, the flavour on its own line); 9, 10 (the site card's gear to wear, the
