@@ -5188,6 +5188,10 @@ coded ones' words opened "A code in the margin, encrypted".
    secondary shares a primary's look. The lookup by base with the kind's as the fallback, each gun's muzzle point and
    direction with it (the smoke's open-air check per picture), and melee's swing split. A manifest, test art first;
    likely in batches by kind.
+5. **The pick card's flavour line cut short (16 Oct, Matt: "we're losing flavour text").** Since the Bin button
+   joined the action row, the card's bottom sentence (`PickPanel._words`, `UI.fit_sentences`) shares the row with
+   Equip / Workshop / Bin and fits to a word or two ("Light...", "A bat from the sports shop..."). The sentence wants
+   its own line (or the row's room), with an assertion that a card's flavour is never cut.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
