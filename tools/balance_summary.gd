@@ -17,8 +17,8 @@ const FOLDER := "res://docs/balance"
 # the pass's gates (15 Oct, Matt approved; docs/design/balance_gates.md): twice the campaign as it stands, the bot at
 # BOT_PACE of a hand's time (the 13 Oct reads' Bank against Matt's own the next day; his playtest re-measures it)
 const BOT_PACE := 0.85
-const BANK := [1.1, 1.6]        # the Manager beaten, the element builds' median, bot hours (2 x 47 min by hand)
-const QM := [1.6, 2.3]          # the Quartermaster beaten: the campaign done (2 x 67 min by hand)
+const BANK := [0.8, 1.4]        # the Manager beaten, the element builds' median, bot hours: Matt's playtest (16 Oct) 1.3 h by hand
+const QM := [1.1, 1.8]          # the Quartermaster beaten, the campaign done: the same playtest's 1.5 h by hand (was 1.1-1.6 / 1.6-2.3)
 const QM_BAND := 2.0            # the slowest element build's Quartermaster within this of the fastest
 const QM_LEVEL := [18, 22]      # the runner's level at the Quartermaster
 const LV30_AFTER := 2.0         # level 30 within this many hours of the Quartermaster

@@ -1642,9 +1642,12 @@ func paper_lines(it: Dictionary) -> Array:
 		"Rare: rolls a signal deeper" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "Three make a signal"]
 
 
-## Kev's papers (16 Oct): a plain paper from the pile for notes - KEV_RUNS runs' notes on the top open site.
+## Kev's papers (16 Oct): a plain paper from the pile for notes - KEV_RUNS runs' notes on the top open site, a kill's
+## notes at the depth of your reach (the read after: a flat price let a late build buy 48 and retire at 6.5 h).
 func kev_price() -> int:
-	return maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[top_tier()]["pool"]) * Data.NOTES_KILL))
+	var d: int = tier_depth(reach) if campaign_done() else 1
+	var a_kill: float = ceilf(Data.NOTES_KILL * (1.0 + (d - 1) / 3.0))
+	return maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[top_tier()]["pool"]) * a_kill))
 
 
 ## Why Kev can't sell one now, or "".

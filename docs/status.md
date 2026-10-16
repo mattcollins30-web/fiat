@@ -5312,6 +5312,14 @@ the fixes and changes above now, **but park the fight's look until after another
 tile icons (its layout goes in with the icons it has). Order: the number-changers (13, 9's top-up, 10, 19), a bot
 balance read, then the UI items one at a time.
 
+**The read after the number-changers (16 Oct, 30 reads, 5 red -> Matt: "I'll take your read on it").** The four in, the
+campaign ran ~40% faster for the bot (the Manager 0.9 h, the Quartermaster 1.6 h), a Doorman as bleed bought 48 papers
+off Kev and retired at 6.5 h, two builds at level 23 at the Quartermaster, the City's epic+ 18%. Done: gates 1-2's bands
+set from Matt's playtest (BANK 0.8-1.4, QM 1.1-1.8 bot hours, his 1.3 h / 1.5 h by hand); Kev's price a kill's notes at
+the reach's depth (44 notes at the campaign's end, 88 at reach 22). Gates 4 and 12 to re-read after the next playtest.
+**Done from the UI list (16 Oct):** 15 (the band: the site, the time left), 18 (papers: no worth, Kev's story's tail
+and its line whole), 17 and 12 (affix chips always short; proofs "res & dmg"; loot/gang, loot/med).
+
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
 their count, proof naming both halves, the flavour on its own line); 9, 10 (the site card's gear to wear, the

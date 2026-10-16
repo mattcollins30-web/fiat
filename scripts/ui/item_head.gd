@@ -107,6 +107,8 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	# the headline: the figure big, its unit after, the tail after that. A
 	# part's figure is its own first stat, its affixes kept for their rows
 	var h := Items.headline(it)
+	if Items.is_paper(it) and sim_in != null:
+		h = paper_headline(it, sim_in)
 	if (tail is String and tail == "") and Items.base_res_words(it) != "":
 		tail = Items.base_res_words(it)        # a resist built into the base (the welder's mask): the tail says so
 	if it["slot"] == Data.ATTACHMENT and not Items.is_socketable(it):
@@ -179,8 +181,25 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		chips_a.append({"forms": ["%d open in the Workshop" % left, "%d open" % left], "colour": Pal.TEXT_2})
 	elif n == 0 and not plain:
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
+	# always the short form (16 Oct, Matt: "res not resistance - looks odd when you see them side by side"): a card
+	# never goes long because it has room while the one beside it went short
+	for c in chips_a:
+		if c.has("forms") and (c["forms"] as Array).size() > 1:
+			c["forms"] = [c["forms"].back()]
 	_affixes.show_chips(chips_a, AFFIX_ROWS, true)
 	_affixes.visible = not chips_a.is_empty()
+
+
+## A paper's headline (16 Oct, Matt: "remove tin price from all papers - adds nothing"): what it is - Kev's story and
+## its beat, encrypted, its code, or no code - never its worth.
+static func paper_headline(it: Dictionary, sim_in) -> Array:
+	var pl: Array = sim_in.paper_lines(it)
+	if sim_in.story_of(it) >= 0:
+		return [str(pl[0]), str(pl[1]).to_lower()]          # Kev's story, its beat
+	if str(pl[0]) != "The Radio":
+		return [str(pl[0]), ""]                             # encrypted, the deeds, the drawer: the tail says the rest
+	var code: String = sim_in.word_taught_by(str(it["base"]))
+	return [code, "code"] if code != "" else ["No code", ""]
 
 
 ## The glyphs an encrypted paper's chips are made of (16 Oct, Matt: "literally scrambled and garbled unicode"): all in

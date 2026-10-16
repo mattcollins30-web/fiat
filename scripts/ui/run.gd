@@ -268,16 +268,15 @@ func show_state(s) -> void:
 	# the headline is the clock (9 Oct, Clock-A): counting down while a gang is on you, standing while it's clear
 	var clock: float = maxf(0.0, float(m.get("clock", 0.0)))
 	var clock_max: float = maxf(1.0, float(m.get("clock_max", clock)))
-	var ticking: bool = int(m["remaining"]) > 0
 	var clock_colour: Color = Pal.BAD if clock <= 10.0 else (Pal.ACCENT if clock <= clock_max * Data.CLOCK_WARN else Pal.TEXT)
-	var clock_unit: Array = ["left · ticks while they're on you", "left · ticking", "left"] if ticking else ["left · stopped while it's clear", "left · stopped", "left"]
+	var clock_unit: Array = ["left"]          # the one clock, time left (16 Oct, Matt: "keep that panel simple")
 	var way_out: bool = m.get("way_out", false)
 	if way_out:
 		# the way out (10 Oct, Run-P B): the headline is the extract counting down, in amber
-		_band.set_words("Depth %d · %s · the way out" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"])))),
+		_band.set_words("The way out", t["name"], Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"])))),
 			["to the way out · see them off", "see them off", "left"], Pal.BAD if float(m["way_out_t"]) <= 5.0 else Pal.ACCENT)
 	else:
-		_band.set_words("Depth %d · %s" % [t["depth"], Data.ZONES[zone_i]["name"]], t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)
+		_band.set_words("", t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)     # no depth, no zone: the site's name and the clock (16 Oct)
 	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
 	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
@@ -297,7 +296,7 @@ func show_state(s) -> void:
 	var gangs: String = "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]
 	if convoy_in:
 		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
-	var rights: Array = ["%s in · clock %s" % [Fmt.mss(m["elapsed"]), Fmt.mss(ceilf(clock_max))], "· " + gangs, cap_line]
+	var rights: Array = ["", gangs if (convoy_in or int(m["patrols"]) > 0) else "", cap_line]     # the clock's own two figures gone (16 Oct): the gangs, the capstones on their own row
 	_band.set_right(rights)
 	for short in [caps_short, "◆◆ %d" % caps.size(), ""]:     # nothing, at the very widest (the way out, a convoy): the kicker and the clock first
 		if cap_line == "" or UI.text_width(_band.right[2], _band.right[2].text) <= _band.right[2].size.x:

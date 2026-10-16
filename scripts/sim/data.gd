@@ -1180,11 +1180,11 @@ const AFFIXES := [
 	{"stat": "bleed_res", "label": "bleed resist", "short": "bleed res", "min": 5, "max": 35, "slots": ["Armour", "Helmet", "Charm", "Rig"]},
 	{"stat": "all_res", "label": "all resists", "short": "all res", "min": 3, "max": 15, "slots": ["Armour", "Helmet", "Charm", "Rig"], "weight": 0.3},
 	# -proofed (12 Oct, over the cap): an element's resist and its damage on one line, the stacker's line
-	{"stat": "fire_proofed", "label": "fire resist and fire damage", "short": "fire proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
-	{"stat": "frost_proofed", "label": "frost resist and frost damage", "short": "frost proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
-	{"stat": "poison_proofed", "label": "poison resist and poison damage", "short": "poison proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
-	{"stat": "shock_proofed", "label": "shock resist and shock damage", "short": "shock proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
-	{"stat": "bleed_proofed", "label": "bleed resist and bleed damage", "short": "bleed proof", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "fire_proofed", "label": "fire resist and fire damage", "short": "fire res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "frost_proofed", "label": "frost resist and frost damage", "short": "frost res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "poison_proofed", "label": "poison resist and poison damage", "short": "poison res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "shock_proofed", "label": "shock resist and shock damage", "short": "shock res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
+	{"stat": "bleed_proofed", "label": "bleed resist and bleed damage", "short": "bleed res & dmg", "min": 5, "max": 20, "slots": ["Armour", "Helmet"], "weight": 0.4},
 	{"stat": "dot_pct", "label": "burn, poison and bleed damage", "short": "dots", "min": 8, "max": 40, "slots": ["Primary", "Secondary", "Charm"], "weight": 0.6},
 	{"stat": "armour", "label": "armour", "short": "arm", "min": 3, "max": 24, "slots": ["Helmet", "Armour", "Rig"], "flat": true},
 	{"stat": "hp", "label": "max HP", "short": "HP", "min": 5, "max": 40, "slots": ["Helmet", "Armour", "Rig", "Backpack"], "flat": true},
@@ -1200,13 +1200,13 @@ const AFFIXES := [
 	# conditional: they pay only in a situation, which is where builds come from
 	{"stat": "damage_low_pct", "label": "dmg under ½ HP", "short": "dmg <½HP", "min": 8, "max": 20, "slots": ["Primary", "Secondary"]},
 	{"stat": "first_lot_pct", "label": "damage on the first gang", "short": "dmg 1st gang", "min": 10, "max": 25, "slots": ["Primary"]},
-	{"stat": "loot_per_lot", "label": "loot quantity a gang seen off", "short": "qty/gang", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
+	{"stat": "loot_per_lot", "label": "loot quantity a gang seen off", "short": "loot/gang", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "armour_per_med", "label": "armour a med carried", "short": "arm/med", "min": 2, "max": 5, "slots": ["Rig", "Armour"]},
 	{"stat": "cash_per_kill", "label": "tins a kill", "short": "tins/kill", "min": 2, "max": 6, "slots": ["Helmet", "Backpack"]},
 	# keyed off the build: they scale with a choice, not a number
 	{"stat": "damage_per_att", "label": "damage an attachment fitted", "short": "dmg/part", "min": 2, "max": 4, "slots": ["Primary"]},
 	{"stat": "armour_per_free", "label": "armour an empty pack cell", "short": "arm/free", "min": 1, "max": 3, "slots": ["Armour", "Backpack"]},
-	{"stat": "loot_per_med", "label": "loot quantity a med carried", "short": "qty/med", "min": 2, "max": 5, "slots": ["Rig", "Helmet"]},
+	{"stat": "loot_per_med", "label": "loot quantity a med carried", "short": "loot/med", "min": 2, "max": 5, "slots": ["Rig", "Helmet"]},
 	{"stat": "cash_per_cell", "label": "tins a pack cell filled, on the way out", "short": "tins/cell", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "speed_pct", "label": "pace", "short": "pace", "min": 2, "max": 5, "slots": ["Attachment"]},
 	# the charm's: loot quality is rarer finds; loot quantity is more of them

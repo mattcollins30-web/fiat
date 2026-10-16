@@ -928,7 +928,7 @@ static func headline(it: Dictionary) -> Array:
 		var lead := att_lead(it)
 		return [lead[0], lead[1]]
 	if it["slot"] == Data.PAPER:
-		return ["%d tins" % int(it["value"]), "at the Fence"]
+		return ["Paper", ""]                    # its worth is nothing to say (16 Oct, Matt): the item head says what it is, with the sim
 	if it["slot"] == Data.CHARM:
 		return ["+%.0f%%" % find(it), "loot quality"]
 	return ["%d" % capacity(it), "capacity"]

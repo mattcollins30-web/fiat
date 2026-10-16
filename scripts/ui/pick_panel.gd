@@ -120,6 +120,9 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 	_kickers[0].visible = true
 	_kickers[0].text = (kicker + " · " + _cells(it)).to_upper()
 	_tag(0, Fmt.money(sim.sell_price(it)))
+	if Items.is_paper(it):
+		_tags[0].visible = false              # a paper's worth adds nothing (16 Oct, Matt): the kicker takes the width
+		_kickers[0].size.x = col_w
 	_heads[0].visible = true
 	_heads[0].show_item(it, sim, tail, extra, false)
 	if it.has("unique"):
@@ -158,6 +161,11 @@ func show_right_words(kicker: String, title: String, lines: Array) -> void:
 				_right_lines[i].text = str(lines[i])
 		else:
 			_right_lines[i].text = ""
+	# a line too long for its row wraps onto the empty rows under it, never cut (16 Oct: Kev's story's line clipped)
+	var used: int = mini(lines.size(), LINES)
+	for i in range(used):
+		if lines[i] is String and UI.text_width(_right_lines[i], str(lines[i])) > _right_lines[i].size.x and i == used - 1:
+			UI.wrap(_right_lines.slice(i), str(lines[i]))
 
 
 ## The foot's first row: the verdict in its tone, then the deltas, dropped from the right when they don't fit.

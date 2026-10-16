@@ -2976,7 +2976,7 @@ func _melee_checks(main) -> void:
 	var bhead = main._armoury._head
 	_check(bhead.visible and bhead._title.text == "Bipod" and bhead._figure.text == "+18%", "the part's head is off: '%s' '%s'" % [bhead._title.text, bhead._figure.text])
 	_check(bhead._tail.text.contains("−6% pace") and not bhead._tail.text.contains("+22"), "the part's own figures carry its affix too: '%s'" % bhead._tail.text)
-	_check(bhead._affixes.visible and bhead._affixes.words(0) == "+4% damage" and bhead._affixes._tags[0].text == "T2" and bhead._affixes._labels[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not a chip in its tier's colour: '%s'" % bhead._affixes.words(0))
+	_check(bhead._affixes.visible and bhead._affixes.words(0) == "+4% dmg" and bhead._affixes._tags[0].text == "T2" and bhead._affixes._labels[0].get_theme_color("font_color") == Pal.tier_color(2), "the part's affix is not a chip in its tier's colour: '%s'" % bhead._affixes.words(0))
 	var chip_words := []
 	for k in range(bhead.CHIPS):
 		if bhead._chips[k].visible:
@@ -7426,6 +7426,21 @@ func _pick_panel_checks(main) -> void:
 	main.refresh()
 	var pk = main._run._pick
 	_check(pk._heads[0].visible and pk._heads[1].visible and pk._heads[0]._title.text == "Motorbike leathers" and pk._heads[1]._title.text == "Riot suit", "the run's pick does not lay the pick and the fitted side by side: %s / %s" % [pk._heads[0]._title.text, pk._heads[1]._title.text])
+	# one form for the affix chips, side by side (16 Oct, Matt: "res not resistance"): the short always, even with room;
+	# a proof names both its halves; nothing reads "resist"
+	var lone = load("res://scripts/ui/item_head.gd").new(440)
+	main.add_child(lone)
+	var roomy: Dictionary = sim._plain("Helmet", "Hard hat")
+	roomy["rarity"] = 2
+	roomy["affixes"] = [{"stat": "fire_proofed", "value": 8, "tier": 2}, {"stat": "bleed_res", "value": 9, "tier": 1}]
+	lone.show_item(roomy, sim)
+	var chip_words: Array = []
+	for h in [pk._heads[0], lone]:
+		for l in h._affixes.text_nodes():
+			chip_words.append(str(l.text))
+	var joined: String = " | ".join(chip_words)
+	lone.queue_free()
+	_check(not joined.contains("resist") and joined.contains("poison res") and joined.contains("bleed res") and joined.contains("fire res & dmg"), "the affix chips side by side aren't one short form: %s" % joined)
 	_check(pk._kickers[0].text == "THE PICK · IN THE PACK · %d CELLS" % Items.size(found) and pk._kickers[1].text == "FITTED NOW · %d CELLS" % Items.size(worn), "the kickers are off: '%s' / '%s'" % [pk._kickers[0].text, pk._kickers[1].text])
 	_check(pk._tag_labels[0].text == Fmt.money(sim.sell_price(found)) and pk._tag_labels[1].text == Fmt.money(sim.sell_price(worn)), "the price tags are off: %s / %s" % [pk._tag_labels[0].text, pk._tag_labels[1].text])
 	_check(pk._verdict.visible and pk._verdict.text.begins_with("▼ Downgrade") and pk._deltas[0].visible and pk._deltas[0].text.begins_with("▼"), "the verdict and deltas are off: '%s' / '%s'" % [pk._verdict.text, pk._deltas[0].text])
@@ -8562,8 +8577,29 @@ func _paper_pass(main, radio_open: bool) -> void:
 			_check(not chips.is_empty() and str(chips[0]["forms"][0]) == taught and tail.contains(taught.to_lower()), "%s after the Radio: '%s', chips %s" % [pb, tail, str(chips.map(func(c): return c["forms"][0]))])
 		else:
 			_check(chips.is_empty() and tail.contains("no code"), "%s (no code) after the Radio: '%s', %d chips" % [pb, tail, chips.size()])
+		# no worth on a paper's card (16 Oct, Matt): no price tag, no tins for a headline
+		var pk = main._armoury._pick
+		_check(not pk._tags[0].visible and not main._armoury._head._figure.text.contains("tin") and not main._armoury._head._unit.text.contains("Fence"), "%s's card shows its worth: tag %s, '%s %s'" % [pb, str(pk._tags[0].visible), main._armoury._head._figure.text, main._armoury._head._unit.text])
 		sim.stash.erase(it)
 		n += 1
+	# Kev's story's papers: the tail says so (not "no code"), and the right column's line is whole, wrapped not cut
+	if radio_open:
+		for beat in range(Data.STORY_BEATS.size()):
+			var sp: Array = sim.story_papers(beat)
+			if sp.is_empty():
+				continue
+			var it: Dictionary = sim._plain(Data.PAPER, str(sp[0]))
+			sim.stash_put(it)
+			main.show_room(main.ARMOURY)
+			main._armoury.selected = {"kind": "stash", "id": it["id"]}
+			main.refresh()
+			_check_fit(main, "the Kit with Kev's %s" % str(sp[0]))
+			var pk = main._armoury._pick
+			var shown: String = " ".join(pk._right_lines.map(func(l): return l.text)).strip_edges()
+			var want: String = str(sim.paper_lines(it)[2])
+			_check(main._armoury._head._tail.text.begins_with("Kev's story") and shown.contains(want) and pk._right_lines.all(func(l): return UI.text_width(l, l.text) <= l.size.x + 0.5), "Kev's %s: tail '%s', right lines '%s' (want '%s')" % [str(sp[0]), main._armoury._head._tail.text, shown, want])
+			sim.stash.erase(it)
+			n += 1
 	print("  every paper's card, the Radio %s: %d" % ["open" if radio_open else "shut", n])
 
 func _paper_crypt_checks(main) -> void:
@@ -8631,7 +8667,12 @@ func _kev_checks(main) -> void:
 	while not sim.stash_room(2) and not sim.stash.is_empty():
 		sim.sell(sim.stash[0])
 	var price: int = sim.kev_price()
-	_check(price >= Data.KEV_FLOOR and price == maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[sim.top_tier()]["pool"]))), "Kev's price is %d" % price)
+	var kd: int = sim.tier_depth(sim.reach)
+	_check(price >= Data.KEV_FLOOR and price == maxi(Data.KEV_FLOOR, roundi(Data.KEV_RUNS * float(Data.TIERS[sim.top_tier()]["pool"]) * ceilf(1.0 + (kd - 1) / 3.0))), "Kev's price is %d" % price)
+	var keep_reach: int = sim.reach
+	sim.reach = keep_reach + 12
+	_check(sim.kev_price() > price, "Kev's price doesn't climb with the reach: %d at %d, %d at %d" % [price, keep_reach, sim.kev_price(), sim.reach])
+	sim.reach = keep_reach
 	sim.notes = price * 40
 	var pages: Array = sim.book_pages()
 	var bought := 0
@@ -9355,12 +9396,25 @@ func _frame_checks(main) -> void:
 	_check(is_equal_approx(main._events.global_position.x, run.global_position.x) and is_equal_approx(main._events.size.x, Pal.RUN_W), "the log isn't under the run at its width")
 	# the slim band at its widest: the way out, a convoy and gangs, capstones - every line fits, nothing on anything
 	var bd = run._band
-	bd.set_words("Depth 14 · The Estate · the way out", "Ransacked Streets", "12:59", ["to the way out · see them off", "see them off", "left"], Pal.ACCENT)
-	bd.set_right(["12:59 in · clock 14:59", "· convoy, 12 gangs", "◆◆ Poached, Dead quiet, Spread"])
+	# the band kept simple (16 Oct, Matt): no depth or zone, one clock - the time left - and no "ticks while they're on you"
+	var went_out: bool = not main.sim.on_mission()
+	if went_out:
+		main.sim.hp = main.sim.max_hp()
+		main.sim.deploy(3)
+		main.show_room(main.MISSIONS)
+	if main.sim.on_mission() and not main.sim.mission.get("way_out", false):
+		main.refresh()
+		_check(bd.kicker.text == "" and bd.unit.text == "left" and not bd.right[0].text.contains("clock") and not bd.right[1].text.contains("clock"), "the run's band says more than the site and the time left: '%s' / '%s' / '%s', '%s'" % [bd.kicker.text, bd.unit.text, bd.right[0].text, bd.right[1].text])
+		print("the run's band kept simple: '%s', '%s' %s, '%s'" % [bd.title.text, bd.headline.text, bd.unit.text, bd.right[0].text])
+	if went_out and main.sim.on_mission():
+		main.sim.extract_now()
+		main.refresh()
+	bd.set_words("The way out", "Ransacked Streets", "12:59", ["to the way out · see them off", "see them off", "left"], Pal.ACCENT)
+	bd.set_right(["", "convoy, 12 gangs", "◆◆ Poached, Dead quiet, Spread"])
 	for short in ["◆◆ 3 capstones", "◆◆ 3", ""]:
 		if UI.text_width(bd.right[2], bd.right[2].text) <= bd.right[2].size.x:
 			break
-		bd.set_right(["12:59 in · clock 14:59", "· convoy, 12 gangs", short])
+		bd.set_right(["", "convoy, 12 gangs", short])
 	var labels: Array = [bd.title, bd.headline, bd.unit, bd.kicker, bd.right[0], bd.right[1], bd.right[2]]
 	for l in labels:
 		_check(UI.text_width(l, l.text) <= l.size.x + 0.5 and l.position.x >= 0.0 and l.position.x + l.size.x <= bd.size.x + 0.5 and l.position.y + l.size.y <= bd.bar.position.y + 2.0, "the slim band's '%s' doesn't fit its row: %.0f in %.0f at %s" % [l.text, UI.text_width(l, l.text), l.size.x, str(l.position)])
@@ -11325,7 +11379,7 @@ func _fill_up_checks(main) -> void:
 	main.refresh()
 	# the run screen's column: the band carries the site and the clock, the sections stack without overlap, the buttons at the foot
 	var rn = main._run
-	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text.begins_with("Depth "), "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
+	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text == "", "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
 	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
 	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.LINE_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
 	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart
@@ -12120,7 +12174,7 @@ func _way_out_checks(main) -> void:
 	_check(sim.on_mission() and m.get("way_out", false) and int(m["remaining"]) == sim.door_gang(m["t"]) and int(m["left_behind"]) == pool, "Get out now before the clear did not start the way out: %s / %d at the door" % [str(m.get("way_out", false)), int(m["remaining"])])
 	_check(is_equal_approx(float(m["way_out_t"]), minf(sim.way_out_s(m["t"]), float(m["clock"]))), "the way out's time is off: %.1f" % float(m["way_out_t"]))
 	main.refresh()
-	_check(rs._band.kicker.text.ends_with("the way out") and rs._band.headline.text == Fmt.mss(ceilf(float(m["way_out_t"]))) and rs._fight["head"].text == "THE FIGHT · THE WAY OUT" and rs._button.text.begins_with("Getting out"),
+	_check(rs._band.kicker.text == "The way out" and rs._band.headline.text == Fmt.mss(ceilf(float(m["way_out_t"]))) and rs._fight["head"].text == "THE FIGHT · THE WAY OUT" and rs._button.text.begins_with("Getting out"),
 		"the run screen does not show the way out: '%s' / '%s' / '%s' / '%s'" % [rs._band.kicker.text, rs._band.headline.text, rs._fight["head"].text, rs._button.text])
 	_check(rs._band._bar_label.text.ends_with("at the door seen off"), "the way out's bar does not count the door: '%s'" % rs._band._bar_label.text)
 	_check_fit(main, "Run (the way out)")
