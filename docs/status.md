@@ -5028,3 +5028,10 @@ level 50 never on three element builds; the reach still stands 2.5-6.5 hours; a 
 grows about a third an hour past the campaign. The D18 review: plain papers are only sold once the Radio's open
 (before it they're unread, kept for their codes). Note for Matt: the Carpet Man's change also softens his convoy head
 and a full-strength Estate head on a signal.
+
+**D19's read (summary_d19.md, 7 reds):** level at the Quartermaster green but one (25); the campaign slower (the Bank
+1.9 h, the Quartermaster 2.5 h); the reach to 31-47 and its longest stretch down to 86-100 min on two; level 50 at
+6.5-11 h on five (a fire Scrapper paid £7M a half hour at reach 40: the curve paid 10% a level against 8% harder).
+
+**D20 (16 Oct).** CAMPAIGN_HOSTILE 0.9: the campaign's (depth 1) crews' HP and fire, heads with them, so the
+campaign's pace comes back at the slower levels. CURVE reward 0.10 to 0.08, with its grow.

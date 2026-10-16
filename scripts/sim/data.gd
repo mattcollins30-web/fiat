@@ -1258,9 +1258,9 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## The endgame's depth curve: once the campaign is done, every site fights
 ## at the depth's numbers bent by its shape, so the choice between sites is
 ## what they drop, not how hard they are. Depth 2 is the first rung.
-## D15: grow 0.14 to 0.11, D19 0.08 - the reach is the runner's power against this slope (signals since D3), and at 14% a level
+## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.08, "reward": 0.10, "rarity": 0.10}
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.08, "reward": 0.08, "rarity": 0.10}
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that
@@ -2098,6 +2098,7 @@ static func craft_of(key: String) -> Dictionary:
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.
+const CAMPAIGN_HOSTILE := 0.9     # D20: the campaign's (depth 1) HP and fire - with XP_SCALE 2.9 the Bank came at 1.9 h, the gate 1.1-1.6
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
 const DEPTH_DROP := 0.03

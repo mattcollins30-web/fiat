@@ -4153,6 +4153,9 @@ func effective(i: int) -> Dictionary:
 		"loot_tier": int(base["loot_tier"]), "rarity": Data.DEPTH_RARITY * (d - 1),
 		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": [], "word_tiers": {}, "armour": 1.0,
 	}
+	if d == 1:
+		e["hp"] *= Data.CAMPAIGN_HOSTILE     # D20: the campaign's crews a touch softer, the levels at the Quartermaster held by XP
+		e["dps"] *= Data.CAMPAIGN_HOSTILE
 	if d >= 2 and campaign_done():
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
 		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
