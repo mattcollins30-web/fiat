@@ -19,6 +19,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Atlas := preload("res://scripts/ui/atlas.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const RadioLine := preload("res://scripts/ui/radio_line.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -114,6 +115,17 @@ var _empty: Label
 var _empty2: Label
 var _others: Array = []             # {button, name, line, odds}
 var _shown := ""
+# the decrypt (16 Oct, item 20; the UI pass canvas): the new signal's card coming through, about 2.5 s; the sim's
+# signal is made at the press, this is only the look of it, and a tap (the button, or the card) skips to the end
+const DEC_S := 2.5
+const DEC_BARS := 16
+var _dec: Panel
+var _dec_dot: Panel
+var _dec_freq: Label
+var _dec_bars: Array = []
+var _dec_lines: Array = []          # [Label, text, from s, to s, colour]
+var _dec_scan: Panel
+var _dec_t := -1.0                  # seconds in; below 0, not running
 
 
 func _init() -> void:
@@ -263,6 +275,7 @@ func _build_signals() -> void:
 	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 380, bw, 56), false)
 	_bin.text = "Bin it"
 	_bin.pressed.connect(_on_bin)
+	_build_dec(cw)
 	_empty = UI.label(_signals_box, Rect2(28, 60, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_empty2 = UI.label(_signals_box, Rect2(28, 88, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(OTHERS_MAX):
@@ -280,6 +293,109 @@ func _build_signals() -> void:
 
 
 const SIM_CRAFTS := ["tune", "retune", "twist"]
+
+
+## The decrypt's panel over the card: the frequency tuning, a meter, the card's lines resolving left to right out of
+## the radio line's glyphs, a scan line down it.
+func _build_dec(cw: float) -> void:
+	_dec = UI.panel(_card, Rect2(0, 0, _card.size.x, _card.size.y), UI.box(Pal.CARD, 8, 2, Pal.ACCENT))
+	_dec.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dec.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			end_decrypt())
+	_dec.clip_contents = true
+	_dec_dot = UI.panel(_dec, Rect2(16, 19, 10, 10), UI.box(BITE, 5))
+	_dec_freq = UI.label(_dec, Rect2(36, 10, cw - 160, 28), "", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT)
+	for k in range(DEC_BARS):
+		_dec_bars.append(UI.panel(_dec, Rect2(16 + cw - DEC_BARS * 7 + k * 7, 14, 4, 4), UI.box(Pal.CARD_LINE, 1)))
+	UI.panel(_dec, Rect2(16, 46, cw, 1), UI.box(Pal.CARD_LINE, 0))
+	var rows := [[62, 22, "Medium", Pal.CELL_TEXT - 2], [88, 40, "SemiBold", Pal.TITLE], [140, 28, "Medium", Pal.CELL_TEXT], [176, 28, "Medium", Pal.CELL_TEXT], [222, 26, "Regular", Pal.CELL_TEXT - 1]]
+	for r in rows:
+		_dec_lines.append([UI.label(_dec, Rect2(16, r[0], cw, r[1]), "", r[2], r[3], Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false), "", 0.0, 1.0, Pal.TEXT])
+	_dec_scan = UI.panel(_dec, Rect2(0, 0, _card.size.x, 2), UI.box(Color(Pal.ACCENT, 0.35), 0))
+	_dec.visible = false
+	set_process(false)
+
+
+## Starts the decrypt on the signal just made: what its card will say, each line given its moment to come through.
+func start_decrypt(sg: Dictionary) -> void:
+	var site: String = str(Data.TIERS[int(sg["site"])]["name"])
+	var lv: int = sim.signal_level(sg)
+	var crew: String = "The %s's crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
+	if bool(sg.get("head", false)):
+		crew += ", and their head at full strength"
+	var names: Array = sim.signal_words(sg).map(func(x): return str(x["w"]))
+	var beat: int = int(sg.get("story", -1))
+	var texts := ["KEV'S STORY · A FIX ON" if beat >= 0 else "A FIX ON", site, "Level %d · depth %d" % [lv, int(sg["depth"])], crew,
+		("Codes: " + ", ".join(names)) if not names.is_empty() else "No codes: a plain fix"]
+	var times := [[0.3, 0.7], [0.6, 1.2], [1.0, 1.7], [1.5, 2.1], [1.8, 2.45]]
+	var colours := [STORY if beat >= 0 else Pal.TEXT_2, Pal.TEXT, Pal.ACCENT, BITE if bool(sg.get("head", false)) else Pal.TEXT_2, PAY if not names.is_empty() else Pal.TEXT_3]
+	for k in range(_dec_lines.size()):
+		var row: Array = _dec_lines[k]
+		var l: Label = row[0]
+		UI.fit(l, [texts[k], texts[k].get_slice(",", 0)])
+		row[1] = l.text
+		row[2] = float(times[k][0])
+		row[3] = float(times[k][1])
+		row[4] = colours[k]
+	_dec_t = 0.0
+	_dec.visible = true
+	set_process(true)
+	_paint_dec()
+
+
+## The decrypt's frame at `_dec_t`: a line before its moment flickers grey glyphs, then resolves left to right in its
+## colour; the meter jumps, the frequency hunts, the dot blinks, the scan goes down the card.
+func _paint_dec() -> void:
+	var tick: int = int(_dec_t / 0.045)
+	var g: String = RadioLine.GARBLE_GLYPHS
+	for k in range(_dec_lines.size()):
+		var row: Array = _dec_lines[k]
+		var text: String = row[1]
+		var p: float = clampf((_dec_t - float(row[2])) / maxf(0.01, float(row[3]) - float(row[2])), 0.0, 1.0)
+		var n: int = int(text.length() * p)
+		var out := ""
+		for i in range(text.length()):
+			var ch := text[i]
+			out += ch if (ch == " " or i < n) else g[(i * 11 + tick * 7 + k * 5) % g.length()]
+		row[0].text = out
+		row[0].add_theme_color_override("font_color", row[4] if _dec_t >= float(row[3]) else Pal.TEXT_3)
+	for k in range(_dec_bars.size()):
+		var h: float = 4.0 + float((k * 37 + tick * 13) % 18)
+		_dec_bars[k].position.y = 36.0 - h
+		_dec_bars[k].size.y = h
+	_dec_freq.text = "TUNING %.2f MHz" % (27.2 + float((tick * 17) % 90) / 100.0)
+	_dec_dot.visible = tick % 6 < 3
+	_dec_scan.position.y = _dec_t / DEC_S * _card.size.y
+
+
+## Done, or skipped: the card is the signal's, as it always was.
+func end_decrypt() -> void:
+	if _dec_t < 0.0:
+		return
+	_dec_t = -1.0
+	_dec.visible = false
+	set_process(false)
+	_shown = ""
+	if sim != null:
+		show_state(sim)
+
+
+func decrypting() -> bool:
+	return _dec_t >= 0.0
+
+
+func _process(delta: float) -> void:
+	if _dec_t < 0.0:
+		return
+	if not (visible and _air.visible):
+		end_decrypt()                 # the room left, or the Dial opened: the card is the signal's
+		return
+	_dec_t += delta
+	if _dec_t >= DEC_S:
+		end_decrypt()
+		return
+	_paint_dec()
 
 
 func show_state(s) -> void:
@@ -441,7 +557,8 @@ func _show_decoder() -> void:
 	UI.fit(_make, ["A signal at level %d-%d" % [band[0], band[1]], "Level %d-%d" % [band[0], band[1]]])
 	UI.wrap([_make_sub, _make_sub2], "Their codes as above · the place, the crew and the extras rolled" if chosen.size() == Data.SIGNAL_PAPERS else "Three papers in: the deeper end with a rare one")
 	var why: String = sim.decrypt_block(chosen)
-	_decrypt.disabled = why != ""
+	_decrypt.disabled = why != "" and not decrypting()
+	_decrypt.text = "Skip" if decrypting() else "Decrypt"     # a tap mid-decrypt goes to the end (item 20)
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
 	var note: String = ("The papers are spent · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == "three papers in" else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
@@ -565,9 +682,15 @@ func _turn(by: int) -> void:
 
 
 func _on_decrypt() -> void:
-	if not sim.decrypt(chosen).is_empty():
+	if decrypting():
+		end_decrypt()
+		acted.emit()
+		return
+	var sg: Dictionary = sim.decrypt(chosen)
+	if not sg.is_empty():
 		chosen = []
 		selected = sim.signals.size() - 1
+		start_decrypt(sim.signal_at(selected))
 	_shown = ""
 	acted.emit()
 
@@ -598,6 +721,7 @@ func _craft(key: String) -> void:
 
 
 func _pick_other(k: int) -> void:
+	end_decrypt()                         # another signal picked mid-decrypt: the decrypt's done (the review)
 	if int(_others[k]["k"]) >= 0:
 		selected = int(_others[k]["k"])
 	_shown = ""

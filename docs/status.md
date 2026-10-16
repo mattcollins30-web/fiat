@@ -5319,6 +5319,12 @@ coded ones' words opened "A code in the margin, encrypted".
    last, each code's chip lighting in amber as it locks); a frequency readout tunes and locks, a level meter settles,
    a scan line runs down. About 2.5 s, a tap skips; nothing in the sim waits on it. Interactive mockup on the UI
    pass canvas.
+   **Done (16 Oct):** the signal is made at the press as before; over the new card a panel 2.5 s long (`radio.gd`
+   `start_decrypt`): the frequency hunting, a meter, the card's lines - "A FIX ON", the site, level and depth, the crew,
+   the codes - resolving left to right out of the radio line's glyphs, each at its moment, and a scan line down it.
+   The Decrypt button reads Skip meanwhile; it, or a tap on the panel, goes to the end; leaving the room ends it.
+   Smoke: running and the button a Skip; 1.3 s in the site is through, the codes still coming; at the end the card's
+   own; a tap skips with no second signal; the glyphs in Inter Regular, Medium and SemiBold.
 
 **The playtest closed (16 Oct, Matt: "the gear gating is frustrating").** The read (docs/balance/playtest.md): 2.0 h
 played, 36 runs, no deaths; the Manager at 1.3 h (level 14), the Quartermaster at 1.5 h (level 17 - the bot's target

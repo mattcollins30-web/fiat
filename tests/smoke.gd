@@ -1927,7 +1927,10 @@ func _tree_effect_checks(sim) -> void:
 	sim.tree = ["Petrol/%d" % fumes]
 	var gain3: Array = sim.node_damage_gain("Petrol/%d" % conv)
 	_check(sim.tree == ["Petrol/%d" % fumes] and float(gain2[0]) > 0.0 and is_equal_approx(float(gain2[0]), float(gain3[0])), "a node's gain reads differently trained (%.1f) and not (%.1f)" % [float(gain2[0]), float(gain3[0])])
-	_check(sim.split_words(split).contains("burning") and sim.split_words(split, true).begins_with("Hits "), "the split's words: %s" % sim.split_words(split))
+	var burn_shown: bool = float(split["dots"].get("fire", 0.0)) < 0.5 or sim.split_words(split).contains("%.0f burning" % float(split["dots"]["fire"]))     # a burn under half a point a second isn't named (a weak kit's)
+	var any_dot: bool = split["dots"].values().any(func(v): return float(v) >= 0.5)
+	var lead_ok: bool = sim.split_words(split).begins_with("%.0f from hits" % float(split["hits"])) and sim.split_words(split, true).begins_with("Hits ") if any_dot else sim.split_words(split).begins_with("All of it hits")
+	_check(burn_shown and lead_ok, "the split's words: %s (burn %.2f)" % [sim.split_words(split), float(split["dots"].get("fire", 0.0))])
 	sim.mission = kept_mission
 	sim.tree = keep_tree
 	sim.cls = keep_cls
@@ -8123,6 +8126,28 @@ func _signal_checks(main) -> void:
 	rd._on_decrypt()
 	main.refresh()
 	_check(sim.signals.size() == 2 and rd.chosen.is_empty(), "the decoder's button made no signal: %d held" % sim.signals.size())
+	# the decrypt (item 20): the new card comes through over ~2.5 s, the button a Skip meanwhile; the lines resolve
+	# to the card's own words in order; at the end (or a tap) the card is the signal's
+	var made: Dictionary = sim.signal_at(rd.selected)
+	_check(rd.decrypting() and rd._dec.visible and rd._decrypt.text == "Skip" and not rd._decrypt.disabled, "the decrypt didn't start: running %s, button '%s'" % [str(rd.decrypting()), rd._decrypt.text])
+	rd._process(1.3)
+	var site_row: Array = rd._dec_lines[1]
+	var codes_row: Array = rd._dec_lines[4]
+	_check(rd.decrypting() and site_row[0].text == site_row[1] and site_row[1] == str(Data.TIERS[int(made["site"])]["name"]) and codes_row[0].text != codes_row[1], "1.3 s in: the site '%s' (want '%s'), the codes still coming '%s'" % [site_row[0].text, site_row[1], codes_row[0].text])
+	rd._process(2.0)
+	main.refresh()
+	_check(not rd.decrypting() and not rd._dec.visible and rd._decrypt.text == "Decrypt" and rd._card_title.text == site_row[1], "the decrypt didn't end on the card: running %s, button '%s', card '%s'" % [str(rd.decrypting()), rd._decrypt.text, rd._card_title.text])
+	rd.start_decrypt(made)
+	rd._on_decrypt()                              # a tap mid-way: to the end, and no second signal
+	_check(not rd.decrypting() and sim.signals.size() == 2, "a tap mid-decrypt didn't skip: running %s, %d held" % [str(rd.decrypting()), sim.signals.size()])
+	var RadioLine := preload("res://scripts/ui/radio_line.gd")
+	for w in ["Regular", "Medium", "SemiBold"]:
+		var f: Font = load("res://fonts/Inter-%s.ttf" % w)
+		var gone := ""
+		for ch in RadioLine.GARBLE_GLYPHS:
+			if not f.has_char(ch.unicode_at(0)):
+				gone += ch
+		_check(gone == "", "decrypt glyphs Inter %s can't draw: %s" % [w, gone])
 	# three held at most
 	for b in bases.slice(0, 3):
 		sim.stash_put(sim._plain(Data.PAPER, b))
@@ -10915,22 +10940,21 @@ func _find_at_mine_checks(main) -> void:
 	_check(past[0] == 0 or sim.wearable_level() == site_lv, "a runner past the site got finds under it: %d" % past[0])
 	_check(sim.finds_words(site_lv).size() == 2, "a runner past the site still reads the fifth: %s" % str(sim.finds_words(site_lv)))
 	sim.xp = keep_xp
-	# the Runs card says when the rig's short of the fight's rounds (16 Oct), after what they fire, and fits
+	# the Runs card says when the rig's short of the fight's rounds (16 Oct), first so it's never the chip left off, and fits
 	var keep_rig: Array = sim.rig.duplicate()
 	var keep_gun = sim.equipped["Primary"]
 	var aside: Array = sim.stash.filter(func(x): return Items.is_ammo(x))     # the stash's rounds would go out with it (the gate's top-up)
 	for it in aside:
 		sim.stash.erase(it)
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
-	sim.rig = [sim._plain(Data.AMMO, "Shells")]
-	Items.set_stack(sim.rig[0], 3)
+	sim.rig = []                                  # none at all: short on any fight, however strong the runner (3 shells weren't, on a strong one)
 	main.show_room(main.MISSIONS)
 	main._missions._pick_zone(1)
 	main._missions._shown = ""
 	main.refresh()
 	var cc: Dictionary = main._missions._cols[0]
 	var card_chips: Array = cc["chips"].text_nodes().map(func(l): return str(l.text))
-	_check(card_chips.any(func(t): return t.contains("hort")), "the Runs card doesn't say the rig's short: %s" % str(card_chips))
+	_check(not card_chips.is_empty() and str(card_chips[0]).contains("hort") and cc["chips"].shown() >= 1, "the Runs card doesn't say the rig's short: %s" % str(card_chips))
 	_check_fit(main, "Runs (rounds short)")
 	sim.rig = keep_rig
 	sim.equipped["Primary"] = keep_gun
