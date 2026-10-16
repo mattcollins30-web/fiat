@@ -876,7 +876,10 @@ func _restock_rounds(sim) -> void:
 			if not sim.buy_ammo(type):
 				if sim.stash_room(1):
 					break
-				# no room for the box: the cheapest spare goes
+				# no room for the box: the cheapest spare goes - only when the box can be bought (the review: with the Fence
+				# shut it binned a spare a pass, six a tidy, for nothing)
+				if not sim.room_open("fence"):
+					break
 				var worst := {}
 				for it in sim.stash:
 					if Items.is_medical(it) or Items.is_ammo(it) or Items.is_paper(it):

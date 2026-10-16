@@ -458,7 +458,10 @@ func _merged(gs: Array) -> Dictionary:
 		var vals: Array = gs.map(func(g): return float(g.get(key, -1.0))).map(func(v): return INF if v < 0.0 else v)
 		var med: float = _median(vals)
 		m[key] = -1.0 if is_inf(med) else snappedf(med, 0.01)
-	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s", "reach_rate"]:
+	# the reach's pace (gate 6): a read whose Radio never opened by hour 12 makes the build's never; else the median
+	var rates: Array = gs.map(func(g): return float(g.get("reach_rate", -1.0)))
+	m["reach_rate"] = -1.0 if rates.any(func(v): return v < 0.0) else snappedf(_median(rates), 0.01)
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
 		if not gs[0].has(key):
 			continue                      # an older read without the key keeps lacking it (the rows read the lack)
 		var total := 0.0

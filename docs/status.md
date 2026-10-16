@@ -5104,3 +5104,14 @@ Stopped here for Matt's review (morning, 16 Oct).
 - XP_TAPER_END 4.0 (between 3.0's 7.7-11.4 h and 5.0's nevers).
 - Gate 6's reach clause (balance_gates.md, the summary): the reach a level an hour or better on average from the
   Radio to hour 12, and never 3 h without one; signals every 20 min kept. The read records `reach_rate`.
+
+**D27's two-read (summary_d27x2.md, 30 reads, 3 reds):** the shock Scrapper's trap gone - the Bank 1.6 h, the
+Quartermaster 2.2 h, the band 1.7-2.8 h, the capstone, Kev's story, the plain floor all green. Red: level at the
+Quartermaster on one (24); gate 6 on eight - the reach 1.9-3.4 levels an hour (the pace green on all), but its longest
+stretch over 3 h on four (175-430 min) and signals 28-84 min apart on seven (the hour-9-10 Yard moves among them);
+level 50 at 9.3-10.1 h on four, never on two.
+
+**D28 (16 Oct).** The review of D27: the rounds restock throws out a spare for a box only when the Fence is open (with
+it shut it binned one a pass, six a tidy, for nothing); the summary merges `reach_rate` by the median, a never if any
+read's Radio never opened. CURVE reward 0.08 to 0.05: the strong builds out-earned the rest up the reach (level 50 from
+9.3 h to never); a signal's pay now rises slower than it gets harder.
