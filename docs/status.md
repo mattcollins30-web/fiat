@@ -5162,3 +5162,11 @@ x4 (not endless), a worn mythic never swapped or lot-sold, the shelf's total wit
 the new pistol, SMG and improvised hands; the smoke's flash check now wants open air 6 px ahead of each muzzle - the
 old points sat on the arm and passed) and generated the seven mythic pictures (tools/pixellab_items_mythics_manifest.
 json); the full smoke passes. All seven read as their objects at their footprints.
+
+**The papers' codes as chips (16 Oct, Matt's playtest: "the notes are inconsistent ... chips for what the notes
+unlock but literally scrambled and garbled unicode").** Before the Radio every paper reads alike - "encrypted till the
+Radio's open", its words its flavour alone - with three chips of glyphs (Greek, Cyrillic, symbols, all in Inter), the
+same paper garbled the same way, coded or not. After it: the code, its bite in red and its pay in green; a paper with
+none says "no code: a line of the before" and has no chips. Smoke: `_paper_pass`, every paper's card in the Kit both
+ways (fits; glyphs only before; the code first after). Was: the eight codeless papers said "from before", and the
+coded ones' words opened "A code in the margin, encrypted".

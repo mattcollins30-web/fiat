@@ -8418,6 +8418,40 @@ func _story_checks(main) -> void:
 ## The papers encrypted till the Radio (15 Oct): a code-carrying paper held before the Radio's open isn't read, its pick
 ## says "Encrypted" and its words hide the code; the Radio opening reads every paper held at once. Papers roll common
 ## to rare, no higher.
+
+## Every paper's card (16 Oct, Matt: "do a pass on all the papers"): picked in the Kit, it fits; before the Radio every
+## one says the same line, its chips nothing but glyphs; after, a coded one's first chip is its code, one with none
+## has no chips and says so, and its words lead with the code line.
+func _paper_pass(main, radio_open: bool) -> void:
+	var sim = main.sim
+	var IH = load("res://scripts/ui/item_head.gd")
+	var latin := RegEx.new()
+	latin.compile("[A-Za-z0-9]")
+	var n := 0
+	for p in Words.PAPERS:
+		var pb: String = str(p["name"])
+		if sim.story_of({"base": pb, "slot": Data.PAPER}) >= 0:
+			continue
+		var it: Dictionary = sim._plain(Data.PAPER, pb)
+		sim.stash_put(it)
+		main.show_room(main.ARMOURY)
+		main._armoury.selected = {"kind": "stash", "id": it["id"]}
+		main.refresh()
+		_check_fit(main, "the Kit with %s (the Radio %s)" % [pb, "open" if radio_open else "shut"])
+		var chips: Array = IH.paper_chips(it, sim)
+		var taught: String = sim.word_taught_by(pb)
+		var tail: String = main._armoury._head._tail.text
+		if not radio_open:
+			_check(tail.contains("encrypted till the Radio's open") and not chips.is_empty() and chips.all(func(c): return latin.search(str(c["forms"][0])) == null),
+				"%s before the Radio: '%s', chips %s" % [pb, tail, str(chips.map(func(c): return c["forms"][0]))])
+		elif taught != "":
+			_check(not chips.is_empty() and str(chips[0]["forms"][0]) == taught and tail.contains(taught.to_lower()), "%s after the Radio: '%s', chips %s" % [pb, tail, str(chips.map(func(c): return c["forms"][0]))])
+		else:
+			_check(chips.is_empty() and tail.contains("no code"), "%s (no code) after the Radio: '%s', %d chips" % [pb, tail, chips.size()])
+		sim.stash.erase(it)
+		n += 1
+	print("  every paper's card, the Radio %s: %d" % ["open" if radio_open else "shut", n])
+
 func _paper_crypt_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -8434,11 +8468,13 @@ func _paper_crypt_checks(main) -> void:
 	sim.stash_put(pp)
 	sim._read(pp)
 	_check(not (base in sim.book) and sim.paper_lines(pp)[0] == "Encrypted", "a paper read before the Radio: in the book %s, '%s'" % [str(base in sim.book), sim.paper_lines(pp)[0]])
-	_check(Words.paper_words(base, false).begins_with(Words.PAPER_LOCKED) and not Words.paper_words(base, true).begins_with(Words.PAPER_LOCKED), "a paper's code isn't hidden before the Radio: '%s'" % Words.paper_words(base, false))
+	var code_line: String = str(Words.PAPERS.filter(func(x): return x["name"] == base)[0]["code"])
+	_check(not Words.paper_words(base, false).contains(code_line) and Words.paper_words(base, true).begins_with(code_line), "a paper's code isn't hidden before the Radio: '%s'" % Words.paper_words(base, false))
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": pp["id"]}
 	main.refresh()
-	_check(main._armoury._pick._words.text.begins_with(Words.PAPER_LOCKED), "the Kit's pick shows an encrypted paper's code: '%s'" % main._armoury._pick._words.text)
+	_check(not main._armoury._pick._words.text.contains(code_line), "the Kit's pick shows an encrypted paper's code: '%s'" % main._armoury._pick._words.text)
+	_paper_pass(main, false)
 	_check_fit(main, "the Kit with an encrypted paper")
 	_check(main._armoury._head._tail.text.contains("encrypted") and not main._armoury._head._tail.text.contains("the code for"), "the Kit's pick line names an encrypted paper's code: '%s'" % main._armoury._head._tail.text)
 	sim.sell_commons()
@@ -8447,6 +8483,7 @@ func _paper_crypt_checks(main) -> void:
 	_check(sim.room_open("radio") and base in sim.book and sim.paper_lines(pp)[0] == "The Radio" and sim.paper_lines(pp)[1].begins_with("Carries"), "the Radio opening didn't read the paper held: %s / %s" % [str(sim.book), str(sim.paper_lines(pp))])
 	main.refresh()
 	_check_fit(main, "the Kit with a read paper")
+	_paper_pass(main, true)
 	var rr := RandomNumberGenerator.new()
 	rr.seed = 7
 	var top := 0

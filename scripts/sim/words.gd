@@ -970,17 +970,16 @@ const YARD := {
 
 
 ## `code`: a paper's code line first (the item's card); the drawer's story leaves it off (it tells the estate, not the radio).
-## A paper's words (15 Oct): its flavour, and its code once the Radio's open to read it; before, the code's encrypted.
+## A paper's words (15 Oct): its flavour, and its code once the Radio's open to read it; before, the flavour alone for
+## every paper, code or none (16 Oct, Matt: one said "from before", one "a code" - the card's garbled chips say it now).
 static func paper_words(base: String, radio_open: bool) -> String:
 	for p in PAPERS:
 		if p["name"] == base:
-			if not p.has("code"):
-				return str(p["words"])
-			return (str(p["code"]) if radio_open else str(PAPER_LOCKED)) + " " + str(p["words"])
+			if not p.has("code") or not radio_open:
+				return str(p["words"])                  # before the Radio, every paper alike: the chips are the code, garbled (16 Oct)
+			return str(p["code"]) + " " + str(p["words"])
 	return item_words(base)
 
-
-const PAPER_LOCKED := "A code in the margin, encrypted."
 
 
 static func item_words(base: String, code := true) -> String:

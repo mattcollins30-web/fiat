@@ -77,7 +77,7 @@ func _init(w := 440, small := false) -> void:
 ## `tail` follows the headline: "takes SMG rounds · 600 carried". `extra` is a
 ## line for the fourth row when there's no open affix to say (a set's words).
 ## `cells`: the cells chip, left off where the panel's kicker carries the cells.
-func show_item(it: Dictionary, _sim, tail = "", extra = "", cells := true) -> void:
+func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> void:
 	UI.fit(_title, [Items.full_name(it), it["base"]])
 	# the chips: what it is, in the order a player asks
 	var chips := _chip_words(it, cells)
@@ -165,6 +165,9 @@ func show_item(it: Dictionary, _sim, tail = "", extra = "", cells := true) -> vo
 	# say; the top row had no room for it beside a long rarity)
 	for c in conv_chips(it):
 		chips_a.append({"forms": c["forms"], "colour": c["colour"]})
+	# a paper's code as chips (16 Oct, Matt): the code, its bite and its pay - garbled glyphs till the Radio's open
+	for c in paper_chips(it, sim_in):
+		chips_a.append(c)
 	# after them, as muted chips: the open slots ("1 open at the Bench"), a set's words in the set's tone, or "No affixes"
 	var open: bool = not it.has("unique") and not Items.is_ammo(it) and not Items.is_paper(it) and not Items.is_medical(it) and not Items.is_grenade(it) and int(it["rarity"]) < Data.RARITIES.size() - 1 and Items.allowed_affixes(it["slot"]).size() > n
 	var plain: bool = Items.is_ammo(it) or Items.is_paper(it) or Items.is_medical(it) or Items.is_grenade(it)
@@ -178,6 +181,52 @@ func show_item(it: Dictionary, _sim, tail = "", extra = "", cells := true) -> vo
 		chips_a.append({"forms": ["No affixes"], "colour": Pal.TEXT_2})
 	_affixes.show_chips(chips_a, AFFIX_ROWS, true)
 	_affixes.visible = not chips_a.is_empty()
+
+
+## The glyphs an encrypted paper's chips are made of (16 Oct, Matt: "literally scrambled and garbled unicode"): all in
+## Inter, so none comes up as a box.
+const GARBLE := "ΞЖ§¤ØÞðƷΔΣΠΩψλξζЯЮЩЦФБДЛ¶†‡※∆∑∏≈≠±÷×◊#%&@"
+
+
+## Words garbled glyph for glyph, the spaces kept: the same paper garbles the same way every time.
+static func garble(text: String, key: String) -> String:
+	var out := ""
+	for i in range(text.length()):
+		var ch: String = text[i]
+		out += ch if ch == " " else GARBLE[absi(hash(key + str(i))) % GARBLE.length()]
+	return out
+
+
+## A paper's code as chips: its name, its bite and its pay in their colours once the Radio's open; before it, the same
+## chips garbled. A paper with no code says so (a line of the before). Kev's papers, the deeds and a rule paper: none.
+static func paper_chips(it: Dictionary, sim) -> Array:
+	if sim == null or not Items.is_paper(it) or Items.is_deeds(it) or str(it.get("rule", "")) != "" or Items.opens(it) != "" or sim.story_of(it) >= 0:
+		return []
+	var code: String = sim.word_taught_by(str(it["base"]))
+	var parts: Array = []                     # [words, colour]
+	if code == "":
+		parts.append(["No code: a line of the before", Pal.TEXT_3])
+	else:
+		var w: Array = sim.word_words(code, maxi(1, sim.word_tier_cap(sim.tier_depth(sim.reach))))
+		parts.append([code, Pal.TEXT])
+		if str(w[0]) != "":
+			parts.append([str(w[0]), Pal.BAD])
+		if str(w[1]) != "":
+			parts.append([str(w[1]), Pal.GOOD])
+	var out: Array = []
+	var open: bool = sim.room_open("radio")
+	if not open:
+		while parts.size() < 3:
+			parts.append(["a line of the before", Pal.TEXT_3])     # three garbled chips on every paper: the count gives nothing away (the review)
+	for k in range(parts.size()):
+		var words: String = str(parts[k][0])
+		var forms: Array = [words] if k == 0 else [words, words.get_slice(", ", 0)]     # a shorter form for a narrow card (the review)
+		if open:
+			if code != "":
+				out.append({"forms": forms, "colour": parts[k][1]})     # no code: the line above says so once it's read
+		else:
+			out.append({"forms": forms.map(func(f): return garble(str(f), str(it["base"]) + str(k))), "colour": Pal.TEXT_3})
+	return out
 
 
 ## A unique's rule as chip forms, [long, short], or [] for anything else.
