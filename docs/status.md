@@ -5192,6 +5192,11 @@ coded ones' words opened "A code in the margin, encrypted".
    joined the action row, the card's bottom sentence (`PickPanel._words`, `UI.fit_sentences`) shares the row with
    Equip / Workshop / Bin and fits to a word or two ("Light...", "A bat from the sports shop..."). The sentence wants
    its own line (or the row's room), with an assertion that a card's flavour is never cut.
+6. **The radio line with more life (16 Oct, Matt: "colour code the text from the various voices and broadcasts and
+   add some garbled unicode messages into the mix").** `radio_line.gd` scrolls every line in one colour. Each voice
+   (`Words.RADIO_VOICES`: the loop, Kev, the army net, the Clinic, the Fence) gets its own colour, and garbled
+   broadcasts (`ItemHead.garble`'s glyphs) are mixed in among the ambient lines - unread traffic on the air. A
+   mockup of the palette and the garble's share first; an assertion that each voice's colour reads against the panel.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
