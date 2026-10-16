@@ -5203,6 +5203,14 @@ coded ones' words opened "A code in the margin, encrypted".
    others' build, or a wider pose. And each head gets his own backdrop in place of the site's plate: the Gamekeeper's
    barn, the Carpet Man's warehouse floor, the Manager's vault, the Quartermaster's stores - four pictures at the
    fight's new frame size (with item 1's walls), test art first, then a manifest.
+8. **Moving through a site (16 Oct, Matt: "3 changes per level so the player moves position in each - ending in an
+   extract site in the last one").** A run's pool split in thirds, a new position at each: the frame moves on (a pan
+   or a cut, as the search's pan does now) to a new plate and wall. The third is the way out - the extract, where the
+   search's crates are; on a head's run the third is his arena (item 7). Visual only: `RunView` already knows the kills
+   and the pool, so no sim change. The cost is the art: 12 sites have one plate and wall each; three positions is 24
+   more pairs, plus the extracts (one a site, or one a zone - 4), each with its three figures' feet read off the
+   picture (`SITE_MID` / `SITE_NEAR` / `SITE_FAR`) and the smoke's floor check over each. Made with item 1's walls at
+   the new frame size, as one manifest; test art first - likely one site through first to see it reads.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
