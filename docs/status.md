@@ -5239,6 +5239,17 @@ coded ones' words opened "A code in the margin, encrypted".
    `fire_proofed` (armour and helmets, 5-20) is the resist AND the element's damage, its chip "+N% fire proof" hiding
    the damage half - and the Fire tree's notable is called Fireproof too. The chip says both halves ("fire res & dmg"
    or two chips), with item 3's chip pass.
+13. **BUG: the trees' damage-over-time nodes do nothing (16 Oct, found on Matt's question).** Fumes (Petrol, +20%),
+   Cumulative (poison, +15%) and Nicked (bleed, +20%) carry `effect: dot_pct`, but `_dot_add` reads
+   `_affix_sum("dot_pct")` only - gear, never `tree_sum`. Checked headless: Fumes trained, `tree_sum("dot_pct")` 20, a
+   burn pool from 100 landed the same 50 with it as without. Every other node effect has a reader. Fix: the tree's
+   share in `_dot_add`; and a smoke check that every effect in `Data` trees moves a number when trained (an orphan
+   can't recur). Matt parked it for after the playtest (16 Oct). Moves the dot builds' numbers: a balance read after.
+14. **One damage figure that holds everything (16 Oct, Matt: "hard to gauge what anything in the petrol tree actually
+   does for my damage").** `dps()` is the hits alone (guns x level, affixes, attack); a burn, poison or bleed is extra
+   and shown nowhere, so a DoT node reads as nothing. To design together (mockups): the headline damage a second
+   includes the dots at their steady rate; the Stats sheet's chain splits it (hits, then burn / poison / bleed); and a
+   tree node says what it would add ("+N a second, +M%"), worked by the try-on as an item's compare is.
 
 **The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
 Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
