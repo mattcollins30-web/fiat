@@ -23,7 +23,8 @@ const QM_BAND := 2.0            # the slowest element build's Quartermaster with
 const QM_LEVEL := [18, 22]      # the runner's level at the Quartermaster
 const LV30_AFTER := 2.0         # level 30 within this many hours of the Quartermaster
 const SIGNAL_GAP := 1.0 / 3.0   # from the Radio's opening to hour 12: a signal made at least every 20 min
-const REACH_GAP := 0.75         # and reach +1 at least every 45 min
+const REACH_GAP := 3.0          # and the reach never more than 3 h without a level (16 Oct, Matt: was +1 every 45 min)
+const REACH_RATE := 1.0         # and on average a level an hour or better
 const LADDER_TO := 12.0
 const STORY_BY := 10.0          # Kev's three beats done by this hour
 const LV50 := [12.0, 24.0]      # level 50 not before, and by
@@ -251,14 +252,15 @@ func _ladder_rows(rows: Array, full: Array) -> void:
 	for bd in full:
 		var sg := float(bd.get("signal_gap_h", -1.0))
 		var rg := float(bd.get("reach_gap_h", -1.0))
-		all_t.append("%s %s/%s" % [bd["build"], _mins(sg), _mins(rg)])
+		var rr := float(bd.get("reach_rate", -1.0))
+		all_t.append("%s %s/%s/%.1f an hour" % [bd["build"], _mins(sg), _mins(rg), rr])
 		if float(bd.get("radio_at", -1.0)) >= LADDER_TO:
 			off.append("%s: the Radio opened at %s, after hour %.0f" % [bd["build"], _hours(float(bd["radio_at"])), LADDER_TO])
 			continue
-		if sg < 0.0 or rg < 0.0 or sg > SIGNAL_GAP + 0.001 or rg > REACH_GAP + 0.001:
-			off.append("%s: signals %s, reach %s" % [bd["build"], _mins(sg), _mins(rg)])
-	rows.append(["6. The Radio's ladder", "from the Radio's opening to hour %.0f, a signal at least every %d min and reach +1 every %d min (the longest stretch)" % [LADDER_TO, int(SIGNAL_GAP * 60.0), int(REACH_GAP * 60.0)],
-		("off: " + "; ".join(off)) if not off.is_empty() else "every build (signals/reach): " + ", ".join(all_t), off.is_empty()])
+		if sg < 0.0 or rg < 0.0 or sg > SIGNAL_GAP + 0.001 or rg > REACH_GAP + 0.001 or rr < REACH_RATE - 0.001:
+			off.append("%s: signals %s, reach %s longest, %.1f an hour" % [bd["build"], _mins(sg), _mins(rg), rr])
+	rows.append(["6. The Radio's ladder", "from the Radio's opening to hour %.0f, a signal at least every %d min (the longest stretch); the reach %.0f level an hour or better on average, and never %.0f h without one" % [LADDER_TO, int(SIGNAL_GAP * 60.0), REACH_RATE, REACH_GAP],
+		("off: " + "; ".join(off)) if not off.is_empty() else "every build (signals/reach longest/reach an hour): " + ", ".join(all_t), off.is_empty()])
 	var late: Array = []
 	for bd in full:
 		var h := float(bd.get("story_at", -1.0))
@@ -456,7 +458,7 @@ func _merged(gs: Array) -> Dictionary:
 		var vals: Array = gs.map(func(g): return float(g.get(key, -1.0))).map(func(v): return INF if v < 0.0 else v)
 		var med: float = _median(vals)
 		m[key] = -1.0 if is_inf(med) else snappedf(med, 0.01)
-	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s"]:
+	for key in ["cash_end", "scrap_end", "scrap_spent", "notes_end", "level", "scrap_per_h", "cash_per_h", "bails_per_h", "elapsed_h", "wall_s", "reach_rate"]:
 		if not gs[0].has(key):
 			continue                      # an older read without the key keeps lacking it (the rows read the lack)
 		var total := 0.0

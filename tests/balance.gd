@@ -384,6 +384,13 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	var sig_h: Array = bot.bought.filter(func(x): return str(x[1]).begins_with("a signal")).map(func(x): return float(x[0]) / 3600.0)
 	g["signal_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, sig_h)
 	g["reach_gap_h"] = _longest_gap(float(g["radio_at"]), to_h, g["reach_log"].map(func(x): return float(x[0])))
+	# and its pace (16 Oct, Matt: gate 6's reach as an average and a longest stretch): levels a hour, the Radio to hour 12
+	var reach_12: int = Data.REACH_START
+	for x in g["reach_log"]:
+		if float(x[0]) <= to_h:
+			reach_12 = int(x[1])
+	var ladder_h: float = to_h - float(g["radio_at"])
+	g["reach_rate"] = snappedf(float(reach_12 - Data.REACH_START) / ladder_h, 0.01) if float(g["radio_at"]) >= 0.0 and ladder_h > 0.0 else -1.0
 	g["cash_end"] = int(sim.cash)
 	g["cash_per_h"] = snappedf(float(g.get("cash_earned", 0.0)) / maxf(0.01, sim.elapsed / 3600.0), 1.0)
 	g["notes_end"] = int(sim.notes)

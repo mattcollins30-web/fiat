@@ -5095,3 +5095,12 @@ reads its "never" is the median, so it reds the Bank, the Quartermaster, the ban
 the story. Otherwise: the Bank 1.2 h and the Quartermaster 2.0 h, levels 19-22 but one (24); signals every 7-14 min on
 six; the reach's longest stretch 101-377 min; level 50 now never on five (the x5.0 taper overshot; 3.0 had 7.7-11.4 h).
 Stopped here for Matt's review (morning, 16 Oct).
+
+**D27 (16 Oct, Matt: "proceed with your thoughts for XP and scrapper; change the ladder's reach clause").**
+- The shock Scrapper's trap: before the Carpet Man's ledger the Fence is shut and nothing sells, so the bot's spares
+  filled the stash (91 of 91 cells: eight secondaries, six primaries, nine stacks of rounds), nothing more was picked
+  up, and the runner never got the kit for him. The bot bins a spare for its scrap while the Fence is shut (the Kit
+  room's bin, 13 Oct), sells it after. Reproduced on a fixed seed and cleared.
+- XP_TAPER_END 4.0 (between 3.0's 7.7-11.4 h and 5.0's nevers).
+- Gate 6's reach clause (balance_gates.md, the summary): the reach a level an hour or better on average from the
+  Radio to hour 12, and never 3 h without one; signals every 20 min kept. The read records `reach_rate`.

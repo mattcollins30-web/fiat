@@ -885,15 +885,23 @@ func _restock_rounds(sim) -> void:
 						continue
 					if worst.is_empty() or it["value"] < worst["value"]:
 						worst = it
-				if worst.is_empty() or not sim.sell(worst):
+				if worst.is_empty() or not _dispose(sim, worst):
 					break
 
 
 const AMMO_STACKS_KEPT := 6
+
+
 const HELD_READ_S := 1200.0
 const ELEM_DPS_FLOOR := 0.8
 const PAPERS_KEPT := 30
 var _held_at := {}
+
+
+## A spare gone: sold, or binned for its scrap while the Fence is shut (D27: before the Carpet Man's ledger nothing
+## sold, the stash filled with spares, nothing more was picked up, and a shock Scrapper never left the Estate).
+func _dispose(sim, it: Dictionary) -> bool:
+	return sim.sell(it) if sim.room_open("fence") else sim.bin(int(it["id"]))
 
 
 func _sell_spares(sim) -> void:
@@ -905,7 +913,7 @@ func _sell_spares(sim) -> void:
 	for it in meds:
 		med_cells += Items.size(it)
 		if med_cells > 12:
-			sim.sell(it)
+			_dispose(sim, it)
 	# rounds a gun fires: the six dearest stacks a type stay (D15: a bleed Doorman's stash held 176 stacks, full, and
 	# picked nothing up - no papers - for the last ten hours of the read)
 	var by_type := {}
@@ -919,12 +927,12 @@ func _sell_spares(sim) -> void:
 	var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0) if sim.room_open("radio") else []     # before the Radio a paper's unread: kept for its code (the review)
 	plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
 	for it in plain.slice(PAPERS_KEPT):
-		sim.sell(it)
+		_dispose(sim, it)
 	for ty in by_type:
 		var stacks: Array = by_type[ty]
 		stacks.sort_custom(func(a, b_in): return int(a.get("value", 0)) > int(b_in.get("value", 0)))     # the dearest: grade and rounds (the review)
 		for it in stacks.slice(AMMO_STACKS_KEPT):
-			sim.sell(it)
+			_dispose(sim, it)
 	for it in sim.stash.duplicate():
 		if Items.is_medical(it) or Items.is_paper(it):
 			continue                      # a paper's a key to the endgame now (15 Oct): kept
@@ -933,7 +941,7 @@ func _sell_spares(sim) -> void:
 			for g in [sim.equipped["Primary"], sim.equipped["Secondary"]]:
 				fired = fired or (g != null and Items.base_of(it)["type"] == Items.ammo_type(g))
 			if not fired:
-				sim.sell(it)
+				_dispose(sim, it)
 			continue
 		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and _best_of_type(sim, keep_type) == it:
 			continue                      # the best spare of the class's type stays; the rest of them go
@@ -947,11 +955,11 @@ func _sell_spares(sim) -> void:
 			# the best three of a mount stay; attachments_for() is sorted best first
 			var rank: int = sim.attachments_for(it["mount"]).find(it)
 			if rank >= 3:
-				sim.sell(it)
+				_dispose(sim, it)
 			continue
 		var best: Dictionary = sim.best_in_stash(it["slot"])
 		if best.is_empty() or best["id"] != it["id"]:
-			sim.sell(it)
+			_dispose(sim, it)
 
 
 ## The best primary of a type in the stash, by score; {} when none.
