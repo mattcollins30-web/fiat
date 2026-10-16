@@ -5323,6 +5323,9 @@ Then 2, 3, 5 (the tail as chips; rounds led by their count, the grade a chip; th
 the pick's column), 9's chip ("Rounds short: N of ~M" on the Runs card, the stash's rounds counted when there's a pouch)
 and its line (the rig's contents, where the kit went, the gun that ran dry). And the odds' key: its runner half worked
 once a frame while the Runs screen reads (the smoke's City tiers starved on Matt's machine; 78 frames now).
+Then 16 (the runner panel: the rig at full 64 px cells over two rows down to the take - the room between the six and
+the take holds two rows of the stash's own cell, not the mockup's 72; the take one strip; the run's line over the
+button; "Their fire"; Matt's dps and hp icons on two of the six).
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by

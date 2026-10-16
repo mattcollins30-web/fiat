@@ -7575,7 +7575,7 @@ func _top_works_checks(main) -> void:
 		if c.visible:
 			right_edge = maxf(right_edge, c.position.x + c.size.x)
 			bottom = maxf(bottom, c.position.y + c.size.y)
-	_check(right_edge <= main._run.PAD + main._run.INNER + 0.5 and bottom <= main._run.RIG_Y + Pal.CELL + 0.5, "the run's rig of %d spills: to x %.0f, y %.0f" % [pouches, right_edge, bottom])
+	_check(right_edge <= main._run.PAD + main._run.INNER + 0.5 and bottom <= main._run.RIG_Y + main._run.RIG_ROOM + 0.5, "the run's rig of %d spills: to x %.0f, y %.0f" % [pouches, right_edge, bottom])
 	var cells_on := 0
 	var outlines_on := 0
 	for c in main._run._rig_cells:
@@ -8891,7 +8891,7 @@ func _search_layout(main, where: String) -> void:
 				top = minf(top, n.position.y)
 				bottom = maxf(bottom, n.position.y + n.size.y)
 	_check(bottom <= run._button.position.y and (bottom == 0.0 or top >= run._rig_head.position.y + run._rig_head.size.y), "%s: the rig runs %.0f to %.0f, the buttons at %.0f" % [where, top, bottom, run._button.position.y])
-	_check(not run._take_head.visible and not run._note.visible and run._take_tiles.all(func(tl): return not tl["panel"].visible), where + ": the take's tiles are still up under the crates")
+	_check(not run._take_head.visible and not run._note.visible and not run._take_strip["panel"].visible, where + ": the take's strip is still up under the crates")
 	var box := Rect2(Vector2.ZERO, run._crates.size)
 	var shown: Array = []
 	for c in run._crates._cells + [run._crates._query]:
@@ -9447,6 +9447,22 @@ func _frame_checks(main) -> void:
 		main.refresh()
 		_check(bd.kicker.text == "" and bd.unit.text == "left" and not bd.right[0].text.contains("clock") and not bd.right[1].text.contains("clock"), "the run's band says more than the site and the time left: '%s' / '%s' / '%s', '%s'" % [bd.kicker.text, bd.unit.text, bd.right[0].text, bd.right[1].text])
 		print("the run's band kept simple: '%s', '%s' %s, '%s'" % [bd.title.text, bd.headline.text, bd.unit.text, bd.right[0].text])
+		# the runner panel (16 Oct, RunPanel mockup): the rig's cells full size (two rows at most) down to the take; the
+		# take one strip over the run's line, the line over the button; "Their fire" and the icons on the six
+		var rig_bottom := 0.0
+		var smallest := 999.0
+		for c in run._rig_cells:
+			if c.visible:
+				rig_bottom = maxf(rig_bottom, c.position.y + c.size.y)
+				smallest = minf(smallest, c.size.y)
+		for o in run._rig_outlines:
+			if o.visible:
+				rig_bottom = maxf(rig_bottom, o.position.y + o.size.y)
+				smallest = minf(smallest, o.size.y)
+		var strip: Panel = run._take_strip["panel"]
+		_check(smallest >= 56.0 and rig_bottom <= run._take_head.position.y and run._take_head.position.y + run._take_head.size.y <= strip.position.y and strip.position.y + strip.size.y <= run._note.position.y and run._note.position.y + run._note.size.y <= run._button.position.y,
+			"the runner panel's rows are off: rig cells %.0f px to %.0f, take head %.0f, strip %.0f-%.0f, note %.0f, button %.0f" % [smallest, rig_bottom, run._take_head.position.y, strip.position.y, strip.position.y + strip.size.y, run._note.position.y, run._button.position.y])
+		_check(run._view == null or (run._six[1].has("icon") and run._six[4].has("icon")) or not ResourceLoader.exists("res://art/ui/dps.png"), "the six have no icons where Matt's art is")
 	if went_out and main.sim.on_mission():
 		main.sim.extract_now()
 		main.refresh()
@@ -9501,7 +9517,7 @@ func _run_view_checks(main) -> void:
 	_check(v.figures_up() == want, "the frame shows %d up, not %d" % [v.figures_up(), want])
 	_check(not v.state()["glass"], "the glass shows in a fight")
 	_full_art_checks(main, v)
-	_check(not run._fight["track"].visible and run._six[0]["key"].text == "Fire in", "the top bar shows in a fight (their HP is over each of them), or the six don't lead with Incoming")
+	_check(not run._fight["track"].visible and run._six[0]["key"].text == "Their fire", "the top bar shows in a fight (their HP is over each of them), or the six don't lead with Incoming")
 	_fig_bar_checks(main)
 	_flash_checks(main)
 	_check_fit(main, "Run (the run view, a gang)")
@@ -11443,7 +11459,7 @@ func _fill_up_checks(main) -> void:
 	var rn = main._run
 	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text == "", "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
 	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
-	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.LINE_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
+	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.NOTE_H <= rn.BUTTON_Y and rn.STRIP_Y + rn.STRIP_H <= rn.NOTE_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
 	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart
 	var fb := Rect2(rn._fight["box"].position, rn._fight["box"].size)
 	var rb := Rect2(rn._runner["box"].position, rn._runner["box"].size)
@@ -11452,7 +11468,7 @@ func _fill_up_checks(main) -> void:
 	for piece in [rn._runner["head"], rn._runner["track"], rn._runner["tiles"][3]["panel"], rn._runner["note"]]:
 		_check(rb.encloses(Rect2(piece.position, piece.size)), "the runner's box does not hold its %s" % piece.name)
 	_check(fb.end.y + 8 <= rb.position.y and fb.position.y >= rn.BAND_H and rb.end.y < rn.RIG_HEAD_Y, "the fight's and the runner's boxes are not apart: %s / %s" % [str(fb), str(rb)])
-	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_tiles[0]["key"].text == "Tins", "the run's tiles are off")
+	_check(rn._fight["tiles"][0]["key"].text == "On you" and rn._runner["tiles"][0]["key"].text == "Armour" and rn._take_strip["tins"].text != "", "the run's tiles are off")
 	# the faces (10 Oct, Run-P A): each in its box at the left, clear of the head, the tiles, the bar and the chips;
 	# a face shows art or the drawn figure, never neither
 	for pair in ([] if rn._view != null else [[rn._fight_face, fb, rn._fight, "fight"], [rn._runner_face, rb, rn._runner, "runner"]]):     # the run view hides the faces (13 Oct)

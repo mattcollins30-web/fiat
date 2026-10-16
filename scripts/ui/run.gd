@@ -62,10 +62,17 @@ const RUNNER_NOTE_Y := RUNNER_TILES_Y + UI.TILE_H + 2
 const RUNNER_BOX_H := RUNNER_NOTE_Y + LINE_H + BOX_PAD - RUNNER_BOX_Y
 const RIG_HEAD_Y := FIGHT_BOX_Y + 430 + SECTION_GAP              # under the frame and the six (VIEW_ROW_Y + TILE_H; the boxes, without the art, end above it)
 const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
-const TAKE_Y := RIG_Y + Pal.CELL + SECTION_GAP
-const TAKE_TILES_Y := TAKE_Y + UI.HEAD_H + 2
-const NOTE_Y := TAKE_TILES_Y + UI.TILE_H + 10                 # the run's own line, above the buttons
 const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
+# the take down by the button, the rig taking the room between (16 Oct, Matt: the rig "too small to see"; the take
+# "less spread"; RunPanel mockup): the run's own line over the button, the take's strip over that, its head over that
+const NOTE_H := 20
+const NOTE_Y := BUTTON_Y - 4 - NOTE_H
+const STRIP_H := 50
+const STRIP_Y := NOTE_Y - 6 - STRIP_H
+const TAKE_Y := STRIP_Y - 2 - UI.HEAD_H
+const RIG_ROOM := TAKE_Y - SECTION_GAP - RIG_Y                # the rig's height in a fight: two rows of full cells
+const ICON := 36                                              # a tile's painted icon, its figure beside it
+const TILE_ICONS := {1: "res://art/ui/dps.png", 4: "res://art/ui/hp.png"}     # the six's: your fire, the meds (Their fire, Kills, Armour and Rounds with the art pass)
 # the run view (13 Oct, Time Crisis): the frame over both boxes, the six figures under it, the search bar under those
 const VIEW_X := PAD - BOX_PAD
 const VIEW_W := INNER + 2 * BOX_PAD                           # 812
@@ -92,7 +99,7 @@ var _fight := {}                   # {box, head, tiles[4], track, fill, bar_text
 var _runner := {}                  # {head, track, fill, bar_text, tiles[4], note, key, chips}
 var _rig_head: Label
 var _take_head: Label
-var _take_tiles: Array = []
+var _take_strip := {}               # the take, one strip (16 Oct): {panel, tins, pack_key, pack, track, fill, counts, div1, div2}
 var _note: Label                   # the run's own line: leaving keeps the loot, HP low, filling up
 var _button: Button                # Get out now
 var _button2: Button               # Stop auto, or Fill up then go
@@ -174,10 +181,34 @@ func _init() -> void:
 		c.pressed.connect(_rig_pressed.bind(k))
 		_left.add_child(c)
 		_rig_cells.append(c)
-	# the take: cash, what was passed over or swapped, the pack
+	# the take, one strip: the tins with their icon, the pack's fill as a bar, what was passed over or swapped small
 	_take_head = UI.head(_left, Rect2(PAD, TAKE_Y, INNER, UI.HEAD_H), "The take")
-	_take_tiles = UI.tile_row(_left, PAD, TAKE_TILES_Y, INNER, 4)
-	_note = UI.label(_left, Rect2(PAD, NOTE_Y, INNER, LINE_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_take_strip["panel"] = UI.panel(_left, Rect2(PAD, STRIP_Y, INNER, STRIP_H), UI.box(Pal.BG, 6))
+	var sp: Panel = _take_strip["panel"]
+	var cash_tex = load("res://art/ui/cash.png") if ResourceLoader.exists("res://art/ui/cash.png") else null
+	var tx := 12.0
+	if cash_tex != null:
+		var ic := TextureRect.new()
+		ic.texture = cash_tex
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ic.position = Vector2(tx, (STRIP_H - ICON) / 2.0)
+		ic.size = Vector2(ICON, ICON)
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sp.add_child(ic)
+		tx += ICON + 10
+	_take_strip["tins"] = UI.label(sp, Rect2(tx, 0, 170, STRIP_H), "", "SemiBold", UI.TILE_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	var px: float = tx + 180
+	_take_strip["div1"] = UI.panel(sp, Rect2(px - 10, 10, 1, STRIP_H - 20), UI.box(Pal.CARD_LINE, 0))
+	var pw: float = INNER - px - 250
+	_take_strip["pack_key"] = UI.label(sp, Rect2(px, 6, pw * 0.5, 20), "Pack", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_take_strip["pack"] = UI.label(sp, Rect2(px + pw * 0.5, 6, pw * 0.5, 20), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_take_strip["track"] = UI.panel(sp, Rect2(px, 32, pw, 8), UI.box(Pal.TRACK, 4))
+	_take_strip["fill"] = UI.panel(sp, Rect2(px, 32, 0, 8), UI.box(Pal.GOOD, 4))
+	_take_strip["div2"] = UI.panel(sp, Rect2(px + pw + 10, 10, 1, STRIP_H - 20), UI.box(Pal.CARD_LINE, 0))
+	_take_strip["counts"] = UI.label(sp, Rect2(px + pw + 20, 0, INNER - (px + pw + 20) - 12, STRIP_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_note = UI.label(_left, Rect2(PAD, NOTE_Y, INNER, NOTE_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_button = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), true)
 	_button.pressed.connect(_get_out)
 	_button2 = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), false)
@@ -223,6 +254,25 @@ func _view_make() -> void:
 	for t in _fight["tiles"] + _runner["tiles"]:
 		t["panel"].visible = false
 	_six = UI.tile_row(_left, VIEW_X, VIEW_ROW_Y, VIEW_W, 6, 6)
+	# Matt's painted icons on the tiles that have one (16 Oct): the icon at the left, the key and the figure beside it
+	for k in TILE_ICONS:
+		var path: String = TILE_ICONS[k]
+		if not ResourceLoader.exists(path):
+			continue
+		var t: Dictionary = _six[k]
+		var ic := TextureRect.new()
+		ic.texture = load(path)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ic.position = Vector2(8, (UI.TILE_H - ICON) / 2.0)
+		ic.size = Vector2(ICON, ICON)
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		t["panel"].add_child(ic)
+		t["icon"] = ic
+		for l in [t["key"], t["value"]]:
+			l.position.x = 8 + ICON + 6
+			l.size.x = t["panel"].size.x - l.position.x - 6
 	_fight["head"].position = Vector2(PAD, FIGHT_BOX_Y + 6)
 	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
 	UI.shadow(_fight["head"])
@@ -361,7 +411,7 @@ func show_state(s) -> void:
 		# the six under the frame: theirs, then yours
 		var fighting: bool = m["remaining"] > 0
 		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		var first: Array = ["Fire in", ["%.1f/s" % m["last_incoming"]]] if fighting else ["Gang in", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(nx) if nx < 1e8 else "never")])]
+		var first: Array = ["Their fire", ["%.1f/s" % m["last_incoming"]]] if fighting else ["Gang in", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(nx) if nx < 1e8 else "never")])]
 		_tiles(_six, [first, ["Your fire", ["%.0f/s" % (sim.dps() * sim.pace())]], ["Kills", ["%d" % m["kills"]]],
 			["Armour", ["%.0f" % sim.armour()]], ["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]],
 			["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
@@ -391,7 +441,12 @@ func show_state(s) -> void:
 	if not on_you.is_empty():
 		_runner["chips"].show_chips(on_you)
 	# the take
-	_tiles(_take_tiles, [["Tins", Fmt.money_forms(m["cash"])], ["Passed over", ["%d" % m["left"]]], ["Swapped", ["%d" % int(m.get("swapped", 0))]], ["Pack", ["%d of %d" % [sim.pack_used(m), sim.capacity()], "%d/%d" % [sim.pack_used(m), sim.capacity()]]]])
+	UI.fit(_take_strip["tins"], Fmt.money_forms(m["cash"]))
+	var used_p: int = sim.pack_used(m)
+	_take_strip["pack"].text = "%d of %d" % [used_p, sim.capacity()]
+	_take_strip["fill"].size.x = _take_strip["track"].size.x * clampf(float(used_p) / maxf(1.0, float(sim.capacity())), 0.0, 1.0)
+	(_take_strip["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if used_p >= sim.capacity() else Pal.GOOD
+	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
 		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
 		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
@@ -402,8 +457,7 @@ func show_state(s) -> void:
 	var crates_on: bool = m.has("crates") and not m.get("crates_off", false) and not way_out
 	_crates.visible = crates_on
 	_take_head.visible = not crates_on
-	for tl in _take_tiles:
-		tl["panel"].visible = not crates_on
+	_take_strip["panel"].visible = not crates_on
 	_note.visible = not crates_on
 	_rig_y = RIG_SEARCH_Y if crates_on else RIG_Y
 	_rig_head.position.y = RIG_SEARCH_HEAD_Y if crates_on else RIG_HEAD_Y
@@ -947,6 +1001,16 @@ func _show_rig() -> void:
 	var per_row: int = maxi(1, ceili(float(cap) / rows))     # no rig (one lost to the clock): one empty row
 	@warning_ignore("integer_division")
 	var cell: int = Pal.CELL if cap <= 8 else mini((Pal.CELL - Pal.CELL_GAP) / 2 if rows == 2 else Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+	if is_equal_approx(_rig_y, RIG_Y):
+		# in a fight the rig has the room down to the take (16 Oct, Matt: "too small to see"): full cells, a row or two
+		@warning_ignore("integer_division")
+		var full_row: int = maxi(1, int((INNER + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP)))
+		rows = 1 if cap <= full_row else 2
+		per_row = full_row if cap <= 2 * full_row else ceili(float(cap) / 2.0)
+		@warning_ignore("integer_division")
+		cell = mini(Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+		@warning_ignore("integer_division")
+		cell = mini(cell, int((RIG_ROOM - Pal.CELL_GAP) / 2) if rows == 2 else cell)
 	@warning_ignore("integer_division")
 	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
@@ -1085,14 +1149,14 @@ func text_nodes() -> Array:
 	if _runner["track"].visible:
 		out.append(_runner["bar_text"])
 	if _take_head.visible:
-		out.append_array([_take_head, _note])
+		out.append_array([_take_head, _note, _take_strip["tins"], _take_strip["pack_key"], _take_strip["pack"], _take_strip["counts"]])
 	if _runner["note"].visible:
 		out.append(_runner["note"])
 	for d in [_fight, _runner]:
 		if d["chips"].visible:
 			out.append(d["key"])
 			out.append_array(d["chips"].text_nodes())
-	for t in (_six if _view != null else _fight["tiles"] + _runner["tiles"]) + _take_tiles:
+	for t in (_six if _view != null else _fight["tiles"] + _runner["tiles"]):
 		if t["panel"].visible or t in _six:
 			out.append_array([t["key"], t["value"]])
 	for b in [_button, _button2]:
