@@ -4971,3 +4971,12 @@ was paid whole on the City forever); the reach term gone with it. Smoke: the cam
 - the move at the lorry: the bot moved the Yard the moment the lorry fell (hour 5-6), a new runner at level 1 - the
   ladder and level 50 cut off for the hours the campaign took again. It moves at level 50 now, a tidy after it's seen.
 - Signal runs logged in the read ("ran a signal: level, odds, reach a -> b").
+
+**D13's read (summary_d13.md, 6 reds; 21 minutes):** the Bank 1.4 h and the Quartermaster 1.9 h median, green; the
+plain floor green; level 50 at hour 4-7 on every element build (the faults gone, XP flows); the Radio's signals binned
+four in five at 0% - all on the City's and the Hospital's sites, won on the Outskirts' at the same level.
+
+**D14: a signal's level is one fight on any site; XP's taper off (16 Oct).** A signal's fight is the endgame curve
+alone, bent by its site's shape (the site's campaign floor - 4200 x 1.25^13 on the Barracks against the curve's 3200 x
+1.14^13 - made a City site's level 22 seven times the Allotments'). XP_TAPER_END 2.4: x2.4 on (level 50 at 243k XP).
+Smoke: the same level on the Allotments and the Barracks reads the shapes' ratio.

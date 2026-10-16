@@ -2275,7 +2275,7 @@ const XP_SCALE := 2.4
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 0.4
+const XP_TAPER_END := 2.4     # D14: no taper - with the bot's D13 faults gone level 50 came at hour 4-7 at 0.4
 
 
 static func xp_scale(l: int) -> float:

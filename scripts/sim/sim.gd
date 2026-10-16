@@ -4150,8 +4150,12 @@ func effective(i: int) -> Dictionary:
 		var g: float = pow(1.0 + float(c["grow"]), lv - 9)
 		var r: float = pow(1.0 + float(c["reward"]), lv - 9)
 		e["pool"] = int(shape["pool"])
-		e["hp"] = maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
-		e["dps"] = maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
+		# a signal's fight is its level's curve alone, bent by the site's shape (D14): the site's own campaign floor made
+		# a City site's level 22 seven times the Allotments' (4200 x 1.25^13 against the curve's 3200 x 1.14^13), and
+		# the Radio's signals split into won and binned by the site they landed on, not their level
+		var on_sig: bool = not _sig.is_empty() and int(_sig["site"]) == i
+		e["hp"] = float(c["hp"]) * g * float(shape["hp"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
+		e["dps"] = float(c["dps"]) * g * float(shape["dps"]) if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
 		e["xp"] = maxf(float(e["xp"]), float(c["xp"]) * r)
 		e["cash"] = maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
 		e["drop"] = maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))

@@ -7873,6 +7873,22 @@ func _signal_checks(main) -> void:
 	var d0: int = int(sim.depth[i])
 	var e: Dictionary = sim.signal_read(0)
 	_check(int(e["level"]) == sim.signal_level(sg) and int(e["depth"]) == sim.tier_depth(sim.signal_level(sg)) and int(sim.depth[i]) == d0 and sim._sig.is_empty(), "a signal's read left its site at depth %d (was %d), %s" % [int(sim.depth[i]), d0, str(e.get("depth", -1))])
+	# a level's fight on any site (D14): the curve bent by the site's shape, not the site's own campaign floor
+	var held0: Array = sim.signals.duplicate(true)
+	var lo: Dictionary = sg.duplicate(true)
+	var hi: Dictionary = sg.duplicate(true)
+	var top: int = Data.TIERS.size() - 1
+	lo["site"] = 0
+	lo["depth"] = sim.depth_for_level(0, sim.signal_level(sg))
+	hi["site"] = top
+	hi["depth"] = sim.depth_for_level(top, sim.signal_level(sg))
+	sim.signals = [lo, hi]
+	var e_lo: Dictionary = sim.signal_read(0)
+	var e_hi: Dictionary = sim.signal_read(1)
+	sim.signals = held0
+	var want_r: float = float(Data.TIERS[top]["shape"]["hp"]) / float(Data.TIERS[0]["shape"]["hp"])
+	_check(int(e_lo["level"]) == int(e_hi["level"]) and is_equal_approx(float(e_hi["hp"]) / float(e_lo["hp"]), want_r),
+		"a signal's level fights differently by site: level %d/%d, hp %.0f against %.0f (want x%.2f)" % [int(e_lo["level"]), int(e_hi["level"]), float(e_hi["hp"]), float(e_lo["hp"]), want_r])
 	# its odds: read a few runs at a time to settled, apart from the site's own, which stay settled (the review)
 	var budget_was: int = sim.odds_budget
 	sim.odds_budget = 0
