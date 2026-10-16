@@ -5235,6 +5235,10 @@ coded ones' words opened "A code in the margin, encrypted".
    level lands on both; the Radio's signal card (`radio.gd:463`, already the wear level) reads the range as the site
    card does. A sim change that moves gear supply: smoke, reviewer, and a bot balance read for the gates after; an
    assertion that both cards' level is `wear_level` of the finds, and one that a signal's finds carry the fifth.
+   **Done (16 Oct):** `FIND_AT_MINE` 0.2 in `_find` (the plain roll and its re-rolls; uniques, sets and mythics at the
+   site's), the fifth on a base no deeper than `gear_tier()` (the review: a deep signal's tier-7+ bases at a low item
+   level, as a gamble already rolls); the Runs kicker "gear for level N", both Finds tiles `finds_words`. Smoke:
+   `_find_at_mine_checks`.
 11. **A "?" on the map: what a site pays (16 Oct, Matt: D4's Torment list).** Mockup on the canvas ("Fiat - Map tier
    guide"): a Depths tab (a site picked by zone; depth 1-12 rows with the site level, the gear level to wear, gangs,
    XP and cash, drops, rarity, unique odds, and what opens - sets, the site's own unique, a head at full strength, the

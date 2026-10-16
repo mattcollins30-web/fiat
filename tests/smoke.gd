@@ -10632,12 +10632,12 @@ func _site_level_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c0: Dictionary = main._missions._cols[0]
-	_check(c0["band"].kicker.text.ends_with("level 8"), "the streets' kicker does not say its level: '%s'" % c0["band"].kicker.text)
+	_check(c0["band"].kicker.text.ends_with("gear for level %d" % sim.wear_of(8)), "the streets' kicker does not say the level to wear its gear: '%s'" % c0["band"].kicker.text)
 	var finds := -1
 	for r in range(6):
 		if c0["tiles"][r]["key"].text == "Finds":
 			finds = r
-	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with("level 8"), "the streets' Finds tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Finds tile"))
+	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with("level %d" % sim.wear_of(8)), "the streets' Finds tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Finds tile"))
 	main._missions._pick_zone(3)
 	main._missions._shown = ""
 	main.refresh()
@@ -10645,6 +10645,7 @@ func _site_level_checks(main) -> void:
 	_check(not c6["note"].text.contains("Depth"), "the Services' card still names a depth's station: '%s'" % c6["note"].text)     # the depths are the signals' (15 Oct)
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(1)
+	_find_at_mine_checks(main)
 	_site_unique_checks(main)
 	_smg_line_checks(main)
 	_growth_checks(main)
@@ -10653,6 +10654,59 @@ func _site_level_checks(main) -> void:
 	sim.depth = hold_depth
 	sim.best_depth = hold_best
 	sim._surv_cache = {}
+
+
+## A fifth of the finds at the runner's level (16 Oct, Matt's playtest: level 10 at the Bank, every drop for 14): the
+## level to wear on the cards, a fifth of the plain gear at the wearable item level and the rest at the site's, on a
+## site and a signal alike; a runner past the site gets all of it at the site's.
+func _find_at_mine_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var keep_xp: float = sim.xp
+	sim.xp = Data.xp_for_level(10)
+	var mine: int = sim.wearable_level()
+	_check(sim.wear_of(mine) <= 10 and sim.wear_of(mine + 1) > 10, "the wearable item level at 10 is %d (wears at %d)" % [mine, sim.wear_of(mine)])
+	var bank: Dictionary = sim.effective(8)
+	var site_lv: int = int(bank["level"])
+	var w: Array = sim.finds_words(site_lv)
+	_check(site_lv > mine and str(w[0]) == "level %d gear · 20%% at %d" % [sim.wear_of(site_lv), sim.wear_of(mine)], "the Bank's finds read '%s'" % str(w[0]))
+	var tally := func(t: Dictionary) -> Array:
+		sim.rng.seed = 1616
+		var low := 0
+		var gear := 0
+		var m := {"found": [], "tier": int(t["tier"]), "kills": 0, "patrols": 0}
+		for k in range(1500):
+			var got: Dictionary = sim._find(m, t, false, {}, true)
+			var it: Dictionary = got["it"]
+			if str(it.get("slot", "")) in Data.SLOTS and not it.has("unique") and not it.has("set") and not it.get("mythic", false):
+				gear += 1
+				if int(it.get("ilvl", 0)) == mine:
+					low += 1
+		return [low, gear]
+	var on_site: Array = tally.call(bank)
+	var share: float = float(on_site[0]) / maxf(1.0, float(on_site[1]))
+	_check(on_site[1] > 200 and share > 0.14 and share < 0.27, "the Bank's plain gear at the runner's level: %d of %d" % [on_site[0], on_site[1]])
+	var sig: Dictionary = bank.duplicate(true)
+	sig["level"] = site_lv + 6                 # a signal's fix, deeper than the campaign site
+	var on_sig: Array = tally.call(sig)
+	var sig_share: float = float(on_sig[0]) / maxf(1.0, float(on_sig[1]))
+	sig["loot_tier"] = Data.MAX_TIER           # a deep fix's bases: the runner's fifth comes on the campaign's, as a gamble's
+	sim.rng.seed = 77
+	var deep_ok := true
+	var mm := {"found": [], "tier": 8, "kills": 0, "patrols": 0}
+	for k in range(600):
+		var g: Dictionary = sim._find(mm, sig, false, {}, true)["it"]
+		if str(g.get("slot", "")) in Data.SLOTS and not g.has("unique") and not g.has("set") and int(g.get("ilvl", 0)) == mine and int(g["tier"]) > sim.gear_tier():
+			deep_ok = false
+	_check(deep_ok, "a find at the runner's level came on a deep base, past the campaign's tier %d" % sim.gear_tier())
+	_check(sig_share > 0.14 and sig_share < 0.27, "a signal's plain gear at the runner's level: %d of %d" % [on_sig[0], on_sig[1]])
+	sim.xp = Data.xp_for_level(40)
+	var past: Array = tally.call(bank)
+	_check(past[0] == 0 or sim.wearable_level() == site_lv, "a runner past the site got finds under it: %d" % past[0])
+	_check(sim.finds_words(site_lv).size() == 2, "a runner past the site still reads the fifth: %s" % str(sim.finds_words(site_lv)))
+	sim.xp = keep_xp
+	print("a fifth of the finds at the runner's level ok: the Bank %d of %d, a signal %d of %d" % [on_site[0], on_site[1], on_sig[0], on_sig[1]])
 
 
 ## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's

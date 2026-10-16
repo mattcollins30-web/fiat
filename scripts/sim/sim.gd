@@ -1432,6 +1432,30 @@ func recover_s() -> float:
 	return Data.RECOVER_H * 3600.0 / (1.0 + Data.FX["atlas/worn_in"] * atlas_rank("worn_in"))
 
 
+## The item level the runner can wear now: the highest whose wear level is theirs or under (16 Oct).
+func wearable_level() -> int:
+	var lv := 1
+	while lv < Data.MAX_LEVEL and wear_of(lv + 1) <= level():
+		lv += 1
+	return lv
+
+
+## The runner's level an item level asks to be worn.
+static func wear_of(item_level: int) -> int:
+	return Items.wear_level({"slot": "Primary", "base": "", "tier": 1, "ilvl": item_level})
+
+
+## A site's or a signal's finds, in the runner's terms (16 Oct, Matt: "if the bank says it drops level 6 gear then my
+## expectation is that i need to be level 6"): the level to wear them, and the fifth at the runner's when that's lower.
+func finds_words(item_level: int) -> Array:
+	var top: int = wear_of(item_level)
+	var mine: int = wear_of(mini(item_level, wearable_level()))
+	if mine >= top:
+		return ["level %d gear" % top, "level %d" % top]
+	var pct: int = roundi(Data.FIND_AT_MINE * 100.0)
+	return ["level %d gear · %d%% at %d" % [top, pct, mine], "level %d · %d%% at %d" % [top, pct, mine], "level %d" % top]
+
+
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
 ## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
 ## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
@@ -6041,6 +6065,13 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var own: Dictionary = site_unique(int(t["tier"]))
 	var own_odds: float = Data.SITE_UNIQUE_DROP * (1.0 if own.is_empty() or not (own["name"] in shelf) else Data.SITE_UNIQUE_AGAIN)
 	var myth: Dictionary = mythic_roll()
+	var find_lv: int = int(t.get("level", lv_at(int(t["tier"]), int(t["depth"]))))
+	var find_tier: int = int(t["loot_tier"])
+	if slot in Data.SLOTS and rng.randf() < Data.FIND_AT_MINE and wearable_level() < find_lv:
+		# a fifth of the plain gear at the level the runner wears (16 Oct), on a base the campaign gives - as a gamble
+		# rolls: a deep signal's tier-7+ bases stay the deep runner's (the review)
+		find_lv = wearable_level()
+		find_tier = mini(find_tier, gear_tier())
 	if not myth.is_empty():
 		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere
 		said = Words.MYTHIC_FOUND % it["unique"]
@@ -6056,8 +6087,8 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		said = "Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()]
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
-		it = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+		it = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
 		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
 			# half the rounds found fit what's in your hands
 			var mine := Items.ammo_type(equipped["Primary"])
@@ -6068,13 +6099,13 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
-		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+		var twice: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
 		if int(twice.get("rarity", 0)) > int(it.get("rarity", 0)):
 			it = twice                       # the Drifter's leads, joined: a shocked kill's drop rolls its rarity twice
 	if has_node("cap_loaded_dice") and int(it.get("rarity", 0)) >= 2 and not it.has("unique") and not it.has("set") and slot != Data.PAPER:
-		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else int(t["loot_tier"]), rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
-			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), int(t.get("level", lv_at(int(t["tier"]), int(t["depth"])))))
+		var again: Dictionary = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
+			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
 		if Items.score(again) > Items.score(it):
 			it = again                       # Loaded dice: a Rare or better rolls twice, keeps the better
 	if capture:

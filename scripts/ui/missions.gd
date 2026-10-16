@@ -232,7 +232,7 @@ func show_state(s) -> void:
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = "Tier %d · %s · level %d" % [k + 1, Data.ZONES[zone]["name"], int(t["level"])]     # the level always: the finds' level to wear (15 Oct)
+			var kicker: String = "Tier %d · %s · gear for level %d" % [k + 1, Data.ZONES[zone]["name"], sim.wear_of(int(t["level"]))]     # the level to wear its finds (16 Oct: it read the item level)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 		else:
@@ -245,7 +245,7 @@ func show_state(s) -> void:
 			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight · clock", ["%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "over %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
-			["Finds", ["level %d gear" % t["level"], "level %d" % t["level"]]],
+			["Finds", sim.finds_words(int(t["level"]))],
 			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
 			["The site", [sim.site_state(i), sim.site_state(i).get_slice(" · ", 0)]],
 		]

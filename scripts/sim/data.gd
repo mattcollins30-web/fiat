@@ -2296,6 +2296,10 @@ const OVER_LEVEL_STEP := 0.15
 const OVER_LEVEL_FLOOR := 0.1
 const WEAR_PER_ILVL := 2.5           # D8 (gates 2 and 4): x3 left the City's drops (wear 19-25) past the runner who'd cleared
                                      # the Town, so the campaign waited on levels - the Quartermaster at 2.6 h, at level 23-27
+## A fifth of a site's or a signal's plain gear finds at the level the runner can wear (16 Oct, Matt's playtest: "the gear
+## gating is frustrating" - level 10 at the Bank, every drop for level 14), never past the site's own. Uniques, set pieces
+## and mythics roll at the site's.
+const FIND_AT_MINE := 0.2
 const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
 const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12
