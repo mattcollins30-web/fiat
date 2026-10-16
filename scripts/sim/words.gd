@@ -119,6 +119,10 @@ const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from th
 ## A save keeps the lines heard by their place here ("voice/index"): add new lines at the end, never reorder.
 const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net", "medic": "The Clinic, on the CB", "fence": "The Fence, on the CB"}
 const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net", "medic": "The medic", "fence": "The Fence"}
+## Out of time (16 Oct, Matt's playtest): where the lost kit went, and the gun that ran dry.
+const TIME_OUT_LOOSE := ["It's out on the estate now: a gang may be wearing it in a few runs. Clear the site and it comes home.",
+	"They're out on the estate now: a gang may be wearing them in a few runs. Clear the site and they come home."]
+const TIME_OUT_DRY := "The %s ran dry."
 ## Kev's papers (16 Oct): his line on the Radio's pile, and the log's when one's bought.
 const KEV_PILE := "\"People bring me paper. Receipts, tickets, logbooks. Bring me notes and I'll see what's in the pile.\""
 const KEV_SOLD := "Off Kev's pile:"

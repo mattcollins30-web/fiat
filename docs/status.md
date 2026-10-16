@@ -5319,6 +5319,10 @@ set from Matt's playtest (BANK 0.8-1.4, QM 1.1-1.8 bot hours, his 1.3 h / 1.5 h 
 the reach's depth (44 notes at the campaign's end, 88 at reach 22). Gates 4 and 12 to re-read after the next playtest.
 **Done from the UI list (16 Oct):** 15 (the band: the site, the time left), 18 (papers: no worth, Kev's story's tail
 and its line whole), 17 and 12 (affix chips always short; proofs "res & dmg"; loot/gang, loot/med).
+Then 2, 3, 5 (the tail as chips; rounds led by their count, the grade a chip; the gun's feed a chip; the flavour whole in
+the pick's column), 9's chip ("Rounds short: N of ~M" on the Runs card, the stash's rounds counted when there's a pouch)
+and its line (the rig's contents, where the kit went, the gun that ran dry). And the odds' key: its runner half worked
+once a frame while the Runs screen reads (the smoke's City tiers starved on Matt's machine; 78 frames now).
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by

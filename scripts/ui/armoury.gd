@@ -209,7 +209,7 @@ func _show_panel() -> void:
 		elif not sim.room_open("radio") and not Items.is_deeds(it):
 			tail = "encrypted till the Radio's open"     # every paper alike, code or none (16 Oct, Matt: one said "from before")
 		else:
-			tail = ("no code: a line of the before" if taught == "" else (("read · the Radio has %s" % taught.to_lower()) if read else ("the code for %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"
+			tail = [[("no code: a line of the before" if taught == "" else (("read · the Radio has %s" % taught.to_lower()) if read else ("the code for %s" % taught.to_lower()))) if not Items.is_deeds(it) else "what the Bank was holding"]]     # one clause, one chip
 	if it.has("set"):
 		# the set: whose, how many worn, what the next piece brings
 		var st: Dictionary = Items.set_named(it["set"])

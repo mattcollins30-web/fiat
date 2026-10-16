@@ -5462,6 +5462,16 @@ func _playtest_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()                        # the odds read only at home on the Map (main._read_odds): a run left on reads nothing (the review)
 	main.show_room(main.MISSIONS)
+	# a gun with rounds for the read (16 Oct): the bot's run can leave the runner dry, and fists against the City's
+	# sites make every dry run long enough to starve the read - the frames are what's under test, not a dry gun
+	var fed_box: Dictionary = {}
+	var gun_now = sim.equipped["Primary"]
+	if gun_now != null and Items.ammo_type(gun_now) not in ["", "none"] and sim.rounds_for(gun_now) == 0:
+		var feed_bx: Dictionary = sim.ammo_box(Items.ammo_type(gun_now))
+		if not feed_bx.is_empty():
+			fed_box = sim._plain(Data.AMMO, str(feed_bx["name"]))
+			sim.rig.append(fed_box)
+			sim._surv_cache = {}
 	var frames := 0
 	var key_moves := {}                         # for the failure's words: a key that moves restarts the read (14 Oct)
 	var keys0 := {}
@@ -5485,6 +5495,8 @@ func _playtest_checks(main) -> void:
 		if sim.tier_open(i):
 			var oc: Array = sim._surv_cache.get(i, [])
 			_check(sim.odds_settled(i), "tier %d's odds never settled in %d frames: on a run %s, %s of %d reads (cap %d), key moved %d times, cache key now %s" % [i, frames, sim.on_mission(), str(oc[2]) if oc.size() > 2 else "none", sim.odds_runs(), sim.odds_runs_max, int(key_moves.get(i, 0)), str(oc.size() > 0 and str(oc[0]) == str(sim._odds_key(i)))])
+	if not fed_box.is_empty():
+		sim.rig.erase(fed_box)
 	main._missions._shown = ""
 	main.refresh()
 	_check_fit(main, "Runs (odds settled)")
@@ -5975,6 +5987,15 @@ func _ammo_checks(sim) -> void:
 	_check(sim.on_mission() and sim.rounds_for(sim.equipped["Primary"]) == 0, "a full rig took rounds at the gate")
 	sim.extract_now()
 	sim.stash.pop_back()
+	# the card's rounds-short read (16 Oct): ten shells against a site's fight is short; a rig of them isn't
+	sim.rig = [sim._plain(Data.AMMO, "Shells")]
+	Items.set_stack(sim.rig[0], 10)
+	var rs0: Array = sim.rounds_short(3)
+	_check(rs0.size() == 2 and int(rs0[0]) == 10 and int(rs0[1]) > 10, "ten shells read as enough for the Parade: %s" % str(rs0))
+	sim.rig = []
+	for k in range(6):
+		sim.rig.append(sim._plain(Data.AMMO, "Shells"))
+	_check(sim.rounds_short(3).is_empty() or int(sim.rounds_short(3)[0]) > 10, "a rig of shells still reads short and unchanged: %s" % str(sim.rounds_short(3)))
 	# two pouches free, three boxes for the shotgun and one for the pistol: the pistol gets its box (the review)
 	sim.rig = []
 	while sim.rig_room(3):
@@ -7441,6 +7462,26 @@ func _pick_panel_checks(main) -> void:
 	var joined: String = " | ".join(chip_words)
 	lone.queue_free()
 	_check(not joined.contains("resist") and joined.contains("poison res") and joined.contains("bleed res") and joined.contains("fire res & dmg"), "the affix chips side by side aren't one short form: %s" % joined)
+	# the flavour on its own line (16 Oct, Matt: "we're losing flavour text"): whole, in the pick's column, under its
+	# affixes, inside its box - not cut beside the buttons
+	var said: String = Words.item_words("Motorbike leathers")
+	var fl: Label = pk._flavour
+	var h0 = pk._heads[0]
+	var aff_bottom: float = h0.position.y + h0._affixes.position.y + h0._affixes.size.y
+	var box: Rect2 = Rect2(pk._boxes[0].position, pk._boxes[0].size)
+	_check(said == "" or (fl.visible and fl.text == said and fl.position.y >= aff_bottom and box.encloses(Rect2(fl.position, fl.size)) and (fl.autowrap_mode != TextServer.AUTOWRAP_OFF or UI.text_width(fl, fl.text) <= fl.size.x)),
+		"the pick's flavour isn't whole on its own line: '%s' at %s (affixes to %.0f, box %s)" % [fl.text, str(Rect2(fl.position, fl.size)), aff_bottom, str(box)])
+	# rounds lead with how many, the grade a chip; a gun's tail is chips
+	var slugs_it: Dictionary = sim._plain(Data.AMMO, "Slugs")
+	var lone2 = load("res://scripts/ui/item_head.gd").new(440)
+	main.add_child(lone2)
+	lone2.show_item(slugs_it, sim, "feeds the shotgun")
+	var tw: Array = lone2._tail_chips.text_nodes().map(func(l): return str(l.text))
+	_check(lone2._figure.text == str(int(slugs_it["rounds"])) and lone2._unit.text == "rounds" and tw.any(func(t): return t.begins_with("+") and t.contains("%")), "special rounds aren't led by their count, the bonus a chip: '%s %s' / %s" % [lone2._figure.text, lone2._unit.text, str(tw)])
+	var gun_it: Dictionary = sim._plain("Primary", _base_of_type("shotgun"))
+	lone2.show_item(gun_it, sim, ["fits nothing", "shells, 40 in the rig"])
+	_check(lone2._tail_chips.visible and not lone2._tail.visible and lone2._tail_chips.text_nodes().size() >= 2, "a gun's tail isn't chips: %s" % str(lone2._tail_chips.text_nodes().map(func(l): return l.text)))
+	lone2.queue_free()
 	_check(pk._kickers[0].text == "THE PICK · IN THE PACK · %d CELLS" % Items.size(found) and pk._kickers[1].text == "FITTED NOW · %d CELLS" % Items.size(worn), "the kickers are off: '%s' / '%s'" % [pk._kickers[0].text, pk._kickers[1].text])
 	_check(pk._tag_labels[0].text == Fmt.money(sim.sell_price(found)) and pk._tag_labels[1].text == Fmt.money(sim.sell_price(worn)), "the price tags are off: %s / %s" % [pk._tag_labels[0].text, pk._tag_labels[1].text])
 	_check(pk._verdict.visible and pk._verdict.text.begins_with("▼ Downgrade") and pk._deltas[0].visible and pk._deltas[0].text.begins_with("▼"), "the verdict and deltas are off: '%s' / '%s'" % [pk._verdict.text, pk._deltas[0].text])
@@ -10822,6 +10863,27 @@ func _find_at_mine_checks(main) -> void:
 	_check(past[0] == 0 or sim.wearable_level() == site_lv, "a runner past the site got finds under it: %d" % past[0])
 	_check(sim.finds_words(site_lv).size() == 2, "a runner past the site still reads the fifth: %s" % str(sim.finds_words(site_lv)))
 	sim.xp = keep_xp
+	# the Runs card says when the rig's short of the fight's rounds (16 Oct), after what they fire, and fits
+	var keep_rig: Array = sim.rig.duplicate()
+	var keep_gun = sim.equipped["Primary"]
+	var aside: Array = sim.stash.filter(func(x): return Items.is_ammo(x))     # the stash's rounds would go out with it (the gate's top-up)
+	for it in aside:
+		sim.stash.erase(it)
+	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
+	sim.rig = [sim._plain(Data.AMMO, "Shells")]
+	Items.set_stack(sim.rig[0], 3)
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(1)
+	main._missions._shown = ""
+	main.refresh()
+	var cc: Dictionary = main._missions._cols[0]
+	var card_chips: Array = cc["chips"].text_nodes().map(func(l): return str(l.text))
+	_check(card_chips.any(func(t): return t.contains("hort")), "the Runs card doesn't say the rig's short: %s" % str(card_chips))
+	_check_fit(main, "Runs (rounds short)")
+	sim.rig = keep_rig
+	sim.equipped["Primary"] = keep_gun
+	sim.stash.append_array(aside)
+	main._missions._shown = ""
 	print("a fifth of the finds at the runner's level ok: the Bank %d of %d, a signal %d of %d" % [on_site[0], on_site[1], on_sig[0], on_sig[1]])
 
 
@@ -12344,7 +12406,8 @@ func _clock_checks(main) -> void:
 		changed += 1 if id1 != ids0[s] else 0
 	_check(changed == Data.CLOCK_LOSE_KIT, "out of time changed %d slots, not %d" % [changed, Data.CLOCK_LOSE_KIT])
 	sim.auto_equip = auto_eq0
-	_check(sim.events.slice(-4).any(func(ev): return str(ev[1]).begins_with("Out of time")), "out of time has no line")
+	_check(sim.events.slice(-8).any(func(ev): return str(ev[1]).begins_with("Out of time")), "out of time has no line")
+	_check(sim.events.slice(-8).any(func(ev): return str(ev[1]) in Words.TIME_OUT_LOOSE), "out of time doesn't say where the kit went")     # 16 Oct
 	# insured, the kit comes back to the stash
 	for s in ["Helmet", "Armour", "Secondary"]:
 		if sim.equipped[s] == null:

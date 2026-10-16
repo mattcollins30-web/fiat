@@ -405,9 +405,13 @@ func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
 			chips.append(["%s %.0f%% · you resist %.0f%%%s" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0, ot], "%s · res %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
 	if chips.is_empty():
 		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
+	# the rig short of the fight's rounds (16 Oct): first, in red - the Bank's dry shotgun
+	var short: Array = sim.rounds_short(int(t["tier"])) if is_open else []
+	if not short.is_empty():
+		chips.append(["Rounds short: %d of ~%d" % [int(short[0]), int(short[1])], "Short: %d of ~%d" % [int(short[0]), int(short[1])], "bad"])
 	c["fire_label"].visible = is_open
 	c["chips"].visible = is_open
-	c["chips"].show_chips(chips if is_open else [])
+	c["chips"].show_chips(chips if is_open else [], 1, true)     # every chip short before one's left off (the rounds' warning last)
 
 
 func _depth(k: int, by: int) -> void:

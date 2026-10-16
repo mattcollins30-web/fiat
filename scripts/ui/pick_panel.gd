@@ -31,6 +31,7 @@ const LINES := 4                                              # the right column
 const TAG_PAD := 8
 const BOX_OUT := 8                                            # each piece in its own box (7 Oct): the run screen's line, drawn this far outside the column, so the column keeps its width (the words were cut for it at first)
 const BOX_Y := 2
+const FLAVOUR_H := 20                                         # the item's own line, a row of it
 
 var w: int
 var h: int
@@ -48,7 +49,9 @@ var _empty_title: Label                                       # nothing picked: 
 var _empty_lines: Array[Label] = []
 var _verdict: Label
 var _deltas: Array[Label] = []
-var _words: Label                                             # the item's own line, or the hint
+var _words: Label                                             # the foot's line: a hint, or the item's own line when its column has no room
+var _flavour: Label                                           # the item's own line, whole, in its column under the head (16 Oct, Matt: "we're losing flavour text")
+var _flavour_text := ""
 var _buttons: Array[Button] = []
 var _actions: Array = []
 var _hint_on := false
@@ -92,6 +95,8 @@ func _init(width: int, height: int) -> void:
 	for i in range(DELTAS):
 		_deltas.append(UI.label(_panel, Rect2(PAD, foot_y, 10, 24), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_words = UI.label(_panel, Rect2(PAD, foot_y + 24, 10, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_flavour = UI.label(_panel, Rect2(PAD, 0, col_w, FLAVOUR_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_flavour.visible = false
 	for i in range(BUTTONS):
 		var b := UI.button(_panel, Rect2(0, foot_y, 240, FOOT_H), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -126,11 +131,12 @@ func show_pick(it: Dictionary, sim, kicker: String, tail = "", extra = "") -> vo
 	_heads[0].visible = true
 	_heads[0].show_item(it, sim, tail, extra, false)
 	if it.has("unique"):
-		_words.text = Words.UNIQUES.get(it["unique"], Words.item_words(it["base"]))
+		_flavour_text = Words.UNIQUES.get(it["unique"], Words.item_words(it["base"]))
 	elif Items.is_paper(it):
-		_words.text = Words.paper_words(it["base"], sim.room_open("radio"))     # the code encrypted till the Radio (15 Oct)
+		_flavour_text = Words.paper_words(it["base"], sim.room_open("radio"))     # the code encrypted till the Radio (15 Oct)
 	else:
-		_words.text = Words.item_words(it["base"])
+		_flavour_text = Words.item_words(it["base"])
+	_lay_flavour()
 
 
 ## The right column as the fitted item, laid the same as the pick.
@@ -204,6 +210,10 @@ func set_hint_options(options: Array) -> void:
 	if _hint_on:
 		_words.text = str(_hint_options[0])
 		_lay_foot()
+	else:
+		_words.text = ""
+		_lay_flavour()                                  # the hint gone: the item's own line back where it goes (the review)
+		_lay_foot()
 
 
 ## The buttons at the foot's right: [{text, action, enabled, primary, tone}], the first primary by default.
@@ -236,6 +246,34 @@ func _foot_left_edge() -> float:
 		if b.visible:
 			x = minf(x, b.position.x)
 	return x - 12
+
+
+## The item's own line in its column, under the affixes, the column's width: whole on one row, or two when there's
+## room; with no room under the head, the foot's line carries it as before.
+func _lay_flavour() -> void:
+	_flavour.visible = false
+	if _flavour_text == "":
+		return
+	var head = _heads[0]
+	var top: float = HEAD_Y + head._affixes.position.y + (head._affixes.size.y if head._affixes.visible else 0.0) + 6.0
+	if not head._affixes.visible:
+		top = HEAD_Y + head.tail_y + head.TAIL_H + 4.0
+	var bottom: float = foot_y - 8.0 - 4.0
+	var room: float = bottom - top
+	if room < FLAVOUR_H:
+		if not _hint_on:
+			_words.text = _flavour_text                 # no room in the column: the foot's line, as it was
+		return
+	_flavour.position = Vector2(PAD, top)
+	_flavour.size = Vector2(col_w, FLAVOUR_H)
+	_flavour.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_flavour.text = _flavour_text
+	if UI.text_width(_flavour, _flavour_text) > col_w and room >= 2 * FLAVOUR_H:
+		_flavour.size.y = 2 * FLAVOUR_H
+		_flavour.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	elif UI.text_width(_flavour, _flavour_text) > col_w:
+		UI.fit_sentences(_flavour, _flavour_text)       # one row: the whole sentences that fit
+	_flavour.visible = true
 
 
 func _lay_foot() -> void:
@@ -274,6 +312,8 @@ func _clear() -> void:
 		l.visible = false
 	_words.text = ""
 	_words.visible = false
+	_flavour_text = ""
+	_flavour.visible = false
 	_hint_on = false
 	for b in _buttons:
 		b.visible = false
@@ -383,6 +423,8 @@ func text_nodes() -> Array:
 			out.append(l)
 	if _words.visible:
 		out.append(_words)
+	if _flavour.visible and _flavour.autowrap_mode == TextServer.AUTOWRAP_OFF:
+		out.append(_flavour)                            # a wrapped one fits by its wrap, its two rows checked apart (the smoke)
 	for b in _buttons:
 		if b.visible:
 			out.append(b)

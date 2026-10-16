@@ -2701,6 +2701,7 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 			_dry_memo.erase("conversion")   # the grade's share goes with the stack (33), in a dry run too
 			if rounds_for(gun) <= 0:
 				log_event("%s: dry" % gun["base"])
+				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
 
 
 ## The Fence sells standard boxes of every type without end: a box a type.
@@ -4869,6 +4870,23 @@ func can_deploy_to(i: int) -> bool:
 
 
 ## Seconds a tier's fight should take at the operator's damage, for the card.
+## The primary's rounds against a site's fight (16 Oct, Matt's dry shotgun at the Bank): [in the rig, the fight wants] -
+## the fight's estimate at the gun's rate of fire - when the rig's short; [] when it isn't, or the gun takes none. The rig
+## read is the one that goes out: it tops up from the stash coming home.
+func rounds_short(i: int) -> Array:
+	var gun = equipped["Primary"]
+	if gun == null or Items.ammo_type(gun) in ["", "none"] or gun.get("rule", "") == "weed_burner":
+		return []
+	var t := effective(i)
+	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]))
+	var have: int = rounds_for(gun)
+	if rig_room(1):
+		for it in stash:     # the gate tops up from the stash (the review): a box bought since home still goes out
+			if Items.is_ammo(it) and Items.base_of(it)["type"] == Items.ammo_type(gun):
+				have += int(it.get("rounds", 0))
+	return [have, want] if have < want else []
+
+
 func estimate(i: int) -> float:
 	var t := effective(i)
 	return t["pool"] * t["hp"] / (dps() * pace() * t["pace"])
@@ -4917,8 +4935,24 @@ func _odds_key(i: int) -> Array:
 	# HP to the nearest tenth of the bar, so a rest doesn't recompute it every second (rounded: a rest to full that
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
-	return [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), depth[i], str(words[i]), str(standing), tree.size(), rig.size(), boss_armed.get(i, false), campaign_done(), yard_moves, str(atlas), weather_of(i), is_night(), wound, _kit_ids(),
+	var common: Array = _odds_key_common()
+	return common + [depth[i], str(words[i]), weather_of(i), boss_armed.get(i, false),
 		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0]     # a signal laid on the site reads apart from it (15 Oct)
+
+
+## The key's runner half, the same for every site: worked once a frame while the shell reads the odds (16 Oct: twelve
+## sites' keys a frame - each a dps(), an armour(), a max_hp() - ate the 5 ms before the City's dry runs got any, on
+## Matt's machine), else every call. Nothing the key reads moves inside one frame's read: a dry run puts it all back.
+var _key_memo := []
+var _key_memo_t := -1
+func _odds_key_common() -> Array:
+	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
+		return _key_memo
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), yard_moves, str(atlas), is_night(), wound, _kit_ids()]
+	if odds_time_ms > 0.0:
+		_key_memo = k
+		_key_memo_t = _odds_t0
+	return k
 
 
 ## A figure in steps of 2%: the odds don't move for less.
@@ -5331,7 +5365,14 @@ func _time_out(m: Dictionary) -> void:
 		m["left"] = int(m["left"]) + rest.size()
 		m["found"] = keep
 	_dry_memo.clear()
-	log_event("Out of time in %s. The pack's gone%s%s." % [Words.mid(t["name"]), "" if lost.is_empty() else ", and %s with it" % " and ".join(lost), "; the Fence pays for the kit" if insured and not lost.is_empty() else ""])
+	# the line says it all (16 Oct, Matt's playtest): what went, the rig's contents with the rig, where it went, and why
+	var rig_gone: bool = "Rig" in lost_slots and not insured
+	log_event("Out of time in %s. The pack's gone%s%s%s." % [Words.mid(t["name"]), "" if lost.is_empty() else ", and %s with it" % " and ".join(lost),
+		", and what was in the rig" if rig_gone else "", "; the Fence pays for the kit" if insured and not lost.is_empty() else ""])
+	if not lost.is_empty() and not insured:
+		log_event(Words.TIME_OUT_LOOSE[0 if lost.size() == 1 else 1])
+	if str(m.get("ran_dry", "")) != "":
+		log_event(Words.TIME_OUT_DRY % str(m["ran_dry"]).to_lower())
 	_extract()
 	if carried != "":
 		last_report["carried"] = carried

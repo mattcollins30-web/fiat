@@ -36,7 +36,8 @@ var _chips: Array[Panel] = []
 var _chip_labels: Array[Label] = []
 var _figure: Label
 var _unit: Label
-var _tail: Label
+var _tail: Label                   # the tail's words, kept for what reads them; shown as chips (16 Oct, the item card's chips)
+var _tail_chips: Chips             # the tail as chips: what it takes, how many, a grade's bonus
 var _affixes: Chips                # the affixes, chips in their tier's colour, two rows
 var _rows: Array[Label] = []       # the open line, a set's words, "No affixes"
 const AFFIX_ROWS := 2
@@ -66,6 +67,10 @@ func _init(w := 440, small := false) -> void:
 	_figure = UI.label(self, Rect2(0, headline_y, width, head_h), "", "SemiBold", fsize, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(self, Rect2(0, headline_y, width, head_h), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_tail = UI.label(self, Rect2(0, tail_y, width, TAIL_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_tail.visible = false
+	_tail_chips = Chips.new(width)
+	_tail_chips.position = Vector2(0, tail_y)
+	add_child(_tail_chips)
 	_affixes = Chips.new(width)
 	_affixes.position = Vector2(0, rows_y)
 	add_child(_affixes)
@@ -150,6 +155,28 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 	if options.is_empty():
 		options.append("")
 	UI.fit(_tail, options)
+	# the tail as chips (16 Oct, Matt: "everything on an item a chip but its headline"): a clause a chip, its short
+	# forms when the row is full; rounds lead with how many, their grade's bonus a chip in the accent
+	var tchips: Array = []
+	for c in clauses:
+		if (c is Array and not c.is_empty() and str(c[0]) != "") or (c is String and c != ""):
+			tchips.append({"forms": c if c is Array else [c], "colour": Pal.TEXT_2})
+	if Items.is_ammo(it):
+		var ab := Items.base_of(it)
+		h = [h[0], "rounds"]
+		if ab.has("damage_pct"):
+			tchips.append({"forms": ["+%d%% damage" % int(ab["damage_pct"]), "+%d%%" % int(ab["damage_pct"])], "colour": Pal.ACCENT})
+		var gw: String = Items.grade_words(ab).trim_prefix(", ")
+		if gw != "":
+			tchips.append({"forms": [gw], "colour": Pal.ACCENT})
+	elif Items.is_gun(it) and sim_in != null and Items.ammo_type(it) not in ["", "none"]:
+		var stack: Dictionary = sim_in.feed_stack(it)
+		var bonus: float = sim_in.grade_bonus(it)
+		if not stack.is_empty() and bonus > 0.0:
+			tchips.append({"forms": ["%s: +%d%% damage" % [str(stack["base"]), int(bonus)], "+%d%% %s" % [int(bonus), str(stack["base"]).to_lower()]], "colour": Pal.ACCENT})
+	_unit.text = h[1]
+	_tail_chips.show_chips(tchips, 1, true)
+	_tail_chips.visible = not tchips.is_empty()
 	# the affixes as chips: the tier tag inside, the words short, in the tier's colour; two rows
 	var lines: Array = Items.affix_lines(it, false, false)
 	var short_lines: Array = Items.affix_lines(it, true, false)
@@ -314,7 +341,9 @@ static func _chip_words(it: Dictionary, cells_chip := true) -> Array:
 
 
 func text_nodes() -> Array:
-	var out: Array = [_title, _figure, _unit, _tail]
+	var out: Array = [_title, _figure, _unit]
+	if _tail_chips.visible:
+		out.append_array(_tail_chips.text_nodes())
 	for k in range(CHIPS):
 		if _chips[k].visible:
 			out.append(_chip_labels[k])
