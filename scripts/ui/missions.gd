@@ -15,6 +15,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
+const TierGuide := preload("res://scripts/ui/tier_guide.gd")
 
 const COL_GAP := 16
 @warning_ignore("integer_division")
@@ -40,7 +41,9 @@ var _zone_art: Array = []                 # a TextureRect a tab, behind it
 var _cols: Array = []              # per column: the labels and buttons
 var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
-var _came_btn: Button              # the tally's button at the zone row's right
+var _came_btn: Button              # the tally's button at the zone row's right, before the guide's
+var _guide_btn: Button             # "What a site pays" (16 Oct, item 11): the map's tier guide, at the row's end
+var _guide
 var _came_open := false            # the card dropped down
 # the map moved to the Radio (12 Oct): the zone row is the four zones, the Outskirts first
 const ZONE_H := 56
@@ -75,7 +78,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	# the zones, as a row of buttons across the top
 	@warning_ignore("integer_division")
-	var zw := (Pal.GRID_W - COL_GAP * (Data.ZONES.size() - 1)) / Data.ZONES.size()
+	var zw := (Pal.GRID_W - GUIDE_W - COL_GAP * Data.ZONES.size()) / Data.ZONES.size()
 	for z in range(Data.ZONES.size()):
 		var art := TextureRect.new()             # the zone's painted art behind its tab (9 Oct), when there is one
 		art.position = Vector2(z * (zw + COL_GAP), 0)
@@ -97,7 +100,7 @@ func _init() -> void:
 		_zone_buttons.append(b)
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
 	# row's right while there's a tally, the card dropping under it when pressed
-	_came_btn = UI.button(self, Rect2(Pal.GRID_W - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
+	_came_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W - COL_GAP - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
 	_came_btn.pressed.connect(_toggle_came)
 	_came_btn.visible = false
 	for col in range(3):
@@ -183,6 +186,18 @@ func _init() -> void:
 	_came.visible = false
 	_came.acted.connect(func(): acted.emit())
 	add_child(_came)
+	_guide_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W, 0, GUIDE_W, ZONE_H), false)
+	_guide_btn.tooltip_text = "What a site pays, depth by depth, and where to farm"
+	_guide_btn.pressed.connect(_open_guide)
+	_guide = TierGuide.new()
+	_guide.closed.connect(func(): acted.emit())
+	add_child(_guide)
+
+
+## The tier guide over the room, on the site of the zone's first open column (else where it was left).
+func _open_guide() -> void:
+	_guide.open(sim, _tier(0) if _guide.site < 0 else -1)
+	_guide.move_to_front()
 
 
 # ------------------------------------------------------------------ showing
@@ -195,6 +210,14 @@ func show_state(s) -> void:
 			if sim.zone_open(z):
 				zone = z
 	_show_came_back()
+	UI.fit_button(_guide_btn, ["What a site pays ?", "Site guide ?", "?"])
+	for z in range(Data.ZONES.size()):
+		# every refresh, not on the signature: the tally's button narrows the tabs without moving anything it reads
+		var zname: String = str(Data.ZONES[z]["name"])
+		UI.fit_button(_zone_buttons[z], [zname] if sim.zone_open(z) else ["%s · locked" % zname, zname])     # shut, the tab says so, or its disabled look does
+	if _guide.visible:
+		_guide.show_state(sim)
+		_guide.move_to_front()             # over the tally's card, which comes to the front on every refresh
 	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
 	for i in range(Data.TIERS.size()):
@@ -208,7 +231,6 @@ func show_state(s) -> void:
 	for z in range(Data.ZONES.size()):
 		var zb: Button = _zone_buttons[z]
 		var open_z: bool = sim.zone_open(z)
-		zb.text = Data.ZONES[z]["name"] if open_z else "%s · locked" % Data.ZONES[z]["name"]
 		zb.disabled = not open_z
 		if _zone_art[z].visible:
 			_style_art_tab(zb, z == zone)
@@ -446,6 +468,7 @@ func _boss(k: int) -> void:
 ## narrowing to make room; pressed, the card drops under it at the screen's right, over the top of the right-hand
 ## column only (its band and fight), clear of every button. Seen puts both away.
 const CAME_BTN_W := 340
+const GUIDE_W := 220               # the tier guide's button, the zone row's last
 const CAME_Y := ZONE_H + 4
 
 
@@ -456,7 +479,7 @@ func _show_came_back() -> void:
 		_came_open = false
 	_came_btn.visible = has
 	var zn: int = Data.ZONES.size()
-	var room: float = Pal.GRID_W - ((CAME_BTN_W + COL_GAP) if has else 0)
+	var room: float = Pal.GRID_W - GUIDE_W - COL_GAP - ((CAME_BTN_W + COL_GAP) if has else 0)
 	var zw: float = (room - COL_GAP * (zn - 1)) / zn
 	for z in range(zn):
 		_zone_buttons[z].position.x = z * (zw + COL_GAP)
@@ -492,6 +515,9 @@ func text_nodes() -> Array:
 	out.append_array(_came.text_nodes())
 	if _came_btn.visible:
 		out.append(_came_btn)
+	out.append(_guide_btn)
+	if _guide.visible:
+		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
 	for zb in _zone_buttons:
 		out.append(zb)
 	for c in _cols:

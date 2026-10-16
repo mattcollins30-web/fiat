@@ -4331,11 +4331,12 @@ static func loot_cap(level_v: int) -> int:
 
 ## The tier as it will be fought: depth and intel applied. Every multiplier
 ## the fight and the search read comes from this, not the base table.
-func effective(i: int) -> Dictionary:
+## A site's plain figures at a depth (16 Oct, split out of effective for the map's tier guide): the campaign's or the
+## endgame's curve, the zone's quality and the over-level share - none of the run's own (the night, the map, the
+## words, the sky, the wear). `on_sig`: a signal's fight, its level's curve alone. `ahead`: the endgame's curve though
+## the campaign isn't done (the guide, showing what the signals will be).
+func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> Dictionary:
 	var base: Dictionary = Data.TIERS[i]
-	var d: int = depth[i]
-	var lv: int = lv_at(i, d)
-	d = site_depth(i)                        # a signal's: its level's on the hardest site, whatever site it's on (D3, the review)
 	var e := {
 		"name": base["name"], "tier": i, "depth": d, "level": lv, "pool": int(base["pool"]),
 		"hp": base["hp"] * pow(1.0 + Data.DEPTH_HOSTILE, d - 1),
@@ -4349,7 +4350,7 @@ func effective(i: int) -> Dictionary:
 	if d == 1:
 		e["hp"] *= Data.CAMPAIGN_HOSTILE     # D20: the campaign's crews a touch softer, the levels at the Quartermaster held by XP
 		e["dps"] *= Data.CAMPAIGN_HOSTILE
-	if d >= 2 and campaign_done():
+	if d >= 2 and (campaign_done() or ahead):
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
 		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
 		# bases a find draws from and its item level follow the level too (the sites were the same fight before)
@@ -4361,7 +4362,6 @@ func effective(i: int) -> Dictionary:
 		# a signal's fight is its level's curve alone, bent by the site's shape (D14): the site's own campaign floor made
 		# a City site's level 22 seven times the Allotments' (4200 x 1.25^13 against the curve's 3200 x 1.14^13), and
 		# the Radio's signals split into won and binned by the site they landed on, not their level
-		var on_sig: bool = not _sig.is_empty() and int(_sig["site"]) == i
 		# D21: and on a signal the shape keeps its crowd and toughness but not its fire - the soft sites' many and the hard
 		# ones' few come to much the same crew HP (14 x 0.6 against 8 x 1.5), and fire x0.7 against x1.4 was nine levels at
 		# the 8% slope: the reach ran ahead on the soft sites and four in five rolls past it were unwinnable
@@ -4378,6 +4378,61 @@ func effective(i: int) -> Dictionary:
 	e["xp"] *= share                         # D9 (Matt): a site well under you pays less XP and fewer tins
 	e["cash"] *= share
 	e["over_level"] = share
+	return e
+
+
+## The map's tier guide (16 Oct, item 11; "Fiat - Map tier guide", approved; the review: depth comes by signals now, by
+## level, so the ladder is a signal's): a row a signal level on site `i` from `from_lv` - the level to wear its finds and
+## the runner's fifth when that's lower, the gangs' HP and the pay against a campaign run here, the drops and rarity on
+## it, the loose-unique chance, and what opens at it ([words, kind]: set, unique, deep, cap). As a signal plays it:
+## depth_figures at tier_depth(level), the curve alone (on_sig); none of a run's own.
+func guide_rows(i: int, from_lv: int, count := 12) -> Array:
+	var b: Dictionary = depth_figures(i, 1, lv_at(i, 1))
+	var mine: int = wearable_level()
+	var own: Dictionary = site_unique(i)
+	var rows: Array = []
+	var before: int = tier_depth(from_lv - 1) if from_lv > lv_at(i, 1) else 0     # what the levels under the first row already opened
+	var capped: bool = before > 0 and unique_odds({"tier": i, "depth": before}) >= Data.UNIQUE_CAP - 1e-6
+	var sets: bool = before >= 2
+	for lv in range(from_lv, from_lv + count):
+		var td: int = tier_depth(lv)
+		var f: Dictionary = depth_figures(i, td, lv, true, true)
+		var uq: float = unique_odds({"tier": i, "depth": td})
+		var marks: Array = []
+		if td >= 2 and not sets:
+			marks.append(["Set pieces drop", "set"])
+		sets = sets or td >= 2
+		if not own.is_empty() and td == site_unique_depth(i):
+			marks.append(["%s drops" % own["name"], "unique"])
+		if lv in Data.DEEP_TIER_LEVELS:
+			marks.append(["Deep gear, tier %d" % loot_tier_at(lv), "deep"])
+		if uq >= Data.UNIQUE_CAP - 1e-6 and not capped:
+			marks.append(["Uniques at their cap", "unique"])
+		capped = capped or uq >= Data.UNIQUE_CAP - 1e-6
+		rows.append({"level": lv, "depth": td, "wear": wear_of(lv), "mine": wear_of(mine) if mine < lv else 0,
+			"gangs": float(f["pool"]) * float(f["hp"]) / maxf(1e-9, float(b["pool"]) * float(b["hp"])),
+			"pay": float(f["xp"]) / maxf(1e-9, float(b["xp"])),
+			"drop": (float(f["drop"]) - float(b["drop"])) * 100.0, "rarity": (float(f["rarity"]) - float(b["rarity"])) * 100.0,
+			"unique": uq, "marks": marks, "here": lv == reach})
+	return rows
+
+
+## The signal level a site's own unique starts dropping from: the first whose depth reaches site_unique_depth.
+func site_unique_level(i: int) -> int:
+	return site_unique_depth(i) + (Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES)
+
+
+## Where the guide's ladder starts for a site: a few levels under the reach, never under the site's own level or the
+## lowest a signal rolls.
+func guide_from(i: int, count := 12) -> int:
+	return maxi(maxi(lv_at(i, 1), Data.REACH_START), mini(reach - 4, 999 - count))     # no signal rolls under REACH_START (the review)
+
+
+func effective(i: int) -> Dictionary:
+	var base: Dictionary = Data.TIERS[i]
+	var lv: int = lv_at(i, int(depth[i]))
+	var e := depth_figures(i, site_depth(i), lv, not _sig.is_empty() and int(_sig["site"]) == i)     # a signal's depth: its level's on the hardest site, whatever site it's on (D3, the review)
+	var d: int = int(e["depth"])
 	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night()
 	if night_run:
 		var night := modifier("Night")

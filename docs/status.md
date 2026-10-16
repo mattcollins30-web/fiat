@@ -5250,6 +5250,18 @@ coded ones' words opened "A code in the margin, encrypted".
    XP and cash, drops, rarity, unique odds, and what opens - sets, the site's own unique, a head at full strength, the
    convoy, the deep tiers; the runner's depth marked) and a Where-to-farm tab (the heads, the sites' own uniques and
    their depths, what each site leans to). Built after item 10 (its gear column reads the wear level); UI only.
+   **Done (16 Oct):** "What a site pays ?" at the Map's zone row's end opens `tier_guide.gd` over the room, on the
+   zone's first site. By level (the review: a site runs at depth 1 since B7.2 and depth comes by signals, by level, so
+   the ladder is a signal's, not the mockup's depth rows): the sites down the left by zone; a row a signal level from
+   four under your reach (never under the site's own) - the gear to wear (red past your level, "20% at N" under it
+   when your fifth is lower), gang HP and XP & tins against a campaign run there, drops and rarity on it, the
+   loose-unique chance, and chips for what opens (set pieces, the site's own unique, a deep tier, uniques at their
+   cap); your reach marked. Where to farm: the heads, their uniques, what they open; mythics, sets and loose uniques;
+   each site's own unique, the signal level it drops from and whether it's on the shelf; where each gun type and kit
+   kind leans. From level 10, the lowest a signal rolls; the endgame curve shown before the campaign is done too.
+   From `sim.guide_rows` over `depth_figures` (effective's plain part split out; the fingerprint
+   unmoved, 2 h a build), at `tier_depth(level)` as a signal plays. The zone tabs fit their names every refresh
+   ("· locked" dropped when the tally's button narrows them).
 12. **"Fire proof" and "fire resist" read alike (16 Oct, Matt).** Two stats: `fire_res` is the resist alone (5-35);
    `fire_proofed` (armour and helmets, 5-20) is the resist AND the element's damage, its chip "+N% fire proof" hiding
    the damage half - and the Fire tree's notable is called Fireproof too. The chip says both halves ("fire res & dmg"

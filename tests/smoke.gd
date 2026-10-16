@@ -10880,6 +10880,7 @@ func _site_level_checks(main) -> void:
 	_check_fit(main, "Runs (levels)")
 	main._missions._pick_zone(1)
 	_find_at_mine_checks(main)
+	_tier_guide_checks(main)
 	_site_unique_checks(main)
 	_smg_line_checks(main)
 	_growth_checks(main)
@@ -10961,6 +10962,77 @@ func _find_at_mine_checks(main) -> void:
 	sim.stash.append_array(aside)
 	main._missions._shown = ""
 	print("a fifth of the finds at the runner's level ok: the Bank %d of %d, a signal %d of %d" % [on_site[0], on_site[1], on_sig[0], on_sig[1]])
+
+
+## The map's tier guide (16 Oct, item 11): the button opens it over the Runs room on the zone's first site; its rows are
+## the sim's guide_rows (depth 1 the baseline, the gear's level as finds carry it, what opens at its depth); the Where
+## to farm tab names every head and every site's own unique; both tabs fit; the close puts the room back.
+func _tier_guide_checks(main) -> void:
+	var sim = main.sim
+	var ms = main._missions
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	if sim.on_mission():
+		print("the tier guide: skipped on a run")
+		return
+	var g = ms._guide
+	g.site = -1
+	g.tab = "depths"
+	ms._guide_btn.pressed.emit()
+	main.refresh()
+	_check(g.visible and g.site == ms._tier(0) and g._site_title.text == str(Data.TIERS[g.site]["name"]), "the guide didn't open on the zone's first site: visible %s, site %d, '%s'" % [str(g.visible), g.site, g._site_title.text])
+	_check_fit(main, "Runs (the tier guide, depths)")
+	# the ladder as a signal plays it (the review: depth comes by signals, by level): from the site's own level, the
+	# first row a signal at it against the campaign's run; the site's own unique at the level its depth reaches; the
+	# deep tiers marked; the gangs never easing as the levels climb past the campaign's
+	for i in [3, 8, 11]:
+		var lv0: int = sim.lv_at(i, 1)
+		var rows: Array = sim.guide_rows(i, lv0, 24)
+		var r0: Dictionary = rows[0]
+		_check(rows.size() == 24 and int(r0["level"]) == lv0 and int(r0["wear"]) == sim.wear_of(lv0) and int(r0["depth"]) == sim.tier_depth(lv0), "%s's first row isn't its own level: %s" % [Data.TIERS[i]["name"], str(r0)])
+		var own: Dictionary = sim.site_unique(i)
+		var own_lv: int = sim.site_unique_level(i)
+		var own_row: Array = rows.filter(func(r): return int(r["level"]) == own_lv)
+		_check(own.is_empty() or own_lv < lv0 or own_lv >= lv0 + 24 or (not own_row.is_empty() and own_row[0]["marks"].any(func(m): return str(m[0]).begins_with(str(own["name"])))), "%s's own unique isn't marked at level %d" % [Data.TIERS[i]["name"], own_lv])
+		_check(own.is_empty() or sim.tier_depth(own_lv) == sim.site_unique_depth(i), "%s's own unique level %d isn't where a signal's depth reaches %d" % [Data.TIERS[i]["name"], own_lv, sim.site_unique_depth(i)])
+		var ok := true
+		for k in range(rows.size()):
+			var r: Dictionary = rows[k]
+			if int(r["level"]) in Data.DEEP_TIER_LEVELS:
+				ok = ok and r["marks"].any(func(m): return str(m[1]) == "deep")
+			if k >= 1 and int(r["depth"]) >= 3:
+				ok = ok and float(r["gangs"]) >= float(rows[k - 1]["gangs"]) * (1.0 - 1e-6)
+		_check(ok, "%s's ladder: a deep tier unmarked, or the gangs easing with level: %s" % [Data.TIERS[i]["name"], str(rows.map(func(r): return [int(r["level"]), snappedf(float(r["gangs"]), 0.01), r["marks"].map(func(m): return m[1])]))])
+	# a ladder from part-way up doesn't mark again what opened under its first row
+	var part: Array = sim.guide_rows(8, sim.lv_at(8, 1) + 10, 6)
+	_check(not part[0]["marks"].any(func(m): return str(m[1]) == "set"), "a ladder from part-way up marks the set pieces again: %s" % str(part[0]["marks"]))
+	# the table shows the rows from a few under the reach, the reach marked
+	g._pick_site(11)
+	var from: int = sim.guide_from(11, g.ROWS)
+	var br: Array = sim.guide_rows(11, from, g.ROWS)
+	var here: int = sim.reach - from
+	var shown_ok: bool = g._rows[0]["cells"][0].text.ends_with("%d" % int(br[0]["level"])) and g._rows[11]["cells"][1].text == "Level %d" % int(br[11]["wear"])
+	_check(shown_ok and (here < 0 or here > 11 or (g._rows[here]["cells"][0].text.begins_with("▶") and g._rows[here]["edge"].visible)), "the guide's table doesn't show the Barracks' rows: '%s', '%s' (reach %d from %d)" % [g._rows[0]["cells"][0].text, g._rows[11]["cells"][1].text, sim.reach, from])
+	_check_fit(main, "Runs (the tier guide, the Barracks)")
+	# where to farm
+	g._pick_tab("farm")
+	var farm_text: String = " | ".join(g.text_nodes().map(func(l): return str(l.text)))
+	var missing: Array = []
+	for b in Data.BOSSES:
+		if not farm_text.contains(str(b["name"])):
+			missing.append(b["name"])
+	for i in range(Data.TIERS.size()):
+		var u: Dictionary = sim.site_unique(i)
+		if not u.is_empty() and not farm_text.contains(str(u["name"])):
+			missing.append(u["name"])
+	var lf: Array = g.looking_for()
+	_check(missing.is_empty() and lf.any(func(x): return str(x[0]) == "Rifles" and str(x[1]).contains("The Barracks")), "Where to farm leaves out %s (looking for: %s)" % [str(missing), str(lf.slice(0, 3))])
+	_check_fit(main, "Runs (the tier guide, where to farm)")
+	g._close.pressed.emit()
+	main.refresh()
+	_check(not g.visible and ms.text_nodes().has(ms._zone_buttons[0]), "the guide's close didn't put the room back")
+	g.tab = "depths"
+	print("the tier guide: the ladders, the marks, where to farm ok")
 
 
 ## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's
@@ -13059,7 +13131,8 @@ func _came_back_checks(main) -> void:
 	# the tally's button at the zone row's right (12 Oct): the card stays up until it's pressed, then drops under it
 	_check(cbtn.visible and not card.visible and cbtn.text.contains("2 runs"), "the tally's button did not show, or the card came up unasked: '%s'" % cbtn.text)
 	var zr: Rect2 = Rect2(main._missions._zone_buttons.back().position, main._missions._zone_buttons.back().size)
-	_check(zr.end.x + 8 <= cbtn.position.x and cbtn.position.x + cbtn.size.x <= Pal.GRID_W, "the zone tabs run into the tally's button")
+	var gbtn: Button = main._missions._guide_btn
+	_check(zr.end.x + 8 <= cbtn.position.x and cbtn.position.x + cbtn.size.x + 8 <= gbtn.position.x and gbtn.position.x + gbtn.size.x <= Pal.GRID_W + 0.5, "the zone tabs, the tally's button and the guide's run into each other")
 	_check_fit(main, "Runs (the tally's button)")
 	cbtn.pressed.emit()
 	_check(card.visible, "the card did not show after two runs and a press")
@@ -13095,7 +13168,7 @@ func _came_back_checks(main) -> void:
 	card._on_seen()
 	main.refresh()
 	_check(not card.visible and not cbtn.visible and int(sim.came_back["runs"]) == 0 and sim.came_back["firsts"].is_empty() and int(sim.came_back["lv_from"]) == sim.level(), "Seen did not put the card and its button away and start again")
-	_check(is_equal_approx(main._missions._zone_buttons.back().position.x + main._missions._zone_buttons.back().size.x, Pal.GRID_W), "the zone tabs did not take the row back after Seen")
+	_check(is_equal_approx(main._missions._zone_buttons.back().position.x + main._missions._zone_buttons.back().size.x, main._missions._guide_btn.position.x - main._missions.COL_GAP), "the zone tabs did not take the row back to the guide's button after Seen")
 	sim.load_dict(saved)
 	main.refresh()
 	# a move keeps the tally (an away move mustn't wipe it), the climb from the new runner's level
