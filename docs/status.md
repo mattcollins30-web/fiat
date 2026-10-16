@@ -5228,8 +5228,11 @@ coded ones' words opened "A code in the margin, encrypted".
    formula stays, the card says the level to wear it. And every find rolls at the site's item level exactly, so a runner
    under it brings home a stash he can't wear. Agreed: **20% of gear finds roll at the highest item level the runner
    can wear now, capped at the site's** (the Bank at level 10: level-9 gear), the card reading the range ("level 9-14
-   gear"); uniques, sets and mythics as now. A sim change that moves gear supply: smoke, reviewer, and a bot balance
-   read for the gates after; an assertion that the card's level is `wear_level` of the site's finds.
+   gear"); uniques, sets and mythics as now. **Signals too (16 Oct, Matt: level 22, a signal dropping level-29
+   gear):** a signal's finds go through the same roll (`t["level"]` is the signal's), so the fifth at the runner's
+   level lands on both; the Radio's signal card (`radio.gd:463`, already the wear level) reads the range as the site
+   card does. A sim change that moves gear supply: smoke, reviewer, and a bot balance read for the gates after; an
+   assertion that both cards' level is `wear_level` of the finds, and one that a signal's finds carry the fifth.
 11. **A "?" on the map: what a site pays (16 Oct, Matt: D4's Torment list).** Mockup on the canvas ("Fiat - Map tier
    guide"): a Depths tab (a site picked by zone; depth 1-12 rows with the site level, the gear level to wear, gangs,
    XP and cash, drops, rarity, unique odds, and what opens - sets, the site's own unique, a head at full strength, the
