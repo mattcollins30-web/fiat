@@ -5181,3 +5181,10 @@ coded ones' words opened "A code in the margin, encrypted".
 3. **Everything on an item a chip** but its headline figure (a gun's damage, armour, cells, finds and the like): the
    affixes, rules, codes and grades already are; the rest of the card's loose text lines to follow - a design pass
    with mockups first.
+
+**The first levels quicker (16 Oct, Matt's playtest).** A fire Drifter by hand: level 2 at 27 minutes on the Retail
+Park (site level 3), every drop wanting level 4-6 - the bot farms to its levels, a player pushes on under them, and
+D19's XP_SCALE 2.9 slowed the first levels a fifth. `xp_scale` climbs from XP_RAMP_FROM 1.0 at level 1 to XP_SCALE by
+XP_RAMP_TO 12, unchanged past it: level 2 at 83 XP (was 240), 6 at 706 (1,486), 10 at 2,080 (3,346), 20 at 11,588
+(12,963). Matt starts a fresh save on it; a balance read after his session (the bot's level at the Quartermaster
+likely a level up).
