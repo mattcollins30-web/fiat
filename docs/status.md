@@ -5197,6 +5197,12 @@ coded ones' words opened "A code in the margin, encrypted".
    (`Words.RADIO_VOICES`: the loop, Kev, the army net, the Clinic, the Fence) gets its own colour, and garbled
    broadcasts (`ItemHead.garble`'s glyphs) are mixed in among the ambient lines - unread traffic on the air. A
    mockup of the palette and the garble's share first; an assertion that each voice's colour reads against the panel.
+   **Done (16 Oct):** `radio_line.gd`'s VOICE colours as the canvas drew them (loop aab4bf, Kev f0a868, the net
+   c2b67e, the medic 8ccbe6, the Fence d6a0e0), a line's voice from its `Words.RADIO` entry. `Words.RADIO_TRAFFIC`
+   (eight lines of air under what you can hear) plays as traffic: before the Radio a line in five, all glyphs in
+   6f7780; after it a line in twelve, with a word or two through in its voice's colour. A line just heard is never
+   held back for traffic. Smoke: Kev in Kev's colour, the shares shut and open, every glyph in Inter's cmap, each
+   voice at 4.5:1 or better against the panel (7.8-9.2) and the grey at 3:1 (3.6).
 7. **The Manager redrawn, and an arena for each head (16 Oct, Matt).** The Manager reads small beside the other
    heads. Measured, he's full height on the 128x192 frame but thin: 62 px wide standing (the others 78-82) and 53 px
    firing (the others 80-84) - a slim figure in a suit, so a rescale alone would stretch him; likely a regen at the

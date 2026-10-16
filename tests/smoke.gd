@@ -13598,6 +13598,57 @@ func _radio_line_checks(main) -> void:
 		_check(played.has(bag_text) == shut, "the bag's line %s with the Clinic %s" % ["plays" if not shut else "never plays", "open" if not shut else "shut"])
 	sim.heard = heard0
 	sim.unlocked = unlocked0
+	# a colour a voice, and the traffic (16 Oct, item 6): Kev's line in Kev's colour; before the Radio a line in five
+	# is all glyphs, after it one in twelve with a word or two through in its voice's colour; every glyph in Inter
+	var RL := preload("res://scripts/ui/radio_line.gd")
+	var kev_text := ""
+	for r in Words.RADIO:
+		if str(r["voice"]) == "kev" and kev_text == "":
+			kev_text = str(r["text"])
+	rl._queue.clear()
+	rl.push(kev_text)
+	var kev_parts: Array = rl.next_parts()
+	_check(kev_parts.size() == 1 and kev_parts[0][0] == kev_text and kev_parts[0][1] == RL.VOICE["kev"], "Kev's line isn't in Kev's colour: %s" % str(kev_parts))
+	# each voice reads against the panel (WCAG 4.5:1); the traffic's grey is meant dim, but not lost (3:1)
+	var lum := func(c: Color) -> float:
+		var ch := [c.r, c.g, c.b].map(func(x): return x / 12.92 if x <= 0.03928 else pow((x + 0.055) / 1.055, 2.4))
+		return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+	var bg: float = lum.call(Pal.PANEL)
+	for v in RL.VOICE:
+		var ratio: float = (float(lum.call(RL.VOICE[v])) + 0.05) / (bg + 0.05)
+		_check(ratio >= 4.5, "%s's colour on the radio line is %.1f:1 against the panel" % [v, ratio])
+	var g_ratio: float = (float(lum.call(RL.GARBLE)) + 0.05) / (bg + 0.05)
+	_check(g_ratio >= 3.0, "the traffic's grey is %.1f:1 against the panel" % g_ratio)
+	var inter: Font = load("res://fonts/Inter-Medium.ttf")
+	var missing := ""
+	for ch in RL.GARBLE_GLYPHS:
+		if not inter.has_char(ch.unicode_at(0)):
+			missing += ch
+	_check(missing == "", "garble glyphs Inter can't draw: %s" % missing)
+	for open in [false, true]:
+		sim.unlocked = unlocked0.filter(func(r): return r != "radio") + (["radio"] if open else [])
+		rl._since_garble = 0
+		var garbled := 0
+		var through := 0
+		var stray := ""
+		for n in range(60):
+			var parts: Array = rl.next_parts()
+			var g: bool = parts.any(func(p): return p[1] == RL.GARBLE)
+			if g:
+				garbled += 1
+				for p in parts:
+					if p[1] == RL.GARBLE:
+						for ch in str(p[0]):
+							if ch != " " and not RL.GARBLE_GLYPHS.contains(ch):
+								stray += ch
+					else:
+						through += 1
+						var known: bool = Words.RADIO_TRAFFIC.any(func(t): return (" " + str(t["text"]) + " ").contains(" " + str(p[0]) + " "))
+						_check(known, "a word through the traffic isn't the traffic's: '%s'" % p[0])
+		var want: int = floori(60.0 / (RL.GARBLE_EVERY_OPEN if open else RL.GARBLE_EVERY))
+		_check(garbled == want and stray == "" and ((through >= garbled) if open else (through == 0)), "the traffic with the Radio %s: %d garbled of 60 (want %d), %d words through, stray '%s'" % ["open" if open else "shut", garbled, want, through, stray])
+	sim.unlocked = unlocked0
+	rl._queue.clear()
 	# a press - a real click through the strip's input - opens the Radio
 	var was: String = main.room
 	var click := InputEventMouseButton.new()

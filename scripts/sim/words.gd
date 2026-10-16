@@ -137,6 +137,18 @@ const SIGNAL_LINES := [
 	"They changed the route. Means somebody's been watching it. Means us, probably.",
 	"Every one of these papers came out of a lorry's cab. They're writing it all down.",
 ]
+## The radio line's traffic (16 Oct, item 6): what's on the air under what you can hear, garbled on the strip; once
+## the Radio's open a word or two comes through in the voice's colour. Nothing to read in it, and nothing in the sim.
+const RADIO_TRAFFIC := [
+	{"voice": "net", "text": "All call signs hold for the second route out"},
+	{"voice": "net", "text": "Convoy six loading at the depot before first light"},
+	{"voice": "loop", "text": "Remain where you are the route is closed"},
+	{"voice": "kev", "text": "Anyone still listening on this band say something"},
+	{"voice": "net", "text": "Paper count confirmed twice signed and sealed"},
+	{"voice": "loop", "text": "Withdrawals are suspended until further notice"},
+	{"voice": "kev", "text": "Lorries on the ring road again heading north"},
+	{"voice": "net", "text": "Masts on the council roof are ours from tonight"},
+]
 const RADIO_QUIET := ["Nothing on the air yet: the Quartermaster holds the set.", "The papers you find are kept: each carries a code, encrypted till the Radio's open."]
 ## Kev's story (15 Oct): a beat's line when its paper comes home, when its signal's made, and when it's beaten.
 const STORY := [
