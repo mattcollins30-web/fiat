@@ -5035,3 +5035,13 @@ and a full-strength Estate head on a signal.
 
 **D20 (16 Oct).** CAMPAIGN_HOSTILE 0.9: the campaign's (depth 1) crews' HP and fire, heads with them, so the
 campaign's pace comes back at the slower levels. CURVE reward 0.10 to 0.08, with its grow.
+
+**D20's read (summary_d20.md, 4 reds):** the Bank 1.6 h and the Quartermaster 2.1 h green; the band 1.5-3.0 h; level
+at the Quartermaster off on four (16-24); level 50 at 7.8-11 h on three, never on five; the reach's longest stretch
+93-489 min. A poison Paramedic's read: the reach to 25 early, then 777 signals binned against 48 run, its dps flat at
+600 for eighteen hours - the reach climbed on the soft sites and the rest of the rolls past the kit.
+
+**D21: a signal's crew is as tough on any site (16 Oct).** On a signal the site's shape keeps its crowd (pool) but not
+its toughness: the crew's whole HP is the curve's for SIGNAL_POOL 11, shared over the site's pool, and fire the curve's.
+(An Allotments crew at x0.6 HP against the Barracks' x1.5 was twelve levels at the 8% slope.) Smoke: the same level on
+the Allotments and the Barracks reads the pools' inverse.

@@ -4169,8 +4169,11 @@ func effective(i: int) -> Dictionary:
 		# a City site's level 22 seven times the Allotments' (4200 x 1.25^13 against the curve's 3200 x 1.14^13), and
 		# the Radio's signals split into won and binned by the site they landed on, not their level
 		var on_sig: bool = not _sig.is_empty() and int(_sig["site"]) == i
-		e["hp"] = float(c["hp"]) * g * float(shape["hp"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
-		e["dps"] = float(c["dps"]) * g * float(shape["dps"]) if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
+		# D21: and on a signal the shape keeps its crowd, not its toughness - the whole crew's HP the same on every site
+		# (an Allotments crew at x0.6 against the Barracks' x1.5 was twelve levels at the 8% slope: the reach ran ahead on
+		# the soft sites and four in five rolls past it were unwinnable)
+		e["hp"] = float(c["hp"]) * g * Data.SIGNAL_POOL / float(shape["pool"]) if on_sig else maxf(float(e["hp"]), float(c["hp"]) * g * float(shape["hp"]))
+		e["dps"] = float(c["dps"]) * g if on_sig else maxf(float(e["dps"]), float(c["dps"]) * g * float(shape["dps"]))
 		e["xp"] = float(c["xp"]) * r if on_sig else maxf(float(e["xp"]), float(c["xp"]) * r)     # and its pay (the review)
 		e["cash"] = float(c["cash"]) * r * float(shape.get("cash", 1.0)) if on_sig else maxf(float(e["cash"]), float(c["cash"]) * r * float(shape.get("cash", 1.0)))
 		e["drop"] = float(c["drop"]) + Data.DEPTH_DROP * (d - 2) if on_sig else maxf(float(e["drop"]), float(c["drop"]) + Data.DEPTH_DROP * (d - 2))

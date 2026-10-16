@@ -2098,6 +2098,7 @@ static func craft_of(key: String) -> Dictionary:
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.
+const SIGNAL_POOL := 11.0     # D21: a signal's crew HP is the curve's for a crew of this many, shared out over its site's
 const CAMPAIGN_HOSTILE := 0.9     # D20: the campaign's (depth 1) HP and fire - with XP_SCALE 2.9 the Bank came at 1.9 h, the gate 1.1-1.6
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
