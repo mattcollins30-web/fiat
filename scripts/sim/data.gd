@@ -1272,7 +1272,7 @@ const BOSSES := [
 	{"zone": 0, "name": "The Gamekeeper", "tier": 2, "hp": 5.0, "dps": 2.0, "notes": 10,     # the Outskirts' edge: soft
 		"words": "Top Farm's shoot had a keeper. It still has. He walks the hedges with the dogs and a gun, and he kept the vet's bag.",
 		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
-	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 10.0, "dps": 3.0, "notes": 20,
+	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 8.0, "dps": 2.5, "notes": 20,     # D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
 		"words": "The crew in the carpet warehouse have a leader. He had a van and a lock-up before; he has the car park now.",
 		"uniques": ["The Van's Spare", "Underlay"], "opens": {"fence": "The Carpet Man's ledger"}},
 	{"zone": 2, "name": "The Manager", "tier": 8, "hp": 12.0, "dps": 3.5, "notes": 40,

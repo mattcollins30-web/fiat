@@ -342,9 +342,12 @@ func _make_signals(sim) -> void:
 			if int(sim.signal_at(k).get("story", -1)) >= 0:
 				continue
 			var read: Array = sim.signal_odds(k)
-			if not bool(read[1]):
+			var sid: int = int(sim.signal_at(k).get("id", -1))
+			if not _held_at.has(sid):
+				_held_at[sid] = sim.elapsed
+			if not bool(read[1]) and sim.elapsed - float(_held_at[sid]) < HELD_READ_S:
 				worst = -1                    # odds still being read: nothing binned on a part-read (D13: fresh signals went at "0%")
-				break
+				break                         # - for twenty minutes: a kit changed at the bench starts its read again (D18: never settled, papers piled to 113)
 			var o: float = float(read[0])
 			if o < wo:
 				wo = o
@@ -887,6 +890,9 @@ func _restock_rounds(sim) -> void:
 
 
 const AMMO_STACKS_KEPT := 6
+const HELD_READ_S := 1200.0
+const PAPERS_KEPT := 30
+var _held_at := {}
 
 
 func _sell_spares(sim) -> void:
@@ -908,6 +914,11 @@ func _sell_spares(sim) -> void:
 			if not by_type.has(ty):
 				by_type[ty] = []
 			by_type[ty].append(it)
+	# plain papers: the rarest thirty stay (D18: a hundred and more piled while three signals were read, a stash filling)
+	var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+	plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
+	for it in plain.slice(PAPERS_KEPT):
+		sim.sell(it)
 	for ty in by_type:
 		var stacks: Array = by_type[ty]
 		stacks.sort_custom(func(a, b_in): return int(a.get("value", 0)) > int(b_in.get("value", 0)))     # the dearest: grade and rounds (the review)

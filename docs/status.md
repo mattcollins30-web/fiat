@@ -5009,3 +5009,12 @@ by half for hours mid-read: worn kit lost to the clock - a run out of time takes
 it on every run; the dry run rolled its own events and left it out, so Kev's convoy beats read 100% and ran out of
 time with one of sixteen down). The bot gets out when the kills so far say the rest won't fall before the clock and
 there's time for the door's gang (after 90 s and four kills), and logs every run out of time.
+
+**D17's read (summary_d17.md, 6 reds):** runs out of time down on most builds (0-3), but a shock Scrapper held at the
+Carpet Man to hour 21 (the Estate's kit, a dps of 50, nothing better dropping) and a plain Paramedic to hour 10; level
+50 at 8-9 h on two poison builds; the reach still stands 3.5-7 hours.
+
+**D18 (16 Oct).** The Carpet Man 10/3.0 to 8/2.5 (HP and fire on the site's). The bot: a held signal unread after
+twenty minutes can be binned (a kit changed at the bench restarts the read, so some never settled and plain papers piled
+past a hundred); the rarest thirty plain papers kept, the rest sold. The review of D17: the dry run's convoy only when
+no other event was rolled, as on a real run.
