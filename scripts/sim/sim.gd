@@ -4895,6 +4895,9 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	if rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys"):
 		m["event"] = Data.EVENTS[rng.randi_range(0, Data.EVENTS.size() - 1)]
 		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
+	if not _sig.is_empty() and int(_sig["site"]) == i and bool(_sig.get("convoy", false)):
+		m["event"] = "convoy"                  # a signal's convoy joins every run, as deploy_signal sets it (D17: the odds left it out)
+		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
 	mission = m
 	_dry_rules = _snapshot_rules()
 	_dry_memo = {}

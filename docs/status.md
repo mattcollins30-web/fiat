@@ -5000,3 +5000,12 @@ at the wall gets winnable signals at full pay, so the levels and the kit keep co
 from x2.4 at 22 to x3.6 at 40 (level 50 at 343k). The D15 review: what a depth opens (the Yard's columns 5 and 6, a
 zone's salvage) reads `dug_depth` - a site's clear as the Barracks' depth at its level - not which site a signal fell
 on; the bot keeps the dearest six stacks of rounds (grade, then count).
+
+**D16's read (summary_d16.md, 6 reds):** level 50 at 14-23 h on nine of twelve; signals every 5-18 min; the reach
+still stands 3-7 hours; the campaign slower on three single reads (the Manager 4.4-4.9 h). The dps of three builds fell
+by half for hours mid-read: worn kit lost to the clock - a run out of time takes two pieces - 10-17 times a read.
+
+**D17: out of time less often (16 Oct).** The odds of a signal with a convoy now carry the convoy (deploy_signal sets
+it on every run; the dry run rolled its own events and left it out, so Kev's convoy beats read 100% and ran out of
+time with one of sixteen down). The bot gets out when the kills so far say the rest won't fall before the clock and
+there's time for the door's gang (after 90 s and four kills), and logs every run out of time.

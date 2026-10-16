@@ -91,11 +91,17 @@ func step(sim) -> int:
 		guard += 1
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still
+	if bool(sim.last_report.get("timed_out", false)) and float(sim.last_report.get("time", -1.0)) >= 0.0 and int(sim.runs_total) != _to_seen:
+		_to_seen = int(sim.runs_total)
+		bought.append([sim.elapsed, "out of time: tier %d%s, %d of %d down, %d gangs, way out %s, clock used %.0f s" % [int(sim.last_report["tier"]),
+			" (a signal)" if not ran_signal.is_empty() else "", int(sim.last_report["kills"]), int(sim.last_report["of"]), int(sim.last_report["patrols"]),
+			str(sim.last_report["way_out"]), float(sim.last_report["clock_used"])]])
 	if not ran_signal.is_empty():
 		bought.append([sim.elapsed, "ran a signal: level %d at %.0f%%, reach %d -> %d%s" % [ran_signal[0], float(ran_signal[1]) * 100.0, ran_signal[2], sim.reach, ran_signal[3]]])
 		ran_signal = []
 	return t
 var ran_signal: Array = []
+var _to_seen := -1
 
 
 ## A signal's extras for the log: its site, the head, a convoy, its codes.
@@ -120,12 +126,30 @@ func should_leave(sim) -> bool:
 		return false
 	if sim.hp < sim.max_hp() * 0.25:
 		return true
+	if _clock_short(sim):
+		return true
 	if not sim.searching():
 		return false
 	var m: Dictionary = sim.mission
 	if m.has("boss") and m["boss"]["alive"]:
 		return false                      # a head or the lorry still standing: the run is for him, picked over or not (the eighteenth read left the convoy at 12 of 16 with the pack "full")
 	return sim.pack_used(m) >= sim.capacity() or m["patrols"] >= 2 or sim.crates_done(m)
+
+
+## The clock against the kills (D17): at the rate they've gone down so far, the rest won't before it runs out, and
+## there's still time to fight the door's gang - out, as a player does, rather than lose two pieces of kit to it.
+func _clock_short(sim) -> bool:
+	var m: Dictionary = sim.mission
+	if m.get("way_out", false) or m.get("dry", false) or int(m["remaining"]) <= 0 or not m.has("clock"):
+		return false
+	var used: float = float(m.get("clock_used", 0.0))
+	if used < 90.0 or int(m["kills"]) < 4:
+		return false                      # the first kills come slow: read the rate once there's one to read
+	var rate: float = float(m["kills"]) / used
+	var need: float = float(m["remaining"]) / rate
+	var door: float = float(sim.door_gang(m["t"])) / rate
+	var ck: float = float(m["clock"])
+	return ck < need * 1.1 and ck > door * 2.0
 
 
 ## Between missions: fit the best of every slot and mount, spend points, buy
