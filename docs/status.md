@@ -5262,6 +5262,11 @@ coded ones' words opened "A code in the margin, encrypted".
    fill as a bar, "passed over" and "swapped" small - moved down to sit above the button (Matt), the hint ("Leaving
    keeps the loot") inside the button, so the rig takes the space between: 72 px cells over two rows. Mockup on the
    UI pass canvas, approved by Matt (16 Oct); a fit check that a rig cell is never under 72 px.
+17. **Affix chips always in their short form (16 Oct, Matt: "res not resistance - looks odd when you see them side by
+   side").** `Chips.show_chips(..., shorten)` lays every chip long and drops to the short forms only when one won't
+   fit, so a pick and its compare beside it can read "+14 bleed res" against "+19 bleed resist". The item head's
+   affix chips take the short form always; the shorts read over once for any that only make sense long (with
+   item 3's and 12's chip pass), and the smoke checks two heads side by side use one form.
 
 Mockups for the pass (16 Oct, the canvas "Fiat - UI pass mockups"): 14 (the one damage figure, the Stats sheet's
 hits-and-burn split, a node's "+N a second"); 2, 3, 5, 12 (the item card: the tail as chips, special rounds led by
