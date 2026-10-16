@@ -5121,3 +5121,10 @@ on all ten. Red: gate 6 on three (the reach's longest stretch 134-344 min; signa
 never on six (41-49 at 24 h), 11.6 h on one.
 
 **D29 (16 Oct).** XP_TAPER_END 4.0 to 3.4.
+
+**D29's two-read (summary_d29x2.md, 30 reads, 5 reds):** the band (1.4-3.5 h), levels at the Quartermaster (two
+Scrappers, 24-25) and the cash sink (one read) red on single reads against D28's green - read noise; gate 6 on four
+(longest 212-267 min, signals 37 min on one); level 50 "never" on five. Read by read, level 50 runs from 8.2 h to past
+24 h, and the same build lands either side of the window (a fire Drifter 8.2 h and never; a frost Paramedic 17.9 h
+and never): the spread is read to read, not build to build, so no one XP setting holds both reads of every build in
+12-24 h. Stopped for Matt's call on gates 6 and 8 (16 Oct, morning).
