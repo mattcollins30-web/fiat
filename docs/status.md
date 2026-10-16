@@ -5143,3 +5143,10 @@ the campaign again and the Radio shut till its Quartermaster.
 
 **The read's ladder ends at the first move (16 Oct).** balance.gd measures gate 6 (and the reach's pace) to hour 12 or
 the first Yard move, whichever is sooner: the ladder is the first Yard's. The re-read next.
+
+**The pass closed (summary_final.md, D29's numbers, 30 reads, 2 reds; Matt, 16 Oct: "stop after this").** Green: the
+Bank 1.5 h, the Quartermaster 2.2 h, the band 1.5-2.7 h, the capstone, Kev's story on all ten, retirement (the median
+read 21.0 h, no read before 8 h), no reds, the gang clock, the loot tables, the gamble, the cash sink, scrap, the
+plain floor. Red, left for the playtest to calibrate: levels at the Quartermaster on one (a fire Scrapper at 23, a
+level over); the reach's longest stretch on the median read 196 min (the gate 180). Every other gate held on the last
+three two-reads. Next: the mythic uniques' design and their art, then Matt's playtest of the 15-16 Oct UI.
