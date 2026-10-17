@@ -8736,6 +8736,36 @@ func _full_pack_checks(sim) -> void:
 			var n_junk: int = m["found"].filter(func(x): return not sim.is_upgrade(x)).size()
 			sim._place_find(m, u2)
 			_check(m["found"].any(func(x): return int(x["id"]) == 930000) and (n_junk == 0 or m["found"].any(func(x): return int(x["id"]) == 940000)), "on auto an upgrade in the pack was swapped out, or the second didn't take the junk's place")
+			# a mythic (17 Oct): swaps into a full pack, and no upgrade swaps it out
+			m["found"] = []                       # full again, of junk and meds
+			var g2 := 0
+			while sim.pack_used(m) + Items.size(junk) <= sim.capacity() and g2 < 50:
+				var jj: Dictionary = junk.duplicate(true)
+				jj["id"] = 970000 + g2
+				m["found"].append(jj)
+				g2 += 1
+			while sim.pack_used(m) < sim.capacity() and g2 < 80:
+				var md: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+				md["id"] = 980000 + g2
+				m["found"].append(md)
+				g2 += 1
+			var my: Dictionary = Items.roll_unique(sim._unique_named("The Headmaster's Cap"), sim.rng)
+			var worn: Dictionary = my.duplicate(true)
+			worn["id"] = 990000
+			sim.equipped["Helmet"] = worn          # the same cap worn: this one's no upgrade, so only its being a mythic keeps it
+			sim._dry_memo.clear()
+			_check(not sim.is_upgrade(my), "the fixture: a cap the same as the one worn reads as an upgrade")
+			var room_for: bool = m["found"].any(func(x): return not sim._pack_keeps(x) and Items.size(x) >= Items.size(my) and Items.opens(x) == "")
+			sim._place_find(m, my)
+			_check(not room_for or m["found"].any(func(x): return int(x["id"]) == int(my["id"])), "on auto a full pack passed a mythic over")
+			for n in range(3):
+				var u3: Dictionary = up.duplicate(true)
+				u3["id"] = 960000 + n
+				sim._place_find(m, u3)
+			_check(not room_for or m["found"].any(func(x): return int(x["id"]) == int(my["id"])), "on auto an upgrade swapped a mythic out of the pack")
+			sim.equipped["Helmet"] = null
+			sim._dry_memo.clear()
+			_check(room_for, "the fixture: nothing in the full pack big enough to make way for a mythic helmet")
 		sim.extract_now()
 	sim.loot_by_hand = by_hand_was
 	sim.load_dict(saved)

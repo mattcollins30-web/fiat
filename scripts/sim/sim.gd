@@ -6411,9 +6411,10 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 		m["left"] += 1
 
 
-## What a full pack holds on to on an auto-run (15 Oct): an upgrade on what's worn, a paper, the deeds.
+## What a full pack holds on to on an auto-run (15 Oct): an upgrade on what's worn, a paper, the deeds - and a mythic
+## (17 Oct, Matt: "never lost" meant it could still be passed over by a full pack, or swapped out of one).
 func _pack_keeps(it: Dictionary) -> bool:
-	return Items.is_paper(it) or is_upgrade(it)
+	return Items.is_paper(it) or it.get("mythic", false) or is_upgrade(it)
 
 
 ## A find's slot, from the site's own weights (a kill carries what was worn;
