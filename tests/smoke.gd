@@ -3858,6 +3858,19 @@ func _events_checks(main) -> void:
 			_check(sim.mission["event_at"] >= Data.EVENT_WINDOW[0] and sim.mission["event_at"] <= Data.EVENT_WINDOW[1], "an event is timed outside its window")
 		sim.extract_now()
 	_check(fired > 3 and fired < 25, "events on %d of 40 runs; 30%% was the aim" % fired)
+	# no passing convoy in the first runs (17 Oct, Matt: one on the very first Allotments run used both starter
+	# bandages and left the next site at 0%); the other two still come, and the convoy does once past them
+	var runs_was: int = sim.runs_total
+	var early := {}
+	var later := {}
+	sim.runs_total = 0
+	for k in range(300):
+		early[sim.roll_event()] = true
+	sim.runs_total = Data.CONVOY_FROM_RUN
+	for k in range(300):
+		later[sim.roll_event()] = true
+	sim.runs_total = runs_was
+	_check(not early.has("convoy") and early.has("trapped") and early.has("cache") and later.has("convoy"), "a convoy can pass in the first %d runs, or the events stopped coming: early %s, later %s" % [Data.CONVOY_FROM_RUN, str(early.keys()), str(later.keys())])
 	# a convoy: a bigger gang, and their notes
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
@@ -9685,6 +9698,46 @@ func _frame_checks(main) -> void:
 	main.refresh()
 
 
+## The six under the frame (17 Oct, Matt: stat-tile mockup A with C's grouping): THEM and YOU, each tile's icon
+## then its key over its figure inside the tile; the figure never the "—" fallback; the tones on what wants acting on.
+func _six_checks(main, m: Dictionary) -> void:
+	var run = main._run
+	var g: Array = run._six_groups
+	_check(g.size() == 2 and g[0].position.x >= run.VIEW_X - 0.5 and absf(g[0].position.x + g[0].size.x + run.SIX_GAP - g[1].position.x) < 0.5 and g[1].position.x + g[1].size.x <= run.VIEW_X + run.VIEW_W + 0.5,
+		"the six's two groups aren't side by side across the frame's width")
+	for k in range(6):
+		var t: Dictionary = run._six[k]
+		var want = g[0] if k in run.SIX_THEM else g[1]
+		_check(t["panel"].get_parent() == want, "the six's tile %d ('%s') is in the wrong group" % [k, t["key"].text])
+		var tw: float = t["panel"].size.x
+		var left: float = 8.0
+		if t.has("icon"):
+			_check(is_equal_approx(t["icon"].size.x, run.TILE_ICON), "the six's tile %d icon is %.0f px, not %d" % [k, t["icon"].size.x, run.TILE_ICON])
+			left = t["icon"].position.x + t["icon"].size.x
+		for l in [t["key"], t["value"]]:
+			_check(l.position.x >= left and l.position.x + l.size.x <= tw + 0.5 and UI.text_width(l, l.text) <= l.size.x + 0.5, "the six's '%s' doesn't sit beside its icon in its tile" % l.text)
+		_check(t["value"].text != "—", "the six's %s fell back to a dash" % t["key"].text)
+	# the tones: their fire red when it'd drop you inside SIX_FAST_S, quiet when it wouldn't
+	var sim = main.sim
+	m["last_incoming"] = sim.hp
+	main.refresh()
+	_check(run._six[0]["value"].get_theme_color("font_color") == Pal.BAD, "their fire at your HP a second isn't red")
+	m["last_incoming"] = 0.01
+	main.refresh()
+	_check(run._six[0]["value"].get_theme_color("font_color") == Pal.TEXT, "their fire at a trickle is red")
+	var rows: Array = run.six_rows(m, m["t"], 1.0)
+	_check((rows[4][2] == Pal.BAD) == (rows[4][1][0] == "none"), "the meds' tone and its figure disagree: %s" % str(rows[4]))
+	# a blade in hand: its rounds read melee, muted, not the dash
+	var gun_was = sim.equipped["Primary"]
+	sim.equipped["Primary"] = sim._plain("Primary", "Machete")
+	main.refresh()
+	_check(run._six[5]["value"].text == "melee" and run._six[5]["value"].get_theme_color("font_color") == Pal.TEXT_3, "a machete's rounds read '%s', not melee" % run._six[5]["value"].text)
+	sim.equipped["Primary"] = gun_was
+	m["last_incoming"] = 0.0
+	main.refresh()
+	print("the six: THEM and YOU, %d px icons, the tones, a blade's melee" % run.TILE_ICON)
+
+
 func _run_view_checks(main) -> void:
 	var run = main._run
 	if run._view == null:
@@ -9710,6 +9763,7 @@ func _run_view_checks(main) -> void:
 	_check(not v.state()["glass"], "the glass shows in a fight")
 	_full_art_checks(main, v)
 	_check(not run._fight["track"].visible and run._six[0]["key"].text == "Their fire", "the top bar shows in a fight (their HP is over each of them), or the six don't lead with Incoming")
+	_six_checks(main, m)
 	_fig_bar_checks(main)
 	_flash_checks(main)
 	_check_fit(main, "Run (the run view, a gang)")

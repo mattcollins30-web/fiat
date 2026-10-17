@@ -72,7 +72,12 @@ const STRIP_Y := NOTE_Y - 6 - STRIP_H
 const TAKE_Y := STRIP_Y - 2 - UI.HEAD_H
 const RIG_ROOM := TAKE_Y - SECTION_GAP - RIG_Y                # the rig's height in a fight: two rows of full cells
 const ICON := 36                                              # a tile's painted icon, its figure beside it
-const TILE_ICON := 30                                         # the six's: smaller, so "Their fire" fits a sixth of the row beside it
+const TILE_ICON := 40                                         # the six's (17 Oct, Matt: stat-tile mockup A): the icon near the tile's height, the figure beside it the hero
+const TILE_KEY := 14                                          # the six's key, small over the figure
+const SIX_GAP := 14                                           # between the two groups, THEM and YOU (mockup C's grouping)
+const SIX_THEM := [0, 2]                                      # Their fire / Gang in, Kills: what's coming at you
+const SIX_YOU := [1, 3, 4, 5]                                 # Your fire, Armour, Meds, Rounds: what you've got
+const SIX_FAST_S := 10.0                                      # their fire goes red when it would take your HP in less than this
 ## The six's icons: Matt's painted dps and hp, and the fight kit's four (17 Oct) - art/ui once he moves them there, else
 ## art/ui_new where the manifest wrote them.
 const TILE_ICONS := {0: ["res://art/ui/their_fire.png", "res://art/ui_new/their_fire.png"], 1: ["res://art/ui/dps.png"], 2: ["res://art/ui/kills.png", "res://art/ui_new/kills.png"],
@@ -137,6 +142,7 @@ var _rig_y: float = RIG_Y          # the rig's row: under the take in a fight, u
 var _floor_pick := -1              # a thing on the floor picked (13 Oct): its comparison, and Take
 var _view = null                   # the run view (run_view.gd), when its art is there; else the boxes as they were
 var _six: Array = []               # the six figures under the frame
+var _six_groups: Array = []        # their two panels, THEM and YOU (17 Oct)
 
 
 func _init() -> void:
@@ -257,27 +263,7 @@ func _view_make() -> void:
 		n.visible = false
 	for t in _fight["tiles"] + _runner["tiles"]:
 		t["panel"].visible = false
-	_six = UI.tile_row(_left, VIEW_X, VIEW_ROW_Y, VIEW_W, 6, 6)
-	# Matt's painted icons on the tiles that have one (16 Oct): the icon at the left, the key and the figure beside it
-	for k in TILE_ICONS:
-		var tex: Texture2D = icon_tex(TILE_ICONS[k])
-		if tex == null:
-			continue
-		var t: Dictionary = _six[k]
-		var ic := TextureRect.new()
-		ic.texture = tex
-		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		ic.position = Vector2(6, (UI.TILE_H - TILE_ICON) / 2.0)
-		ic.size = Vector2(TILE_ICON, TILE_ICON)
-		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		t["panel"].add_child(ic)
-		t["icon"] = ic
-		t["key"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)     # all six with an icon (17 Oct): "Their fire" beside one in a sixth of the row
-		for l in [t["key"], t["value"]]:
-			l.position.x = 6 + TILE_ICON + 5
-			l.size.x = t["panel"].size.x - l.position.x - 4
+	_build_six()
 	_fight["head"].position = Vector2(PAD, FIGHT_BOX_Y + 6)
 	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
 	UI.shadow(_fight["head"])
@@ -428,12 +414,9 @@ func show_state(s) -> void:
 	if _view != null:
 		# the six under the frame: theirs, then yours
 		var fighting: bool = m["remaining"] > 0
-		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		var first: Array = ["Their fire", ["%.1f/s" % m["last_incoming"]]] if fighting else ["Gang in", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(nx) if nx < 1e8 else "never")])]
-		_tiles(_six, [first, ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]],
-			["Armour", ["%.0f" % sim.armour()]], ["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]],
-			["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
-		_six[5]["value"].add_theme_color_override("font_color", _runner["tiles"][3]["value"].get_theme_color("font_color"))
+		var rows6: Array = six_rows(m, t, fire_now)
+		for k in range(6):
+			UI.set_tile(_six[k], rows6[k][0], rows6[k][1], rows6[k][2])
 		if fighting and not boss_on and not way_out:
 			var on_now: int = mini(m["remaining"], sim.contact(t))
 			_fight["head"].text += " · %d ON YOU%s" % [on_now, (" · %d MORE" % (m["remaining"] - on_now)) if m["remaining"] > on_now else ""]
@@ -662,6 +645,83 @@ static func gang_face(zone_i: int) -> String:
 
 
 ## The tiles' words: [[key, [long, shorter...]], ...].
+## The six under the frame (17 Oct, Matt: "A plus your suggestions with the grouping"; the stat-tile canvas): two
+## panels, THEM and YOU, each tile a 40 px icon with a small key over a big figure, a hairline between tiles. _six
+## stays in the figures' order (Their fire, Your fire, Kills, Armour, Meds, Rounds); only where they sit changes.
+func _build_six() -> void:
+	_six.resize(6)
+	_six_groups = []
+	var tw: float = (VIEW_W - SIX_GAP) / 6.0
+	var x: float = VIEW_X
+	for group in [SIX_THEM, SIX_YOU]:
+		var gw: float = tw * group.size()
+		var gp := UI.panel(_left, Rect2(x, VIEW_ROW_Y, gw, UI.TILE_H), UI.box(Pal.BG, 6))
+		gp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_six_groups.append(gp)
+		for n in range(group.size()):
+			var k: int = group[n]
+			var t: Dictionary = UI.tile(gp, Rect2(n * tw, 0, tw, UI.TILE_H))
+			t["panel"].add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+			if n > 0:
+				var line := ColorRect.new()
+				line.color = Pal.CARD_LINE
+				line.position = Vector2(n * tw, 10)
+				line.size = Vector2(1, UI.TILE_H - 20)
+				line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				gp.add_child(line)
+			var tex: Texture2D = icon_tex(TILE_ICONS[k])
+			var left: float = 8.0
+			if tex != null:
+				var ic := TextureRect.new()
+				ic.texture = tex
+				ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				ic.position = Vector2(8, (UI.TILE_H - TILE_ICON) / 2.0)
+				ic.size = Vector2(TILE_ICON, TILE_ICON)
+				ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				t["panel"].add_child(ic)
+				t["icon"] = ic
+				left = 8.0 + TILE_ICON + 8.0
+			t["key"].add_theme_font_size_override("font_size", TILE_KEY)
+			t["key"].position = Vector2(left, 8)
+			t["key"].size = Vector2(tw - left - 4, 18)
+			t["value"].position = Vector2(left, 25)
+			t["value"].size = Vector2(tw - left - 4, 30)
+			_six[k] = t
+		x += gw + SIX_GAP
+
+
+## The six's figures (17 Oct): the forms long to short, and the tone - red where it wants you to act (their fire
+## fast enough to drop you inside SIX_FAST_S, no meds, a gun dry), muted where there's nothing to read (held, never,
+## a blade's rounds).
+func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
+	var fighting: bool = m["remaining"] > 0
+	var first: Array
+	if fighting:
+		var inc: float = float(m["last_incoming"])
+		first = ["Their fire", ["%.1f/s" % inc], Pal.BAD if inc > 0.0 and sim.hp / inc < SIX_FAST_S else Pal.TEXT]
+	elif sim.gang_held(m):
+		first = ["Gang in", ["on the call", "held"], Pal.TEXT_3]
+	else:
+		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
+		first = ["Gang in", [Fmt.mss(nx)] if nx < 1e8 else ["never"], Pal.TEXT if nx < 1e8 else Pal.TEXT_3]
+	var gun = sim.equipped["Primary"]
+	var rounds: int = sim.rounds_for(gun) if gun != null else 0
+	var r: Array
+	if gun == null:
+		r = ["Rounds", ["no gun", "none"], Pal.TEXT]
+	elif Items.ammo_type(gun) in ["", "none"]:
+		r = ["Rounds", ["melee"], Pal.TEXT_3]
+	elif rounds > 0:
+		r = ["Rounds", ["%d" % rounds], Pal.TEXT]
+	else:
+		r = ["Rounds", ["dry"], Pal.BAD]
+	var meds: int = sim.meds_carried()
+	return [first, ["Your fire", ["%.0f/s" % fire_now], Pal.TEXT], ["Kills", ["%d" % m["kills"]], Pal.TEXT],
+		["Armour", ["%.0f" % sim.armour()], Pal.TEXT], ["Meds", ["%d" % meds] if meds > 0 else ["none"], Pal.TEXT if meds > 0 else Pal.BAD], r]
+
+
 func _tiles(tiles: Array, rows: Array) -> void:
 	for k in range(tiles.size()):
 		if k < rows.size():

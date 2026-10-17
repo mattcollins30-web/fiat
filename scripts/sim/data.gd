@@ -1779,6 +1779,7 @@ const BUILD_GRENADE := 12           # with the element's socketable; the nail bo
 const EVENT_ODDS := 0.3
 const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
 const EVENTS := ["convoy", "trapped", "cache"]
+const CONVOY_FROM_RUN := 5         # no passing convoy before the sixth run (17 Oct, Matt: one on the first Allotments run used both starter bandages)
 
 ## Contracts (9 Oct, docs/design/contracts.md): the Fence wants gear - so many of a slot at a rarity, a deep
 ## piece, one carrying a named affix - or papers or meds, and pays in currency only: cash sized to a run's

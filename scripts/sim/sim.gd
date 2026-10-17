@@ -5182,8 +5182,9 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 	# what may happen on the way, on the odds' own dice, as deploy rolls it (15 Oct, refactor A4: the odds missed a
 	# convoy's extra lot; parked item 14). Only one that comes before the clear plays: a dry run ends at the clear,
 	# so a convoy in the search still isn't in the odds
-	if rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys"):
-		m["event"] = Data.EVENTS[rng.randi_range(0, Data.EVENTS.size() - 1)]
+	var ev: String = roll_event()
+	if ev != "":
+		m["event"] = ev
 		m["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
 	if not _sig.is_empty() and int(_sig["site"]) == i and bool(_sig.get("convoy", false)) and str(m.get("event", "")) == "":
 		m["event"] = "convoy"                  # a signal's convoy, as deploy_signal sets it when nothing else is on (D17: the odds left it out)
@@ -5277,8 +5278,9 @@ func deploy(i: int) -> void:
 	# something may happen on the way: when, and what
 	mission["event"] = ""
 	mission["event_at"] = -1.0
-	if rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys"):
-		mission["event"] = Data.EVENTS[rng.randi_range(0, Data.EVENTS.size() - 1)]
+	var ev: String = roll_event()
+	if ev != "":
+		mission["event"] = ev
 		mission["event_at"] = rng.randf_range(Data.EVENT_WINDOW[0], Data.EVENT_WINDOW[1])
 	if mission["remaining"] > 0:
 		_gang_arrives(mission)                # Guard at the first gang (12 Oct)
@@ -5607,6 +5609,16 @@ func _take(m: Dictionary, amount: float) -> float:
 
 func _boss_entry(b: Dictionary) -> Dictionary:
 	return {"name": b["name"], "hp": b["hp"], "dps": b["dps"], "zone": b["zone"], "pinnacle": b.get("pinnacle", false), "started": false, "alive": true}
+
+
+## A run's event on the dice, or "" (17 Oct, Matt: a convoy on the very first Allotments run took both starter
+## bandages and left the next site at 0% with no way to buy more): no passing convoy in the first CONVOY_FROM_RUN
+## runs; the other two still come on the same odds.
+func roll_event() -> String:
+	if not (rng.randf() < Data.EVENT_ODDS or has_rule("caretakers_keys")):
+		return ""
+	var pool: Array = Data.EVENTS if runs_total >= Data.CONVOY_FROM_RUN else Data.EVENTS.filter(func(e): return e != "convoy")
+	return pool[rng.randi_range(0, pool.size() - 1)]
 
 
 ## The run's event, once.
