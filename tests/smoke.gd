@@ -1898,6 +1898,23 @@ func _tree_effect_checks(sim) -> void:
 	sim._dot_add(mine, "fire", 100.0, 1.0e9)
 	sim.mission = kept_mission
 	_check(with_node > 0.0 and is_equal_approx(with_node, float(mine.get("fire", 0.0))), "Fumes grew a burn on the runner: %.2f against %.2f" % [with_node, float(mine.get("fire", 0.0))])
+	# nor the gear's +% dots (17 Oct, Matt): a dot_pct affix grows a burn on them, not one on you
+	var plain_on_you: float = float(mine.get("fire", 0.0))
+	var dot_slot: String = "Charm" if sim.equipped.get("Charm") != null else "Helmet"
+	var dot_kit: Dictionary = (sim.equipped[dot_slot] if sim.equipped[dot_slot] != null else sim._plain(dot_slot, Data.BASES[dot_slot][0]["name"])).duplicate(true)
+	dot_kit["affixes"] = dot_kit["affixes"] + [{"stat": "dot_pct", "value": 50, "tier": 1}]
+	var kept_kit = sim.equipped[dot_slot]
+	sim.equipped[dot_slot] = dot_kit
+	sim._dry_memo.clear()
+	mine.clear()
+	sim.mission = {"my_dots": mine}
+	sim._dot_add(mine, "fire", 100.0, 1.0e9)
+	var theirs_pool := {}
+	sim._dot_add(theirs_pool, "fire", 100.0, 1.0e9)
+	sim.mission = kept_mission
+	sim.equipped[dot_slot] = kept_kit
+	sim._dry_memo.clear()
+	_check(is_equal_approx(float(mine.get("fire", 0.0)), plain_on_you) and float(theirs_pool.get("fire", 0.0)) > plain_on_you * 1.4, "the gear's +50%% dots: a burn on you %.2f (plain %.2f), on them %.2f" % [float(mine.get("fire", 0.0)), plain_on_you, float(theirs_pool.get("fire", 0.0))])
 	# the one figure (16 Oct, item 14): damage_split's burn is what the pool deals a second once it settles, worked
 	# against _dot_add and _dot_tick themselves; and a node's "+N a second" is the figure with it less without it
 	var conv := -1
@@ -8728,6 +8745,16 @@ func _paper_crypt_checks(main) -> void:
 	_check(not main._armoury._pick._words.text.contains(code_line), "the Kit's pick shows an encrypted paper's code: '%s'" % main._armoury._pick._words.text)
 	_paper_pass(main, false)
 	_check_fit(main, "the Kit with an encrypted paper")
+	# an encrypted paper's chips draw from the garble's glyphs: every one in each Inter a chip uses (17 Oct, the review's
+	# note: a font swap would leave boxes on the card, and nothing would say so)
+	var IH := preload("res://scripts/ui/item_head.gd")
+	var no_glyph := ""
+	for w in ["Regular", "Medium", "SemiBold"]:
+		var f: Font = load("res://fonts/Inter-%s.ttf" % w)
+		for ch in IH.GARBLE:
+			if not f.has_char(ch.unicode_at(0)):
+				no_glyph += "%s (%s) " % [ch, w]
+	_check(no_glyph == "", "an encrypted paper's glyphs Inter can't draw: %s" % no_glyph)
 	_check(main._armoury._head._tail.text.contains("encrypted") and not main._armoury._head._tail.text.contains("the code for"), "the Kit's pick line names an encrypted paper's code: '%s'" % main._armoury._head._tail.text)
 	sim.sell_commons()
 	_check(sim.stash.has(pp), "selling the commons sold a paper (the endgame's keys, 15 Oct)")
@@ -12693,8 +12720,10 @@ func _chronicle_checks() -> void:
 	_check(k.get("level", 0) >= 1 and s.level() > 1, "levelling to %d wrote no level line" % s.level())
 	_check(s.chronicle.filter(func(e): return e["k"] == "level")[-1].get("to", 0) == s.level(), "the level line does not read the level reached")
 	var run: Dictionary = s.chronicle.filter(func(e): return e["k"] == "run")[0]
-	for f in ["t", "p", "w", "lv", "cls", "yard", "tier", "site", "outcome", "time", "kills", "of", "dps", "kit"]:
+	for f in ["t", "p", "w", "lv", "cls", "yard", "tier", "site", "outcome", "time", "kills", "of", "dps", "kit",
+			"dealt", "ticked", "ticked_by", "split_total", "split_dot", "dot_gear", "dot_tree", "signal", "gear", "gear_wearable", "gear_at_mine"]:     # the dots and the drops (17 Oct)
 		_check(run.has(f), "a run line has no '%s': %s" % [f, str(run.keys())])
+	_check(int(run.get("ticked", 0)) <= int(run.get("dealt", 0)) and int(run.get("gear_wearable", 0)) <= int(run.get("gear", 0)) and int(run.get("gear_at_mine", 0)) <= int(run.get("gear", 0)), "a run line's dots or drops don't add up: %s" % str(run))
 	_check(s.train_node("Muscle/0"), "Muscle/0 did not train for the record: %s" % s.train_block("Muscle/0"))
 	_check(kinds.call().get("train", 0) == 1, "training wrote no line")
 	s.unlock_all()                               # the Yard's the Manager's deeds on a real camp (13 Oct)
@@ -12736,6 +12765,10 @@ func _chronicle_checks() -> void:
 	with_odds.append({"k": "run", "site": "The Allotments", "tier": 0, "depth": 1, "outcome": "Back", "odds": 0.95, "regen": 2.5, "time": 60.0, "kills": 4, "of": 4, "cash": 10, "xp": 5, "p": 100.0, "t": 100.0, "lv": 1, "cls": "Doorman"})
 	with_odds.append({"k": "run", "site": "The Allotments", "tier": 0, "depth": 1, "outcome": "Dead", "odds": 0.5, "regen": 0.0, "time": 60.0, "kills": 1, "of": 4, "cash": 0, "xp": 0, "p": 200.0, "t": 200.0, "lv": 1, "cls": "Doorman"})
 	var page2: String = PlaytestRead.summarize(s.to_dict(), with_odds, "smoke")
+	with_odds.append({"k": "run", "site": "The Bank", "tier": 8, "depth": 1, "outcome": "Back", "time": 60.0, "kills": 4, "of": 4, "cash": 10, "xp": 5, "p": 300.0, "t": 300.0, "lv": 9, "cls": "Drifter",
+		"dealt": 1000, "ticked": 250, "ticked_by": {"fire": 250}, "split_total": 40.0, "split_dot": 10.0, "dot_gear": 0.0, "dot_tree": 20.0, "signal": false, "gear": 10, "gear_wearable": 3, "gear_at_mine": 2})
+	var page_dots: String = PlaytestRead.summarize(s.to_dict(), with_odds, "smoke")
+	_check(page_dots.contains("## The dots and the drops") and page_dots.contains("| 1 | 0%, 20% | 1000 | 25% (250) | 25% |") and page_dots.contains("30% (3) | 20% (2) |"), "the playtest read doesn't read the dots and the drops: %s" % page_dots.substr(page_dots.find("## The dots"), 600))
 	_check(page2.contains("## The odds set off at") and page2.contains("| Safe (90-100%) | 1 | 0 |") and page2.contains("| A coin toss (40-60%) | 1 | 1 |") and page2.contains("the lowest taken: 50%"), "the playtest read doesn't band the odds set off at: %s" % page2.substr(page2.find("## The odds"), 500))
 	# and the sim writes them: a run read at the gate carries its odds, the site's fire and HP, the regen
 	var g = Sim.new()

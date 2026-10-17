@@ -5274,7 +5274,8 @@ coded ones' words opened "A code in the margin, encrypted".
    can't recur). Matt parked it for after the playtest (16 Oct). Moves the dot builds' numbers: a balance read after.
    **Done (16 Oct):** the tree's share in `_dot_add`, on their pools only (the review: `_dot_add` fills `my_dots` too);
    `_tree_effect_checks` reads every node effect's reader in the source and Fumes grows a burn on them, not on you.
-   Open, for Matt: a `dot_pct` affix on the runner's gear has always grown the dots on the runner too.
+   A `dot_pct` affix on the runner's gear grew the dots on the runner too; Matt (17 Oct): "gear boosts only your
+   dots" - `dot_grow(false)` is 1, and the smoke checks a burn on you ignores the gear's +50% while one on them takes it.
 14. **One damage figure that holds everything (16 Oct, Matt: "hard to gauge what anything in the petrol tree actually
    does for my damage").** `dps()` is the hits alone (guns x level, affixes, attack); a burn, poison or bleed is extra
    and shown nowhere, so a DoT node reads as nothing. To design together (mockups): the headline damage a second
@@ -5374,3 +5375,10 @@ D19's XP_SCALE 2.9 slowed the first levels a fifth. `xp_scale` climbs from XP_RA
 XP_RAMP_TO 12, unchanged past it: level 2 at 83 XP (was 240), 6 at 706 (1,486), 10 at 2,080 (3,346), 20 at 11,588
 (12,963). Matt starts a fresh save on it; a balance read after his session (the bot's level at the Quartermaster
 likely a level up).
+
+**Before the second playtest (17 Oct, Matt: "anything outside of balance").** Gear's +% dots grow only the runner's
+own dots (above, item 13). An encrypted paper's chip glyphs checked against Inter Regular, Medium and SemiBold, as the
+radio's are. The playtest read's new section, "The dots and the drops": a run line carries what it dealt and the dots'
+ticks of it, the one figure and its dot part, the +% dots worn and trained, and its gear finds - wearable when found,
+and at the runner's level from a site over it - so the balance after reads the dot change and the fifth at yours from
+Matt's play, the campaign's and the signals' apart.

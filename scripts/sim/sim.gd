@@ -654,9 +654,12 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * grow)     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
 
 
-## A dot's growth: the kit's dot_pct, and the trees' on them only.
+## A dot's growth: the kit's dot_pct and the trees', on them only - a burn on you is their fire's, and your gear's
+## +% dots never fed it (17 Oct, Matt: "gear boosts only your dots").
 func dot_grow(theirs := true) -> float:
-	return 1.0 + (_affix_sum("dot_pct") + (tree_sum("dot_pct") if theirs else 0.0)) / 100.0
+	if not theirs:
+		return 1.0
+	return 1.0 + (_affix_sum("dot_pct") + tree_sum("dot_pct")) / 100.0
 
 
 ## What the dots deal this tick, draining their pools.
@@ -5230,6 +5233,7 @@ func deploy(i: int) -> void:
 		choose_runner(0)                  # nobody picked: the first one stays
 	_top_up()                                 # the worn guns' rounds from the stash, into the rig's room (16 Oct): before the insurance and the odds read
 	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1)
+	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
 	var t := effective(i)
@@ -5254,6 +5258,7 @@ func deploy(i: int) -> void:
 	mission = {
 		"tier": i, "t": t, "remaining": maxi(1, pool), "target_hp": float(t["hp"]), "kills": 0, "found": [], "insured": insured, "clock": clock_budget(t), "clock_max": clock_budget(t),
 		"left": 0, "cash": 0.0, "xp": 0.0, "elapsed": 0.0, "hp_start": hp, "cleared": false, "odds_seen": odds_seen,
+		"split_gate": [float(gate_split.get("total", 0.0)), float(gate_split.get("dot", 0.0))], "wear_gate": wearable_level(),
 		"search": 0.0, "searches": 0, "patrol_timer": 0.0, "patrols": 0, "last_incoming": 0.0,
 		"using": null, "meds_used": 0, "fresh": true, "swapped": 0, "chill_t": Data.FX["joint/poacher_frost.chill_s"] if has_joint("poacher_frost") else 0.0,
 	}
@@ -6941,6 +6946,8 @@ func _record_run(m: Dictionary) -> void:
 
 ## A run's end in the playtest record: where, how deep, how it ended, what the runner was, and the run's own figures.
 func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
+	if _dry_on:
+		return                                    # chron would drop it: the odds' runs skip the reading too
 	var et: Dictionary = m.get("t", tier(m["tier"]))
 	var b = m.get("boss", null)
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
@@ -6956,6 +6963,35 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 		d["boss_down"] = not bool(b.get("alive", true))
 	if m.get("convoy", false):
 		d["convoy"] = true
+	# the dots and the drops (17 Oct, for the balance after Matt's playtest): what the run dealt and how much of it the
+	# dots' ticks, the one figure and its dot part, the +% dots worn and trained; and its gear finds against what the
+	# runner can wear - the dot change and the fifth at yours, read from a person's play
+	var ticked := 0.0
+	var by := {}
+	for ty in m.get("ticked_by", {}):
+		ticked += float(m["ticked_by"][ty])
+		by[ty] = roundi(float(m["ticked_by"][ty]))
+	var split: Array = m.get("split_gate", [0.0, 0.0])
+	d["dealt"] = roundi(float(m.get("dealt", 0.0)))
+	d["ticked"] = roundi(ticked)
+	d["ticked_by"] = by
+	d["split_total"] = snappedf(float(split[0]), 0.1)
+	d["split_dot"] = snappedf(float(split[1]), 0.1)
+	d["dot_gear"] = snappedf(_affix_sum("dot_pct"), 0.1)
+	d["dot_tree"] = snappedf(tree_sum("dot_pct"), 0.1)
+	d["signal"] = m.has("signal")
+	var gear := 0
+	var wearable := 0
+	var at_mine := 0
+	var mine: int = int(m.get("wear_gate", wearable_level()))     # as it was at the gate: a level-up mid-run would miss the finds rolled before it (the review)
+	for it in m.get("found", []):
+		if str(it.get("slot", "")) in Data.SLOTS and not it.get("mythic", false):
+			gear += 1
+			wearable += 1 if Items.wear_level(it) <= level() else 0
+			at_mine += 1 if Items.ilvl(it) == mine and int(et.get("level", 0)) > mine else 0
+	d["gear"] = gear
+	d["gear_wearable"] = wearable
+	d["gear_at_mine"] = at_mine
 	d.merge(extra, true)
 	chron("run", d)
 

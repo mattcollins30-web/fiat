@@ -264,6 +264,41 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 		L.append("")
 		@warning_ignore("integer_division")
 		L.append("Median odds at the gate: %.0f%%; the lowest taken: %.0f%%; %d of %d runs read." % [100.0 * odds_all[odds_all.size() / 2], 100.0 * odds_all[0], read_runs.size(), runs.size()])
+	# ---- the dots and the drops (17 Oct): how much of the damage the dots' ticks did, against what the one figure said,
+	# by the +% dots on; and the gear found against what the runner could wear - the campaign's and the signals' apart
+	var dot_runs: Array = runs.filter(func(e): return e.has("ticked") and not e.get("away", false))
+	L.append("")
+	L.append("## The dots and the drops")
+	L.append("")
+	if dot_runs.is_empty():
+		L.append("No run in this record carries the dots and the drops (a save from before 17 Oct).")
+	else:
+		L.append("| Runs | +% dots on (gear, tree) | Dealt | From dots' ticks | The figure's dot share (mean) |")
+		L.append("| --- | --- | --- | --- | --- |")
+		var groups := {}
+		for e in dot_runs:
+			var key := "%.0f%%, %.0f%%" % [float(e.get("dot_gear", 0.0)), float(e.get("dot_tree", 0.0))]
+			if not groups.has(key):
+				groups[key] = {"n": 0, "dealt": 0, "ticked": 0, "share": 0.0}
+			var g: Dictionary = groups[key]
+			g["n"] += 1
+			g["dealt"] += int(e.get("dealt", 0))
+			g["ticked"] += int(e.get("ticked", 0))
+			g["share"] += float(e.get("split_dot", 0.0)) / maxf(0.1, float(e.get("split_total", 0.0)))
+		for key in groups:
+			var g: Dictionary = groups[key]
+			L.append("| %d | %s | %d | %s | %.0f%% |" % [g["n"], key, int(g["dealt"]), _pct(int(g["ticked"]), maxi(1, int(g["dealt"]))), 100.0 * float(g["share"]) / maxf(1.0, float(g["n"]))])
+		L.append("")
+		L.append("| Gear found on | Runs | Gear | Wearable when found | At your level (from a site over it) |")
+		L.append("| --- | --- | --- | --- | --- |")
+		for sig in [false, true]:
+			var these: Array = dot_runs.filter(func(e): return bool(e.get("signal", false)) == sig)
+			if these.is_empty():
+				continue
+			var gear: int = these.reduce(func(a, e): return a + int(e.get("gear", 0)), 0)
+			L.append("| %s | %d | %d | %s | %s |" % ["Signals" if sig else "The campaign", these.size(), gear,
+				_pct(these.reduce(func(a, e): return a + int(e.get("gear_wearable", 0)), 0), maxi(1, gear)),
+				_pct(these.reduce(func(a, e): return a + int(e.get("gear_at_mine", 0)), 0), maxi(1, gear))])
 	# ---- hour by hour
 	var snaps: Array = ch.filter(func(e): return e["k"] == "snap")
 	if not snaps.is_empty():
