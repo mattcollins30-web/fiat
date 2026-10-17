@@ -4410,6 +4410,9 @@ func _move_checks(main) -> void:
 	_juice_checks(main)
 	_yard_checks(main)
 	_sound_checks(main)
+	_dress_checks(main)
+	_mythic_moment_checks(main)
+	_why_checks(main)
 	_playtest_checks(main)
 	_chronicle_checks()
 
@@ -5080,6 +5083,134 @@ func _juice_checks(main) -> void:
 
 ## Sound: every placeholder file reads; the zone's ambient while out, rain
 ## over it, the gun's tick, the sting, the door; off from the pause menu.
+## The item's tone dressed (17 Oct, Matt: the item-colours canvas): no dressing on a common; a wash of its tone from
+## uncommon; the glow from epic; a sheen on a unique; a mythic's sheen and pulse; a locked piece without the glow. And
+## the three colours moved off what they read as.
+func _dress_checks(main) -> void:
+	var ItemCell := preload("res://scripts/ui/item_cell.gd")
+	var sim = main.sim
+	var cell = ItemCell.new()
+	main.add_child(cell)
+	var plain: Dictionary = sim._plain("Primary", "Pump shotgun")
+	var cases := []
+	for r in range(5):
+		var it: Dictionary = plain.duplicate(true)
+		it["rarity"] = r
+		cases.append([it, r])
+	var uq: Dictionary = Items.roll_unique(sim._unique_named("The Keeper's Twelve-Bore"), sim.rng)
+	var my: Dictionary = Items.roll_unique(sim._unique_named("The Last Orders"), sim.rng)
+	cases.append([uq, 5])
+	cases.append([my, 6])
+	for c in cases:
+		cell.show_item(c[0], false)
+		var d: Dictionary = cell.dress()
+		var rank: int = c[1]
+		var col: Color = Pal.tone_color(ItemCell.rarity_tone(c[0])) if rank > 0 else Color.TRANSPARENT
+		_check(d["wash"] == (rank > 0) and (rank == 0 or (d["wash_colour"] as Color).is_equal_approx(Color(col, ItemCell.WASH))), "rank %d's wash: %s" % [rank, str(d)])
+		_check(d["glow"] == (rank >= ItemCell.GLOW_FROM), "rank %d's glow: %s" % [rank, str(d)])
+		_check(d["sheen"] == (rank >= 5) and d["pulse"] == (rank == 6) and cell.is_processing() == (rank == 6), "rank %d's sheen or pulse: %s" % [rank, str(d)])
+	cell.show_item(my, false)
+	cell.set_locked(9)
+	_check(not cell.dress()["glow"], "a locked mythic kept its glow over its fade")
+	cell.queue_free()
+	var far := func(a: Color, b: Color) -> float:
+		return absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b)
+	_check(far.call(Pal.LEGENDARY, Pal.ACCENT) > 0.4 and far.call(Pal.SET, Pal.GOOD) > 0.4 and far.call(Pal.MYTHIC, Pal.BAD) > 0.3, "a rarity's colour still sits on the one it read as")
+	print("the item's tone dressed: the wash from uncommon, the glow from epic, the sheen, the mythic's pulse")
+
+
+## A mythic's moment (17 Oct): found on a run, the card over everything and the game held; it fits; Take it closes it;
+## off the floor with room, it's taken; a loaded camp's own mythics aren't news.
+func _mythic_moment_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	m["event_at"] = -1.0
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	_check(main._mythic_card == null, "a mythic's card up with none found")
+	var my: Dictionary = Items.roll_unique(sim._unique_named("The Last Orders"), sim.rng)
+	m["found"].append(my)
+	main.refresh()
+	var card = main._mythic_card
+	_check(card != null and is_instance_valid(card) and card.visible, "a mythic found and no card")
+	if card == null:
+		sim.load_dict(saved)
+		return
+	var t0: float = sim.elapsed
+	main._process(0.5)
+	_check(is_equal_approx(sim.elapsed, t0), "the game ran on under a mythic's card: %.2f to %.2f" % [t0, sim.elapsed])
+	card._process(1.0)
+	_check(card._card.modulate.a > 0.99 and card._take.text == "Take it", "the card isn't up a second in, or its button reads '%s'" % card._take.text)
+	_check_nodes(card.text_nodes().filter(func(l): return l != card._words), [], "the mythic's card")     # the words wrap: their lines below
+	_check(card._words.text != "" and card._words.get_line_count() <= 3, "the mythic's words: '%s' on %d lines" % [card._words.text, card._words.get_line_count()])
+	card._on_take()
+	main.refresh()
+	_check(main._mythic_card == null, "Take it didn't close the mythic's card")
+	main.refresh()
+	_check(main._mythic_card == null, "the same mythic came round twice")
+	# off the floor: Take it takes it
+	if m.has("floor"):
+		var my2: Dictionary = Items.roll_unique(sim._unique_named("The Spare Key"), sim.rng)
+		sim.stash.clear()
+		m["found"].clear()
+		m["floor"].append(my2)
+		main.refresh()
+		var c2 = main._mythic_card
+		_check(c2 != null and c2.where() == "floor", "a mythic on the floor: no card, or it isn't on the floor (%s)" % (c2.where() if c2 != null else "none"))
+		if c2 != null:
+			c2._process(1.0)
+			c2._on_take()
+			main.refresh()
+			_check(m["found"].any(func(x): return int(x["id"]) == int(my2["id"])), "Take it left the mythic on the floor")
+	sim.load_dict(saved)
+	main._mythic_sim = null
+	main.refresh()
+	_check(main._mythic_card == null, "a camp loaded showed a mythic it already held")
+	print("a mythic's moment: the card, the game held, it fits, Take it, off the floor")
+
+
+## Why a site reads low (17 Oct): no meds and HP under half first, chips under the odds at Risky and worse, none above.
+func _why_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var M = main._missions
+	sim.rig = sim.rig.filter(func(it): return str(it["slot"]) != Data.MEDICAL)
+	sim.hp = sim.max_hp() * 0.3
+	var why: Array = M.odds_reasons(sim, 0)
+	_check(why.size() >= 2 and str(why[0]["forms"][0]) == "No meds" and str(why[1]["forms"][0]).begins_with("HP "), "the reasons don't lead with no meds and the HP: %s" % str(why))
+	sim.hp = sim.max_hp()
+	main.show_room(main.MISSIONS)
+	var lows := 0
+	var highs := 0
+	for z in range(Data.ZONES.size()):
+		M.zone = z
+		for k in range(3):
+			var i: int = Data.ZONES[z]["tiers"][k]
+			if not sim.tier_open(i):
+				continue
+			sim.survival(i)
+			main.refresh()
+			var band = M._cols[k]["band"]
+			var low: bool = sim.odds_settled(i) and sim.odds_now(i) < M.WHY_UNDER and not M.odds_reasons(sim, i).is_empty()
+			lows += 1 if low else 0
+			highs += 0 if low else 1
+			_check(band.chips.visible == low and (not low or band.chips.words(0) == "No meds"), "site %d at %s: the reasons %s, first '%s'" % [i, str(sim.odds_now(i)), "shown" if band.chips.visible else "hidden", band.chips.words(0) if band.chips.visible else ""])
+			if low:
+				_check(band.headline.position.y + band.headline.size.y <= band.chips.position.y + 1.0 and band.title.position.y + band.title.size.y <= band.headline.position.y + 1.0, "the odds' headline and the reasons overlap on site %d" % i)
+		_check_fit(main, "Map zone %d (the reasons under the odds)" % z)
+	_check(lows > 0, "no site read low enough to show its reasons (%d read high)" % highs)
+	sim.load_dict(saved)
+	main.refresh()
+	print("why the odds read low: no meds and the HP first, under the odds at Risky and worse (%d sites low, %d not)" % [lows, highs])
+
+
 func _sound_checks(main) -> void:
 	var sim = main.sim
 	var snd = main._sound
@@ -10454,9 +10585,12 @@ func _full_art_checks(main, v) -> void:
 		v.shot_fired.disconnect(count)
 		var gun3: Dictionary = sim._plain("Primary", "Farmer's shotgun")
 		if not gun3.is_empty():
+			var sec_was = sim.equipped["Secondary"]
+			sim.equipped["Secondary"] = null     # a dry gun shows the secondary's hands (gun_in_hand): none, so the gun's (17 Oct, the flake)
 			sim.equipped["Primary"] = gun3
 			main.refresh()
 			_check(not v._melee and not v._hand_r.visible and v._hands.self_modulate.a > 0.99 and is_zero_approx(v._hands.rotation), "a gun kept the hammer's swing parts")
+			sim.equipped["Secondary"] = sec_was
 	sim.equipped["Primary"] = hold
 	main.refresh()
 

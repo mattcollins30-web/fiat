@@ -14,6 +14,46 @@ const Items := preload("res://scripts/sim/items.gd")
 const SHORT := {"Primary": "PRI", "Secondary": "SEC", "Helmet": "HLM", "Armour": "ARM", "Rig": "RIG", "Backpack": "PCK",
 	"Medical": "MED", "Attachment": "ATT", "Ammo": "AMO", "Paper": "PPR", "Charm": "CHM", "Grenade": "GRN"}
 const INSET := 3                   # the picture sits inside the border
+## The tone made to read at a glance (17 Oct, Matt: the item-colours canvas): a wash of the tone up from the cell's
+## foot, a glow round the picture from epic up, a sheen across a unique (a faster ember one on a mythic) and a mythic's
+## border pulsing. Common has none of it.
+const WASH := 0.24                 # the wash's strength at the foot; a fifth of it at three quarters up
+const GLOW_FROM := 3               # epic
+const PULSE_S := 1.8
+const GLOW_SHADER := """
+shader_type canvas_item;
+uniform vec4 glow : source_color = vec4(1.0);
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float near = 0.0;
+	for (int x = -2; x <= 2; x++) {
+		for (int y = -2; y <= 2; y++) {
+			near = max(near, texture(TEXTURE, UV + vec2(float(x), float(y)) * TEXTURE_PIXEL_SIZE).a * (1.0 - 0.3 * length(vec2(float(x), float(y)))));
+		}
+	}
+	vec4 g = vec4(glow.rgb, glow.a * near * (1.0 - c.a));
+	COLOR = mix(g, c, c.a);
+}
+"""
+const SHEEN_SHADER := """
+shader_type canvas_item;
+uniform vec4 tint : source_color = vec4(1.0, 1.0, 1.0, 0.22);
+uniform float period = 3.2;
+void fragment() {
+	float t = mod(TIME, period) / period;
+	float x = -0.4 + t / 0.55 * 1.6;
+	float d = (UV.x + (1.0 - UV.y) * 0.2) - x;
+	float band = clamp(1.0 - abs(d) / 0.14, 0.0, 1.0);
+	COLOR = vec4(tint.rgb, tint.a * band * band);
+}
+"""
+static var _glow_shader: Shader
+static var _sheen_shader: Shader
+static var _wash_tex: GradientTexture2D
+var _wash: TextureRect
+var _sheen: ColorRect
+var _pulse := false
+var _tone_now := ""
 
 var id := -1
 var glass := false                 # over a backdrop (10 Oct, Kit-B): the fill lets a fifth of it through
@@ -34,6 +74,13 @@ const LOCKED_FADE := 0.4           # the piece greyed under its padlock
 func _init() -> void:
 	text = ""
 	focus_mode = Control.FOCUS_ALL
+	_wash = TextureRect.new()
+	_wash.texture = _wash_texture()
+	_wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_wash.stretch_mode = TextureRect.STRETCH_SCALE
+	_wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wash.visible = false
+	add_child(_wash)
 	_art = TextureRect.new()
 	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -68,6 +115,94 @@ func _init() -> void:
 	_lock_icon.position = Vector2(3, (LOCK_H - LOCK_ICON) / 2.0)
 	_lock_icon.size = Vector2(LOCK_ICON, LOCK_ICON)
 	_lock.add_child(_lock_icon)
+	_sheen = ColorRect.new()
+	_sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheen.visible = false
+	add_child(_sheen)
+	set_process(false)
+
+
+## The wash's gradient, once: the tone's own colour comes from the rect's modulate.
+static func _wash_texture() -> GradientTexture2D:
+	if _wash_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.25, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.2), Color(1, 1, 1, 1.0)])
+		_wash_tex = GradientTexture2D.new()
+		_wash_tex.gradient = g
+		_wash_tex.fill_from = Vector2(0, 0)
+		_wash_tex.fill_to = Vector2(0, 1)
+		_wash_tex.width = 4
+		_wash_tex.height = 64
+	return _wash_tex
+
+
+## How high an item ranks for the tone's dressing: its rarity, a set's and a legendary's 4, a unique 5, a mythic 6.
+static func tone_rank(it: Dictionary) -> int:
+	if it.get("mythic", false):
+		return 6
+	if it.has("unique"):
+		return 5
+	if it.has("set"):
+		return 4
+	return int(it.get("rarity", 0))
+
+
+## The wash, the glow, the sheen and the pulse for this item's tone (17 Oct).
+func _dress(it: Dictionary, tone: String) -> void:
+	var rank: int = tone_rank(it)
+	var col: Color = Pal.tone_color(tone) if tone != "" else Color.TRANSPARENT
+	_tone_now = tone
+	_wash.visible = tone != "" and rank > 0
+	_wash.position = Vector2(INSET, INSET)
+	_wash.size = size - Vector2(2 * INSET, 2 * INSET)
+	_wash.modulate = Color(col, WASH)
+	if rank >= GLOW_FROM and tone != "":
+		if _glow_shader == null:
+			_glow_shader = Shader.new()
+			_glow_shader.code = GLOW_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = _glow_shader
+		mat.set_shader_parameter("glow", Color(col, 0.85))
+		_art.material = mat
+	else:
+		_art.material = null
+	_sheen.visible = rank >= 5
+	if _sheen.visible:
+		if _sheen_shader == null:
+			_sheen_shader = Shader.new()
+			_sheen_shader.code = SHEEN_SHADER
+		var sm := ShaderMaterial.new()
+		sm.shader = _sheen_shader
+		sm.set_shader_parameter("tint", Color(1.0, 0.78, 0.6, 0.32) if rank == 6 else Color(1, 1, 1, 0.22))
+		sm.set_shader_parameter("period", 2.2 if rank == 6 else 3.2)
+		_sheen.material = sm
+		_sheen.position = Vector2(INSET, INSET)
+		_sheen.size = size - Vector2(2 * INSET, 2 * INSET)
+		_sheen.move_to_front()
+	_pulse = rank == 6
+	set_process(_pulse)
+	if not _pulse:
+		for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			var sb := get_theme_stylebox(state) as StyleBoxFlat
+			if sb != null:
+				sb.shadow_size = 0
+
+
+func _process(_dt: float) -> void:
+	if not _pulse:
+		return
+	var k: float = 0.5 - 0.5 * cos(Time.get_ticks_msec() / 1000.0 * TAU / PULSE_S)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var sb := get_theme_stylebox(state) as StyleBoxFlat
+		if sb != null:
+			sb.shadow_color = Color(Pal.MYTHIC, 0.55 * k)
+			sb.shadow_size = int(round(2.0 + 8.0 * k))
+
+
+## For the tests: the dressing as shown.
+func dress() -> Dictionary:
+	return {"wash": _wash.visible, "wash_colour": _wash.modulate, "glow": _art.material != null, "sheen": _sheen.visible, "pulse": _pulse}
 
 
 ## Gear too high to wear (15 Oct, gear gated by level; mockup signals_kit.png): greyed, and a padlock with the level
@@ -82,6 +217,7 @@ func set_locked(lv: int) -> void:
 	_corner.modulate = fade
 	if not on:
 		return
+	_art.material = null                     # greyed under its padlock: no glow (the shader would drop the fade)
 	_up.visible = false
 	_lock.text = "%d" % lv
 	_lock.size = Vector2(ceilf(UI.text_width(_lock, _lock.text)) + LOCK_ICON + 9, LOCK_H)
@@ -129,6 +265,7 @@ func show_item(it: Dictionary, on: bool, box := Vector2.ZERO) -> void:
 	# the words are laid out by the room there is, in cells
 	f = Vector2i(maxi(1, roundi((size.x + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))), maxi(1, roundi((size.y + Pal.CELL_GAP) / (Pal.CELL + Pal.CELL_GAP))))
 	_style(on, rarity_tone(it))
+	_dress(it, rarity_tone(it))
 	var tex := Items.art(it)
 	for l in _lines:
 		l.visible = false

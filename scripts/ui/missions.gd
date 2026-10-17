@@ -16,6 +16,8 @@ const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 const TierGuide := preload("res://scripts/ui/tier_guide.gd")
+const Items := preload("res://scripts/sim/items.gd")
+const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
 @warning_ignore("integer_division")
@@ -257,8 +259,16 @@ func show_state(s) -> void:
 			var kicker: String = "Tier %d · %s · gear for level %d" % [k + 1, Data.ZONES[zone]["name"], sim.wear_of(int(t["level"]))]     # the level to wear its finds (16 Oct: it read the item level)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
+			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
+			var why: Array = odds_reasons(sim, i) if sim.odds_settled(i) and odds < WHY_UNDER else []
+			band.headline_under_title(not why.is_empty())
+			band.chips.visible = not why.is_empty()
+			if not why.is_empty():
+				band.chips.show_chips(why, 1, true)
 		else:
 			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "clear tier %d first" % k, Pal.TEXT_3)
+			band.headline_under_title(false)
+			band.chips.visible = false
 		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
 		c["depth_down"].visible = false
 		c["depth_up"].visible = false
@@ -510,6 +520,32 @@ func _toggle_came() -> void:
 
 
 ## For the tests: every label and button with text.
+## Why a site reads low (17 Oct, Matt: a 0% with no bandages and no way to buy any): what the runner is short of,
+## worst first - no meds, HP under half, a gun with no rounds, a wound, a level under the gear the site drops - as chips,
+## each a long form and a short.
+static func odds_reasons(s, i: int) -> Array:
+	var out: Array = []
+	if s.meds_carried() <= 0:
+		out.append({"forms": ["No meds"], "colour": "bad"})
+	if s.hp < s.max_hp() * 0.5:
+		out.append({"forms": ["HP %d of %d" % [s.hp_shown(), s.max_hp_shown()], "HP %d" % s.hp_shown()], "colour": "bad"})
+	var gun = s.equipped["Primary"]
+	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and str(gun.get("rule", "")) != "weed_burner":
+		var have: int = s.rounds_for(gun)
+		if s.rig_room(1):
+			for it in s.stash:                   # the gate tops up from the stash (rounds_short's count)
+				if Items.is_ammo(it) and Items.base_of(it)["type"] == Items.ammo_type(gun):
+					have += int(it.get("rounds", 0))
+		if have <= 0:
+			out.append({"forms": ["No rounds"], "colour": "bad"})
+	if s.wound != "":
+		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn"})
+	var gear_lv: int = s.wear_of(int(s.effective(i)["level"]))
+	if s.level() < gear_lv:
+		out.append({"forms": ["Level %d, its gear %d" % [s.level(), gear_lv], "Level %d of %d" % [s.level(), gear_lv]], "colour": "warn"})
+	return out
+
+
 func text_nodes() -> Array:
 	var out: Array = []
 	out.append_array(_came.text_nodes())

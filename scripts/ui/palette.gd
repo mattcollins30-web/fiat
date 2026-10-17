@@ -26,15 +26,15 @@ const SELECT := Color("2b3138")
 const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
-const SET := Color("5fc3c9")          # a set's own tint, apart from the rarity colours
+const SET := Color("3fd4e8")          # a set's own tint, apart from the rarity colours (17 Oct: bluer, off the uncommon green)
 ## The rarities' own colours (Rarity-A, 7 Oct: Rare, Legendary and a unique all read as one orange before, and the
 ## pick ring was the same amber): none, green, blue, purple, gold; a unique pink; the pick ring white, so gold
 ## only ever means a legendary.
 const RARE := Color("5aa0e6")
 const EPIC := Color("b58cf0")
-const LEGENDARY := Color("f2c94c")
+const LEGENDARY := Color("fff07a")     # 17 Oct (the item-colours canvas): brighter, off the buttons' and picks' amber
 const UNIQUE := Color("ee6fb5")
-const MYTHIC := Color("ff5a36")       # the mythics (16 Oct): a hot red-orange, past the unique's pink
+const MYTHIC := Color("ff4a1c")       # the mythics (16 Oct): a hot ember past the unique's pink (17 Oct: hotter, off the warning red)
 const GUARD := Color("c9d3dc")         # Guard (12 Oct): the steel band over HP, and what it took
 const PICK := TEXT                    # the ring round a picked cell or tile
 const RARITY_TONES := ["", "good", "rare", "epic", "legendary"]   # Common .. Legendary

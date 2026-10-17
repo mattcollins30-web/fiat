@@ -21,6 +21,7 @@ const Menu := preload("res://scripts/ui/menu.gd")
 const Intro := preload("res://scripts/ui/intro.gd")
 const Opening := preload("res://scripts/ui/opening.gd")
 const RoomIntro := preload("res://scripts/ui/room_intro.gd")
+const MythicMoment := preload("res://scripts/ui/mythic_moment.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
@@ -145,6 +146,9 @@ var intro := true                  # the studio card before the title; the tests
 var _opening = null                # the opening's scenes on a new camp (14 Oct), while they play
 var room_intros := true            # the Settings' Room intros (14 Oct): off, no room's card comes up by itself
 var _room_card = null              # a room's first-visit card (14 Oct), while it's up
+var _mythic_card = null            # a mythic found (17 Oct): its moment, while it's up
+var _mythic_seen := {}              # the mythics' ids already shown, this camp
+var _mythic_sim = null
 var _overlay_closed := -1          # the frame an opening or a room card closed: its Esc isn't the pause's too
 var _opening_due := false          # a new camp's opening is about to start: no room card before it (Matt: the Map's take played under it)
 var _help_btn: Button              # the ? on the rail's heading: the room's card again
@@ -457,6 +461,8 @@ func _process(delta: float) -> void:
 		return                              # the opening holds the game
 	if _room_card != null and is_instance_valid(_room_card):
 		return                              # so does a room's card
+	if _mythic_card != null and is_instance_valid(_mythic_card):
+		return                              # and a mythic's moment
 	if _run != null and _run._view != null and _run._view.placing and _run._view._shown():
 		return                              # the fight's placement tool (F3) holds the game still
 	sim.advance(delta * speed)
@@ -846,6 +852,43 @@ func show_room_intro(key: String) -> void:
 	add_child(_room_card)
 
 
+## A mythic found on the run (17 Oct, Matt: the item-colours canvas): its moment over everything, once a piece. A camp
+## loaded or begun counts what it holds already as seen.
+func _maybe_mythic() -> void:
+	if sim != _mythic_sim:
+		_mythic_sim = sim
+		_mythic_seen = {}
+		for it in _mythics_now():
+			_mythic_seen[int(it["id"])] = true
+		return
+	if (_mythic_card != null and is_instance_valid(_mythic_card)) or _menu.visible:
+		return
+	for it in _mythics_now():
+		if not _mythic_seen.has(int(it["id"])):
+			_mythic_seen[int(it["id"])] = true
+			show_mythic(it)
+			return
+
+
+func _mythics_now() -> Array:
+	if sim == null or not sim.on_mission():
+		return []
+	return (sim.mission["found"] + sim.mission.get("floor", [])).filter(func(it): return it.get("mythic", false))
+
+
+func show_mythic(it: Dictionary) -> void:
+	_mythic_card = MythicMoment.new(it, sim)
+	if _run != null and _run._view != null:
+		_run._view.set_process(false)          # the fight holds still behind it
+	_mythic_card.done.connect(func():
+		_mythic_card = null
+		if _run != null and _run._view != null:
+			_run._view.set_process(true)
+		_overlay_closed = Engine.get_process_frames()
+		refresh())
+	add_child(_mythic_card)
+
+
 func save_game(path := "") -> void:
 	if path == "":
 		path = save_file
@@ -1019,6 +1062,7 @@ func refresh() -> void:
 	_maybe_air()
 	_maybe_room_intro()
 	_sound.follow(sim)
+	_maybe_mythic()
 	_top_labels["cash"].text = Fmt.group(int(round(sim.cash))) if sim.cash < 1e7 else Fmt.num(sim.cash)     # the glyph says tins
 	_top_labels["notes"].text = Fmt.num(sim.notes)
 	_top_labels["scrap"].text = Fmt.num(sim.scrap)
