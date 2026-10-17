@@ -4967,8 +4967,21 @@ func _juice_checks(main) -> void:
 	for k in range(4):                         # in steps, as the screen sees a run
 		sim.advance(0.5)
 		main.refresh()
+	var pend0: Dictionary = main._run._hit_pending.duplicate()
+	var fired := [0]
+	var count_shot := func(_at): fired[0] += 1
+	if main._run._view != null:
+		main._run._view.shot_fired.connect(count_shot)
 	_shoot(main)
-	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f" % float(sim.mission.get("dealt", 0.0)))
+	if main._run._view != null:
+		main._run._view.shot_fired.disconnect(count_shot)
+	# what it saw, when it fails (17 Oct, Matt: "change the check" - it failed once and passed on the rerun): the hits
+	# waiting before the shot and after, the shots the view fired, who was up, the gun in hand
+	var v_n = main._run._view
+	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f; waiting %s before the shot, %s after; %d shot(s) fired; %d up, firing %s, swing %.2f, melee %s; gun %s" % [
+		float(sim.mission.get("dealt", 0.0)), str(pend0), str(main._run._hit_pending), fired[0],
+		v_n.figures_up() if v_n != null else -1, str(v_n._firing) if v_n != null else "-", float(v_n._swing) if v_n != null else -1.0,
+		str(v_n._melee) if v_n != null else "-", str(RunView.gun_in_hand(sim)["base"]) if RunView.gun_in_hand(sim) != null else "none"])
 	# scattered: a run of numbers lands at different places, not one column; no more than one a third of a second
 	main._juice.clear_numbers()
 	var spots := {}

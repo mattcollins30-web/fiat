@@ -1210,6 +1210,7 @@ const MUZZLE_AT := {
 	"security_guard_s_carbine": [Vector2(77, 92), Vector2(-1, -0.15)],     # and the front sight's, here and below
 	"army_smg": [Vector2(77, 79), Vector2(-1, -0.2)],     # the suppressor's end
 	"riot_squad_s_smg": [Vector2(131, 84), Vector2(-1, -0.35)],
+	"close_protection_smg": [Vector2(103, 84), Vector2(-1, -0.15)],     # the suppressor's end, not the receiver's top (17 Oct, the reroll)
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:
