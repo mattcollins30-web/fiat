@@ -72,7 +72,11 @@ const STRIP_Y := NOTE_Y - 6 - STRIP_H
 const TAKE_Y := STRIP_Y - 2 - UI.HEAD_H
 const RIG_ROOM := TAKE_Y - SECTION_GAP - RIG_Y                # the rig's height in a fight: two rows of full cells
 const ICON := 36                                              # a tile's painted icon, its figure beside it
-const TILE_ICONS := {1: "res://art/ui/dps.png", 4: "res://art/ui/hp.png"}     # the six's: your fire, the meds (Their fire, Kills, Armour and Rounds with the art pass)
+const TILE_ICON := 30                                         # the six's: smaller, so "Their fire" fits a sixth of the row beside it
+## The six's icons: Matt's painted dps and hp, and the fight kit's four (17 Oct) - art/ui once he moves them there, else
+## art/ui_new where the manifest wrote them.
+const TILE_ICONS := {0: ["res://art/ui/their_fire.png", "res://art/ui_new/their_fire.png"], 1: ["res://art/ui/dps.png"], 2: ["res://art/ui/kills.png", "res://art/ui_new/kills.png"],
+	3: ["res://art/ui/armour.png", "res://art/ui_new/armour.png"], 4: ["res://art/ui/hp.png"], 5: ["res://art/ui/rounds.png", "res://art/ui_new/rounds.png"]}
 # the run view (13 Oct, Time Crisis): the frame over both boxes, the six figures under it, the search bar under those
 const VIEW_X := PAD - BOX_PAD
 const VIEW_W := INNER + 2 * BOX_PAD                           # 812
@@ -256,23 +260,24 @@ func _view_make() -> void:
 	_six = UI.tile_row(_left, VIEW_X, VIEW_ROW_Y, VIEW_W, 6, 6)
 	# Matt's painted icons on the tiles that have one (16 Oct): the icon at the left, the key and the figure beside it
 	for k in TILE_ICONS:
-		var path: String = TILE_ICONS[k]
-		if not ResourceLoader.exists(path):
+		var tex: Texture2D = icon_tex(TILE_ICONS[k])
+		if tex == null:
 			continue
 		var t: Dictionary = _six[k]
 		var ic := TextureRect.new()
-		ic.texture = load(path)
+		ic.texture = tex
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		ic.position = Vector2(8, (UI.TILE_H - ICON) / 2.0)
-		ic.size = Vector2(ICON, ICON)
+		ic.position = Vector2(6, (UI.TILE_H - TILE_ICON) / 2.0)
+		ic.size = Vector2(TILE_ICON, TILE_ICON)
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		t["panel"].add_child(ic)
 		t["icon"] = ic
+		t["key"].add_theme_font_size_override("font_size", Pal.CELL_TEXT)     # all six with an icon (17 Oct): "Their fire" beside one in a sixth of the row
 		for l in [t["key"], t["value"]]:
-			l.position.x = 8 + ICON + 6
-			l.size.x = t["panel"].size.x - l.position.x - 6
+			l.position.x = 6 + TILE_ICON + 5
+			l.size.x = t["panel"].size.x - l.position.x - 4
 	_fight["head"].position = Vector2(PAD, FIGHT_BOX_Y + 6)
 	_fight["head"].add_theme_color_override("font_color", Pal.TEXT)
 	UI.shadow(_fight["head"])
@@ -287,6 +292,18 @@ func _view_make() -> void:
 
 
 ## A bar moved: its track, its width, its words.
+## The first of the paths that's there: imported if the editor's seen it, else read off the disk (a fresh manifest's).
+static func icon_tex(paths: Array) -> Texture2D:
+	for path in paths:
+		if ResourceLoader.exists(path):
+			return load(path)
+		if FileAccess.file_exists(path):
+			var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+			if img != null:
+				return ImageTexture.create_from_image(img)
+	return null
+
+
 func _bar_place(d: Dictionary, r: Rect2) -> void:
 	d["track"].position = r.position
 	d["track"].size = r.size

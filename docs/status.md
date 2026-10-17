@@ -5415,3 +5415,22 @@ and framed on the kind's hands; plates 744x320 and walls 744x173 to art/fight_ne
 beside the live ones; icons their_fire, kills, armour, rounds to art/ui_new/ (64x64, styled on Matt's dps and hp). The
 code that reads them (a base's hands first, the kind's the fallback; each new picture's muzzle point; the new plates and
 walls; the tiles' icons) once the test pieces are judged.
+
+**The fight kit in code (17 Oct, Matt: "start working on step 3 ... as the art generates").** `run_view.gd`:
+- Hands per gun: `hands_tex` takes a base's own picture (art/fight/hands/<art_slug>.png, the manifest's slug) before its
+  kind's; drawn HANDS_VIEW_W wide whatever its pixels (`hands_scale`: the kit's 280 at 0.73, the kind's 256 at 0.8), its
+  drawn corner on HANDS_CORNER as before. The gun in hand (`gun_in_hand`) is the primary while it fires, else the
+  secondary - the fight's own rule - so a secondary's hands show behind a dry primary.
+- Its flash: the kind's shape at the picture's muzzle - `find_muzzle` in its upper part (the kit's arms come up from the
+  foot), a pistol's or SMG's topmost drawn pixel, else the long gun's furthest toward the top left, pointing from the
+  gun's middle out through it; `MUZZLE_AT` puts right one it misses (the police carbine's: the finder took its sight).
+- The kit's plate and wall (art/fight_new/, read before art/fight/ for _plate and _cover names) drawn as the old 688
+  across (PLATE_VIEW_W, COVER_VIEW_W), the wall's top at COVER_TOP and its fill scaled with it; the slots and the pan keep
+  their numbers. A kit pair's slots are placed under "<site>@kit" (F3/F5 saves there - the review caught it saving over
+  the old pair's), the old pair's placing its start.
+- `run.gd`: the six's icons - Matt's dps and hp and the kit's their_fire, kills, armour, rounds (art/ui first, else
+  art/ui_new, read off the disk if not yet imported); 30 px with the keys at 16 so "Their fire" fits a sixth of the row.
+Smoke: `_kit_hands_checks` - the slugs, every base picture there its own and at the kind's width, a kind's fallback where
+none, every kit flash on a drawn pixel into open air, the gun in hand dry/fed/a bat, the kit's Parade pair drawn as the
+old with its slots under @kit, every tile with art its icon; the near one's cover check over every base picture too.
+Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas check, kit-dependent) - raised with Matt.

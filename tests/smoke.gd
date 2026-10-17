@@ -9436,6 +9436,86 @@ func _bin_checks(main) -> void:
 	print("the bin ok: a pick's Bin for scrap, a unique asked twice, never the deeds, Select-many bins with the Fence shut")
 
 
+## The fight kit's hands (17 Oct): a gun base with its own picture shows it (art/fight/hands/<base>.png), drawn as wide as
+## the kind's were, its corner where theirs was; its flash on a drawn pixel of the gun, firing into open air; a base
+## without one falls back to its kind's; the secondary's in hand behind a dry primary. Every base picture there is checked.
+func _kit_hands_checks(main) -> void:
+	var sim = main.sim
+	var v = main._run._view
+	# the kit's plate and wall where they're there: drawn as the old 688 across, the wall's top at COVER_TOP, its slots
+	# under their own key - the old pair's placing their start
+	var was_key: String = v._site_key
+	if RunView.kit_pair("the_parade"):
+		v._site("the_parade")
+		var pw: float = v._plate.size.x * v._plate.scale.x
+		var cw: float = v._cover.size.x * v._cover.scale.x
+		var top: float = v._cover_y + RunView.used_of(v._cover.texture).position.y * v._cover_s
+		_check(v._kit_site and is_equal_approx(pw, RunView.PLATE_VIEW_W) and is_equal_approx(cw, RunView.COVER_VIEW_W) and absf(top - RunView.COVER_TOP) < 0.5 and v.slot_key() == "the_parade@kit",
+			"the kit's Parade pair isn't drawn as the old: plate %.0f, wall %.0f, its top %.1f (want %.0f), slots under '%s'" % [pw, cw, top, RunView.COVER_TOP, v.slot_key()])
+		var placed: Dictionary = RunView.saved_sites()
+		if not placed.has("the_parade@kit"):
+			_check(RunView.site_slot("the_parade@kit", 0)["foot"] == RunView.site_slot("the_parade", 0)["foot"], "the kit's Parade unplaced doesn't start where the old pair's were")
+		v._site(was_key if was_key != "-" else "")
+	var run = main._run
+	for k in run.TILE_ICONS:
+		var there: bool = run.icon_tex(run.TILE_ICONS[k]) != null
+		_check(run._view == null or not there or run._six[k].has("icon"), "the six's tile %d has its art but no icon" % k)
+	_check(RunView.art_slug("Farmer's shotgun") == "farmer_s_shotgun" and RunView.art_slug("Semi-auto .22") == "semi_auto_22" and RunView.art_slug("Courier's SMG") == "courier_s_smg", "the hands' names aren't the manifest's: %s" % RunView.art_slug("Semi-auto .22"))
+	var seen := 0
+	var bad: Array = []
+	for slot in ["Primary", "Secondary"]:
+		for b in Data.BASES[slot]:
+			var gun: Dictionary = sim._plain(slot, str(b["name"]))
+			var slug: String = RunView.art_slug(str(b["name"]))
+			var own: Texture2D = RunView.tex("hands/" + slug)
+			var ht: Texture2D = RunView.hands_tex(gun)
+			if own == null:
+				_check(ht == null or ht == RunView.tex_of(["hands_" + RunView._hands_kind(gun), "hands_revolver"]), "%s has no picture but doesn't fall back to its kind's" % b["name"])
+				continue
+			seen += 1
+			_check(ht == own and is_equal_approx(own.get_size().x * RunView.hands_scale(own), RunView.HANDS_VIEW_W), "%s's hands aren't its own picture at the kind's width: %s" % [b["name"], str(own.get_size())])
+			if Items.is_melee(gun):
+				continue
+			var kind: String = RunView._hands_kind(gun)
+			var mz: Dictionary = RunView.muzzle_of(own, kind, slug)
+			if mz.is_empty():
+				continue
+			var img: Image = own.get_image()
+			if img.is_compressed():
+				img = img.duplicate()
+				img.decompress()
+			var at: Vector2 = mz["at"]
+			var drawn := false
+			for dx in range(-2, 3):
+				for dy in range(-2, 3):
+					var q := Vector2i(int(at.x) + dx, int(at.y) + dy)
+					if q.x >= 0 and q.y >= 0 and q.x < img.get_width() and q.y < img.get_height() and img.get_pixelv(q).a > 0.5:
+						drawn = true
+			var ahead: Vector2 = at + (mz["dir"] as Vector2).normalized() * 6.0
+			var qa := Vector2i(int(ahead.x), int(ahead.y))
+			var clear: bool = qa.x < 0 or qa.y < 0 or qa.x >= img.get_width() or qa.y >= img.get_height() or img.get_pixelv(qa).a < 0.5
+			if not (drawn and clear):
+				bad.append("%s at %s (drawn %s, clear %s)" % [b["name"], str(at), str(drawn), str(clear)])
+	_check(bad.is_empty(), "the kit's hands whose flash isn't at the muzzle: %s" % ", ".join(bad))
+	# the secondary in hand behind a dry primary; the primary while it has rounds or needs none
+	var kp = sim.equipped["Primary"]
+	var ks = sim.equipped["Secondary"]
+	var keep_rig: Array = sim.rig.duplicate()
+	sim.equipped["Primary"] = sim._plain("Primary", "Pump shotgun")
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Service pistol")
+	sim.rig = []
+	var dry = RunView.gun_in_hand(sim)
+	sim.rig = [sim._plain(Data.AMMO, "Shells")]
+	var fed = RunView.gun_in_hand(sim)
+	sim.equipped["Primary"] = sim._plain("Primary", "Spiked bat")
+	var bat = RunView.gun_in_hand(sim)
+	_check(str(dry["base"]) == "Service pistol" and str(fed["base"]) == "Pump shotgun" and str(bat["base"]) == "Spiked bat", "the gun in hand: dry %s, fed %s, a bat %s" % [dry["base"], fed["base"], bat["base"]])
+	sim.equipped["Primary"] = kp
+	sim.equipped["Secondary"] = ks
+	sim.rig = keep_rig
+	print("the kit's hands: %d base pictures, every flash at its muzzle ok" % seen)
+
+
 ## The run view (13 Oct, Time Crisis; docs/design/fight_art.md): with its art there, the frame takes the two boxes; the
 ## six figures under it; the gang up as many as are on you; a kill drops one; a hit reddens the edges; the search pans
 ## to the crates; their bar over the frame in a fight, the search's under the six; it all fits.
@@ -9454,6 +9534,8 @@ func _flash_checks(main) -> void:
 		v._hands.visible = true
 		v._hands_at = RunView.HANDS_CORNER - RunView.used_of(ht).end * RunView.HANDS_SCALE
 		v._hands.position = v._hands_at
+		v._hs = RunView.hands_scale(ht)
+		v._mz = RunView.muzzle_of(ht, kind)
 		v.fire_flash()
 		var fs: Dictionary = v.flash_state()
 		var mz: Vector2 = RunView.MUZZLE[kind]["at"]
@@ -9478,6 +9560,7 @@ func _flash_checks(main) -> void:
 	v.fire_flash()
 	_check(not v.flash_state()["up"], "a blade or a hammer flashed")
 	v._melee = false
+	_kit_hands_checks(main)
 	main.refresh()
 	print("the muzzle flash ok: each gun at its muzzle, for its moment; none on a blade")
 
@@ -9689,13 +9772,21 @@ func _run_view_checks(main) -> void:
 	var su: Rect2 = RunView.used_of(stand)
 	var nrect := Rect2(near["foot"] - Vector2(su.get_center().x - su.position.x, su.size.y) * near["scale"], su.size * near["scale"])
 	nrect.end.y = minf(nrect.end.y, RunView.COVER_TOP)          # below the wall's top he's behind it anyway
+	var hand_pics: Array = []
 	for ty in ["pistol", "shotgun", "rifle", "smg", "improvised", "melee", "blade", "revolver"]:
-		var ht: Texture2D = RunView.tex("hands_" + ty)
+		hand_pics.append([ty, RunView.tex("hands_" + ty)])
+	for slot in ["Primary", "Secondary"]:
+		for b in Data.BASES[slot]:
+			hand_pics.append([str(b["name"]), RunView.tex("hands/" + RunView.art_slug(str(b["name"])))])     # the kit's (17 Oct)
+	for pic in hand_pics:
+		var ty: String = pic[0]
+		var ht: Texture2D = pic[1]
 		if ht == null:
 			continue
+		var hsc: float = RunView.hands_scale(ht)
 		# what of him is drawn that the hands' drawn pixels cover, sampled every few pixels (a raised hammer's box is mostly air)
 		var hu: Rect2 = RunView.used_of(ht)
-		var h_at: Vector2 = RunView.HANDS_CORNER - hu.end * RunView.HANDS_SCALE
+		var h_at: Vector2 = RunView.HANDS_CORNER - hu.end * hsc
 		var n_at: Vector2 = near["foot"] - Vector2(su.get_center().x, su.end.y) * near["scale"]
 		var himg: Image = ht.get_image()
 		var nimg: Image = stand.get_image()
@@ -9708,7 +9799,7 @@ func _run_view_checks(main) -> void:
 				var np: Vector2 = (Vector2(x, y) - n_at) / near["scale"]
 				if np.x >= 0 and np.y >= 0 and np.x < nimg.get_width() and np.y < nimg.get_height() and nimg.get_pixelv(Vector2i(np)).a > 0.5:
 					drawn += 1
-					var hp: Vector2 = (Vector2(x, y) - h_at) / RunView.HANDS_SCALE
+					var hp: Vector2 = (Vector2(x, y) - h_at) / hsc
 					if hp.x >= 0 and hp.y >= 0 and hp.x < himg.get_width() and hp.y < himg.get_height() and himg.get_pixelv(Vector2i(hp)).a > 0.5:
 						covered += 1
 				x += 3.0
@@ -10063,7 +10154,7 @@ func _placement_checks(main, v) -> void:
 	var want: Array = [v.slot_of(0).duplicate(), v.slot_of(1).duplicate(), v.slot_of(2).duplicate()]
 	_check(p.save() == OK and FileAccess.file_exists(p.save_path), "F5 didn't save")
 	var back = load(p.save_path)
-	_check(back != null and back.sites.has(v._site_key) and is_equal_approx(float(back.sites[v._site_key][0][0]), want[0]["foot"].x), "the save doesn't hold the middle one: %s" % (str(back.sites) if back != null else "nothing"))
+	_check(back != null and back.sites.has(v.slot_key()) and is_equal_approx(float(back.sites[v.slot_key()][0][0]), want[0]["foot"].x), "the save doesn't hold the middle one: %s" % (str(back.sites) if back != null else "nothing"))
 	p.toggle()
 	_check(not v.placing and v.slot_of(0)["foot"] == want[0]["foot"] and is_equal_approx(v.slot_of(1)["scale"], snappedf(want[1]["scale"], 0.001)), "after F3 the view doesn't stand them where they were saved")
 	main._process(0.1)
@@ -10170,7 +10261,7 @@ func _full_art_checks(main, v) -> void:
 			continue
 		sim.equipped["Primary"] = g
 		main.refresh()
-		var want: Texture2D = RunView.tex("hands_" + pair[2])
+		var want: Texture2D = RunView.hands_tex(RunView.gun_in_hand(sim))     # its own picture, else its kind's (the kit, 17 Oct); the secondary's behind it dry
 		if want != null:
 			_check(v._hands.visible and v._hands.texture == want, "the %s's hands aren't up" % pair[1])
 		elif pair[2] == "melee":
@@ -10185,7 +10276,7 @@ func _full_art_checks(main, v) -> void:
 		v._jolt = 0.0
 		v._process(0.0)
 		if v._hands.visible:
-			var br: Vector2 = v._hands.position + RunView.used_of(v._hands.texture).end * RunView.HANDS_SCALE
+			var br: Vector2 = v._hands.position + RunView.used_of(v._hands.texture).end * v._hs
 			_check(br.distance_to(RunView.HANDS_CORNER) < 1.5, "the %s's hands aren't in the corner: %s" % [gname, str(br)])
 	# a melee swing (14 Oct, Matt: "the action just hangs"): the hammer's arm apart from the off hand, no hit as it winds
 	# up, one on the chop with a streak behind it, the arm back where it was after; a gun keeps its kick

@@ -134,7 +134,7 @@ func move(p: Vector2) -> void:
 func release() -> void:
 	if _drag >= 0:
 		var s: Dictionary = view.slot_of(_drag)
-		print("%s, %s: foot (%d, %d), scale %.3f" % [view._site_key, NAMES[_drag], s["foot"].x, s["foot"].y, s["scale"]])
+		print("%s, %s: foot (%d, %d), scale %.3f" % [view.slot_key(), NAMES[_drag], s["foot"].x, s["foot"].y, s["scale"]])
 	_drag = -1
 
 
@@ -148,20 +148,20 @@ func save() -> int:
 		var s: Dictionary = view.slot_of(k)
 		rows.append([s["foot"].x, s["foot"].y, snappedf(s["scale"], 0.001)])
 	var all: Dictionary = res.sites.duplicate(true)
-	all[view._site_key] = rows
+	all[view.slot_key()] = rows
 	res.sites = all
 	if not DirAccess.dir_exists_absolute(save_path.get_base_dir()):
 		DirAccess.make_dir_recursive_absolute(save_path.get_base_dir())
 	var err := ResourceSaver.save(res, save_path)
 	view.use_saved(res.sites)
-	_note = ("Saved %s's three to %s" % [view._site_key, save_path]) if err == OK else ("Couldn't save (%d)" % err)
+	_note = ("Saved %s's three to %s" % [view.slot_key(), save_path]) if err == OK else ("Couldn't save (%d)" % err)
 	print(_note)
 	queue_redraw()
 	return err
 
 
 func dump() -> String:
-	var out := "%s:" % view._site_key
+	var out := "%s:" % view.slot_key()
 	for k in range(3):
 		var s: Dictionary = view.slot_of(k)
 		out += "  %s (%d, %d) %.3f" % [NAMES[k], s["foot"].x, s["foot"].y, s["scale"]]
@@ -180,7 +180,7 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, r.position + Vector2(3, 13), NAMES[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, c)
 		var s: Dictionary = view.slot_of(k)
 		draw_circle(s["foot"], 3.0, c)        # the feet: what the slot is
-	var line := "PLACING · %s · drag to move, corner or wheel to size · F5 save · F4 print · F3 done" % view._site_key
+	var line := "PLACING · %s · drag to move, corner or wheel to size · F5 save · F4 print · F3 done" % view.slot_key()
 	draw_rect(Rect2(0, 0, size.x, 40), Color(0, 0, 0, 0.78))     # its words at the frame's top, over the bars
 	draw_string(ThemeDB.fallback_font, Vector2(8, 16), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, TEXT)
 	var k2: int = _drag if _drag >= 0 else _hover

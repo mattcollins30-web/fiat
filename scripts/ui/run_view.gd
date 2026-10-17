@@ -24,6 +24,13 @@ const W := 588
 const H := 262
 const DIR := "res://art/fight_test/%s.png"
 const FULL_DIR := "res://art/fight/%s.png"       # the full pass (13 Oct, tools/pixellab_fight_manifest.json)
+## The fight kit (17 Oct, tools/make_fight_kit_manifest.py): every site's plate and wall again at the bigger frame's
+## size (744 wide, drawn as the old 688 - so every slot and the pan keep their numbers), and a pair of hands for every
+## gun base (art/fight/hands/<base>.png, 280x210, drawn as the kind's 256x192 were). The kit's plates are read first.
+const KIT_DIR := "res://art/fight_new/%s.png"
+const PLATE_VIEW_W := 688.0                       # a plate's width in the frame's space, whatever its picture's
+const COVER_VIEW_W := 688.0
+const HANDS_VIEW_W := 256.0 * 0.8                 # the hands' drawn width in the frame's space (the kind's at HANDS_SCALE)
 const ZONE_KEYS := ["the_outskirts", "the_estate", "the_town", "the_city"]
 const COVER_TOP := H - 48                         # where a cover's drawn top sits, whatever its picture's height
 ## The three depths: where a figure stands (its feet, in the frame), its scale, how lit.
@@ -80,6 +87,10 @@ var _zone_key := "the_estate"             # its zone's gang
 var _boss_key := ""                       # the head when he's out, "" else
 var _cover_y: float = COVER_Y
 var _own_site := false                     # the site's own plate is up (its far slot with it)
+var _kit_site := false                     # and it's the kit's pair (its slots placed apart from the old pair's)
+var _cover_s := 1.0                        # the wall's picture scaled to COVER_VIEW_W
+var _hs := HANDS_SCALE                     # the hands' picture scaled to HANDS_VIEW_W
+var _mz: Dictionary = {}                   # the flash for the picture up: its kind's shape, at this picture's muzzle
 var _hands_at := HANDS_AT                 # the hands' top-left for the gun's picture                   # the cover's top-left y: its drawn top at COVER_TOP
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
 var _crates: Array = []                   # the crates in the street while searching
@@ -184,7 +195,8 @@ static func tex(nm: String) -> Texture2D:
 	if _tex.has(nm):
 		return _tex[nm]
 	var t: Texture2D = null
-	for dir in [FULL_DIR, DIR]:
+	var dirs: Array = ([KIT_DIR] if (nm.ends_with("_plate") or nm.ends_with("_cover")) else []) + [FULL_DIR, DIR]
+	for dir in dirs:
 		var path: String = dir % nm
 		if ResourceLoader.exists(path):
 			t = load(path)
@@ -221,6 +233,15 @@ static func used_of(t: Texture2D) -> Rect2:
 
 
 ## A site's name as its files' (The Allotments -> the_allotments).
+## An item's art name, as the manifests write it (make_*_manifest.py's slug): lower case, every run of anything but
+## letters and digits one underscore, none at the ends - "Farmer's shotgun" is farmer_s_shotgun.
+static var _slug_re: RegEx = null
+static func art_slug(nm: String) -> String:
+	if _slug_re == null:
+		_slug_re = RegEx.create_from_string("[^a-z0-9]+")
+	return _slug_re.sub(nm.to_lower(), "_", true).strip_edges().trim_prefix("_").trim_suffix("_")
+
+
 static func site_key(nm: String) -> String:
 	return nm.to_lower().replace(" ", "_").replace("'", "")
 
@@ -339,16 +360,28 @@ func _init() -> void:
 func slot_of(k: int) -> Dictionary:
 	if placing and _edit.size() == 3:
 		return _edit[k]
-	return site_slot(_site_key if _own_site else "", k)
+	return site_slot(slot_key(), k)
+
+
+## The key a site's slots are placed under: the kit's pair apart from the old pair (17 Oct: the new plates aren't the
+## old ones' ground), "" for the test plate's.
+func slot_key() -> String:
+	if not _own_site:
+		return ""
+	return _site_key + ("@kit" if _kit_site else "")
 
 
 ## A site's slot k ("" for the test plate's): where F3/F5 put it (data/fight_slots.tres), else its own in the tables
 ## below, else the common one.
 static func site_slot(key: String, k: int) -> Dictionary:
 	var placed: Dictionary = saved_sites()
-	if placed.has(key) and placed[key] is Array and placed[key].size() == 3:
-		var row: Array = placed[key][k]
+	var at: String = key
+	if not (placed.has(at) and placed[at] is Array and placed[at].size() == 3):
+		at = key.trim_suffix("@kit")              # the kit's pair not placed yet: where the old pair's were, as a start
+	if placed.has(at) and placed[at] is Array and placed[at].size() == 3:
+		var row: Array = placed[at][k]
 		return {"foot": Vector2(float(row[0]), float(row[1])), "scale": float(row[2]), "lit": SLOTS[k]["lit"]}
+	key = key.trim_suffix("@kit")
 	if k == 2 and SITE_FAR.has(key):
 		return {"foot": SITE_FAR[key][0], "scale": SITE_FAR[key][1], "lit": SLOTS[2]["lit"]}
 	var own: Dictionary = (SITE_MID if k == 0 else SITE_NEAR) if k < 2 else {}
@@ -394,7 +427,7 @@ func set_placing(on: bool) -> void:
 	if on:
 		_edit = []
 		for k in range(3):
-			_edit.append(site_slot(_site_key, k).duplicate())
+			_edit.append(site_slot(slot_key(), k).duplicate())
 		for k in range(_figs.size()):
 			var f: Dictionary = _figs[k]
 			if not f.has("who"):
@@ -419,7 +452,7 @@ func set_slot(k: int, foot: Vector2, sc: float) -> void:
 func _place_tick() -> void:
 	_plate.position = PLATE_AT
 	_cover.position = Vector2(COVER_X, _cover_y)
-	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y - 1)
+	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y * _cover_s - 1)
 	_hands.position = _hands_at
 	_marker.visible = false
 	_red.modulate.a = 0.0
@@ -449,21 +482,35 @@ func _site(key: String) -> void:
 	_site_key = key
 	var own: bool = tex(key + "_plate") != null and tex(key + "_cover") != null     # the site's pair, or the Parade's: never one of each
 	_own_site = own
+	_kit_site = own and kit_pair(key)
 	_plate.texture = tex(key + "_plate") if own else tex("parade_plate")
 	if _plate.texture != null:
 		_plate.size = _plate.texture.get_size()
+		_plate.scale = Vector2.ONE * (PLATE_VIEW_W / _plate.size.x)     # the kit's 744 drawn as the old 688: the slots and the pan keep their numbers
 	var ct: Texture2D = tex(key + "_cover") if own else tex("parade_cover")
 	_cover.texture = ct
 	_cover_fill.texture = null
 	if ct == null:
 		return
 	_cover.size = ct.get_size()
-	_cover_y = COVER_TOP - used_of(ct).position.y
+	_cover_s = COVER_VIEW_W / _cover.size.x
+	_cover.scale = Vector2.ONE * _cover_s
+	_cover_fill.scale = Vector2.ONE * _cover_s
+	_cover_y = COVER_TOP - used_of(ct).position.y * _cover_s
 	# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
 	# nothing caught on it
 	var y0: int = int(ct.get_height() * 0.72)
 	_cover_fill.texture = ImageTexture.create_from_image(ct.get_image().get_region(Rect2i(0, y0, ct.get_width(), ct.get_height() - y0)))
-	_cover_fill.size = Vector2(ct.get_width(), H)
+	_cover_fill.size = Vector2(ct.get_width(), H / _cover_s)
+
+
+## Whether a site's plate and wall are the kit's (art/fight_new/), both.
+static func kit_pair(key: String) -> bool:
+	for nm in [key + "_plate", key + "_cover"]:
+		var path: String = KIT_DIR % nm
+		if not (ResourceLoader.exists(path) or FileAccess.file_exists(path)):
+			return false
+	return true
 
 
 ## A figure's picture for a pose: the head's when he's out, else the zone's member it was given, else the slice's.
@@ -676,11 +723,9 @@ func show_state(sim, m: Dictionary) -> void:
 			_duck_t = randf_range(0.6, 1.0)          # a big one: down behind the wall
 	_hp_seen = sim.hp
 	# your gun's rate, for the recoil and the marker
-	var gun = sim.equipped["Primary"]
+	var gun = gun_in_hand(sim)
 	_rof = maxf(0.5, minf(4.0, float(Items.base_of(gun).get("rof", 1.0)) * sim.pace())) if gun != null else 1.0
-	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"]) if gun != null else null
-	if ht != null and Items.is_melee(gun) and tex("hands_" + _hands_kind(gun)) == null:
-		ht = null                                  # no revolver for a hammer: nothing till its hands are drawn
+	var ht: Texture2D = hands_tex(gun)
 	var melee: bool = ht != null and Items.is_melee(gun)
 	_kind = _hands_kind(gun) if gun != null else ""
 	if ht != _hands.texture or melee != _melee:
@@ -688,7 +733,10 @@ func show_state(sim, m: Dictionary) -> void:
 		_melee = melee
 		if ht != null:
 			_hands.size = ht.get_size()
-			_hands_at = HANDS_CORNER - used_of(ht).end * HANDS_SCALE
+			_hs = hands_scale(ht)
+			_hands.scale = Vector2(_hs, _hs)
+			_hands_at = HANDS_CORNER - used_of(ht).end * _hs
+			_mz = muzzle_of(ht, _kind, art_slug(str(gun["base"])))
 		_set_swing_parts(ht)
 	_hands.visible = ht != null
 	# the search: the view pans along to the crates in the street, the next three
@@ -901,7 +949,7 @@ func _process(dt: float) -> void:
 		jolt = Vector2(randf_range(-4.0, 4.0), randf_range(-3.0, 3.0))
 	_plate.position = PLATE_AT + Vector2(-_pan, -DUCK_SCENE * _duck) + jolt
 	_cover.position = Vector2(COVER_X - _pan * 1.4, _cover_y - DUCK_COVER * _duck) + jolt * 1.5
-	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y - 1)
+	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y * _cover_s - 1)
 	# the crates ride the street as it pans in (the review: they stood still while the plate slid under them)
 	for k in range(_crates.size()):
 		for n in [_crates[k], _shadows[k]]:
@@ -942,7 +990,7 @@ func _process(dt: float) -> void:
 				_land_hit(k)
 	_swing_step(dt)
 	_recoil = maxf(0.0, _recoil - dt)
-	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt + _swing_off * HANDS_SCALE
+	_hands.position = _hands_at + Vector2(10, 12) * (_recoil / 0.08) + Vector2(0, DUCK_HANDS * _duck) + jolt + _swing_off * _hs
 	_flash_step(dt)
 	_marker_t -= dt
 	_marker.visible = _marker_t > 0.0
@@ -1060,10 +1108,10 @@ class FigBar extends Control:
 
 ## A shot's flash at the gun's muzzle: its kind's shape for its moment (none on a blade, a hammer or no picture).
 func fire_flash() -> void:
-	if _melee or not _hands.visible or not MUZZLE.has(_kind) or tex("hands_" + _kind) == null:
+	if _melee or not _hands.visible or _mz.is_empty():
 		_flash.visible = false                   # a stand-in picture's muzzle is somewhere else (the review)
 		return
-	var mz: Dictionary = MUZZLE[_kind]
+	var mz: Dictionary = _mz
 	_flash.kind = mz
 	_flash.left = float(mz["s"])
 	_flash.seed_v = randi()
@@ -1089,9 +1137,105 @@ func _flash_step(dt: float) -> void:
 
 ## Where the gun's muzzle is in the frame this moment (the hands' picture, its scale, the kick), or the hands' corner.
 func muzzle_point() -> Vector2:
-	if not MUZZLE.has(_kind):
+	if _mz.is_empty():
 		return _hands.position
-	return _hands.position + MUZZLE[_kind]["at"] * HANDS_SCALE
+	return _hands.position + (_mz["at"] as Vector2) * _hs
+
+
+## The gun in your hands (17 Oct, the kit: every gun its own): the primary while it fires - a blade, a burner, or a
+## gun with rounds - else the secondary, as the fight does (the sim's dps: the secondary at full behind a dry primary).
+static func gun_in_hand(sim) -> Variant:
+	var p = sim.equipped["Primary"]
+	var s = sim.equipped["Secondary"]
+	if p != null and (s == null or sim.has_rounds(p)):
+		return p
+	return s if s != null else p
+
+
+## A gun's hands: its base's own picture (art/fight/hands/<base>.png), else its kind's, else the revolver's - but never
+## the revolver for a blade or a hammer.
+static func hands_tex(gun) -> Texture2D:
+	if gun == null:
+		return null
+	var own: Texture2D = tex("hands/" + art_slug(str(gun["base"])))
+	if own != null:
+		return own
+	var ht: Texture2D = tex_of(["hands_" + _hands_kind(gun), "hands_revolver"])
+	if ht != null and Items.is_melee(gun) and tex("hands_" + _hands_kind(gun)) == null:
+		return null                                # no revolver for a hammer: nothing till its hands are drawn
+	return ht
+
+
+## A hands picture's scale: drawn HANDS_VIEW_W wide in the frame whatever its pixels (the kind's 256 at 0.8, the kit's 280).
+static func hands_scale(t: Texture2D) -> float:
+	return HANDS_VIEW_W / maxf(1.0, t.get_size().x) if t != null else HANDS_SCALE
+
+
+## A picture's flash: its kind's shape (MUZZLE), at the kind's read-off point for the kind's own picture, else at the
+## kit picture's muzzle - MUZZLE_AT's where one's been read off by eye, else found in its pixels (find_muzzle); {} for a
+## blade, a hammer or a kind without a flash.
+## The kit's hands (17 Oct) come up from the frame's foot with the gun raised toward the top left, steeper than the
+## kind's pictures; a muzzle the finder misses is put right here, [at, dir] in the picture's pixels.
+const MUZZLE_AT := {
+	"police_carbine": [Vector2(117, 84), Vector2(-1, -0.5)],     # the finder takes its sight's top; the barrel's end is lower left
+}
+static var _muzzles := {}
+static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:
+	if t == null or not MUZZLE.has(kind):
+		return {}
+	if t == tex("hands_" + kind):
+		return MUZZLE[kind]
+	var key: int = t.get_instance_id()
+	if _muzzles.has(key):
+		return _muzzles[key]
+	var mz: Dictionary = (MUZZLE[kind] as Dictionary).duplicate()
+	if MUZZLE_AT.has(slug):
+		mz["at"] = MUZZLE_AT[slug][0]
+		mz["dir"] = (MUZZLE_AT[slug][1] as Vector2).normalized()
+	else:
+		var found: Array = find_muzzle(t, kind)
+		mz["at"] = found[0]
+		mz["dir"] = found[1]
+	_muzzles[key] = mz
+	return mz
+
+
+## A kit picture's muzzle and the way it fires, in its pixels: in its upper part (the arms come up from the foot), a
+## pistol's or an SMG's topmost drawn pixel, else the long gun's furthest toward the top left; the way it points from
+## the gun's middle (the upper part's drawn pixels averaged) out through the muzzle. [at, dir].
+static func find_muzzle(t: Texture2D, kind: String) -> Array:
+	var img := t.get_image()
+	if img == null:
+		return [Vector2.ZERO, Vector2(-1, -0.4).normalized()]
+	if img.is_compressed():
+		img = img.duplicate()
+		img.decompress()
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	var probe: Vector2 = Vector2(0, -1) if kind in ["pistol", "smg"] else Vector2(-1, -0.35).normalized()
+	var best := -INF
+	var at := Vector2.ZERO
+	var sum := Vector2.ZERO
+	var n := 0
+	for y in range(int(h * 0.62)):
+		for x in range(w):
+			if img.get_pixel(x, y).a > 0.5:
+				var q := Vector2(x, y)
+				sum += q
+				n += 1
+				var d: float = q.dot(probe)
+				if d > best:
+					best = d
+					at = q
+	if n == 0:
+		return [Vector2.ZERO, probe]
+	var mid: Vector2 = sum / n
+	var dir: Vector2 = (at - mid).normalized() if at.distance_to(mid) > 4.0 else probe
+	# a pixel in from the very edge, still on the gun
+	var back: Vector2 = at - dir
+	if back.x >= 0 and back.y >= 0 and back.x < w and back.y < h and img.get_pixelv(Vector2i(back)).a > 0.5:
+		at = back
+	return [at, dir]
 
 
 ## For the tests: the flash up, where, and the kind it's drawn as.
