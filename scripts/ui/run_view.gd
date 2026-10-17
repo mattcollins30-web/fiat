@@ -222,6 +222,35 @@ static func tex_of(names: Array) -> Texture2D:
 
 ## Where a picture's drawn part ends, in its own pixels (a figure's feet, a cover's top): its used rect, cached.
 static var _used := {}
+## Where a wall's body starts (17 Oct, Matt: the kit's walls showed only their tips - the Allotments' weeds, the Retail
+## Park's shrubs): the first row at least WALL_SOLID across drawn, so what pokes above it pokes above COVER_TOP; a
+## picture with no such row keeps its highest drawn one.
+const WALL_SOLID := 0.6
+static var _wall_tops := {}
+static func wall_top(t: Texture2D) -> float:
+	if t == null:
+		return 0.0
+	var key: int = t.get_instance_id()
+	if not _wall_tops.has(key):
+		var top: float = used_of(t).position.y
+		var img := t.get_image()
+		if img != null:
+			img = img.duplicate()
+			if img.is_compressed():
+				img.decompress()
+			var w: int = img.get_width()
+			for y in range(img.get_height()):
+				var n := 0
+				for x in range(w):
+					if img.get_pixel(x, y).a > 0.5:
+						n += 1
+				if n >= WALL_SOLID * w:
+					top = maxf(top, float(y))
+					break
+		_wall_tops[key] = top
+	return _wall_tops[key]
+
+
 static func used_of(t: Texture2D) -> Rect2:
 	if t == null:
 		return Rect2()
@@ -496,7 +525,7 @@ func _site(key: String) -> void:
 	_cover_s = COVER_VIEW_W / _cover.size.x
 	_cover.scale = Vector2.ONE * _cover_s
 	_cover_fill.scale = Vector2.ONE * _cover_s
-	_cover_y = COVER_TOP - used_of(ct).position.y * _cover_s
+	_cover_y = COVER_TOP - wall_top(ct) * _cover_s     # the body's top at COVER_TOP, not its tallest weed (17 Oct)
 	# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
 	# nothing caught on it
 	var y0: int = int(ct.get_height() * 0.72)

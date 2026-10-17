@@ -108,6 +108,9 @@ func _shot(view, sim, m: Dictionary) -> Image:
 	while view._swing >= 0.0 and guard < 40:
 		view._process(0.05)                     # off a swing's frame: the painter draws the arm unrotated
 		guard += 1
+	view._duck = 0.0                            # up from behind the wall: every shot the same, the wall at its own height
+	view._duck_t = 0.0
+	view._process(0.001)
 	var img := Image.create(RunView.W, RunView.H, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.08, 0.09, 0.1))
 	_paint(view, view, img)

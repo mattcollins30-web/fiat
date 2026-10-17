@@ -171,6 +171,8 @@ func _init() -> void:
 	_player_saves_before = _player_saves()
 	root.add_child(main)
 	main.new_game()
+	_check(main.sim.mythics_on, "a new camp has the mythics off")
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_gates_checks(main)                          # the shut rooms on a fresh camp, before the smoke opens them all (13 Oct)
 	_open_camp(main.sim)
 	var sim = main.sim
@@ -597,6 +599,8 @@ func _init() -> void:
 	main.save_game()
 	var before: Dictionary = sim.to_dict()
 	main.load_game()
+	_check(main.sim.mythics_on, "a loaded camp has the mythics off")
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	var after: Dictionary = main.sim.to_dict()
 	_check(is_equal_approx(float(before["cash"]), float(after["cash"])), "is_equal_approx(float(before['cash']), float(after['cash']))")
 	_check(before["stash"].size() == after["stash"].size(), "before['stash'].size() == after['stash'].size()")
@@ -681,6 +685,7 @@ func _slots_offline_hardcore(main) -> void:
 	_check(main._save_words(slot).begins_with("Level %d" % sim.level()), "save words: " + main._save_words(slot))
 	var before_cash: float = sim.cash
 	main.load_game(slot)
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_check(is_equal_approx(main.sim.cash, before_cash), "slot load changed the cash")
 	main.show_slots(false, main.show_title)
 	main.show_slots(true, main.show_pause)
@@ -751,10 +756,12 @@ func _slots_offline_hardcore(main) -> void:
 	f.store_string(JSON.stringify({"version": main.SAVE_VERSION, "saved": Time.get_unix_time_from_system() - 7200.0, "sim": sim.to_dict()}))
 	f.close()
 	main.load_game()
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_check(main._menu.visible, "a two-hour-old save did not open the away screen")
 	main._menu.close()
 	# hardcore: a KIA ends the camp
 	main.new_game(true)
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	sim = main.sim
 	_open_camp(sim)
 	_check(sim.hardcore, "new_game(true) is not hardcore")
@@ -8272,6 +8279,7 @@ func _gear_gate_checks(main) -> void:
 	_check(main._save_words(old) == main.OLD_SAVE, "an old save's slot reads '%s'" % main._save_words(old))
 	var was = main.sim
 	main.load_game(old)
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_check(main.sim == was, "an old save was loaded")
 	DirAccess.remove_absolute(old)
 	sim.load_dict(saved)
@@ -8459,6 +8467,8 @@ func _mythic_checks(sim) -> void:
 	_check(not sim.loose_uniques(99).any(func(u): return u.get("mythic", false)), "a mythic is in the loose pool")
 	# the roll: their own dice, about one in MYTHIC_ODDS_IN
 	var rng0: int = sim.rng.state
+	var myth_was: bool = sim.mythics_on
+	sim.mythics_on = true
 	sim.mythic_rng.seed = 4242
 	var got := 0
 	var n := Data.MYTHIC_ODDS_IN * 20
@@ -8470,7 +8480,7 @@ func _mythic_checks(sim) -> void:
 	var none := true
 	for k in range(Data.MYTHIC_ODDS_IN * 3):
 		none = none and sim.mythic_roll().is_empty()
-	sim.mythics_on = true
+	sim.mythics_on = myth_was
 	_check(none, "a mythic rolled with the mythics off")
 	# none held twice before all seven
 	sim.stash = []
@@ -9718,6 +9728,9 @@ func _bin_checks(main) -> void:
 ## The fight kit's hands (17 Oct): a gun base with its own picture shows it (art/fight/hands/<base>.png), drawn as wide as
 ## the kind's were, its corner where theirs was; its flash on a drawn pixel of the gun, firing into open air; a base
 ## without one falls back to its kind's; the secondary's in hand behind a dry primary. Every base picture there is checked.
+const WALLS_OPEN := []     # walls with no solid row on purpose (a railing, a fence), placed by their tip: none yet
+
+
 func _kit_hands_checks(main) -> void:
 	var sim = main.sim
 	var v = main._run._view
@@ -9728,13 +9741,33 @@ func _kit_hands_checks(main) -> void:
 		v._site("the_parade")
 		var pw: float = v._plate.size.x * v._plate.scale.x
 		var cw: float = v._cover.size.x * v._cover.scale.x
-		var top: float = v._cover_y + RunView.used_of(v._cover.texture).position.y * v._cover_s
+		var top: float = v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s
 		_check(v._kit_site and is_equal_approx(pw, RunView.PLATE_VIEW_W) and is_equal_approx(cw, RunView.COVER_VIEW_W) and absf(top - RunView.COVER_TOP) < 0.5 and v.slot_key() == "the_parade@kit",
 			"the kit's Parade pair isn't drawn as the old: plate %.0f, wall %.0f, its top %.1f (want %.0f), slots under '%s'" % [pw, cw, top, RunView.COVER_TOP, v.slot_key()])
 		var placed: Dictionary = RunView.saved_sites()
 		if not placed.has("the_parade@kit"):
 			_check(RunView.site_slot("the_parade@kit", 0)["foot"] == RunView.site_slot("the_parade", 0)["foot"], "the kit's Parade unplaced doesn't start where the old pair's were")
 		v._site(was_key if was_key != "-" else "")
+	# every site's wall with its body's top at COVER_TOP (17 Oct, Matt: only the tips showed): the row there at least
+	# WALL_SOLID drawn, never above the picture's highest drawn row
+	var tips: Array = []
+	for t in Data.TIERS:
+		var key: String = RunView.site_key(str(t["name"]))
+		var ct: Texture2D = RunView.tex(key + "_cover")
+		if ct == null:
+			continue
+		var wt: float = RunView.wall_top(ct)
+		var img: Image = ct.get_image()
+		var row := 0
+		for x in range(img.get_width()):
+			if img.get_pixel(x, int(wt)).a > 0.5:
+				row += 1
+		if row < RunView.WALL_SOLID * img.get_width() and not (key in WALLS_OPEN):     # no solid row: placed by its tip, the old fault
+			tips.append("%s (%d, %d of %d drawn)" % [key, int(wt), row, img.get_width()])
+		v._site(key)
+		_check(absf(v._cover_y + wt * v._cover_s - RunView.COVER_TOP) < 0.5, "%s's wall body isn't at COVER_TOP: %.1f" % [key, v._cover_y + wt * v._cover_s])
+	_check(tips.is_empty(), "walls whose top isn't their body: %s" % ", ".join(tips))
+	v._site(was_key if was_key != "-" else "")
 	var run = main._run
 	for k in run.TILE_ICONS:
 		var there: bool = run.icon_tex(run.TILE_ICONS[k]) != null
@@ -10520,7 +10553,7 @@ func _full_art_checks(main, v) -> void:
 	var m: Dictionary = sim.mission
 	var key0: String = RunView.site_key(str(Data.TIERS[int(m["tier"])]["name"]))
 	_check(v._plate.texture == RunView.tex_of([key0 + "_plate", "parade_plate"]) and v._cover.texture == RunView.tex_of([key0 + "_cover", "parade_cover"]), "%s's plate or cover isn't up" % key0)
-	_check(absf(v._cover_y + RunView.used_of(v._cover.texture).position.y - RunView.COVER_TOP) < 0.5, "the cover's drawn top isn't on its line: %.0f" % (v._cover_y + RunView.used_of(v._cover.texture).position.y))
+	_check(absf(v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s - RunView.COVER_TOP) < 0.5, "the cover's body isn't on its line: %.0f" % (v._cover_y + RunView.wall_top(v._cover.texture) * v._cover_s))
 	# the zone's gang, when it's drawn
 	var zone: String = RunView.ZONE_KEYS[int(Data.TIERS[int(m["tier"])]["zone"])]
 	if RunView.tex("gang_%s_a_stand" % zone) != null:
@@ -13240,6 +13273,7 @@ func _chronicle_checks() -> void:
 ## through JSON with the file, as on the player's machine.
 func _record_file_checks(main) -> void:
 	main.new_game()
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_open_camp(main.sim)
 	var rec: String = main.record_file()
 	_check(rec == SMOKE_SAVE.get_basename() + ".record.jsonl", "the smoke's record is at %s" % rec)
@@ -13261,6 +13295,7 @@ func _record_file_checks(main) -> void:
 	_check(PlaytestRead.read_record(main.record_file(SMOKE_SLOT % 3)).size() == lines.size(), "the slot did not take the record")
 	# loading: a session line, ahead of the settle's runs
 	main.load_game(SMOKE_SAVE)
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	main.save_game()
 	var after: Array = PlaytestRead.read_record(rec)
 	_check(after.size() == lines.size() + 1 and after[-1]["k"] == "session", "loading did not write one session line: %s" % str(after.slice(lines.size()).map(func(e): return e["k"])))
@@ -13272,11 +13307,13 @@ func _record_file_checks(main) -> void:
 	main.sim.chron("after the slot")
 	main.save_game()
 	main.load_game(SMOKE_SLOT % 3)
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_check(PlaytestRead.read_record(rec).size() == lines.size(), "the loaded slot's record is not the autosave's: %d lines, not %d" % [PlaytestRead.read_record(rec).size(), lines.size()])
 	var kept: Array = Array(DirAccess.get_files_at("user://")).filter(func(f): return f.begins_with(SMOKE_SAVE.get_file().get_basename() + ".record.") and f != rec.get_file())
 	_check(not kept.is_empty(), "the autosave's record was not kept aside when the slot came in")
 	# a new game starts an empty record and keeps the old one
 	main.new_game()
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_open_camp(main.sim)
 	_check(PlaytestRead.read_record(rec).size() == main.sim.chron_count and main.sim.chron_count <= 2, "a new game's record holds the last game's lines: %d" % PlaytestRead.read_record(rec).size())
 
@@ -14379,6 +14416,7 @@ func _gates_checks(main) -> void:
 	dry.extract_now()
 	print("gates ok: shut on a fresh camp, the rail, the jobs, each head's thing, the lines, the deeds off the Manager, saves")
 	main.new_game()                              # the rest of the smoke starts from a fresh camp, as it always did
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_open_camp(main.sim)
 
 
@@ -14515,6 +14553,7 @@ func _room_intro_checks(main) -> void:
 	# a new camp: the opening alone, the Map's card only once it's done (14 Oct, Matt: the Map's take under the opening)
 	var old_sim = main.sim
 	main.new_game()
+	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
 	_check(main._opening != null and main._room_card == null, "a room's card came up with the opening on a new camp")
 	if main._opening != null:
 		main._opening.finish()
