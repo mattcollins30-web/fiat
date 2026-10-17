@@ -1178,6 +1178,9 @@ static func hands_scale(t: Texture2D) -> float:
 ## kind's pictures; a muzzle the finder misses is put right here, [at, dir] in the picture's pixels.
 const MUZZLE_AT := {
 	"police_carbine": [Vector2(117, 84), Vector2(-1, -0.5)],     # the finder takes its sight's top; the barrel's end is lower left
+	"security_guard_s_carbine": [Vector2(77, 92), Vector2(-1, -0.15)],     # and the front sight's, here and below
+	"army_smg": [Vector2(77, 79), Vector2(-1, -0.2)],     # the suppressor's end
+	"riot_squad_s_smg": [Vector2(131, 84), Vector2(-1, -0.35)],
 }
 static var _muzzles := {}
 static func muzzle_of(t: Texture2D, kind: String, slug := "") -> Dictionary:

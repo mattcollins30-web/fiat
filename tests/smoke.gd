@@ -3694,7 +3694,10 @@ func _atlas_checks(main) -> void:
 	_check(sim.atlas_rank("deeper_pockets") == 3 and not sim.can_rank_atlas("deeper_pockets"), "Deeper pockets went past its max")
 	_check(sim.search_s(t2) < search0 * 0.75, "Deeper pockets did not quicken searches")
 	_check(sim.rank_atlas("good_reception") and sim.word_craft_cost(3, "retune") <= int(ceil(cost0 * 0.85)) and sim.word_craft_cost(3, "retune") < cost0 + 1, "Good reception did not cheapen the crafts: %d from %d" % [sim.word_craft_cost(3, "retune"), cost0])
-	_check(sim.rank_atlas("paid_in_notes") and sim.notes_a_kill(t2) == notes0 + 1, "Paid in notes did not add a note")
+	# a note more a kill - doubled by the Traffic Warden's Hat when the camp's kit is wearing it (17 Oct: the check read
+	# +1 and failed whenever the smoke's earlier runs had left the hat on)
+	var hat: int = int(Data.FX["rule/wardens_hat.notes"]) if sim.has_rule("wardens_hat") else 1
+	_check(sim.rank_atlas("paid_in_notes") and sim.notes_a_kill(t2) == notes0 + hat, "Paid in notes did not add a note: %d from %d (the hat x%d)" % [sim.notes_a_kill(t2), notes0, hat])
 	_check(sim.rank_atlas("two_of_everything"), "Two of everything did not take")
 	# the boss drops two with it
 	sim.notes += 1000
