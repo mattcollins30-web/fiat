@@ -5411,7 +5411,7 @@ before the parked Doom-style fight).** tools/make_fight_kit_manifest.py writes t
 a big revolver, a knife and a garage rifle; the Parade's plate and wall at the new size; the four tile icons) and the set
 (tools/pixellab_fight_kit_manifest.json, 110: hands for all 82 gun bases, 12 plates and 12 walls, the 4 icons). Hands to
 art/fight/hands/<base>.png at 280x210 (the 256x192 at HANDS_SCALE x VIEW_SCALE on screen), styled on each base's item art
-and framed on the kind's hands; plates 950x409 and walls 950x221 (688x296 / 688x160 at VIEW_SCALE) to art/fight_new/
+and framed on the kind's hands; plates 744x320 and walls 744x173 to art/fight_new/ (the frame draws them at 950 wide; the API caps at about 512x512s worth, so the largest at their shape, scaled x1.28)
 beside the live ones; icons their_fire, kills, armour, rounds to art/ui_new/ (64x64, styled on Matt's dps and hp). The
 code that reads them (a base's hands first, the kind's the fallback; each new picture's muzzle point; the new plates and
 walls; the tiles' icons) once the test pieces are judged.

@@ -3,7 +3,7 @@
   "FIAT FIGHT KIT, THE TEST (17 Oct, Matt): one pair of hands for each kind (a bat, a pump shotgun, a bullpup, a carbine, a crossbow, a big revolver, a knife, a garage rifle), the Parade's plate and wall at the new size, the four tile icons. Judge these in the frame before the set is run.",
   "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_kit_test_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)",
   "Hands: art/fight/hands/<base>.png, 280x210, styled on the base's item art and framed on the kind's current hands; the code looks a base up first, the kind's picture its fallback.",
-  "Walls and plates: art/fight_new/<site>_cover.png 950x221 and _plate.png 950x409, the size the bigger frame draws them; the live ones in art/fight/ stay until these are judged.",
+  "Walls and plates: art/fight_new/<site>_cover.png 744x173 and _plate.png 744x320, the largest the API takes at their shape (the bigger frame draws them at 950 wide, scaling x1.28); the live ones in art/fight/ stay until these are judged. Run the test's Parade pair first: it shows the size is taken.",
   "Icons: art/ui_new/their_fire, kills, armour, rounds - 64x64, drawn at 36 px on the run's tiles beside Matt's dps and hp. Never written over art/ui.",
   "Regenerate with python3 tools/make_fight_kit_manifest.py."
  ],
@@ -178,8 +178,8 @@
   },
   {
    "out": "art/fight_new/the_parade_plate.png",
-   "width": 950,
-   "height": 409,
+   "width": 744,
+   "height": 320,
    "no_background": false,
    "seed": 97090,
    "endpoint": "generate-image-v2",
@@ -196,8 +196,8 @@
   },
   {
    "out": "art/fight_new/the_parade_cover.png",
-   "width": 950,
-   "height": 221,
+   "width": 744,
+   "height": 173,
    "no_background": true,
    "seed": 97091,
    "endpoint": "generate-image-v2",

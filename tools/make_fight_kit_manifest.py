@@ -14,7 +14,8 @@ What each is:
     hands is the gun on the card, and framed on the kind's current hands, so every picture sits in the corner alike.
     Drawn at 280x210: the hands' 256x192 at HANDS_SCALE 0.8 x the frame's VIEW_SCALE 812/588 is 283x212 on screen.
   - The walls and their plates (status item 1: the bigger frame scales them up and the joins show). Regenerated at the
-    size they're drawn: the 688x296 plate and 688x160 wall at VIEW_SCALE are 950x409 and 950x221. To art/fight_new/,
+    largest the API takes at their shape, 744x320 and 744x173 (drawn at 950x409 and 950x221, the API's cap about
+    512x512's worth), the frame scaling the rest. To art/fight_new/,
     beside the live ones in art/fight/, which stay until the new ones are judged.
   - The run's six tiles' missing icons (status item 16): Their fire, Kills, Armour, Rounds - Matt's painted dps and hp
     are the other two. 64x64, drawn at 36 px; to art/ui_new/ (never over art/ui), styled on the dps and hp icons.
@@ -34,8 +35,10 @@ TAIL = ("Realistic painted pixel art, soft overcast light, muted cool northern p
 STYLE = {"color_palette": True, "outline": True, "detail": True, "shading": True}
 VIEW_SCALE = 812.0 / 588.0
 HANDS_W, HANDS_H = 280, 210
-PLATE_W, PLATE_H = round(688 * VIEW_SCALE), round(296 * VIEW_SCALE)     # 950 x 409
-WALL_W, WALL_H = round(688 * VIEW_SCALE), round(160 * VIEW_SCALE)       # 950 x 221
+# the frame draws a plate at 950x409 (688x296 x VIEW_SCALE), past the API's cap (about 512x512's worth: its widest is
+# 688x384); so the largest at the plate's shape with a margin, the frame scaling the rest (x1.28, not x1.38) (17 Oct)
+PLATE_W, PLATE_H = 744, 320
+WALL_W, WALL_H = 744, 173
 
 
 def slug(name):
@@ -215,7 +218,7 @@ def main():
     run = "godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/%s   (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)"
     common = [
         "Hands: art/fight/hands/<base>.png, 280x210, styled on the base's item art and framed on the kind's current hands; the code looks a base up first, the kind's picture its fallback.",
-        "Walls and plates: art/fight_new/<site>_cover.png 950x221 and _plate.png 950x409, the size the bigger frame draws them; the live ones in art/fight/ stay until these are judged.",
+        "Walls and plates: art/fight_new/<site>_cover.png 744x173 and _plate.png 744x320, the largest the API takes at their shape (the bigger frame draws them at 950 wide, scaling x1.28); the live ones in art/fight/ stay until these are judged. Run the test's Parade pair first: it shows the size is taken.",
         "Icons: art/ui_new/their_fire, kills, armour, rounds - 64x64, drawn at 36 px on the run's tiles beside Matt's dps and hp. Never written over art/ui.",
         "Regenerate with python3 tools/make_fight_kit_manifest.py.",
     ]
