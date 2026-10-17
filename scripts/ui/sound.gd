@@ -62,6 +62,25 @@ var enabled := true                # effects on at all (the volume above nothing
 var music_on := true               # music on at all
 ## The Settings' three volumes (14 Oct, Matt: the pause's Settings): effects, music, the voices (the opening, On the
 ## air, the rooms' cards), each its own bus, stepped by a press. enabled and music_on follow them.
+## The world's room (17 Oct, Matt: "anything in engine sfx wise"): the fight's and the search's sounds on WORLD, the
+## places' beds (ambience, weather) on BED under it; the camp's and the UI's straight on SFX, so a duck or an echo
+## never reaches a button. On WORLD an echo for the sites with a roof and a low-pass that closes while you're down
+## behind the wall and when you're hurt; BED and the music dip a moment when a gang arrives.
+const WORLD := "World"
+const BED := "Bed"
+const UI_IDS := ["ui_click", "ui_tab", "equip", "sell", "buy", "craft", "build", "level_up", "point_spent", "heal_clinic",
+	"radio_on", "radio_code", "gate_open", "the_end_burn", "the_end_sell"]
+const INDOOR := ["The Bank", "The Hospital", "Shopping Centre", "The Garden Centre"]     # a roof over the fight: the echo
+const OPEN_HZ := 20500.0           # the low-pass wide open
+const DUCK_HZ := 700.0             # down behind the wall
+const HURT_HZ := 2400.0            # under a quarter of your HP
+const DIP_DB := -9.0               # a gang arriving: the bed and the music under it
+const DIP_S := 1.6
+const STREAK_S := 1.6              # kills this close together climb in pitch
+const STREAK_STEP := 0.05
+const STREAK_MAX := 6
+const PAN := 0.45                  # a shot from the frame's edge sits this far across the screen
+const FAR_DB := -7.0               # the far slot's shots, this much under the near one's
 const VOL_STEPS := [1.0, 0.75, 0.5, 0.25, 0.0]
 const BUSES := {"sfx": "SFX", "music": "Music", "voice": "Voice"}
 var vols := {"sfx": 1.0, "music": 1.0, "voice": 1.0}
@@ -84,14 +103,31 @@ var _buttons_hooked := false
 var _deeds_fate_seen := ""              # the deeds' fate last heard: burned or sold sound once, as it happens (14 Oct)
 var _dry_seen := false             # the gun was dry at the last look: rounds again is a reload
 var _sim_seen = null               # the camp the counts are of: a load or a new camp starts them again
+var view = null                    # the run view (run.gd sets it): how far down you are, where a shot came from
+var _on_run := false
+var _hurt := false
+var _indoor := false
+var _hz := OPEN_HZ
+var _dip_t := 0.0
+var _streak := 0
+var _kill_at := -10.0
+var _pan_pool: Array = []          # AudioStreamPlayer2Ds: their shots, placed across the screen as the figure is in the frame
 
 
 func _init() -> void:
 	ensure_buses()
 	for k in range(POOL):
 		_pool.append(_player("SFX"))
+	for k in range(4):
+		var p2 := AudioStreamPlayer2D.new()
+		p2.bus = WORLD
+		p2.max_distance = 100000.0             # no falloff: the place across the screen is the pan, the slot the level
+		p2.attenuation = 0.0
+		p2.panning_strength = 1.5
+		add_child(p2)
+		_pan_pool.append(p2)
 	for layer in ["amb", "weather", "low_hp", "clock", "music"]:
-		var bus: String = "Music" if layer == "music" else "SFX"
+		var bus: String = "Music" if layer == "music" else (BED if layer in ["amb", "weather"] else "SFX")
 		_loops[layer] = {"p": [_player(bus), _player(bus)], "on": 0, "id": "", "db": -80.0}
 	apply_volumes()
 
@@ -103,7 +139,8 @@ func _player(bus := "SFX") -> AudioStreamPlayer:
 	return p
 
 
-## The effects', the music's and the voices' buses, under the Master, once.
+## The effects', the music's and the voices' buses, under the Master, once; the world's under the effects, the beds
+## under the world - the echo (off till a roof) and the low-pass (open) on the world's.
 static func ensure_buses() -> void:
 	for nm in BUSES.values():
 		if AudioServer.get_bus_index(nm) < 0:
@@ -111,6 +148,24 @@ static func ensure_buses() -> void:
 			var i := AudioServer.bus_count - 1
 			AudioServer.set_bus_name(i, nm)
 			AudioServer.set_bus_send(i, "Master")
+	for pair in [[WORLD, "SFX"], [BED, WORLD]]:
+		if AudioServer.get_bus_index(pair[0]) < 0:
+			AudioServer.add_bus()
+			var j := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(j, pair[0])
+			AudioServer.set_bus_send(j, pair[1])
+	var w := AudioServer.get_bus_index(WORLD)
+	if AudioServer.get_bus_effect_count(w) == 0:
+		var verb := AudioEffectReverb.new()
+		verb.room_size = 0.45
+		verb.damping = 0.6
+		verb.wet = 0.22
+		verb.dry = 1.0
+		AudioServer.add_bus_effect(w, verb, 0)
+		AudioServer.set_bus_effect_enabled(w, 0, false)
+		var lp := AudioEffectLowPassFilter.new()
+		lp.cutoff_hz = OPEN_HZ
+		AudioServer.add_bus_effect(w, lp, 1)
 
 
 ## Each bus at its volume (off is muted); effects off quiets the world, music off the music.
@@ -233,13 +288,18 @@ static func _looped(s: AudioStream) -> AudioStream:
 # ------------------------------------------------------------------ playing
 
 ## A one-shot: a take at random, a touch of pitch, on a free player (the oldest if none is).
-func cue(id: String, pitch_var := 0.04) -> void:
+func cue(id: String, pitch_var := 0.04, pitch := 1.0, spot := {}) -> void:
 	_last = id
 	_cued.append(id)
 	if not enabled:
 		return
 	var ts := takes(id)
 	if ts.is_empty():
+		return
+	var db: float = float(SOUNDS.get(id, {}).get("db", -10.0))
+	var pitch_v: float = pitch * randf_range(1.0 - pitch_var, 1.0 + pitch_var)
+	if not spot.is_empty():
+		_cue_at(ts[randi() % ts.size()], db + lerpf(FAR_DB, 0.0, float(spot["near"])), pitch_v, float(spot["pan"]))
 		return
 	var p: AudioStreamPlayer = null
 	for q in _pool:
@@ -249,11 +309,38 @@ func cue(id: String, pitch_var := 0.04) -> void:
 	if p == null:
 		p = _pool.pop_front()
 		_pool.append(p)
+	p.bus = "SFX" if id in UI_IDS else WORLD
 	p.stream = ts[randi() % ts.size()]
-	p.volume_db = float(SOUNDS.get(id, {}).get("db", -10.0))
-	p.pitch_scale = randf_range(1.0 - pitch_var, 1.0 + pitch_var)
+	p.volume_db = db
+	p.pitch_scale = pitch_v
 	if p.is_inside_tree():
 		p.play()
+
+
+## A one-shot placed across the screen (-1 left, 1 right): their shots from where the figure stands in the frame.
+func _cue_at(st: AudioStream, db: float, pitch_v: float, pan: float) -> void:
+	var p: AudioStreamPlayer2D = null
+	for q in _pan_pool:
+		if not q.playing:
+			p = q
+			break
+	if p == null:
+		p = _pan_pool.pop_front()
+		_pan_pool.append(p)
+	var vs: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1920, 1080)
+	p.position = Vector2(vs.x * (0.5 + PAN * clampf(pan, -1.0, 1.0)), vs.y * 0.5)
+	p.stream = st
+	p.volume_db = db
+	p.pitch_scale = pitch_v
+	if p.is_inside_tree():
+		p.play()
+
+
+## Where their shot comes from: one of the figures up in the run view, or nowhere in particular.
+func _spot() -> Dictionary:
+	if view == null or not is_instance_valid(view) or not view.is_visible_in_tree():
+		return {}
+	return view.shooter_spot()
 
 
 ## What a loop layer should be playing ("" for nothing): a change crossfades.
@@ -280,6 +367,7 @@ func set_loop(layer: String, id: String) -> void:
 
 
 func _process(dt: float) -> void:
+	_world_step(dt)
 	for layer in _loops:
 		var L: Dictionary = _loops[layer]
 		for p in L["p"]:
@@ -295,6 +383,42 @@ func _process(dt: float) -> void:
 				var id: String = L["id"]
 				L["id"] = ""
 				set_loop("music", id)
+
+
+## The world's room each frame: the low-pass toward where it should be (down behind the wall, hurt, or open), the
+## gang's dip easing back.
+func _world_step(dt: float) -> void:
+	var w := AudioServer.get_bus_index(WORLD)
+	if w < 0 or AudioServer.get_bus_effect_count(w) < 2:
+		return
+	var want: float = OPEN_HZ
+	if _on_run:
+		if _hurt:
+			want = HURT_HZ
+		var down: float = 0.0
+		if view != null and is_instance_valid(view) and view.is_visible_in_tree():
+			down = clampf(view.duck_amount(), 0.0, 1.0)
+		want = exp(lerpf(log(want), log(DUCK_HZ), down))
+	_hz = exp(move_toward(log(_hz), log(want), dt * 6.0))         # in octaves, so a close and an open take as long
+	var lp: AudioEffectLowPassFilter = AudioServer.get_bus_effect(w, 1)
+	lp.cutoff_hz = _hz
+	AudioServer.set_bus_effect_enabled(w, 1, _hz < 19000.0)     # open, out of the way altogether
+	AudioServer.set_bus_effect_enabled(w, 0, _on_run and _indoor)
+	_dip_t = maxf(0.0, _dip_t - dt)
+	var dip: float = DIP_DB * clampf(_dip_t / (DIP_S - 0.4), 0.0, 1.0)
+	var b := AudioServer.get_bus_index(BED)
+	if b >= 0:
+		AudioServer.set_bus_volume_db(b, dip)
+	var mi := AudioServer.get_bus_index("Music")
+	if mi >= 0 and float(vols["music"]) > 0.0:
+		AudioServer.set_bus_volume_db(mi, linear_to_db(float(vols["music"])) + dip)
+
+
+## For the tests: the world's room as it stands.
+func world() -> Dictionary:
+	var w := AudioServer.get_bus_index(WORLD)
+	return {"hz": _hz, "echo": w >= 0 and AudioServer.is_bus_effect_enabled(w, 0), "dip_t": _dip_t, "streak": _streak,
+		"on_run": _on_run, "hurt": _hurt}
 
 
 # ------------------------------------------------------------------ following the sim
@@ -314,6 +438,10 @@ func follow(sim) -> void:
 		return
 	_camp(sim)
 	var m = sim.mission
+	_on_run = m != null and not m.get("dry", false)
+	if not _on_run:
+		_hurt = false
+		_indoor = false
 	if m == null or m.get("dry", false):
 		set_loop("amb", "amb_yard")
 		for layer in ["weather", "low_hp", "clock"]:
@@ -367,7 +495,9 @@ func _place(sim, m: Dictionary) -> void:
 	set_loop("amb", ["amb_outskirts", "amb_estate", "amb_town", "amb_city"][mini(zone, 3)])
 	var w: String = sim.weather_of(int(m["tier"]))
 	set_loop("weather", "rain" if w == "Rain" else ("fog" if w == "Fog" else ("night" if sim.is_night() else "")))
-	set_loop("low_hp", "low_hp" if sim.hp < sim.max_hp() * 0.25 else "")
+	_hurt = sim.hp < sim.max_hp() * 0.25
+	_indoor = str(Data.TIERS[int(m["tier"])]["name"]) in INDOOR
+	set_loop("low_hp", "low_hp" if _hurt else "")
 	var clock: float = float(m.get("clock", 999.0))
 	set_loop("clock", "clock_warn" if clock > 0.0 and clock <= 10.0 else "")
 
@@ -427,13 +557,17 @@ func _fight(sim, m: Dictionary, now: Dictionary) -> void:
 	# theirs at you, now and then
 	if fighting and t - _incoming_at >= randf_range(1.2, 2.6):
 		_incoming_at = t
-		cue("incoming", 0.08)
+		cue("incoming", 0.08, 1.0, _spot())
 	if now["patrols"] > _seen["patrols"]:
 		cue("gang_arrives")
+		_dip_t = DIP_S                           # the bed and the music under it a moment
 	if now["boss_on"] and not _seen["boss_on"]:
 		cue("head_door")
 	if now["kills"] > _seen["kills"]:
-		cue("kill")
+		var now_s: float = Time.get_ticks_msec() / 1000.0      # in real seconds: at x10 the run's own clock would pin it at the top
+		_streak = mini(_streak + 1, STREAK_MAX) if now_s - _kill_at <= STREAK_S else 0
+		_kill_at = now_s
+		cue("kill", 0.02, 1.0 + STREAK_STEP * _streak)     # kills close together climb
 	if now["hp"] < _seen["hp"] - sim.max_hp() * 0.04 and t - _hit_at > 0.4:
 		_hit_at = t
 		cue("hit_taken")
@@ -480,7 +614,10 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 	var floor_items: Array = m.get("floor", [])
 	for it in floor_items:
 		if not (it["id"] in _seen["floor"]) and not it.has("ditch_scrap"):
-			cue("find_unique" if it.has("unique") or it.has("set") else ("find_rare" if int(it.get("rarity", 0)) >= 2 else "find_common"))
+			if it.get("mythic", false):
+				find_mythic()
+			else:
+				cue("find_unique" if it.has("unique") or it.has("set") else ("find_rare" if int(it.get("rarity", 0)) >= 2 else "find_common"))
 	for id in now["found"]:
 		if id in _seen["floor"] and not (id in _seen["found"]):
 			cue("take")
@@ -492,7 +629,28 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 	# a rare off a kill, straight into the pack
 	for it in m["found"]:
 		if not (it["id"] in _seen["found"]) and not (it["id"] in _seen["floor"]) and (int(it.get("rarity", 0)) >= 2 or it.has("unique") or it.has("set")):
-			cue("find_unique" if it.has("unique") or it.has("set") else "find_rare")
+			if it.get("mythic", false):
+				find_mythic()
+			else:
+				cue("find_unique" if it.has("unique") or it.has("set") else "find_rare")
+
+
+## A mythic found (17 Oct): the unique's sting low and the rare's high together, and the bed and the music out from
+## under them.
+func find_mythic() -> void:
+	cue("find_unique", 0.0, 0.78)
+	cue("find_rare", 0.0, 1.26)
+	_last = "find_mythic"
+	_cued.append("find_mythic")
+	_dip_t = DIP_S
+
+
+## The decrypt (17 Oct): a glyph locking in, quiet and high; a line done, the code's own sound.
+func decrypt_tick(line_done: bool) -> void:
+	if line_done:
+		cue("radio_code", 0.03)
+	else:
+		cue("search_tick", 0.15, 1.7)
 
 
 ## The camp's moments, from the chronicle: a level, a building, a gamble... a run home or a death. And the Fence's

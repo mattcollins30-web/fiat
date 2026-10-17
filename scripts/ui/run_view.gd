@@ -1511,6 +1511,25 @@ func fighting() -> bool:
 
 
 ## For the tests: what's up, the pan, the red.
+## Where a shot of theirs comes from, for the sound (17 Oct): one of the figures up, its place across the frame (-1 the
+## left edge, 1 the right) and how near its slot is (0 the far one, 1 the near).
+func shooter_spot() -> Dictionary:
+	var up: Array = []
+	for k in range(_figs.size()):
+		if _figs[k]["state"] in ["pop", "up"]:
+			up.append(k)
+	if up.is_empty():
+		return {}
+	var k: int = up[randi() % up.size()]
+	var s: Dictionary = slot_of(mini(k, SLOTS.size() - 1))
+	return {"pan": clampf((float(s["foot"].x) - W / 2.0) / (W / 2.0), -1.0, 1.0), "near": clampf((float(s["scale"]) - 0.3) / 0.65, 0.0, 1.0)}
+
+
+## How far down behind the wall: 0 up, 1 right down (the sound's low-pass follows it).
+func duck_amount() -> float:
+	return _duck
+
+
 func figures_up() -> int:
 	var n := 0
 	for f in _figs:

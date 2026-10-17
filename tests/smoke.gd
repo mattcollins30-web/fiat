@@ -5141,6 +5141,57 @@ func _sound_checks(main) -> void:
 	main.refresh()
 	for want in ["gang_arrives", "kill", "hit_taken", "burn"]:
 		_check(want in snd.cued(), "%s didn't sound: %s" % [want, str(snd.cued())])
+	# the world's room (17 Oct, Matt: sound in engine): the gang's dip, kills climbing, the low-pass hurt and down behind
+	# the wall, the echo under a roof, their shots from a figure's place, the camp's sounds off the world's bus
+	var wi := AudioServer.get_bus_index(snd.WORLD)
+	_check(wi >= 0 and AudioServer.get_bus_index(snd.BED) >= 0 and AudioServer.get_bus_effect_count(wi) >= 2 and AudioServer.get_bus_effect(wi, 1) is AudioEffectLowPassFilter, "the world's bus, the bed's or the world's effects aren't there")
+	_check(snd.world()["dip_t"] > 0.0, "a gang arrived and the bed and the music didn't dip")
+	var streak0: int = int(snd.world()["streak"])
+	m["kills"] = int(m["kills"]) + 1
+	main.refresh()
+	_check(int(snd.world()["streak"]) == streak0 + 1, "a second kill straight after the first didn't climb: %d from %d" % [int(snd.world()["streak"]), streak0])
+	for k in range(30):
+		snd._world_step(0.1)
+	_check(snd.world()["hz"] > 15000.0 and not snd.world()["hurt"], "up, unhurt, the world is muffled: %.0f Hz" % snd.world()["hz"])
+	sim.hp = sim.max_hp() * 0.1
+	main.refresh()
+	for k in range(30):
+		snd._world_step(0.1)
+	_check(snd.world()["hurt"] and snd.world()["hz"] < snd.HURT_HZ * 1.1, "under a quarter of your HP the world isn't muffled: %.0f Hz" % snd.world()["hz"])
+	sim.hp = sim.max_hp()
+	main.refresh()
+	if main._run._view != null:
+		var v = main._run._view
+		v._duck = 1.0
+		for k in range(30):
+			snd._world_step(0.1)
+		if v.is_visible_in_tree():
+			_check(snd.world()["hz"] < snd.DUCK_HZ * 1.2, "down behind the wall the world isn't muffled: %.0f Hz" % snd.world()["hz"])
+		else:
+			_check(snd.world()["hz"] > 15000.0, "the frame off screen, its duck muffled the world: %.0f Hz" % snd.world()["hz"])
+		v._duck = 0.0
+		for k in range(4):
+			v._process(0.2)
+		var sp: Dictionary = v.shooter_spot()
+		_check(v.figures_up() == 0 or (sp.has("pan") and absf(float(sp["pan"])) <= 1.0 and float(sp["near"]) >= 0.0 and float(sp["near"]) <= 1.0), "their shot has no place in the frame: %s" % str(sp))
+	var tier0: int = int(m["tier"])
+	var bank: int = Data.TIERS.map(func(t): return str(t["name"])).find("The Bank")
+	m["tier"] = bank
+	main.refresh()
+	snd._world_step(0.016)
+	_check(snd.world()["echo"], "no echo under the Bank's roof")
+	m["tier"] = tier0
+	main.refresh()
+	snd._world_step(0.016)
+	_check(not snd.world()["echo"], "an echo out on %s" % str(Data.TIERS[tier0]["name"]))
+	for id in snd.UI_IDS:
+		_check(snd.SOUNDS.has(id), "the camp's sound %s isn't one the game has" % id)
+	for nm in snd.INDOOR:
+		_check(Data.TIERS.any(func(t): return str(t["name"]) == nm), "the echo's site %s isn't a site" % nm)
+	snd.clear_cued()
+	snd.find_mythic()
+	_check("find_mythic" in snd.cued() and "find_unique" in snd.cued(), "a mythic found has no sting: %s" % str(snd.cued()))
+	print("the world's room: the dip, the climb, hurt %.0f Hz, the duck, the Bank's echo, a mythic's sting" % snd.HURT_HZ)
 	# the sounds made and never played (14 Oct): a grenade thrown, the duck behind the wall, a dry gun given rounds
 	snd.clear_cued()
 	m["thrown"] = int(m.get("thrown", 0)) + 1
@@ -8186,7 +8237,11 @@ func _signal_checks(main) -> void:
 	# to the card's own words in order; at the end (or a tap) the card is the signal's
 	var made: Dictionary = sim.signal_at(rd.selected)
 	_check(rd.decrypting() and rd._dec.visible and rd._decrypt.text == "Skip" and not rd._decrypt.disabled, "the decrypt didn't start: running %s, button '%s'" % [str(rd.decrypting()), rd._decrypt.text])
-	rd._process(1.3)
+	if rd.sound != null:
+		rd.sound.clear_cued()
+	for k in range(26):
+		rd._process(0.05)                         # as frames come: a glyph's tick between the lines' codes
+	_check(rd.sound == null or ("search_tick" in rd.sound.cued() and "radio_code" in rd.sound.cued()), "the decrypt made no ticks or no line's code: %s" % (str(rd.sound.cued()) if rd.sound != null else ""))
 	var site_row: Array = rd._dec_lines[1]
 	var codes_row: Array = rd._dec_lines[4]
 	_check(rd.decrypting() and site_row[0].text == site_row[1] and site_row[1] == str(Data.TIERS[int(made["site"])]["name"]) and codes_row[0].text != codes_row[1], "1.3 s in: the site '%s' (want '%s'), the codes still coming '%s'" % [site_row[0].text, site_row[1], codes_row[0].text])

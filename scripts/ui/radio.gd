@@ -126,6 +126,10 @@ var _dec_bars: Array = []
 var _dec_lines: Array = []          # [Label, text, from s, to s, colour]
 var _dec_scan: Panel
 var _dec_t := -1.0                  # seconds in; below 0, not running
+var sound = null                    # the shell's (17 Oct): the decrypt's ticks; null in a bare test
+var _dec_heard := 0                 # glyphs locked so far, for the ticks
+var _dec_done := 0                  # lines done so far
+var _dec_tick_t := 0.0
 
 
 func _init() -> void:
@@ -339,6 +343,9 @@ func start_decrypt(sg: Dictionary) -> void:
 		row[3] = float(times[k][1])
 		row[4] = colours[k]
 	_dec_t = 0.0
+	_dec_heard = 0
+	_dec_done = 0
+	_dec_tick_t = 0.0
 	_dec.visible = true
 	set_process(true)
 	_paint_dec()
@@ -367,6 +374,29 @@ func _paint_dec() -> void:
 	_dec_freq.text = "TUNING %.2f MHz" % (27.2 + float((tick * 17) % 90) / 100.0)
 	_dec_dot.visible = tick % 6 < 3
 	_dec_scan.position.y = _dec_t / DEC_S * _card.size.y
+	_dec_sound()
+
+
+## The decrypt's ticks (17 Oct, Matt: sound in engine): a glyph locking in, at most one a 0.06 s; a line done, its code.
+func _dec_sound() -> void:
+	var locked := 0
+	var done := 0
+	for row in _dec_lines:
+		var p: float = clampf((_dec_t - float(row[2])) / maxf(0.01, float(row[3]) - float(row[2])), 0.0, 1.0)
+		locked += int(str(row[1]).length() * p)
+		if _dec_t >= float(row[3]):
+			done += 1
+	if done > _dec_done:
+		if sound != null:
+			sound.decrypt_tick(true)
+		_dec_heard = locked
+		_dec_tick_t = _dec_t
+	elif locked > _dec_heard and _dec_t - _dec_tick_t >= 0.06:
+		if sound != null:
+			sound.decrypt_tick(false)
+		_dec_heard = locked
+		_dec_tick_t = _dec_t
+	_dec_done = done
 
 
 ## Done, or skipped: the card is the signal's, as it always was.

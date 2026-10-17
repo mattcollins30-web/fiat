@@ -421,6 +421,8 @@ func show_state(s) -> void:
 			var on_now: int = mini(m["remaining"], sim.contact(t))
 			_fight["head"].text += " · %d ON YOU%s" % [on_now, (" · %d MORE" % (m["remaining"] - on_now)) if m["remaining"] > on_now else ""]
 		_view.show_state(sim, m)
+		if sound != null:
+			sound.view = _view                   # the duck's low-pass, and where their shots come from (17 Oct)
 		_fig_bars()
 	# on them: the chips under their bar; nothing while there's no one to be on
 	var them: Array = sim.dots_on_them()
