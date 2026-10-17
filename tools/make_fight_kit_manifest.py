@@ -123,7 +123,8 @@ EMPTY = "Nobody in the scene, empty and waiting."
 LAYOUT = ("Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, "
           "a dark doorway or gap on the left side well down the scene, and room in the right foreground. "
           "The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to "
-          "edge: no repeated sections, no seams.")
+          "edge: no repeated sections, no seams. The bottom fifth of the scene is plain open ground running to the frame's edge, "
+          "nothing standing in the foreground: no walls, rubble or cover there, it is drawn over later.")
 SITES = [
     ("the_allotments", "across overgrown allotments at the edge of a town: sheds of corrugated iron and old doors, runner-bean canes, water butts, a polytunnel with its plastic torn, a rusting wheelbarrow, a shed with its door hanging open",
      "a raised vegetable bed built of old railway sleepers, weeds and a broken cane over the top"),
@@ -134,7 +135,7 @@ SITES = [
     ("ransacked_streets", "down a ransacked terraced street: front doors kicked in, a sofa in the road, a car on its roof, washing still on a line between houses, a ginnel between two terraces",
      "a low front-garden wall of pebbledash with a toppled wheelie bin against it"),
     ("the_parade", "along a parade of shops on an estate: shutters down and sprayed, a bookie's and a chippy and a launderette, a bus shelter with its glass out, a car burnt out at the kerb, an alley between two shops",
-     "a low wall of grimy red brick with a broken concrete coping, moss in the joints, a crisp packet caught on it"),
+     "a low wall of grimy red brick with a broken concrete coping, moss in the joints, a weed growing from a crack"),
     ("the_retail_park", "across a retail park car park: big box stores with their shutters half up, abandoned cars at angles, a trolley shelter, lamp posts, a carpet warehouse's loading bay open on the left",
      "a long concrete planter with dead shrubs and a run of trolleys jammed against it"),
     ("the_pleasure_park", "into a dead seaside pleasure park: a stalled waltzer, a ghost train's dark entrance, a burger kiosk with its hatch up, bunting in tatters, a helter-skelter in the haze",
@@ -167,7 +168,7 @@ def wall_job(key, cover, seed):
             "description": ("Seen very close from behind, running unbroken across the whole width of the frame at the bottom: " + cover +
                             ", as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no "
                             "repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the "
-                            "lower two thirds of the image. " + TAIL),
+                            "lower two thirds of the image. No packaging, signs or anything with lettering on it. " + TAIL),
             "_where": "the wall at the frame's drawn size: %s" % key}
 
 
