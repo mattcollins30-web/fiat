@@ -6918,6 +6918,9 @@ func _extract() -> void:
 				log_event(Words.DEEDS["held"])
 		elif stash_put(it):
 			stashed += 1
+		elif it.get("mythic", false):
+			stash.append(it)                 # a mythic comes home whatever the room, as the deeds do (17 Oct)
+			stashed += 1
 		else:
 			continue
 		if not Items.rig_item(it):

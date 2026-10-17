@@ -8797,6 +8797,18 @@ func _full_pack_checks(sim) -> void:
 		_check(sim.stash.any(func(x): return int(x["id"]) == int(fm["id"])), "a mythic left on the floor was lost on the %s" % ending)
 		if sim.on_mission():
 			sim.extract_now()
+	# home to a full stash (17 Oct): a mythic comes in whatever the room, as the deeds do
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var mh: Dictionary = sim.mission
+	var g4 := 0
+	while sim.stash_put(sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])) and g4 < 2000:
+		g4 += 1
+	var hm: Dictionary = Items.roll_unique(sim._unique_named("The Last Orders"), sim.rng)
+	_check(not sim.stash_fits(hm), "the fixture: the stash isn't full")
+	mh["found"].append(hm)
+	sim.extract_now()
+	_check(sim.stash.any(func(x): return int(x["id"]) == int(hm["id"])), "a mythic brought home to a full stash was left at the gate")
 	sim.loot_by_hand = by_hand_was
 	sim.load_dict(saved)
 	print("a full pack ok: by hand to the floor; on auto only an upgrade swaps in, and never out; a mythic always home")
