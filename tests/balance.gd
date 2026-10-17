@@ -197,6 +197,9 @@ func _elements(hours: float, forced: String) -> void:
 ## The firsts the pass's gates read (15 Oct, docs/design/balance_gates.md), each the hour it first came true.
 func _gate_firsts(sim, g: Dictionary, loose_seen: bool) -> void:
 	var h: float = snappedf(sim.elapsed / 3600.0, 0.01)
+	if float(g["gk_at"]) < 0.0 and sim.bosses_beaten[0]:
+		g["gk_at"] = h
+		g["level_at_gk"] = sim.level()
 	if float(g["manager_at"]) < 0.0 and sim.bosses_beaten[2]:
 		g["manager_at"] = h
 	if float(g["qm_at"]) < 0.0 and sim.bosses_beaten[3]:
@@ -251,7 +254,10 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0,
 		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
 		"manager_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
-		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0}
+		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
+		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
+		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
+		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1}
 	var boss_uniques: Dictionary = {}
 	for u in Data.UNIQUES:
 		if u.get("boss", false):
@@ -307,6 +313,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 				var key := "%d/%d" % [i, sim.best_depth[i]]
 				if sim.best_depth[i] > 0 and not depth_seen.has(key):
 					depth_seen[key] = true
+					if int(sim.best_depth[i]) == 1:
+						g["first_clear_lv"][str(i)] = sim.level()
 					g["depth_clears"].append([snappedf(sim.elapsed / 3600.0, 0.01), i, sim.best_depth[i]])
 			if sim.lorry_done and first_ladder.is_empty():
 				var l0 := Time.get_ticks_usec()

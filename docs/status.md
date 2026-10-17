@@ -5388,3 +5388,30 @@ laid at FLAVOUR_H each, 20 px, under the label's real 22 (font height and line s
 second. Now two rows are measured from the font at 16, 15 and 14, the first whose two rows the room holds and whose wrap
 falls in two lines; else the whole sentences of one row. Smoke: the shot's own pair, every row showing, inside the box.
 The smoke clean with the game closed (one earlier run passed bar the saves guard: Matt was playing).
+
+**The quick balance pass (17 Oct, Matt's second playtest: "too quick to the point that the outskirts are pointless - I
+hit the parade while still at level 1 and dropping level 4 gear at level 1 feels off").** Gates set up front: 16, the
+level at each site's first clear from the Parade on within 1 under and 3 over the level to wear its gear; 17, the
+Gamekeeper beaten at 0.3-0.5 bot hours (Matt: "about 25 minutes" by hand) at level 3 or more; the Bank and the
+Quartermaster 20 min later (1.1-1.7 h, 1.4-2.1 h); the level at the Quartermaster 20-24 (the Barracks' gear is 21).
+Reads (summary_E0/E1/E2.md under docs/balance):
+- E0, the build as it was, 5 RED: the Parade at level 2 (gear 4), the Bank at 10 (gear 14), the Gamekeeper at 6 min at level 1.
+- E1, 4 RED: the Outskirts and the Streets 2.5x the HP, 2x the fire, 3x the XP; the Town and the City XP x1.3; the City's
+  quality .38 to .32 (the loot gate's epic share 18% to 15.8%, green). The Gamekeeper overshot to 48 min; the Town two short.
+- E2, 5 RED (stopped here, Matt: "unless there's something major, stop after this one"): the Outskirts eased a quarter
+  (240/290/330 HP, 0.35-0.5 fire), the Streets 330/0.5; the Town's XP 17/24/28, the Retail Park's 10, the City's 37/45/57.
+  The Outskirts green (0.4 h at level 3); levels/gear Parade 4/4, Retail Park 5/6, Pleasure Park 8/9, Shopping Centre
+  10/11, Bank 12/14, Services 16/16, Hospital 18/19, Barracks 21/21 - the Bank one past the gate's one under. Red: the
+  Bank's time 1.0 h (a bot timing gate, Matt's playtest calibrates it), and the slowest build's noise - the band 0.9-2.2 h,
+  the Scrapper as fire at level 26 at the Quartermaster and a 22-min signal gap. Matt playtests on this; the rest after.
+
+**The fight kit's manifest (17 Oct, Matt: "per weapon fight arms, wall regens, missing art for the fight stat boxes",
+before the parked Doom-style fight).** tools/make_fight_kit_manifest.py writes two: the test
+(tools/pixellab_fight_kit_test_manifest.json, 14 jobs: hands for a bat, a pump shotgun, a bullpup, a carbine, a crossbow,
+a big revolver, a knife and a garage rifle; the Parade's plate and wall at the new size; the four tile icons) and the set
+(tools/pixellab_fight_kit_manifest.json, 110: hands for all 82 gun bases, 12 plates and 12 walls, the 4 icons). Hands to
+art/fight/hands/<base>.png at 280x210 (the 256x192 at HANDS_SCALE x VIEW_SCALE on screen), styled on each base's item art
+and framed on the kind's hands; plates 950x409 and walls 950x221 (688x296 / 688x160 at VIEW_SCALE) to art/fight_new/
+beside the live ones; icons their_fire, kills, armour, rounds to art/ui_new/ (64x64, styled on Matt's dps and hp). The
+code that reads them (a base's hands first, the kind's the fallback; each new picture's muzzle point; the new plates and
+walls; the tiles' icons) once the test pieces are judged.

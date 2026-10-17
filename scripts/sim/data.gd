@@ -746,7 +746,7 @@ const MYTHIC_SEARCH_FINDS := 2         # the Removal Van: finds a search, more
 const MYTHIC_PACK := 4                 # and the pack this many times over
 const MYTHIC_PAY := 2.0                # the Freedom of the Borough: tins, notes and XP
 const SET_CAP := 0.02
-const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.38]     # D7: the City at .45 read 18% epic or better in its gear (gate 12: 8-16%)
+const ZONE_QUALITY := [0.0, 0.15, 0.30, 0.32]     # E1 (17 Oct): .38 to .32, the City read 18% epic or better (gate 12: 8-16%). D7: the City at .45 read 18% epic or better in its gear (gate 12: 8-16%)
 ## Uniques by tier (12 Oct, docs/design/uniques.md): every unique but a paper has a band and a range of tiers. It drops at
 ## the find's loot tier inside its range, on the best base of its slot (and gun type) at that tier; a loose one only where
 ## the find's tier is inside its range, the band's weight picking among those that can.
@@ -1241,41 +1241,41 @@ const OUTSKIRTS_SITES := 3         # the sites before the Streets: a site's leve
 ## type it leans to, and the bases found there and nowhere else.
 const TIERS := [
 	# the Outskirts (12 Oct): gentler than the Streets, no crew; finds at tier 1
-	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 120.0, "dps": 0.2, "drop": 0.35, "loot_tier": 1, "xp": 1, "cash": 3,
+	{"name": "The Allotments", "zone": 0, "pool": 4, "hp": 240.0, "dps": 0.35, "drop": 0.35, "loot_tier": 1, "xp": 3, "cash": 3,     # E1-2 (17 Oct, Matt: the Outskirts pointless, the Parade at level 1-2): 120/0.2/1; E1 300/0.4 put the Gamekeeper at 0.8 h
 		"shape": {"pool": 14, "hp": 0.6, "dps": 0.7, "patrol": 0.9, "cash": 0.7},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 1, "Backpack": 2}, "type": "melee", "only": ["A seed order", "An allotment waiting list"]}},
-	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 150.0, "dps": 0.25, "drop": 0.4, "loot_tier": 1, "xp": 1, "cash": 4,
+	{"name": "The Garden Centre", "zone": 0, "pool": 5, "hp": 290.0, "dps": 0.42, "drop": 0.4, "loot_tier": 1, "xp": 3, "cash": 4,     # E1-2: 150/0.25/1
 		"shape": {"pool": 13, "hp": 0.7, "dps": 0.8, "patrol": 1.0, "cash": 0.9, "med": 1.5},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 2, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "improvised", "only": ["A loyalty card"]}},
-	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 170.0, "dps": 0.3, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 5,
+	{"name": "Top Farm", "zone": 0, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 1, "xp": 6, "cash": 5,     # E1-2: 170/0.3/2
 		"shape": {"pool": 12, "hp": 0.8, "dps": 0.8, "patrol": 1.1, "cash": 1.0, "ammo": 1.5},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "shotgun", "only": ["A milk quota letter"]}},
-	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 200.0, "dps": 0.4, "drop": 0.4, "loot_tier": 1, "xp": 2, "cash": 6,
+	{"name": "Ransacked Streets", "zone": 1, "pool": 6, "hp": 330.0, "dps": 0.5, "drop": 0.4, "loot_tier": 1, "xp": 5, "cash": 6,     # E1-2: 200/0.4/2
 		"shape": {"pool": 14, "hp": 0.7, "dps": 0.8, "patrol": 0.8, "cash": 0.9},
 		"drops": {"slots": {"Primary": 2, "Secondary": 3, "Helmet": 2, "Armour": 1, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Pipe shotgun", "Carrier bags"]}},
 	{"name": "The Parade", "zone": 1, "pool": 10, "hp": 280.0, "dps": 0.35, "drop": 0.4, "loot_tier": 3,     # 2 to 3 (the pass, 13 Oct): with the Fence and the Workshop shut till the heads, tier-2 kit stalled a third of the plain reads under the Retail Park for hours
-		 "xp": 3, "cash": 9,
+		 "xp": 5, "cash": 9,     # E1: 3
 		"shape": {"pool": 12, "hp": 0.9, "dps": 0.8, "patrol": 1.0, "cash": 1.2},
 		"drops": {"slots": {"Primary": 1, "Secondary": 3, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "pistol", "only": ["Sawn-off", "Holdall"]}},
-	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 6, "cash": 14,
+	{"name": "The Retail Park", "zone": 1, "pool": 14, "hp": 420.0, "dps": 0.7, "drop": 0.45, "loot_tier": 3, "xp": 10, "cash": 14,     # E1-2: 6
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 1.0, "cash": 1.0, "att": 2.0},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "improvised", "only": ["Garage-built rifle", "Drum magazine", "Wire stock"]}},
-	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 1100.0, "dps": 1.4, "drop": 0.45, "loot_tier": 3, "xp": 10, "cash": 22,
+	{"name": "The Pleasure Park", "zone": 2, "pool": 12, "hp": 1100.0, "dps": 1.4, "drop": 0.45, "loot_tier": 3, "xp": 17, "cash": 22,     # E1-2: the Town 10/15/20 to 17/24/28 (the Town two levels under its gear at E1), the City 30/36/46 to 37/45/57
 		"shape": {"pool": 10, "hp": 1.0, "dps": 1.1, "patrol": 1.2, "cash": 1.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 1, "Rig": 3, "Backpack": 3}, "type": "shotgun", "only": ["Framed pack", "Fishing vest"]}},
-	{"name": "Shopping Centre", "zone": 2, "pool": 16, "hp": 1300.0, "dps": 1.8, "drop": 0.5, "loot_tier": 4, "xp": 15, "cash": 24,
+	{"name": "Shopping Centre", "zone": 2, "pool": 16, "hp": 1300.0, "dps": 1.8, "drop": 0.5, "loot_tier": 4, "xp": 24, "cash": 24,
 		"shape": {"pool": 11, "hp": 1.1, "dps": 1.0, "patrol": 0.9, "cash": 1.1},
 		"drops": {"slots": {"Primary": 1, "Secondary": 2, "Helmet": 3, "Armour": 3, "Rig": 1, "Backpack": 1}, "type": "pistol", "only": ["Tactical pistol", "Ballistic vest"]}},
-	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 1500.0, "dps": 2.4, "drop": 0.5, "loot_tier": 5, "xp": 20, "cash": 30,
+	{"name": "The Bank", "zone": 2, "pool": 20, "hp": 1500.0, "dps": 2.4, "drop": 0.5, "loot_tier": 5, "xp": 28, "cash": 30,
 		"shape": {"pool": 7, "hp": 1.4, "dps": 1.3, "patrol": 1.5, "cash": 1.6, "paper": 3.0},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 2, "Rig": 1, "Backpack": 1}, "type": "smg", "only": ["Compact pistol", "Light plates"]}},
-	{"name": "The Services", "zone": 3, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 30, "cash": 40,
+	{"name": "The Services", "zone": 3, "pool": 16, "hp": 2600.0, "dps": 3.2, "drop": 0.5, "loot_tier": 5, "xp": 37, "cash": 40,
 		"shape": {"pool": 12, "hp": 1.0, "dps": 1.0, "patrol": 0.7, "cash": 1.0, "ammo": 2.5},
 		"drops": {"slots": {"Primary": 2, "Secondary": 2, "Helmet": 1, "Armour": 1, "Rig": 2, "Backpack": 2}, "type": "smg", "only": ["A delivery note", "Belt links", "Depot rounds", "Cargo frame"]}},
-	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 36, "cash": 44,
+	{"name": "The Hospital", "zone": 3, "pool": 18, "hp": 3300.0, "dps": 3.9, "drop": 0.5, "loot_tier": 6, "xp": 45, "cash": 44,
 		"shape": {"pool": 10, "hp": 1.2, "dps": 1.0, "patrol": 1.0, "cash": 0.9, "med": 3.0},
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
-	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 46, "cash": 50,
+	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 57, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
 		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Issue plates", "Night optic"]}},
 ]

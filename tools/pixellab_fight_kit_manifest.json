@@ -1,0 +1,2254 @@
+{
+ "_readme": [
+  "FIAT FIGHT KIT, THE SET (17 Oct, Matt): hands for every gun base (82), every site's plate and wall at the frame's drawn size (24), the four tile icons. After the test reads; the test's pieces are skipped as made.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_kit_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)",
+  "Hands: art/fight/hands/<base>.png, 280x210, styled on the base's item art and framed on the kind's current hands; the code looks a base up first, the kind's picture its fallback.",
+  "Walls and plates: art/fight_new/<site>_cover.png 950x221 and _plate.png 950x409, the size the bigger frame draws them; the live ones in art/fight/ stay until these are judged.",
+  "Icons: art/ui_new/their_fire, kills, armour, rounds - 64x64, drawn at 36 px on the run's tiles beside Matt's dps and hp. Never written over art/ui.",
+  "Regenerate with python3 tools/make_fight_kit_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight/hands/hand_me_down_nail_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/hand_me_down_nail_gun.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a hand-me-down nail gun, held forward like a pistol in one hand, its hose trailing back past the wrist, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Hand-me-down nail gun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/nail_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/nail_gun.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a nail gun, held forward like a pistol in one hand, its hose trailing back past the wrist, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Nail gun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/bolt_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bolt_gun.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bolt gun, held forward like a pistol in one hand, a battery pack on its grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bolt gun (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/pipe_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pipe_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pipe shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pipe shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/crossbow.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/crossbow.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a crossbow, shouldered, the bow's limbs wide across the frame, the bolt pointing forward up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Crossbow (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/garage_built_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/garage_built_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a garage-built rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Garage-built rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/farmer_s_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/farmer_s_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a farmer's shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Farmer's shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/sawn_off.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/sawn_off.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a sawn-off, held forward low in both hands, the short double barrels pointing up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Sawn-off (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/pump_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pump_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pump shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pump shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/riot_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/riot_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a riot shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Riot shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/semi_auto_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/semi_auto_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a semi-auto shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Semi-auto shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/semi_auto_22.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/semi_auto_22.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a semi-auto .22, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Semi-auto .22 (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/old_303.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97012,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/old_303.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a old .303, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Old .303 (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/stalking_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97013,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/stalking_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a stalking rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Stalking rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/army_bullpup.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97014,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/army_bullpup.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a army bullpup, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Army bullpup (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/ar_pattern_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97015,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/ar_pattern_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a ar-pattern rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: AR-pattern rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/battle_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97016,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/battle_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a battle rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Battle rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/workshop_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97017,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/workshop_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a workshop smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Workshop SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/police_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97018,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/police_carbine.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a police carbine, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Police carbine (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/security_guard_s_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97019,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/security_guard_s_carbine.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a security guard's carbine, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Security guard's carbine (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/courier_s_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97020,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/courier_s_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a courier's smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Courier's SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/armoured_car_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97021,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/armoured_car_gun.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a armoured car gun, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Armoured car gun (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/riot_squad_s_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97022,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/riot_squad_s_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a riot squad's smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Riot squad's SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/workshop_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97023,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/workshop_carbine.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a workshop carbine, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Workshop carbine (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/drum_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97024,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/drum_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a drum shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Drum shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/scoped_308.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97025,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/scoped_308.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a scoped .308, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Scoped .308 (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/army_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97026,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/army_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a army smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Army SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/tooled_up_garage_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97027,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/tooled_up_garage_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a tooled-up garage rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Tooled-up garage rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/automatic_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97028,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/automatic_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a automatic shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Automatic shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/sniper_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97029,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/sniper_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a sniper rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Sniper rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/armourer_s_carbine.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97030,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/armourer_s_carbine.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a armourer's carbine, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Armourer's carbine (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/police_marksman_s_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97031,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/police_marksman_s_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a police marksman's rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Police marksman's rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/riot_squad_s_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97032,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/riot_squad_s_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a riot squad's shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Riot squad's shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/claw_hammer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97033,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/claw_hammer.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a claw hammer, raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Claw hammer (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/spiked_bat.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97034,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/spiked_bat.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a spiked bat, raised, ready to swing, gripped near the end of the handle, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Spiked bat (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/machete.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97035,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/machete.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a machete, raised, ready to swing, the edge catching the light, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Machete (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/pipe_wrench.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97036,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/pipe_wrench.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a pipe wrench, raised in the right hand, ready to swing, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Pipe wrench (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/fire_axe.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97037,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/fire_axe.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a fire axe, raised in both hands over the right shoulder, the red head catching the light, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Fire axe (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/bayonet_on_a_stick.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97038,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bayonet_on_a_stick.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bayonet on a stick, held forward in both hands like a spear, the bayonet's point up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bayonet on a stick (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/sledgehammer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97039,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/sledgehammer.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a sledgehammer, raised in both hands over the right shoulder, ready to swing down, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Sledgehammer (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/breaker_bar.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97040,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/breaker_bar.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a breaker bar, raised in both hands over the right shoulder, ready to swing, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Breaker bar (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/assault_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97041,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/assault_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a assault shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Assault shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/marksman_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97042,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/marksman_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a marksman rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Marksman rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/section_gun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97043,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/section_gun.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a section gun, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Section gun (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/belt_fed_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97044,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/belt_fed_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a belt-fed smg, held forward in both hands, a belt of rounds hanging from its side, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Belt-fed SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/security_service_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97045,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/security_service_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a security service smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Security service SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/close_protection_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97046,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/close_protection_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a close protection smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Close protection SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/special_forces_smg.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97047,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/special_forces_smg.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a special forces smg, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Special forces SMG (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/range_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97048,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/range_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a range rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Range rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/service_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97049,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/service_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a service rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Service rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/anti_materiel_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97050,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/anti_materiel_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a anti-materiel rifle, shouldered, its long heavy barrel pointing forward up the frame on a bipod, one hand at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Anti-materiel rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/breaching_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97051,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/breaching_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a breaching shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Breaching shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/entry_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97052,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/entry_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a entry shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Entry shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/combat_shotgun.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97053,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/combat_shotgun.png",
+   "reference_images": [
+    "res://art/fight/hands_shotgun.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a combat shotgun, shouldered, the barrel pointing forward up the frame, one hand at the fore-end and one at the grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Combat shotgun (primary; falls back to hands_shotgun)"
+  },
+  {
+   "out": "art/fight/hands/bolt_action_garage_rifle.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97054,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bolt_action_garage_rifle.png",
+   "reference_images": [
+    "res://art/fight/hands_rifle.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bolt-action garage rifle, shouldered, the barrel pointing forward up the frame, one hand at the grip and one under the fore-end, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bolt-action garage rifle (primary; falls back to hands_rifle)"
+  },
+  {
+   "out": "art/fight/hands/workshop_gauss.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97055,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/workshop_gauss.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a workshop gauss, held forward in both hands, coils of copper wire round its barrel, a car battery taped under it, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Workshop gauss (primary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/the_engineer_s_piece.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97056,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/the_engineer_s_piece.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a the engineer's piece, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: The engineer's piece (primary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/demolition_bar.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97057,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/demolition_bar.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a demolition bar, raised in both hands over the right shoulder, ready to swing, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Demolition bar (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/rescue_axe.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97058,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/rescue_axe.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a rescue axe, raised in both hands over the right shoulder, ready to swing, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Rescue axe (primary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/door_ram.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97059,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/door_ram.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a door ram, held forward in both hands by its two handles, its flat steel face aimed up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Door ram (primary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/converted_blank_firer.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97060,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/converted_blank_firer.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a converted blank-firer, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Converted blank-firer (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/flare_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97061,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/flare_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a flare pistol, held out forward in one hand, its wide orange barrel pointing up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Flare pistol (secondary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/knife.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97062,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/knife.png",
+   "reference_images": [
+    "res://art/fight/hands_blade.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a knife, held low and forward in the right hand, the blade up, the left hand out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Knife (secondary; falls back to hands_blade)"
+  },
+  {
+   "out": "art/fight/hands/knuckle_duster.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97063,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/knuckle_duster.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a knuckle duster, worn on a clenched right fist raised forward, the left fist up beside it like a boxer's guard, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Knuckle duster (secondary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/cosh.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97064,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/cosh.png",
+   "reference_images": [
+    "res://art/fight/hands_melee.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a cosh, raised in the right hand, ready to swing, its leather strap round the wrist, the other hand held out for balance, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Cosh (secondary; falls back to hands_melee)"
+  },
+  {
+   "out": "art/fight/hands/air_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97065,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/air_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_improvised.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a air pistol, held out forward in one hand, the slim barrel pointing up the frame, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Air pistol (secondary; falls back to hands_improvised)"
+  },
+  {
+   "out": "art/fight/hands/service_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97066,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/service_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a service pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Service pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/old_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97067,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/old_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a old revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Old revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/compact_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97068,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/compact_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a compact pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Compact pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/machine_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97069,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/machine_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a machine pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Machine pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/big_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97070,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/big_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a big revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Big revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/tactical_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97071,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/tactical_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a tactical pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Tactical pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/officer_s_revolver.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97072,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/officer_s_revolver.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a officer's revolver, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Officer's revolver (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/army_machine_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97073,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/army_machine_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a army machine pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Army machine pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/issue_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97074,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/issue_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a issue pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Issue pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/automatic_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97075,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/automatic_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a automatic pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Automatic pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/close_quarters_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97076,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/close_quarters_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a close quarters pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Close quarters pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/bodyguard_s_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97077,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/bodyguard_s_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a bodyguard's pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Bodyguard's pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/special_issue_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97078,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/special_issue_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_pistol.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a special issue pistol, held out forward and slightly up in both hands, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Special issue pistol (secondary; falls back to hands_pistol)"
+  },
+  {
+   "out": "art/fight/hands/diplomatic_machine_pistol.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97079,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/diplomatic_machine_pistol.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a diplomatic machine pistol, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Diplomatic machine pistol (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/embassy_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97080,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/embassy_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a embassy pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Embassy PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight/hands/protection_squad_pdw.png",
+   "width": 280,
+   "height": 210,
+   "no_background": true,
+   "seed": 97081,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/items/protection_squad_pdw.png",
+   "reference_images": [
+    "res://art/fight/hands_smg.png"
+   ],
+   "description": "First-person view of the player's own two hands in fingerless wool gloves holding a protection squad pdw, held out forward in both hands, one at the grip and one on the fore-grip, coming in from the bottom right corner of the frame, as in a light-gun arcade game; the sleeves of a worn work jacket at the wrists. Exactly the weapon in the style image, its shape and colours. Only the hands and what they hold, coming in from the bottom right edge. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "your hands: Protection squad PDW (secondary; falls back to hands_smg)"
+  },
+  {
+   "out": "art/fight_new/the_allotments_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97082,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_allotments_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across overgrown allotments at the edge of a town: sheds of corrugated iron and old doors, runner-bean canes, water butts, a polytunnel with its plastic torn, a rusting wheelbarrow, a shed with its door hanging open. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_allotments (the live art/fight/the_allotments_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_allotments_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97083,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_allotments_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a raised vegetable bed built of old railway sleepers, weeds and a broken cane over the top, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_allotments"
+  },
+  {
+   "out": "art/fight_new/the_garden_centre_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97084,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_garden_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down an aisle of a looted garden centre: a glasshouse roof with panes out, toppled shelving of pots, dead plants on trolleys, a café counter, the exit doors at the end standing open. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_garden_centre (the live art/fight/the_garden_centre_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_garden_centre_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97085,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_garden_centre_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a pallet stacked with split compost bags, soil spilling over the edge, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_garden_centre"
+  },
+  {
+   "out": "art/fight_new/top_farm_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97086,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/top_farm_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a farmyard: a stone barn with its big doors open, a rusting tractor, round bales in black plastic, a muddy yard with puddles, a farmhouse back door ajar. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: top_farm (the live art/fight/top_farm_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/top_farm_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97087,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/top_farm_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a low dry-stone wall with a gate post, nettles at its foot, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: top_farm"
+  },
+  {
+   "out": "art/fight_new/ransacked_streets_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97088,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/ransacked_streets_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a ransacked terraced street: front doors kicked in, a sofa in the road, a car on its roof, washing still on a line between houses, a ginnel between two terraces. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: ransacked_streets (the live art/fight/ransacked_streets_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/ransacked_streets_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97089,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/ransacked_streets_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a low front-garden wall of pebbledash with a toppled wheelie bin against it, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: ransacked_streets"
+  },
+  {
+   "out": "art/fight_new/the_parade_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97090,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_parade_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking along a parade of shops on an estate: shutters down and sprayed, a bookie's and a chippy and a launderette, a bus shelter with its glass out, a car burnt out at the kerb, an alley between two shops. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_parade (the live art/fight/the_parade_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_parade_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97091,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_parade_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a low wall of grimy red brick with a broken concrete coping, moss in the joints, a crisp packet caught on it, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_parade"
+  },
+  {
+   "out": "art/fight_new/the_retail_park_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97092,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_retail_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a retail park car park: big box stores with their shutters half up, abandoned cars at angles, a trolley shelter, lamp posts, a carpet warehouse's loading bay open on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_retail_park (the live art/fight/the_retail_park_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_retail_park_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97093,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_retail_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a long concrete planter with dead shrubs and a run of trolleys jammed against it, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_retail_park"
+  },
+  {
+   "out": "art/fight_new/the_pleasure_park_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97094,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_pleasure_park_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking into a dead seaside pleasure park: a stalled waltzer, a ghost train's dark entrance, a burger kiosk with its hatch up, bunting in tatters, a helter-skelter in the haze. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_pleasure_park (the live art/fight/the_pleasure_park_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_pleasure_park_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97095,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_pleasure_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: the side of an overturned dodgem car, its pole bent, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_pleasure_park"
+  },
+  {
+   "out": "art/fight_new/shopping_centre_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97096,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/shopping_centre_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking along a shopping centre's upper mall in failing daylight from the roof: shop shutters, a dead escalator, a fountain dried up, a department store's dark entrance, litter everywhere. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: shopping_centre (the live art/fight/shopping_centre_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/shopping_centre_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97097,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/shopping_centre_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a row of upturned mall benches and a broken planter edge, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: shopping_centre"
+  },
+  {
+   "out": "art/fight_new/the_bank_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97098,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_bank_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a high-street bank's banking hall: teller windows with their glass starred, a queue rope fallen, leaflets on the floor, a door marked private open onto the dark, the vault corridor beyond. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_bank (the live art/fight/the_bank_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_bank_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97099,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: the front of a wooden counter with a cracked glass screen above it, pens on chains hanging, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_bank"
+  },
+  {
+   "out": "art/fight_new/the_services_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97100,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_services_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across a motorway services forecourt: petrol pumps, a shop with its glass smashed, a jack-knifed lorry, the canopy lights out, the slip road in haze. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_services (the live art/fight/the_services_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_services_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97101,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_services_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a run of steel crash barrier, dented, with a traffic cone tipped against it, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_services"
+  },
+  {
+   "out": "art/fight_new/the_hospital_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97102,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_hospital_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking down a hospital corridor: trolleys left at angles, curtains pulled round bays, a nurses' station, fire doors propped open, signs to wards, strip lights out but for one. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_hospital (the live art/fight/the_hospital_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_hospital_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97103,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_hospital_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: an overturned hospital trolley and its thin mattress on its side, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_hospital"
+  },
+  {
+   "out": "art/fight_new/the_barracks_plate.png",
+   "width": 950,
+   "height": 409,
+   "no_background": false,
+   "seed": 97104,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_barracks_plate.png",
+   "description": "A first-person view at crouching eye level, as if from behind cover in a light-gun arcade game, looking across an army barracks' parade ground: brick accommodation blocks, a guardroom with its barrier up, a Land Rover with flat tyres, a flagpole with no flag, a hangar door open on the left. Nobody in the scene, empty and waiting. Composed for three figures to stand in later: clear open ground in the middle distance just right of centre, a dark doorway or gap on the left side well down the scene, and room in the right foreground. The ground runs across the lower third; the horizon sits a third of the way down. One continuous scene edge to edge: no repeated sections, no seams. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the plate at the frame's drawn size: the_barracks (the live art/fight/the_barracks_plate.png its style)"
+  },
+  {
+   "out": "art/fight_new/the_barracks_cover.png",
+   "width": 950,
+   "height": 221,
+   "no_background": true,
+   "seed": 97105,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight/the_barracks_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame at the bottom: a low wall of sandbags, some split, a strip of hessian flapping, as the cover a player crouches behind in a light-gun arcade game. One continuous piece edge to edge, no repeated sections, no seams. Only the cover, nothing above or behind it; its top edge uneven, filling the lower two thirds of the image. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall at the frame's drawn size: the_barracks"
+  },
+  {
+   "out": "art/ui_new/their_fire.png",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 97106,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a dented square of steel plate with a bullet strike punched into it, the lead smeared and the paint scorched round the hole, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "the run's tile: Their fire (36 px beside the figure, with Matt's dps and hp)"
+  },
+  {
+   "out": "art/ui_new/kills.png",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 97107,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a scrap of grey slate with five chalk tally marks on it, four upright and one struck across, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "the run's tile: Kills (36 px beside the figure, with Matt's dps and hp)"
+  },
+  {
+   "out": "art/ui_new/armour.png",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 97108,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a dented steel chest plate from a stab vest, scuffed matt black with frayed webbing straps, seen front on. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "the run's tile: Armour (36 px beside the figure, with Matt's dps and hp)"
+  },
+  {
+   "out": "art/ui_new/rounds.png",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "seed": 97109,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small open cardboard box of red shotgun shells standing in rows, the flap torn, seen from above at a slight angle. One object centred and filling the frame, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "_where": "the run's tile: Rounds (36 px beside the figure, with Matt's dps and hp)"
+  }
+ ]
+}

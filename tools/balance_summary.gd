@@ -17,10 +17,16 @@ const FOLDER := "res://docs/balance"
 # the pass's gates (15 Oct, Matt approved; docs/design/balance_gates.md): twice the campaign as it stands, the bot at
 # BOT_PACE of a hand's time (the 13 Oct reads' Bank against Matt's own the next day; his playtest re-measures it)
 const BOT_PACE := 0.85
-const BANK := [0.8, 1.4]        # the Manager beaten, the element builds' median, bot hours: Matt's playtest (16 Oct) 1.3 h by hand
-const QM := [1.1, 1.8]          # the Quartermaster beaten, the campaign done: the same playtest's 1.5 h by hand (was 1.1-1.6 / 1.6-2.3)
+const BANK := [1.1, 1.7]        # the Manager beaten, the element builds' median, bot hours: Matt's playtest (16 Oct) 1.3 h by hand, and the Outskirts' 20 min more (17 Oct; was 0.8-1.4)
+const QM := [1.4, 2.1]          # the Quartermaster beaten, the campaign done: the same playtest's 1.5 h by hand and the 20 min (17 Oct; was 1.1-1.8)
+const GK := [0.3, 0.5]          # the Gamekeeper beaten, the Outskirts done (17 Oct, Matt: "about 25 minutes" by hand)
+const GK_LEVEL := 3             # and the runner at least this level leaving them
+const SITE_LEVEL_UNDER := 1     # at a site's first clear, the runner no more than this under the level to wear its gear (17 Oct, Matt)
+const SITE_LEVEL_OVER := 3      # nor more than this over it (the Outskirts' grind not a level ahead of the gear for long)
+const Sim := preload("res://scripts/sim/sim.gd")
+const Data := preload("res://scripts/sim/data.gd")
 const QM_BAND := 2.0            # the slowest element build's Quartermaster within this of the fastest
-const QM_LEVEL := [18, 22]      # the runner's level at the Quartermaster
+const QM_LEVEL := [20, 24]      # the runner's level at the Quartermaster (17 Oct: was 18-22; the Barracks' gear is level 21, gate 16 has him within one of it)
 const LV30_AFTER := 2.0         # level 30 within this many hours of the Quartermaster
 const SIGNAL_GAP := 1.0 / 3.0   # from the Radio's opening to hour 12: a signal made at least every 20 min
 const REACH_GAP := 3.0          # and the reach never more than 3 h without a level (16 Oct, Matt: was +1 every 45 min)
@@ -242,6 +248,32 @@ func _pace_rows(rows: Array, full: Array) -> void:
 		if q < 0.0 or l30 < 0.0 or l30 - q > LV30_AFTER:
 			late.append("%s %s after him" % [bd["build"], ("%.1f h" % (l30 - q)) if q >= 0.0 and l30 >= 0.0 else "never"])
 	rows.append(["5. The capstone", "level 30 within %.0f h of the Quartermaster" % LV30_AFTER, ("late: " + ", ".join(late)) if not late.is_empty() else "every build", late.is_empty()])
+	# 14 and 15 (17 Oct, Matt's playtest: the Parade at level 1-2 dropping level 4 gear, the Outskirts pointless)
+	var off_sites: Array = []
+	var site_words: Array = []
+	for i in range(Data.OUTSKIRTS_SITES + 1, Data.TIERS.size()):     # the Parade on: the Outskirts' and the Streets' gear is level 1
+		var lvs: Array = []
+		for bd in full:
+			var fl: Dictionary = bd.get("first_clear_lv", {})
+			if fl.has(str(i)):
+				lvs.append(float(fl[str(i)]))
+		var wear: int = Sim.wear_of(Sim.lv_at(i, 1))
+		if lvs.is_empty():
+			off_sites.append("%s never" % Data.TIERS[i]["name"])
+			continue
+		var med: int = int(_median(lvs))
+		site_words.append("%s %d/%d" % [str(Data.TIERS[i]["name"]).replace("The ", ""), med, wear])
+		if med < wear - SITE_LEVEL_UNDER or med > wear + SITE_LEVEL_OVER:
+			off_sites.append("%s %d (gear %d)" % [Data.TIERS[i]["name"], med, wear])
+	rows.append(["16. Levels against the sites", "at each site's first clear from the Parade on, the median build within %d under and %d over the level to wear its gear" % [SITE_LEVEL_UNDER, SITE_LEVEL_OVER],
+		(("off: " + ", ".join(off_sites) + " · ") if not off_sites.is_empty() else "") + "level/gear: " + ", ".join(site_words), off_sites.is_empty()])
+	var gks: Array = full.filter(func(bd): return float(bd.get("gk_at", -1.0)) >= 0.0).map(func(bd): return float(bd["gk_at"]))
+	var gk_lvs: Array = full.filter(func(bd): return int(bd.get("level_at_gk", -1)) >= 0).map(func(bd): return float(bd["level_at_gk"]))
+	var gk_med: float = _median(gks) if gks.size() == full.size() and not gks.is_empty() else -1.0
+	var gk_lv: int = int(_median(gk_lvs)) if not gk_lvs.is_empty() else -1
+	rows.append(["17. The Outskirts", "the Gamekeeper beaten at %.1f-%.1f h, the median build, at level %d or more" % [GK[0], GK[1], GK_LEVEL],
+		"median %s at level %d (%s to %s)" % [_hours(gk_med), gk_lv, _hours(gks.min() if not gks.is_empty() else -1.0), _hours(gks.max() if not gks.is_empty() else -1.0)],
+		gk_med >= GK[0] and gk_med <= GK[1] and gk_lv >= GK_LEVEL])
 
 
 ## Gates 6-8: the Radio's ladder, Kev's story, retirement.
@@ -456,7 +488,7 @@ func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
-	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm"]:
+	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk"]:
 		if not gs[0].has(key):
 			continue
 		# by their median, a never counted as later than any (the review, 15 Oct: one read of two that never got there
@@ -514,6 +546,16 @@ func _merged(gs: Array) -> Dictionary:
 	for g in gs:
 		clears.append_array(g.get("depth_clears", []))
 	m["depth_clears"] = clears
+	var fcl := {}
+	for g in gs:
+		for k in g.get("first_clear_lv", {}):
+			if not fcl.has(k):
+				fcl[k] = []
+			fcl[k].append(float(g["first_clear_lv"][k]))
+	var fcm := {}
+	for k in fcl:
+		fcm[k] = int(_median(fcl[k]))
+	m["first_clear_lv"] = fcm
 	m["hours"] = float(gs[0]["hours"])
 	m["reads"] = gs.size()
 	return m
