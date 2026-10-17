@@ -8765,11 +8765,41 @@ func _full_pack_checks(sim) -> void:
 			_check(not room_for or m["found"].any(func(x): return int(x["id"]) == int(my["id"])), "on auto an upgrade swapped a mythic out of the pack")
 			sim.equipped["Helmet"] = null
 			sim._dry_memo.clear()
+			# a mythic with nothing its size to make way (17 Oct): a pack of meds alone, a five-cell rifle - in over the size
+			m["found"] = []
+			var g3 := 0
+			while sim.pack_used(m) < sim.capacity() and g3 < 80:
+				var md3: Dictionary = sim._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])
+				md3["id"] = 985000 + g3
+				m["found"].append(md3)
+				g3 += 1
+			var lo: Dictionary = Items.roll_unique(sim._unique_named("The Last Orders"), sim.rng)
+			sim._place_find(m, lo)
+			_check(m["found"].any(func(x): return int(x["id"]) == int(lo["id"])), "on auto a full pack of one-cell pieces passed a mythic rifle over")
 			_check(room_for, "the fixture: nothing in the full pack big enough to make way for a mythic helmet")
 		sim.extract_now()
+	# a mythic left on the floor (17 Oct): home on the way out, and on a death
+	for ending in ["extract", "timeout", "kia"]:
+		sim.hp = sim.max_hp()
+		sim.deploy(0)
+		var mf: Dictionary = sim.mission
+		mf["crates"] = []
+		var fm: Dictionary = Items.roll_unique(sim._unique_named("The Spare Key"), sim.rng)
+		mf["floor"] = [fm]
+		if ending == "extract":
+			sim.extract_now()
+		elif ending == "timeout":
+			sim._time_out(mf)
+			if sim.on_mission():
+				sim.extract_now()
+		else:
+			sim._kia()
+		_check(sim.stash.any(func(x): return int(x["id"]) == int(fm["id"])), "a mythic left on the floor was lost on the %s" % ending)
+		if sim.on_mission():
+			sim.extract_now()
 	sim.loot_by_hand = by_hand_was
 	sim.load_dict(saved)
-	print("a full pack ok: by hand to the floor; on auto only an upgrade swaps in, and never out")
+	print("a full pack ok: by hand to the floor; on auto only an upgrade swaps in, and never out; a mythic always home")
 
 
 ## The Van's Spare cut (15 Oct, parked item 12, Matt's pick): the secondary at two thirds behind the primary, not all of

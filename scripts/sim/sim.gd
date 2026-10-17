@@ -5451,6 +5451,7 @@ func _time_out(m: Dictionary) -> void:
 		m["dead"] = true                       # the odds: out of time is a run lost
 		prof["dry_timeouts"] = int(prof.get("dry_timeouts", 0)) + 1     # the bot and the balance gate count them
 		return
+	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var insured: bool = m.get("insured", false)
 	if auto_tier >= 0:
@@ -6407,6 +6408,9 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 		m["found"][cheapest] = it
 		m["swapped"] = m.get("swapped", 0) + 1
 		_read(it)
+	elif it.get("mythic", false):
+		m["found"].append(it)                 # a mythic with nothing its size to make way (17 Oct): in over the pack's size, as a head's uniques come home
+		_read(it)
 	else:
 		m["left"] += 1
 
@@ -6862,6 +6866,7 @@ func _extract() -> void:
 	if mission != null and mission.get("dry", false):
 		return
 	var m: Dictionary = mission
+	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var timed_out: bool = m.get("timed_out", false)
 	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or crates_done(m)) and not timed_out:     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
@@ -7045,11 +7050,21 @@ static func _renamed(x: String) -> String:
 
 ## KIA: the loadout and what was found are gone; the stash and cash stay. A
 ## fresh operator takes over at level 1. Auto-run stops.
+## A mythic left on the floor at a run's end (17 Oct: a full pack by hand, or "No room: make some" never made) comes
+## home as one in the pack does: into the pack first, over its size if need be, so each ending's own rule takes it.
+func _floor_mythics_in(m: Dictionary) -> void:
+	var fl: Array = m.get("floor", [])
+	for it in fl.filter(func(x): return x.get("mythic", false)):
+		fl.erase(it)
+		m["found"].append(it)
+
+
 func _kia() -> void:
 	var m: Dictionary = mission
 	if m.get("dry", false):
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
+	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var dogs_share: bool = has_node("cap_dogs_share") and not m.get("insured", false) and not rig.is_empty()
 	var lost := loadout_value()
