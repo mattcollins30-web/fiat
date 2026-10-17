@@ -528,7 +528,11 @@ static func odds_reasons(s, i: int) -> Array:
 	if s.meds_carried() <= 0:
 		out.append({"forms": ["No meds"], "colour": "bad"})
 	if s.hp < s.max_hp() * 0.5:
-		out.append({"forms": ["HP %d of %d" % [s.hp_shown(), s.max_hp_shown()], "HP %d" % s.hp_shown()], "colour": "bad"})
+		var hp_forms: Array = ["HP %d of %d" % [s.hp_shown(), s.max_hp_shown()], "HP %d" % s.hp_shown()]
+		if not s.on_mission() and s.rest_rate() > 0.0:
+			var full: String = Fmt.mss((s.max_hp() - s.hp) / s.rest_rate())
+			hp_forms = ["HP %d of %d, full in %s" % [s.hp_shown(), s.max_hp_shown(), full], "HP %d, full in %s" % [s.hp_shown(), full]] + hp_forms     # resting at camp mends it (17 Oct)
+		out.append({"forms": hp_forms, "colour": "bad"})
 	var gun = s.equipped["Primary"]
 	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and str(gun.get("rule", "")) != "weed_burner":
 		var have: int = s.rounds_for(gun)

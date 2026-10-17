@@ -852,6 +852,14 @@ func show_room_intro(key: String) -> void:
 	add_child(_room_card)
 
 
+## Resting at camp (17 Oct, Matt's playtest: a 0% everywhere read as stuck - HP comes back at camp, and nothing said so):
+## "Resting, full in 1:50" while home and short of HP, "" otherwise.
+func resting_words() -> String:
+	if sim == null or sim.on_mission() or sim.hp >= sim.max_hp() - 0.5 or sim.rest_rate() <= 0.0:
+		return ""
+	return "Resting, full in %s" % Fmt.mss((sim.max_hp() - sim.hp) / sim.rest_rate())
+
+
 ## A mythic found on the run (17 Oct, Matt: the item-colours canvas): its moment over everything, once a piece. A camp
 ## loaded or begun counts what it holds already as seen.
 func _maybe_mythic() -> void:
@@ -1080,7 +1088,7 @@ func refresh() -> void:
 	_top_lines["xp"][1].size.x = _top_lines["xp"][0].size.x * _xp_share()
 	if _dps_shown < 0.0:
 		_top_lines["dps"][1].size.x = _top_lines["dps"][0].size.x * _dps_share()     # the first paint; _move_dps_line has it from there
-	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else "On the Pitch"
+	_top_labels["where"].text = ("Out: " + sim.tier(sim.mission["tier"])["name"]) if sim.on_mission() else (resting_words() if resting_words() != "" else "On the Pitch")
 	_top_class.text = sim.cls
 	_top_class.position.x = _top_labels["level"].position.x + ceilf(UI.text_width(_top_labels["level"], _top_labels["level"].text)) + 10
 	_lay_top_right()

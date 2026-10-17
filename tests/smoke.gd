@@ -4420,6 +4420,7 @@ func _move_checks(main) -> void:
 	_dress_checks(main)
 	_mythic_moment_checks(main)
 	_why_checks(main)
+	_early_game_checks(main)
 	_playtest_checks(main)
 	_chronicle_checks()
 
@@ -5192,6 +5193,125 @@ func _mythic_moment_checks(main) -> void:
 	main.refresh()
 	_check(main._mythic_card == null, "a camp loaded showed a mythic it already held")
 	print("a mythic's moment: the card, the game held, it fits, Take it, off the floor")
+
+
+## The early game (17 Oct, Matt's two playtests): the Garden Centre's first clear leaves a gun and its rounds, once; no
+## rounds drop for a gun you haven't got, and those that drop fit one you have; no wound before the Clinic; resting at
+## camp says so, on the top row and under a site's odds.
+func _early_game_checks(main) -> void:
+	var fresh = Sim.new()
+	fresh.start()
+	fresh.mythics_on = false
+	fresh.best_tier = maxi(fresh.best_tier, Data.FIRST_GUN_SITE)
+	fresh.best_depth[0] = 1
+	fresh.hp = fresh.max_hp()
+	fresh.deploy(Data.FIRST_GUN_SITE)
+	var m = fresh.mission
+	_check(m != null, "the fixture: no run to the Garden Centre")
+	if m == null:
+		return
+	m["found"] = []
+	fresh._clear(m, m["t"])
+	var names: Array = Data.FIRST_GUNS.map(func(g): return str(g[1]))
+	var guns: Array = m["found"].filter(func(it): return str(it["base"]) in names)
+	var boxes: Array = m["found"].filter(func(it): return Items.is_ammo(it))
+	_check(guns.size() == 1 and boxes.size() == 1 and str(Items.base_of(boxes[0])["type"]) == Items.ammo_type(guns[0]), "the Garden Centre's first clear didn't leave one gun and its rounds: %s" % str(m["found"].map(func(it): return str(it["base"]))))
+	_check(guns.size() == 1 and fresh._pack_keeps(guns[0]) and fresh._pack_keeps(boxes[0]), "a full pack wouldn't keep the first gun and its rounds")
+	m["cleared"] = false
+	fresh._clear(m, m["t"])
+	_check(m["found"].filter(func(it): return str(it["base"]) in names).size() == 1, "a second gun while the first's still in the pack")
+	# lost on the way (out of time): the next clear leaves another; home: never again
+	fresh._time_out(m)
+	if fresh.on_mission():
+		fresh.extract_now()
+	fresh.hp = fresh.max_hp()
+	fresh.deploy(Data.FIRST_GUN_SITE)
+	var m2 = fresh.mission
+	if m2 != null:
+		m2["found"] = []
+		fresh._clear(m2, m2["t"])
+		_check(m2["found"].any(func(it): return str(it["base"]) in names), "a first gun lost to a time-out didn't come again")
+		fresh.extract_now()
+		_check(fresh.seen.has("first_gun_home") and not fresh.stash.any(func(it): return it.has("first_gun")), "the first gun home wasn't marked home, or kept its mark")
+		fresh.stash = fresh.stash.filter(func(it): return not Items.is_gun(it))
+		fresh.hp = fresh.max_hp()
+		fresh.deploy(Data.FIRST_GUN_SITE)
+		var m3 = fresh.mission
+		if m3 != null:
+			m3["found"] = []
+			fresh._clear(m3, m3["t"])
+			_check(not m3["found"].any(func(it): return str(it["base"]) in names), "a first gun again after one came home")
+			fresh.extract_now()
+	# the Stash's Bins and a full stash (the review): the first gun comes home whatever, and only then counts as home
+	var binned = Sim.new()
+	binned.start()
+	binned.mythics_on = false
+	binned.best_tier = maxi(binned.best_tier, Data.FIRST_GUN_SITE)
+	binned.best_depth[0] = 1
+	_yard_set(binned, "stash", 1, "b")          # the Stash's second column, the Bins
+	_check(binned.yard_has("bins"), "the fixture: no Bins built")
+	while binned.stash_put(binned._plain(Data.MEDICAL, Data.BASES[Data.MEDICAL][0]["name"])):
+		pass
+	binned.hp = binned.max_hp()
+	binned.deploy(Data.FIRST_GUN_SITE)
+	var mbn = binned.mission
+	if mbn != null:
+		mbn["found"] = []
+		binned._clear(mbn, mbn["t"])
+		binned.extract_now()
+		_check(binned.stash.any(func(it): return str(it["base"]) in names) and binned.seen.has("first_gun_home"), "the first gun lost to the bins or a full stash: in the stash %s, home %s (bins %s)" % [str(binned.stash.any(func(it): return str(it["base"]) in names)), str(binned.seen.has("first_gun_home")), str(binned.yard_has("bins"))])
+	# no gun, no rounds; then a shotgun in the stash, only shells
+	var bare = Sim.new()
+	bare.start()
+	bare.mythics_on = false
+	bare.stash = bare.stash.filter(func(it): return not Items.is_gun(it))
+	bare.equipped["Secondary"] = null
+	bare.hp = bare.max_hp()
+	bare.deploy(0)
+	var mb: Dictionary = bare.mission
+	_check(bare.owned_ammo_types(mb).is_empty(), "the fixture: a camp with a hammer owns rounds for %s" % str(bare.owned_ammo_types(mb)))
+	var ammo_none := 0
+	for k in range(400):
+		var f: Dictionary = bare._find(mb, mb["t"], k % 2 == 0, {}, true)     # rolled, not landed: a gun found mustn't join the count
+		if not f.is_empty() and Items.is_ammo(f["it"]):
+			ammo_none += 1
+	bare.stash_put(bare._plain("Primary", "Pump shotgun"))
+	var shells := 0
+	var other := 0
+	for k in range(400):
+		var f2: Dictionary = bare._find(mb, mb["t"], k % 2 == 0, {}, true)
+		if not f2.is_empty() and Items.is_ammo(f2["it"]):
+			if str(Items.base_of(f2["it"])["type"]) == "shotgun":
+				shells += 1
+			else:
+				other += 1
+	_check(ammo_none == 0 and shells > 0 and other == 0, "rounds without a gun: %d with none; with a shotgun %d shells, %d others" % [ammo_none, shells, other])
+	# no wound before the Clinic
+	bare.unlocked = bare.unlocked.filter(func(r): return r != "clinic")
+	bare.wound = ""
+	bare._wound(mb)
+	_check(bare.wound == "", "a wound before the Clinic opened: %s" % bare.wound)
+	bare.unlocked.append("clinic")
+	bare._wound(mb)
+	_check(bare.wound != "", "no wound with the Clinic open")
+	bare.extract_now()
+	# resting at camp: said on the top row and under the odds
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hp_was: float = sim.hp
+	sim.hp = sim.max_hp() * 0.4
+	main.refresh()
+	_check(main.resting_words().begins_with("Resting, full in") and main._top_labels["where"].text.contains("full in"), "resting at camp isn't said on the top row: '%s'" % main._top_labels["where"].text)
+	var hp_chip: Array = main._missions.odds_reasons(sim, 0).filter(func(r): return str(r["forms"][0]).begins_with("HP "))
+	_check(not hp_chip.is_empty() and str(hp_chip[0]["forms"][0]).contains("full in"), "the HP reason doesn't say when it's full: %s" % str(hp_chip))
+	_check_fit(main, "the top row (resting)")
+	sim.hp = sim.max_hp()
+	main.refresh()
+	_check(main.resting_words() == "" and main._top_labels["where"].text == "On the Pitch", "full HP still says resting: '%s'" % main._top_labels["where"].text)
+	sim.hp = hp_was
+	main.refresh()
+	print("the early game: the first gun once, rounds only for guns you have, no wound before the Clinic, resting said")
 
 
 ## Why a site reads low (17 Oct): no meds and HP under half first, chips under the odds at Risky and worse, none above.
@@ -12353,7 +12473,7 @@ func _gamble_checks(main) -> void:
 	sim.extract_now()
 	var gb1: float = sim.a_gamble_base()
 	_check(gb1 <= gb0 * (1.0 + Data.GAMBLE_STEP) + 1.0 and gb1 > gb0, "one sale moved the gamble's base %.0f to %.0f" % [gb0, gb1])
-	_check(sim.takings > tk_g0, "the takings themselves did not take the sale (the contracts read them)")
+	_check(sim.takings > tk_g0, "the takings themselves did not take the sale (the contracts read them): %.1f from %.1f, the sale %.1f, the base %.1f to %.1f, the run's report %s" % [sim.takings, tk_g0, gb0 * 20.0, gb0, gb1, str(sim.last_report.get("cash", "-"))])     # what it saw, when it fails (17 Oct: failed once, passed on the rerun)
 	var loaded = load("res://scripts/sim/sim.gd").new()
 	loaded.load_dict(sim.to_dict())
 	_check(is_equal_approx(loaded.gamble_base, sim.gamble_base), "the gamble's base did not save")

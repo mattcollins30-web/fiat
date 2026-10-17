@@ -911,6 +911,7 @@ const EVENTS := {
 ## fence's contracts, the cards' notes.
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
+const FIRST_GUN := "Behind the till, wrapped in a bin bag: a %s, and a box of %s."     # the Garden Centre's first clear (17 Oct)
 const ODDS := [[0.9, "Safe"], [0.75, "Likely"], [0.6, "Risky"], [0.4, "A coin toss"], [0.2, "Long odds"], [0.0, "A bad idea"]]
 
 

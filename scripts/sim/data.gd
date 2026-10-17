@@ -1780,6 +1780,11 @@ const EVENT_ODDS := 0.3
 const EVENT_WINDOW := [15.0, 70.0]  # seconds in, when it happens
 const EVENTS := ["convoy", "trapped", "cache"]
 const CONVOY_FROM_RUN := 5         # no passing convoy before the sixth run (17 Oct, Matt: one on the first Allotments run used both starter bandages)
+## The first gun (17 Oct, Matt's two playtests: with no gun a save spiralled, with a shotgun the Gamekeeper fell at level 2):
+## a Garden Centre clear leaves one of these, plain, with a box of its rounds, while there's no gun anywhere and none has
+## come home yet - the same step for every save, and for the bot; kept by a full pack, given again if the run loses it.
+const FIRST_GUN_SITE := 1
+const FIRST_GUNS := [["Primary", "Farmer's shotgun"], ["Primary", "Pump shotgun"], ["Secondary", "Old revolver"]]
 const START_STASH_BANDAGES := 5    # a new camp's stash (17 Oct, Matt: "add 4 or 5 to the stash on a new save"): no meds to buy till the Gamekeeper opens the Clinic
 
 ## Contracts (9 Oct, docs/design/contracts.md): the Fence wants gear - so many of a slot at a rarity, a deep

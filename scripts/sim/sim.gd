@@ -364,6 +364,8 @@ func wound_words() -> String:
 
 ## A hit took the runner under a quarter: a wound, one stat cut until treated. A second replaces the first.
 func _wound(m: Dictionary) -> void:
+	if not room_open("clinic"):
+		return                                # nothing to treat it with till the Gamekeeper's down (17 Oct, Matt's playtest): no wound before the Clinic
 	var was := wound
 	wound = Data.WOUND_STATS[rng.randi_range(0, Data.WOUND_STATS.size() - 1)]
 	if not m.get("wounded", false):
@@ -6252,6 +6254,40 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.YARD["campaign"])
 
 
+## The rounds the guns you have take (17 Oct): worn, in the stash, in the rig, in this run's pack - none for a blade or a
+## gun that takes none.
+func owned_ammo_types(m = null) -> Array:
+	var out: Array = []
+	var guns: Array = [equipped["Primary"], equipped["Secondary"]] + stash + rig
+	if m is Dictionary:
+		guns += m.get("found", []) + m.get("floor", [])
+	for g in guns:
+		if g is Dictionary and Items.is_gun(g):
+			var ty: String = Items.ammo_type(g)
+			if not (ty in ["", "none"]) and not (ty in out):
+				out.append(ty)
+	return out
+
+
+## The Garden Centre's first clear (17 Oct): one of Data.FIRST_GUNS, plain, and a box of its rounds, in the pack whatever
+## the room - the step every save gets.
+func _first_gun(m: Dictionary) -> void:
+	var pick: Array = Data.FIRST_GUNS[rng.randi_range(0, Data.FIRST_GUNS.size() - 1)]
+	var gun: Dictionary = _plain(str(pick[0]), str(pick[1]))
+	gun["first_gun"] = true                   # kept by a full pack like the deeds (_pack_keeps); the mark comes off at home
+	m["found"].append(gun)
+	var box := {}
+	for b in Data.BASES[Data.AMMO]:
+		if str(b["type"]) == Items.ammo_type(gun) and int(b["tier"]) == 1:
+			box = _plain(Data.AMMO, str(b["name"]))
+			box["first_gun"] = true
+			break
+	if not box.is_empty():
+		m["found"].append(box)
+	log_event(Words.FIRST_GUN % [str(gun["base"]).to_lower(), str(box.get("base", "rounds")).to_lower()])
+	chron("first_gun", {"base": str(gun["base"])})
+
+
 ## A find. `from_kill`: what they were carrying - guns, armour, a helmet, a
 ## rig. From a look: what the site holds - attachments, meds, packs, and a
 ## share of gear left lying about. `crate`, a Data.CRATES entry: its lean and its quality (13 Oct). `capture`: rolled,
@@ -6272,6 +6308,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var site: Dictionary = Data.TIERS[int(t["tier"])]
 	var shape: Dictionary = site["shape"]
 	var slot: String = _site_slot(site, from_kill)
+	var gear_slot: String = slot
 	var kind := rng.randf()
 	if from_kill:
 		if kind < Data.MED_DROP * 0.5 * float(shape.get("med", 1.0)):
@@ -6294,6 +6331,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	# the crate's lean (13 Oct): an ammo tin's finds mostly rounds, a military crate's guns and armour
 	if not crate.is_empty() and crate.has("slots") and rng.randf() < float(crate.get("lean", 0.0)):
 		slot = str(crate["slots"][rng.randi_range(0, crate["slots"].size() - 1)])
+	var owned: Array = owned_ammo_types(m) if slot == Data.AMMO else []
+	if slot == Data.AMMO and owned.is_empty():
+		slot = gear_slot                      # rounds for no gun you have (17 Oct, Matt's playtest: three boxes, no gun): something else instead
 	var said := ""
 	var quality: float = rarity_bonus() + float(t.get("rarity", 0.0)) + float(crate.get("rarity", 0.0))
 	var it: Dictionary
@@ -6326,13 +6366,22 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
 		it = Items.roll(slot, 1 if slot == Data.PAPER else find_tier, rng, quality, has_node("all_or_nothing"), has_rule("lucky_cap"),
 			site["name"], str(site["drops"].get("type", "")), Data.FX["atlas/picked_over.base"] + Data.FX["atlas/picked_over"] * atlas_rank("picked_over"), int(t["depth"]), find_lv)
-		if slot == Data.AMMO and equipped["Primary"] != null and rng.randf() < 0.5:
-			# half the rounds found fit what's in your hands
-			var mine := Items.ammo_type(equipped["Primary"])
+		if slot == Data.AMMO:
+			# rounds only for a gun you have (17 Oct): half for the one in your hands, as they always were, the rest any you
+			# own - a stash of guns kept to sell doesn't thin the hands' share (the review) - at the find's tier or under
+			var hand_ty: String = Items.ammo_type(equipped["Primary"]) if equipped["Primary"] != null else ""
+			var want: Array = owned
+			if hand_ty in owned and rng.randf() < 0.5:
+				want = [hand_ty]
 			var fits := []
-			for b in Data.BASES[Data.AMMO]:
-				if b["type"] == mine and b["tier"] <= int(t["loot_tier"]):
-					fits.append(b)
+			if not (str(Items.base_of(it)["type"]) in want):
+				for b in Data.BASES[Data.AMMO]:
+					if str(b["type"]) in want and int(b["tier"]) <= int(t["loot_tier"]):
+						fits.append(b)
+				if fits.is_empty():
+					for b in Data.BASES[Data.AMMO]:
+						if str(b["type"]) in want and int(b["tier"]) == 1:
+							fits.append(b)
 			if not fits.is_empty():
 				it = _plain(Data.AMMO, fits[rng.randi_range(0, fits.size() - 1)]["name"])
 	if from_kill and m.get("kill_shocked", false) and has_joint("drifter_shock") and slot in Data.SLOTS and not it.has("unique") and not it.has("set") and not Items.is_deeds(it):
@@ -6418,7 +6467,7 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 ## What a full pack holds on to on an auto-run (15 Oct): an upgrade on what's worn, a paper, the deeds - and a mythic
 ## (17 Oct, Matt: "never lost" meant it could still be passed over by a full pack, or swapped out of one).
 func _pack_keeps(it: Dictionary) -> bool:
-	return Items.is_paper(it) or it.get("mythic", false) or is_upgrade(it)
+	return Items.is_paper(it) or it.get("mythic", false) or it.get("first_gun", false) or is_upgrade(it)
 
 
 ## A find's slot, from the site's own weights (a kill carries what was worn;
@@ -6478,6 +6527,8 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		log_event(Words.site_cleared(t["name"]))
 	else:
 		log_event("%s cleared. Picking it over; more will come" % t["name"])
+	if int(m["tier"]) == Data.FIRST_GUN_SITE and not seen.has("first_gun_home") and owned_ammo_types(m).is_empty():
+		_first_gun(m)                         # until one's home (the review: a first clear's gun lost to a time-out would never come again)
 	# the deeds come off the Manager now, not the Bank's first clear (13 Oct, Matt): see the boss's things
 	if not m.has("crates"):
 		_roll_crates(m, t)                    # the search: the site's crates, in the dice's order (13 Oct); a Ghost's rolled at its first search
@@ -6898,6 +6949,13 @@ func _extract() -> void:
 		m["found"] = _bin_commons(m["found"])     # the Stash's Bins: the run's commons to scrap before they're stashed
 	var stashed := 0
 	for it in m["found"]:
+		var first: bool = it.get("first_gun", false) and Items.is_gun(it)
+		it.erase("first_gun")
+		if first:
+			stash.append(it)                  # the first gun comes home whatever the room, as a mythic does, and it's home: no more (17 Oct)
+			seen["first_gun_home"] = true
+			stashed += 1
+			continue
 		if it.get("from_rig", false):
 			# the runner's own rounds, moved to the pack on the run: back to the rig when there's a pouch, else the
 			# stash, never loot (the review: a full stash dropped them without a word)
@@ -8053,7 +8111,7 @@ func _bin_commons(found: Array) -> Array:
 	var n := 0
 	var got := 0
 	for it in found:
-		if int(it.get("rarity", 0)) == 0 and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false) or Items.is_ammo(it)):
+		if int(it.get("rarity", 0)) == 0 and not (Items.rig_item(it) or Items.is_paper(it) or Items.is_socketable(it) or it.has("unique") or it.has("set") or Items.is_deeds(it) or it.get("built", false) or Items.is_ammo(it) or it.get("first_gun", false)):
 			got += scrap_of(it)
 			n += 1
 		else:
