@@ -7527,6 +7527,24 @@ func _pick_panel_checks(main) -> void:
 	var box: Rect2 = Rect2(pk._boxes[0].position, pk._boxes[0].size)
 	_check(said == "" or (fl.visible and fl.text == said and fl.position.y >= aff_bottom and box.encloses(Rect2(fl.position, fl.size)) and (fl.autowrap_mode != TextServer.AUTOWRAP_OFF or UI.text_width(fl, fl.text) <= fl.size.x)),
 		"the pick's flavour isn't whole on its own line: '%s' at %s (affixes to %.0f, box %s)" % [fl.text, str(Rect2(fl.position, fl.size)), aff_bottom, str(box)])
+	# and wrapped, every row of it shows (17 Oct, Matt's shot: the blank-firer's two rows in a box a line short, cut to
+	# "It fires..." by the label) - against a Knife, the shot's own pair
+	var knife_was = sim.equipped["Secondary"]
+	sim.equipped["Secondary"] = sim._plain("Secondary", "Knife")
+	var blank: Dictionary = sim._plain("Secondary", "Converted blank-firer")
+	blank["affixes"] = [{"stat": "damage_low_pct", "value": 8, "tier": 1}]
+	sim.stash_put(blank)
+	pk.show_pick(blank, sim, "The pick · in the stash")
+	pk.show_fitted(sim.equipped["Secondary"], sim)
+	pk.set_hint_options([])
+	var bl: Label = pk._flavour
+	var whole: bool = bl.visible and bl.text == Words.item_words("Converted blank-firer") and (bl.autowrap_mode == TextServer.AUTOWRAP_OFF or bl.get_visible_line_count() >= bl.get_line_count())
+	_check(whole and Rect2(pk._boxes[0].position, pk._boxes[0].size).encloses(Rect2(bl.position, bl.size)), "the blank-firer's flavour isn't whole: '%s', %d of %d rows show, %s in %s" % [bl.text, bl.get_visible_line_count(), bl.get_line_count(), str(Rect2(bl.position, bl.size)), str(Rect2(pk._boxes[0].position, pk._boxes[0].size))])
+	sim.stash.erase(blank)
+	sim.equipped["Secondary"] = knife_was
+	main._run._shown = ""
+	# the run repaints its pick from the pack's selection, still the leathers, for what follows
+	main.refresh()
 	# rounds lead with how many, the grade a chip; a gun's tail is chips
 	var slugs_it: Dictionary = sim._plain(Data.AMMO, "Slugs")
 	var lone2 = load("res://scripts/ui/item_head.gd").new(440)

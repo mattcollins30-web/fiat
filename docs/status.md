@@ -5382,3 +5382,9 @@ radio's are. The playtest read's new section, "The dots and the drops": a run li
 ticks of it, the one figure and its dot part, the +% dots worn and trained, and its gear finds - wearable when found,
 and at the runner's level from a site over it - so the balance after reads the dot change and the fifth at yours from
 Matt's play, the campaign's and the signals' apart.
+
+**The flavour cut on two rows (17 Oct, Matt's shot: the blank-firer's "It fires...." beside a Knife).** Two rows were
+laid at FLAVOUR_H each, 20 px, under the label's real 22 (font height and line spacing), and the label ellipsised the
+second. Now two rows are measured from the font at 16, 15 and 14, the first whose two rows the room holds and whose wrap
+falls in two lines; else the whole sentences of one row. Smoke: the shot's own pair, every row showing, inside the box.
+The smoke clean with the game closed (one earlier run passed bar the saves guard: Matt was playing).

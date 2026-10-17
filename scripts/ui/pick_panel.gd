@@ -267,12 +267,26 @@ func _lay_flavour() -> void:
 	_flavour.position = Vector2(PAD, top)
 	_flavour.size = Vector2(col_w, FLAVOUR_H)
 	_flavour.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_flavour.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
 	_flavour.text = _flavour_text
-	if UI.text_width(_flavour, _flavour_text) > col_w and room >= 2 * FLAVOUR_H:
-		_flavour.size.y = 2 * FLAVOUR_H
-		_flavour.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	elif UI.text_width(_flavour, _flavour_text) > col_w:
-		UI.fit_sentences(_flavour, _flavour_text)       # one row: the whole sentences that fit
+	if UI.text_width(_flavour, _flavour_text) > col_w:
+		# two rows, at the size whose two rows the room holds - by the label's own line height and spacing, not
+		# FLAVOUR_H (17 Oct, Matt's shot: two 20 px rows were a line short, and the label cut it to "It fires..."); a
+		# point or two smaller before the whole sentences of one row
+		var wrapped := false
+		for sz in [Pal.CELL_TEXT, Pal.CELL_TEXT - 1, Pal.CELL_TEXT - 2]:
+			_flavour.add_theme_font_size_override("font_size", sz)
+			var two: float = 2.0 * _flavour.get_theme_font("font").get_height(sz) + float(_flavour.get_theme_constant("line_spacing"))     # get_line_height reads the theme's size, not the override
+			if two <= room and UI.text_width(_flavour, _flavour_text) <= 1.9 * col_w:
+				_flavour.size.y = ceilf(two) + 1.0
+				_flavour.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				if _flavour.get_line_count() <= 2:     # the wrap as it fell, not the width's guess (the review: a bad break can need three)
+					wrapped = true
+					break
+				_flavour.autowrap_mode = TextServer.AUTOWRAP_OFF
+		if not wrapped:
+			_flavour.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
+			UI.fit_sentences(_flavour, _flavour_text)       # one row: the whole sentences that fit
 	_flavour.visible = true
 
 
