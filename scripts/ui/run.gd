@@ -713,6 +713,8 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		r = ["Rounds", ["no gun", "none"], Pal.TEXT]
 	elif Items.ammo_type(gun) in ["", "none"]:
 		r = ["Rounds", ["melee"], Pal.TEXT_3]
+	elif str(gun.get("rule", "")) == "weed_burner":
+		r = ["Rounds", ["∞"], Pal.TEXT_3]          # the Council's Weed Burner (17 Oct): a shotgun's base, never a round spent
 	elif rounds > 0:
 		r = ["Rounds", ["%d" % rounds], Pal.TEXT]
 	else:

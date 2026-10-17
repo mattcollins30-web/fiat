@@ -175,6 +175,8 @@ func start() -> void:
 	unlocked = []                          # a fresh camp: every room a head opens is shut
 	met = []
 	_starter_loadout()
+	for k in range(Data.START_STASH_BANDAGES):
+		stash_put(_plain(Data.MEDICAL, "Bandage"))     # a new camp's spares (17 Oct, Matt): meds before the Clinic opens
 	restock()
 	came_back_seen()
 	while contracts.size() < contracts_open():

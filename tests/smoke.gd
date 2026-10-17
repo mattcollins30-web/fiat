@@ -3870,6 +3870,11 @@ func _events_checks(main) -> void:
 	for k in range(300):
 		later[sim.roll_event()] = true
 	sim.runs_total = runs_was
+	# a new camp's spare bandages in the stash (17 Oct, Matt), on top of the two in the rig
+	var fresh = Sim.new()
+	fresh.start()
+	var spares: int = fresh.stash.filter(func(it): return str(it["base"]) == "Bandage").size()
+	_check(spares == Data.START_STASH_BANDAGES and fresh.rig.size() == 2, "a new camp has %d bandages in the stash (not %d) and %d in the rig" % [spares, Data.START_STASH_BANDAGES, fresh.rig.size()])
 	_check(not early.has("convoy") and early.has("trapped") and early.has("cache") and later.has("convoy"), "a convoy can pass in the first %d runs, or the events stopped coming: early %s, later %s" % [Data.CONVOY_FROM_RUN, str(early.keys()), str(later.keys())])
 	# a convoy: a bigger gang, and their notes
 	sim.deploy(3)
@@ -9732,6 +9737,13 @@ func _six_checks(main, m: Dictionary) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", "Machete")
 	main.refresh()
 	_check(run._six[5]["value"].text == "melee" and run._six[5]["value"].get_theme_color("font_color") == Pal.TEXT_3, "a machete's rounds read '%s', not melee" % run._six[5]["value"].text)
+	# the Weed Burner: a shotgun's base, but it never spends a round - not "dry"
+	var wb: Dictionary = Items.roll_unique(sim._unique_named("The Council's Weed Burner"), sim.rng)
+	if not wb.is_empty():
+		sim.equipped["Primary"] = wb
+		main.refresh()
+		_check(run._six[5]["value"].get_theme_font("font").has_char(0x221E), "the tiles' font has no ∞ for the Weed Burner")
+		_check(run._six[5]["value"].text == "∞" and run._six[5]["value"].get_theme_color("font_color") == Pal.TEXT_3, "the Weed Burner's rounds read '%s'" % run._six[5]["value"].text)
 	sim.equipped["Primary"] = gun_was
 	m["last_incoming"] = 0.0
 	main.refresh()
