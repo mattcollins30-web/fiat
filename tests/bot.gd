@@ -571,7 +571,7 @@ func _hold_the_element(sim) -> void:
 			best = it
 	if best.is_empty():
 		return
-	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary") >= sim.dps() * ELEM_DPS_FLOOR):
+	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary") >= sim.damage_total() * ELEM_DPS_FLOOR):
 		sim.equip_item(best["id"])        # D23: the element's gun, but not at a fifth less damage, read on a try-on - a shock Scrapper took one at half at an hour and held the Estate's wall for twenty
 
 

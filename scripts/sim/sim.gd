@@ -577,6 +577,12 @@ func damage_split(res := {}) -> Dictionary:
 	return {"hits": hits, "dots": dots, "dot": dot, "total": hits + dot}
 
 
+## The damage a second the top bar shows (18 Oct, Matt: a fire build's Epic read as a downgrade from a Common): the
+## hits and the dots' burn together, so a try-on weighs a piece by the figure the player sees.
+func damage_total() -> float:
+	return float(damage_split()["total"])
+
+
 ## damage_split in words, for the top bar's tip and the Stats sheet: "321 from hits · 31 burning", or short "Hits 321 · burn 31".
 func split_words(split: Dictionary, short := false) -> String:
 	var parts := [("Hits %.0f" if short else "%.0f from hits") % float(split["hits"])]
@@ -7700,7 +7706,7 @@ func fit_value(it: Dictionary, slot := "") -> float:
 func _fit_value(it: Dictionary, slot: String) -> float:
 	match Data.SLOT_SCORE.get(slot, ""):
 		"dps":
-			return _try(it, dps)
+			return _try(it, damage_total)     # the hits and the burn, as the top bar reads them (18 Oct)
 		"armour":
 			return _try(it, survival_value.bind(front_fight()))
 	if it.is_empty():
@@ -7847,8 +7853,8 @@ func _rig_grades() -> Array:
 
 
 func _compare(it: Dictionary, slot: String) -> int:
-	var d0: float = _try({}, dps)
-	var rel: float = (_try(it, dps) - d0) / maxf(d0, 0.01)
+	var d0: float = _try({}, damage_total)     # the top bar's figure, the dots in (18 Oct): the hits alone called a fire build's Epic a downgrade
+	var rel: float = (_try(it, damage_total) - d0) / maxf(d0, 0.01)
 	var g: int = 1 if rel > TRY_EPS else (-1 if rel < -TRY_EPS else 0)
 	var kind: String = Data.SLOT_SCORE.get(slot, "")
 	if kind == "dps":

@@ -616,6 +616,7 @@ func _init() -> void:
 	_yard_own_checks(main.sim)
 	_words_checks(main)
 	_rebuild_checks(main)
+	_dot_compare_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -15077,3 +15078,46 @@ func _rebuild_checks(main) -> void:
 	main.show_room(was)
 	main.refresh()
 	print("the rebuild ok: shut till Kev's done, costs and ranks, the places' effects, materials home through death, a save and a move, the order's Grid run and won, the town view and the order tab fit")
+
+
+## A fire build's verdict (18 Oct, Matt's two machine pistols: a Common with +5% damage read as the Upgrade over an Epic
+## with fire, conversion and damage over time, and equipping it dropped the top bar's figure): the arrow, the delta and
+## the verdict weigh a gun by the figure the top bar shows, the hits and the burn together.
+func _dot_compare_checks(_main) -> void:
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	var plain: Dictionary = s._plain("Secondary", "Automatic pistol")
+	plain["rarity"] = 1
+	plain["affixes"] = [{"stat": "damage_pct", "value": 5, "tier": 1}]
+	var burn: Dictionary = s._plain("Secondary", "Automatic pistol")
+	burn["rarity"] = 3
+	burn["affixes"] = [{"stat": "dot_pct", "value": 24, "tier": 3}, {"stat": "conv_fire_pct", "value": 25, "tier": 4}, {"stat": "fire_pct", "value": 24, "tier": 4}]
+	s.equipped["Secondary"] = plain
+	var with_plain: float = s.damage_total()
+	s.equipped["Secondary"] = burn
+	var with_burn: float = s.damage_total()
+	s.equipped["Secondary"] = plain
+	var want: int = 1 if with_burn > with_plain * 1.005 else (-1 if with_burn < with_plain * 0.995 else 0)
+	_check(s.compare(burn) == want, "the burn pistol over the plain one reads %d, the top bar says %d (%.1f to %.1f)" % [s.compare(burn), want, with_plain, with_burn])
+	_check(is_equal_approx(s.fit_value(burn) - s.fit_value({}, "Secondary"), with_burn - with_plain), "the pick's delta isn't the top bar's change: %.2f, not %.2f" % [s.fit_value(burn) - s.fit_value({}, "Secondary"), with_burn - with_plain])
+	var dl: Array = PickPanel.deltas_for(s, burn, plain)
+	_check(not dl.is_empty() and is_equal_approx(absf(float(dl[0][0])), absf(with_burn - with_plain)) and str(dl[0][1]).ends_with("dmg/s"), "the pick panel's damage delta reads %s, not %.1f" % [str(dl[0]) if not dl.is_empty() else "nothing", with_burn - with_plain])
+	s.equipped["Secondary"] = burn
+	_check(s.compare(plain) == -want, "and back the other way the plain one reads %d, not %d" % [s.compare(plain), -want])
+	# and in the Primary, where the secondary's share rides on it
+	var p_plain: Dictionary = s._plain("Primary", "Workshop SMG")
+	p_plain["rarity"] = 1
+	p_plain["affixes"] = [{"stat": "damage_pct", "value": 5, "tier": 1}]
+	var p_burn: Dictionary = s._plain("Primary", "Workshop SMG")
+	p_burn["rarity"] = 3
+	p_burn["affixes"] = [{"stat": "dot_pct", "value": 24, "tier": 3}, {"stat": "conv_fire_pct", "value": 25, "tier": 4}, {"stat": "fire_pct", "value": 24, "tier": 4}]
+	s.equipped["Primary"] = p_plain
+	var pa: float = s.damage_total()
+	s.equipped["Primary"] = p_burn
+	var pb: float = s.damage_total()
+	s.equipped["Primary"] = p_plain
+	var pwant: int = 1 if pb > pa * 1.005 else (-1 if pb < pa * 0.995 else 0)
+	_check(s.compare(p_burn) == pwant, "the burn SMG over the plain one reads %d, the top bar says %d (%.1f to %.1f)" % [s.compare(p_burn), pwant, pa, pb])
+	print("the burn build's verdict ok: %.1f with the plain pistol, %.1f with the burn one, the arrow agrees" % [with_plain, with_burn])
+
