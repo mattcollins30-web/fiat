@@ -74,7 +74,7 @@ const ROOM_INTROS := {
 	"map": {"room": "The Map", "face": "", "title": "Where the runner goes", "voice": "map", "cues": [0.0, 5.64], "lines": [
 		"The town, from the ring road in. Every site on it was somebody's once.",
 		"Pick one. Send the runner. They come back with what they carry, or they don't."],
-		"tiles": [["Sites", "Where to go, and the odds"], ["Depth", "Deeper pays, hits harder"], ["The heads", "Each one opens a room"]]},
+		"tiles": [["Sites", "Where to go, and the odds"], ["Tiers", "Further in, harder and richer"], ["The heads", "Each one opens a room"]]},
 	"kit": {"room": "The Kit", "face": "", "title": "What the runner takes", "voice": "kit", "cues": [0.0, 3.58], "lines": [
 		"What the runner takes out is all they've got.",
 		"What stays behind is the stash. What's worn out there can be lost out there."],
@@ -219,9 +219,9 @@ const GATES := {
 	"clinic": "The vet's bag's come home. The Clinic's open.",
 	"fence": "The Fence has seen the ledger. He's open for business.",
 	"yard": "The deeds are the Pitch's. Build on it.",
-	"radio": "The set's on the Radio's bench. The Radio's on the air.",
+	"radio": "The set's in and working. The Radio's on the air.",
 	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
-	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the Carpet Man's ledger", "yard": "the Manager's deeds", "radio": "the Quartermaster's set", "workshop": "the Quartermaster's tool roll"},
+	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the Carpet Man's ledger", "yard": "the Manager's deeds", "radio": "the Quartermaster's military radio", "workshop": "the Quartermaster's tool roll"},
 }
 
 ## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.
@@ -306,7 +306,7 @@ const PASTS := {
 		"arrives": "A paramedic turns up at the Pitch, still in the green. Asks where the kit is.",
 		"wall": "Stayed with the last one. Always did."},
 	"Scrapper": {"was": "Stripped the estate's own cars for copper. Knows what everything's worth, to the penny.",
-		"arrives": "A scrapper turns up at the Pitch with a trolley. Prices the Lock-up before saying hello.",
+		"arrives": "A scrapper turns up at the Pitch with a trolley. Prices the Pitch before saying hello.",
 		"wall": "Knew what everything was worth. The Fence got the trolley."},
 	"Drifter": {"was": "Walked in from somewhere worse. Doesn't say where; doesn't plan to stay.",
 		"arrives": "A drifter turns up at the Pitch. Light pack, good boots, already looking at the road.",
@@ -379,7 +379,7 @@ const SITES := {
 			"There's a crew in the carpet warehouse. They've got the carpet.",
 			"The petrol station's forecourt is a market on Sundays. Not this Sunday.",
 		],
-		"cleared": "The Retail Park's cleared. The road to the town is open, which is not the same as safe.",
+		"cleared": "The Retail Park's cleared. The road to the Town is open, which is not the same as safe.",
 	},
 	"The Pleasure Park": {
 		"depths": [
@@ -407,7 +407,7 @@ const SITES := {
 			"The lorry park is a town now. Every trailer's a house; every cab's a shop.",
 			"The fuel's long gone. What's in the tanks is what they fight over.",
 			"The drivers kept the CB sets. They heard your pitch before they saw it.",
-			"The last lorry in was the Army's. It isn't here any more. They know where it went.",
+			"The last lorry in was the army's. It isn't here any more. They know where it went.",
 		],
 		"cleared": "The Services are quiet. The trailers are still houses; nobody's opening the doors.",
 	},
@@ -498,7 +498,7 @@ const BOOK := {
 	"deep": "The rest are deeper than you've been.",
 	"gap": "Not found yet.",
 	"gap_site": "Not found yet: only at %s.",
-	"gap_deep": "Not found yet: from depth %d.",
+	"gap_deep": "Not found yet: from a level %d signal.",
 }
 ## The radio's log in the Caravan (12 Oct).
 const HEARD := {
@@ -519,11 +519,11 @@ const MYTHIC_FOUND := "A mythic: %s"
 const SHELF := {
 	"empty": "Nothing on the shelf yet. Heads carry most of them; some sites keep their own.",
 	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is
-	"own_gap": "%s, depth %d and past. A rule only that depth gives.",
-	"head_gap": "%s at full strength, depth %d of his site. The charm only he carries.",
+	"own_gap": "%s, from a level %d signal on. It drops nowhere else.",
+	"head_gap": "%s at full strength, on a level %d signal at his site. The charm only he carries.",
 	"lorry_gap": "Kev's last beat: the depot's convoy. The pack it comes home with.",
 	"own_found": "Only %s has it. It drops nowhere else.",
-	"own_note": "Depth %d: its own, %s",
+	"own_note": "Level %d signal: %s, only here",
 }
 
 ## The deeds: what the Bank was holding. Dropped once, when the Bank is
@@ -571,7 +571,7 @@ const UNIQUES := {
 	"The Lorry's Load": "What the convoy was carrying, in the end. Not food. Notes, baled, and the tarp they were under. Nobody said what for.",
 	"The Council's Weed Burner": "Parks department. A gas bottle on a frame and a lance with a roar in it. It was for the pavements. It still is, in a way.",
 	"Jump Leads": "Red and black, from a boot. Clipped to the right thing, the first one they touch passes it on.",
-	"The Rat Man's Bag": "The Council's rat man had a bag, and whatever's in the bottom of it never came out. It's in everything you put in there now.",
+	"The Rat Man's Bag": "The council's rat man had a bag, and whatever's in the bottom of it never came out. It's in everything you put in there now.",
 	"The Butcher's Steel": "Not the knife, the steel: the rod he ran the knife down. Anything cut with what it's touched doesn't close.",
 	"The Gritter's Hopper": "The yellow hopper off the back of the gritter, cut down and strapped on. Everyone near you is standing in January.",
 	"The Sparky's Gloves": "Rubber, to the elbow, tested and stamped. He never got a belt in thirty years. Neither will you.",
@@ -591,7 +591,7 @@ const UNIQUES := {
 	"The Caretaker's Keys": "Every door on the estate on one ring. Something's always open and something's always happening.",
 	"The Lorry Driver's Log": "Hours, miles, stops, in biro. It's worth notes to the right people, and the Fence insures anyone who's got one, for free, because he wants it.",
 	"The Arsonist's Rig": "Every pouch smells of petrol. Whatever you reach for in it, something near you catches.",
-	"The Gritter's Keys": "The Council's gritting lorry, and the man who drove it all one winter. The cold does what he says.",
+	"The Gritter's Keys": "The council's gritting lorry, and the man who drove it all one winter. The cold does what he says.",
 	"The Rat Man's Overalls": "The pest man's, stiff with what he sprayed. Nothing that gets poisoned near him stops being poisoned.",
 	"The Substation Key": "A key to a box no one should open. Everyone it touches touches everyone else.",
 	"The Butcher's Apron": "Chainmail under a rubber apron. The butcher never stopped at one cut.",
@@ -603,7 +603,7 @@ const UNIQUES := {
 	"The Last Orders": "Called at every pub in the borough on the same night. Nobody who heard the bell went home sober, or whole.",
 	"The Spare Key": "Under the mat, behind the meter, in the drainpipe. It opens everything, and it never waits its turn.",
 	"The Headmaster's Cap": "He knew every lesson in the building and taught them all at once. Put it on and so do you.",
-	"The Bomb Disposal Suit": "Forty kilos of the Army's best idea. Whatever goes off near you, you walk out of it slowly.",
+	"The Bomb Disposal Suit": "Forty kilos of the army's best idea. Whatever goes off near you, you walk out of it slowly.",
 	"The Ambulance's Bag": "Off the last ambulance in the county. However much you take out of it, it's full again by the next corner.",
 	"The Removal Van": "Seven and a half tonnes and it still has room. Whatever you find goes in, and comes out better.",
 	"The Freedom of the Borough": "A scroll and a key from the Town Hall. The gangs read it, stand aside, and pay you for the privilege.",
@@ -617,7 +617,7 @@ const ITEMS := {
 	# the start
 	"Hand-me-down nail gun": "Somebody's before it was yours, and somebody's before that. Fires when it feels like it.",
 	"Claw hammer": "From the shed. It's put up shelves and taken down a fence. It'll do.",
-	"Work jacket": "A donkey jacket with the Council's name half off the back. Warm. That's the whole of it.",
+	"Work jacket": "A donkey jacket with the council's name half off the back. Warm. That's the whole of it.",
 	"Plastic bag": "A bag for life, one of them. Holds nine things and the shape of the rain.",
 	# improvised
 	"Nail gun": "From the DIY place. Takes nails; makes holes. The estate's first gun, and most people's last.",
@@ -639,7 +639,7 @@ const ITEMS := {
 	"Semi-auto .22": "A plinking rifle from a garden shed. It's killed more rabbits than people, but not by much now.",
 	"Old .303": "A service rifle from a war two wars ago, kept oiled by a man who talked about it. Still hits what it's pointed at.",
 	"Stalking rifle": "A deer rifle, walnut and blued, from an estate with a different meaning of the word.",
-	"Army bullpup": "The Army's own, with the Army's own problems. It came off a lorry that never reached the Barracks.",
+	"Army bullpup": "The army's own, with the army's own problems. It came off a lorry that never reached the Barracks.",
 	"AR-pattern rifle": "Built from parts that came in the post, before the post. Light, fast, hungry.",
 	"Battle rifle": "A full-calibre service rifle. Heavy, loud, and nothing it hits gets up to argue.",
 	"Scoped .308": "A target rifle with a glass on it. The man who owned it shot paper on Sundays. Then he didn't.",
@@ -727,11 +727,11 @@ const ITEMS := {
 	# the city
 	"Armourer's carbine": "Built by the depot's armourer from parts off three guns. Better than any of the three.",
 	"Assault shotgun": "A military combat shotgun with a drum. The sort of thing the news said nobody had.",
-	"Marksman rifle": "The Army's long rifle. The glass alone was worth a house, back when a house was worth something.",
+	"Marksman rifle": "The army's long rifle. The glass alone was worth a house, back when a house was worth something.",
 	"Section gun": "A light machine gun off the lorry, belt-fed, and the section it was issued to are the crew who have it.",
-	"Issue pistol": "The Army's sidearm. Clean, boring, and it works every time, which is the point of it.",
+	"Issue pistol": "The army's sidearm. Clean, boring, and it works every time, which is the point of it.",
 	"Composite helmet": "A modern army helmet, light and hard. It arrived with the lorry, with a name written inside.",
-	"Issue plates": "The Army's own plates in the Army's own carrier. The lorry was full of them. He issues them to people he likes.",
+	"Issue plates": "The army's own plates in the army's own carrier. The lorry was full of them. He issues them to people he likes.",
 	"Police marksman's rifle": "The firearms squad's own rifle, from the one armoury nobody got into until now. Nothing out here is this good.",
 	"Riot squad's shotgun": "The riot squad's own, drum-fed, for crowds. It was made for exactly this.",
 	"Officer's revolver": "An officer's revolver, kept clean by someone who expected an inspection. Heavy, slow, final.",
@@ -747,12 +747,12 @@ const ITEMS := {
 	"Bomb suit": "The bomb squad's suit, every plate of it. Nothing moves fast in it, and nothing gets through it either.",
 	"Bomb-disposal rig": "The bomb squad's harness, with a pouch for every tool and a few for the hands that shook.",
 	"Full bergen": "A soldier's bergen, the big one, frame and all, full. It carries a week; it carries you slower.",
-	"Mayor's chain": "The chain of office, out of the town hall. Worth a fortune to the Fence and it looks it.",
+	"Mayor's chain": "The chain of office, out of the Town Hall. Worth a fortune to the Fence and it looks it.",
 	"Assault rig": "A soldier's rig, every pouch meant for something. You'll find things to put in them.",
 	"Patrol pack": "An army day sack, built for a day that lasts a week. Everything stays dry, which nothing else does.",
 	"Hospital kit": "The Hospital's own crash bag. Everything in it is real and most of it is out of date. It still works.",
 	"Belt links": "Linked rounds for the section gun, in a tin from the lorry. They don't fit anything else.",
-	"Depot rounds": "The Army's rifle ammunition, boxed and dated. Better than anything the garage ever loaded.",
+	"Depot rounds": "The army's rifle ammunition, boxed and dated. Better than anything the garage ever loaded.",
 	"Incendiary shells": "Shells with something in the wad that keeps burning. What they hit, they set alight.",
 	"Incendiary SMG rounds": "Tracer that was never meant for the range. Every third one goes in burning.",
 	"Salted rounds": "Rifle rounds dipped in the gritter's salt, the way the rat man said. The hit goes cold.",
@@ -878,7 +878,7 @@ const ITEMS := {
 ## The sets' pieces: whose they were.
 const SET_PIECES := {
 	"Council hi-vis": "Orange, with the crest and a name in marker on the back. He was in Highways. He's not now.",
-	"Council hard hat": "Yellow, the Council's, with the sticker of the last inspection. It passed.",
+	"Council hard hat": "Yellow, the council's, with the sticker of the last inspection. It passed.",
 	"Council rucksack": "Issued for the tools, used for the sandwiches. There's a tin of something under the lining.",
 	"Council lanyard": "The pass still works, if there's anywhere left to swipe it. The crews treat it like it does.",
 	"Ambulance rig": "Green, with the pouches in the order they teach you. Whoever wore it had the order by heart.",
@@ -948,8 +948,8 @@ const NEXT := {
 	"head": "%s is behind %s. Arm him on the Map when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
-	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next starts its ladders higher, with a free node on the Pitch's tree.",
-	"moved": "A new pitch, the same list on the wall. Start at the allotments.",
+	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next one pays better, with a free perk in the Yard.",
+	"moved": "A new estate, the same climb. Start at the Allotments.",
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
@@ -981,9 +981,9 @@ const YARD := {
 	"set": "The Pitch is set. One runner, a hammer, the estate outside.",
 	"dead": "Dead in %s. The kit's gone with them. %s",       # site, then the next runner arriving
 	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
-	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Lock-up by morning.",
-	"campaign": "The edge of it, the estate, the town, the city. The Pitch's name is known in all of them. Now it's a question of how far in you go.",
-	"moved": "The Pitch moves. A new lock-up on a new estate, the same radio, the same list on the wall. The name came with it.",
+	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Pitch by morning.",
+	"campaign": "The Outskirts, the Estate, the Town, the City. The Pitch's name is known in all of them. Now it's a question of how far in you go.",
+	"moved": "The Pitch moves. A new estate, the same radio, the same list on the wall. The name came with it.",
 	"lorry": "The Lorry's Load is yours. There's nothing left in this town that's worth the drive; the Pitch can move on whenever you like.",
 	"trade": "The Pitch's trade came too: %s, and anyone who runs for the Pitch learns the lot of it.",
 }

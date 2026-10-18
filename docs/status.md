@@ -5497,3 +5497,10 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   art as you have it"), card 840 high, smoke asserts it. Two smoke flakes fixed (sell-commons counted papers; the
   reasons check read unsettled odds). Smoke pass x2, reviewer OK. Raised for Matt: tests/bot.gd still climbs site
   depths, so the bot earns Dial points and depths a player can't (balance reads).
+- (18 Oct) Words pass batch 2 of 4 (depth, glossary, caps): 130 strings plus the code under them. Every depth on screen
+  is a level now (lv_at for a site's own depth, Sim.tier_level for a signal's/paper's/site unique's Barracks-equivalent
+  depth); the Yard's last two columns say the signal level that opens them (Data.yard_gate). The tree "The Rat Man"
+  renamed with every key. UI.track for caps kickers (MYTHIC). The Backpack slot's card says PACK. Smoke: the inventory
+  filters must name real slots (the pass had emptied the Meds tab - reviewer caught it); two more flakes fixed (the torch
+  split sat on the 0.5/s line; the crowded strip). Held for Matt: S3053 (the rail's "The Pitch" -> "The Yard" contradicts
+  his call 3).

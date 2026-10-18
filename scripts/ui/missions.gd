@@ -141,12 +141,12 @@ func _init() -> void:
 		c["boxes"][1].position.y = y
 		y += BOX_PAD
 		# what they fire, as chips in the element's colour, with your resist to each; what they resist, the same way
-		c["fire_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "They fire", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["fire_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "THEY FIRE", "Medium", 20, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["chips"] = Chips.new(INNER - FIRE_W)
 		c["chips"].position = Vector2(PAD + FIRE_W, y)
 		panel.add_child(c["chips"])
 		y += Chips.CHIP_H + 8
-		c["resist_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "They resist", "Regular", Pal.LINE, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["resist_label"] = UI.label(panel, Rect2(PAD, y, FIRE_W - 8, Chips.CHIP_H), "THEY RESIST", "Medium", 20, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		c["resist"] = Chips.new(INNER - FIRE_W)
 		c["resist"].position = Vector2(PAD + FIRE_W, y)
 		panel.add_child(c["resist"])
@@ -189,7 +189,7 @@ func _init() -> void:
 	_came.acted.connect(func(): acted.emit())
 	add_child(_came)
 	_guide_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W, 0, GUIDE_W, ZONE_H), false)
-	_guide_btn.tooltip_text = "What a site pays, depth by depth, and where to farm"
+	_guide_btn.tooltip_text = "What a site pays at each signal level, and where to farm"
 	_guide_btn.pressed.connect(_open_guide)
 	_guide = TierGuide.new()
 	_guide.closed.connect(func(): acted.emit())
@@ -274,7 +274,7 @@ func show_state(s) -> void:
 		c["depth_up"].visible = false
 		var p_odds: float = sim.paper_odds(i)
 		var tiles: Array = [
-			["Them", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
+			["Gang", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight · clock", ["%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "over %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
 			["Finds", sim.finds_words(int(t["level"]))],
@@ -319,7 +319,7 @@ func show_state(s) -> void:
 		c["deploy"].size.x = INNER - BOSS_W - 8 if c["boss"].visible else INNER
 		if c["boss"].visible:
 			var armed: bool = sim.boss_armed.get(i, false)
-			c["boss"].text = ("Convoy ✓" if armed else "Convoy") if convoy else ("Boss ✓" if armed else "Boss")
+			c["boss"].text = ("Convoy ✓" if armed else "Convoy") if convoy else ("Head ✓" if armed else "Head")
 			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
 			UI.style_button(c["boss"], false, "bad" if armed else "")
 		c["auto"].visible = is_open
@@ -352,10 +352,10 @@ func _station_words(i: int) -> String:
 	var out: Array = []
 	var b: Dictionary = sim.boss_of(i)
 	if not b.is_empty() and sim.depth[i] < sim.pinnacle_depth(i):
-		out.append("Depth %d: %s at full strength" % [sim.pinnacle_depth(i), b["name"]])
+		out.append("Level %d signal: %s at full strength" % [sim.lv_at(i, sim.pinnacle_depth(i)), b["name"]])
 	var own: Dictionary = sim.site_unique(i)
 	if not own.is_empty() and not (own["name"] in sim.shelf):
-		out.append(Words.SHELF["own_note"] % [sim.site_unique_depth(i), own["name"]])
+		out.append(Words.SHELF["own_note"] % [sim.site_unique_level(i), own["name"]])
 	return " · ".join(out)
 
 
@@ -433,13 +433,13 @@ func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
 		if share > 0.0:
 			var over: float = sim.over_cap(ty)
 			var ot: String = (" +%.0f" % over) if over >= 0.5 else ""     # over the cap (12 Oct)
-			chips.append(["%s %.0f%% · you resist %.0f%%%s" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0, ot], "%s · res %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
+			chips.append(["%s %.0f%% · you resist %.0f%%%s" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0, ot], "%s · resist %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
 	if chips.is_empty():
 		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
 	# the rig short of the fight's rounds (16 Oct): first, in red - the Bank's dry shotgun
 	var short: Array = sim.rounds_short(int(t["tier"])) if is_open else []
 	if not short.is_empty():
-		chips.push_front(["Rounds short: %d of ~%d" % [int(short[0]), int(short[1])], "Short: %d of ~%d" % [int(short[0]), int(short[1])], "bad"])
+		chips.push_front({"forms": ["Rounds short: %d of ~%d" % [int(short[0]), int(short[1])], "Short: %d of ~%d" % [int(short[0]), int(short[1])], "Rounds short"], "colour": "bad"})     # its shortest says it without the figures, so the resist chip after it keeps its room (18 Oct)
 	c["fire_label"].visible = is_open
 	c["chips"].visible = is_open
 	c["chips"].show_chips(chips if is_open else [], 1, true)     # every chip short before one's left off: the rounds' warning first, so it's never the one (the smoke caught it dropped)

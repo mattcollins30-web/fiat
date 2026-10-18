@@ -22,12 +22,12 @@ const ROW_H := 54
 const ROWS := 12
 const TABLE_Y := 182
 ## The table's columns: [heading, width]; the last takes what's left.
-const COLS := [["Signal level", 130], ["Gear to wear", 190], ["Gang HP", 100], ["XP & tins", 100], ["Drops", 80], ["Rarity", 80], ["Uniques", 80], ["Opens here", 0]]
+const COLS := [["Signal level", 130], ["Gear to wear", 190], ["Gang HP", 100], ["XP & tins", 100], ["Finds", 80], ["Quality", 80], ["Uniques", 80], ["Opens here", 0]]
 const COL_GAP := 10
 const MARK_TONES := {"set": Pal.SET, "unique": Pal.UNIQUE, "head": Pal.BAD, "convoy": Pal.ACCENT, "deep": Pal.EPIC}
 const TYPE_WORDS := {"melee": "melee", "improvised": "improvised", "shotgun": "shotguns", "pistol": "pistols", "smg": "SMGs", "rifle": "rifles"}
 const SLOT_WORDS := {"Primary": "primaries", "Secondary": "sidearms", "Helmet": "helmets", "Armour": "armour", "Rig": "rigs", "Backpack": "packs"}
-const ROOM_WORDS := {"clinic": "the Clinic", "fence": "the Fence", "yard": "the Pitch", "radio": "the Radio", "workshop": "the Workshop"}
+const ROOM_WORDS := {"clinic": "the Clinic", "fence": "the Fence", "yard": "the Yard", "radio": "the Radio", "workshop": "the Workshop"}
 
 var sim
 var tab := "depths"

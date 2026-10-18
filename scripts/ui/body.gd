@@ -169,7 +169,7 @@ func _init() -> void:
 		cell.gui_input.connect(_cell_input.bind(slot))
 		cell.set_drag_forwarding(Callable(), _can_drop.bind(slot), _drop.bind(slot))
 		zone.add_child(cell)
-		var nm := UI.label(zone, Rect2(2, 0, r.size.x - 4, TOP_STRIP - 1), slot.to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var nm := UI.label(zone, Rect2(2, 0, r.size.x - 4, TOP_STRIP - 1), slot_name(slot).to_upper(), "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		var item: Array = []                     # "Empty" on an empty card; a full one's name is the art's (and its tooltip)
 		for i in range(3):
 			item.append(UI.label(zone, Rect2(10, TOP_STRIP + (r.size.y - TOP_STRIP) / 2.0 - 20 + i * 20, r.size.x - 20, 20), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false))
@@ -443,3 +443,8 @@ func _zone_input(event: InputEvent, slot: String) -> void:
 func box_rect(slot: String) -> Rect2:
 	var z: Control = _boxes[slot]["zone"]
 	return Rect2(z.position, z.size)
+
+
+## A slot as the screens name it (18 Oct, the glossary): the Backpack slot is the pack; the key stays "Backpack".
+static func slot_name(slot: String) -> String:
+	return "Pack" if slot == "Backpack" else slot

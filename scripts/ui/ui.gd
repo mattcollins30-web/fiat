@@ -24,6 +24,15 @@ static func font(weight: String, tabular := true) -> Font:
 	return fv
 
 
+## Letter-spacing for an ALL CAPS kicker (18 Oct, the words pass): tracking in the font, never spaces between the
+## letters, so the word stays a word for the fit checks.
+static func track(l: Label, px: int) -> void:
+	var fv := FontVariation.new()
+	fv.base_font = l.get_theme_font("font")
+	fv.spacing_glyph = px
+	l.add_theme_font_override("font", fv)
+
+
 static func label(parent: Node, rect: Rect2, text: String, weight: String, size: int,
 		color: Color, align := HORIZONTAL_ALIGNMENT_LEFT, tabular := true) -> Label:
 	var l := Label.new()

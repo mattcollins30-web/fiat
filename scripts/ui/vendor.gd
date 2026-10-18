@@ -373,7 +373,10 @@ func _show_deals() -> void:
 		sb.bg_color = Color(colour, 0.13)
 		sb.border_color = Color(colour, 0.4)
 		r["hand"].disabled = not can
-		r["pass"].text = "Turn it down · free" if pc == 0 else "Turn it down · %d n" % pc
+		if pc == 0:
+			r["pass"].text = "Turn it down · free"
+		else:
+			UI.fit_button(r["pass"], ["Turn it down · %d notes" % pc, "Turn it down"])
 		r["pass"].disabled = not sim.can_pass_contract(k)
 	if sim.mate.is_empty():
 		_mate_line.text = "Not about."
@@ -739,7 +742,7 @@ func _show_panel() -> void:
 		_right_lines[0].text = "%s %s" % [fh[0], fh[1]]
 		UI.fit(_right_lines[1], Items.affix_options(fitted))
 		var c: int = sim.compare(it)      # tried on (11 Oct), as the Lock-up's verdict
-		_right_lines[2].text = "Sidegrade" if c == 0 else ("▲ Better than it" if c > 0 else "▼ Worse than it")
+		_right_lines[2].text = "Sidegrade" if c == 0 else ("▲ Upgrade" if c > 0 else "▼ Downgrade")
 		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if c == 0 else (Pal.GOOD if c > 0 else Pal.BAD))
 		if sim.wear_lock(it) > 0:
 			_right_lines[2].text = "Level %d to wear" % sim.wear_lock(it)     # gear gated by level (15 Oct): it waits

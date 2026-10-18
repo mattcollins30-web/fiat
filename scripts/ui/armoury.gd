@@ -159,7 +159,7 @@ func _show_strip() -> void:
 	(_hp_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if frac > 0.5 else (Pal.WARN if frac > 0.25 else Pal.BAD)
 	var total: float = float(sim.damage_split()["total"])     # the hits and the dots together (16 Oct, item 14)
 	UI.fit(_dps, ["%.0f dmg/s" % total, "%.0f" % total])
-	UI.fit(_armour, ["%s armour" % Fmt.pct(sim.mitigation()), Fmt.pct(sim.mitigation())])
+	UI.fit(_armour, ["%s stopped" % Fmt.pct(sim.mitigation()), Fmt.pct(sim.mitigation())])
 	UI.fit(_pace, ["pace ×%.2f" % sim.pace(), "×%.2f" % sim.pace()])
 	UI.fit(_carry, ["%d cells · %d pouches" % [sim.capacity(), sim.med_capacity()], "%d cells" % sim.capacity()])
 
@@ -320,7 +320,7 @@ func _rounds_clause(gun: Dictionary) -> Array:
 
 ## A med or rounds: the rig on the right; Take into it, or Leave it in the stash. Returns the buttons.
 func _show_medical(it: Dictionary) -> Array:
-	var lines := [("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
+	var lines := [("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "Used under fire, over a few seconds")]
 	if Items.is_ammo(it):
 		var gun = sim.equipped["Primary"]
 		var sec = sim.equipped["Secondary"]
@@ -349,7 +349,7 @@ func _split_button(it: Dictionary) -> Dictionary:
 
 
 ## The junk rules' buttons: the rarity the Fence takes up to (off, then each rarity to Rare), and the kind kept.
-const SELL_WORDS := ["off", "commons", "to uncommon", "to rare"]
+const SELL_WORDS := ["off", "commons", "up to Uncommon", "up to Rare"]
 const KEEP_WORDS := {"": "upgrades", "guns": "upgrades, guns", "body": "upgrades, body", "bags": "upgrades, bags", "parts": "upgrades, parts"}
 
 

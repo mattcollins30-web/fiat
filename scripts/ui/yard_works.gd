@@ -87,7 +87,7 @@ func show_jobs(title: String, headline: String, unit: String, jobs: Array, statu
 			continue
 		var j: Dictionary = jobs[i]
 		_names[i].text = str(j["name"])
-		_levels[i].text = "Level %d of %d" % [int(j["level"]), int(j["of"])]
+		_levels[i].text = "Rank %d of %d" % [int(j["level"]), int(j["of"])]
 		var now_forms: Array = []
 		for f in j["now"]:
 			now_forms.append("Now: " + str(f))

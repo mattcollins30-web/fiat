@@ -403,7 +403,7 @@ static func deltas_for(sim, it: Dictionary, fitted: Dictionary) -> Array:
 		# the body's figure first (12 Oct): what the arrow reads for a helmet or a coat, regen and resists in it
 		var sg: float = sim.survival_gain(it) * 100.0
 		if absf(sg) >= 0.5:
-			out.push_front([sg, "%.0f%% survival" % absf(sg)])
+			out.push_front([sg, "%.0f%% odds" % absf(sg)])
 	return out
 
 

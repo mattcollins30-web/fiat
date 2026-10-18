@@ -497,7 +497,7 @@ func dot_seconds(ty: String, theirs := true) -> float:
 	var s := float(Data.DOTS[ty]["s"])
 	if not theirs:
 		return s
-	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The rat man/3")) or (ty == "bleed" and (tree.has("Blades/3") or has_set_rule("carpet"))):
+	if (ty == "fire" and tree.has("Petrol/3")) or (ty == "poison" and tree.has("The Rat Man/3")) or (ty == "bleed" and (tree.has("Blades/3") or has_set_rule("carpet"))):
 		s *= Data.FX["set/carpet.bleed_s"]
 	if ty == "poison" and has_rule("rat_mans_overalls"):
 		s *= Data.FX["rule/rat_mans_overalls"]                                 # the overalls: the same pool, twice as fast
@@ -918,7 +918,7 @@ func retire() -> bool:
 	if not can_retire():
 		return false
 	chron("retire", {"trait": runner_trait, "runner_runs": runner_runs})
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired", "site": _deepest_held()[0], "depth": _deepest_held()[1]})
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired", "site": _deepest_held()[0], "depth": _deepest_held()[1], "held_lv": _deepest_held()[2]})
 	if runner_trait != "":
 		retired.append(runner_trait)
 		while retired.size() > Data.RETIRED_MAX:
@@ -1296,7 +1296,7 @@ func _deepest_held() -> Array:
 		if best_depth[i] > at or (best_depth[i] == at and at > 0 and i > best):
 			at = best_depth[i]
 			best = i
-	return [Data.TIERS[best]["name"] if best >= 0 else "", at]
+	return [Data.TIERS[best]["name"] if best >= 0 else "", at, lv_at(best, at) if best >= 0 else 0]     # the level for the screens (18 Oct)
 
 
 ## The Yard's tree nodes taken, in the order they were taken.
@@ -1396,7 +1396,7 @@ func move_yard(trade := "") -> bool:
 	cash = float(Data.STARTING_CASH) * inflation()    # the float, at today's prices
 	log_event(Words.YARD["moved"])
 	if trade != "":
-		log_event(Words.YARD["trade"] % Data.tree_of_element(trade)["name"].to_lower())
+		log_event(Words.YARD["trade"] % Words.mid(Data.tree_of_element(trade)["name"]))     # names as named (18 Oct)
 	last_next = ""
 	log_event(Words.NEXT["moved"])
 	return true
@@ -1694,7 +1694,7 @@ func paper_lines(it: Dictionary) -> Array:
 		return ["Encrypted", "Read once the Radio's open", "Keep it: a key to the endgame"]
 	var code: String = word_taught_by(str(it["base"]))
 	return ["The Radio", "Carries %s" % code.to_lower() if code != "" else "No code: a line of the before",
-		"Rare: rolls a signal deeper" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "Three make a signal"]
+		"Rare: rolls the signal 1 level higher" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "Three make a signal"]
 
 
 ## Kev's papers (16 Oct): a plain paper from the pile for notes - KEV_RUNS runs' notes on the top open site, a kill's
@@ -2529,7 +2529,7 @@ func train_block(id: String, ignore_points := false) -> String:
 	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
 		return "opens at level %d" % Data.CAPSTONE_LEVEL
 	if t.has("element") and col >= Data.ELEMENT_GATED_COL and not _tops_open(parts[0]):
-		return "wants a joint closed in %s" % parts[0]
+		return "wants a joint joined in %s" % parts[0]
 	if n.get("capstone", false):
 		# the capstone wants the tree's shape behind it: the keystone and every notable this runner can train
 		for k in range(t["nodes"].size()):
@@ -2619,7 +2619,7 @@ func _earn_points(before: int) -> void:
 		log_event("Level %d: %d training point%s" % [after, gained, "" if gained == 1 else "s"])
 		chron("level", {"to": after, "gained": gained, "best": true})
 	elif after > before:
-		log_event("Level %d: no point - the camp's had a runner at level %d" % [after, best_level])
+		log_event("Level %d: no training point – the Pitch has had a runner at level %d" % [after, best_level])
 		chron("level", {"to": after, "gained": 0, "best": false})
 
 
@@ -2912,12 +2912,12 @@ func shelf_chase() -> Array:
 		var u := site_unique(i)
 		if u.is_empty():
 			continue
-		out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["own_gap"] % [Data.TIERS[i]["name"], site_unique_depth(i)]})
+		out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["own_gap"] % [Data.TIERS[i]["name"], site_unique_level(i)]})
 	for u in Data.UNIQUES:
 		if u.has("pinnacle"):
 			for b in Data.BOSSES:
 				if int(b["zone"]) == int(u["pinnacle"]):
-					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], pinnacle_depth(int(b["tier"]))]})
+					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], lv_at(int(b["tier"]), pinnacle_depth(int(b["tier"])))]})
 	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"]})     # the depot's, Kev's last beat (15 Oct)
 	return out
 
@@ -3308,7 +3308,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"dps":
 			return "fire +" + pc.call(e["dps"])
 		"pool":
-			return ("pack ×%s" % ("%.1f" % float(e["pool"])).trim_suffix(".0")) if float(e["pool"]) >= 2.0 else "pack +" + pc.call(e["pool"])
+			return ("gang size ×%s" % ("%.1f" % float(e["pool"])).trim_suffix(".0")) if float(e["pool"]) >= 2.0 else "gang size +" + pc.call(e["pool"])
 		"patrol":
 			return "gangs %s sooner" % pc.call(e["patrol"])
 		"pace":
@@ -3325,7 +3325,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"res":
 			return "%s res %d%%" % ["all" if part["res"] == "all" else str(part["res"]), int(round(float(e.get("res_add", 0.0)) * 100.0))]
 		"soaked":
-			return "your resists −%d" % int(round(float(e.get("soaked", 0.0)) * 100.0))
+			return "your resist −%d%%" % int(round(float(e.get("soaked", 0.0)) * 100.0))
 		"no_meds":
 			return "no meds on the run"
 		"no_kill_cash":
@@ -3333,7 +3333,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"clock_half":
 			return "the clock halved"
 		"boss_walks":
-			return "the zone's head every run, free"
+			return "the area's head every run, free"
 		"drop":
 			return "finds +" + pc.call(e["drop"])
 		"cash":
@@ -3341,7 +3341,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"xp":
 			return "XP +" + pc.call(e["xp"])
 		"rarity":
-			return "quality +%d%%" % int(round(float(e["rarity"]) * 100.0))
+			return "loot quality +%d%%" % int(round(float(e["rarity"]) * 100.0))
 		"crates":
 			var bits: Array = []
 			for key in e.get("crates", {}):
@@ -3388,7 +3388,7 @@ func word_total_words(i: int) -> Array:
 	if g["drop"] > 1.005:
 		gw.append("finds +" + pc.call(g["drop"]))
 	if g["rarity"] > 0.005:
-		gw.append("quality +%d%%" % int(round(g["rarity"] * 100.0)))
+		gw.append("loot quality +%d%%" % int(round(g["rarity"] * 100.0)))
 	if g["cash"] > 1.005:
 		gw.append("tins +" + pc.call(g["cash"]))
 	if g["xp"] > 1.005:
@@ -3401,7 +3401,7 @@ func word_total_words(i: int) -> Array:
 	if b["dps"] > 1.005:
 		bw.append("fire +" + pc.call(b["dps"]))
 	if b["pool"] > 1.005:
-		bw.append("pack +" + pc.call(b["pool"]))
+		bw.append("gang size +" + pc.call(b["pool"]))
 	if b["patrol"] < 0.995:
 		bw.append("gangs %s sooner" % pc.call(b["patrol"]))
 	if b["pace"] < 0.995:
@@ -3415,9 +3415,9 @@ func word_total_words(i: int) -> Array:
 	for ty in b["types"]:
 		bw.append("%d%% %s" % [int(round(float(b["types"][ty]) * 100.0)), ty])
 	for ty in b["res"]:
-		bw.append("%s res %d%%" % [ty, int(round(float(b["res"][ty]) * 100.0))])
+		bw.append("%s resist %d%%" % [ty, int(round(float(b["res"][ty]) * 100.0))])
 	if float(b.get("soaked", 0.0)) > 0.005:
-		bw.append("your res −%d" % int(round(float(b["soaked"]) * 100.0)))
+		bw.append("your resist −%d%%" % int(round(float(b["soaked"]) * 100.0)))
 	for f in b["flags"]:
 		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill tins", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
 	return [" · ".join(gw), " · ".join(bw)]
@@ -3703,9 +3703,9 @@ func yard_cols() -> int:
 		n = 3
 	if campaign_done():
 		n = 4
-	if deepest_dug() >= 6:
+	if deepest_dug() >= Data.YARD_GATE_DEPTHS[4]:
 		n = 5
-	if deepest_dug() >= 9:
+	if deepest_dug() >= Data.YARD_GATE_DEPTHS[5]:
 		n = 6
 	yard_open = maxi(yard_open, n)
 	return yard_open
@@ -3737,7 +3737,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	if mission != null:
 		return "The runner is out"
 	if col >= yard_cols():
-		return "%s" % Data.YARD_GATES[col]
+		return Data.yard_gate(col)
 	if yard_side(key, col) == side:
 		return "Built"
 	if cash < yard_pick_cost(key, col):
@@ -3794,7 +3794,7 @@ func yard_rank_block(key: String) -> String:
 	if mission != null:
 		return "The runner is out"
 	if yard_cols() < Data.YARD_COLS:
-		return Data.YARD_GATES[Data.YARD_COLS - 1]
+		return Data.yard_gate(Data.YARD_COLS - 1)
 	if cash < yard_rank_cost(key):
 		return "Short of tins"
 	if int(salvage.get(b["salvage"], 0)) < yard_rank_salvage(key):
@@ -4412,7 +4412,7 @@ func guide_rows(i: int, from_lv: int, count := 12) -> Array:
 		if not own.is_empty() and td == site_unique_depth(i):
 			marks.append(["%s drops" % own["name"], "unique"])
 		if lv in Data.DEEP_TIER_LEVELS:
-			marks.append(["Deep gear, tier %d" % loot_tier_at(lv), "deep"])
+			marks.append(["Deep gear, T%d" % loot_tier_at(lv), "deep"])
 		if uq >= Data.UNIQUE_CAP - 1e-6 and not capped:
 			marks.append(["Uniques at their cap", "unique"])
 		capped = capped or uq >= Data.UNIQUE_CAP - 1e-6
@@ -4426,7 +4426,13 @@ func guide_rows(i: int, from_lv: int, count := 12) -> Array:
 
 ## The signal level a site's own unique starts dropping from: the first whose depth reaches site_unique_depth.
 func site_unique_level(i: int) -> int:
-	return site_unique_depth(i) + (Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES)
+	return tier_level(site_unique_depth(i))
+
+
+## The level a Barracks-equivalent depth is (tier_depth's inverse): the depth a signal, a paper's gate or a site's own
+## unique is keyed on, as the screens say it (18 Oct: levels on screen).
+static func tier_level(d: int) -> int:
+	return d + (Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES)
 
 
 ## Where the guide's ladder starts for a site: a few levels under the reach, never under the site's own level or the
@@ -5293,7 +5299,8 @@ func deploy(i: int) -> void:
 	if runs_total % Data.MATE_RUNS == 0:
 		mate = roll_mate()
 	var intel: String = ", ".join(t["intel"]).to_lower()
-	log_event("Out to %s, %s, depth %d%s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), t["depth"], (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
+	var at_lv: String = (", level %d" % int(t.get("level", 0))) if not _sig.is_empty() else ""     # a signal says its level; a campaign run says nothing (18 Oct: no depth on screen)
+	log_event("Out to %s, %s%s%s" % [Words.mid(t["name"]), Words.mid(zone_name(i)), at_lv, (": " + intel) if intel != "" else ""])     # no codes, no colon (13 Oct, Matt's save)
 	_maybe_wearing(mission)
 	var key := "%d/%d" % [i, t["depth"]]
 	if not seen.has(key):
@@ -5575,7 +5582,7 @@ func guard_sources() -> Array:
 	if has_node("in_the_hide"):
 		out.append("15% the first down")
 	if has_node("sheet_metal"):
-		out.append("6% a cache")
+		out.append("6% of max HP a crate searched")
 	if has_node("breather"):
 		out.append("back between gangs")
 	if rig.any(func(it): return Items.is_medical(it) and Items.affix_total(it, "overflow_pct") > 0.0):
@@ -7134,7 +7141,7 @@ func _kia() -> void:
 	}
 	_chron_run(m, "Dead", {"lost_value": lost, "insured": bool(m.get("insured", false)), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
 		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1]})
+	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1], "held_lv": _deepest_held()[2]})
 	if Words.PASTS.has(cls) and not _dry_on:
 		log_event("On the Pitch's list: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
 	runner_runs = 0
@@ -7907,8 +7914,8 @@ func gamble_buy(kind: String, unique_roll := -1.0) -> Dictionary:
 	cash -= gamble_price(kind)
 	gamble.erase(kind)
 	stash_put(it)
-	last_craft = {"id": it["id"], "kind": "gamble", "words": "The Fence's word: %s" % Items.full_name(it).to_lower()}
-	log_event("A word in the right ear: %s" % Items.full_name(it).to_lower())
+	last_craft = {"id": it["id"], "kind": "gamble", "words": "The Fence's word: %s" % Items.full_name(it)}     # names as named (18 Oct)
+	log_event("A word in the right ear: %s" % Items.full_name(it))
 	return it
 
 
@@ -8305,7 +8312,7 @@ func gang_line(m: Dictionary, size: int) -> String:
 	var g: Dictionary = Words.GANGS[z]
 	var said: String = Words.rotate(g["arrive"], int(m.get("patrols", 0)) + runs_total)
 	if hard >= 0:
-		var from: String = Words.GANG_HARD_CORE if m.has("t_home") and hard == int(m["t_home"].get("crew_zone", -1)) else Words.GANG_IN_FROM % str(Data.ZONES[hard]["name"]).to_lower()
+		var from: String = Words.GANG_HARD_CORE if m.has("t_home") and hard == int(m["t_home"].get("crew_zone", -1)) else Words.GANG_IN_FROM % Words.mid(str(Data.ZONES[hard]["name"]))
 		return "%s, %d of them, %s. %s" % [g["name"], size, from, said]
 	return "%s, %d of them. %s" % [g["name"], size, said]
 
@@ -8418,7 +8425,7 @@ func _came_back_line(e: Dictionary) -> void:
 				cb["scrap"] = int(cb["scrap"]) + int(e.get("scrap", 0))
 				cb["items"] = int(cb["items"]) + int(e.get("loot", 0))
 		"clear":
-			line = ("First clear: %s" % e["site"]) if e.get("first", false) else ("%s held at depth %d" % [e["site"], int(e["depth"])])
+			line = ("First clear: %s" % e["site"]) if e.get("first", false) else ("%s held at level %d" % [e["site"], int(e.get("site_level", e["depth"]))])
 		"boss":
 			if e.get("first", false):
 				line = "%s down" % e["name"]

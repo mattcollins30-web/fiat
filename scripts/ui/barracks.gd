@@ -490,20 +490,20 @@ func _build_panel() -> void:
 
 
 const EFFECT_WORDS := {
-	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% quantity", "search_pct": "Search %d%% faster",
+	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity", "search_pct": "Search %d%% faster",
 	"first_pct": "+%d%% damage to each gang's first", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
 	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d med carried", "rest_pct": "Rest +%d%%", "treat_pct": "Treatment −%d%%",
-	"att_share": "+%d%% attachments", "sell_pct": "Fence pays +%d%%", "cash_pct": "Tins +%d%%", "rarity": "+%d%% quality",
+	"att_share": "+%d%% from gun parts", "sell_pct": "Fence pays +%d%%", "cash_pct": "Tins +%d%%", "rarity": "+%d%% loot quality",
 	"pace_pct": "+%d%% pace", "damage_low_pct": "+%d%% dmg under ½ HP",
 	"conv_fire_pct": "%d%% as fire", "conv_frost_pct": "%d%% as frost", "conv_poison_pct": "%d%% as poison", "conv_shock_pct": "%d%% as shock", "conv_bleed_pct": "%d%% as bleed",
 	"fire_pct": "+%d%% fire", "frost_pct": "+%d%% frost", "poison_pct": "+%d%% poison", "shock_pct": "+%d%% shock", "bleed_pct": "+%d%% bleed", "physical_pct": "+%d%% physical",
-	"dot_pct": "+%d%% dots", "phys_pen": "Ignores %d%% resist",
+	"dot_pct": "+%d%% damage over time", "phys_pen": "Ignores %d%% resist",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
 const PANEL_WORDS := {
 	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More to lose before a bail-out.", "loot_pct": "Every search turns up a little more.",
-	"search_pct": "The picking-over goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
+	"search_pct": "Searching goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
 	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
 	"rest_pct": "Resting on the Pitch heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
 	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
@@ -1054,7 +1054,7 @@ func _paper_gap(nm: String) -> String:
 	if site != "":
 		return Words.BOOK["gap_site"] % Words.mid(site)
 	var d: int = int(Items.base_named(Data.PAPER, nm).get("depth", 0))
-	return Words.BOOK["gap_deep"] % d if d > 0 else Words.BOOK["gap"]
+	return Words.BOOK["gap_deep"] % sim.tier_level(d) if d > 0 else Words.BOOK["gap"]     # a paper's gate is a Barracks-equivalent depth: its level (18 Oct: levels on screen)
 
 
 ## The radio (12 Oct, the lore pass): every line heard, in the order heard, under its voice.
@@ -1177,7 +1177,7 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	# the dots: their increase, and what the notables do to them
 	var dot_inc: float = sim.tree_sum("dot_pct")
 	var extras: Array = []
-	for pair in [["Petrol/3", "burns"], ["The rat man/3", "poison"], ["Blades/3", "bleeds"]]:
+	for pair in [["Petrol/3", "burns"], ["The Rat Man/3", "poison"], ["Blades/3", "bleeds"]]:
 		if sim.tree.has(pair[0]):
 			extras.append("%s ×2 long" % pair[1])          # Lit, Dosed, Opened up: the trees' own, not the kit's (dot_seconds reads both)
 	if sim.has_node("poison_stacks"):
@@ -1187,7 +1187,7 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	if dot_inc > 0.0 or not extras.is_empty():
 		var head: String = ("+%.0f%%" % dot_inc) if dot_inc > 0.0 else ""
 		var long: Array = ([head] if head != "" else []) + extras
-		items.append({"tag": "Dots", "forms": [" · ".join(long), " · ".join(long.slice(0, 2)), long[0]], "colour": Pal.TEXT})
+		items.append({"tag": "Lasting", "forms": [" · ".join(long), " · ".join(long.slice(0, 2)), long[0]], "colour": Pal.TEXT})     # "Lasting": damage over time (the glossary), short enough for the crowded strip (18 Oct)
 	plain.call("Max HP", sums.get("hp", 0.0), "+%.0f")
 	plain.call("First of each gang", sums.get("first_pct", 0.0), "+%.0f%%")
 	plain.call("Search", sums.get("search_pct", 0.0), "%.0f%% faster")
@@ -1296,7 +1296,7 @@ func _show_panel() -> void:
 		if is_taken and not sim.node_active(selected) and not sim._active(nd):
 			tail = "idle without %s in hand" % type_words(nd)
 		elif is_taken and not sim.node_active(selected):
-			tail = "idle until a joint in %s closes again" % str(selected).get_slice("/", 0)
+			tail = "idle until a joint in %s is joined again" % str(selected).get_slice("/", 0)
 		var block: String = "" if is_taken else sim.train_block(selected, true)     # the points are the tree's and the button's to say (Matt, 10 Oct)
 		var t2 := _as_sentence(tail)
 		var b2 := _as_sentence(block)
@@ -1401,7 +1401,7 @@ func _show_past() -> void:
 	var short := []
 	for k in range(sim.past.size() - 1, -1, -1):
 		var r: Dictionary = sim.past[k]
-		var held: String = (", %s at depth %d" % [Words.mid(str(r["site"])), int(r["depth"])]) if int(r.get("depth", 0)) > 0 else ""
+		var held: String = (", %s at level %d" % [Words.mid(str(r["site"])), int(r.get("held_lv", 0))]) if int(r.get("held_lv", 0)) > 0 else ""
 		long.append("a %s, %d run%s%s, %s" % [str(r["class"]), int(r["runs"]), "" if int(r["runs"]) == 1 else "s", held, r["end"]])
 		short.append("%s %d" % [str(r["class"]), int(r["runs"])])
 	UI.fit(_past, ["Before: " + "; ".join(long), "Before: " + "; ".join(long.slice(0, 2)), "Before: " + ", ".join(short), long[0], "%d runner%s before this one" % [sim.past.size(), "" if sim.past.size() == 1 else "s"]])

@@ -189,10 +189,11 @@ func show_state(s) -> void:
 	_band.set_right(["A point for each signal", "at or past your reach.", "Holds on every site."])
 	var zones := []
 	for z in range(Data.ZONES.size()):
-		var deepest := 0
+		var best_lv := 0                    # the best level cleared there (18 Oct: levels, not depths, on screen)
 		for i in Data.ZONES[z]["tiers"]:
-			deepest = maxi(deepest, sim.best_depth[i])
-		zones.append({"forms": ["%s · depth %d" % [Data.ZONES[z]["name"], deepest], "depth %d" % deepest], "colour": Pal.TEXT_2})
+			if sim.best_depth[i] > 0:
+				best_lv = maxi(best_lv, sim.lv_at(i, sim.best_depth[i]))
+		zones.append({"forms": ["%s · level %d" % [Data.ZONES[z]["name"], best_lv], "level %d" % best_lv], "colour": Pal.TEXT_2})
 	_band.set_chips(zones)
 	var taken_of: Array = [[0, 0], [0, 0], [0, 0]]
 	var items := []

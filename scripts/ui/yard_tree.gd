@@ -71,7 +71,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The yard")        # art/places/the_yard.png (Rooms-B)
-	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Pitch", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kicker = UI.label(head, Rect2(PAD, 8, 330, 24), "The Yard", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 200, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the purse down the left under the title, on the band's shaded side, so the painting across the top is clear
@@ -224,7 +224,7 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 	UI.fit(lane["name"], [b["name"], str(b["name"]).trim_prefix("The ")])
 	UI.fit(lane["count"], ["%d of 5 · rank %d" % [picked, sim.yard_rank(key)], "%d/5 · %d" % [picked, sim.yard_rank(key)]])
 	if cols < COLS:
-		UI.fit(lane["gate"], ["column %d: %s" % [cols + 1, str(Data.YARD_GATE_SHORT[cols])], "next: %s" % str(Data.YARD_GATE_SHORT[cols]), ""])
+		UI.fit(lane["gate"], ["column %d: %s" % [cols + 1, Data.yard_gate(cols, true)], "next: %s" % Data.yard_gate(cols, true), ""])
 	else:
 		UI.fit(lane["gate"], ["every column open", "all open"])
 	UI.fit(lane["kind"], ["%s %d" % [Data.SALVAGE_NAMES[b["salvage"]], int(sim.salvage.get(b["salvage"], 0))], str(Data.SALVAGE_NAMES[b["salvage"]])])
@@ -252,7 +252,7 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 			if look == "open":
 				cost = _short_money(sim.yard_pick_cost(key, c))
 			elif look == "shut" and not gate_said:
-				cost = str(Data.YARD_GATE_SHORT[c])     # the first shut column says what opens it
+				cost = Data.yard_gate(c, true)     # the first shut column says what opens it
 		if side_built == "" and c >= cols:
 			gate_said = true
 		var cl: Label = lane["tiles"][c][0]["cost"]
@@ -265,7 +265,7 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 	r["glyph"].texture = NodeGlyphs.texture("star")
 	r["button"].tooltip_text = "Rank %d: %s a rank" % [rank, b["rank"]["short"]]
 	UI.fit(r["name"], ["◆ Rank %d · %s" % [rank, b["rank"]["short"]], "◆ Rank %d" % rank])
-	UI.fit(r["cost"], [_short_money(sim.yard_rank_cost(key)) if rank_open else "opens %s" % str(Data.YARD_GATE_SHORT[COLS - 1]), str(Data.YARD_GATE_SHORT[COLS - 1])])
+	UI.fit(r["cost"], [_short_money(sim.yard_rank_cost(key)) if rank_open else "opens at %s" % Data.yard_gate(COLS - 1, true), Data.yard_gate(COLS - 1, true)])
 	# five pips: the ranks in this five, all five lit past each fifth
 	var lit: int = 0 if rank == 0 else ((rank - 1) % 5) + 1
 	for k in range(5):

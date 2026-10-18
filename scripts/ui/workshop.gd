@@ -57,7 +57,7 @@ const JOB_GAP := 8
 @warning_ignore("integer_division")
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
 const JOBS := ["reroll", "add", "socket", "strip", "bump", "scrap"]
-const JOB_NAMES := {"bump": "Raise the level", "scrap": "Scrap it"}
+const JOB_NAMES := {"bump": "Raise the item level", "scrap": "Scrap it"}
 const JOB_WORDS := {"bump": "Three levels up: the worst tiers stop rolling", "scrap": "Broken down for the builds; gone for good"}
 const FOOT_H := 44
 const GUNS := ["Primary", "Secondary"]
@@ -278,7 +278,7 @@ static func rarity_tone(it: Dictionary) -> String:
 func show_state(s) -> void:
 	sim = s
 	var source: Array = sim.attachments_for(sel_mount) if sel_mount != "" else _all_attachments(view == "sockets")
-	var what: String = "Socketables" if view == "sockets" else "Attachments"
+	var what: String = "Socketables" if view == "sockets" else "Gun parts"
 	if sel_mount != "":
 		what = sel_mount.capitalize() if sel_mount.begins_with("socket") else "%s mount" % Items.mount_name(sel_mount)
 	if view == "craft":

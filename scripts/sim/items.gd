@@ -896,7 +896,7 @@ static func base_res_words(it: Dictionary) -> String:
 	var res: Dictionary = base_of(it).get("res", {})
 	for ty in Data.ELEMENTS:
 		if res.has(ty):
-			out.append("%s res %d" % [ty, int(res[ty])])
+			out.append("%s resist %d%%" % [ty, int(res[ty])])
 	if base_of(it).has("sustain"):
 		var su: Array = base_of(it)["sustain"]
 		out.append("walking fire +%d%%/s to +%d%%" % [int(su[0]), int(su[1])])     # the SMG line (7 Oct)
@@ -948,7 +948,7 @@ static func grade_words(b: Dictionary) -> String:
 static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var sz := 0.0
-	for pair in [["damage_pct", "% damage"], ["first_pct", "% damage to each gang's first"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
+	for pair in [["damage_pct", "% damage"], ["first_pct", "% damage to each gang's first"], ["speed_pct", "% pace"], ["patrol_pct", "% later gangs"],
 			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > sz:
@@ -964,7 +964,7 @@ static func att_lead(it: Dictionary) -> Array:
 ## `base_only`: the part's own figures, its rolled affixes left for their own lines.
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
-	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "damage to the first of each gang", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
+	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "damage to the first of each gang", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "later gangs", "delay"],
 			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:

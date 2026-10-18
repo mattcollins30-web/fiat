@@ -72,8 +72,8 @@ const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "scrap", "coppe
 const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"]
 const TOP_SALVAGE := ["copper", "steel", "army"]
 const TOP_TONE := {"scrap": Color("eceded"), "copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}
-const TOP_TIP := {"notes": "Notes: paid for heads, Radio jobs, Kev, Workshop crafts and the Fence's mate", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Pitch",
-	"steel": "Safe steel: salvage from the Town's depths, for the Pitch", "army": "Army surplus: salvage from the City's depths, for the Pitch", "cash": "Tins: the money; the Fence pays in them",
+const TOP_TIP := {"notes": "Notes: paid for heads, Radio jobs, Kev, Workshop crafts and the Fence's mate", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's signals, for the Pitch",
+	"steel": "Safe steel: salvage from the Town's signals, for the Pitch", "army": "Army surplus: salvage from the City's signals, for the Pitch", "cash": "Tins: the money; the Fence pays in them",
 	"where": "Where the runner is"}
 const TOP_WORST := {
 	"cash": "9,999,999",
@@ -573,11 +573,11 @@ func _notification(what: int) -> void:
 func show_title() -> void:
 	var items := []
 	var saved := FileAccess.file_exists(save_file)
-	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No camp in progress",
+	items.append({"name": "Continue", "detail": _save_words(save_file) if saved else "No game in progress",
 			"action": load_game.bind(save_file), "enabled": saved and _save_ok(_read_save(save_file)), "glyph": "menu_continue"})
-	items.append({"name": "New camp", "detail": "One runner, a hammer, 150 tins",
-			"action": new_game.bind(false), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_new"})
-	items.append({"name": "New camp, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
+	items.append({"name": "New game", "detail": "One runner, a hammer, 150 tins",
+			"action": new_game.bind(false), "confirm": "This replaces the game in progress – press again" if saved else "", "glyph": "menu_new"})
+	items.append({"name": "New game, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
 			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
@@ -638,7 +638,7 @@ func show_slots(saving: bool, back: Callable) -> void:
 		else:
 			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": load_game.bind(path), "enabled": used and _save_ok(_read_save(path))})
 	items.append({"name": "Back", "detail": "", "action": back})
-	_menu.open("Save to a slot" if saving else "Load a slot", "Saves the player makes; the game autosaves on its own", items, back)
+	_menu.open("Save to a slot" if saving else "Load a slot", "Saves you make; the game also saves itself every 30 s", items, back)
 
 
 func _save_to_slot(path: String) -> void:
@@ -670,7 +670,7 @@ class CogGlyph extends Control:
 
 ## The pause as a drawer over the rail (Pause B, 8 Oct): the rooms' column becomes the menu's.
 func show_pause() -> void:
-	_menu.open("Paused", "Hardcore camp" if sim.hardcore else "", [
+	_menu.open("Paused", "Hardcore game" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close, "glyph": "menu_continue"},
 		{"name": "Settings", "detail": "Effects, music and voice volumes; the rooms' intros", "action": show_settings, "glyph": "menu_sound"},
 		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
@@ -684,7 +684,7 @@ func show_pause() -> void:
 ## the pause. Opened again under a press, the row that was lit stays lit (a pad).
 func show_settings(lit_row := -1) -> void:
 	var items := []
-	var words := {"sfx": ["Effects", "The guns, the fights, the camp"], "music": ["Music", "The title's, the camp's, the fight's"],
+	var words := {"sfx": ["Effects", "The guns, the fights, the Pitch"], "music": ["Music", "The title's, the Pitch's, the fights'"],
 			"voice": ["Voice", "The opening, the radio, the rooms' intros"]}
 	for k in ["sfx", "music", "voice"]:
 		items.append({"name": "%s: %s" % [words[k][0], _vol_words(float(_sound.vols[k]))], "detail": words[k][1] + ": press to change",
@@ -1315,10 +1315,11 @@ func _rail_status(nm: String) -> Dictionary:
 func _town_purse() -> Dictionary:
 	var zlines := []
 	for z in range(Data.ZONES.size()):
-		var deepest := 0
+		var best_lv := 0                    # the best level cleared there (18 Oct: levels, not depths, on screen)
 		for i in Data.ZONES[z]["tiers"]:
-			deepest = maxi(deepest, sim.best_depth[i])
-		zlines.append([Data.ZONES[z]["name"], ("depth %d" % deepest) if deepest > 0 else ("open" if sim.zone_open(z) else "locked")])
+			if sim.best_depth[i] > 0:
+				best_lv = maxi(best_lv, sim.lv_at(i, sim.best_depth[i]))
+		zlines.append([Data.ZONES[z]["name"], ("level %d" % best_lv) if best_lv > 0 else ("open" if sim.zone_open(z) else "locked")])
 	var open_zones := 0
 	for z in range(Data.ZONES.size()):
 		if sim.zone_open(z):
@@ -1327,18 +1328,19 @@ func _town_purse() -> Dictionary:
 		var names := []
 		for el in sim.trades:
 			names.append(Data.tree_of_element(el)["name"])
-		zlines.append(["Pitch's trade", ", ".join(names)])
+		zlines.append(["The Pitch's trade", ", ".join(names)])
 	if not sim.best_dig.is_empty():
 		# the Yard's best dig, the score across yards (the endgame, 7 Oct)
 		var site: String = str(sim.best_dig["site"]).trim_prefix("The ")
-		zlines.append(["Best dig", ["%s, depth %d · pitch %d" % [site, int(sim.best_dig["depth"]), int(sim.best_dig["yard"])], "%s, depth %d" % [site, int(sim.best_dig["depth"])], "%s D%d" % [site, int(sim.best_dig["depth"])], "depth %d" % int(sim.best_dig["depth"])], "accent"])
+		var dig_lv: int = sim.lv_at(int(sim.best_dig["tier"]), int(sim.best_dig["depth"]))
+		zlines.append(["Best signal", ["%s, level %d · Pitch no. %d" % [site, dig_lv, int(sim.best_dig["yard"])], "%s, level %d" % [site, dig_lv], "%s L%d" % [site, dig_lv], "level %d" % dig_lv], "accent"])
 	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
 	if sim.lorry_done:
 		town_note = ["The lorry's beaten: move the Pitch when you're ready", "The lorry's beaten"]
 	var d := {
-		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · pitch %d" % (sim.yard_moves + 1),
+		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · Pitch no. %d" % (sim.yard_moves + 1),
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
-		"left": {"kicker": "The town · %d of %d zones open" % [open_zones, Data.ZONES.size()], "lines": zlines,
+		"left": {"kicker": "The town · %d of %d areas open" % [open_zones, Data.ZONES.size()], "lines": zlines,
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
 		"right": {"kicker": "The purse", "lines": [["Tins", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
@@ -1378,7 +1380,7 @@ func _choose_word(i: int, key: String, page := 0) -> void:
 		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, key, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = ("Call in a code on %s" if key == "call" else "Hold a code on %s") % sim.tier(i)["name"].to_lower()
+	var title: String = ("Call in a code on %s" if key == "call" else "Hold a code on %s") % Words.mid(sim.tier(i)["name"])     # "on the Allotments": names as named, a lower "the" mid-sentence (18 Oct)
 	_menu.open(title, "%s, and the codes stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
 
 
@@ -1439,7 +1441,7 @@ func _confirm_retire() -> void:
 	var td: Dictionary = sim.trait_data()
 	var kept: String = ("a third of %s kept" % td["name"].to_lower()) if not td.is_empty() else "no trait to keep"
 	var items := [
-		{"name": "Retire %s" % sim.cls.to_lower(), "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
+		{"name": "Retire the %s" % sim.cls, "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
 		{"name": "Not yet", "detail": "", "action": _menu.close},
 	]
 	_menu.open("Retire to the wall?", "A runner who retires is not a runner who died: the wall keeps a little of what they were, up to three.", items, _menu.close)
@@ -1503,7 +1505,7 @@ func _open_build_kind(kind: String, page: int) -> void:
 	var items := []
 	for o in opts.slice(page * 4, page * 4 + 4):
 		var wants: String = (" · wants %s" % (("a box of %s" % str(o["from"]).to_lower()) if kind == "grade" else str(o["from"]).to_lower())) if o["from"] != "" else ""
-		var detail: String = ("Tier %d%s" % [o["tier"], wants]) + ("" if o["ok"] else " · %s" % o["why"])
+		var detail: String = ("T%d%s" % [o["tier"], wants]) + ("" if o["ok"] else " · %s" % o["why"])
 		items.append({"name": "%s · %d scrap" % [o["name"], o["scrap"]], "detail": detail, "action": _build_one.bind(kind, o["name"]), "enabled": bool(o["ok"])})
 	if opts.size() > (page + 1) * 4:
 		items.append({"name": "More …", "detail": "", "action": _open_build_kind.bind(kind, page + 1)})

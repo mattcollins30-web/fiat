@@ -292,7 +292,7 @@ func _show_runner(lv: int) -> void:
 	var next_xp := Data.xp_for_level(shown + 1)
 	var fill: float = clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
 	c["fill"].size.x = roundf(c["track"].size.x * fill)
-	c["xp"].text = "%s / %s xp to %d" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp), shown + 1]
+	c["xp"].text = "%s / %s XP to level %d" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp), shown + 1]
 	var who := []
 	if sim.wound != "":
 		who.append([sim.wound_words(), "bad"])
@@ -305,13 +305,13 @@ func _show_runner(lv: int) -> void:
 	var alive: float = sim.elapsed - float(sim.record.get("since", 0.0))
 	var dig: String = "none yet"
 	if not sim.best_dig.is_empty():
-		dig = "%s, depth %d" % [str(sim.best_dig["site"]).trim_prefix("The "), int(sim.best_dig["depth"])]
+		dig = "%s, level %d" % [str(sim.best_dig["site"]).trim_prefix("The "), sim.lv_at(int(sim.best_dig["tier"]), int(sim.best_dig["depth"]))]
 	var rows: Array = c["rows"]
 	_set_row(rows[0], "Pace", ["×%.2f" % sim.pace()])
 	_set_row(rows[1], "Pack · rig", ["%d cells · %d" % [sim.capacity(), sim.med_capacity()], "%d · %d" % [sim.capacity(), sim.med_capacity()]])
 	_set_row(rows[2], "Runs, this runner", ["%d" % sim.runner_runs])
 	_set_row(rows[3], "Alive", [Fmt.clock(alive)])
-	_set_row(rows[4], "Deepest hold", [dig, dig.get_slice(",", 0)])
+	_set_row(rows[4], "Best signal", [dig, dig.get_slice(",", 0)])
 	_set_row(rows[5], "Kit worth", [Fmt.money(sim.loadout_value())], Pal.ACCENT)
 	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
 
@@ -381,7 +381,7 @@ func _zone_fires() -> Dictionary:
 func _show_defence() -> void:
 	var c: Dictionary = cards["defence"]
 	_headline(c, "%d" % sim.max_hp_shown(), "max HP")
-	c["armour_big"].text = "%s armour" % Fmt.pct(sim.mitigation())
+	c["armour_big"].text = "%s stopped" % Fmt.pct(sim.mitigation())
 	c["fill"].size.x = roundf(c["track"].size.x * clampf(sim.mitigation(), 0.0, 1.0))
 	c["armour_line"].text = "%.0f armour · %s of a hit stopped" % [sim.armour(), Fmt.pct(sim.mitigation())]
 	var fires := _zone_fires()

@@ -349,7 +349,7 @@ func show_state(s) -> void:
 	var convoy_in: bool = str(m.get("event_done", "")) == "convoy"
 	var gangs: String = "%d gang%s so far" % [m["patrols"], "" if m["patrols"] == 1 else "s"]
 	if convoy_in:
-		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's crew in"     # "a convoy and 2 gangs so far" was 20 px past the column
+		gangs = ("convoy, %d gang%s" % [m["patrols"], "" if m["patrols"] == 1 else "s"]) if m["patrols"] > 0 else "a convoy's gang in"     # "a convoy and 2 gangs so far" was 20 px past the column
 	var rights: Array = ["", gangs if (convoy_in or int(m["patrols"]) > 0) else "", cap_line]     # the clock's own two figures gone (16 Oct): the gangs, the capstones on their own row
 	_band.set_right(rights)
 	for short in [caps_short, "◆◆ %d" % caps.size(), ""]:     # nothing, at the very widest (the way out, a convoy): the kicker and the clock first
@@ -370,19 +370,19 @@ func show_state(s) -> void:
 	_faces_off()
 	if boss_on:
 		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
-		_tiles(_fight["tiles"], [["On you", ["the crew's head", "1"]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
+		_tiles(_fight["tiles"], [["On you", ["the head", "1"]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif way_out:
 		var door_on: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = "THE FIGHT · THE WAY OUT"
-		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]],
+		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]],
 			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
-			["Incoming", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
+			["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
@@ -516,7 +516,7 @@ func show_state(s) -> void:
 		UI.style_button(_button, low)
 	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
 	_button2.visible = auto or m["cleared"]
-	_button2.text = "Stop auto" if auto else ("Filling up ✓" if filling else "Fill up, then go")
+	_button2.text = "Stop auto-run" if auto else ("Filling up ✓" if filling else "Fill up, then go")
 	UI.style_button(_button2, false, "good" if (filling and not auto) else "")
 	if _button2.visible:
 		@warning_ignore("integer_division")
@@ -780,7 +780,7 @@ func _show_pick(m: Dictionary) -> void:
 		# a med, rounds or a grenade: the rig on the right, Take into it when there's a pouch
 		var room: bool = sim.rig_room(Items.size(it)) or sim.rig_tops_up(it)
 		_pick.show_right_words("The rig", "%d of %d pouches filled" % [sim.rig_used(), sim.med_capacity()],
-			[("Fired by the %s" % Items.base_of(it)["type"]) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "%s, under fire" % sim.med_words(it)),
+			[("Fired by the %s" % Items.type_word(it)) if Items.is_ammo(it) else ("Thrown at everyone on you" if Items.is_grenade(it) else "%s, under fire" % sim.med_words(it)),
 			"" if room else ("No rig fitted" if sim.med_capacity() == 0 else "The rig is full")])
 		buttons.append({"text": "Take into the rig", "action": _take_pick, "enabled": room, "primary": true})
 	elif it["slot"] in Data.SLOTS:

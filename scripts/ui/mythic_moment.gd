@@ -73,7 +73,8 @@ func _init(it: Dictionary, sim_v) -> void:
 	_card = UI.panel(self, Rect2(0, 0, W, H), _sb)
 	_card.modulate.a = 0.0
 	var y := PAD
-	_kicker = UI.label(_card, Rect2(PAD, y, W - 2 * PAD, 20), "M Y T H I C", "SemiBold", 13, Pal.MYTHIC, HORIZONTAL_ALIGNMENT_CENTER)
+	_kicker = UI.label(_card, Rect2(PAD, y, W - 2 * PAD, 20), "MYTHIC", "SemiBold", 13, Pal.MYTHIC, HORIZONTAL_ALIGNMENT_CENTER)
+	UI.track(_kicker, 4)
 	y += 30
 	_name = UI.label(_card, Rect2(PAD, y, W - 2 * PAD, 40), Items.full_name(it), "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	y += 44
