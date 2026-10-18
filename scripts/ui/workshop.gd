@@ -30,7 +30,7 @@ const GAP := 24
 const PAD := 20
 const HEAD_H := Pal.BAND_H         # the rooms' one band across the top (10 Oct, Bands-U A): 118 → 180
 const TOP := HEAD_H + 14           # the columns under it
-const VIEW_W := 140                # a view's tab
+const VIEW_W := 144                # a view's tab (140 until "Weapons", 18 Oct)
 const VIEW_H := 40
 const VIEWS_X := Pal.GRID_W - PAD - 3 * VIEW_W - 12     # the views at the band's foot, right (Bands-U A)
 const CARD_PAD := 14
@@ -106,12 +106,12 @@ func _init() -> void:
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The workshop")    # art/places/the_workshop.png (Rooms-B)
 	# the band as the Yard's (Bands-U A): the words and the purse down the shaded left, the views at the foot, right
-	_kicker = UI.label(head, Rect2(PAD, 8, Pal.BAND_TEXT_W, 24), "The Workshop", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kicker = UI.label(head, Rect2(PAD, 8, Pal.BAND_TEXT_W, 24), "Workshop", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, Pal.BAND_TEXT_W, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, Pal.BAND_TEXT_W, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(3):
 		var v := UI.button(head, Rect2(VIEWS_X + i * (VIEW_W + 6), HEAD_H - 16 - VIEW_H, VIEW_W, VIEW_H), false)      # plain: _style skins the one that's on (a primary start left Guns' text dark, 8 Oct)
-		v.text = ["Guns", "Sockets", "Craft"][i]
+		v.text = ["Weapons", "Sockets", "Craft"][i]     # the hammer and the knife are in it (18 Oct, Q12)
 		v.pressed.connect(_set_view.bind(["guns", "sockets", "craft"][i]))
 		_views.append(v)
 	_chips = Chips.new(Pal.BAND_TEXT_W, 3)
@@ -304,11 +304,8 @@ func show_state(s) -> void:
 		# the chips: the type, the rarity in its tone, what's fitted
 		g["chips"].visible = view == "guns" and gun != null
 		if gun != null:
-			var fw: Array = Items.fitted_words(gun)
-			var fitted_chip: String = fw[2] if fw.size() > 2 else fw[0]          # "5 fitted", or "nothing fitted" / "no mounts"
 			var type_word: String = str(Items.base_of(gun).get("type", "gun"))
-			g["chips"].show_chips([[type_word.to_upper() if type_word == "smg" else type_word.capitalize(), Pal.TEXT_2], [Items.rarity_name(gun), Pal.tone_color(rarity_tone(gun)) if rarity_tone(gun) != "" else Pal.TEXT_2],
-				[fitted_chip, Pal.GOOD if fw.size() > 2 else Pal.TEXT_2]])
+			g["chips"].show_chips([[type_word.to_upper() if type_word == "smg" else type_word.capitalize(), Pal.TEXT_2], [Items.rarity_name(gun), Pal.tone_color(rarity_tone(gun)) if rarity_tone(gun) != "" else Pal.TEXT_2]])     # what's fitted is the mount tiles' (18 Oct, said once)
 		var mounts: Array = _mounts_of(gun)
 		for k in range(TILES):
 			var r: Dictionary = g["rows"][k]
@@ -387,7 +384,7 @@ func show_state(s) -> void:
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = PAD + Pal.BAND_TEXT_W + 120 - _unit.position.x
 	UI.fit(_unit, ["upgrades built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "upgrades built", "upgrades"])
-	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 3)
+	_chips.show_chips([], 3)     # tins, notes and scrap are the top bar's and the Craft panel's (18 Oct, said once)
 	if picks.is_empty():
 		UI.fit(_next, ["Every job and mount is open from the start; the Bench's upgrades are built on the Pitch", "The Bench's upgrades are built on the Pitch", "Upgrades: the Pitch"])
 	else:

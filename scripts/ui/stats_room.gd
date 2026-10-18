@@ -245,7 +245,7 @@ func show_state(s) -> void:
 	var lv: int = sim.level()
 	var dps: float = sim.dps()
 	var split: Dictionary = sim.damage_split()     # the one figure: the hits and the dots together (16 Oct, item 14)
-	band.set_words("Stats · %s, level %d" % [sim.cls if sim.cls != "" else "no past yet", lv], "", "%.0f" % float(split["total"]), ["dmg/s"])
+	band.set_words("Stats · %s" % (sim.cls if sim.cls != "" else "no past yet"), "", "", [""])     # the level is THE RUNNER's, the dmg/s ATTACK's (18 Oct, said once)
 	People.show(_band_face, sim.cls)
 	_show_runner(lv)
 	_show_attack(lv, dps, split)
@@ -443,10 +443,8 @@ func _show_record() -> void:
 	_tile(t[1], [Fmt.num(float(rec.get("dealt", 0.0)))], "most damage, a run")
 	_tile(t[2], [Fmt.money(float(rec.get("cash", 0.0)))], "the best take")
 	_tile(t[3], [find, find.get_slice(" ", find.count(" "))] if find != "" else ["nothing yet"], ("dearest find · %s" % Fmt.money(float(rec.get("find_value", 0)))) if find != "" else "the dearest find", Pal.ACCENT if find != "" else Pal.TEXT_3)
-	var alive: float = sim.elapsed - float(sim.record.get("since", 0.0))
 	var seen: int = sim.operators_lost - int(rec.get("deaths_seen", 0))
-	UI.fit(c["status"], ["%d runs back · alive %s · %s" % [int(rec.get("runs", 0)), Fmt.clock(alive), ("%d lost on their watch" % seen) if seen > 0 else "no one lost on their watch"],
-		"%d runs back · alive %s" % [int(rec.get("runs", 0)), Fmt.clock(alive)]])
+	c["status"].text = ("%d lost on their watch" % seen) if seen > 0 else "no one lost on their watch"     # runs and time alive are THE RUNNER's rows (18 Oct, said once)
 
 
 func _tile(t: Dictionary, values: Array, key: String, tone := Pal.TEXT) -> void:

@@ -723,24 +723,10 @@ func _disarm_stale(sim) -> void:
 			sim.arm_boss(i, false)
 
 
-## Climb: when the tier just run reads safe, go a depth deeper on it. The
-## tier just run alone: a player digs where they play, and every tier read
-## costs the lookout's dry runs.
-func _climb(sim) -> void:
-	if RUSH or sim.campaign_done():
-		return                                # the campaign at depth 1, as a person plays it (12 Oct); past it the signals climb (15 Oct)
-	var i := last_tier
-	if i == Data.CONVOY_TIER and sim.is_convoy(i) and not sim.lorry_done:
-		return                                # at the lorry's depth: beat it before digging past it
-	if i >= 0 and sim.tier_open(i) and sim.depth[i] <= sim.best_depth[i]:
-		# read whole, as the pick reads (8 Oct: read hurt, straight off the run, it was a fresh read every run at
-		# odds the pick never sees - and the reader's key carries the HP, so the pick read it all again)
-		var hp0: float = sim.hp
-		sim.hp = sim.max_hp()
-		var climb: bool = sim.survival(i) >= CLIMB
-		sim.hp = hp0
-		if climb:
-			sim.set_depth(i, sim.depth[i] + 1)
+## Climb: gone (18 Oct, Matt: a player can't set a site's depth since signals took the depths on 15 Oct, so the bot
+## doesn't either; set_depth held the campaign at depth 1 already, this makes it plain).
+func _climb(_sim) -> void:
+	return
 
 
 func _train_tree(sim) -> void:
@@ -858,15 +844,15 @@ func _restock_meds(sim) -> void:
 func _restock_rounds(sim) -> void:
 	var types: Array = []
 	for s in ["Primary", "Secondary"]:
-		if sim.equipped[s] != null:
+		if sim.equipped[s] != null and not Items.free_rounds(sim.equipped[s]):
 			types.append(Items.ammo_type(sim.equipped[s]))
 	for it in sim.rig.duplicate():
 		if Items.is_ammo(it) and not (Items.base_of(it)["type"] in types):
 			sim.leave(it["id"])
 	for pair in [["Primary", 2.0], ["Secondary", 1.0]]:
 		var gun = sim.equipped[pair[0]]
-		if gun == null or Items.ammo_type(gun) == "none":
-			continue
+		if gun == null or Items.ammo_type(gun) == "none" or Items.free_rounds(gun):
+			continue                          # a gun that spends nothing wants no rounds (18 Oct: the Weed Burner, the Spare Key)
 		var type: String = Items.ammo_type(gun)
 		# rounds for a run: the gun's rate over two minutes
 		var want: int = int(Items.base_of(gun)["rof"] * 120.0 * pair[1])

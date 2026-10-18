@@ -182,8 +182,7 @@ func start() -> void:
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	mate = roll_mate()
-	for line in Words.OPENING:
-		log_event(line)                       # the opening (12 Oct): said once, on a new camp
+	# (18 Oct, Matt on Q8: the opening's scenes tell it; the log no longer tells it again on another timeline)
 	log_event(Words.YARD["set"])
 	_say_next()
 
@@ -359,7 +358,12 @@ func wound_mult(stat: String) -> float:
 func wound_words() -> String:
 	if wound == "":
 		return ""
-	return "Wounded: %s −%d%%" % [("max HP" if wound == "hp" else wound), Data.WOUND_PCT]
+	return "Wounded: %s −%d%%" % [("max HP" if wound == "hp" else wound), wound_pct()]
+
+
+## The wound's cut as it is, in percent: Physio's third off included (18 Oct, Matt on Q7: it always read 10).
+func wound_pct() -> int:
+	return int(round((1.0 - wound_mult(wound)) * 100.0)) if wound != "" else 0
 
 
 ## A hit took the runner under a quarter: a wound, one stat cut until treated. A second replaces the first.
@@ -728,9 +732,9 @@ func capacity_raw() -> int:
 	return int((base + extra) * (Data.FX["node/hoarder.capacity"] if has_node("hoarder") else 1) * (Data.FX["rule/the_float.capacity"] if has_rule("the_float") else 1.0))
 
 
-## Meds the rig can carry. No rig, no meds.
+## Meds the rig can carry. No rig, no meds. (The Float stops the meds only, not the rig: 18 Oct, Matt's call on Q0.)
 func med_capacity() -> int:
-	if equipped["Rig"] == null or has_rule("the_float"):
+	if equipped["Rig"] == null:
 		return 0
 	var n: int = (Items.capacity(equipped["Rig"]) + int(tree_sum("med_cap")) + int(_affix_sum("med_cap"))) * (Data.FX["rule/issue_webbing"] if has_rule("issue_webbing") else 1)
 	n += (Data.FX["yard/rig_wiring"] if yard_has("rig_wiring") else 0) + (Data.RIG_ROW if yard_has("battery") else 0)    # the Generator's picks
@@ -1565,8 +1569,8 @@ func site_state(i: int) -> String:
 
 
 ## The sky over a site, in words: the clock, night or day, the weather.
-func sky_words(i: int) -> String:
-	var w := weather_of(i)
+func sky_words(i: int, with_weather := true) -> String:
+	var w := weather_of(i) if with_weather else ""
 	return "%s, %s%s" % [clock_words(), Words.SKY["night"] if is_night() else Words.SKY["day"], (", " + Words.SKY[w.to_lower()]) if w != "" else ""]
 
 
@@ -2634,7 +2638,7 @@ func contact(t: Dictionary) -> int:
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
 	return SEARCH_S * (Data.FX["rule/miners_lamp"] if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (Data.FX["node/never_there.search"] if has_node("never_there") else 1.0) * trait_mult("search") \
-		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_rank("deeper_pockets"))
+		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_rank("deeper_pockets")) * (Data.FX["yard/second_dog"] if yard_has("second_dog") else 1.0)
 
 
 ## Seconds to the next lot. The first lot waits for the lookout too; "never
@@ -2689,10 +2693,10 @@ func has_rounds(gun: Dictionary) -> bool:
 		# (13 Oct, the ammo trap: with the Fence shut, Equip if better swapped the nail gun for a rifle nobody had rounds
 		# for, and the runner fought with their fists)
 		var type: String = Items.ammo_type(gun)
-		if type in ["", "none"] or gun.get("rule", "") == "weed_burner" or room_open("fence"):
+		if type in ["", "none"] or Items.free_rounds(gun) or room_open("fence"):
 			return true
 		return rounds_for(gun) > 0 or stash.any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == type)
-	if Items.ammo_type(gun) == "none" or gun.get("rule", "") == "weed_burner":
+	if Items.ammo_type(gun) == "none" or Items.free_rounds(gun):
 		return true                          # a bat never runs dry; the burner takes nothing
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
 
@@ -2760,7 +2764,7 @@ func build_elements() -> Array:
 ## stack is dropped, and a gun that's just run dry says so.
 func _spend_rounds(gun: Dictionary, shots: float) -> void:
 	var t := Items.ammo_type(gun)
-	if t == "none" or gun.get("rule", "") == "weed_burner":
+	if t == "none" or Items.free_rounds(gun):
 		return
 	var m: Dictionary = mission
 	m["fired"] = m.get("fired", {})
@@ -2809,6 +2813,8 @@ func buy_ammo(type: String) -> bool:
 
 ## The first med in the rig, for the Use button and the Paramedic's rule.
 func first_med() -> Dictionary:
+	if has_rule("the_float"):
+		return {}                            # the Float: no meds used (18 Oct: the rig stays for rounds and grenades)
 	for it in rig:
 		if Items.is_medical(it):
 			return it
@@ -2816,6 +2822,8 @@ func first_med() -> Dictionary:
 
 
 func meds_carried() -> int:
+	if has_rule("the_float"):
+		return 0
 	var n := 0
 	for it in rig:
 		if Items.is_medical(it):
@@ -3823,7 +3831,7 @@ func buy_yard_rank(key: String) -> bool:
 func _yard_setting_off() -> void:
 	if yard_has("charger"):
 		hp = max_hp()
-	if yard_has("field_kit") and rig_room(1):
+	if yard_has("field_kit") and rig_room(1) and not has_rule("the_float"):     # the Float carries no meds (18 Oct)
 		rig.append(_plain(Data.MEDICAL, "Bandage"))
 
 
@@ -3912,7 +3920,7 @@ func yard_quality() -> float:
 
 
 func yard_patrol() -> float:
-	return (Data.FX["yard/guard_dog"] if yard_has("guard_dog") else 1.0) * (Data.FX["yard/tripwires"] if yard_has("tripwires") else 1.0) * (Data.FX["yard/watch_rota"] if yard_has("watch_rota") else 1.0) \
+	return (Data.FX["yard/guard_dog"] if yard_has("guard_dog") else 1.0) * (Data.FX["yard/tripwires"] if yard_has("tripwires") else 1.0) * (Data.FX["yard/watch_rota"] if yard_has("watch_rota") and is_night() else 1.0) \
 		* (Data.FX["yard/crows_nest"] if yard_has("crows_nest") else 1.0) * (1.0 + Data.FX["yard_rank/lookout"] * yard_rank("lookout"))
 
 
@@ -4241,7 +4249,8 @@ static func _softened(m: Dictionary, f: float) -> Dictionary:
 		if out.has(k):
 			out[k] = 1.0 + (float(out[k]) - 1.0) * f
 	if out.has("contact"):
-		out["contact"] = int(float(out["contact"]) * f)       # toward nothing: half of one on you is none
+		var c: int = int(out["contact"])
+		out["contact"] = signi(c) * ceili(absf(c) * f)     # away from nothing (18 Oct, Matt on Q6): half of Fog's one fewer is still one
 	if out.has("rarity"):
 		out["rarity"] = float(out["rarity"]) * f
 	return out
@@ -4595,8 +4604,6 @@ func set_depth(i: int, d: int) -> void:
 	if mission == null:
 		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
 		var top: int = maxi(best_depth[i] + 1, (ladder_floor() + 1) if best_depth[i] > 0 else 1) if campaign_done() else 1
-		if campaign_done() and best_depth[i] > 0 and atlas_rank("lie_of_the_land") > 0:
-			top += 1                          # The lie of the land: one past the deepest cleared
 		depth[i] = clampi(d, 1, top)
 
 
@@ -4678,7 +4685,7 @@ func story_held() -> Array:
 
 ## The levels three papers would roll: the reach's band, one higher for a rare paper (D3: levels, not depths).
 func signal_band(ids: Array) -> Array:
-	var lo: int = reach + int(Data.SIGNAL_ROLL[0][0])
+	var lo: int = reach + (maxi(int(Data.SIGNAL_ROLL[0][0]), -int(Data.FX["atlas/lie_of_the_land"])) if atlas_rank("lie_of_the_land") > 0 else int(Data.SIGNAL_ROLL[0][0]))
 	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) + (int(Data.FX["atlas/lorrys_route"]) if atlas_rank("lorrys_route") > 0 else 0)
 	var up: int = 1 if _papers_rare(ids) else 0
 	return [maxi(Data.REACH_START, lo + up), hi + up]
@@ -4721,6 +4728,8 @@ func decrypt(ids: Array) -> Dictionary:
 		step = int(row[0])
 		if x <= 0.0:
 			break
+	if atlas_rank("lie_of_the_land") > 0:
+		step = maxi(step, -int(Data.FX["atlas/lie_of_the_land"]))     # The lie of the land: no roll far under the reach (18 Oct)
 	if step == int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) and atlas_rank("lorrys_route") > 0 and rng.randf() < 0.5:
 		step += int(Data.FX["atlas/lorrys_route"])     # The lorry's route: the top of the band a depth further, half the time it's reached
 	signal_seq += 1
@@ -5018,7 +5027,7 @@ func can_deploy_to(i: int) -> bool:
 ## read is the one that goes out: it tops up from the stash coming home.
 func rounds_short(i: int) -> Array:
 	var gun = equipped["Primary"]
-	if gun == null or Items.ammo_type(gun) in ["", "none"] or gun.get("rule", "") == "weed_burner":
+	if gun == null or Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun):
 		return []
 	var t := effective(i)
 	var want: int = ceili(estimate(i) * float(Items.base_of(gun)["rof"]) * pace() * float(t["pace"]))
@@ -6423,7 +6432,7 @@ func _land(m: Dictionary, it: Dictionary, said := "", to_floor := false) -> void
 		_place_find(m, it)
 	# a gun found while the Fence is shut comes with a box of its own rounds (13 Oct, the ammo trap: rounds are sold
 	# at the Fence only, and a gun with none is a club)
-	if (it["slot"] == "Primary" or it["slot"] == "Secondary") and not room_open("fence") and it.get("rule", "") != "weed_burner":
+	if (it["slot"] == "Primary" or it["slot"] == "Secondary") and not room_open("fence") and not Items.free_rounds(it):
 		var type: String = Items.ammo_type(it)
 		var box: Dictionary = ammo_box(type) if not (type in ["", "none"]) else {}
 		if not box.is_empty():
@@ -6673,7 +6682,7 @@ func _search(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["scrap"] = int(m.get("scrap", 0)) + rng.randi_range(Data.SCRAP_HANDFUL[0], Data.SCRAP_HANDFUL[1])     # a handful of scrap (34)
 		if cd.get("tins", false):
 			m["cash"] += float(t["cash"]) * rng.randf_range(0.5, 2.0) * inflation()     # a safe: a handful of tins (the pass, 13 Oct: 1-3 read the Bank 17% over)
-		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/second_dog"] if yard_has("second_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0) + (Data.MYTHIC_SEARCH_FINDS if has_rule("removal_van") else 0)
+		var finds: int = 1 + (1 if (has_node("scavenger") or has_node("quiet_hands")) else 0) + (Data.FX["yard/a_dog"] if yard_has("a_dog") else 0) + (Data.FX["yard/pack"] if yard_has("pack") else 0) + (Data.FX["rule/postman"] if has_rule("postman") else 0) + (Data.MYTHIC_SEARCH_FINDS if has_rule("removal_van") else 0)
 		if atlas_rank("second_look") >= 2 or (atlas_rank("second_look") == 1 and int(m["searches"]) % 2 == 0):
 			finds += 1                        # Second look: one more every other search, then every search
 		# quantity reaches searches: +25% is a fourth find one search in four, carried as a fraction (27)
@@ -7545,7 +7554,7 @@ func _top_up() -> void:
 		if gun == null:
 			continue
 		var t := Items.ammo_type(gun)
-		if t in ["", "none"] or gun.get("rule", "") == "weed_burner":
+		if t in ["", "none"] or Items.free_rounds(gun):
 			continue
 		var els: Array = build_elements() if slot == "Primary" else []
 		var stacks: Array = stash.filter(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == t and int(x.get("rounds", 0)) > 0)
@@ -7744,6 +7753,8 @@ func rig_tops_up(it: Dictionary) -> bool:
 func _take_from(src: Array, id: int) -> bool:
 	for it in src:
 		if it["id"] == id and Items.rig_item(it):
+			if Items.is_medical(it) and has_rule("the_float"):
+				return false                    # the Float carries no meds (18 Oct)
 			if Items.is_ammo(it):
 				# top up the rig's stack of the same rounds first; what's left takes a pouch, or stays
 				var topped := false

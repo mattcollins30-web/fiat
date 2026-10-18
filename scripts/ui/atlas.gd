@@ -185,7 +185,7 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	var free: int = sim.atlas_free()
-	_band.set_words("The Dial · the endgame's tree", "The Dial", "%d" % free, ["of %d point%s free" % [sim.atlas_points, "" if sim.atlas_points == 1 else "s"], "of %d free" % sim.atlas_points, "free"])
+	_band.set_words("The endgame's tree", "The Dial", "%d" % free, ["of %d point%s free" % [sim.atlas_points, "" if sim.atlas_points == 1 else "s"], "of %d free" % sim.atlas_points, "free"])
 	_band.set_right(["A point for each signal", "at or past your reach.", "Ranks hold on every site."])
 	var zones := []
 	for z in range(Data.ZONES.size()):

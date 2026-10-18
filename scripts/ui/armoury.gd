@@ -282,7 +282,7 @@ func _show_panel() -> void:
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
 		var precious: bool = it.has("unique") or it.has("set")
 		var armed: bool = _bin_armed == int(it["id"])
-		buttons.append({"text": ("Bin it: %d scrap" % sim.scrap_of(it)) if armed else "Bin", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
+		buttons.append({"text": ("Scrap it: %d scrap" % sim.scrap_of(it)) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
 	_set_buttons(buttons)
 
 

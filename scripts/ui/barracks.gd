@@ -88,7 +88,7 @@ const WORD_H := 26                                             # a line of a pap
 
 var sim
 var selected := ""                 # a node id, or ""
-var alt := ""                      # the Also chip in the Yard's place: a tree's name, "The drawer", "The shelf", or "" for the Yard
+var alt := ""                      # the Also chip in the Yard's place: a tree's name, "The drawer", "The mantelpiece", or "" for the Yard
 var drawer_page := 0               # the drawer's (or the shelf's) page
 var _armed := ""                   # a class pressed once: the second press changes to it (the change costs, 9 Oct)
 var _armed_cls := ""               # the class it was armed from: a death, a move or a change elsewhere disarms it
@@ -667,13 +667,13 @@ func also_names() -> Array:
 		if not (t["name"] in lanes_now) and not (t["name"] in out):
 			out.append(t["name"])
 	out.append("The drawer")
-	out.append("The shelf")
+	out.append("The mantelpiece")
 	out.append("The wireless")
 	return out
 
 
 static func _is_pages(nm: String) -> bool:
-	return nm == "The drawer" or nm == "The shelf" or nm == "The wireless"
+	return nm == "The drawer" or nm == "The mantelpiece" or nm == "The wireless"
 
 
 ## The pages over the lanes, by the Also chip's name.
@@ -711,13 +711,11 @@ func show_state(s) -> void:
 
 
 func _show_head() -> void:
-	var cd: Dictionary = sim.class_data()
 	var td: Dictionary = sim.trait_data()
 	var faced := People.show(_face, sim.cls)
 	_face.visible = faced
 	_face_q.visible = not faced
-	var who: String = str(cd.get("name", "No past yet"))
-	UI.fit(_kicker, [("%s · %s · Training" % [who, td["name"]]) if not td.is_empty() else "%s · Training" % who, ("%s · %s" % [who, td["name"]]) if not td.is_empty() else who, who])
+	UI.fit(_kicker, [("Training · %s" % td["name"]) if not td.is_empty() else "Training", "Training"])     # the class is the card's and the panel's (18 Oct, said once)
 	var free: int = sim.points_free()
 	_points.text = "%d of %d" % [free, sim.training_points]
 	_points.add_theme_color_override("font_color", Pal.ACCENT if free > 0 else Pal.TEXT_2)
@@ -1077,7 +1075,7 @@ func _shelf_branch() -> Dictionary:
 	for nm in sim.shelf:
 		if not (nm in names):
 			names.append(nm)
-	var branch := _pages_branch("The shelf", names, Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size(), Words.SHELF["empty"],
+	var branch := _pages_branch("The mantelpiece", names, Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size(), Words.SHELF["empty"],
 		func(nm): return gaps[nm] if gaps.has(nm) else _shelf_words(nm), 3)
 	for nd in branch["nodes"]:
 		nd["gap"] = gaps.has(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))

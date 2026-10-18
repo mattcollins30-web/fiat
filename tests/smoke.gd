@@ -613,6 +613,8 @@ func _init() -> void:
 	print("save round-trip ok; last event: %s" % main.sim.events.back()[1])
 	# every screen with the worst items there are: elites of every base, every affix at its top roll
 	_worst_case(main)
+	_yard_own_checks(main.sim)
+	_words_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -1370,7 +1372,7 @@ func _narrative_checks(main) -> void:
 		ftab_x = t.position.x + t.size.x
 	for t in fv._tabs:
 		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
-	_check(fv._side_tiles[0]["key"].text == "Com" and fv._side_tiles[Data.RARITIES.size() - 1]["key"].text == "Leg" and fv._side_tiles[Data.RARITIES.size()]["key"].text.begins_with("Nails") and fv._side_tiles[Data.RARITIES.size() + 5]["button"].visible, "the Fence's tiles are off: %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
+	_check(fv._side_tiles[0]["key"].text == "Com" and fv._side_tiles[Data.RARITIES.size() - 1]["key"].text == "Leg" and fv._side_tiles[Data.RARITIES.size()]["key"].text.begins_with("Nails") and not fv._side_tiles[Data.RARITIES.size() + 5]["button"].visible, "the Fence's tiles are off (no shelf tile since 18 Oct: said once): %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
 	_check(fv._side_tiles[1]["value"].get_theme_color("font_color") == Pal.GOOD or fv._side_tiles[1]["button"].disabled, "the uncommon tile's figure is not green")
 	_check(fv._heads[2].visible and fv._heads[2].text.begins_with("THE CONTRACTS"), "the Fence's contracts head is off: '%s'" % fv._heads[2].text)
 	_check(fv._band.kicker.position.x >= fv._face.position.x + fv._face.size.x or not fv._face.visible, "the Fence's words sit on the face")
@@ -1380,7 +1382,7 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Upgrades", "the Clinic's treatment tiles are off")
+	_check(cv._side_track.visible and cv._side_bar_text.text == "" and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Upgrades", "the Clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
 	var med_kinds := {}
 	for it in sim.stash:
@@ -2622,7 +2624,7 @@ func _element_checks(main) -> void:
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
 		bk.also_button(name).pressed.emit()
 		_check_fit(main, "Caravan (also: %s)" % name)
-		if name == "The drawer" or name == "The shelf" or name == "The wireless":
+		if name == "The drawer" or name == "The mantelpiece" or name == "The wireless":
 			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
 		else:
 			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
@@ -3085,7 +3087,8 @@ func _melee_checks(main) -> void:
 		# the band (Bands-U A): the purse down the left under the headline, the views at the foot, right, the line between
 		var ws = main._workshop
 		var cr := Rect2(chips.position, chips.size)
-		_check(ws.HEAD_H == Pal.BAND_H and cr.position.y >= ws._headline.position.y + ws._headline.size.y and cr.end.x <= ws.PAD + Pal.BAND_TEXT_W + 0.5 and cr.end.y <= ws.HEAD_H - 8 and chips.shown() == 3, "the purse chips are off their place in the band: %s, %d shown" % [str(cr), chips.shown()])
+		_check(ws.HEAD_H == Pal.BAND_H and cr.position.y >= ws._headline.position.y + ws._headline.size.y and cr.end.x <= ws.PAD + Pal.BAND_TEXT_W + 0.5 and cr.end.y <= ws.HEAD_H - 8 and chips.shown() == 0,     # no purse chips since 18 Oct (said once)
+ "the purse chips are off their place in the band: %s, %d shown" % [str(cr), chips.shown()])
 		for v in ws._views:
 			var vr := Rect2(v.position, v.size)
 			_check(vr.end.y <= ws.HEAD_H - 8 and vr.end.x <= ws.size.x - ws.PAD + 0.5 and not vr.intersects(cr) and not vr.intersects(Rect2(ws._next.position, ws._next.size)), "a view's tab is off the band's foot or on the purse or the line: %s" % str(vr))
@@ -3232,7 +3235,21 @@ func _unique_rules_checks(main) -> void:
 	var pace0: float = sim.pace()
 	sim.equipped["Rig"] = sim._plain("Rig", "Bum bag")
 	sim.equipped["Backpack"] = Items.roll_unique(sim._unique_named("The Float"), sim.rng)
-	_check(sim.med_capacity() == 0 and sim.pace() > pace0 * 1.35 and sim.capacity() > cap0, "the Float did not do its three things: meds %d pace %.2f cap %d" % [sim.med_capacity(), sim.pace() / pace0, sim.capacity()])
+	sim.rig = [sim._plain(Data.MEDICAL, "Bandage")]
+	var float_box: Dictionary = sim._plain(Data.AMMO, "Shells")
+	sim.stash.append(float_box)
+	_check(sim.med_capacity() > 0 and sim.first_med().is_empty() and sim.meds_carried() == 0 and sim.pace() > pace0 * 1.35 and sim.capacity() > cap0, "the Float did not do its three things (no meds, the rig kept, pace, pack): rig %d meds %d pace %.2f cap %d" % [sim.med_capacity(), sim.meds_carried(), sim.pace() / pace0, sim.capacity()])
+	var float_med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	sim.stash.append(float_med)
+	_check(not sim.take(int(float_med["id"])) and sim.take(int(float_box["id"])), "under the Float a med went in the rig, or rounds didn't (18 Oct: it stops the meds only)")
+	sim.stash.erase(float_med)
+	# the Field kit's bandage doesn't go in the Float's rig either (the review: dead bandages filled the pouches)
+	sim.rig = []
+	_yard_set(sim, "clinic", 3, "b")         # the Field kit
+	sim._yard_setting_off()
+	_check(not sim.yard_has("field_kit") or sim.rig.all(func(r): return not Items.is_medical(r)), "under the Float the Field kit put a med in the rig")
+	_yard_set(sim, "clinic", 3, "")
+	sim.rig = []
 	sim.equipped["Backpack"] = null
 	sim.equipped["Rig"] = null
 	sim.equipped["Armour"] = Items.roll_unique(sim._unique_named("Nan's Cardigan"), sim.rng)
@@ -3576,7 +3593,7 @@ func _unique_tier_checks(main) -> void:
 	var heal0: float = sim.med_heal(med)
 	var fire0: float = sim.dot_seconds("fire")
 	var depth0: float = sim.dot_depth()
-	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Paramedic's Bumbag"), sim.rng)
+	sim.equipped["Rig"] = Items.roll_unique(sim._unique_named("The Paramedic's Bum Bag"), sim.rng)
 	_check(is_equal_approx(sim.med_heal(med), heal0 * 1.5), "the Bumbag's meds do not heal half again: %.1f vs %.1f" % [sim.med_heal(med), heal0])
 	sim.rig = [med.duplicate()]
 	sim.words[3] = []                    # no Rationed on the site: the med is allowed
@@ -4512,9 +4529,9 @@ func _book_checks(main) -> void:
 	sim._read(Items.roll_unique(sim._unique_named("Lucky Cap"), sim.rng))
 	sim._read(Items.roll_unique(sim._unique_named("Jump Leads"), sim.rng))
 	_check(sim.shelf == ["Lucky Cap", "Jump Leads"], "the shelf is not the uniques in the order found: %s" % str(sim.shelf))
-	bk.pick_also("The shelf")
+	bk.pick_also("The mantelpiece")
 	main.refresh()
-	_check(bk.also_button("The shelf").text.contains("2 of %d" % Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size()), "the shelf's chip is off: %s" % bk.also_button("The shelf").text)
+	_check(bk.also_button("The mantelpiece").text.contains("2 of %d" % Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size()), "the shelf's chip is off: %s" % bk.also_button("The mantelpiece").text)
 	# the chase first (endgame part 3): thirteen gaps in TEXT_3, where each is under it; then the rest found, in order
 	var chase: Array = sim.shelf_chase()
 	_check(chase.size() == 13 and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked Streets, from a level"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
@@ -4536,7 +4553,7 @@ func _book_checks(main) -> void:
 	main._barracks._shown = ""
 	main.refresh()
 	_check_fit(main, "Caravan (the shelf, one filled)")
-	bk.pick_also("The shelf")
+	bk.pick_also("The mantelpiece")
 	main.refresh()
 	# a paper is read on pickup (Matt, 10 Oct: "where do they actually need to be learned?"): unread it teaches its
 	# word; read, the Lock-up says the Radio knows it and it's safe to sell; a rule paper says keep it
@@ -4655,7 +4672,7 @@ func _places_checks(main) -> void:
 	for r in range(c["intel"].shown()):
 		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_head"].text.begins_with("CONDITIONS · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("CONDITIONS · 23:00, night") and not c["intel_head"].text.contains("rain"), "the card's clock line is off: %s" % c["intel_head"].text)
 	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = sim.to_dict()
@@ -5779,7 +5796,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Bin"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
+	_check(main._armoury._head._title.text == "A P45" and main._armoury._head._tail.text.contains("read · the Radio has laid off") and main._armoury._pick.button_texts() == ["Scrap"], "a paper's panel is off (Sell is the Fence's): %s / %s / %s" % [main._armoury._head._title.text, main._armoury._head._tail.text, str(main._armoury._pick.button_texts())])
 	_check(main._armoury._pick._right_title.text.begins_with("Carries"), "a read paper's line is off: %s / %s" % [main._armoury._pick._right_title.text, main._armoury._pick._right_lines[0].text])     # the Radio's, not the drawer's (15 Oct)
 	_check_fit(main, "Lock-up (a paper)")
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
@@ -5798,7 +5815,7 @@ func _playtest_checks(main) -> void:
 	main.show_room(main.ARMOURY)
 	main.refresh()
 	main._armoury._pick_cell(main._armoury._inv.cell_of(paper["id"]))
-	_check(main._armoury._pick.button_texts().is_empty() or main._armoury._pick.button_texts() == ["Bin"], "the Lock-up offers a paper a button but the bin (13 Oct): %s" % str(main._armoury._pick.button_texts()))
+	_check(main._armoury._pick.button_texts().is_empty() or main._armoury._pick.button_texts() == ["Scrap"], "the Lock-up offers a paper a button but the bin (13 Oct): %s" % str(main._armoury._pick.button_texts()))
 	sim.sell(paper)
 	_check(not sim.stash.has(paper), "the paper did not sell")
 	# every piece says what kind of thing it is on its card
@@ -7097,7 +7114,7 @@ func _loot_roll_checks(main) -> void:
 			break                        # three searches, however slow this runner's are (Never there doubles them)
 	if sim.on_mission():
 		var per_search: float = float(int(m.get("finds", 0)) - found0) / maxf(1.0, float(m["searches"] - searches0))
-		var base_finds: int = 1 + (1 if sim.has_node("scavenger") or sim.has_node("quiet_hands") else 0) + (1 if sim.yard_has("a_dog") else 0) + (1 if sim.yard_has("second_dog") else 0) + (2 if sim.yard_has("pack") else 0) + (1 if sim.has_rule("postman") else 0)
+		var base_finds: int = 1 + (1 if sim.has_node("scavenger") or sim.has_node("quiet_hands") else 0) + (1 if sim.yard_has("a_dog") else 0) + (2 if sim.yard_has("pack") else 0) + (1 if sim.has_rule("postman") else 0)
 		_check(m["searches"] - searches0 >= 2 and per_search >= float(base_finds) + floorf(q) - 0.6, "with +%.0f%% quantity a search brings %.2f, base %d" % [q * 100.0, per_search, base_finds])
 		sim.extract_now()
 	# the dog adds quality
@@ -8250,7 +8267,7 @@ func _wound_checks(main) -> void:
 	_check(main._clinic._side_buttons[1].text.begins_with("Treat the wound (") and not main._clinic._side_buttons[1].disabled, "the Clinic's wound button is off: '%s'" % main._clinic._side_buttons[1].text)
 	_check(main._clinic._side_buttons[0].text == "Full HP" and main._clinic._side_buttons[0].disabled, "the Clinic's heal button at full HP reads '%s'" % main._clinic._side_buttons[0].text)
 	_check(main._clinic._side_buttons[0].position.x + main._clinic._side_buttons[0].size.x <= main._clinic._side_buttons[1].position.x, "the Clinic's two buttons overlap")
-	_check(main._clinic._side_bar_text.text.contains("wounded"), "the Clinic's bar does not name the wound: '%s'" % main._clinic._side_bar_text.text)
+	_check(main._clinic._band.unit.text.contains("wounded"), "the Clinic's band does not name the wound: '%s'" % main._clinic._band.unit.text)
 	_check_fit(main, "Clinic (wounded)")
 	# hurt and wounded: heal alone costs the HP's price and leaves the wound; the wound alone costs its price and leaves the HP
 	sim.hp = sim.max_hp() * 0.5
@@ -9822,7 +9839,7 @@ func _bin_checks(main) -> void:
 	main.refresh()
 	var bin_i: int = -1
 	for k in range(main._armoury._pick._buttons.size()):
-		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Scrap":
 			bin_i = k
 	_check(bin_i >= 0, "a stash pick has no Bin")
 	_check_fit(main, "Lock-up (the bin)")
@@ -9836,12 +9853,12 @@ func _bin_checks(main) -> void:
 	main.refresh()
 	bin_i = -1
 	for k in range(main._armoury._pick._buttons.size()):
-		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Bin":
+		if main._armoury._pick._buttons[k].visible and main._armoury._pick._buttons[k].text == "Scrap":
 			bin_i = k
 	if bin_i >= 0:
 		main._armoury._press(bin_i)
 		main.refresh()
-		_check(sim.stash.has(prize) and main._armoury._pick._buttons[bin_i].text.begins_with("Bin it"), "a unique went in the bin on the first press")
+		_check(sim.stash.has(prize) and main._armoury._pick._buttons[bin_i].text.begins_with("Scrap it"), "a unique went in the bin on the first press")
 		_check_fit(main, "Lock-up (the bin, asked)")
 		main._armoury._press(bin_i)
 		main.refresh()
@@ -11215,7 +11232,7 @@ func _yard_pick_checks(main) -> void:
 	on.call("lookout", 2, "b")
 	on.call("lookout", 3, "b")
 	on.call("lookout", 4, "a")
-	_check(is_equal_approx(sim.patrol_s(sim.effective(3)), later0 * 1.1 * 1.1 * 1.2), "Tripwires, Watch rota and the Crow's nest are off")
+	_check(is_equal_approx(sim.patrol_s(sim.effective(3)), later0 * 1.1 * (Data.FX["yard/watch_rota"] if sim.is_night() else 1.0) * 1.2), "Tripwires, Watch rota (nights only, 18 Oct) and the Crow's nest are off")
 	on.call("lookout", 4, "b")
 	var pool0: int = int(sim.effective(3)["pool"])
 	sim.deploy(3)
@@ -11844,16 +11861,20 @@ func _map_nodes_checks(main) -> void:
 	sim.best_depth[3] = 3
 	sim.set_depth(3, 6)
 	_check(sim.depth[3] == 4, "without the keystone the ladder opened past the deepest plus one: %d" % sim.depth[3])
+	var reach0: int = sim.reach
+	sim.reach = 20
+	var band0: Array = sim.signal_band([])
 	take.call(["lie_of_the_land"])
-	sim.set_depth(3, 6)
-	_check(sim.depth[3] == 5, "The lie of the land did not open one past: %d" % sim.depth[3])
+	var band1: Array = sim.signal_band([])
+	_check(int(band0[0]) == 20 + int(Data.SIGNAL_ROLL[0][0]) and int(band1[0]) == 20 - int(Data.FX["atlas/lie_of_the_land"]), "The lie of the land did not stop the low rolls: %s -> %s (18 Oct)" % [str(band0), str(band1)])
+	sim.reach = reach0
 	sim.set_depth(3, 2)
 	sim.best_depth[3] = best0
 	# the crews' column
 	take.call(["paid_in_notes", "two_of_everything", "heads_up", "heads_up"])
 	sim.boss_paid[5] = []                 # the runs above paid him: Long memory reads from here
 	sim.bosses_beaten[1] = true
-	sim.set_depth(5, 3)
+	sim.depth[5] = 3                     # the ladder by hand: the Lie of the land no longer opens it (18 Oct)
 	var full: int = int(sim.boss_of(5)["notes"]) * 3
 	_check(sim.boss_cost(5) == int(round(full / 3.0)), "Heads up is off: %d of %d" % [sim.boss_cost(5), full])
 	_check(sim.pinnacle_depth(11) == int(Data.PINNACLE_DEPTH[3]), "the pinnacle moved before Full strength")
@@ -11875,7 +11896,7 @@ func _map_nodes_checks(main) -> void:
 	sim.deploy(5)
 	sim.extract_now()
 	_check(sim.boss_paid[5] == [3, 2] and sim.boss_cost(5) == 0, "Long memory forgot a depth: %s" % str(sim.boss_paid[5]))
-	sim.set_depth(5, 3)
+	sim.depth[5] = 3                     # the ladder by hand: the Lie of the land no longer opens it (18 Oct)
 	_check(sim.boss_cost(5) == 0, "Long memory forgot the first depth paid")
 	take.call(["head_start"])
 	var pts: int = sim.atlas_points
@@ -12832,7 +12853,7 @@ func _panel_words_checks(main) -> void:
 	bk._shown = ""
 	main.show_room(main.WORKSHOP)
 	main.refresh()
-	_check(main._workshop._kicker.text == "The Workshop", "the Workshop's heading says '%s'" % main._workshop._kicker.text)
+	_check(main._workshop._kicker.text == "Workshop", "the Workshop's heading says '%s'" % main._workshop._kicker.text)
 	var hold_bank: int = sim.paragon_banked
 	sim.paragon_banked = 12
 	main.refresh()
@@ -14170,12 +14191,11 @@ func _lore_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	# the opening: before "the Yard is set", once
+	# the opening is the scenes' alone (18 Oct, Q8): the log starts with the Pitch set, not the old four-day telling
 	var y = Sim.new()
 	y.start()
 	var said: Array = y.events.map(func(e): return str(e[1]))
-	var at_set: int = said.find(Words.YARD["set"])
-	_check(at_set >= Words.OPENING.size() and said.slice(at_set - Words.OPENING.size(), at_set) == Words.OPENING, "the opening is not said before the Pitch is set: %s" % str(said))
+	_check(said.has(Words.YARD["set"]) and not said.any(func(l): return l in Words.OPENING), "the log still tells the opening: %s" % str(said))
 	# the radio: a line every RADIO_EVERY runs home, in order, the zone's and the lorries' gates holding
 	_check(y.radio_next().get("key", "") == "loop/0", "the radio's first line is not the loop's: %s" % str(y.radio_next()))
 	y.runs_total = Data.RADIO_EVERY
@@ -14815,5 +14835,46 @@ func _words_checks(main) -> void:
 				_check(not hit, "%s shows \"%s\" (%s): %s" % [r, b, n.name, t])
 			_check(kicker.search(t) == null, "%s has a letter-spaced kicker: %s" % [r, t])
 			_check(fmt.search(t) == null, "%s shows an unfilled format code: %s" % [r, t])
+	# the decoder with two papers in: the note says what decrypting does, not "Put three papers in" (18 Oct: a words
+	# change once broke the match; decrypt_block and the Radio share Sim.DECRYPT_NEEDS_PAPERS now)
+	if sim.campaign_done() and sim.signals.size() < Data.SIGNALS_HELD:
+		main.show_room(main.COMMS)
+		main._radio.chosen = [-1, -2]
+		main._radio._shown = ""
+		main.refresh()
+		_check(sim.decrypt_block([-1, -2]) == sim.DECRYPT_NEEDS_PAPERS and main._radio._decrypt_note.text.begins_with("Decrypting"), "two papers in, the decoder note reads '%s'" % main._radio._decrypt_note.text)
+		main._radio.chosen = []
 	main.show_room(was)
 	main.refresh()
+
+
+## Watch rota and Second dog do their own things (18 Oct, Matt on Q4: they copied Tripwires and A dog): the rota only
+## at night, the second dog in the search time, not the finds.
+func _yard_own_checks(sim) -> void:
+	var el0: float = sim.elapsed
+	var picks0: Dictionary = sim.yard_picks.duplicate(true)
+	var t: Dictionary = sim.effective(3)
+	sim.elapsed = 3600.0 * 5.0               # 14:00, day
+	var day0: float = sim.yard_patrol()
+	_yard_set(sim, "lookout", 3, "b")
+	_check(sim.yard_has("watch_rota") and is_equal_approx(sim.yard_patrol(), day0), "the Watch rota changed a day's gangs")
+	sim.elapsed = 3600.0 * 14.0              # 23:00, night
+	_check(sim.is_night() and is_equal_approx(sim.yard_patrol(), day0 * Data.FX["yard/watch_rota"]), "the Watch rota did not hold a night's gangs back: %.3f of %.3f" % [sim.yard_patrol(), day0])
+	var s0: float = sim.search_s(t)
+	_yard_set(sim, "kennel", 2, "b")
+	_check(sim.yard_has("second_dog") and is_equal_approx(sim.search_s(t), s0 * Data.FX["yard/second_dog"]), "the Second dog did not quicken the search: %.2f from %.2f" % [sim.search_s(t), s0])
+	# the wound reads its real cut (Q7): Physio takes a third off
+	var w0: String = sim.wound
+	sim.wound = "pace"
+	_check(sim.wound_pct() == Data.WOUND_PCT, "a wound reads %d%%, not %d%%" % [sim.wound_pct(), Data.WOUND_PCT])
+	_yard_set(sim, "clinic", 2, "b")         # Physio: the Clinic's third column, side b
+	_check(not sim.yard_has("physio") or sim.wound_pct() == int(round(Data.WOUND_PCT * 2.0 / 3.0)), "with Physio a wound reads %d%%" % sim.wound_pct())
+	sim.wound = w0
+	sim.yard_picks = picks0
+	sim._yard_dirty = true
+	sim.elapsed = el0
+	# the Weather set halves Fog's one fewer to one, not none (Q6)
+	_check(int(sim._softened({"contact": -1}, 0.5)["contact"]) == -1 and int(sim._softened({"contact": 2}, 0.5)["contact"]) == 1, "the Weather set rounds a gang's one to nothing")
+	# the Spare Key spends no rounds (Q5)
+	var key_it: Dictionary = Items.roll_unique(sim._unique_named("The Spare Key"), sim.rng)
+	_check(Items.free_rounds(key_it) and Items.ammo_words(key_it) == "Takes no rounds" and sim.has_rounds(key_it), "the Spare Key wants rounds")

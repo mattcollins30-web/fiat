@@ -308,7 +308,7 @@ func show_state(s) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
-	_tab_text(_tabs[0], ["Shelf (%d)" % stock.size(), "Shelf"])
+	_tabs[0].text = "Shelf"                 # its count is the grid's header (18 Oct, said once)
 	_tab_text(_tabs[1], [("Stash (%d)" % sim.stash.size()) if kind == "fence" else ("Your meds (%d)" % _stash_meds()), "Stash" if kind == "fence" else "Meds"])
 	UI.style_button(_tabs[0], showing == "shelf")
 	UI.style_button(_tabs[1], showing == "stash")
@@ -320,7 +320,7 @@ func show_state(s) -> void:
 		if is_ready > 0:
 			_tabs[2].text = "Contracts ✓%d" % is_ready
 		else:
-			_tab_text(_tabs[2], ["Contracts (%d)" % sim.contracts.size(), "Contracts"])
+			_tabs[2].text = "Contracts"
 		UI.style_button(_tabs[2], showing == "contracts", "good" if (is_ready > 0 and showing != "contracts") else "")
 		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
 		UI.style_button(_tabs[3], showing == "word")
@@ -522,7 +522,7 @@ func _signature() -> String:
 ## The Clinic's treatment block, at the top of the side panel.
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
-	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), Data.WOUND_PCT]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
+	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), sim.wound_pct()]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
 	_band.set_words("The Clinic · the medic", "", "%d" % sim.hp_shown(),
 		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
 	_band.headline_under_title(true)
@@ -531,7 +531,7 @@ func _show_treatment() -> void:
 	var fill: float = clampf(sim.hp / sim.max_hp(), 0.0, 1.0)
 	_side_fill.size.x = roundf(INNER * fill)
 	(_side_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if fill > 0.5 else Pal.WARN
-	UI.fit(_side_bar_text, ["Your HP %d / %d · %s" % [sim.hp_shown(), sim.max_hp_shown(), state] if sim.wound != "" else "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()], "Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()]])
+	_side_bar_text.text = ""                # a plain bar: the band says the HP and the wound (18 Oct, said once)
 	_side_track.visible = true
 
 
@@ -626,16 +626,13 @@ func _show_side() -> void:
 				var heal: float = Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0)
 				t["panel"].visible = true
 				UI.set_tile(t, "%s ×%d" % [order[k], counts_in[order[k]]["n"]], ["heals %.0f over %.0f s" % [heal, sim.use_time(it)], "heals %.0f" % heal])
-			elif k == order.size():
-				t["panel"].visible = true
-				UI.set_tile(t, "The rig", ["%d of %d pouches" % [sim.rig_used(), sim.med_capacity()], "%d of %d" % [sim.rig_used(), sim.med_capacity()]] if sim.med_capacity() > 0 else ["no rig fitted"], Pal.TEXT if sim.med_capacity() > 0 else Pal.TEXT_3)
 		return
 	# the Fence: the band, then sell by rarity, the boxes and the shelf, the contracts
 	var worth_all := 0
 	for it in sim.stash:
 		worth_all += sim.sell_price(it)
-	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays full value, charges three times"), "",
-		Fmt.money(worth_all), ["for the lot · %d in the stash" % sim.stash.size(), "for the lot of %d" % sim.stash.size(), "for the lot"], Pal.ACCENT)
+	_band.set_words("The Fence · pays full value, charges three times", "",
+		Fmt.money(worth_all), ["for the lot"], Pal.ACCENT)     # the price rise is the panel's, the count the tab's (18 Oct, said once)
 	_band.headline_under_title(true)
 	_side_title.text = "SELL BY RARITY"
 	_side_title.visible = true
@@ -668,7 +665,6 @@ func _show_side() -> void:
 		_side_tile(k, PAD + (n % 3) * (tw3 + TILE_GAP), y + (n / 3) * (UI.TILE_H + TILE_GAP), tw3, "%s ×%d" % [box["name"], int(box["rounds"])], [Fmt.money(sim.ammo_price(types[n]))], Pal.TEXT,
 			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and (sim.stash_room(1) or sim.yard_has("racks")))
 		k += 1
-	_side_tile(k, PAD + 2 * (tw3 + TILE_GAP), y + UI.TILE_H + TILE_GAP, tw3, "Their shelf", ["%d on it" % sim.market_stock(), "%d" % sim.market_stock()], Pal.TEXT_2, Callable(), false)     # a bigger one is built in the Yard (9 Oct)
 	y += 2 * UI.TILE_H + TILE_GAP + 12
 	# the contracts, in brief: the tab has the lot
 	_heads[2].position.y = y
@@ -720,7 +716,7 @@ func _show_panel() -> void:
 				UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes keep their value" % sim.inflation_pct(), "Prices up %d%%; notes don't" % sim.inflation_pct()])
 			else:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays full value; charges three times"])
-			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), sim.market.size() if sim.yard_has("back_room") else sim.market_stock()]
+			_right_title.text = "Their shelf"
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick an item on the shelf or in the stash"
 		_lay_buttons()
@@ -865,7 +861,7 @@ func _on_visit() -> void:
 			_town_said = true
 			_line = Words.FENCE["town"]
 		else:
-			_line = Words.rotate(Words.FENCE["visit"], _visits - 1)
+			_line = Words.rotate(Words.FENCE["visit"], _visits)     # from the second line: the room card says the first (18 Oct)
 	_show_said()
 
 

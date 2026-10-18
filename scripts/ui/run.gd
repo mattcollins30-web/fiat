@@ -370,19 +370,19 @@ func show_state(s) -> void:
 	_faces_off()
 	if boss_on:
 		_fight["head"].text = "THE FIGHT · " + m["boss"]["name"].to_upper()
-		_tiles(_fight["tiles"], [["On you", ["the head", "1"]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
+		_tiles(_fight["tiles"], [["On you", ["the head", "1"]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / float(m["boss"]["hp"]), 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(m["boss"]["hp"])], "bad", m.get("dots", {}), float(m["boss"]["hp"]))
 	elif way_out:
 		var door_on: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = "THE FIGHT · THE WAY OUT"
-		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]],
+		_tiles(_fight["tiles"], [["On you", ["%d" % door_on]], ["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", ["%.0f/s" % fire_now]],
 			["Door", ["%d of %d" % [m["remaining"], int(m.get("way_out_gang", m["remaining"]))], "%d" % m["remaining"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
 		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT · THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
-			["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
+			["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Firing now", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
@@ -409,8 +409,8 @@ func show_state(s) -> void:
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
 	_tiles(_runner["tiles"], [["Armour", ["%.0f (%s)" % [sim.armour(), Fmt.pct(sim.mitigation())], "%.0f" % sim.armour()]], ["Damage", ["%.0f/s" % fire_now]],
-		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and Items.ammo_type(gun) in ["", "none"] else ("dry" if gun != null else "no gun")), "—"]]])
-	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"]) else Pal.TEXT)
+		["Meds", [("%d" % sim.meds_carried()) if sim.meds_carried() > 0 else "none"]], ["Rounds", [("%d" % rounds) if rounds > 0 else ("none needed" if gun != null and (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else ("dry" if gun != null else "no gun")), "—"]]])
+	_runner["tiles"][3]["value"].add_theme_color_override("font_color", Pal.BAD if gun != null and rounds == 0 and not (Items.ammo_type(gun) in ["", "none"] or Items.free_rounds(gun)) else Pal.TEXT)
 	if _view != null:
 		# the six under the frame: theirs, then yours
 		var fighting: bool = m["remaining"] > 0
@@ -715,7 +715,7 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		r = ["Rounds", ["no gun", "none"], Pal.TEXT]
 	elif Items.ammo_type(gun) in ["", "none"]:
 		r = ["Rounds", ["melee"], Pal.TEXT_3]
-	elif str(gun.get("rule", "")) == "weed_burner":
+	elif Items.free_rounds(gun):
 		r = ["Rounds", ["∞"], Pal.TEXT_3]          # the Council's Weed Burner (17 Oct): a shotgun's base, never a round spent
 	elif rounds > 0:
 		r = ["Rounds", ["%d" % rounds], Pal.TEXT]
@@ -745,11 +745,11 @@ func _show_pick(m: Dictionary) -> void:
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
 			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: a find that beats what's worn replaces the pack's cheapest item")
-			lines.append("Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
+			lines.append("Cheapest now: %s, %s" % [Words.mid_base(str(cheap["base"])), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
 		else:
 			lines.append("%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"])
 		lines.append("Pick a cell for its figures; Select ditches several at once" if m["found"].size() > 0 else "Nothing found yet")
-		_pick.show_empty("The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()], lines)
+		_pick.show_empty("The pack", lines)     # its fill is the grid's header and the cells free (18 Oct, said once)
 		_pick.set_buttons([])
 		return
 	var tail = ""

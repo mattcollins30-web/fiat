@@ -137,7 +137,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var head := UI.panel(self, Rect2(0, 0, Pal.GRID_W, HEAD_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	head_band = UI.head_art(head, "The radio")
-	_kicker = UI.label(head, Rect2(PAD, 8, 420, 24), "The Radio", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kicker = UI.label(head, Rect2(PAD, 8, 420, 24), "Radio", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, 330, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, 240, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_sub = UI.label(head, Rect2(PAD, 78, 440, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -453,16 +453,13 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	var on_air: bool = sim.campaign_done()
-	UI.fit(_kicker, ["The Radio · on the air" if on_air else "The Radio · nothing on the air", "The Radio"])
+	UI.fit(_kicker, ["Radio · on the air" if on_air else "Radio · nothing on the air", "Radio"])     # the rail's name (18 Oct, Q10)
 	_headline.text = ("Level %d" % sim.reach) if on_air else "Quiet"
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 440 - _unit.position.x
 	UI.fit(_unit, ["your reach", ""] if on_air else ["till the Quartermaster", ""])
 	UI.fit(_sub, ["Beat a signal at your reach to raise it by 1", "Beat one at it: +1", ""] if on_air else ["", ""])
-	_chips.show_chips([{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Color("c9b98f")},
-		{"tag": "Papers", "forms": ["%d" % have.size()], "colour": Pal.TEXT_2},
-		{"tag": "Signals", "forms": ["%d of %d held" % [sim.signals.size(), Data.SIGNALS_HELD], "%d/%d" % [sim.signals.size(), Data.SIGNALS_HELD]], "colour": Pal.TEXT_2},
-		{"tag": "Kev's story", "forms": ["%d of %d" % [mini(sim.story_beat, Data.STORY_BEATS.size()), Data.STORY_BEATS.size()]], "colour": STORY}], 1)
+	_chips.show_chips([{"tag": "Kev's story", "forms": ["%d of %d" % [mini(sim.story_beat, Data.STORY_BEATS.size()), Data.STORY_BEATS.size()]], "colour": STORY}], 1)
 	_chips.visible = on_air
 	_show_heard()
 	for b in [_papers_box, _decoder_box, _signals_box]:
@@ -597,7 +594,7 @@ func _show_decoder() -> void:
 	_kev.disabled = kb != ""
 	var price: int = sim.kev_price()
 	if kb == "" or kb == "%d notes" % price:
-		UI.fit_button(_kev, ["Ask Kev · %d notes (you have %d)" % [price, sim.notes], "Ask Kev · %d notes" % price, "Ask Kev"])
+		UI.fit_button(_kev, ["Ask Kev · %d notes" % price, "Ask Kev"])
 	else:
 		UI.fit_button(_kev, ["Ask Kev · %s" % kb, "Ask Kev"])
 

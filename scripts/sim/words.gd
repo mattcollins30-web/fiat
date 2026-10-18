@@ -613,14 +613,14 @@ const UNIQUES := {
 	"The Butcher's Apron": "Chainmail under a rubber apron. The butcher never stopped at one cut.",
 	"The Starting Pistol": "From the school sports day, rebored. Everyone used to wait for it. Everyone still does, for about a second.",
 	"The Miner's Lamp": "Off the last shift at the pit, the battery rewired. It finds the seam before you've looked.",
-	"The Paramedic's Bumbag": "Off an ambulance that stopped coming. Plasters, a foil blanket, and a habit of being there when you go down.",
+	"The Paramedic's Bum Bag": "Off an ambulance that stopped coming. Plasters, a foil blanket, and a habit of being there when you go down.",
 	"The Plumber's Belt": "Wrenches, PTFE tape, a blowtorch. Whatever he fixed stayed fixed. Whatever he broke stayed broken.",
 	# the mythics (16 Oct)
 	"The Last Orders": "Called at every pub in the borough on the same night. Nobody who heard the bell went home sober, or whole.",
 	"The Spare Key": "Under the mat, behind the meter, in the drainpipe. It opens everything, and it never waits its turn.",
 	"The Headmaster's Cap": "He knew every lesson in the building and taught them all at once. Put it on and so do you.",
 	"The Bomb Disposal Suit": "Forty kilos of the army's best idea. Whatever goes off near you, you walk out of it slowly.",
-	"The Ambulance's Bag": "Off the last ambulance in the county. However much you take out of it, it's full again by the next corner.",
+	"The Crash Bag": "Off the last ambulance in the county. However much you take out of it, it's full again by the next corner.",
 	"The Removal Van": "Seven and a half tonnes and it still has room. Whatever you find goes in, and comes out better.",
 	"The Freedom of the Borough": "A scroll and a key from the Town Hall. The gangs read it, stand aside, and pay you for the privilege.",
 }
@@ -745,9 +745,9 @@ const ITEMS := {
 	"Assault shotgun": "A military combat shotgun with a drum. The sort of thing the news said nobody had.",
 	"Marksman rifle": "The army's long rifle. The glass alone was worth a house, back when a house was worth something.",
 	"Section gun": "A light machine gun off the lorry, belt-fed, and the section it was issued to are the crew who have it.",
-	"Issue pistol": "The army's sidearm. Clean, boring, and it works every time, which is the point of it.",
+	"Duty pistol": "The army's sidearm. Clean, boring, and it works every time, which is the point of it.",
 	"Composite helmet": "A modern army helmet, light and hard. It arrived with the lorry, with a name written inside.",
-	"Issue plates": "The army's own plates in the army's own carrier. The lorry was full of them. He issues them to people he likes.",
+	"Stab plates": "The army's own plates in the army's own carrier. The lorry was full of them. He issues them to people he likes.",
 	"Police marksman's rifle": "The firearms squad's own rifle, from the one armoury nobody got into until now. Nothing out here is this good.",
 	"Riot squad's shotgun": "The riot squad's own, drum-fed, for crowds. It was made for exactly this.",
 	"Officer's revolver": "An officer's revolver, kept clean by someone who expected an inspection. Heavy, slow, final.",
@@ -825,7 +825,7 @@ const ITEMS := {
 	"Bank's own pen": "On a chain, from the counter. Everything that ever changed hands in the town was signed with one of these.",
 	# attachments - magazine
 	"Extended magazine": "More rounds before the pause. The pause is when they get you.",
-	"Quick mag": "A magazine with a pull-tab and a taped spare. Out, in, on.",
+	"Quick magazine": "A magazine with a pull-tab and a taped spare. Out, in, on.",
 	"Drum magazine": "Fifty rounds in a drum that jams when it's cold. It's always cold.",
 	"Belt box": "A hundred rounds in a box on the side, and the weight of a hundred more.",
 	"Hundred-round drum": "The drum that doesn't jam. Someone paid for it with more than money.",
@@ -964,7 +964,7 @@ const NEXT := {
 	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
-	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next one pays better, with a free perk in the Yard.",
+	"lorry": "The lorry's beaten.",
 	"moved": "A new estate, the same climb. Start at the Allotments.",
 }
 const NEXT_SHORT := {

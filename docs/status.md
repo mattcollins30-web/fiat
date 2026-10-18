@@ -5513,3 +5513,14 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   strings); all found by the reviewer and a whole-diff key scan, all fixed. Fit-driven: "Fight · clock", "till the
   Quartermaster", "Lasting", class/unique/keystone lines shortened. Fencing's sell node "Gift of the gab" (clash).
   Held: the four voiced room-card lines (Matt: a separate change later), Daisy chain's condition (for Matt).
+- (18 Oct) Words pass batch 4 of 4: the duplicates said once (Clinic bar/rig tile, Fence tab counts and shelf tile,
+  run pick title, Stats band and record foot, Workshop chips, Pitch purse, Radio chips, Dial/Training/Map kickers,
+  Settings, the lorry line); Matt's question calls: the Float stops meds only (rig kept; the Field kit's bandage too),
+  Lie of the land = no signal rolls more than 3 under the reach, Watch rota = gangs 20% later at night, Second dog =
+  searches 15% quicker, the Spare Key spends no rounds (Items.free_rounds, the bot too), the Weather set rounds away
+  from zero, the wound shows its real cut, the opening's log lines gone, The mantelpiece, Radio/Workshop kickers,
+  Scrap not Bin, Weapons tab, Daisy chain's condition; base/unique renames with their art (Duty pistol, Stab plates,
+  Quick magazine, The Paramedic's Bum Bag, The Crash Bag; Quick fingers); the bot's depth climb gone. The words check
+  is live in the smoke (banned words in the data's mechanics lines; no depth/camp/Boss/spaced kickers/format codes on
+  any room). Old .import files for the five renamed pictures are left on disk untracked (deleting needs Matt's OK).
+  Next: the endgame loop discussion (Matt, 18 Oct: materials per zone, combined to rebuild the world, true pinnacles).

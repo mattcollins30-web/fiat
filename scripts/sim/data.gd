@@ -54,7 +54,7 @@ const FOOTPRINTS := {
 	"Range rifle": [5, 1], "Service rifle": [5, 1], "Anti-materiel rifle": [5, 1], "Bolt-action garage rifle": [5, 1],     # the deep bases (10 Oct)
 	"Demolition bar": [3, 1], "Rescue axe": [3, 1], "Door ram": [3, 1],
 	# heavy armour
-	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Issue plates": [3, 4], "Bomb suit": [3, 4], "Butcher's chainmail": [3, 4],
+	"Riot suit": [3, 4], "Full plate carrier": [3, 4], "Stab plates": [3, 4], "Bomb suit": [3, 4], "Butcher's chainmail": [3, 4],
 	"Military plate carrier": [3, 4], "Special forces plates": [3, 4], "CBRN suit": [3, 4], "Heavy armour suit": [3, 4], "Full EOD suit": [3, 4],
 	# bags
 	"Plastic bag": [2, 2], "School bag": [2, 2], "Carrier bags": [2, 2], "Holdall": [2, 2],
@@ -185,7 +185,7 @@ const YARD := [
 		[{"id": "hold_fire", "name": "Hold fire", "short": "First gang waits for a full pack", "words": "After the clear, the first gang waits until the pack is full"},
 		 {"id": "tripwires", "name": "Tripwires", "short": "Gangs 10% later", "words": "Every gang takes 10% longer to arrive"}],
 		[{"id": "whistle", "name": "The whistle", "short": "Auto-run ignores wounds", "words": "Auto-run keeps going when the runner is wounded"},
-		 {"id": "watch_rota", "name": "Watch rota", "short": "Gangs 10% later", "words": "Every gang takes a tenth longer to arrive"}],
+		 {"id": "watch_rota", "name": "Watch rota", "short": "Night: gangs 20% later", "words": "On night runs, every gang takes 20% longer to arrive"}],
 		[{"id": "crows_nest", "name": "Crow's nest", "short": "Gangs 20% later", "words": "Every gang takes 20% longer to arrive"},
 		 {"id": "flares", "name": "Flares", "short": "Gangs one man short", "words": "Every gang arrives one man short"}]],
 	 "rank": {"short": "Gangs 2% later", "words": "Every gang takes 2% longer to arrive a rank"}},
@@ -195,7 +195,7 @@ const YARD := [
 		[{"id": "guard_dog", "name": "Guard dog", "short": "Gangs 20% later", "words": "Every gang takes 20% longer to arrive"},
 		 {"id": "pedigree", "name": "Pedigree", "short": "+10% quality", "words": "Loot quality +10%"}],
 		[{"id": "fetch", "name": "Fetch", "short": "Death: best find home", "words": "When the runner dies, the dog brings the most valuable thing in the pack home"},
-		 {"id": "second_dog", "name": "Second dog", "short": "+1 find a search", "words": "One more find every search"}],
+		 {"id": "second_dog", "name": "Second dog", "short": "Searches 15% quicker", "words": "Searches are 15% quicker"}],
 		[{"id": "tracker", "name": "Tracker", "short": "Papers ×2", "words": "Papers and charms turn up twice as often"},
 		 {"id": "ratter", "name": "Ratter", "short": "Poison, bleed +10%", "words": "Poison and bleed do a tenth more"}],
 		[{"id": "pack", "name": "The litter", "short": "+2 finds a search", "words": "Every search finds 2 more"},
@@ -409,7 +409,7 @@ const BASES := {
 			"attachments": ["optic", "muzzle"]},
 		{"name": "Army machine pistol", "type": "smg", "tier": 6, "damage": 16.0, "rof": 4.6, "value": 380,
 			"attachments": ["muzzle", "magazine", "stock"]},
-		{"name": "Issue pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300,
+		{"name": "Duty pistol", "type": "pistol", "tier": 6, "damage": 22.0, "rof": 2.4, "value": 300,
 			"attachments": ["optic", "muzzle", "magazine"]},
 		{"name": "Automatic pistol", "type": "smg", "tier": 5, "damage": 14.0, "rof": 4.2, "value": 240,
 			"attachments": ["optic", "muzzle", "magazine", "stock"]},
@@ -462,7 +462,7 @@ const BASES := {
 		{"name": "Ballistic vest", "tier": 4, "armour": 100.0, "pace": -2, "value": 420},
 		{"name": "Full plate carrier", "tier": 5, "armour": 140.0, "pace": -10, "value": 680},
 		{"name": "Light plates", "tier": 5, "armour": 110.0, "pace": 2, "value": 720},
-		{"name": "Issue plates", "tier": 6, "armour": 160.0, "pace": -6, "value": 900},
+		{"name": "Stab plates", "tier": 6, "armour": 160.0, "pace": -6, "value": 900},
 		## resist gear (6 Oct): what the trades wore against their own hazards
 		{"name": "Fireman's tunic", "tier": 4, "armour": 55.0, "pace": -2, "value": 380, "res": {"fire": 40}},
 		{"name": "Lineman's rubber coat", "tier": 4, "armour": 45.0, "value": 360, "res": {"shock": 45}},
@@ -696,7 +696,7 @@ const ATTACHMENTS := [
 	{"name": "Muzzle brake", "mount": "muzzle", "tier": 3, "value": 180, "damage_pct": 12, "speed_pct": -5},
 	# magazines
 	{"name": "Extended magazine", "mount": "magazine", "tier": 1, "value": 70, "damage_pct": 8},
-	{"name": "Quick mag", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 4, "speed_pct": 4},
+	{"name": "Quick magazine", "mount": "magazine", "tier": 2, "value": 90, "damage_pct": 4, "speed_pct": 4},
 	{"name": "Drum magazine", "mount": "magazine", "tier": 3, "value": 110, "damage_pct": 14, "speed_pct": -8},
 	{"name": "Belt box", "mount": "magazine", "tier": 3, "value": 240, "damage_pct": 20, "speed_pct": -12, "type": "smg"},
 	# handguards
@@ -823,7 +823,7 @@ const UNIQUES := [
 	{"name": "The Bookie's Pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "Loot quality ×2; tins from kills halved", "short": "Quality ×2, tins ½", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
 	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "band": "chase", "range": [6, 9], "site": 7,
-		"words": "Pace +40%, pack +50%; no rig, so no meds, rounds or grenades", "short": "Pace +40%; no rig at all", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
+		"words": "Pace +40%, pack +50%; you carry no meds", "short": "Pace +40%; no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
 	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [4, 9], "body": {"pace_min": 0}, "depth": 6,
 		"words": "Heals 3% of max HP a second; no armour at all", "short": "3% max HP/s, no armour", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
 	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "band": "core", "range": [4, 9], "depth": 6,
@@ -860,7 +860,7 @@ const UNIQUES := [
 		"words": "Each man in every gang first takes a free shot from the secondary at triple damage", "short": "Free ×3 secondary shot", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_pct", "value": 25}]},
 	{"name": "The Miner's Lamp", "slot": "Helmet", "base": "Ballistic visor", "rule": "miners_lamp", "band": "core", "range": [4, 7], "depth": 6,
 		"words": "Searches take half as long", "short": "Searches twice as quick", "affixes": [{"stat": "search_pct", "value": 20}, {"stat": "loot_pct", "value": 10}, {"stat": "armour", "value": 10}]},
-	{"name": "The Paramedic's Bumbag", "slot": "Rig", "base": "Bum bag", "rule": "paramedics_bumbag", "band": "levelling", "range": [1, 4],
+	{"name": "The Paramedic's Bum Bag", "slot": "Rig", "base": "Bum bag", "rule": "paramedics_bumbag", "band": "levelling", "range": [1, 4],
 		"words": "Meds heal 50% more; one is used by itself under 40% HP", "short": "Meds +50%, auto under 40%", "affixes": [{"stat": "med_cap", "value": 1}, {"stat": "hp", "value": 15}]},
 	{"name": "The Plumber's Belt", "slot": "Rig", "base": "Medic's harness", "rule": "plumbers_belt", "band": "core", "range": [4, 7], "depth": 6,
 		"words": "Burns, poison and bleeds on them deal double; chills and shocks last twice as long", "short": "Damage over time ×2; chill, shock last ×2", "affixes": [{"stat": "dot_pct", "value": 20}, {"stat": "capacity", "value": 2}]},
@@ -870,12 +870,12 @@ const UNIQUES := [
 	{"name": "The Last Orders", "slot": "Primary", "base": "Old .303", "rule": "last_orders", "band": "mythic", "mythic": true, "range": [2, 9],
 		"words": "Every hit does full damage as physical and as each of the 5 elements, and every element's keystones are open", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
-		"words": "The secondary always does its full damage beside the primary", "short": "Secondary at full damage", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+		"words": "The secondary always does its full damage beside the primary, and never spends a round", "short": "Secondary: full damage, no rounds", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "You have every node in your class's trees except keystones, and every element's keystones are open", "short": "Every class node yours", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
 	{"name": "The Bomb Disposal Suit", "slot": "Armour", "base": "Police body armour", "rule": "bomb_suit", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "You never lose more than 5% of max HP a second, and the clock never runs out", "short": "At most 5% max HP lost a second; no clock", "affixes": [{"stat": "hp", "value": 40}, {"stat": "armour_pct", "value": 15}]},
-	{"name": "The Ambulance's Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
+	{"name": "The Crash Bag", "slot": "Rig", "base": "Assault rig", "rule": "ambulance_bag", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "Meds are never used up; one is used by itself under 50% HP", "short": "Meds never used up; auto under 50%", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "med_speed_pct", "value": 30}]},
 	{"name": "The Removal Van", "slot": "Backpack", "base": "Cargo frame", "rule": "removal_van", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "The pack holds 4 times as much, finds roll one loot tier higher, and every search finds 2 more", "short": "Pack ×4, finds tier up, +2 a search", "affixes": [{"stat": "loot_pct", "value": 25}, {"stat": "search_pct", "value": 20}]},
@@ -921,7 +921,7 @@ const FX := {
 	"rule/lollipop": 2.0,     # The Lollipop Lady's Sign: Stop: the first of every gang drops where it stands; gangs come half as often
 	"rule/managers_coat": 1.5,     # The Manager's Coat: Tins half again; no notes - he doesn't take paper
 	"rule/miners_lamp": 0.5,     # The Miner's Lamp: Searches take half as long
-	"rule/paramedics_bumbag": 1.5,     # The Paramedic's Bumbag: Meds heal half again; one is used for you under 40% HP
+	"rule/paramedics_bumbag": 1.5,     # The Paramedic's Bum Bag: Meds heal half again; one is used for you under 40% HP
 	"rule/plumbers_belt": 2.0,     # The Plumber's Belt: Burns, poison and bleeds on them build twice as deep; chills and shocks last twice as long
 	"rule/postman": 1,     # The Postman's Bag: Every search finds one more
 	"rule/sergeants_whistle.contact": 2,     # The Sergeant's Whistle: Two more on you at once; everything you do does 60% more
@@ -965,7 +965,7 @@ const FX := {
 	"yard/pedigree": 10.0,     # Pedigree: Ten per cent better finds
 	"yard/rig_wiring": 4,     # Rig wiring: Four more pouches on the rig
 	"yard/scanner": 0.75,     # Scanner: Every craft at the Radio a quarter cheaper
-	"yard/second_dog": 1,     # Second dog: One more find every search
+	"yard/second_dog": 0.85,     # Second dog: searches 15% quicker (18 Oct, Matt: its own effect, not A dog's again)
 	"yard/shelf": 4,     # Shelf: Ten meds on the Clinic's shelf, not six
 	"yard/shelving": 40,     # Shelving: Forty more cells in the stash
 	"yard/shopfront": 3,     # Shopfront: Three more things on the Fence's shelf
@@ -981,7 +981,7 @@ const FX := {
 	"yard/tracker.papers": 2.0,     # Tracker: Papers and charms turn up twice as often
 	"yard/tripwires": 1.1,     # Tripwires: Every gang takes a tenth longer to arrive
 	"yard/ward": 1.0,     # Ward: Resting heals an HP a second more
-	"yard/watch_rota": 1.1,     # Watch rota: Every gang takes a tenth longer to arrive
+	"yard/watch_rota": 1.2,     # Watch rota: on night runs, gangs 20% later (18 Oct, Matt: its own effect, not Tripwires' again)
 	# yard_rank
 	"yard_rank/clinic": 0.03,     # a rank of the Yard's clinic
 	"yard_rank/fence": 2.0,     # a rank of the Yard's fence
@@ -1004,6 +1004,7 @@ const FX := {
 	"atlas/heavy_crews.contact": 1,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/heavy_crews.xp": 1.5,     # Heavy crews: One more on you at a time; kills pay half again in tins and XP
 	"atlas/lorrys_route": 1,     # The lorry's route: the decoder's band a level wider at the top
+	"atlas/lie_of_the_land": 3,     # The lie of the land: a signal rolls at worst this many levels under the reach (18 Oct)
 	"atlas/open_ground": 1,     # Open ground: One fewer on you at a time
 	"atlas/picked_over.base": 0.33,     # a site's own things: the share of finds before the map's Picked over
 	"atlas/picked_over": 0.1667,     # Picked over: A site's own things turn up more: a third of finds, then half, then two-thirds
@@ -1284,7 +1285,7 @@ const TIERS := [
 		"drops": {"slots": {"Primary": 1, "Secondary": 1, "Helmet": 1, "Armour": 2, "Rig": 3, "Backpack": 1}, "type": "", "only": ["A drug chart", "Hospital kit", "Surgeon's kit", "Medic's harness"]}},
 	{"name": "The Barracks", "zone": 3, "pool": 22, "hp": 4200.0, "dps": 4.8, "drop": 0.55, "loot_tier": 6, "xp": 57, "cash": 50,
 		"shape": {"pool": 8, "hp": 1.5, "dps": 1.4, "patrol": 1.3, "cash": 0.8},
-		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Issue plates", "Night optic"]}},
+		"drops": {"slots": {"Primary": 3, "Secondary": 1, "Helmet": 2, "Armour": 3, "Rig": 2, "Backpack": 1}, "type": "rifle", "only": ["A leave pass", "A requisition", "Section gun", "Stab plates", "Night optic"]}},
 ]
 
 const BANK := 8                    # the tier whose vault holds the deeds
@@ -1523,7 +1524,7 @@ const TREES := [
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
 		{"name": "Nose for parts", "col": 0, "row": 0, "effect": "att_share", "value": 5},
-		{"name": "Quick hands", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
+		{"name": "Quick fingers", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
 		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Improvised gun damage +40%"},
 		{"name": "Spare parts", "col": 1, "row": 1, "effect": "att_share", "value": 5},
@@ -1638,7 +1639,7 @@ const ELEMENT_TREES := [
 		{"name": "Current", "col": 2, "row": 0, "effect": "shock_pct", "value": 30, "notable": true, "words": "Shock damage +30%; shocked gangs take 40% more, not 25%"},
 		{"name": "Amps", "col": 1, "row": 1, "effect": "shock_pct", "value": 12},
 		{"name": "Drifter's leads", "col": 3, "row": 0, "effect": "shock_pct", "value": 25, "also": {"patrol_pct": 10}, "class": "Drifter", "notable": true, "joint": "drifter_shock", "words": "Shock damage +25%; every gang takes 10% longer to arrive"},
-		{"name": "Daisy chain", "col": 4, "row": 0, "effect": "shock_chain", "keystone": true, "words": "Shock damage hits everyone on you"},
+		{"name": "Daisy chain", "col": 4, "row": 0, "effect": "shock_chain", "keystone": true, "words": "While the target is shocked, your shock damage hits everyone on you"},
 		{"name": "Volts", "col": 2, "row": 1, "effect": "shock_pct", "value": 15},
 		{"name": "Scrapper's mains", "col": 3, "row": 1, "effect": "shock_pct", "value": 25, "type": "improvised", "class": "Scrapper", "notable": true, "joint": "scrapper_shock", "words": "Improvised guns do 25% more shock damage"},
 		{"name": "Earthed", "col": 4, "row": 1, "effect": "shock_more", "notable": true, "words": "Shock damage +40%; your armour −20%"},
@@ -1847,8 +1848,8 @@ const ATLAS := [
 		"sum": "On you", "figures": ["as they come", "one fewer"], "sentence": "One fewer on you at a time, on every site."},
 	{"key": "every_penny", "column": 0, "name": "Every tin", "max": 2, "words": "Tins +10% a rank",
 		"sum": "Tins", "figures": ["as they come", "+10%", "+20%"], "sentence": "Every run brings a little more home."},
-	{"key": "lie_of_the_land", "column": 0, "name": "The lie of the land", "max": 1, "keystone": true, "words": "Every ladder opens one depth past the deepest cleared",
-		"sum": "Ladders", "figures": ["to the deepest cleared", "one past it"], "sentence": "You know the ground: every site's ladder opens one depth past the deepest you've cleared on it."},
+	{"key": "lie_of_the_land", "column": 0, "name": "The lie of the land", "max": 1, "keystone": true, "words": "A signal never rolls more than 3 levels under your reach",
+		"sum": "Low rolls", "figures": ["as they fall", "3 under at worst"], "sentence": "You know the ground: a signal never rolls more than 3 levels under your reach."},     # 18 Oct (Matt, Q2): it opened a depth no screen sets any more
 	# the crews
 	{"key": "paid_in_notes", "column": 1, "name": "Paid in notes", "max": 3, "words": "Every kill carries 1 more note a rank",
 		"sum": "Notes", "figures": ["as they come", "+1 a kill", "+2 a kill", "+3 a kill"], "sentence": "Every kill carries a note more."},

@@ -732,10 +732,16 @@ static func is_melee(it: Dictionary) -> bool:
 	return base_of(it).get("type", "") == "melee"
 
 
+## A gun that never spends a round: the Council's Weed Burner, the Spare Key (18 Oct, Matt on Q5: its own thing, not
+## Double tap's again).
+static func free_rounds(gun: Dictionary) -> bool:
+	return str(gun.get("rule", "")) in ["weed_burner", "spare_key"]
+
+
 ## What a gun takes, by the standard box of its type: "Takes shells"; a bat, nothing.
 static func ammo_words(gun: Dictionary) -> String:
 	var type := ammo_type(gun)
-	if type == "none" or gun.get("rule", "") == "weed_burner":
+	if type == "none" or free_rounds(gun):
 		return "Takes no rounds"
 	if type == "" or not is_gun(gun):
 		return ""

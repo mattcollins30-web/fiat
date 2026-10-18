@@ -687,7 +687,7 @@ func show_settings(lit_row := -1) -> void:
 	var words := {"sfx": ["Effects", "The guns, the fights, the Pitch"], "music": ["Music", "The title's, the Pitch's, the fights'"],
 			"voice": ["Voice", "The opening, the radio, the rooms' intros"]}
 	for k in ["sfx", "music", "voice"]:
-		items.append({"name": "%s: %s" % [words[k][0], _vol_words(float(_sound.vols[k]))], "detail": words[k][1] + ": press to change",
+		items.append({"name": "%s: %s" % [words[k][0], _vol_words(float(_sound.vols[k]))], "detail": words[k][1],
 				"action": _press_setting.bind(k), "glyph": "menu_sound"})
 	items.append({"name": "Room intros: %s" % ("on" if room_intros else "off"), "detail": "A room's card the first time you're in it; the ? brings one back",
 			"action": _press_setting.bind("intros"), "glyph": "menu_continue"})
@@ -1342,7 +1342,7 @@ func _town_purse() -> Dictionary:
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d areas open" % [open_zones, Data.ZONES.size()], "lines": zlines,
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
-		"right": {"kicker": "The purse", "lines": [["Tins", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
+		"right": {"kicker": "The purse", "lines": [["Kit worth", Fmt.money(sim.loadout_value())],     # tins, notes and scrap are the top bar's (18 Oct, said once)
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
 			"note": "Tins lose value as prices rise; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],

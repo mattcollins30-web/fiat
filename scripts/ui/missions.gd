@@ -256,7 +256,7 @@ func show_state(s) -> void:
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = "Tier %d · %s · gear for level %d" % [k + 1, Data.ZONES[zone]["name"], sim.wear_of(int(t["level"]))]     # the level to wear its finds (16 Oct: it read the item level)
+			var kicker: String = "Tier %d · gear for level %d" % [k + 1, sim.wear_of(int(t["level"]))]     # the area is the tab's (18 Oct, said once)     # the level to wear its finds (16 Oct: it read the item level)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
@@ -266,7 +266,7 @@ func show_state(s) -> void:
 			if not why.is_empty():
 				band.chips.show_chips(why, 1, true)
 		else:
-			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
+			band.set_words("Tier %d" % (k + 1), Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
 			band.headline_under_title(false)
 			band.chips.visible = false
 		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
@@ -305,7 +305,7 @@ func show_state(s) -> void:
 			if not (nm in names):
 				names.append(nm)                 # the Radio's words first, the sky's after
 		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
-		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i), "CONDITIONS"])     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
+		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i, false), "CONDITIONS"])     # the weather is the row's (18 Oct, said once)     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
@@ -534,7 +534,7 @@ static func odds_reasons(s, i: int) -> Array:
 			hp_forms = ["HP %d of %d, full in %s" % [s.hp_shown(), s.max_hp_shown(), full], "HP %d, full in %s" % [s.hp_shown(), full]] + hp_forms     # resting at camp mends it (17 Oct)
 		out.append({"forms": hp_forms, "colour": "bad"})
 	var gun = s.equipped["Primary"]
-	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and str(gun.get("rule", "")) != "weed_burner":
+	if gun != null and not (Items.ammo_type(gun) in ["", "none"]) and not Items.free_rounds(gun):
 		var have: int = s.rounds_for(gun)
 		if s.rig_room(1):
 			for it in s.stash:                   # the gate tops up from the stash (rounds_short's count)
