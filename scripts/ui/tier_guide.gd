@@ -219,9 +219,9 @@ func _show_depths() -> void:
 			items.append({"forms": [text, short], "colour": MARK_TONES.get(str(m[1]), Pal.TEXT_2)})
 		row["marks"].show_chips(items, 2 if items.size() > 1 else 1, true)
 		row["marks"].position.y = (ROW_H - 1 - (Chips.CHIP_H * (2 if row["marks"].rows_used() > 1 else 1) + (Chips.ROW_GAP if row["marks"].rows_used() > 1 else 0))) / 2.0
-	var mine: int = sim.wear_of(sim.wearable_level())
-	UI.fit(_legend, ["▶ your reach (level %d) · gear in red is past your level (%d) · a fifth of finds come at the level you can wear (%d)" % [sim.reach, lv, mine],
-		"▶ your reach · red: past your level (%d) · a fifth at yours (%d)" % [lv, mine], "▶ your reach · red: past level %d" % lv])
+	var reach: String = ("▶ your reach (level %d) · " % sim.reach) if sim.room_open("radio") else ""     # the reach is the Radio's: no word of it before
+	UI.fit(_legend, [reach + "gear in red is past your level (%d) · %.0f%% of finds come at a level you can wear" % [lv, Data.FIND_AT_MINE * 100.0],
+		reach + "red: past your level (%d) · %.0f%% at yours" % [lv, Data.FIND_AT_MINE * 100.0], "red: past level %d" % lv])
 	UI.fit(_legend2, ["Gang HP, XP and tins against a campaign run here · a signal's codes and extras on top · Mythics: 1 in %s finds, anywhere" % _thousands(Data.MYTHIC_ODDS_IN),
 		"Against a campaign run here · Mythics 1 in %s finds" % _thousands(Data.MYTHIC_ODDS_IN)])
 
@@ -270,7 +270,7 @@ func _show_farm() -> void:
 	y += 32
 	_farm_label(Rect2(x, y, col_w, 26), "Mythics · one a slot · 1 in %s finds" % _thousands(Data.MYTHIC_ODDS_IN), "Regular", Pal.CELL_TEXT, Pal.MYTHIC)
 	_farm_label(Rect2(x, y + 28, col_w, 26), "Set pieces · signals from level %d, any site" % (2 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES), "Regular", Pal.CELL_TEXT, Pal.SET)
-	_farm_label(Rect2(x, y + 56, col_w, 26), "Loose uniques · %s on, +%.0f%% a level past %d, to %.0f%%" % [Data.ZONES[Data.UNIQUE_FROM_ZONE]["name"], Data.UNIQUE_DROP * 100.0, 1 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES, Data.UNIQUE_CAP * 100.0], "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
+	_farm_label(Rect2(x, y + 56, col_w, 26), "Loose uniques · %.0f%% from %s on, +%.0f%% a level past %d anywhere, up to %.0f%%" % [Data.UNIQUE_CAMPAIGN * 100.0, Data.ZONES[Data.UNIQUE_FROM_ZONE]["name"], Data.UNIQUE_DROP * 100.0, 1 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES, Data.UNIQUE_CAP * 100.0], "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
 	# each site's own unique
 	x += col_w + 24
 	y = 80.0

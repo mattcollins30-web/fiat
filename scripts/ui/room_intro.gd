@@ -16,14 +16,28 @@ const VOICE := "res://art/intro/rooms/%s.mp3"
 const VOICE_DB := -1.0
 const W := 1280
 const LINES := 4                       # the most lines a card has (the Clinic, 14 Oct)
-const H := 752
+const H := 840                         # 752 until the boxes got their strips (18 Oct, option C)
 const BAND_H := 300
 const FACE := 256
 const PAD := 48
 const LINE_Y := 330
 const LINE_GAP := 46
 const TILE_Y := 524                    # under four lines
-const TILE_H := 92
+const STRIP_H := 84                    # a strip of scene across the top of each box (18 Oct, Matt: option C on the canvas 'Room card art')
+const TILE_H := 92 + STRIP_H
+## Each box's strip, cut from art the game already has (Matt: "just use the art as you have it - we already have these
+## assets per zone"): [art under res://art/, where the cut sits across and down (0-1), how far in (1 = the widest cut)].
+const STRIPS := {
+	"map": [["places/the_estate", 0.5, 0.45, 1.0], ["places/the_town", 0.5, 0.55, 1.0], ["people/the_carpet_man", 0.5, 0.32, 1.0]],
+	"kit": [["people/drifter", 0.5, 0.35, 1.0], ["places/the_kit_room", 0.5, 0.6, 1.0], ["places/the_kit_room", 1.0, 0.75, 1.6]],
+	"stats": [["people/doorman", 0.5, 0.33, 1.0], ["places/the_barracks", 0.5, 0.55, 1.0], ["places/the_stats", 0.6, 0.55, 1.0]],
+	"training": [["people/scrapper", 0.5, 0.33, 1.0], ["places/the_caravan", 0.6, 0.55, 1.0], ["places/the_yard", 0.3, 0.6, 1.0]],
+	"clinic": [["people/medic", 0.5, 0.33, 1.0], ["places/the_clinic", 0.65, 0.5, 1.0], ["places/the_hospital", 0.5, 0.55, 1.0]],
+	"fence": [["places/the_parade", 0.5, 0.6, 1.0], ["places/the_fence", 0.65, 0.55, 1.0], ["people/fence", 0.5, 0.33, 1.0]],
+	"workshop": [["places/the_workshop", 0.6, 0.65, 2.0], ["places/the_workshop", 0.85, 0.5, 2.0], ["places/the_workshop", 0.5, 0.55, 1.0]],
+	"yard": [["places/the_yard", 0.85, 0.6, 2.0], ["places/the_garden_centre", 0.5, 0.55, 1.0], ["places/the_outskirts", 0.5, 0.55, 1.0]],
+	"radio": [["places/the_radio", 0.6, 0.6, 2.0], ["places/the_city", 0.5, 0.35, 1.0], ["places/the_radio", 0.5, 0.2, 1.0]],
+}
 const TILE_GAP := 16
 const LINE_S := 2.2                    # a line's turn with no take
 const LINE_FADE_S := 0.4
@@ -40,7 +54,7 @@ var _kicker: Label
 var _title: Label
 var _sub: Label
 var _lines: Array = []
-var _tiles: Array = []                 # [panel, head, body]
+var _tiles: Array = []                 # [panel, head, body, strip]
 var _hint: Label
 var _go_on: Button
 var _voice: AudioStreamPlayer
@@ -94,9 +108,19 @@ func _init(room_key: String) -> void:
 	for k in range(3):
 		var x: float = PAD + k * (tw + TILE_GAP)
 		var p := UI.panel(_card, Rect2(x, TILE_Y, tw, TILE_H), UI.box(Pal.BG, 6))
-		var h := UI.label(p, Rect2(18, 12, tw - 36, 28), "", "SemiBold", 20, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var b := UI.label(p, Rect2(18, 44, tw - 36, 34), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_tiles.append([p, h, b])
+		p.clip_contents = true
+		var st := TextureRect.new()
+		st.position = Vector2.ZERO
+		st.size = Vector2(tw, STRIP_H)
+		st.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		st.stretch_mode = TextureRect.STRETCH_SCALE              # the cut is the box's shape already
+		st.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		st.modulate = Color(0.8, 0.8, 0.8)
+		st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(st)
+		var h := UI.label(p, Rect2(18, STRIP_H + 12, tw - 36, 28), "", "SemiBold", 20, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var b := UI.label(p, Rect2(18, STRIP_H + 44, tw - 36, 34), "", "Medium", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_tiles.append([p, h, b, st])
 	_hint = UI.label(_card, Rect2(PAD, H - PAD - 40, 640, 40), "", "Regular", 22, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_go_on = UI.button(_card, Rect2(W - PAD - 220, H - PAD - 64, 220, 64), true)
 	_go_on.text = "Go on"
@@ -142,6 +166,7 @@ func _fill() -> void:
 	for k in range(_tiles.size()):
 		_tiles[k][1].text = str(d["tiles"][k][0]).to_upper()
 		_tiles[k][2].text = str(d["tiles"][k][1])
+		_tiles[k][3].texture = strip_texture(key, k, _tiles[k][3].size)
 	var vs: AudioStream = _voice_of(d)
 	if vs != null:
 		_voice.stream = vs
@@ -149,6 +174,37 @@ func _fill() -> void:
 	shown = 0
 	_vt = 0.0
 	_line_t = LINE_S                       # the first line straight away
+
+
+## A box's strip: its art, cut to the box's shape where STRIPS says; null when the art isn't there (the plain ground shows).
+static func strip_texture(room_key: String, k: int, box: Vector2) -> Texture2D:
+	var spec: Array = STRIPS.get(room_key, [])
+	if k >= spec.size():
+		return null
+	var src: Texture2D = art_texture(str(spec[k][0]))
+	if src == null:
+		return null
+	var w: float = src.get_width()
+	var h: float = src.get_height()
+	var aspect: float = box.x / box.y
+	var cut := Vector2(w, w / aspect) if w / h <= aspect else Vector2(h * aspect, h)
+	cut /= maxf(1.0, float(spec[k][3]))
+	var at := Vector2((w - cut.x) * float(spec[k][1]), (h - cut.y) * float(spec[k][2]))
+	var t := AtlasTexture.new()
+	t.atlas = src
+	t.region = Rect2(at.floor(), cut.floor())
+	return t
+
+
+static func art_texture(rel: String) -> Texture2D:
+	var path := "res://art/%s.png" % rel
+	if ResourceLoader.exists(path):
+		return load(path)
+	if FileAccess.file_exists(path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+		if img != null:
+			return ImageTexture.create_from_image(img)
+	return null
 
 
 ## The place art each room's band already uses (art/places/).

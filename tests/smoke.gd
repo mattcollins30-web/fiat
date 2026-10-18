@@ -1101,15 +1101,15 @@ func _fence_screen(main) -> void:
 	main.refresh()
 	var commons := 0
 	for it in sim.stash:
-		if it["rarity"] == 0 and not Items.is_deeds(it):
+		if it["rarity"] == 0 and not Items.is_deeds(it) and not Items.is_paper(it) and not it.get("mythic", false):     # sell_rarity keeps papers and mythics (18 Oct: a P45 in the bot's stash made this flake)
 			commons += 1
 	if commons > 0:
 		main._fence._side_press(0)          # Common
 		var left := 0
 		for it in sim.stash:
-			if it["rarity"] == 0 and not Items.is_deeds(it):      # the deeds never go to the Fence (13 Oct: the bot's run had found them)
+			if it["rarity"] == 0 and not Items.is_deeds(it) and not Items.is_paper(it) and not it.get("mythic", false):      # the deeds never go to the Fence (13 Oct: the bot's run had found them); papers and mythics one at a time
 				left += 1
-		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return x["rarity"] == 0 and not Items.is_deeds(x)).map(func(x): return x["base"]))])
+		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return x["rarity"] == 0 and not Items.is_deeds(x) and not Items.is_paper(x)).map(func(x): return x["base"]))])
 	_check_fit(main, "Fence (after)")
 	main._fence._show("shelf")
 	print("fence screen ok")
@@ -1374,7 +1374,7 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Heal" and cv._side_tiles_c[2]["key"].text == "The wound" and cv._side_tiles_c[3]["key"].text == "The Clinic", "the Clinic's treatment tiles are off")
+	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "The Clinic", "the Clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
 	var med_kinds := {}
 	for it in sim.stash:
@@ -5325,7 +5325,7 @@ func _why_checks(main) -> void:
 	sim.hp = sim.max_hp() * 0.3
 	var why: Array = M.odds_reasons(sim, 0)
 	_check(why.size() >= 2 and str(why[0]["forms"][0]) == "No meds" and str(why[1]["forms"][0]).begins_with("HP "), "the reasons don't lead with no meds and the HP: %s" % str(why))
-	sim.hp = sim.max_hp()
+	sim.hp = sim.max_hp() * 0.3          # hurt and no meds: some open site always reads low (18 Oct: at full HP the bot's camp could read all six high)
 	main.show_room(main.MISSIONS)
 	var lows := 0
 	var highs := 0
@@ -5335,7 +5335,10 @@ func _why_checks(main) -> void:
 			var i: int = Data.ZONES[z]["tiers"][k]
 			if not sim.tier_open(i):
 				continue
-			sim.survival(i)
+			for _n in range(200):                    # read to the end: the odds come in over frames under a time budget (18 Oct: an unsettled read counted as high and flaked this)
+				sim.survival(i)
+				if sim.odds_settled(i):
+					break
 			main.refresh()
 			var band = M._cols[k]["band"]
 			var low: bool = sim.odds_settled(i) and sim.odds_now(i) < M.WHY_UNDER and not M.odds_reasons(sim, i).is_empty()
@@ -5346,6 +5349,7 @@ func _why_checks(main) -> void:
 				_check(band.headline.position.y + band.headline.size.y <= band.chips.position.y + 1.0 and band.title.position.y + band.title.size.y <= band.headline.position.y + 1.0, "the odds' headline and the reasons overlap on site %d" % i)
 		_check_fit(main, "Map zone %d (the reasons under the odds)" % z)
 	_check(lows > 0, "no site read low enough to show its reasons (%d read high)" % highs)
+	sim.hp = sim.max_hp()
 	sim.load_dict(saved)
 	main.refresh()
 	print("why the odds read low: no meds and the HP first, under the odds at Risky and worse (%d sites low, %d not)" % [lows, highs])
@@ -7023,9 +7027,7 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 		if n.text.contains("£"):
 			push_error("%s: '%s' shows pounds; everything is paid in tins (13 Oct)" % [where, n.text])
 			bad += 1
-		if n.text.contains("Yard"):
-			push_error("%s: '%s' still says the Yard; it's the Pitch (14 Oct)" % [where, n.text])
-			bad += 1
+		# "the Yard" is back as the Pitch's tree of works (18 Oct, Matt's call 3); the Pitch stays the place
 		var room := 32.0 if n is Button else 0.0
 		var w: float = UI_v.text_width(n, n.text) + room
 		if w > n.size.x + 0.5:
@@ -11380,7 +11382,7 @@ func _endgame_move_checks(main) -> void:
 	sim._clear(sim.mission, t0)
 	sim.extract_now()
 	_check(sim.best_depth[0] == 1 and sim.atlas_points == points_kept, "the first clear on a moved yard is off: best %d, points %d of %d kept" % [sim.best_depth[3], sim.atlas_points, points_kept])
-	_check(sim.events.any(func(e): return str(e[1]).contains("ladders start at depth 2")), "the ladder's floor was not said")
+	_check(not sim.events.any(func(e): return str(e[1]).contains("ladders start at depth") or str(e[1]).contains("is open")), "a clear on a moved yard still talks of depth (18 Oct, Matt: levels only on screen)")
 	# the floor opens the depth without faking the clear: depth 2 opens on the streets, depth 3 does not; the wall reads depth 1
 	_finish_campaign(sim)
 	sim.set_depth(3, 3)
@@ -12767,7 +12769,7 @@ func _radio_juice_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	_check(c["intel"].shown() >= 1 and c["intel_head"].text.contains("from the Radio"), "the Runs card does not carry the Radio's words: '%s'" % c["intel_head"].text)
+	_check(c["intel"].shown() >= 1 and c["intel_head"].text.begins_with("ON THE AIR") and not c["intel_head"].text.contains("from the Radio"), "the Runs card's air head is off (the sky only since 18 Oct; the codes are on signals): '%s'" % c["intel_head"].text)
 	_check_fit(main, "Runs (juiced)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -12805,6 +12807,7 @@ func _panel_words_checks(main) -> void:
 		_check(bk._train.disabled, "Train is not off with no point free")
 		# four buttons late on leave ~430 px: every node's sentence still says itself, over its two lines
 		var worst := 0
+		var worst_s := ""
 		for t in sim.trees():
 			if t == null or t.get("drawer", false):
 				continue
@@ -12813,7 +12816,8 @@ func _panel_words_checks(main) -> void:
 				bk.fit_two([s], 430.0)
 				if (bk._words.text + " " + bk._words2.text).strip_edges() != s.strip_edges() or UI.text_width(bk._words2, bk._words2.text) > 430.0:
 					worst += 1
-		_check(worst == 0, "%d node sentences do not fit two lines at 430 px" % worst)
+					worst_s = s
+		_check(worst == 0, "%d node sentences do not fit two lines at 430 px, e.g. %s" % [worst, worst_s])
 		bk._shown = ""
 		main.refresh()
 		_check_fit(main, "Training (a node, no point free)")
@@ -13603,7 +13607,7 @@ func _try_on_checks(main) -> void:
 		if bwords.find(bwords[k]) != k:
 			dup = bwords[k]
 	_check(dup == "", "a delta shows twice (%s): %s" % [dup, str(bd)])
-	_check(bd.any(func(d): return str(d[1]).ends_with("dmg <½HP")) and bd.any(func(d): return str(d[1]).ends_with("dmg 1st gang")), "the Branch Pistol's deltas miss its own: %s" % str(bd))
+	_check(bd.any(func(d): return str(d[1]).ends_with("dmg <½HP")) and bd.any(func(d): return str(d[1]).ends_with("dmg pre-clear")), "the Branch Pistol's deltas miss its own: %s" % str(bd))
 	# a unique's rule on its card (13 Oct, Matt: chips): every unique, at every width an item head is drawn, shows its rule
 	# chip first and every affix after it, the rule shortened where the long form would push one off
 	var IH = load("res://scripts/ui/item_head.gd")
@@ -14567,6 +14571,7 @@ func _room_intro_checks(main) -> void:
 	_check(main.ROOM_INTRO_KEY.size() == main.ROOMS.size() and Words.ROOM_INTROS.size() == main.ROOMS.size(), "a room has no card, or a card no room")
 	# every card: its lines and tiles, its words inside their boxes, its art
 	var arts := 0
+	var strips := 0
 	for k in Words.ROOM_INTROS.keys():
 		var d_in: Dictionary = Words.ROOM_INTROS[k]
 		var c = main.RoomIntro.new(k)
@@ -14579,8 +14584,25 @@ func _room_intro_checks(main) -> void:
 			l.modulate.a = 1.0
 		_check(_check_nodes(c.text_nodes(), [], "%s's card" % k) == 0, "%s's card has words out of their boxes" % k)
 		_check(c._kicker.position.x + UI.text_width(c._title, c._title.text) <= c._card.size.x - c.PAD, "%s's card's title runs off it" % k)
+		# the boxes' strips (18 Oct, option C): the words under the strip, the boxes clear of the last line and of the foot,
+		# the card inside a 1080 screen; a strip made is a strip shown
+		var last_line: Control = c._lines[c._lines.size() - 1]
+		for ti in range(c._tiles.size()):
+			var t: Array = c._tiles[ti]
+			_check(t[1].position.y >= c.STRIP_H, "%s's box %d has its heading over its strip" % [k, ti + 1])
+			_check(t[2].position.y + t[2].size.y <= t[0].size.y, "%s's box %d has its words out of the box" % [k, ti + 1])
+			_check(t[0].position.y >= last_line.position.y + last_line.size.y, "%s's box %d sits over the card's lines" % [k, ti + 1])
+			_check(t[0].position.y + t[0].size.y <= c._hint.position.y and t[0].position.y + t[0].size.y <= c._go_on.position.y, "%s's box %d runs into the card's foot" % [k, ti + 1])
+			if t[3].texture != null:
+				strips += 1
+				var reg: Rect2 = (t[3].texture as AtlasTexture).region
+				var src: Texture2D = (t[3].texture as AtlasTexture).atlas
+				_check(reg.position.x >= 0 and reg.position.y >= 0 and reg.end.x <= src.get_width() + 0.5 and reg.end.y <= src.get_height() + 0.5, "%s's box %d cuts its strip off the edge of its art" % [k, ti + 1])
+				_check(absf(reg.size.x / reg.size.y - t[3].size.x / t[3].size.y) < 0.05, "%s's box %d's strip is stretched" % [k, ti + 1])
+		_check(c._card.position.y >= 0 and c._card.position.y + c._card.size.y <= 1080, "%s's card doesn't fit a 1080 screen" % k)
 		c.finish()
-	print("room cards: %d of %d have their art" % [arts, Words.ROOM_INTROS.size()])
+	print("room cards: %d of %d have their art; %d of 27 boxes have their strip" % [arts, Words.ROOM_INTROS.size(), strips])
+	_check(strips == 27 or arts < Words.ROOM_INTROS.size(), "only %d of the 27 boxes show a strip" % strips)
 	# Go on is a button of its own: it lights under the mouse and takes the click, once (Matt: "no visual register")
 	var gc = main.RoomIntro.new("clinic")
 	main.add_child(gc)
@@ -14735,3 +14757,57 @@ func _room_intro_checks(main) -> void:
 	main.intro = false
 	main.show_room(room0)
 	print("room cards ok: each fits, a first visit, held and let go, met once, the ?, Esc, not over a menu, old saves, after the opening, On the air")
+
+
+## The words (18 Oct, the language pass, docs/language/style_guide.md): the mechanics lines in the data say each thing
+## by its one name and with figures; every room, every label showing, has no depth (Matt's call: levels only), no
+## camp, no Boss, no letter-spaced kicker, no format code left unfilled, no spaced hyphen.
+const WORDS_BANNED := ["cash", "operator", "boss", "health", "ammo", "faster", "cache", "dots", "first shot", "first hit",
+		"quarter", "a third", "a fifth", "a tenth", "half again", "depth", "camp", "one head"]
+const WORDS_SCREEN_BANNED := ["depth", "camp", "Boss", "pouchs", "1 finds", " - "]
+func _words_checks(main) -> void:
+	var rx := RegEx.new()
+	rx.compile("(?i)\\b(" + "|".join(WORDS_BANNED) + ")\\b")
+	var lines := []                         # [where, text]
+	for t in Data.TREES + Data.ELEMENT_TREES:
+		for nd in t["nodes"]:
+			if nd.has("words"):
+				lines.append(["%s / %s" % [t["name"], nd["name"]], str(nd["words"])])
+	for u in Data.UNIQUES:
+		for k in ["words", "short"]:
+			if u.has(k):
+				lines.append([str(u["name"]), str(u[k])])
+	for a in Data.AFFIXES:
+		lines.append([str(a["stat"]), str(a["label"])])
+	for y in Data.YARD:
+		if y.has("words"):
+			lines.append([str(y.get("name", "")), str(y["words"])])
+	for at in Data.ATLAS:
+		if at.has("sentence"):
+			lines.append([str(at.get("name", "")), str(at["sentence"])])
+	for l in lines:
+		var m := rx.search(l[1])
+		_check(m == null, "the mechanics line of %s says \"%s\": %s" % [l[0], m.get_string() if m != null else "", l[1]])
+	var sim = main.sim
+	var was: String = main.room
+	sim.unlock_all()
+	var kicker := RegEx.new()
+	kicker.compile("^([A-Z] ){3,}[A-Z]")
+	var fmt := RegEx.new()
+	fmt.compile("%[-0-9.]*[sdf]")
+	for r in main.ROOMS:
+		main.show_room(r)
+		main.refresh()
+		for n in main.find_children("*", "Control", true, false):
+			if not (n is Label or n is Button) or not n.is_visible_in_tree():
+				continue
+			var t: String = n.text
+			if t == "":
+				continue
+			for b in WORDS_SCREEN_BANNED:
+				var hit: bool = (t.find(b) >= 0) if b == "Boss" or b.begins_with(" ") or b.contains(" ") else (t.to_lower().find(b) >= 0)
+				_check(not hit, "%s shows \"%s\" (%s): %s" % [r, b, n.name, t])
+			_check(kicker.search(t) == null, "%s has a letter-spaced kicker: %s" % [r, t])
+			_check(fmt.search(t) == null, "%s shows an unfilled format code: %s" % [r, t])
+	main.show_room(was)
+	main.refresh()

@@ -100,7 +100,7 @@ const YARD := [
 	{"key": "bench", "name": "The Bench", "salvage": "steel", "costs": [2000, 7000, 16000, 40000, 80000], "picks": [
 		[{"id": "steady_hands", "name": "Steady hands", "short": "One-affix odds ×2", "words": "Re-rolling one affix: twice the chance it goes up a tier"},
 		 {"id": "cheap_parts", "name": "Cheap parts", "short": "Every job −25%", "words": "Every job at the Bench costs a quarter less"}],
-		[{"id": "third_socket", "name": "Third socket", "short": "Sockets to three", "words": "A third socket can be cut in a gun or armour"},
+		[{"id": "third_socket", "name": "Third socket", "short": "Sockets to three", "words": "A third socket can be cut in a gun, helmet or armour"},
 		 {"id": "two_locks", "name": "Two locks", "short": "A lock keeps two", "words": "A lock keeps the affix you pick and the best of the rest"}],
 		[{"id": "gunsmith", "name": "Gunsmith", "short": "Guns at your depth", "words": "Improvised guns built at your deepest site's level, not their own"},
 		 {"id": "strip_for_parts", "name": "Strip for parts", "short": "Scrap ×2", "words": "Scrapping gives twice the scrap"}],
@@ -111,13 +111,13 @@ const YARD := [
 	 "rank": {"short": "Item-level cap +1", "words": "Bumps go one item level higher a rank"}},
 	{"key": "stash", "name": "The Stash", "salvage": "copper", "costs": [1500, 6000, 15000, 35000, 80000], "picks": [
 		[{"id": "shelving", "name": "Shelving", "short": "+40 cells", "words": "Forty more cells in the stash"},
-		 {"id": "racks", "name": "Racks", "short": "Rounds take no room", "words": "Rounds, meds and grenades in the stash take no cells"}],
+		 {"id": "racks", "name": "Racks", "short": "Rounds, meds, grenades: no cells", "words": "Rounds, meds and grenades in the stash take no cells"}],
 		[{"id": "another_unit", "name": "Another unit", "short": "+50 cells", "words": "Fifty more cells in the stash"},
 		 {"id": "bins", "name": "Bins", "short": "Commons to scrap", "words": "The common gear a run brings home goes straight to scrap"}],
 		[{"id": "strongroom", "name": "Strongroom", "short": "Insurance half", "words": "Insuring a run costs half"},
 		 {"id": "wall_of_fame", "name": "Wall of fame", "short": "Uniques take no room", "words": "Uniques and set pieces in the stash take no cells"}],
 		[{"id": "lock_up", "name": "Lock-up", "short": "+60 cells", "words": "Sixty more cells in the stash"},
-		 {"id": "paper_rack", "name": "Paper rack", "short": "Papers take no room", "words": "Papers and charms in the stash take no cells"}],
+		 {"id": "paper_rack", "name": "Paper rack", "short": "Papers, charms: no cells", "words": "Papers and charms in the stash take no cells"}],
 		[{"id": "dry_store", "name": "Dry store", "short": "Moves keep 75%", "words": "A move keeps three quarters of the notes and scrap, not half"},
 		 {"id": "annex", "name": "Annex", "short": "+100 cells", "words": "A hundred more cells in the stash"}]],
 	 "rank": {"short": "+20 cells", "words": "Twenty more cells a rank"}},
@@ -147,17 +147,17 @@ const YARD := [
 	 "rank": {"short": "+2% on sales", "words": "Two per cent more for everything sold, a rank"}},
 	{"key": "radio", "name": "The Radio", "salvage": "army", "costs": [1500, 6000, 15000, 40000, 80000], "picks": [
 		# map juicing (9 Oct, docs/design/juicing.md §8): the first two columns help the campaign through the sky, the rest the words
-		[{"id": "weather_set", "name": "Weather set", "short": "Rain, fog half", "words": "Rain and fog bite half as hard"},
+		[{"id": "weather_set", "name": "Weather set", "short": "Rain, fog half", "words": "Rain and fog do half as much, good and bad"},
 		 {"id": "night_set", "name": "Night set", "short": "Night pace halved", "words": "Night's slower feet halved"}],
 		[{"id": "forecast", "name": "The forecast", "short": "Weather pays +20%", "words": "A run under rain or fog brings a fifth more tins home"},
 		 {"id": "dead_air", "name": "Dead air", "short": "Night gangs later", "words": "At Night the gangs come a quarter later"}],
 		[{"id": "scanner", "name": "Scanner", "short": "Crafts −25%", "words": "Every craft at the Radio a quarter cheaper"},
 		 {"id": "two_channels", "name": "Two channels", "short": "Rolls twice", "words": "Tune in and Retune roll twice and keep the better"}],
-		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Kev's papers ×2", "words": "Kev's story papers come home twice as often"},     # 15 Oct, Matt: was the old convoy two shallower
+		[{"id": "lorry_watch", "name": "Lorry watch", "short": "Kev's papers every time", "words": "Every signal won brings Kev's next story paper home, not half the time"},     # 15 Oct, Matt: was the old convoy two shallower
 		 {"id": "long_range", "name": "Long range", "short": "A code more", "words": "A site carries one more code"}],
 		[{"id": "jammer", "name": "Jammer", "short": "Codes bite half", "words": "Every code's bite - their health, their fire, more on you - is halved"},
-		 {"id": "military_band", "name": "Military band", "short": "Rewards ×1.5", "words": "Every code's reward - tins, XP, drops, quality - half again"}]],
-	 "rank": {"short": "Rewards +5%", "words": "Every code's reward five per cent more, a rank"}},
+		 {"id": "military_band", "name": "Military band", "short": "Code reward bonuses ×1.5", "words": "Every code's reward bonus is 50% bigger: tins, XP, drops, loot quality"}]],
+	 "rank": {"short": "Code reward bonuses +5%", "words": "Every code's reward bonus 5% bigger a rank"}},
 	{"key": "generator", "name": "The Generator", "salvage": "copper", "costs": [2500, 8000, 20000, 50000, 80000], "picks": [
 		[{"id": "twelve_hours", "name": "Twelve hours", "short": "12 h away", "words": "Twelve hours away count, not eight"},
 		 {"id": "rig_wiring", "name": "Rig wiring", "short": "+4 pouches", "words": "Four more pouches on the rig"}],
@@ -174,7 +174,7 @@ const YARD := [
 		[{"id": "spotter", "name": "Spotter", "short": "First gang ×1.5 later", "words": "The first gang takes half as long again to arrive"},
 		 {"id": "glasses", "name": "Glasses", "short": "Odds from 60 runs", "words": "The odds shown are read from sixty dry runs, not twenty-four"}],
 		[{"id": "lookout_post", "name": "Lookout post", "short": "First gang +50% later", "words": "The first gang takes half as long again to arrive, on top"},
-		 {"id": "range_cards", "name": "Range cards", "short": "First shot +50%", "words": "The first shot on every gang does half again"}],
+		 {"id": "range_cards", "name": "Range cards", "short": "+50% damage to the first of each gang", "words": "Do 50% more damage to the first of each gang"}],
 		[{"id": "hold_fire", "name": "Hold fire", "short": "Waits for a full pack", "words": "After the clear, the first gang waits until the pack is full"},
 		 {"id": "tripwires", "name": "Tripwires", "short": "Gangs 10% later", "words": "Every gang takes a tenth longer to arrive"}],
 		[{"id": "whistle", "name": "The whistle", "short": "Auto runs on wounded", "words": "Auto-run carries on through a wound"},
@@ -760,7 +760,7 @@ const UNIQUES := [
 	{"name": "The Postman's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "postman", "band": "levelling", "range": [1, 4],
 		"words": "Every search finds one more", "short": "+1 find a search", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "loot_pct", "value": 15}]},
 	{"name": "The Doorman's Jacket", "slot": "Armour", "base": "Police body armour", "rule": "doormans", "band": "levelling", "range": [2, 5],
-		"words": "With three on you, take a quarter less", "short": "−25% taken, three on you", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 20}]},
+		"words": "With three on you, take a quarter less", "short": "−25% damage taken, 3+ on you", "affixes": [{"stat": "armour", "value": 12}, {"stat": "hp", "value": 20}]},
 	{"name": "Lucky Cap", "slot": "Helmet", "base": "Hard hat", "rule": "lucky_cap", "band": "levelling", "range": [1, 4],
 		"words": "Finds are half as likely to be common", "short": "Half the commons", "affixes": [{"stat": "loot_pct", "value": 20}, {"stat": "cash_per_kill", "value": 6}]},
 	# the bosses' - only from them; their rules are the affixes, for now
@@ -774,13 +774,13 @@ const UNIQUES := [
 	{"name": "Underlay", "slot": "Armour", "base": "Padded jacket", "rule": "underlay", "band": "levelling", "range": [3, 6], "boss": true,
 		"words": "The first two seconds of every gang land on the underlay", "short": "Each gang's first 2 s soaked", "affixes": [{"stat": "armour", "value": 30}, {"stat": "hp", "value": 25}, {"stat": "speed_pct", "value": 6}]},
 	{"name": "The Manager's Coat", "slot": "Armour", "base": "Ballistic vest", "rule": "managers_coat", "band": "core", "range": [5, 8], "boss": true,
-		"words": "Tins half again; no notes - he doesn't take paper", "short": "Tins ×1.5, no notes", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_per_kill", "value": 8}, {"stat": "hp", "value": 20}]},
+		"words": "Tins from kills +50%; kills drop no notes", "short": "Kill tins ×1.5, no kill notes", "affixes": [{"stat": "armour", "value": 20}, {"stat": "cash_per_kill", "value": 8}, {"stat": "hp", "value": 20}]},
 	{"name": "The Branch Pistol", "slot": "Secondary", "base": "Tactical pistol", "rule": "branch_pistol", "band": "core", "range": [5, 8], "boss": true,
-		"words": "Under half HP the secondary fires twice as fast", "short": "Secondary ×2 under ½ HP", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "damage_low_pct", "value": 25}, {"stat": "speed_pct", "value": 6}]},
+		"words": "The secondary does double damage under half HP", "short": "Secondary ×2 under ½ HP", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "damage_low_pct", "value": 25}, {"stat": "speed_pct", "value": 6}]},
 	{"name": "The Quartermaster's Rifle", "slot": "Primary", "base": "Marksman rifle", "rule": "qm_rifle", "band": "chase", "range": [7, 9], "boss": true,
 		"words": "Never runs dry; he signed for the rounds", "short": "Never runs dry", "affixes": [{"stat": "damage_pct", "value": 20}, {"stat": "first_lot_pct", "value": 30}, {"stat": "damage_per_att", "value": 5}]},
 	{"name": "Issue Webbing", "slot": "Rig", "base": "Assault rig", "rule": "issue_webbing", "band": "chase", "range": [7, 9], "boss": true,
-		"words": "Every pouch holds two", "short": "Every pouch holds two", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "armour", "value": 15}, {"stat": "loot_per_med", "value": 5}]},
+		"words": "The rig has twice as many pouches", "short": "Pouches ×2", "affixes": [{"stat": "capacity", "value": 3}, {"stat": "armour", "value": 15}, {"stat": "loot_per_med", "value": 5}]},
 	# the pinnacles' - a charm each, from a crew's head at full strength
 	{"name": "The Van Keys", "slot": "Charm", "base": "Horseshoe nail", "rule": "van_keys", "band": "chase", "range": [6, 9], "boss": true, "pinnacle": 1,
 		"words": "You drive: pace +25%", "short": "Pace +25%", "affixes": [{"stat": "rarity_pct", "value": 10}, {"stat": "cash_pct", "value": 10}, {"stat": "loot_pct", "value": 8}]},
@@ -814,9 +814,9 @@ const UNIQUES := [
 	{"name": "The Lollipop Lady's Sign", "slot": "Secondary", "base": "Cosh", "rule": "lollipop", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "Stop: the first of every gang drops where it stands; gangs come half as often", "short": "First drops, gangs halved", "affixes": [{"stat": "first_pct", "value": 30}, {"stat": "patrol_pct", "value": 15}]},
 	{"name": "The Bookie's Pencil", "slot": "Charm", "base": "Lucky penny", "rule": "bookies_pencil", "band": "core", "range": [4, 9], "depth": 6,
-		"words": "Loot quality doubled; tins halved", "short": "Quality ×2, tins ½", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
+		"words": "Loot quality ×2; tins from kills halved", "short": "Quality ×2, tins ½", "affixes": [{"stat": "rarity_pct", "value": 15}, {"stat": "loot_pct", "value": 10}]},
 	{"name": "The Float", "slot": "Backpack", "base": "Cargo frame", "rule": "the_float", "band": "chase", "range": [6, 9], "site": 7,
-		"words": "Pace +40% and the pack half again; you carry no meds", "short": "Pace +40%, no meds", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
+		"words": "Pace +40%, pack +50%; no rig, so no meds, rounds or grenades", "short": "Pace +40%; no rig at all", "affixes": [{"stat": "capacity", "value": 10}, {"stat": "speed_pct", "value": 15}, {"stat": "cash_pct", "value": 20}]},
 	{"name": "Nan's Cardigan", "slot": "Armour", "base": "Padded jacket", "rule": "nans_cardigan", "band": "core", "range": [4, 9], "body": {"pace_min": 0}, "depth": 6,
 		"words": "3% of your HP back a second; no armour at all", "short": "3% HP/s, no armour", "affixes": [{"stat": "hp", "value": 40}, {"stat": "all_res", "value": 10}]},
 	{"name": "The Dinner Lady's Ladle", "slot": "Primary", "base": "Pipe wrench", "rule": "ladle", "band": "core", "range": [4, 9], "depth": 6,
@@ -861,7 +861,7 @@ const UNIQUES := [
 	# you do get one then the point is that it does break game balance"; docs/design/mythics.md): one a slot, at
 	# MYTHIC_ODDS a find wherever it is, worn at any level, never lost; their own band, outside every other pool
 	{"name": "The Last Orders", "slot": "Primary", "base": "Old .303", "rule": "last_orders", "band": "mythic", "mythic": true, "range": [2, 9],
-		"words": "Every shot is all five elements at full strength, and every element's keystones are open", "short": "All five elements, full", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
+		"words": "Every hit does full damage as physical and as each of the 5 elements, and every element's keystones are open", "short": "Full damage as every type", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Spare Key", "slot": "Secondary", "base": "Old revolver", "rule": "spare_key", "band": "mythic", "mythic": true, "range": [2, 9],
 		"words": "The secondary fires at full rate, always, beside the primary", "short": "Secondary at full rate", "affixes": [{"stat": "damage_pct", "value": 30}, {"stat": "attack_pct", "value": 10}]},
 	{"name": "The Headmaster's Cap", "slot": "Helmet", "base": "Composite helmet", "rule": "headmasters_cap", "band": "mythic", "mythic": true, "range": [1, 9],
@@ -873,7 +873,7 @@ const UNIQUES := [
 	{"name": "The Removal Van", "slot": "Backpack", "base": "Cargo frame", "rule": "removal_van", "band": "mythic", "mythic": true, "range": [1, 9],
 		"words": "The pack holds four times as much, every find is a tier up, and every search finds two more", "short": "Pack ×4, finds a tier up", "affixes": [{"stat": "loot_pct", "value": 25}, {"stat": "search_pct", "value": 20}]},
 	{"name": "The Freedom of the Borough", "slot": "Charm", "base": "Horseshoe nail", "rule": "freedom", "band": "mythic", "mythic": true, "range": [1, 9],
-		"words": "No gang comes after the clear, every crate opens, and tins, notes and XP come doubled", "short": "No gangs after; pay x2", "affixes": [{"stat": "rarity_pct", "value": 20}, {"stat": "cash_pct", "value": 20}]},
+		"words": "No gangs come after the clear, locked crates open, and tins, notes and XP are doubled", "short": "No gangs after; pay x2", "affixes": [{"stat": "rarity_pct", "value": 20}, {"stat": "cash_pct", "value": 20}]},
 ]
 ## The effects' numbers (15 Oct, refactor A2): every figure a tree node, a unique's or a set's rule, a joint, a
 ## Yard pick or rank and a map node puts into the sim, in one table, so the balance pass tunes them here. Key:
@@ -1083,7 +1083,7 @@ const SETS := [
 			{"name": "Council lanyard", "slot": "Charm", "base": "Lucky penny", "affixes": [{"stat": "notes_pct", "value": 15}, {"stat": "rarity_pct", "value": 6}]},
 		],
 		"bonuses": {2: {"stats": {"all_res": 20}, "words": "All resists +20%"}, 3: {"stats": {"regen": 4}, "words": "+4 HP a second"},
-			4: {"stats": {"search_pct": 30, "notes_pct": 50}, "rule": "council", "words": "Searches 30% quicker, notes +50%, every cache opens"}}},
+			4: {"stats": {"search_pct": 30, "notes_pct": 50}, "rule": "council", "words": "Searches 30% quicker, notes +50%, every locked crate opens"}}},
 	{"name": "The Ambulance's", "depth": 8, "words": "A crew's kit from the one ambulance that kept going",
 		"pieces": [
 			{"name": "Ambulance rig", "slot": "Rig", "base": "Paramedic's rig", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "med_speed_pct", "value": 15}]},
@@ -1107,7 +1107,7 @@ const SETS := [
 			{"name": "Issue bergen", "slot": "Backpack", "base": "Bergen", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "hp", "value": 10}]},
 			{"name": "Issue rifle", "slot": "Primary", "base": "Marksman rifle", "affixes": [{"stat": "damage_pct", "value": 15}, {"stat": "first_pct", "value": 20}]},
 		],
-		"bonuses": {2: {"stats": {"armour_pct": 15}, "words": "Armour +15%"}, 3: {"stats": {"first_pct": 40}, "words": "First shot +40%"},
+		"bonuses": {2: {"stats": {"armour_pct": 15}, "words": "Armour +15%"}, 3: {"stats": {"first_pct": 40}, "words": "+40% damage to the first of each gang"},
 			4: {"rule": "army", "words": "One fewer on you at once; everything you do does 30% more"}}},
 	{"name": "The Carpet Man's", "depth": 5, "words": "A fitter's kit: the knife, the knee pads",
 		"pieces": [
@@ -1194,12 +1194,12 @@ const AFFIXES := [
 	{"stat": "heal_pct", "label": "healing", "short": "heal", "min": 10, "max": 40, "slots": ["Medical"]},
 	# Guard (12 Oct): anyone's, a little
 	{"stat": "overflow_pct", "label": "of its heal past full as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
-	{"stat": "guard_gang", "label": "max HP as Guard every gang", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
+	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
 	{"stat": "guard_pct", "label": "Guard holds more", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from
 	{"stat": "damage_low_pct", "label": "dmg under ½ HP", "short": "dmg <½HP", "min": 8, "max": 20, "slots": ["Primary", "Secondary"]},
-	{"stat": "first_lot_pct", "label": "damage on the first gang", "short": "dmg 1st gang", "min": 10, "max": 25, "slots": ["Primary"]},
+	{"stat": "first_lot_pct", "label": "damage before the clear", "short": "dmg pre-clear", "min": 10, "max": 25, "slots": ["Primary"]},
 	{"stat": "loot_per_lot", "label": "loot quantity a gang seen off", "short": "loot/gang", "min": 3, "max": 8, "slots": ["Backpack", "Rig"]},
 	{"stat": "armour_per_med", "label": "armour a med carried", "short": "arm/med", "min": 2, "max": 5, "slots": ["Rig", "Armour"]},
 	{"stat": "cash_per_kill", "label": "tins a kill", "short": "tins/kill", "min": 2, "max": 6, "slots": ["Helmet", "Backpack"]},
@@ -1432,7 +1432,7 @@ const TREES := [
 		{"name": "Still hands", "col": 0, "row": 0, "effect": "first_pct", "value": 5},
 		{"name": "Breathing", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
 		{"name": "Patience", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
-		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Your first shot on every gang does double"},
+		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Do double damage to the first of each gang with a rifle"},
 		{"name": "Wind reading", "col": 1, "row": 1, "effect": "first_pct", "value": 10},
 		{"name": "Long shot", "col": 2, "row": 1, "effect": "damage_pct", "value": 4},
 		{"name": "One shot", "col": 4, "row": 0, "effect": "one_shot", "keystone": true, "words": "The first of every gang drops to your first shot"},
@@ -1446,7 +1446,7 @@ const TREES := [
 		{"name": "Quick hands", "col": 0, "row": 0, "effect": "search_pct", "value": 15},
 		{"name": "Hedgerows", "col": 0, "row": 1, "effect": "loot_pct", "value": 3},
 		{"name": "Soft ground", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
-		{"name": "Quiet feet", "col": 2, "row": 0, "effect": "quiet_feet", "notable": true, "words": "The next gang comes every 30 seconds, not 20"},
+		{"name": "Quiet feet", "col": 2, "row": 0, "effect": "quiet_feet", "notable": true, "words": "A new gang comes every 30 seconds, not 24"},
 		{"name": "Night eyes", "col": 1, "row": 1, "effect": "rarity", "value": 20},
 		{"name": "Snare lines", "col": 2, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Trapline", "col": 4, "row": 0, "effect": "trapline", "keystone": true, "words": "Every gang arrives one head short, the first included"},
@@ -1466,7 +1466,7 @@ const TREES := [
 		{"name": "Bodyline", "col": 4, "row": 0, "effect": "bodyline", "keystone": true, "words": "With three on you, you take half the damage"},
 		{"name": "Big frame", "col": 3, "row": 1, "effect": "hp", "value": 6},
 		{"name": "Glassing", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "doorman_bleed", "words": "A share of every hit lands as bleed and keeps bleeding"},
-		{"name": "Loud", "col": 4, "row": 1, "effect": "loud", "notable": true, "words": "Gangs come sooner and one head bigger; +30% drops"},
+		{"name": "Loud", "col": 4, "row": 1, "effect": "loud", "notable": true, "words": "Gangs come 40% sooner and one bigger; drops +30%"},
 		{"name": "Spoils", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Iron", "col": 5, "row": 0, "effect": "cap_iron", "capstone": true, "words": "Under half HP, every kill heals a tenth of you"},
 	]},
@@ -1495,7 +1495,7 @@ const TREES := [
 		{"name": "Field surgery", "col": 4, "row": 0, "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
 		{"name": "Pressure", "col": 3, "row": 1, "effect": "heal_pct", "value": 15},
 		{"name": "Syringe", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "paramedic_poison", "words": "A share of every hit lands as poison and keeps working"},
-		{"name": "Walking wounded", "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Under half HP: +40% damage; meds heal half"},
+		{"name": "Walking wounded", "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Meds heal 50% less; damage +40% under half HP"},
 		{"name": "Pockets checked", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Clean hands", "col": 5, "row": 0, "effect": "cap_clean_hands", "capstone": true, "words": "A med clears everything on you, and nothing lands for three seconds"},
 	]},
@@ -1554,7 +1554,7 @@ const TREES := [
 		{"name": "Petrol bomb", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "drifter_fire", "words": "A share of every hit lands as fire and keeps burning"},
 		{"name": "Hit and run", "col": 4, "row": 1, "effect": "hit_and_run", "notable": true, "words": "Leaves as the first gang arrives, the loot kept; every kill pays 50% more"},
 		{"name": "Ghost", "col": 5, "row": 0, "effect": "cap_ghost", "capstone": true, "words": "The first gang never comes: a run starts at the search, and a full pack brought home is the clear"},
-		{"name": "Breather", "col": 5, "row": 1, "beside": true, "effect": "breather", "notable": true, "words": "While no one's on you, Guard comes back a tenth of its cap a second"},     # Guard (12 Oct)
+		{"name": "Breather", "col": 5, "row": 1, "beside": true, "effect": "breather", "notable": true, "words": "While searching, Guard refills 10% of its cap a second"},     # Guard (12 Oct)
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
 		{"name": "Lucky", "col": 0, "row": 0, "effect": "rarity", "value": 10},
@@ -1566,7 +1566,7 @@ const TREES := [
 		{"name": "All or nothing", "col": 4, "row": 0, "effect": "all_or_nothing", "keystone": true, "words": "Nothing common is ever found, and half as many things are"},
 		{"name": "Four-leaf", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Jump start", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "drifter_shock", "words": "A share of every hit lands as shock"},
-		{"name": "Light fingers", "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers three times as often; tins −20%"},
+		{"name": "Light fingers", "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers turn up 3 times as often; tins from kills −20%"},
 		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice and keeps the better"},
 	]},
 ]
@@ -1667,7 +1667,7 @@ const ELEMENT_TREES := [
 		{"name": "Weight behind it", "col": 2, "row": 1, "effect": "physical_pct", "value": 12},
 		{"name": "Knuckle-duster", "col": 3, "row": 1, "effect": "physical_pct", "value": 20},
 		{"name": "Heavy", "col": 4, "row": 1, "effect": "physical_more", "notable": true, "words": "Physical does 40% more; pace −15%"},
-		{"name": "Flattened", "col": 5, "row": 0, "effect": "cap_flattened", "capstone": true, "words": "A kill with the plain staggers the next gang: they fire at half for two seconds"},
+		{"name": "Flattened", "col": 5, "row": 0, "effect": "cap_flattened", "capstone": true, "words": "A physical kill halves the fire of everyone on you for 2 seconds"},
 		{"name": "Thick-skinned", "col": 5, "row": 1, "beside": true, "effect": "thick_skinned", "notable": true,
 		 "words": "Every 10 armour past 200 is +1% physical, to +50%"},     # over the cap's physical (12 Oct): armour is its resist
 	]},
@@ -1683,13 +1683,13 @@ const JOINTS := [
 	{"key": "drifter_fire", "class": "Drifter", "tree": "Moving on", "element_tree": "Petrol", "words": "Your bursts ignite: burning gangs take 25% more from SMGs"},
 	{"key": "drifter_shock", "class": "Drifter", "tree": "Luck", "element_tree": "Live", "words": "A shocked kill's drop rolls its rarity twice"},
 	{"key": "scrapper_shock", "class": "Scrapper", "tree": "Stripping", "element_tree": "Live", "words": "Every hit from an improvised gun shocks"},
-	{"key": "scrapper_fire", "class": "Scrapper", "tree": "Fencing", "element_tree": "Petrol", "words": "A kill while it burns always drops something; finds sell for 20% more"},
-	{"key": "poacher_poison", "class": "Poacher", "tree": "Stalking", "element_tree": "The rat man", "words": "Your first shot on a gang lands its poison at full stacks"},
+	{"key": "scrapper_fire", "class": "Scrapper", "tree": "Fencing", "element_tree": "Petrol", "words": "A kill on a burning man always drops something; the Fence pays 20% more"},
+	{"key": "poacher_poison", "class": "Poacher", "tree": "Stalking", "element_tree": "The rat man", "words": "Your poison on the first of each gang goes on at full stacks"},
 	{"key": "poacher_frost", "class": "Poacher", "tree": "Snares", "element_tree": "The cold", "words": "Every gang arrives chilled, and one head short"},
 	{"key": "paramedic_poison", "class": "Paramedic", "tree": "Triage", "element_tree": "The rat man", "words": "Every med you use doses them with a full stack of poison"},
 	{"key": "paramedic_frost", "class": "Paramedic", "tree": "Shifts", "element_tree": "The cold", "words": "Chilled gangs do 30% less to you; meds heal 20% more while one is"},
 	{"key": "doorman_bleed", "class": "Doorman", "tree": "Muscle", "element_tree": "Blades", "words": "Every shell and swing opens a bleed; bleeding gangs do 20% less to you"},
-	{"key": "doorman_physical", "class": "Doorman", "tree": "The door", "element_tree": "Knuckles", "words": "Every shell and swing staggers: the gangs on you fire 25% slower"},
+	{"key": "doorman_physical", "class": "Doorman", "tree": "The door", "element_tree": "Knuckles", "words": "With a shotgun or melee in hand, the gangs on you fire 25% slower"},
 ]
 const JOINT_COL := 3               # the column both halves sit in (the fourth)
 const ELEMENT_GATED_COL := 4       # an element tree's columns from here want a closed joint
@@ -1748,7 +1748,7 @@ const CRAFT := {
 	"lock": {"name": "Lock one, re-roll the rest", "cash": 120, "words": "The one you pick stays as it is", "pick": true},
 	"one": {"name": "Re-roll one", "cash": 80, "words": "Rolled again; a chance up a tier, a smaller one down, within the rarity", "pick": true},
 	"add": {"name": "Add an affix", "cash": 100, "words": "One more, a rarity up"},
-	"socket": {"name": "Cut a socket", "cash": 80, "words": "One more socket, up to two"},
+	"socket": {"name": "Cut a socket", "cash": 80, "words": "Adds a socket, up to %d"},
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Back to plain; the value goes with them"},
 	"bump": {"name": "Raise the item's level", "notes": 10, "words": "Three levels up: the worst tiers stop rolling; up to the base's tier plus 20"},
 }
@@ -1818,8 +1818,8 @@ const MATE_NOTES := 400            # a unique from the mate, times the tier
 ## `figures` the panel's and the strip's figure at each rank (rank 0 first).
 const ATLAS := [
 	# the sites
-	{"key": "picked_over", "column": 0, "name": "Picked over", "max": 3, "words": "A site's own things turn up more: a third of finds, then half, then two-thirds",
-		"sum": "Own finds", "figures": ["as they come", "a third of finds", "half of finds", "two-thirds of finds"], "sentence": "A site's own things turn up more of the time."},
+	{"key": "picked_over", "column": 0, "name": "Picked over", "max": 3, "words": "A site's own things make up more of its finds: 50%, then 67%, then 83% (33% without)",
+		"sum": "Own finds", "figures": ["33% of finds", "50% of finds", "67% of finds", "83% of finds"], "sentence": "A site's own things turn up more of the time."},
 	{"key": "deeper_pockets", "column": 0, "name": "Deeper pockets", "max": 3, "words": "Searches 10% quicker a rank",
 		"sum": "Searches", "figures": ["as they come", "10% quicker", "20% quicker", "30% quicker"], "sentence": "The picking-over goes quicker, on every site."},
 	{"key": "quiet_roads", "column": 0, "name": "Quiet roads", "max": 3, "words": "Gangs come 10% later a rank",
@@ -1849,14 +1849,14 @@ const ATLAS := [
 		"sum": "Heads", "figures": ["drop one", "drop two"], "sentence": "A crew's head drops two of theirs."},
 	{"key": "heads_up", "column": 1, "name": "Heads up", "max": 2, "words": "A crew's head's price in notes a third less a rank",
 		"sum": "Heads cost", "figures": ["full price", "a third less", "two-thirds less"], "sentence": "The crews' heads come cheaper."},
-	{"key": "full_strength", "column": 1, "name": "Full strength", "max": 1, "notable": true, "words": "A head comes at full strength from depth 8, not 10",
-		"sum": "Full strength", "figures": ["from depth 10", "from depth 8"], "sentence": "The heads come at full strength two depths sooner, their charms with them."},
+	{"key": "full_strength", "column": 1, "name": "Full strength", "max": 1, "notable": true, "words": "A crew's head comes at full strength 2 levels sooner",
+		"sum": "Full strength", "figures": ["as it stands", "2 levels sooner"], "sentence": "The heads come at full strength 2 levels sooner, their charms with them."},
 	{"key": "bounties", "column": 1, "name": "Bounties", "max": 2, "words": "The notes a head holds, half again a rank",
 		"sum": "Head's notes", "figures": ["as they come", "half again", "doubled"], "sentence": "The crews' heads hold more of the old paper."},
 	{"key": "wages", "column": 1, "name": "Wages", "max": 3, "words": "XP +10% a rank",
 		"sum": "XP", "figures": ["as it comes", "+10%", "+20%", "+30%"], "sentence": "Every kill teaches a little more."},
 	{"key": "heavy_crews", "column": 1, "name": "Heavy crews", "max": 1, "notable": true, "words": "One more on you at a time; kills pay half again in tins and XP",
-		"sum": "Crews", "figures": ["as they come", "heavy, pay half again"], "sentence": "The gangs come one bigger, and every kill pays half again in tins and XP."},
+		"sum": "Crews", "figures": ["as they come", "heavy, pay half again"], "sentence": "One more on you at a time, and every kill pays 50% more in tins and XP."},
 	{"key": "their_own_kit", "column": 1, "name": "Their own kit", "max": 2, "words": "A kill drops something 10% more often a rank",
 		"sum": "Kill drops", "figures": ["as they come", "+10%", "+20%"], "sentence": "More of them are carrying something when they go down."},
 	{"key": "marked_men", "column": 1, "name": "Marked men", "max": 1, "notable": true, "words": "+25% damage to the first of every gang",
@@ -1866,13 +1866,13 @@ const ATLAS := [
 	{"key": "head_start", "column": 1, "name": "Head start", "max": 1, "notable": true, "words": "A head beaten at full strength pays a point on the Dial",
 		"sum": "Heads pay", "figures": ["nothing", "a point at full strength"], "sentence": "Beat a crew's head at full strength and the Dial gains a point."},
 	{"key": "lorrys_route", "column": 1, "name": "The lorry's route", "max": 1, "keystone": true, "words": "A signal can roll two over your reach, not one",
-		"sum": "The decoder", "figures": ["to reach +1", "to reach +2"], "sentence": "You know the lorry's route: a signal can roll a level further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
+		"sum": "The decoder", "figures": ["to reach +1", "to reach +2"], "sentence": "You know the lorry's route: half the time, a signal can roll 1 level further past your reach."},     # 15 Oct, Matt: was the old convoy two sooner
 	# the air (9 Oct, docs/design/juicing.md §7): the juicing tree
 	{"key": "good_reception", "column": 2, "name": "Good reception", "max": 2, "words": "Every craft at the Radio 15% cheaper a rank",
 		"sum": "Crafts", "figures": ["full price", "15% less", "30% less"], "sentence": "Every craft at the Radio comes cheaper."},
 	{"key": "clear_air", "column": 2, "name": "Clear air", "max": 1, "words": "Name a code the Radio never hears",
 		"sum": "Never heard", "figures": ["every code", "one code filtered"], "sentence": "Name one code you know: the Radio never rolls it again. Change it at the Radio."},
-	{"key": "booster", "column": 2, "name": "Booster", "max": 3, "words": "Every code's pay +10% a rank",
+	{"key": "booster", "column": 2, "name": "Booster", "max": 3, "words": "Every code's reward bonus 10% bigger a rank",
 		"sum": "Codes pay", "figures": ["as they are", "+10%", "+20%", "+30%"], "sentence": "Every code brings a little more home, on every site."},
 	{"key": "held_frequency", "column": 2, "name": "Held frequency", "max": 1, "words": "A site's codes hold through a move",
 		"sum": "Codes", "figures": ["go with the move", "hold through it"], "sentence": "When the Pitch moves, every site keeps its codes."},
@@ -1886,8 +1886,8 @@ const ATLAS := [
 		"sum": "Call in", "figures": ["full price", "a quarter less", "half price"], "sentence": "Calling a code in comes cheaper."},
 	{"key": "relay", "column": 2, "name": "Relay", "max": 1, "notable": true, "words": "A standing code from the book on every site",
 		"sum": "Standing", "figures": ["none", "one code"], "sentence": "Name a code you know: it stands on every site with codes, at that site's top tier, over its own."},
-	{"key": "bent", "column": 2, "name": "Bent", "max": 1, "notable": true, "words": "Twist's tier IV twice as often",
-		"sum": "Twist", "figures": ["as it falls", "tier IV ×2"], "sentence": "A twisted site lands a tier IV code twice as often."},
+	{"key": "bent", "column": 2, "name": "Bent", "max": 1, "notable": true, "words": "Twist lands tier IV more often: 57%, not 40%",
+		"sum": "Twist", "figures": ["as it falls", "tier IV 57%"], "sentence": "A Twist lands a tier IV code more often: 57% of the time, not 40%."},
 	{"key": "whole_band", "column": 2, "name": "The whole band", "max": 1, "keystone": true, "words": "A second standing code",
 		"sum": "Standing", "figures": ["one code", "two codes"], "sentence": "Two standing codes on every site with codes."},
 ]
@@ -1924,7 +1924,7 @@ const RESPEC_CASH := 50
 ## can be fitted - with a cost to go with it. Numbers are multipliers the sim
 ## reads by key; "words" is what the Barracks says.
 const CLASSES := [
-	{"name": "Poacher", "words": "+40% damage to the first of every gang; the next gang 25% slower to arrive",
+	{"name": "Poacher", "words": "Damage +40% to the first of each gang; every gang takes 25% longer to arrive",
 		"short": [["+40% first hit", true], ["Gangs 25% later", true]],     # the card's lines (14 Oct, Training's cards): the words a tooltip
 		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "+15% damage; armour counts 20% more; −10% pace",
@@ -2179,7 +2179,7 @@ const GAMBLE_KINDS := [
 	{"kind": "shotgun", "slot": "Primary", "type": "shotgun", "words": "A shotgun"},
 	{"kind": "smg", "slot": "Primary", "type": "smg", "words": "An SMG"},
 	{"kind": "improvised", "slot": "Primary", "type": "improvised", "words": "Something improvised", "short": "Improvised"},
-	{"kind": "melee", "slot": "Primary", "type": "melee", "words": "Something with an edge", "short": "An edge"},
+	{"kind": "melee", "slot": "Primary", "type": "melee", "words": "Something to swing", "short": "Melee"},
 	{"kind": "pistol", "slot": "Secondary", "type": "", "words": "A sidearm"},
 	{"kind": "helmet", "slot": "Helmet", "type": "", "words": "A helmet"},
 	{"kind": "armour", "slot": "Armour", "type": "", "words": "Body armour"},

@@ -88,7 +88,7 @@ var _said: Array[Label] = []       # what they said: one line under the band
 var _heads: Array[Label] = []      # the section heads under the band
 var _side_tiles: Array = []        # the Fence's tile buttons: {button, key, value}
 var _med_tiles: Array = []         # the Clinic's: your meds by kind
-var _side_tiles_c: Array = []      # the Clinic's figures: resting, heal, the wound, the Clinic's level
+var _side_tiles_c: Array = []      # the Clinic's figures: resting, the Clinic's level (18 Oct: the heal and wound prices are on their buttons only)
 var _visits := 0
 var _said_n := 0
 var _line := ""
@@ -158,7 +158,7 @@ func _init() -> void:
 	_last.visible = false
 	_word.add_child(_last)
 	_last_none = UI.label(_word, Rect2(PAD, LAST_Y, GRID_W - 2 * PAD, 28), "Nothing yet. Pay, and whatever he gets you lands in the stash.", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_word_note = UI.label(_word, Rect2(PAD, BODY_H - PAD - 28, GRID_W - 2 * PAD, 28), "Rolled at the best tier you have opened, never Common. One in fifty is a unique of the kind.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_word_note = UI.label(_word, Rect2(PAD, BODY_H - PAD - 28, GRID_W - 2 * PAD, 28), "At your best site's level, up to what you can wear. Never Common; 1 in 50 is a unique.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# the contracts (Deals-A, 9 Oct): a strip, a row a contract - five with the Fence's Orders - and the mate's
 	_deals = UI.panel(self, Rect2(GRID_X, BODY_Y, GRID_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_deals.visible = false
@@ -212,7 +212,7 @@ func _init() -> void:
 	_side_track = UI.panel(_side, Rect2(PAD, TOP + UI.HEAD_H + 2, INNER, 24), UI.box(Pal.BG, 6))
 	_side_fill = UI.panel(_side_track, Rect2(0, 0, 0, 24), UI.box(Pal.GOOD, 6))
 	_side_bar_text = UI.label(_side_track, Rect2(0, 0, INNER, 24), "", "Medium", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	_side_tiles_c = UI.tile_row(_side, PAD, TOP + UI.HEAD_H + 2 + 24 + 6, INNER, 4)
+	_side_tiles_c = UI.tile_row(_side, PAD, TOP + UI.HEAD_H + 2 + 24 + 6, INNER, 2)
 	_med_tiles = UI.tile_row(_side, PAD, 0, INNER, 2) + UI.tile_row(_side, PAD, 0, INNER, 2)
 	for t in _side_tiles_c + _med_tiles:
 		t["panel"].visible = false
@@ -304,10 +304,6 @@ func show_state(s) -> void:
 	_panel.visible = not (_deals.visible or _word.visible)     # the contracts and the word take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
-		for t in _side_tiles_c:
-			if t["panel"].visible and t["key"].text == "Heal":
-				var hurt_now: bool = sim.hp < sim.max_hp() - 0.5
-				UI.set_tile(t, "Heal", Fmt.money_forms(sim.heal_cost()) if hurt_now else ["not needed", "fit"], Pal.TEXT if hurt_now else Pal.TEXT_2)
 	var sig := _signature()
 	if sig == _shown:
 		return
@@ -426,7 +422,7 @@ func _show_word() -> void:
 			o["art"].texture = _kind_art(kd)
 			o["art"].visible = o["art"].texture != null
 			UI.fit(o["kind"], [kd["words"], kd.get("short", kd["words"])])
-			o["sub"].text = "sealed · any rarity"
+			o["sub"].text = "Uncommon+"
 			o["pay"].visible = true
 			var pay_words: String = Fmt.money(sim.gamble_price(kinds[k]))
 			o["pay"].text = "Pay %s" % pay_words
@@ -586,13 +582,11 @@ func _show_side() -> void:
 			t["panel"].visible = true
 		var hurt: bool = sim.hp < sim.max_hp() - 0.5
 		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
-		UI.set_tile(_side_tiles_c[1], "Heal", Fmt.money_forms(sim.heal_cost()) if hurt else ["not needed", "fit"], Pal.TEXT if hurt else Pal.TEXT_2)
-		UI.set_tile(_side_tiles_c[2], "The wound", Fmt.money_forms(sim.wound_cost()) if sim.wound != "" else ["none"], Pal.TEXT if sim.wound != "" else Pal.TEXT_2)
 		var cpicks: int = 0
 		for c in range(5):
 			if sim.yard_side("clinic", c) != "":
 				cpicks += 1
-		UI.set_tile(_side_tiles_c[3], "The Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
+		UI.set_tile(_side_tiles_c[1], "The Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
 		y_in += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
@@ -725,7 +719,7 @@ func _show_panel() -> void:
 				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
 			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), sim.market.size() if sim.yard_has("back_room") else sim.market_stock()]
 			_right_lines[0].text = "No more until the next run"
-		_hint.text = "Pick a cell on either grid"
+		_hint.text = "Pick an item on the shelf or in the stash"
 		_lay_buttons()
 		return
 	_hint.text = ""

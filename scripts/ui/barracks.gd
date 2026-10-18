@@ -491,7 +491,7 @@ func _build_panel() -> void:
 
 const EFFECT_WORDS := {
 	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% quantity", "search_pct": "Search %d%% faster",
-	"first_pct": "First shot +%d%%", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
+	"first_pct": "+%d%% damage to each gang's first", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
 	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d med carried", "rest_pct": "Rest +%d%%", "treat_pct": "Treatment −%d%%",
 	"att_share": "+%d%% attachments", "sell_pct": "Fence pays +%d%%", "cash_pct": "Tins +%d%%", "rarity": "+%d%% quality",
 	"pace_pct": "+%d%% pace", "damage_low_pct": "+%d%% dmg under ½ HP",
@@ -1112,7 +1112,7 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 ## each the share of the hit the trees convert to it and the increase they give it, notables included, in its
 ## colour; the dots; the joints closed of the runner's. A plain figure at nothing is left off; when the row is
 ## still too long the plain figures go from the least telling up (SUM_DROP), never an element's or the joints'.
-const SUM_DROP := ["Search", "Quantity", "First shot", "Quality", "Gangs", "Max HP", "Damage"]
+const SUM_DROP := ["Search", "Quantity", "First of each gang", "Quality", "Gangs", "Max HP", "Damage"]
 func _show_sum(lanes: Array) -> void:
 	_sum_chips.show_chips(sum_items(lanes), SUM_ROWS)
 
@@ -1189,7 +1189,7 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 		var long: Array = ([head] if head != "" else []) + extras
 		items.append({"tag": "Dots", "forms": [" · ".join(long), " · ".join(long.slice(0, 2)), long[0]], "colour": Pal.TEXT})
 	plain.call("Max HP", sums.get("hp", 0.0), "+%.0f")
-	plain.call("First shot", sums.get("first_pct", 0.0), "+%.0f%%")
+	plain.call("First of each gang", sums.get("first_pct", 0.0), "+%.0f%%")
 	plain.call("Search", sums.get("search_pct", 0.0), "%.0f%% faster")
 	plain.call("Gangs", sums.get("patrol_pct", 0.0), "%.0f%% later")
 	plain.call("Quality", sums.get("rarity", 0.0), "+%.0f%%")

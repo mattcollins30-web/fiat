@@ -813,7 +813,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 	for a in it["affixes"]:
 		var d := affix_def(a["stat"])
 		var label: String = str(d.get("short" if short else "label", a["stat"]))
-		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] == "loot_per_lot"
+		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] in ["loot_per_lot", "guard_gang"]     # guard_gang is a share of max HP (18 Oct)
 		var line: String
 		line = "+%d%s %s" % [a["value"], "%" if pct else "", label]
 		if tiers and a.has("tier"):
@@ -940,7 +940,7 @@ static func grade_words(b: Dictionary) -> String:
 		if b.has("conv_%s_pct" % ty):
 			return ", %d%% as %s" % [int(b["conv_%s_pct" % ty]), ty]
 	if b.has("first_pct"):
-		return ", first shot +%d%%" % int(b["first_pct"])
+		return ", +%d%% damage to each gang's first" % int(b["first_pct"])
 	return ""
 
 
@@ -948,7 +948,7 @@ static func grade_words(b: Dictionary) -> String:
 static func att_lead(it: Dictionary) -> Array:
 	var best := ["", ""]
 	var sz := 0.0
-	for pair in [["damage_pct", "% damage"], ["first_pct", "% first shot"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
+	for pair in [["damage_pct", "% damage"], ["first_pct", "% damage to each gang's first"], ["speed_pct", "% pace"], ["patrol_pct", "% gang delay"],
 			["conv_fire_pct", "% of hits as fire"], ["conv_frost_pct", "% of hits as frost"], ["conv_poison_pct", "% of hits as poison"], ["conv_shock_pct", "% of hits as shock"], ["conv_bleed_pct", "% of hits as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
 		var v := att_stat(it, pair[0])
 		if absf(v) > sz:
@@ -964,7 +964,7 @@ static func att_lead(it: Dictionary) -> Array:
 ## `base_only`: the part's own figures, its rolled affixes left for their own lines.
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
-	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "first shot", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
+	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "damage to the first of each gang", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "gang delay", "delay"],
 			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:

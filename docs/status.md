@@ -5434,3 +5434,66 @@ Smoke: `_kit_hands_checks` - the slugs, every base picture there its own and at 
 none, every kit flash on a drawn pixel into open air, the gun in hand dry/fed/a bat, the kit's Parade pair drawn as the
 old with its slots under @kit, every tile with art its icon; the near one's cover check over every base picture too.
 Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas check, kit-dependent) - raised with Matt.
+
+## While the fight kit generates (17 Oct, Matt: "anything you can do in the meantime?" - all four)
+- 54256f0: MUZZLE_AT by hand for the police carbine, security guard's carbine, army SMG and riot squad's SMG (the finder
+  took a sleeve or stock); the atlas check's "Paid in notes" flake was the Traffic Warden's Hat doubling notes a kill -
+  the check expects its multiplier now. Smoke all pass, reviewer OK.
+- Hands checked as they land: 40 in, all read (the last, the machete and pipe wrench, fine). Matt's side moved the guns
+  to the big revolver's down-the-barrel view (the manifest's DOWN_BARREL / LIKE_REVOLVER / STOCK_LOW) - the four
+  overrides are for the pictures as they are; a reroll of one of those four wants its override looked at again.
+- The Doom-style mockup on the canvas "Fiat - Moving through a site": 1 in, the move (three stills, ~0.5 s push, the
+  wall drops), 2 deeper, 3 the way out (the last third, then the crates on the floor - the search), the head's arena in
+  place of 3 on a head run (the head plus the last third as guards). The pool in thirds, the first taking the
+  remainder (the Parade's 10: 4/3/3). Deeper and the way out are stand-ins (the Parade pushed in / mirrored); the arena's
+  is the Retail Park.
+- tools/make_doom_test_manifest.py -> tools/pixellab_doom_test_manifest.json: the Parade's deeper plate and wall and its
+  way-out plate (no wall, an open floor for the crates), styled on the new Parade pair, written to art/fight_doom/.
+  Not committed till Matt passes the mockup.
+- (17 Oct, Matt: "A plus your suggestions with the grouping"; convoy on the first Allotments run) the six rebuilt -
+  mockup A in THEM | YOU panels, red on fast fire / no meds / dry, a blade's 'melee', smoke _six_checks; roll_event()
+  keeps a random convoy out of runs_total < CONVOY_FROM_RUN (5). Smoke pass, reviewer OK. Raised, not done: the Weed
+  Burner reads 'dry' (red) with no rounds though it needs none; no bandage source before the Gamekeeper opens the Clinic.
+- (17 Oct, Matt) START_STASH_BANDAGES 5 in a new camp's stash (start() - a Yard move's fresh camp gets them too); the
+  Weed Burner's rounds '∞' muted. Smoke pass, reviewer OK. Balance around his playtest use of the bandages.
+- (17 Oct) tools/review_art.bat: the fight art review, headless - every site's fight (kit or OLD ART marked), the four
+  heads at their sites, all 82 guns' hands with the muzzle marked -> docs/review/. Reviewer fixes in (the wall fill's
+  tile scale, off a swing's frame). Not painted: flash, bars, words, glass, particles.
+- (17 Oct, Matt: "do everything as you suggest") Sound in engine: World/Bed buses, indoor echo, duck/hurt low-pass,
+  gang-arrival dip, placed incoming shots (run_view.shooter_spot), kill-streak pitch (real seconds), find_mythic,
+  decrypt ticks. Smoke pass, reviewer OK. Raised: the swing-parts check flakes (the test's shotgun has no rounds, so
+  gun_in_hand can keep a melee secondary) - a test fix, asked first.
+- (17 Oct, Matt: "make the UI changes and the swing hands fix") Item cell dressing (wash, glow from epic, sheen on
+  unique/mythic, mythic pulse); LEGENDARY fff07a, SET 3fd4e8, MYTHIC ff4a1c; mythic_moment.gd (held game, flash, grey,
+  card, Take it); site card's reasons under the odds below 60% (missions.odds_reasons); swing-hands flake fixed. Smoke
+  pass, reviewer OK. Raised, not done: a mythic can be passed over or swapped out of a full pack (_pack_keeps).
+- (17 Oct, Matt: "make the mythic change") _pack_keeps counts a mythic. Smoke pass, reviewer OK. Raised, not done: a
+  mythic still lost when nothing in a full pack is big enough to swap with, and one left on the floor at the run's end
+  (extract, time-out, death bring home only the pack's).
+- (17 Oct, Matt: "go for it") A mythic into a full pack with nothing its size (over the size), and floor mythics home on
+  extract, time-out and death (_floor_mythics_in). Smoke pass, reviewer OK. Raised, not done: a normal extract into a
+  full stash drops a mythic (stash_put fails, the loop moves on); deaths and time-outs append, so they're safe.
+- (17 Oct, Matt: "go for it") A mythic home to a full stash is appended whatever the room. Reviewer: every automatic
+  path now brings a mythic home (pack, floor, extract, time-out, death, insurance, Yard move). The bulk sell already skips
+  mythics. Not a loss: auto-equip (equip_best) can take off a worn mythic for a better figure; it goes to the stash.
+- (17 Oct, the art review; Matt: "agreed on the code fix for the walls", reroll 5 hands, the Bank wall after he's seen
+  it in game) RunView.wall_top: a wall's first row >=60% drawn at COVER_TOP; smoke asserts every wall's (WALLS_OPEN for
+  any on purpose). review_art shoots undocked. Smoke camps mythics_on=false after new/load (a new and loaded camp
+  checked on first). Raised: 'no number came off the hits' failed once, passed on rerun - wants its state printed.
+- (17 Oct) The five rerolled hands and the air pistol checked: all read, the down-barrel view; close protection SMG's
+  muzzle by hand (the suppressor's end). The numbers check prints its state on a miss. Base fight art: complete.
+- (17 Oct, Matt's two playtests: "early game still needs a little work"; "build all 4 but don't run a balance pass")
+  The first gun (Data.FIRST_GUNS on a Garden Centre clear while no gun owned and none home; _pack_keeps and the Bins keep
+  it, home whatever the room), rounds only for owned types (half the hand's), no wound before the Clinic, resting shown
+  (main.resting_words, the HP reason's "full in"). Smoke pass, reviewer OK. For the balance pass after his play: the
+  Gamekeeper and the Outskirts against a gun at the second site (the 25-minute target).
+- (18 Oct, Matt: "a language and general UI pass ... lets do it all today") The words pass: tools/strings_corpus.py
+  (4,482 strings by screen), a 46-shot gallery, style guide v2 (docs/language/style_guide.md: two voices, caps by role,
+  the glossary; Matt's calls: levels only on screen, lower "the" mid-sentence, the Pitch + the Yard, "first of each
+  gang", set in South Wales), two reviewers and an editor -> 832 string changes, 24 renames, 37 duplicates, 18
+  questions, every one approved by Matt on the words-pass page. Batch 1 of 4 (wrong facts + cuts): 112 strings, the
+  Clinic's Heal/wound tiles cut (they duplicated and disagreed with the buttons), the Council 4-piece's locked crates
+  wired (never was), stale depth log lines gone. Room cards: each box a strip of existing art (Matt: option C, "use the
+  art as you have it"), card 840 high, smoke asserts it. Two smoke flakes fixed (sell-commons counted papers; the
+  reasons check read unsettled odds). Smoke pass x2, reviewer OK. Raised for Matt: tests/bot.gd still climbs site
+  depths, so the bot earns Dial points and depths a player can't (balance reads).

@@ -948,7 +948,7 @@ func retire() -> bool:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Pitch with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "Two new runners turn up at the Pitch with their own kit: pick one.")
 	_refund_runner_trees()
 	_dry_memo.clear()
 	return true
@@ -3454,7 +3454,7 @@ func word_craft_block(i: int, key: String) -> String:
 	if mission != null:
 		return "The runner is out"
 	if not juiceable(i):
-		return "Codes from depth 2, the campaign done"
+		return "Codes go on signals, after the campaign"
 	var n: int = words[i].size()
 	if sealed[i] and key != "clear":
 		return "Sealed: only Clear"
@@ -5507,7 +5507,7 @@ func _time_out(m: Dictionary) -> void:
 	# the line says it all (16 Oct, Matt's playtest): what went, the rig's contents with the rig, where it went, and why
 	var rig_gone: bool = "Rig" in lost_slots and not insured
 	log_event("Out of time in %s. The pack's gone%s%s%s." % [Words.mid(t["name"]), "" if lost.is_empty() else ", and %s with it" % " and ".join(lost),
-		", and what was in the rig" if rig_gone else "", "; the Fence pays for the kit" if insured and not lost.is_empty() else ""])
+		", and what was in the rig" if rig_gone else "", "; insured, the kit comes back to the stash" if insured and not lost.is_empty() else ""])
 	if not lost.is_empty() and not insured:
 		log_event(Words.TIME_OUT_LOOSE[0 if lost.size() == 1 else 1])
 	if str(m.get("ran_dry", "")) != "":
@@ -6504,8 +6504,6 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	xp += bonus
 	_earn_points(before)
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
-	if best_depth[m["tier"]] == 0 and ladder_floor() > 0:
-		log_event("%s cleared; this Pitch's ladders start at depth %d" % [t["name"], ladder_floor() + 1])     # the floor opens the depths (set_depth); the clears stay honest for the wall and the map
 	var cd: int = int(depth[m["tier"]])     # the site's own depth: a signal's t["depth"] is its level's on the Barracks (D3), not this site's (D14 review)
 	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
 	if first_clear or cd > best_depth[m["tier"]]:
@@ -6513,11 +6511,8 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
 	if cd > best_depth[m["tier"]]:
 		best_depth[m["tier"]] = cd
-		if not m.has("signal"):
-			log_event("%s cleared at depth %d; depth %d is open" % [t["name"], cd, cd + 1])
 		if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
 			atlas_points += 1
-			log_event("A point on the Dial.")
 	if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (cd > int(best_dig.get("depth", 0)) or (cd == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
 		best_dig = {"site": t["name"], "tier": m["tier"], "depth": cd, "yard": yard_moves + 1}     # the ladder's, not the campaign's
 	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)
@@ -6619,7 +6614,7 @@ static func crate_for(q: Dictionary) -> Dictionary:
 
 ## Whether a run opens locked crates: the Caretaker's Keys.
 func has_keys() -> bool:
-	return has_rule("caretakers_keys") or has_rule("freedom")     # the Freedom of the Borough: every crate opens
+	return has_rule("caretakers_keys") or has_rule("freedom") or has_set_rule("council")     # the Freedom of the Borough, the Council's 4-piece (18 Oct: its clause was never wired): every crate opens
 
 
 ## Locked crates in hand without the Keys are passed over, marked so.
@@ -7222,7 +7217,7 @@ func _kia() -> void:
 		candidates[1] = promised
 		promised = ""
 	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "A new runner turns up at the Pitch with their own kit.")
+	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "Two new runners turn up at the Pitch with their own kit: pick one.")
 	# the dead runner's past goes with them: their class and its trees come
 	# back as points for the next to spend from the start, with a past of their
 	# own to pick. The Yard's tree and the elements' are the Yard's and stay.

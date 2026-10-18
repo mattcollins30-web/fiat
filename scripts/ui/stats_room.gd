@@ -364,7 +364,7 @@ func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
 	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
 	var firing: String = "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
-	var extra: String = ("growth ×%.2f · first shot %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first shot %s" % signed_pct(first_pct)
+	var extra: String = ("growth ×%.2f · first of each gang %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first of each gang %s" % signed_pct(first_pct)
 	UI.fit(c["status"], ["%s · %s" % [firing, extra], firing])
 
 
@@ -484,7 +484,7 @@ func _show_last() -> void:
 	if dead:
 		status = ("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])
 	elif timed_out:
-		status = "Out of time: the pack and %d pieces of kit lost" % Data.CLOCK_LOSE_KIT
+		status = "Out of time: the pack and up to %d pieces of kit lost" % Data.CLOCK_LOSE_KIT
 	elif r.get("wounded", false):
 		status = "Wounded: seen to at the Clinic"
 	elif r.get("way_out", false):

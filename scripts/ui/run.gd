@@ -741,7 +741,7 @@ func _show_pick(m: Dictionary) -> void:
 		_show_rig_pick(m, r)
 		return
 	if it.is_empty():
-		var lines := ["A rifle is four cells by one, armour three by three, a med or a part one"]
+		var lines := ["A long gun takes 4 or 5 cells by 1, armour 3 by 3, a bandage 1"]
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
 			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: an upgrade on what's worn swaps out the cheapest that isn't")

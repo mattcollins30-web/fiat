@@ -91,25 +91,25 @@ const ROOM_INTROS := {
 		"Resting on the Pitch heals, slowly.",
 		"I'm quicker, I cost tins and I'm the only one that can heal a lasting wound.",
 		"Meds go in the rig. Your runner takes them first when it gets bad out there."],
-		"tiles": [["Treatment", "Heal faster, for tins"], ["The shelf", "Meds to buy, new each run"], ["Your meds", "In the rig, used under fire"]]},
+		"tiles": [["Treatment", "Full HP now, for tins"], ["The shelf", "Meds to buy, new each run"], ["Your meds", "In the rig, used under fire"]]},
 	"fence": {"room": "The Fence", "face": "fence", "title": "The Fence", "voice": "fence", "cues": [0.0, 5.44, 9.10], "lines": [
 		"Everything's for sale. That's the one thing that hasn't changed.",
 		"You bring, I price. The price is the price.",
 		"Want steady work? I've got contracts."],
-		"tiles": [["Sell", "Finds, for tins"], ["Buy", "The shelf, and sealed lots"], ["Contracts", "What he wants, what he pays"]]},
+		"tiles": [["The stash", "Yours to sell, for tins"], ["The shelf", "His stock, and sealed lots"], ["Contracts", "What he wants, what he pays"]]},
 	"workshop": {"room": "Workshop", "face": "", "title": "The bench", "voice": "workshop", "cues": [0.0, 6.46], "lines": [
 		"The armourer's roll, laid out on the bench. Proper tools, for once.",
 		"Guns get better here, part by part."],
-		"tiles": [["Jobs", "Work done on a part"], ["Mounts", "What goes on the gun"], ["The Bench", "Its own upgrades"]]},
+		"tiles": [["Guns", "Gun parts, fitted"], ["Sockets", "What fits in a socket"], ["Craft", "Affixes, sockets, levels"]]},
 	"yard": {"room": "The Pitch", "face": "", "title": "Yours, on paper", "voice": "pitch", "cues": [0.0, 4.84], "lines": [
 		"The deeds say it's yours. Paper's about all anyone still agrees on.",
 		"Build on it. What's built here comes with you when you move."],
-		"tiles": [["The buildings", "What's been built"], ["Ranks", "Each building, better"], ["Moving on", "Once the lorry's beaten"]]},
+		"tiles": [["The buildings", "What's been built"], ["Ranks", "Each building, better"], ["Moving on", "Once every area's cleared"]]},
 	"radio": {"room": "Radio", "face": "", "title": "Kev", "voice": "radio", "cues": [0.0, 5.34, 11.14], "lines": [
 		"Kev here. Well, you know that. You've got a set now.",
 		"Everything worth hearing comes over this. Most of it isn't worth hearing.",
 		"Keep listening anyway."],
-		"tiles": [["On the air", "What's being said"], ["Who's talking", "The voices out there"], ["Heard so far", "Every line, kept"]]},
+		"tiles": [["The decoder", "Three papers make a signal"], ["Signals", "A site to run, once"], ["The Dial", "Points from your reach"]]},
 }
 const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from the start; an old save has met them
 
@@ -120,8 +120,8 @@ const ROOM_INTRO_FIRST := ["map", "kit", "stats", "training"]     # open from th
 const RADIO_VOICES := {"loop": "The emergency loop", "kev": "Kev, on the pirate frequency", "net": "The army net", "medic": "The Clinic, on the CB", "fence": "The Fence, on the CB"}
 const RADIO_SHORT := {"loop": "The loop", "kev": "Kev", "net": "The army net", "medic": "The medic", "fence": "The Fence"}
 ## Out of time (16 Oct, Matt's playtest): where the lost kit went, and the gun that ran dry.
-const TIME_OUT_LOOSE := ["It's out on the estate now: a gang may be wearing it in a few runs. Clear the site and it comes home.",
-	"They're out on the estate now: a gang may be wearing them in a few runs. Clear the site and they come home."]
+const TIME_OUT_LOOSE := ["It's out there now: a gang may be wearing it in a few runs. Clear the site they turn up on and it comes home.",
+	"They're out there now: a gang may be wearing them in a few runs. Clear the site they turn up on and they come home."]
 const TIME_OUT_DRY := "The %s ran dry."
 ## Kev's papers (16 Oct): his line on the Radio's pile, and the log's when one's bought.
 const KEV_PILE := "\"People bring me paper. Receipts, tickets, logbooks. Bring me notes and I'll see what's in the pile.\""
@@ -149,7 +149,7 @@ const RADIO_TRAFFIC := [
 	{"voice": "kev", "text": "Lorries on the ring road again heading north"},
 	{"voice": "net", "text": "Masts on the council roof are ours from tonight"},
 ]
-const RADIO_QUIET := ["Nothing on the air yet: the Quartermaster holds the set.", "The papers you find are kept: each carries a code, encrypted till the Radio's open."]
+const RADIO_QUIET := ["Nothing on the air yet: the Quartermaster holds the set.", "The papers you find are kept. Most carry a code, unreadable till the Radio's open."]
 ## Kev's story (15 Oct): a beat's line when its paper comes home, when its signal's made, and when it's beaten.
 const STORY := [
 	{"found": "%s: one of Kev's. The route's in it somewhere (%d of 3).", "made": "Kev: \"Three of them, and they say the same thing. They run a route. Here's where it goes.\"",
@@ -163,7 +163,7 @@ const SIGNAL_MADE := "A signal: a fix on %s, level %d"
 const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
 const SIGNAL_LOST := "The signal's gone with the run"
-const RADIO_READ := "The Radio reads your papers: %d codes on them"     # the Radio open (15 Oct): the papers held, read at once
+const RADIO_READ := "The Radio reads the papers you hold: %d new to the drawer"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [
 	{"voice": "loop", "zone": 0, "text": "This is a recorded message. Remain in your homes. Cash withdrawals are limited to fifty pounds a day."},
@@ -216,8 +216,8 @@ const GATE_ITEMS := {
 
 ## A room opening, in the log (13 Oct): the head's thing home, the room with it.
 const GATES := {
-	"clinic": "The vet's bag goes to the medic. The Clinic's open.",
-	"fence": "The ledger goes to the Fence. He's open for business.",
+	"clinic": "The vet's bag's come home. The Clinic's open.",
+	"fence": "The Fence has seen the ledger. He's open for business.",
 	"yard": "The deeds are the Pitch's. Build on it.",
 	"radio": "The set's on the Radio's bench. The Radio's on the air.",
 	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
@@ -507,7 +507,7 @@ const HEARD := {
 ## The map at thirty-six (7 Oct).
 const MAP := {
 	"head_start": "%s at full strength: the Dial gains a point.",
-	"empty": "Pick a node above. The points come from your reach: a signal beaten past it is a point.",
+	"empty": "Pick a node above. The points come from your reach: each signal beaten at your reach or past it is a point.",
 	"empty_short": "A point a new reach.",
 	"needs": "Needs %s first",
 	"column_count": "%d of %d ranks",
@@ -517,7 +517,7 @@ const MYTHIC_FOUND := "A mythic: %s"
 
 
 const SHELF := {
-	"empty": "Nothing on the shelf yet. The heads carry them.",
+	"empty": "Nothing on the shelf yet. Heads carry most of them; some sites keep their own.",
 	# the chase (endgame part 3): a gap a thing the shelf waits for, and where it is
 	"own_gap": "%s, depth %d and past. A rule only that depth gives.",
 	"head_gap": "%s at full strength, depth %d of his site. The charm only he carries.",
@@ -925,7 +925,7 @@ static func odds_words(odds: float) -> String:
 const AWAY := {
 	"title": "Back, then.",
 	"rested": "Gone %s. The runner slept, the radio played to nobody.",
-	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s on the shelf, level %d to %d.",
+	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s in the stash, level %d to %d.",
 	"settled": " The Pitch kept going for %s of it; the rest is just the clock.",
 	"lost": " One runner didn't come back.",
 	"prices": " The Fence's prices are up %d%% on when the Pitch opened.",

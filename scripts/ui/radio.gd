@@ -458,7 +458,7 @@ func show_state(s) -> void:
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 440 - _unit.position.x
 	UI.fit(_unit, ["your reach", ""] if on_air else ["till the Quartermaster", ""])
-	UI.fit(_sub, ["The deepest signal you've beaten, plus one", "Your deepest signal, plus one", ""] if on_air else ["", ""])
+	UI.fit(_sub, ["Beat a signal at your reach to raise it by 1", "Beat one at it: +1", ""] if on_air else ["", ""])
 	_chips.show_chips([{"tag": "Notes", "forms": ["%d" % sim.notes], "colour": Color("c9b98f")},
 		{"tag": "Papers", "forms": ["%d" % have.size()], "colour": Pal.TEXT_2},
 		{"tag": "Signals", "forms": ["%d of %d held" % [sim.signals.size(), Data.SIGNALS_HELD], "%d/%d" % [sim.signals.size(), Data.SIGNALS_HELD]], "colour": Pal.TEXT_2},
@@ -590,7 +590,7 @@ func _show_decoder() -> void:
 	_decrypt.disabled = why != "" and not decrypting()
 	_decrypt.text = "Skip" if decrypting() else "Decrypt"     # a tap mid-decrypt goes to the end (item 20)
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
-	var note: String = ("The papers are spent · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == "three papers in" else why.substr(0, 1).to_upper() + why.substr(1)
+	var note: String = ("Decrypting spends the papers · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == "three papers in" else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
 	var kb: String = sim.kev_block()
 	UI.fit(_kev_line, [Words.KEV_PILE, "\"Bring me notes and I'll see what's in the pile.\"", ""])

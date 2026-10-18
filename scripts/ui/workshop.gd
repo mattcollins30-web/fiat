@@ -723,7 +723,8 @@ func _show_craft(it: Dictionary) -> void:
 		var t: Dictionary = _job_tiles[k]
 		var b: Button = t["button"]
 		t["name"].text = JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind))
-		UI.wrap(t["words"], JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", "")))
+		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
+		UI.wrap(t["words"], jw % sim.socket_max() if kind == "socket" else jw)     # "up to %d": the real cap (18 Oct)
 		var cost: int = -1
 		if not it.is_empty():
 			cost = ((-1 if _worn(it) else sim.scrap_of(it)) if kind == "scrap" else sim.craft_cost(it, kind))     # a worn piece isn't scrapped off the runner

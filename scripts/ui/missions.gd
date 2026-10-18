@@ -304,8 +304,7 @@ func show_state(s) -> void:
 			if not (nm in names):
 				names.append(nm)                 # the Radio's words first, the sky's after
 		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
-		var radio: String = ("%d code%s from the Radio" % [wtiers.size(), "" if wtiers.size() == 1 else "s"]) if sim.juiceable(i) else "a plain site"     # codes live on signals (15 Oct)
-		UI.fit(c["intel_head"], ["ON THE AIR · %s · %s" % [sim.sky_words(i), radio], "ON THE AIR · %s" % sim.sky_words(i), "ON THE AIR"])     # the sky and the codes (13 Oct, Matt)
+		UI.fit(c["intel_head"], ["ON THE AIR · %s" % sim.sky_words(i), "ON THE AIR"])     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
@@ -341,7 +340,7 @@ func show_state(s) -> void:
 		elif c["boss"].visible and not sim.boss_armed.get(i, false) and sim.boss_cost(i) > 0 and sim.notes < sim.boss_cost(i):
 			UI.fit(c["note"], ["%s wants %d notes; you have %d" % [boss["name"], sim.boss_cost(i), sim.notes], "%s: %d notes" % [boss["name"], sim.boss_cost(i)], "Not enough notes"])
 		elif auto:
-			c["note"].text = "Rests to 95%, leaves when the next gang comes"
+			c["note"].text = "Rests to 95% HP; leaves when the pack's full or a gang comes"
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")

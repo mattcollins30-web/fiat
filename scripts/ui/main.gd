@@ -72,8 +72,8 @@ const TOP_KEYS := ["level", "hp", "xp", "dps", "where", "notes", "scrap", "coppe
 const TOP_RIGHT := ["cash", "army", "steel", "copper", "scrap", "notes", "where"]
 const TOP_SALVAGE := ["copper", "steel", "army"]
 const TOP_TONE := {"scrap": Color("eceded"), "copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}
-const TOP_TIP := {"notes": "Notes: the Radio's currency", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Pitch",
-	"steel": "Safe steel: salvage from the Town's depths, for the Pitch", "army": "Army surplus: salvage from the City's depths, for the Pitch", "cash": "Tins: what everything's paid in",
+const TOP_TIP := {"notes": "Notes: paid for heads, Radio jobs, Kev, Workshop crafts and the Fence's mate", "scrap": "Scrap: the Workshop's material", "copper": "Copper: salvage from the Estate's depths, for the Pitch",
+	"steel": "Safe steel: salvage from the Town's depths, for the Pitch", "army": "Army surplus: salvage from the City's depths, for the Pitch", "cash": "Tins: the money; the Fence pays in them",
 	"where": "Where the runner is"}
 const TOP_WORST := {
 	"cash": "9,999,999",
@@ -966,6 +966,8 @@ func _settle_away(away: float) -> void:
 		var things: int = after["stash"] - before["stash"]
 		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
 				things, "" if things == 1 else "s", before["level"], after["level"]]
+		if int(before["level"]) == int(after["level"]):
+			words = words.replace(" level %d to %d." % [before["level"], after["level"]], "").trim_suffix(",") + "."     # no "level 5 to 5"
 		if after["lost"] > before["lost"]:
 			words += Words.AWAY["lost"]
 	else:
@@ -1452,11 +1454,10 @@ func _retire() -> void:
 
 func _confirm_move() -> void:
 	var items := [
-		{"name": "Move the Pitch", "detail": "Start again. The uniques, the Pitch's tree, the list, the wall, half the notes and the Pitch's trade come. Nothing else.", "action": _pick_trade},
+		{"name": "Move the Pitch", "detail": "The uniques, the Yard, the dead, the wall, the Dial, the signals, half the notes and scrap, and the trade come. Nothing else.", "action": _pick_trade},
 		{"name": "Stay", "detail": "", "action": _menu.close},
 	]
-	var floor_next: int = mini(sim.yard_moves + 1, Data.LADDER_FLOOR_MAX)
-	_menu.open("Move the Pitch?", "A pitch that's moved finds rarer things and more tins (+%d%% each a move), %d points to start, its ladders from depth %d once a site is cleared, and %d free node%s on the Pitch's tree." % [Data.MOVE_FIND, Data.MOVE_POINTS * (sim.yard_moves + 1), floor_next + 1, sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
+	_menu.open("Move the Pitch?", "A moved Pitch gets +%d%% loot quality and +%d%% tins a move, %d training points to start, and %d free perk%s in the Yard." % [Data.MOVE_FIND, Data.MOVE_CASH, Data.MOVE_POINTS * (sim.yard_moves + 1), sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
 
 
 ## The Yard's trade: one element comes with the move, and every class after
