@@ -5591,7 +5591,8 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   - The Radio's town view missed the caps review ("pumping station" lost its "The" in the fit fallback; NOT BUILT,
     "Opens the Grid · the Lineman").
   - The Yard's Paper rack: half dead now papers live on the pile (charms, rule papers, keepsakes only); new job or
-    new words. Matt: a new job; options put to him.
+    new words. Matt's pick, parked for the next batch: the Filing cabinet, beaten signals bring 3 papers home
+    instead of 2 (the loop breaks even), against the Container's +60 cells.
 - Read from Matt's save (fiat_slot1, 1h44m played, level 25, 26 runs), for the balance pass:
   - No deaths, no wounds: the worst run cost 47 of 152 HP; at the Barracks regen out-heals their 4.3 a second. 16
     painkillers and 2 bandages sit unused in the Clinic. The Clinic's wounds (item 4) won't show in play unless runs hurt.
