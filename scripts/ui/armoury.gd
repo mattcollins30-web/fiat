@@ -258,8 +258,8 @@ func _show_panel() -> void:
 				hints.append("No rounds for it in the rig")
 			if not sim.can_equip_item(it["id"]) and not sim.on_mission():
 				hints.append("No room in the stash for what comes off")
-			if lock > 0:
-				_pick.set_hint_options(PickPanel.lock_hints(sim, it))
+			if lock > 0 and fitted == null:
+				_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level: said once (the review)
 			elif not hints.is_empty():
 				_pick.set_hint_options(_hint_forms(hints))
 			if not it.has("unique") and not it.has("set"):

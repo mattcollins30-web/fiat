@@ -38,6 +38,8 @@ var _figure: Label
 var _unit: Label
 var _tail: Label                   # the tail's words, kept for what reads them; shown as chips (16 Oct, the item card's chips)
 var _tail_chips: Chips             # the tail as chips: what it takes, how many, a grade's bonus
+var _tchips: Array = []            # the tail's own chips, for a warning laid in front of them
+var warning: Array = []            # the warning chip's forms, long to short (18 Oct: the pick's hints, off the foot); [] for none
 var _affixes: Chips                # the affixes, chips in their tier's colour, two rows
 var _rows: Array[Label] = []       # the open line, a set's words, "No affixes"
 const AFFIX_ROWS := 2
@@ -175,8 +177,9 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 		if not stack.is_empty() and bonus > 0.0:
 			tchips.append({"forms": ["%s: +%d%% damage" % [str(stack["base"]), int(bonus)], "+%d%% %s" % [int(bonus), str(stack["base"]).to_lower()]], "colour": Pal.ACCENT})
 	_unit.text = h[1]
-	_tail_chips.show_chips(tchips, 1, true)
-	_tail_chips.visible = not tchips.is_empty()
+	_tchips = tchips
+	warning = []
+	_lay_tail()
 	# the affixes as chips: the tier tag inside, the words short, in the tier's colour; two rows
 	var lines: Array = Items.affix_lines(it, false, false)
 	var short_lines: Array = Items.affix_lines(it, true, false)
@@ -215,6 +218,23 @@ func show_item(it: Dictionary, sim_in, tail = "", extra = "", cells := true) -> 
 			c["forms"] = [c["forms"].back()]
 	_affixes.show_chips(chips_a, AFFIX_ROWS, true)
 	_affixes.visible = not chips_a.is_empty()
+
+
+## A warning in front of the tail's chips (18 Oct, Matt: the flavour always on the foot, so what stops the button - no
+## rounds, no room, the level - moved up here): its forms long to short, in the warning's tone; [] takes it off.
+func set_warning(forms: Array) -> void:
+	warning = forms.filter(func(f): return str(f) != "")
+	_lay_tail()
+
+
+func _lay_tail() -> void:
+	var chips: Array = _tchips.duplicate()
+	if not warning.is_empty():
+		chips.push_front({"forms": warning, "colour": "warn"})
+	_tail_chips.show_chips(chips, 1, true)
+	if not warning.is_empty() and _tail_chips.shown() == 0:
+		_tail_chips.show_chips([chips[0]], 1, true)     # too long beside the tail (the review): the warning alone, the row's whole width
+	_tail_chips.visible = not chips.is_empty()
 
 
 ## A paper's headline (16 Oct, Matt: "remove tin price from all papers - adds nothing"): what it is - Kev's story and

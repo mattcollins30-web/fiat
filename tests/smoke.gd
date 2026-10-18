@@ -7824,7 +7824,7 @@ func _bench_pick_checks(main) -> void:
 	main.refresh()
 	var pk = main._workshop._pick
 	_check(pk.visible and pk._heads[0].visible and pk._heads[0]._title.text == "Choke" and pk._tag_labels[0].visible, "the Bench's part pick is not on the pick frame: '%s'" % pk._heads[0]._title.text)
-	_check(pk.button_texts() == ["Fit"] and pk._buttons[0].disabled and pk._words.visible and pk._words.text == "Shotguns only", "the Bench did not grey Fit with the reason: %s / '%s'" % [str(pk.button_texts()), pk._words.text])
+	_check(pk.button_texts() == ["Fit"] and pk._buttons[0].disabled and pk.hint_text() == "Shotguns only", "the Bench did not grey Fit with the reason: %s / '%s'" % [str(pk.button_texts()), pk.hint_text()])
 	_check(not pk.button_texts().any(func(t): return t.begins_with("Sell")), "Sell is on the Bench")
 	_check_fit(main, "Workshop (a refused part)")
 	# a part that fits: the verdict and the swap read, Fit goes through the frame
@@ -7888,17 +7888,16 @@ func _pick_panel_checks(main) -> void:
 	var joined: String = " | ".join(chip_words)
 	lone.queue_free()
 	_check(not joined.contains("resist") and joined.contains("poison res") and joined.contains("bleed res") and joined.contains("fire res & dmg"), "the affix chips side by side aren't one short form: %s" % joined)
-	# the flavour on its own line (16 Oct, Matt: "we're losing flavour text"): whole, in the pick's column, under its
-	# affixes, inside its box - not cut beside the buttons
+	# the flavour on the foot, always (18 Oct, Matt: it moved between the column and the foot, and a hint pushed it off):
+	# left of the buttons, inside the panel, whole sentences (under a verdict its one row keeps the sentences that fit);
+	# with no verdict, wrapped to the foot's two rows when it needs them
 	var said: String = Words.item_words("Motorbike leathers")
-	var fl: Label = pk._flavour
-	var h0 = pk._heads[0]
-	var aff_bottom: float = h0.position.y + h0._affixes.position.y + h0._affixes.size.y
-	var box: Rect2 = Rect2(pk._boxes[0].position, pk._boxes[0].size)
-	_check(said == "" or (fl.visible and fl.text == said and fl.position.y >= aff_bottom and box.encloses(Rect2(fl.position, fl.size)) and (fl.autowrap_mode != TextServer.AUTOWRAP_OFF or UI.text_width(fl, fl.text) <= fl.size.x)),
-		"the pick's flavour isn't whole on its own line: '%s' at %s (affixes to %.0f, box %s)" % [fl.text, str(Rect2(fl.position, fl.size)), aff_bottom, str(box)])
-	# and wrapped, every row of it shows (17 Oct, Matt's shot: the blank-firer's two rows in a box a line short, cut to
-	# "It fires..." by the label) - against a Knife, the shot's own pair
+	var fl: Label = pk._words
+	var edge: float = pk._foot_left_edge()
+	_check(said == "" or (fl.visible and fl.text != "" and said.begins_with(fl.text) and fl.text.ends_with(".") and fl.position.y >= pk.foot_y and fl.position.x + fl.size.x <= edge + 0.5 and fl.position.y + fl.size.y <= pk.h + 0.5 and (fl.autowrap_mode != TextServer.AUTOWRAP_OFF or UI.text_width(fl, fl.text) <= fl.size.x)),
+		"the pick's flavour isn't whole on the foot: '%s' at %s (edge %.0f)" % [fl.text, str(Rect2(fl.position, fl.size)), edge])
+	# and wrapped, every row of it shows (17 Oct, Matt's shot: the blank-firer's two rows cut to "It fires...") - and a
+	# hint never takes its place: it's a chip at the front of the tail
 	var knife_was = sim.equipped["Secondary"]
 	sim.equipped["Secondary"] = sim._plain("Secondary", "Knife")
 	var blank: Dictionary = sim._plain("Secondary", "Converted blank-firer")
@@ -7906,10 +7905,21 @@ func _pick_panel_checks(main) -> void:
 	sim.stash_put(blank)
 	pk.show_pick(blank, sim, "The pick · in the stash")
 	pk.show_fitted(sim.equipped["Secondary"], sim)
+	pk.set_hint_options(["No rounds for it in the rig"])
+	var bl: Label = pk._words
+	var bw: String = Words.item_words("Converted blank-firer")
+	var whole: bool = bl.visible and (bl.text == bw or bw.begins_with(bl.text)) and (bl.autowrap_mode == TextServer.AUTOWRAP_OFF or bl.get_visible_line_count() >= bl.get_line_count())
+	_check(whole and bl.position.y >= pk.foot_y and bl.position.y + bl.size.y <= pk.h + 0.5, "the blank-firer's flavour isn't whole on the foot: '%s', %d of %d rows show, %s" % [bl.text, bl.get_visible_line_count(), bl.get_line_count(), str(Rect2(bl.position, bl.size))])
+	_check(pk.hint_text() == "No rounds for it in the rig" and bl.text != pk.hint_text(), "the hint isn't a chip in the tail: '%s' / foot '%s'" % [pk.hint_text(), bl.text])
 	pk.set_hint_options([])
-	var bl: Label = pk._flavour
-	var whole: bool = bl.visible and bl.text == Words.item_words("Converted blank-firer") and (bl.autowrap_mode == TextServer.AUTOWRAP_OFF or bl.get_visible_line_count() >= bl.get_line_count())
-	_check(whole and Rect2(pk._boxes[0].position, pk._boxes[0].size).encloses(Rect2(bl.position, bl.size)), "the blank-firer's flavour isn't whole: '%s', %d of %d rows show, %s in %s" % [bl.text, bl.get_visible_line_count(), bl.get_line_count(), str(Rect2(bl.position, bl.size)), str(Rect2(pk._boxes[0].position, pk._boxes[0].size))])
+	_check(pk.hint_text() == "", "the hint chip stayed after the hint went")
+	# a hint too long beside the tail still shows, alone, inside the head (the review: the Workshop's refusals)
+	var long_why: String = "The %s has no magazine mount" % "police marksman's rifle"
+	pk.set_hint_options([long_why, "No magazine mount", "Doesn't fit"])
+	var tc = pk._heads[0]._tail_chips
+	_check(pk.hint_text() != "" and tc.used_rect().size.x <= pk._heads[0].width + 0.5, "a long hint vanished or left the head: '%s', %.0f of %.0f" % [pk.hint_text(), tc.used_rect().size.x, pk._heads[0].width])
+	pk.show_pick(blank, sim, "The pick · in the stash")
+	_check(pk.hint_text() == "", "the next pick kept the last one's hint")
 	sim.stash.erase(blank)
 	sim.equipped["Secondary"] = knife_was
 	main._run._shown = ""
@@ -7944,7 +7954,7 @@ func _pick_panel_checks(main) -> void:
 	main.refresh()
 	main._run._inv._pick(main._run._inv.cell_of(small["id"]))
 	main.refresh()
-	_check(pk._buttons[0].disabled and pk._words.visible and pk._words.text.begins_with("No room in the pack"), "a full pack did not grey Equip with the hint: '%s'" % pk._words.text)
+	_check(pk._buttons[0].disabled and pk.hint_text().begins_with("No room in the pack"), "a full pack did not grey Equip with the hint: '%s'" % pk.hint_text())
 	_check_fit(main, "Run (Pick-A, no room)")
 	# a smaller backpack found: Equip only when what's carried still fits in it
 	var worn_pack = sim.equipped["Backpack"]
@@ -8409,7 +8419,7 @@ func _gear_gate_checks(main) -> void:
 	var pick = main._armoury._pick
 	_check(pick._verdict.text == "Level %d to wear" % W, "the locked gun's verdict reads '%s'" % pick._verdict.text)
 	_check(pick._buttons[0].text == "Equip at level %d" % W and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
-	_check(pick._words.text.begins_with("Level %d to wear" % W), "the locked gun's line reads '%s'" % pick._words.text)
+	_check(not pick.hint_text().begins_with("Level"), "the locked gun says its level twice, the verdict and the hint: '%s'" % pick.hint_text())     # said once (the review)
 	_check_fit(main, "the kit with a locked gun")
 	# the Fence's shelf: a piece over the level reads its level, never "Better" (the review)
 	var shelf_gun: Dictionary = big.duplicate(true)
@@ -14038,12 +14048,13 @@ func _build_rounds_checks(main) -> void:
 	main._armoury.selected = {"kind": "stash", "id": smg["id"]}
 	main._armoury._shown = ""
 	main.refresh()
-	_check(main._armoury._pick._words.text.begins_with("No rounds for it"), "a gun with no rounds in the rig does not say so: '%s'" % main._armoury._pick._words.text)
+	var smg_words: String = main._armoury._pick._words.text
+	_check(main._armoury._pick.hint_text().begins_with("No rounds") and smg_words != "" and Words.item_words("Workshop SMG").begins_with(smg_words), "a gun with no rounds in the rig does not say so, or lost its own line: '%s' / '%s'" % [main._armoury._pick.hint_text(), main._armoury._pick._words.text])
 	# and over an empty slot, where it matters most
 	sim.equipped["Primary"] = null
 	main._armoury._shown = ""
 	main.refresh()
-	_check(main._armoury._pick._words.text.begins_with("No rounds for it"), "a gun for an empty slot with no rounds does not say so: '%s'" % main._armoury._pick._words.text)
+	_check(main._armoury._pick.hint_text().begins_with("No rounds"), "a gun for an empty slot with no rounds does not say so: '%s'" % main._armoury._pick.hint_text())
 	_check_fit(main, "Lock-up (a gun with no rounds, nothing fitted)")
 	# both hints at once, on the run screen where the pick has Equip and Ditch beside it
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
@@ -14059,7 +14070,7 @@ func _build_rounds_checks(main) -> void:
 	main.refresh()
 	main._run._inv._pick(main._run._inv.cell_of(big["id"]))
 	main.refresh()
-	var hw: String = main._run._pick._words.text
+	var hw: String = main._run._pick.hint_text()
 	_check(hw.begins_with("No rounds") and hw.contains("No room"), "the run's pick does not carry both hints: '%s'" % hw)
 	_check_fit(main, "Run (no rounds and no room)")
 	sim.extract_now()

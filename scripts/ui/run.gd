@@ -772,8 +772,8 @@ func _show_pick(m: Dictionary) -> void:
 		var fits: bool = sim.floor_fits(it)
 		if not fits:
 			_pick.set_hint_options(["No room in the pack: ditch something first (it takes %d cells)" % Items.size(it), "No room in the pack"])
-		elif sim.wear_lock(it) > 0:
-			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
+		elif sim.wear_lock(it) > 0 and fitted_f == null:
+			_pick.set_hint_options(PickPanel.lock_hints(sim, it))     # with a piece worn the verdict says the level (the review)
 		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
 		return
 	if Items.rig_item(it):
@@ -803,7 +803,7 @@ func _show_pick(m: Dictionary) -> void:
 			hints.append("No rounds for it in the rig")
 		if not can and fitted != null and lock == 0:
 			hints.append("No room in the pack for what comes off (%d cells)" % Items.size(fitted))
-		if lock > 0:
+		if lock > 0 and fitted == null:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
 		elif not hints.is_empty():
 			_pick.set_hint_options(_hint_forms(hints))

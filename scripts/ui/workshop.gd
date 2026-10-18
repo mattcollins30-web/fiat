@@ -566,7 +566,7 @@ func _show_panel() -> void:
 				var tone: String = "good" if d_dps > 0.5 else ("bad" if d_dps < -0.5 else "warn")
 				_pick.set_verdict(("▲ Upgrade" if tone == "good" else ("▼ Downgrade" if tone == "bad" else "Sidegrade")) if cur != null else ("▲ Fits" if d_dps >= -0.5 else "▼ Costs damage"), tone, deltas)
 			else:
-				_pick.set_hint(why)
+				_pick.set_hint_options([why, ("No " + why.get_slice(" has no ", 1)) if why.contains(" has no ") else why.get_slice(":", 0), "Doesn't fit"])     # short forms for the tail's chip (the review)
 			buttons.append({"text": "Fit", "action": sim.fit.bind(target_slot, it["id"]), "enabled": why == "", "primary": true})
 	_set_pick_buttons(buttons)
 

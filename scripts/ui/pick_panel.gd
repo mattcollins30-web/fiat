@@ -31,7 +31,6 @@ const LINES := 4                                              # the right column
 const TAG_PAD := 8
 const BOX_OUT := 8                                            # each piece in its own box (7 Oct): the run screen's line, drawn this far outside the column, so the column keeps its width (the words were cut for it at first)
 const BOX_Y := 2
-const FLAVOUR_H := 20                                         # the item's own line, a row of it
 
 var w: int
 var h: int
@@ -49,13 +48,10 @@ var _empty_title: Label                                       # nothing picked: 
 var _empty_lines: Array[Label] = []
 var _verdict: Label
 var _deltas: Array[Label] = []
-var _words: Label                                             # the foot's line: a hint, or the item's own line when its column has no room
-var _flavour: Label                                           # the item's own line, whole, in its column under the head (16 Oct, Matt: "we're losing flavour text")
+var _words: Label                                             # the foot's line: the item's own line, always there (18 Oct, Matt: it moved about)
 var _flavour_text := ""
 var _buttons: Array[Button] = []
 var _actions: Array = []
-var _hint_on := false
-var _hint_options: Array = []      # the hint's forms, long to short: fitted to the room left of the buttons
 
 
 func _init(width: int, height: int) -> void:
@@ -95,8 +91,6 @@ func _init(width: int, height: int) -> void:
 	for i in range(DELTAS):
 		_deltas.append(UI.label(_panel, Rect2(PAD, foot_y, 10, 24), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_words = UI.label(_panel, Rect2(PAD, foot_y + 24, 10, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_flavour = UI.label(_panel, Rect2(PAD, 0, col_w, FLAVOUR_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_flavour.visible = false
 	for i in range(BUTTONS):
 		var b := UI.button(_panel, Rect2(0, foot_y, 240, FOOT_H), i == 0)
 		b.pressed.connect(_press.bind(i))
@@ -196,6 +190,7 @@ func set_verdict(verdict: String, tone: String, deltas: Array) -> void:
 		l.position.x = x
 		l.visible = true
 		x += l.size.x + 16
+	_lay_foot()                                         # a verdict takes the foot's first row: the item's line to its second
 
 
 ## A hint in place of the item's own line: what stops the button, mostly.
@@ -203,17 +198,15 @@ func set_hint(text: String) -> void:
 	set_hint_options([text])
 
 
-## A hint in forms long to short (11 Oct: two hints on one line ran past the buttons): the first that fits is shown.
+## A hint in forms long to short: a warning chip at the front of the pick's tail (18 Oct, Matt: the foot is the item's
+## own line, always), the first form that fits.
 func set_hint_options(options: Array) -> void:
-	_hint_options = options.filter(func(o): return str(o) != "")
-	_hint_on = not _hint_options.is_empty()
-	if _hint_on:
-		_words.text = str(_hint_options[0])
-		_lay_foot()
-	else:
-		_words.text = ""
-		_lay_flavour()                                  # the hint gone: the item's own line back where it goes (the review)
-		_lay_foot()
+	_heads[0].set_warning(options)
+
+
+## The hint shown, or "" (for the tests).
+func hint_text() -> String:
+	return _heads[0]._tail_chips.words(0) if not _heads[0].warning.is_empty() and _heads[0]._tail_chips.visible else ""
 
 
 ## The buttons at the foot's right: [{text, action, enabled, primary, tone}], the first primary by default.
@@ -248,60 +241,38 @@ func _foot_left_edge() -> float:
 	return x - 12
 
 
-## The item's own line in its column, under the affixes, the column's width: whole on one row, or two when there's
-## room; with no room under the head, the foot's line carries it as before.
+## The item's own line on the foot, left of the buttons (18 Oct, Matt: the same place on every item): under a verdict, its
+## one row; with the foot's two rows free, wrapped to two when it needs them; else the whole sentences that fit.
 func _lay_flavour() -> void:
-	_flavour.visible = false
-	if _flavour_text == "":
-		return
-	var head = _heads[0]
-	var top: float = HEAD_Y + head._affixes.position.y + (head._affixes.size.y if head._affixes.visible else 0.0) + 6.0
-	if not head._affixes.visible:
-		top = HEAD_Y + head.tail_y + head.TAIL_H + 4.0
-	var bottom: float = foot_y - 8.0 - 4.0
-	var room: float = bottom - top
-	if room < FLAVOUR_H:
-		if not _hint_on:
-			_words.text = _flavour_text                 # no room in the column: the foot's line, as it was
-		return
-	_flavour.position = Vector2(PAD, top)
-	_flavour.size = Vector2(col_w, FLAVOUR_H)
-	_flavour.autowrap_mode = TextServer.AUTOWRAP_OFF
-	_flavour.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-	_flavour.text = _flavour_text
-	if UI.text_width(_flavour, _flavour_text) > col_w:
-		# two rows, at the size whose two rows the room holds - by the label's own line height and spacing, not
-		# FLAVOUR_H (17 Oct, Matt's shot: two 20 px rows were a line short, and the label cut it to "It fires..."); a
-		# point or two smaller before the whole sentences of one row
-		var wrapped := false
-		for sz in [Pal.CELL_TEXT, Pal.CELL_TEXT - 1, Pal.CELL_TEXT - 2]:
-			_flavour.add_theme_font_size_override("font_size", sz)
-			var two: float = 2.0 * _flavour.get_theme_font("font").get_height(sz) + float(_flavour.get_theme_constant("line_spacing"))     # get_line_height reads the theme's size, not the override
-			if two <= room and UI.text_width(_flavour, _flavour_text) <= 1.9 * col_w:
-				_flavour.size.y = ceilf(two) + 1.0
-				_flavour.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				if _flavour.get_line_count() <= 2:     # the wrap as it fell, not the width's guess (the review: a bad break can need three)
-					wrapped = true
-					break
-				_flavour.autowrap_mode = TextServer.AUTOWRAP_OFF
-		if not wrapped:
-			_flavour.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-			UI.fit_sentences(_flavour, _flavour_text)       # one row: the whole sentences that fit
-	_flavour.visible = true
+	_words.text = _flavour_text
+	_lay_foot()
 
 
 func _lay_foot() -> void:
 	var edge := _foot_left_edge()
-	_words.size.x = maxf(80.0, edge - PAD)
-	if _hint_on and not _hint_options.is_empty():
-		UI.fit(_words, _hint_options)
-	_words.visible = _words.text != ""
-	if _hint_on:
-		_words.add_theme_color_override("font_color", Pal.TEXT_3)
-	else:
-		_words.add_theme_color_override("font_color", Pal.TEXT_2)
-		if _words.text != "":
-			UI.fit_sentences(_words, _words.text)
+	var both: bool = not _verdict.visible
+	_words.position = Vector2(PAD, foot_y if both else foot_y + 24)
+	_words.size = Vector2(maxf(80.0, edge - PAD), FOOT_H if both else 20)
+	_words.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_words.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+	_words.add_theme_color_override("font_color", Pal.TEXT_2)
+	_words.text = _flavour_text
+	_words.visible = _flavour_text != ""
+	if _words.visible and UI.text_width(_words, _flavour_text) > _words.size.x:
+		var wrapped := false
+		if both:
+			for sz in [Pal.CELL_TEXT_BIG, Pal.CELL_TEXT, Pal.CELL_TEXT - 1]:
+				_words.add_theme_font_size_override("font_size", sz)
+				var two: float = 2.0 * _words.get_theme_font("font").get_height(sz) + float(_words.get_theme_constant("line_spacing"))
+				if two <= FOOT_H and UI.text_width(_words, _flavour_text) <= 1.9 * _words.size.x:
+					_words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+					if _words.get_line_count() <= 2:     # the wrap as it fell, not the width's guess
+						wrapped = true
+						break
+					_words.autowrap_mode = TextServer.AUTOWRAP_OFF
+		if not wrapped:
+			_words.add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
+			UI.fit_sentences(_words, _flavour_text)       # one row: the whole sentences that fit
 	# the deltas past the edge go
 	for l in _deltas:
 		if l.visible and l.position.x + l.size.x > edge:
@@ -327,8 +298,6 @@ func _clear() -> void:
 	_words.text = ""
 	_words.visible = false
 	_flavour_text = ""
-	_flavour.visible = false
-	_hint_on = false
 	for b in _buttons:
 		b.visible = false
 
@@ -435,10 +404,8 @@ func text_nodes() -> Array:
 	for l in _deltas:
 		if l.visible:
 			out.append(l)
-	if _words.visible:
-		out.append(_words)
-	if _flavour.visible and _flavour.autowrap_mode == TextServer.AUTOWRAP_OFF:
-		out.append(_flavour)                            # a wrapped one fits by its wrap, its two rows checked apart (the smoke)
+	if _words.visible and _words.autowrap_mode == TextServer.AUTOWRAP_OFF:
+		out.append(_words)                              # a wrapped one fits by its wrap, its two rows checked apart (the smoke)
 	for b in _buttons:
 		if b.visible:
 			out.append(b)
