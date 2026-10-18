@@ -5544,4 +5544,10 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   site kicker is just its tier. The "20% at your level" note left the tile.
 - Flaky smoke checks seen today, not touched (house rule): "no number came off the hits" (1 in 4) and "the
   Twelve-Bore's kill healed" (1 in 6; likely a level-up mid-kill moving max HP in the check's sum).
+- Gear verdicts (the Kit's and the run's pick, the ▲ on cells, the bot) weigh a gun by the top bar's figure, hits and
+  burn together (Sim.damage_total); before, a fire build's Epic read as a downgrade from a plain Common.
+- Not touched, same kind of mismatch (house rule): the Workshop's part verdict and "Fitting it: X → Y" read the gun's
+  raw hits (workshop.gd _dps_with); the top bar's damage line fills from dps() while its number is the total.
+- Parked for after the playtest, in order: the drawn Map, layout B (canvas "Fiat – The drawn map": the map left, a
+  pin's card right, the order's places as pins, test art first); the two flaky smoke checks.
 
