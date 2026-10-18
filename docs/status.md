@@ -5600,3 +5600,8 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   - The paper loop: 8 of 11 papers came off Kev (704 notes). A beaten signal costs 3 and brings 2 back, so it runs
     down without finds or Kev. The save sits at 2 papers and 24 notes, with Kev at 88.
   - The Bank at 39 minutes of play, all four heads by 79.
+- Matt (18 Oct, night): slow the campaign so a runner enters a site at its gear level, one under at worst; and rethink
+  how the balance pass runs. From his record: on first entry he was 1 level under the site's drops at the Parade and 5
+  under at the Barracks (wear = 2.5 x the site's level - 1.5). 14 of the 49 gear finds from level 4 to 19 were wearable.
+  To agree tomorrow: a level gate per site against fitting the scale (2 x level - 2 fits his entry levels), and the
+  pass gates read from his records as well as the bot's.
