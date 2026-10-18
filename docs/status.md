@@ -5581,8 +5581,8 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   read on arrival; decrypt draws from it. An old save's stash papers move there on load. The deeds, a key's paper and a
   unique (rule papers) stay in the stash.
 - A signal's run home brings two papers at the least (SIGNAL_PAPERS_HOME): what it found counts (not Kev's), plain
-  common or uncommon ones make up the rest, only ones a find could be at that depth and site. A death brings none; a
-  lost or timed-out signal still pays them (asked Matt).
+  common or uncommon ones make up the rest, only ones a find could be at that depth and site. Beaten signals only
+  (Matt): a death, a time-out or the head left standing brings none.
 - The Fence's papers contracts are gone; an old save's are rolled again on load.
 - Parked from the same playtest (Matt: "the rest can be parked"):
   - The odds lag after the Yard's Lookout pick, flipping fight the head or not.
@@ -5591,4 +5591,4 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   - The Radio's town view missed the caps review ("pumping station" lost its "The" in the fit fallback; NOT BUILT,
     "Opens the Grid · the Lineman").
   - The Yard's Paper rack: half dead now papers live on the pile (charms, rule papers, keepsakes only); new job or
-    new words (asked Matt).
+    new words. Matt: a new job; options put to him.

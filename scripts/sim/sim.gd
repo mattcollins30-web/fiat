@@ -5373,8 +5373,8 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		_sig_off()
 		return
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
-	if not died:
-		_signal_papers_home(m)
+	if won:
+		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
 	if won and d >= reach:
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
@@ -5393,8 +5393,8 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	_sig_off()
 
 
-## A signal's run home brings SIGNAL_PAPERS_HOME papers at the least (18 Oct, Matt: "at a minimum a signal run needs
-## to provide 2 of low quality"): what it found counts, plain ones (common or uncommon) make up the rest, to the pile.
+## A signal beaten brings SIGNAL_PAPERS_HOME papers home at the least (18 Oct, Matt: "at a minimum a signal run needs
+## to provide 2 of low quality"; "only beaten ones"): what it found counts, plain ones (common or uncommon) make up the rest, to the pile.
 func _signal_papers_home(m: Dictionary) -> void:
 	var found := 0
 	for it in m.get("found", []):

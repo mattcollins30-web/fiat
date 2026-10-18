@@ -15199,9 +15199,13 @@ func _paper_pile_checks(_main) -> void:
 	var sg: Dictionary = s.decrypt(s.papers.map(func(x): return int(x["id"])))
 	_check(not sg.is_empty() and s.papers.is_empty(), "the fixture: no signal from three papers: %s" % s.decrypt_block([]))
 	s.hp = s.max_hp()
-	if s.deploy_signal(0):
+	var went: bool = s.deploy_signal(0)
+	_check(went, "the fixture: the signal didn't deploy (won)")
+	if went:
 		s.mission["found"] = []
 		s.mission["cleared"] = true
+		if s.mission.has("boss"):
+			s.mission["boss"]["alive"] = false   # beaten: its head down too
 		s.extract_now()
 		_check(s.papers.size() >= Data.SIGNAL_PAPERS_HOME and s.papers.all(func(x): return int(x["rarity"]) <= 1), "a signal's run home brought %d papers, or a high one" % s.papers.size())
 	var made: Dictionary = {}
@@ -15210,9 +15214,28 @@ func _paper_pile_checks(_main) -> void:
 	made = s.decrypt(s.papers.slice(s.papers.size() - 3).map(func(x): return int(x["id"])))
 	var before: int = s.papers.size()
 	s.hp = s.max_hp()
-	if not made.is_empty() and s.deploy_signal(0):
+	went = not made.is_empty() and s.deploy_signal(0)
+	_check(went, "the fixture: the signal didn't deploy (death)")
+	if went:
 		s._kia()
 		_check(s.papers.size() == before, "a death on a signal brought papers home: %d from %d" % [s.papers.size(), before])
+	# a lost one (timed out) brings none either
+	for b in ["A P45", "A pawn ticket", "A bank statement"]:
+		s.papers.append(s._plain(Data.PAPER, b))
+	made = s.decrypt(s.papers.slice(s.papers.size() - 3).map(func(x): return int(x["id"])))
+	before = s.papers.size()
+	s.hp = s.max_hp()
+	_check(not made.is_empty(), "the fixture: no signal for the time-out check")
+	went = not made.is_empty() and s.deploy_signal(0)
+	_check(went, "the fixture: the signal didn't deploy (time-out)")
+	if went:
+		s.mission["found"] = []
+		s.mission["cleared"] = true
+		if s.mission.has("boss"):
+			s.mission["boss"]["alive"] = false   # beaten: its head down too
+		s.mission["timed_out"] = true
+		s.extract_now()
+		_check(s.papers.size() == before, "a lost signal brought papers home: %d from %d" % [s.papers.size(), before])
 	# the top-up at a shallow site: nothing deep, nothing another site's own (the review)
 	var site0: String = str(Data.TIERS[0]["name"])
 	var bad: Array = []
@@ -15237,5 +15260,5 @@ func _paper_pile_checks(_main) -> void:
 	var s3 = Sim.new()
 	s3.load_dict(d3)
 	_check(not s3.contracts.any(func(c): return str(c["kind"]) == "papers"), "an old save's papers contract survived the load")
-	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal home brings %d, a death none; the top-up shallow, Kev's not counted, old contracts rolled" % Data.SIGNAL_PAPERS_HOME)
+	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted, old contracts rolled" % Data.SIGNAL_PAPERS_HOME)
 
