@@ -5534,3 +5534,14 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   their uniques and drops, the mint's pay, Kev's closing line opening it. Purse: Materials and The town's worth.
   The bot builds the cheapest place it can. Every number a placeholder for the balance pass.
 
+## Playtest fixes (18 Oct, evening)
+
+- The pick panel: the item's own line always on the foot left of the buttons; hints (no rounds, no room, the level,
+  the Workshop's reasons) an amber chip at the front of the tail. A locked piece against a worn one says its level once.
+- The run screen: the line under the take is gone; the strip sits over the button, the run's warnings at the right of
+  the take's head, nothing when all's well.
+- The Map and the Radio's card: Finds is Gear level, just the number (the wear level an item's Level chip shows); the
+  site kicker is just its tier. The "20% at your level" note left the tile.
+- Flaky smoke checks seen today, not touched (house rule): "no number came off the hits" (1 in 4) and "the
+  Twelve-Bore's kill healed" (1 in 6; likely a level-up mid-kill moving max HP in the check's sum).
+
