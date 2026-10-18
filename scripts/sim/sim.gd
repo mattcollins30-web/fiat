@@ -583,6 +583,18 @@ func damage_total() -> float:
 	return float(damage_split()["total"])
 
 
+## The top bar's figure with a part on the gun in `slot` (18 Oct: the Workshop read the gun's raw hits, so a part that
+## turns hits to fire read as nothing): [as worn now, with the part fitted].
+func damage_with_part(slot: String, part: Dictionary) -> Array:
+	var now: float = _try({}, damage_total)
+	var gun = equipped.get(slot, null)
+	if gun == null or not part.has("mount"):
+		return [now, now]
+	var copy: Dictionary = gun.duplicate(true)
+	copy["attachments"][part["mount"]] = part
+	return [now, _try(copy, damage_total)]
+
+
 ## damage_split in words, for the top bar's tip and the Stats sheet: "321 from hits · 31 burning", or short "Hits 321 · burn 31".
 func split_words(split: Dictionary, short := false) -> String:
 	var parts := [("Hits %.0f" if short else "%.0f from hits") % float(split["hits"])]

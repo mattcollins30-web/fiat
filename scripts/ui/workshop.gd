@@ -549,14 +549,15 @@ func _show_panel() -> void:
 			var cur = gun["attachments"].get(it["mount"], null)
 			var why: String = sim.fit_refusal(target_slot, it["id"])
 			var kicker: String = "On the %s · %s" % [target_slot.to_lower(), Items.mount_name(it["mount"]).to_lower()]
+			var dw: Array = sim.damage_with_part(target_slot, it)     # the top bar's figure, before and after (18 Oct), read once
 			if cur != null:
 				_pick.show_fitted(cur, sim, kicker)
 			else:
-				_pick.show_right_words(kicker, "Empty", ["Fitting it: %.0f → %.0f dmg/s" % [Items.dps(gun), _dps_with(gun, it)]] if why == "" else [])
+				_pick.show_right_words(kicker, "Empty", ["Fitting it: %.0f → %.0f dmg/s" % [float(dw[0]), float(dw[1])]] if why == "" else [])
 			if why == "":
 				# the swap, as the gun's damage and each stat the part moves
 				var deltas := []
-				var d_dps: float = _dps_with(gun, it) - Items.dps(gun)
+				var d_dps: float = float(dw[1]) - float(dw[0])     # the runner's damage as the top bar reads it, the burn in (18 Oct)
 				if absf(d_dps) >= 0.5:
 					deltas.append([d_dps, "%.0f dmg/s" % absf(d_dps)])
 				for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
@@ -815,12 +816,6 @@ func _show_view() -> void:
 
 
 ## The gun's damage a second with this attachment in place of the mount's.
-func _dps_with(gun: Dictionary, it: Dictionary) -> float:
-	var copy := gun.duplicate(true)
-	copy["attachments"][it["mount"]] = it
-	return Items.dps(copy)
-
-
 # ------------------------------------------------------------------ acting
 
 func _pick_mount(slot: String, mount: String) -> void:

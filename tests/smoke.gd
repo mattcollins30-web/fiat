@@ -7826,6 +7826,23 @@ func _bench_pick_checks(main) -> void:
 	var pk = main._workshop._pick
 	_check(pk.visible and pk._heads[0].visible and pk._heads[0]._title.text == "Choke" and pk._tag_labels[0].visible, "the Bench's part pick is not on the pick frame: '%s'" % pk._heads[0]._title.text)
 	_check(pk.button_texts() == ["Fit"] and pk._buttons[0].disabled and pk.hint_text() == "Shotguns only", "the Bench did not grey Fit with the reason: %s / '%s'" % [str(pk.button_texts()), pk.hint_text()])
+	# a part that fits: the right column's figure and the verdict are the top bar's before and after (18 Oct: the gun's
+	# raw hits called a part that turns them to fire nothing)
+	var comp: Dictionary = sim._plain(Data.ATTACHMENT, "Compensator")
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(comp)
+	main._workshop.sel_slot = ""
+	main._workshop.sel_mount = ""
+	main._workshop.sel_id = -1
+	main._workshop._shown = ""
+	main.refresh()                            # the grid laid again with the part in it
+	main._workshop._pick_cell(main._workshop._inv.cell_of(comp["id"]))
+	main.refresh()
+	var dwc: Array = sim.damage_with_part("Primary", comp)
+	var fit_line: String = "Fitting it: %.0f → %.0f dmg/s" % [float(dwc[0]), float(dwc[1])]
+	_check(pk._right_lines.any(func(l): return l.text == fit_line) and pk._verdict.text == ("▲ Fits" if float(dwc[1]) - float(dwc[0]) >= -0.5 else "▼ Costs damage"), "the Bench's part reads '%s' / '%s', not '%s'" % [str(pk._right_lines.map(func(l): return l.text)), pk._verdict.text, fit_line])
+	sim.stash.erase(comp)
 	_check(not pk.button_texts().any(func(t): return t.begins_with("Sell")), "Sell is on the Bench")
 	_check_fit(main, "Workshop (a refused part)")
 	# a part that fits: the verdict and the swap read, Fit goes through the frame
@@ -15119,5 +15136,17 @@ func _dot_compare_checks(_main) -> void:
 	s.equipped["Primary"] = p_plain
 	var pwant: int = 1 if pb > pa * 1.005 else (-1 if pb < pa * 0.995 else 0)
 	_check(s.compare(p_burn) == pwant, "the burn SMG over the plain one reads %d, the top bar says %d (%.1f to %.1f)" % [s.compare(p_burn), pwant, pa, pb])
+	# the Workshop's figure for a part is the top bar's with it fitted (18 Oct: it read the gun's raw hits)
+	s.equipped["Primary"] = p_burn
+	var comp: Dictionary = s._plain(Data.ATTACHMENT, "Compensator")
+	if p_burn["attachments"].has("muzzle"):
+		var dw: Array = s.damage_with_part("Primary", comp)
+		var before: float = s.damage_total()
+		p_burn["attachments"]["muzzle"] = comp
+		var after: float = s.damage_total()
+		p_burn["attachments"]["muzzle"] = null
+		_check(is_equal_approx(float(dw[0]), before) and is_equal_approx(float(dw[1]), after), "the Workshop's part figure %.1f → %.1f isn't the top bar's %.1f → %.1f" % [float(dw[0]), float(dw[1]), before, after])
+	else:
+		_check(false, "the fixture: the Workshop SMG has no muzzle mount")
 	print("the burn build's verdict ok: %.1f with the plain pistol, %.1f with the burn one, the arrow agrees" % [with_plain, with_burn])
 

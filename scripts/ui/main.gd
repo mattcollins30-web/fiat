@@ -492,7 +492,7 @@ func _move_dps_line(delta: float) -> void:
 	var target: float = _dps_share()
 	if sim.on_mission():
 		var m: Dictionary = sim.mission
-		target *= clampf(float(m.get("landed_rate", 0.0)) / maxf(sim.dps(), 1.0), 0.0, 1.6)
+		target *= clampf(float(m.get("landed_rate", 0.0)) / maxf(float(sim.damage_split()["hits"]), 1.0), 0.0, 1.6)     # landed against the type-scaled hits expected (the review)
 		target = minf(target, 1.0)
 	if _dps_shown < 0.0:
 		_dps_shown = target
@@ -1271,7 +1271,7 @@ func _dps_share() -> float:
 	var i: int = clampi(sim.best_tier, 0, Data.TIERS.size() - 1)
 	var t: Dictionary = sim.effective(i)
 	var gang: float = float(t.get("pool", 1)) * float(t.get("hp", 1.0))
-	return clampf(sim.dps() * 60.0 / maxf(gang, 1.0), 0.0, 1.0)
+	return clampf(sim.damage_total() * 60.0 / maxf(gang, 1.0), 0.0, 1.0)     # the figure beside it, the burn in (18 Oct)
 
 
 ## The level's progress, 0 to 1, for the line under the XP figure.
