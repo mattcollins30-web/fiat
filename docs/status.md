@@ -5551,6 +5551,26 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
 - Flaky smoke checks seen today, for the batch: "no number came off the hits", "the Twelve-Bore's kill healed",
   "a pistol backing a live primary spent no rounds", "no skull on your own bar with a bleed", "their poison on you
   did not come up green" (each once, each passing on re-run; give each a message that prints its state first).
-- Parked for after the playtest, in order: the drawn Map, layout B (canvas "Fiat – The drawn map": the map left, a
-  pin's card right, the order's places as pins, test art first); the two flaky smoke checks.
+- The list for after the playtest (18 Oct, Matt), in order:
+  1. The flaky smoke checks (five, above): each prints what it saw, then fixed.
+  2. Socketables show their damage in the Workshop (damage_with_part through the socket, a verdict and a delta).
+  3. The drawn Map, layout B (canvas "Fiat – The drawn map"): the map left, a pin's card right, the order's places as
+     pins appearing with their rebuild, the fifth tab gone; test art first.
+  4. The Clinic (canvas "Fiat – The Clinic and the Fence", Clinic A and B): wounds stack to three, one each to the
+     head (max HP), the chest (armour), the legs (pace); a fourth bad run home adds nothing; the body outline with
+     each wound, what it costs, the run it came from, Treat per wound and Treat everything; the Clinic the only cure.
+     The meds panel as cards: total, HP a second, stash or rig.
+  5. Meds heal as they say: a share every second over the timer, stopping at full (it's a heal at the end now). A
+     numbers change: in before the balance pass.
+  6. The Fence (same canvas, Fence A and B): sell by rarity as rows, rounds by the box as cards (your guns' rounds
+     lit), a part's pick says whether it fits your guns; the contracts as compact rows with the stash showing what
+     goes (green), what would do (dashed), the rest dimmed; and the player can SWAP what goes by picking cells
+     (new: today the game picks).
+- The art manifest, once each reads with test art (no credits before):
+  - The room intro cards their own art: today each card's three strips are cuts of the room's place art (option C,
+    18 Oct); each wants pictures of its own, made for the card.
+  - The rebuild: the three order uniques' icons (the Lineman's Lamp, the Registrar's Satchel, the Issuer's Robes),
+    plates for the Grid, the Archive and the Mint, faces for the Lineman, the Registrar and the Issuer if the columns
+    want them, glyphs for the seven materials if the counts want them.
+  - The drawn Map's painted version, once layout B reads with the drawn shapes.
 
