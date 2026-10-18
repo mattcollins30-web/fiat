@@ -20,6 +20,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Atlas := preload("res://scripts/ui/atlas.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
+const Town := preload("res://scripts/ui/town.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -58,7 +59,8 @@ var sim
 var selected := 0                   # the signal picked, by its place on the Radio
 var chosen: Array = []              # the papers in the decoder, by id, in order
 var paper_page := 0
-var view := "air"                   # "air": papers and signals; "map": the Dial
+var view := "air"                   # "air": papers and signals; "map": the Dial; "town": the rebuild (18 Oct)
+const VIEWS := ["air", "map", "town"]
 var _kicker: Label
 var _headline: Label
 var _unit: Label
@@ -68,6 +70,7 @@ var _heard: Label
 var _heard_pill: Panel
 var _air: Control
 var _atlas
+var _town
 var _views: Array = []
 var _quiet: Array = []              # nothing on the air: the lines before the Quartermaster
 # the papers
@@ -163,10 +166,14 @@ func _init() -> void:
 	_atlas.visible = false
 	_atlas.acted.connect(func(): acted.emit())
 	add_child(_atlas)
-	for k in range(2):
-		var vb := UI.button(self, Rect2(Pal.GRID_W - PAD - (2 - k) * (VIEW_W + 6) + 6, VIEW_Y, VIEW_W, VIEW_H), false)
+	_town = Town.new()
+	_town.visible = false
+	_town.acted.connect(func(): acted.emit())
+	add_child(_town)
+	for k in range(VIEWS.size()):
+		var vb := UI.button(self, Rect2(Pal.GRID_W - PAD - (VIEWS.size() - k) * (VIEW_W + 6) + 6, VIEW_Y, VIEW_W, VIEW_H), false)
 		vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
-		vb.pressed.connect(_pick_view.bind(["air", "map"][k]))
+		vb.pressed.connect(_pick_view.bind(VIEWS[k]))
 		_views.append(vb)
 
 
@@ -430,18 +437,25 @@ func _process(delta: float) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	if view == "map" and not sim.campaign_done():
+	if view != "air" and not sim.campaign_done():
 		view = "air"
 	_views[0].text = "The air"
 	_views[1].text = "The Dial" if sim.campaign_done() else "The Dial · locked"
 	_views[1].disabled = not sim.campaign_done()
-	UI.style_button(_views[0], view == "air")
-	UI.style_button(_views[1], view == "map")
+	_views[2].text = "The town" if sim.campaign_done() else "The town · locked"     # the rebuild (18 Oct): its cards read shut till Kev's story is done
+	_views[2].disabled = not sim.campaign_done()
+	for k in range(VIEWS.size()):
+		UI.style_button(_views[k], view == VIEWS[k])
 	_air.visible = view == "air"
 	_atlas.visible = view == "map"
+	_town.visible = view == "town"
 	if view == "map":
 		_shown = ""
 		_atlas.show_state(sim)
+		return
+	if view == "town":
+		_shown = ""
+		_town.show_state(sim)
 		return
 	var have: Array = sim.signal_papers().map(func(x): return int(x["id"]))
 	chosen = chosen.filter(func(id): return int(id) in have)
@@ -768,7 +782,7 @@ func craft_button(key: String) -> Button:
 
 ## The air or the map (12 Oct): the map once the campaign's done.
 func _pick_view(v: String) -> void:
-	if v == "map" and not sim.campaign_done():
+	if v != "air" and not sim.campaign_done():
 		return
 	view = v
 	_shown = ""
@@ -783,6 +797,8 @@ func _reset_map() -> void:
 func text_nodes() -> Array:
 	if view == "map":
 		return _views + _atlas.text_nodes()
+	if view == "town":
+		return _views + _town.text_nodes()
 	var out: Array = [_kicker, _headline, _unit, _sub, _heard] + _views
 	out.append_array(_chips.text_nodes())
 	for l in _quiet:
@@ -819,4 +835,6 @@ func text_nodes() -> Array:
 func line_pairs() -> Array:
 	if view == "map":
 		return []
+	if view == "town":
+		return _town.line_pairs()
 	return [[_headline, _unit]]

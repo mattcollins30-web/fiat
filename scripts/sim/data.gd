@@ -798,6 +798,13 @@ const UNIQUES := [
 	# the convoy's
 	{"name": "The Lorry's Load", "slot": "Backpack", "base": "Cargo frame", "rule": "lorrys_load", "band": "chase", "range": [7, 9], "boss": true, "convoy": true,
 		"words": "Every empty pack cell comes home as notes, more on a higher signal", "short": "Empty cells home as notes", "affixes": [{"stat": "capacity", "value": 8}, {"stat": "loot_pct", "value": 15}, {"stat": "cash_per_cell", "value": 3}]},
+	# the order's (18 Oct, docs/design/rebuild.md §5): one each from the true pinnacles, nowhere else
+	{"name": "The Lineman's Lamp", "slot": "Helmet", "base": "High-cut helmet", "rule": "linemans_lamp", "band": "chase", "range": [7, 9], "boss": true, "order": "grid",
+		"words": "At night: no slower feet, and the dark's finds count double", "short": "Night: full pace, finds ×2", "affixes": [{"stat": "armour", "value": 24}, {"stat": "rarity_pct", "value": 15}]},
+	{"name": "The Registrar's Satchel", "slot": "Backpack", "base": "Assault pack", "rule": "registrars_satchel", "band": "chase", "range": [7, 9], "boss": true, "order": "archive",
+		"words": "Papers turn up twice as often", "short": "Papers ×2", "affixes": [{"stat": "capacity", "value": 6}, {"stat": "loot_pct", "value": 15}]},
+	{"name": "The Issuer's Robes", "slot": "Armour", "base": "Heavy armour suit", "rule": "issuers_robes", "band": "chase", "range": [8, 9], "boss": true, "order": "mint",
+		"words": "A run's tins +1% for every point of the town's worth", "short": "Tins +1% a point of worth", "affixes": [{"stat": "armour", "value": 40}, {"stat": "hp", "value": 40}, {"stat": "cash_pct", "value": 10}]},
 	# the build-defining ones: a rule each, found loose from `depth` on, and from the mate once you've been that deep;
 	# nine of them are a site's own (`site`, endgame part 3, 7 Oct): found only on that site, past SITE_UNIQUE_DEPTH for its
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
@@ -2306,6 +2313,86 @@ const STORY_BEATS := [
 	{"key": "depot", "name": "The depot", "site": 9, "zone": 3, "convoy": true},
 ]
 const STORY_DROP := 0.5
+
+## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "a reason to keep grinding past the lorry"): materials from runs,
+## the town's places put back with them, and the order's true pinnacles behind them. Every number here is a
+## placeholder for the balance pass (Matt: "no balance yet").
+## The materials: counts, never cells, never sold, never lost (a death brings them home). An area's two, the signals' fuses.
+const MATERIALS := {
+	"copper_wire": {"name": "Copper wire", "area": 1},
+	"paving": {"name": "Paving", "area": 1},
+	"glass": {"name": "Glass", "area": 2},
+	"ledgers": {"name": "Ledgers", "area": 2},
+	"cable_drums": {"name": "Cable drums", "area": 3},
+	"army_kit": {"name": "Army kit", "area": 3},
+	"fuses": {"name": "Fuses", "area": -1},
+}
+const MATERIAL_ORDER := ["copper_wire", "paving", "glass", "ledgers", "cable_drums", "army_kit", "fuses"]
+const SITE_MATERIAL := ["", "", "", "copper_wire", "copper_wire", "paving", "glass", "glass", "ledgers", "cable_drums", "cable_drums", "army_kit"]     # by site: the Outskirts none
+const MATERIAL_RUN := 0.08               # a campaign site's run: the chance at its material
+const MATERIAL_SIGNAL := 0.20            # a signal's run, at REACH_START
+const MATERIAL_SIGNAL_STEP := 0.01       # and this more a level past it
+const MATERIAL_CAP := 0.5
+const MATERIAL_MOVE := 0.01              # a move of the Pitch: this more on every run (the new Pitch knows the ground)
+const MATERIAL_HANDFUL := [1, 3]         # a drop
+const MATERIAL_HEAD := [3, 6]            # a crew's head down: theirs, guaranteed
+const FUSE_SIGNAL := 0.10                # a signal's run: the chance at fuses too
+## The order's things, kept as counts: what a true pinnacle drops for the next rebuild or rank.
+const KEY_ITEMS := {
+	"grid_key": {"name": "The Grid's key"},
+	"ledger_seal": {"name": "Ledger seals"},
+	"fiat_note": {"name": "A true FIAT note"},
+}
+const KEY_ORDER := ["grid_key", "ledger_seal", "fiat_note"]
+## The places. `costs` a first build's; a rank on grows them by REBUILD_GROWTH, adds REBUILD_FUSES fuses a rank past the
+## first and, from REBUILD_KEY_RANK, one of `rank_key`. `first` is extra on the first build only (the mint's key).
+## `fx`: what it does, base at rank 1 and step a rank after (cap where given), summed by stat (Sim.town_stat).
+const REBUILDS := [
+	{"key": "substation", "name": "The substation", "costs": {"copper_wire": 20, "cable_drums": 10}, "rank_key": "grid_key", "opens": "grid",
+		"fx": [{"stat": "night_feet", "base": 1, "step": 0, "say": "Night runs keep their pace"}, {"stat": "night_rarity_pct", "base": 0, "step": 5, "say": "+%d%% night finds"}]},
+	{"key": "pumping", "name": "The pumping station", "costs": {"paving": 20, "glass": 10}, "rank_key": "grid_key",
+		"fx": [{"stat": "rest_pct", "base": 50, "step": 10, "say": "+%d%% rest"}, {"stat": "clinic_pct", "base": 10, "step": 2, "cap": 40, "say": "Clinic −%d%%"}]},
+	{"key": "bus_depot", "name": "The bus depot", "costs": {"paving": 15, "army_kit": 10}, "rank_key": "grid_key",
+		"fx": [{"stat": "auto_rest_pct", "base": 100, "step": 25, "say": "Auto-run rests +%d%%"}]},
+	{"key": "library", "name": "The library", "costs": {"glass": 15, "ledgers": 15}, "rank_key": "ledger_seal", "opens": "archive",
+		"fx": [{"stat": "paper_pct", "base": 25, "step": 5, "say": "+%d%% papers"}]},
+	{"key": "market_hall", "name": "The market hall", "costs": {"glass": 20, "copper_wire": 20}, "rank_key": "ledger_seal",
+		"fx": [{"stat": "shelf", "base": 1, "step": 0.5, "say": "Fence's shelf +%d"}, {"stat": "fence_pct", "base": 5, "step": 2, "cap": 40, "say": "Fence −%d%%"}]},
+	{"key": "mint", "name": "The mint", "costs": {"ledgers": 30, "army_kit": 20}, "first": {"fuses": 5, "grid_key": 1}, "rank_key": "ledger_seal", "opens": "mint",
+		"fx": [{"stat": "mint_pay", "base": 1.0, "step": 0.25, "say": "Pays tins by worth"}]},
+]
+const REBUILD_GROWTH := 1.35
+const REBUILD_FUSES := 2                 # fuses a rank past the first
+const REBUILD_KEY_RANK := 3              # from this rank, one of the place's rank_key
+const MINT_TINS := 2.0                   # a run's tins from the mint: the town's worth × this × mint_pay, at today's prices
+## The true pinnacles: new people in new places, opened by a rebuild, fought on a host site's crew and drops (`site`,
+## `zone`) under their own name and art; their level the reach + `over`, a level more every PINNACLE_WORTH of worth
+## and every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
+## `first` on the first win only.
+const PINNACLES := [
+	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The City", "hp": 14.0, "dps": 3.0, "over": 2,
+		"drop": "grid_key", "unique": "The Lineman's Lamp"},
+	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Town", "hp": 16.0, "dps": 3.5, "over": 4,
+		"drop": "ledger_seal", "unique": "The Registrar's Satchel"},
+	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Bank", "hp": 20.0, "dps": 4.0, "over": 6,
+		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes"},
+]
+const PINNACLE_WORTH := 4
+const PINNACLE_UNIQUE := 0.25
+
+
+static func rebuild(key: String) -> Dictionary:
+	for r in REBUILDS:
+		if r["key"] == key:
+			return r
+	return {}
+
+
+static func pinnacle(key: String) -> Dictionary:
+	for p in PINNACLES:
+		if p["key"] == key:
+			return p
+	return {}
 ## Gear gated by level (15 Oct, Matt; docs/design/endgame_radio.md §5): a piece's level to wear is its item level
 ## times this, less (this - 1) - the first sites' at 1, the Quartermaster's (item level 9) at 25 - to MAX_LEVEL.
 ## Carried, stashed and sold as any other; it waits for the runner's level. One figure for the pass to tune.

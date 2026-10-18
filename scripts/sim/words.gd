@@ -159,6 +159,22 @@ const STORY := [
 	{"found": "%s: the depot's. One more step (%d of 3).", "made": "Kev: \"That's the depot. The convoy's due. Stop it and we see what they've been moving all along.\"",
 		"won": "Kev: \"So that's the load. All of it, all this time. Keep the radio on. There'll be more of them.\""},
 ]
+## The rebuild (18 Oct, docs/design/rebuild.md): Kev's last line opens it; the places and the order in his words.
+const REBUILD := {
+	"open": "Kev: \"Someone has to put it back together. Might as well be the people who know where everything went.\"",
+	"first_material": "%s. Kev says someone used to want that.",
+	"built": "%s rebuilt: rank %d. The town's worth is %d.",
+	"opened": "%s is open on the map, under the order.",
+	"material": "Brought home: %s",
+	"note": "The first true FIAT note. Its value is as stated. The mint pays double from here.",
+	"order_lost": "%s is still standing.",
+	"order_won": "%s is down. The order is one short.",
+}
+const PINNACLE_WORDS := {
+	"grid": "Kept the lights on for the order's people only.",
+	"archive": "Decides who was born, who owns, who's owed.",
+	"mint": "Prints the money nobody believes in. \"Its value is as stated.\"",
+}
 const SIGNAL_MADE := "A signal: a fix on %s, level %d"
 const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
@@ -538,6 +554,7 @@ const SHELF := {
 	"own_gap": "%s, from a level %d signal on. It drops nowhere else.",
 	"head_gap": "%s at full strength, on a level %d signal at his site. The charm only he carries.",
 	"lorry_gap": "Kev's last beat: the depot's convoy. The pack it comes home with.",
+	"order_gap": "%s, at %s: the order's. Only they carry it.",
 	"own_found": "Only %s has it. It drops nowhere else.",
 	"own_note": "Level %d signal: %s, only here",
 }
@@ -581,6 +598,9 @@ const UNIQUES := {
 	"The Branch Pistol": "The pistol from under the counter at the Bank, kept for a robbery that never came. Then everything was one.",
 	"The Quartermaster's Rifle": "Issued to himself, signed for by himself. Zeroed every Sunday.",
 	"Issue Webbing": "The last set the depot issued, to the last man who signed for it. The pouches are full of paperwork.",
+	"The Lineman's Lamp": "He wore it up the poles when the lights went off for everyone but them. It still finds the live wire first.",
+	"The Registrar's Satchel": "Births, deeds, debts: she carried the town's paperwork about with her in case anyone asked. Nobody did.",
+	"The Issuer's Robes": "Cut for a man who signs money into being. Heavy, because it has to be.",
 	"The Van Keys": "The Carpet Man's. The van's long gone, but the keys were in his pocket, and they're the kind that start anything.",
 	"The Manager's Pen": "His own, not the counter's. Everything he signed, he signed with this, right up to the last day. It still works.",
 	"The Quartermaster's Ledger": "Every round, every blanket, every name, in his hand. What's signed for is yours. He'd say so himself, now.",

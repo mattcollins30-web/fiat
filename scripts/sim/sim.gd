@@ -117,6 +117,10 @@ var _sig: Dictionary = {}           # the signal swapped onto its site: read, or
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the Fence holds the paper on the kit
+var materials := {}                # the rebuild (18 Oct, docs/design/rebuild.md): material key -> count; never lost, kept by a move
+var key_items := {}                # the order's drops: key -> count (the Grid's key, ledger seals, the FIAT note)
+var rebuilt := {}                  # the town's places put back: key -> rank; kept by a move
+var order_beaten := {}             # the true pinnacles: key -> times beaten
 var elapsed := 0.0
 var events: Array = []
 ## The playtest record (11 Oct, Matt: "did we actually log everything required? The answer is not really"): every
@@ -134,6 +138,7 @@ var played_s := 0.0                  # real seconds at the game, the player ther
 var _snaps := 0
 var rng := RandomNumberGenerator.new()
 var mythic_rng := RandomNumberGenerator.new()     # the mythics' own dice (16 Oct): the one roll a find leaves every other draw where it was
+var material_rng := RandomNumberGenerator.new()   # the rebuild's own dice (18 Oct): a run's material leaves every other draw where it was
 var mythics_on := true                  # off for the balance read: a read is never one (docs/design/mythics.md)
 
 
@@ -164,10 +169,12 @@ func _reseed() -> void:
 	if fixed_seed == 0:
 		rng.randomize()
 		mythic_rng.randomize()
+		material_rng.randomize()
 		return
 	_seed_n += 1
 	rng.seed = fixed_seed + _seed_n
 	mythic_rng.seed = fixed_seed + _seed_n + 7919
+	material_rng.seed = fixed_seed + _seed_n + 104729
 
 
 func start() -> void:
@@ -1336,6 +1343,7 @@ func move_yard(trade := "") -> bool:
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "keepsakes": keepsakes.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
+		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
 	if atlas_rank("held_frequency") > 0:
@@ -1359,6 +1367,10 @@ func move_yard(trade := "") -> bool:
 	reach = keep["reach"]
 	signal_seq = keep["signal_seq"]
 	story_beat = keep["story_beat"]
+	materials = keep["materials"]         # the rebuild survives a move (18 Oct, Matt's call 1): what's built, what's held, the order's
+	key_items = keep["key_items"]
+	rebuilt = keep["rebuilt"]
+	order_beaten = keep["order_beaten"]
 	paragon_banked = keep["paragon_banked"]
 	chronicle = keep["chronicle"]
 	chron_count = keep["chron_count"]
@@ -1554,7 +1566,8 @@ func mythic_pick() -> Dictionary:
 ## A search's find at a site being a paper (the Map's Papers tile, 15 Oct; the find's own roll).
 func paper_odds(i: int) -> float:
 	var shape: Dictionary = Data.TIERS[i]["shape"]
-	return Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0)
+	return Data.PAPER_DROP * float(shape.get("paper", 1.0)) * (Data.FX["node/light_fingers.papers"] if has_node("light_fingers") else 1.0) * (Data.FX["yard/tracker.papers"] if yard_has("tracker") else 1.0) \
+		* (1.0 + town_stat("paper_pct") / 100.0) * (2.0 if has_rule("registrars_satchel") else 1.0)     # the library, the Registrar's Satchel (18 Oct)
 
 
 func site_state(i: int) -> String:
@@ -2927,6 +2940,8 @@ func shelf_chase() -> Array:
 				if int(b["zone"]) == int(u["pinnacle"]):
 					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], lv_at(int(b["tier"]), pinnacle_depth(int(b["tier"])))]})
 	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"]})     # the depot's, Kev's last beat (15 Oct)
+	for p in Data.PINNACLES:
+		out.append({"name": p["unique"], "found": p["unique"] in shelf, "where": Words.SHELF["order_gap"] % [p["who"], Words.mid(str(p["place"]))]})     # the order's (18 Oct)
 	return out
 
 
@@ -3009,7 +3024,7 @@ func pack_used(m: Dictionary) -> int:
 
 func rest_rate() -> float:
 	var base: float = Data.REST_BASE + (Data.FX["yard/beds"] if yard_has("beds") else 0.0) + (Data.FX["yard/ward"] if yard_has("ward") else 0.0)
-	return base * (Data.FX["node/second_wind"] if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0)
+	return base * (Data.FX["node/second_wind"] if has_node("second_wind") else 1.0) * (1.0 + tree_sum("rest_pct") / 100.0) * (1.0 + town_stat("rest_pct") / 100.0)     # the pumping station (18 Oct)
 
 
 ## The Clinic's shelf and the Fence's, by the Yard's picks.
@@ -3018,7 +3033,7 @@ func clinic_stock() -> int:
 
 
 func market_stock() -> int:
-	return Data.MARKET_STOCK + (Data.FX["yard/stall"] if yard_has("stall") else 0) + (Data.FX["yard/shopfront"] if yard_has("shopfront") else 0)
+	return Data.MARKET_STOCK + (Data.FX["yard/stall"] if yard_has("stall") else 0) + (Data.FX["yard/shopfront"] if yard_has("shopfront") else 0) + int(floor(town_stat("shelf")))     # the market hall (18 Oct)
 
 
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
@@ -4461,9 +4476,10 @@ func effective(i: int) -> Dictionary:
 	var night_run: bool = has_node("night_work") or atlas_rank("after_dark") > 0 or is_night()
 	if night_run:
 		var night := modifier("Night")
-		if not yard_has("floodlights"):     # the Generator's Floodlights: night's finds without its slow feet
+		if not yard_has("floodlights") and town_stat("night_feet") <= 0.0 and not has_rule("linemans_lamp"):     # the Generator's Floodlights, the substation, the Lineman's Lamp: night's finds without its slow feet
 			e["pace"] *= 1.0 - (1.0 - night.get("pace", 1.0)) * (Data.FX["yard/night_set"] if yard_has("night_set") else 1.0)   # the Radio's Night set: the slower feet halved
-		e["rarity"] += night.get("rarity", 0.0) * (Data.FX["atlas/after_dark"] if atlas_rank("after_dark") > 0 else 1.0)   # After dark: the dark gives half again
+		e["rarity"] += night.get("rarity", 0.0) * (Data.FX["atlas/after_dark"] if atlas_rank("after_dark") > 0 else 1.0) * (2.0 if has_rule("linemans_lamp") else 1.0)   # After dark: the dark gives half again
+		e["rarity"] += town_stat("night_rarity_pct") / 100.0     # the substation's ranks past the first
 		e["intel"].append("Night")
 	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
 	e["drop"] *= 1.0 + Data.FX["atlas/easy_pickings"] * atlas_rank("easy_pickings")
@@ -4494,7 +4510,10 @@ func effective(i: int) -> Dictionary:
 			walks = true
 	var b := boss_of(i)
 	var sig_here: bool = not _sig.is_empty() and int(_sig["site"]) == i
-	if sig_here and bool(_sig.get("head", false)) and not zone_boss(int(_sig["zone"])).is_empty():
+	if sig_here and _sig.has("order"):
+		e["boss"] = order_head(str(_sig["order"]), e)     # the order's true pinnacle (18 Oct): their own head, on the host site's crew
+		e["name"] = Data.pinnacle(str(_sig["order"]))["place"]
+	elif sig_here and bool(_sig.get("head", false)) and not zone_boss(int(_sig["zone"])).is_empty():
 		e["boss"] = boss_form(zone_boss(int(_sig["zone"])), e, true)     # a signal's extra: the crew's head at full strength
 	elif (boss_armed.get(i, false) and is_convoy(i)) or (sig_here and bool(_sig.get("convoy_fight", false))):     # the depot's signal: the convoy (15 Oct)
 		# the convoy: all three, one after another, come light (CONVOY_HP of their HP, CONVOY_DPS of their fire): the crews stayed with the load
@@ -4605,6 +4624,354 @@ func set_depth(i: int, d: int) -> void:
 		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
 		var top: int = maxi(best_depth[i] + 1, (ladder_floor() + 1) if best_depth[i] > 0 else 1) if campaign_done() else 1
 		depth[i] = clampi(d, 1, top)
+
+
+# ------------------------------------------------------------------ the rebuild (18 Oct, docs/design/rebuild.md)
+
+## A saved count map, its numbers back to ints (through a save they came back floats).
+static func _counts(v: Variant) -> Dictionary:
+	var out := {}
+	if v is Dictionary:
+		for k in v:
+			if int(v[k]) != 0:
+				out[str(k)] = int(v[k])
+	return out
+
+
+## The rebuild opens on Kev's last line: the depot's beat beaten.
+func rebuild_open() -> bool:
+	return story_beat >= Data.STORY_BEATS.size()
+
+
+func rebuild_rank(key: String) -> int:
+	return int(rebuilt.get(key, 0))
+
+
+## The town's worth: every rank built, the number the endgame chases. Never down; a move keeps it.
+func town_worth() -> int:
+	var w := 0
+	for k in rebuilt:
+		w += int(rebuilt[k])
+	return w
+
+
+## What the next rank of a place wants: material and key-item keys -> counts.
+func rebuild_cost(key: String) -> Dictionary:
+	var r: Dictionary = Data.rebuild(key)
+	if r.is_empty():
+		return {}
+	var next: int = rebuild_rank(key) + 1
+	var out := {}
+	for m in r["costs"]:
+		out[m] = int(round(int(r["costs"][m]) * pow(Data.REBUILD_GROWTH, next - 1)))
+	if next == 1:
+		for m in r.get("first", {}):
+			out[m] = int(out.get(m, 0)) + int(r["first"][m])
+	if next >= 2:
+		out["fuses"] = int(out.get("fuses", 0)) + Data.REBUILD_FUSES * (next - 1)
+	if next >= Data.REBUILD_KEY_RANK:
+		out[r["rank_key"]] = int(out.get(r["rank_key"], 0)) + 1
+	return out
+
+
+## Held of a material or a key item.
+func held_of(k: String) -> int:
+	return int(key_items.get(k, 0)) if Data.KEY_ITEMS.has(k) else int(materials.get(k, 0))
+
+
+## A material's or a key item's name.
+static func thing_name(k: String) -> String:
+	if Data.KEY_ITEMS.has(k):
+		return str(Data.KEY_ITEMS[k]["name"])
+	return str(Data.MATERIALS.get(k, {"name": k})["name"])
+
+
+## Why the next rank can't be built, or "".
+func rebuild_block(key: String) -> String:
+	if Data.rebuild(key).is_empty():
+		return "no such place"
+	if not rebuild_open():
+		return "After Kev's story"
+	if mission != null:
+		return "The runner is out"
+	var cost := rebuild_cost(key)
+	for k in cost:
+		if held_of(k) < int(cost[k]):
+			return "Short of %s" % (Words.mid(thing_name(k)) if Data.KEY_ITEMS.has(k) else thing_name(k).to_lower())     # a key item's name keeps its proper noun
+	return ""
+
+
+func can_rebuild(key: String) -> bool:
+	return rebuild_block(key) == ""
+
+
+func rebuild_place(key: String) -> bool:
+	if not can_rebuild(key):
+		return false
+	var cost := rebuild_cost(key)
+	for k in cost:
+		var bag: Dictionary = key_items if Data.KEY_ITEMS.has(k) else materials
+		bag[k] = held_of(k) - int(cost[k])
+		if int(bag[k]) <= 0:
+			bag.erase(k)                       # none left: off the count, as a save keeps it
+	rebuilt[key] = rebuild_rank(key) + 1
+	var r: Dictionary = Data.rebuild(key)
+	chron("rebuild", {"key": key, "rank": rebuild_rank(key), "worth": town_worth(), "cost": cost.duplicate()})
+	log_event(Words.REBUILD["built"] % [r["name"], rebuild_rank(key), town_worth()])
+	if rebuild_rank(key) == 1 and r.has("opens"):
+		log_event(Words.REBUILD["opened"] % Data.pinnacle(str(r["opens"]))["place"])
+	_yard_changed("")                          # the shelf and the prices read the town
+	return true
+
+
+## One effect at a rank: base, and step a rank past the first, to its cap.
+static func fx_at(fx: Dictionary, rank: int) -> float:
+	if rank <= 0:
+		return 0.0
+	var v: float = float(fx["base"]) + float(fx["step"]) * (rank - 1)
+	return minf(v, float(fx["cap"])) if fx.has("cap") else v
+
+
+## What the town does, by stat: every place's effect at its rank, summed.
+func town_stat(stat: String) -> float:
+	var v := 0.0
+	for r in Data.REBUILDS:
+		var rk: int = int(rebuilt.get(r["key"], 0))
+		if rk <= 0:
+			continue
+		for fx in r["fx"]:
+			if fx["stat"] == stat:
+				v += fx_at(fx, rk)
+	return v
+
+
+## A place's effects in words at a rank (its next rank's to show what's coming): the lines with anything in them.
+func rebuild_words(key: String, rank: int) -> Array:
+	var out: Array = []
+	for fx in Data.rebuild(key).get("fx", []):
+		var v: float = fx_at(fx, maxi(1, rank))
+		if v <= 0.0:
+			continue
+		out.append(str(fx["say"]) % int(floor(v)) if str(fx["say"]).contains("%") else str(fx["say"]))
+	return out
+
+
+## The mint's tins on a run: the worth × its pay × MINT_TINS, at today's prices; twice that with the FIAT note held.
+func mint_tins() -> float:
+	var pay: float = town_stat("mint_pay")
+	if pay <= 0.0:
+		return 0.0
+	return town_worth() * pay * Data.MINT_TINS * inflation() * (2.0 if held_of("fiat_note") > 0 else 1.0)
+
+
+## The material a site's run brings: its own; a signal or the order's on an Outskirts site, its crew's area's first.
+func material_at(i: int) -> String:
+	var kind: String = Data.SITE_MATERIAL[i]
+	if kind == "" and not _sig.is_empty() and int(_sig["site"]) == i:
+		for k in Data.MATERIAL_ORDER:
+			if int(Data.MATERIALS[k]["area"]) == maxi(1, int(_sig["zone"])):
+				return k
+	return kind
+
+
+## A run's chance at its site's material: MATERIAL_RUN on the campaign, a signal's by its level; a move adds a share.
+func material_odds(i: int) -> float:
+	if material_at(i) == "":
+		return 0.0
+	var base: float = Data.MATERIAL_RUN
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		base = Data.MATERIAL_SIGNAL + Data.MATERIAL_SIGNAL_STEP * maxi(0, signal_level(_sig) - Data.REACH_START)
+	return minf(Data.MATERIAL_CAP, base + Data.MATERIAL_MOVE * yard_moves)
+
+
+## The run's materials home, whatever happened (death included): a head's handful, the run's roll, a signal's fuses.
+func _bank_materials(m: Dictionary) -> void:
+	if m.get("dry", false) or _dry_on:
+		return
+	var got: Dictionary = m.get("materials", {}).duplicate()
+	var i: int = int(m["tier"])
+	if int(m["kills"]) > 0:
+		var kind: String = material_at(i)
+		if kind != "" and material_rng.randf() < material_odds(i):
+			got[kind] = int(got.get(kind, 0)) + material_rng.randi_range(Data.MATERIAL_HANDFUL[0], Data.MATERIAL_HANDFUL[1])
+		if not _sig.is_empty() and int(_sig["site"]) == i and material_rng.randf() < Data.FUSE_SIGNAL:
+			got["fuses"] = int(got.get("fuses", 0)) + material_rng.randi_range(1, 2)
+	m["materials"] = got
+	if got.is_empty():
+		return
+	var first: bool = materials.is_empty() and town_worth() == 0
+	var said: Array = []
+	for k in Data.MATERIAL_ORDER:
+		if got.has(k):
+			materials[k] = int(materials.get(k, 0)) + int(got[k])
+			said.append("%d %s" % [int(got[k]), thing_name(k).to_lower()])
+	chron("materials", {"got": got.duplicate()})
+	log_event(Words.REBUILD["material"] % ", ".join(said))
+	if first:
+		log_event(Words.REBUILD["first_material"] % thing_name(got.keys()[0]))
+
+
+## A crew's head down: their handful of the site's material, home with the run.
+func _head_materials(m: Dictionary) -> void:
+	var kind: String = material_at(int(m["tier"]))
+	if kind == "" or m.get("dry", false):
+		return
+	m["materials"] = m.get("materials", {})
+	m["materials"][kind] = int(m["materials"].get(kind, 0)) + material_rng.randi_range(Data.MATERIAL_HEAD[0], Data.MATERIAL_HEAD[1])
+
+
+## The order's true pinnacles: open once their rebuild is.
+func order_open(k: String) -> bool:
+	var p: Dictionary = Data.pinnacle(k)
+	return not p.is_empty() and rebuild_rank(str(p["opened_by"])) > 0
+
+
+func any_order_open() -> bool:
+	for p in Data.PINNACLES:
+		if order_open(p["key"]):
+			return true
+	return false
+
+
+## A true pinnacle's level: your reach and its own step past it, a level more every PINNACLE_WORTH of the town's worth
+## and every time it's been beaten.
+func order_level(k: String) -> int:
+	var p: Dictionary = Data.pinnacle(k)
+	@warning_ignore("integer_division")
+	return maxi(Data.REACH_START, reach) + int(p["over"]) + town_worth() / Data.PINNACLE_WORTH + int(order_beaten.get(k, 0))
+
+
+## A true pinnacle as a signal: laid on its host site the way a signal is, under its own name and head.
+func order_sig(k: String) -> Dictionary:
+	var p: Dictionary = Data.pinnacle(k)
+	var site: int = int(p["site"])
+	return {"id": -1, "site": site, "zone": int(p["zone"]), "depth": depth_for_level(site, order_level(k)), "codes": [], "papers": [],
+		"head": false, "convoy": false, "line": 0, "story": -1, "order": k}
+
+
+## The head a true pinnacle fields, formed on the fight's figures as a crew's head is.
+func order_head(k: String, e: Dictionary) -> Dictionary:
+	var p: Dictionary = Data.pinnacle(k)
+	var b := boss_form({"name": p["who"], "hp": p["hp"], "dps": p["dps"], "zone": p["zone"]}, e, false)
+	b["order"] = k
+	return b
+
+
+## A true pinnacle's figures, as it would run.
+func order_read(k: String) -> Dictionary:
+	if not _sig.is_empty() or not order_open(k):
+		return {}
+	var sg := order_sig(k)
+	_sig_on(sg)
+	var e := effective(int(sg["site"]))
+	_sig_off()
+	return e
+
+
+## A true pinnacle's odds, read a few dry runs at a time as a signal's are. [odds so far, settled].
+func order_odds(k: String) -> Array:
+	if not _sig.is_empty() or not order_open(k):
+		return [0.0, false]
+	var sg := order_sig(k)
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var key: String = "order/%s/%d" % [k, int(sg["depth"])]
+	var home = _surv_cache.get(i, null)
+	if _sig_odds.has(key):
+		_surv_cache[i] = _sig_odds[key]
+	else:
+		_surv_cache.erase(i)
+	var o: float = survival(i)
+	var done: bool = odds_settled(i)
+	_sig_odds[key] = _surv_cache[i]
+	if home != null:
+		_surv_cache[i] = home
+	else:
+		_surv_cache.erase(i)
+	_sig_off()
+	return [o, done]
+
+
+## The odds read so far, without running any (the Map's order card, as signal_odds_now is the Radio's).
+func order_odds_now(k: String) -> Array:
+	if not _sig.is_empty() or not order_open(k):
+		return [0.0, false]
+	var sg := order_sig(k)
+	var key: String = "order/%s/%d" % [k, int(sg["depth"])]
+	if not _sig_odds.has(key):
+		return [0.0, false]
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var c: Array = _sig_odds[key]
+	var out: Array = [float(c[1]), int(c[2]) >= odds_runs()] if c[0] == _odds_key(i) else [0.0, false]
+	_sig_off()
+	return out
+
+
+## Why a true pinnacle can't be run now, or "".
+func order_block(k: String) -> String:
+	var p: Dictionary = Data.pinnacle(k)
+	if p.is_empty():
+		return "no such place"
+	if not order_open(k):
+		return "Rebuild %s to open" % str(Data.rebuild(str(p["opened_by"]))["name"]).to_lower()
+	if not can_deploy() or not _sig.is_empty():
+		return "The runner is out" if mission != null else "The runner can't go"
+	return ""
+
+
+## Run a true pinnacle: laid on its host site for the run, as a signal is; nothing spent to go.
+func deploy_order(k: String) -> bool:
+	if order_block(k) != "":
+		return false
+	var sg := order_sig(k)
+	_sig_on(sg)
+	deploy(int(sg["site"]))
+	if mission == null:
+		_sig_off()
+		return false
+	mission["signal"] = sg
+	chron("order_run", {"key": k, "level": order_level(k)})
+	return true
+
+
+## A true pinnacle's head down: the run's pay, their unique (always the first time), their handful of materials.
+func _order_down(m: Dictionary, t: Dictionary, b: Dictionary) -> void:
+	var k: String = str(b["order"])
+	var p: Dictionary = Data.pinnacle(k)
+	var first: bool = int(order_beaten.get(k, 0)) == 0
+	chron("order_down", {"key": k, "first": first, "level": int(t.get("level", 0))})
+	_head_materials(m)
+	if first or rng.randf() < Data.PINNACLE_UNIQUE:
+		var it := Items.roll_unique(_unique_named(str(p["unique"])), rng, int(t.get("level", -1)), int(t["loot_tier"]))
+		m["found"].append(it)
+		_read(it)
+		log_event("%s is down. Found: %s." % [p["who"], it["unique"]])
+	else:
+		log_event("%s is down." % p["who"])
+
+
+## A true pinnacle's run over: beaten, its drop comes home (and the first time its keepsake); either way the site goes
+## back to its campaign self. The reach is the signals'; the order's never moves it.
+func _order_done(won: bool) -> void:
+	var k: String = str(_sig["order"])
+	var p: Dictionary = Data.pinnacle(k)
+	chron("order_done", {"key": k, "won": won})
+	if not won:
+		log_event(Words.REBUILD["order_lost"] % p["who"])
+		return
+	var first: bool = int(order_beaten.get(k, 0)) == 0
+	order_beaten[k] = int(order_beaten.get(k, 0)) + 1
+	var drop: String = str(p.get("drop", ""))
+	if drop != "":
+		key_items[drop] = held_of(drop) + 1
+		log_event("Brought home: %s" % thing_name(drop))
+	if first and p.has("first"):
+		var f: String = str(p["first"])
+		key_items[f] = held_of(f) + 1
+		if f == "fiat_note":
+			log_event(Words.REBUILD["note"])
+	log_event(Words.REBUILD["order_won"] % p["who"])
 
 
 # ------------------------------------------------------------------ signals (15 Oct, the Radio's endgame)
@@ -4976,6 +5343,10 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		return
 	var d: int = signal_level(_sig)
 	var won: bool = bool(m["cleared"]) and not died and not m.get("ghost_pending", false) and not bool(m.get("timed_out", false)) and not (m.has("boss") and bool(m["boss"].get("alive", false)))
+	if _sig.has("order"):
+		_order_done(won)
+		_sig_off()
+		return
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
 	if won and d >= reach:
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
@@ -4988,6 +5359,8 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		chron("story", {"beat": beat})
 		log_event(Words.STORY[beat]["won"])
 		story_beat = mini(story_beat + 1, Data.STORY_BEATS.size())
+		if rebuild_open():
+			log_event(Words.REBUILD["open"])      # Kev's last line opens the rebuild (18 Oct)
 	elif won and rng.randf() < Data.STORY_DROP * (Data.FX["yard/lorry_watch"] if yard_has("lorry_watch") else 1.0):     # the Radio's Lorry watch
 		_story_find()
 	_sig_off()
@@ -5360,9 +5733,10 @@ func advance(seconds: float) -> void:
 				auto_tier = -1   # the tier closed under it; rest instead
 			continue
 		if auto_tier >= 0 and rest_rate() > 0.0:
-			# rest only as far as the redeploy point, then go again
-			var dt := minf(left, (ready - hp) / rest_rate())
-			hp = minf(max_hp(), hp + rest_rate() * dt)
+			# rest only as far as the redeploy point, then go again; the bus depot's ranks rest it quicker (18 Oct)
+			var auto_rest: float = rest_rate() * (1.0 + town_stat("auto_rest_pct") / 100.0)
+			var dt := minf(left, (ready - hp) / auto_rest)
+			hp = minf(max_hp(), hp + auto_rest * dt)
 			left -= maxf(dt, 0.001)
 			continue
 		if hp < max_hp():
@@ -5632,7 +6006,7 @@ func _take(m: Dictionary, amount: float) -> float:
 
 
 func _boss_entry(b: Dictionary) -> Dictionary:
-	return {"name": b["name"], "hp": b["hp"], "dps": b["dps"], "zone": b["zone"], "pinnacle": b.get("pinnacle", false), "started": false, "alive": true}
+	return {"name": b["name"], "hp": b["hp"], "dps": b["dps"], "zone": b["zone"], "pinnacle": b.get("pinnacle", false), "order": str(b.get("order", "")), "started": false, "alive": true}
 
 
 ## A run's event on the dice, or "" (17 Oct, Matt: a convoy on the very first Allotments run took both starter
@@ -6208,6 +6582,10 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 	_earn_points(before)
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
 	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))
+	if str(b.get("order", "")) != "":
+		_order_down(m, t, b)                  # the order's true pinnacle: their own drops, none of a crew's
+		return
+	_head_materials(m)                        # the rebuild (18 Oct): a head's handful of the site's material
 	if b.get("pinnacle", false) and atlas_rank("head_start") > 0:
 		atlas_points += 1                     # Head start: a head beaten at full strength pays a map point
 		log_event(Words.MAP["head_start"] % b["name"])
@@ -6525,6 +6903,8 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	var cd: int = int(depth[m["tier"]])     # the site's own depth: a signal's t["depth"] is its level's on the Barracks (D3), not this site's (D14 review)
 	var first_clear: bool = not seen.has("cleared/%d" % m["tier"])
+	if m.has("signal") and m["signal"].has("order"):
+		cd = 0                                # the order's run (18 Oct): no depth, no best signal, no Yard column; the reach is the signals'
 	if first_clear or cd > best_depth[m["tier"]]:
 		chron("clear", {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(cd), "first": first_clear,
 			"site_level": int(t.get("level", 0)), "dps": snappedf(dps(), 0.1), "kit": loadout_value()})
@@ -6942,6 +7322,10 @@ func _extract() -> void:
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= Data.FX["node/cap_the_lot"]                      # The lot: a full pack pays double
+	if has_rule("issuers_robes"):
+		m["cash"] *= 1.0 + town_worth() / 100.0                      # the Issuer's Robes: +1% a point of the town's worth
+	m["cash"] += mint_tins()                                         # the mint (18 Oct): the town's worth pays on every run home
+	_bank_materials(m)
 	_earn(float(m["cash"]))
 	var base0: float = a_gamble_base()
 	gamble_base = clampf(lerp(base0, _takings_run, 0.25), base0 * (1.0 - Data.GAMBLE_STEP), base0 * (1.0 + Data.GAMBLE_STEP))     # before takings moves: the first run starts from its stand-in
@@ -7075,6 +7459,8 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	d["dot_gear"] = snappedf(_affix_sum("dot_pct"), 0.1)
 	d["dot_tree"] = snappedf(tree_sum("dot_pct"), 0.1)
 	d["signal"] = m.has("signal")
+	if m.has("signal") and m["signal"].has("order"):
+		d["order"] = str(m["signal"]["order"])     # the order's runs apart from the signals' (18 Oct)
 	var gear := 0
 	var wearable := 0
 	var at_mine := 0
@@ -7151,6 +7537,7 @@ func _kia() -> void:
 		"left": m["found"].size() + m["left"], "cash": 0.0, "xp": 0.0, "hp_lost": m["hp_start"], "time": m["elapsed"],
 		"lost_value": lost, "searches": m["searches"], "patrols": m["patrols"],
 	}
+	_bank_materials(m)                       # the rebuild's materials come home whatever happens (18 Oct, Matt's call: never lost)
 	_chron_run(m, "Dead", {"lost_value": lost, "insured": bool(m.get("insured", false)), "searches": int(m["searches"]), "patrols": int(m["patrols"]),
 		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1], "held_lv": _deepest_held()[2]})
@@ -7971,7 +8358,7 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 func price(it: Dictionary) -> int:
 	if Items.is_ammo(it) and not Items.base_of(it).has("damage_pct") and it["affixes"].is_empty():
 		return ammo_price(str(Items.base_of(it)["type"]))
-	return _inf(it["value"] * Data.MARKET_MARKUP * (Data.FX["node/buyers_market.buy"] if has_node("buyers_market") else 1.0))
+	return _inf(it["value"] * Data.MARKET_MARKUP * (Data.FX["node/buyers_market.buy"] if has_node("buyers_market") else 1.0) * (1.0 - town_stat("fence_pct") / 100.0))     # the market hall (18 Oct)
 
 
 func buy(i: int) -> bool:
@@ -8171,7 +8558,7 @@ func _restock_clinic() -> void:
 
 
 func clinic_price(it: Dictionary) -> int:
-	return int(round(it["value"] * Data.MED_PRICE))
+	return int(round(it["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0)))     # the pumping station (18 Oct)
 
 
 func buy_clinic(id: int) -> bool:
@@ -8207,7 +8594,7 @@ func med_stock() -> Array:
 
 
 func med_price(base: Dictionary) -> int:
-	return _inf(base["value"] * Data.MED_PRICE)
+	return _inf(base["value"] * Data.MED_PRICE * (1.0 - town_stat("clinic_pct") / 100.0))
 
 
 func buy_med(name: String) -> bool:
@@ -8243,7 +8630,7 @@ func away_cap_s() -> float:
 ## The Clinic's two jobs, priced apart (Matt, 7 Oct: "heal my HP and treat the wound separately"): the HP back
 ## at TREAT_CASH_PER_HP a point, the wound at WOUND_CASH a level; the Clinic's discount on both.
 func _treat_rate() -> float:
-	return inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0)
+	return inflation() * maxf(0.2, 1.0 - tree_sum("treat_pct") / 100.0) * (1.0 - town_stat("clinic_pct") / 100.0)
 
 
 func heal_cost() -> int:
@@ -8526,6 +8913,7 @@ func _state() -> Dictionary:
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat,
+		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
@@ -8725,6 +9113,10 @@ func load_dict(d: Dictionary) -> void:
 	reach = int(d.get("reach", Data.REACH_START))
 	signal_seq = int(d.get("signal_seq", 0))
 	story_beat = int(d.get("story_beat", 0))
+	materials = _counts(d.get("materials", {}))
+	key_items = _counts(d.get("key_items", {}))
+	rebuilt = _counts(d.get("rebuilt", {}))
+	order_beaten = _counts(d.get("order_beaten", {}))
 	_sig = {}
 	if mission != null and mission.get("signal", null) is Dictionary:
 		_sig = mission["signal"]                 # a signal's run, saved mid-run: its site still carries it

@@ -128,10 +128,10 @@ func _outskirts_checks(main) -> void:
 	_check(again == old, "a moved save moved twice")
 	# Runs: the four zones, the Outskirts first, no map; the Radio has it
 	main.show_room(main.MISSIONS)
-	_check(main._missions._zone_buttons.size() == 4 and main._missions._zone_buttons[0].text.begins_with("The Outskirts"), "Runs does not show the four zones with the Outskirts first")
+	_check(main._missions._zone_buttons.size() == 5 and main._missions._zone_buttons[0].text.ends_with("Outskirts") and main._missions._zone_buttons[4].text.begins_with("The order"), "Runs does not show the four zones with the Outskirts first, and the order's tab last")
 	main.show_room(main.COMMS)
 	main.refresh()
-	_check(main._radio._views.size() == 2 and (main._radio._views[1].disabled == not sim.campaign_done()), "the Radio's map button does not follow the campaign")
+	_check(main._radio._views.size() == 3 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()), "the Radio's map and town buttons do not follow the campaign")
 	_check_fit(main, "Radio (twelve sites)")
 	print("the Outskirts ok: first, three sites, no crew, the Estate after, levels, the old save moved, Runs' four zones, the Radio's map")
 
@@ -615,6 +615,7 @@ func _init() -> void:
 	_worst_case(main)
 	_yard_own_checks(main.sim)
 	_words_checks(main)
+	_rebuild_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -4532,9 +4533,9 @@ func _book_checks(main) -> void:
 	bk.pick_also("The mantelpiece")
 	main.refresh()
 	_check(bk.also_button("The mantelpiece").text.contains("2 of %d" % Data.UNIQUES.filter(func(u): return not u.get("mythic", false)).size()), "the shelf's chip is off: %s" % bk.also_button("The mantelpiece").text)
-	# the chase first (endgame part 3): thirteen gaps in TEXT_3, where each is under it; then the rest found, in order
+	# the chase first (endgame part 3): sixteen gaps in TEXT_3 (the order's three since 18 Oct), where each is under it; then the rest found, in order
 	var chase: Array = sim.shelf_chase()
-	_check(chase.size() == 13 and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked Streets, from a level"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
+	_check(chase.size() == 13 + Data.PINNACLES.size() and not chase[0]["found"] and str(chase[0]["where"]).begins_with("Ransacked Streets, from a level"), "the shelf's chase is off: %d rows, '%s'" % [chase.size(), str(chase[0]["where"]) if not chase.is_empty() else ""])
 	var row0: Dictionary = bk._cells[0]
 	_check(row0["name"].text == "1. %s" % chase[0]["name"] and row0["lines"][0].text.begins_with("Ransacked Streets") and row0["name"].get_theme_color("font_color") == Pal.TEXT_3, "the shelf's first gap is off: '%s' / '%s'" % [row0["name"].text, row0["lines"][0].text])
 	var shelf_branch: Dictionary = main._barracks._shelf_branch()
@@ -4543,7 +4544,8 @@ func _book_checks(main) -> void:
 		main._barracks.drawer_page = pg
 		for nd in main._barracks._shelf_branch()["nodes"]:
 			all_names.append(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
-	_check(all_names.size() == 15 and all_names[13] == "Lucky Cap" and all_names[14] == "Jump Leads" and all_names[12] == Data.CONVOY_UNIQUE, "the shelf's order is off: %s" % str(all_names))
+	var n_ord: int = Data.PINNACLES.size()
+	_check(all_names.size() == 15 + n_ord and all_names[13 + n_ord] == "Lucky Cap" and all_names[14 + n_ord] == "Jump Leads" and all_names[12] == Data.CONVOY_UNIQUE and all_names[13] == Data.PINNACLES[0]["unique"], "the shelf's order is off: %s" % str(all_names))
 	main._barracks.drawer_page = 0
 	_check_fit(main, "Caravan (the shelf)")
 	# a site's own found fills its gap
@@ -14878,3 +14880,182 @@ func _yard_own_checks(sim) -> void:
 	# the Spare Key spends no rounds (Q5)
 	var key_it: Dictionary = Items.roll_unique(sim._unique_named("The Spare Key"), sim.rng)
 	_check(Items.free_rounds(key_it) and Items.ammo_words(key_it) == "Takes no rounds" and sim.has_rounds(key_it), "the Spare Key wants rounds")
+
+
+## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "go with your picks and build it up - no balance yet"): shut till
+## Kev's story is done; a place's costs, ranks and what it does; materials home whatever happens and through a move and
+## a save; the order's pinnacles open on their rebuild, run as signals, drop their things; the town view and the order
+## tab fit, every chip shown.
+func _rebuild_checks(main) -> void:
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	_open_camp(s)
+	for z in range(Data.ZONES.size()):
+		s.bosses_beaten[z] = true
+		for i in Data.ZONES[z]["tiers"]:
+			s.best_depth[i] = 1
+	_check(s.campaign_done(), "the fixture: the campaign is not done")
+	_check(not s.rebuild_open() and s.rebuild_block("substation") == "After Kev's story", "the rebuild opens before Kev's story: '%s'" % s.rebuild_block("substation"))
+	s.story_beat = Data.STORY_BEATS.size()
+	var c1: Dictionary = s.rebuild_cost("substation")
+	_check(c1 == {"copper_wire": 20, "cable_drums": 10}, "the substation's first build wants %s" % str(c1))
+	_check(s.rebuild_block("substation").begins_with("Short of"), "the substation builds with nothing held")
+	s.materials = {"copper_wire": 100, "cable_drums": 100, "paving": 100, "glass": 100, "ledgers": 200, "army_kit": 100, "fuses": 50}
+	var rest0: float = s.rest_rate()
+	var med0: int = s.med_price(Items.base_named(Data.MEDICAL, "Bandage"))
+	var stock0: int = s.market_stock()
+	var paper0: float = s.paper_odds(8)
+	_check(s.rebuild_place("substation") and s.rebuild_rank("substation") == 1 and s.town_worth() == 1 and int(s.materials["copper_wire"]) == 80 and int(s.materials["cable_drums"]) == 90,
+		"the substation's build: rank %d, worth %d, %s" % [s.rebuild_rank("substation"), s.town_worth(), str(s.materials)])
+	_check(s.order_open("grid") and not s.order_open("archive") and s.town_stat("night_feet") == 1.0, "the substation did not open the Grid, or keep night's pace")
+	var c2: Dictionary = s.rebuild_cost("substation")
+	_check(int(c2.get("fuses", 0)) == Data.REBUILD_FUSES and int(c2["copper_wire"]) == int(round(20 * Data.REBUILD_GROWTH)) and not c2.has("grid_key"), "rank 2 wants %s" % str(c2))
+	s.rebuild_place("substation")
+	var c3: Dictionary = s.rebuild_cost("substation")
+	_check(int(c3.get("grid_key", 0)) == 1 and int(c3["fuses"]) == 2 * Data.REBUILD_FUSES, "rank 3 wants %s" % str(c3))
+	_check(s.rebuild_block("substation") == "Short of the Grid's key", "rank 3 without the Grid's key: '%s'" % s.rebuild_block("substation"))
+	var cm: Dictionary = s.rebuild_cost("mint")
+	_check(int(cm.get("grid_key", 0)) == 1 and int(cm.get("fuses", 0)) == 5, "the mint's first build wants %s" % str(cm))
+	for k in ["pumping", "library", "market_hall"]:
+		_check(s.rebuild_place(k), "%s would not build: %s" % [k, s.rebuild_block(k)])
+	_check(is_equal_approx(s.rest_rate(), rest0 * 1.5), "the pumping station's rest: %.3f from %.3f" % [s.rest_rate(), rest0])
+	_check(s.med_price(Items.base_named(Data.MEDICAL, "Bandage")) < med0 or med0 <= 5, "the pumping station left the Clinic's prices")
+	_check(s.market_stock() == stock0 + 1, "the market hall's shelf: %d from %d" % [s.market_stock(), stock0])
+	_check(is_equal_approx(s.paper_odds(8), paper0 * 1.25), "the library's papers: %.4f from %.4f" % [s.paper_odds(8), paper0])
+	_check(s.mint_tins() == 0.0, "the town pays before the mint")
+	s.key_items["grid_key"] = 1
+	_check(s.rebuild_place("mint") and int(s.key_items.get("grid_key", 0)) == 0 and s.mint_tins() > 0.0 and s.order_open("mint"), "the mint: %s, %.1f tins" % [s.rebuild_block("mint"), s.mint_tins()])
+	var tins: float = s.mint_tins()
+	s.key_items["fiat_note"] = 1
+	_check(is_equal_approx(s.mint_tins(), tins * 2.0), "the FIAT note did not double the mint")
+	for k in ["substation", "pumping", "bus_depot", "library", "market_hall", "mint"]:
+		_check(not s.rebuild_words(k, 1).is_empty(), "%s has no words" % k)
+	# materials: a head's handful and the run's roll home, death included
+	var m := {"tier": 3, "kills": 1, "materials": {"glass": 2}, "found": []}
+	var g0: int = s.held_of("glass")
+	s._bank_materials(m)
+	_check(s.held_of("glass") == g0 + 2, "the run's materials did not come home: %d from %d" % [s.held_of("glass"), g0])
+	_check(Data.SITE_MATERIAL.size() == Data.TIERS.size() and s.material_at(0) == "" and s.material_at(3) == "copper_wire" and s.material_odds(0) == 0.0 and is_equal_approx(s.material_odds(3), Data.MATERIAL_RUN + Data.MATERIAL_MOVE * s.yard_moves), "the sites' materials are off")
+	s.deploy(3)
+	_check(s.mission != null, "the fixture: no run to die on")
+	if s.mission != null:
+		s.mission["materials"] = {"paving": 3}
+		var p0: int = s.held_of("paving")
+		s._kia()
+		_check(s.held_of("paving") == p0 + 3, "a death cost the run's materials: %d from %d" % [s.held_of("paving"), p0])
+	# the save and the move keep it
+	var d: Dictionary = s.to_dict()
+	var s2 = Sim.new()
+	s2.load_dict(JSON.parse_string(JSON.stringify(d)))
+	_check(s2.rebuilt == s.rebuilt and s2.materials == s.materials and s2.key_items == s.key_items and s2.town_worth() == s.town_worth(), "the save lost the rebuild: %s / %s" % [str(s2.rebuilt), str(s2.materials)])
+	# the order: a pinnacle as a signal, its head its own, its drops home
+	s.reach = 20
+	var lv: int = s.order_level("grid")
+	@warning_ignore("integer_division")
+	var want_lv: int = 20 + int(Data.pinnacle("grid")["over"]) + s.town_worth() / Data.PINNACLE_WORTH
+	_check(lv == want_lv, "the Grid's level %d, not %d" % [lv, want_lv])
+	var e: Dictionary = s.order_read("grid")
+	_check(e.has("boss") and str(e["boss"].get("order", "")) == "grid" and str(e["boss"]["name"]) == "The Lineman" and e["name"] == "The Grid" and int(e["level"]) == lv, "the Grid reads %s" % str(e.get("boss", {})))
+	_check(s._sig.is_empty() and s.order_block("archive").begins_with("Rebuild the library") == false, "the read left the Grid on its site, or the Archive shut")
+	s.hp = s.max_hp()
+	s.wound = ""
+	_check(s.deploy_order("grid") and s.mission != null and s.mission["signal"].get("order", "") == "grid" and s.mission.has("boss"), "the Grid would not set off: %s" % s.order_block("grid"))
+	if s.mission != null:
+		var reach0: int = s.reach
+		var mm: Dictionary = s.mission
+		mm["remaining"] = 0
+		mm["cleared"] = true
+		s._boss_down(mm, mm["t"])
+		_check(mm["found"].any(func(x): return x.get("unique", "") == "The Lineman's Lamp"), "the Lineman's first kill dropped no lamp")
+		s.extract_now()
+		_check(s.mission == null and int(s.order_beaten.get("grid", 0)) == 1 and s.held_of("grid_key") == 1 and s.reach == reach0 and s._sig.is_empty(), "the Grid's win: beaten %d, key %d, reach %d from %d" % [int(s.order_beaten.get("grid", 0)), s.held_of("grid_key"), s.reach, reach0])
+		_check(s.order_level("grid") == lv + 1, "the Grid did not harden after a win")
+		_check(s.best_dig.is_empty() or str(s.best_dig.get("site", "")) != "The Grid", "the Grid's win set the best signal: %s" % str(s.best_dig))
+	# the order's odds read leaves the host site's own read where it was (the review)
+	var host: int = int(Data.pinnacle("grid")["site"])
+	var cache0 = s._surv_cache.get(host, null)
+	s.odds_frame_start()
+	s.order_odds("grid")
+	_check(s._surv_cache.get(host, null) == cache0 and s._sig.is_empty(), "the Grid's odds read moved the Services' own")
+	# an order run saved mid-run and loaded finishes as the order's (the review)
+	var depth0: int = int(s.depth[host])
+	s.hp = s.max_hp()
+	if s.deploy_order("grid"):
+		var s3 = Sim.new()
+		s3.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+		_check(s3._sig.get("order", "") == "grid" and str(s3.mission["boss"].get("order", "")) == "grid", "a loaded order run lost its order")
+		var b3: int = int(s3.order_beaten.get("grid", 0))
+		var m3: Dictionary = s3.mission
+		m3["remaining"] = 0
+		m3["cleared"] = true
+		s3._boss_down(m3, m3["t"])
+		s3.extract_now()
+		_check(int(s3.order_beaten.get("grid", 0)) == b3 + 1 and s3._sig.is_empty() and int(s3.depth[host]) == depth0 and not s3.boss_armed.get(host, false), "a loaded order run did not finish as the order's: beaten %d, depth %d" % [int(s3.order_beaten.get("grid", 0)), int(s3.depth[host])])
+		# and one lost to a death: nothing beaten, the site put back
+		var b4: int = int(s.order_beaten.get("grid", 0))
+		s._kia()
+		_check(int(s.order_beaten.get("grid", 0)) == b4 and s._sig.is_empty() and int(s.depth[host]) == depth0 and s.events.any(func(ev): return str(ev[1]) == Words.REBUILD["order_lost"] % "The Lineman"), "a death on the Grid: beaten %d, depth %d" % [int(s.order_beaten.get("grid", 0)), int(s.depth[host])])
+	else:
+		_check(false, "the fixture: the Grid would not set off again: %s" % s.order_block("grid"))
+	# the shelf waits for the order's uniques
+	_check(s.shelf_chase().any(func(x): return x["name"] == "The Issuer's Robes"), "the shelf does not wait for the order's uniques")
+	# a move keeps it (Matt's call 1): what's built, what's held, the order's
+	var kept: Array = [s.rebuilt.duplicate(), s.materials.duplicate(), s.key_items.duplicate(), s.order_beaten.duplicate(), s.town_worth()]
+	_check(s.can_move_yard() and s.move_yard(), "the fixture: the Pitch would not move")
+	_check([s.rebuilt, s.materials, s.key_items, s.order_beaten, s.town_worth()] == kept and s.rebuild_open(), "the move lost the rebuild: %s from %s" % [str([s.rebuilt, s.materials, s.key_items, s.order_beaten]), str(kept)])
+	# the screens: the town view and the order tab, shut and open, fit and show every chip
+	var sim = main.sim
+	var saved: Dictionary = sim.to_dict()
+	var was: String = main.room
+	sim.unlock_all()
+	for z in range(Data.ZONES.size()):
+		sim.bosses_beaten[z] = true
+		for i in Data.ZONES[z]["tiers"]:
+			sim.best_depth[i] = maxi(1, sim.best_depth[i])
+	main.show_room(main.COMMS)
+	sim.story_beat = 0
+	main._radio._pick_view("town")
+	main.refresh()
+	_check(main._radio.view == "town" and main._radio._town.visible and main._radio._views.size() == 3, "the Radio's town view did not open")
+	_check(main._radio._town.card("substation")["note"].text == "After Kev's story", "the town before Kev's story: '%s'" % main._radio._town.card("substation")["note"].text)
+	_check_fit(main, "Radio town (shut)")
+	sim.story_beat = Data.STORY_BEATS.size()
+	sim.materials = {"copper_wire": 999, "cable_drums": 999, "paving": 999, "glass": 999, "ledgers": 999, "army_kit": 999, "fuses": 999}
+	sim.key_items = {"grid_key": 3, "ledger_seal": 3, "fiat_note": 1}
+	sim.rebuilt = {"substation": 4, "library": 2}
+	main._radio._town._shown = ""
+	main.refresh()
+	var tw = main._radio._town
+	for c in tw._cards:
+		_check(c["chips"].shown() == int(c["items"]), "%s shows %d of its %d wants" % [c["key"], c["chips"].shown(), int(c["items"])])
+	_check(tw.card("pumping")["button"].visible and tw.card("substation")["button"].text.contains("rank 5"), "the town's Rebuild buttons are off: '%s'" % tw.card("substation")["button"].text)
+	_check_fit(main, "Radio town (built)")
+	tw.card("pumping")["button"].pressed.emit()
+	_check(sim.rebuild_rank("pumping") == 1, "Rebuild on the card did not build")
+	# with the runner out: the cards say so, and fit (the review)
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	tw._shown = ""
+	main.refresh()
+	_check(sim.mission == null or tw.card("bus_depot")["note"].text == "The runner is out", "the town with the runner out: '%s'" % tw.card("bus_depot")["note"].text)
+	_check_fit(main, "Radio town (runner out)")
+	if sim.mission != null:
+		sim.extract_now()
+		if sim.mission != null:
+			sim._kia()
+	main._radio._pick_view("air")
+	main.show_room(main.MISSIONS)
+	main._missions._pick_zone(main._missions.ORDER_TAB)
+	main.refresh()
+	var od = main._missions._order
+	_check(main._missions.zone == main._missions.ORDER_TAB and od.visible and main._missions._zone_buttons.size() == Data.ZONES.size() + 1, "the Map's order tab did not open")
+	_check(od.col("grid")["button"].visible and od.col("mint")["note"].text.begins_with("Rebuild the mint"), "the order's columns are off: '%s'" % od.col("mint")["note"].text)
+	_check_fit(main, "Map order")
+	main._missions._pick_zone(0)
+	main.refresh()
+	_check(not od.visible and main._missions._cols[0]["panel"].visible, "the Outskirts did not come back from the order tab")
+	sim.load_dict(saved)
+	main.show_room(was)
+	main.refresh()
+	print("the rebuild ok: shut till Kev's done, costs and ranks, the places' effects, materials home through death, a save and a move, the order's Grid run and won, the town view and the order tab fit")

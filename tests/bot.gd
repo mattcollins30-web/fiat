@@ -218,6 +218,20 @@ func _endgame(sim) -> void:
 				var pay: String = sim.contract_pay_words(c)
 				sim.hand_in(k)
 				bought.append([sim.elapsed, "contract: %s" % pay])
+	# the rebuild (18 Oct, docs/design/rebuild.md §7): the cheapest place it can build, by the materials it wants
+	var cheapest := ""
+	var least := 1 << 30
+	for r in Data.REBUILDS:
+		if sim.can_rebuild(r["key"]):
+			var n := 0
+			var cost: Dictionary = sim.rebuild_cost(r["key"])
+			for k in cost:
+				n += int(cost[k])
+			if n < least:
+				least = n
+				cheapest = r["key"]
+	if cheapest != "" and sim.rebuild_place(cheapest):
+		bought.append([sim.elapsed, "rebuilt %s to rank %d" % [cheapest, sim.rebuild_rank(cheapest)]])
 	# the map at thirty-six (7 Oct): a rank a point, the columns in turn, each down its chain
 	var col := 0
 	while sim.atlas_free() > 0:

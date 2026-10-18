@@ -5524,3 +5524,13 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   is live in the smoke (banned words in the data's mechanics lines; no depth/camp/Boss/spaced kickers/format codes on
   any room). Old .import files for the five renamed pictures are left on disk untracked (deleting needs Matt's OK).
   Next: the endgame loop discussion (Matt, 18 Oct: materials per zone, combined to rebuild the world, true pinnacles).
+
+## The rebuild (18 Oct)
+
+- Matt went with the picks in docs/design/rebuild.md section 8 ("no balance yet"). Built: materials from runs (an
+  area's two, signals' fuses; counts, never lost, kept by a move and a save), six places in the Radio's third view
+  "The town" (ranks without end, costs growing, fuses and the order's things from later ranks), the town's worth, the
+  Map's fifth tab "The order" with the Grid, the Archive and the Mint (signals on a host site under their own head),
+  their uniques and drops, the mint's pay, Kev's closing line opening it. Purse: Materials and The town's worth.
+  The bot builds the cheapest place it can. Every number a placeholder for the balance pass.
+

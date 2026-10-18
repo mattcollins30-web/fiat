@@ -511,6 +511,14 @@ func _read_odds() -> void:
 		sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
 		sim.odds_time_ms = 0.0
 		return
+	if room == MISSIONS and _missions.zone >= Data.ZONES.size():
+		for p in Data.PINNACLES:              # the order's tab (18 Oct): its open pinnacles, in the same few milliseconds
+			if sim._odds_time_up():
+				break
+			if sim.order_open(p["key"]):
+				sim.order_odds(p["key"])
+		sim.odds_time_ms = 0.0
+		return
 	var order: Array = []
 	for i in Data.ZONES[_missions.zone]["tiers"] if _missions.zone < Data.ZONES.size() else []:
 		order.append(i)
@@ -1343,13 +1351,23 @@ func _town_purse() -> Dictionary:
 		"left": {"kicker": "The town · %d of %d areas open" % [open_zones, Data.ZONES.size()], "lines": zlines,
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
 		"right": {"kicker": "The purse", "lines": [["Kit worth", Fmt.money(sim.loadout_value())],     # tins, notes and scrap are the top bar's (18 Oct, said once)
-			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
+			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]] + _rebuild_lines(),
 			"note": "Tins lose value as prices rise; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
 		d["button"] = {"text": "Move the Pitch", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
 	return d
+
+
+## The rebuild on the purse (18 Oct, docs/design/rebuild.md §6): the materials held and the town's worth, once either is.
+func _rebuild_lines() -> Array:
+	var held := 0
+	for k in Data.MATERIAL_ORDER:
+		held += sim.held_of(k)
+	if held == 0 and not sim.rebuild_open():
+		return []
+	return [["Materials", "%d held" % held], ["The town's worth", str(sim.town_worth())]]
 
 
 # ------------------------------------------------------------------ the run
