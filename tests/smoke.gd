@@ -617,6 +617,7 @@ func _init() -> void:
 	_words_checks(main)
 	_rebuild_checks(main)
 	_dot_compare_checks(main)
+	_paper_pile_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -7362,7 +7363,7 @@ func _contract_material_checks(main) -> void:
 			_check(absi(int(c["amount"]) - int(round(maxf(sim.a_runs_takings() * Data.CONTRACT_CASH * minf(sim.contract_weight(c), Data.CONTRACT_CASH_WEIGHT_MAX), fence * Data.CONTRACT_OVER_FENCE)))) <= 10 or int(c["amount"]) == 10, "a cash contract is not its share of a run's takings, or under the pieces' price: %s" % str(c))
 			if c["kind"] == "gear":
 				_check(fence > 0.0 and float(c["amount"]) >= fence * Data.CONTRACT_OVER_FENCE - 5.0, "a gear contract pays under what the Fence gives for its pieces: %s against %.0f" % [str(c), fence])
-	_check(kinds.size() == (5 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 4) and pays.size() == 3, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
+	_check(kinds.size() == (4 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 3) and not kinds.has("papers") and pays.size() == 3, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
 	# every slot weighs alike at a rarity (the pay's floor follows the pieces' price since 12 Oct)
 	for slot in Data.CONTRACT_SLOTS:
 		var probe_c := {"kind": "gear", "slot": slot, "rarity": 2, "count": 1, "level": 0, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
@@ -8492,8 +8493,7 @@ func _signal_checks(main) -> void:
 	_check(sim.campaign_done(), "the signals' area wants the campaign done")
 	sim.signals = []
 	sim.reach = Data.REACH_START
-	for it in sim.signal_papers():
-		sim.stash.erase(it)
+	sim.papers = []                           # the Radio's pile (18 Oct): empty for the fixture
 	var bases: Array = []
 	for p in Words.PAPERS:
 		if p.has("code") and sim.word_taught_by(str(p["name"])) != "" and bases.size() < 6:
@@ -8501,7 +8501,7 @@ func _signal_checks(main) -> void:
 	for b in bases:
 		sim.stash_put(sim._plain(Data.PAPER, b))
 	var ps: Array = sim.signal_papers()
-	_check(ps.size() == 6, "six papers in the stash, %d for a signal" % ps.size())
+	_check(ps.size() == 6 and not sim.stash.any(func(x): return Sim.is_pile_paper(x)), "six papers put in the stash, %d on the Radio's pile, or some left in the stash" % ps.size())
 	var ids: Array = ps.slice(0, 3).map(func(x): return int(x["id"]))
 	_check(sim.decrypt_block(ids.slice(0, 2)) != "" and sim.decrypt_block(ids) == "", "the decoder's block: '%s' with two, '%s' with three" % [sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids)])
 	var band: Array = sim.signal_band(ids)
@@ -15149,4 +15149,93 @@ func _dot_compare_checks(_main) -> void:
 	else:
 		_check(false, "the fixture: the Workshop SMG has no muzzle mount")
 	print("the burn build's verdict ok: %.1f with the plain pistol, %.1f with the burn one, the arrow agrees" % [with_plain, with_burn])
+
+
+## The Radio's pile (18 Oct, Matt: contracts took his papers; "papers found never touch the stash"; "a signal run needs
+## to provide 2 of low quality"): a paper home goes to the pile, Kev's too with the stash full, an old save's stash
+## papers move there; a signal's run home brings two at the least, a death none; the deeds stay in the stash.
+func _paper_pile_checks(_main) -> void:
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	_open_camp(s)
+	for z in range(Data.ZONES.size()):
+		s.bosses_beaten[z] = true
+		for i in Data.ZONES[z]["tiers"]:
+			s.best_depth[i] = 1
+	if not ("radio" in s.unlocked):
+		s.unlocked.append("radio")
+	s.papers = []
+	var cells0: int = s.stash_used()
+	s.hp = s.max_hp()
+	s.deploy(3)
+	var found_paper: Dictionary = s._plain(Data.PAPER, "A P45")
+	var deeds: Dictionary = s._plain(Data.PAPER, "The deeds")
+	deeds["deeds"] = true
+	s.mission["found"].append_array([found_paper, deeds])
+	s.mission["cleared"] = true
+	s.extract_now()
+	_check(s.papers.has(found_paper) and not s.stash.has(found_paper) and s.stash.any(func(x): return Items.is_deeds(x)), "a paper home went to the stash, or the deeds left it: pile %d" % s.papers.size())
+	_check(s.stash_used() >= cells0, "the fixture: the stash lost cells")
+	# Kev's, the stash full
+	while s.stash_room(1):
+		s.stash_put(s._plain("Primary", "Claw hammer"))
+	s.notes = 9999
+	var pile0: int = s.papers.size()
+	var kev: Dictionary = s.ask_kev()
+	_check(not kev.is_empty() and s.papers.size() == pile0 + 1 and not s.stash.has(kev), "Kev's paper didn't reach the pile with the stash full: '%s'" % s.kev_block())
+	# an old save's stash papers move to the pile
+	var d: Dictionary = s.to_dict()
+	d["stash"].append(d["papers"][0])
+	d["papers"] = d["papers"].slice(1)
+	var s2 = Sim.new()
+	s2.load_dict(d)
+	_check(s2.papers.size() == s.papers.size() and not s2.stash.any(func(x): return Sim.is_pile_paper(x)), "an old save's stash papers didn't move to the pile")
+	# a signal's run home: two at the least; a death, none
+	s.stash = []
+	s.papers = []
+	for b in ["A P45", "A pawn ticket", "A bank statement"]:
+		s.papers.append(s._plain(Data.PAPER, b))
+	var sg: Dictionary = s.decrypt(s.papers.map(func(x): return int(x["id"])))
+	_check(not sg.is_empty() and s.papers.is_empty(), "the fixture: no signal from three papers: %s" % s.decrypt_block([]))
+	s.hp = s.max_hp()
+	if s.deploy_signal(0):
+		s.mission["found"] = []
+		s.mission["cleared"] = true
+		s.extract_now()
+		_check(s.papers.size() >= Data.SIGNAL_PAPERS_HOME and s.papers.all(func(x): return int(x["rarity"]) <= 1), "a signal's run home brought %d papers, or a high one" % s.papers.size())
+	var made: Dictionary = {}
+	for b in ["A P45", "A pawn ticket", "A bank statement"]:
+		s.papers.append(s._plain(Data.PAPER, b))
+	made = s.decrypt(s.papers.slice(s.papers.size() - 3).map(func(x): return int(x["id"])))
+	var before: int = s.papers.size()
+	s.hp = s.max_hp()
+	if not made.is_empty() and s.deploy_signal(0):
+		s._kia()
+		_check(s.papers.size() == before, "a death on a signal brought papers home: %d from %d" % [s.papers.size(), before])
+	# the top-up at a shallow site: nothing deep, nothing another site's own (the review)
+	var site0: String = str(Data.TIERS[0]["name"])
+	var bad: Array = []
+	for i in range(200):
+		s.papers = []
+		s._signal_papers_home({"found": [], "t": {"depth": 1, "tier": 0}})
+		_check(s.papers.size() == Data.SIGNAL_PAPERS_HOME, "a top-up brought %d" % s.papers.size())
+		for x in s.papers:
+			var home := Items.exclusive_to(str(x["base"]))
+			if int(Items.base_of(x).get("depth", 0)) > 1 or (home != "" and home != site0) or int(x["rarity"]) > 1:
+				bad.append(str(x["base"]))
+	_check(bad.is_empty(), "a shallow top-up gave a deep, another site's or a high paper: %s" % ", ".join(bad.slice(0, 5)))
+	# Kev's in the run's finds don't count towards the two
+	var kev_names: Array = Sim.story_papers(0)
+	if not kev_names.is_empty():
+		s.papers = []
+		s._signal_papers_home({"found": [s._plain(Data.PAPER, str(kev_names[0]))], "t": {"depth": 1, "tier": 0}})
+		_check(s.papers.size() == Data.SIGNAL_PAPERS_HOME, "Kev's paper counted towards the top-up: %d" % s.papers.size())
+	# an old save's papers contract is rolled again
+	var d3: Dictionary = s.to_dict()
+	d3["contracts"] = [{"kind": "papers", "slot": "", "rarity": 0, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 10, "salvage": ""}]
+	var s3 = Sim.new()
+	s3.load_dict(d3)
+	_check(not s3.contracts.any(func(c): return str(c["kind"]) == "papers"), "an old save's papers contract survived the load")
+	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal home brings %d, a death none; the top-up shallow, Kev's not counted, old contracts rolled" % Data.SIGNAL_PAPERS_HOME)
 

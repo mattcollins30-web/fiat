@@ -1810,7 +1810,7 @@ const START_STASH_BANDAGES := 5    # a new camp's stash (17 Oct, Matt: "add 4 or
 const CONTRACTS_OPEN := 3
 const CONTRACTS_MAX := 5
 const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Attachment"]
-const CONTRACT_KINDS := {"gear": 0.5, "deep": 0.125, "affix": 0.125, "papers": 0.125, "meds": 0.125}
+const CONTRACT_KINDS := {"gear": 0.5, "deep": 0.125, "affix": 0.125, "meds": 0.125}     # no papers (18 Oct, Matt): they're the Radio's, off the stash
 const CONTRACT_KIND_NAMES := {"gear": "Gear", "deep": "Deep gear", "affix": "Named affix", "papers": "Papers", "meds": "Meds"}
 const CONTRACT_PAYS := {"cash": 0.4, "notes": 0.25, "scrap": 0.2, "salvage": 0.15}
 const CONTRACT_CASH := 0.5         # a run's takings, times the ask's weight
@@ -2313,6 +2313,7 @@ const STORY_BEATS := [
 	{"key": "depot", "name": "The depot", "site": 9, "zone": 3, "convoy": true},
 ]
 const STORY_DROP := 0.5
+const SIGNAL_PAPERS_HOME := 2               # a signal's run home brings this many papers at the least (18 Oct, Matt)
 
 ## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "a reason to keep grinding past the lorry"): materials from runs,
 ## the town's places put back with them, and the order's true pinnacles behind them. Every number here is a

@@ -5574,3 +5574,21 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
     want them, glyphs for the seven materials if the counts want them.
   - The drawn Map's painted version, once layout B reads with the drawn shapes.
 
+
+## The Radio's pile (18 Oct, night; Matt: "the papers dropping needs to be fixed now")
+
+- Papers never touch the stash: a run's papers, Kev's, the story's go straight to the Radio's own pile (Sim.papers),
+  read on arrival; decrypt draws from it. An old save's stash papers move there on load. The deeds, a key's paper and a
+  unique (rule papers) stay in the stash.
+- A signal's run home brings two papers at the least (SIGNAL_PAPERS_HOME): what it found counts (not Kev's), plain
+  common or uncommon ones make up the rest, only ones a find could be at that depth and site. A death brings none; a
+  lost or timed-out signal still pays them (asked Matt).
+- The Fence's papers contracts are gone; an old save's are rolled again on load.
+- Parked from the same playtest (Matt: "the rest can be parked"):
+  - The odds lag after the Yard's Lookout pick, flipping fight the head or not.
+  - The fight panel's "Your fire" 510 against the top bar's 362: two figures for one thing.
+  - The radio loop says it's stopped, then plays straight on.
+  - The Radio's town view missed the caps review ("pumping station" lost its "The" in the fit fallback; NOT BUILT,
+    "Opens the Grid · the Lineman").
+  - The Yard's Paper rack: half dead now papers live on the pile (charms, rule papers, keepsakes only); new job or
+    new words (asked Matt).
