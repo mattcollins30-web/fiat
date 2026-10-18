@@ -5504,3 +5504,12 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   filters must name real slots (the pass had emptied the Meds tab - reviewer caught it); two more flakes fixed (the torch
   split sat on the 0.5/s line; the crowded strip). Held for Matt: S3053 (the rail's "The Pitch" -> "The Yard" contradicts
   his call 3).
+- (18 Oct) Words pass batch 3 of 4 (grammar, clarity, flavour): ~540 strings. Code under them: articles and acronyms
+  (Words.mid_base, a_thing), plurals in the logs, affix lines (pouch/pouches, no "+" on crowd_less_pct), the joint words
+  lower-case only their first letter, "Sell when home" with the duplicate rules line gone, Stats/Clinic notes fitted,
+  Map chips "40% fire · you resist", "After the Garden Centre" on a locked site, Sim.DECRYPT_NEEDS_PAPERS (a words change
+  had broken the decoder note's match). Renames on nodes, Yard picks, the Dial and codes (none a lookup key). The apply
+  script's line-nearest match hit wrong targets (the Triage/Live trees, the capacity stat key, half-changed duplicate
+  strings); all found by the reviewer and a whole-diff key scan, all fixed. Fit-driven: "Fight · clock", "till the
+  Quartermaster", "Lasting", class/unique/keystone lines shortened. Fencing's sell node "Gift of the gab" (clash).
+  Held: the four voiced room-card lines (Matt: a separate change later), Daisy chain's condition (for Matt).

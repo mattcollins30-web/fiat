@@ -1380,7 +1380,7 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "The Clinic", "the Clinic's treatment tiles are off")
+	_check(cv._side_track.visible and cv._side_bar_text.text.begins_with("Your HP") and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Upgrades", "the Clinic's treatment tiles are off")
 	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
 	var med_kinds := {}
 	for it in sim.stash:
@@ -1988,7 +1988,7 @@ func _tree_rules_checks(main) -> void:
 		main.refresh()
 		var names: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
 		_check(names == table[c], "the %s's lanes are %s, not the table's" % [c, str(names)])
-		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text == "⇄ OPEN", "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
+		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text == "⇄ CAN JOIN", "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
 	# a runner with no class: the Yard's lane alone, and the Also row
 	sim.cls = ""
 	sim.cls2 = ""
@@ -2622,7 +2622,7 @@ func _element_checks(main) -> void:
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
 		bk.also_button(name).pressed.emit()
 		_check_fit(main, "Caravan (also: %s)" % name)
-		if name == "The drawer" or name == "The shelf" or name == "The radio":
+		if name == "The drawer" or name == "The shelf" or name == "The wireless":
 			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
 		else:
 			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
@@ -2977,7 +2977,7 @@ func _melee_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	var bat: Dictionary = sim._plain("Primary", "Spiked bat")
-	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes nothing" and bat["attachments"].has("grip") and bat["attachments"].has("business end"), "a spiked bat is not a melee weapon with a grip and a head")
+	_check(Items.is_melee(bat) and Items.ammo_words(bat) == "Takes no rounds" and bat["attachments"].has("grip") and bat["attachments"].has("business end"), "a spiked bat is not a melee weapon with a grip and a head")
 	var old = sim.equipped["Primary"]
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
 	var bleed0: float = sim.conversion()["bleed"]          # whatever the rest of the kit and the web add already
@@ -3174,7 +3174,7 @@ func _unique_rules_checks(main) -> void:
 	# the burner: all fire, takes nothing, spreads
 	var burner := Items.roll_unique(sim._unique_named("The Council's Weed Burner"), sim.rng)
 	sim.equipped["Primary"] = burner
-	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) == "Takes nothing", "the burner is not all fire and free: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) == "Takes no rounds", "the burner is not all fire and free: %s" % str(sim.conversion()))
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
 	# Jump Leads: a third shock
 	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("Jump Leads"), sim.rng)
@@ -3493,7 +3493,7 @@ func _guard_checks(main) -> void:
 	main.show_room(main.RUNNER)
 	main.refresh()
 	var gnote: Label = main._stats.cards["defence"]["note"]
-	_check(gnote.text.begins_with("Guard to ") and gnote.text.contains("overheal"), "the Stats sheet's defence does not say where Guard comes from: '%s'" % gnote.text)
+	_check(gnote.text.begins_with("Guard ") and gnote.text.contains("overheal"), "the Stats sheet's defence does not say where Guard comes from: '%s'" % gnote.text)
 	_check_fit(main, "Stats (Guard)")
 	if sim.mission != null:
 		sim.extract_now()
@@ -4655,7 +4655,7 @@ func _places_checks(main) -> void:
 	for r in range(c["intel"].shown()):
 		names.append(c["intel"].words(r))
 	_check("Rain" in names and "Night" in names, "the card does not show the sky's words: %s" % str(names))
-	_check(c["intel_head"].text.begins_with("ON THE AIR · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("CONDITIONS · 23:00, night, raining"), "the card's clock line is off: %s" % c["intel_head"].text)
 	_check(c["tiles"][5]["key"].text == "The site" and c["tiles"][5]["value"].text.begins_with("Picked over"), "the card does not say the site is picked over: %s %s" % [c["tiles"][5]["key"].text, c["tiles"][5]["value"].text])
 	_check_fit(main, "Runs (night, rain, picked over)")
 	var d: Dictionary = sim.to_dict()
@@ -5681,7 +5681,7 @@ func _playtest_checks(main) -> void:
 	_check(c["band"]._tone == 2 or not sim.zone_open(2), "the band's tone did not follow the zone")
 	main._missions._pick_zone(1)
 	main.refresh()
-	_check(c["intel_head"].text.begins_with("ON THE AIR"), "the air's head is off: '%s'" % c["intel_head"].text)
+	_check(c["intel_head"].text.begins_with("CONDITIONS"), "the air's head is off: '%s'" % c["intel_head"].text)
 	# three boxes under the band: the fight holds its tiles, the elements their chips, the word its rows and the site lines; none overlap, and the last clears the note
 	var bx: Array = c["boxes"]
 	var r0 := Rect2(bx[0].position, bx[0].size)
@@ -5760,16 +5760,16 @@ func _playtest_checks(main) -> void:
 	var forms: Array = main._by_sentence(long)
 	_check(forms.size() >= 4 and forms[1] == "A convoy comes through. Lorries, and a crew riding on them. They stop. They were carrying notes." and forms[-1] == "A convoy comes through.", "the sentence forms are off: %s" % str(forms))
 	# one long sentence: cut at its last comma, never trailing off (the lost runner's long name in a long base's)
-	var one := "One of them is in the last doorman's station helmet, visored and with the strap on."
+	var one := "One of them has the last doorman's station helmet, visored and with the strap on."
 	var one_forms: Array = main._by_sentence(one)
-	_check(one_forms.size() == 2 and one_forms[1] == "One of them is in the last doorman's station helmet.", "the one-sentence forms are off: %s" % str(one_forms))
+	_check(one_forms.size() == 2 and one_forms[1] == "One of them has the last doorman's station helmet.", "the one-sentence forms are off: %s" % str(one_forms))
 	# a toast with nowhere to cut (13 Oct: the lost Doorman's hand-me-down nail gun ran past its box): the piece goes, then a smaller size
-	for tline in ["One of them is in the last Doorman's hand-me-down nail gun.", "One of them is in the last Paramedic's Bomb-disposal rig with the Arsonist's straps on it and more."]:
+	for tline in ["One of them has the last Doorman's hand-me-down nail gun.", "One of them has the last Paramedic's Bomb-disposal rig with the Arsonist's straps on it and more."]:
 		main._juice.toast(tline, "", main.toast_forms(tline))
 		var tl: Label = main._juice._toasts[0]["label"]
 		_check(UI.text_width(tl, tl.text) <= tl.size.x + 0.5, "a toast runs past its box: '%s'" % tl.text)
-	_check(Words.short_line("One of them is in the last Doorman's butcher's chainmail.") == "One of them is in the last Doorman's kit.", "the short form cut at the piece's apostrophe: '%s'" % Words.short_line("One of them is in the last Doorman's butcher's chainmail."))
-	_check(main.toast_forms("One of them is in the last Doorman's hand-me-down nail gun.").back() == "One of them is in the last Doorman's kit.", "the wearing line's short form is off: %s" % str(main.toast_forms("One of them is in the last Doorman's hand-me-down nail gun.")))
+	_check(Words.short_line("One of them has the last Doorman's butcher's chainmail.") == "One of them has the last Doorman's kit.", "the short form cut at the piece's apostrophe: '%s'" % Words.short_line("One of them has the last Doorman's butcher's chainmail."))
+	_check(main.toast_forms("One of them has the last Doorman's hand-me-down nail gun.").back() == "One of them has the last Doorman's kit.", "the wearing line's short form is off: %s" % str(main.toast_forms("One of them has the last Doorman's hand-me-down nail gun.")))
 	# a paper picked in the Lock-up
 	var paper: Dictionary = sim._plain(Data.PAPER, "A P45")
 	while not sim.stash_room(2) and not sim.stash.is_empty():
@@ -5974,7 +5974,7 @@ func _recycle_checks(main) -> void:
 	var found_before: int = m["found"].size()
 	sim._clear(m, m["t"])
 	_check(m["found"].size() == found_before + 1 and m["found"].back()["base"] == "Riot suit" and m["found"].back()["affixes"][0]["value"] == 33.0 and not m.has("wearing"), "the jacket did not come off him with its affix: %s" % str(m["found"].back() if not m["found"].is_empty() else {}))
-	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("Riot suit came off him. The last")), "the off line is off: %s" % str(sim.events.back()[1]))
+	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The riot suit came off him. The last")), "the off line is off: %s" % str(sim.events.back()[1]))
 	sim.extract_now()
 	_check(sim.stash.any(func(it): return it["base"] == "Riot suit" and it["affixes"].size() == 1 and it["affixes"][0]["value"] == 33.0), "the jacket did not come home")
 	# the unique, the same way
@@ -8049,7 +8049,7 @@ func _top_works_checks(main) -> void:
 	_check(sim.on_mission() and m["patrols"] == 0 and m["patrol_timer"] == 0.0, "the first gang's clock ran before the call: %.1f" % m["patrol_timer"])
 	main.show_room(main.MISSIONS)
 	main.refresh()
-	_check(main._run._fight["tiles"][0]["value"].text in ["on the call", "held"], "the Next gang tile does not say on the call: '%s'" % main._run._fight["tiles"][0]["value"].text)
+	_check(main._run._fight["tiles"][0]["value"].text in ["held off", "held"], "the Next gang tile does not say on the call: '%s'" % main._run._fight["tiles"][0]["value"].text)
 	_check_fit(main, "Run (on the call)")
 	while sim.pack_used(m) < sim.capacity():
 		m["found"].append(sim._plain(Data.AMMO, "Nails"))
@@ -8247,8 +8247,8 @@ func _wound_checks(main) -> void:
 	main.refresh()
 	_check(main._clinic._band.unit.text.contains("wounded"), "the Clinic's band does not say wounded: '%s'" % main._clinic._band.unit.text)
 	# the two jobs apart (Clinic-B): at full HP the wound's button is the primary, Heal reads Fit
-	_check(main._clinic._side_buttons[1].text.begins_with("The wound (") and not main._clinic._side_buttons[1].disabled, "the Clinic's wound button is off: '%s'" % main._clinic._side_buttons[1].text)
-	_check(main._clinic._side_buttons[0].text == "Fit" and main._clinic._side_buttons[0].disabled, "the Clinic's heal button at full HP reads '%s'" % main._clinic._side_buttons[0].text)
+	_check(main._clinic._side_buttons[1].text.begins_with("Treat the wound (") and not main._clinic._side_buttons[1].disabled, "the Clinic's wound button is off: '%s'" % main._clinic._side_buttons[1].text)
+	_check(main._clinic._side_buttons[0].text == "Full HP" and main._clinic._side_buttons[0].disabled, "the Clinic's heal button at full HP reads '%s'" % main._clinic._side_buttons[0].text)
 	_check(main._clinic._side_buttons[0].position.x + main._clinic._side_buttons[0].size.x <= main._clinic._side_buttons[1].position.x, "the Clinic's two buttons overlap")
 	_check(main._clinic._side_bar_text.text.contains("wounded"), "the Clinic's bar does not name the wound: '%s'" % main._clinic._side_bar_text.text)
 	_check_fit(main, "Clinic (wounded)")
@@ -8389,7 +8389,7 @@ func _gear_gate_checks(main) -> void:
 		_check(cr.encloses(Rect2(cell._lock.position, cell._lock.size)), "the padlock leaves its cell: %s in %s" % [str(Rect2(cell._lock.position, cell._lock.size)), str(cr)])
 	var pick = main._armoury._pick
 	_check(pick._verdict.text == "Level %d to wear" % W, "the locked gun's verdict reads '%s'" % pick._verdict.text)
-	_check(pick._buttons[0].text == "Equip at %d" % W and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
+	_check(pick._buttons[0].text == "Equip at level %d" % W and pick._buttons[0].disabled, "the locked gun's button reads '%s', %s" % [pick._buttons[0].text, "off" if pick._buttons[0].disabled else "on"])
 	_check(pick._words.text.begins_with("Level %d to wear" % W), "the locked gun's line reads '%s'" % pick._words.text)
 	_check_fit(main, "the kit with a locked gun")
 	# the Fence's shelf: a piece over the level reads its level, never "Better" (the review)
@@ -9321,7 +9321,7 @@ func _training_gate_checks(main) -> void:
 	for i in range(bt["nodes"].size()):
 		if int(bt["nodes"][i].get("col", 0)) < 2:
 			sim.train_node("Blades/%d" % i)
-	_check(sim.train_block(col2).begins_with("opens at 6 in Muscle"), "Blades' third column with nothing in Muscle: '%s'" % sim.train_block(col2))
+	_check(sim.train_block(col2).begins_with("opens at 6 points in Muscle"), "Blades' third column with nothing in Muscle: '%s'" % sim.train_block(col2))
 	var mt: Dictionary = Data.tree_named("Muscle")
 	var k := 0
 	while sim.points_in("Muscle") < 6 and k < mt["nodes"].size():
@@ -10889,7 +10889,7 @@ func _yard_wide_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	sim.cash = 1000000.0
 	main.refresh()
-	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "the rail's Upgrade badge is not lit with a pick newly affordable")
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Can build", "the rail's Upgrade badge is not lit with a pick newly affordable")
 	main.show_room(main.OVERVIEW)
 	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "" and not main._rail_buttons[main.OVERVIEW]._badge.visible, "looking at the Pitch did not clear the badge (as drawn: %s)" % str(main._rail_buttons[main.OVERVIEW]._badge.visible))
 	var seen_n: int = sim.yard_seen.size()
@@ -10909,7 +10909,7 @@ func _yard_wide_checks(main) -> void:
 	if sim.on_mission():
 		sim._extract()
 	sim.yard_open = sim.yard_cols() + 1
-	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Upgrade", "a column opened did not light the badge")
+	_check(main._rail_status(main.OVERVIEW).get("badge", "") == "Can build", "a column opened did not light the badge")
 	sim.yard_open = 1
 	sim.yard_seen_cols = 1
 	main.show_room(main.OVERVIEW)
@@ -11545,7 +11545,7 @@ func _find_at_mine_checks(main) -> void:
 	var bank: Dictionary = sim.effective(8)
 	var site_lv: int = int(bank["level"])
 	var w: Array = sim.finds_words(site_lv)
-	_check(site_lv > mine and str(w[0]) == "level %d gear · 20%% at %d" % [sim.wear_of(site_lv), sim.wear_of(mine)], "the Bank's finds read '%s'" % str(w[0]))
+	_check(site_lv > mine and str(w[0]) == "level %d gear · 20%% at level %d" % [sim.wear_of(site_lv), sim.wear_of(mine)], "the Bank's finds read '%s'" % str(w[0]))
 	var tally := func(t: Dictionary) -> Array:
 		sim.rng.seed = 1616
 		var low := 0
@@ -11755,7 +11755,7 @@ func _smg_line_checks(main) -> void:
 	sim.equipped["Primary"] = hold
 	# the panel's tail says it
 	var gun: Dictionary = sim._plain("Primary", "Courier's SMG")
-	_check(Items.base_res_words(gun).contains("walking fire +4%/s to +40%"), "the SMG's tail does not say walking fire: '%s'" % Items.base_res_words(gun))
+	_check(Items.base_res_words(gun).contains("walking fire: damage +4% a second, up to +40%"), "the SMG's tail does not say walking fire: '%s'" % Items.base_res_words(gun))
 	print("the SMG line ok: nine guns, walking fire")
 
 
@@ -12121,7 +12121,7 @@ func _yard_checks(main) -> void:
 	# a torch makes the deal share show on Attack: a chip and its segment of the split
 	var hold_gun = sim.equipped["Primary"]
 	var torch: Dictionary = sim._plain("Primary", "Nail gun")
-	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 20, "tier": 2}]
+	torch["affixes"] = [{"stat": "conv_fire_pct", "value": 50, "tier": 2}]     # 50, not 20: a 20% burn off a weak nail gun sat on the 0.5 a second the split shows from (18 Oct flake)
 	sim.equipped["Primary"] = torch
 	main.refresh()
 	var attack: Dictionary = st.cards["attack"]
@@ -12195,7 +12195,7 @@ func _yard_checks(main) -> void:
 	var col: Dictionary = main._missions._cols[0]
 	var chip_texts: Array = col["chips"].text_nodes().map(func(l): return l.text)
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
-		_check(chip_texts.any(func(t): return str(t).begins_with("Fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
+		_check(chip_texts.any(func(t): return str(t).to_lower().contains("fire")) and chip_texts.any(func(t): return str(t).contains("res")), "the town's card does not say what it fires and what you resist: %s" % str(chip_texts))
 	# the odds in words, the figure small beside them; every band fits the card
 	if sim.tier_open(Data.ZONES[2]["tiers"][0]):
 		_check(Words.ODDS.any(func(b): return b[1] == col["band"].headline.text) and col["band"].unit.text.ends_with("to clear") or col["band"].unit.text == "reading the odds", "the odds don't read in words: '%s' / '%s'" % [col["band"].headline.text, col["band"].unit.text])
@@ -12667,7 +12667,7 @@ func _radio_juice_checks(main) -> void:
 	sim.set_depth(3, 2)
 	_check(sim.word_tier_now(3, 3) == 1 and int(sim.effective(3)["word_tiers"]["Numbers"]) == 1, "a tier II word ran at tier II at depth 2")
 	sim.set_depth(3, 9)
-	_check(sim.word_words("Numbers", 1) == ["HP +40%", "finds +30%"], "a word's words are off: %s" % str(sim.word_words("Numbers", 1)))
+	_check(sim.word_words("Numbers", 1) == ["their HP +40%", "finds +30%"], "a word's words are off: %s" % str(sim.word_words("Numbers", 1)))
 	# the flags: no meds, no kill cash, a clock, your armour cut, the head walking
 	sim.words[3] = [{"w": "Rationed", "t": 1}, {"w": "Overdrawn", "t": 1}]
 	sim.set_depth(3, 15)
@@ -12775,7 +12775,7 @@ func _radio_juice_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
-	_check(c["intel"].shown() >= 1 and c["intel_head"].text.begins_with("ON THE AIR") and not c["intel_head"].text.contains("from the Radio"), "the Runs card's air head is off (the sky only since 18 Oct; the codes are on signals): '%s'" % c["intel_head"].text)
+	_check(c["intel"].shown() >= 1 and c["intel_head"].text.begins_with("CONDITIONS") and not c["intel_head"].text.contains("from the Radio"), "the Runs card's air head is off (the sky only since 18 Oct; the codes are on signals): '%s'" % c["intel_head"].text)
 	_check_fit(main, "Runs (juiced)")
 	sim.load_dict(saved)
 	main.refresh()
@@ -12813,7 +12813,7 @@ func _panel_words_checks(main) -> void:
 		_check(bk._train.disabled, "Train is not off with no point free")
 		# four buttons late on leave ~430 px: every node's sentence still says itself, over its two lines
 		var worst := 0
-		var worst_s := ""
+		var worst_s := []
 		for t in sim.trees():
 			if t == null or t.get("drawer", false):
 				continue
@@ -12822,8 +12822,8 @@ func _panel_words_checks(main) -> void:
 				bk.fit_two([s], 430.0)
 				if (bk._words.text + " " + bk._words2.text).strip_edges() != s.strip_edges() or UI.text_width(bk._words2, bk._words2.text) > 430.0:
 					worst += 1
-					worst_s = s
-		_check(worst == 0, "%d node sentences do not fit two lines at 430 px, e.g. %s" % [worst, worst_s])
+					worst_s.append(s)
+		_check(worst == 0, "%d node sentences do not fit two lines at 430 px: %s" % [worst, " | ".join(worst_s)])
 		bk._shown = ""
 		main.refresh()
 		_check_fit(main, "Training (a node, no point free)")
@@ -13020,7 +13020,7 @@ func _way_out_checks(main) -> void:
 	main.show_room(main.MISSIONS)
 	main.refresh()
 	var rs = main._run
-	_check(rs._button.text.begins_with("Get out now · ") and rs._button.text.ends_with("and a last gang"), "before the clear Get out now does not say its price: '%s'" % rs._button.text)
+	_check(rs._button.text.begins_with("Get out · ") and rs._button.text.ends_with("and one last gang"), "before the clear Get out now does not say its price: '%s'" % rs._button.text)
 	_check_fit(main, "Run (the way out's price)")
 	var found: Dictionary = sim._plain("Helmet", "Hard hat")
 	m["found"].append(found)
@@ -13031,7 +13031,7 @@ func _way_out_checks(main) -> void:
 	main.refresh()
 	_check(rs._band.kicker.text == "The way out" and rs._band.headline.text == Fmt.mss(ceilf(float(m["way_out_t"]))) and rs._fight["head"].text == "THE FIGHT · THE WAY OUT" and rs._button.text.begins_with("Getting out"),
 		"the run screen does not show the way out: '%s' / '%s' / '%s' / '%s'" % [rs._band.kicker.text, rs._band.headline.text, rs._fight["head"].text, rs._button.text])
-	_check(rs._band._bar_label.text.ends_with("at the door seen off"), "the way out's bar does not count the door: '%s'" % rs._band._bar_label.text)
+	_check(rs._band._bar_label.text.ends_with("seen off at the door"), "the way out's bar does not count the door: '%s'" % rs._band._bar_label.text)
 	_check_fit(main, "Run (the way out)")
 	rs._get_out()
 	_check(sim.on_mission() and m.get("way_out", false), "a second press left the way out")
@@ -13476,7 +13476,7 @@ func _junk_rule_checks(main) -> void:
 		main._armoury._toggle(1)
 		words.append(main._armoury._toggles[1].text)
 		_check_fit(main, "Lock-up (sell %s)" % main._armoury._toggles[1].text)
-	_check(words == ["Sell: commons", "Sell: up to Uncommon", "Sell: up to Rare", "Sell: off"] and sim.junk_upto == -1, "the sell rule does not go round: %s" % str(words))
+	_check(words == ["Sell when home: commons", "Sell when home: up to Uncommon", "Sell when home: up to Rare", "Sell when home: off"] and sim.junk_upto == -1, "the sell rule does not go round: %s" % str(words))
 	_check(main._armoury._toggles[2].disabled, "the keep rule is live with nothing sold")
 	main._armoury._toggle(1)
 	main._armoury._toggle(1)                  # to uncommon
@@ -14214,11 +14214,11 @@ func _lore_checks(main) -> void:
 	var bk = main._barracks
 	bk._shown = ""
 	main.refresh()
-	_check(bk.also_names().has("The radio"), "the radio's page is not in the Also row")
-	bk.pick_also("The radio")
+	_check(bk.also_names().has("The wireless"), "the radio's page is not in the Also row")
+	bk.pick_also("The wireless")
 	main.refresh()
 	_check(bk._cells[0]["name"].text == "1. " + Words.RADIO_VOICES["loop"] and bk._cells[1]["name"].text == "2. " + Words.RADIO_VOICES["kev"] and bk._cells[1]["lines"][0].text != "", "the radio's page is off: '%s' / '%s'" % [bk._cells[0]["name"].text, bk._cells[1]["name"].text])
-	var rb = bk.also_button("The radio")
+	var rb = bk.also_button("The wireless")
 	_check(rb != null and rb.visible and rb.text.contains("2 of %d" % Words.RADIO.size()), "the radio's chip is off the Also row, or off: %s" % (rb.text if rb != null else "hidden"))
 	_check_fit(main, "Caravan (the radio)")
 	# every line the radio has, and every paper's words, fit their cards (the reviewer: two lines ran past two rows)
@@ -14239,7 +14239,7 @@ func _lore_checks(main) -> void:
 					if l.visible and l.text != "":
 						_check(not l.text.ends_with("…") and UI.text_width(l, l.text) <= l.size.x + 0.5, "a radio line runs past its card: '%s'" % l.text)
 	bk.drawer_page = 0
-	bk.pick_also("The radio")
+	bk.pick_also("The wireless")
 	var book_keep: Array = sim.book.duplicate()
 	sim.book = sim.book_pages().duplicate()
 	bk.pick_also("The drawer")
@@ -14478,7 +14478,7 @@ func _gates_checks(main) -> void:
 	sim.cash = 100000.0
 	var spare: Dictionary = sim._plain("Helmet", "Hard hat")
 	sim.stash_put(spare)
-	_check(not sim.can_heal() and not sim.sell(spare) and not sim.buy(0) and not sim.can_word_craft(3, "tune") and sim.yard_pick_block("bench", 0, "a") == "The Pitch isn't yours yet" and not sim.can_craft(spare["id"], "reroll"), "a shut room's job was done")
+	_check(not sim.can_heal() and not sim.sell(spare) and not sim.buy(0) and not sim.can_word_craft(3, "tune") and sim.yard_pick_block("bench", 0, "a") == "The Yard opens with the Manager's deeds" and not sim.can_craft(spare["id"], "reroll"), "a shut room's job was done")
 	# the Yard open before the rooms its buildings serve: those wait on their rooms (the review)
 	sim.unlocked = ["yard"]
 	_check(sim.yard_pick_block("clinic", 0, "a").begins_with("Opens with") and sim.yard_pick_block("bench", 0, "a").begins_with("Opens with") and not sim.yard_pick_block("stash", 0, "a").begins_with("Opens with"), "a building for a shut room could be built: %s" % sim.yard_pick_block("clinic", 0, "a"))

@@ -234,7 +234,7 @@ func _build_decoder() -> void:
 	# Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece, and no signal from either)
 	var ky: float = my + MAKE_H + 14 + 62 + 30
 	_kev_box = UI.panel(_decoder_box, Rect2(14, ky, iw, KEV_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
-	_kev_head = UI.label(_kev_box, Rect2(12, 6, iw - 24, 20), "KEV'S PILE · A PLAIN PAPER, NEVER HIS STORY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_kev_head = UI.label(_kev_box, Rect2(12, 6, iw - 24, 20), "KEV'S PILE · PLAIN PAPERS ONLY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_kev_line = UI.label(_kev_box, Rect2(12, 26, iw - 24, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_kev = UI.button(_kev_box, Rect2(12, 52, iw - 24, 36), false)
 	_kev.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
@@ -325,7 +325,7 @@ func _build_dec(cw: float) -> void:
 func start_decrypt(sg: Dictionary) -> void:
 	var site: String = str(Data.TIERS[int(sg["site"])]["name"])
 	var lv: int = sim.signal_level(sg)
-	var crew: String = "The %s's crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
+	var crew: String = "The %s crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
 	if bool(sg.get("head", false)):
 		crew += ", and their head at full strength"
 	var names: Array = sim.signal_words(sg).map(func(x): return str(x["w"]))
@@ -584,13 +584,13 @@ func _show_decoder() -> void:
 			cw = [["Kev's story · %s" % str(Data.STORY_BEATS[sim.story_of(it)]["name"]).to_lower(), "Kev's story"], STORY]
 		UI.fit(sl["code"], cw[0])
 	var band: Array = sim.signal_band(chosen)
-	UI.fit(_make, ["A signal at level %d-%d" % [band[0], band[1]], "Level %d-%d" % [band[0], band[1]]])
-	UI.wrap([_make_sub, _make_sub2], "Their codes as above · the place, the crew and the extras rolled" if chosen.size() == Data.SIGNAL_PAPERS else "Three papers make a signal; a rare one rolls it higher")
+	UI.fit(_make, ["A signal at level %d–%d" % [band[0], band[1]], "Level %d–%d" % [band[0], band[1]]])
+	UI.wrap([_make_sub, _make_sub2], "The codes as above; the site, crew and extras roll when you decrypt" if chosen.size() == Data.SIGNAL_PAPERS else "Three papers make a signal; a rare one rolls it higher")
 	var why: String = sim.decrypt_block(chosen)
 	_decrypt.disabled = why != "" and not decrypting()
 	_decrypt.text = "Skip" if decrypting() else "Decrypt"     # a tap mid-decrypt goes to the end (item 20)
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
-	var note: String = ("Decrypting spends the papers · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == "three papers in" else why.substr(0, 1).to_upper() + why.substr(1)
+	var note: String = ("Decrypting spends the papers · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == sim.DECRYPT_NEEDS_PAPERS else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
 	var kb: String = sim.kev_block()
 	UI.fit(_kev_line, [Words.KEV_PILE, "\"Bring me notes and I'll see what's in the pile.\"", ""])
@@ -624,14 +624,14 @@ func _show_signals(od: Array) -> void:
 	UI.fit(_card_title, [site])
 	var lv: int = sim.signal_level(sg)
 	var rel: String = "at your reach" if lv == sim.reach else (("%d over your reach" % (lv - sim.reach)) if lv > sim.reach else ("%d under your reach" % (sim.reach - lv)))
-	var crew: String = "the %s's crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
+	var crew: String = "the %s crew" % str(Data.ZONES[int(sg["zone"])]["name"]).replace("The ", "")
 	UI.fit(_card_line, ["Level %d · %s · %s" % [lv, rel, crew], "Level %d · %s" % [lv, crew], "Level %d" % lv])
 	_card_odds.text = Fmt.pct(float(od[0]))
 	var tone: String = "good" if float(od[0]) >= 0.9 else ("warn" if float(od[0]) >= 0.6 else "bad")
 	_card_odds.add_theme_color_override("font_color", Pal.tone_color(tone) if od[1] else Pal.TEXT_3)
-	UI.fit(_card_odds_sub, ["the odds, events in" if od[1] else "reading the odds", "to clear"])
+	UI.fit(_card_odds_sub, ["to clear, events counted" if od[1] else "reading the odds", "to clear"])
 	UI.set_tile(_card_tiles[0], "Gang", ["%d × %s HP" % [int(e["pool"]), Fmt.num(float(e["hp"]))], "%d × %s" % [int(e["pool"]), Fmt.num(float(e["hp"]))]])
-	UI.set_tile(_card_tiles[1], "Their fire", ["%.1f/s each" % float(e["dps"]), "%.1f/s" % float(e["dps"])])
+	UI.set_tile(_card_tiles[1], "Their fire", ["%.1f dmg/s each" % float(e["dps"]), "%.1f/s" % float(e["dps"])])
 	UI.set_tile(_card_tiles[2], "Finds", sim.finds_words(int(e["level"])))
 	var chips: Array = []
 	for wd in sim.signal_words(sg):
@@ -653,9 +653,9 @@ func _show_signals(od: Array) -> void:
 		chips.push_front({"forms": ["Kev's story: %s" % Data.STORY_BEATS[beat]["name"], "Kev's story"], "colour": STORY})
 	_card_codes.show_chips(chips, 3, true)
 	if beat >= 0:
-		UI.wrap([_card_kev, _card_kev2], str(Words.STORY[beat]["made"]).replace("Kev: ", "KEV  "))
+		UI.wrap([_card_kev, _card_kev2], str(Words.STORY[beat]["made"]).replace("Kev: ", "KEV ·"))
 	else:
-		UI.wrap([_card_kev, _card_kev2], "KEV  \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()]))
+		UI.wrap([_card_kev, _card_kev2], "KEV · \"%s\"" % str(Words.SIGNAL_LINES[int(sg["line"]) % Words.SIGNAL_LINES.size()]))
 	for c in _crafts:
 		var cd: Dictionary = Data.craft_of(c["key"])
 		var why: String = sim.signal_craft_block(selected, c["key"])
@@ -671,7 +671,7 @@ func _show_signals(od: Array) -> void:
 		var og: Dictionary = sim.signal_at(j)
 		o["k"] = j
 		o["button"].visible = true
-		UI.fit(o["name"], ["%s · level %d · the %s's crew" % [Data.TIERS[int(og["site"])]["name"], sim.signal_level(og), str(Data.ZONES[int(og["zone"])]["name"]).replace("The ", "")], "%s · level %d" % [Data.TIERS[int(og["site"])]["name"], sim.signal_level(og)]])
+		UI.fit(o["name"], ["%s · level %d · the %s crew" % [Data.TIERS[int(og["site"])]["name"], sim.signal_level(og), str(Data.ZONES[int(og["zone"])]["name"]).replace("The ", "")], "%s · level %d" % [Data.TIERS[int(og["site"])]["name"], sim.signal_level(og)]])
 		var names: Array = sim.signal_words(og).map(func(x): return str(x["w"]))
 		var extra: String = (" · a head at full strength" if bool(og.get("head", false)) else "") + (" · a convoy may come" if bool(og.get("convoy", false)) else "")
 		UI.fit(o["line"], [(", ".join(names) if not names.is_empty() else "no codes") + extra, ", ".join(names) if not names.is_empty() else "no codes"])

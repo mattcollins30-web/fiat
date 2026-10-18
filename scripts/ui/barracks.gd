@@ -142,7 +142,7 @@ func _init() -> void:
 	_sum.position = Vector2(_words_x(), SUM_Y)
 	_sum.size = Vector2(_words_w(), SUM_H)
 	head_band["art"].get_parent().add_child(_sum)
-	_sum_head = UI.head(_sum, Rect2(0, 0, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
+	_sum_head = UI.head(_sum, Rect2(0, 0, SUM_HEAD_W, Chips.CHIP_H), "In total")
 	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	UI.shadow(_sum_head)
 	_sum_chips = Chips.new(_words_w() - SUM_HEAD_W - 8, 16)
@@ -492,7 +492,7 @@ func _build_panel() -> void:
 const EFFECT_WORDS := {
 	"damage_pct": "+%d%% damage", "hp": "+%d max HP", "loot_pct": "+%d%% loot quantity", "search_pct": "Search %d%% faster",
 	"first_pct": "+%d%% damage to each gang's first", "patrol_pct": "Gangs %d%% later", "armour_pct": "Armour +%d%%", "heal_pct": "Meds +%d%%",
-	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d med carried", "rest_pct": "Rest +%d%%", "treat_pct": "Treatment −%d%%",
+	"med_speed_pct": "Meds %d%% quicker", "med_cap": "+%d in the rig", "rest_pct": "Rest +%d%%", "treat_pct": "Clinic prices −%d%%",
 	"att_share": "+%d%% from gun parts", "sell_pct": "Fence pays +%d%%", "cash_pct": "Tins +%d%%", "rarity": "+%d%% loot quality",
 	"pace_pct": "+%d%% pace", "damage_low_pct": "+%d%% dmg under ½ HP",
 	"conv_fire_pct": "%d%% as fire", "conv_frost_pct": "%d%% as frost", "conv_poison_pct": "%d%% as poison", "conv_shock_pct": "%d%% as shock", "conv_bleed_pct": "%d%% as bleed",
@@ -502,14 +502,14 @@ const EFFECT_WORDS := {
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
 const PANEL_WORDS := {
-	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More to lose before a bail-out.", "loot_pct": "Every search turns up a little more.",
+	"damage_pct": "Every shot hits harder, whatever is in hand.", "hp": "More HP to lose before the runner goes down.", "loot_pct": "Every search turns up a little more.",
 	"search_pct": "Searching goes quicker.", "first_pct": "The opening shot on every gang hits harder.", "patrol_pct": "The next gang takes longer to arrive.",
 	"armour_pct": "Less of every hit gets through.", "heal_pct": "Every med heals more.", "med_speed_pct": "Every med works quicker.", "med_cap": "One more pouch on the rig.",
 	"rest_pct": "Resting on the Pitch heals faster.", "treat_pct": "The Clinic charges less.", "att_share": "Gun parts count for more.",
-	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run's take is bigger.", "rarity": "Rarer things turn up.",
+	"sell_pct": "The Fence pays more for what you sell.", "cash_pct": "Every run brings home more tins.", "rarity": "Rarer things turn up.",
 	"pace_pct": "The fight and the search go quicker.", "damage_low_pct": "Under half HP, every shot hits harder.",
 	"conv_fire_pct": "A share of every hit lands as fire and keeps burning.", "conv_frost_pct": "A share of every hit lands as frost and slows them.", "conv_poison_pct": "A share of every hit lands as poison and keeps working.",
-	"conv_shock_pct": "A share of every hit lands as shock.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",
+	"conv_shock_pct": "A share of every hit lands as shock, and they take more damage.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",
 	"fire_pct": "Fire hits harder.", "frost_pct": "Frost hits harder.", "poison_pct": "Poison hits harder.", "shock_pct": "Shock hits harder.",
 	"bleed_pct": "Bleed hits harder.", "physical_pct": "The plain share of every hit, the part not converted, hits harder.", "dot_pct": "Burns, poison and bleeds all do more.",
 }
@@ -668,19 +668,19 @@ func also_names() -> Array:
 			out.append(t["name"])
 	out.append("The drawer")
 	out.append("The shelf")
-	out.append("The radio")
+	out.append("The wireless")
 	return out
 
 
 static func _is_pages(nm: String) -> bool:
-	return nm == "The drawer" or nm == "The shelf" or nm == "The radio"
+	return nm == "The drawer" or nm == "The shelf" or nm == "The wireless"
 
 
 ## The pages over the lanes, by the Also chip's name.
 func _branch_for(nm: String) -> Dictionary:
 	if nm == "The drawer":
 		return _drawer_branch()
-	if nm == "The radio":
+	if nm == "The wireless":
 		return _radio_branch()
 	return _shelf_branch()
 
@@ -733,9 +733,9 @@ func _show_head() -> void:
 		var cost: int = sim.class_change_cost(_armed)
 		_notice.add_theme_color_override("font_color", Pal.ACCENT if sim.cash >= cost else Pal.BAD)
 		if sim.cash >= cost:
-			UI.fit(_notice, ["Change to %s: %s, the respec of what it gives back — press again" % [_armed, Fmt.money(cost)], "Change to %s: %s — press again" % [_armed, Fmt.money(cost)], "%s — press again" % Fmt.money(cost)])
+			UI.fit(_notice, ["Change to %s for %s (the cost of a reset) – press again" % [_armed, Fmt.money(cost)], "Change to %s for %s – press again" % [_armed, Fmt.money(cost)], "%s – press again" % Fmt.money(cost)])
 		else:
-			UI.fit(_notice, ["Change to %s: %s — %s short" % [_armed, Fmt.money(cost), Fmt.money(cost - int(sim.cash))], "%s: %s short" % [_armed, Fmt.money(cost - int(sim.cash))]])
+			UI.fit(_notice, ["Change to %s for %s – %s short" % [_armed, Fmt.money(cost), Fmt.money(cost - int(sim.cash))], "%s: %s short" % [_armed, Fmt.money(cost - int(sim.cash))]])
 	elif sim.cls == "":
 		UI.fit(_notice, ["Pick a past: what the runner was, and how they fight now · free for a new runner", "Pick a past · free for a new runner", "Pick a past"])
 	elif not td.is_empty():
@@ -815,11 +815,11 @@ func _show_lane(k: int, t) -> void:
 		if not j.is_empty():
 			UI.fit(lane["tag"], ["%s · joins %s" % [t["element"], j["tree"]], "%s · %s" % [t["element"], j["tree"]], t["element"]])
 		else:
-			UI.fit(lane["tag"], ["%s · double" % t["element"] if not sim.affinity(t["element"]) else t["element"], t["element"]])
+			UI.fit(lane["tag"], ["%s · double cost" % t["element"] if not sim.affinity(t["element"]) else t["element"], t["element"]])
 	elif t.get("class", "") != "":
 		UI.fit(lane["tag"], ["the %s's" % t["class"].to_lower(), t["class"]])
 	else:
-		UI.fit(lane["tag"], ["the Pitch's · kept", "the Pitch's"])
+		UI.fit(lane["tag"], ["the Pitch's · kept on death", "the Pitch's"])
 	lane["tag"].add_theme_color_override("font_color", colour if colour != Pal.CARD_LINE else Pal.TEXT_2)
 	var pts: int = sim.points_in(t["name"])
 	UI.fit(lane["gates"], ["%d point%s in" % [pts, "" if pts == 1 else "s"], "%d in" % pts])     # the gates say what opens next (Tree-J B)
@@ -927,7 +927,7 @@ func _show_links(lanes: Array, pages: bool) -> void:
 		if closed:
 			l.text = "⇄ JOINED"          # the joint's words are the halves' to say, once picked (14 Oct, Matt: "keeps it simple")
 		else:
-			l.text = "⇄ OPEN"
+			l.text = "⇄ CAN JOIN"
 		l.add_theme_color_override("font_color", Pal.ACCENT_TEXT if closed else colour)
 		var w: float = ceilf(UI.text_width(l, l.text)) + 20.0
 		var chip: Panel = link["chip"]
@@ -1059,7 +1059,7 @@ func _paper_gap(nm: String) -> String:
 
 ## The radio (12 Oct, the lore pass): every line heard, in the order heard, under its voice.
 func _radio_branch() -> Dictionary:
-	return _pages_branch("The radio", sim.heard, Words.RADIO.size(), Words.HEARD["empty"],
+	return _pages_branch("The wireless", sim.heard, Words.RADIO.size(), Words.HEARD["empty"],
 		func(key): return str(sim.radio_line(key).get("text", "")), 3,
 		func(key): return str(Words.RADIO_VOICES.get(sim.radio_line(key).get("voice", ""), "")))
 
@@ -1179,9 +1179,9 @@ func sum_items(_lanes_v: Array, fit := true) -> Array:
 	var extras: Array = []
 	for pair in [["Petrol/3", "burns"], ["The Rat Man/3", "poison"], ["Blades/3", "bleeds"]]:
 		if sim.tree.has(pair[0]):
-			extras.append("%s ×2 long" % pair[1])          # Lit, Dosed, Opened up: the trees' own, not the kit's (dot_seconds reads both)
+			extras.append("%s lasts twice as long" % pair[1])          # Lit, Dosed, Opened up: the trees' own, not the kit's (dot_seconds reads both)
 	if sim.has_node("poison_stacks"):
-		extras.append("poison to 15")
+		extras.append("poison stacks to 15")
 	if sim.has_node("bleed_forever"):
 		extras.append("bleeds don't fade")
 	if dot_inc > 0.0 or not extras.is_empty():
@@ -1292,7 +1292,9 @@ func _show_panel() -> void:
 			var halves := _halves(j)
 			var other: String = halves[1] if nd["name"] == halves[0] else halves[0]
 			var other_tree: String = j["element_tree"] if nd["name"] == halves[0] else j["tree"]
-			tail = ("joined: %s" % str(j["words"]).to_lower()) if sim.has_joint(j_key) else ("with %s in %s: %s" % [other, other_tree, str(j["words"]).to_lower()])
+			var jw: String = str(j["words"])
+			jw = jw.substr(0, 1).to_lower() + jw.substr(1)     # mid-line: only its first letter drops (18 Oct: "smgs")
+			tail = ("joined: %s" % jw) if sim.has_joint(j_key) else ("with %s in %s: %s" % [other, other_tree, jw])
 		if is_taken and not sim.node_active(selected) and not sim._active(nd):
 			tail = "idle without %s in hand" % type_words(nd)
 		elif is_taken and not sim.node_active(selected):
@@ -1314,7 +1316,7 @@ func _show_panel() -> void:
 			_train.text = "Train (%d point%s)" % [cost, "" if cost == 1 else "s"]
 			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
-	_respec.text = "Respec for %s" % Fmt.money(sim.respec_cost())
+	_respec.text = "Reset trees for %s" % Fmt.money(sim.respec_cost())
 	_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
 	var x: float = Pal.GRID_W - PAD

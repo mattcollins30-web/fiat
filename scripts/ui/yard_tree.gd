@@ -314,7 +314,7 @@ func _show_strip(purse: Dictionary) -> void:
 	UI.fit(_words, [str(pk["words"]) + ".", str(pk["short"])])
 	var or_line: String = "Or %s: %s" % [ot["name"], str(ot["words"]).to_lower()]
 	if built == side:
-		UI.fit(_other, ["Built · %s; a refit to it costs half the column" % or_line, "Built · %s" % or_line, "Built"])
+		UI.fit(_other, ["Built · %s; switching to the other costs half the column's price" % or_line, "Built · %s" % or_line, "Built"])
 		_build.text = "Built"
 		_build.disabled = true
 		return

@@ -578,7 +578,7 @@ func show_title() -> void:
 	items.append({"name": "New game", "detail": "One runner, a hammer, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the game in progress – press again" if saved else "", "glyph": "menu_new"})
 	items.append({"name": "New game, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
-			"action": new_game.bind(true), "confirm": "This replaces the camp in progress - press again" if saved else "", "glyph": "menu_skull"})
+			"action": new_game.bind(true), "confirm": "This replaces the game in progress – press again" if saved else "", "glyph": "menu_skull"})
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
 	_menu.open("Fiat", "Let it be done", items, Callable(), true, Rect2(), true)
@@ -634,7 +634,7 @@ func show_slots(saving: bool, back: Callable) -> void:
 		var words := _save_words(path) if used else "Empty"
 		if saving:
 			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": _save_to_slot.bind(path),
-					"confirm": "Overwrite this slot - press again" if used else ""})
+					"confirm": "Overwrite this slot – press again" if used else ""})
 		else:
 			items.append({"name": "Slot %d" % (k + 1), "detail": words, "action": load_game.bind(path), "enabled": used and _save_ok(_read_save(path))})
 	items.append({"name": "Back", "detail": "", "action": back})
@@ -673,7 +673,7 @@ func show_pause() -> void:
 	_menu.open("Paused", "Hardcore game" if sim.hardcore else "", [
 		{"name": "Resume", "detail": "", "action": _menu.close, "glyph": "menu_continue"},
 		{"name": "Settings", "detail": "Effects, music and voice volumes; the rooms' intros", "action": show_settings, "glyph": "menu_sound"},
-		{"name": "Save", "detail": "The autosave; it saves on its own every thirty seconds", "action": _save_and_resume, "glyph": "menu_save"},
+		{"name": "Save", "detail": "Save now; the game also saves itself every 30 s", "action": _save_and_resume, "glyph": "menu_save"},
 		{"name": "Save to a slot", "detail": _slots_words(), "action": show_slots.bind(true, show_pause), "glyph": "menu_slots"},
 		{"name": "Quit to title", "detail": "Saves first", "action": _quit_to_title, "glyph": "menu_title"},
 	], _menu.close, false, Rect2(_rail.position, Vector2(Pal.RAIL_W, _rail_panel.size.y)))     # the rail unfolded's shape, folded or not (15 Oct)
@@ -692,7 +692,7 @@ func show_settings(lit_row := -1) -> void:
 	items.append({"name": "Room intros: %s" % ("on" if room_intros else "off"), "detail": "A room's card the first time you're in it; the ? brings one back",
 			"action": _press_setting.bind("intros"), "glyph": "menu_continue"})
 	items.append({"name": "Back", "detail": "", "action": show_pause})
-	_menu.open("Settings", "A press steps each one; Esc goes back", items, show_pause)     # the card, not the drawer: its rows say what each is
+	_menu.open("Settings", "Each press steps a volume; Esc goes back", items, show_pause)     # the card, not the drawer: its rows say what each is
 	_menu.light(lit_row)
 
 
@@ -1291,7 +1291,7 @@ func _rail_status(nm: String) -> Dictionary:
 	match nm:
 		OVERVIEW:
 			# the Yard's jobs were easy to miss: the rail says when one is affordable, as the Fence's does for a contract
-			return {"badge": "Upgrade" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
+			return {"badge": "Can build" if sim.yard_news() else "", "badge_tone": "good"}     # news only (9 Oct): looking at the Yard clears it
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
@@ -1344,7 +1344,7 @@ func _town_purse() -> Dictionary:
 			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
 		"right": {"kicker": "The purse", "lines": [["Tins", Fmt.money(sim.cash), "accent"], ["Notes · scrap", "%d · %d" % [sim.notes, sim.scrap]], ["Kit worth", Fmt.money(sim.loadout_value())],
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]],
-			"note": "Tins go off; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
+			"note": "Tins lose value as prices rise; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
 	if sim.can_move_yard():
@@ -1403,7 +1403,7 @@ func _choose_book(kind: String, page := 0) -> void:
 		items.append({"name": "More", "detail": "", "action": _choose_book.bind(kind, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = "The code never heard" if kind == "filter" else "A standing code on every site"
+	var title: String = "A code filtered off every site" if kind == "filter" else "A standing code on every site"
 	_menu.open(title, "From the book: change it any time", items, _menu.close)
 
 
@@ -1441,7 +1441,7 @@ func _confirm_retire() -> void:
 	var td: Dictionary = sim.trait_data()
 	var kept: String = ("a third of %s kept" % td["name"].to_lower()) if not td.is_empty() else "no trait to keep"
 	var items := [
-		{"name": "Retire the %s" % sim.cls, "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
+		{"name": "Retire the %s" % sim.cls, "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new runners turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
 		{"name": "Not yet", "detail": "", "action": _menu.close},
 	]
 	_menu.open("Retire to the wall?", "A runner who retires is not a runner who died: the wall keeps a little of what they were, up to three.", items, _menu.close)
@@ -1494,7 +1494,7 @@ func _open_builds(page := 0) -> void:
 	for k in kinds:
 		items.append({"name": k[1], "detail": k[2], "action": _open_build_kind.bind(k[0], 0)})
 	if BUILD_KINDS.size() > (page + 1) * 4:
-		items.append({"name": "More …", "detail": "", "action": _open_builds.bind(page + 1)})
+		items.append({"name": "More", "detail": "", "action": _open_builds.bind(page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _menu.close})
 	_menu.open("Build for scrap", "%d scrap in hand" % sim.scrap, items.slice(0, 5), _menu.close)
@@ -1508,7 +1508,7 @@ func _open_build_kind(kind: String, page: int) -> void:
 		var detail: String = ("T%d%s" % [o["tier"], wants]) + ("" if o["ok"] else " · %s" % o["why"])
 		items.append({"name": "%s · %d scrap" % [o["name"], o["scrap"]], "detail": detail, "action": _build_one.bind(kind, o["name"]), "enabled": bool(o["ok"])})
 	if opts.size() > (page + 1) * 4:
-		items.append({"name": "More …", "detail": "", "action": _open_build_kind.bind(kind, page + 1)})
+		items.append({"name": "More", "detail": "", "action": _open_build_kind.bind(kind, page + 1)})
 	else:
 		items.append({"name": "Back", "detail": "", "action": _open_builds.bind(0)})
 	if items.size() > 5:

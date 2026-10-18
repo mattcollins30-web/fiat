@@ -133,7 +133,7 @@ func _init() -> void:
 	_word.visible = false
 	_word_title = UI.label(_word, Rect2(PAD, PAD, GRID_W - 2 * PAD, 36), "A word in the right ear", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_word_line = UI.label(_word, Rect2(PAD, PAD + 38, GRID_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_word_head = UI.head(_word, Rect2(PAD, WORD_Y - UI.HEAD_H - 4, GRID_W - 2 * PAD, UI.HEAD_H), "On offer · five kinds · new ones after every run")
+	_word_head = UI.head(_word, Rect2(PAD, WORD_Y - UI.HEAD_H - 4, GRID_W - 2 * PAD, UI.HEAD_H), "On offer · 5 kinds · new ones after every run")
 	for k in range(Data.GAMBLE_SHOWN):
 		var x := PAD + k * (OFFER_W + TILE_GAP)
 		var o := {}
@@ -379,7 +379,7 @@ func _show_deals() -> void:
 			UI.fit_button(r["pass"], ["Turn it down · %d notes" % pc, "Turn it down"])
 		r["pass"].disabled = not sim.can_pass_contract(k)
 	if sim.mate.is_empty():
-		_mate_line.text = "Not about."
+		_mate_line.text = "Not about. He comes by every %d runs." % Data.MATE_RUNS
 		_mate_buy.visible = false
 	else:
 		var mt: String = (" T%d" % int(sim.mate["tier"])) if sim.mate.has("tier") else ""     # the tier he has it at (12 Oct)
@@ -414,7 +414,7 @@ func _tab_text(b: Button, forms: Array) -> void:
 ## words and Pay with the price; a kind bought is gone until the next run; the last thing it got you.
 func _show_word() -> void:
 	var price: int = sim.gamble_price(sim.gamble[0]) if not sim.gamble.is_empty() else sim._inf(Data.GAMBLE_FLOOR)
-	UI.fit(_word_line, ["He knows a man. %s a word, whatever it turns out to be; the kinds change after every run." % Fmt.money(price), "%s a word; the kinds change after every run." % Fmt.money(price), "%s a word." % Fmt.money(price)])
+	UI.fit(_word_line, ["He knows a man. %s a word, whatever it turns out to be." % Fmt.money(price), "%s a word; the kinds change after every run." % Fmt.money(price), "%s a word." % Fmt.money(price)])
 	var kinds: Array = sim.gamble.duplicate()
 	for k in range(Data.GAMBLE_SHOWN):
 		var o: Dictionary = _offers[k]
@@ -589,17 +589,17 @@ func _show_side() -> void:
 		for c in range(5):
 			if sim.yard_side("clinic", c) != "":
 				cpicks += 1
-		UI.set_tile(_side_tiles_c[1], "The Clinic", ["%d of 5 upgrades" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
+		UI.set_tile(_side_tiles_c[1], "Upgrades", ["%d of 5" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
 		y_in += UI.TILE_H + 10
 		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
 		var half: float = (INNER - 10) / 2.0
 		var out: bool = sim.on_mission()
-		_side_button(0, y_in, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Fit"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
-		_side_button(1, y_in, "The runner is out" if out else ("The wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
+		_side_button(0, y_in, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Full HP"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
+		_side_button(1, y_in, "The runner is out" if out else ("Treat the wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
 		if not out and hurt:
 			UI.fit_button(_side_buttons[0], Fmt.money_forms(sim.heal_cost()).map(func(m): return "Heal (%s)" % m))
 		if not out and sim.wound != "":
-			UI.fit_button(_side_buttons[1], Fmt.money_forms(sim.wound_cost()).map(func(m): return "The wound (%s)" % m) + ["Wound: %s" % Fmt.short_num(sim.wound_cost())])
+			UI.fit_button(_side_buttons[1], Fmt.money_forms(sim.wound_cost()).map(func(m): return "Treat the wound (%s)" % m) + ["Wound: %s" % Fmt.short_num(sim.wound_cost())])
 		if full and not out:
 			_side_buttons[0].text = "Fit for duty"
 		y_in += 48 + 8
@@ -634,7 +634,7 @@ func _show_side() -> void:
 	var worth_all := 0
 	for it in sim.stash:
 		worth_all += sim.sell_price(it)
-	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays worth, asks three times"), "",
+	_band.set_words("The Fence · %s" % ("prices up %d%%" % sim.inflation_pct() if sim.inflation_pct() > 0 else "pays full value, charges three times"), "",
 		Fmt.money(worth_all), ["for the lot · %d in the stash" % sim.stash.size(), "for the lot of %d" % sim.stash.size(), "for the lot"], Pal.ACCENT)
 	_band.headline_under_title(true)
 	_side_title.text = "SELL BY RARITY"
@@ -695,7 +695,7 @@ func _show_panel() -> void:
 		if kind == "clinic":
 			_left_title.text = "The rig: %d of %d" % [sim.rig_used(), sim.med_capacity()]
 			if sim.med_capacity() == 0:
-				UI.fit(_left_lines[0], ["No rig fitted - fit one in the Kit to carry meds", "No rig fitted: fit one in the Kit", "No rig fitted"])
+				UI.fit(_left_lines[0], ["No rig fitted: fit one in the Kit to carry meds", "No rig fitted: fit one in the Kit", "No rig fitted"])
 			elif sim.rig.is_empty():
 				UI.fit(_left_lines[0], ["Nothing carried: take from Your meds", "Nothing carried: take from the grid", "Nothing carried"])
 			else:
@@ -710,16 +710,16 @@ func _show_panel() -> void:
 				for nm in order:
 					words.append(nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
 				UI.fit(_left_lines[0], [", ".join(words), "%d meds" % sim.rig.size()])
-				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, first taken first"])
+				UI.fit(_left_lines[1], ["Used under fire; first taken, first used", "Used under fire, in the order taken"])
 				UI.fit(_left_lines[2], ["Taken out again in the Kit, from the rig", "Taken out in the Kit"])
 			_right_title.text = "The shelf: %d of %d" % [sim.clinic.size(), sim.clinic_stock()]
 			_right_lines[0].text = "No more until the next run"
 		else:
 			_left_title.text = "The Fence"
 			if sim.inflation_pct() > 0:
-				UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes hold" % sim.inflation_pct(), "Prices up %d%%; notes hold" % sim.inflation_pct()])
+				UI.fit(_left_lines[0], ["Prices up %d%% since the Pitch opened; notes keep their value" % sim.inflation_pct(), "Prices up %d%%; notes don't" % sim.inflation_pct()])
 			else:
-				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays worth; asks three times"])
+				UI.fit(_left_lines[0], ["Pays what a thing is worth; asks three times that", "Pays full value; charges three times"])
 			_right_title.text = "Their shelf: %d of %d" % [sim.market.size(), sim.market.size() if sim.yard_has("back_room") else sim.market_stock()]
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick an item on the shelf or in the stash"

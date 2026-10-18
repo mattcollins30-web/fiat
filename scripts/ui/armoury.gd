@@ -185,11 +185,11 @@ func _signature() -> String:
 func _show_panel() -> void:
 	var it := _selected_item()
 	if it.is_empty():
-		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right", "", "When a run comes home:", junk_words(sim)])
+		_pick.show_empty("Select an item", ["A slot on the left, or a stash item on the right"])     # the rules read on their buttons (18 Oct: said twice)
 		# the idle toggles and the junk rules (11 Oct) live where the buttons would be
 		_pick.set_buttons([
 			{"text": "Equip if better ✓" if sim.auto_equip else "Equip if better", "action": _toggle.bind(0), "enabled": true, "primary": false, "tone": "good" if sim.auto_equip else ""},
-			{"text": "Sell: " + SELL_WORDS[sim.junk_upto + 1], "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.junk_upto >= 0 else ""},
+			{"text": "Sell when home: " + SELL_WORDS[sim.junk_upto + 1], "action": _toggle.bind(1), "enabled": true, "primary": false, "tone": "good" if sim.junk_upto >= 0 else ""},
 			{"text": "Keep: " + KEEP_WORDS[sim.junk_keep], "action": _toggle.bind(2), "enabled": sim.junk_upto >= 0, "primary": false, "tone": ""}])
 		return
 	var buttons := []
@@ -241,7 +241,7 @@ func _show_panel() -> void:
 		var from_stash: bool = selected["kind"] == "stash"
 		if from_stash:
 			if fitted == null:
-				_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
+				_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 			else:
 				var ftail = ""
 				if Items.is_gun(fitted):
@@ -250,7 +250,7 @@ func _show_panel() -> void:
 				var v: Array = PickPanel.verdict_for(sim, it)
 				_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
 			var lock: int = sim.wear_lock(it)
-			buttons.append({"text": "Equip at %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
+			buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": sim.equip_item.bind(it["id"]), "enabled": sim.can_equip_item(it["id"]), "primary": true})
 			# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct),
 			# no room for what comes off, or both
 			var hints: Array = []
@@ -331,7 +331,7 @@ func _show_medical(it: Dictionary) -> Array:
 		lines[0] = ("Feeds both guns" if feeds.size() == 2 else "Feeds the %s" % str(feeds[0]).to_lower()) if not feeds.is_empty() else "Nothing fitted fires it"     # two names ran past the panel (10 Oct)
 	var buttons := []
 	if selected["kind"] == "rig":
-		buttons.append({"text": "Leave in stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
+		buttons.append({"text": "Leave in the stash", "action": sim.leave.bind(it["id"]), "enabled": not sim.on_mission() and (sim.stash_fits(it) or sim._stack_room(it)), "primary": true})
 	else:
 		var room: bool = sim.rig_room(Items.size(it))
 		if not room:
@@ -350,7 +350,7 @@ func _split_button(it: Dictionary) -> Dictionary:
 
 ## The junk rules' buttons: the rarity the Fence takes up to (off, then each rarity to Rare), and the kind kept.
 const SELL_WORDS := ["off", "commons", "up to Uncommon", "up to Rare"]
-const KEEP_WORDS := {"": "upgrades", "guns": "upgrades, guns", "body": "upgrades, body", "bags": "upgrades, bags", "parts": "upgrades, parts"}
+const KEEP_WORDS := {"": "upgrades", "guns": "upgrades and guns", "body": "upgrades and body kit", "bags": "upgrades and bags", "parts": "upgrades and parts"}
 
 
 ## The rules in a line: what goes to the Fence when a run comes home.
@@ -358,7 +358,7 @@ static func junk_words(s) -> String:
 	if s.junk_upto < 0:
 		return "nothing's sold" + (", the best goes on" if s.auto_equip else "")
 	var what: String = ["commons", "commons and uncommons", "everything to rare"][s.junk_upto]
-	var keep: String = "" if s.junk_keep == "" else ", or %s" % s.junk_keep
+	var keep: String = "" if s.junk_keep == "" else ", nor any %s" % ("body kit" if s.junk_keep == "body" else s.junk_keep)
 	return "the Fence takes %s, never an upgrade%s" % [what, keep]
 
 

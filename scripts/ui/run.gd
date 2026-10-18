@@ -179,7 +179,7 @@ func _init() -> void:
 	_runner["chips"].position = Vector2(PAD + KEY_W, RUNNER_NOTE_Y + 2)
 	_left.add_child(_runner["chips"])
 	# the rig's pouches: what's carried, a cell a pouch; a med's cell uses that med
-	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · use an item in the rig")
+	_rig_head = UI.head(_left, Rect2(PAD, RIG_HEAD_Y, INNER, UI.HEAD_H), "The rig · click an item to use it")
 	for k in range(RIG_MAX):
 		var o := UI.panel(_left, Rect2(PAD, RIG_Y, Pal.CELL, Pal.CELL), UI.box(Color.TRANSPARENT, 6, 1, Pal.CARD_LINE))
 		o.visible = false
@@ -360,7 +360,7 @@ func show_state(s) -> void:
 	var of: int = maxi(1, int(m["kills"]) + int(m["remaining"])) if not m["cleared"] else int(t["pool"])
 	if m.get("way_out", false):
 		var door: int = maxi(1, int(m.get("way_out_gang", 1)))
-		_band.set_bar(float(door - int(m["remaining"])) / float(door), "%d of %d at the door seen off" % [door - int(m["remaining"]), door])
+		_band.set_bar(float(door - int(m["remaining"])) / float(door), "%d of %d seen off at the door" % [door - int(m["remaining"]), door])
 	else:
 		_band.set_bar((float(m["kills"]) / float(of)) if not m["cleared"] else 1.0, ("Cleared" if m["cleared"] else "%d of %d down" % [m["kills"], of]))
 	# them
@@ -380,14 +380,14 @@ func show_state(s) -> void:
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	elif m["remaining"] > 0:
 		var on_you_in: int = mini(m["remaining"], sim.contact(t))
-		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT; THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
+		_fight["head"].text = ("GANG %d" % m["patrols"]) if m["cleared"] else ("THE FIGHT · THEN %s" % m["boss"]["name"].to_upper() if m.has("boss") and m["boss"]["alive"] else "THE FIGHT")
 		_tiles(_fight["tiles"], [["On you", [("%d · %d more" % [on_you_in, m["remaining"] - on_you_in]) if m["remaining"] > on_you_in else "%d" % on_you_in, "%d" % on_you_in]],
 			["Their fire", ["%.1f/s" % m["last_incoming"]]], ["Your fire", ["%.0f/s" % fire_now]], ["Kills", ["%d" % m["kills"]]]])
 		_bar(_fight, clampf(m["target_hp"] / t["hp"], 0.0, 1.0), "Their HP %d / %d" % [ceili(m["target_hp"]), int(t["hp"])], "bad", m.get("dots", {}), float(t["hp"]))
 	else:
 		_fight["head"].text = "PICKING IT OVER · EVERY GANG THE SIZE OF THE FIRST" if sim.has_node("cap_dead_quiet") else "PICKING IT OVER · EACH GANG BIGGER THAN THE LAST"
 		var next: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
-		_tiles(_fight["tiles"], [["Next gang", (["on the call", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
+		_tiles(_fight["tiles"], [["Next gang", (["held off", "held"] if sim.gang_held(m) else [(Fmt.mss(next) if next < 1e8 else "never")])], ["Gangs", ["%d" % m["patrols"]]], ["Kills", ["%d" % m["kills"]]], ["Found", ["%d" % m["found"].size()]]])
 	var search_state: bool = not boss_on and not way_out and m["remaining"] <= 0
 	if _view != null:
 		# the run view: their bar over the frame in a fight; while it's searching the search's at the frame's foot,
@@ -404,7 +404,7 @@ func show_state(s) -> void:
 	# the runner, and their wound when they carry one (30)
 	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
 	var g: float = sim.guard()
-	var hp_words: String = ("Your HP %d / %d + %d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(g))]) if g >= 0.5 else ("Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()])
+	var hp_words: String = ("Your HP %d / %d · Guard %d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(g))]) if g >= 0.5 else ("Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()])
 	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), hp_words, "bad" if low else "good", m.get("my_dots", {}), sim.max_hp(), g / maxf(1.0, sim.max_hp()))
 	var gun = sim.equipped["Primary"]
 	var rounds: int = sim.rounds_for(gun) if gun != null else 0
@@ -450,9 +450,9 @@ func show_state(s) -> void:
 	_take_strip["fill"].size.x = _take_strip["track"].size.x * clampf(float(used_p) / maxf(1.0, float(sim.capacity())), 0.0, 1.0)
 	(_take_strip["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if used_p >= sim.capacity() else Pal.GOOD
 	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
-	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: leaving ends it" if sim.auto_tier >= 0 else
-		("Goes when the pack's full or a gang comes" if m.get("leave_full", false) else
-		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ("Push for loot, or go" if m["cleared"] else "Leaving keeps the loot"))))
+	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: getting out stops it" if sim.auto_tier >= 0 else
+		("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
+		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ("Stay for more loot, or get out" if m["cleared"] else "Leaving keeps the loot"))))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
 	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
@@ -509,7 +509,7 @@ func show_state(s) -> void:
 		var wo: String = Fmt.mss(ceilf(sim.way_out_s(t, m)))
 		var room: float = ((INNER - 12) / 2.0 if auto else float(INNER)) - 48.0     # the half-width button on an auto-run (10 Oct); the button's own padding
 		_button.text = "Get out · %s" % wo
-		for o in ["Get out now · %s and a last gang" % wo, "Get out · %s, a gang" % wo]:
+		for o in ["Get out · %s and one last gang" % wo, "Get out · %s, a gang" % wo]:
 			if UI.text_width(_button, o) <= room:
 				_button.text = o
 				break
@@ -704,7 +704,7 @@ func six_rows(m: Dictionary, t: Dictionary, fire_now: float) -> Array:
 		var inc: float = float(m["last_incoming"])
 		first = ["Their fire", ["%.1f/s" % inc], Pal.BAD if inc > 0.0 and sim.hp / inc < SIX_FAST_S else Pal.TEXT]
 	elif sim.gang_held(m):
-		first = ["Gang in", ["on the call", "held"], Pal.TEXT_3]
+		first = ["Gang in", ["held off", "held"], Pal.TEXT_3]
 	else:
 		var nx: float = sim.patrol_s(t, m["patrols"] == 0) - m["patrol_timer"]
 		first = ["Gang in", [Fmt.mss(nx)] if nx < 1e8 else ["never"], Pal.TEXT if nx < 1e8 else Pal.TEXT_3]
@@ -744,11 +744,11 @@ func _show_pick(m: Dictionary) -> void:
 		var lines := ["A long gun takes 4 or 5 cells by 1, armour 3 by 3, a bandage 1"]
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
-			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: an upgrade on what's worn swaps out the cheapest that isn't")
+			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: a find that beats what's worn replaces the pack's cheapest item")
 			lines.append("Cheapest now: %s, %s" % [cheap["base"].to_lower(), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
 		else:
 			lines.append("%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"])
-		lines.append("Pick a cell for its figures; Select many ditches a few at once" if m["found"].size() > 0 else "Nothing found yet")
+		lines.append("Pick a cell for its figures; Select ditches several at once" if m["found"].size() > 0 else "Nothing found yet")
 		_pick.show_empty("The pack: %d of %d cells" % [sim.pack_used(m), sim.capacity()], lines)
 		_pick.set_buttons([])
 		return
@@ -771,7 +771,7 @@ func _show_pick(m: Dictionary) -> void:
 			_pick.show_right_words("The pack", "%d of %d cells" % [sim.pack_used(m), sim.capacity()], ["%d cell%s" % [Items.size(it), "" if Items.size(it) == 1 else "s"]])
 		var fits: bool = sim.floor_fits(it)
 		if not fits:
-			_pick.set_hint_options(["No room in the pack: ditch something first (%d cells)" % Items.size(it), "No room in the pack"])
+			_pick.set_hint_options(["No room in the pack: ditch something first (it takes %d cells)" % Items.size(it), "No room in the pack"])
 		elif sim.wear_lock(it) > 0:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
 		_pick.set_buttons([{"text": "Take", "action": _take_floor.bind(_floor_pick), "enabled": fits, "primary": true}])
@@ -793,7 +793,7 @@ func _show_pick(m: Dictionary) -> void:
 			var v: Array = PickPanel.verdict_for(sim, it)
 			_pick.set_verdict(v[0], v[1], PickPanel.deltas_for(sim, it, fitted))
 		else:
-			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Equipping adds everything at the left"])
+			_pick.show_right_words("Fitted now", "Nothing fitted as %s" % it["slot"].to_lower(), ["Nothing worn there: equipping adds all of it"])
 		var can: bool = sim.can_equip_from_pack(it["id"])
 		var lock: int = sim.wear_lock(it)
 		# the foot's hint: over the runner's level (15 Oct); else no rounds for it (the try-on counts it fed, 11 Oct), no
@@ -807,7 +807,7 @@ func _show_pick(m: Dictionary) -> void:
 			_pick.set_hint_options(PickPanel.lock_hints(sim, it))
 		elif not hints.is_empty():
 			_pick.set_hint_options(_hint_forms(hints))
-		buttons.append({"text": "Equip at %d" % lock if lock > 0 else "Equip", "action": _equip_pick, "enabled": can, "primary": true})
+		buttons.append({"text": "Equip at level %d" % lock if lock > 0 else "Equip", "action": _equip_pick, "enabled": can, "primary": true})
 	else:
 		_pick.show_right_words("", "", [])
 	buttons.append({"text": "Ditch", "action": _ditch_pick, "enabled": true, "primary": buttons.is_empty()})
@@ -1121,7 +1121,7 @@ func _show_rig() -> void:
 		if Items.is_medical(it):
 			c.tooltip_text = "%s · %s" % [it["base"], sim.med_words(it)]
 		elif Items.is_ammo(it):
-			c.tooltip_text = "%s · %d rounds · tap for the pack" % [it["base"], int(it["rounds"])]
+			c.tooltip_text = "%s · %d rounds · click for the pack" % [it["base"], int(it["rounds"])]
 		else:
 			c.tooltip_text = str(it["base"])
 		c.visible = true

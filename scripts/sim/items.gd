@@ -736,7 +736,7 @@ static func is_melee(it: Dictionary) -> bool:
 static func ammo_words(gun: Dictionary) -> String:
 	var type := ammo_type(gun)
 	if type == "none" or gun.get("rule", "") == "weed_burner":
-		return "Takes nothing"
+		return "Takes no rounds"
 	if type == "" or not is_gun(gun):
 		return ""
 	for b in Data.BASES[Data.AMMO]:
@@ -815,7 +815,10 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 		var label: String = str(d.get("short" if short else "label", a["stat"]))
 		var pct: bool = a["stat"].ends_with("_pct") or a["stat"] in ["loot_per_lot", "guard_gang"]     # guard_gang is a share of max HP (18 Oct)
 		var line: String
-		line = "+%d%s %s" % [a["value"], "%" if pct else "", label]
+		if label == "pouch" and int(a["value"]) != 1:
+			label = "pouches"                    # "+1 pouch", "+2 pouches" (18 Oct)
+		var plus: String = "" if a["stat"] == "crowd_less_pct" else "+"     # "8% less damage with three or more on you"
+		line = "%s%d%s %s" % [plus, a["value"], "%" if pct else "", label]
 		if tiers and a.has("tier"):
 			line += " · T%d" % int(a["tier"])
 		out.append(line)
@@ -899,7 +902,7 @@ static func base_res_words(it: Dictionary) -> String:
 			out.append("%s resist %d%%" % [ty, int(res[ty])])
 	if base_of(it).has("sustain"):
 		var su: Array = base_of(it)["sustain"]
-		out.append("walking fire +%d%%/s to +%d%%" % [int(su[0]), int(su[1])])     # the SMG line (7 Oct)
+		out.append("walking fire: damage +%d%% a second, up to +%d%%" % [int(su[0]), int(su[1])])     # the SMG line (7 Oct)
 	return " · ".join(out)
 
 
@@ -965,7 +968,7 @@ static func att_lead(it: Dictionary) -> Array:
 static func att_words(it: Dictionary, short := false, base_only := false) -> String:
 	var out := []
 	for pair in [["damage_pct", "dmg", "dmg"], ["first_pct", "damage to the first of each gang", "first"], ["speed_pct", "pace", "pace"], ["patrol_pct", "later gangs", "delay"],
-			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
+			["conv_fire_pct", "of hits as fire: they burn", "as fire"], ["conv_frost_pct", "of hits as frost: they're chilled", "as frost"], ["conv_poison_pct", "of hits as poison: it lingers", "as poison"], ["conv_shock_pct", "of hits as shock: they take more damage", "as shock"], ["conv_bleed_pct", "of hits as bleed: they keep bleeding", "as bleed"], ["salt", "armour", "armour"], ["wire_pct", "tins from every kill", "tins"]]:
 		var v: float = float(base_of(it).get(pair[0], 0)) if base_only else att_stat(it, pair[0])
 		if absf(v) >= 0.5:
 			var sgn: String = "" if pair[0].begins_with("conv_") else ("+" if v > 0 else "−")
@@ -977,7 +980,7 @@ static func att_words(it: Dictionary, short := false, base_only := false) -> Str
 static func socket_words(it: Dictionary) -> String:
 	var b := base_of(it)
 	if b.has("salt"):
-		return "A socketable: packed into any socket, +%d armour" % int(b["salt"])
+		return "A socketable: in any socket, +%d armour" % int(b["salt"])
 	if b.has("wire_pct"):
 		return "A socketable: in any socket, +%d%% tins from every kill" % int(b["wire_pct"])
 	for ty in ["fire", "frost", "poison", "shock"]:
@@ -1039,4 +1042,4 @@ static func paper_keep(it: Dictionary, book: Array) -> String:
 		return ""
 	if str(it.get("rule", "")) != "":
 		return "Works from the stash: keep it"
-	return "Read: safe to sell, the code stays"
+	return "Read: safe to sell; the Radio keeps the code"

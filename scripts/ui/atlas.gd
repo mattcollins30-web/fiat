@@ -133,7 +133,7 @@ func _init(h: float) -> void:
 			_tiles[key] = t
 			_style(b, "open")
 	var sum := UI.panel(self, Rect2(0, SUM_Y, W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_sum_head = UI.head(sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "Add up to")
+	_sum_head = UI.head(sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "In total")
 	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_sum_chips = Chips.new(W - 2 * PAD - SUM_HEAD_W - 10, 6)
 	_sum_chips.position = Vector2(PAD + SUM_HEAD_W + 10, 10)
@@ -186,7 +186,7 @@ func show_state(s) -> void:
 	_shown = sig
 	var free: int = sim.atlas_free()
 	_band.set_words("The Dial · the endgame's tree", "The Dial", "%d" % free, ["of %d point%s free" % [sim.atlas_points, "" if sim.atlas_points == 1 else "s"], "of %d free" % sim.atlas_points, "free"])
-	_band.set_right(["A point for each signal", "at or past your reach.", "Holds on every site."])
+	_band.set_right(["A point for each signal", "at or past your reach.", "Ranks hold on every site."])
 	var zones := []
 	for z in range(Data.ZONES.size()):
 		var best_lv := 0                    # the best level cleared there (18 Oct: levels, not depths, on screen)
@@ -264,7 +264,7 @@ func _show_panel() -> void:
 		_words.position.x = PAD + _chips.used_width() + 10
 		_words.size.x = W - PAD - _words.position.x
 		UI.fit(_words, [str(a["sentence"]), str(a["words"]), ""])
-		_take.text = "Take a rank (1 point)" if rank < int(a["max"]) else "At its top"
+		_take.text = "Take a rank (1 point)" if rank < int(a["max"]) else "Top rank"
 		_take.disabled = not sim.can_rank_atlas(selected)
 		_take.size.x = ceilf(UI.text_width(_take, _take.text)) + 48
 	_reset.disabled = sim.atlas_spent() == 0 or sim.on_mission()

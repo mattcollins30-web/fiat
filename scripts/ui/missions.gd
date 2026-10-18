@@ -156,7 +156,7 @@ func _init() -> void:
 		c["boxes"][2].position.y = y
 		y += BOX_PAD
 		# the word: the head carries the sky; a row a word, its name left and its effect right
-		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "On the air")
+		c["intel_head"] = UI.head(panel, Rect2(PAD, y, INNER, UI.HEAD_H), "Conditions")
 		y += UI.HEAD_H + 2
 		# the words as toned rows: the name in its tone, its effect muted beside it, one chip a row
 		c["intel"] = Chips.new(INNER)
@@ -266,7 +266,7 @@ func show_state(s) -> void:
 			if not why.is_empty():
 				band.chips.show_chips(why, 1, true)
 		else:
-			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "clear tier %d first" % k, Pal.TEXT_3)
+			band.set_words("Tier %d · %s" % [k + 1, Data.ZONES[zone]["name"]], Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
 			band.headline_under_title(false)
 			band.chips.visible = false
 		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
@@ -275,8 +275,9 @@ func show_state(s) -> void:
 		var p_odds: float = sim.paper_odds(i)
 		var tiles: Array = [
 			["Gang", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
-			["Their fire", ["%.1f/s each" % t["dps"], "%.1f/s" % t["dps"]]],
-			["Fight · clock", ["%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "over %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
+			["Their fire", ["%.1f dmg/s each" % t["dps"], "%.1f/s" % t["dps"]]],
+			["Fight · clock", [     # "Fight time · run clock" wanted 179 px of the tile's 128 (18 Oct)
+			"%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "clock %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
 			["Finds", sim.finds_words(int(t["level"]))],
 			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
 			["The site", [sim.site_state(i), sim.site_state(i).get_slice(" · ", 0)]],
@@ -304,7 +305,7 @@ func show_state(s) -> void:
 			if not (nm in names):
 				names.append(nm)                 # the Radio's words first, the sky's after
 		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
-		UI.fit(c["intel_head"], ["ON THE AIR · %s" % sim.sky_words(i), "ON THE AIR"])     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
+		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i), "CONDITIONS"])     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
@@ -326,14 +327,14 @@ func show_state(s) -> void:
 		c["auto"].text = "Auto-run: on" if auto else "Auto-run: off"
 		UI.style_button(c["auto"], false, "good" if auto else "")
 		c["insure"].visible = is_open
-		var long_text: String = "Insured ✓" if sim.insure_next else "Insure %s" % Fmt.money(sim.insure_cost(i))
+		var long_text: String = "Insured ✓" if sim.insure_next else "Insure kit · %s" % Fmt.money(sim.insure_cost(i))
 		c["insure"].text = long_text if UI.text_width(c["insure"], long_text) + 32 <= BOSS_W else ("Insured ✓" if sim.insure_next else "Insure")
 		c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
 		if not is_open:
 			c["note"].text = ""
 		elif sim.hp < sim.max_hp() * 0.5:
-			c["note"].text = "The runner is hurt"
+			c["note"].text = "The runner is under half HP"
 		elif c["boss"].visible and sim.boss_armed.get(i, false):
 			var cost: int = sim.boss_cost(i)
 			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %d notes, you have %d" % [boss["name"], cost, sim.notes]), "%s: %d notes" % [boss["name"], cost], boss["name"]])
@@ -433,7 +434,7 @@ func _show_chips(c: Dictionary, t: Dictionary, is_open: bool) -> void:
 		if share > 0.0:
 			var over: float = sim.over_cap(ty)
 			var ot: String = (" +%.0f" % over) if over >= 0.5 else ""     # over the cap (12 Oct)
-			chips.append(["%s %.0f%% · you resist %.0f%%%s" % [ty.capitalize(), share * 100.0, sim.resist(ty) * 100.0, ot], "%s · resist %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
+			chips.append(["%.0f%% %s · you resist %.0f%%%s" % [share * 100.0, ty, sim.resist(ty) * 100.0, ot], "%s · resist %.0f%%%s" % [ty.capitalize(), sim.resist(ty) * 100.0, ot], ty])
 	if chips.is_empty():
 		chips.append(["Physical only · armour takes %s" % Fmt.pct(sim.mitigation()), "Physical only", "physical"])
 	# the rig short of the fight's rounds (16 Oct): first, in red - the Bank's dry shotgun
@@ -545,7 +546,7 @@ static func odds_reasons(s, i: int) -> Array:
 		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn"})
 	var gear_lv: int = s.wear_of(int(s.effective(i)["level"]))
 	if s.level() < gear_lv:
-		out.append({"forms": ["Level %d, its gear %d" % [s.level(), gear_lv], "Level %d of %d" % [s.level(), gear_lv]], "colour": "warn"})
+		out.append({"forms": ["Level %d; its gear needs level %d" % [s.level(), gear_lv], "Gear needs level %d" % gear_lv], "colour": "warn"})
 	return out
 
 

@@ -234,8 +234,8 @@ func show_crates(sim, m: Dictionary) -> void:
 	var pack: String = "PACK %d OF %d" % [sim.pack_used(m), sim.capacity()]
 	UI.fit(_head, ["THE CRATES · %s%s · %s · %s" % [opens, locked_tail, tins, pack], "%s%s · %s · %s" % [opens, locked_tail, tins, pack],
 		"%s%s · %s" % [opens, locked_tail, pack], opens + locked_tail])
-	_aside.text = "the dog's nose on them" if sniffs else "the dice's order"
-	UI.fit(_aside, [_aside.text, "the dog's nose" if sniffs else "the dice's"])
+	_aside.text = "the dog's nose on them" if sniffs else "in no order"
+	UI.fit(_aside, [_aside.text, "the dog's nose" if sniffs else "random"])
 	# the row: a window on the queue from the one opened last, the rest as "+N more"
 	var start: int = clampi(i - 1, 0, maxi(0, n - SHOWN))
 	var more: int = n - start - SHOWN + 1 if n - start > SHOWN else 0

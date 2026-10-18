@@ -1267,7 +1267,7 @@ func buy_mate() -> bool:
 	var it := _mate_item()
 	stash.append(it)
 	_read(it)
-	log_event("From the Fence's mate, for %d notes: %s." % [int(mate["notes"]), it["unique"]])
+	log_event("From the Fence's mate, for %d notes: %s" % [int(mate["notes"]), it["unique"]])
 	mate = roll_mate()
 	return true
 
@@ -1508,7 +1508,7 @@ func finds_words(item_level: int) -> Array:
 	if mine >= top:
 		return ["level %d gear" % top, "level %d" % top]
 	var pct: int = roundi(Data.FIND_AT_MINE * 100.0)
-	return ["level %d gear · %d%% at %d" % [top, pct, mine], "level %d · %d%% at %d" % [top, pct, mine], "level %d" % top]
+	return ["level %d gear · %d%% at level %d" % [top, pct, mine], "level %d · %d%% at level %d" % [top, pct, mine], "level %d" % top]
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.
@@ -1661,7 +1661,7 @@ func _read(it: Dictionary, quiet := false) -> void:
 		chron("paper", {"name": str(it["base"]), "pages": book.size()})
 		var taught := word_taught_by(str(it["base"]))
 		if taught != "" and not _dry_on and not quiet:
-			log_event("%s: a code on it. The Radio has %s now" % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper carries its code (13 Oct: codes, not words)
+			log_event("%s: a code on it. The Radio has %s now." % [it["base"], taught.to_lower()])     # map juicing (9 Oct): a paper carries its code (13 Oct: codes, not words)
 	if it.has("unique") and not (it["unique"] in shelf):
 		shelf.append(it["unique"])
 		chron("unique", {"name": str(it["unique"]), "shelf": shelf.size(), "tier": int(it.get("tier", 0))})
@@ -1689,7 +1689,7 @@ func paper_lines(it: Dictionary) -> Array:
 	if str(it.get("rule", "")) != "":
 		return ["The drawer", "Works from the stash", "Keep it"]     # a unique's rule paper (the Lorry Driver's Log)
 	if story_of(it) >= 0:
-		return ["Kev's story", str(Data.STORY_BEATS[story_of(it)]["name"]), "Its three together make the beat's signal"]
+		return ["Kev's story", str(Data.STORY_BEATS[story_of(it)]["name"]), "Three of Kev's story papers together make a signal"]
 	if not room_open("radio"):
 		return ["Encrypted", "Read once the Radio's open", "Keep it: a key to the endgame"]
 	var code: String = word_taught_by(str(it["base"]))
@@ -1796,7 +1796,7 @@ func _wearing_off(m: Dictionary) -> void:
 		log_event(Words.RECYCLE["off_unique"] % (it["unique"] if it.has("unique") else it["base"]))
 	else:
 		var who: String = e["who"]
-		log_event(Words.RECYCLE["off"] % [it["base"], who.substr(0, 1).to_upper() + who.substr(1)])
+		log_event(Words.RECYCLE["off"] % [Words.mid_base(str(it["base"])), who.substr(0, 1).to_upper() + who.substr(1)])
 
 
 # ------------------------------------------------------------------ the Bench's crafting
@@ -2519,11 +2519,11 @@ func train_block(id: String, ignore_points := false) -> String:
 	var col: int = int(n.get("col", 0))
 	var g: int = Data.gate(t, col, my_classes())
 	if points_in(parts[0]) < g:
-		return "opens at %d in %s (%d now)" % [g, parts[0], points_in(parts[0])]
+		return "opens at %d points in %s (%d now)" % [g, parts[0], points_in(parts[0])]
 	var need: int = core_need(t, n) if core_gates else 0
 	var core: String = core_tree(parts[0]) if need > 0 else ""
 	if core != "" and points_in(core) < need:
-		return "opens at %d in %s (%d now)" % [need, core, points_in(core)]     # the core first (15 Oct)
+		return "opens at %d points in %s (%d now)" % [need, core, points_in(core)]     # the core first (15 Oct)
 	if core_gates and n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
 		return "opens at level %d" % Data.KEYSTONE_LEVEL
 	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
@@ -2779,7 +2779,7 @@ func _spend_rounds(gun: Dictionary, shots: float) -> void:
 			rig.erase(stack)
 			_dry_memo.erase("conversion")   # the grade's share goes with the stack (33), in a dry run too
 			if rounds_for(gun) <= 0:
-				log_event("%s: dry" % gun["base"])
+				log_event("%s: out of rounds" % gun["base"])
 				m["ran_dry"] = str(gun["base"])     # for the out-of-time line (16 Oct)
 
 
@@ -3304,9 +3304,9 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 	var pc := func(x: float) -> String: return "%d%%" % int(round(absf(x - 1.0) * 100.0))
 	match k:
 		"hp":
-			return "HP +" + pc.call(e["hp"])
+			return "their HP +" + pc.call(e["hp"])
 		"dps":
-			return "fire +" + pc.call(e["dps"])
+			return "their fire +" + pc.call(e["dps"])
 		"pool":
 			return ("gang size ×%s" % ("%.1f" % float(e["pool"])).trim_suffix(".0")) if float(e["pool"]) >= 2.0 else "gang size +" + pc.call(e["pool"])
 		"patrol":
@@ -3323,7 +3323,7 @@ func _word_part(k: String, e: Dictionary, part: Dictionary) -> String:
 		"type":
 			return "%d%% of their fire is %s" % [int(round(float(e.get("share", 0.0)) * 100.0)), str(part["type"])]
 		"res":
-			return "%s res %d%%" % ["all" if part["res"] == "all" else str(part["res"]), int(round(float(e.get("res_add", 0.0)) * 100.0))]
+			return "they resist %s +%d%%" % ["all" if part["res"] == "all" else str(part["res"]), int(round(float(e.get("res_add", 0.0)) * 100.0))]
 		"soaked":
 			return "your resist −%d%%" % int(round(float(e.get("soaked", 0.0)) * 100.0))
 		"no_meds":
@@ -3419,7 +3419,7 @@ func word_total_words(i: int) -> Array:
 	if float(b.get("soaked", 0.0)) > 0.005:
 		bw.append("your resist −%d%%" % int(round(float(b["soaked"]) * 100.0)))
 	for f in b["flags"]:
-		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill tins", "clock_half": "half the clock", "boss_walks": "the head walks"}[f])
+		bw.append({"no_meds": "no meds", "no_kill_cash": "no kill tins", "clock_half": "half the clock", "boss_walks": "the head, free"}[f])
 	return [" · ".join(gw), " · ".join(bw)]
 
 
@@ -3463,12 +3463,12 @@ func word_craft_block(i: int, key: String) -> String:
 			if n >= max_words(i):
 				return "Full: %d of %d" % [n, max_words(i)]
 			if key == "tune" and _word_pools(i, word_names(i)).values().all(func(l): return l.is_empty()):
-				return "Nothing more known to hear"
+				return "No more known codes to tune in"
 			if key == "call" and call_options(i).is_empty():
-				return "Nothing more known to call"
+				return "No more known codes to call in"
 		"broadcast":
 			if n > 0:
-				return "Only on a silent site"
+				return "Only on a site with no codes"
 		"retune", "clear", "twist":
 			if n == 0:
 				return "No codes on it"
@@ -3731,7 +3731,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 	if b.is_empty() or col < 0 or col >= b["picks"].size() or not (side in ["a", "b"]):
 		return "no such upgrade"
 	if not room_open("yard"):
-		return "The Pitch isn't yours yet"     # until the Manager's deeds (13 Oct)
+		return "The Yard opens with the Manager's deeds"     # until the Manager's deeds (13 Oct)
 	if not room_open(building_room(key)):
 		return "Opens with %s" % Words.GATES["shut"][building_room(key)]     # a building for a shut room waits on it
 	if mission != null:
@@ -3788,7 +3788,7 @@ func yard_rank_block(key: String) -> String:
 	if b.is_empty():
 		return "no such building"
 	if not room_open("yard"):
-		return "The Pitch isn't yours yet"
+		return "The Yard opens with the Manager's deeds"
 	if not room_open(building_room(key)):
 		return "Opens with %s" % Words.GATES["shut"][building_room(key)]
 	if mission != null:
@@ -3991,7 +3991,7 @@ func fit_refusal(slot: String, id: int) -> String:
 			if not gun["attachments"].has(it["mount"]):
 				return "The %s has no %s mount" % [gun["base"].to_lower(), it["mount"]]
 			if not mount_open(it["mount"]):
-				return "Needs a bigger Bench"
+				return "Needs a bigger Bench: built on the Pitch"
 			if not Items.att_fits(it, str(Items.base_of(gun).get("type", ""))):
 				return Items.only_words(it)
 			return ""
@@ -4425,6 +4425,9 @@ func guide_rows(i: int, from_lv: int, count := 12) -> Array:
 
 
 ## The signal level a site's own unique starts dropping from: the first whose depth reaches site_unique_depth.
+const DECRYPT_NEEDS_PAPERS := "put three papers in"     # decrypt_block's "not enough chosen", which the Radio reads as no block (18 Oct: a words change broke the match)
+
+
 func site_unique_level(i: int) -> int:
 	return tier_level(site_unique_depth(i))
 
@@ -4617,7 +4620,7 @@ func decrypt_block(ids: Array) -> String:
 	if signals.size() >= Data.SIGNALS_HELD:
 		return "%d signals held: run or bin one" % Data.SIGNALS_HELD
 	if ids.size() != Data.SIGNAL_PAPERS:
-		return "three papers in"
+		return DECRYPT_NEEDS_PAPERS
 	var have: Array = signal_papers().map(func(x): return int(x["id"]))
 	var seen_ids := {}
 	for id in ids:
@@ -4633,7 +4636,7 @@ func decrypt_block(ids: Array) -> String:
 	if beats.size() > 1 or (beats.has(-1) == false and bases.size() < Data.SIGNAL_PAPERS):
 		return "Kev's papers go in together, the three of a beat"
 	if not beats.has(-1) and not beats.has(story_now()):
-		return "not the beat Kev's on"
+		return "not the part of Kev's story he's on"
 	return ""
 
 
@@ -5578,9 +5581,9 @@ func guard_sources() -> Array:
 		out.append("a med fills it")
 	var gang: float = (Data.FX["node/squared_up"] if has_node("squared_up") else 0.0) + _affix_sum("guard_gang")
 	if gang > 0.0:
-		out.append("%d%% a gang" % int(round(gang)))
+		out.append("%d%% of max HP a gang" % int(round(gang)))
 	if has_node("in_the_hide"):
-		out.append("15% the first down")
+		out.append("15% of max HP when a gang's first goes down")
 	if has_node("sheet_metal"):
 		out.append("6% of max HP a crate searched")
 	if has_node("breather"):
@@ -6218,7 +6221,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		var ld := Items.roll_unique(_unique_named(Data.CONVOY_UNIQUE), rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		m["found"].append(ld)
 		_read(ld)
-		log_event("The convoy's done. Found: %s" % ld["unique"])
+		log_event("The convoy's done. Found: %s." % ld["unique"])
 		if not lorry_done:
 			lorry_done = true
 			lorries += 1
@@ -6228,7 +6231,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))     # at the depth he's fought at (12 Oct)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
 		_read(it)
-		log_event("%s is down. %s Found: %s" % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
+		log_event("%s is down. %s Found: %s." % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
 			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))
 			m["found"].append(it2)
@@ -6254,7 +6257,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			elif room_open(str(room)):
 				continue
 			else:
-				log_event("Found: %s." % thing["base"])
+				log_event("Found: %s" % thing["base"])
 				m["found"].append(thing)          # in the pack to see, a keepsake home (15 Oct): the room opens here, the thing goes to the drawer
 			_home_gate(thing)
 	if first and campaign_done():
@@ -6291,7 +6294,7 @@ func _first_gun(m: Dictionary) -> void:
 			break
 	if not box.is_empty():
 		m["found"].append(box)
-	log_event(Words.FIRST_GUN % [str(gun["base"]).to_lower(), str(box.get("base", "rounds")).to_lower()])
+	log_event(Words.FIRST_GUN % [Words.a_thing(str(gun["base"])), str(box.get("base", "rounds")).to_lower()])
 	chron("first_gun", {"base": str(gun["base"])})
 
 
@@ -6528,7 +6531,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		seen["cleared/%d" % m["tier"]] = true
 		log_event(Words.site_cleared(t["name"]))
 	else:
-		log_event("%s cleared. Picking it over; more will come" % t["name"])
+		log_event("%s cleared. Picking it over; more will come." % t["name"])
 	if int(m["tier"]) == Data.FIRST_GUN_SITE and not seen.has("first_gun_home") and owned_ammo_types(m).is_empty():
 		_first_gun(m)                         # until one's home (the review: a first clear's gun lost to a time-out would never come again)
 	# the deeds come off the Manager now, not the Bank's first clear (13 Oct, Matt): see the boss's things
@@ -6905,7 +6908,7 @@ func _start_way_out(m: Dictionary) -> void:
 ## The door's gang down: out with the pack.
 func _seen_off(m: Dictionary) -> void:
 	m["seen_off"] = true
-	log_event("Seen off at the door. Out with the pack")
+	log_event("Seen off at the door. Out with the pack.")
 	_extract()
 
 
@@ -6925,7 +6928,7 @@ func _extract() -> void:
 	if m.get("ghost_pending", false) and (pack_used(m) >= capacity() or crates_done(m)) and not timed_out:     # a site picked clean is a Ghost's clear too (13 Oct)     # out of time is no clear, kept pack or not
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
-		log_event("Ghost: the pack full, and %s counts as cleared" % Words.mid(t["name"]))
+		log_event("Ghost: the pack's full, and %s counts as cleared" % Words.mid(t["name"]))
 	m["left"] = int(m["left"]) + m.get("floor", []).filter(func(x): return not x.has("ditch_scrap")).size()     # what was left on the floor: passed over
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
@@ -6998,7 +7001,7 @@ func _extract() -> void:
 		"hp_lost": m["hp_start"] - hp, "time": m["elapsed"], "searches": m["searches"], "patrols": m["patrols"], "wounded": bool(m.get("wounded", false)), "scrap": int(m.get("scrap", 0)), "salvage": sv.duplicate(),
 		"clock_used": float(m.get("clock_used", 0.0)), "clock_left": float(m.get("clock", 0.0)), "timed_out": bool(m.get("timed_out", false)), "way_out": bool(m.get("way_out", false)),
 	}
-	log_event("%s from %s: %d kills, %d items, %s" % [outcome, Words.mid(t["name"]), m["kills"], stashed,
+	log_event("%s from %s: %d kill%s, %d item%s, %s" % [outcome, Words.mid(t["name"]), m["kills"], "" if int(m["kills"]) == 1 else "s", stashed, "" if int(stashed) == 1 else "s",
 			_cash_words(m["cash"])])
 	_radio_after_run()
 	_chron_run(m, outcome, {"loot": stashed, "left": int(last_report["left"]), "cash": int(m["cash"]), "xp": int(m["xp"]),
@@ -7143,7 +7146,7 @@ func _kia() -> void:
 		"cleared": bool(m["cleared"]), "runner_runs": runner_runs})
 	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "died in %s" % Words.mid(t["name"]), "site": _deepest_held()[0], "depth": _deepest_held()[1], "held_lv": _deepest_held()[2]})
 	if Words.PASTS.has(cls) and not _dry_on:
-		log_event("On the Pitch's list: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
+		log_event("On the Pitch's list of the dead: a %s. %s" % [cls.to_lower(), Words.PASTS[cls]["wall"]])     # the runner as the Yard remembers them (12 Oct; the wall is the retired's)
 	runner_runs = 0
 	_record_reset()
 	if m.get("insured", false):
@@ -7165,7 +7168,7 @@ func _kia() -> void:
 					log_event(Words.DEEDS["held"])
 			m["pack_kept"] = true
 			last_report["left"] = int(m["left"])
-			log_event("The desk paid on the pack too: %d thing%s" % [m["found"].size(), "" if m["found"].size() == 1 else "s"])
+			log_event("The insurance paid on the pack too: %d thing%s" % [m["found"].size(), "" if m["found"].size() == 1 else "s"])
 	else:
 		log_event("Dead in %s. Kit lost (%s). %s" % [Words.mid(t["name"]), _cash_words(lost), Words.RECYCLE["listed"]])
 		for s in Data.SLOTS:
@@ -8102,7 +8105,7 @@ func sell_junk() -> int:
 				got += p
 				n += 1
 	if n > 0:
-		log_event("The Fence took the junk: %d thing%s, %s." % [n, "" if n == 1 else "s", _cash_words(got)])
+		log_event("The Fence took the junk: %d thing%s, %s" % [n, "" if n == 1 else "s", _cash_words(got)])
 	return n
 
 
@@ -8120,7 +8123,7 @@ func _bin_commons(found: Array) -> Array:
 			kept.append(it)
 	scrap += got
 	if n > 0:
-		log_event("Into the bins: %d thing%s, %d scrap." % [n, "" if n == 1 else "s", got])
+		log_event("Into the bins: %d thing%s, %d scrap" % [n, "" if n == 1 else "s", got])
 	return kept
 
 
@@ -8134,7 +8137,7 @@ func _idle_tidy() -> void:
 			if equip_best(s):
 				changed.append(Items.full_name(equipped[s]))
 		if not changed.is_empty():
-			log_event("Put on: %s." % ", ".join(changed))
+			log_event("Put on: %s" % ", ".join(changed))
 
 
 # ------------------------------------------------------------------ the medic tent

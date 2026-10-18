@@ -308,9 +308,9 @@ func _show_runner(lv: int) -> void:
 		dig = "%s, level %d" % [str(sim.best_dig["site"]).trim_prefix("The "), sim.lv_at(int(sim.best_dig["tier"]), int(sim.best_dig["depth"]))]
 	var rows: Array = c["rows"]
 	_set_row(rows[0], "Pace", ["×%.2f" % sim.pace()])
-	_set_row(rows[1], "Pack · rig", ["%d cells · %d" % [sim.capacity(), sim.med_capacity()], "%d · %d" % [sim.capacity(), sim.med_capacity()]])
+	_set_row(rows[1], "Pack · rig", ["%d cells · %d pouch%s" % [sim.capacity(), sim.med_capacity(), "" if sim.med_capacity() == 1 else "es"], "%d · %d" % [sim.capacity(), sim.med_capacity()]])
 	_set_row(rows[2], "Runs, this runner", ["%d" % sim.runner_runs])
-	_set_row(rows[3], "Alive", [Fmt.clock(alive)])
+	_set_row(rows[3], "Alive for", [Fmt.clock(alive)])
 	_set_row(rows[4], "Best signal", [dig, dig.get_slice(",", 0)])
 	_set_row(rows[5], "Kit worth", [Fmt.money(sim.loadout_value())], Pal.ACCENT)
 	UI.fit(c["note"], [sim.next_words(true), sim.next_words(true).replace(" on the Map", ""), ""])
@@ -363,7 +363,7 @@ func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	c["chips"].show_chips(chips)
 	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
 	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
-	var firing: String = "Walking fire: the SMG" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
+	var firing: String = "Walking fire: SMG damage builds while firing" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
 	var extra: String = ("growth ×%.2f · first of each gang %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first of each gang %s" % signed_pct(first_pct)
 	UI.fit(c["status"], ["%s · %s" % [firing, extra], firing])
 
@@ -397,12 +397,12 @@ func _show_defence() -> void:
 			fired.append(ty)
 	var gs: Array = sim.guard_sources()
 	if gs.is_empty():
-		c["note"].text = "%d%% cap · +N past it is +N%% damage · ● none where sites hit" % int(Data.RESIST_CAP)
+		UI.fit(c["note"], ["Resist caps at %d%% · each point past it adds 1%% damage · ● you resist none of what sites fire" % int(Data.RESIST_CAP), "Resist caps at %d%% · each point past it adds 1%% damage" % int(Data.RESIST_CAP), "Resist caps at %d%%" % int(Data.RESIST_CAP)])
 		c["note"].add_theme_color_override("font_color", Pal.TEXT_3)
 	else:
 		# Guard (12 Oct): its cap and where it comes from, in its own colour; the cap's note is the bars' ticks
 		var cap: int = int(round(sim.guard_cap()))
-		UI.fit(c["note"], ["Guard to %d: %s" % [cap, ", ".join(gs)], "Guard to %d: %s" % [cap, gs[0] + (" +%d" % (gs.size() - 1) if gs.size() > 1 else "")], "Guard to %d" % cap])
+		UI.fit(c["note"], ["Guard (a shield over HP) up to %d: %s" % [cap, ", ".join(gs)], "Guard up to %d: %s" % [cap, ", ".join(gs)], "Guard to %d: %s" % [cap, gs[0] + (" +%d" % (gs.size() - 1) if gs.size() > 1 else "")], "Guard up to %d" % cap])
 		c["note"].add_theme_color_override("font_color", Pal.GUARD)
 	c["status"].text = (("Sites fire %s" % ", ".join(fired)) if fired.size() <= 3 else "Sites fire %d elements" % fired.size()) if not fired.is_empty() else "Nothing open fires an element"
 
@@ -418,8 +418,8 @@ func _show_finds() -> void:
 	_set_bar(c["bars"][2], "Notes", notes / 100.0, signed_pct(notes), Pal.GOOD)
 	var search_faster: float = (1.0 - sim.search_s({}) / sim.SEARCH_S) * 100.0
 	var patrol_later: float = (sim.patrol_s({}) / sim.PATROL_S - 1.0) * 100.0 if not sim.has_node("never_there") else 0.0
-	_set_row(c["rows"][0], "Search", [("%.0f%% faster" % search_faster) if search_faster > 0.5 else "as it comes"])
-	_set_row(c["rows"][1], "Gangs", [("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "as they come")])
+	_set_row(c["rows"][0], "Search", [("%.0f%% faster" % search_faster) if search_faster > 0.5 else "no bonus"])
+	_set_row(c["rows"][1], "Gangs", [("%.0f%% later" % patrol_later) if patrol_later > 0.5 else ("never" if sim.has_node("never_there") else "no bonus")])
 	c["status"].text = dog_words(sim)
 
 
@@ -428,7 +428,7 @@ static func dog_words(s) -> String:
 	var finds: int = (1 if s.yard_has("a_dog") else 0) + (1 if s.yard_has("second_dog") else 0) + (2 if s.yard_has("pack") else 0)
 	if finds > 0:
 		return "The dogs find +%d a search" % finds if finds > 1 else "A dog finds +1 a search"
-	return "No dog finding yet" if s.yard_side("kennel", 0) == "" else "A dog with a nose for it"
+	return "No dog yet: built at the Kennel in the Yard" if s.yard_side("kennel", 0) == "" else "A dog with a nose for it"
 
 
 func _show_record() -> void:
@@ -439,7 +439,7 @@ func _show_record() -> void:
 	c["unit"].visible = false
 	var t: Array = c["tiles"]
 	var find: String = str(rec.get("find", ""))
-	_tile(t[0], ["%d" % int(rec.get("kills", 0))], "kills, the best run")
+	_tile(t[0], ["%d" % int(rec.get("kills", 0))], "most kills, a run")
 	_tile(t[1], [Fmt.num(float(rec.get("dealt", 0.0)))], "most damage, a run")
 	_tile(t[2], [Fmt.money(float(rec.get("cash", 0.0)))], "the best take")
 	_tile(t[3], [find, find.get_slice(" ", find.count(" "))] if find != "" else ["nothing yet"], ("dearest find · %s" % Fmt.money(float(rec.get("find_value", 0)))) if find != "" else "the dearest find", Pal.ACCENT if find != "" else Pal.TEXT_3)
@@ -479,7 +479,7 @@ func _show_last() -> void:
 	_set_row(rows[1], "Kills · gangs", ["%d · %d" % [r["kills"], int(r.get("patrols", 0))]])
 	_set_row(rows[2], "Loot", ["%d item%s" % [r["loot"], "" if int(r["loot"]) == 1 else "s"]])
 	_set_row(rows[3], "Tins · scrap", ["%s · %d" % [Fmt.money(r["cash"]), int(r.get("scrap", 0))]])
-	_set_row(rows[4], "Took", [Fmt.mss(r["time"])])
+	_set_row(rows[4], "Time", [Fmt.mss(r["time"])])
 	var status: String = ""
 	if dead:
 		status = ("Lost %s, one carried" if r.has("carried") else "Lost %s of kit") % Fmt.money(r["lost_value"])
@@ -488,7 +488,7 @@ func _show_last() -> void:
 	elif r.get("wounded", false):
 		status = "Wounded: seen to at the Clinic"
 	elif r.get("way_out", false):
-		status = "Out by the way out"
+		status = "Left by the way out"
 	c["status"].text = status
 	c["status"].add_theme_color_override("font_color", Pal.BAD if (dead or r.get("wounded", false)) else (Pal.ACCENT if timed_out else Pal.TEXT_2))
 

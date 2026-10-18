@@ -44,7 +44,7 @@ const OPENING_SCENES := [
 		"A new currency was promised. Its value is as stated. Let it be done."]},
 	{"year": "Now", "title": "The Pitch", "art": "scene_6", "voice": "now", "cues": [2.52, 7.50, 13.46, 17.58, 20.80], "lines": [
 		"You keep a camp. A few vans, a fire, a fence of pallets.",
-		"You don't go out. Somebody does - whoever's willing, for a share of what comes back.",
+		"You don't go out. Somebody does – whoever's willing, for a share of what comes back.",
 		"Tins are money now. What's in a tin is worth something.",
 		"Send them out. Bring back what you can.",
 		"When a place is picked clean, or someone wants it more than you do, you move on."]},
@@ -55,14 +55,14 @@ const OPENING_SCENES := [
 ## his takes' cues (art/intro/voice/air_N.mp3, read off them; he doesn't read the headings).
 const AIR_SCENES := [
 	{"year": "Channel 19", "title": "The set", "art": "air_1", "voice": "air_1", "cues": [0.0, 7.56], "lines": [
-		"Kev here. Properly, this time. That's a military set you've got - it hears a long way.",
+		"Kev here. Properly, this time. That's a military set you've got – it hears a long way.",
 		"I've had two years listening from the other end. You'd better hear what I hear."]},
 	{"year": "Long wave", "title": "Everywhere else", "art": "air_2", "voice": "air_2", "cues": [0.0, 8.84, 14.06], "lines": [
 		"Swansea's gone quiet. Bristol's one big checkpoint. Nobody's answered from London since the spring.",
-		"It isn't just the UK, everywhere else has gone dark too.",
+		"It isn't just the UK. Everywhere else has gone dark too.",
 		"The only ones still moving are the army. Their lorries run every night, and nobody knows what's in them."]},
 	{"year": "The codes", "title": "Deeper", "art": "air_3", "voice": "air_3", "cues": [0.0, 6.90, 12.70], "lines": [
-		"Those papers you keep finding. The codes on them aren't codes - they're frequencies.",
+		"Those papers you keep finding. The codes on them aren't codes – they're frequencies.",
 		"Somebody wrote them down so the right people could listen. Tune one in and it tells you where to dig.",
 		"The deeper you go, the more you'll hear. Go carefully. Somebody's always listening back."]},
 ]
@@ -78,7 +78,7 @@ const ROOM_INTROS := {
 	"kit": {"room": "The Kit", "face": "", "title": "What the runner takes", "voice": "kit", "cues": [0.0, 3.58], "lines": [
 		"What the runner takes out is all they've got.",
 		"What stays behind is the stash. What's worn out there can be lost out there."],
-		"tiles": [["The body", "What's worn"], ["The rig", "Pouches, meds first"], ["The stash", "What's kept back"]]},
+		"tiles": [["The body", "What's worn"], ["The rig", "Pouches for meds and rounds"], ["The stash", "What's kept back"]]},
 	"stats": {"room": "Stats", "face": "", "title": "The runner, on paper", "voice": "stats", "cues": [0.0], "lines": [
 		"The runner, on paper. What they hit for, what they can take, what they've done."],
 		"tiles": [["Attack", "What they hit for"], ["Defence", "What they can take"], ["The record", "What they've done"]]},
@@ -257,6 +257,22 @@ const TRAITS := {
 static func mid(name: String) -> String:
 	return ("the " + name.trim_prefix("The ")) if name.begins_with("The ") else name
 
+
+## An item base mid-sentence (18 Oct, the style guide): its first letter lower, its acronyms kept ("army SMG").
+static func mid_base(base: String) -> String:
+	if base.length() > 1 and base.substr(0, 2) == base.substr(0, 2).to_upper():
+		return base                          # "SMG ...", "AK ...": an acronym leads
+	return base.substr(0, 1).to_lower() + base.substr(1)
+
+
+## "a farmer's shotgun", "an old revolver": a base with its article.
+static func a_thing(base: String) -> String:
+	var b := mid_base(base)
+	var first: String = b.substr(0, 1)
+	var acronym: bool = b.length() > 1 and b.substr(0, 2) == b.substr(0, 2).to_upper()
+	var an: bool = (first in "AEFHILMNORSX") if acronym else (first in "aeiou")     # "an SMG", "an AR-pattern rifle"
+	return ("an " if an else "a ") + b
+
 const FENCE := {
 	"visit": [
 		"Everything's for sale. That's the one thing that hasn't changed.",
@@ -271,7 +287,7 @@ const FENCE := {
 	"shelf": "More shelf. Same stock, more of it.",
 	"contract": ["That's what I asked for. Here's what I said.", "Good. Someone's waiting on these.", "Done. I'll have another for you."],
 	"gamble": ["He had one. Don't ask where.", "That's what came. No returns.", "Sealed when I got it. Sealed when you did."],
-	"insured": "I'll hold the paper on it. If they don't come back, you do.",
+	"insured": "I'll hold the paper on it. If they don't come back, the kit does.",
 	"paid_out": "Insured. The Fence held the paper; the kit's back on the Pitch. The runner isn't.",
 	"mate": ["He doesn't come in. He sends them with me. Don't ask.", "Notes. He still thinks they're money. So do the crews."],
 	"town": "You've been past the Retail Park, then. The Bank's got a crew. They'll know your name before you know theirs.",
@@ -289,7 +305,7 @@ const MEDIC := {
 	],
 	"treated": ["Hold still.", "That's the third time with that arm.", "You'll do.", "Keep it dry. Nothing round here is dry."],
 	"fit": "Nothing wrong with you that I can charge for.",
-	"hurt": "Sit down before you fall down.",
+	"hurt": "Lie down before you fall down.",
 	"new_runner": "Another one. The last one didn't listen either.",
 	"shelf": "More on the shelf. It won't be enough.",
 }
@@ -334,7 +350,7 @@ const SITES := {
 	"The Garden Centre": {
 		"depths": [
 			"Big glasshouse, bigger car park. The trolleys are still where they were left.",
-			"The cafe's been stripped down to the scones' sign.",
+			"The cafe's been stripped down to the sign for scones.",
 			"Compost bags make good walls. Someone worked that out.",
 			"The aquatics end smells. Nobody goes to the aquatics end.",
 			"Whoever runs it now has the tills open and nothing in them.",
@@ -477,7 +493,7 @@ const PAPERS := [
 	{"name": "A fuel receipt", "value": 6, "words": "Four hundred litres of diesel, paid in notes, the old ones. Kev's story: where they go."},
 	{"name": "A movement order", "value": 8, "words": "Signed by a major who should be dead. Three lorries, nights only. Kev's story: whose they are."},
 	{"name": "A ration chit", "value": 8, "words": "Forty men, fourteen days, from stores. Somebody's still feeding an army. Kev's story: whose they are."},
-	{"name": "A signals log", "value": 8, "words": "Call signs, times, a frequency circled: Kev's. Kev's story: whose they are."},
+	{"name": "A signals log", "value": 8, "words": "Call signs, times, and Kev's frequency, circled. Kev's story: whose they are."},
 	{"name": "A gate pass", "value": 10, "words": "Valid for the depot, one vehicle, the bearer and his load. Kev's story: the depot."},
 	{"name": "A loading manifest", "value": 10, "words": "Crate after crate, and at the bottom, in a different hand: the load. Kev's story: the depot."},
 	{"name": "A depot plan", "value": 10, "words": "The yard, the sheds, the gate, and an X where the lorries stop. Kev's story: the depot."},
@@ -502,13 +518,13 @@ const BOOK := {
 }
 ## The radio's log in the Caravan (12 Oct).
 const HEARD := {
-	"empty": "Nothing heard yet. The radio comes on after a few runs home.",
+	"empty": "Nothing heard yet. A new line comes on every few runs home.",
 }
 ## The map at thirty-six (7 Oct).
 const MAP := {
 	"head_start": "%s at full strength: the Dial gains a point.",
 	"empty": "Pick a node above. The points come from your reach: each signal beaten at your reach or past it is a point.",
-	"empty_short": "A point a new reach.",
+	"empty_short": "A point for each new reach.",
 	"needs": "Needs %s first",
 	"column_count": "%d of %d ranks",
 }
@@ -542,7 +558,7 @@ const DEEDS := {
 
 ## The crews' heads: a line when they come out, a line when they go down.
 const BOSSES := {
-	"The Gamekeeper": {"armed": "The dogs hear you before he does. Then he does.", "out": "He comes along the hedge with the gun broken over his arm. He closes it.", "down": "The dogs sit. They were never his, he only fed them."},
+	"The Gamekeeper": {"armed": "The dogs hear you before he does. Then he does.", "out": "He comes along the hedge with the gun broken over his arm. He closes it.", "down": "The dogs sit. They were never his; he only fed them."},
 	"The Carpet Man": {"armed": "Word goes to the warehouse that you're coming. He puts the kettle on.", "out": "He's brought the whole warehouse.", "down": "The warehouse crew go quiet. Somebody else will have the car park by morning."},
 	"The Manager": {"armed": "The branch is told to expect you. He has the staff tidy the counters.", "out": "He's in a suit. It fits.", "down": "The staff stop. Nobody's told them what to do next, and he isn't going to."},
 	"The Quartermaster": {"armed": "The depot's gate is left open for you. That's not a kindness.", "out": "He signs for you.", "down": "The depot's unlocked. Nobody's counting any more."},
@@ -570,7 +586,7 @@ const UNIQUES := {
 	"The Quartermaster's Ledger": "Every round, every blanket, every name, in his hand. What's signed for is yours. He'd say so himself, now.",
 	"The Lorry's Load": "What the convoy was carrying, in the end. Not food. Notes, baled, and the tarp they were under. Nobody said what for.",
 	"The Council's Weed Burner": "Parks department. A gas bottle on a frame and a lance with a roar in it. It was for the pavements. It still is, in a way.",
-	"Jump Leads": "Red and black, from a boot. Clipped to the right thing, the first one they touch passes it on.",
+	"Jump Leads": "Red and black, from a boot. Clip them to the right thing and the first one they touch passes it on.",
 	"The Rat Man's Bag": "The council's rat man had a bag, and whatever's in the bottom of it never came out. It's in everything you put in there now.",
 	"The Butcher's Steel": "Not the knife, the steel: the rod he ran the knife down. Anything cut with what it's touched doesn't close.",
 	"The Gritter's Hopper": "The yellow hopper off the back of the gritter, cut down and strapped on. Everyone near you is standing in January.",
@@ -720,7 +736,7 @@ const ITEMS := {
 	"Slugs": "One lump of lead a shell, for things bigger than birds. Everything's bigger than birds now.",
 	"Rifle rounds": "Mixed calibres in a biscuit tin. Enough of them fit.",
 	"Match rounds": "Target ammunition, boxed and counted by someone careful. They fly straighter; so will you.",
-	"SMG rounds": "Boxed 9mm, the most common round in the country, which is why the SMGs are.",
+	"SMG rounds": "Boxed 9mm, the most common round in the country. It's why there are so many SMGs.",
 	"SMG hollow point": "Police issue 9mm. They open up inside. That's the whole description.",
 	"Pistol rounds": "A bag of mixed pistol ammunition from a drawer that had a pistol in it once.",
 	"Pistol hollow point": "The expensive ones. Fewer, better, and you'll know when you've used one.",
@@ -735,7 +751,7 @@ const ITEMS := {
 	"Police marksman's rifle": "The firearms squad's own rifle, from the one armoury nobody got into until now. Nothing out here is this good.",
 	"Riot squad's shotgun": "The riot squad's own, drum-fed, for crowds. It was made for exactly this.",
 	"Officer's revolver": "An officer's revolver, kept clean by someone who expected an inspection. Heavy, slow, final.",
-	"Army machine pistol": "A section's machine pistol, out of the lorry. It empties a magazine before you've decided to.",
+	"Army machine pistol": "A section's machine pistol, out of the lorry. Short bursts, if you can manage them.",
 	"Welder's mask": "A welder's flip-down mask. The fire comes off it; so does most of what you'd want to see.",
 	"Station helmet, visored": "A fire crew's helmet with the thick visor down. It took heat for a living.",
 	"Bomb-squad helmet": "The bomb squad's helmet, with the thick visor. Heavy as a bucket of sand and good for the same reason.",
@@ -766,7 +782,7 @@ const ITEMS := {
 	"Laser module": "A laser on the rail. The dot's where the round goes, and they can see it coming.",
 	# attachments - muzzle
 	"Flash hider": "Keeps the muzzle flash off your night eyes. It doesn't keep the noise off anyone.",
-	"Choke": "Tightens a shotgun's spread. Fewer pellets miss. Shotguns only.",
+	"Choke": "Tightens a shotgun's spread. Fewer pellets miss.",
 	"Compensator": "Ports in the muzzle that fight the climb. Loud for whoever's beside you.",
 	"Oil-can silencer": "An oil filter on a thread. It works for a magazine or two, then it's an oil filter.",
 	"Muzzle brake": "A proper brake. The gun stays put; your shoulder wishes it hadn't.",
@@ -777,7 +793,7 @@ const ITEMS := {
 	"Pipe wrench": "A Stillson from a plumber's van. Heavy at the wrong end, which is the right end.",
 	"Fire axe": "Off the wall of a stairwell, behind glass that's gone. Made for doors; works on anything.",
 	"Bayonet on a stick": "A bayonet from the Barracks on a broom handle, taped. Reach, and a point. Whoever made it had been shown.",
-	"Sledgehammer": "Fourteen pounds. Slow, and nothing it lands on gets up to argue.",
+	"Sledgehammer": "Fourteen pounds. Slow, and it only needs the once.",
 	"Breaker bar": "A metre of hardened steel from a tyre place. Balanced, somehow; it swings faster than it should.",
 	"Knife": "A kitchen knife with the handle taped. Everyone's got one. Most people have used it.",
 	"Knuckle duster": "Brass, old, somebody's grandad's. Doesn't look like much until it's in a fist.",
@@ -811,17 +827,17 @@ const ITEMS := {
 	"Extended magazine": "More rounds before the pause. The pause is when they get you.",
 	"Quick mag": "A magazine with a pull-tab and a taped spare. Out, in, on.",
 	"Drum magazine": "Fifty rounds in a drum that jams when it's cold. It's always cold.",
-	"Belt box": "A hundred rounds in a box on the side. SMGs only, and even then.",
+	"Belt box": "A hundred rounds in a box on the side, and the weight of a hundred more.",
 	"Hundred-round drum": "The drum that doesn't jam. Someone paid for it with more than money.",
 	# attachments - handguard
 	"Foregrip": "A handle under the barrel. Steadier, and your hand's not on the hot bit.",
 	"Rail handguard": "Rails all round for things to bolt to. Lighter than it looks.",
-	"Heat shield": "A shield over a shotgun's barrel. Keeps the heat off, keeps the shots coming. Shotguns only.",
-	"Bipod": "Two legs for the rifle to rest on. Set up, wait, don't move. Rifles only.",
+	"Heat shield": "A shield over a shotgun's barrel. Keeps the heat off, keeps the shots coming.",
+	"Bipod": "Two legs for the rifle to rest on. Set up, wait, don't move.",
 	"Angled grip": "A grip set forward at an angle. For moving and shooting, which is all you do.",
 	# attachments - stock
 	"Folding stock": "A stock that folds. Shorter in the car, in the stairwell, in the doorway.",
-	"Wire stock": "A wire frame off something improvised, on something improvised. It fits. Improvised only.",
+	"Wire stock": "A wire frame off something improvised, on something improvised. It fits.",
 	"Heavy stock": "A solid stock that soaks the kick. Slower to bring up; steadier when it's there.",
 	"Cheek riser": "A pad on the stock that puts your eye behind the sight the same way every time.",
 	"Recoil pad": "Rubber on the butt. The hundredth shot feels like the first.",
@@ -847,7 +863,7 @@ const ITEMS := {
 	"Special issue pistol": "Not on any list. The serial number was never there to file off.",
 	"Diplomatic machine pistol": "From an embassy's strongroom. Technically you're on foreign soil when you fire it.",
 	"Embassy PDW": "A personal defence weapon from the same strongroom. The case had a crest on it.",
-	"Protection squad PDW": "What the protection squad carried when the cars stopped coming. Light, fast, and hungry.",
+	"Protection squad PDW": "What the protection squad carried when the cars stopped coming. Small enough to hide, quick enough not to need to.",
 	"High-cut helmet": "A modern combat helmet cut high over the ears, rails down the sides. Nobody here makes these.",
 	"Special forces helmet": "Lighter than it looks and stronger than anything else you've worn. The mount for the goggles is empty.",
 	"CBRN helmet": "A helmet with the respirator built in, from the people who planned for worse than this.",
@@ -857,7 +873,7 @@ const ITEMS := {
 	"Fire service turnout gear": "A full fire crew's turnout coat, the new kind. Made to walk into a burning building and back out.",
 	"Special forces plates": "Plates that stop what the others don't, in a carrier that weighs less than it should.",
 	"CBRN suit": "A sealed suit for chemical work, taped at every seam. The filter still has days in it.",
-	"Heavy armour suit": "Plate on plate on plate. You won't run, but you won't need to.",
+	"Heavy armour suit": "Plate on plate on plate. Doors are a problem. Bullets aren't.",
 	"Full EOD suit": "The whole bomb suit, not just the jacket. Walking is a decision.",
 	"Special forces rig": "Pouches exactly where your hands go, before you know you want them.",
 	"Breacher's rig": "Low-slung and quick, made for people who go through doors first.",
@@ -901,8 +917,8 @@ const SET_PIECES := {
 ## What happens on a run, once in a while.
 const EVENTS := {
 	"convoy": "A convoy comes through. Lorries, and a crew riding on them. They stop.",
-	"convoy_notes": "They were carrying notes. They were, anyway.",
-	"trapped": "Someone under a fallen ceiling, alive. You get them out. They say they know a yard.",
+	"convoy_notes": "They're carrying notes. For now.",
+	"trapped": "Someone under a fallen ceiling, alive. You get them out. They say they'll look you up if you're ever short a runner.",
 	"cache": "A locked cabinet, council green. It gives to a crowbar.",     # not the Bench's tools: it opens with the Workshop shut (13 Oct)
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
@@ -911,7 +927,7 @@ const EVENTS := {
 ## fence's contracts, the cards' notes.
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
-const FIRST_GUN := "Behind the till, wrapped in a bin bag: a %s, and a box of %s."     # the Garden Centre's first clear (17 Oct)
+const FIRST_GUN := "Behind the till, wrapped in a bin bag: %s, and a box of %s."     # the Garden Centre's first clear (17 Oct)
 const ODDS := [[0.9, "Safe"], [0.75, "Likely"], [0.6, "Risky"], [0.4, "A coin toss"], [0.2, "Long odds"], [0.0, "A bad idea"]]
 
 
@@ -926,7 +942,7 @@ const AWAY := {
 	"title": "Back, then.",
 	"rested": "Gone %s. The runner slept, the radio played to nobody.",
 	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s in the stash, level %d to %d.",
-	"settled": " The Pitch kept going for %s of it; the rest is just the clock.",
+	"settled": "The Pitch kept going for %s of it; past that, nothing ran.",
 	"lost": " One runner didn't come back.",
 	"prices": " The Fence's prices are up %d%% on when the Pitch opened.",
 }
@@ -943,9 +959,9 @@ const SKY := {
 const NEXT := {
 	"past": "The runner's waiting in Training. Ask what they were, before.",
 	"first": "The Allotments are out past the ring road. Go and see what's left.",
-	"contract": "The Fence has a contract you can fill. Contracts, on his screen: hand it in.",
+	"contract": "The Fence has a contract you can fill. Hand it in on his Contracts tab.",
 	"site": "%s hasn't been cleared. That's where the next lot are.",
-	"head": "%s is behind %s. Arm him on the Map when the odds hold.",
+	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
 	"lorry": "The lorry's beaten. Move the Pitch when you're ready: the next one pays better, with a free perk in the Yard.",
@@ -953,7 +969,7 @@ const NEXT := {
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
-	"first": "The Outskirts are outside",
+	"first": "Next: the Allotments",
 	"contract": "A contract's ready",
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
@@ -969,9 +985,9 @@ const NOTES := {
 
 ## The estate recycles: what was lost turns up on someone, and comes off him.
 const RECYCLE := {
-	"wearing": "One of them is in %s's %s.",                # who, the piece
+	"wearing": "One of them has %s's %s.",                # who, the piece
 	"has": "One of them has %s. The Fence said someone would want it.",   # the unique
-	"off": "%s came off him. %s's, by the name in the collar.",         # the piece, who
+	"off": "The %s came off him. %s's, by the name in the collar.",         # the piece, who
 	"off_unique": "%s came off him. Sold once, found twice.",           # the unique
 	"listed": "Someone on the estate will be wearing it by the week's end.",
 }

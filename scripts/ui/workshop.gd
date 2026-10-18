@@ -58,7 +58,7 @@ const JOB_GAP := 8
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
 const JOBS := ["reroll", "add", "socket", "strip", "bump", "scrap"]
 const JOB_NAMES := {"bump": "Raise the item level", "scrap": "Scrap it"}
-const JOB_WORDS := {"bump": "Three levels up: the worst tiers stop rolling", "scrap": "Broken down for the builds; gone for good"}
+const JOB_WORDS := {"bump": "Item level +3: the lowest affix tiers stop rolling", "scrap": "Broken down for scrap; gone for good"}
 const FOOT_H := 44
 const GUNS := ["Primary", "Secondary"]
 
@@ -389,7 +389,7 @@ func show_state(s) -> void:
 	UI.fit(_unit, ["upgrades built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "upgrades built", "upgrades"])
 	_chips.show_chips([{"forms": [Fmt.money(sim.cash) + " in hand", Fmt.money(sim.cash)], "colour": Pal.ACCENT}, {"forms": ["%d notes" % sim.notes], "colour": Pal.TEXT_2}, {"forms": ["%d scrap" % sim.scrap], "colour": Pal.TEXT_2}], 3)
 	if picks.is_empty():
-		UI.fit(_next, ["Every job and every mount, from the start; the Bench's upgrades are built on the Pitch", "The Bench's upgrades are built on the Pitch", "Upgrades: the Pitch"])
+		UI.fit(_next, ["Every job and mount is open from the start; the Bench's upgrades are built on the Pitch", "The Bench's upgrades are built on the Pitch", "Upgrades: the Pitch"])
 	else:
 		UI.fit(_next, ["Built: %s" % ", ".join(picks), ", ".join(picks), "Built: %s" % ", ".join(picks.slice(0, 2)), ", ".join(picks.slice(0, 2)), "%s and %d more" % [picks[0], picks.size() - 1] if picks.size() > 1 else str(picks[0]), str(picks[0]), "%d built" % picks.size()])
 	_show_panel()
@@ -534,7 +534,7 @@ func _show_panel() -> void:
 		if target_slot == "" or key == "":
 			_pick.show_right_words("The socket", "Nothing fitted has a socket", [])
 		elif not sim.mount_open(key):
-			_pick.show_right_words("The socket", "Needs a Bench", [])
+			_pick.show_right_words("The socket", "Needs a Bench upgrade: built on the Pitch", [])
 		else:
 			var gear: Dictionary = sim.equipped[target_slot]
 			var cur = gear["attachments"].get(key, null)
@@ -652,10 +652,10 @@ func _show_craft(it: Dictionary) -> void:
 	if it.is_empty():
 		sel_stat = ""
 		_piece_title.text = "Pick a piece"
-		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets."
-		_piece_words[1].text = "Worn gear: Workshop on it in the Kit."
-		_piece_words[2].text = "The jobs below price up once a piece is picked."
-		_pick.show_empty("Nothing picked", ["In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "Scrap: searched up, scrapped here, ditched"])
+		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets"
+		_piece_words[1].text = "Worn gear: press Workshop on it in the Kit"
+		_piece_words[2].text = "Pick a piece to see what each job costs."
+		_pick.show_empty("Nothing picked", ["In hand: %s, %d notes and %d scrap" % [Fmt.money(sim.cash), sim.notes, sim.scrap], "Scrap comes from searches, scrapping here and ditching"])
 		_set_pick_buttons([])
 	else:
 		var h := Items.headline(it)
@@ -666,7 +666,7 @@ func _show_craft(it: Dictionary) -> void:
 		UI.fit(_piece_title, [Items.full_name(it), it["base"]])
 		var floor_t: int = mini(Items.tier_floor(Items.ilvl(it)), Items.rarity_cap(it))
 		var chips := [[Items.rarity_name(it), Pal.tone_color(rarity_tone(it)) if rarity_tone(it) != "" else Pal.TEXT_2], ["Item level %d" % Items.ilvl(it), Pal.TEXT_2],
-			{"forms": ["Rolls T%d to T%d" % [floor_t, Items.rarity_cap(it)], "T%d–T%d" % [floor_t, Items.rarity_cap(it)]], "colour": Pal.TEXT_2}]
+			{"forms": ["Affixes roll T%d to T%d" % [floor_t, Items.rarity_cap(it)], "T%d–T%d" % [floor_t, Items.rarity_cap(it)]], "colour": Pal.TEXT_2}]
 		if it["slot"] in Data.SOCKET_SLOTS:
 			var n := Items.sockets(it)
 			chips.append(["%d socket%s" % [n, "" if n == 1 else "s"] if n > 0 else "no sockets", Pal.TEXT_2])

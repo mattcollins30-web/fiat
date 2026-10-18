@@ -134,7 +134,7 @@ func where() -> String:
 
 
 func take_words() -> String:
-	return "No room: make some" if where() == "no_room" else "Take it"
+	return "No room in the pack: ditch something" if where() == "no_room" else "Take it"
 
 
 func _ready() -> void:

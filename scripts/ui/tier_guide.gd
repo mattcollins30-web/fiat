@@ -22,7 +22,7 @@ const ROW_H := 54
 const ROWS := 12
 const TABLE_Y := 182
 ## The table's columns: [heading, width]; the last takes what's left.
-const COLS := [["Signal level", 130], ["Gear to wear", 190], ["Gang HP", 100], ["XP & tins", 100], ["Finds", 80], ["Quality", 80], ["Uniques", 80], ["Opens here", 0]]
+const COLS := [["Signal level", 130], ["Gear to wear", 190], ["Gang HP", 100], ["XP and tins", 100], ["Finds", 80], ["Quality", 80], ["Uniques", 80], ["Opens here", 0]]
 const COL_GAP := 10
 const MARK_TONES := {"set": Pal.SET, "unique": Pal.UNIQUE, "head": Pal.BAD, "convoy": Pal.ACCENT, "deep": Pal.EPIC}
 const TYPE_WORDS := {"melee": "melee", "improvised": "improvised", "shotgun": "shotguns", "pistol": "pistols", "smg": "SMGs", "rifle": "rifles"}
@@ -54,7 +54,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override("panel", UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	UI.label(self, Rect2(PAD, 12, 380, 40), "What a site pays", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	UI.label(self, Rect2(PAD, 12, 380, 40), "Site guide", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(2):
 		var b := UI.button(self, Rect2(PAD + 400 + k * (TAB_W + 8), 12, TAB_W, 40), false)
 		b.text = ["By level", "Where to farm"][k]
@@ -186,7 +186,7 @@ func _show_depths() -> void:
 	UI.fit(_site_title, [str(Data.TIERS[site]["name"])])
 	UI.fit(_site_lean, [lean_words(site), ""])
 	var done: bool = sim.campaign_done()
-	UI.fit(_site_note, ["A signal at each level here, against a campaign run here" if done else "Signals come with the Radio, after the campaign: each level as one plays here", "A signal at each level here" if done else "Signals: after the campaign", ""])
+	UI.fit(_site_note, ["A signal at each level here, against a campaign run here" if done else "Signals open with the Radio after the campaign; each row is one signal level here", "A signal at each level here" if done else "Signals: after the campaign", ""])
 	var rows: Array = sim.guide_rows(site, sim.guide_from(site, ROWS), ROWS)
 	var lv: int = sim.level()
 	for r in range(ROWS):
@@ -263,12 +263,12 @@ func _show_farm() -> void:
 		_farm_label(Rect2(x, y, col_w, 28), "%s · %s" % [b["name"], Data.TIERS[i]["name"]], "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT)
 		_farm_label(Rect2(x, y + 28, col_w, 24), " · ".join(b.get("uniques", [])), "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
 		var opens: Array = (b.get("opens", {}) as Dictionary).keys().map(func(r): return str(ROOM_WORDS.get(r, r)))
-		_farm_label(Rect2(x, y + 52, col_w, 24), "Opens %s · at full strength as a signal's extra" % " and ".join(opens), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
+		_farm_label(Rect2(x, y + 52, col_w, 24), "Opens %s · comes back at full strength as a signal's extra" % " and ".join(opens), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
 		y += 92
 	y += 10
 	_farm_label(Rect2(x, y, col_w, 28), "ANYWHERE", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_3)
 	y += 32
-	_farm_label(Rect2(x, y, col_w, 26), "Mythics · one a slot · 1 in %s finds" % _thousands(Data.MYTHIC_ODDS_IN), "Regular", Pal.CELL_TEXT, Pal.MYTHIC)
+	_farm_label(Rect2(x, y, col_w, 26), "Mythics · one for each slot · 1 in %s finds" % _thousands(Data.MYTHIC_ODDS_IN), "Regular", Pal.CELL_TEXT, Pal.MYTHIC)
 	_farm_label(Rect2(x, y + 28, col_w, 26), "Set pieces · signals from level %d, any site" % (2 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES), "Regular", Pal.CELL_TEXT, Pal.SET)
 	_farm_label(Rect2(x, y + 56, col_w, 26), "Loose uniques · %.0f%% from %s on, +%.0f%% a level past %d anywhere, up to %.0f%%" % [Data.UNIQUE_CAMPAIGN * 100.0, Data.ZONES[Data.UNIQUE_FROM_ZONE]["name"], Data.UNIQUE_DROP * 100.0, 1 + Data.TIERS.size() - 1 - Data.OUTSKIRTS_SITES, Data.UNIQUE_CAP * 100.0], "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
 	# each site's own unique
@@ -286,7 +286,7 @@ func _show_farm() -> void:
 		_farm_label(Rect2(x, y + 26, col_w, 22), "%s · %s%s" % [u["slot"], Data.TIERS[i]["name"], " · on the shelf" if found else ""], "Regular", Pal.CELL_TEXT - 1, Pal.GOOD if found else Pal.TEXT_3)
 		y += 58
 	y += 6
-	_farm_label(Rect2(x, y, col_w, 24), "%.0f%% of a find on a signal there from that level" % (Data.SITE_UNIQUE_DROP * 100.0), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
+	_farm_label(Rect2(x, y, col_w, 24), "%.0f%% of finds on a signal there, from that level" % (Data.SITE_UNIQUE_DROP * 100.0), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
 	_farm_label(Rect2(x, y + 24, col_w, 24), "Once it's on the shelf, a second is 1 in %d of that" % roundi(1.0 / Data.SITE_UNIQUE_AGAIN), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
 	# looking for
 	x += col_w + 24
