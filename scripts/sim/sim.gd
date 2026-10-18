@@ -1519,12 +1519,7 @@ static func wear_of(item_level: int) -> int:
 ## A site's or a signal's finds, in the runner's terms (16 Oct, Matt: "if the bank says it drops level 6 gear then my
 ## expectation is that i need to be level 6"): the level to wear them, and the fifth at the runner's when that's lower.
 func finds_words(item_level: int) -> Array:
-	var top: int = wear_of(item_level)
-	var mine: int = wear_of(mini(item_level, wearable_level()))
-	if mine >= top:
-		return ["level %d gear" % top, "level %d" % top]
-	var pct: int = roundi(Data.FIND_AT_MINE * 100.0)
-	return ["level %d gear · %d%% at level %d" % [top, pct, mine], "level %d · %d%% at level %d" % [top, pct, mine], "level %d" % top]
+	return [str(wear_of(item_level))]         # the Gear level tile's figure (18 Oct, Matt: "just a number", the same on every site)
 
 
 ## The site's state, for the card: fresh, settling, or picked over and when it's back.

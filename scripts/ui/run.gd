@@ -64,11 +64,10 @@ const RIG_HEAD_Y := FIGHT_BOX_Y + 430 + SECTION_GAP              # under the fra
 const RIG_Y := RIG_HEAD_Y + UI.HEAD_H + 4                     # the pouches' row
 const BUTTON_Y := Pal.ROOM_H - PAD - Pal.BUTTON_H
 # the take down by the button, the rig taking the room between (16 Oct, Matt: the rig "too small to see"; the take
-# "less spread"; RunPanel mockup): the run's own line over the button, the take's strip over that, its head over that
-const NOTE_H := 20
-const NOTE_Y := BUTTON_Y - 4 - NOTE_H
+# "less spread"; RunPanel mockup): the take's strip over the button, its head over that, the run's own line at the
+# head's right (18 Oct, Matt: "remove 'leaving keeps the loot' and push the take bar down")
 const STRIP_H := 50
-const STRIP_Y := NOTE_Y - 6 - STRIP_H
+const STRIP_Y := BUTTON_Y - 6 - STRIP_H
 const TAKE_Y := STRIP_Y - 2 - UI.HEAD_H
 const RIG_ROOM := TAKE_Y - SECTION_GAP - RIG_Y                # the rig's height in a fight: two rows of full cells
 const ICON := 36                                              # a tile's painted icon, its figure beside it
@@ -109,7 +108,7 @@ var _runner := {}                  # {head, track, fill, bar_text, tiles[4], not
 var _rig_head: Label
 var _take_head: Label
 var _take_strip := {}               # the take, one strip (16 Oct): {panel, tins, pack_key, pack, track, fill, counts, div1, div2}
-var _note: Label                   # the run's own line: leaving keeps the loot, HP low, filling up
+var _note: Label                   # the run's own line, at the take's head's right: HP low, the way out, filling up; nothing when all's well
 var _button: Button                # Get out now
 var _button2: Button               # Stop auto, or Fill up then go
 var _inv
@@ -218,7 +217,7 @@ func _init() -> void:
 	_take_strip["fill"] = UI.panel(sp, Rect2(px, 32, 0, 8), UI.box(Pal.GOOD, 4))
 	_take_strip["div2"] = UI.panel(sp, Rect2(px + pw + 10, 10, 1, STRIP_H - 20), UI.box(Pal.CARD_LINE, 0))
 	_take_strip["counts"] = UI.label(sp, Rect2(px + pw + 20, 0, INNER - (px + pw + 20) - 12, STRIP_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_note = UI.label(_left, Rect2(PAD, NOTE_Y, INNER, NOTE_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_note = UI.label(_left, Rect2(PAD, TAKE_Y, INNER, UI.HEAD_H), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_button = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), true)
 	_button.pressed.connect(_get_out)
 	_button2 = UI.button(_left, Rect2(PAD, BUTTON_Y, INNER, Pal.BUTTON_H), false)
@@ -452,7 +451,7 @@ func show_state(s) -> void:
 	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
 	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: getting out stops it" if sim.auto_tier >= 0 else
 		("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
-		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ("Stay for more loot, or get out" if m["cleared"] else "Leaving keeps the loot"))))
+		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else "")))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
 	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
@@ -1254,6 +1253,8 @@ func text_nodes() -> Array:
 func line_pairs() -> Array:
 	var out: Array = _pick.line_pairs()
 	out.append([_band.headline, _band.unit])
+	if _take_head.visible:
+		out.append([_take_head, _note])                 # the run's line shares the take's head row (18 Oct): never into it
 	return out
 
 

@@ -291,7 +291,7 @@ func show_state(s) -> void:
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = "Tier %d · gear for level %d" % [k + 1, sim.wear_of(int(t["level"]))]     # the area is the tab's (18 Oct, said once)     # the level to wear its finds (16 Oct: it read the item level)
+			var kicker: String = "Tier %d" % (k + 1)     # the gear's level is the Gear level tile's (18 Oct, Matt: said once, and every site the same)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
 			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
@@ -313,7 +313,7 @@ func show_state(s) -> void:
 			["Their fire", ["%.1f dmg/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight · clock", [     # "Fight time · run clock" wanted 179 px of the tile's 128 (18 Oct)
 			"%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "clock %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
-			["Finds", sim.finds_words(int(t["level"]))],
+			["Gear level", sim.finds_words(int(t["level"]))],     # the level to wear what it drops, the number an item's own Level chip says (18 Oct)
 			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
 			["The site", [sim.site_state(i), sim.site_state(i).get_slice(" · ", 0)]],
 		]

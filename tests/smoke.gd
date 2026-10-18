@@ -5683,7 +5683,7 @@ func _playtest_checks(main) -> void:
 	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
 	var band0 = c["band"]
 	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
-	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.begins_with("Tier 1 · "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
+	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text == "Tier 1", "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
 	_check(c["tiles"][0]["key"].text == "Gang" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
 	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
 	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
@@ -10118,6 +10118,10 @@ func _frame_checks(main) -> void:
 		main.refresh()
 		_check(bd.kicker.text == "" and bd.unit.text == "left" and not bd.right[0].text.contains("clock") and not bd.right[1].text.contains("clock"), "the run's band says more than the site and the time left: '%s' / '%s' / '%s', '%s'" % [bd.kicker.text, bd.unit.text, bd.right[0].text, bd.right[1].text])
 		print("the run's band kept simple: '%s', '%s' %s, '%s'" % [bd.title.text, bd.headline.text, bd.unit.text, bd.right[0].text])
+		# nothing on the take's row when all's well (18 Oct, Matt: "remove 'leaving keeps the loot'")
+		var mm2: Dictionary = main.sim.mission
+		if main.sim.auto_tier < 0 and main.sim.hp / main.sim.max_hp() > 0.35 and not mm2.get("leave_full", false) and main.sim.pack_used(mm2) < main.sim.capacity() and not mm2.has("crates"):
+			_check(run._note.text == "", "a plain run still says something under the take: '%s'" % run._note.text)
 		# the runner panel (16 Oct, RunPanel mockup): the rig's cells full size (two rows at most) down to the take; the
 		# take one strip over the run's line, the line over the button; "Their fire" and the icons on the six
 		var rig_bottom := 0.0
@@ -10131,8 +10135,8 @@ func _frame_checks(main) -> void:
 				rig_bottom = maxf(rig_bottom, o.position.y + o.size.y)
 				smallest = minf(smallest, o.size.y)
 		var strip: Panel = run._take_strip["panel"]
-		_check(smallest >= 56.0 and rig_bottom <= run._take_head.position.y and run._take_head.position.y + run._take_head.size.y <= strip.position.y and strip.position.y + strip.size.y <= run._note.position.y and run._note.position.y + run._note.size.y <= run._button.position.y,
-			"the runner panel's rows are off: rig cells %.0f px to %.0f, take head %.0f, strip %.0f-%.0f, note %.0f, button %.0f" % [smallest, rig_bottom, run._take_head.position.y, strip.position.y, strip.position.y + strip.size.y, run._note.position.y, run._button.position.y])
+		_check(smallest >= 56.0 and rig_bottom <= run._take_head.position.y and run._take_head.position.y + run._take_head.size.y <= strip.position.y and is_equal_approx(run._note.position.y, run._take_head.position.y) and strip.position.y + strip.size.y <= run._button.position.y,
+			"the runner panel's rows are off: rig cells %.0f px to %.0f, take head %.0f, strip %.0f-%.0f, note %.0f (on the head's row), button %.0f" % [smallest, rig_bottom, run._take_head.position.y, strip.position.y, strip.position.y + strip.size.y, run._note.position.y, run._button.position.y])
 		_check(run._view == null or (run._six[1].has("icon") and run._six[4].has("icon")) or not ResourceLoader.exists("res://art/ui/dps.png"), "the six have no icons where Matt's art is")
 	if went_out and main.sim.on_mission():
 		main.sim.extract_now()
@@ -11535,12 +11539,16 @@ func _site_level_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c0: Dictionary = main._missions._cols[0]
-	_check(c0["band"].kicker.text.ends_with("gear for level %d" % sim.wear_of(8)), "the streets' kicker does not say the level to wear its gear: '%s'" % c0["band"].kicker.text)
+	_check(c0["band"].kicker.text == "Tier 1", "the streets' kicker says more than its tier: '%s'" % c0["band"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
 	var finds := -1
 	for r in range(6):
-		if c0["tiles"][r]["key"].text == "Finds":
+		if c0["tiles"][r]["key"].text == "Gear level":
 			finds = r
-	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with("level %d" % sim.wear_of(8)), "the streets' Finds tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Finds tile"))
+	_check(finds >= 0 and c0["tiles"][finds]["value"].text.begins_with(str(sim.wear_of(8))), "the streets' Gear level tile is off: %s" % (c0["tiles"][finds]["value"].text if finds >= 0 else "no Gear level tile"))
+	# every open site's tile reads the same way: the number first, never "level N gear" on one and "level N" on the next (Matt's shot)
+	for c in main._missions._cols:
+		if c["deploy"].visible:
+			_check(c["tiles"][finds]["value"].text.substr(0, 1).is_valid_int(), "a Gear level tile reads '%s'" % c["tiles"][finds]["value"].text)
 	main._missions._pick_zone(3)
 	main._missions._shown = ""
 	main.refresh()
@@ -11574,7 +11582,7 @@ func _find_at_mine_checks(main) -> void:
 	var bank: Dictionary = sim.effective(8)
 	var site_lv: int = int(bank["level"])
 	var w: Array = sim.finds_words(site_lv)
-	_check(site_lv > mine and str(w[0]) == "level %d gear · 20%% at level %d" % [sim.wear_of(site_lv), sim.wear_of(mine)], "the Bank's finds read '%s'" % str(w[0]))
+	_check(site_lv > mine and w == [str(sim.wear_of(site_lv))], "the Bank's Gear level reads '%s', not its number" % str(w))
 	var tally := func(t: Dictionary) -> Array:
 		sim.rng.seed = 1616
 		var low := 0
@@ -11608,7 +11616,6 @@ func _find_at_mine_checks(main) -> void:
 	sim.xp = Data.xp_for_level(40)
 	var past: Array = tally.call(bank)
 	_check(past[0] == 0 or sim.wearable_level() == site_lv, "a runner past the site got finds under it: %d" % past[0])
-	_check(sim.finds_words(site_lv).size() == 2, "a runner past the site still reads the fifth: %s" % str(sim.finds_words(site_lv)))
 	sim.xp = keep_xp
 	# the Runs card says when the rig's short of the fight's rounds (16 Oct), first so it's never the chip left off, and fits
 	var keep_rig: Array = sim.rig.duplicate()
@@ -12267,7 +12274,7 @@ func _fill_up_checks(main) -> void:
 	var rn = main._run
 	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text == "", "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
 	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
-	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.NOTE_Y + rn.NOTE_H <= rn.BUTTON_Y and rn.STRIP_Y + rn.STRIP_H <= rn.NOTE_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d note %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.NOTE_Y, rn.BUTTON_Y])
+	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.STRIP_Y + rn.STRIP_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d strip %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.STRIP_Y, rn.BUTTON_Y])
 	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart
 	var fb := Rect2(rn._fight["box"].position, rn._fight["box"].size)
 	var rb := Rect2(rn._runner["box"].position, rn._runner["box"].size)

@@ -643,7 +643,7 @@ func _show_signals(od: Array) -> void:
 	UI.fit(_card_odds_sub, ["to clear, events counted" if od[1] else "reading the odds", "to clear"])
 	UI.set_tile(_card_tiles[0], "Gang", ["%d × %s HP" % [int(e["pool"]), Fmt.num(float(e["hp"]))], "%d × %s" % [int(e["pool"]), Fmt.num(float(e["hp"]))]])
 	UI.set_tile(_card_tiles[1], "Their fire", ["%.1f dmg/s each" % float(e["dps"]), "%.1f/s" % float(e["dps"])])
-	UI.set_tile(_card_tiles[2], "Finds", sim.finds_words(int(e["level"])))
+	UI.set_tile(_card_tiles[2], "Gear level", sim.finds_words(int(e["level"])))
 	var chips: Array = []
 	for wd in sim.signal_words(sg):
 		var parts: Array = sim.word_words(str(wd["w"]), int(wd["t"]))     # [the bite, the pay]
