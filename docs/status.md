@@ -5611,3 +5611,5 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
 1. The exported build saves in its own folder (Godot's custom user dir, for exports only), so Matt can play while the
    smoke runs: one test export on his machine first to check the setting takes, then his slot and its record copied
    across once. The smoke's check of his saves stays as it is.
+2. The odds lag after Glasses (60 test runs, not 24): the 24-run odds at once, the rest worked out over the next
+   frames; a smoke check that working out the odds never holds a frame past a set time.
