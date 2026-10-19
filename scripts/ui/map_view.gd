@@ -46,6 +46,10 @@ const SITE_LABEL := [BELOW, RIGHT, ABOVE, BELOW, BELOW, ABOVE, BELOW, BELOW, BEL
 const ORDER_AT := {"grid": Vector2(842, 248), "archive": Vector2(596, 643), "mint": Vector2(940, 728)}
 const ORDER_LABEL := {"grid": BELOW, "archive": ABOVE, "mint": BELOW}
 const ART_DIR := "res://art/map/"
+const KEY_H := 30.0
+const KEY_PAD := 12.0
+const KEY_GAP := 14.0
+const KEY_DOT := 10.0
 const MAP_AT := Vector2(-3, -2)        # the painting's top left: 1024 x 848 drawn, 3 px off each side, 2 off top and bottom
 const LIT := Color(1.0, 0.86, 0.6, 0.08)    # the picked site's zone, lit
 
@@ -56,6 +60,8 @@ var _zone_names: Array = []        # [name Label, state Label] a zone
 var _pin_labels: Array = []        # a Label a site
 var _order_labels: Dictionary = {}  # key -> Label
 var _legend: Array = []            # [Label, colour, hollow]
+var _key_rect := Rect2()           # the key's panel, fitted to its words
+var _label_at := {}                # Label -> [the pin's point, its side]: a name sits snug on its own pin
 var _shown := ""
 static var _art := {}                  # path -> Texture2D or null, looked for once
 func _init(rect: Rect2) -> void:
@@ -78,12 +84,25 @@ func _init(rect: Rect2) -> void:
 		_pin_labels.append(l)
 	for k in ORDER_AT:
 		_order_labels[k] = _pin_label(_px(ORDER_AT[k]), int(ORDER_LABEL[k]), Pal.ACCENT)
-	# the key, bottom right: what a pin's colour says
-	var x := size.x - 470.0
-	for e in [["Safe", Pal.GOOD, false], ["Risky", Pal.WARN, false], ["A bad idea", Pal.BAD, false], ["Locked", Pal.TEXT_3, true]]:
-		var l := UI.label(self, Rect2(x + 20, size.y - 44, 96, 26), str(e[0]), "Regular", Pal.CELL_TEXT, Pal.TEXT_2 if e[2] else Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	# the key, bottom right: what a pin's colour says - a dot and its word, packed tight (19 Oct, Matt: "too big ... too
+	# spread out")
+	var items := [["Safe", Pal.GOOD, false], ["Risky", Pal.WARN, false], ["A bad idea", Pal.BAD, false], ["Locked", Pal.TEXT_3, true]]
+	var widths: Array = []
+	var total := KEY_PAD
+	for e in items:
+		var l := UI.label(self, Rect2(0, 0, 10, KEY_H), str(e[0]), "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2 if e[2] else Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var w: float = ceilf(UI.text_width(l, l.text)) + 2.0
+		l.size.x = w
+		widths.append(w)
 		_legend.append([l, e[1], e[2]])
-		x += 116.0
+		total += KEY_DOT + 6.0 + w + KEY_GAP
+	total += KEY_PAD - KEY_GAP
+	_key_rect = Rect2(size.x - total - 12.0, size.y - KEY_H - 12.0, total, KEY_H)
+	var kx: float = _key_rect.position.x + KEY_PAD
+	for k in range(_legend.size()):
+		var l: Label = _legend[k][0]
+		l.position = Vector2(kx + KEY_DOT + 6.0, _key_rect.position.y)
+		kx += KEY_DOT + 6.0 + float(widths[k]) + KEY_GAP
 	for c in get_children():
 		if c is CanvasItem:
 			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -134,7 +153,19 @@ func _pin_label(p: Vector2, side: int, col: Color) -> Label:
 	r.position.x = clampf(r.position.x, 4.0, size.x - 4.0 - r.size.x)
 	var l := UI.label(self, r, "", "SemiBold", Pal.CELL_TEXT, col, align, false)
 	UI.shadow(l)
+	_label_at[l] = [p, side]
 	return l
+
+
+## A pin's name hugging its own pin (19 Oct, Matt: the Allotments' name drifted off its dot): above or below, its box the
+## word's own width centred on the pin, kept inside the map; left or right as laid.
+func _snug(l: Label) -> void:
+	var at: Array = _label_at.get(l, [])
+	if at.is_empty() or not (int(at[1]) == BELOW or int(at[1]) == ABOVE):
+		return
+	var w: float = ceilf(UI.text_width(l, l.text)) + 4.0
+	l.size.x = w
+	l.position.x = clampf(at[0].x - w / 2.0, 4.0, size.x - 4.0 - w)
 
 
 ## A point of the drawing's space on the control.
@@ -192,22 +223,16 @@ func show_state(s, sel: int, okey: String) -> void:
 		l.visible = sim.zone_open(z)
 		if not l.visible:
 			continue
-		var nm: String = str(Data.TIERS[i]["name"])
-		if sim.tier_open(i):
-			var o: String = Fmt.pct(sim.odds_now(i)) if sim.odds_ready(i) else "…"
-			UI.fit(l, ["%s · %s" % [nm, o], nm])
-		elif sim.level_gated(i) and (Data.ZONES[z]["tiers"].find(i) == 0 or int(sim.best_depth[i - 1]) > 0):
-			UI.fit(l, ["%s · opens at level %d" % [nm, sim.site_gate(i)], "%s · level %d" % [nm, sim.site_gate(i)], nm])
-		else:
-			UI.fit(l, ["%s · after %s" % [nm, Words.mid(Data.TIERS[i - 1]["name"])], nm])
+		l.text = str(Data.TIERS[i]["name"])     # the name only: the odds, the gate and what's before it are the card's (19 Oct, Matt)
+		_snug(l)
 		var picked_now: bool = i == selected and order_key == ""
 		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.TEXT if sim.tier_open(i) else Pal.TEXT_2))
 	for p in Data.PINNACLES:
 		var l: Label = _order_labels[p["key"]]
 		l.visible = sim.order_open(p["key"])
 		if l.visible:
-			var od: Array = sim.order_odds_now(p["key"])
-			UI.fit(l, ["%s · %s" % [p["place"], Fmt.pct(float(od[0])) if bool(od[1]) else "…"], str(p["place"])])
+			l.text = str(p["place"])
+			_snug(l)
 			l.add_theme_color_override("font_color", Pal.ACCENT if order_key == p["key"] else Pal.TEXT)
 	queue_redraw()
 
@@ -255,16 +280,15 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
 		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), Pal.ACCENT)
 	# the key's panel and its dots
-	var kx: float = size.x - 486.0
-	draw_rect(Rect2(kx, size.y - 56, 470, 44), Color(Pal.PANEL, 0.92))
-	draw_rect(Rect2(kx, size.y - 56, 470, 44), Pal.CARD_LINE, false, 1.0)
+	draw_rect(_key_rect, Color(Pal.PANEL, 0.88))
+	draw_rect(_key_rect, Pal.CARD_LINE, false, 1.0)
 	for e in _legend:
 		var l: Label = e[0]
-		var dc := Vector2(l.position.x - 10, l.position.y + 13)
+		var dc := Vector2(l.position.x - 6.0 - KEY_DOT / 2.0, l.position.y + KEY_H / 2.0)
 		if e[2]:
-			draw_arc(dc, 6.0, 0.0, TAU, 16, e[1], 2.0)
+			draw_arc(dc, KEY_DOT / 2.0 - 1.0, 0.0, TAU, 16, e[1], 2.0)
 		else:
-			draw_circle(dc, 6.0, e[1])
+			draw_circle(dc, KEY_DOT / 2.0, e[1])
 
 
 ## No painting: the old drawn map - the zones' fills, the river, the motorway.

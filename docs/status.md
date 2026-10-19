@@ -5723,6 +5723,9 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
 - Done (19 Oct): the order's three heads' art in - each one's place on the order card (Data.PINNACLES' art) and on an
   order run's band, a face, the fight's stand/fire/down, the unique's icon (found by name). Their fights still stand on
   the host site's plate (the Services, the Bank, the Barracks); plates of their own would be another art job.
+- Done (19 Oct, Matt on the painted Map): a pin's name is the name only (the odds, the gate, what's before it are the
+  card's), sitting snug on its own pin; the key a small packed strip of dots and words. Two smoke fixtures that left
+  state behind fixed (an incendiary box in the rig fed the "plain" gun; a bought box of rounds topped up a stack).
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

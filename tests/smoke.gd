@@ -1071,7 +1071,7 @@ func _fence_screen(main) -> void:
 		var n_before: int = sim.stash.size()
 		var shelf_before: int = sim.market.size()
 		main._fence._press(0)
-		_check(sim.stash.size() == n_before + 1 or not sim.stash_room(Items.size(it)), "Buy through the screen did not buy")
+		_check(sim.stash.size() == n_before + 1 or sim.market.size() == shelf_before - 1 or not sim.stash_room(Items.size(it)), "Buy through the screen did not buy: %s at %d, cash %.0f, stash %d" % [it["base"], sim.price(it), sim.cash, sim.stash.size()])     # a box of rounds tops up a stack (19 Oct)
 		_check(sim.market.size() == shelf_before - 1 or not sim.stash_room(Items.size(it)), "the shelf did not shrink: finite stock")
 	main._fence._show("stash")
 	main.refresh()
@@ -6230,8 +6230,9 @@ func _damage_model_checks(main) -> void:
 	sim.equipped["Secondary"] = null
 	for s in ["Helmet", "Armour", "Charm"]:
 		sim.equipped[s] = null
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x))     # an incendiary box left in the rig feeds the gun (the review, 19 Oct)
 	var conv: Dictionary = sim.conversion()
-	_check(is_equal_approx(conv["physical"], 1.0), "a plain gun is not all physical: %s" % str(conv))
+	_check(is_equal_approx(conv["physical"], 1.0), "a plain gun is not all physical: %s (rig %s)" % [str(conv), str(sim.rig.map(func(x): return x["base"]))])
 	var gun: Dictionary = sim.equipped["Primary"]
 	gun["attachments"]["socket 1"] = sim._plain("Attachment", "Lighter fluid")
 	gun["affixes"] = [{"stat": "fire_pct", "value": 20, "tier": 3}]
@@ -15676,6 +15677,18 @@ func _map_checks(main) -> void:
 	_check(not mv._pin_labels[10].visible and mv._pin_labels[1].visible, "a shut zone's pins carry names, or an open one's don't")
 	_check(mv._zone_names[1][1].text.begins_with("Locked"), "a shut zone doesn't say it's locked: '%s'" % mv._zone_names[1][1].text)
 	_check_fit(main, "the Map (a fresh camp)")
+	# a pin's name is the name only, sitting on its own pin (19 Oct, Matt); the key small and packed
+	for i in range(Data.TIERS.size()):
+		var pl: Label = mv._pin_labels[i]
+		if not pl.visible:
+			continue
+		_check(pl.text == str(Data.TIERS[i]["name"]), "a pin's name carries more than the name: '%s'" % pl.text)
+		var side: int = int(mv.SITE_LABEL[i])
+		if side == mv.BELOW or side == mv.ABOVE:
+			var cx: float = pl.position.x + pl.size.x / 2.0
+			var room_l: bool = pl.position.x <= 4.5 or pl.position.x + pl.size.x >= mv.size.x - 4.5
+			_check(absf(cx - mv.pin_at(i).x) < 2.0 or (room_l and Rect2(pl.position, pl.size).grow_individual(0, 0, 0, 0).has_point(Vector2(mv.pin_at(i).x, pl.position.y + 1)) or (room_l and absf(pl.position.x - 4.0) < 0.5)), "%s's name sits off its pin: %.0f against %.0f" % [Data.TIERS[i]["name"], cx, mv.pin_at(i).x])
+	_check(mv._key_rect.size.x <= 340.0 and mv._key_rect.size.y <= 32.0 and mv._legend.all(func(e): return mv._key_rect.encloses(Rect2(e[0].position, e[0].size))), "the Map's key is %s, or a word leaves it" % str(mv._key_rect))
 	# a pad or the keys step the pins, round the open zones' sites (the review: the tabs were buttons; the Deck's d-pad)
 	var kev := InputEventAction.new()
 	kev.action = "ui_right"
