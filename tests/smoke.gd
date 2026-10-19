@@ -14797,6 +14797,9 @@ func _gates_checks(main) -> void:
 	_check(dry.compare(rifle) == 1, "a rifle with its rounds in the stash doesn't read better than the nail gun: %d" % dry.compare(rifle))
 	_check(dry.equip_best("Primary") and dry.equipped["Primary"]["id"] == rifle["id"] and dry.has_rounds(rifle), "Equip if better put the rifle on without its rounds in the rig")
 	dry.hp = dry.max_hp()
+	var bags: Array = Data.BASES["Backpack"].duplicate()
+	bags.sort_custom(func(x, y): return float(x.get("cells", x.get("capacity", 0))) > float(y.get("cells", y.get("capacity", 0))))
+	dry.equipped["Backpack"] = dry._plain("Backpack", str(bags[0]["name"]))     # room for the box: a full pack passes it over (19 Oct, a flake)
 	dry.deploy(0)
 	var guns := 0
 	var boxed := true
@@ -14809,7 +14812,7 @@ func _gates_checks(main) -> void:
 				guns += 1
 				boxed = boxed and dry.mission["found"].any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == Items.ammo_type(f))
 		dry.mission["found"] = before
-	_check(guns > 0 and boxed, "a gun found with the Fence shut came without its rounds (%d guns)" % guns)
+	_check(guns > 0 and boxed, "a gun found with the Fence shut came without its rounds (%d guns, pack %d of %d)" % [guns, dry.pack_used(dry.mission), dry.capacity()])
 	dry.extract_now()
 	print("gates ok: shut on a fresh camp, the rail, the jobs, each head's thing, the lines, the deeds off the Manager, saves")
 	main.new_game()                              # the rest of the smoke starts from a fresh camp, as it always did
@@ -15688,6 +15691,27 @@ func _map_checks(main) -> void:
 			var cx: float = pl.position.x + pl.size.x / 2.0
 			var room_l: bool = pl.position.x <= 4.5 or pl.position.x + pl.size.x >= mv.size.x - 4.5
 			_check(absf(cx - mv.pin_at(i).x) < 2.0 or (room_l and Rect2(pl.position, pl.size).grow_individual(0, 0, 0, 0).has_point(Vector2(mv.pin_at(i).x, pl.position.y + 1)) or (room_l and absf(pl.position.x - 4.0) < 0.5)), "%s's name sits off its pin: %.0f against %.0f" % [Data.TIERS[i]["name"], cx, mv.pin_at(i).x])
+	# the cloud over all but the open zones (19 Oct, Matt): under every word, its mask white on an open zone's pin,
+	# black on a shut one's and on the land between
+	if mv._clouds != null:
+		_check(mv._clouds.get_index() < mv._zone_names[0][0].get_index() and mv._clouds.mouse_filter == Control.MOUSE_FILTER_IGNORE and mv._clouds.size == mv.size, "the cloud sits over the words or takes the clicks")
+		var mk: Image = mv.cloud_mask("1000", mv.size)
+		var at_px := func(p: Vector2) -> float:
+			return mk.get_pixel(int(p.x * mv.size.x / mv.W0 / mv.MASK_DIV), int(p.y * mv.size.y / mv.H0 / mv.MASK_DIV)).r
+		_check(at_px.call(mv.SITE_AT[0]) > 0.5 and at_px.call(mv.SITE_AT[10]) < 0.5 and at_px.call(Vector2(600, 800)) < 0.5, "the cloud's mask is off: the Allotments %.1f, the Hospital %.1f, the moor %.1f" % [at_px.call(mv.SITE_AT[0]), at_px.call(mv.SITE_AT[10]), at_px.call(Vector2(600, 800))])
+		# every pin clear of the cloud's soft edge: 12 px at least from its zone's edges, bar the map's own
+		for i in range(Data.TIERS.size()):
+			var poly: Array = mv.ZONE_SHAPES[int(Data.TIERS[i]["zone"])]["points"]
+			var pp: Vector2 = mv.pin_at(i)
+			var near := INF
+			for e in range(poly.size()):
+				var a2: Vector2 = mv._px(poly[e])
+				var b2: Vector2 = mv._px(poly[(e + 1) % poly.size()])
+				var on_rim: bool = (a2.x <= 0.5 and b2.x <= 0.5) or (a2.y <= 0.5 and b2.y <= 0.5) or (a2.x >= mv.size.x - 0.5 and b2.x >= mv.size.x - 0.5) or (a2.y >= mv.size.y - 0.5 and b2.y >= mv.size.y - 0.5)
+				if not on_rim:
+					near = minf(near, pp.distance_to(Geometry2D.get_closest_point_to_segment(pp, a2, b2)))
+			_check(near >= 12.0, "%s's pin is %.0f px from its zone's edge: the cloud's fade reaches it" % [Data.TIERS[i]["name"], near])
+		_check(mv._clouds_open == "1000" or mv._clouds_open.length() == Data.ZONES.size(), "the cloud wasn't cut for the zones open: '%s'" % mv._clouds_open)
 	_check(mv._key_rect.size.x <= 340.0 and mv._key_rect.size.y <= 32.0 and mv._legend.all(func(e): return mv._key_rect.encloses(Rect2(e[0].position, e[0].size))), "the Map's key is %s, or a word leaves it" % str(mv._key_rect))
 	# a pad or the keys step the pins, round the open zones' sites (the review: the tabs were buttons; the Deck's d-pad)
 	var kev := InputEventAction.new()

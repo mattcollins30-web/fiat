@@ -5726,6 +5726,14 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
 - Done (19 Oct, Matt on the painted Map): a pin's name is the name only (the odds, the gate, what's before it are the
   card's), sitting snug on its own pin; the key a small packed strip of dots and words. Two smoke fixtures that left
   state behind fixed (an incendiary box in the rig fed the "plain" gun; a bought box of rounds topped up a stack).
+- Done (19 Oct, Matt: "tiled clouds ... cover the entire map except unlocked regions"): art/map/clouds.png (114 px,
+  Matt's) tiled x2 over everything but the open zones, two drifts crossed and mirrored top to bottom to hide the seam;
+  the open zones cut out of a mask at a sixth of the map (soft edge), cut again when a zone opens. Over the painting
+  and the pins, under every word; the key on its own layer above it. The hatch only stands in without the tile.
+  Known: the drift snaps once an hour (TIME wraps). The smoke: the cloud under the words and off the clicks, its mask
+  clear on an open zone's pin and clouded on a shut one's and the moor, every pin 12 px clear of its zone's edge.
+  - For Matt: a gun found with the Fence shut brings its box only if the pack has room; a full pack passes the box
+    over (a smoke fixture tripped on it; it now gives the pack room).
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

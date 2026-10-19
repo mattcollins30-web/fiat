@@ -63,6 +63,27 @@ var _legend: Array = []            # [Label, colour, hollow]
 var _key_rect := Rect2()           # the key's panel, fitted to its words
 var _label_at := {}                # Label -> [the pin's point, its side]: a name sits snug on its own pin
 var _shown := ""
+var _clouds: ColorRect                 # the cloud over all but the open zones (19 Oct, Matt), when art/map/clouds.png is made
+var _clouds_open := "-"
+var _key_bg: Control                   # the key's panel and dots, over the cloud, under its words                # the open zones the cloud's mask was cut for
+const MASK_DIV := 6.0                  # the mask at a sixth of the map: smoothed up, a soft edge
+const CLOUD_SHADER := """
+shader_type canvas_item;
+uniform sampler2D tile : repeat_enable, filter_nearest;
+uniform sampler2D mask : filter_linear;
+uniform vec2 px_size = vec2(1018.0, 844.0);
+uniform float tile_px = 228.0;
+void fragment() {
+	vec2 px = floor(UV * px_size / 2.0) * 2.0;                 // whole 2 px steps, the painting's pixels
+	vec2 a = px / tile_px + vec2(TIME * 0.006, TIME * 0.0025);
+	vec2 b = px / (tile_px * 1.37) + vec2(0.43, 0.29) - vec2(TIME * 0.004, -TIME * 0.0015);
+	a.y = 1.0 - abs(mod(a.y, 2.0) - 1.0);                      // mirrored top to bottom: the tile's rows don't meet
+	b.y = 1.0 - abs(mod(b.y, 2.0) - 1.0);
+	vec3 col = mix(texture(tile, a).rgb, texture(tile, b).rgb, 0.42);     // two drifts crossed: no repeat
+	float open = texture(mask, UV).r;
+	COLOR = vec4(col, 1.0 - smoothstep(0.3, 0.7, open));
+}
+"""
 static var _art := {}                  # path -> Texture2D or null, looked for once
 func _init(rect: Rect2) -> void:
 	position = rect.position
@@ -71,6 +92,25 @@ func _init(rect: Rect2) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
+	var tile := art("clouds")
+	if tile != null:                        # over the map's drawing and the pins, under every word
+		_clouds = ColorRect.new()
+		_clouds.size = size
+		_clouds.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sh := Shader.new()
+		sh.code = CLOUD_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		mat.set_shader_parameter("tile", tile)
+		mat.set_shader_parameter("px_size", size)
+		mat.set_shader_parameter("tile_px", tile.get_width() * 2.0)
+		_clouds.material = mat
+		add_child(_clouds)
+	_key_bg = Control.new()
+	_key_bg.size = size
+	_key_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_key_bg.draw.connect(_draw_key)
+	add_child(_key_bg)
 	for z in range(Data.ZONES.size()):
 		var at: Vector2 = _px(ZONE_SHAPES[z]["name_at"])
 		var room: float = minf(320.0, size.x - at.x - 8.0)
@@ -120,6 +160,40 @@ static func art(nm: String) -> Texture2D:
 			if img != null:
 				_art[path] = ImageTexture.create_from_image(img)
 	return _art[path]
+
+
+## The cloud's mask: white over the open zones, black elsewhere, at a sixth of the map; cut again when a zone opens.
+func _cut_clouds() -> void:
+	if _clouds == null or sim == null:
+		return
+	var key := ""
+	for z in range(Data.ZONES.size()):
+		key += "1" if sim.zone_open(z) else "0"
+	if key == _clouds_open:
+		return
+	_clouds_open = key
+	(_clouds.material as ShaderMaterial).set_shader_parameter("mask", ImageTexture.create_from_image(cloud_mask(key, size)))
+
+
+## The mask for a set of open zones ("1100": the first two): each cell white when its middle is in an open zone.
+static func cloud_mask(key: String, map_size: Vector2) -> Image:
+	var w := int(ceilf(map_size.x / MASK_DIV))
+	var h := int(ceilf(map_size.y / MASK_DIV))
+	var img := Image.create(w, h, false, Image.FORMAT_L8)
+	var polys: Array = []
+	for z in range(mini(key.length(), ZONE_SHAPES.size())):
+		if key[z] == "1":
+			polys.append(PackedVector2Array(ZONE_SHAPES[z]["points"]))
+	for y in range(h):
+		for x in range(w):
+			var p := Vector2((x + 0.5) * MASK_DIV * W0 / map_size.x, (y + 0.5) * MASK_DIV * H0 / map_size.y)
+			var inside := false
+			for poly in polys:
+				if Geometry2D.is_point_in_polygon(p, poly):
+					inside = true
+					break
+			img.set_pixel(x, y, Color.WHITE if inside else Color.BLACK)
+	return img
 
 
 ## The painting, if made.
@@ -197,6 +271,7 @@ func show_state(s, sel: int, okey: String) -> void:
 	if sig == _shown:
 		return
 	_shown = sig
+	_cut_clouds()
 	for z in range(Data.ZONES.size()):
 		var nm: Label = _zone_names[z][0]
 		var st: Label = _zone_names[z][1]
@@ -250,9 +325,9 @@ func _draw() -> void:
 		draw_colored_polygon(pts, LIT)
 		pts.append(pts[0])
 		draw_polyline(pts, Color(Pal.ACCENT, 0.7), 2.0)
-	# a shut zone under a hatch
+	# a shut zone under a hatch, where there's no cloud
 	for z in range(Data.ZONES.size()):
-		if sim != null and not sim.zone_open(z):
+		if _clouds == null and sim != null and not sim.zone_open(z):
 			_hatch(ZONE_SHAPES[z]["points"])
 	if sim == null:
 		return
@@ -279,16 +354,20 @@ func _draw() -> void:
 		var d := PIN_R + 3.0                 # a diamond: the order's places aren't the campaign's
 		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
 		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), Pal.ACCENT)
-	# the key's panel and its dots
-	draw_rect(_key_rect, Color(Pal.PANEL, 0.88))
-	draw_rect(_key_rect, Pal.CARD_LINE, false, 1.0)
+	# the key's panel and its dots: their own layer (_draw_key), over the cloud
+
+
+## The key's panel and its dots, on their own layer over the cloud.
+func _draw_key() -> void:
+	_key_bg.draw_rect(_key_rect, Color(Pal.PANEL, 0.88))
+	_key_bg.draw_rect(_key_rect, Pal.CARD_LINE, false, 1.0)
 	for e in _legend:
 		var l: Label = e[0]
 		var dc := Vector2(l.position.x - 6.0 - KEY_DOT / 2.0, l.position.y + KEY_H / 2.0)
 		if e[2]:
-			draw_arc(dc, KEY_DOT / 2.0 - 1.0, 0.0, TAU, 16, e[1], 2.0)
+			_key_bg.draw_arc(dc, KEY_DOT / 2.0 - 1.0, 0.0, TAU, 16, e[1], 2.0)
 		else:
-			draw_circle(dc, KEY_DOT / 2.0, e[1])
+			_key_bg.draw_circle(dc, KEY_DOT / 2.0, e[1])
 
 
 ## No painting: the old drawn map - the zones' fills, the river, the motorway.
