@@ -124,7 +124,7 @@ const YARD := [
 		[{"id": "strongroom", "name": "Strongroom", "short": "Insurance half price", "words": "Insuring a run costs half"},
 		 {"id": "wall_of_fame", "name": "Wall of fame", "short": "Uniques take no room", "words": "Uniques and set pieces in the stash take no cells"}],
 		[{"id": "lock_up", "name": "Container", "short": "+60 cells", "words": "60 more cells in the stash"},
-		 {"id": "paper_rack", "name": "Paper rack", "short": "Papers, charms: no cells", "words": "Papers and charms in the stash take no cells"}],
+		 {"id": "filing_cabinet", "name": "Filing cabinet", "short": "Signals bring 3 papers", "words": "A signal you beat brings at least 3 papers home, not 2"}],
 		[{"id": "dry_store", "name": "Dry store", "short": "Moves keep 75%", "words": "Moving the Pitch keeps 75% of the notes and scrap, not 50%"},
 		 {"id": "annex", "name": "Annex", "short": "+100 cells", "words": "100 more cells in the stash"}]],
 	 "rank": {"short": "+20 cells", "words": "20 more stash cells a rank"}},
@@ -947,6 +947,7 @@ const FX := {
 	# yard
 	"yard/a_dog": 1,     # A dog: One more find every search
 	"yard/annex": 100,     # Annex: A hundred more cells in the stash
+	"yard/filing_cabinet": 1,     # Filing cabinet (19 Oct, Matt): a beaten signal's papers home, one more (3, not 2)
 	"yard/another_unit": 50,     # Another unit: Fifty more cells in the stash
 	"yard/beds": 0.5,     # Beds: Resting heals half an HP a second more
 	"yard/champion": 20.0,     # Champion: Twenty per cent better finds

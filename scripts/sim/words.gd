@@ -188,7 +188,7 @@ const RADIO := [
 	{"voice": "loop", "zone": 1, "text": "This is a recorded. Remain. Limited to."},
 	{"voice": "kev", "zone": 1, "text": "Kev here, on whatever this is. If you can hear me, you've got batteries. Look after them."},
 	{"voice": "kev", "zone": 1, "text": "Someone on the Parade's buying old tenners. Paying in tins. Make of that what you like."},
-	{"voice": "loop", "zone": 2, "text": "The loop's stopped. It's just the tone now."},
+	{"voice": "loop", "zone": 2, "stopped": true, "text": "The loop's stopped. It's just the tone now."},
 	{"voice": "kev", "zone": 2, "text": "The Bank crew are taking notes by the bin bag. Not spending them. Counting them. Twice."},
 	{"voice": "kev", "zone": 2, "text": "A request, from a lady in the flats: could whoever took her bins bring the bins back. Keep the rest."},
 	{"voice": "net", "zone": 3, "text": "Convoy four, convoy four. Load is paper. Destination withheld. Acknowledge."},

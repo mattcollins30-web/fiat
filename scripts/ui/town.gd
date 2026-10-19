@@ -129,12 +129,19 @@ func show_state(s) -> void:
 	UI.wrap(_side_notes, "From runs only: each area its own, signals more and fuses too. A death never costs them.")
 
 
+static func _cap(s: String) -> String:
+	return s.substr(0, 1).to_upper() + s.substr(1)
+
+
 func _show_card(c: Dictionary, open: bool) -> void:
 	var key: String = c["key"]
 	var r: Dictionary = Data.rebuild(key)
 	var rank: int = sim.rebuild_rank(key)
-	UI.fit(c["name"], [str(r["name"]), str(r["name"]).trim_prefix("The ")])
-	c["rank"].text = ("RANK %d" % rank) if rank > 0 else "NOT BUILT"
+	# the caps pass (19 Oct, Matt): the rank in sentence case, the name given the room the rank leaves, and a name
+	# short of its "The" still capitalised
+	c["rank"].text = ("Rank %d" % rank) if rank > 0 else "Not built"
+	c["name"].size.x = c["rank"].size.x - ceilf(UI.text_width(c["rank"], c["rank"].text)) - 16
+	UI.fit(c["name"], [str(r["name"]), _cap(str(r["name"]).trim_prefix("The "))])
 	c["rank"].add_theme_color_override("font_color", Pal.GOOD if rank > 0 else Pal.TEXT_3)
 	var fx: Array = sim.rebuild_words(key, maxi(1, rank))
 	for k in range(2):
@@ -147,14 +154,14 @@ func _show_card(c: Dictionary, open: bool) -> void:
 		if cost.has(k):
 			var have: int = sim.held_of(k)
 			var nm: String = sim.thing_name(k)
-			items.append({"forms": ["%s %d/%d" % [nm, have, int(cost[k])], "%s %d/%d" % [nm.trim_prefix("The ").get_slice(" ", 0), have, int(cost[k])]],
+			items.append({"forms": ["%s %d/%d" % [nm, have, int(cost[k])], "%s %d/%d" % [_cap(nm.trim_prefix("The ").get_slice(" ", 0)), have, int(cost[k])]],
 				"colour": "good" if have >= int(cost[k]) else "bad"})
 	c["chips"].show_chips(items, WANT_ROWS, true)
 	c["items"] = items.size()
 	var opens: String = str(r.get("opens", ""))
 	if opens != "":
 		var p: Dictionary = Data.pinnacle(opens)
-		UI.fit(c["opens"], [("Opened %s · %s" if rank > 0 else "Opens %s · %s") % [Words.mid(p["place"]), Words.mid(p["who"])], ("Opened %s" if rank > 0 else "Opens %s") % Words.mid(p["place"])])
+		UI.fit(c["opens"], [("Opened %s · %s" if rank > 0 else "Opens %s · %s") % [Words.mid(p["place"]), str(p["who"])], ("Opened %s" if rank > 0 else "Opens %s") % Words.mid(p["place"])])     # after the dot a name starts its own words: The Lineman
 	else:
 		c["opens"].text = ""
 	var why: String = sim.rebuild_block(key)

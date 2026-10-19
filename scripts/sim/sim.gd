@@ -3061,13 +3061,11 @@ func stash_cap() -> int:
 
 
 ## Whether a stash item takes no cells: the Stash's Racks (rounds, meds, grenades), Wall of fame (uniques and set
-## pieces), Paper rack (papers and charms).
+## pieces). (The Paper rack's papers and charms went with it: papers live on the pile; it's the Filing cabinet, 19 Oct.)
 func stash_free(it: Dictionary) -> bool:
 	if yard_has("racks") and (Items.is_ammo(it) or Items.is_medical(it) or Items.is_grenade(it)):
 		return true
-	if yard_has("wall_of_fame") and (it.has("unique") or it.has("set")):
-		return true
-	return yard_has("paper_rack") and (Items.is_paper(it) or it["slot"] == Data.CHARM)
+	return yard_has("wall_of_fame") and (it.has("unique") or it.has("set"))
 
 
 ## Cells in use.
@@ -5476,7 +5474,7 @@ func _signal_papers_home(m: Dictionary) -> void:
 			found += 1                         # Kev's don't count: they're the story's, not the drawer's
 	var pages: Array = signal_pages(int(m["t"]["depth"]), str(Data.TIERS[int(m["t"]["tier"])]["name"]))
 	var added: Array = []
-	for k in range(maxi(0, Data.SIGNAL_PAPERS_HOME - found)):
+	for k in range(maxi(0, signal_papers_min() - found)):
 		if pages.is_empty():
 			break
 		var it := _plain(Data.PAPER, str(pages[rng.randi_range(0, pages.size() - 1)]))
@@ -5486,6 +5484,11 @@ func _signal_papers_home(m: Dictionary) -> void:
 		added.append(str(it["base"]).to_lower())
 	if not added.is_empty():
 		log_event(Words.SIGNAL_PAPERS % ", ".join(added))
+
+
+## The papers a beaten signal brings home at the least: SIGNAL_PAPERS_HOME, one more with the Stash's Filing cabinet.
+func signal_papers_min() -> int:
+	return Data.SIGNAL_PAPERS_HOME + (Data.FX["yard/filing_cabinet"] if yard_has("filing_cabinet") else 0)
 
 
 ## The papers a signal's top-up can be (the review): the book's pages found at this depth and this site, as a find

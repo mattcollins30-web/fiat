@@ -105,7 +105,7 @@ const PICK_GLYPH := {
 	"steady_hands": "dice", "cheap_parts": "cash", "third_socket": "wrench", "two_locks": "dice", "gunsmith": "dmg", "strip_for_parts": "scrap",
 	"overbump": "wrench", "fine_tuning": "quality", "masterwork": "star", "salvage_line": "steel",
 	"shelving": "pack", "racks": "first", "another_unit": "pack", "bins": "scrap", "strongroom": "armour", "wall_of_fame": "gem",
-	"lock_up": "pack", "paper_rack": "pen", "dry_store": "forever", "annex": "pack",
+	"lock_up": "pack", "filing_cabinet": "pen", "dry_store": "forever", "annex": "pack",
 	"beds": "hp", "shelf": "med", "ward": "hp", "stockroom": "med", "surgery": "cash", "physio": "med", "drip": "hp", "field_kit": "med",
 	"theatre": "hp", "med_lab": "med",
 	"stall": "quantity", "haggling": "cash", "shopfront": "quantity", "orders": "pen", "back_room": "gem", "fixer": "pen",

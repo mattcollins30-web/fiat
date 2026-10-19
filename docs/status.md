@@ -5684,3 +5684,15 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   - For Matt: the rarity rows still sell rounds, meds and grenades (as the old Com tile did) - the starter bandages go
     with Sell on Common. Keep them out of the rows (rounds have their boxes)? One line in Sim._spare.
   - Device run 61 logged a one-off leak at exit (2 objects, 1 resource); run 62 clean. Watch for it.
+- Done (19 Oct): the Filing cabinet. The Stash's fourth pick's other side (was the Paper rack): a beaten signal brings
+  at least 3 papers home, not 2 (Sim.signal_papers_min). Papers and charms take their cells again. The bot never picks
+  that side, so the balance reads don't move.
+- Done (19 Oct), the parked:
+  - Your fire: every fire tile on the run screen shows the top bar's figure (damage, the hits and the burn), the pace
+    beside it while it fits ("362/s ×1.41") - the fight lands the two multiplied. It showed the product (510) before.
+  - The radio loop: the strip plays only the loop's latest heard line, so once "The loop's stopped" is heard, it's
+    stopped - in the traffic too - till the new currency's message brings it back.
+  - The caps pass on the Radio's town: "Rank 2" and "Not built" in sentence case; the name gets the room the rank
+    leaves ("The pumping station" whole); "Opens the Grid · The Lineman"; the chips' short forms capitalised.
+- Today's list is done. Matt exports and plays: at the export, copy every fiat* file from
+  %APPDATA%\Godot\app_userdata\Fiat to %APPDATA%\Fiat once.

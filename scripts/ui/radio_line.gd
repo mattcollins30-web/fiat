@@ -140,6 +140,10 @@ func next_parts() -> Array:
 		_since_garble = 0
 		_garbles += 1
 		var src: Dictionary = Words.RADIO_TRAFFIC[_garbles % Words.RADIO_TRAFFIC.size()]
+		if _loop_stopped():
+			while str(src["voice"]) == "loop":       # the loop's stopped: none of it in the traffic either (19 Oct, Matt)
+				_garbles += 1
+				src = Words.RADIO_TRAFFIC[_garbles % Words.RADIO_TRAFFIC.size()]
 		var text: String = str(src["text"])
 		if not open:
 			return [[garble(text, _garbles), GARBLE]]
@@ -181,10 +185,14 @@ func _next_line() -> String:
 		return _queue.pop_front()
 	var pool: Array = []
 	if sim != null:
+		var top: int = _loop_latest()
 		for key in sim.heard:
 			var r: Dictionary = Sim.radio_line(str(key))
-			if not r.is_empty() and not sim.gate_line_done(r):      # a room's "bring me the bag" stops once it's open
-				pool.append(str(r["text"]))
+			if r.is_empty() or sim.gate_line_done(r):      # a room's "bring me the bag" stops once it's open
+				continue
+			if str(r["voice"]) == "loop" and int(str(key).get_slice("/", 1)) < top:
+				continue                              # the loop plays its latest only: once it's stopped, it's stopped (19 Oct, Matt)
+			pool.append(str(r["text"]))
 	if pool.is_empty():
 		return str(Words.RADIO[0]["text"])
 	_next_heard = _next_heard % pool.size()
@@ -194,6 +202,24 @@ func _next_line() -> String:
 		s = pool[_next_heard % pool.size()]          # not the line just played again (a heard line pushed, then its turn)
 		_next_heard += 1
 	return s
+
+
+## The latest of the loop's lines heard, by its place in RADIO; -1 for none.
+func _loop_latest() -> int:
+	var top := -1
+	if sim == null:
+		return top
+	for key in sim.heard:
+		var r: Dictionary = Sim.radio_line(str(key))
+		if not r.is_empty() and str(r["voice"]) == "loop":
+			top = maxi(top, int(str(key).get_slice("/", 1)))
+	return top
+
+
+## Whether the loop's latest heard is it stopping: no loop in the traffic then.
+func _loop_stopped() -> bool:
+	var top: int = _loop_latest()
+	return top >= 0 and Words.RADIO[top].get("stopped", false)
 
 
 func _tail_x() -> float:

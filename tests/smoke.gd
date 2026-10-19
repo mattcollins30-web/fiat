@@ -10375,6 +10375,10 @@ func _six_checks(main, m: Dictionary) -> void:
 	m["last_incoming"] = 0.01
 	main.refresh()
 	_check(run._six[0]["value"].get_theme_color("font_color") == Pal.TEXT, "their fire at a trickle is red")
+	# your fire is the top bar's figure (19 Oct, Matt: 510 against 362), the pace beside it
+	var top_fire: String = main._top_labels["dps"].text.get_slice(" ", 0)
+	_check(run._six[1]["value"].text.begins_with(top_fire + "/s"), "your fire reads '%s', the top bar '%s'" % [run._six[1]["value"].text, main._top_labels["dps"].text])
+	_check(absf(sim.pace() - 1.0) < 0.005 or run._six[1]["value"].text.contains("×") or run._six[1]["value"].text == top_fire + "/s", "your fire's pace is off: '%s'" % run._six[1]["value"].text)
 	var rows: Array = run.six_rows(m, m["t"], 1.0)
 	_check((rows[4][2] == Pal.BAD) == (rows[4][1][0] == "none"), "the meds' tone and its figure disagree: %s" % str(rows[4]))
 	# a blade in hand: its rounds read melee, muted, not the dash
@@ -11282,7 +11286,7 @@ func _yard_pick_checks(main) -> void:
 	on.call("stash", 0, "b")
 	on.call("stash", 2, "b")
 	on.call("stash", 3, "b")
-	_check(sim.stash_free(sim._plain(Data.AMMO, "Nails")) and sim.stash_free(Items.roll_unique(Data.UNIQUES[0], sim.rng)) and sim.stash_free(sim._plain(Data.PAPER, "A P45")) and not sim.stash_free(it), "Racks, Wall of fame or Paper rack is off")
+	_check(sim.stash_free(sim._plain(Data.AMMO, "Nails")) and sim.stash_free(Items.roll_unique(Data.UNIQUES[0], sim.rng)) and not sim.stash_free(sim._plain(Data.PAPER, "A P45")) and not sim.stash_free(it) and sim.yard_has("filing_cabinet"), "Racks or Wall of fame is off, or the Filing cabinet still frees a paper")
 	on.call("stash", 1, "b")
 	var junk: Dictionary = sim._plain("Helmet", "Army helmet")     # worth a pound of scrap or more (a hard hat's £20 is under 24, 12 Oct)
 	junk["rarity"] = 0
@@ -14552,6 +14556,33 @@ func _radio_line_checks(main) -> void:
 		for n in range(sim.heard.size() * 2 + 2):
 			played.append(rl._next_line())
 		_check(played.has(bag_text) == shut, "the bag's line %s with the Clinic %s" % ["plays" if not shut else "never plays", "open" if not shut else "shut"])
+	# the loop stopped stays stopped (19 Oct, Matt: it said so, then played straight on): its latest heard only, and
+	# none of it in the traffic
+	var stop_k: int = -1
+	var loop_ks: Array = []
+	for k in range(Words.RADIO.size()):
+		if str(Words.RADIO[k]["voice"]) == "loop" and not Words.RADIO[k].has("lorries"):
+			loop_ks.append(k)
+			if Words.RADIO[k].get("stopped", false):
+				stop_k = k
+	_check(stop_k >= 0, "the loop has no stopped line")
+	var kev_k: int = Words.RADIO.find(Words.RADIO.filter(func(r): return str(r["voice"]) == "kev")[0])
+	sim.heard = loop_ks.map(func(k): return "loop/%d" % k) + ["kev/%d" % kev_k]
+	rl._queue.clear()
+	var after_stop := []
+	for n in range(12):
+		after_stop.append(rl._next_line())
+	var stop_text: String = str(Words.RADIO[maxi(0, stop_k)]["text"])
+	_check(after_stop.all(func(x): return x == stop_text or x == str(Words.RADIO[kev_k]["text"])) and after_stop.has(stop_text), "the loop played on after it stopped: %s" % str(after_stop))
+	sim.unlocked = unlocked0 + (["radio"] if not ("radio" in unlocked0) else [])
+	var RLv := preload("res://scripts/ui/radio_line.gd")
+	var heard_loop := false
+	rl._since_garble = 0
+	for n in range(240):
+		var parts: Array = rl.next_parts()
+		if parts.any(func(p): return p[1] == RLv.GARBLE) and parts.any(func(p): return p[1] == RLv.VOICE["loop"]):
+			heard_loop = true             # a word of the loop's through the traffic
+	_check(not heard_loop, "the loop came through the traffic after it stopped")
 	sim.heard = heard0
 	sim.unlocked = unlocked0
 	# a colour a voice, and the traffic (16 Oct, item 6): Kev's line in Kev's colour; before the Radio a line in five
@@ -15216,6 +15247,16 @@ func _rebuild_checks(main) -> void:
 		_check(c["chips"].shown() == int(c["items"]), "%s shows %d of its %d wants" % [c["key"], c["chips"].shown(), int(c["items"])])
 	_check(tw.card("pumping")["button"].visible and tw.card("substation")["button"].text.contains("rank 5"), "the town's Rebuild buttons are off: '%s'" % tw.card("substation")["button"].text)
 	_check_fit(main, "Radio town (built)")
+	# the caps pass (19 Oct, Matt): every card's name whole and capitalised, its rank in sentence case, a name after
+	# the dot capitalised ("Opens the Grid · The Lineman")
+	for c in tw._cards:
+		var nm_r: String = str(Data.rebuild(c["key"])["name"])
+		_check(c["name"].text == nm_r, "a town card's name is cut: '%s' for '%s'" % [c["name"].text, nm_r])
+		_check(c["rank"].text == "Not built" or c["rank"].text.begins_with("Rank "), "a town card's rank is not sentence case: '%s'" % c["rank"].text)
+		var after_dot: String = c["opens"].text.get_slice(" · ", 1) if c["opens"].text.contains(" · ") else ""
+		_check(after_dot == "" or after_dot.substr(0, 1) == after_dot.substr(0, 1).to_upper(), "a name after the dot is lower case: '%s'" % c["opens"].text)
+		for ch in c["chips"].text_nodes():
+			_check(ch.text == "" or ch.text.substr(0, 1) == ch.text.substr(0, 1).to_upper(), "a want's chip starts lower case: '%s'" % ch.text)
 	tw.card("pumping")["button"].pressed.emit()
 	_check(sim.rebuild_rank("pumping") == 1, "Rebuild on the card did not build")
 	# with the runner out: the cards say so, and fit (the review)
@@ -15408,6 +15449,15 @@ func _paper_pile_checks(_main) -> void:
 		s.papers = []
 		s._signal_papers_home({"found": [s._plain(Data.PAPER, str(kev_names[0]))], "t": {"depth": 1, "tier": 0}})
 		_check(s.papers.size() == Data.SIGNAL_PAPERS_HOME, "Kev's paper counted towards the top-up: %d" % s.papers.size())
+	# the Stash's Filing cabinet (19 Oct, Matt; it was the Paper rack): a beaten signal brings one more, and papers and
+	# charms take their cells again
+	_yard_set(s, "stash", 3, "b")
+	_check(s.yard_has("filing_cabinet") and s.signal_papers_min() == Data.SIGNAL_PAPERS_HOME + 1, "the Filing cabinet is not the Stash's fourth pick's other side")
+	s.papers = []
+	s._signal_papers_home({"found": [], "t": {"depth": 1, "tier": 0}})
+	_check(s.papers.size() == Data.SIGNAL_PAPERS_HOME + 1, "with the Filing cabinet a top-up brought %d" % s.papers.size())
+	_check(not s.stash_free(s._plain(Data.CHARM, str(Data.BASES[Data.CHARM][0]["name"]))), "a charm still takes no cells with the Filing cabinet")
+	_yard_set(s, "stash", 3, "")
 	# an old save's papers contract is rolled again
 	var d3: Dictionary = s.to_dict()
 	d3["contracts"] = [{"kind": "papers", "slot": "", "rarity": 0, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 10, "salvage": ""}]
