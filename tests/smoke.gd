@@ -620,6 +620,7 @@ func _init() -> void:
 	_paper_pile_checks(main)
 	_save_folder_checks()
 	_odds_paint_checks(main)
+	_site_gate_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -8418,8 +8419,8 @@ func _gear_gate_checks(main) -> void:
 	var bases: Array = Data.BASES["Primary"]
 	var big: Dictionary = sim._plain("Primary", bases[bases.size() - 1]["name"])
 	big["ilvl"] = 9
-	var W: int = Items.wear_level(big)          # the Quartermaster's item level's: 21 at x2.5 (D8; 25 at x3)
-	_check(W == int(round(9 * Data.WEAR_PER_ILVL - (Data.WEAR_PER_ILVL - 1.0))) and W > 15 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not the item level's and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
+	var W: int = Items.wear_level(big)          # the Quartermaster's item level's: 16 at 2 x - 2 (19 Oct; 21 at x2.5 - 1.5)
+	_check(W == int(round(9 * Data.WEAR_PER_ILVL - Data.WEAR_OFFSET)) and W > 15 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not the item level's and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
 	_check(Items.wear_level({"slot": Data.MEDICAL, "base": "x", "tier": 6, "ilvl": 9}) == 1, "a med carries a level to wear")
 	sim.equipped["Primary"] = sim._plain("Primary", bases[0]["name"])
 	sim.stash_put(big)
@@ -8766,7 +8767,7 @@ func _over_level_checks(sim) -> void:
 		sim.bosses_beaten[z] = true
 	_check(sim.campaign_done(), "the over-level case's campaign isn't done")
 	var low: Dictionary = sim.effective(Data.BANK)
-	var mine: float = (50.0 + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var mine: float = (50.0 + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL
 	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
 	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"])),
 		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"])])
@@ -11596,9 +11597,9 @@ func _find_at_mine_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var keep_xp: float = sim.xp
-	sim.xp = Data.xp_for_level(10)
+	sim.xp = Data.xp_for_level(9)               # a level under the Bank's drops (10 at 2 x - 2, 19 Oct)
 	var mine: int = sim.wearable_level()
-	_check(sim.wear_of(mine) <= 10 and sim.wear_of(mine + 1) > 10, "the wearable item level at 10 is %d (wears at %d)" % [mine, sim.wear_of(mine)])
+	_check(sim.wear_of(mine) <= 9 and sim.wear_of(mine + 1) > 9, "the wearable item level at 9 is %d (wears at %d)" % [mine, sim.wear_of(mine)])
 	var bank: Dictionary = sim.effective(8)
 	var site_lv: int = int(bank["level"])
 	var w: Array = sim.finds_words(site_lv)
@@ -15320,3 +15321,47 @@ func _odds_paint_checks(main) -> void:
 	else:
 		_check(false, "the fixture: no Glasses from the Lookout's first pick")
 	print("the odds' paint ok: the key once a paint, a button's look once, Glasses' number at %d runs" % Data.ODDS_RUNS)
+
+
+## The campaign's pace (19 Oct, Matt): gear to wear at 2 x the site's level - 2, and each site first opens at that
+## less one, so a runner arrives at its drops' level, a level under at worst; a cleared site stays open to a new runner.
+func _site_gate_checks(main) -> void:
+	var want := {1: 1, 2: 2, 3: 4, 4: 6, 5: 8, 6: 10, 7: 12, 8: 14, 9: 16}
+	for lv in want:
+		_check(Sim.wear_of(lv) == int(want[lv]), "items of level %d wear at %d, not %d" % [lv, Sim.wear_of(lv), int(want[lv])])
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	var parade := 4
+	var retail := 5
+	_check(Data.TIERS[parade]["name"] == "The Parade" and Data.TIERS[retail]["name"] == "The Retail Park", "the fixture: the Parade and the Retail Park moved")
+	for i in range(Data.OUTSKIRTS_SITES + 1):
+		s.best_depth[i] = 1
+	s.bosses_beaten[0] = true
+	s.xp = 0.0
+	_check(s.site_gate(retail) == Sim.wear_of(Sim.lv_at(retail, 1)) - 1 and s.site_gate(retail) > 1, "the Retail Park's gate reads %d" % s.site_gate(retail))
+	s.best_depth[parade] = 1
+	_check(not s.tier_open(retail) and s.level_gated(retail), "the Retail Park opened to a level-1 runner")
+	s.xp = Data.xp_for_level(s.site_gate(retail))
+	_check(s.tier_open(retail), "the Retail Park stayed shut at its gate's level %d" % s.site_gate(retail))
+	s.best_depth[retail] = 1
+	s.xp = 0.0
+	_check(s.tier_open(retail), "a cleared site shut on a new runner")
+	# every campaign site's gate: its drops' level less one
+	for i in range(Data.TIERS.size()):
+		_check(s.site_gate(i) == maxi(1, Sim.wear_of(Sim.lv_at(i, 1)) - 1), "%s opens at %d" % [Data.TIERS[i]["name"], s.site_gate(i)])
+	# the Map says so
+	var keep = main.sim
+	s.best_depth[retail] = 0
+	main.sim = s
+	main.show_room(main.MISSIONS)
+	main._missions.zone = int(Data.TIERS[retail]["zone"])
+	main._missions._shown = ""
+	main.refresh()
+	var said := " | ".join(_texts(main._missions))
+	_check(said.contains("Opens at level %d" % s.site_gate(retail)), "the Map doesn't say the Retail Park opens at level %d: %s" % [s.site_gate(retail), said.left(300)])
+	_check_fit(main, "the Map (a site shut for the level)")
+	main.sim = keep
+	main._missions._shown = ""
+	main.refresh()
+	print("the campaign's pace ok: wear at 2 x - 2, each site open at its drops' level less one, the Map says so")

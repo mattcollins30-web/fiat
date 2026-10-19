@@ -5634,3 +5634,12 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   run a frame always runs, 10-20 ms for a head's fight on the cloud's CPU; less on Matt's.
 - Flaky smoke checks seen today, for the batch's first item: "the Manager down did not drop the deeds" and "the
   fight tiles are off" (the Fight tile fell to its "clock 5:12" form); each passed on re-run.
+- Done (19 Oct): the campaign's pace. Gear wears at 2 x the item level - 2 (was 2.5 x - 1.5); each site first opens
+  at its drops' level less one (Sim.site_gate): the Parade 1, the Retail Park 3, the Pleasure Park 5, the Shopping
+  Centre 7, the Bank 9, the Services 11, the Hospital 13, the Barracks 15; the Map says "Opens at level N". A cleared
+  site stays open (a new runner after a death goes back). On Matt's record he'd never have met a gate, and every
+  site's drops would have been his to wear on entry. Every item's level to wear drops on load: pieces he couldn't wear
+  can be worn now.
+  - For the balance pass: until the runner reaches a new zone's gate, the gamble's level and price, the deep
+    contracts' level, the Fence's and the Clinic's stock tier and the body pieces' verdicts read the last open site.
+  - Matt's call, later: a new zone can open with all three sites shut for the level; the Map lands on that tab.

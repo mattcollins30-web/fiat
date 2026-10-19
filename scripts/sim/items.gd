@@ -419,7 +419,7 @@ static func ilvl(it: Dictionary) -> int:
 static func wear_level(it: Dictionary) -> int:
 	if not (str(it.get("slot", "")) in Data.SLOTS) or it.get("mythic", false):
 		return 1
-	return clampi(int(round(ilvl(it) * Data.WEAR_PER_ILVL - (Data.WEAR_PER_ILVL - 1.0))), 1, Data.MAX_LEVEL)
+	return clampi(int(round(ilvl(it) * Data.WEAR_PER_ILVL - Data.WEAR_OFFSET)), 1, Data.MAX_LEVEL)
 
 
 ## The bench: the affixes rolled again (the count kept), one of them rolled

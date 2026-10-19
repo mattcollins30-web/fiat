@@ -300,6 +300,10 @@ func show_state(s) -> void:
 			band.chips.visible = not why.is_empty()
 			if not why.is_empty():
 				band.chips.show_chips(why, 1, true)
+		elif sim.level_gated(i) and (tiers.find(i) == 0 or int(sim.best_depth[i - 1]) > 0):
+			band.set_words("Tier %d" % (k + 1), Data.TIERS[i]["name"], "Locked", "Opens at level %d" % sim.site_gate(i), Pal.TEXT_3)     # its drops' level less one (19 Oct)
+			band.headline_under_title(false)
+			band.chips.visible = false
 		else:
 			band.set_words("Tier %d" % (k + 1), Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
 			band.headline_under_title(false)

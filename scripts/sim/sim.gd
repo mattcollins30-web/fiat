@@ -1546,7 +1546,7 @@ func finds_words(item_level: int) -> Array:
 ## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
 ## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
 func gamble_level() -> int:
-	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL)))
+	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL)))
 
 
 ## A loose unique a find (15 Oct, the loot read): a trickle from the Town on, growing with the depth, capped.
@@ -3708,7 +3708,7 @@ func dug_depth(i: int) -> int:
 ## item level you wear at - and never past the furthest you've got (D12: the deepest site cleared, or the highest
 ## signal won): a runner held at the Carpet Man was paid a tenth for the Estate he was stuck in, and never got out.
 func over_level_share(lv: int) -> float:
-	var mine: float = (level() + Data.WEAR_PER_ILVL - 1.0) / Data.WEAR_PER_ILVL
+	var mine: float = (level() + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL
 	if not campaign_done():
 		mine = minf(mine, float(deepest_cleared_level()))     # held at a wall: its last sites pay whole (D12)
 	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE
@@ -4338,7 +4338,19 @@ func tier_open(i: int) -> bool:
 		return false
 	var zt: Array = Data.ZONES[t["zone"]]["tiers"]
 	var k := zt.find(i)
-	return k == 0 or best_depth[zt[k - 1]] > 0
+	return (k == 0 or best_depth[zt[k - 1]] > 0) and not level_gated(i)
+
+
+## The level a site first opens at (19 Oct, Matt: "the level a player enters a new level matches the level of the gear
+## drops - at worst you'd be one ahead"): its drops' level at depth 1, less one.
+func site_gate(i: int) -> int:
+	return maxi(1, wear_of(lv_at(i, 1)) - 1)
+
+
+## Shut for the runner's level: a site not yet cleared in this yard, under its gate. Once cleared it stays open - a
+## new runner after a death can go back to what the camp has taken.
+func level_gated(i: int) -> bool:
+	return int(best_depth[i]) <= 0 and level() < site_gate(i)
 
 
 ## The zone a tier belongs to, by name, for the log.

@@ -2402,8 +2402,11 @@ static func pinnacle(key: String) -> Dictionary:
 const OVER_LEVEL_FREE := 5.0
 const OVER_LEVEL_STEP := 0.15
 const OVER_LEVEL_FLOOR := 0.1
-const WEAR_PER_ILVL := 2.5           # D8 (gates 2 and 4): x3 left the City's drops (wear 19-25) past the runner who'd cleared
-                                     # the Town, so the campaign waited on levels - the Quartermaster at 2.6 h, at level 23-27
+## The level to wear an item level: WEAR_PER_ILVL x it - WEAR_OFFSET, at least 1 (19 Oct, Matt's playtest: at x2.5 - 1.5 he
+## reached the Parade a level under its drops and the Barracks five under; 2 x - 2 is the levels he reached them at:
+## the Parade 2, the Retail Park 4 ... the Barracks 16). Each site also opens at its drops' level less one (site_gate).
+const WEAR_OFFSET := 2.0
+const WEAR_PER_ILVL := 2.0           # 2.5 - 1.5 from D8 to 18 Oct (D8: x3 had the City's drops at wear 19-25); 2 - 2 now: the City's 12-16
 ## A fifth of a site's or a signal's plain gear finds at the level the runner can wear (16 Oct, Matt's playtest: "the gear
 ## gating is frustrating" - level 10 at the Bank, every drop for level 14), never past the site's own. Uniques, set pieces
 ## and mythics roll at the site's.
