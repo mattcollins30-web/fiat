@@ -1,6 +1,6 @@
 @echo off
 rem The playtest read (11 Oct): what your save's chronicle says about the run.
-rem   tools\playtest.bat                       reads the live save (user://fiat.save)
+rem   tools\playtest.bat                       reads the live save (%%APPDATA%%\Fiat, the exported build's; else the editor's)
 rem   tools\playtest.bat C:\path\to\fiat.save  reads a copy
 rem Writes docs\balance\playtest.md (time, milestones, the gates as played,
 rem sites, hour by hour, spending, kit) and prints it when done.

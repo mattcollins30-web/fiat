@@ -7,7 +7,8 @@ extends SceneTree
 ##
 ##     godot --headless --path . -s tools/playtest_summary.gd -- [save]
 ##
-## The save defaults to the autosave (user://fiat.save, the game's own, its record user://fiat.record.jsonl); a slot
+## The save defaults to the autosave: the exported build's (%APPDATA%/Fiat/fiat.save, 19 Oct: its own folder) when
+## there is one, else the editor's (user://fiat.save), its record beside it; a slot
 ## or a copied file works too, its record beside it. A record's earlier games are kept as fiat.record.<time>.jsonl.
 ## tools\playtest.bat runs it, and the watcher does on docs\balance\playtest.flag.
 
@@ -19,9 +20,15 @@ const LEVELS := [5, 10, 15, 20, 25, 30, 40, 50]
 const DEPTHS := [2, 4, 6, 8, 10, 12, 16, 20]
 
 
+## The autosave to read: the exported build's folder first (Godot's custom user dir, config/name), the editor's after.
+static func default_save() -> String:
+	var exported: String = OS.get_data_dir().path_join(str(ProjectSettings.get_setting("application/config/name"))).path_join("fiat.save")
+	return exported if FileAccess.file_exists(exported) else "user://fiat.save"
+
+
 func _init() -> void:
 	var args := OS.get_cmdline_user_args()
-	var path: String = args[0] if not args.is_empty() and str(args[0]) != "" else "user://fiat.save"
+	var path: String = args[0] if not args.is_empty() and str(args[0]) != "" else default_save()
 	var f := FileAccess.open(path, FileAccess.READ)
 	var out := ""
 	if f == null:

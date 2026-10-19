@@ -5623,3 +5623,7 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
 6. The parked: the fight panel's "Your fire" against the top bar; the radio loop playing on after it's stopped; a caps
    pass on the Radio's town screen (Matt, 19 Oct).
 Matt exports and plays once all of it is done, and tests it at once; changes then go in while he plays that build.
+- Done (19 Oct): the exported build saves in %APPDATA%\Fiat (project.godot, use_custom_user_dir for exports only);
+  the editor and the smoke keep %APPDATA%\Godot\app_userdata\Fiat. tools\playtest.bat reads the exported build's
+  autosave first. At the next export, Matt copies every fiat* file from the old folder to the new one, once. Playing
+  from the editor (F5) is a separate set of saves from now on.

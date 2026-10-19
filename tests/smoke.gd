@@ -618,6 +618,7 @@ func _init() -> void:
 	_rebuild_checks(main)
 	_dot_compare_checks(main)
 	_paper_pile_checks(main)
+	_save_folder_checks()
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -15262,3 +15263,14 @@ func _paper_pile_checks(_main) -> void:
 	_check(not s3.contracts.any(func(c): return str(c["kind"]) == "papers"), "an old save's papers contract survived the load")
 	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted, old contracts rolled" % Data.SIGNAL_PAPERS_HOME)
 
+
+
+## The exported build saves in a folder of its own (19 Oct, Matt: play while the smoke runs): exported, Godot's
+## custom user dir (%APPDATA%/Fiat); from the editor, as the smoke runs, Godot's app_userdata - never the same files.
+func _save_folder_checks() -> void:
+	var f := FileAccess.open("res://project.godot", FileAccess.READ)
+	var text: String = f.get_as_text() if f != null else ""
+	_check(text.contains("config/use_custom_user_dir.template=true"), "the exported build doesn't save in a folder of its own")
+	_check(not ProjectSettings.get_setting("application/config/use_custom_user_dir", false), "the editor's runs (the smoke's) moved to the exported build's folder")
+	_check(not OS.has_feature("template") and OS.get_user_data_dir().contains("app_userdata"), "the smoke isn't saving in the editor's folder: %s" % OS.get_user_data_dir())
+	print("the save folders ok: the exported build in its own, the smoke in the editor's")
