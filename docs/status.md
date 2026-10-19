@@ -5605,3 +5605,9 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
   under at the Barracks (wear = 2.5 x the site's level - 1.5). 14 of the 49 gear finds from level 4 to 19 were wearable.
   To agree tomorrow: a level gate per site against fitting the scale (2 x level - 2 fits his entry levels), and the
   pass gates read from his records as well as the bot's.
+
+## Today's list (19 Oct, Matt)
+
+1. The exported build saves in its own folder (Godot's custom user dir, for exports only), so Matt can play while the
+   smoke runs: one test export on his machine first to check the setting takes, then his slot and its record copied
+   across once. The smoke's check of his saves stays as it is.
