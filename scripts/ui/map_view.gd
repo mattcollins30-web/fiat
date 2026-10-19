@@ -59,6 +59,39 @@ var _order_labels: Dictionary = {}  # key -> Label
 var _legend: Array = []            # [Label, colour, hollow]
 var _shown := ""
 static var _art := {}                  # path -> Texture2D or null, looked for once
+var _fog: ColorRect                    # the land past the zones (19 Oct, Matt: "fill those sections with cloud or fog in engine")
+
+## The fog: slow banded cloud in chunky pixels, drifting, under the zones (the map draws over it; the gaps show it).
+const FOG_SHADER := """
+shader_type canvas_item;
+uniform vec4 base : source_color = vec4(0.094, 0.106, 0.122, 1.0);
+uniform vec4 mist : source_color = vec4(0.24, 0.27, 0.31, 1.0);
+uniform vec2 px_size = vec2(1018.0, 844.0);
+uniform float pix = 4.0;
+uniform float drift = 0.012;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p) {
+	float v = 0.0;
+	float a = 0.5;
+	for (int k = 0; k < 5; k++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+	return v;
+}
+void fragment() {
+	vec2 px = floor(UV * px_size / pix) * pix;
+	vec2 p = px / 170.0;
+	float t = TIME * drift;
+	float n = fbm(p + vec2(t, t * 0.4)) * 0.65 + fbm(p * 1.7 - vec2(t * 1.3, -t * 0.25)) * 0.35;
+	n = smoothstep(0.32, 0.78, n);
+	n = floor(n * 5.0) / 5.0;
+	COLOR = mix(base, mist, n * 0.85);
+}
+"""
 
 
 func _init(rect: Rect2) -> void:
@@ -68,6 +101,17 @@ func _init(rect: Rect2) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
+	_fog = ColorRect.new()
+	_fog.size = size
+	_fog.show_behind_parent = true          # under the map's own drawing: the zones paint over it
+	_fog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sh := Shader.new()
+	sh.code = FOG_SHADER
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("px_size", size)
+	_fog.material = mat
+	add_child(_fog)
 	for z in range(Data.ZONES.size()):
 		var at: Vector2 = _px(ZONE_SHAPES[z]["name_at"])
 		var room: float = minf(320.0, size.x - at.x - 8.0)
@@ -226,7 +270,7 @@ func show_state(s, sel: int, okey: String) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("181b1f"))
+	# the ground past the zones is the fog (_fog, behind this drawing)
 	for z in range(ZONE_SHAPES.size()):
 		var pts := PackedVector2Array()
 		var uvs := PackedVector2Array()

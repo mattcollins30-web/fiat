@@ -15729,6 +15729,8 @@ func _map_checks(main) -> void:
 			if boxes[a][1].grow(-1.0).intersects(boxes[b][1].grow(-1.0)):
 				crossed.append("%s / %s" % [boxes[a][0], boxes[b][0]])
 	_check(crossed.is_empty(), "names cross on the Map: %s" % ", ".join(crossed))
+	# the fog past the zones (19 Oct, Matt): behind the map's drawing, over the whole of it, a shader that drifts
+	_check(mv._fog != null and mv._fog.show_behind_parent and mv._fog.size == mv.size and mv._fog.material is ShaderMaterial and mv._fog.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the Map's fog is off")
 	# the painting (19 Oct): every site's picture, made or not, inside the map, on no name and on no other picture
 	var pics: Array = []
 	for i in range(Data.TIERS.size()):

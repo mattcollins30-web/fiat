@@ -5706,6 +5706,10 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   made or not; four pins moved clear of them (the Garden Centre, the Shopping Centre, the Grid's and the Archive's). The
   smoke: every picture inside the map and on no name, pin, diamond or other picture; the ground 2x its box; a site's
   picture 64 px. In: the Outskirts' test (its ground and three sites). Next: the rest of the manifest.
+- Done (19 Oct, Matt: "fill those sections with cloud or fog in engine"): the land past the zones is fog - a shader
+  (map_view.gd FOG_SHADER) behind the map's drawing, banded cloud in 4 px blocks drifting slowly. Known: Godot's TIME
+  rolls over hourly, so the fog jumps to a new pattern once an hour; it runs under the zones too (a quarter-size
+  SubViewport would cut its cost to a sixteenth, if the Deck's battery asks).
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'
