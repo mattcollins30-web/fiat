@@ -1,0 +1,83 @@
+{
+ "_readme": [
+  "FIAT OUTSTANDING ART, THE TEST (19 Oct, Matt): the Map's Outskirts - its ground, clipped to the zone's shape, and its three sites under their pins. In the game before the rest.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_outstanding_test_manifest.json   (++ --dry-run to list; ++ --only <name> ++ --force to reroll). Regenerate with python3 tools/make_outstanding_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/map/zone_outskirts.png",
+   "endpoint": "generate-image-v2",
+   "width": 188,
+   "height": 160,
+   "no_background": false,
+   "single": true,
+   "seed": 96000,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_outskirts.png",
+   "reference_images": [
+    "res://art/reference/map_layout_outskirts.png"
+   ],
+   "description": "Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: farmland on the edge of a northern English town: small fields with hedgerows and dry-stone walls, a lane between them, a copse, allotment plots with sheds, a farmyard's roofs, ploughed earth and overgrown grass. The whole frame filled edge to edge with ground, no horizon, no sky, no border, no frame, no vignette. Muted blue-grey and slate palette with muted greens and browns, dusk light, a few warm orange lights; quiet and empty, no people, no vehicles moving, no text, no labels, no readable signs or numbers. Even detail all over: the picture is cut to an irregular shape and drawn under markers, so nothing in it should be the only thing worth looking at.",
+   "_where": "the Map: The Outskirts's ground, clipped to its shape (box (0, 520, 380, 844) in the 1000 x 844 drawing, drawn x2)"
+  },
+  {
+   "out": "art/map/site_the_allotments.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96100,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_outskirts.png",
+   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a patchwork of allotment plots with sheds, a greenhouse and water butts, a path down the middle. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with muted greens and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
+   "_where": "the Map: The Allotments under its pin"
+  },
+  {
+   "out": "art/map/site_the_garden_centre.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96101,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_outskirts.png",
+   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a garden centre: a long glasshouse, rows of plant tables, a car park with one van. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with muted greens and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
+   "_where": "the Map: The Garden Centre under its pin"
+  },
+  {
+   "out": "art/map/site_top_farm.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 96102,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_outskirts.png",
+   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a farmyard: a stone farmhouse, a big barn with a curved roof, a muddy yard, a tractor. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with muted greens and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
+   "_where": "the Map: Top Farm under its pin"
+  }
+ ]
+}

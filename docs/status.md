@@ -5694,5 +5694,15 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
     stopped - in the traffic too - till the new currency's message brings it back.
   - The caps pass on the Radio's town: "Rank 2" and "Not built" in sentence case; the name gets the room the rank
     leaves ("The pumping station" whole); "Opens the Grid · The Lineman"; the chips' short forms capitalised.
+- The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
+  tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
+  zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'
+  64 px vignettes under their pins. The rest (30): the other three grounds and nine sites; the order's three heads - a
+  face, the fight's stand/fire/down, their place for the order card, their unique's icon. Optional (9): the order's
+  three keys and six materials (copper wire has its item's). Layout references: art/reference/map_layout*.png. Every
+  file new; nothing live touched. Wiring after the art lands: map_view.gd draws art/map/zone_<key>.png and
+  site_<slug>.png; Data.PINNACLES' "art" to the order's own places (The Grid, The Archive, The Mint).
+  - Already written, not in these: the room cards' strips (tools/make_room_box_manifest.py: the Map's 3 as the test,
+    then 24). Parked till after a playtest: the fight's look (the head arenas, moving through a site, the Doom test).
 - Today's list is done. Matt exports and plays: at the export, copy every fiat* file from
   %APPDATA%\Godot\app_userdata\Fiat to %APPDATA%\Fiat once.
