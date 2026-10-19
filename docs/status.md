@@ -5651,3 +5651,8 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   the Clinic open RED, contracts 382% of the runs' tins RED; level on entry green at the new scale. A one-hour bot read
   went red the other way on entry (the Bank at 15 against its gear's 10): the bot grinds where Matt pushes on.
 - Flaky, for the batch: "charms are 3 of 400 finds; 5% was the aim" (device, once; 11-22 on twenty fresh reads).
+- Done (19 Oct): the flaky smoke checks, all eight. Each was the fixture, not the game: the deeds' fate left from
+  earlier play, a target still coming in when the shot fired, a level-up inside the Twelve-Bore's sum, a gang killed
+  and searched before the pistol fired, Guard outlasting the bleed, too little poison to number, codes leaning the
+  charms. Each message now prints what it saw. One wording fix with them: a fight too long to print says "over 5:12"
+  (it fell to "clock 5:12", the fight gone). Eight loops on Matt's machine before: one red; nine after: none.

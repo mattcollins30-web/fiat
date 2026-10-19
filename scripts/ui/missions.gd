@@ -316,7 +316,8 @@ func show_state(s) -> void:
 			["Gang", ["%d × %.0f HP" % [t["pool"], t["hp"]], "%d × %.0f" % [t["pool"], t["hp"]]]],
 			["Their fire", ["%.1f dmg/s each" % t["dps"], "%.1f/s" % t["dps"]]],
 			["Fight · clock", [     # "Fight time · run clock" wanted 179 px of the tile's 128 (18 Oct)
-			"%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "clock %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct)
+			"%s of %s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))], "%s/%s" % [Fmt.mss(sim.estimate(i)), Fmt.mss(sim.clock_of(i))],
+			("over %s" % Fmt.mss(sim.clock_of(i))) if sim.estimate(i) > sim.clock_of(i) else "clock %s" % Fmt.mss(sim.clock_of(i))]],     # the run's clock beside the fight (9 Oct); a fight too long to print says it's over the clock (19 Oct: it fell to "clock 5:12", the fight gone)
 			["Gear level", sim.finds_words(int(t["level"]))],     # the level to wear what it drops, the number an item's own Level chip says (18 Oct)
 			["Papers", ["1 in %d finds" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001))), "1 in %d" % maxi(1, roundi(1.0 / maxf(p_odds, 0.001)))]],     # the endgame's keys, found here (15 Oct)
 			["The site", [sim.site_state(i), sim.site_state(i).get_slice(" · ", 0)]],

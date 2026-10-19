@@ -1255,6 +1255,8 @@ func _narrative_checks(main) -> void:
 	_check(sim.tier_open(bank), "the Bank did not open with every depth cleared")
 	sim.seen.erase("%d/1" % bank)              # the bot's run may have walked it already
 	sim.deeds_found = false                     # and found the deeds (13 Oct)
+	sim.deeds_fate = ""                         # and decided them (19 Oct, the flaky drop: a fate or deeds in the stash from the
+	sim.stash = sim.stash.filter(func(x): return not Items.is_deeds(x))     # smoke's earlier play stop a second drop, as they should)
 	sim.unlocked.erase("yard")                  # the deeds come off the Manager while the Yard isn't yours (13 Oct)
 	sim.boss_armed[bank] = true
 	sim.deploy(bank)
@@ -1271,7 +1273,7 @@ func _narrative_checks(main) -> void:
 	for it in sim.mission["found"]:
 		if Items.is_deeds(it):
 			deeds = it
-	_check(not deeds.is_empty(), "the Manager down did not drop the deeds (found before %s, tier %d, BANK %d, seen %s)" % [str(sim.deeds_found), int(sim.mission["tier"]), Data.BANK, str(sim.seen.keys().filter(func(k): return str(k).begins_with("%d/" % Data.BANK) or str(k).begins_with("cleared/")))])
+	_check(not deeds.is_empty(), "the Manager down did not drop the deeds (found before %s, fate '%s', held %s, convoy %s, a head %s, tier %d, BANK %d, seen %s)" % [str(sim.deeds_found), sim.deeds_fate, str(sim._deeds_held({})), str(sim.mission.get("convoy", false)), str(sim.mission.has("boss")), int(sim.mission["tier"]), Data.BANK, str(sim.seen.keys().filter(func(k): return str(k).begins_with("%d/" % Data.BANK) or str(k).begins_with("cleared/")))])
 	if deeds.is_empty():
 		sim.extract_now()
 		sim.load_dict(save)
@@ -1657,6 +1659,7 @@ func _charm_sockets(main) -> void:
 	_check(main._armoury._body._boxes["Charm"]["cell"].visible, "the charm's cell is not shown on the body")
 	# charms turn up among a site's finds
 	var charms := 0
+	sim.words[3] = []                          # no codes leaning the drops (19 Oct, the flaky check: 3 of 400)
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	var eff: Dictionary = sim.effective(3)
@@ -1666,7 +1669,7 @@ func _charm_sockets(main) -> void:
 		if not m["found"].is_empty() and Items.is_charm(m["found"][0]):
 			charms += 1
 	sim.extract_now()
-	_check(charms > 4 and charms < 60, "charms are %d of 400 finds; 5%% was the aim" % charms)
+	_check(charms > 4 and charms < 60, "charms are %d of 400 finds; 5%% was the aim (level %d, wearable %d, site words %s, weather %s)" % [charms, sim.level(), sim.wearable_level(), str(sim.words[3]), str(sim.weather_of(3))])
 	# sockets: a gun with two, a socketable in each, its effect on the figures
 	var gun: Dictionary = sim._plain("Primary", "Army SMG")
 	gun["attachments"]["socket 1"] = null
@@ -4962,6 +4965,8 @@ func _shoot(main) -> void:
 	v._process(RunView.POP_S + 0.1)            # anyone coming in is up by now
 	if not v._figs.any(func(f): return f["state"] == "up"):
 		v._figs[0]["state"] = "up"              # between gangs nobody stands; a swing needs someone to land on (14 Oct, the flaky check)
+	if v._target_k >= 0 and v._figs[v._target_k]["state"] == "pop":
+		v._figs[v._target_k]["state"] = "up"    # the one you're hitting still coming in: the kick, no hit (19 Oct, the flaky check: 0 shots, 3 up)
 	v._firing = true
 	v._swing = -1.0
 	v._shot_t = 0.0
@@ -5010,10 +5015,11 @@ func _juice_checks(main) -> void:
 	# what it saw, when it fails (17 Oct, Matt: "change the check" - it failed once and passed on the rerun): the hits
 	# waiting before the shot and after, the shots the view fired, who was up, the gun in hand
 	var v_n = main._run._view
-	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f; waiting %s before the shot, %s after; %d shot(s) fired; %d up, firing %s, swing %.2f, melee %s; gun %s" % [
+	_check(main._juice.numbers() > n0, "no number came off the hits: dealt %.0f; waiting %s before the shot, %s after; %d shot(s) fired; %d up, firing %s, swing %.2f, melee %s; gun %s; target %d (%s), duck %.2f" % [
 		float(sim.mission.get("dealt", 0.0)), str(pend0), str(main._run._hit_pending), fired[0],
 		v_n.figures_up() if v_n != null else -1, str(v_n._firing) if v_n != null else "-", float(v_n._swing) if v_n != null else -1.0,
-		str(v_n._melee) if v_n != null else "-", str(RunView.gun_in_hand(sim)["base"]) if RunView.gun_in_hand(sim) != null else "none"])
+		str(v_n._melee) if v_n != null else "-", str(RunView.gun_in_hand(sim)["base"]) if RunView.gun_in_hand(sim) != null else "none",
+		int(v_n._target_k) if v_n != null else -1, str(v_n._figs[v_n._target_k]["state"]) if v_n != null and v_n._target_k >= 0 else "-", float(v_n._duck) if v_n != null else -1.0])
 	# scattered: a run of numbers lands at different places, not one column; no more than one a third of a second
 	main._juice.clear_numbers()
 	var spots := {}
@@ -5047,12 +5053,33 @@ func _juice_checks(main) -> void:
 	var colours := {}
 	for k in range(8):
 		sim.advance(0.5)
+		sim.mission["taken"] = float(sim.mission.get("taken", 0.0)) + 4.0     # their poison landing for sure: a gang between shots or a
+		sim.mission["taken_by"]["poison"] = float(sim.mission["taken_by"].get("poison", 0.0)) + 4.0     # resisting kit took too little to number (19 Oct, the flaky check)
 		main.refresh()
 		_shoot(main)
 		for n in main._juice._numbers:                      # gathered as they come: twelve show at once, the rest go
 			colours[n["label"].get_theme_color("font_color")] = true
 	_check(colours.has(Pal.ELEMENT_COLOURS["fire"]) and colours.has(Pal.ELEMENT_COLOURS["physical"]), "the hits did not come in fire and physical colours: dealt_by %s" % str(sim.mission.get("dealt_by", {})))
-	_check(colours.has(Pal.ELEMENT_COLOURS["poison"]), "their poison on you did not come up green: taken_by %s" % str(sim.mission.get("taken_by", {})))
+	_check(colours.has(Pal.ELEMENT_COLOURS["poison"]), "their poison on you did not come up green: taken_by %s, poison resist %.0f" % [str(sim.mission.get("taken_by", {})), sim.resist("poison")])
+	# and their typed fire lands as its type (the review: the colour above is fed; this is the sim's own split)
+	var sp = Sim.new()
+	sp.start()
+	sp.mythics_on = false
+	sp.deploy(0)
+	if sp.on_mission():
+		var mm: Dictionary = sp.mission
+		mm["t"]["types"] = {"physical": 0.2, "poison": 0.8}
+		mm["t"]["dps"] = 2.0
+		mm["target_hp"] = 1e9
+		mm["t"]["hp"] = 1e9
+		mm["guard"] = 0.0
+		sp.hp = 1e6                              # can't go down in the seconds read
+		for k in range(4):
+			sp._tick(1.0)
+		var tb: Dictionary = mm.get("taken_by", {})
+		_check(float(tb.get("poison", 0.0)) > float(tb.get("physical", 0.0)) and float(tb.get("poison", 0.0)) > 0.0, "a gang firing 80%% poison landed it as: %s" % str(tb))
+	else:
+		_check(false, "the fixture: no run for the typed fire")
 	var dealt_sum := 0.0
 	for ty in sim.mission.get("dealt_by", {}):
 		dealt_sum += float(sim.mission["dealt_by"][ty])
@@ -6356,10 +6383,12 @@ func _ammo_checks(sim) -> void:
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	sim.mission["t"]["dps"] = 0.0
+	sim.mission["t"]["hp"] = 100000.0          # a gang that stands the thirty seconds: a quick kill and a search fired nothing (19 Oct, the flaky check)
+	sim.mission["target_hp"] = 100000.0
 	for k in range(30):
 		sim.advance(1.0)
 	var backing: int = pistol0 - sim.rounds_for(sim.equipped["Secondary"])
-	_check(backing > 0, "a pistol backing a live primary spent no rounds over thirty seconds")
+	_check(backing > 0, "a pistol backing a live primary spent no rounds over thirty seconds (on a run %s, kills %d, gangs %d, primary rounds %d, searching %s)" % [str(sim.on_mission()), int(sim.mission.get("kills", 0)) if sim.on_mission() else -1, int(sim.mission.get("patrols", 0)) if sim.on_mission() else -1, sim.rounds_for(sim.equipped["Primary"]), str(sim.mission.get("searching", false)) if sim.on_mission() else "-"])
 	sim.extract_now()
 	for it in sim.stash.filter(func(x): return Items.is_ammo(x)):
 		sim.stash.erase(it)                     # what the runs brought home aside too: the gate would top the nail gun up
@@ -9066,9 +9095,11 @@ func _keepsake_checks(main) -> void:
 	sim._dry_memo.clear()
 	sim.hp = sim.max_hp() * 0.5
 	sim.deploy(0)
+	sim.mission["t"]["xp"] = 0.0               # no level off the kill: a level-up moved the max HP in the sum (19 Oct, the flaky check)
 	var h0: float = sim.hp
+	var lv0: int = sim.level()
 	sim._kill(sim.mission, sim.mission["t"])
-	_check(is_equal_approx(sim.hp - h0, sim.max_hp() * Data.FX["rule/keepers_gun"] + sim._affix_sum("life_per_kill")), "the Twelve-Bore's kill healed %.1f of %.0f" % [sim.hp - h0, sim.max_hp()])
+	_check(is_equal_approx(sim.hp - h0, sim.max_hp() * Data.FX["rule/keepers_gun"] + sim._affix_sum("life_per_kill")), "the Twelve-Bore's kill healed %.1f of %.0f (want %.1f + %.1f a kill; level %d -> %d)" % [sim.hp - h0, sim.max_hp(), sim.max_hp() * Data.FX["rule/keepers_gun"], sim._affix_sum("life_per_kill"), lv0, sim.level()])
 	sim.extract_now()
 	# the Wax Jacket: poison on you does half
 	var loss := []
@@ -14138,9 +14169,9 @@ func _skull_checks(main) -> void:
 	_check(run_ui._fight["skull"].visible, "no skull with the dots covering the HP left (110 against 100)")
 	var hp_before: float = m["target_hp"]
 	_check(is_equal_approx(hp_before, 100.0), "the skull changed the fight")
-	m["my_dots"] = {"bleed": sim.hp + 10.0}
+	m["my_dots"] = {"bleed": sim.hp + sim.guard() + 10.0}     # the dots come off Guard first: a kit with Guard outlasted hp + 10 (19 Oct, the flaky check)
 	main.refresh()
-	_check(run_ui._runner["skull"].visible, "no skull on your own bar with a bleed that will have you")
+	_check(run_ui._runner["skull"].visible, "no skull on your own bar with a bleed that will have you (HP %.0f, Guard %.0f, bleed %.0f)" % [sim.hp, sim.guard(), float(m["my_dots"]["bleed"])])
 	m["my_dots"] = {}
 	main.refresh()
 	_check(not run_ui._runner["skull"].visible, "the skull stayed on your bar with nothing on you")
