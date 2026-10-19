@@ -5,231 +5,6 @@
  ],
  "jobs": [
   {
-   "out": "art/map/zone_estate.png",
-   "endpoint": "generate-image-v2",
-   "width": 208,
-   "height": 192,
-   "no_background": false,
-   "single": true,
-   "seed": 96001,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_estate.png",
-   "reference_images": [
-    "res://art/reference/map_layout_estate.png"
-   ],
-   "description": "Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: a 1960s council estate and its high street: rows of terraced roofs, three grey tower blocks' flat roofs, car parks, a parade of shop roofs, a retail park's big flat sheds and their car park, scrubby greens between. The whole frame filled edge to edge with ground, no horizon, no sky, no border, no frame, no vignette. Muted blue-grey and slate palette with slate greys, dusk light, a few warm orange lights; quiet and empty, no people, no vehicles moving, no text, no labels, no readable signs or numbers. Even detail all over: the picture is cut to an irregular shape and drawn under markers, so nothing in it should be the only thing worth looking at.",
-   "_where": "the Map: The Estate's ground, clipped to its shape (box (0, 170, 420, 560) in the 1000 x 844 drawing, drawn x2)"
-  },
-  {
-   "out": "art/map/zone_town.png",
-   "endpoint": "generate-image-v2",
-   "width": 180,
-   "height": 224,
-   "no_background": false,
-   "single": true,
-   "seed": 96002,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_town.png",
-   "reference_images": [
-    "res://art/reference/map_layout_town.png"
-   ],
-   "description": "Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: an old town centre inside a ring road: dense Victorian roofs, a church, a shopping centre's long glass roof, a bank's stone block, a fairground's rides and a big wheel on a park, narrow streets. The whole frame filled edge to edge with ground, no horizon, no sky, no border, no frame, no vignette. Muted blue-grey and slate palette with brick reds and browns, dusk light, a few warm orange lights; quiet and empty, no people, no vehicles moving, no text, no labels, no readable signs or numbers. Even detail all over: the picture is cut to an irregular shape and drawn under markers, so nothing in it should be the only thing worth looking at.",
-   "_where": "the Map: The Town's ground, clipped to its shape (box (360, 110, 720, 560) in the 1000 x 844 drawing, drawn x2)"
-  },
-  {
-   "out": "art/map/zone_city.png",
-   "endpoint": "generate-image-v2",
-   "width": 168,
-   "height": 300,
-   "no_background": false,
-   "single": true,
-   "seed": 96003,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_city.png",
-   "reference_images": [
-    "res://art/reference/map_layout_city.png"
-   ],
-   "description": "Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: the edge of a big city past the river: a motorway services and its car park, a hospital's tower and wings, an army barracks' parade ground and huts behind a fence, warehouses, railway lines, cranes. The whole frame filled edge to edge with ground, no horizon, no sky, no border, no frame, no vignette. Muted blue-grey and slate palette with cold blues, dusk light, a few warm orange lights; quiet and empty, no people, no vehicles moving, no text, no labels, no readable signs or numbers. Even detail all over: the picture is cut to an irregular shape and drawn under markers, so nothing in it should be the only thing worth looking at.",
-   "_where": "the Map: The City's ground, clipped to its shape (box (660, 40, 1000, 640) in the 1000 x 844 drawing, drawn x2)"
-  },
-  {
-   "out": "art/map/site_ransacked_streets.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96103,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_estate.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a corner of terraced streets, back yards, a burnt-out car and bins in an alley. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with slate greys, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: Ransacked Streets under its pin"
-  },
-  {
-   "out": "art/map/site_the_parade.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96104,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_estate.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a short parade of shops under a concrete canopy, flats above, a bus shelter. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with slate greys, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Parade under its pin"
-  },
-  {
-   "out": "art/map/site_the_retail_park.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96105,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_estate.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a retail park: three big flat-roofed sheds round a car park, trolley shelters. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with slate greys, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Retail Park under its pin"
-  },
-  {
-   "out": "art/map/site_the_pleasure_park.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96106,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_town.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a small fairground in a park: a big wheel, a carousel's round roof, a helter-skelter. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with brick reds and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Pleasure Park under its pin"
-  },
-  {
-   "out": "art/map/site_shopping_centre.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96107,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_town.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a shopping centre's long glass roof and its multi-storey car park. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with brick reds and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: Shopping Centre under its pin"
-  },
-  {
-   "out": "art/map/site_the_bank.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96108,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_town.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a stone bank on a corner, a columned front, a clock over the door, a strongroom's vents on the roof. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with brick reds and browns, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Bank under its pin"
-  },
-  {
-   "out": "art/map/site_the_services.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96109,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_city.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: motorway services: a flat canopy over petrol pumps, a low building, lorries parked in rows. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with cold blues, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Services under its pin"
-  },
-  {
-   "out": "art/map/site_the_hospital.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96110,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_city.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: a big hospital: a tower block, wings off it, a painted helipad circle, ambulance bays. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with cold blues, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Hospital under its pin"
-  },
-  {
-   "out": "art/map/site_the_barracks.png",
-   "endpoint": "generate-image-v2",
-   "width": 64,
-   "height": 64,
-   "no_background": true,
-   "single": true,
-   "seed": 96111,
-   "style_options": {
-    "color_palette": true,
-    "outline": true,
-    "detail": true,
-    "shading": true
-   },
-   "style_image": "res://art/places/the_city.png",
-   "description": "Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: an army barracks: a parade ground, rows of huts, a watchtower, a chain-link fence round it. One place only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no border. Muted blue-grey palette with cold blues, dusk light, one or two warm orange lights; no people, no text, no readable signs or numbers. It must read at this size: a single strong shape.",
-   "_where": "the Map: The Barracks under its pin"
-  },
-  {
    "out": "art/people/the_lineman.png",
    "endpoint": "generate-image-v2",
    "width": 128,
@@ -287,7 +62,7 @@
     "res://art/fight/head_the_lineman_stand.png",
     "res://art/people/the_lineman.png"
    ],
-   "description": "The same a big electricity lineman in his fifties in a cracked black rubber lineman's coat and a high-cut helmet with a lamp on its front, climbing spurs at his belt, a coil of cable over one shoulder, aiming a carbine, two-handed, straight at the viewer, a bright muzzle flash, the helmet lamp lit. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a big electricity lineman in his fifties in a cracked black rubber lineman's coat and a high-cut helmet with a lamp on its front, climbing spurs at his belt, a coil of cable over one shoulder, aiming a carbine, two-handed, straight at the viewer, a bright muzzle flash, the helmet lamp lit. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_lineman: firing at you"
   },
   {
@@ -309,7 +84,7 @@
     "res://art/fight/head_the_lineman_stand.png",
     "res://art/people/the_lineman.png"
    ],
-   "description": "The same a big electricity lineman in his fifties in a cracked black rubber lineman's coat and a high-cut helmet with a lamp on its front, climbing spurs at his belt, a coil of cable over one shoulder, hit and falling backwards, arms flung out, the carbine dropping, the helmet lamp swinging. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a big electricity lineman in his fifties in a cracked black rubber lineman's coat and a high-cut helmet with a lamp on its front, climbing spurs at his belt, a coil of cable over one shoulder, hit and falling backwards, arms flung out, the carbine dropping, the helmet lamp swinging. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_lineman: beaten, going down"
   },
   {
@@ -327,7 +102,7 @@
     "shading": true
    },
    "style_image": "res://art/places/the_city.png",
-   "description": "Pixel art, a wide view of a city's electricity substation behind a chain-link fence, transformers and pylons, cables humming overhead, its windows the only lit ones for miles at dusk. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "description": "Pixel art, a wide view of a city's electricity substation behind a chain-link fence hung with blank warning plates, transformers and pylons, cables humming overhead, its windows the only lit ones for miles at dusk. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
    "_where": "the order card's picture for grid (Data.PINNACLES art; today the zone's)"
   },
   {
@@ -406,7 +181,7 @@
     "res://art/fight/head_the_registrar_stand.png",
     "res://art/people/the_registrar.png"
    ],
-   "description": "The same a thin woman in her sixties in a buttoned grey cardigan and a long dark skirt, reading glasses on a chain, a leather satchel of papers over one shoulder, aiming a revolver, one-handed, arm straight at the viewer, a bright muzzle flash, the ledger under her arm. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a thin woman in her sixties in a buttoned grey cardigan and a long dark skirt, reading glasses on a chain, a leather satchel of papers over one shoulder, aiming a revolver, one-handed, arm straight at the viewer, a bright muzzle flash, the ledger under her arm. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_registrar: firing at you"
   },
   {
@@ -428,7 +203,7 @@
     "res://art/fight/head_the_registrar_stand.png",
     "res://art/people/the_registrar.png"
    ],
-   "description": "The same a thin woman in her sixties in a buttoned grey cardigan and a long dark skirt, reading glasses on a chain, a leather satchel of papers over one shoulder, hit and falling backwards, papers flying from her satchel, the revolver dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a thin woman in her sixties in a buttoned grey cardigan and a long dark skirt, reading glasses on a chain, a leather satchel of papers over one shoulder, hit and falling backwards, papers flying from her satchel, the revolver dropping. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_registrar: beaten, going down"
   },
   {
@@ -464,7 +239,7 @@
     "shading": true
    },
    "style_image": "res://art/reference/items/ref_02.png",
-   "description": "A realistic painted pixel-art still-life of a single old leather document satchel converted into a rucksack, standing upright as if set down, seen from the front, stuffed with folded papers and ledgers, a brass lock and a council crest stamped into the flap, straps added from an army pack. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
+   "description": "A realistic painted pixel-art still-life of a single old leather document satchel converted into a rucksack, standing upright as if set down, seen from the front, stuffed with folded papers and ledgers, a brass lock and a worn crest with no lettering stamped into the flap, straps added from an army pack. One object centred and filling the frame, soft directional overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object photographed on a grey day in a country that has run out of money. Muted cool northern palette, worn and repaired, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, a plain dark neutral background.",
    "_where": "The Registrar's unique, in the stash and the kit"
   },
   {
@@ -525,7 +300,7 @@
     "res://art/fight/head_the_issuer_stand.png",
     "res://art/people/the_issuer.png"
    ],
-   "description": "The same a heavy pale man in his sixties in long heavy embroidered robes over a ballistic vest, a chain of office round his neck, rings on his fingers, aiming a shotgun from the hip straight at the viewer, a bright muzzle flash, the robes swinging. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a heavy pale man in his sixties in long heavy embroidered robes over a ballistic vest, a chain of office round his neck, rings on his fingers, aiming a shotgun from the hip straight at the viewer, a bright muzzle flash, the robes swinging. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_issuer: firing at you"
   },
   {
@@ -547,7 +322,7 @@
     "res://art/fight/head_the_issuer_stand.png",
     "res://art/people/the_issuer.png"
    ],
-   "description": "The same a heavy pale man in his sixties in long heavy embroidered robes over a ballistic vest, a chain of office round his neck, rings on his fingers, hit and falling backwards, arms flung out, the shotgun dropping, the chain of office flying up. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "description": "The same person as the reference image: a heavy pale man in his sixties in long heavy embroidered robes over a ballistic vest, a chain of office round his neck, rings on his fingers, hit and falling backwards, arms flung out, the shotgun dropping, the chain of office flying up. One person alone, full body head to feet, facing the viewer, centred, filling the frame top to bottom, plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
    "_where": "the_issuer: beaten, going down"
   },
   {
@@ -565,7 +340,7 @@
     "shading": true
    },
    "style_image": "res://art/places/the_bank.png",
-   "description": "Pixel art, a wide view of a fortified state printing works: a concrete block with no windows, razor wire, a lorry bay with its shutter half up and light inside, banknote sheets drying on racks glimpsed through it at dusk. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
+   "description": "Pixel art, a wide view of a fortified state printing works: a concrete block with no windows, razor wire, a lorry bay with its shutter half up and light inside, sheets of blank printed paper drying on racks glimpsed through it at dusk. Muted blue-grey and slate palette with sparse warm orange lights, low cloud. Quiet; no people, no text, no readable signs. The subject across the middle of the frame (it is cropped to a card's top from either side); darker at the bottom edge.",
    "_where": "the order card's picture for mint (Data.PINNACLES art; today the zone's)"
   },
   {

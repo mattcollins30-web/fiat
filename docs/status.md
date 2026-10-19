@@ -5714,6 +5714,12 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   across the middle; the old cut of the room's art only where one's missing. The Map's land past the zones: Matt found
   the fog alone too sparse - tools/pixellab_map_land_manifest.json makes art/map/land.png (508 x 420, drawn x2 under
   the lot); with it in, the fog drifts over it as thin banks (the shader's over_land), without it the fog stays solid.
+- Done (19 Oct, Matt: "a single image with everything on it ... then we carve it up in the game"): the Map is one
+  painting, art/map/map.png (512 x 424, Matt's, prompted by hand), drawn x2 from (-3, -2). The zones' shapes, the pins
+  and the order's diamonds are traced off it; the picked site's zone is lit (a warm wash, an accent outline), a shut one
+  hatched. Gone: the zones' grounds, the sites' pictures, the land and the fog (their files sit unused in art/map/;
+  their manifest jobs dropped). The smoke: the painting fills the map, every pin and diamond inside its own zone, no two
+  pins too close to click apart, the lit zone follows the pick.
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

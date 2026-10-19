@@ -15735,53 +15735,24 @@ func _map_checks(main) -> void:
 			if boxes[a][1].grow(-1.0).intersects(boxes[b][1].grow(-1.0)):
 				crossed.append("%s / %s" % [boxes[a][0], boxes[b][0]])
 	_check(crossed.is_empty(), "names cross on the Map: %s" % ", ".join(crossed))
-	# the fog past the zones (19 Oct, Matt): behind the map's drawing, over the whole of it, a shader that drifts
-	_check(mv._fog != null and mv._fog.show_behind_parent and mv._fog.size == mv.size and mv._fog.material is ShaderMaterial and mv._fog.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the Map's fog is off")
-	var land_t = mv.art("land")
-	_check((mv._land != null) == (land_t != null) and float(mv._fog.material.get_shader_parameter("over_land")) == (1.0 if land_t != null else 0.0), "the Map's land picture or the fog over it is off")
-	if mv._land != null:
-		_check(mv._land.show_behind_parent and mv._land.get_index() < mv._fog.get_index() and mv._land.size == mv.size and mv._land.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "the land is not under the fog, full size and nearest")
-	# the painting (19 Oct): every site's picture, made or not, inside the map, on no name and on no other picture
-	var pics: Array = []
+	# the painting (19 Oct, Matt: one picture, the zones and pins traced off it): it covers the map, every pin and order
+	# diamond sits inside its own zone's shape, the lit zone follows the pick, no pin sits on another
+	var pic = mv.painting()
+	if pic != null:
+		var pr := Rect2(mv.MAP_AT, pic.get_size() * 2.0)
+		_check(pr.encloses(Rect2(Vector2.ZERO, mv.size)) and pr.size.x - mv.size.x <= 8.0 and pr.size.y - mv.size.y <= 8.0, "the painting doesn't fill the Map: %s on %s" % [str(pr), str(mv.size)])
 	for i in range(Data.TIERS.size()):
-		var pr: Rect2 = mv.site_art_rect(i)
-		pics.append(pr)
-		if not Rect2(Vector2.ZERO, mv.size).encloses(pr):
-			outside.append("%s's picture" % Data.TIERS[i]["name"])
-		for bx in boxes:
-			if pr.grow(-2.0).intersects(bx[1]):
-				crossed.append("%s's picture / %s" % [Data.TIERS[i]["name"], bx[0]])
+		var zpoly := PackedVector2Array(mv.ZONE_SHAPES[int(Data.TIERS[i]["zone"])]["points"])
+		_check(Geometry2D.is_point_in_polygon(mv.SITE_AT[i], zpoly), "%s's pin sits outside its zone" % Data.TIERS[i]["name"])
 		for j in range(i):
-			if pr.grow(-2.0).intersects(pics[j]):
-				crossed.append("%s's picture / %s's" % [Data.TIERS[i]["name"], Data.TIERS[j]["name"]])
-	# and on no pin, no order's diamond
-	for i in range(Data.TIERS.size()):
-		var marks: Array = []
-		for j in range(Data.TIERS.size()):
-			if j != i:
-				marks.append([str(Data.TIERS[j]["name"]) + "'s pin", Rect2(mv.pin_at(j) - Vector2(mv.PIN_R, mv.PIN_R), Vector2(2, 2) * mv.PIN_R)])
-		for k in mv.ORDER_AT:
-			marks.append([str(k) + "'s diamond", Rect2(mv.order_pin_at(k) - Vector2(mv.PIN_R + 3, mv.PIN_R + 3), Vector2(2, 2) * (mv.PIN_R + 3))])
-		for mk in marks:
-			if pics[i].intersects(mk[1]):
-				crossed.append("%s's picture / %s" % [Data.TIERS[i]["name"], mk[0]])
-	_check(crossed.is_empty(), "the sites' pictures sit on names, pins or each other: %s" % ", ".join(crossed))
-	# a click on a site's picture, its top, picks the site
-	for i in range(Data.TIERS.size()):
-		if mv.site_art(i) != null and sim.zone_open(int(Data.TIERS[i]["zone"])):
-			M.select(1 if i == 0 else 0)
-			main.refresh()
-			click.call(mv.site_art_rect(i).position + Vector2(mv.SITE_ART / 2.0, 4.0))
-			main.refresh()
-			_check(M.selected == i, "a click on %s's picture picked %d" % [Data.TIERS[i]["name"], M.selected])
-	for z in range(Data.ZONES.size()):
-		var zt = mv.zone_art(z)
-		if zt != null:
-			var zb: Rect2 = mv.zone_box(z)
-			_check(absf(zt.get_size().x * 2.0 / zb.size.x - 1.0) < 0.05 and absf(zt.get_size().y * 2.0 / zb.size.y - 1.0) < 0.05, "%s's ground is %s for a box of %s" % [Data.ZONES[z]["name"], str(zt.get_size()), str(zb.size)])
-	for i in range(Data.TIERS.size()):
-		var st = mv.site_art(i)
-		_check(st == null or st.get_size() == Vector2(mv.SITE_ART, mv.SITE_ART), "%s's picture is %s" % [Data.TIERS[i]["name"], str(st.get_size()) if st != null else ""])
+			_check(mv.pin_at(i).distance_to(mv.pin_at(j)) > 2.0 * mv.HIT_R, "%s's and %s's pins are too close to click apart" % [Data.TIERS[i]["name"], Data.TIERS[j]["name"]])
+	for k in mv.ORDER_AT:
+		_check(Rect2(Vector2.ZERO, mv.size).has_point(mv.order_pin_at(k)), "%s's diamond is off the Map" % k)
+		var oz: int = int(Data.pinnacle(k)["zone"])
+		_check(Geometry2D.is_point_in_polygon(mv.ORDER_AT[k], PackedVector2Array(mv.ZONE_SHAPES[oz]["points"])), "%s's diamond sits outside the zone it lights" % k)
+	M.select(7)
+	main.refresh()
+	_check(mv.lit_zone() == int(Data.TIERS[7]["zone"]), "the lit zone doesn't follow the pick: %d" % mv.lit_zone())
 	_check(outside.is_empty(), "names leave the Map: %s" % ", ".join(outside))
 	_check(mv._order_labels.values().all(func(l): return l.visible), "an opened order's place has no pin on the Map")
 	click.call(mv.order_pin_at("archive"))

@@ -1,25 +1,16 @@
-"""The art still outstanding after the 19 Oct list (Matt: "lets get the art manifest for everything outstanding - the
-map looks great but it needs drawn art either way"). Three manifests:
+"""The art still outstanding after the 19 Oct list (Matt: "lets get the art manifest for everything outstanding"). Two
+manifests:
 
   python3 tools/make_outstanding_manifest.py
-    -> tools/pixellab_outstanding_test_manifest.json   (4: the Map's Outskirts - its ground and its three sites)
-    -> tools/pixellab_outstanding_manifest.json        (the rest: the Map, the order's three heads and places)
+    -> tools/pixellab_outstanding_manifest.json        (18: the order's three heads - a face, three poses, a place, a unique)
     -> tools/pixellab_order_glyphs_manifest.json       (9, optional: the order's three keys, six materials - copper wire has its item's picture)
 
-  godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_outstanding_test_manifest.json
+  godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_outstanding_manifest.json
   (++ --dry-run to list; ++ --only <name> ++ --force to reroll)
 
-Test first: the Outskirts' ground and its three site pictures go in the game before the other zones are made.
-The room cards' strips have their own manifests already (tools/make_room_box_manifest.py: the Map's three as the
-test, then 24).
-
-Nothing live is touched: every file here is new (art/map/, and names art/items, art/people and art/fight don't have).
-
-The Map: each zone's ground is its own picture, the game clips it to the zone's shape (map_view.gd ZONE_SHAPES), so
-the painting can never drift off the pins; the roads, the river, the pins, the names and the hatch stay drawn on top.
-Each zone's picture is its bounding box at half size (drawn x2 on the 1018 x 844 map). A site's picture sits under
-its pin (64 x 64, drawn at 64: no uneven pixels). art/reference/map_layout_<zone>.png is the drawn map's shapes cut
-to each zone's box (the river and the roads where they cross it), for its layout.
+The Map is one painting now (art/map/map.png, Matt's, run by hand, 19 Oct): the zones' grounds, the sites' pictures and
+the land that were made here are no longer drawn, and their jobs are dropped (ZONES, SITES and ground()/site() stay
+for the record). Nothing live is touched: every file here is new.
 """
 import json
 import os
@@ -220,7 +211,7 @@ def write(path, readme, jobs):
 RUN = "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://%s   (++ --dry-run to list; ++ --only <name> ++ --force to reroll). Regenerate with python3 tools/make_outstanding_manifest.py."
 
 test = [ground(0, ZONES[0])] + [site(k, SITES[k]) for k in range(3)]
-rest = [ground(k, ZONES[k]) for k in range(1, 4)] + [site(k, SITES[k]) for k in range(3, 12)]
+rest = []          # the Map is one painting now (art/map/map.png, 19 Oct): the zones' grounds and sites' pictures are dropped
 for k, o in enumerate(ORDER):
     rest += order_jobs(k, o)
 glyphs = [{"out": "art/items/%s.png" % s, "endpoint": "generate-image-v2", "width": w, "height": h, "no_background": True,
@@ -231,9 +222,6 @@ glyphs += [{"out": "art/items/%s.png" % s, "endpoint": "generate-image-v2", "wid
             "description": OBJECT % ("a single " + what), "_where": "a rebuild material, on the Radio's town list and its cards' chips"}
            for k, (s, what) in enumerate(MATERIALS)]
 
-write("tools/pixellab_outstanding_test_manifest.json",
-      ["FIAT OUTSTANDING ART, THE TEST (19 Oct, Matt): the Map's Outskirts - its ground, clipped to the zone's shape, and its three sites under their pins. In the game before the rest.",
-       RUN % "tools/pixellab_outstanding_test_manifest.json"], test)
 write("tools/pixellab_outstanding_manifest.json",
       ["FIAT OUTSTANDING ART (19 Oct, Matt): the Map's other three zones and nine sites; the order's three heads - a face, the fight's three poses, their place for the order card, their unique. After the test reads.",
        RUN % "tools/pixellab_outstanding_manifest.json"], rest)
@@ -252,10 +240,4 @@ LAND = ("Pixel art, seen straight down from directly above like an aerial photog
         "dull olive, dusk light, no lights at all; no people, no vehicles, no text, no labels, no readable signs. Even "
         "detail all over: the town's districts are drawn over most of it, so nothing in it should be the only thing "
         "worth looking at.")
-land = [{"out": "art/map/land.png", "endpoint": "generate-image-v2", "width": 508, "height": 420, "no_background": False,
-         "single": True, "seed": 96400, "style_options": STYLE, "style_image": "res://art/map/zone_outskirts.png",
-         "description": LAND,
-         "_where": "the Map: the land past the zones, under all of it (1000 x 844 drawing at half size, drawn x2)"}]
-write("tools/pixellab_map_land_manifest.json",
-      ["FIAT THE MAP'S LAND (19 Oct, Matt): the country past the zones, one picture under the whole map; the fog drifts over it thin. Styled on the Outskirts' ground: after the Outskirts test.",
-       RUN % "tools/pixellab_map_land_manifest.json"], land)
+# (the land job went with the zones' pictures: the one painting has its own country round it)
