@@ -2176,10 +2176,17 @@ const UNARMED_DPS := 3.0          # fists; a mission with no gun is a bad idea
 const TREAT_CASH_PER_HP := 2.0    # the Clinic's healing, paid for at once
 ## Wounds (30): a hit that takes the runner under WOUND_AT of max HP leaves a
 ## wound, one of WOUND_STATS cut by WOUND_PCT until the Clinic treats it for
-## WOUND_CASH a level. One at a time; a second replaces it.
+## WOUND_CASH a level. They stack (19 Oct, Matt: "up to 3 at a time"): one a run, one to each of WOUND_AREAS - the
+## head's cuts the max HP, the chest's the armour, the legs' the pace - and a fourth bad run home adds nothing.
 const WOUND_AT := 0.33            # 0.35 read 31-44% wounded and 0.30 2-9% (Matt, 8 Oct); the fifteenth read (7 Oct): at 0.35 the bot read 31-44% wounded and one bail in 31-69 - its close calls end between a quarter and a third; the pass (6 Oct): a quarter read 2-10% wounded, a third 28-32% on four builds, 0.30 4-9% on five with the bot pushing to 0.75; the bot plays to 0.85 now, so the wound comes from higher
 const WOUND_PCT := 10
 const WOUND_STATS := ["pace", "armour", "hp"]
+const WOUND_AREAS := ["head", "chest", "legs"]
+const WOUND_AREA := {
+	"head": {"stat": "hp", "name": "Head", "what": ["a concussion", "a split brow", "a cracked cheekbone"]},
+	"chest": {"stat": "armour", "name": "Chest", "what": ["cracked ribs", "a deep graze", "a winded lung"]},
+	"legs": {"stat": "pace", "name": "Leg", "what": ["a torn hamstring", "a twisted knee", "a bad ankle"]},
+}
 const WOUND_CASH := 20
 const MARKET_STOCK := 3           # items for sale, re-rolled after every mission
 const MARKET_MARKUP := 3.0        # buying is dearer than selling

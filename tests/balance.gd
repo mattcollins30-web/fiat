@@ -574,7 +574,7 @@ func _odds_detail(sim, i: int, s: float) -> void:
 			meds += 1
 	print("  odds T%d %.0f%% at depth 1: hp %.0f/%.0f dps %.1f (gun %s, rounds %s %d, grade %.0f) armour %.0f mitigation %.2f pace %.2f contact %d meds %d wound '%s' night %s weather '%s' intel %s | site hp %.0f dps %.1f pool %d res %s" % [
 		i, s * 100.0, sim.hp, sim.max_hp(), sim.dps(), Items.full_name(gun) if gun != null else "none", str(sim.has_rounds(gun)) if gun != null else "-", sim.rounds_for(gun) if gun != null else 0, sim.grade_bonus(gun) if gun != null else 0.0,
-		sim.armour(), sim.mitigation(), sim.pace(), sim.contact(t), meds, sim.wound, str(sim.is_night()), sim.weather_of(i), str(sim.word_names(i)), float(t["hp"]), float(t["dps"]), int(t["pool"]), str(t.get("res", {}))])
+		sim.armour(), sim.mitigation(), sim.pace(), sim.contact(t), meds, ",".join(sim.wounds.keys()), str(sim.is_night()), sim.weather_of(i), str(sim.word_names(i)), float(t["hp"]), float(t["dps"]), int(t["pool"]), str(t.get("res", {}))])
 
 
 func _kit(sim) -> String:

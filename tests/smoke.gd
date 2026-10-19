@@ -624,6 +624,7 @@ func _init() -> void:
 	_site_gate_checks(main)
 	_feel_gate_checks()
 	_map_checks(main)
+	_med_over_time_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -1022,8 +1023,8 @@ func _clinic_screen(main) -> void:
 	sim.hp = sim.max_hp() * 0.5
 	sim.cash += 2000.0
 	main.refresh()
-	main._clinic._side_press(0)         # Treat
-	_check(sim.hp >= sim.max_hp() - 0.5, "Treat through the screen did not heal")
+	main._clinic._body._all.pressed.emit()     # the body's one button: Heal, or Treat everything
+	_check(sim.hp >= sim.max_hp() - 0.5, "Treat through the screen did not heal: '%s'" % main._clinic._body._all.text)
 	_check(sim.clinic.size() > 0 and sim.clinic.size() <= sim.clinic_stock(), "the Clinic's shelf is empty or over its stock")
 	var it: Dictionary = sim.clinic[0]
 	main._clinic._shelf._pick(main._clinic._shelf.cell_of(it["id"]))
@@ -1393,20 +1394,23 @@ func _narrative_checks(main) -> void:
 	_check_fit(main, "Clinic (said)")
 	var cv = main._clinic
 	_check(cv._band.title.text == "" and cv._band.kicker.text.begins_with("The Clinic") and cv._band.headline.text == "%d" % sim.hp_shown() and cv._band.unit.text.begins_with("of %d HP" % sim.max_hp_shown()), "the Clinic's band is off: '%s' / '%s' / '%s'" % [cv._band.title.text, cv._band.headline.text, cv._band.unit.text])
-	_check(cv._side_track.visible and cv._side_bar_text.text == "" and cv._side_tiles_c.size() == 2 and cv._side_tiles_c[0]["key"].text == "Resting" and cv._side_tiles_c[1]["key"].text == "Upgrades", "the Clinic's treatment tiles are off")
-	_check(cv._heads[1].visible and cv._heads[1].text.begins_with("YOUR MEDS"), "the Clinic has no YOUR MEDS head")
+	var body = cv._body
+	_check(body.visible and body._head.text.begins_with("THE RUNNER") and body._bar_left.text == "HP %d of %d" % [sim.hp_shown(), sim.max_hp_shown()], "the Clinic's runner is off: '%s' / '%s'" % [body._head.text, body._bar_left.text])
+	# the meds as cards (Clinic B): a card a kind, the stash's and the rig's, each what it heals and a second's
 	var med_kinds := {}
-	for it in sim.stash:
+	for it in sim.stash + sim.rig:
 		if Items.is_medical(it):
 			med_kinds[it["base"]] = true
-	var shown_meds: int = cv._med_tiles.filter(func(t): return t["panel"].visible and not t["key"].text.begins_with("The rig")).size()
-	_check(shown_meds == mini(med_kinds.size(), 4), "the Clinic shows %d med kinds for %d in the stash" % [shown_meds, med_kinds.size()])
-	for t in cv._med_tiles:
-		if t["panel"].visible and not t["key"].text.begins_with("The rig"):
-			_check(t["value"].text.begins_with("heals "), "a med tile does not say what it heals: '%s'" % t["value"].text)
-	# a heal node trained elsewhere moves the Clinic's figures without anything else changing (the reviewer's catch)
-	if shown_meds > 0:
-		var heal_before: String = cv._med_tiles[0]["value"].text
+	cv._show("stash")
+	main.refresh()
+	var mc = cv._meds
+	var cards: Array = mc._cards.filter(func(c): return c["button"].visible)
+	_check(cards.size() == mini(med_kinds.size(), mc.CARDS), "the Clinic shows %d med cards for %d kinds" % [cards.size(), med_kinds.size()])
+	for c in cards:
+		_check(str(c["total"].text).contains(" HP "), "a med card does not say what it heals: '%s'" % c["total"].text)
+	# a heal node trained elsewhere moves the cards' figures without anything else changing (the reviewer's catch)
+	if not cards.is_empty():
+		var heal_before: String = cards[0]["total"].text
 		var hold_tree: Array = sim.tree.duplicate()
 		var heal_node := ""
 		for b in Data.TREES:
@@ -1415,10 +1419,12 @@ func _narrative_checks(main) -> void:
 					heal_node = "%s/%d" % [b["name"], i]
 		if heal_node != "" and not sim.tree.has(heal_node):
 			sim.tree.append(heal_node)
+			mc._shown = ""
 			main.refresh()
-			_check(cv._med_tiles[0]["value"].text != heal_before, "a heal node did not move the Clinic's med figure: still '%s'" % heal_before)
+			_check(cards[0]["total"].text != heal_before, "a heal node did not move the Clinic's med figure: still '%s'" % heal_before)
 			sim.tree = hold_tree
 			main.refresh()
+	cv._show("shelf")
 	sim.load_dict(save)
 	print("narrative ok: site lines, the deeds three ways, the past, papers, every item's words, the vendors")
 
@@ -5348,12 +5354,13 @@ func _early_game_checks(main) -> void:
 	_check(ammo_none == 0 and shells > 0 and other == 0, "rounds without a gun: %d with none; with a shotgun %d shells, %d others" % [ammo_none, shells, other])
 	# no wound before the Clinic
 	bare.unlocked = bare.unlocked.filter(func(r): return r != "clinic")
-	bare.wound = ""
+	bare.wounds = {}
+	mb["wounded"] = false
 	bare._wound(mb)
-	_check(bare.wound == "", "a wound before the Clinic opened: %s" % bare.wound)
+	_check(bare.wounds.is_empty(), "a wound before the Clinic opened: %s" % str(bare.wounds))
 	bare.unlocked.append("clinic")
 	bare._wound(mb)
-	_check(bare.wound != "", "no wound with the Clinic open")
+	_check(bare.wounds.size() == 1, "no wound with the Clinic open")
 	bare.extract_now()
 	# resting at camp: said on the top row and under the odds
 	var sim = main.sim
@@ -8296,15 +8303,17 @@ func _dots_chip_checks(main) -> void:
 	print("the dots as chips ok: on them, on you, the med beside them, cleared")
 
 
-## 30: wounds. A hit that takes the runner under a quarter leaves one stat cut a tenth until the Clinic treats
-## it for cash by level; one at a time; the Yard, the run and the Clinic say so; it goes with the runner.
+## 30: wounds (stacked, 19 Oct: Matt's Clinic A). A hit that takes the runner under a third leaves a wound, one a run, to
+## an area not yet hurt - the head's cuts the max HP, the chest's the armour, the legs' the pace - three at most, a
+## fourth bad run adding nothing; the Clinic treats each, or the lot; the run, the Pitch and the Clinic say so; the
+## save keeps them; they go with the runner.
 func _wound_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	sim.wound = ""
-	# the hit under a quarter wounds; one already under it does not
+	sim.wounds = {}
+	# the hit under a third wounds; one already under it does not
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	var pace0: float = sim.pace()          # on the mission: armour counts the pack's free cells
@@ -8314,27 +8323,29 @@ func _wound_checks(main) -> void:
 	m["target_hp"] = 1e9
 	sim.hp = sim.max_hp() * Data.WOUND_AT - 0.01
 	sim.advance(1.0)
-	_check(sim.wound == "", "a hit already under the quarter wounded")
+	_check(sim.wounds.is_empty(), "a hit already under the third wounded")
 	_check(sim.on_mission(), "the runner died under the first wound check")
 	if not sim.on_mission():
 		sim.load_dict(saved)
 		return
-	# through the fight itself: a hair over the quarter, their fire takes the runner under it; auto-run stops on it
+	# through the fight itself: a hair over, their fire takes the runner under it; auto-run stops on it
 	sim.auto_tier = 0
 	sim.hp = sim.max_hp() * Data.WOUND_AT + 0.01
 	var hp_in: float = sim.hp
 	sim.advance(1.0)
 	var through_the_fight: bool = sim.hp < hp_in and sim.hp > 0.0
 	if through_the_fight:
-		_check(sim.wound in Data.WOUND_STATS and m.get("wounded", false), "the hit under a quarter did not wound: '%s'" % sim.wound)
+		_check(sim.wounds.size() == 1 and m.get("wounded", false), "the hit under a third did not wound: %s" % str(sim.wounds))
 	else:
 		sim._wound(m)                     # nothing landed at this tier (or it killed them): the wound by hand, the rest still checked
 	_check(sim.on_mission(), "the runner died under the wound check")
 	if not sim.on_mission():
 		sim.load_dict(saved)
 		return
-	_check(not through_the_fight or sim.auto_tier < 0, "auto-run carried on through the wound")     # the fight's wound stops auto-run; the one by hand is only the wound
-	var cut: String = sim.wound
+	_check(not through_the_fight or sim.auto_tier < 0, "auto-run carried on through the wound")
+	var area: String = sim.wounds.keys()[0]
+	var cut: String = str(sim.wounds[area]["stat"])
+	_check(cut == str(Data.WOUND_AREA[area]["stat"]) and str(sim.wounds[area]["from"]) == str(Data.TIERS[3]["name"]) and str(sim.wounds[area]["what"]) != "", "the wound's record is off: %s" % str(sim.wounds[area]))
 	var now: Dictionary = {"pace": sim.pace(), "armour": sim.armour(), "hp": sim.max_hp()}
 	var was: Dictionary = {"pace": pace0, "armour": arm0, "hp": hp0}
 	for st in Data.WOUND_STATS:
@@ -8342,13 +8353,9 @@ func _wound_checks(main) -> void:
 			_check(is_equal_approx(now[st], was[st] * (1.0 - Data.WOUND_PCT / 100.0)), "the wound did not cut %s: %.2f from %.2f" % [st, now[st], was[st]])
 		else:
 			_check(is_equal_approx(now[st], was[st]), "the wound cut %s too: %.2f from %.2f" % [st, now[st], was[st]])
-	# a second replaces the first: still one, and the log says what it replaced (15 Oct, item 16: "Wounded again" read as stacking)
-	var first_w: String = sim.wound
+	# one a run: the same run takes no second
 	sim._wound(m)
-	_check(sim.wound in Data.WOUND_STATS, "the second wound is off: '%s'" % sim.wound)
-	var wline: String = str(sim.events.back()[1])
-	var want_after: String = " (the same wound: one at a time)" if sim.wound == first_w else " (replaces %s)" % ("max HP" if first_w == "hp" else first_w)
-	_check(wline == sim.wound_words() + want_after and not wline.contains("again"), "a second wound's line: '%s'" % wline)
+	_check(sim.wounds.size() == 1, "a run left two wounds: %s" % str(sim.wounds))
 	# the run says so and fits
 	main.show_room(main.MISSIONS)
 	main.refresh()
@@ -8356,58 +8363,126 @@ func _wound_checks(main) -> void:
 	_check_fit(main, "Run (wounded)")
 	sim.extract_now()
 	_check(sim.last_report.get("wounded", false), "the report does not carry the wound")
-	# the Runner room's card and the last run say so
+	# stacking: three runs, three areas, every stat a tenth; a fourth adds nothing and says so
+	for k in range(3):
+		sim._wound({"wounded": false, "tier": 5})
+	_check(sim.wounds.size() == 3 and Data.WOUND_AREAS.all(func(a): return sim.wounds.has(a)), "three bad runs didn't leave the three areas: %s" % str(sim.wounds.keys()))
+	_check(str(sim.events.back()[1]) == Words.WOUNDS["full"], "the fourth didn't say there's nowhere left: '%s'" % str(sim.events.back()[1]))
+	for st in Data.WOUND_STATS:
+		_check(is_equal_approx(sim.wound_mult(st), 1.0 - Data.WOUND_PCT / 100.0), "three wounds don't cut %s a tenth: %.3f" % [st, sim.wound_mult(st)])
+	_check(sim.wound_words().begins_with("3 wounds:"), "three wounds in words: '%s'" % sim.wound_words())
+	# the Runner room's card says so
 	main.show_room(main.RUNNER)
 	main.refresh()
 	var wound_chips: Array = _chip_texts(main._stats.cards["runner"]["chips"])
-	_check(not wound_chips.is_empty() and str(wound_chips[0]).begins_with("Wounded:"), "the sheet does not carry the wound chip: %s" % str(wound_chips))
+	_check(not wound_chips.is_empty() and str(wound_chips[0]).begins_with("3 wounds:"), "the sheet does not carry the wounds chip: %s" % str(wound_chips))
 	_check_fit(main, "Stats (wounded)")
-	# the Clinic: the band says so, Treat costs the wound's price by level at full HP, and clears it
-	sim.wound = "pace"                    # a wound that leaves the max HP alone: the checks below read HP against it
-	sim.hp = sim.max_hp()
-	sim.cash += 5000.0
+	# the Clinic: a row a wound with its Treat, the body marked, Treat everything the lot
+	sim.hp = sim.max_hp() * 0.5
+	sim.cash += 50000.0
 	var lv: int = sim.level()
-	var expect: int = int(ceil(Data.WOUND_CASH * lv * sim.inflation() * maxf(0.2, 1.0 - sim.tree_sum("treat_pct") / 100.0)))
-	_check(sim.needs_treating() and sim.treat_cost() == expect, "the wound's price reads %d, not %d" % [sim.treat_cost(), expect])
+	var each: int = int(ceil(Data.WOUND_CASH * lv * sim.inflation() * maxf(0.2, 1.0 - sim.tree_sum("treat_pct") / 100.0)))
+	_check(sim.wound_cost("legs") == each and sim.wound_cost() == 3 * each and sim.treat_cost() == sim.heal_cost() + 3 * each, "the wounds' prices: one %d (want %d), all %d, with the HP %d" % [sim.wound_cost("legs"), each, sim.wound_cost(), sim.treat_cost()])
 	main.show_room(main.MEDIC)
 	main._clinic._shown = ""
 	main.refresh()
-	_check(main._clinic._band.unit.text.contains("wounded"), "the Clinic's band does not say wounded: '%s'" % main._clinic._band.unit.text)
-	# the two jobs apart (Clinic-B): at full HP the wound's button is the primary, Heal reads Fit
-	_check(main._clinic._side_buttons[1].text.begins_with("Treat the wound (") and not main._clinic._side_buttons[1].disabled, "the Clinic's wound button is off: '%s'" % main._clinic._side_buttons[1].text)
-	_check(main._clinic._side_buttons[0].text == "Full HP" and main._clinic._side_buttons[0].disabled, "the Clinic's heal button at full HP reads '%s'" % main._clinic._side_buttons[0].text)
-	_check(main._clinic._side_buttons[0].position.x + main._clinic._side_buttons[0].size.x <= main._clinic._side_buttons[1].position.x, "the Clinic's two buttons overlap")
-	_check(main._clinic._band.unit.text.contains("wounded"), "the Clinic's band does not name the wound: '%s'" % main._clinic._band.unit.text)
-	_check_fit(main, "Clinic (wounded)")
-	# hurt and wounded: heal alone costs the HP's price and leaves the wound; the wound alone costs its price and leaves the HP
-	sim.hp = sim.max_hp() * 0.5
-	main.refresh()
-	var heal_expect: int = sim.heal_cost()
-	_check(heal_expect > 0 and sim.wound_cost() == expect and sim.treat_cost() == heal_expect + expect, "the Clinic's prices do not add up: heal %d, wound %d, both %d" % [heal_expect, sim.wound_cost(), sim.treat_cost()])
-	_check(main._clinic._side_buttons[0].text.begins_with("Heal (") and not main._clinic._side_buttons[0].disabled, "the Clinic's heal button is off hurt: '%s'" % main._clinic._side_buttons[0].text)
+	var body = main._clinic._body
+	_check(main._clinic._band.unit.text.contains("3 wounds") and main._clinic._band.chips.visible, "the Clinic's band does not say 3 wounds: '%s'" % main._clinic._band.unit.text)
+	_check(body._head.text == "THE RUNNER · 3 OF 3 WOUNDS" and body._marks.size() == 3, "the body's head or its marks: '%s', %d" % [body._head.text, body._marks.size()])
+	for a in Data.WOUND_AREAS:
+		var r: Dictionary = body.row(a)
+		_check(r["treat"].visible and not r["treat"].disabled and r["treat"].text.begins_with("Treat") and r["effect"].text.begins_with("−"), "the %s's row is off: '%s' / '%s'" % [a, r["treat"].text, r["effect"].text])
+	_check(body._all.text.begins_with("Treat everything") and not body._all.disabled, "Treat everything reads '%s'" % body._all.text)
+	_check_fit(main, "Clinic (three wounds)")
+	# one treated by its row: that one gone, the rest kept, its price paid
 	var cash0: float = sim.cash
-	main._clinic._side_press(0)
-	_check(sim.hp >= sim.max_hp() - 0.5 and sim.wound != "" and is_equal_approx(cash0 - sim.cash, float(heal_expect)), "Heal did not heal alone: hp %.0f of %.0f, wound '%s', %.0f paid" % [sim.hp, sim.max_hp(), sim.wound, cash0 - sim.cash])
+	body.row("chest")["treat"].pressed.emit()
 	main.refresh()
+	_check(not sim.wounds.has("chest") and sim.wounds.size() == 2 and is_equal_approx(cash0 - sim.cash, float(each)), "the chest's Treat: %s left, %.0f paid" % [str(sim.wounds.keys()), cash0 - sim.cash])
+	_check(not body.row("chest")["treat"].visible and body.row("chest")["empty"].text == "Chest · nothing", "the chest's row after: '%s'" % body.row("chest")["empty"].text)
+	_check_fit(main, "Clinic (two wounds)")
+	# the lot: the HP and both wounds
 	cash0 = sim.cash
-	main._clinic._side_press(1)
-	_check(sim.wound == "" and is_equal_approx(cash0 - sim.cash, float(expect)) and not sim.needs_treating(), "The wound did not see to the wound: '%s', %.0f paid" % [sim.wound, cash0 - sim.cash])
+	var lot: int = sim.treat_cost()
+	body._all.pressed.emit()
 	main.refresh()
-	_check(main._clinic._side_buttons[0].text == "Fit for duty" and main._clinic._side_buttons[1].text == "No wound", "the Clinic's buttons after treatment: '%s' / '%s'" % [main._clinic._side_buttons[0].text, main._clinic._side_buttons[1].text])
-	_check_fit(main, "Clinic (fit)")
+	_check(sim.wounds.is_empty() and sim.hp >= sim.max_hp() - 0.5 and is_equal_approx(cash0 - sim.cash, float(lot)), "Treat everything left %s, HP %.0f of %.0f, %.0f paid of %d" % [str(sim.wounds.keys()), sim.hp, sim.max_hp(), cash0 - sim.cash, lot])
+	_check(body._all.text == "Fit for duty" and body._all.disabled, "after the lot the button reads '%s'" % body._all.text)
+	# one wound at full HP: the button names it
+	sim._wound({"wounded": false, "tier": 5})
+	main.refresh()
+	var one: String = sim.wounds.keys()[0]
+	_check(body._all.text.begins_with("Treat the %s" % str(Data.WOUND_AREA[one]["name"]).to_lower()), "one wound at full HP: the button reads '%s'" % body._all.text)
+	_check_fit(main, "Clinic (one wound)")
 	# saved and loaded; gone with a dead runner
-	sim.wound = "pace"
 	var d: Dictionary = sim.to_dict()
-	_check(str(d.get("wound", "")) == "pace", "the wound is not saved")
+	_check(d.get("wounds", {}).has(one), "the wounds are not saved")
 	sim.load_dict(d)
-	_check(sim.wound == "pace", "the wound is not loaded")
+	_check(sim.wounds.has(one) and str(sim.wounds[one]["what"]) != "", "the wounds are not loaded: %s" % str(sim.wounds))
 	sim.deploy(3)
 	sim.hp = 0.0
 	sim._kia()
-	_check(sim.wound == "", "the wound went on to the next runner")
+	_check(sim.wounds.is_empty(), "the wounds went on to the next runner")
 	sim.load_dict(saved)
 	main.refresh()
-	print("wounds ok: the hit under a quarter, one stat a tenth, one at a time, the run, the Pitch, the Clinic's price and cure, the save, the death")
+	print("wounds ok: the hit under a third, one a run, three areas at most, every stat a tenth, the run, the Pitch, the Clinic's rows and its lot, the save, the death")
+
+
+## Meds as they say (19 Oct, Matt): a share of the heal every second over the med's time, stopping at full; the meds'
+## cards in the Clinic say what each does.
+func _med_over_time_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	var bandage: Dictionary = s._plain(Data.MEDICAL, "Bandage")
+	s.deploy(0)
+	if not s.on_mission():
+		_check(false, "the fixture: no run for the meds")
+		return
+	var mm: Dictionary = s.mission
+	mm["t"]["dps"] = 0.0
+	mm["remaining"] = 0
+	s.rig = [bandage]
+	s.hp = 10.0
+	var t: float = s.use_time(bandage)
+	var heal: float = s.med_heal(bandage)
+	_check(t > 1.0 and heal > 0.0, "the fixture: the bandage takes %.1f s for %.0f" % [t, heal])
+	s.use_med(bandage["id"])
+	s._patch(mm, 1.0)
+	_check(is_equal_approx(s.hp, 10.0 + heal / t) and mm["using"] != null, "a second in, a med healed %.1f, not %.1f (its share)" % [s.hp - 10.0, heal / t])
+	s._patch(mm, t)
+	_check(is_equal_approx(s.hp, minf(s.max_hp(), 10.0 + heal)) and mm["using"] == null, "the med's whole didn't land by its time: %.1f of %.1f" % [s.hp - 10.0, heal])
+	# at full with nowhere for it to go, a med isn't taken (its end-of-heal work isn't free)
+	s.rig = [s._plain(Data.MEDICAL, "Bandage")]
+	s.hp = s.max_hp()
+	var g0: float = s.guard()
+	_check(not s.use_med(s.rig[0]["id"]) and s.rig.size() == 1 and mm["using"] == null and is_equal_approx(s.guard(), g0), "a med went at full HP: rig %d, using %s" % [s.rig.size(), str(mm["using"])])
+	# stops at full: nearly full, it ends as the HP tops out
+	s.rig = [s._plain(Data.MEDICAL, "Bandage")]
+	s.hp = s.max_hp() - 1.0
+	s.use_med(s.rig[0]["id"])
+	s._patch(mm, t * 0.5)
+	_check(s.hp >= s.max_hp() - 0.001 and mm["using"] == null and str(s.events.back()[1]).contains("stopped at full"), "a med didn't stop at full: '%s'" % str(s.events.back()[1]))
+	# the Clinic's cards: what each does, a second's, where it is
+	main.show_room(main.MEDIC)
+	sim.stash.append(sim._plain(Data.MEDICAL, "Bandage"))
+	main._clinic._show("stash")
+	main.refresh()
+	var mc = main._clinic._meds
+	_check(mc.visible and not main._clinic._panel.visible, "the Meds tab didn't show its cards")
+	var said: String = " | ".join(mc.text_nodes().map(func(l): return str(l.text)))
+	var b0: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	var lines: Array = mc.med_lines(b0)
+	_check(said.contains("Bandage") and said.contains(lines[0]) and said.contains(lines[1]) and said.contains("in the stash"), "the bandage's card: %s (want '%s', '%s')" % [said.left(300), lines[0], lines[1]])
+	_check_fit(main, "Clinic (meds as cards)")
+	main._clinic._show("shelf")
+	sim.load_dict(saved)
+	main.refresh()
+	print("meds over time ok: a share a second, the whole by its time, stops at full, the cards")
 
 
 ## The effects' numbers in one table (15 Oct, refactor A2): every Data.FX key names something the data has (a tree
@@ -11220,14 +11295,14 @@ func _yard_pick_checks(main) -> void:
 	on.call("clinic", 0, "b")
 	on.call("clinic", 1, "b")
 	_check(sim.clinic_stock() == Data.CLINIC_STOCK + 10, "Shelf and Stockroom are off: %d" % sim.clinic_stock())
-	sim.wound = "pace"
+	sim.wounds = {"legs": {"stat": "pace", "what": "a bad ankle", "from": "The Parade", "hp_pct": 20}}
 	var wc0: int = sim.wound_cost()
 	var wm0: float = sim.wound_mult("pace")
 	on.call("clinic", 2, "a")
 	_check(sim.wound_cost() <= int(ceil(wc0 / 2.0)) + 1, "Surgery did not halve the wound's price")
 	on.call("clinic", 2, "b")
 	_check(sim.wound_mult("pace") > wm0, "Physio did not lighten the wound")
-	sim.wound = ""
+	sim.wounds = {}
 	on.call("clinic", 3, "b")
 	var bandages := func() -> int: return sim.rig.filter(func(x): return str(x.get("base", "")) == "Bandage").size()
 	var room_k: bool = sim.rig_room(1)
@@ -12448,7 +12523,7 @@ func _dig_checks(main) -> void:
 		sim.equipped[s] = sim._plain(s, Data.BASES[s].back()["name"])
 	sim.equipped["Primary"]["affixes"] = [{"stat": "damage_pct", "value": 3000.0, "tier": 6}]
 	sim.equipped["Secondary"] = null
-	sim.wound = ""
+	sim.wounds = {}
 	sim.cash = 100000.0
 	sim.rig = [sim._plain(Data.AMMO, sim.ammo_box("smg")["name"])]
 	var bot = Bot.new()
@@ -12653,7 +12728,7 @@ func _gamble_checks(main) -> void:
 	sim.restock()
 	sim.equipped["Primary"] = sim._plain("Primary", "Stalking rifle")
 	sim.gamble = ["rifle", "charm", "rig", "pistol", "melee"]
-	sim.wound = ""                     # whole: the bot keeps the Clinic's price back from the gamble when there is one to pay
+	sim.wounds = {}                    # whole: the bot keeps the Clinic's price back from the gamble when there is one to pay
 	sim.hp = sim.max_hp()              # (the wound first: an HP wound lifts the maximum when it goes)
 	var lorry_hold: bool = sim.lorry_done
 	sim.lorry_done = true              # no Lorry watch saved for: the rule's own reserve is what's read here
@@ -13848,6 +13923,7 @@ func _try_on_checks(main) -> void:
 	# but a thing leaving the rig is a change (armour a med, the review): a med used throws them away
 	var med: Dictionary = sim.first_med()
 	if not med.is_empty():
+		sim.hp = sim.max_hp() * 0.6               # hurt, not under half (the key reads that): a med goes (at full, one with nowhere to spill is kept, 19 Oct)
 		sim.use_med(med["id"])
 		_check(sim._kit_key() != k0, "a med used left the try-on's answers standing (armour a med counts the rig)")
 	sim.extract_now()
@@ -14401,7 +14477,7 @@ func _tins_checks(main) -> void:
 	var sim = main.sim
 	var saved: Dictionary = sim.to_dict()
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
-	sim.wound = "armour"
+	sim.wounds = {"chest": {"stat": "armour", "what": "cracked ribs", "from": "The Barracks", "hp_pct": 12}}
 	sim.hp = sim.max_hp() * 0.5
 	sim.cash = 999999.0
 	main.show_room(main.MEDIC)
@@ -14969,12 +15045,12 @@ func _yard_own_checks(sim) -> void:
 	_yard_set(sim, "kennel", 2, "b")
 	_check(sim.yard_has("second_dog") and is_equal_approx(sim.search_s(t), s0 * Data.FX["yard/second_dog"]), "the Second dog did not quicken the search: %.2f from %.2f" % [sim.search_s(t), s0])
 	# the wound reads its real cut (Q7): Physio takes a third off
-	var w0: String = sim.wound
-	sim.wound = "pace"
+	var w0: Dictionary = sim.wounds.duplicate(true)
+	sim.wounds = {"legs": {"stat": "pace", "what": "a bad ankle", "from": "The Parade", "hp_pct": 20}}
 	_check(sim.wound_pct() == Data.WOUND_PCT, "a wound reads %d%%, not %d%%" % [sim.wound_pct(), Data.WOUND_PCT])
 	_yard_set(sim, "clinic", 2, "b")         # Physio: the Clinic's third column, side b
 	_check(not sim.yard_has("physio") or sim.wound_pct() == int(round(Data.WOUND_PCT * 2.0 / 3.0)), "with Physio a wound reads %d%%" % sim.wound_pct())
-	sim.wound = w0
+	sim.wounds = w0
 	sim.yard_picks = picks0
 	sim._yard_dirty = true
 	sim.elapsed = el0
@@ -15062,7 +15138,7 @@ func _rebuild_checks(main) -> void:
 	_check(e.has("boss") and str(e["boss"].get("order", "")) == "grid" and str(e["boss"]["name"]) == "The Lineman" and e["name"] == "The Grid" and int(e["level"]) == lv, "the Grid reads %s" % str(e.get("boss", {})))
 	_check(s._sig.is_empty() and s.order_block("archive").begins_with("Rebuild the library") == false, "the read left the Grid on its site, or the Archive shut")
 	s.hp = s.max_hp()
-	s.wound = ""
+	s.wounds = {}
 	_check(s.deploy_order("grid") and s.mission != null and s.mission["signal"].get("order", "") == "grid" and s.mission.has("boss"), "the Grid would not set off: %s" % s.order_block("grid"))
 	if s.mission != null:
 		var reach0: int = s.reach

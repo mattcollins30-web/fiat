@@ -30,7 +30,7 @@ var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage
 var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
 var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
 var hardcore := false              # a death ends the Yard, stash and all
-var wound := ""                    # a wound (30): "pace", "armour" or "hp" cut a tenth until the Clinic treats it; "" for none
+var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {stat, what, from, hp_pct}, three at most, the Clinic the cure
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
 var cls := ""                      # the operator's class, by name; "" is none yet
@@ -283,7 +283,7 @@ func dps() -> float:
 	for it in rig:
 		if it["slot"] == Data.AMMO and int(it["rounds"]) > 0:
 			feed.append(it["base"])
-	var k := [feed, hp < max_hp() * 0.5, mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)), xp, wound, _kit_ids()]
+	var k := [feed, hp < max_hp() * 0.5, mission != null and (not mission["cleared"] or mission.get("ghost_pending", false)), xp, wounds.keys(), _kit_ids()]
 	var c = _dry_memo.get("dps")
 	if c != null and c[0] == k:
 		return c[1]
@@ -357,42 +357,60 @@ func armour() -> float:
 	return a * (1.0 + (tree_sum("armour_pct") + _affix_sum("armour_pct")) / 100.0) * (Data.FX["node/shock_more.armour"] if (has_node("shock_more") and not has_rule("sparkys_gloves")) else 1.0) * wound_mult("armour")
 
 
-## The wound's cut on a stat: a tenth off the one it names, nothing off the rest.
+## The wounds' cut on a stat: a tenth off for the one that names it (one an area, so one a stat), nothing off the rest.
 func wound_mult(stat: String) -> float:
-	return 1.0 - Data.WOUND_PCT / 100.0 * (2.0 / 3.0 if yard_has("physio") else 1.0) if wound == stat else 1.0
+	for a in wounds:
+		if str(wounds[a]["stat"]) == stat:
+			return 1.0 - Data.WOUND_PCT / 100.0 * (2.0 / 3.0 if yard_has("physio") else 1.0)
+	return 1.0
 
 
-## The wound in words: "Wounded: pace −10%", or "" unhurt.
+## A stat's name in a wound's words.
+static func wound_stat_name(stat: String) -> String:
+	return "max HP" if stat == "hp" else stat
+
+
+## The wounds in words: "Wounded: pace −10%", "2 wounds: pace, armour −10%", or "" unhurt.
 func wound_words() -> String:
-	if wound == "":
+	if wounds.is_empty():
 		return ""
-	return "Wounded: %s −%d%%" % [("max HP" if wound == "hp" else wound), wound_pct()]
+	var stats: Array = []
+	for a in Data.WOUND_AREAS:
+		if wounds.has(a):
+			stats.append(wound_stat_name(str(wounds[a]["stat"])))
+	if stats.size() == 1:
+		return "Wounded: %s −%d%%" % [stats[0], wound_pct()]
+	return "%d wounds: %s −%d%%" % [stats.size(), ", ".join(stats), wound_pct()]
 
 
-## The wound's cut as it is, in percent: Physio's third off included (18 Oct, Matt on Q7: it always read 10).
+## A wound's cut as it is, in percent: Physio's third off included (18 Oct, Matt on Q7: it always read 10).
 func wound_pct() -> int:
-	return int(round((1.0 - wound_mult(wound)) * 100.0)) if wound != "" else 0
+	return int(round(Data.WOUND_PCT * (2.0 / 3.0 if yard_has("physio") else 1.0))) if not wounds.is_empty() else 0
 
 
-## A hit took the runner under a quarter: a wound, one stat cut until treated. A second replaces the first.
+## A hit took the runner under a third: a wound, to an area not yet hurt - the head's cuts max HP, the chest's armour,
+## the legs' pace - until the Clinic treats it (19 Oct, Matt: they stack, three at most). One a run; with all three
+## carried, a fourth bad run adds nothing.
 func _wound(m: Dictionary) -> void:
 	if not room_open("clinic"):
 		return                                # nothing to treat it with till the Gamekeeper's down (17 Oct, Matt's playtest): no wound before the Clinic
-	var was := wound
-	wound = Data.WOUND_STATS[rng.randi_range(0, Data.WOUND_STATS.size() - 1)]
-	if not m.get("wounded", false):
-		wounded_total += 1                # runs that ended wounded, every runner (the wounds row reads Matt's save by it, 8 Oct)
+	if m.get("wounded", false):
+		return                                # one a run
 	m["wounded"] = true
+	wounded_total += 1                        # runs that ended wounded, every runner (the wounds row reads Matt's save by it, 8 Oct)
+	var free: Array = Data.WOUND_AREAS.filter(func(a): return not wounds.has(a))
+	if free.is_empty():
+		log_event(Words.WOUNDS["full"])
+		return
+	var area: String = free[rng.randi_range(0, free.size() - 1)]
+	var spec: Dictionary = Data.WOUND_AREA[area]
+	var whats: Array = spec["what"]
+	wounds[area] = {"stat": str(spec["stat"]), "what": str(whats[rng.randi_range(0, whats.size() - 1)]), "from": str(tier(int(m.get("tier", 0)))["name"]),
+		"hp_pct": int(round(100.0 * hp / maxf(max_hp(), 1.0)))}
 	_dry_memo.clear()
-	if wound == "hp":
+	if spec["stat"] == "hp":
 		hp = minf(hp, max_hp())
-	# one at a time (15 Oct, parked item 16: "Wounded again" four times read as stacking): a second says what it replaced
-	var after: String = ""
-	if was == wound:
-		after = " (the same wound: one at a time)"
-	elif was != "":
-		after = " (replaces %s)" % ("max HP" if was == "hp" else was)
-	log_event(wound_words() + after)
+	log_event(Words.WOUNDS["took"] % [str(spec["name"]), str(wounds[area]["what"]), wound_stat_name(str(spec["stat"])), wound_pct(), wounds.size()])
 
 
 ## The share of incoming damage the armour stops.
@@ -988,7 +1006,7 @@ func retire() -> bool:
 			stash.append(it)
 	rig = []
 	xp = 0.0
-	wound = ""
+	wounds = {}
 	hp = Data.BASE_HP
 	auto_tier = -1
 	_starter_loadout()
@@ -5580,7 +5598,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), yard_moves, str(atlas), is_night(), wound, _kit_ids()]
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), yard_moves, str(atlas), is_night(), wounds.keys(), _kit_ids()]
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -6519,13 +6537,15 @@ func use_med(id: int) -> bool:
 	for k in range(rig.size()):
 		if rig[k]["id"] == id:
 			var it: Dictionary = rig[k]
+			if hp >= max_hp() - 0.001 and Items.affix_total(it, "overflow_pct") <= 0.0 and not class_data().get("overheal", false):
+				return false                   # full, and nowhere for it to go: kept (the review: its end-of-heal work came free)
 			if has_rule("ambulance_bag"):
 				pass                           # the Ambulance's Bag (a mythic): never used up
 			elif (has_node("second_shift") or has_set_rule("ambulance")) and not mission.get("free_med", false):
 				mission["free_med"] = true     # the first med of the run isn't spent
 			else:
 				rig.remove_at(k)
-			mission["using"] = {"name": it["base"], "left": use_time(it), "heal": med_heal(it), "overflow": Items.affix_total(it, "overflow_pct") / 100.0}
+			mission["using"] = {"name": it["base"], "left": use_time(it), "time": use_time(it), "heal": med_heal(it), "overflow": Items.affix_total(it, "overflow_pct") / 100.0, "given": 0.0, "gained": 0.0}
 			_patch(mission, 0.0)          # field surgery: at once
 			return true
 	return false
@@ -6623,30 +6643,44 @@ func use_grenade(id: int) -> bool:
 	return false
 
 
+## A med as it says (19 Oct, Matt: "heal Xhp over N seconds" healed nothing till the timer ran out, then all of it): its
+## heal a share every second over its time, stopping at full - unless what heals past full has somewhere to go (a med's
+## overflow, the Paramedic's overheal: Guard). Field surgery: all of it at once. The rest of a med's work (Transfusion,
+## the dose, the bleed stopped, Clean hands, the Arsonist's Rig) lands as it finishes.
 func _patch(m: Dictionary, dt: float) -> void:
 	if m["using"] == null:
 		return
-	m["using"]["left"] -= dt
-	if has_node("overtime") and float(m.get("guard", 0.0)) > 0.0:
-		m["using"]["left"] -= dt                 # Overtime: with Guard up, a med takes half the time
-	if m["using"]["left"] <= 0.0 or has_node("field_surgery"):
+	var u: Dictionary = m["using"]
+	var step: float = dt * (2.0 if has_node("overtime") and float(m.get("guard", 0.0)) > 0.0 else 1.0)     # Overtime: with Guard up, a med takes half the time
+	var total_t: float = maxf(float(u.get("time", u["left"])), 0.0001)
+	var total: float = float(u["heal"])
+	var portion: float = total - float(u.get("given", 0.0)) if has_node("field_surgery") or float(u["left"]) <= step \
+		else total * step / total_t
+	u["left"] = float(u["left"]) - step
+	if has_node("field_surgery"):
+		u["left"] = 0.0
+	var spills: bool = float(u.get("overflow", 0.0)) > 0.0 or class_data().get("overheal", false)
+	if portion > 0.0:
 		var hp_was := hp
-		_heal(m, m["using"]["heal"] * (Data.FX["joint/paramedic_frost.heal"] if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true, float(m["using"].get("overflow", 0.0)))
-		if has_node("cap_transfusion"):
-			m["guard"] = guard_cap()             # Transfusion: a med fills Guard to the top
-		m["using"]["gained"] = hp - hp_was     # what it healed, after the max HP caps it (the log's figure)
-		if has_joint("paramedic_poison") and m["remaining"] > 0:
-			_dose(m)                         # the Paramedic's dose, joined: the med's a full stack of poison on them
-		if m.has("my_dots"):
-			m["my_dots"].erase("bleed")      # a dressing stops the bleeding
-		if has_node("cap_clean_hands"):
-			m["my_dots"] = {}                # Clean hands: everything on you cleared, and a grace
-			m["immune_t"] = 3.0
-		if has_rule("arsonists_rig") and m["remaining"] > 0:
-			_alight(m)                       # the Arsonist's Rig: the med's a petrol bomb's worth on everyone on you
-		m["meds_used"] += 1
-		log_event("%s used: +%d HP (%d of %d)" % [m["using"]["name"], int(round(float(m["using"].get("gained", 0.0)))), ceili(hp), ceili(max_hp())])
-		m["using"] = null
+		_heal(m, portion * (Data.FX["joint/paramedic_frost.heal"] if (has_joint("paramedic_frost") and float(m.get("chill_t", 0.0)) > 0.0) else 1.0), true, float(u.get("overflow", 0.0)))
+		u["given"] = float(u.get("given", 0.0)) + portion
+		u["gained"] = float(u.get("gained", 0.0)) + (hp - hp_was)     # what it healed, after the max HP caps it (the log's figure)
+	if float(u["left"]) > 0.0 and not (hp >= max_hp() - 0.001 and not spills):
+		return
+	if has_node("cap_transfusion"):
+		m["guard"] = guard_cap()             # Transfusion: a med fills Guard to the top
+	if has_joint("paramedic_poison") and m["remaining"] > 0:
+		_dose(m)                         # the Paramedic's dose, joined: the med's a full stack of poison on them
+	if m.has("my_dots"):
+		m["my_dots"].erase("bleed")      # a dressing stops the bleeding
+	if has_node("cap_clean_hands"):
+		m["my_dots"] = {}                # Clean hands: everything on you cleared, and a grace
+		m["immune_t"] = 3.0
+	if has_rule("arsonists_rig") and m["remaining"] > 0:
+		_alight(m)                       # the Arsonist's Rig: the med's a petrol bomb's worth on everyone on you
+	m["meds_used"] += 1
+	log_event("%s used: +%d HP (%d of %d)%s" % [u["name"], int(round(float(u.get("gained", 0.0)))), ceili(hp), ceili(max_hp()), " · stopped at full" if float(u["left"]) > 0.0 else ""])
+	m["using"] = null
 
 
 func _kill(m: Dictionary, t: Dictionary) -> void:
@@ -7553,7 +7587,7 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
 		"outcome": outcome, "time": snappedf(float(m["elapsed"]), 0.1), "kills": int(m["kills"]), "of": int(et.get("pool", 0)),
 		"auto": auto_tier >= 0, "cls2": cls2, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
-		"kit": loadout_value(), "wound_in": wound,
+		"kit": loadout_value(), "wound_in": ",".join(wounds.keys()),
 		# what the player saw and set off against (12 Oct, Matt: "how the bot plays isn't how a person plays"): the
 		# odds the Runs card read at the gate (-1 unread), the site's own fire and HP, and the kit's regen
 		"odds": snappedf(float(m.get("odds_seen", -1.0)), 0.01), "their_hp": int(et.get("hp", 0)), "their_dps": snappedf(float(et.get("dps", 0.0)), 0.1),
@@ -7721,7 +7755,7 @@ func _kia() -> void:
 	rig = []
 	operators_lost += 1
 	xp = 0.0
-	wound = ""                           # theirs, gone with them
+	wounds = {}                          # theirs, gone with them
 	hp = Data.BASE_HP
 	_signal_done(m, true)
 	_sweep_papers()                           # a paper the insurance or the dog brought home: the Radio's pile
@@ -7960,7 +7994,7 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return hash([equipped, level(), tree, cls, cls2, wound, _rig_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	return hash([equipped, level(), tree, cls, cls2, wounds.keys(), _rig_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -8759,25 +8793,32 @@ func heal_cost() -> int:
 	return int(ceil(maxf(0.0, max_hp() - hp) * Data.TREAT_CASH_PER_HP * _treat_rate()))
 
 
-func wound_cost() -> int:
-	return int(ceil(Data.WOUND_CASH * level() * _treat_rate() * (Data.FX["yard/surgery"] if yard_has("surgery") else 1.0))) if wound != "" else 0
+## A wound's treatment: WOUND_CASH a level, the Clinic's discount and the Surgery's.
+func wound_cost(area := "") -> int:
+	if area == "":
+		var all := 0
+		for a in wounds:
+			all += wound_cost(a)
+		return all
+	return int(ceil(Data.WOUND_CASH * level() * _treat_rate() * (Data.FX["yard/surgery"] if yard_has("surgery") else 1.0))) if wounds.has(area) else 0
 
 
-## Both at once: what the bot pays, and the old button.
+## Both at once: what the bot pays, and the Clinic's Treat everything (the HP and every wound).
 func treat_cost() -> int:
 	return heal_cost() + wound_cost()
 
 
 func needs_treating() -> bool:
-	return hp < max_hp() or wound != ""
+	return hp < max_hp() or not wounds.is_empty()
 
 
 func can_heal() -> bool:
 	return room_open("clinic") and mission == null and hp < max_hp() - 0.5 and cash >= heal_cost()
 
 
-func can_treat_wound() -> bool:
-	return room_open("clinic") and mission == null and wound != "" and cash >= wound_cost()
+func can_treat_wound(area := "") -> bool:
+	var has: bool = wounds.has(area) if area != "" else not wounds.is_empty()
+	return room_open("clinic") and mission == null and has and cash >= wound_cost(area)
 
 
 func heal() -> bool:
@@ -8789,13 +8830,16 @@ func heal() -> bool:
 	return true
 
 
-func treat_wound() -> bool:
-	if not can_treat_wound():
+## One wound seen to, by its area; "" for every one of them.
+func treat_wound(area := "") -> bool:
+	if not can_treat_wound(area):
 		return false
-	chron("treat", {"cost": wound_cost(), "wound": wound})
-	cash -= wound_cost()
-	log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
-	wound = ""
+	var areas: Array = [area] if area != "" else Data.WOUND_AREAS.filter(func(a): return wounds.has(a))
+	chron("treat", {"cost": wound_cost(area), "wound": ",".join(areas)})
+	cash -= wound_cost(area)
+	for a in areas:
+		log_event(Words.WOUNDS["treated"] % [str(Data.WOUND_AREA[a]["name"]), wound_stat_name(str(wounds[a]["stat"]))])
+		wounds.erase(a)
 	_dry_memo.clear()
 	return true
 
@@ -8803,11 +8847,13 @@ func treat_wound() -> bool:
 func treat() -> bool:
 	if not room_open("clinic") or mission != null or not needs_treating() or cash < treat_cost():     # the Clinic's (13 Oct)
 		return false
-	chron("treat", {"cost": treat_cost(), "wound": wound, "hp": int(hp), "max": int(max_hp())})
+	chron("treat", {"cost": treat_cost(), "wound": ",".join(wounds.keys()), "hp": int(hp), "max": int(max_hp())})
 	cash -= treat_cost()
-	if wound != "":
-		log_event("The wound seen to: %s back" % ("max HP" if wound == "hp" else wound))
-		wound = ""
+	for a in Data.WOUND_AREAS:
+		if wounds.has(a):
+			log_event(Words.WOUNDS["treated"] % [str(Data.WOUND_AREA[a]["name"]), wound_stat_name(str(wounds[a]["stat"]))])
+	if not wounds.is_empty():
+		wounds = {}
 		_dry_memo.clear()
 	hp = max_hp()
 	return true
@@ -9032,7 +9078,7 @@ func _state() -> Dictionary:
 		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
-		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wound": wound,
+		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
@@ -9158,7 +9204,12 @@ func load_dict(d: Dictionary) -> void:
 	tree = kept
 	_load_yard(d)
 	hardcore = bool(d.get("hardcore", false))
-	wound = str(d.get("wound", "")) if str(d.get("wound", "")) in Data.WOUND_STATS else ""
+	wounds = {}
+	var saved_w = d.get("wounds", {})
+	if saved_w is Dictionary:
+		for a in saved_w:
+			if str(a) in Data.WOUND_AREAS and saved_w[a] is Dictionary:
+				wounds[str(a)] = {"stat": str(Data.WOUND_AREA[str(a)]["stat"]), "what": str(saved_w[a].get("what", "")), "from": str(saved_w[a].get("from", "")), "hp_pct": int(saved_w[a].get("hp_pct", 0))}
 	camp_lost = bool(d.get("camp_lost", false))
 	if d.has("depth"):
 		for i in range(Data.TIERS.size()):

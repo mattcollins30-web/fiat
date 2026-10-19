@@ -20,6 +20,8 @@ const Inventory := preload("res://scripts/ui/inventory.gd")
 const ItemHead := preload("res://scripts/ui/item_head.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Band := preload("res://scripts/ui/band.gd")
+const ClinicBody := preload("res://scripts/ui/clinic_body.gd")
+const MedCards := preload("res://scripts/ui/med_cards.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -110,6 +112,8 @@ var _words: Array[Label] = []      # the item's own line, two rows under the fig
 var _buttons: Array[Button] = []
 var _actions: Array = []
 var _shown := ""
+var _body                          # the Clinic's runner: the outline, the wounds, the HP (clinic_body.gd, 19 Oct)
+var _meds                          # the Clinic's meds as cards, in the grid's place (med_cards.gd, 19 Oct)
 
 
 func _init() -> void:
@@ -270,6 +274,16 @@ func setup(k: String) -> void:
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
+		# Clinic A and B (19 Oct): the runner's body and wounds down the left, the meds as cards on their tab
+		_body = ClinicBody.new(INNER, BODY_H - TOP - PAD)
+		_body.position = Vector2(PAD, TOP)
+		_body.acted.connect(_on_treated)
+		_side.add_child(_body)
+		_meds = MedCards.new(GRID_W, BODY_H)
+		_meds.position = Vector2(GRID_X, BODY_Y)
+		_meds.visible = false
+		_meds.acted.connect(_on_acted)
+		add_child(_meds)
 	_band.set_site("The Clinic" if kind == "clinic" else "The Fence")     # art/places/the_clinic.png, the_fence.png when painted (9 Oct); the skyline till then
 	if not People.show(_face, "medic" if kind == "clinic" else "fence"):
 		_band.portrait_width(0)           # no art yet: the words take the band
@@ -298,10 +312,14 @@ func show_state(s) -> void:
 	_shelf.show_items(sim, stock, cells, maxi(shelf_cap, cells), "Shelf")
 	_stash.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_shelf.visible = showing == "shelf"
-	_stash.visible = showing == "stash"
+	_stash.visible = showing == "stash" and kind != "clinic"
 	_deals.visible = showing == "contracts"
 	_word.visible = showing == "word"
-	_panel.visible = not (_deals.visible or _word.visible)     # the contracts and the word take the grid's and the panel's place (Bands-U A)
+	if _meds != null:
+		_meds.visible = showing == "stash"
+		if _meds.visible:
+			_meds.show_state(sim)
+	_panel.visible = not (_deals.visible or _word.visible or (_meds != null and _meds.visible))     # the contracts, the word and the meds take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 	var sig := _signature()
@@ -309,7 +327,7 @@ func show_state(s) -> void:
 		return
 	_shown = sig
 	_tabs[0].text = "Shelf"                 # its count is the grid's header (18 Oct, said once)
-	_tab_text(_tabs[1], [("Stash (%d)" % sim.stash.size()) if kind == "fence" else ("Your meds (%d)" % _stash_meds()), "Stash" if kind == "fence" else "Meds"])
+	_tab_text(_tabs[1], [("Stash (%d)" % sim.stash.size()) if kind == "fence" else "Meds", "Stash" if kind == "fence" else "Meds"])
 	UI.style_button(_tabs[0], showing == "shelf")
 	UI.style_button(_tabs[1], showing == "stash")
 	if kind == "fence":
@@ -506,7 +524,7 @@ func _stash_meds() -> int:
 
 func _signature() -> String:
 	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
-		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), sim.wound,
+		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), str(sim.wounds.keys()),
 		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
 	for it in _stock():
 		parts.append("m" + str(it["id"]))
@@ -519,20 +537,26 @@ func _signature() -> String:
 	return "|".join(parts)
 
 
-## The Clinic's treatment block, at the top of the side panel.
+## The Clinic's band (19 Oct, Clinic A): the HP, the wounds' count, a chip a wound's cut; the body below, every refresh
+## (HP moves while resting).
 func _show_treatment() -> void:
 	var full: bool = sim.hp >= sim.max_hp() - 0.5
-	var state: String = ("wounded: %s −%d%%" % [("max HP" if sim.wound == "hp" else sim.wound), sim.wound_pct()]) if sim.wound != "" else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
+	var n: int = sim.wounds.size()
+	var state: String = ("%d wound%s" % [n, "" if n == 1 else "s"]) if n > 0 else ("fit for duty" if full else ("out on a run" if sim.on_mission() else "resting"))
 	_band.set_words("The Clinic · the medic", "", "%d" % sim.hp_shown(),
-		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP · wounded" % sim.max_hp_shown(), "of %d HP" % sim.max_hp_shown()], Pal.BAD if sim.wound != "" else (Pal.GOOD if full else Pal.ACCENT))
+		["of %d HP · %s" % [sim.max_hp_shown(), state], "of %d HP" % sim.max_hp_shown()], Pal.BAD if n > 0 else (Pal.GOOD if full else Pal.ACCENT))
+	var cuts: Array = []
+	for a in Data.WOUND_AREAS:
+		if sim.wounds.has(a):
+			var nm: String = sim.wound_stat_name(str(sim.wounds[a]["stat"]))
+			cuts.append({"forms": ["−%d%% %s" % [sim.wound_pct(), nm], "−%d%% %s" % [sim.wound_pct(), nm.replace("max HP", "HP")]], "colour": "bad"})
 	_band.headline_under_title(true)
-	_side_title.text = "TREATMENT"
-	_side_title.visible = true
-	var fill: float = clampf(sim.hp / sim.max_hp(), 0.0, 1.0)
-	_side_fill.size.x = roundf(INNER * fill)
-	(_side_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.GOOD if fill > 0.5 else Pal.WARN
-	_side_bar_text.text = ""                # a plain bar: the band says the HP and the wound (18 Oct, said once)
-	_side_track.visible = true
+	_band.chips.visible = not cuts.is_empty()
+	if not cuts.is_empty():
+		_band.chips.size.x = Pal.BAND_TEXT_W + 120     # three cuts across (the band's words run as far)
+		_band.chips.show_chips(cuts, 1, true)
+	if _body != null:
+		_body.show_state(sim)
 
 
 func _side_button(i: int, y: float, text: String, action: Callable, enabled: bool, tone := "", primary := false, x := float(PAD), w := float(INNER)) -> void:
@@ -578,54 +602,7 @@ func _show_side() -> void:
 		h.visible = false
 	_side_track.visible = false
 	if kind == "clinic":
-		_show_treatment()
-		var full: bool = sim.hp >= sim.max_hp() - 0.5 and sim.wound == ""
-		var y_in: float = TOP + UI.HEAD_H + 2 + 24 + 6
-		for t in _side_tiles_c:
-			t["panel"].visible = true
-		var hurt: bool = sim.hp < sim.max_hp() - 0.5
-		UI.set_tile(_side_tiles_c[0], "Resting", ["+%.1f HP a second" % sim.rest_rate(), "+%.1f HP/s" % sim.rest_rate()])
-		var cpicks: int = 0
-		for c in range(5):
-			if sim.yard_side("clinic", c) != "":
-				cpicks += 1
-		UI.set_tile(_side_tiles_c[1], "Upgrades", ["%d of 5" % cpicks, "%d/5" % cpicks], Pal.GOOD if cpicks >= 5 else Pal.TEXT)    # built in the Yard (9 Oct)
-		y_in += UI.TILE_H + 10
-		# the two jobs side by side (Clinic-B, 7 Oct): the one that applies is the primary, the other says what it is
-		var half: float = (INNER - 10) / 2.0
-		var out: bool = sim.on_mission()
-		_side_button(0, y_in, "The runner is out" if out else ("Heal (%s)" % Fmt.money(sim.heal_cost()) if hurt else "Full HP"), sim.heal, hurt and not out and sim.cash >= sim.heal_cost(), "", hurt and not out, PAD, half)
-		_side_button(1, y_in, "The runner is out" if out else ("Treat the wound (%s)" % Fmt.money(sim.wound_cost()) if sim.wound != "" else "No wound"), sim.treat_wound, sim.wound != "" and not out and sim.cash >= sim.wound_cost(), "", sim.wound != "" and not out and not hurt, PAD + half + 10, half)
-		if not out and hurt:
-			UI.fit_button(_side_buttons[0], Fmt.money_forms(sim.heal_cost()).map(func(m): return "Heal (%s)" % m))
-		if not out and sim.wound != "":
-			UI.fit_button(_side_buttons[1], Fmt.money_forms(sim.wound_cost()).map(func(m): return "Treat the wound (%s)" % m) + ["Wound: %s" % Fmt.short_num(sim.wound_cost())])
-		if full and not out:
-			_side_buttons[0].text = "Fit for duty"
-		y_in += 48 + 8
-		# your meds, by kind: what each heals for you, and how many there are
-		y_in += 8
-		_heads[1].position.y = y_in
-		_heads[1].text = "YOUR MEDS · IN THE STASH, WHAT EACH DOES FOR YOU"
-		_heads[1].visible = true
-		y_in += UI.HEAD_H + 2
-		var counts_in := {}
-		var order := []
-		for it in sim.stash:
-			if Items.is_medical(it):
-				if not counts_in.has(it["base"]):
-					counts_in[it["base"]] = {"n": 0, "it": it}
-					order.append(it["base"])
-				counts_in[it["base"]]["n"] += 1
-		for k in range(_med_tiles.size()):
-			var t: Dictionary = _med_tiles[k]
-			@warning_ignore("integer_division")
-			t["panel"].position.y = y_in + (k / 2) * (UI.TILE_H + TILE_GAP)
-			if k < order.size():
-				var it: Dictionary = counts_in[order[k]]["it"]
-				var heal: float = Items.heal(it) * sim.cm("heal") * (1.0 + sim.tree_sum("heal_pct") / 100.0)
-				t["panel"].visible = true
-				UI.set_tile(t, "%s ×%d" % [order[k], counts_in[order[k]]["n"]], ["heals %.0f over %.0f s" % [heal, sim.use_time(it)], "heals %.0f" % heal])
+		_show_treatment()                 # the band and the body (clinic_body.gd): the old side's tiles and buttons are the Fence's
 		return
 	# the Fence: the band, then sell by rarity, the boxes and the shelf, the contracts
 	var worth_all := 0
@@ -851,6 +828,8 @@ func _on_visit() -> void:
 	if kind == "clinic":
 		if _lost_seen >= 0 and sim.operators_lost > _lost_seen:
 			_line = Words.MEDIC["new_runner"]
+		elif not sim.wounds.is_empty():
+			_line = Words.MEDIC["wounds"][mini(sim.wounds.size(), 3) - 1] if sim.wounds.size() > 1 else str(Words.MEDIC["wound"][sim.wounds.keys()[0]])
 		elif sim.hp < sim.max_hp() * 0.5:
 			_line = Words.MEDIC["hurt"]
 		else:
@@ -879,13 +858,13 @@ func _show_said() -> void:
 
 func _side_press(i: int) -> void:
 	var was_hp: float = sim.hp
-	var was_wound: String = sim.wound
+	var was_wounds: int = sim.wounds.size()
 	var was_level: int = sim.clinic_stock() + sim.market_stock()
 	var was_n: int = sim.stash.size()
 	if _side_actions[i].is_valid():
 		_side_actions[i].call()
-	if kind == "clinic" and (sim.hp > was_hp or (was_wound != "" and sim.wound == "")):
-		_says("fit" if sim.hp >= sim.max_hp() and sim.wound == "" else "treated")
+	if kind == "clinic" and (sim.hp > was_hp or sim.wounds.size() < was_wounds):
+		_says("fit" if sim.hp >= sim.max_hp() and sim.wounds.is_empty() else "treated")
 	elif sim.clinic_stock() + sim.market_stock() > was_level:
 		_says("shelf")
 	elif sim.stash.size() < was_n:
@@ -894,6 +873,13 @@ func _side_press(i: int) -> void:
 		_says("bought")
 	if _selected_item().is_empty():
 		selected = {}
+	acted.emit()
+
+
+## The body's Treat (clinic_body.gd): the medic's word, then the room again.
+func _on_treated() -> void:
+	_says("fit" if sim.hp >= sim.max_hp() - 0.5 and sim.wounds.is_empty() else "treated")
+	_shown = ""
 	acted.emit()
 
 
@@ -943,6 +929,10 @@ func text_nodes() -> Array:
 		out.append_array(_head.text_nodes())
 	out.append_array(_band.text_nodes())
 	out.append_array(_said)
+	if _body != null:
+		out.append_array(_body.text_nodes())
+	if _meds != null and _meds.visible:
+		out.append_array(_meds.text_nodes())
 	for h in _heads:
 		if h.visible:
 			out.append(h)
@@ -983,7 +973,7 @@ func text_nodes() -> Array:
 	for b in _buttons:
 		if b.visible:
 			out.append(b)
-	if showing != "contracts" and showing != "word":
+	if showing == "shelf" or (showing == "stash" and kind != "clinic"):
 		out.append_array((_shelf if showing == "shelf" else _stash).text_nodes())
 	return out
 

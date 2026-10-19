@@ -401,7 +401,7 @@ func show_state(s) -> void:
 		_bar(_fight, float(bf[0]), str(bf[1][0]), str(bf[2]))
 		UI.fit(_fight["bar_text"], bf[1])
 	# the runner, and their wound when they carry one (30)
-	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if sim.wound != "" else "THE RUNNER"
+	_runner["head"].text = ("THE RUNNER · " + sim.wound_words().to_upper()) if not sim.wounds.is_empty() else "THE RUNNER"
 	var g: float = sim.guard()
 	var hp_words: String = ("Your HP %d / %d · Guard %d" % [sim.hp_shown(), sim.max_hp_shown(), int(round(g))]) if g >= 0.5 else ("Your HP %d / %d" % [sim.hp_shown(), sim.max_hp_shown()])
 	_bar(_runner, clampf(sim.hp / sim.max_hp(), 0.0, 1.0), hp_words, "bad" if low else "good", m.get("my_dots", {}), sim.max_hp(), g / maxf(1.0, sim.max_hp()))

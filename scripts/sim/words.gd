@@ -323,6 +323,8 @@ const MEDIC := {
 	"treated": ["Hold still.", "That's the third time with that arm.", "You'll do.", "Keep it dry. Nothing round here is dry."],
 	"fit": "Nothing wrong with you that I can charge for.",
 	"hurt": "Lie down before you fall down.",
+	"wound": {"head": "Look at me. No, at me. Follow the finger.", "chest": "Breathe in. Now don't. That's the rib.", "legs": "Walk it off? Not on that leg."},
+	"wounds": ["", "Two of them now. You're collecting.", "Three of them. Sit down before you fall down."],
 	"new_runner": "Another one. The last one didn't listen either.",
 	"shelf": "More on the shelf. It won't be enough.",
 }
@@ -1099,3 +1101,11 @@ static func toast_tone(line: String) -> String:
 	if line.begins_with(RADIO_LEAD):
 		return "none"                           # the radio line under the top bar plays it (13 Oct): no toast
 	return "none"
+
+
+## The wounds (19 Oct, Matt: three at most, one an area, the Clinic the cure).
+const WOUNDS := {
+	"took": "%s: %s. %s −%d%% until the Clinic sees to it (%d of 3)",
+	"full": "Hurt again, and nowhere left to hurt: three wounds is the most a runner carries",
+	"treated": "%s seen to: %s back",
+}

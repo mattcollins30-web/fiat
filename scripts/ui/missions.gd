@@ -542,7 +542,7 @@ static func odds_reasons(s, i: int) -> Array:
 					have += int(it.get("rounds", 0))
 		if have <= 0:
 			out.append({"forms": ["No rounds"], "colour": "bad"})
-	if s.wound != "":
+	if not s.wounds.is_empty():
 		out.append({"forms": [s.wound_words(), "Wounded"], "colour": "warn"})
 	var gear_lv: int = s.wear_of(int(s.effective(i)["level"]))
 	if s.level() < gear_lv:

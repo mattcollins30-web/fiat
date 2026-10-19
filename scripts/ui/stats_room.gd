@@ -294,7 +294,7 @@ func _show_runner(lv: int) -> void:
 	c["fill"].size.x = roundf(c["track"].size.x * fill)
 	c["xp"].text = "%s / %s XP to level %d" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp), shown + 1]
 	var who := []
-	if sim.wound != "":
+	if not sim.wounds.is_empty():
 		who.append([sim.wound_words(), "bad"])
 	if sim.cls != "":
 		who.append([sim.cls, ""])

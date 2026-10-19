@@ -5665,3 +5665,10 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   amber diamonds once their rebuild opens them; the picked pin's card at the right (the old column, one now). The tabs
   are gone, the order's fifth with them. A pad or the keys step the pins (left/right, up/down). The smoke checks no
   two names on the map cross and all sit inside it. For the art manifest later: the painted map in these shapes.
+- Done (19 Oct): the Clinic's wounds and meds over time (Clinic A and B). Wounds stack: one a run, to the head (max
+  HP), the chest (armour) or the legs (pace), three at most - a fourth bad run adds nothing and says so. The Clinic's
+  left: the body with each wound marked, a row a wound (what, its cut, the run it came from and the HP when it hit,
+  Treat), the HP resting, and one button for the lot; the band's chips are the cuts. The Meds tab is cards: what each
+  heals over its time, HP a second, stops at full (or the share to Guard), stash or rig, Into the rig. Meds heal as
+  they say: a share every second, the end-of-heal work (Transfusion, Clean hands...) as it finishes; a med at full
+  HP with nowhere to spill isn't taken. For the balance pass: three wounds cost three times one; meds land slower.
