@@ -73,6 +73,7 @@ var can_many := true               # a vendor's shelf has no Select-many
 var page_rows := ROWS              # rows a page; set_rows() for fewer
 var drag_src := ""                 # set by the owner: cells can be dragged out, carrying this name
 var accepts := []                  # drag sources this grid takes drops from, e.g. ["rig"]
+var marks := {}                    # id -> "go", "could" or "dim": the Fence's contract marks (19 Oct); {} none
 var _press_at := Vector2.ZERO      # where a cell press began, for the drag threshold
 var _press_cell := -1
 var _fill: Label
@@ -174,11 +175,19 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 			items.sort_custom(func(a, b): return a["id"] > b["id"])
 		"Slot":
 			items.sort_custom(func(a, b): return a["slot"] < b["slot"] if a["slot"] != b["slot"] else a["value"] > b["value"])
+	# a contract's marks (Fence B): what goes, then what would do, ahead of the rest - never a page away
+	if not marks.is_empty():
+		var by_mark := {"go": 0, "could": 1}
+		var ranked: Array = []
+		for k in range(items.size()):
+			ranked.append([int(by_mark.get(str(marks.get(items[k]["id"], "")), 2)), k, items[k]])
+		ranked.sort_custom(func(a, b): return a[0] < b[0] if a[0] != b[0] else a[1] < b[1])
+		items = ranked.map(func(x): return x[2])
 	# keep selections that still exist
 	chosen = chosen.filter(func(id): return _has(id))
 	if selected >= 0 and not _has(selected):
 		selected = -1
-	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning)]
+	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks)]
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
@@ -249,6 +258,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		c.show_item(it, (it["id"] in chosen) if many else it["id"] == selected)
 		c.set_upgrade(ups[it["id"]])
 		c.set_locked(locks[it["id"]])
+		c.set_mark(str(marks.get(it["id"], "")))
 		k += 1
 	while k < _cells.size():
 		_cells[k].visible = false

@@ -1182,6 +1182,27 @@ func contract_fits(c: Dictionary, it: Dictionary) -> bool:
 	return it["slot"] == c["slot"] and int(it["rarity"]) >= int(c["rarity"])
 
 
+## What would go to this contract: `pick` (ids, the player's swap, 19 Oct) when it's the count and every one fits,
+## else the cheapest that fit, up to its count.
+func contract_pick(c: Dictionary, pick: Array) -> Array:
+	if pick.size() == int(c["count"]):
+		var out: Array = []
+		for id in pick:
+			var it := item_by_id(int(id))
+			if it.is_empty() or not stash.has(it) or not contract_fits(c, it) or out.has(it):
+				return contract_items(c)
+			out.append(it)
+		return out
+	return contract_items(c)
+
+
+## Everything in the stash this contract takes, cheapest first.
+func contract_all(c: Dictionary) -> Array:
+	var fits: Array = stash.filter(func(it): return contract_fits(c, it))
+	fits.sort_custom(func(a, b): return a["value"] < b["value"])
+	return fits
+
+
 ## What in the stash would go to this contract: the cheapest that fit, up to its count.
 func contract_items(c: Dictionary) -> Array:
 	var fits: Array = []
@@ -1199,11 +1220,11 @@ func can_hand_in(k: int) -> bool:
 	return contract_items(c).size() >= int(c["count"])
 
 
-func hand_in(k: int) -> bool:
+func hand_in(k: int, pick := []) -> bool:
 	if not can_hand_in(k):
 		return false
 	var c: Dictionary = contracts[k]
-	for it in contract_items(c):
+	for it in contract_pick(c, pick):
 		_remove(it)
 	var paid := ""
 	match c["pay"]:
@@ -8609,10 +8630,30 @@ func _remove(it: Dictionary) -> bool:
 func sell_rarity(r: int) -> int:
 	var n := 0
 	for it in stash.duplicate():
-		if it["rarity"] == r and not Items.is_paper(it) and not it.get("mythic", false):     # nor a mythic in a lot (the review)     # the deeds are sold on purpose or not at all; a paper's a key to the endgame (15 Oct): one at a time
+		if _spare(it, r):
 			sell(it)
 			n += 1
 	return n
+
+
+## A piece the Fence's rarity row sells (19 Oct, Matt's Fence A: "sell what you don't wear"): that rarity, not a paper,
+## not a mythic, not the deeds, and not an upgrade on what's worn - that's kept.
+func _spare(it: Dictionary, r: int) -> bool:
+	return int(it["rarity"]) == r and not Items.is_paper(it) and not it.get("mythic", false) and not Items.is_deeds(it) and not (str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1)
+
+
+## A rarity's row: [pieces sold, what they fetch, upgrades kept back].
+func rarity_spare(r: int) -> Array:
+	var n := 0
+	var worth := 0
+	var kept := 0
+	for it in stash:
+		if _spare(it, r):
+			n += 1
+			worth += sell_price(it)
+		elif int(it["rarity"]) == r and str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1:
+			kept += 1
+	return [n, worth, kept]
 
 
 ## The junk run.

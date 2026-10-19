@@ -16,6 +16,7 @@ const PlaytestRead := preload("res://tools/playtest_summary.gd")
 const SMOKE_SAVE := "user://smoke_autosave.save"
 const SMOKE_SLOT := "user://smoke_slot%d.save"
 var _player_saves_before := {}
+var _code_word := RegEx.create_from_string("\\b[a-z]+_[a-z_]+\\b")
 
 
 ## The player's own save files on this machine, by size and time: the smoke must leave every one as it found it.
@@ -1091,7 +1092,7 @@ func _fence_screen(main) -> void:
 	# the Fence's word (the gamble, Matt, 6 Oct): the fourth tab, five kinds with a price, Pay through the screen, the last word under them
 	main._fence._show("word")
 	main.refresh()
-	_check(main._fence._word.visible and not main._fence._shelf.visible and not main._fence._deals.visible, "the word tab did not show its panel alone")
+	_check(main._fence._word.visible and not main._fence._shelf.visible and not main._fence._list.visible, "the word tab did not show its panel alone")
 	_check(main._fence._tabs[3].visible and main._fence._tabs[3].text.begins_with("The word"), "the word tab reads '%s'" % main._fence._tabs[3].text)
 	var shown_offers: int = 0
 	for o in main._fence._offers:
@@ -1122,12 +1123,12 @@ func _fence_screen(main) -> void:
 		if it["rarity"] == 0 and not Items.is_deeds(it) and not Items.is_paper(it) and not it.get("mythic", false):     # sell_rarity keeps papers and mythics (18 Oct: a P45 in the bot's stash made this flake)
 			commons += 1
 	if commons > 0:
-		main._fence._side_press(0)          # Common
+		main._fence._sell._sell(0)          # Common (Fence A, 19 Oct: an upgrade on what's worn is kept)
 		var left := 0
 		for it in sim.stash:
-			if it["rarity"] == 0 and not Items.is_deeds(it) and not Items.is_paper(it) and not it.get("mythic", false):      # the deeds never go to the Fence (13 Oct: the bot's run had found them); papers and mythics one at a time
+			if sim._spare(it, 0):      # the deeds never go to the Fence (13 Oct: the bot's run had found them); papers and mythics one at a time
 				left += 1
-		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return x["rarity"] == 0 and not Items.is_deeds(x) and not Items.is_paper(x)).map(func(x): return x["base"]))])
+		_check(left == 0, "Sell commons through the screen left %d: %s" % [left, str(sim.stash.filter(func(x): return sim._spare(x, 0)).map(func(x): return x["base"]))])
 	_check_fit(main, "Fence (after)")
 	main._fence._show("shelf")
 	print("fence screen ok")
@@ -1376,7 +1377,7 @@ func _narrative_checks(main) -> void:
 	# the A style on the vendors: the band with the face, the name and the figure; the line under it; the tabs in the band's foot; the sections
 	var fv = main._fence
 	# the rooms' one band across the top (10 Oct, Bands-U A): the kicker names the vendor, the figure in gold, no title line
-	_check(fv._band.title.text == "" and fv._band.headline.text.contains("tin") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
+	_check(fv._band.title.text == "" and fv._band.unit.text.contains("tin") and fv._band.kicker.text.begins_with("The Fence · ") and fv._band.size == Vector2(Pal.GRID_W, Pal.BAND_H), "the Fence's band is off: '%s' / '%s' / '%s' %s" % [fv._band.kicker.text, fv._band.title.text, fv._band.headline.text, str(fv._band.size)])
 	_check(fv._said[0].text != "" and fv._side.position.y + fv._said[0].position.y >= fv.BAND_H, "the Fence's line is not under the band: '%s' at %.0f" % [fv._said[0].text, fv._side.position.y + fv._said[0].position.y])
 	var ftab_x := 0.0
 	for t in fv._tabs:
@@ -1384,9 +1385,8 @@ func _narrative_checks(main) -> void:
 		ftab_x = t.position.x + t.size.x
 	for t in fv._tabs:
 		_check(t.position.y + t.size.y <= fv.BAND_H and t.visible, "a fence tab is not in the band's foot")
-	_check(fv._side_tiles[0]["key"].text == "Com" and fv._side_tiles[Data.RARITIES.size() - 1]["key"].text == "Leg" and fv._side_tiles[Data.RARITIES.size()]["key"].text.begins_with("Nails") and not fv._side_tiles[Data.RARITIES.size() + 5]["button"].visible, "the Fence's tiles are off (no shelf tile since 18 Oct: said once): %s" % str(fv._side_tiles.map(func(t): return t["key"].text)))
-	_check(fv._side_tiles[1]["value"].get_theme_color("font_color") == Pal.GOOD or fv._side_tiles[1]["button"].disabled, "the uncommon tile's figure is not green")
-	_check(fv._heads[2].visible and fv._heads[2].text.begins_with("THE CONTRACTS"), "the Fence's contracts head is off: '%s'" % fv._heads[2].text)
+	# Fence A (19 Oct): a row a rarity, then the boxes; no old tiles
+	_check(fv._sell.visible and fv._sell.row_of(0)["name"].text == "Common" and fv._sell.row_of(Data.RARITIES.size() - 1)["name"].text == str(Data.RARITIES[Data.RARITIES.size() - 1]["name"]) and not fv._side_tiles.any(func(t): return t["button"].visible), "the Fence's rarity rows are off: %s" % str(range(Data.RARITIES.size()).map(func(r): return fv._sell.row_of(r)["name"].text)))
 	_check(fv._band.kicker.position.x >= fv._face.position.x + fv._face.size.x or not fv._face.visible, "the Fence's words sit on the face")
 	main.show_room(main.MEDIC)
 	main.refresh()
@@ -1811,7 +1811,7 @@ func _craft_view_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.cash = 100000.0
 	var piece: Dictionary = Items.roll("Primary", 6, sim.rng, 12)
-	piece["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "dps_pct", "value": 10.0, "tier": 1}]
+	piece["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "damage_pct", "value": 10.0, "tier": 1}]
 	sim.stash.append(piece)
 	main.show_room(main.WORKSHOP)
 	main._workshop._set_view("craft")
@@ -3812,7 +3812,8 @@ func _contracts_checks(main) -> void:
 	main._fence._show("contracts")
 	_check_fit(main, "Fence (contracts)")
 	var cash0: float = sim.cash
-	main._fence._hand_in(0)
+	main._fence._pick_contract(0)
+	main._fence._hand_contract(0)
 	_check(sim.cash == cash0 + 500.0, "handing in did not pay £500")
 	_check(not sim.stash.has(cheap) and not sim.stash.has(mid) and sim.stash.has(common), "the wrong helmets went")
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN, "the handed-in contract was not replaced")
@@ -3876,21 +3877,22 @@ func _contracts_checks(main) -> void:
 		main._fence._show("contracts")
 		main._fence._shown = ""
 		main.refresh()
-		var t0: String = main._fence._deal_rows[0]["have"].text
-		_check(t0.begins_with("Wants") or t0.begins_with("Could") or t0.begins_with("Someone") or t0.contains("wanted") or t0.begins_with("Looking"), "the Fence's line is not in his voice: '%s'" % t0)
-		_check(main._fence._deal_rows[0]["title"].text == "Two uncommon helmets", "the ask is not the row's title: '%s'" % main._fence._deal_rows[0]["title"].text)
+		var t0: String = main._fence._list.row_of(0)["have"].text
+		_check(t0.ends_with("/ 2"), "the row's count is not of two: '%s'" % t0)
+		_check(main._fence._list.row_of(0)["title"].text == "Two uncommon helmets", "the ask is not the row's title: '%s'" % main._fence._list.row_of(0)["title"].text)
 		# every affix the Fence can ask for is named on the row, whole or short
 		for slot in Data.CONTRACT_SLOTS.slice(0, Data.CONTRACT_SLOTS.size() - 1):
 			for a in Items.allowed_affixes(slot):
 				sim.contracts[0] = {"kind": "affix", "slot": slot, "rarity": 1, "count": 1, "level": 0, "stat": a["stat"], "pay": "notes", "amount": 5, "salvage": ""}
 				main._fence._shown = ""
 				main.refresh()
-				var tt: String = main._fence._deal_rows[0]["title"].text
+				var tt: String = main._fence._list.row_of(0)["title"].text
 				_check(tt.contains(sim.contract_affix_phrase(a["stat"])) or tt.ends_with(str(a["short"])), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
-				_check(main._fence._deal_rows[0]["have"].text != "", "the Fence's line went blank for %s on a %s" % [a["stat"], slot])
+				_check(main._fence._list.row_of(0)["have"].text != "", "the row's count went blank for %s on a %s" % [a["stat"], slot])
 		_check(sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}) == "an armour with fire conversion", "the affix ask reads '%s'" % sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}))
 		_check_fit(main, "Fence (contracts in the voice)")
 	print("contracts and the mate ok: three open, the cheapest that fit, cash, notes, the mate")
+	_fence_ab_checks(main)
 	_events_checks(main)
 
 
@@ -7096,6 +7098,10 @@ func _check_nodes(nodes: Array, pairs: Array, where: String) -> int:
 		if n.text.contains("£"):
 			push_error("%s: '%s' shows pounds; everything is paid in tins (13 Oct)" % [where, n.text])
 			bad += 1
+		# a code name in the words (19 Oct: a rename caught "3 n_ready" in the Fence's band)
+		if _code_word.search(n.text) != null:
+			push_error("%s: '%s' shows a code name" % [where, n.text])
+			bad += 1
 		# "the Yard" is back as the Pitch's tree of works (18 Oct, Matt's call 3); the Pitch stays the place
 		var room := 32.0 if n is Button else 0.0
 		var w: float = UI_v.text_width(n, n.text) + room
@@ -7482,8 +7488,8 @@ func _contract_material_checks(main) -> void:
 	main._fence._show("contracts")
 	main._fence._shown = ""
 	main.refresh()
-	_check(main._fence._deal_rows.filter(func(r): return r["panel"].visible).size() == Data.CONTRACTS_MAX, "the tab does not show five rows with Orders")
-	_check(main._fence._deal_rows[0]["pass"].text.begins_with("Turn it down ·") and main._fence._deal_rows[0]["tag"].text != "", "a row's turn-down or its tag is off: '%s'" % main._fence._deal_rows[0]["pass"].text)
+	_check(range(Data.CONTRACTS_MAX).filter(func(k): return main._fence._list.row_of(k)["panel"].visible).size() == Data.CONTRACTS_MAX, "the tab does not show five rows with Orders")
+	_check(main._fence._list.row_of(0)["pass"].text == "Pass" and main._fence._list.row_of(0)["tag"].text != "", "a row's Pass or its tag is off: '%s'" % main._fence._list.row_of(0)["pass"].text)
 	_check_fit(main, "Fence (five contracts)")
 	# the Fence's contracts tab reads them and fits
 	main.show_room(main.MARKET)
@@ -15647,3 +15653,130 @@ func _map_checks(main) -> void:
 	M._shown = ""
 	main.refresh()
 	print("the drawn Map ok: a pin picks its card, a shut zone's don't, no names cross, all inside, the order's places")
+
+
+## Fence A and B (19 Oct, Matt's picks): the rarity rows sell what isn't worn and keep an upgrade back; the boxes put
+## your guns' rounds first and lit; a part says which gun it fits; a contract marks the stash - what goes, what would
+## do, the rest shaded - and a cell picked swaps what goes, the pick handed in.
+func _fence_ab_checks(main) -> void:
+	var sim = main.sim
+	if not sim.room_open("fence") or sim.on_mission():
+		_check(false, "the Fence was not open for its A/B checks")
+		return
+	var saved: Dictionary = sim.to_dict()
+	var fv = main._fence
+	main.show_room(main.MARKET)
+	# A: an upgrade on what's worn is kept back from its rarity's row
+	sim.equipped["Helmet"] = null
+	sim.stash.clear()
+	var up: Dictionary = sim._plain("Helmet", "Hard hat")
+	up["rarity"] = 1
+	var part: Dictionary = sim._plain(Data.ATTACHMENT, "Red dot")
+	part["rarity"] = 1
+	sim.stash.append_array([up, part])
+	var sp: Array = sim.rarity_spare(1)
+	_check(int(sp[0]) == 1 and int(sp[2]) == 1 and int(sp[1]) == sim.sell_price(part), "the uncommon row did not keep the upgrade back: %s" % str(sp))
+	fv._show("shelf")
+	fv._sell._shown = ""
+	main.refresh()
+	var row: Dictionary = fv._sell.row_of(1)
+	_check(row["count"].text.contains("kept") and not row["sell"].disabled, "the uncommon row does not say the upgrade's kept: '%s'" % row["count"].text)
+	_check(fv._sell.row_of(3)["sell"].disabled and fv._sell.row_of(3)["worth"].text == "–", "a rarity with nothing spare can still sell")
+	_check_fit(main, "Fence A (an upgrade kept)")
+	# a part says which of your guns it fits, a line a gun
+	fv._show("stash")
+	fv._on_pick(int(part["id"]), "stash")
+	main.refresh()
+	_check(fv._right_title.text.begins_with("Fits"), "a part does not say what it fits: '%s'" % fv._right_title.text)
+	var g0 = sim.equipped.get("Primary", null)
+	if g0 != null:
+		_check(fv._right_lines[0].text.begins_with(str(g0["base"])), "the part's first line is not the primary: '%s'" % fv._right_lines[0].text)
+	_check_fit(main, "Fence A (a part picked)")
+	fv._show("shelf")
+	fv._sell._sell(1)
+	_check(sim.stash.has(up) and not sim.stash.has(part), "selling the uncommons took the upgrade or left the part")
+	# the boxes: the primary's rounds first and lit
+	if g0 != null and Items.ammo_type(g0) in fv._sell.TYPES:
+		fv._sell._shown = ""
+		main.refresh()
+		var b0: Dictionary = fv._sell.box_of(0)
+		_check(b0["type"] == Items.ammo_type(g0) and (b0["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color == Pal.ACCENT, "the first box is not the primary's, lit: %s" % str(b0["type"]))
+		var unlit: Dictionary = fv._sell.box_of(2)
+		_check(not fv._sell.worn_types().has(unlit["type"]) or fv._sell.worn_types().size() > 2, "an unworn box sits before a worn one")
+	# B: the marks, the swap, the pick handed in
+	sim.stash.clear()
+	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 20, "salvage": ""}
+	var hats: Array = []
+	for v in [10, 20, 30]:
+		var h: Dictionary = sim._plain("Helmet", "Hard hat")
+		h["rarity"] = 1
+		h["value"] = v
+		hats.append(h)
+	var other: Dictionary = sim._plain(Data.ATTACHMENT, "Red dot")
+	sim.stash.append_array(hats + [other])
+	fv._show("contracts")
+	fv._pick_contract(0)
+	main.refresh()
+	var ids: Array = hats.map(func(h): return int(h["id"]))
+	var mk: Dictionary = fv._contract_marks()
+	_check(mk.get(ids[0]) == "go" and mk.get(ids[1]) == "go" and mk.get(ids[2]) == "could" and mk.get(int(other["id"])) == "dim", "the contract's marks are off: %s" % str(mk))
+	var cell_mark := ""
+	for c in fv._stash._cells:
+		if c.visible and c.id == ids[0]:
+			cell_mark = c.mark
+	_check(cell_mark == "go", "the cheapest hat's cell is not marked to go: '%s'" % cell_mark)
+	var first3: Array = fv._stash.items.slice(0, 3).map(func(x): return int(x["id"]))
+	_check(first3.slice(0, 2).all(func(i): return mk.get(i) == "go") and mk.get(first3[2]) == "could", "the stash does not put what goes, then what would do, first: %s" % str(first3))
+	_check(fv._left_lines[0].text.begins_with("For ") and fv._right_lines[0].text != "", "the hand-in's ask or its worth is off: '%s' / '%s'" % [fv._left_lines[0].text, fv._right_lines[0].text])
+	_check(fv._left_lines[1].text.begins_with("The two") or fv._left_lines[1].text == "The cheapest go first", "the hand-in does not say the cheapest go: '%s'" % fv._left_lines[1].text)
+	_check_fit(main, "Fence B (marks)")
+	# the dearest one picked goes, the dearer of the two going steps out
+	fv._on_pick(ids[2], "stash")
+	mk = fv._contract_marks()
+	_check(mk.get(ids[0]) == "go" and mk.get(ids[2]) == "go" and mk.get(ids[1]) == "could", "the swap in did not put out the dearer: %s" % str(mk))
+	_check(fv._left_lines[1].text == "Your pick" and fv._stash.selected == -1, "the swap does not read as your pick: '%s'" % fv._left_lines[1].text)
+	# one going picked stays, the next that fits stepping in
+	fv._on_pick(ids[0], "stash")
+	mk = fv._contract_marks()
+	_check(mk.get(ids[0]) == "could" and mk.get(ids[1]) == "go" and mk.get(ids[2]) == "go", "the swap out did not bring the next in: %s" % str(mk))
+	# a cell that won't do changes nothing
+	fv._on_pick(int(other["id"]), "stash")
+	_check(fv._contract_marks() == mk, "a part swapped into a helmet contract")
+	_check_fit(main, "Fence B (swapped)")
+	var scrap0: int = sim.scrap
+	fv._hand_contract(0)
+	_check(sim.scrap == scrap0 + 20 and sim.stash.has(hats[0]) and not sim.stash.has(hats[1]) and not sim.stash.has(hats[2]), "the pick was not what went")
+	_check(not fv._go.has(0), "the pick outlived the contract")
+	# the review (19 Oct): a pick belongs to its contract - a pass ends it; one picked sold, the gap fills cheapest
+	# first but never with what was kept back
+	sim.stash.clear()
+	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 20, "salvage": ""}
+	hats.clear()
+	for v in [10, 20, 30, 5]:
+		var h: Dictionary = sim._plain("Helmet", "Hard hat")
+		h["rarity"] = 1
+		h["value"] = v
+		hats.append(h)
+	sim.stash.append_array(hats.slice(0, 3))
+	ids = hats.map(func(h): return int(h["id"]))
+	fv._pick_contract(0)
+	fv._on_pick(ids[2], "stash")            # 10 and 30 go, 20 kept back
+	fv._on_pick(ids[0], "stash")            # 10 kept back too: 20 has to come back in
+	var go_now: Array = fv._contract_go(0).map(func(x): return int(x["id"]))
+	_check(go_now.has(ids[1]) and go_now.has(ids[2]), "swapping out with nothing else left did not bring the kept one back: %s" % str(go_now))
+	sim.stash.append(hats[3])
+	sim.sell(hats[1])
+	go_now = fv._contract_go(0).map(func(x): return int(x["id"]))
+	_check(go_now.has(ids[2]) and go_now.has(ids[3]) and not go_now.has(ids[0]), "a picked one sold let a kept-back one in: %s" % str(go_now))
+	sim.passes = 0
+	fv._pass(0)
+	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 20, "salvage": ""}
+	main.refresh()
+	_check(fv._contract_go(0) == sim.contract_items(sim.contracts[0]) and not fv._go.has(0), "a pick outlived its contract's pass")
+	fv._on_pick(ids[2], "stash")
+	sim.load_dict(sim.to_dict())
+	_check(fv._contract_go(0) == sim.contract_items(sim.contracts[0]), "a pick outlived a load")
+	sim.load_dict(saved)
+	fv._show("shelf")
+	main.refresh()
+	print("fence A/B ok: upgrades kept, boxes lit, parts' fit, marks, swap, the pick handed in")

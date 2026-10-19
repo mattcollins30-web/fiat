@@ -119,7 +119,41 @@ func _init() -> void:
 	_sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheen.visible = false
 	add_child(_sheen)
+	_mark = Control.new()                  # over everything: the Fence's contract marks (19 Oct)
+	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mark.draw.connect(_draw_mark)
+	add_child(_mark)
 	set_process(false)
+
+
+## A contract's mark on the cell (19 Oct, Matt's Fence B): "go" - it goes on Hand in, a green ring; "could" - it
+## would do, kept back, a dashed ring; "dim" - not asked for, under a shade; "" none.
+var mark := ""
+var _mark: Control
+
+
+func set_mark(kind: String) -> void:
+	mark = kind
+	_mark.position = Vector2.ZERO
+	_mark.size = size
+	_mark.queue_redraw()
+
+
+func _draw_mark() -> void:
+	var r := Rect2(Vector2(1, 1), size - Vector2(2, 2))
+	match mark:
+		"go":
+			_mark.draw_rect(r, Pal.GOOD, false, 3.0)
+		"could":
+			var d := 6.0
+			for side in [[r.position, Vector2(r.end.x, r.position.y)], [Vector2(r.end.x, r.position.y), r.end], [r.end, Vector2(r.position.x, r.end.y)], [Vector2(r.position.x, r.end.y), r.position]]:
+				var a: Vector2 = side[0]
+				var b: Vector2 = side[1]
+				var n: int = int(a.distance_to(b) / d)
+				for k in range(0, n, 2):
+					_mark.draw_line(a.lerp(b, float(k) / n), a.lerp(b, float(mini(k + 1, n)) / n), Pal.TEXT, 2.0)
+		"dim":
+			_mark.draw_rect(Rect2(Vector2.ZERO, size), Color(Pal.BG, 0.65))
 
 
 ## The wash's gradient, once: the tone's own colour comes from the rect's modulate.

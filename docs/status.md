@@ -5672,3 +5672,15 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   heals over its time, HP a second, stops at full (or the share to Guard), stash or rig, Into the rig. Meds heal as
   they say: a share every second, the end-of-heal work (Transfusion, Clean hands...) as it finishes; a med at full
   HP with nowhere to spill isn't taken. For the balance pass: three wounds cost three times one; meds land slower.
+- Done (19 Oct): the Fence redesign (Fence A and B). Shelf and Stash: the side sells by rarity - a row a rarity, its
+  pieces, what they fetch, Sell - keeping back an upgrade on what's worn (and papers, mythics, the deeds); then rounds
+  by the box, your guns' types first and lit, the rest named under them. A part picked says which gun it fits, a line a
+  gun. Contracts: his list as rows (kind, ask, pay, how far the stash gets it, Hand in, Pass) and his mate; the stash
+  stays beside it, marked for the picked contract - what goes (green ring), what would do (dashed), the rest shaded -
+  with the marked cells first. Pick a cell to swap: one going stays back and the next cheapest steps in; one that would
+  do goes and the dearest going steps out. The pick lasts while that contract does (a pass, a hand-in or a load ends
+  it); one picked sold, the gap fills cheapest first, never with one kept back unless nothing else will do.
+  - New smoke check: no code name shows in the words (it caught the band's "3 n_ready" from a rename).
+  - For Matt: the rarity rows still sell rounds, meds and grenades (as the old Com tile did) - the starter bandages go
+    with Sell on Common. Keep them out of the rows (rounds have their boxes)? One line in Sim._spare.
+  - Device run 61 logged a one-off leak at exit (2 objects, 1 resource); run 62 clean. Watch for it.

@@ -22,6 +22,8 @@ const People := preload("res://scripts/ui/people.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const ClinicBody := preload("res://scripts/ui/clinic_body.gd")
 const MedCards := preload("res://scripts/ui/med_cards.gd")
+const FenceSell := preload("res://scripts/ui/fence_sell.gd")
+const FenceList := preload("res://scripts/ui/fence_list.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -68,18 +70,6 @@ var _offers: Array = []            # {panel, art, kind, sub, pay} a kind on offe
 var _last_head: Label
 var _last                          # the last thing the word got you (item_head.gd)
 var _last_none: Label
-var _deals: Panel                  # the Fence's contracts and the mate, in the grid's place
-var _deal_rows: Array = []         # per contract: {panel, tag, title, have, chip, pay, pass, hand}
-var _deal_head: Label
-var _deal_pass: Label
-var _mate_title: Label
-var _mate_line: Label
-var _mate_buy: Button
-const DEALS_Y := 50
-const DEAL_H := 86
-const DEAL_GAP := 6
-const DEAL_PAY_W := 190
-const DEAL_TEXT_W := 470
 var _shelf                         # the vendor's grid
 var _stash                         # your grid
 var _side: Panel
@@ -114,6 +104,9 @@ var _actions: Array = []
 var _shown := ""
 var _body                          # the Clinic's runner: the outline, the wounds, the HP (clinic_body.gd, 19 Oct)
 var _meds                          # the Clinic's meds as cards, in the grid's place (med_cards.gd, 19 Oct)
+var _sell                          # the Fence's side on the shelf and the stash: by rarity, the boxes (fence_sell.gd, 19 Oct)
+var _list                          # the Fence's side on the contracts: his list and his mate (fence_list.gd, 19 Oct)
+var _go := {}                      # contract index -> {c: the contract itself, ids: picked to go, kept: kept back} (Fence B's swap); none, the cheapest that fit
 
 
 func _init() -> void:
@@ -163,36 +156,6 @@ func _init() -> void:
 	_word.add_child(_last)
 	_last_none = UI.label(_word, Rect2(PAD, LAST_Y, GRID_W - 2 * PAD, 28), "Nothing yet. Pay, and whatever he gets you lands in the stash.", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_word_note = UI.label(_word, Rect2(PAD, BODY_H - PAD - 28, GRID_W - 2 * PAD, 28), "At your best site's level, up to what you can wear. Never Common; 1 in 50 is a unique.", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	# the contracts (Deals-A, 9 Oct): a strip, a row a contract - five with the Fence's Orders - and the mate's
-	_deals = UI.panel(self, Rect2(GRID_X, BODY_Y, GRID_W, BODY_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
-	_deals.visible = false
-	_deal_head = UI.label(_deals, Rect2(PAD, 10, 360, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_deal_pass = UI.label(_deals, Rect2(PAD + 370, 10, GRID_W - 2 * PAD - 370, 32), "", "Regular", Pal.CELL_TEXT, Pal.GOOD, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	for k in range(Data.CONTRACTS_MAX):
-		var y: float = DEALS_Y + k * (DEAL_H + DEAL_GAP)
-		var r := {}
-		r["panel"] = UI.panel(_deals, Rect2(PAD - 8, y, GRID_W - 2 * PAD + 16, DEAL_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-		var p: Panel = r["panel"]
-		r["tag"] = UI.label(p, Rect2(10, 4, DEAL_TEXT_W, 23), "", "SemiBold", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["title"] = UI.label(p, Rect2(10, 24, DEAL_TEXT_W, 32), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["have"] = UI.label(p, Rect2(10, 54, DEAL_TEXT_W, 24), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["chip"] = UI.panel(p, Rect2(DEAL_TEXT_W + 20, 8, DEAL_PAY_W, 34), UI.box(Pal.BUTTON, 6, 1, Pal.CARD_LINE))
-		r["pay"] = UI.label(r["chip"], Rect2(6, 4, DEAL_PAY_W - 12, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, false)
-		r["pass"] = UI.button(p, Rect2(DEAL_TEXT_W + 20, 46, DEAL_PAY_W, 34), false)
-		r["pass"].add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
-		r["pass"].text = "Turn it down"
-		r["pass"].pressed.connect(_pass.bind(k))
-		r["hand"] = UI.button(p, Rect2(DEAL_TEXT_W + 28 + DEAL_PAY_W, 8, GRID_W - 2 * PAD + 16 - DEAL_TEXT_W - 38 - DEAL_PAY_W, DEAL_H - 16), true)
-		r["hand"].add_theme_font_size_override("font_size", Pal.CELL_TEXT_BIG)
-		r["hand"].text = "Hand in"
-		r["hand"].pressed.connect(_hand_in.bind(k))
-		_deal_rows.append(r)
-	var my: float = DEALS_Y + Data.CONTRACTS_MAX * (DEAL_H + DEAL_GAP)
-	_mate_title = UI.label(_deals, Rect2(PAD, my + 4, 220, 30), "The Fence's mate", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_mate_line = UI.label(_deals, Rect2(PAD + 226, my + 7, GRID_W - 2 * PAD - 226 - 230, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_mate_buy = UI.button(_deals, Rect2(GRID_W - PAD - 220, my, 220, 40), true)
-	_mate_buy.add_theme_font_size_override("font_size", Pal.CELL_TEXT)
-	_mate_buy.pressed.connect(_buy_mate)
 	_shelf = Inventory.new()
 	_shelf.position = Vector2(GRID_X, BODY_Y)
 	_shelf.set_rows(GRID_ROWS)
@@ -271,6 +234,20 @@ func setup(k: String) -> void:
 			_tabs[i].position.x = _tab_x(i, 4)
 			_tabs[i].visible = true
 			_tabs[i].add_theme_font_size_override("font_size", 16)     # four across: "Contracts ✓1" wants 146 at 18
+		# Fence A and B (19 Oct): the side by rarity and the boxes; on the contracts, his list - the stash at the right
+		_sell = FenceSell.new(INNER)
+		_sell.position = Vector2(PAD, TOP)
+		_sell.acted.connect(_on_sold)
+		_side.add_child(_sell)
+		_list = FenceList.new(INNER, BODY_H - TOP - PAD)
+		_list.position = Vector2(PAD, TOP)
+		_list.visible = false
+		_list.picked.connect(_pick_contract)
+		_list.hand.connect(_hand_contract)
+		_list.pass_one.connect(_pass)
+		_list.mate.connect(_buy_mate)
+		_list.pay_colour = _pay_colour
+		_side.add_child(_list)
 	if kind == "clinic":
 		_shelf.fixed_kind = Data.MEDICAL
 		_stash.fixed_kind = Data.MEDICAL
@@ -310,16 +287,16 @@ func show_state(s) -> void:
 		cells += Items.size(it)
 	var shelf_cap: int = sim.clinic_stock() if kind == "clinic" else cells
 	_shelf.show_items(sim, stock, cells, maxi(shelf_cap, cells), "Shelf")
+	_stash.marks = _contract_marks() if kind == "fence" and showing == "contracts" else {}
 	_stash.show_items(sim, sim.stash, sim.stash_used(), sim.stash_cap(), "Stash")
 	_shelf.visible = showing == "shelf"
-	_stash.visible = showing == "stash" and kind != "clinic"
-	_deals.visible = showing == "contracts"
+	_stash.visible = (showing == "stash" and kind != "clinic") or showing == "contracts"     # the contracts mark what goes in the stash (Fence B)
 	_word.visible = showing == "word"
 	if _meds != null:
 		_meds.visible = showing == "stash"
 		if _meds.visible:
 			_meds.show_state(sim)
-	_panel.visible = not (_deals.visible or _word.visible or (_meds != null and _meds.visible))     # the contracts, the word and the meds take the grid's and the panel's place (Bands-U A)
+	_panel.visible = not (_word.visible or (_meds != null and _meds.visible))     # the contracts, the word and the meds take the grid's and the panel's place (Bands-U A)
 	if kind == "clinic":
 		_show_treatment()                 # HP moves while resting: every refresh
 	var sig := _signature()
@@ -342,69 +319,9 @@ func show_state(s) -> void:
 		UI.style_button(_tabs[2], showing == "contracts", "good" if (is_ready > 0 and showing != "contracts") else "")
 		_tab_text(_tabs[3], ["The word (%d)" % sim.gamble.size(), "The word"])
 		UI.style_button(_tabs[3], showing == "word")
-		_show_deals()
 		_show_word()
 	_show_side()
 	_show_panel()
-
-
-## The Fence's contracts: what's wanted, what it pays, what you have, what turning one down costs.
-func _show_deals() -> void:
-	var is_ready := 0
-	for k in range(sim.contracts.size()):
-		if sim.can_hand_in(k):
-			is_ready += 1
-	UI.fit(_deal_head, ["%d open · %d ready" % [sim.contracts.size(), is_ready], "%d · %d ready" % [sim.contracts.size(), is_ready]])
-	var pc: int = sim.pass_cost()
-	UI.fit(_deal_pass, ["A turn-down this run: free; then %d, %d, %d notes" % [Data.CONTRACT_PASS_NOTES, Data.CONTRACT_PASS_NOTES * 2, Data.CONTRACT_PASS_NOTES * 4], "A turn-down: free", "free"] if pc == 0 else ["The next turn-down: %d notes; free again after a run" % pc, "Next turn-down: %d notes" % pc, "%d notes" % pc])
-	_deal_pass.add_theme_color_override("font_color", Pal.GOOD if pc == 0 else Pal.TEXT_2)
-	for k in range(Data.CONTRACTS_MAX):
-		var r: Dictionary = _deal_rows[k]
-		var on: bool = k < sim.contracts.size()
-		r["panel"].visible = on
-		if not on:
-			continue
-		var c: Dictionary = sim.contracts[k]
-		var can: bool = sim.can_hand_in(k)
-		(r["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.GOOD if can else Pal.CARD_LINE
-		var kind_n: String = str(Data.CONTRACT_KIND_NAMES.get(c.get("kind", "gear"), "Gear")).to_upper()
-		var have: int = sim.contract_items(c).size()
-		var line: String = ("you have %d of %d" % [have, int(c["count"])]) if not can else "ready: the cheapest %d that fit go" % int(c["count"])
-		UI.fit(r["tag"], ["%s · %s" % [kind_n, line.to_upper()], kind_n])
-		r["tag"].add_theme_color_override("font_color", Pal.GOOD if can else Pal.TEXT_3)
-		var short_t: String = _cap(sim.contract_words(c))
-		if c.get("kind", "") == "affix":
-			var slot_n: String = "Gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"])
-			short_t = "%s · %s" % [slot_n, str(Items.affix_def(c["stat"]).get("short", c["stat"]))]
-		UI.fit(r["title"], [_cap(sim.contract_words(c)), short_t])
-		var said: String = Words.CONTRACT_ASKS[(k + sim.runs_total) % Words.CONTRACT_ASKS.size()] % sim.contract_words(c)
-		var forms: Array = [_cap(said)]
-		for t in Words.CONTRACT_ASKS:
-			forms.append(_cap(t % sim.contract_words(c)))      # a shorter line of his, whole, before none
-		for t in Words.CONTRACT_ASKS_SHORT:
-			forms.append(t)
-		UI.fit(r["have"], forms)
-		var colour: Color = _pay_colour(c)
-		UI.fit(r["pay"], [sim.contract_pay_words(c), sim.contract_pay_words(c).get_slice(" ", 0)])
-		r["pay"].add_theme_color_override("font_color", colour)
-		var sb := r["chip"].get_theme_stylebox("panel") as StyleBoxFlat
-		sb.bg_color = Color(colour, 0.13)
-		sb.border_color = Color(colour, 0.4)
-		r["hand"].disabled = not can
-		if pc == 0:
-			r["pass"].text = "Turn it down · free"
-		else:
-			UI.fit_button(r["pass"], ["Turn it down · %d notes" % pc, "Turn it down"])
-		r["pass"].disabled = not sim.can_pass_contract(k)
-	if sim.mate.is_empty():
-		_mate_line.text = "Not about. He comes by every %d runs." % Data.MATE_RUNS
-		_mate_buy.visible = false
-	else:
-		var mt: String = (" T%d" % int(sim.mate["tier"])) if sim.mate.has("tier") else ""     # the tier he has it at (12 Oct)
-		UI.fit(_mate_line, ["%s%s, for %d notes. A new one every %d runs." % [sim.mate["unique"], mt, int(sim.mate["notes"]), Data.MATE_RUNS], "%s%s, %d notes" % [sim.mate["unique"], mt, int(sim.mate["notes"])], str(sim.mate["unique"]) + mt, str(sim.mate["unique"])])
-		_mate_buy.visible = true
-		_mate_buy.text = "Buy for %d notes" % int(sim.mate["notes"])
-		_mate_buy.disabled = not sim.can_buy_mate()
 
 
 ## A pay's colour: tins in gold, notes in the paper's, scrap grey, a salvage in its own.
@@ -491,15 +408,8 @@ static func _cap(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1)
 
 
-func _hand_in(k: int) -> void:
-	if sim.hand_in(k):
-		_says("contract")
-		acted.emit()
-	_shown = ""
-	show_state(sim)
-
-
 func _pass(k: int) -> void:
+	_go.erase(k)
 	if sim.pass_contract(k):
 		acted.emit()
 	_shown = ""
@@ -525,7 +435,8 @@ func _stash_meds() -> int:
 func _signature() -> String:
 	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
 		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), str(sim.wounds.keys()),
-		str(hash(sim.tree)), sim.cls]          # the tree and the class move the heal and rest figures
+		str(hash(sim.tree)), sim.cls,          # the tree and the class move the heal and rest figures
+		str(_go.keys().map(func(k): return _go_ids(k))), str(_list.selected) if _list != null else ""]     # the contract picked and its swap (Fence B)
 	for it in _stock():
 		parts.append("m" + str(it["id"]))
 	for it in sim.stash:
@@ -604,53 +515,160 @@ func _show_side() -> void:
 	if kind == "clinic":
 		_show_treatment()                 # the band and the body (clinic_body.gd): the old side's tiles and buttons are the Fence's
 		return
-	# the Fence: the band, then sell by rarity, the boxes and the shelf, the contracts
+	# the Fence (19 Oct, Fence A and B): the band, then by rarity and the boxes, or his list on the contracts
 	var worth_all := 0
 	for it in sim.stash:
 		worth_all += sim.sell_price(it)
-	_band.set_words("The Fence · pays full value, charges three times", "",
-		Fmt.money(worth_all), ["for the lot"], Pal.ACCENT)     # the price rise is the panel's, the count the tab's (18 Oct, said once)
-	_band.headline_under_title(true)
-	_side_title.text = "SELL BY RARITY"
-	_side_title.visible = true
-	var nr: int = Data.RARITIES.size()
-	var counts := []
-	var worth := []
-	for r in range(nr):
-		counts.append(0)
-		worth.append(0)
-	for it in sim.stash:
-		counts[it["rarity"]] += 1
-		worth[it["rarity"]] += sim.sell_price(it)
-	var y: float = TOP + UI.HEAD_H + 2
-	var twr := (INNER - (nr - 1) * TILE_GAP) / float(nr)
-	for r in range(nr):
-		var tone: Color = Pal.TEXT if r == 0 else Pal.tone_color(Pal.rarity_tone(r))
-		_side_tile(r, PAD + r * (twr + TILE_GAP), y, twr, Data.RARITY_SHORT[r], ["%d · %s" % [counts[r], Fmt.money(worth[r])], Fmt.money(worth[r]), "%d · %s" % [counts[r], Fmt.money_k(worth[r])], Fmt.money_k(worth[r]), Fmt.short_num(worth[r]), str(counts[r])], tone, sim.sell_rarity.bind(r), counts[r] > 0)     # the short names: five tiles across, "Uncommon" would not fit
-	y += UI.TILE_H + 12
-	_heads[1].position.y = y
-	_heads[1].text = "BY THE BOX · TO THE STASH"
-	_heads[1].visible = true
-	y += UI.HEAD_H + 2
-	# boxes of standard rounds, without end: a cell in your stash each; the bigger shelf beside them
-	var tw3 := (INNER - 2 * TILE_GAP) / 3.0
-	var k: int = Data.RARITIES.size()
-	var types := ["improvised", "shotgun", "rifle", "smg", "pistol"]
-	for n in range(types.size()):
-		var box: Dictionary = sim.ammo_box(types[n])
-		@warning_ignore("integer_division")
-		_side_tile(k, PAD + (n % 3) * (tw3 + TILE_GAP), y + (n / 3) * (UI.TILE_H + TILE_GAP), tw3, "%s ×%d" % [box["name"], int(box["rounds"])], [Fmt.money(sim.ammo_price(types[n]))], Pal.TEXT,
-			sim.buy_ammo.bind(types[n]), sim.cash >= sim.ammo_price(types[n]) and (sim.stash_room(1) or sim.yard_has("racks")))
-		k += 1
-	y += 2 * UI.TILE_H + TILE_GAP + 12
-	# the contracts, in brief: the tab has the lot
-	_heads[2].position.y = y
-	var is_ready := 0
+	var n_ready := 0
 	for c in range(sim.contracts.size()):
 		if sim.can_hand_in(c):
-			is_ready += 1
-	_heads[2].text = ("THE CONTRACTS · %d OPEN, %d READY" % [sim.contracts.size(), is_ready]) if not sim.contracts.is_empty() else "THE CONTRACTS · NONE OPEN"
-	_heads[2].visible = true
+			n_ready += 1
+	var chips: Array = []
+	if showing == "contracts":
+		_band.set_words("The Fence · the contracts", "", "%d ready" % n_ready, ["of %d open" % sim.contracts.size()], Pal.GOOD if n_ready > 0 else Pal.TEXT_2)
+		var pc: int = sim.pass_cost()
+		chips.append({"forms": ["A pass is free this run", "A free pass"] if pc == 0 else ["The next pass: %d notes" % pc, "Pass: %d notes" % pc], "colour": Pal.TEXT_2})
+		chips.append({"forms": ["%s notes" % Fmt.group(sim.notes)], "colour": Pal.TEXT_2})
+	else:
+		_band.set_words("The Fence · pays full value, charges three times", "", Fmt.group(int(sim.cash)), ["tins in hand", "tins"], Pal.ACCENT)
+		if sim.inflation_pct() > 0:
+			chips.append({"forms": ["Prices up %d%%" % sim.inflation_pct()], "colour": Pal.TEXT_2})
+		chips.append({"forms": ["Your stash sells for %s" % Fmt.group(worth_all), "Stash: %s" % Fmt.short_num(worth_all)], "colour": Pal.TEXT_2})
+		if n_ready > 0:
+			chips.append({"forms": ["%d contract%s ready" % [n_ready, "" if n_ready == 1 else "s"], "%d ready" % n_ready], "colour": "good"})
+	_band.headline_under_title(true)
+	_band.chips.visible = true
+	_band.chips.size.x = Pal.BAND_TEXT_W + 260
+	_band.chips.show_chips(chips, 1, true)
+	_sell.visible = showing != "contracts"
+	_list.visible = showing == "contracts"
+	if _list.visible:
+		_list.show_state(sim, _contract_title)
+	else:
+		_sell.show_state(sim)
+
+
+## A contract's ask as a row's title: whole, then shorter.
+func _contract_title(c: Dictionary) -> Array:
+	var short_t: String = _cap(sim.contract_words(c))
+	if c.get("kind", "") == "affix":
+		var slot_n: String = "Gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"])
+		short_t = "%s · %s" % [slot_n, str(Items.affix_def(c["stat"]).get("short", c["stat"]))]
+	var w: String = sim.contract_words(c)
+	var nums := ["one", "two", "three", "four", "five", "six"]
+	var first: String = w.get_slice(" ", 0)
+	var digits: String = w
+	var bare: String = w
+	if first in nums:
+		digits = "%d %s" % [nums.find(first) + 1, w.substr(first.length() + 1)]
+		bare = w.substr(first.length() + 1)
+	return [_cap(w), _cap(digits), short_t, _cap(bare)]
+
+
+## What goes for the picked contract (Fence B): the player's swap while it still holds, else the cheapest that fit.
+func _contract_go(k: int) -> Array:
+	if k < 0 or k >= sim.contracts.size():
+		return []
+	return sim.contract_pick(sim.contracts[k], _go_ids(k))
+
+
+## The player's pick for a contract, whole (the review, 19 Oct): only while that same contract holds the place - a pass,
+## a hand-in or a load puts another there; what still fits stays picked, the gaps filled cheapest first, never with
+## what was kept back unless nothing else will do.
+func _go_ids(k: int) -> Array:
+	if not _go.has(k):
+		return []
+	var g: Dictionary = _go[k]
+	if k >= sim.contracts.size() or not is_same(g["c"], sim.contracts[k]):
+		_go.erase(k)
+		return []
+	var c: Dictionary = sim.contracts[k]
+	var all: Array = sim.contract_all(c).map(func(x): return int(x["id"]))
+	var ids: Array = g["ids"].filter(func(id): return all.has(int(id)))
+	for pass_n in [0, 1]:
+		for id in all:
+			if ids.size() >= int(c["count"]):
+				break
+			if not ids.has(id) and (pass_n == 1 or not g["kept"].has(id)):
+				ids.append(id)
+	return ids
+
+
+## The stash's marks for the picked contract: what goes, what would do, the rest shaded.
+func _contract_marks() -> Dictionary:
+	var out := {}
+	var k: int = _list.selected if _list != null else -1
+	if k < 0 or k >= sim.contracts.size():
+		return out
+	var c: Dictionary = sim.contracts[k]
+	var go: Array = _contract_go(k).map(func(it): return int(it["id"]))
+	for it in sim.stash:
+		var id: int = int(it["id"])
+		out[id] = "go" if go.has(id) else ("could" if sim.contract_fits(c, it) else "dim")
+	return out
+
+
+func _pick_contract(k: int) -> void:
+	_list.selected = k
+	_list._shown = ""
+	selected = {}
+	_stash.selected = -1
+	show_state(sim)
+
+
+## A cell picked on the contracts tab (Fence B's swap): one that goes is kept back, the next cheapest stepping in; one
+## that would do goes, and the dearest of those going steps out for it.
+func _swap(id: int) -> void:
+	var k: int = _list.selected
+	if k < 0 or k >= sim.contracts.size():
+		return
+	var c: Dictionary = sim.contracts[k]
+	var it: Dictionary = sim.item_by_id(id)
+	if it.is_empty() or not sim.contract_fits(c, it):
+		return
+	var go: Array = _contract_go(k).map(func(x): return int(x["id"]))
+	var kept: Array = _go[k]["kept"].duplicate() if _go.has(k) else []
+	var all: Array = sim.contract_all(c).map(func(x): return int(x["id"]))
+	if go.has(id):
+		go.erase(id)
+		for pass_n in [0, 1]:                 # the next cheapest not kept back, else one that was
+			for other in all:
+				if go.size() < int(c["count"]) and other != id and not go.has(other) and (pass_n == 1 or not kept.has(other)):
+					go.append(other)
+		if go.size() < int(c["count"]):
+			return                            # nothing else would do: it stays
+		kept.append(id)
+	else:
+		go.append(id)
+		kept.erase(id)
+		if go.size() > int(c["count"]):
+			var dearest: int = -1
+			var top := -1.0
+			for g in go:
+				if g == id:
+					continue
+				var v: float = float(sim.item_by_id(g)["value"])
+				if v > top:
+					top = v
+					dearest = g
+			go.erase(dearest)
+			kept.append(dearest)
+	_go[k] = {"c": c, "ids": go, "kept": kept.filter(func(x): return not go.has(x))}
+	_list._shown = ""
+	show_state(sim)
+
+
+func _hand_contract(k: int) -> void:
+	if sim.hand_in(k, _go_ids(k)):
+		_go.erase(k)
+		_says("contract")
+		_list._shown = ""
+		acted.emit()
+
+
+func _on_sold() -> void:
+	_says("sold")
+	acted.emit()
 
 
 func _show_panel() -> void:
@@ -660,6 +678,11 @@ func _show_panel() -> void:
 		l.text = ""
 	for l in _right_lines:
 		l.text = ""
+		l.add_theme_color_override("font_color", Pal.TEXT_2)     # the colours a pick set go back (the parts' and the pay's)
+	_right_title.add_theme_color_override("font_color", Pal.TEXT_2)
+	if kind == "fence" and showing == "contracts":
+		_show_hand_in()
+		return
 	var it := _selected_item()
 	_say(it)
 	_head.visible = not it.is_empty()
@@ -733,8 +756,26 @@ func _show_panel() -> void:
 		UI.fit(_right_lines[0], [pl[1], pl[1].get_slice(":", 0)])
 		UI.fit(_right_lines[1], [pl[2], pl[2].get_slice(":", 0)])
 	elif it.has("mount"):
-		_right_title.text = "Fitted in the Workshop"
-		_right_lines[0].text = "Goes on %s" % Items.mount_words(it["mount"])
+		# on your guns (19 Oct, Matt's Fence A): which of the two worn takes it, a line a gun
+		var fits: Array = []
+		var n_line := 0
+		for slot in ["Primary", "Secondary"]:
+			var g = sim.equipped.get(slot, null)
+			if g == null:
+				continue
+			var gty: String = str(Items.base_of(g).get("type", ""))
+			var ok: bool = g.get("attachments", {}).has(str(it["mount"])) and Items.att_fits(it, gty)
+			if ok:
+				fits.append(slot)
+			if n_line < _right_lines.size():
+				UI.fit(_right_lines[n_line], ["%s: %s%s" % [g["base"], gty if gty != "" else "melee", "" if ok else " · no"], str(g["base"])])
+				_right_lines[n_line].add_theme_color_override("font_color", Pal.GOOD if ok else Pal.TEXT_2)
+				n_line += 1
+		_right_title.text = "Fits neither" if fits.is_empty() else ("Fits both" if fits.size() == 2 else "Fits your %s" % str(fits[0]).to_lower())
+		_right_title.add_theme_color_override("font_color", Pal.TEXT_2 if fits.is_empty() else Pal.GOOD)
+		if n_line < _right_lines.size():
+			_right_lines[n_line].text = "Fitted in the Workshop"
+			_right_lines[n_line].add_theme_color_override("font_color", Pal.TEXT_3)
 	else:
 		_right_title.text = ""
 	if selected["kind"] == "shelf":
@@ -753,6 +794,54 @@ func _show_panel() -> void:
 			_button(1, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
 		else:
 			_button(0, "Sell for %s" % Fmt.money(sim.sell_price(it)), sim.sell.bind(it), true)
+	_lay_buttons()
+
+
+## The panel under the stash on the contracts tab (Fence B): what goes and what he pays, Hand in.
+func _show_hand_in() -> void:
+	_head.visible = false
+	_left_title.visible = true
+	var k: int = _list.selected
+	if k < 0 or k >= sim.contracts.size():
+		_left_title.text = "No contracts"
+		_hint.text = ""
+		_lay_buttons()
+		return
+	var c: Dictionary = sim.contracts[k]
+	var go: Array = _contract_go(k)
+	var can: bool = sim.can_hand_in(k)
+	var names: Array = go.map(func(it): return str(it["base"]))
+	UI.fit(_left_lines[0], ["For %s" % sim.contract_words(c), "For the contract"])
+	if go.is_empty():
+		_left_title.text = "Nothing in the stash"
+		UI.fit(_left_lines[1], ["He wants %s" % sim.contract_words(c), "Not yet"])
+	else:
+		UI.fit(_left_title, [", ".join(names), "%d pieces" % names.size()])
+		var picked_own: bool = _go.has(k) and go != sim.contract_items(c)
+		if not can:
+			UI.fit(_left_lines[1], ["%d of %d: more to find" % [go.size(), int(c["count"])], "%d of %d" % [go.size(), int(c["count"])]])
+		elif picked_own:
+			_left_lines[1].text = "Your pick"
+		else:
+			var n: int = int(c["count"])
+			UI.fit(_left_lines[1], ["The %s he'd give least for go%s first" % ["one" if n == 1 else ["", "", "two", "three", "four", "five"][mini(n, 5)], "es" if n == 1 else ""], "The cheapest go first"])
+	_right_title.text = sim.contract_pay_words(c)
+	_right_title.add_theme_color_override("font_color", _pay_colour(c))
+	var worth := 0
+	for it in go:
+		worth += sim.sell_price(it)
+	if not go.is_empty():
+		UI.fit(_right_lines[0], ["The Fence would give %s for %s" % [Fmt.money(worth), "it" if go.size() == 1 else ("the pair" if go.size() == 2 else "the lot")], "Worth %s sold" % Fmt.money(worth), Fmt.money(worth)])
+	var could: Array = sim.contract_all(c).filter(func(it): return not go.has(it))
+	if can and not could.is_empty():
+		UI.fit(_hint, ["Pick a cell to swap what goes; %s would do instead" % str(could[0]["base"]).to_lower(), "Pick a cell to swap what goes"])
+	elif can:
+		_hint.text = "Only these will do"
+	else:
+		_hint.text = "Bring what's on the list home from a run"
+	_button(0, "Hand in · %s" % sim.contract_pay_words(c), _hand_contract.bind(k), can)
+	UI.fit_button(_buttons[0], ["Hand in · %s" % sim.contract_pay_words(c), "Hand in"])
+	UI.style_button(_buttons[0], false, "good" if can else "")
 	_lay_buttons()
 
 
@@ -803,6 +892,11 @@ func _show(which: String) -> void:
 
 
 func _on_pick(id: int, which: String) -> void:
+	if kind == "fence" and showing == "contracts" and which == "stash":
+		if id >= 0:
+			_swap(id)
+		_stash.selected = -1
+		return
 	if id >= 0:
 		selected = {"kind": which, "id": id}
 	elif _stash.many or _selected_item().is_empty():
@@ -931,6 +1025,10 @@ func text_nodes() -> Array:
 	out.append_array(_said)
 	if _body != null:
 		out.append_array(_body.text_nodes())
+	if _sell != null and _sell.visible:
+		out.append_array(_sell.text_nodes())
+	if _list != null and _list.visible:
+		out.append_array(_list.text_nodes())
 	if _meds != null and _meds.visible:
 		out.append_array(_meds.text_nodes())
 	for h in _heads:
@@ -961,19 +1059,12 @@ func text_nodes() -> Array:
 			out.append_array(_last.text_nodes())
 		else:
 			out.append(_last_none)
-	if showing == "contracts":
-		out.append_array([_mate_title, _mate_line, _deal_head, _deal_pass])
-		if _mate_buy.visible:
-			out.append(_mate_buy)
-		for r in _deal_rows:
-			if r["panel"].visible:
-				out.append_array([r["tag"], r["title"], r["pay"], r["have"], r["hand"], r["pass"]])
 	out.append_array(_left_lines)
 	out.append_array(_right_lines)
 	for b in _buttons:
 		if b.visible:
 			out.append(b)
-	if showing == "shelf" or (showing == "stash" and kind != "clinic"):
+	if showing == "shelf" or (showing == "stash" and kind != "clinic") or showing == "contracts":
 		out.append_array((_shelf if showing == "shelf" else _stash).text_nodes())
 	return out
 
