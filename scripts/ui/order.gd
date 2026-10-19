@@ -23,6 +23,7 @@ const ART_H := 300
 const LINE_H := 28
 
 var sim
+var only := ""                     # the drawn Map (19 Oct): one place's card, at the Map's right, the pin picked
 var _cols: Array = []               # {panel, art, state, place, who, words: [Label, Label], chips, odds, drops_head, drops, button, note, key}
 var _shown := ""
 
@@ -135,6 +136,15 @@ func _go(k: String) -> void:
 		acted.emit()
 
 
+## One place's card at the Map's right (the drawn Map, 19 Oct): the pin picked; "" shows all three (unused now).
+func set_only(k: String) -> void:
+	only = k
+	for n in range(_cols.size()):
+		var c: Dictionary = _cols[n]
+		c["panel"].visible = k == "" or c["key"] == k
+		c["panel"].position.x = (2 * (COL_W + COL_GAP)) if k != "" else n * (COL_W + COL_GAP)
+
+
 ## For the tests: a column by its pinnacle's key.
 func col(k: String) -> Dictionary:
 	for c in _cols:
@@ -146,6 +156,8 @@ func col(k: String) -> Dictionary:
 func text_nodes() -> Array:
 	var out: Array = []
 	for c in _cols:
+		if not c["panel"].visible:
+			continue
 		out.append_array([c["state"], c["place"], c["who"], c["odds"], c["drops_head"], c["drops"]] + c["words"])
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())

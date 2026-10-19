@@ -511,17 +511,11 @@ func _read_odds() -> void:
 		sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
 		sim.odds_time_ms = 0.0
 		return
-	if room == MISSIONS and _missions.zone >= Data.ZONES.size():
-		for p in Data.PINNACLES:              # the order's tab (18 Oct): its open pinnacles, in the same few milliseconds
-			if sim._odds_time_up():
-				break
-			if sim.order_open(p["key"]):
-				sim.order_odds(p["key"])
-		sim.odds_time_ms = 0.0
-		return
-	var order: Array = []
-	for i in Data.ZONES[_missions.zone]["tiers"] if _missions.zone < Data.ZONES.size() else []:
-		order.append(i)
+	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin
+	# wears its odds' colour), then the order's open places
+	if room == MISSIONS and _missions.order_key != "" and sim.order_open(_missions.order_key):
+		sim.order_odds(_missions.order_key)       # read on to the whole count: its card's figure
+	var order: Array = [_missions.selected] if _missions.selected >= 0 else []
 	for i in range(Data.TIERS.size()):
 		if not (i in order):
 			order.append(i)
@@ -530,6 +524,12 @@ func _read_odds() -> void:
 			break
 		if sim.tier_open(i) and not sim.odds_settled(i):
 			sim.survival(i)
+	if room == MISSIONS:
+		for p in Data.PINNACLES:
+			if sim._odds_time_up():
+				break
+			if sim.order_open(p["key"]) and not bool(sim.order_odds_now(p["key"])[1]):
+				sim.order_odds(p["key"])          # a pin's colour: read to the showing count, then left
 	sim.odds_time_ms = 0.0
 
 

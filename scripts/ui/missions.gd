@@ -1,9 +1,8 @@
 extends Control
-## The Missions screen, between missions: a column per tier of the zone,
-## everything about that mission in one place - depth, the hostiles, the
-## odds, the intel - and the Deploy and Auto buttons at the foot. While the
-## operator is out, main.gd shows the live cards instead. Fixed geometry in
-## the card grid's 1536 x 864, like the Armoury and the Barracks.
+## The Map, between runs (19 Oct, the drawn Map, Matt's pick B): the map at the left - every zone an area, every site a
+## pin in its odds' colour, the order's places once opened (map_view.gd) - and the picked pin's card at the right:
+## everything about that site in one place - the hostiles, the odds, the intel - and Set off and Auto at the foot. While
+## the runner is out, main.gd shows the live cards instead. Fixed geometry in the card grid's 1536 x 916.
 
 signal acted
 
@@ -17,6 +16,7 @@ const Chips := preload("res://scripts/ui/chips.gd")
 const CameBack := preload("res://scripts/ui/came_back.gd")
 const TierGuide := preload("res://scripts/ui/tier_guide.gd")
 const Order := preload("res://scripts/ui/order.gd")
+const MapView := preload("res://scripts/ui/map_view.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
@@ -37,81 +37,42 @@ const RESIST_ROWS := 2             # what they resist wraps to a second row (12 
 const WORD_ROWS := 4               # the radio's two words and the sky's two, a row each
 
 var sim
-var zone := 0                      # the zone whose tiers the columns show; ORDER_TAB for the order's (18 Oct)
-var _zone_set := false             # the first show opens on the furthest zone open (12 Oct: not the Outskirts every launch)
-var _zone_buttons: Array = []
-var _zone_art: Array = []                 # a TextureRect a tab, behind it
-var _cols: Array = []              # per column: the labels and buttons
+var zone := 0                      # the picked site's zone
+var selected := -1                 # the site whose card shows (19 Oct: a pin picked); -1 until the first show picks the furthest open
+var order_key := ""                # an order's place picked instead (its card in the site's place)
+var _map                           # map_view.gd
+var _title: Label                  # the row's left: the picked site's zone and its sky
+var _cols: Array = []              # the card (one, at the right since the drawn Map): its labels and buttons
 var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
 var _came_btn: Button              # the tally's button at the zone row's right, before the guide's
-var _order                         # the fifth tab's three columns (order.gd): the true pinnacles
+var _order                         # the order's places (order.gd): one card at the right, its pin picked
 var _guide_btn: Button             # "What a site pays" (16 Oct, item 11): the map's tier guide, at the row's end
 var _guide
 var _came_open := false            # the card dropped down
 # the map moved to the Radio (12 Oct): the zone row is the four zones, the Outskirts first; the order's fifth (18 Oct)
 const ZONE_H := 56
-const ORDER_TAB := 4               # Data.ZONES.size(): the tab past the zones
-const ORDER_NAME := "The order"
-const ORDER_ART := "The City"     # its tab's plate, a stand-in
 const TOP := ZONE_H + 16
-
-
-## A tab over its zone's art: a dark glass over the picture so the name reads, the picked one ringed in the
-## accent instead of filled with it, a shut one darker.
-func _style_art_tab(b: Button, picked: bool) -> void:
-	var ring: Color = Pal.ACCENT if picked else Pal.CARD_LINE
-	var w := 3 if picked else 1
-	var glass := func(a: float, bw: int, c: Color) -> StyleBoxFlat:
-		var sb := UI.box(Color(0, 0, 0, a), 8, bw, c)
-		sb.content_margin_left = 12            # the plain tab's margins
-		sb.content_margin_right = 12
-		return sb
-	b.add_theme_stylebox_override("normal", glass.call(0.25 if picked else 0.45, w, ring))
-	b.add_theme_stylebox_override("hover", glass.call(0.15 if picked else 0.3, w, ring))
-	b.add_theme_stylebox_override("pressed", glass.call(0.25, w, ring))
-	b.add_theme_stylebox_override("hover_pressed", glass.call(0.25, w, ring))
-	b.add_theme_stylebox_override("disabled", glass.call(0.7, 1, Pal.CARD_LINE))
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 8, 2, Pal.TEXT))
-	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(st, Pal.TEXT)
-	b.add_theme_color_override("font_disabled_color", Pal.TEXT_2)
-	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	b.add_theme_constant_override("outline_size", 4)
+const CARD_X := 2 * (COL_W + COL_GAP)      # the card, the right third
+const MAP_W := 2 * COL_W + COL_GAP         # the map, the left two
 
 
 func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# the zones, as a row of buttons across the top
-	@warning_ignore("integer_division")
-	var zw := (Pal.GRID_W - GUIDE_W - COL_GAP * (Data.ZONES.size() + 1)) / (Data.ZONES.size() + 1)
-	for z in range(Data.ZONES.size() + 1):
-		var art := TextureRect.new()             # the zone's painted art behind its tab (9 Oct), when there is one
-		art.position = Vector2(z * (zw + COL_GAP), 0)
-		art.size = Vector2(zw, ZONE_H)
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		art.clip_contents = true
-		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art.texture = UI.place_texture(_tab_name(z) if z < Data.ZONES.size() else ORDER_ART)
-		art.visible = art.texture != null
-		if art.texture != null and art.texture.get_width() > zw:
-			art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR     # scaled down into the tab: smoothed
-		add_child(art)
-		_zone_art.append(art)
-		var b := UI.button(self, Rect2(z * (zw + COL_GAP), 0, zw, ZONE_H), false)
-		b.text = _tab_name(z)
-		b.pressed.connect(_pick_zone.bind(z))
-		_zone_buttons.append(b)
+	# the row: the picked site's zone and its sky at the left (the zones are the map's now, not tabs)
+	_title = UI.label(self, Rect2(0, 0, Pal.GRID_W - GUIDE_W - CAME_BTN_W - 2 * COL_GAP, ZONE_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_map = MapView.new(Rect2(0, TOP, MAP_W, Pal.ROOM_H - TOP))
+	_map.picked.connect(select)
+	_map.picked_order.connect(select_order)
+	add_child(_map)
 	# what came back (12 Oct, Matt's playtest: the card over a column "doesn't work where it is"): a button at the zone
 	# row's right while there's a tally, the card dropping under it when pressed
 	_came_btn = UI.button(self, Rect2(Pal.GRID_W - GUIDE_W - COL_GAP - CAME_BTN_W, 0, CAME_BTN_W, ZONE_H), false)
 	_came_btn.pressed.connect(_toggle_came)
 	_came_btn.visible = false
-	for col in range(3):
-		var x := col * (COL_W + COL_GAP)
+	for col in range(1):
+		var x := CARD_X
 		var panel := UI.panel(self, Rect2(x, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 		var edge := StyleBoxFlat.new()
 		edge.bg_color = Pal.GOOD
@@ -191,6 +152,7 @@ func _init() -> void:
 		_cols.append(c)
 	_order = Order.new(TOP)
 	_order.visible = false
+	_order.mouse_filter = Control.MOUSE_FILTER_IGNORE     # its full-width frame over the map: only its card takes a click
 	_order.acted.connect(func(): acted.emit())
 	add_child(_order)
 	_came = CameBack.new()
@@ -205,13 +167,13 @@ func _init() -> void:
 	add_child(_guide)
 
 
-## A tab's name: a zone's, or the order's.
-static func _tab_name(z: int) -> String:
-	return str(Data.ZONES[z]["name"]) if z < Data.ZONES.size() else ORDER_NAME
-
-
-func _tab_open(z: int) -> bool:
-	return sim.zone_open(z) if z < Data.ZONES.size() else sim.any_order_open()
+## The site the Map opens on: the furthest open (12 Oct: not the Outskirts every launch).
+func _default_site() -> int:
+	var out := 0
+	for i in range(Data.TIERS.size()):
+		if sim.tier_open(i):
+			out = i
+	return out
 
 
 ## The tier guide over the room, on the site of the zone's first open column (else where it was left).
@@ -224,32 +186,27 @@ func _open_guide() -> void:
 
 func show_state(s) -> void:
 	sim = s
-	if not _zone_set or not _tab_open(zone):
-		_zone_set = true
-		for z in range(Data.ZONES.size()):
-			if sim.zone_open(z):
-				zone = z
+	if selected < 0 or selected >= Data.TIERS.size() or not sim.zone_open(int(Data.TIERS[selected]["zone"])):
+		selected = _default_site()
+	if order_key != "" and not sim.order_open(order_key):
+		order_key = ""
+	zone = int(Data.TIERS[selected]["zone"])
 	_show_came_back()
 	UI.fit_button(_guide_btn, ["What a site pays ?", "Site guide ?", "?"])
-	for z in range(_zone_buttons.size()):
-		# every refresh, not on the signature: the tally's button narrows the tabs without moving anything it reads
-		var zname: String = _tab_name(z)
-		UI.fit_button(_zone_buttons[z], ([zname, zname.trim_prefix("The ")] if _tab_open(z) else ["%s · locked" % zname, zname, zname.trim_prefix("The ")]))     # shut, the tab says so, or its disabled look does; five tabs (18 Oct) take a name without its "The"
+	var place: String = str(Data.pinnacle(order_key)["place"]) if order_key != "" else str(Data.ZONES[zone]["name"])
+	var sky: String = sim.sky_words(selected, false)
+	UI.fit(_title, ["%s · %s" % [place, sky], place])
+	_map.show_state(sim, selected, order_key)
 	if _guide.visible:
 		_guide.show_state(sim)
 		_guide.move_to_front()             # over the tally's card, which comes to the front on every refresh
-	var on_order: bool = zone == ORDER_TAB
+	var on_order: bool = order_key != ""
 	_order.visible = on_order
 	for c in _cols:
 		c["panel"].visible = not on_order
 		c["edge"].visible = c["edge"].visible and not on_order
 	if on_order:
-		for z in range(_zone_buttons.size()):
-			_zone_buttons[z].disabled = not _tab_open(z)
-			if _zone_art[z].visible:
-				_style_art_tab(_zone_buttons[z], z == zone)
-			else:
-				UI.style_button(_zone_buttons[z], z == zone)
+		_order.set_only(order_key)
 		_order.show_state(sim)
 		_shown = ""
 		_came.move_to_front()
@@ -261,23 +218,15 @@ func show_state(s) -> void:
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
-			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
+			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
 		return
 	_shown = sig
-	for z in range(_zone_buttons.size()):
-		var zb: Button = _zone_buttons[z]
-		var open_z: bool = _tab_open(z)
-		zb.disabled = not open_z
-		if _zone_art[z].visible:
-			_style_art_tab(zb, z == zone)
-		else:
-			UI.style_button(zb, z == zone)
-			zb.remove_theme_constant_override("outline_size")
 	var tiers: Array = Data.ZONES[zone]["tiers"]
-	for k in range(3):
-		var i: int = tiers[k]
+	for k in range(1):
+		var i: int = selected
 		var c: Dictionary = _cols[k]
+		var tier_n: int = tiers.find(i) + 1
 		var t: Dictionary = sim.effective(i)
 		var is_open: bool = sim.tier_open(i)
 		var odds: float = sim.odds_now(i) if is_open else 0.0     # as read so far: the shell reads them a few ms a frame
@@ -291,7 +240,7 @@ func show_state(s) -> void:
 		if is_open:
 			# still reading: dimmer, and the screen keeps refreshing until it's settled
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
-			var kicker: String = "Tier %d" % (k + 1)     # the gear's level is the Gear level tile's (18 Oct, Matt: said once, and every site the same)
+			var kicker: String = "%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n]     # the zone's, the map no longer a tab a zone (19 Oct); the gear's level is the Gear level tile's
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
 				("%s to clear" % Fmt.pct(odds)) if sim.odds_ready(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_ready(i) else Pal.TEXT_3)
 			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
@@ -301,11 +250,11 @@ func show_state(s) -> void:
 			if not why.is_empty():
 				band.chips.show_chips(why, 1, true)
 		elif sim.level_gated(i) and (tiers.find(i) == 0 or int(sim.best_depth[i - 1]) > 0):
-			band.set_words("Tier %d" % (k + 1), Data.TIERS[i]["name"], "Locked", "Opens at level %d" % sim.site_gate(i), Pal.TEXT_3)     # its drops' level less one (19 Oct)
+			band.set_words("%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n], Data.TIERS[i]["name"], "Locked", "Opens at level %d" % sim.site_gate(i), Pal.TEXT_3)     # its drops' level less one (19 Oct)
 			band.headline_under_title(false)
 			band.chips.visible = false
 		else:
-			band.set_words("Tier %d" % (k + 1), Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
+			band.set_words("%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n], Data.TIERS[i]["name"], "Locked", "After %s" % Words.mid(Data.TIERS[i - 1]["name"]), Pal.TEXT_3)     # "Clear the Garden Centre first" sat on "Locked" (18 Oct)
 			band.headline_under_title(false)
 			band.chips.visible = false
 		# a site is always its campaign self (15 Oct, signals_map.png): no depth's −/+; the depths are the signals'
@@ -402,15 +351,33 @@ func _station_words(i: int) -> String:
 
 # ------------------------------------------------------------------ acting
 
-func _tier(k: int) -> int:
-	return Data.ZONES[mini(zone, Data.ZONES.size() - 1)]["tiers"][k]     # the order's tab has no sites: the last zone's
+func _tier(_k: int) -> int:
+	return selected
 
 
+## A pin picked (19 Oct): its card. A shut site in an open zone shows too - what opens it.
+func select(i: int) -> void:
+	if i < 0 or i >= Data.TIERS.size() or sim == null or not sim.zone_open(int(Data.TIERS[i]["zone"])):
+		return
+	selected = i
+	order_key = ""
+	_shown = ""
+	show_state(sim)
+
+
+## An order's place picked: its card in the site's place.
+func select_order(k: String) -> void:
+	if sim == null or not sim.order_open(k):
+		return
+	order_key = k
+	_shown = ""
+	show_state(sim)
+
+
+## A zone's first site (the tabs' old call, kept for the tests): its card.
 func _pick_zone(z: int) -> void:
-	if z >= 0 and z <= ORDER_TAB and _tab_open(z):
-		zone = z
-		_shown = ""
-		show_state(sim)
+	if z >= 0 and z < Data.ZONES.size():
+		select(int(Data.ZONES[z]["tiers"][0]))
 
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
@@ -529,14 +496,6 @@ func _show_came_back() -> void:
 	if not has:
 		_came_open = false
 	_came_btn.visible = has
-	var zn: int = _zone_buttons.size()
-	var room: float = Pal.GRID_W - GUIDE_W - COL_GAP - ((CAME_BTN_W + COL_GAP) if has else 0)
-	var zw: float = (room - COL_GAP * (zn - 1)) / zn
-	for z in range(zn):
-		_zone_buttons[z].position.x = z * (zw + COL_GAP)
-		_zone_buttons[z].size.x = zw
-		_zone_art[z].position.x = z * (zw + COL_GAP)
-		_zone_art[z].size.x = zw
 	if has:
 		var cb: Dictionary = sim.came_back
 		var runs: int = int(cb.get("runs", 0))
@@ -599,8 +558,8 @@ func text_nodes() -> Array:
 	out.append(_guide_btn)
 	if _guide.visible:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
-	for zb in _zone_buttons:
-		out.append(zb)
+	out.append(_title)
+	out.append_array(_map.text_nodes())
 	if _order.visible:
 		out.append_array(_order.text_nodes())
 		return out

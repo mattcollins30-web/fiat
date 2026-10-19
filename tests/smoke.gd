@@ -128,7 +128,8 @@ func _outskirts_checks(main) -> void:
 	_check(again == old, "a moved save moved twice")
 	# Runs: the four zones, the Outskirts first, no map; the Radio has it
 	main.show_room(main.MISSIONS)
-	_check(main._missions._zone_buttons.size() == 5 and main._missions._zone_buttons[0].text.ends_with("Outskirts") and main._missions._zone_buttons[4].text.begins_with("The order"), "Runs does not show the four zones with the Outskirts first, and the order's tab last")
+	var zn: Array = main._missions._map._zone_names
+	_check(zn.size() == Data.ZONES.size() and zn[0][0].text == "The Outskirts" and zn[3][0].text == "The City", "the Map does not draw the four zones, the Outskirts first")     # the drawn Map (19 Oct): areas, not tabs
 	main.show_room(main.COMMS)
 	main.refresh()
 	_check(main._radio._views.size() == 3 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()), "the Radio's map and town buttons do not follow the campaign")
@@ -622,6 +623,7 @@ func _init() -> void:
 	_odds_paint_checks(main)
 	_site_gate_checks(main)
 	_feel_gate_checks()
+	_map_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -5388,7 +5390,6 @@ func _why_checks(main) -> void:
 	var lows := 0
 	var highs := 0
 	for z in range(Data.ZONES.size()):
-		M.zone = z
 		for k in range(3):
 			var i: int = Data.ZONES[z]["tiers"][k]
 			if not sim.tier_open(i):
@@ -5397,8 +5398,9 @@ func _why_checks(main) -> void:
 				sim.survival(i)
 				if sim.odds_settled(i):
 					break
+			M.select(i)
 			main.refresh()
-			var band = M._cols[k]["band"]
+			var band = M._cols[0]["band"]
 			var low: bool = sim.odds_settled(i) and sim.odds_now(i) < M.WHY_UNDER and not M.odds_reasons(sim, i).is_empty()
 			lows += 1 if low else 0
 			highs += 0 if low else 1
@@ -5716,7 +5718,7 @@ func _playtest_checks(main) -> void:
 	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
 	var band0 = c["band"]
 	_check(band0.headline.position.y + band0.headline.size.y <= band0.size.y and band0.kicker.position.y >= 0 and band0.title.position.y > band0.kicker.position.y, "the band's words leave the band")
-	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text == "Tier 1", "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
+	_check(band0.headline.text != "" and band0.unit.text != "" and band0.kicker.text.contains(" · Tier "), "the band's words are off: '%s' / '%s' / '%s'" % [band0.kicker.text, band0.headline.text, band0.unit.text])
 	_check(c["tiles"][0]["key"].text == "Gang" and c["tiles"][0]["value"].text.contains(" × ") and c["tiles"][2]["key"].text == "Fight · clock" and (c["tiles"][2]["value"].text.contains(" of ") or c["tiles"][2]["value"].text.contains("/") or c["tiles"][2]["value"].text.begins_with("over")), "the fight tiles are off: %s" % str(c["tiles"].map(func(t): return t["key"].text + " " + t["value"].text)))
 	# the Yard's Runner card note with a long head's name: the form without "on Runs" when the long one won't fit
 	var yard_note = main._cards[0]._note if main._cards[0]._title.text == "Runner" else null
@@ -5887,17 +5889,17 @@ func _playtest_checks(main) -> void:
 	sim.arm_boss(5, false)
 	main._juice._toasts = []
 	main.show_room(main.MISSIONS)
-	main._missions._shown = ""
+	main._missions.select(5)                 # the Retail Park: the Carpet Man's
 	main.refresh()
-	main._missions._boss(2)
+	main._missions._boss(0)
 	for k in range(4):
 		main._missions._shown = ""
 		main.refresh()
 	var boss_toasts: int = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
 	_check(boss_toasts == 1, "the boss toggle toasted %d times" % boss_toasts)
-	main._missions._boss(2)
+	main._missions._boss(0)
 	main.refresh()
-	main._missions._boss(2)
+	main._missions._boss(0)
 	main.refresh()
 	boss_toasts = main._juice.lines().filter(func(l): return str(l).begins_with("The Carpet Man: ")).size()
 	_check(boss_toasts == 1, "toggling off and on again toasted again while the first still showed: %d" % boss_toasts)
@@ -11636,7 +11638,7 @@ func _site_level_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	var c0: Dictionary = main._missions._cols[0]
-	_check(c0["band"].kicker.text == "Tier 1", "the streets' kicker says more than its tier: '%s'" % c0["band"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
+	_check(c0["band"].kicker.text == "The Estate · Tier 1", "the streets' kicker isn't its zone and tier: '%s'" % c0["band"].kicker.text)     # the gear's level is the tile's (18 Oct, said once)
 	var finds := -1
 	for r in range(6):
 		if c0["tiles"][r]["key"].text == "Gear level":
@@ -11803,7 +11805,7 @@ func _tier_guide_checks(main) -> void:
 	_check_fit(main, "Runs (the tier guide, where to farm)")
 	g._close.pressed.emit()
 	main.refresh()
-	_check(not g.visible and ms.text_nodes().has(ms._zone_buttons[0]), "the guide's close didn't put the room back")
+	_check(not g.visible and ms.text_nodes().has(ms._title), "the guide's close didn't put the room back")
 	g.tab = "depths"
 	print("the tier guide: the ladders, the marks, where to farm ok")
 
@@ -11924,10 +11926,9 @@ func _site_unique_checks(main) -> void:
 	# the Runs card names it until it is found
 	sim.shelf = []
 	main.show_room(main.MISSIONS)
-	main._missions._pick_zone(3)
-	main._missions._shown = ""
+	main._missions.select(11)
 	main.refresh()
-	var c8: Dictionary = main._missions._cols[2]
+	var c8: Dictionary = main._missions._cols[0]
 	_check(main._missions._station_words(11).contains("signal: The Quartermaster's Manual, only here"), "the Barracks' station words do not name its own: '%s'" % main._missions._station_words(11))
 	_check(not c8["note"].text.contains("Depth"), "the Barracks' card still names a depth's station: '%s'" % c8["note"].text)
 	_check_fit(main, "Runs (a site's own)")
@@ -12196,17 +12197,6 @@ func _place_art_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	_check_fit(main, "Runs (site art)")
-	var zart: TextureRect = main._missions._zone_art[0]
-	var had_zone = zart.texture
-	zart.texture = tex
-	zart.visible = true
-	main._missions._shown = ""
-	main.refresh()
-	var zb: Button = main._missions._zone_buttons[0]
-	_check(zart.get_index() < zb.get_index() and zb.get_theme_stylebox("normal").bg_color.a < 0.5 and zb.get_theme_color("font_color") == Pal.TEXT, "the zone tab does not show its art under a glass")
-	_check_fit(main, "Runs (zone art)")
-	zart.texture = had_zone
-	zart.visible = had_zone != null
 	if had_site == null:
 		UI._places.erase(UI.place_slug(site))
 	else:
@@ -12215,7 +12205,6 @@ func _place_art_checks(main) -> void:
 	band.set_site(site)
 	main._missions._shown = ""
 	main.refresh()
-	_check(zb.get_theme_constant("outline_size") == 0 or zart.visible, "a tab without art keeps the art tab's outline")
 	# the Clinic's and the Fence's bands read their own places (art/places/the_clinic.png, the_fence.png), the Map's its own
 	_check(main._fence._band._seed == hash("The Fence") and main._clinic._band._seed == hash("The Clinic"), "the Fence's or the Clinic's band does not name its place for its art")
 	_check(main._radio._atlas._band._seed == hash("the map"), "the Map's band does not name its place for its art")
@@ -13878,7 +13867,7 @@ func _came_back_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	sim.came_back_seen()
 	main.show_room(main.MISSIONS)
-	main._missions.zone = 0
+	main._missions.select(0)
 	main.refresh()
 	_check(not main._missions._came.visible, "the card shows with no run since Seen")
 	sim.survival(3)
@@ -13919,9 +13908,9 @@ func _came_back_checks(main) -> void:
 	var cbtn: Button = main._missions._came_btn
 	# the tally's button at the zone row's right (12 Oct): the card stays up until it's pressed, then drops under it
 	_check(cbtn.visible and not card.visible and cbtn.text.contains("2 runs"), "the tally's button did not show, or the card came up unasked: '%s'" % cbtn.text)
-	var zr: Rect2 = Rect2(main._missions._zone_buttons.back().position, main._missions._zone_buttons.back().size)
+	var zr: Rect2 = Rect2(main._missions._title.position, main._missions._title.size)
 	var gbtn: Button = main._missions._guide_btn
-	_check(zr.end.x + 8 <= cbtn.position.x and cbtn.position.x + cbtn.size.x + 8 <= gbtn.position.x and gbtn.position.x + gbtn.size.x <= Pal.GRID_W + 0.5, "the zone tabs, the tally's button and the guide's run into each other")
+	_check(zr.end.x + 8 <= cbtn.position.x and cbtn.position.x + cbtn.size.x + 8 <= gbtn.position.x and gbtn.position.x + gbtn.size.x <= Pal.GRID_W + 0.5, "the row's title, the tally's button and the guide's run into each other")
 	_check_fit(main, "Runs (the tally's button)")
 	cbtn.pressed.emit()
 	_check(card.visible, "the card did not show after two runs and a press")
@@ -13930,7 +13919,7 @@ func _came_back_checks(main) -> void:
 	_check(card._cell.visible and card._find_name.text.begins_with(Items.full_name(find).get_slice(" ", 0)) and card._find_line.text.contains(Fmt.money(99999.0)), "the card's find is off: '%s' / '%s'" % [card._find_name.text, card._find_line.text])
 	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
 	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)) and card.position.y >= main._missions.ZONE_H, "the card leaves the Runs screen or sits on the zone row")
-	var c3: Dictionary = main._missions._cols[2]
+	var c3: Dictionary = main._missions._cols[0]                 # the card, the right third (the drawn Map)
 	for db in [c3["depth_up"], c3["depth_down"], c3["deploy"], c3["auto"], c3["insure"], c3["boss"]]:
 		_check(not card.get_global_rect().intersects(db.get_global_rect()), "the card would cover the right-hand column's '%s' when it shows" % db.text)
 	_check_fit(main, "Runs (what came back)")
@@ -13957,7 +13946,6 @@ func _came_back_checks(main) -> void:
 	card._on_seen()
 	main.refresh()
 	_check(not card.visible and not cbtn.visible and int(sim.came_back["runs"]) == 0 and sim.came_back["firsts"].is_empty() and int(sim.came_back["lv_from"]) == sim.level(), "Seen did not put the card and its button away and start again")
-	_check(is_equal_approx(main._missions._zone_buttons.back().position.x + main._missions._zone_buttons.back().size.x, main._missions._guide_btn.position.x - main._missions.COL_GAP), "the zone tabs did not take the row back to the guide's button after Seen")
 	sim.load_dict(saved)
 	main.refresh()
 	# a move keeps the tally (an away move mustn't wipe it), the climb from the new runner's level
@@ -15161,15 +15149,20 @@ func _rebuild_checks(main) -> void:
 			sim._kia()
 	main._radio._pick_view("air")
 	main.show_room(main.MISSIONS)
-	main._missions._pick_zone(main._missions.ORDER_TAB)
 	main.refresh()
 	var od = main._missions._order
-	_check(main._missions.zone == main._missions.ORDER_TAB and od.visible and main._missions._zone_buttons.size() == Data.ZONES.size() + 1, "the Map's order tab did not open")
-	_check(od.col("grid")["button"].visible and od.col("mint")["note"].text.begins_with("Rebuild the mint"), "the order's columns are off: '%s'" % od.col("mint")["note"].text)
-	_check_fit(main, "Map order")
-	main._missions._pick_zone(0)
+	var mv = main._missions._map
+	_check(mv._order_labels["grid"].visible and not mv._order_labels["mint"].visible, "the Map's order pins: the Grid's %s, the Mint's %s (shut till its rebuild)" % [str(mv._order_labels["grid"].visible), str(mv._order_labels["mint"].visible)])
+	main._missions.select_order("grid")
 	main.refresh()
-	_check(not od.visible and main._missions._cols[0]["panel"].visible, "the Outskirts did not come back from the order tab")
+	_check(main._missions.order_key == "grid" and od.visible and od.col("grid")["panel"].visible and not od.col("archive")["panel"].visible and is_equal_approx(od.col("grid")["panel"].position.x, main._missions.CARD_X), "the Grid's pin did not show its card at the right")
+	_check(od.col("grid")["button"].visible, "the Grid's card has no Go")
+	_check_fit(main, "Map order")
+	main._missions.select_order("mint")
+	_check(main._missions.order_key == "grid", "a shut place's pin took the card")
+	main._missions.select(0)
+	main.refresh()
+	_check(not od.visible and main._missions._cols[0]["panel"].visible and main._missions.order_key == "", "a site's pin did not take the card back from the order's")
 	sim.load_dict(saved)
 	main.show_room(was)
 	main.refresh()
@@ -15431,8 +15424,7 @@ func _site_gate_checks(main) -> void:
 	s.best_depth[retail] = 0
 	main.sim = s
 	main.show_room(main.MISSIONS)
-	main._missions.zone = int(Data.TIERS[retail]["zone"])
-	main._missions._shown = ""
+	main._missions.select(retail)
 	main.refresh()
 	var said := " | ".join(_texts(main._missions))
 	_check(said.contains("Opens at level %d" % s.site_gate(retail)), "the Map doesn't say the Retail Park opens at level %d: %s" % [s.site_gate(retail), said.left(300)])
@@ -15468,3 +15460,114 @@ func _feel_gate_checks() -> void:
 	var empty: Array = Feel.rows(Feel.read([]))
 	_check(empty.all(func(r): return r[3] == null), "an empty record was judged: %s" % str(empty.map(func(r): return r[3])))
 	print("the feel gates ok: one reader, the entries, the wearable share, wounds, deaths, contracts")
+
+
+## The drawn Map (19 Oct, Matt's pick B): a pin picked shows its card; a shut zone's pins take no click and carry no
+## names; with every zone and every order's place open, no two names on the map cross, and all of them sit inside it.
+func _map_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	var M = main._missions
+	var mv = M._map
+	main.show_room(main.MISSIONS)
+	# a fresh camp: the Outskirts open, the rest shut
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	main.sim = s
+	main.refresh()
+	var click := func(at: Vector2) -> void:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = true
+		ev.position = at
+		mv._gui_input(ev)
+	click.call(mv.pin_at(1))
+	main.refresh()
+	_check(M.selected == 1 and M._cols[0]["band"].title.text == str(Data.TIERS[1]["name"]), "a pin picked didn't show its card: selected %d, the card '%s'" % [M.selected, M._cols[0]["band"].title.text])
+	click.call(mv.pin_at(10))
+	main.refresh()
+	_check(M.selected == 1, "a shut zone's pin took the click")
+	_check(not mv._pin_labels[10].visible and mv._pin_labels[1].visible, "a shut zone's pins carry names, or an open one's don't")
+	_check(mv._zone_names[1][1].text.begins_with("Locked"), "a shut zone doesn't say it's locked: '%s'" % mv._zone_names[1][1].text)
+	_check_fit(main, "the Map (a fresh camp)")
+	# a pad or the keys step the pins, round the open zones' sites (the review: the tabs were buttons; the Deck's d-pad)
+	var kev := InputEventAction.new()
+	kev.action = "ui_right"
+	kev.pressed = true
+	mv._gui_input(kev)
+	main.refresh()
+	_check(M.selected == 2, "ui_right didn't step to the next pin: %d" % M.selected)
+	kev.action = "ui_left"
+	mv._gui_input(kev)
+	mv._gui_input(kev)
+	main.refresh()
+	_check(M.selected == 0, "ui_left didn't step back: %d" % M.selected)
+	mv._gui_input(kev)
+	main.refresh()
+	_check(M.selected == 2, "ui_left didn't go round the end to the last open zone's last pin: %d" % M.selected)
+	# a level-gated site in an open zone: its pin picks its card, which says what opens it
+	for i in range(5):
+		s.best_depth[i] = 1                  # the Outskirts and the Parade cleared: the Retail Park next, shut for the level
+	s.bosses_beaten[0] = true
+	s.xp = 0.0
+	M._shown = ""
+	mv._shown = ""
+	main.refresh()
+	click.call(mv.pin_at(5))
+	main.refresh()
+	_check(M.selected == 5 and M._cols[0]["band"].unit.text == "Opens at level %d" % s.site_gate(5), "a gated site's pin: selected %d, the card '%s'" % [M.selected, M._cols[0]["band"].unit.text])
+	# what's over the map takes the click first: the guide, open over the room
+	# what's over the map takes the click first: the guide over the room, the came-back card - each later than the map
+	# among the room's children (drawn over it, offered the click first) and stopping the mouse, over the map's rect
+	M.select(4)
+	M._open_guide()
+	main.refresh()
+	var g = M._guide
+	_check(g.visible and g.mouse_filter == Control.MOUSE_FILTER_STOP and g.get_index() > mv.get_index() and g.get_global_rect().encloses(mv.get_global_rect()), "the open guide doesn't stand over the map for the click: index %d against %d, stop %s" % [g.get_index(), mv.get_index(), str(g.mouse_filter == Control.MOUSE_FILTER_STOP)])
+	g._close.pressed.emit()
+	main.refresh()
+	var card = M._came
+	_check(card.mouse_filter == Control.MOUSE_FILTER_STOP and card.get_index() > mv.get_index(), "the came-back card isn't over the map for the click")
+	_check(not card.get_global_rect().intersects(mv.get_global_rect()) or card.get_index() > mv.get_index(), "the came-back card sits on the map under it")
+	# everything open, every order's place too: the names
+	main.sim = sim
+	_finish_campaign(sim)
+	for p in Data.PINNACLES:
+		sim.rebuilt[str(p["opened_by"])] = maxi(1, int(sim.rebuilt.get(str(p["opened_by"]), 0)))
+	M._shown = ""
+	mv._shown = ""
+	main.refresh()
+	var boxes: Array = []
+	for l in mv.text_nodes():
+		if not l.visible or l.text == "":
+			continue
+		var w: float = UI.text_width(l, l.text)
+		var x: float = l.position.x
+		if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+			x += (l.size.x - w) / 2.0
+		elif l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+			x += l.size.x - w
+		boxes.append([l.text, Rect2(x, l.position.y, w, l.size.y)])
+	var crossed: Array = []
+	var outside: Array = []
+	for a in range(boxes.size()):
+		if not Rect2(Vector2.ZERO, mv.size).encloses(boxes[a][1]):
+			outside.append(boxes[a][0])
+		for b in range(a + 1, boxes.size()):
+			if boxes[a][1].grow(-1.0).intersects(boxes[b][1].grow(-1.0)):
+				crossed.append("%s / %s" % [boxes[a][0], boxes[b][0]])
+	_check(crossed.is_empty(), "names cross on the Map: %s" % ", ".join(crossed))
+	_check(outside.is_empty(), "names leave the Map: %s" % ", ".join(outside))
+	_check(mv._order_labels.values().all(func(l): return l.visible), "an opened order's place has no pin on the Map")
+	click.call(mv.order_pin_at("archive"))
+	main.refresh()
+	_check(M.order_key == "archive" and M._order.visible, "the Archive's pin didn't show its card")
+	_check_fit(main, "the Map (all open, an order's place picked)")
+	M.select(11)
+	sim.load_dict(saved)
+	M._shown = ""
+	main.refresh()
+	print("the drawn Map ok: a pin picks its card, a shut zone's don't, no names cross, all inside, the order's places")

@@ -5660,3 +5660,8 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   bar's figure (Sim.damage_with_part with the socket named). In a helmet's or the armour's socket: the body's figure
   the Kit judges by, "Fitting it: stands the fight 1.8× → 2.0×", and its verdict (Sim.body_with_part). Like the gun
   parts, the figure is the gun fed: with the rounds out the top bar reads lower.
+- Done (19 Oct): the drawn Map, layout B, in test art. The map at the left (scripts/ui/map_view.gd): the four zones
+  as areas with their roads and river, a shut zone hatched, each site a pin in its odds' colour, the order's places as
+  amber diamonds once their rebuild opens them; the picked pin's card at the right (the old column, one now). The tabs
+  are gone, the order's fifth with them. A pad or the keys step the pins (left/right, up/down). The smoke checks no
+  two names on the map cross and all sit inside it. For the art manifest later: the painted map in these shapes.
