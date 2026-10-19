@@ -5720,6 +5720,9 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   hatched. Gone: the zones' grounds, the sites' pictures, the land and the fog (their files sit unused in art/map/;
   their manifest jobs dropped). The smoke: the painting fills the map, every pin and diamond inside its own zone, no two
   pins too close to click apart, the lit zone follows the pick.
+- Done (19 Oct): the order's three heads' art in - each one's place on the order card (Data.PINNACLES' art) and on an
+  order run's band, a face, the fight's stand/fire/down, the unique's icon (found by name). Their fights still stand on
+  the host site's plate (the Services, the Bank, the Barracks); plates of their own would be another art job.
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

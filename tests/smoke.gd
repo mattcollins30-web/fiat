@@ -15301,6 +15301,14 @@ func _rebuild_checks(main) -> void:
 	main.refresh()
 	_check(main._missions.order_key == "grid" and od.visible and od.col("grid")["panel"].visible and not od.col("archive")["panel"].visible and is_equal_approx(od.col("grid")["panel"].position.x, main._missions.CARD_X), "the Grid's pin did not show its card at the right")
 	_check(od.col("grid")["button"].visible, "the Grid's card has no Go")
+	# the order's places their own pictures (19 Oct): the card shows it, and its head's face and poses are there
+	var UIv := load("res://scripts/ui/ui.gd")
+	var PeopleV := load("res://scripts/ui/people.gd")
+	for p in Data.PINNACLES:
+		var own_t = UIv.place_texture(str(p["place"]))
+		_check(str(p["art"]) == str(p["place"]) and od.col(str(p["key"]))["art"].texture == own_t, "%s's card doesn't show its own place" % p["place"])
+		if own_t != null:
+			_check(PeopleV.portrait(str(p["who"])) != null, "%s has a place but no face" % p["who"])
 	_check_fit(main, "Map order")
 	main._missions.select_order("mint")
 	_check(main._missions.order_key == "grid", "a shut place's pin took the card")

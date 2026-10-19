@@ -2379,11 +2379,11 @@ const MINT_TINS := 2.0                   # a run's tins from the mint: the town'
 ## and every time they're beaten. One unique each (always the first time, PINNACLE_UNIQUE after), `drop` every win,
 ## `first` on the first win only.
 const PINNACLES := [
-	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The City", "hp": 14.0, "dps": 3.0, "over": 2,
+	{"key": "grid", "place": "The Grid", "who": "The Lineman", "opened_by": "substation", "site": 9, "zone": 3, "art": "The Grid", "hp": 14.0, "dps": 3.0, "over": 2,
 		"drop": "grid_key", "unique": "The Lineman's Lamp"},
-	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Town", "hp": 16.0, "dps": 3.5, "over": 4,
+	{"key": "archive", "place": "The Archive", "who": "The Registrar", "opened_by": "library", "site": 8, "zone": 2, "art": "The Archive", "hp": 16.0, "dps": 3.5, "over": 4,
 		"drop": "ledger_seal", "unique": "The Registrar's Satchel"},
-	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Bank", "hp": 20.0, "dps": 4.0, "over": 6,
+	{"key": "mint", "place": "The Mint", "who": "The Issuer", "opened_by": "mint", "site": 11, "zone": 3, "art": "The Mint", "hp": 20.0, "dps": 4.0, "over": 6,
 		"drop": "ledger_seal", "first": "fiat_note", "unique": "The Issuer's Robes"},
 ]
 const PINNACLE_WORTH := 4
