@@ -5700,6 +5700,12 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   own drawing from the Kit, the wounds marked over it (the drawn outline only for a past with no drawing); the room
   cards' tiles: the Map's "Zones · Each opens at its level", the Clinic's "Treatment · Wounds and HP, for tins".
   Open questions closed: the feel gates' thresholds to be judged on Matt's playtest; a new save each build.
+- Done (19 Oct): the Map's painting wired (map_view.gd). A zone's ground (art/map/zone_<key>.png) fills its shape, drawn x2
+  nearest; a site's picture (art/map/site_<slug>.png, 64 px) stands above its pin with a pool of shade, a click on it
+  picks the site; a zone or site without its picture keeps the drawn look. The names keep room for the pictures whether
+  made or not; four pins moved clear of them (the Garden Centre, the Shopping Centre, the Grid's and the Archive's). The
+  smoke: every picture inside the map and on no name, pin, diamond or other picture; the ground 2x its box; a site's
+  picture 64 px. In: the Outskirts' test (its ground and three sites). Next: the rest of the manifest.
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

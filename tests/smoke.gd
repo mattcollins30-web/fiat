@@ -15729,6 +15729,47 @@ func _map_checks(main) -> void:
 			if boxes[a][1].grow(-1.0).intersects(boxes[b][1].grow(-1.0)):
 				crossed.append("%s / %s" % [boxes[a][0], boxes[b][0]])
 	_check(crossed.is_empty(), "names cross on the Map: %s" % ", ".join(crossed))
+	# the painting (19 Oct): every site's picture, made or not, inside the map, on no name and on no other picture
+	var pics: Array = []
+	for i in range(Data.TIERS.size()):
+		var pr: Rect2 = mv.site_art_rect(i)
+		pics.append(pr)
+		if not Rect2(Vector2.ZERO, mv.size).encloses(pr):
+			outside.append("%s's picture" % Data.TIERS[i]["name"])
+		for bx in boxes:
+			if pr.grow(-2.0).intersects(bx[1]):
+				crossed.append("%s's picture / %s" % [Data.TIERS[i]["name"], bx[0]])
+		for j in range(i):
+			if pr.grow(-2.0).intersects(pics[j]):
+				crossed.append("%s's picture / %s's" % [Data.TIERS[i]["name"], Data.TIERS[j]["name"]])
+	# and on no pin, no order's diamond
+	for i in range(Data.TIERS.size()):
+		var marks: Array = []
+		for j in range(Data.TIERS.size()):
+			if j != i:
+				marks.append([str(Data.TIERS[j]["name"]) + "'s pin", Rect2(mv.pin_at(j) - Vector2(mv.PIN_R, mv.PIN_R), Vector2(2, 2) * mv.PIN_R)])
+		for k in mv.ORDER_AT:
+			marks.append([str(k) + "'s diamond", Rect2(mv.order_pin_at(k) - Vector2(mv.PIN_R + 3, mv.PIN_R + 3), Vector2(2, 2) * (mv.PIN_R + 3))])
+		for mk in marks:
+			if pics[i].intersects(mk[1]):
+				crossed.append("%s's picture / %s" % [Data.TIERS[i]["name"], mk[0]])
+	_check(crossed.is_empty(), "the sites' pictures sit on names, pins or each other: %s" % ", ".join(crossed))
+	# a click on a site's picture, its top, picks the site
+	for i in range(Data.TIERS.size()):
+		if mv.site_art(i) != null and sim.zone_open(int(Data.TIERS[i]["zone"])):
+			M.select(1 if i == 0 else 0)
+			main.refresh()
+			click.call(mv.site_art_rect(i).position + Vector2(mv.SITE_ART / 2.0, 4.0))
+			main.refresh()
+			_check(M.selected == i, "a click on %s's picture picked %d" % [Data.TIERS[i]["name"], M.selected])
+	for z in range(Data.ZONES.size()):
+		var zt = mv.zone_art(z)
+		if zt != null:
+			var zb: Rect2 = mv.zone_box(z)
+			_check(absf(zt.get_size().x * 2.0 / zb.size.x - 1.0) < 0.05 and absf(zt.get_size().y * 2.0 / zb.size.y - 1.0) < 0.05, "%s's ground is %s for a box of %s" % [Data.ZONES[z]["name"], str(zt.get_size()), str(zb.size)])
+	for i in range(Data.TIERS.size()):
+		var st = mv.site_art(i)
+		_check(st == null or st.get_size() == Vector2(mv.SITE_ART, mv.SITE_ART), "%s's picture is %s" % [Data.TIERS[i]["name"], str(st.get_size()) if st != null else ""])
 	_check(outside.is_empty(), "names leave the Map: %s" % ", ".join(outside))
 	_check(mv._order_labels.values().all(func(l): return l.visible), "an opened order's place has no pin on the Map")
 	click.call(mv.order_pin_at("archive"))

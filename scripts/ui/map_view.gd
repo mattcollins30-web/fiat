@@ -2,7 +2,10 @@ extends Control
 ## The drawn Map (19 Oct, Matt's pick B on the canvas "Fiat – The drawn map"): the four zones as areas of one map -
 ## the Outskirts' fields, the Estate's grid, the Town's ring road, the City past the river - each site a pin in its
 ## odds' colour, a shut zone under a hatch, the order's places as pins once their rebuild has opened them. A pin picked
-## shows its card at the Map's right (missions.gd). Test art: shapes and roads drawn here, no painting yet.
+## shows its card at the Map's right (missions.gd). The painting (19 Oct, tools/make_outstanding_manifest.py): each
+## zone's ground art/map/zone_<key>.png clipped to its shape, each site's art/map/site_<slug>.png under its pin, drawn
+## x2 / at 64 px, nearest; a zone or a site without its picture keeps the drawn fill. Roads, river, pins, names and the
+## hatch stay drawn on top.
 ##
 ## Signals: `picked(i)` for a site, `picked_order(key)` for an order's place.
 
@@ -14,6 +17,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Items := preload("res://scripts/sim/items.gd")
 
 const W0 := 1000.0                 # the drawing's own space, as the canvas drew it
 const H0 := 844.0
@@ -31,16 +35,20 @@ const ZONE_SHAPES := [
 	{"points": [Vector2(690, 140), Vector2(840, 40), Vector2(1000, 60), Vector2(1000, 620), Vector2(860, 640), Vector2(720, 560), Vector2(660, 520), Vector2(720, 330)], "fill": Color("262c34"), "name_at": Vector2(760, 62)},
 ]
 ## Each site's pin, by its index in Data.TIERS (the Outskirts' three, the Estate's, the Town's, the City's).
-const SITE_AT := [Vector2(110, 692), Vector2(220, 756), Vector2(290, 632),
+const SITE_AT := [Vector2(110, 692), Vector2(270, 790), Vector2(290, 632),
 	Vector2(150, 312), Vector2(250, 430), Vector2(330, 268),
-	Vector2(463, 259), Vector2(573, 337), Vector2(529, 453),
+	Vector2(463, 259), Vector2(592, 347), Vector2(529, 453),
 	Vector2(765, 177), Vector2(869, 337), Vector2(925, 505)]
 ## Where a pin's name sits: below it, above, to its right or its left - so no two names cross, nor a zone's name.
 enum { BELOW, ABOVE, RIGHT, LEFT }
 const SITE_LABEL := [BELOW, RIGHT, BELOW, BELOW, BELOW, ABOVE, BELOW, BELOW, BELOW, BELOW, BELOW, LEFT]
 ## The order's places (18 Oct), by key: off their host site, out along the road east.
-const ORDER_AT := {"grid": Vector2(800, 250), "archive": Vector2(610, 470), "mint": Vector2(900, 590)}
+const ORDER_AT := {"grid": Vector2(772, 236), "archive": Vector2(632, 478), "mint": Vector2(900, 590)}
 const ORDER_LABEL := {"grid": BELOW, "archive": ABOVE, "mint": BELOW}
+const ZONE_KEYS := ["outskirts", "estate", "town", "city"]
+const SITE_ART := 64.0                 # a site's picture, drawn at its own size
+const SITE_LIFT := 26.0                # and stood on its pin: the picture above, the pin at its foot
+const ART_DIR := "res://art/map/"
 
 var sim
 var selected := -1
@@ -50,6 +58,7 @@ var _pin_labels: Array = []        # a Label a site
 var _order_labels: Dictionary = {}  # key -> Label
 var _legend: Array = []            # [Label, colour, hollow]
 var _shown := ""
+static var _art := {}                  # path -> Texture2D or null, looked for once
 
 
 func _init(rect: Rect2) -> void:
@@ -58,6 +67,7 @@ func _init(rect: Rect2) -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
 	for z in range(Data.ZONES.size()):
 		var at: Vector2 = _px(ZONE_SHAPES[z]["name_at"])
 		var room: float = minf(320.0, size.x - at.x - 8.0)
@@ -67,7 +77,7 @@ func _init(rect: Rect2) -> void:
 		UI.shadow(st)
 		_zone_names.append([nm, st])
 	for i in range(Data.TIERS.size()):
-		var l := _pin_label(_px(SITE_AT[i]), int(SITE_LABEL[i]), Pal.TEXT)
+		var l := _pin_label(_px(SITE_AT[i]), int(SITE_LABEL[i]), Pal.TEXT, SITE_ART - 6.0)     # room for its picture whether or not it's made yet
 		_pin_labels.append(l)
 	for k in ORDER_AT:
 		_order_labels[k] = _pin_label(_px(ORDER_AT[k]), int(ORDER_LABEL[k]), Pal.ACCENT)
@@ -77,20 +87,62 @@ func _init(rect: Rect2) -> void:
 		var l := UI.label(self, Rect2(x + 20, size.y - 44, 96, 26), str(e[0]), "Regular", Pal.CELL_TEXT, Pal.TEXT_2 if e[2] else Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_legend.append([l, e[1], e[2]])
 		x += 116.0
+	for c in get_children():
+		if c is CanvasItem:
+			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+
+
+## A picture of the map's, if made: imported, or dropped in and not yet imported; null when there's none.
+static func art(nm: String) -> Texture2D:
+	var path: String = ART_DIR + nm + ".png"
+	if not _art.has(path):
+		_art[path] = null
+		if ResourceLoader.exists(path):
+			_art[path] = load(path)
+		elif FileAccess.file_exists(path):
+			var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+			if img != null:
+				_art[path] = ImageTexture.create_from_image(img)
+	return _art[path]
+
+
+## A zone's ground, and a site's picture, by their names.
+static func zone_art(z: int) -> Texture2D:
+	return art("zone_" + ZONE_KEYS[z])
+
+
+static func site_art(i: int) -> Texture2D:
+	return art("site_" + Items.slug(str(Data.TIERS[i]["name"])))
+
+
+## Where a site's picture is drawn: above its pin, the pin at its foot.
+func site_art_rect(i: int) -> Rect2:
+	var c: Vector2 = _px(SITE_AT[i]) - Vector2(0, SITE_LIFT)
+	return Rect2(c - Vector2(SITE_ART, SITE_ART) / 2.0, Vector2(SITE_ART, SITE_ART))
+
+
+## The drawing's box round a zone's shape: its ground's picture covers it.
+static func zone_box(z: int) -> Rect2:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for p in ZONE_SHAPES[z]["points"]:
+		lo = lo.min(p)
+		hi = hi.max(p)
+	return Rect2(lo, hi - lo)
 
 
 ## A pin's name: its box on the side asked, kept inside the map.
-func _pin_label(p: Vector2, side: int, col: Color) -> Label:
+func _pin_label(p: Vector2, side: int, col: Color, lift := 0.0) -> Label:
 	var r := Rect2(p.x - LABEL_W / 2.0, p.y + PIN_R + 6, LABEL_W, LABEL_H)
 	var align := HORIZONTAL_ALIGNMENT_CENTER
 	match side:
 		ABOVE:
-			r.position.y = p.y - PIN_R - 6 - LABEL_H
+			r.position.y = p.y - PIN_R - 6 - LABEL_H - lift      # over a site's picture, when it has one
 		RIGHT:
-			r = Rect2(p.x + PIN_R + 8, p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)
+			r = Rect2(p.x + (SITE_ART / 2.0 + 4.0 if lift > 0.0 else PIN_R + 8), p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)     # clear of a site's picture
 			align = HORIZONTAL_ALIGNMENT_LEFT
 		LEFT:
-			r = Rect2(p.x - PIN_R - 8 - LABEL_W, p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)
+			r = Rect2(p.x - (SITE_ART / 2.0 + 4.0 if lift > 0.0 else PIN_R + 8) - LABEL_W, p.y - LABEL_H / 2.0, LABEL_W, LABEL_H)
 			align = HORIZONTAL_ALIGNMENT_RIGHT
 	r.position.x = clampf(r.position.x, 4.0, size.x - 4.0 - r.size.x)
 	var l := UI.label(self, r, "", "SemiBold", Pal.CELL_TEXT, col, align, false)
@@ -177,9 +229,16 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("181b1f"))
 	for z in range(ZONE_SHAPES.size()):
 		var pts := PackedVector2Array()
+		var uvs := PackedVector2Array()
+		var box := zone_box(z)
 		for p in ZONE_SHAPES[z]["points"]:
 			pts.append(_px(p))
-		draw_colored_polygon(pts, ZONE_SHAPES[z]["fill"])
+			uvs.append((p - box.position) / box.size)
+		var ground := zone_art(z)
+		if ground != null:
+			draw_polygon(pts, PackedColorArray([Color.WHITE]), uvs, ground)
+		else:
+			draw_colored_polygon(pts, ZONE_SHAPES[z]["fill"])
 		pts.append(pts[0])
 		draw_polyline(pts, Pal.CARD_LINE, 2.0)
 	# the river, the ring road round the Town, the motorway along the top, the road out east
@@ -191,6 +250,13 @@ func _draw() -> void:
 	draw_polyline(ring, Color("3a3f46"), 5.0)
 	_curve([Vector2(0, 120), Vector2(300, 100), Vector2(560, 100), Vector2(720, 140), Vector2(1000, 150)], Color("3d4249"), 11.0)
 	_curve([Vector2(860, 640), Vector2(920, 740), Vector2(1000, 830)], Color("3a3f46"), 4.0)
+	# the sites' pictures, under their pins
+	for i in range(Data.TIERS.size()):
+		var pic := site_art(i)
+		if pic != null:
+			var c: Vector2 = site_art_rect(i).get_center()
+			draw_circle(c + Vector2(0, 6), SITE_ART * 0.42, Color(0, 0, 0, 0.45))     # a pool of shade: it reads off the ground
+			draw_texture_rect(pic, site_art_rect(i), false)
 	# a shut zone under a hatch
 	for z in range(Data.ZONES.size()):
 		if sim != null and not sim.zone_open(z):
@@ -312,6 +378,8 @@ func _gui_input(ev: InputEvent) -> void:
 		if not sim.zone_open(int(Data.TIERS[i]["zone"])):
 			continue
 		var d: float = at.distance_to(_px(SITE_AT[i]))
+		if site_art(i) != null and site_art_rect(i).has_point(at):
+			d = minf(d, at.distance_to(site_art_rect(i).get_center()) * 0.5)     # its picture is the pin's too (the review)
 		if d < best:
 			best = d
 			hit_i = i
