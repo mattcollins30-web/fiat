@@ -245,6 +245,14 @@ static func button(parent: Node, rect: Rect2, primary: bool) -> Button:
 ## `tone` ("good", "warn", "bad") colours the button that colour instead - a
 ## button that means something, like selling a rarity (Fiat's Black Market).
 static func style_button(b: Button, primary: bool, tone := "") -> void:
+	# once a look (19 Oct, the Map's lag): thirteen overrides a call, each a theme change the button and its parents
+	# lay out again - 11 ms a paint for the Map's one button on Matt's save. The same look asked again is a no-op,
+	# unless something else restyled it since (its normal or hover box isn't the one set here). So a button's look
+	# changes through here, or by replacing its normal and hover boxes - never its colours or other boxes alone.
+	var key := "%s|%s" % [primary, tone]
+	if b.get_meta("ui_style", "") == key and b.has_theme_stylebox_override("normal") and b.has_theme_stylebox_override("hover") \
+			and b.get_theme_stylebox("normal") == b.get_meta("ui_style_normal", null) and b.get_theme_stylebox("hover") == b.get_meta("ui_style_hover", null):
+		return
 	var bg := Pal.ACCENT if primary else Pal.BUTTON
 	var hover := Pal.ACCENT_HOVER if primary else Pal.BUTTON_HOVER
 	var press := Pal.ACCENT_PRESS if primary else Pal.BUTTON_PRESS
@@ -268,6 +276,9 @@ static func style_button(b: Button, primary: bool, tone := "") -> void:
 	b.add_theme_color_override("font_focus_color", text)
 	b.add_theme_color_override("font_hover_pressed_color", text)
 	b.add_theme_color_override("font_disabled_color", Pal.TEXT_3)
+	b.set_meta("ui_style", key)
+	b.set_meta("ui_style_normal", b.get_theme_stylebox("normal"))
+	b.set_meta("ui_style_hover", b.get_theme_stylebox("hover"))
 
 
 ## The first of `options` that fits the label's box becomes its text; the last

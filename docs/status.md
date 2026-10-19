@@ -5627,3 +5627,10 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   the editor and the smoke keep %APPDATA%\Godot\app_userdata\Fiat. tools\playtest.bat reads the exported build's
   autosave first. At the next export, Matt copies every fiat* file from the old folder to the new one, once. Playing
   from the editor (F5) is a separate set of saves from now on.
+- Done (19 Oct): the Map's lag. Measured on Matt's save: a Map paint (ten a second) cost 25 ms - the odds' key worked
+  for every site (12 x dps, armour, HP, pace) and the came-back button restyled from scratch (11 ms, thirteen theme
+  overrides). Now 7-8 ms: the key once a paint (Sim.odds_scope), a button's look set once (UI.style_button skips the
+  look it has). With Glasses the figure shows at 24 runs and the rest read behind it (Sim.odds_ready). Still: one dry
+  run a frame always runs, 10-20 ms for a head's fight on the cloud's CPU; less on Matt's.
+- Flaky smoke checks seen today, for the batch's first item: "the Manager down did not drop the deeds" and "the
+  fight tiles are off" (the Fight tile fell to its "clock 5:12" form); each passed on re-run.

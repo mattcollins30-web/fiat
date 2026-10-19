@@ -4917,7 +4917,7 @@ func order_odds_now(k: String) -> Array:
 	_sig_on(sg)
 	var i: int = int(sg["site"])
 	var c: Array = _sig_odds[key]
-	var out: Array = [float(c[1]), int(c[2]) >= odds_runs()] if c[0] == _odds_key(i) else [0.0, false]
+	var out: Array = [float(c[1]), int(c[2]) >= mini(odds_runs(), Data.ODDS_RUNS)] if c[0] == _odds_key(i) else [0.0, false]
 	_sig_off()
 	return out
 
@@ -5325,7 +5325,7 @@ func signal_odds_now(k: int) -> Array:
 	_sig_on(sg)
 	var i: int = int(sg["site"])
 	var c: Array = _sig_odds[int(sg["id"])]
-	var out: Array = [float(c[1]), int(c[2]) >= odds_runs()] if c[0] == _odds_key(i) else [0.0, false]
+	var out: Array = [float(c[1]), int(c[2]) >= mini(odds_runs(), Data.ODDS_RUNS)] if c[0] == _odds_key(i) else [0.0, false]
 	_sig_off()
 	return out
 
@@ -5529,13 +5529,28 @@ func _odds_key(i: int) -> Array:
 ## Matt's machine), else every call. Nothing the key reads moves inside one frame's read: a dry run puts it all back.
 var _key_memo := []
 var _key_memo_t := -1
+## And the shell's paint (19 Oct, Matt: the Map lagged after Glasses): a screen asks every site's odds_settled and
+## odds_now ten times a second, a key each - 25 ms of dps() and armour() a paint on Matt's save. Inside a paint
+## nothing moves, so the shell opens a scope (odds_scope) and the key is worked once in it.
+var _scope := 0
+var _scope_memo := []
+func odds_scope(on: bool) -> void:
+	_scope = 1 if on else 0                # no nesting: opening resets, so a paint cut short by an error can't leave it stuck
+	_scope_memo = []
+
+
 func _odds_key_common() -> Array:
+	if _scope > 0 and not _scope_memo.is_empty():
+		return _scope_memo
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
+	prof["key_common"] = int(prof.get("key_common", 0)) + 1
 	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), yard_moves, str(atlas), is_night(), wound, _kit_ids()]
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
+	if _scope > 0:
+		_scope_memo = k
 	return k
 
 
@@ -5596,6 +5611,13 @@ func survival(i: int) -> float:
 	c[1] = float(c[3]) / maxf(1.0, c[2])
 	prof["surv_us"] += Time.get_ticks_usec() - p0
 	return c[1]
+
+
+## Whether the odds for a tier have read enough to show (19 Oct, Matt: Glasses' sixty runs kept the Map on "reading
+## the odds"): the plain lookout's twenty-four, or all of them when fewer; the rest read on behind the number.
+func odds_ready(i: int) -> bool:
+	var runs: int = odds_runs() if odds_runs_max <= 0 else mini(odds_runs(), odds_runs_max)
+	return _surv_cache.has(i) and _surv_cache[i][0] == _odds_key(i) and _surv_cache[i][2] >= mini(runs, Data.ODDS_RUNS)
 
 
 ## Whether the odds for a tier are fully read (the shell shows them dimmer until they are).

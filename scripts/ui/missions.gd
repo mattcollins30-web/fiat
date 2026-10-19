@@ -258,7 +258,7 @@ func show_state(s) -> void:
 	# the odds are read a few milliseconds a frame by the shell (main._read_odds); the screen shows what has settled
 	var settled := ""
 	for i in range(Data.TIERS.size()):
-		settled += "1" if sim.odds_settled(i) else "0"
+		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), zone, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
@@ -293,9 +293,9 @@ func show_state(s) -> void:
 			# the site's level on the kicker past the campaign (7 Oct): the tier and the depth together are what the fight and its finds are
 			var kicker: String = "Tier %d" % (k + 1)     # the gear's level is the Gear level tile's (18 Oct, Matt: said once, and every site the same)
 			band.set_words(kicker, Data.TIERS[i]["name"], Words.odds_words(odds),
-				("%s to clear" % Fmt.pct(odds)) if sim.odds_settled(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_settled(i) else Pal.TEXT_3)
+				("%s to clear" % Fmt.pct(odds)) if sim.odds_ready(i) else "reading the odds", Pal.tone_color(tone) if sim.odds_ready(i) else Pal.TEXT_3)
 			# why it reads low (17 Oct, Matt: the item-colours canvas): the headline under the title, the reasons under it
-			var why: Array = odds_reasons(sim, i) if sim.odds_settled(i) and odds < WHY_UNDER else []
+			var why: Array = odds_reasons(sim, i) if sim.odds_ready(i) and odds < WHY_UNDER else []
 			band.headline_under_title(not why.is_empty())
 			band.chips.visible = not why.is_empty()
 			if not why.is_empty():

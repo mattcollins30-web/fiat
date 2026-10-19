@@ -1128,6 +1128,7 @@ func refresh() -> void:
 	_stats.visible = room == RUNNER
 	_grid.visible = not (room == ARMOURY or room == BARRACKS or room == WORKSHOP or room == MISSIONS or room == MARKET or room == MEDIC or room == OVERVIEW or room == COMMS or room == RUNNER)
 	_radio.visible = room == COMMS
+	sim.odds_scope(true)                      # a paint: the odds' key worked once in it (19 Oct)
 	if room == COMMS:
 		_radio.show_state(sim)
 	if room == ARMOURY:
@@ -1146,6 +1147,7 @@ func refresh() -> void:
 		_clinic.show_state(sim)
 	elif room == RUNNER:
 		_stats.show_state(sim)
+	sim.odds_scope(false)
 	var cards: Array = []                     # the card grid's last room went to its own sheet (10 Oct, Stats-R A)
 	# each card set once to where it ends up: hiding them all and showing the used ones again, ten
 	# times a second, dropped a button's hover and any press in progress - the Radio's buttons flickered

@@ -619,6 +619,7 @@ func _init() -> void:
 	_dot_compare_checks(main)
 	_paper_pile_checks(main)
 	_save_folder_checks()
+	_odds_paint_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -15274,3 +15275,48 @@ func _save_folder_checks() -> void:
 	_check(not ProjectSettings.get_setting("application/config/use_custom_user_dir", false), "the editor's runs (the smoke's) moved to the exported build's folder")
 	_check(not OS.has_feature("template") and OS.get_user_data_dir().contains("app_userdata"), "the smoke isn't saving in the editor's folder: %s" % OS.get_user_data_dir())
 	print("the save folders ok: the exported build in its own, the smoke in the editor's")
+
+
+## The Map's paint and the odds (19 Oct, Matt: the Map lagged after Glasses): a paint works the odds' key once, a
+## button asked for the look it has is left alone, and Glasses' sixty runs show their number at twenty-four.
+func _odds_paint_checks(main) -> void:
+	var sim = main.sim
+	main.show_room(main.MISSIONS)
+	main._missions._shown = ""
+	sim.prof["key_common"] = 0
+	main.refresh()
+	_check(int(sim.prof["key_common"]) <= 2, "a paint of the Map worked the odds' key %d times (once, in its scope)" % int(sim.prof["key_common"]))
+	_check(sim._scope == 0, "the paint left its odds scope open")
+	# a button's look, once
+	var b := Button.new()
+	main.add_child(b)
+	UI.style_button(b, false, "good")
+	var sb = b.get_theme_stylebox("normal")
+	UI.style_button(b, false, "good")
+	_check(b.get_theme_stylebox("normal") == sb, "the same look asked again restyled the button")
+	UI.style_button(b, true)
+	_check(b.get_theme_stylebox("normal") != sb, "a new look didn't restyle the button")
+	var other := StyleBoxFlat.new()
+	b.add_theme_stylebox_override("normal", other)
+	UI.style_button(b, true)
+	_check(b.get_theme_stylebox("normal") != other, "a button restyled by hand kept the hand's look when asked for its old one")
+	b.queue_free()
+	# Glasses: the number at twenty-four, the rest read behind it
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	_open_camp(s)
+	s.yard_picks["lookout"] = ["b", "", "", "", ""]
+	s._yard_dirty = true
+	if s.yard_has("glasses"):
+		s.odds_budget = 1
+		var i := 0
+		for k in range(Data.ODDS_RUNS):
+			s.survival(i)
+		var c: Array = s._surv_cache.get(i, [])
+		var bailed: bool = not c.is_empty() and int(c[2]) >= s.odds_runs()     # an early settle (all alive or all dead) reads whole
+		_check(s.odds_ready(i), "Glasses: the odds didn't show at %d runs" % Data.ODDS_RUNS)
+		_check(bailed or not s.odds_settled(i), "Glasses: the odds read whole at %d of %d" % [Data.ODDS_RUNS, s.odds_runs()])
+	else:
+		_check(false, "the fixture: no Glasses from the Lookout's first pick")
+	print("the odds' paint ok: the key once a paint, a button's look once, Glasses' number at %d runs" % Data.ODDS_RUNS)
