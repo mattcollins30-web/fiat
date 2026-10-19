@@ -5613,3 +5613,13 @@ Seen once and passed on a rerun: "Paid in notes did not add a note" (the atlas c
    across once. The smoke's check of his saves stays as it is.
 2. The odds lag after Glasses (60 test runs, not 24): the 24-run odds at once, the rest worked out over the next
    frames; a smoke check that working out the odds never holds a frame past a set time.
+3. The campaign's pace (Matt took both): each site opens at its gear's level less one ("Opens at level N" on the
+   Map card), and the gear-level scale moves towards 2 x the site's level - 2.
+4. The balance pass's way of working: gates for what Matt feels as well as the bot's times (level on entry against the
+   site's gear level, the share of gear finds he can wear, wounds an hour, contracts' income against runs'), read by
+   one tool from the bot's runs and from his record.jsonl.
+5. The batch, in order: the five flaky smoke checks; socketables' damage in the Workshop; the drawn Map, layout B;
+   the Clinic's wounds; meds over their timer; the Fence redesign with the swap; the Filing cabinet.
+6. The parked: the fight panel's "Your fire" against the top bar; the radio loop playing on after it's stopped; a caps
+   pass on the Radio's town screen (Matt, 19 Oct).
+Matt exports and plays once all of it is done, and tests it at once; changes then go in while he plays that build.
