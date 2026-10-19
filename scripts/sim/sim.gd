@@ -1521,6 +1521,8 @@ func next_words(short := false) -> String:
 		if zone_complete(z):
 			continue
 		if not zone_open(z):
+			if zone_level_shut(z):
+				return w["level"] % [Data.ZONES[z]["name"], zone_gate(z)]
 			break
 		for i in Data.ZONES[z]["tiers"]:
 			if best_depth[i] <= 0:
@@ -4280,7 +4282,27 @@ func tier(i: int) -> Dictionary:
 ## its boss beaten. All three complete is the campaign done, and the depth
 ## ladder and the radio's call-in open with it.
 func zone_open(z: int) -> bool:
-	return z == 0 or zone_complete(z - 1)
+	return z == 0 or (zone_complete(z - 1) and not zone_level_shut(z))
+
+
+## The level a zone opens at (19 Oct, Matt: "keep a zone locked until the level cap is hit"): its first site's gate,
+## so a zone never opens with all its sites shut for the level.
+func zone_gate(z: int) -> int:
+	var g := 999
+	for i in Data.ZONES[z]["tiers"]:
+		g = mini(g, site_gate(int(i)))
+	return g
+
+
+## The zone before is done but the runner's under the zone's gate - and nothing in it cleared yet in this yard (a new
+## runner after a death goes back to what the camp has taken, as a site does).
+func zone_level_shut(z: int) -> bool:
+	if z == 0 or not zone_complete(z - 1) or level() >= zone_gate(z):
+		return false
+	for i in Data.ZONES[z]["tiers"]:
+		if int(best_depth[i]) > 0:
+			return false
+	return true
 
 
 func zone_complete(z: int) -> bool:
@@ -8640,9 +8662,10 @@ func sell_rarity(r: int) -> int:
 
 
 ## A piece the Fence's rarity row sells (19 Oct, Matt's Fence A: "sell what you don't wear"): that rarity, not a paper,
-## not a mythic, not the deeds, and not an upgrade on what's worn - that's kept.
+## not a mythic, not the deeds, not rounds, meds or grenades (19 Oct, Matt: they stay out - rounds have their boxes), and
+## not an upgrade on what's worn - that's kept.
 func _spare(it: Dictionary, r: int) -> bool:
-	return int(it["rarity"]) == r and not Items.is_paper(it) and not it.get("mythic", false) and not Items.is_deeds(it) and not (str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1)
+	return int(it["rarity"]) == r and not Items.rig_item(it) and not Items.is_paper(it) and not it.get("mythic", false) and not Items.is_deeds(it) and not (str(it.get("slot", "")) in Data.SLOTS and compare(it) == 1)
 
 
 ## A rarity's row: [pieces sold, what they fetch, upgrades kept back].

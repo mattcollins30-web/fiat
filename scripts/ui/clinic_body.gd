@@ -13,6 +13,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Body := preload("res://scripts/ui/body.gd")
 
 const BODY_W := 190.0
 const BODY_H := 400.0
@@ -35,6 +36,9 @@ var _fill: Panel
 var _all: Button
 var _upgrades: Button
 var _marks: Array = []                # [area, number] drawn on the body, in the rows' order
+var _figure: TextureRect              # the runner's own drawing, the Kit's (19 Oct, Matt: yes to the class's body art)
+var _over: Control                    # the wounds, drawn over the figure
+var _figure_path := ""
 var _shown := ""
 
 
@@ -42,6 +46,19 @@ func _init(w: float, h: float) -> void:
 	size = Vector2(w, h)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_head = UI.head(self, Rect2(0, 0, w, UI.HEAD_H), "THE RUNNER")
+	_figure = TextureRect.new()
+	_figure.position = Vector2(0, UI.HEAD_H + 10)
+	_figure.size = Vector2(BODY_W, BODY_H)
+	_figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_figure)
+	_over = Control.new()
+	_over.position = _figure.position
+	_over.size = _figure.size
+	_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_over.draw.connect(_draw_marks)
+	add_child(_over)
 	for a in Data.WOUND_AREAS:
 		var r := {"area": a}
 		r["panel"] = UI.panel(self, Rect2(ROW_X, 0, w - ROW_X, ROW_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
@@ -71,22 +88,16 @@ func _init(w: float, h: float) -> void:
 	_upgrades.tooltip_text = "The Clinic's upgrades are built on the Pitch"
 
 
-## Where a wound shows on the outline (the body's own space, BODY_W by BODY_H).
-func _mark_at(area: String) -> Vector2:
-	match area:
-		"head":
-			return Vector2(140, 34)
-		"chest":
-			return Vector2(144, 146)
-	return Vector2(42, 288)
-
-
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%d|%d|%s|%d|%s|%.1f" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate()]
+	var sig := "%s|%d|%d|%s|%d|%s|%.1f|%s" % [str(sim.wounds), int(sim.hp), int(sim.max_hp()), str(sim.on_mission()), int(sim.cash), str(sim.yard_picks.get("clinic", [])), sim.rest_rate(), sim.cls]
 	if sig == _shown:
 		return
 	_shown = sig
+	var path: String = Body.figure_for(str(sim.cls))
+	if path != _figure_path:
+		_figure_path = path
+		_figure.texture = null if path == "" else Body._cropped(load(path) if ResourceLoader.exists(path) else ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(path))))
 	var n: int = sim.wounds.size()
 	_head.text = "THE RUNNER · %d OF 3 WOUNDS" % n if n > 0 else "THE RUNNER · NO WOUNDS"
 	# the rows: the wounds first, numbered as they're drawn on the body, then the areas unhurt, dashed
@@ -170,12 +181,33 @@ func show_state(s) -> void:
 			picks += 1
 	_upgrades.text = "Upgrades %d/5" % picks
 	queue_redraw()
+	_over.queue_redraw()
+
+
+## The figure as drawn: the drawing's rect in the box (kept to its aspect, centred), or the box for the outline.
+func figure_rect() -> Rect2:
+	if _figure.texture == null:
+		return Rect2(Vector2.ZERO, Vector2(BODY_W, BODY_H))
+	var ts: Vector2 = _figure.texture.get_size()
+	var k: float = minf(BODY_W / ts.x, BODY_H / ts.y)
+	var fs: Vector2 = ts * k
+	return Rect2((Vector2(BODY_W, BODY_H) - fs) / 2.0, fs)
+
+
+## Where a wound shows: the head, the chest, the legs, by their share of the figure's height; the number at its side.
+func mark_at(area: String) -> Vector2:
+	var r := figure_rect()
+	var y: float = {"head": 0.11, "chest": 0.32, "legs": 0.72}.get(area, 0.5)
+	var x: float = 0.30 if area == "legs" else 0.72
+	return r.position + Vector2(r.size.x * x, r.size.y * y)
 
 
 func _draw() -> void:
-	# the outline: a head, a neck, the shoulders and the arms, the trunk, two legs - test art, the canvas's shape
 	var o := Vector2(0, UI.HEAD_H + 10)
 	draw_rect(Rect2(o, Vector2(BODY_W, BODY_H)), Pal.BG)
+	if _figure.texture != null:
+		return
+	# no drawing for the past: the outline - a head, a neck, the shoulders and the arms, the trunk, two legs
 	var skin := Pal.BUTTON
 	var line := Color("4a515a")
 	var body := func(pts: Array) -> void:
@@ -191,24 +223,32 @@ func _draw() -> void:
 	body.call([Vector2(50, 96), Vector2(140, 96), Vector2(148, 112), Vector2(166, 196), Vector2(156, 200), Vector2(138, 140), Vector2(136, 206), Vector2(54, 206), Vector2(52, 140), Vector2(34, 200), Vector2(24, 196), Vector2(42, 112)])
 	body.call([Vector2(56, 206), Vector2(92, 206), Vector2(88, 376), Vector2(64, 376)])
 	body.call([Vector2(98, 206), Vector2(134, 206), Vector2(126, 376), Vector2(102, 376)])
+
+
+## The wounds over the figure: the area washed red, its number beside it.
+func _draw_marks() -> void:
 	if sim == null:
 		return
+	var r := figure_rect()
 	var hurt := Color(Pal.BAD, 0.35)
 	for m in _marks:
 		var a: String = m[0]
+		var cx: float = r.position.x + r.size.x * 0.5
 		match a:
 			"head":
-				draw_circle(o + Vector2(95, 50), 26, hurt)
+				var hc := Vector2(cx, r.position.y + r.size.y * 0.11)
+				_over.draw_circle(hc, r.size.y * 0.065, hurt)
 			"chest":
-				draw_rect(Rect2(o + Vector2(60, 118), Vector2(70, 60)), hurt)
+				_over.draw_rect(Rect2(Vector2(cx - r.size.x * 0.22, r.position.y + r.size.y * 0.2), Vector2(r.size.x * 0.44, r.size.y * 0.24)), hurt)
 			"legs":
-				draw_rect(Rect2(o + Vector2(58, 250), Vector2(30, 80)), hurt)
-		var c: Vector2 = o + _mark_at(a)
-		draw_circle(c, 13, Pal.BAD)
+				_over.draw_rect(Rect2(Vector2(cx - r.size.x * 0.2, r.position.y + r.size.y * 0.6), Vector2(r.size.x * 0.4, r.size.y * 0.25)), hurt)
+		var c: Vector2 = mark_at(a)
+		c.x = clampf(c.x, 14.0, BODY_W - 14.0)
+		_over.draw_circle(c, 13, Pal.BAD)
 		var f: Font = get_theme_default_font()
 		var t: String = str(m[1])
 		var tw: float = f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		draw_string(f, c + Vector2(-tw / 2.0, 6), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Pal.BG)
+		_over.draw_string(f, c + Vector2(-tw / 2.0, 6), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Pal.BG)
 
 
 func _treat(a: String) -> void:

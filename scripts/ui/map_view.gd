@@ -132,7 +132,10 @@ func show_state(s, sel: int, okey: String) -> void:
 		var st: Label = _zone_names[z][1]
 		var open_z: bool = sim.zone_open(z)
 		nm.add_theme_color_override("font_color", Pal.TEXT if open_z else Pal.TEXT_2)
-		if not open_z:
+		if not open_z and sim.zone_level_shut(z):
+			UI.fit(st, ["Locked · level %d required" % sim.zone_gate(z), "Level %d required" % sim.zone_gate(z), "Level %d" % sim.zone_gate(z)])
+			st.add_theme_color_override("font_color", Pal.TEXT_2)
+		elif not open_z:
 			var before: Dictionary = sim.zone_boss(z - 1) if z > 0 else {}
 			var after: String = str(before["name"]) if not before.is_empty() else str(Data.ZONES[maxi(0, z - 1)]["name"])
 			UI.fit(st, ["Locked · after %s" % after, "Locked"])

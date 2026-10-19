@@ -74,7 +74,7 @@ const ROOM_INTROS := {
 	"map": {"room": "The Map", "face": "", "title": "Where the runner goes", "voice": "map", "cues": [0.0, 5.64], "lines": [
 		"The town, from the ring road in. Every site on it was somebody's once.",
 		"Pick one. Send the runner. They come back with what they carry, or they don't."],
-		"tiles": [["Sites", "Where to go, and the odds"], ["Tiers", "Further in, harder and richer"], ["The heads", "Each one opens a room"]]},
+		"tiles": [["Sites", "Where to go, and the odds"], ["Zones", "Each opens at its level"], ["The heads", "Each one opens a room"]]},
 	"kit": {"room": "The Kit", "face": "", "title": "What the runner takes", "voice": "kit", "cues": [0.0, 3.58], "lines": [
 		"What the runner takes out is all they've got.",
 		"What stays behind is the stash. What's worn out there can be lost out there."],
@@ -91,7 +91,7 @@ const ROOM_INTROS := {
 		"Resting on the Pitch heals, slowly.",
 		"I'm quicker, I cost tins and I'm the only one that can heal a lasting wound.",
 		"Meds go in the rig. Your runner takes them first when it gets bad out there."],
-		"tiles": [["Treatment", "Full HP now, for tins"], ["The shelf", "Meds to buy, new each run"], ["Your meds", "In the rig, used under fire"]]},
+		"tiles": [["Treatment", "Wounds and HP, for tins"], ["The shelf", "Meds to buy, new each run"], ["Your meds", "In the rig, used under fire"]]},
 	"fence": {"room": "The Fence", "face": "fence", "title": "The Fence", "voice": "fence", "cues": [0.0, 5.44, 9.10], "lines": [
 		"Everything's for sale. That's the one thing that hasn't changed.",
 		"You bring, I price. The price is the price.",
@@ -989,6 +989,7 @@ const NEXT := {
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
 	"lorry": "The lorry's beaten.",
 	"moved": "A new estate, the same climb. Start at the Allotments.",
+	"level": "%s opens at level %d. The sites you have still pay the XP.",
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
@@ -998,6 +999,7 @@ const NEXT_SHORT := {
 	"head": "Arm %s on the Map",
 	"done": "The Radio's the game now",
 	"lorry": "The lorry's beaten: move the Pitch",
+	"level": "%s at level %d",
 }
 const NOTES := {
 	"zones": "Heads down open the next",

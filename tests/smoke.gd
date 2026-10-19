@@ -362,7 +362,7 @@ func _init() -> void:
 			_check(main._armoury._containers._can_drop(Vector2.ZERO, data), "the rig refuses a med dropped on it")
 			var before_rig: int = sim.rig.size()
 			main._armoury._containers._drop(Vector2.ZERO, data)
-			_check(sim.rig.size() == before_rig + 1, "a drop on the rig did not take")
+			_check(sim.rig.size() == before_rig + 1 or not sim.stash.has(it), "a drop on the rig did not take")     # a stack of rounds tops up the one in the rig (the stash keeps its rounds now, 19 Oct)
 			_check(not main._armoury._inv._can_drop_data(Vector2.ZERO, {"id": 0, "src": "nowhere"}), "the stash takes drops from anywhere")
 			_check(main._armoury._inv._can_drop_data(Vector2.ZERO, {"id": it["id"], "src": "rig"}), "the stash refuses a rig slot dropped on it")
 			main._armoury._inv._drop_data(Vector2.ZERO, {"id": it["id"], "src": "rig"})
@@ -1076,8 +1076,9 @@ func _fence_screen(main) -> void:
 	main._fence._show("stash")
 	main.refresh()
 	_check_fit(main, "Fence (your stash)")
-	if sim.stash.size() > 0:
-		var it: Dictionary = sim.stash[0]
+	var sellable: Array = sim.stash.filter(func(x): return not Items.rig_item(x))     # a med or rounds' first button is Take
+	if not sellable.is_empty():
+		var it: Dictionary = sellable[0]
 		main._fence._stash._set_kind(0)
 		main._fence._stash._set_rarity(-1)
 		main.refresh()
@@ -4886,6 +4887,7 @@ func _next_checks(main) -> void:
 		fresh.best_depth[i] = 1
 	_check(fresh.next_words() == Words.NEXT["head"] % ["The Carpet Man", "the Retail Park"] and fresh.next_words(true) == "Arm the Carpet Man on the Map", "the head is not named: %s / %s" % [fresh.next_words(), fresh.next_words(true)])
 	fresh.bosses_beaten[1] = true
+	fresh.xp = maxf(fresh.xp, Data.xp_for_level(fresh.zone_gate(2)))     # the Town opens at its level (19 Oct)
 	_check(fresh.next_words() == Words.NEXT["site"] % "The Pleasure Park", "the town's first site is not named: %s" % fresh.next_words())
 	fresh.hp = fresh.max_hp()
 	fresh.deploy(0)
@@ -7649,6 +7651,7 @@ func _grade_checks(main) -> void:
 	sim.auto_equip = false                # "Equip if better" would swap the rifle out on deploy
 	sim.candidates = []                   # a runner waiting to be picked would take over the kit on deploy
 	var drops := []
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))     # deploy tops the rig up from the stash: only the stack on test (19 Oct: the rarity rows keep rounds now)
 	for stack in [plain_r, sim._plain(Data.AMMO, "Match rounds")]:
 		sim.rig = [stack]
 		sim.rng.seed = 11
@@ -8400,6 +8403,16 @@ func _wound_checks(main) -> void:
 		_check(r["treat"].visible and not r["treat"].disabled and r["treat"].text.begins_with("Treat") and r["effect"].text.begins_with("−"), "the %s's row is off: '%s' / '%s'" % [a, r["treat"].text, r["effect"].text])
 	_check(body._all.text.begins_with("Treat everything") and not body._all.disabled, "Treat everything reads '%s'" % body._all.text)
 	_check_fit(main, "Clinic (three wounds)")
+	# the runner's own drawing, the Kit's (19 Oct, Matt): every wound's mark on it, inside the box
+	var BodyV := preload("res://scripts/ui/body.gd")
+	var want_fig: String = BodyV.figure_for(str(sim.cls))
+	_check((body._figure.texture != null) == (want_fig != ""), "the Clinic's figure is %s with %s for a %s" % [str(body._figure.texture), want_fig, sim.cls])
+	var fr: Rect2 = body.figure_rect()
+	for a in Data.WOUND_AREAS:
+		var at: Vector2 = body.mark_at(a)
+		_check(fr.grow(1.0).has_point(at) and Rect2(Vector2.ZERO, Vector2(body.BODY_W, body.BODY_H)).encloses(fr.grow(-0.5)), "the %s's mark sits off the figure: %s in %s" % [a, str(at), str(fr)])
+	var hy: float = body.mark_at("head").y
+	_check(hy < body.mark_at("chest").y and body.mark_at("chest").y < body.mark_at("legs").y, "the marks are out of order down the body")
 	# one treated by its row: that one gone, the rest kept, its price paid
 	var cash0: float = sim.cash
 	body.row("chest")["treat"].pressed.emit()
@@ -11268,6 +11281,7 @@ func _yard_pick_checks(main) -> void:
 	sim.yard_ranks = {}
 	# a refit off cells is allowed, and the strip says first how far over it leaves the stash (9 Oct)
 	var stash_keep: Array = sim.stash.duplicate(true)
+	sim.stash = sim.stash.filter(func(x): return not Items.rig_item(x))     # Racks frees what's left of the rounds and meds: the fixture's own (19 Oct, the rarity rows keep them now)
 	while sim.stash_used() < sim.stash_cap():
 		sim.stash.append(sim._plain("Helmet", "Hard hat"))
 	var picks_keep: Dictionary = sim.yard_picks.duplicate(true)
@@ -14074,6 +14088,7 @@ func _rig_checks(main) -> void:
 	sim.rig.append(depot)
 	var band: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
 	sim.rig.append(band)
+	sim.stash = sim.stash.filter(func(x): return not Items.is_ammo(x))     # deploy tops the rig up from the stash: only these stacks
 	_check(sim.feed_stack(sim.equipped["Primary"]) == depot and sim.grade_bonus(sim.equipped["Primary"]) == 25.0, "the Depot rounds behind the plain ones don't fire first")
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -15561,6 +15576,28 @@ func _site_gate_checks(main) -> void:
 	var said := " | ".join(_texts(main._missions))
 	_check(said.contains("Opens at level %d" % s.site_gate(retail)), "the Map doesn't say the Retail Park opens at level %d: %s" % [s.site_gate(retail), said.left(300)])
 	_check_fit(main, "the Map (a site shut for the level)")
+	# a zone shut till its first site's level (19 Oct, Matt: "keep a zone locked until the level cap is hit and note it
+	# on the zone of the map"): the Estate done, the Town at its gate
+	for i in Data.ZONES[1]["tiers"]:
+		s.best_depth[i] = 1
+	s.bosses_beaten[1] = true
+	var tg: int = s.zone_gate(2)
+	s.xp = Data.xp_for_level(tg - 1)
+	s.cls = "Scrapper"
+	s.runs_total = maxi(1, s.runs_total)
+	_check(tg > 1 and not s.zone_open(2) and s.zone_level_shut(2) and Data.ZONES[2]["tiers"].all(func(i): return not s.tier_open(i)), "the Town opened under its level %d" % tg)
+	_check(s.next_words() == Words.NEXT["level"] % [Data.ZONES[2]["name"], tg], "what's next doesn't say the Town's level: '%s'" % s.next_words())
+	main.sim = s
+	main._missions._map._shown = ""
+	main.refresh()
+	var town_st: String = main._missions._map._zone_names[2][1].text
+	_check(town_st.contains("level %d" % tg), "the Map's Town doesn't say level %d: '%s'" % [tg, town_st])
+	_check_fit(main, "the Map (a zone shut for the level)")
+	s.xp = Data.xp_for_level(tg)
+	_check(s.zone_open(2) and s.tier_open(int(Data.ZONES[2]["tiers"][0])), "the Town stayed shut at level %d" % tg)
+	s.best_depth[int(Data.ZONES[2]["tiers"][0])] = 1
+	s.xp = 0.0
+	_check(s.zone_open(2), "a zone with a site cleared shut on a new runner")
 	main.sim = keep
 	main._missions._shown = ""
 	main.refresh()
@@ -15723,7 +15760,11 @@ func _fence_ab_checks(main) -> void:
 	up["rarity"] = 1
 	var part: Dictionary = sim._plain(Data.ATTACHMENT, "Red dot")
 	part["rarity"] = 1
-	sim.stash.append_array([up, part])
+	var med: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+	med["rarity"] = 1
+	var box: Dictionary = sim._plain(Data.AMMO, "Nails")
+	box["rarity"] = 1
+	sim.stash.append_array([up, part, med, box])
 	var sp: Array = sim.rarity_spare(1)
 	_check(int(sp[0]) == 1 and int(sp[2]) == 1 and int(sp[1]) == sim.sell_price(part), "the uncommon row did not keep the upgrade back: %s" % str(sp))
 	fv._show("shelf")
@@ -15744,7 +15785,7 @@ func _fence_ab_checks(main) -> void:
 	_check_fit(main, "Fence A (a part picked)")
 	fv._show("shelf")
 	fv._sell._sell(1)
-	_check(sim.stash.has(up) and not sim.stash.has(part), "selling the uncommons took the upgrade or left the part")
+	_check(sim.stash.has(up) and not sim.stash.has(part) and sim.stash.has(med) and sim.stash.has(box), "selling the uncommons took the upgrade, a med or rounds, or left the part")
 	# the boxes: the primary's rounds first and lit
 	if g0 != null and Items.ammo_type(g0) in fv._sell.TYPES:
 		fv._sell._shown = ""

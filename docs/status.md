@@ -5694,6 +5694,12 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
     stopped - in the traffic too - till the new currency's message brings it back.
   - The caps pass on the Radio's town: "Rank 2" and "Not built" in sentence case; the name gets the room the rank
     leaves ("The pumping station" whole); "Opens the Grid · The Lineman"; the chips' short forms capitalised.
+- Done (19 Oct, Matt's answers): the rarity rows keep rounds, meds and grenades out (Sim._spare); a zone stays locked
+  till the runner reaches its first site's level (Sim.zone_gate, zone_level_shut; a site cleared keeps it open for a new
+  runner), the Map's zone says "Locked · level N required" and what's next names it; the Clinic's body is the runner's
+  own drawing from the Kit, the wounds marked over it (the drawn outline only for a past with no drawing); the room
+  cards' tiles: the Map's "Zones · Each opens at its level", the Clinic's "Treatment · Wounds and HP, for tins".
+  Open questions closed: the feel gates' thresholds to be judged on Matt's playtest; a new save each build.
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'
