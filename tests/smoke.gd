@@ -7897,6 +7897,50 @@ func _bench_pick_checks(main) -> void:
 	main.refresh()
 	_check(pk._heads[0].visible and pk._heads[0]._title.text == "Red dot" and pk.button_texts() == ["Strip"], "a fitted part's panel is off: %s" % str(pk.button_texts()))
 	_check_fit(main, "Workshop (a fitted part picked)")
+	# a socketable: what it does to the damage, before the fit and after (19 Oct, Matt: the socket said nothing)
+	rifle["attachments"]["socket 1"] = null
+	var fluid: Dictionary = sim._plain(Data.ATTACHMENT, "Lighter fluid")
+	_check(Items.is_socketable(fluid) and sim.mount_open("socket 1"), "the fixture: lighter fluid isn't a socketable, or the first socket's shut")
+	while not sim.stash_room(1) and not sim.stash.is_empty():
+		sim.sell(sim.stash[0])
+	sim.stash.append(fluid)
+	main._workshop._set_view("sockets")
+	main._workshop.sel_slot = ""
+	main._workshop.sel_mount = ""
+	main._workshop.sel_id = -1
+	main._workshop._shown = ""
+	main.refresh()
+	main._workshop._pick_cell(main._workshop._inv.cell_of(fluid["id"]))
+	main.refresh()
+	var dws: Array = sim.damage_with_part(main._workshop.sel_slot if main._workshop.sel_slot != "" else "Primary", fluid, "socket 1")
+	var sock_line: String = "Fitting it: %.0f → %.0f dmg/s" % [float(dws[0]), float(dws[1])]
+	_check(pk._right_lines.any(func(l): return l.text == sock_line) and pk._verdict.visible and pk._verdict.text != "", "the socketable reads '%s' / '%s', not '%s'" % [str(pk._right_lines.map(func(l): return l.text)), pk._verdict.text, sock_line])
+	_check(float(dws[1]) > float(dws[0]), "lighter fluid in the rifle's socket read no damage: %.1f → %.1f" % [float(dws[0]), float(dws[1])])
+	_check_fit(main, "Workshop (a socketable picked)")
+	# in a body piece's socket: the body's figure, not the damage (the review: salt in armour read "Sidegrade" on dmg/s)
+	var vest = sim.equipped["Armour"]
+	if vest != null:
+		vest["attachments"]["socket 1"] = null
+		var salt: Dictionary = sim._plain(Data.ATTACHMENT, "Road salt")
+		while not sim.stash_room(1) and not sim.stash.is_empty():
+			sim.sell(sim.stash[0])
+		sim.stash.append(salt)
+		main._workshop.sel_slot = "Armour"
+		main._workshop.sel_mount = "socket 1"
+		main._workshop.sel_id = salt["id"]
+		main._workshop._shown = ""
+		main.refresh()
+		var bw: Array = sim.body_with_part("Armour", salt, "socket 1")
+		var said_s: Array = pk._right_lines.map(func(l): return l.text)
+		_check(float(bw[1]) > float(bw[0]) and pk._verdict.text == "▲ Fits" and not said_s.any(func(t): return str(t).contains("dmg/s")) and said_s.any(func(t): return str(t).begins_with("Fitting it: stands the fight")), "salt in the armour's socket reads '%s' / %s (the body %.2f → %.2f)" % [pk._verdict.text, str(said_s), float(bw[0]), float(bw[1])])
+		_check_fit(main, "Workshop (a socketable for the armour)")
+		sim.stash.erase(salt)
+		main._workshop._set_view("sockets")
+	else:
+		_check(false, "the fixture: no armour on for the body's socket")
+	var fitted_ok: bool = sim.fit_socket("Primary", "socket 1", fluid["id"])
+	var after: float = sim._try({}, sim.damage_total)          # as the verdicts read a kit: fed (the smoke sold its rounds for room)
+	_check(fitted_ok and is_equal_approx(after, float(dws[1])), "the socket's figure before the fit (%.1f → %.1f) isn't the kit's after (%.1f; fitted %s, slot '%s')" % [float(dws[0]), float(dws[1]), after, str(fitted_ok), main._workshop.sel_slot])
 	sim.load_dict(saved)
 	main.refresh()
 	print("the Bench's pick frame ok: the part, the refusal, the fit, the fitted")

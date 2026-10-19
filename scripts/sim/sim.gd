@@ -586,14 +586,37 @@ func damage_total() -> float:
 
 ## The top bar's figure with a part on the gun in `slot` (18 Oct: the Workshop read the gun's raw hits, so a part that
 ## turns hits to fire read as nothing): [as worn now, with the part fitted].
-func damage_with_part(slot: String, part: Dictionary) -> Array:
+## `at` names the mount when it isn't the part's own: a socketable's socket ("socket 2"), 19 Oct - Matt: the Workshop
+## said nothing of what a socketable does to the damage. One in the socket, as fit_socket puts it.
+func damage_with_part(slot: String, part: Dictionary, at := "") -> Array:
 	var now: float = _try({}, damage_total)
-	var gun = equipped.get(slot, null)
-	if gun == null or not part.has("mount"):
+	var gear = equipped.get(slot, null)
+	var key: String = at if at != "" else str(part.get("mount", ""))
+	if gear == null or key == "":
 		return [now, now]
-	var copy: Dictionary = gun.duplicate(true)
-	copy["attachments"][part["mount"]] = part
+	var copy: Dictionary = gear.duplicate(true)
+	copy["attachments"][key] = _one_copy(part)
 	return [now, _try(copy, damage_total)]
+
+
+## One of a part, as fit_socket's _one_off puts it in (a stack's one), without touching the stash's or minting an id.
+func _one_copy(part: Dictionary) -> Dictionary:
+	var one: Dictionary = part.duplicate(true)
+	if Items.stacks(one) and Items.stack_size(one) > 1:
+		Items.set_stack(one, 1)
+	return one
+
+
+## A socketable in a body piece's socket (19 Oct, the review): the body's figure the Kit judges it by - how many times
+## over the runner stands the fight (survival_value), or the piece's score for a bag or a charm - [now, with it].
+func body_with_part(slot: String, part: Dictionary, at: String) -> Array:
+	var now: float = _fit_value({}, slot)
+	var gear = equipped.get(slot, null)
+	if gear == null or at == "":
+		return [now, now]
+	var copy: Dictionary = gear.duplicate(true)
+	copy["attachments"][at] = _one_copy(part)
+	return [now, _fit_value(copy, slot)]
 
 
 ## damage_split in words, for the top bar's tip and the Stats sheet: "321 from hits · 31 burning", or short "Hits 321 · burn 31".

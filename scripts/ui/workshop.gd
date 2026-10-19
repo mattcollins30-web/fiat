@@ -535,10 +535,15 @@ func _show_panel() -> void:
 		else:
 			var gear: Dictionary = sim.equipped[target_slot]
 			var cur = gear["attachments"].get(key, null)
+			var gun_slot: bool = Data.SLOT_SCORE.get(target_slot, "") == "dps"
+			# what it does (19 Oct, Matt): in a gun, the top bar's figure; in a body piece, the body's figure the Kit judges by
+			var dw: Array = sim.damage_with_part(target_slot, it, key) if gun_slot else sim.body_with_part(target_slot, it, key)
+			var line: String = ("Fitting it: %.0f → %.0f dmg/s" % [float(dw[0]), float(dw[1])]) if gun_slot else ("Fitting it: stands the fight %.1f× → %.1f×" % [float(dw[0]), float(dw[1])])
 			if cur != null:
 				_pick.show_fitted(cur, sim, "On the %s · %s" % [target_slot.to_lower(), key])
 			else:
-				_pick.show_right_words("On the %s · %s" % [target_slot.to_lower(), key], "Empty", ["Fitting it fills the socket"])
+				_pick.show_right_words("On the %s · %s" % [target_slot.to_lower(), key], "Empty", [line])
+			_part_verdict(it, cur, dw, gun_slot)
 			buttons.append({"text": "Fit", "action": sim.fit_socket.bind(target_slot, key, it["id"]), "enabled": not sim.on_mission(), "primary": true})
 	else:
 		var target_slot := sel_slot if sel_slot != "" else _slot_for(it["mount"])
@@ -555,21 +560,28 @@ func _show_panel() -> void:
 			else:
 				_pick.show_right_words(kicker, "Empty", ["Fitting it: %.0f → %.0f dmg/s" % [float(dw[0]), float(dw[1])]] if why == "" else [])
 			if why == "":
-				# the swap, as the gun's damage and each stat the part moves
-				var deltas := []
-				var d_dps: float = float(dw[1]) - float(dw[0])     # the runner's damage as the top bar reads it, the burn in (18 Oct)
-				if absf(d_dps) >= 0.5:
-					deltas.append([d_dps, "%.0f dmg/s" % absf(d_dps)])
-				for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
-					var dv: float = Items.att_stat(it, pair[0]) - (Items.att_stat(cur, pair[0]) if cur != null else 0.0)
-					if absf(dv) >= 0.5:
-						deltas.append([dv, "%.0f%s" % [absf(dv), pair[1]]])
-				var tone: String = "good" if d_dps > 0.5 else ("bad" if d_dps < -0.5 else "warn")
-				_pick.set_verdict(("▲ Upgrade" if tone == "good" else ("▼ Downgrade" if tone == "bad" else "Sidegrade")) if cur != null else ("▲ Fits" if d_dps >= -0.5 else "▼ Costs damage"), tone, deltas)
+				_part_verdict(it, cur, dw)
 			else:
 				_pick.set_hint_options([why, ("No " + why.get_slice(" has no ", 1)) if why.contains(" has no ") else why.get_slice(":", 0), "Doesn't fit"])     # short forms for the tail's chip (the review)
 			buttons.append({"text": "Fit", "action": sim.fit.bind(target_slot, it["id"]), "enabled": why == "", "primary": true})
 	_set_pick_buttons(buttons)
+
+
+## A part's or a socketable's verdict against what's there: the runner's damage as the top bar reads it, the burn in
+## (18 Oct), and each stat it moves. Gun parts and socketables alike (19 Oct).
+func _part_verdict(it: Dictionary, cur, dw: Array, by_damage := true) -> void:
+	var deltas := []
+	var d_dps: float = float(dw[1]) - float(dw[0])
+	if not by_damage:
+		d_dps = d_dps / maxf(absf(float(dw[0])), 0.01) * 100.0     # a body piece's figure moves in shares: a percent of it reads as the damage's 1
+	elif absf(d_dps) >= 0.5:
+		deltas.append([d_dps, "%.0f dmg/s" % absf(d_dps)])
+	for pair in [["damage_pct", "% dmg"], ["first_pct", "% first"], ["speed_pct", "% pace"], ["patrol_pct", "% delay"], ["conv_fire_pct", "% as fire"], ["conv_frost_pct", "% as frost"], ["conv_poison_pct", "% as poison"], ["conv_shock_pct", "% as shock"], ["conv_bleed_pct", "% as bleed"], ["salt", " armour"], ["wire_pct", "% tins"]]:
+		var dv: float = Items.att_stat(it, pair[0]) - (Items.att_stat(cur, pair[0]) if cur != null else 0.0)
+		if absf(dv) >= 0.5:
+			deltas.append([dv, "%.0f%s" % [absf(dv), pair[1]]])
+	var tone: String = "good" if d_dps > 0.5 else ("bad" if d_dps < -0.5 else "warn")
+	_pick.set_verdict(("▲ Upgrade" if tone == "good" else ("▼ Downgrade" if tone == "bad" else "Sidegrade")) if cur != null else ("▲ Fits" if d_dps >= -0.5 else "▼ Costs damage"), tone, deltas)
 
 
 ## The pick panel's buttons, each through _press_pick so the selection follows.

@@ -5656,3 +5656,7 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   and searched before the pistol fired, Guard outlasting the bleed, too little poison to number, codes leaning the
   charms. Each message now prints what it saw. One wording fix with them: a fight too long to print says "over 5:12"
   (it fell to "clock 5:12", the fight gone). Eight loops on Matt's machine before: one red; nine after: none.
+- Done (19 Oct): socketables in the Workshop. In a gun's socket: "Fitting it: X → Y dmg/s" and a verdict on the top
+  bar's figure (Sim.damage_with_part with the socket named). In a helmet's or the armour's socket: the body's figure
+  the Kit judges by, "Fitting it: stands the fight 1.8× → 2.0×", and its verdict (Sim.body_with_part). Like the gun
+  parts, the figure is the gun fed: with the rounds out the top bar reads lower.
