@@ -29,13 +29,16 @@ STYLE = {"color_palette": True, "outline": True, "detail": True, "shading": True
 
 GROUND = ("Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: %s. "
           "The whole frame filled edge to edge with ground, no horizon, no sky, no border, no frame, no vignette. "
+          "Only the palette, light and painting style of the style image, not its view: no horizon, no sky, nothing at "
+          "eye level. "
           "Muted blue-grey and slate palette with %s, dusk light, a few warm orange lights; quiet and empty, no people, "
           "no vehicles moving, no text, no labels, no readable signs or numbers. Even detail all over: the picture is "
           "cut to an irregular shape and drawn under markers, so nothing in it should be the only thing worth looking at.")
 
 SITE = ("Pixel art, a small map vignette seen from above at a steep angle, as on a hand-painted town map: %s. One place "
         "only, centred, about two thirds of the frame, on a transparent background, no ground beyond its own edge, no "
-        "border. Muted blue-grey palette with %s, dusk light, one or two warm orange lights; no people, no text, no "
+        "border. Only the palette, light and painting style of the style image, not its view: no horizon, no sky, "
+        "nothing at eye level. Muted blue-grey palette with %s, dusk light, one or two warm orange lights; no people, no text, no "
         "readable signs or numbers. It must read at this size: a single strong shape.")
 
 # zone key, Data.ZONES name, bounding box of its ZONE_SHAPES points in the drawing's 1000 x 844 space, the ground,
@@ -81,7 +84,7 @@ FIGURE = ("%s, %s. One person alone, full body head to feet, facing the viewer, 
           "plain dark neutral background. Realistic painted pixel art, soft overcast light, muted cool northern palette, "
           "worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not "
           "glossy; no text, no logos.")
-POSES = [["stand", "standing", ""], ["fire", "firing at you", "The same "], ["down", "beaten, going down", "The same "]]
+POSES = [["stand", "standing", ""], ["fire", "firing at you", "The same person as the reference image: "], ["down", "beaten, going down", "The same person as the reference image: "]]
 OBJECT = ("A realistic painted pixel-art still-life of %s. One object centred and filling the frame, soft directional "
           "overcast daylight, natural material rendering with fine detail and painterly shading; no black outlines, no "
           "flat cel shading, not anime, not a cartoon, not a glossy video-game item; the look of a real object "
@@ -103,7 +106,7 @@ ORDER = [
      "on its front, climbing spurs at his belt, a coil of cable over one shoulder",
      ["holding a carbine low across his body, the helmet lamp lit", "aiming a carbine, two-handed, straight at the viewer, a bright muzzle flash, the helmet lamp lit",
       "hit and falling backwards, arms flung out, the carbine dropping, the helmet lamp swinging"],
-     "a city's electricity substation behind a chain-link fence, transformers and pylons, cables humming overhead, its "
+     "a city's electricity substation behind a chain-link fence hung with blank warning plates, transformers and pylons, cables humming overhead, its "
      "windows the only lit ones for miles", "the_city",
      ["the_lineman_s_lamp", 128, 128, "a single high-cut helmet with a heavy miner's lamp bolted to its front, the lamp's "
       "glass lit amber, scuffed paint, a strip of reflective tape round it, seen from the front"]],
@@ -118,8 +121,8 @@ ORDER = [
      "a town's old records office: a Victorian stone building with tall windows, filing shelves seen through them by "
      "lamplight, a locked iron gate", "the_town",
      ["the_registrar_s_satchel", 192, 256, "a single old leather document satchel converted into a rucksack, standing "
-      "upright as if set down, seen from the front, stuffed with folded papers and ledgers, a brass lock and a council "
-      "crest stamped into the flap, straps added from an army pack"]],
+      "upright as if set down, seen from the front, stuffed with folded papers and ledgers, a brass lock and a worn "
+      "crest with no lettering stamped into the flap, straps added from an army pack"]],
     ["mint", "The Issuer", "the_issuer",
      "the Issuer, a heavy pale man in his sixties who prints money nobody believes in: heavy embroidered robes over a "
      "ballistic vest, a chain of office, rings on every finger, a face that has never been told no, thin grey hair "
@@ -129,7 +132,7 @@ ORDER = [
      ["standing still with a shotgun held upright beside him like a staff", "aiming a shotgun from the hip straight at the viewer, a bright muzzle flash, the robes swinging",
       "hit and falling backwards, arms flung out, the shotgun dropping, the chain of office flying up"],
      "a fortified state printing works: a concrete block with no windows, razor wire, a lorry bay with its shutter half "
-     "up and light inside, banknote sheets drying on racks glimpsed through it", "the_bank",
+     "up and light inside, sheets of blank printed paper drying on racks glimpsed through it", "the_bank",
      ["the_issuer_s_robes", 192, 256, "a single set of heavy dark embroidered ceremonial robes hung flat as if on a hook, "
       "seen from the front, gold thread worn dull, the front open on a ballistic vest sewn into the lining, a chain of "
       "office hung over it"]],
@@ -237,3 +240,22 @@ write("tools/pixellab_outstanding_manifest.json",
 write("tools/pixellab_order_glyphs_manifest.json",
       ["FIAT ORDER GLYPHS, OPTIONAL (19 Oct): the order's three keys and six of the rebuild materials (copper wire has its item's picture), for the Radio's town list and chips, if those want pictures.",
        RUN % "tools/pixellab_order_glyphs_manifest.json"], glyphs)
+
+# The land past the zones (19 Oct, Matt: the fog alone "too sparse ... draw some art for this that matches the map"):
+# one picture under the whole map at half size, drawn x2; the zones paint over it, the fog drifts over it thin.
+LAND = ("Pixel art, seen straight down from directly above like an aerial photograph turned into a painted map: the "
+        "empty country round a northern English town - rough moorland and bracken, bare hills with dry-stone walls "
+        "running over them, rough grazing gone to scrub, a reservoir's edge, a few abandoned farmsteads and a quarry, "
+        "lanes going nowhere, banks of low fog lying in the hollows. The whole frame filled edge to edge with land, no "
+        "horizon, no sky, no border, no vignette. Only the palette, light and painting style of the style image, not its "
+        "view. Darker, plainer and emptier than a town: muted greys, slate blues and "
+        "dull olive, dusk light, no lights at all; no people, no vehicles, no text, no labels, no readable signs. Even "
+        "detail all over: the town's districts are drawn over most of it, so nothing in it should be the only thing "
+        "worth looking at.")
+land = [{"out": "art/map/land.png", "endpoint": "generate-image-v2", "width": 508, "height": 420, "no_background": False,
+         "single": True, "seed": 96400, "style_options": STYLE, "style_image": "res://art/map/zone_outskirts.png",
+         "description": LAND,
+         "_where": "the Map: the land past the zones, under all of it (1000 x 844 drawing at half size, drawn x2)"}]
+write("tools/pixellab_map_land_manifest.json",
+      ["FIAT THE MAP'S LAND (19 Oct, Matt): the country past the zones, one picture under the whole map; the fog drifts over it thin. Styled on the Outskirts' ground: after the Outskirts test.",
+       RUN % "tools/pixellab_map_land_manifest.json"], land)

@@ -59,6 +59,7 @@ var _order_labels: Dictionary = {}  # key -> Label
 var _legend: Array = []            # [Label, colour, hollow]
 var _shown := ""
 static var _art := {}                  # path -> Texture2D or null, looked for once
+var _land: TextureRect                 # its picture, art/map/land.png, when made: the fog drifts over it thin
 var _fog: ColorRect                    # the land past the zones (19 Oct, Matt: "fill those sections with cloud or fog in engine")
 
 ## The fog: slow banded cloud in chunky pixels, drifting, under the zones (the map draws over it; the gaps show it).
@@ -69,6 +70,7 @@ uniform vec4 mist : source_color = vec4(0.24, 0.27, 0.31, 1.0);
 uniform vec2 px_size = vec2(1018.0, 844.0);
 uniform float pix = 4.0;
 uniform float drift = 0.012;
+uniform float over_land = 0.0;         // 1 with the land's picture under it: thin banks drifting over it, not the ground
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
 	vec2 i = floor(p);
@@ -89,7 +91,8 @@ void fragment() {
 	float n = fbm(p + vec2(t, t * 0.4)) * 0.65 + fbm(p * 1.7 - vec2(t * 1.3, -t * 0.25)) * 0.35;
 	n = smoothstep(0.32, 0.78, n);
 	n = floor(n * 5.0) / 5.0;
-	COLOR = mix(base, mist, n * 0.85);
+	vec4 solid = mix(base, mist, n * 0.85);
+	COLOR = mix(solid, vec4(mist.rgb, n * 0.55), over_land);
 }
 """
 
@@ -101,6 +104,16 @@ func _init(rect: Rect2) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
+	var land_tex := art("land")             # the country past the zones, under the lot (19 Oct, Matt: the fog alone was too sparse)
+	if land_tex != null:
+		_land = TextureRect.new()
+		_land.size = size
+		_land.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_land.stretch_mode = TextureRect.STRETCH_SCALE
+		_land.texture = land_tex
+		_land.show_behind_parent = true
+		_land.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_land)
 	_fog = ColorRect.new()
 	_fog.size = size
 	_fog.show_behind_parent = true          # under the map's own drawing: the zones paint over it
@@ -110,6 +123,7 @@ func _init(rect: Rect2) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = sh
 	mat.set_shader_parameter("px_size", size)
+	mat.set_shader_parameter("over_land", 1.0 if land_tex != null else 0.0)
 	_fog.material = mat
 	add_child(_fog)
 	for z in range(Data.ZONES.size()):
@@ -132,7 +146,7 @@ func _init(rect: Rect2) -> void:
 		_legend.append([l, e[1], e[2]])
 		x += 116.0
 	for c in get_children():
-		if c is CanvasItem:
+		if c is CanvasItem and c != _land:
 			c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 

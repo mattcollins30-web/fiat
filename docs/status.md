@@ -5710,6 +5710,10 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   (map_view.gd FOG_SHADER) behind the map's drawing, banded cloud in 4 px blocks drifting slowly. Known: Godot's TIME
   rolls over hourly, so the fog jumps to a new pattern once an hour; it runs under the zones too (a quarter-size
   SubViewport would cut its cost to a sixteenth, if the Deck's battery asks).
+- Done (19 Oct): the room cards' boxes show their own pictures (art/room_boxes/<room>_<n>.png, all 27), cut to the box
+  across the middle; the old cut of the room's art only where one's missing. The Map's land past the zones: Matt found
+  the fog alone too sparse - tools/pixellab_map_land_manifest.json makes art/map/land.png (508 x 420, drawn x2 under
+  the lot); with it in, the fog drifts over it as thin banks (the shader's over_land), without it the fog stays solid.
 - The outstanding art's manifests (19 Oct, Matt: "everything outstanding - the map ... needs drawn art either way"):
   tools/make_outstanding_manifest.py writes three. The test (4): the Map's Outskirts - its ground, clipped in code to the
   zone's shape (so it can't drift off the pins; roads, river, pins and hatch stay drawn on top), and its three sites'

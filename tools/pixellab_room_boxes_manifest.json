@@ -1,0 +1,441 @@
+{
+ "_readme": [
+  "FIAT ROOM CARD BOXES (18 Oct, Matt: option C, a strip of scene on each box). The other 24, after the Map's test.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_room_boxes_manifest.json   (++ --dry-run to list; ++ --only <name> ++ --force to reroll)",
+  "Regenerate with python3 tools/make_room_box_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/room_boxes/kit_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99003,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_kit_room.png",
+   "description": "Pixel art, a wide close view: a padded work jacket and a hard hat hung on hooks on a breeze-block wall, boots on the floor below. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the kit room card's box: The body"
+  },
+  {
+   "out": "art/room_boxes/kit_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99004,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_kit_room.png",
+   "description": "Pixel art, a wide close view: a chest rig laid flat on a table, its pouches open, bandages and a plain cardboard box of shells beside it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the kit room card's box: The rig"
+  },
+  {
+   "out": "art/room_boxes/kit_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99005,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_kit_room.png",
+   "description": "Pixel art, a wide close view: a row of grey steel cabinets with padlocks, one door ajar on stacked boxes and a gun case. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the kit room card's box: The stash"
+  },
+  {
+   "out": "art/room_boxes/stats_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99006,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_stats.png",
+   "description": "Pixel art, a wide close view: a revolver and a claw hammer side by side on a folded oilcloth, spent cases scattered. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the stats room card's box: Attack"
+  },
+  {
+   "out": "art/room_boxes/stats_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99007,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_stats.png",
+   "description": "Pixel art, a wide close view: a dented hard hat and a stab vest on a chair, a strip of tape over a split in the vest. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the stats room card's box: Defence"
+  },
+  {
+   "out": "art/room_boxes/stats_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99008,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_stats.png",
+   "description": "Pixel art, a wide close view: an open notebook of tally marks and struck-through lines, a pencil stub and a mug ring on the page. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the stats room card's box: The record"
+  },
+  {
+   "out": "art/room_boxes/training_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99009,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_caravan.png",
+   "description": "Pixel art, a wide close view: a creased work ID badge on a lanyard, its print worn blank, and an old photo, lying on a caravan's fold-down table. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the training room card's box: Their past"
+  },
+  {
+   "out": "art/room_boxes/training_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99010,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_caravan.png",
+   "description": "Pixel art, a wide close view: a sapling growing in a battered paint tin on a caravan step, a kettle beside it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the training room card's box: Their trees"
+  },
+  {
+   "out": "art/room_boxes/training_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99011,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_caravan.png",
+   "description": "Pixel art, a wide close view: a branching tree carved into an old fence post, years of knife marks around it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the training room card's box: The Pitch's tree"
+  },
+  {
+   "out": "art/room_boxes/clinic_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99012,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_clinic.png",
+   "description": "Pixel art, a wide close view: a needle, a reel of thread and a steel kidney dish on a clean towel under a work lamp. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the clinic room card's box: Treatment"
+  },
+  {
+   "out": "art/room_boxes/clinic_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99013,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_clinic.png",
+   "description": "Pixel art, a wide close view: a wall shelf of plain unlabelled brown pill bottles and plain boxed dressings, a few gaps where stock has gone. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the clinic room card's box: The shelf"
+  },
+  {
+   "out": "art/room_boxes/clinic_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99014,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_clinic.png",
+   "description": "Pixel art, a wide close view: a bandage roll, a plain foil blister pack of painkillers and a field dressing tucked in a belt pouch. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the clinic room card's box: Your meds"
+  },
+  {
+   "out": "art/room_boxes/fence_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99015,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_fence.png",
+   "description": "Pixel art, a wide close view: a holdall on the ground with finds spilling out: a radio, a watch, a gun part, a tin. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the fence room card's box: The stash"
+  },
+  {
+   "out": "art/room_boxes/fence_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99016,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_fence.png",
+   "description": "Pixel art, a wide close view: a trestle table of goods under a tarp, taped-up boxes stacked behind, a lantern hanging. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the fence room card's box: The shelf"
+  },
+  {
+   "out": "art/room_boxes/fence_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99017,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_fence.png",
+   "description": "Pixel art, a wide close view: a scrap of card covered in scrawled pencil marks, nothing readable, hung on a nail in a wooden post, a pen tied on string. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the fence room card's box: Contracts"
+  },
+  {
+   "out": "art/room_boxes/workshop_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99018,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_workshop.png",
+   "description": "Pixel art, a wide close view: a pump shotgun stripped on a workbench, a scope and a stock laid out beside it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the workshop room card's box: Guns"
+  },
+  {
+   "out": "art/room_boxes/workshop_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99019,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_workshop.png",
+   "description": "Pixel art, a wide close view: an open socket set in its case on a bench, a few loose sockets and a small glowing stone. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the workshop room card's box: Sockets"
+  },
+  {
+   "out": "art/room_boxes/workshop_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99020,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_workshop.png",
+   "description": "Pixel art, a wide close view: a bench vice gripping a gun part that glows faintly, filings and a file on the bench. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the workshop room card's box: Craft"
+  },
+  {
+   "out": "art/room_boxes/yard_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99021,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: a row of sheds built from pallets and corrugated sheet in a muddy yard, smoke from a flue. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the yard room card's box: The buildings"
+  },
+  {
+   "out": "art/room_boxes/yard_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99022,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: a wooden stepladder against a half-built shed wall, a new course of blocks going on. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the yard room card's box: Ranks"
+  },
+  {
+   "out": "art/room_boxes/yard_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99023,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_yard.png",
+   "description": "Pixel art, a wide close view: a white van with no number plate, loaded up with its roof rack strapped down, back doors open, pulling out of a yard. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the yard room card's box: Moving on"
+  },
+  {
+   "out": "art/room_boxes/radio_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99024,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_radio.png",
+   "description": "Pixel art, a wide close view: three torn paper scraps covered in scribbled pencil marks, nothing readable, under a bulldog clip beside a radio set. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the radio room card's box: The decoder"
+  },
+  {
+   "out": "art/room_boxes/radio_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99025,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_radio.png",
+   "description": "Pixel art, a wide close view: a lattice radio mast against a dark sky, one red light at its top, cables running down. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the radio room card's box: Signals"
+  },
+  {
+   "out": "art/room_boxes/radio_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99026,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_radio.png",
+   "description": "Pixel art, a wide close view: a big Bakelite tuning dial glowing amber on an old military radio set, plain tick marks on it and no numbers, a hand-drawn chart of lines beside it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the radio room card's box: The Dial"
+  }
+ ]
+}

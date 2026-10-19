@@ -1,0 +1,63 @@
+{
+ "_readme": [
+  "FIAT ROOM CARD BOXES (18 Oct, Matt: option C, a strip of scene on each box). The test: the Map's three, judged in the game before the other 24.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_room_boxes_test_manifest.json   (++ --dry-run to list; ++ --only <name> ++ --force to reroll)",
+  "Regenerate with python3 tools/make_room_box_manifest.py --test."
+ ],
+ "jobs": [
+  {
+   "out": "art/room_boxes/map_1.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99000,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_map.png",
+   "description": "Pixel art, a wide close view: a folded street map spread on the bonnet of a car, only roads, blocks and a river drawn on it, no names printed, a red pin pushed into it, a torch beside it. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the map room card's box: Sites"
+  },
+  {
+   "out": "art/room_boxes/map_2.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99001,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_map.png",
+   "description": "Pixel art, a wide close view: a ring road at dusk seen from a footbridge, three slip roads leading off it into the haze, their road signs blank, the town getting denser beyond. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the map room card's box: Zones"
+  },
+  {
+   "out": "art/room_boxes/map_3.png",
+   "endpoint": "generate-image-v2",
+   "width": 384,
+   "height": 96,
+   "no_background": false,
+   "single": true,
+   "seed": 99002,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/places/the_map.png",
+   "description": "Pixel art, a wide close view: three photographs of men in balaclavas, head and shoulders, no placards or captions, pinned to a corkboard, red string running between the pins. Muted blue-grey palette, dark navy shadows, overcast evening light, one or two warm orange lamps. A wide, low strip: the subject sits across the middle, filling the width, with nothing important in the top or bottom eighth (the strip is cropped to fit its box). Only the palette, light and painting style of the style image, not its view or its subject. One continuous scene edge to edge, no border, no frame. No people unless the brief names them, no text, no readable signage, numbers or lettering.",
+   "_where": "the map room card's box: The heads"
+  }
+ ]
+}

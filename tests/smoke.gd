@@ -14831,6 +14831,7 @@ func _room_intro_checks(main) -> void:
 	# every card: its lines and tiles, its words inside their boxes, its art
 	var arts := 0
 	var strips := 0
+	var owns := 0
 	for k in Words.ROOM_INTROS.keys():
 		var d_in: Dictionary = Words.ROOM_INTROS[k]
 		var c = main.RoomIntro.new(k)
@@ -14858,9 +14859,14 @@ func _room_intro_checks(main) -> void:
 				var src: Texture2D = (t[3].texture as AtlasTexture).atlas
 				_check(reg.position.x >= 0 and reg.position.y >= 0 and reg.end.x <= src.get_width() + 0.5 and reg.end.y <= src.get_height() + 0.5, "%s's box %d cuts its strip off the edge of its art" % [k, ti + 1])
 				_check(absf(reg.size.x / reg.size.y - t[3].size.x / t[3].size.y) < 0.05, "%s's box %d's strip is stretched" % [k, ti + 1])
+				# its own picture when made (19 Oct): that's the atlas, cut across its middle
+				var own_pic = c.art_texture("room_boxes/%s_%d" % [k, ti + 1])
+				if own_pic != null:
+					owns += 1
+					_check(src == own_pic and absf(reg.get_center().y - src.get_height() / 2.0) <= 1.0, "%s's box %d doesn't show its own picture across the middle" % [k, ti + 1])
 		_check(c._card.position.y >= 0 and c._card.position.y + c._card.size.y <= 1080, "%s's card doesn't fit a 1080 screen" % k)
 		c.finish()
-	print("room cards: %d of %d have their art; %d of 27 boxes have their strip" % [arts, Words.ROOM_INTROS.size(), strips])
+	print("room cards: %d of %d have their art; %d of 27 boxes have their strip, %d their own picture" % [arts, Words.ROOM_INTROS.size(), strips, owns])
 	_check(strips == 27 or arts < Words.ROOM_INTROS.size(), "only %d of the 27 boxes show a strip" % strips)
 	# Go on is a button of its own: it lights under the mouse and takes the click, once (Matt: "no visual register")
 	var gc = main.RoomIntro.new("clinic")
@@ -15731,6 +15737,10 @@ func _map_checks(main) -> void:
 	_check(crossed.is_empty(), "names cross on the Map: %s" % ", ".join(crossed))
 	# the fog past the zones (19 Oct, Matt): behind the map's drawing, over the whole of it, a shader that drifts
 	_check(mv._fog != null and mv._fog.show_behind_parent and mv._fog.size == mv.size and mv._fog.material is ShaderMaterial and mv._fog.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the Map's fog is off")
+	var land_t = mv.art("land")
+	_check((mv._land != null) == (land_t != null) and float(mv._fog.material.get_shader_parameter("over_land")) == (1.0 if land_t != null else 0.0), "the Map's land picture or the fog over it is off")
+	if mv._land != null:
+		_check(mv._land.show_behind_parent and mv._land.get_index() < mv._fog.get_index() and mv._land.size == mv.size and mv._land.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "the land is not under the fog, full size and nearest")
 	# the painting (19 Oct): every site's picture, made or not, inside the map, on no name and on no other picture
 	var pics: Array = []
 	for i in range(Data.TIERS.size()):

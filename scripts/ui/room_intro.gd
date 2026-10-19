@@ -176,8 +176,19 @@ func _fill() -> void:
 	_line_t = LINE_S                       # the first line straight away
 
 
-## A box's strip: its art, cut to the box's shape where STRIPS says; null when the art isn't there (the plain ground shows).
+## A box's strip: its own picture (art/room_boxes/<room>_<n>.png, 384 x 96, 19 Oct) cut to the box across the middle;
+## else the room's art cut where STRIPS says; null when neither is there (the plain ground shows).
 static func strip_texture(room_key: String, k: int, box: Vector2) -> Texture2D:
+	var own: Texture2D = art_texture("room_boxes/%s_%d" % [room_key, k + 1])
+	if own != null:
+		var ow: float = own.get_width()
+		var oh: float = own.get_height()
+		var a: float = box.x / box.y
+		var c := Vector2(ow, ow / a) if ow / oh <= a else Vector2(oh * a, oh)
+		var ot := AtlasTexture.new()
+		ot.atlas = own
+		ot.region = Rect2(((Vector2(ow, oh) - c) / 2.0).floor(), c.floor())     # the middle: a sixteenth off the top and the bottom
+		return ot
 	var spec: Array = STRIPS.get(room_key, [])
 	if k >= spec.size():
 		return null
