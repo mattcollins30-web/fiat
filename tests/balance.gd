@@ -16,6 +16,7 @@ const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Bot := preload("res://tests/bot.gd")
+const Feel := preload("res://tools/feel_gates.gd")
 
 
 func _init() -> void:
@@ -443,6 +444,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 		first_ladder = _ladder_read(sim, bot.PUSH)
 		ladder_us += Time.get_ticks_usec() - l0
 	g["ladder"] = first_ladder
+	g["feel"] = Feel.read(sim.chronicle, true)    # the bot's away hours are play too (AWAY_SHARE)          # how play felt (19 Oct): the gates a playtest is judged by too
 	# where the wall went, in seconds: the bot's step holds the odds reads (survival: the dry runs, their snapshots)
 	# and the real run's ticks; the tidy is the fitting, selling and building; the ladder reads are their own
 	var pr: Dictionary = sim.prof

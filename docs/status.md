@@ -5643,3 +5643,11 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   - For the balance pass: until the runner reaches a new zone's gate, the gamble's level and price, the deep
     contracts' level, the Fence's and the Clinic's stock tier and the body pieces' verdicts read the last open site.
   - Matt's call, later: a new zone can open with all three sites shut for the level; the Map lands on that tab.
+- Done (19 Oct): the balance pass's way of working (docs/design/balance_gates.md, "How it felt"). tools/feel_gates.gd
+  reads five gates off a chronicle - level on entry, gear to wear, wounds, deaths, contracts against runs - and judges
+  them the same on Matt's record (playtest.md, "How it felt, judged") and on every bot read (summary.md, "(as
+  played)"). A gate is green when both are. Two thresholds PROPOSED, for Matt: 60% of the campaign's gear wearable
+  as it drops; contracts' tins at most half the runs'. On his 18 Oct record: gear 35% RED, wounds 0 of 23 runs with
+  the Clinic open RED, contracts 382% of the runs' tins RED; level on entry green at the new scale. A one-hour bot read
+  went red the other way on entry (the Bank at 15 against its gear's 10): the bot grinds where Matt pushes on.
+- Flaky, for the batch: "charms are 3 of 400 finds; 5% was the aim" (device, once; 11-22 on twenty fresh reads).

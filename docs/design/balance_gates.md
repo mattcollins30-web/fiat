@@ -38,3 +38,30 @@ deaths and wounds say nothing. Shown in the summary beside the gates, unjudged.
 
 Retired with the structure they measured: the keystone by hour 2 and the capstone by hour 5 (now levels 20 and 30:
 gates 4 and 5), depth pace (the depth buttons went: gate 6), the lorry by 16 (gate 7), the ladders' spread (signals).
+
+## How it felt: gates judged on play as well as the bot (19 Oct)
+
+Matt's playtest of 18 Oct played green on the bot's gates and still felt wrong: he reached the Barracks five levels
+under its gear, could wear a third of what dropped, took no wound in 26 runs, and made more from the Fence's contracts
+than from running. The bot plays slower than he does and grinds levels, so its reads missed all four.
+
+The pass now works like this:
+
+1. Every playtest: `tools\playtest.bat` writes docs\balance\playtest.md, whose "How it felt, judged" table holds the
+   gates below, judged on Matt's record.
+2. Every balance pass: docs\balance\summary.md carries the same rows, "(as played)", judged on every element read of
+   the bot (green when every read is). One reader, tools/feel_gates.gd, does both.
+3. A gate is green only when the bot and Matt's latest playtest are both green. A red in play that's green on the bot
+   is the bot playing unlike Matt: the bot's play is fixed first (its pace, when it moves on), then the numbers.
+
+| Gate | Green when |
+| --- | --- |
+| Level on entry | at each site's first clear from the Parade, within 1 under and 3 over its gear's level |
+| Gear to wear | 60% or more of the campaign's plain gear finds wearable as they drop (PROPOSED) |
+| Wounds | 5-30% of runs |
+| Deaths | one run in 10-30, judged from 30 runs |
+| Contracts against runs | the Fence's contracts' tins at most 50% of the runs' tins (PROPOSED) |
+
+Read off Matt's 18 Oct record (at the new 2 x - 2 wear): level on entry green, gear to wear 35% RED, wounds 0% RED,
+deaths too few runs to judge, contracts 382% of the runs' tins RED. A one-hour bot read (fire Drifter): level on entry
+RED the other way (the Bank at 15 against its gear's 10), the rest green.

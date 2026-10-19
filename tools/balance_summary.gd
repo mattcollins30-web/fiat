@@ -24,6 +24,7 @@ const GK_LEVEL := 3             # and the runner at least this level leaving the
 const SITE_LEVEL_UNDER := 1     # at a site's first clear, the runner no more than this under the level to wear its gear (17 Oct, Matt)
 const SITE_LEVEL_OVER := 3      # nor more than this over it (the Outskirts' grind not a level ahead of the gear for long)
 const Sim := preload("res://scripts/sim/sim.gd")
+const Feel := preload("res://tools/feel_gates.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const QM_BAND := 2.0            # the slowest element build's Quartermaster within this of the fastest
 const QM_LEVEL := [20, 24]      # the runner's level at the Quartermaster (17 Oct: was 18-22; the Barracks' gear is level 21, gate 16 has him within one of it)
@@ -115,6 +116,7 @@ func _init() -> void:
 	_clock_rows(rows, full)
 	_loot_rows(rows, full, probe)
 	_economy_rows(rows, full)
+	_feel_rows(rows, reads.filter(func(b): return str(b.get("element", "")) != "" and b.has("feel")))
 	# the plain floor: every read of a plain build finishes the campaign
 	if not plains.is_empty():
 		var stuck: Array = []
@@ -209,6 +211,28 @@ func _init() -> void:
 		print(out[k])
 	print("-> docs/balance/summary.md")
 	quit(0)
+
+
+## How it felt (19 Oct, tools/feel_gates.gd): the gates a playtest is judged by, on every element read - green when
+## every read is, the worst read shown. playtest.md judges Matt's record by the same.
+func _feel_rows(rows: Array, el_reads: Array) -> void:
+	if el_reads.is_empty():
+		return
+	var per: Array = el_reads.map(func(b): return Feel.rows(b["feel"]))
+	for k in range(per[0].size()):
+		var greens := 0
+		var judged := 0
+		var worst := ""
+		for j in range(per.size()):
+			var r: Array = per[j][k]
+			if r[3] == null:
+				continue
+			judged += 1
+			if r[3]:
+				greens += 1
+			elif worst == "":
+				worst = "%s: %s" % [el_reads[j]["build"], r[2]]
+		rows.append([per[0][k][0] + " (as played)", per[0][k][1], ("%d of %d reads green" % [greens, judged]) + ((" · " + worst) if worst != "" else ""), Feel._judged(judged > 0, greens == judged)])
 
 
 ## Gates 1-5: the Manager, the Quartermaster, the builds' band, the level at him, level 30 after him.

@@ -14,6 +14,7 @@ extends SceneTree
 
 const OUT := "res://docs/balance/playtest.md"
 const GATES := preload("res://tools/balance_summary.gd")
+const FEEL := preload("res://tools/feel_gates.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const LEVELS := [5, 10, 15, 20, 25, 30, 40, 50]
@@ -213,6 +214,16 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 	L.append("| 11. Staying costs | %.0f%% of runs into a third gang gone by the fifth | %s |" % [GATES.LEAVE_BY5 * 100.0, ("%d of %d" % [gone5, into3.size()]) if not into3.is_empty() else "never into a third gang"])
 	var ways := live.filter(func(e): return e.get("way_out", false)).size()
 	L.append("| The way out | (not a gate) | %s of runs left by the way out |" % _pct(ways, live.size()))
+	# ---- how it felt (19 Oct): judged here and on the bot alike (tools/feel_gates.gd)
+	L.append("")
+	L.append("## How it felt, judged")
+	L.append("")
+	L.append("The same gates summary.md judges the bot by. A red here that's green there is the bot missing what play is like.")
+	L.append("")
+	L.append("| Gate | Green when | Play | |")
+	L.append("| --- | --- | --- | --- |")
+	for r in FEEL.rows(FEEL.read(ch)):
+		L.append("| %s | %s | %s | %s |" % [r[0], r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	# ---- runs by site
 	L.append("")
 	L.append("## Runs, site by site (away runs counted, and shown apart)")

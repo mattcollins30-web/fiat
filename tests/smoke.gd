@@ -621,6 +621,7 @@ func _init() -> void:
 	_save_folder_checks()
 	_odds_paint_checks(main)
 	_site_gate_checks(main)
+	_feel_gate_checks()
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -15365,3 +15366,30 @@ func _site_gate_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	print("the campaign's pace ok: wear at 2 x - 2, each site open at its drops' level less one, the Map says so")
+
+
+## The gates for how play feels (19 Oct): one reader for the bot's chronicle and the player's record, judged alike.
+func _feel_gate_checks() -> void:
+	var Feel = load("res://tools/feel_gates.gd")
+	var ch: Array = [
+		{"k": "clear", "first": true, "site": "The Parade", "site_level": 2, "depth": 1, "lv": 2},
+		{"k": "clear", "first": true, "site": "The Barracks", "site_level": 9, "depth": 1, "lv": 12},
+		{"k": "run", "cash": 1000, "gear": 4, "gear_wearable": 1, "outcome": "Back"},
+		{"k": "open", "room": "clinic"},
+		{"k": "run", "cash": 1000, "gear": 0, "gear_wearable": 0, "wounded": true, "outcome": "Back"},
+		{"k": "run", "cash": 1000, "gear": 4, "gear_wearable": 1, "outcome": "Back", "away": true},
+		{"k": "contract", "pay": "cash", "amount": 5000},
+		{"k": "contract", "pay": "notes", "amount": 99},
+	]
+	var f: Dictionary = Feel.read(ch)
+	_check(f["runs"] == 2 and f["wound_runs"] == 1 and f["gear"] == 4 and f["wearable"] == 1 and f["wounded"] == 1 and is_equal_approx(float(f["contract_cash"]), 5000.0), "the feel read is off: %s" % str(f))
+	var bot_f: Dictionary = Feel.read(ch, true)
+	_check(bot_f["runs"] == 3 and bot_f["gear"] == 8, "the bot's away hours weren't counted: %s" % str(bot_f))
+	var rows: Array = Feel.rows(f)
+	var by := {}
+	for r in rows:
+		by[r[0]] = r[3]
+	_check(by.get("Level on entry") == false and by.get("Gear to wear") == false and by.get("Contracts against runs") == false and by.get("Deaths") == null, "the feel gates judged it wrong: %s" % str(by))
+	var empty: Array = Feel.rows(Feel.read([]))
+	_check(empty.all(func(r): return r[3] == null), "an empty record was judged: %s" % str(empty.map(func(r): return r[3])))
+	print("the feel gates ok: one reader, the entries, the wearable share, wounds, deaths, contracts")
