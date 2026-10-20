@@ -5916,3 +5916,10 @@ first. His points for the pass, to design:
 - Done (item 1, parked till after the playtest): the reasons-under-the-odds fixture reads at 3% HP, not 30%, so a site
   reads low whatever the camp the smoke rolled (runs 92 and 134).
 
+## How the game moves on from here (20 Oct, Matt, agreed)
+
+Features or number changes -> one balance pass with the bots -> Matt playtests -> then either more features or
+changes, or straight on with his playtests. Bot balance passes don't repeat: this one (the gates above, agreed as a
+starting place) is the only one. The bots set the shape (deaths, odds, stalls, every build finishing); Matt's play sets
+the times.
+
