@@ -5913,4 +5913,6 @@ first. His points for the pass, to design:
   so its materials and its head if one comes). The Pitch's move waits till the reach has stood MOVE_STALL (10) signals
   run at its band (a faint one doesn't count, the review), the Pitch saying how many; the button shows, shut, till then.
   - For the balance pass: the bot's moves now wait on the same stall.
+- Done (item 1, parked till after the playtest): the reasons-under-the-odds fixture reads at 3% HP, not 30%, so a site
+  reads low whatever the camp the smoke rolled (runs 92 and 134).
 

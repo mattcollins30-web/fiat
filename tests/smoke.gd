@@ -5478,7 +5478,7 @@ func _why_checks(main) -> void:
 	sim.hp = sim.max_hp() * 0.3
 	var why: Array = M.odds_reasons(sim, 0)
 	_check(why.size() >= 2 and str(why[0]["forms"][0]) == "No meds" and str(why[1]["forms"][0]).begins_with("HP "), "the reasons don't lead with no meds and the HP: %s" % str(why))
-	sim.hp = sim.max_hp() * 0.3          # hurt and no meds: some open site always reads low (18 Oct: at full HP the bot's camp could read all six high)
+	sim.hp = sim.max_hp() * 0.03         # near dead and no meds: some open site always reads low (18 Oct: at full HP the bot's camp could read all six high; 20 Oct, run 92 and 134: at 30% too)
 	main.show_room(main.MISSIONS)
 	var lows := 0
 	var highs := 0
