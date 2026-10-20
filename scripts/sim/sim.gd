@@ -3840,7 +3840,7 @@ func yard_pick_cost(key: String, col: int) -> int:
 	if b.is_empty() or col < 0 or col >= b["costs"].size():
 		return -1
 	var c: int = _inf(int(b["costs"][col]))
-	return int(round(c * Data.YARD_REFIT)) if yard_side(key, col) != "" else c
+	return _round_price(int(round(c * Data.YARD_REFIT)) if yard_side(key, col) != "" else c)
 
 
 ## The salvage a column wants: the fifth's, YARD_PICK_SALVAGE of the building's kind (none for a refit).
@@ -3899,7 +3899,17 @@ func yard_pick(key: String, col: int, side: String) -> bool:
 
 ## A rank's price: YARD_RANK_CASH × YARD_RANK_GROWTH a rank bought, at today's prices; salvage, one more a rank.
 func yard_rank_cost(key: String) -> int:
-	return _inf(int(round(Data.YARD_RANK_CASH * pow(Data.YARD_RANK_GROWTH, yard_rank(key)))))
+	return _round_price(_inf(int(round(Data.YARD_RANK_CASH * pow(Data.YARD_RANK_GROWTH, yard_rank(key))))))
+
+
+## A Pitch price, rounded (20 Oct, Matt's video: prices climbing a few tins with the clock read as a click raising
+## them): to the hundred from a thousand, the thousand from a hundred thousand, so they move in steps, seldom.
+static func _round_price(x: int) -> int:
+	if x >= 100000:
+		return int(round(x / 1000.0)) * 1000
+	if x >= 1000:
+		return int(round(x / 100.0)) * 100
+	return x
 
 
 func yard_rank_salvage(key: String) -> int:

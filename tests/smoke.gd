@@ -192,6 +192,8 @@ func _init() -> void:
 		_check_fit(main, r + " (start)")
 	_part_name_checks(main)
 	_rig_layout_checks()
+	# the Pitch's prices move in steps (20 Oct, Matt's video: a few tins a click): to the hundred, the thousand past 100k
+	_check(Sim._round_price(1234) == 1200 and Sim._round_price(82611) == 82600 and Sim._round_price(154321) == 154000 and Sim._round_price(950) == 950, "the Pitch's prices aren't rounded")
 	_try_on_rounds_checks(main.sim)
 	_pitch_scramble_checks(main)
 	# the bot: deploy to the best open tier the operator can probably survive,
@@ -450,8 +452,32 @@ func _init() -> void:
 	# filter and emptied the Meds tab)
 	var real_slots: Array = Data.SLOTS + [Data.MEDICAL, Data.AMMO, Data.GRENADE, Data.PAPER, Data.ATTACHMENT]
 	for kd in inv.KINDS:
+		if kd[1] is String:
+			_check(kd[1] in ["unique", "set"], "the %s tab reads '%s', not a slot or what a piece is" % [kd[0], kd[1]])
+			continue
 		for sl in kd[1]:
 			_check(sl in real_slots, "the %s filter names '%s', not a slot" % [kd[0], sl])
+	# the tabs (20 Oct, Matt): no Paper; Meds without the rounds, Rounds their own; Uniques and Sets what the piece is;
+	# every tab on bar one before the sort
+	var names: Array = inv.KINDS.map(func(kd): return kd[0])
+	_check(not ("Paper" in names) and "Rounds" in names and "Uniques" in names and "Sets" in names, "the stash's tabs: %s" % str(names))
+	var u_have := Items.roll_unique(Data.UNIQUES[0], sim.rng)
+	sim.stash.append(u_have)
+	for k in range(inv.KINDS.size()):
+		inv._set_kind(k)
+		main.refresh()
+		var tab: String = inv.KINDS[k][0]
+		var wrong: Array = inv.items.filter(func(x): return not inv._of_kind(x, inv.KINDS[k][1]))
+		_check(wrong.is_empty(), "the %s tab shows %s" % [tab, str(wrong.map(func(x): return x["base"]))])
+		if tab == "Meds":
+			_check(not inv.items.any(func(x): return Items.is_ammo(x)), "the Meds tab shows rounds")
+		if tab == "Uniques":
+			_check(inv.items.has(u_have), "the Uniques tab: %d shown, the unique held not among them" % inv.items.size())
+	var last_b: Button = inv._kind_buttons.back()
+	_check(last_b.position.x + last_b.size.x <= inv._sort_button.position.x - 2, "the tabs run into the sort: %.0f past %.0f" % [last_b.position.x + last_b.size.x, inv._sort_button.position.x])
+	sim.stash.erase(u_have)
+	inv._set_kind(0)
+	main.refresh()
 	for k in range(main._armoury._inv.KINDS.size()):
 		inv._set_kind(k)
 		main.refresh()
@@ -1854,34 +1880,37 @@ func _craft_view_checks(main) -> void:
 	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
 	_check(ws._affix_buttons[0].visible and ws._affix_buttons[0].text.contains("tin") and not ws._affix_buttons[0].disabled, "the re-roll values button is not priced and live: %s" % ws._affix_buttons[0].text)
 	_check(ws._job_tiles[ws.JOBS.find("bump")]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[ws.JOBS.find("bump")]["price"].text)
-	_check(ws._job_tiles[5]["price"].text.begins_with("+") and ws._job_tiles[5]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[5]["price"].text)
-	_check(ws._affix_buttons.all(func(b): return not b.visible), "the affix jobs are up with no affix picked")
+	_check(ws._job_tiles[ws.JOBS.find("scrap")]["price"].text.begins_with("+") and ws._job_tiles[ws.JOBS.find("scrap")]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[ws.JOBS.find("scrap")]["price"].text)
+	_check(ws._affix_buttons.all(func(b): return b.visible), "the two re-rolls aren't up on a piece with affixes")
 	_check_fit(main, "Workshop (craft, piece picked)")
-	# an affix picked: its two jobs along the card's foot, inside the card
-	ws._pick_affix(0)
-	_check(ws.sel_stat == "hp" and ws._affix_buttons[0].visible and ws._affix_buttons[1].visible, "picking the first affix did not show its two jobs")
-	_check(ws._affix_buttons[1].position.x + ws._affix_buttons[1].size.x <= ws.BODY_W - ws.PAD + 0.5, "the affix jobs run off the piece card")
-	_check(ws._affix_buttons[0].text.contains("tin") and ws._affix_buttons[1].text.contains("tin"), "the affix jobs carry no price")
-	_check_fit(main, "Workshop (craft, affix picked)")
-	# the job runs in the room: a re-roll keeps the count, the foot says what was done
+	# a padlock on the first affix (20 Oct): the two re-rolls inside the card, priced, the lock line saying it
+	piece["locks"] = []
+	ws._toggle_lock(0)
+	_check(sim.locks_of(piece) == [piece["affixes"][0]["stat"]] and ws._affix_buttons[0].visible and ws._affix_buttons[1].visible, "a padlock on the first affix: %s" % str(sim.locks_of(piece)))
+	_check(ws._affix_buttons[1].position.x + ws._affix_buttons[1].size.x <= ws.BODY_W - ws.PAD + 0.5, "the re-rolls run off the piece card")
+	_check(ws._affix_buttons[0].text.contains("tin") and ws._affix_buttons[1].text.contains("tin"), "the re-rolls carry no price")
+	_check_fit(main, "Workshop (craft, a padlock on)")
+	# the job runs in the room: new affixes keep the count and the locked one, the foot says what was done
 	var before_affixes: int = piece["affixes"].size()
-	ws._press_job(0)
+	var kept0: Dictionary = piece["affixes"][0].duplicate()
+	ws._press_affix_job(1)
+	main.refresh()
 	var after: Dictionary = sim.item_by_id(piece["id"])
-	_check(after.get("affixes", []).size() == before_affixes, "the re-roll in the room changed the affix count")
-	_check(ws._foot.text.begins_with("Re-rolled") or ws._foot.get_theme_color("font_color") == Pal.GOOD, "the jobs' foot does not say what the Bench did: %s" % ws._foot.text)
+	_check(after.get("affixes", []).size() == before_affixes and after["affixes"][0] == kept0, "new affixes in the room changed the count or the locked one")
+	_check(ws._foot.text.begins_with("Kept") or ws._foot.text.begins_with("New") or ws._foot.get_theme_color("font_color") == Pal.GOOD, "the jobs' foot does not say what the Bench did: %s" % ws._foot.text)
 	_check(not main._menu.visible, "a job in the room opened the menu")
 	_check_fit(main, "Workshop (craft, after a job)")
 	# scrap from the room: the piece goes, the foot says what it gave, nothing stays picked
 	var scrap_before: int = sim.scrap
 	var gave: int = sim.scrap_of(after)
-	ws._press_job(5)
+	ws._press_job(ws.JOBS.find("scrap"))
 	_check(sim.item_by_id(piece["id"]).is_empty() and sim.scrap == scrap_before + gave, "the scrap tile did not scrap the piece for %d" % gave)
 	_check(ws.sel_id == -1 and ws._piece_title.text.begins_with("Pick a piece") and ws._foot.text.begins_with("Scrapped"), "after scrapping: picked %d, title '%s', foot '%s'" % [ws.sel_id, ws._piece_title.text, ws._foot.text])
 	_check_fit(main, "Workshop (craft, after scrapping)")
 	ws._set_view("guns")
 	_check(not ws._piece.visible and not ws._jobs.visible, "the piece card stayed up on the Guns view")
 	sim.load_dict(saved)
-	print("craft view ok: stash gear only, the piece card, the priced tiles, an affix's jobs, a job in the room")
+	print("craft view ok: stash gear only, the piece card, the priced tiles, the padlocks and the re-rolls, a job in the room")
 
 
 ## Every tree node's effect has a reader (16 Oct: Fumes, Cumulative and Nicked carried dot_pct and nothing read it from
@@ -5930,10 +5959,16 @@ func _playtest_checks(main) -> void:
 	# and the same paper picked at the Fence's stash tab (it crashed there too)
 	main.show_room(main.MARKET)
 	main._fence._show("stash")
-	main._fence._stash.kind = 6               # the Paper tab: the paper is on the page whatever the stash holds
+	main._fence._stash.kind = 0               # All (20 Oct: no Paper tab): the page the paper's on
 	main._fence._stash.page = 0
 	main._fence._shown = ""
 	main.refresh()
+	for _pg in range(8):
+		if main._fence._stash.cell_of(paper["id"]) >= 0:
+			break
+		main._fence._stash._turn(1)
+		main._fence._shown = ""
+		main.refresh()
 	main._fence._stash._pick(main._fence._stash.cell_of(paper["id"]))
 	main.refresh()
 	_check(main._fence._right_title.text == "The Radio" and main._fence._right_lines[0].text.begins_with("Carries"), "a paper at the Fence: %s / %s" % [main._fence._right_title.text, main._fence._right_lines[0].text])
@@ -6197,7 +6232,7 @@ func _inflation_checks(main) -> void:
 		any_button = any_button or b.visible
 	_check(not any_button, "the Clinic's empty panel shows a button: %s" % str(main._clinic._buttons.map(func(b): return b.text if b.visible else "")))
 	_check_fit(main, "Clinic (nothing picked)")
-	_check(ws0 == 0 or absi(sim.yard_pick_cost("bench", 4) - int(round(ws0 * m))) <= 1, "the Pitch's prices did not rise: %d -> %d" % [ws0, sim.yard_pick_cost("bench", 4)])
+	_check(ws0 == 0 or absi(sim.yard_pick_cost("bench", 4) - int(round(ws0 * m))) <= maxi(1, int(ws0 * m / 100000.0) * 1000 + 100), "the Pitch's prices did not rise: %d -> %d" % [ws0, sim.yard_pick_cost("bench", 4)])
 	_check(absi(sim.treat_cost() - int(round(treat0 * m))) <= 2, "treatment did not rise: %d -> %d" % [treat0, sim.treat_cost()])
 	_check(sim.boss_cost(3) == sim.boss_cost(3) and Data.CRAFT["bump"].has("notes"), "notes prices exist to hold")
 	var c0: int = sim.craft_cost(it, "affixes")
@@ -8704,7 +8739,12 @@ func _gear_gate_checks(main) -> void:
 	main.refresh()
 	main._fence.selected = {"kind": "shelf", "id": shelf_gun["id"]}
 	main.refresh()
-	_check(main._fence._right_lines[2].text == "Level %d to wear" % W, "a locked gun on the shelf reads '%s'" % main._fence._right_lines[2].text)
+	_check(main._fence._verdict.visible and main._fence._verdict.text == "Level %d to wear" % W, "a locked gun on the shelf reads '%s'" % main._fence._verdict.text)
+	# the shelf's compare is the Kit's (20 Oct, Matt): the worn gun as its own card beside the pick, the verdict and deltas on the foot
+	var worn_g = sim.equipped["Primary"]
+	_check(worn_g != null and main._fence._fit_head.visible and main._fence._fit_head.text_nodes().any(func(l): return str(l.text) == str(worn_g["base"]) or str(l.text) == Items.full_name(worn_g)) and not main._fence._right_title.visible,
+		"the shelf's compare isn't the Kit's: the worn card %s, the old title %s" % [str(main._fence._fit_head.visible), str(main._fence._right_title.visible)])
+	_check_fit(main, "the Fence's shelf, a gun against the worn one")
 	sim.market.erase(shelf_gun)
 	main.show_room(main.ARMOURY)
 	main._armoury.selected = {"kind": "stash", "id": big["id"]}
@@ -11284,7 +11324,7 @@ func _yard_wide_checks(main) -> void:
 	_check(yt._build.text == "Built" and yt._build.disabled, "a built pick still offers a build")
 	yt._press("kennel", 0, "b")
 	main.refresh()
-	_check(yt._build.text == "Refit" and sim.yard_pick_cost("kennel", 0) == int(round(c1 * Data.YARD_REFIT)), "the other side does not refit for half: '%s', %d of %d" % [yt._build.text, sim.yard_pick_cost("kennel", 0), c1])
+	_check(yt._build.text == "Refit" and absi(sim.yard_pick_cost("kennel", 0) - int(round(c1 * Data.YARD_REFIT))) <= 100, "the other side does not refit for half: '%s', %d of %d" % [yt._build.text, sim.yard_pick_cost("kennel", 0), c1])
 	yt._on_build()
 	_check(sim.yard_has("good_nose") and not sim.yard_has("a_dog"), "the refit did not swap the pick")
 	_check_fit(main, "Yard (a refit)")

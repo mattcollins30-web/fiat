@@ -43,13 +43,16 @@ const HEIGHT := GRID_Y + ROWS * CELL + (ROWS - 1) * GAP         # 588
 ## The height a grid of so many rows takes.
 static func height_for(n: int) -> int:
 	return GRID_Y + n * CELL + (n - 1) * GAP
+## The tabs (20 Oct, Matt: "stash tabs for uniques and set items ... paper has a tab that isn't used any more and the
+## meds tab displays both meds and ammo"): slots, or "unique" / "set" for what the piece is. The deeds and a head's
+## papers sit in All. Each tab is as wide as its words; the sort an icon at the end.
 const KINDS := [["All", []], ["Guns", ["Primary", "Secondary"]], ["Body", ["Helmet", "Armour", "Charm"]], ["Bags", ["Rig", "Backpack"]],
-	["Meds", ["Medical", "Ammo", "Grenade"]], ["Parts", ["Attachment"]], ["Paper", ["Paper"]]]
-# the bars' widths, measured: a button needs its text and 32 px of margin;
-# bar one is 122 + 6 + 7 × 90 + 6 × 3 + 124 = 900, inside the grid's 904
-const FILL_W := 122
-const KIND_W := 90
-const SORT_W := 124
+	["Meds", ["Medical", "Grenade"]], ["Rounds", ["Ammo"]], ["Parts", ["Attachment"]], ["Uniques", "unique"], ["Sets", "set"]]
+const FILL_W := 100
+const KIND_PAD := 32                 # a button's margin round its words (the fit rule)
+const KIND_GAP := 3
+const KIND_FONT := 18
+const SORT_W := 52
 const RARITY_W := 72                 # six buttons with five rarities, at 17 px (the pass, 6 Oct): the row ends before the pages
 const MANY_W := 100
 const SELL_W := 180
@@ -98,12 +101,12 @@ func _init() -> void:
 	_fill = UI.label(self, Rect2(0, 0, FILL_W, BAR_H), "", "SemiBold", Pal.FLOOR, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	var x := FILL_W + 6
 	for k in range(KINDS.size()):
-		var b := UI.button(self, Rect2(x, 0, KIND_W, BAR_H), false)
+		var b := UI.button(self, Rect2(x, 0, 60, BAR_H), false)
 		b.text = KINDS[k][0]
-		b.add_theme_font_size_override("font_size", 20)
+		b.add_theme_font_size_override("font_size", KIND_FONT)
 		b.pressed.connect(_set_kind.bind(k))
 		_kind_buttons.append(b)
-		x += KIND_W + 3
+	_lay_kinds()
 	_sort_button = UI.button(self, Rect2(WIDTH - SORT_W, 0, SORT_W, BAR_H), false)
 	_sort_button.add_theme_font_size_override("font_size", 20)
 	_sort_button.pressed.connect(_cycle_sort)
@@ -153,17 +156,33 @@ func _cell(k: int) -> Button:
 	return _cells[k]
 
 
+## The tabs along bar one, each as wide as its words, from after the fill.
+func _lay_kinds() -> void:
+	var x: float = FILL_W + 6
+	for b in _kind_buttons:
+		b.size.x = maxf(48.0, ceilf(UI.text_width(b, b.text)) + KIND_PAD)
+		b.position.x = x
+		x += b.size.x + KIND_GAP
+
+
+## Whether a piece is on a tab: its slot in the tab's, or what it is ("unique", "set"); All takes everything.
+static func _of_kind(it: Dictionary, kinds) -> bool:
+	if kinds is String:
+		return it.has(kinds)
+	return kinds.is_empty() or it["slot"] in kinds
+
+
 # ------------------------------------------------------------------ showing
 
 ## The container's items (the stash, usually), filtered and sorted here.
 func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	sim = s
 	items = []
-	var kinds: Array = KINDS[kind][1]
+	var kinds = KINDS[kind][1]
 	for it in source:
 		if fixed_kind != "" and it["slot"] != fixed_kind:
 			continue
-		if fixed_kind == "" and not kinds.is_empty() and not (it["slot"] in kinds):
+		if fixed_kind == "" and not _of_kind(it, kinds):
 			continue
 		if rarity >= 0 and it["rarity"] != rarity:
 			continue
@@ -200,13 +219,18 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	_fill.text = "%s %d / %d" % [what, used, cap]
 	if UI.text_width(_fill, _fill.text) > _fill.size.x:
 		_fill.text = "%d / %d" % [used, cap]
+	if UI.text_width(_fill, _fill.text) > _fill.size.x:
+		_fill.text = "%d/%d" % [used, cap]     # a big stash, the tabs beside it (20 Oct)
 	var bars: bool = fixed_kind == ""
 	for k in range(_kind_buttons.size()):
 		_kind_buttons[k].visible = bars
-		UI.style_button(_kind_buttons[k], k == kind)
+		var flag = KINDS[k][1]
+		UI.style_button(_kind_buttons[k], k == kind and not (flag is String), (str(flag) if k == kind else "") if flag is String else "")
+	_lay_kinds()
 	for r in range(_rarity_buttons.size()):
 		UI.style_button(_rarity_buttons[r], r - 1 == rarity)
-	_sort_button.text = "↕ %s" % SORTS[sort]
+	_sort_button.text = "↕"
+	_sort_button.tooltip_text = "Sorted by %s: click for %s" % [SORTS[sort].to_lower(), SORTS[(sort + 1) % SORTS.size()].to_lower()]
 	_many_button.visible = can_many
 	_many_button.text = "Select" if not many else "Single"
 	UI.style_button(_many_button, false, "good" if many else "")

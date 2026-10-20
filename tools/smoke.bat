@@ -9,6 +9,8 @@ if exist tools\godot.txt for /f "usebackq delims=" %%G in ("tools\godot.txt") do
 if not exist docs\balance mkdir docs\balance
 rem with a time limit (13 Oct): a script error used to leave Godot running and the watcher waiting for ever
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_limited.ps1 -Godot "%GODOT%" -GodotArgs "--headless --path . -s tests/smoke.gd" -Log docs\balance\smoke.txt -Minutes 25 -Quiet 180
+rem a script error ends only the check function it is in, and the rest of it never runs: the verdict fails (20 Oct)
+findstr /c:"SCRIPT ERROR" docs\balance\smoke.txt >nul && echo FAIL: a script error cut a check short, see above>> docs\balance\smoke.txt
 findstr /i /c:"CHECK FAILED" /c:"SCRIPT ERROR" /c:"Parse Error" /c:"FAIL:" /c:"needs " /c:"overlaps" /c:"all labels" /c:"out of its box" /c:"sits on" docs\balance\smoke.txt
 echo -^> docs\balance\smoke.txt
 endlocal

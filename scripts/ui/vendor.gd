@@ -18,6 +18,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const ItemHead := preload("res://scripts/ui/item_head.gd")
+const PickPanel := preload("res://scripts/ui/pick_panel.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Band := preload("res://scripts/ui/band.gd")
 const ClinicBody := preload("res://scripts/ui/clinic_body.gd")
@@ -44,6 +45,7 @@ const LINE_H := 30
 const PANEL_LINES := 4
 @warning_ignore("integer_division")
 const COL_W := (GRID_W - 3 * PAD) / 2
+const VERDICT_Y := 228               # the Kit's compare on the shelf (20 Oct): the verdict row, level with the pick's words
 const TAB_H := 40                                             # the tabs, along the band's foot, right
 const TAB_W := 160
 const FACE := Pal.BAND_FACE                                   # the portrait in the band
@@ -100,6 +102,10 @@ var _right_lines: Array[Label] = []
 var _hint: Label
 var _words: Array[Label] = []      # the item's own line, two rows under the figures
 var _buttons: Array[Button] = []
+var _pending_deltas: Array = []    # the pick's deltas, laid along the foot with the buttons
+var _fit_head                      # the piece worn in its slot, beside the pick, as the Kit has it (20 Oct, Matt)
+var _verdict: Label                # Upgrade / Sidegrade / Downgrade, the foot's left
+var _deltas: Array[Label] = []     # what changes, ▲ or ▼, after it
 var _actions: Array = []
 var _shown := ""
 var _body                          # the Clinic's runner: the outline, the wounds, the HP (clinic_body.gd, 19 Oct)
@@ -216,6 +222,17 @@ func _init() -> void:
 	_head.position = Vector2(PAD, 10)
 	_head.visible = false
 	_panel.add_child(_head)
+	_fit_head = ItemHead.new(COL_W, true)
+	_fit_head.position = Vector2(PAD * 2 + COL_W, 10)
+	_fit_head.visible = false
+	_panel.add_child(_fit_head)
+	# the verdict and its deltas: the right column's foot, under the worn card, level with the pick's words
+	_verdict = UI.label(_panel, Rect2(PAD * 2 + COL_W, VERDICT_Y, 200, 30), "", "SemiBold", Pal.FLOOR, Pal.WARN, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_verdict.visible = false
+	for i in range(PickPanel.DELTAS):
+		var dl := UI.label(_panel, Rect2(PAD * 2 + COL_W, VERDICT_Y, 120, 30), "", "Regular", Pal.FLOOR, Pal.GOOD, HORIZONTAL_ALIGNMENT_LEFT, false)
+		dl.visible = false
+		_deltas.append(dl)
 	_hint = UI.label(_panel, Rect2(PAD, PANEL_H - 6 - 44, GRID_W - 2 * PAD, 44), "", "Regular", Pal.FLOOR, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for i in range(2):
 		_words.append(UI.label(_panel, Rect2(PAD, 228 + i * 20, COL_W, 20), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
@@ -685,6 +702,14 @@ func _show_panel() -> void:
 		return
 	var it := _selected_item()
 	_say(it)
+	_fit_head.visible = false
+	_pending_deltas = []
+	_verdict.visible = false
+	for dl in _deltas:
+		dl.visible = false
+	_right_title.visible = true
+	for rl in _right_lines:
+		rl.visible = true
 	_head.visible = not it.is_empty()
 	_left_title.visible = it.is_empty()
 	if it.is_empty():
@@ -733,16 +758,22 @@ func _show_panel() -> void:
 	_head.show_item(it, sim, tail)
 	var fitted = sim.equipped.get(it["slot"], null) if it["slot"] in Data.SLOTS else null
 	if fitted != null:
-		var fh := Items.headline(fitted)
-		UI.fit(_right_title, ["Fitted now: " + fitted["base"], "Fitted: " + fitted["base"], "Fitted now"])
-		_right_lines[0].text = "%s %s" % [fh[0], fh[1]]
-		UI.fit(_right_lines[1], Items.affix_options(fitted))
-		var c: int = sim.compare(it)      # tried on (11 Oct), as the Lock-up's verdict
-		_right_lines[2].text = "Sidegrade" if c == 0 else ("▲ Upgrade" if c > 0 else "▼ Downgrade")
-		_right_lines[2].add_theme_color_override("font_color", Pal.WARN if c == 0 else (Pal.GOOD if c > 0 else Pal.BAD))
-		if sim.wear_lock(it) > 0:
-			_right_lines[2].text = "Level %d to wear" % sim.wear_lock(it)     # gear gated by level (15 Oct): it waits
-			_right_lines[2].add_theme_color_override("font_color", Pal.BAD)
+		# the Kit's compare (20 Oct, Matt: "the standard gear comparison display when viewing the fence's stashed items"):
+		# the worn piece as its own card beside the pick, the verdict and what changes along the foot
+		_right_title.visible = false
+		for rl in _right_lines:
+			rl.visible = false
+		var ftail: Variant = ""
+		if Items.is_gun(fitted):
+			ftail = [Items.fitted_words(fitted), Items.ammo_words(fitted).to_lower().replace("smg", "SMG")]
+		_fit_head.show_item(fitted, sim, ftail)
+		_fit_head.visible = true
+		var v: Array = PickPanel.verdict_for(sim, it)
+		_verdict.text = str(v[0])
+		_verdict.add_theme_color_override("font_color", Pal.tone_color(str(v[1])))
+		_verdict.size.x = ceilf(UI.text_width(_verdict, _verdict.text)) + 2
+		_verdict.visible = true
+		_pending_deltas = PickPanel.deltas_for(sim, it, fitted)
 	elif it["slot"] in Data.SLOTS:
 		_right_title.text = "Nothing fitted as %s" % it["slot"].to_lower()
 	elif Items.rig_item(it):
@@ -800,6 +831,10 @@ func _show_panel() -> void:
 ## The panel under the stash on the contracts tab (Fence B): what goes and what he pays, Hand in.
 func _show_hand_in() -> void:
 	_head.visible = false
+	_fit_head.visible = false
+	_verdict.visible = false
+	for dl in _deltas:
+		dl.visible = false
 	_left_title.visible = true
 	var k: int = _list.selected
 	if k < 0 or k >= sim.contracts.size():
@@ -868,6 +903,23 @@ func _lay_buttons() -> void:
 			_buttons[i].position.x = x
 			x -= 12
 	_hint.size.x = maxf(100.0, x - PAD - 12)
+	# the verdict's deltas after it, as many as the right column holds
+	var dx: float = PAD * 2 + COL_W + (_verdict.size.x + 18 if _verdict.visible else 0.0)
+	var dx_end: float = PAD * 2 + 2 * COL_W
+	for i in range(_deltas.size()):
+		var dl: Label = _deltas[i]
+		dl.visible = false
+		if not _verdict.visible or i >= _pending_deltas.size():
+			continue
+		var up: bool = float(_pending_deltas[i][0]) > 0.0
+		dl.text = "%s %s" % ["▲" if up else "▼", _pending_deltas[i][1]]
+		dl.add_theme_color_override("font_color", Pal.GOOD if up else Pal.BAD)
+		dl.size.x = ceilf(UI.text_width(dl, dl.text)) + 2
+		if dx + dl.size.x > dx_end:
+			break
+		dl.position.x = dx
+		dl.visible = true
+		dx += dl.size.x + 16
 	if x - PAD - 12 < ceilf(UI.text_width(_hint, _hint.text)):
 		_hint.text = ""
 
@@ -1021,6 +1073,11 @@ func text_nodes() -> Array:
 	out.append_array(_words)
 	if _head.visible:
 		out.append_array(_head.text_nodes())
+	if _fit_head.visible:
+		out.append_array(_fit_head.text_nodes())
+	if _verdict.visible:
+		out.append(_verdict)
+		out.append_array(_deltas.filter(func(dl): return dl.visible))
 	out.append_array(_band.text_nodes())
 	out.append_array(_said)
 	if _body != null:
@@ -1073,5 +1130,7 @@ func line_pairs() -> Array:
 	var out := []
 	if _head.visible:
 		out.append_array(_head.line_pairs())
+	if _fit_head.visible:
+		out.append_array(_fit_head.line_pairs())
 	out.append([_band.headline, _band.unit])
 	return out

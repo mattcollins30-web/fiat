@@ -5897,4 +5897,10 @@ first. His points for the pass, to design:
   rows, each with its tier's range at the piece's level and a mark for where the roll sits. The bot padlocks then
   re-rolls. Smoke checks for the cap, the price, the keep, five rows on a Legendary.
   - Noted (the review): the affix padlock is the same glyph as a gear piece's level lock; a tint apart if it confuses.
+- Done (items 8, 12, 10): the Pitch's prices rounded (to the 100, the 1,000 past 100k) so the clock's rise moves them in
+  steps; the stash's nine tabs (All, Guns, Body, Bags, Meds with grenades, Rounds, Parts, Uniques, Sets; no Paper),
+  each sized to its words, the sort an icon; the Fence's shelf and stash compare as the Kit's - the worn piece's card
+  beside the pick, the verdict and what changes under it. Smoke checks for each.
+- Found: a script error in a check ends only its function and the smoke still read "all pass" (the craft view's
+  checks, runs 118-124, after the padlocks). Fixed the check; tools/smoke.bat now fails the verdict on a script error.
 
