@@ -5966,3 +5966,20 @@ difficulty and length, the endgame placeholders.
     back to 0.3, so it lands before the wall. The wall is the next loop's: the endgame placeholders (materials, the
     Bench's prices) and how cash buys power past the campaign.
   - Faint signals: the bot never makes one with three papers in hand, so it's unread.
+
+### The bot's Bench, needs-led (20 Oct, Matt: "cap resistances, roll perfect gear for your build and increase hp/armour")
+
+- Done (tests/bot.gd _bench_needs): the kit read as one figure - survival_value with the fight's length off
+  damage_total (the element's hit, its increase, the dots) - and each affix's share of it. Every worn piece but a bag:
+  its level raised with notes, an affix added while there's room, then dead lines (an element it doesn't fire, a resist
+  past the cap) rolled away with the build's own padlocked first (conversion, increase, dots), or the weakest read
+  line's values; up to six rolls a piece, stopping when it reads better, no undo. Loot, tins, notes and the like are
+  never dead. Smoke checks: a dead line rolled away with HP kept, nothing under the floor, nothing done at the cap, loot
+  kept, each element's own lines read live.
+- What it showed (cloud 24 h reads, a build each): the frost Poacher still stood 4.5 h at reach 40 - its kit's value
+  flat from hour 9 to 24, the Bench's re-rolls £110-430k for +0-7%, every signal two under the reach at 0%; the fire
+  Drifter stood 1.7 h, then moved the Pitch at hour 16 and climbed to 43 again. CURVE grow 0.08 to 0.06 (an experiment,
+  not kept) only moved the Poacher's wall to reach 45 by hour 11, then 7 h stood.
+- The wall, read: the crews grow 8% a level both ways (HP and fire, 17% a level together), compounding; the kit's
+  growth past level 20 is the affixes' 6% an item level, straight-line (no base past the deep tier 9), and level 50's
+  cap. So the reach outruns the kit at 35-45 whatever the Bench does. For Matt.

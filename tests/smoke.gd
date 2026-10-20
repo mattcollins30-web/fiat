@@ -2546,6 +2546,14 @@ func _element_bot_checks(main) -> void:
 			has_inc = has_inc or a["stat"] == "%s_pct" % el
 		_check(has_inc or sim.craft_cost(sim.equipped["Primary"], "add") < 0, "the %s bot did not add its increased affix: %s" % [el, sim.equipped["Primary"]["affixes"]])
 		_check(sim.conversion()[el] > 0.5, "the %s build is not mostly %s: %s" % [el, el, sim.conversion()])
+		# the needs-led Bench reads the build's own lines (the review: its figure was the raw hits, fire read as dead)
+		var gun: Dictionary = sim.equipped["Primary"]
+		var hold_aff: Array = gun["affixes"].duplicate(true)
+		gun["affixes"] = [{"stat": "conv_%s_pct" % el, "value": 25.0, "tier": 5}, {"stat": "%s_pct" % el, "value": 30.0, "tier": 5}]
+		var esh: Array = bot._shares(sim, "Primary")
+		var conv_full: bool = float(sim._try(gun.duplicate(true).merged({"affixes": [{"stat": "%s_pct" % el, "value": 30.0, "tier": 5}]}, true), func(): return sim.conversion()[el])) >= 0.99     # a gun all that element already: its conversion line adds nothing (the bleed's blades)
+		_check(esh.size() == 2 and esh.all(func(x): return float(x[1]) >= bot.DEAD or (conv_full and str(x[0]).begins_with("conv_"))), "the %s bot's Bench reads its own lines as dead: %s" % [el, str(esh)])
+		gun["affixes"] = hold_aff
 	# the band: at depth 30 on every site, some element build lands at least 60% of what it would unresisted
 	var builds := {}
 	for t in Data.ELEMENT_TREES:
@@ -12881,34 +12889,47 @@ func _leave_checks(main) -> void:
 	_bench_worn_checks(main)
 
 
-## The bot's bench rule: the worn kit's weakest affix re-rolled, one job a
-## run, while two grand stays.
+## The bot's Bench (the pass, 20 Oct: needs-led): a dead affix rolled away with the build's padlocked, nothing under
+## the two grand it keeps, and a piece with nothing dead and every tier at its cap left alone.
 func _bench_worn_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
-		sim.equipped[s] = null
-	var it: Dictionary = sim._plain("Armour", "Stab vest")
-	it["affixes"] = [{"stat": "regen", "value": 1.0, "tier": 1}, {"stat": "armour_pct", "value": 15.0, "tier": 4}]
-	it["rarity"] = 2
-	sim.equipped["Armour"] = it
+	var it: Dictionary = sim._plain("Helmet", "Hard hat")
+	it["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "frost_pct", "value": 10.0, "tier": 2}]     # frost on a build that fires none: dead
+	it["rarity"] = Data.RARITIES.size() - 1     # no room to add: the re-roll alone
+	sim.equipped["Helmet"] = it
+	sim.notes = 0
 	var bot = Bot.new()
-	it["locks"] = ["armour_pct"]                # the bot padlocks the rest and rolls new values (20 Oct)
-	sim.cash = 2000.0 + sim.craft_cost(it, "values") - 1
-	it["locks"] = []
-	bot._bench_worn(sim)
-	_check(bot.bought.is_empty(), "the bot's bench rule spent under the two grand it keeps")
-	sim.cash = 50000.0
-	var cash0: float = sim.cash
-	bot._bench_worn(sim)
-	_check(bot.bought.size() == 1 and sim.cash < cash0 and "regen" in str(bot.bought[0][1]), "the bot's bench rule did not re-roll the weakest affix: %s" % str(bot.bought))
+	var sh: Array = bot._shares(sim, "Helmet")
+	_check(str(sh[0][0]) == "hp" and float(sh[0][1]) > bot.DEAD and float(sh[1][1]) < bot.DEAD, "the bot's Bench doesn't read HP as the helmet's and frost (unfired) as dead: %s" % str(sh))
+	sim.cash = 1999.0
+	bot._bench_needs(sim)
+	_check(bot.bought.is_empty(), "the bot's Bench spent under the two grand it keeps: %s" % str(bot.bought))
+	sim.cash = 500000.0
+	bot._bench_at = -1e9
+	bot._bench_needs(sim)
+	var helm: Dictionary = sim.equipped["Helmet"]
+	_check(bot.bought.any(func(b): return str(b[1]).contains("helmet's affixes re-rolled")) and helm["affixes"].any(func(a): return str(a["stat"]) == "hp" and is_equal_approx(float(a["value"]), 20.0)), "the bot's Bench did not roll the dead affix away with HP padlocked: %s %s" % [str(bot.bought), str(helm["affixes"])])
 	bot.bought = []
-	for a in sim.equipped["Armour"]["affixes"]:
-		a["tier"] = Data.AFFIX_TIERS
-	bot._bench_worn(sim)
-	_check(bot.bought.is_empty(), "the bot's bench rule re-rolled a piece with every affix at the top")
+	bot._bench_at = -1e9
+	helm["affixes"] = [{"stat": "hp", "value": 40.0, "tier": Data.AFFIX_TIERS}, {"stat": "armour", "value": 24.0, "tier": Data.AFFIX_TIERS}]
+	bot._bench_needs(sim)
+	_check(bot.bought.filter(func(b): return str(b[1]).contains("helmet")).is_empty(), "the bot's Bench re-rolled a helmet with nothing dead and every tier at the top: %s" % str(bot.bought))
+	bot.bought = []
+	bot._bench_at = -1e9
+	sim.cash = 500000.0
+	var cash0: float = sim.cash
+	bot._bench_needs(sim)
+	_check(sim.cash <= cash0, "the bot's Bench paid out")
+	# what the figure can't read is kept, never rolled away (the review): loot on the helmet beside HP at the top
+	bot.bought = []
+	bot._bench_at = -1e9
+	helm = sim.equipped["Helmet"]
+	helm["affixes"] = [{"stat": "hp", "value": 40.0, "tier": Data.AFFIX_TIERS}, {"stat": "loot_pct", "value": 30.0, "tier": Data.AFFIX_TIERS}]
+	bot._bench_needs(sim)
+	_check(bot.bought.filter(func(b): return str(b[1]).contains("helmet")).is_empty() and helm["affixes"].any(func(a): return str(a["stat"]) == "loot_pct"), "the bot's Bench rolled a loot line away: %s %s" % [str(bot.bought), str(helm["affixes"])])
 	sim.load_dict(saved)
 	print("the bot's bench rule ok")
 	_build_one_checks(main)

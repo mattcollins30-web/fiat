@@ -27,8 +27,6 @@ var cls := ""                  # the class the gate set: put back on the runner 
 var moves := 0                 # yards moved on after the lorry (the endgame's loop, 7 Oct)
 var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
-var _rerolls := {}             # "item id/stat" -> re-rolls bought at the bench (capped: REROLLS_MAX)
-const REROLLS_MAX := 3
 var _cleared_at := {}           # tier -> the depth its words were last cleared at: none put back there
 const AWAY_SHARE := 1.0 / 3.0  # the share of the yard's time the bot counts as away (Overtime, the Generator's rank)
 const AWAY_EVERY := 3.0 * 3600.0
@@ -320,14 +318,7 @@ func _endgame(sim) -> void:
 		floor_notes = maxi(floor_notes, sim.boss_cost(i))
 	if element != "":
 		_craft_toward(sim)
-	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
-		var it = sim.equipped[s]
-		if it == null:
-			continue
-		var cost: int = sim.craft_cost(it, "add")
-		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "add"):
-			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), cost]])
-	_bench_worn(sim)
+	_bench_needs(sim)
 	_build_one(sim)
 	_gamble_one(sim)
 
@@ -477,50 +468,139 @@ func _build_one(sim) -> void:
 		bought.append([sim.elapsed, "built %s for %d scrap" % [o["name"].to_lower(), int(o["scrap"])]])
 
 
-## The bench as a player uses it late: the worn kit's weakest affix re-rolled,
-## one job a run at most, while two grand stays. One a run bounds the spend
-## by the runs, so what piles up past it is the prices' to answer for.
-func _bench_worn(sim) -> void:
-	for s in ["Primary", "Armour", "Helmet", "Secondary"]:
-		var it = sim.equipped[s]
-		if it == null or it.has("unique") or it.has("set"):
-			continue                      # a set piece's affixes are the set's, no tier on them
-		var weakest := {}
-		for a in it["affixes"]:
-			if _dead_stat(sim, str(a.get("stat", ""))):
-				continue                  # an element's share the build doesn't fire does nothing whatever its tier (the twenty-fourth read: a plain Drifter re-rolled its gun's fire_pct eighteen times, £140k, its damage flat for five hours)
-			if int(_rerolls.get("%d/%s" % [int(it["id"]), a.get("stat", "")], 0)) >= REROLLS_MAX:
-				continue                  # three goes at one affix and a player moves on
-			if int(a.get("tier", 1)) < Items.rarity_cap(it) and (weakest.is_empty() or int(a.get("tier", 1)) < int(weakest.get("tier", 1))):     # under the rarity's cap: at it, there is nothing to roll for
-				weakest = a
-		if weakest.is_empty():
+## The Bench as an ARPG player uses it (the pass, 20 Oct, Matt: "cap resistances, roll perfect gear for your build and
+## increase hp/armour"; "if you have a fire build then all damage should be for fire and increase fire + increasing
+## dots"): the kit read as one figure - how many times over the runner stands the fight being pushed, its length the
+## damage's (_power) - so damage, its element, the dots, HP, armour, resists to the cap and regen are one currency, and
+## an affix that adds nothing to it (loot, notes, an element the build doesn't fire, a resist past the cap) is dead.
+## Every worn piece but a bag, each tidy at most BENCH_EVERY apart: its level raised with notes, an affix added while
+## there's room, then the dead affixes rolled away (the build's own lines padlocked first: the element's conversion,
+## its increase, the dots), or, with nothing dead, the weakest's values - rolled again until the piece reads better
+## than it did, BENCH_TRIES at most, while two grand stays. No undo: a run of bad rolls is kept, as a player's is.
+const BENCH_SLOTS := ["Primary", "Armour", "Helmet", "Charm", "Rig", "Secondary"]
+const BENCH_EVERY := 600.0      # sim seconds between the Bench's passes (the odds' reads are the wall's)
+const BENCH_TRIES := 6          # rolls on one piece a pass before it moves on
+const BENCH_JOBS := 16          # jobs a pass at most
+const DEAD := 0.004             # an affix under this share of the kit's figure does nothing for the build
+## What the kit's figure can't read - loot, tins, notes, searches, the meds' carry, gangs later: never dead, never
+## rolled away (the review: a charm's every line read dead and was rolled six times a pass for ever)
+const UTILITY := ["loot_pct", "rarity_pct", "notes_pct", "cash_pct", "search_pct", "capacity", "cash_per_kill", "loot_per_lot",
+	"loot_per_med", "cash_per_cell", "patrol_pct", "med_cap", "med_speed_pct", "heal_pct", "overflow_pct"]
+var _bench_at := -1e9
+var _bench_done := {}           # a piece that came out of a pass no better: its id and affixes, left till either moves
+
+
+## The kit's figure (_bench_needs): survival_value with the fight's seconds read off the kit tried on, so the damage
+## counts by shortening the fight. `it` tried on in its slot ({} for the kit as worn).
+## The fight's length off the top bar's figure (damage_total: the element's hit, its increase and the dots - the
+## review: estimate's dps() is the raw hits, so fire, fire % and dots read as nothing).
+func _power(sim, it := {}) -> float:
+	return float(sim._try(it, func():
+		var t: Dictionary = sim.effective(sim.front_tier())
+		var fight: float = float(t["pool"]) * float(t["hp"]) / maxf(0.000001, sim.damage_total() * sim.pace() * float(t["pace"]))
+		return sim.survival_value(clampf(fight, 1.0, 3600.0))))
+
+
+## Each affix's share of the kit's figure on the worn piece in `slot`: [[stat, share], ...], the best first.
+func _shares(sim, slot: String) -> Array:
+	var it: Dictionary = sim.equipped[slot]
+	var p0 := _power(sim)
+	var out: Array = []
+	for k in range(it["affixes"].size()):
+		var without: Dictionary = it.duplicate(true)
+		without["affixes"].remove_at(k)
+		out.append([str(it["affixes"][k]["stat"]), (p0 - _power(sim, without)) / maxf(p0, 0.000001)])
+	out.sort_custom(func(x, y): return float(x[1]) > float(y[1]))
+	return out
+
+
+## The build's own lines on a gun, padlocked before anything else: the element's conversion and increase, the dots
+## for a burn, poison or bleed build.
+func _build_lines() -> Array:
+	if element == "" or element == "physical":
+		return ["physical_pct", "damage_pct"] if element == "physical" else []
+	var out := ["conv_%s_pct" % element, "%s_pct" % element]
+	if element in ["fire", "poison", "bleed"]:
+		out.append("dot_pct")
+	return out
+
+
+func _bench_needs(sim) -> void:
+	if sim.elapsed - _bench_at < BENCH_EVERY:
+		return
+	_bench_at = sim.elapsed
+	var floor_cash := maxf(2000.0, _reserve(sim))
+	var jobs := 0
+	for s in BENCH_SLOTS:
+		var it = sim.equipped.get(s)
+		if it == null or it.has("unique") or it.has("set") or jobs >= BENCH_JOBS:
 			continue
-		_lock_all_but(sim, it, str(weakest["stat"]))     # 20 Oct: padlocks on the rest, as many as the Bench has, then new values
-		var cost: int = sim.craft_cost(it, "values")
-		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "values"):
-			var key := "%d/%s" % [int(it["id"]), weakest["stat"]]
-			_rerolls[key] = int(_rerolls.get(key, 0)) + 1
-			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d" % [s.to_lower(), weakest["stat"], cost]])
-			return
-
-
-## The Bench's padlocks on every affix but `stat`, the best tiers first, as many as it has (20 Oct).
-func _lock_all_but(sim, it: Dictionary, stat: String) -> void:
-	it["locks"] = []
-	var rest: Array = it["affixes"].filter(func(a): return str(a["stat"]) != stat)
-	rest.sort_custom(func(a, b): return int(a.get("tier", 1)) > int(b.get("tier", 1)))
-	for a in rest:
-		if not sim.toggle_lock(int(it["id"]), str(a["stat"])):
-			break
-
-
-## An affix that does nothing for this build: an element's damage share with no
-## conversion to it (a plain build fires nothing; an element build fires its own).
-func _dead_stat(sim, stat: String) -> bool:
-	for el in Data.ELEMENTS:
-		if stat == el + "_pct" and el != element and float(sim.conversion().get(el, 0.0)) <= 0.0:
-			return true
-	return false
+		# its level first (notes): the lowest tiers stop rolling
+		var bc: int = sim.craft_cost(it, "bump")
+		if bc >= 0 and sim.notes - bc >= _notes_kept(sim) and sim.notes >= bc * 2 and sim.craft(it["id"], "bump"):
+			jobs += 1
+			bought.append([sim.elapsed, "bench: the %s's level raised for %d notes" % [s.to_lower(), bc]])
+		# an affix while there's room: never worse, and a rarity up (the tiers' cap with it)
+		var ac: int = sim.craft_cost(it, "add")
+		if ac >= 0 and sim.cash - ac >= floor_cash and sim.craft(it["id"], "add"):
+			jobs += 1
+			bought.append([sim.elapsed, "bench: an affix on the %s for £%d" % [s.to_lower(), ac]])
+		if it["affixes"].is_empty():
+			continue
+		var done_key := hash([int(it["id"]), it["affixes"]])
+		if _bench_done.get(done_key, false):
+			continue
+		var shares := _shares(sim, s)
+		var dead: Array = shares.filter(func(x): return float(x[1]) < DEAD and not (x[0] in UTILITY))
+		var kept: int = shares.size() - dead.size()
+		# new affixes only when every line worth keeping fits under the padlocks (the review: one dead line on a
+		# five-line piece and one padlock rolled four to fix one); else the weakest line the figure reads, by its values
+		var kind := "affixes" if not dead.is_empty() and kept <= sim.lock_max() else "values"
+		var weakest_stat := ""
+		if kind == "values":
+			for k in range(shares.size() - 1, -1, -1):
+				var st: String = str(shares[k][0])
+				if st in UTILITY or float(shares[k][1]) < DEAD:
+					continue
+				for a in it["affixes"]:
+					if str(a["stat"]) == st and int(a.get("tier", 1)) < Items.rarity_cap(it):
+						weakest_stat = st
+				if weakest_stat != "":
+					break
+			if weakest_stat == "":
+				_bench_done[done_key] = true
+				continue                  # every line it reads at the rarity's cap: as good as the Bench makes it
+		# padlocks: the build's lines on it, then the best shares, then what the figure can't read - never a dead one
+		it["locks"] = []
+		var order: Array = []
+		for st in _build_lines():
+			if it["affixes"].any(func(a): return str(a["stat"]) == st):
+				order.append(st)
+		for x in shares:
+			if float(x[1]) >= DEAD and not (x[0] in order):
+				order.append(x[0])
+		for x in shares:
+			if x[0] in UTILITY and not (x[0] in order):
+				order.append(x[0])
+		if kind == "values":
+			order.erase(weakest_stat)
+		for st in order:
+			if not sim.toggle_lock(int(it["id"]), str(st)):
+				break
+		var p_start := _power(sim)
+		var tries := 0
+		while tries < BENCH_TRIES and jobs < BENCH_JOBS:
+			var cost: int = sim.craft_cost(it, kind)
+			if cost < 0 or sim.cash - cost < floor_cash or not sim.craft(it["id"], kind):
+				break
+			tries += 1
+			jobs += 1
+			var p := _power(sim)
+			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d (%+.1f%%)" % [s.to_lower(), "affixes" if kind == "affixes" else "values", cost, (p / maxf(p_start, 0.000001) - 1.0) * 100.0]])
+			if p > p_start * 1.001:
+				break                     # better than it was: kept, the next piece
+		if tries > 0 and _power(sim) <= p_start * 1.001:
+			_bench_done[hash([int(it["id"]), it["affixes"]])] = true     # no better this pass: left till it changes
 
 
 ## The build's bench work on the primary: a socket for the element's
@@ -550,11 +630,11 @@ func _craft_toward(sim) -> void:
 		var kind := "add"
 		var stat := ""
 		if sim.craft_cost(it, "add") < 0:
-			# full: new affixes around what's right (padlocked), or the lot (20 Oct: padlocks)
+			if has_conv or has_inc:
+				return                    # full with one on: the needs-led Bench padlocks it and rolls the rest (the review: the two fought over the gun)
+			# full with neither: new affixes, the lot (20 Oct: padlocks)
 			kind = "affixes"
 			it["locks"] = []
-			if has_conv or has_inc:
-				sim.toggle_lock(int(it["id"]), conv if has_conv else inc)
 		var cost: int = sim.craft_cost(it, kind, stat)
 		if cost < 0 or sim.cash - cost < maxf(2000.0, _reserve(sim)) or not sim.craft(it["id"], kind, stat):
 			return
