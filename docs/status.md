@@ -5838,4 +5838,10 @@ Logged, nothing built till the save lands:
     re-rolls the picked affix's figures; "the rest" keeps the picked one and replaces the others with different
     affixes; the job "Re-roll the affixes" replaces every affix. Missing: every affix's figures at once, the affixes
     kept. The mockup names each by what it does (figures vs new affixes) and adds that one.
+    Matt's design (20 Oct), replacing the above: a padlock on each affix row, and two jobs for what isn't locked -
+    "Re-roll values" (the same affixes, new figures) and "Re-roll affixes" (new ones). To settle in the mockup: how many
+    padlocks (one today; the Pitch's Two locks keeps the best of the rest - it could become a second padlock) and what a
+    lock adds to the price.
+    And a range on every affix (Matt: "is 15% fire the max i can ever roll?"): its tier's low-high, and the best tier
+    this piece can reach (its rarity's cap, its item level's floor), so a roll reads against what's possible.
 
