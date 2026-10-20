@@ -5784,5 +5784,6 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   picked place gone unknown gives the Map's card back. Words.scramble holds the glyphs now (Fmt's calls it), so the
   sim never loads a UI script.
   - For Matt: the smoke's "the takings took the sale" check is wrong when takings already sit above the sale (takings
-    is a moving average); it failed once at run 85. Fix proposed, not made.
+    is a moving average); it failed once at run 85. Fixed (Matt: "change it now"): the check reads the takings moving
+    at a quarter's weight toward the run's sale and cash, exactly; the away bonus held off for it.
 

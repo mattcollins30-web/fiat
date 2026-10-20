@@ -12757,11 +12757,19 @@ func _gamble_checks(main) -> void:
 	var tk_g0: float = sim.takings
 	sim.deploy(0)
 	sim._takings_run += gb0 * 20.0
+	var run_in: float = sim._takings_run
+	var away_was: bool = sim.away_on
+	sim.away_on = false                       # _earn's away bonus would credit past the report's cash
 	sim.mission["cleared"] = true
 	sim.extract_now()
 	var gb1: float = sim.a_gamble_base()
 	_check(gb1 <= gb0 * (1.0 + Data.GAMBLE_STEP) + 1.0 and gb1 > gb0, "one sale moved the gamble's base %.0f to %.0f" % [gb0, gb1])
-	_check(sim.takings > tk_g0, "the takings themselves did not take the sale (the contracts read them): %.1f from %.1f, the sale %.1f, the base %.1f to %.1f, the run's report %s" % [sim.takings, tk_g0, gb0 * 20.0, gb0, gb1, str(sim.last_report.get("cash", "-"))])     # what it saw, when it fails (17 Oct: failed once, passed on the rerun)
+	# the takings are a run's moving average (20 Oct: "took the sale" failed whenever they already sat above it): the
+	# sale and the run's cash go in at a quarter's weight, the first run whole
+	var run_total: float = run_in + float(sim.last_report.get("cash", 0.0))
+	sim.away_on = away_was
+	var tk_want: float = run_total if tk_g0 <= 0.0 else lerpf(tk_g0, run_total, 0.25)
+	_check(absf(sim.takings - tk_want) <= 0.5, "the takings didn't take the sale at a quarter's weight (the contracts read them): %.1f, want %.1f from %.1f, the sale %.1f, the run's report %s" % [sim.takings, tk_want, tk_g0, gb0 * 20.0, str(sim.last_report.get("cash", "-"))])
 	var loaded = load("res://scripts/sim/sim.gd").new()
 	loaded.load_dict(sim.to_dict())
 	_check(is_equal_approx(loaded.gamble_base, sim.gamble_base), "the gamble's base did not save")
