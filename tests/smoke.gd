@@ -8677,7 +8677,55 @@ func _signal_checks(main) -> void:
 	var ps: Array = sim.signal_papers()
 	_check(ps.size() == 6 and not sim.stash.any(func(x): return Sim.is_pile_paper(x)), "six papers put in the stash, %d on the Radio's pile, or some left in the stash" % ps.size())
 	var ids: Array = ps.slice(0, 3).map(func(x): return int(x["id"]))
-	_check(sim.decrypt_block(ids.slice(0, 2)) != "" and sim.decrypt_block(ids) == "", "the decoder's block: '%s' with two, '%s' with three" % [sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids)])
+	_check(sim.decrypt_block([]) == sim.DECRYPT_NEEDS_PAPERS and sim.decrypt_block(ids.slice(0, 1)) == "" and sim.decrypt_block(ids.slice(0, 2)) == "" and sim.decrypt_block(ids) == ""
+		and sim.decrypt_block(ps.slice(0, 4).map(func(x): return int(x["id"]))) != "",
+		"the decoder's block (20 Oct: one to three): '%s' with none, '%s' one, '%s' two, '%s' three, '%s' four" % [sim.decrypt_block([]), sim.decrypt_block(ids.slice(0, 1)),
+		sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids), sim.decrypt_block(ps.slice(0, 4).map(func(x): return int(x["id"])))])
+	# the grades (20 Oct, Matt): one paper Faint, two Clear, three Full - each band, most codes and extras as agreed
+	for g in range(3):
+		var gb: Array = sim.signal_band(ids.slice(0, g + 1))
+		var want: Array = [[-7, -2], [-5, 0], [-3, 1]][g]
+		_check(int(gb[0]) == maxi(Data.REACH_START, sim.reach + int(want[0])) and int(gb[1]) == maxi(Data.REACH_START, sim.reach + int(want[1])) and int(Sim.signal_grade(g + 1)["codes"]) == g + 2
+			and is_equal_approx(float(Sim.signal_grade(g + 1)["extras"]), [0.0, 0.5, 1.0][g]),
+			"%d paper(s): band %s at reach %d, grade %s" % [g + 1, str(gb), sim.reach, str(Sim.signal_grade(g + 1))])
+	var odds_sum := func(gd: Dictionary) -> float:
+		var t := 0.0
+		for row in gd["roll"]:
+			t += float(row[1])
+		return t
+	for gd in Data.SIGNAL_GRADES:
+		_check(is_equal_approx(odds_sum.call(gd), 1.0), "%s's roll odds sum to %.3f, not 1" % [gd["name"], odds_sum.call(gd)])
+	var reach_was: int = sim.reach
+	sim.reach = 20
+	for n in range(6):
+		var one: Dictionary = sim.decrypt(sim.signal_papers().slice(0, 1).map(func(x): return int(x["id"])))
+		if one.is_empty():
+			break
+		_check(int(one.get("grade", 0)) == 1 and not bool(one["head"]) and not bool(one["convoy"]) and sim.signal_level(one) < sim.reach and one["papers"].size() == 1,
+			"a one-paper signal: grade %d, head %s, convoy %s, level %d at reach %d" % [int(one.get("grade", 0)), str(one["head"]), str(one["convoy"]), sim.signal_level(one), sim.reach])
+		sim._sig_on(one)
+		var mw: int = sim.max_words(int(one["site"]))
+		sim._sig_off()
+		_check(mw <= 2 + sim.atlas_rank("long_wave") + (Data.FX["yard/long_range"] if sim.yard_has("long_range") else 0), "a faint signal carries %d codes, past its 2" % mw)
+		sim.signals.pop_back()
+	sim.reach = reach_was
+	# at the first reach a faint band is the reach itself (nothing rolls under REACH_START): its win still never moves it
+	_check(int(sim.signal_band([-1])[1]) == Data.REACH_START or sim.reach > Data.REACH_START + 1, "the faint band at the first reach: %s" % str(sim.signal_band([-1])))
+	var fp: Array = sim.signal_papers().slice(0, 1).map(func(x): return int(x["id"]))
+	if fp.is_empty():
+		sim.stash_put(sim._plain(Data.PAPER, bases[0]))
+		fp = sim.signal_papers().slice(0, 1).map(func(x): return int(x["id"]))
+	var faint: Dictionary = sim.decrypt(fp)
+	if not faint.is_empty():
+		var faint_r: int = sim.reach
+		_win_signal(sim, sim.signals.size() - 1)
+		_check(sim.reach == faint_r, "a faint signal won at the first reach moved it %d -> %d" % [faint_r, sim.reach])
+	sim.signals = []
+	sim.papers = []
+	for b in bases:
+		sim.stash_put(sim._plain(Data.PAPER, b))
+	ps = sim.signal_papers()
+	ids = ps.slice(0, 3).map(func(x): return int(x["id"]))
 	var band: Array = sim.signal_band(ids)
 	var sg: Dictionary = sim.decrypt(ids)
 	_check(not sg.is_empty() and sim.signals.size() == 1 and ((sim.signal_level(sg) >= int(band[0]) and sim.signal_level(sg) <= int(band[1])) or int(sg["depth"]) == 2) and sg["codes"].size() == 3 and sim.signal_papers().size() == 3,
@@ -12086,10 +12134,10 @@ func _map_nodes_checks(main) -> void:
 	_check(sim.depth[3] == 4, "without the keystone the ladder opened past the deepest plus one: %d" % sim.depth[3])
 	var reach0: int = sim.reach
 	sim.reach = 20
-	var band0: Array = sim.signal_band([])
+	var band0: Array = sim.signal_band([-1])     # one paper (20 Oct): the faint band reaches furthest under
 	take.call(["lie_of_the_land"])
-	var band1: Array = sim.signal_band([])
-	_check(int(band0[0]) == 20 + int(Data.SIGNAL_ROLL[0][0]) and int(band1[0]) == 20 - int(Data.FX["atlas/lie_of_the_land"]), "The lie of the land did not stop the low rolls: %s -> %s (18 Oct)" % [str(band0), str(band1)])
+	var band1: Array = sim.signal_band([-1])
+	_check(int(band0[0]) == 20 + int(Data.SIGNAL_GRADES[0]["roll"][0][0]) and int(band1[0]) == 20 - int(Data.FX["atlas/lie_of_the_land"]), "The lie of the land did not stop the low rolls: %s -> %s (18 Oct)" % [str(band0), str(band1)])
 	sim.reach = reach0
 	sim.set_depth(3, 2)
 	sim.best_depth[3] = best0
@@ -15088,10 +15136,23 @@ func _words_checks(main) -> void:
 	# change once broke the match; decrypt_block and the Radio share Sim.DECRYPT_NEEDS_PAPERS now)
 	if sim.campaign_done() and sim.signals.size() < Data.SIGNALS_HELD:
 		main.show_room(main.COMMS)
-		main._radio.chosen = [-1, -2]
+		main._radio.chosen = []
 		main._radio._shown = ""
 		main.refresh()
-		_check(sim.decrypt_block([-1, -2]) == sim.DECRYPT_NEEDS_PAPERS and main._radio._decrypt_note.text.begins_with("Decrypting"), "two papers in, the decoder note reads '%s'" % main._radio._decrypt_note.text)
+		_check(sim.decrypt_block([]) == sim.DECRYPT_NEEDS_PAPERS and main._radio._decrypt_note.text.begins_with("Decrypting"), "none in, the decoder note reads '%s'" % main._radio._decrypt_note.text)
+		# one paper in (20 Oct): the decoder says Faint, the empty slots are optional, and it reads under the reach
+		var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+		var reach_ui: int = sim.reach
+		sim.reach = 20                        # past the first reach, where a faint band can't go under it
+		if not plain.is_empty():
+			main._radio.chosen = [int(plain[0]["id"])]
+			main._radio._shown = ""
+			main.refresh()
+			var rd = main._radio
+			_check(rd._make_head.text.contains("FAINT") and rd._slots[1]["n"].text.contains("optional") and rd._slots[2]["n"].text.contains("optional")
+				and rd._make_sub2.text.begins_with("Never moves your reach") and rd._decrypt.text == "Decrypt · 1 paper" and not rd._decrypt.disabled,
+				"one paper in, the decoder reads '%s' / '%s' / '%s' / '%s'" % [rd._make_head.text, rd._slots[1]["n"].text, rd._make_sub2.text, rd._decrypt.text])
+		sim.reach = reach_ui
 		main._radio.chosen = []
 	main.show_room(was)
 	main.refresh()
@@ -15984,3 +16045,17 @@ func _fence_ab_checks(main) -> void:
 	fv._show("shelf")
 	main.refresh()
 	print("fence A/B ok: upgrades kept, boxes lit, parts' fit, marks, swap, the pick handed in")
+
+
+## Run held signal `k` and win it outright (the fight and any head done at once), home again.
+func _win_signal(sim, k: int) -> void:
+	sim.hp = sim.max_hp()
+	if not sim.deploy_signal(k):
+		_check(false, "signal %d didn't set off" % k)
+		return
+	sim.mission["remaining"] = 0
+	if sim.mission.has("boss"):
+		sim.mission["boss"]["alive"] = false
+	sim._clear(sim.mission, sim.mission["t"])
+	sim.extract_now()
+

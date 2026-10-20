@@ -5760,5 +5760,15 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   way is a stored "known" that never goes back.
 - The smoke: a fresh camp's rail, map, guide and shelf name nothing shut; a sweep of next_words, the shelf's gaps and
   the Yard gates for shut names.
-- Next: the Radio - a signal from 1, 2 or 3 papers (Matt), to talk through first.
-
+- Matt (20 Oct): known stays tied to the zone gate (names scramble again under a level shut); fine as built.
+- The Radio, agreed (20 Oct): a signal from 1, 2 or 3 papers. 1 (faint): 7 to 2 under the reach, up to 2 codes, no
+  head or convoy. 2 (clear): 5 under to the reach, 3 codes, the extras at half odds. 3 (full): 3 under to 1 over,
+  4 codes, the extras as before. A rare paper still +1; Kev's beats still their three; a signal's run still brings 2
+  papers home, so a faint one grows the pile. Mockup on the canvas "Fiat – The decoder, one to three papers" (Matt: "yep build it").
+- Done (20 Oct): Data.SIGNAL_GRADES (replaces SIGNAL_ROLL); a laid-on signal's codes capped at its grade's, Long wave
+  and Long range on top; both ends of the band floored at REACH_START, and a faint win never moves the reach (at the
+  first reach its band is the reach itself), so it pays no Dial point either. The decoder: the grade in its head, the
+  slots past the first "optional", the most codes and the extras, whether a win moves the reach, "Decrypt · N papers".
+  The bot makes a one- or two-paper signal only when none is held. The smoke: none to four papers' blocks, each grade's
+  band, codes and extras, its odds summing to 1, six faint signals at reach 20 (no head, no convoy, under the reach, two
+  codes at most), a faint win at the first reach leaving it, and the decoder with one paper in.

@@ -392,10 +392,12 @@ func _make_signals(sim) -> void:
 				bought.append([sim.elapsed, "off Kev's pile: %s for %d notes" % [str(got["base"]).to_lower(), price]])
 				plain = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
 			plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
+			if plain.size() < Data.SIGNAL_PAPERS and not sim.signals.is_empty():
+				break                         # short of three with a signal held: wait for the rest (20 Oct: one or two only when there's nothing to run)
 			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
 		if sim.decrypt(ids).is_empty():
 			break
-		bought.append([sim.elapsed, "a signal from three papers: level %d" % sim.signal_level(sim.signals.back())])
+		bought.append([sim.elapsed, "a signal from %d paper%s: level %d" % [ids.size(), "" if ids.size() == 1 else "s", sim.signal_level(sim.signals.back())]])
 
 
 ## The held signal to run: the deepest that reads PUSH (Kev's at a head's odds, FIRST); -1 for none - the campaign's

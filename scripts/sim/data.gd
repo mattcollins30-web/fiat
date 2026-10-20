@@ -2309,8 +2309,18 @@ const STORY_UNDER := 5                       # Kev's beats come this many levels
 ## rolls at and past the reach were all unwinnable and the D5 read's held three read 0% at the end of every build.
 ## D16: seven under to one over - at the wall (the reach a level or two past the kit) the rolls were all unwinnable, the
 ## bot farmed the campaign at the falloff's tenth and the levels stood still for hours; a deep roll keeps it moving.
-const SIGNAL_ROLL := [[-7, 0.1], [-5, 0.1], [-3, 0.15], [-2, 0.15], [-1, 0.15], [0, 0.2], [1, 0.15]]
+## 20 Oct: the band is the papers' grade now (SIGNAL_GRADES); three papers roll three under to one over.
 const SIGNAL_HEAD_ODDS := 0.15               # an extra: the crew's head, at full strength
+## A signal from one, two or three papers (20 Oct, Matt: "allow a signal to be created on 1, 2 or 3 papers ... the
+## quality of signal that is rolled and the max amount of modifiers"; the canvas "Fiat – The decoder, one to three
+## papers"): the papers in set its grade - the band round the reach ([step, odds], as SIGNAL_ROLL was), the most codes it
+## carries, and the head's and convoy's odds as a share of SIGNAL_HEAD_ODDS / SIGNAL_CONVOY_ODDS. Faint never reaches
+## the reach: a win's for the gear and the papers home (SIGNAL_PAPERS_HOME), so a short pile still makes a signal.
+const SIGNAL_GRADES := [
+	{"papers": 1, "name": "Faint", "roll": [[-7, 0.2], [-5, 0.25], [-3, 0.3], [-2, 0.25]], "codes": 2, "extras": 0.0},
+	{"papers": 2, "name": "Clear", "roll": [[-5, 0.15], [-3, 0.2], [-2, 0.2], [-1, 0.2], [0, 0.25]], "codes": 3, "extras": 0.5},
+	{"papers": 3, "name": "Full", "roll": [[-3, 0.15], [-2, 0.2], [-1, 0.2], [0, 0.25], [1, 0.2]], "codes": 4, "extras": 1.0},
+]
 const SIGNAL_CONVOY_ODDS := 0.15             # an extra: a convoy's crew joins on the way
 ## Kev's story (15 Oct, §3): three beats, each a story signal made of its beat's three papers - a fixed site and crew
 ## at your reach, the crew's head at full strength; the third is the depot, the lorry's convoy (the old Services at

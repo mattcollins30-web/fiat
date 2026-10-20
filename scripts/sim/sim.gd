@@ -3176,7 +3176,7 @@ func max_words(i: int) -> int:
 		if site_depth(i) >= int(row[0]):
 			n = int(row[1])
 	if not _sig.is_empty() and int(_sig["site"]) == i:
-		n = maxi(n, _sig["codes"].size())     # a signal's papers' codes, every one (15 Oct)
+		n = mini(maxi(n, _sig["codes"].size()), int(signal_grade(int(_sig.get("grade", 0)))["codes"]))     # a signal's papers' codes, every one (15 Oct), to its grade's most (20 Oct)
 	if n == 0:
 		return 0
 	return n + atlas_rank("long_wave") + (Data.FX["yard/long_range"] if yard_has("long_range") else 0)
@@ -4557,7 +4557,7 @@ func guide_rows(i: int, from_lv: int, count := 12) -> Array:
 
 
 ## The signal level a site's own unique starts dropping from: the first whose depth reaches site_unique_depth.
-const DECRYPT_NEEDS_PAPERS := "put three papers in"     # decrypt_block's "not enough chosen", which the Radio reads as no block (18 Oct: a words change broke the match)
+const DECRYPT_NEEDS_PAPERS := "put a paper in"     # decrypt_block's "not enough chosen", which the Radio reads as no block (18 Oct: a words change broke the match)
 
 
 func site_unique_level(i: int) -> int:
@@ -5112,13 +5112,15 @@ func decrypt_block(ids: Array) -> String:
 		return "the campaign first"
 	if signals.size() >= Data.SIGNALS_HELD:
 		return "%d signals held: run or bin one" % Data.SIGNALS_HELD
-	if ids.size() != Data.SIGNAL_PAPERS:
+	if ids.is_empty():
 		return DECRYPT_NEEDS_PAPERS
+	if ids.size() > Data.SIGNAL_PAPERS:
+		return "three papers at most"
 	var have: Array = signal_papers().map(func(x): return int(x["id"]))
 	var seen_ids := {}
 	for id in ids:
 		if not (int(id) in have) or seen_ids.has(int(id)):
-			return "three papers from the stash"
+			return "papers from the Radio's pile"
 		seen_ids[int(id)] = true
 	var beats := {}
 	var bases := {}
@@ -5126,7 +5128,7 @@ func decrypt_block(ids: Array) -> String:
 		if int(it["id"]) in ids:
 			beats[story_of(it)] = true
 			bases[str(it["base"])] = true
-	if beats.size() > 1 or (beats.has(-1) == false and bases.size() < Data.SIGNAL_PAPERS):
+	if beats.size() > 1 or (beats.has(-1) == false and bases.size() < Data.SIGNAL_PAPERS):     # a beat's three, never one or two of it
 		return "Kev's papers go in together, the three of a beat"
 	if not beats.has(-1) and not beats.has(story_now()):
 		return "not the part of Kev's story he's on"
@@ -5169,12 +5171,34 @@ func story_held() -> Array:
 	return out
 
 
-## The levels three papers would roll: the reach's band, one higher for a rare paper (D3: levels, not depths).
+## A signal's grade by the papers in (20 Oct): one Faint, two Clear, three Full; none reads as three (the band the
+## decoder shows before any paper's in, and a signal from before the grades).
+static func signal_grade(n: int) -> Dictionary:
+	var k: int = clampi(n, 1, Data.SIGNAL_GRADES.size()) if n > 0 else Data.SIGNAL_GRADES.size()
+	return Data.SIGNAL_GRADES[k - 1]
+
+
+## The levels these papers would roll: their grade's band round the reach, one higher for a rare paper (D3: levels,
+## not depths).
 func signal_band(ids: Array) -> Array:
-	var lo: int = reach + (maxi(int(Data.SIGNAL_ROLL[0][0]), -int(Data.FX["atlas/lie_of_the_land"])) if atlas_rank("lie_of_the_land") > 0 else int(Data.SIGNAL_ROLL[0][0]))
-	var hi: int = reach + int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) + (int(Data.FX["atlas/lorrys_route"]) if atlas_rank("lorrys_route") > 0 else 0)
+	var roll: Array = signal_grade(ids.size())["roll"]
+	var lo: int = reach + (maxi(int(roll[0][0]), -int(Data.FX["atlas/lie_of_the_land"])) if atlas_rank("lie_of_the_land") > 0 else int(roll[0][0]))
+	var hi: int = reach + int(roll[roll.size() - 1][0]) + (int(Data.FX["atlas/lorrys_route"]) if atlas_rank("lorrys_route") > 0 else 0)
 	var up: int = 1 if _papers_rare(ids) else 0
-	return [maxi(Data.REACH_START, lo + up), hi + up]
+	return [maxi(Data.REACH_START, lo + up), maxi(Data.REACH_START, hi + up)]     # a faint band at the first reach is the first level (20 Oct)
+
+
+## The most codes these papers' signal could carry at the top of its band: the depth's count (WORD_MAX_DEPTH, read
+## at the level's tier depth as max_words reads it), never past its grade's (20 Oct), and the map's Long wave and the
+## Yard's Long range on top.
+func signal_codes_most(ids: Array) -> int:
+	var d: int = tier_depth(int(signal_band(ids)[1]))
+	var n := 0
+	for row in Data.WORD_MAX_DEPTH:
+		if d >= int(row[0]):
+			n = int(row[1])
+	n = mini(maxi(n, ids.size()), int(signal_grade(ids.size())["codes"]))
+	return n + atlas_rank("long_wave") + (Data.FX["yard/long_range"] if yard_has("long_range") else 0)
 
 
 func _papers_rare(ids: Array) -> bool:
@@ -5207,23 +5231,25 @@ func decrypt(ids: Array) -> Dictionary:
 			papers.erase(it)                   # spent off the Radio's pile
 	if beat >= 0:
 		return _story_signal(beat, names)
+	var grade: Dictionary = signal_grade(ids.size())
+	var roll: Array = grade["roll"]
 	var x := rng.randf()
 	var step := 0
-	for row in Data.SIGNAL_ROLL:
+	for row in roll:
 		x -= float(row[1])
 		step = int(row[0])
 		if x <= 0.0:
 			break
 	if atlas_rank("lie_of_the_land") > 0:
 		step = maxi(step, -int(Data.FX["atlas/lie_of_the_land"]))     # The lie of the land: no roll far under the reach (18 Oct)
-	if step == int(Data.SIGNAL_ROLL[Data.SIGNAL_ROLL.size() - 1][0]) and atlas_rank("lorrys_route") > 0 and rng.randf() < 0.5:
+	if step == int(roll[roll.size() - 1][0]) and atlas_rank("lorrys_route") > 0 and rng.randf() < 0.5:
 		step += int(Data.FX["atlas/lorrys_route"])     # The lorry's route: the top of the band a depth further, half the time it's reached
 	signal_seq += 1
 	var site: int = rng.randi_range(0, Data.TIERS.size() - 1)
 	var sig := {"id": signal_seq, "site": site, "zone": rng.randi_range(0, Data.ZONES.size() - 1),
 		"depth": depth_for_level(site, maxi(Data.REACH_START, reach + step + up)), "codes": codes, "papers": names,
-		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS, "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS,
-		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1)}
+		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS * float(grade["extras"]), "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS * float(grade["extras"]),
+		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1), "grade": int(grade["papers"])}
 	signals.append(sig)
 	chron("signal", {"id": signal_seq, "site": int(sig["site"]), "zone": int(sig["zone"]), "depth": int(sig["depth"]), "codes": codes.duplicate(), "papers": names.duplicate()})
 	log_event(Words.SIGNAL_MADE % [Words.mid(str(Data.TIERS[int(sig["site"])]["name"])), signal_level(sig)])
@@ -5469,7 +5495,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
 	if won:
 		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
-	if won and d >= reach:
+	if won and d >= reach and int(_sig.get("grade", 0)) != 1:     # a faint one never moves it (20 Oct; at the first reach its band is the reach)
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
 		log_event(Words.SIGNAL_REACH % [d, reach])

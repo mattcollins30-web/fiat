@@ -49,6 +49,7 @@ const VIEW_Y := 88
 const HEARD_X := 470
 const HEARD_Y := HEAD_H - 44
 const BITE := Color("ee7663")
+const SPARE_NAME := ["", "A second paper", "A third paper"]     # an empty slot past the first paper (20 Oct)
 const KEV_H := 96                  # Kev's pile, under the decoder
 const KEV := Color("f0a868")        # Kev's voice's colour (the radio line's mockup, approved 16 Oct)
 const STORY := Color("8fb3d9")      # Kev's story's papers and signals (the mockup's blue)
@@ -220,11 +221,11 @@ func _build_papers() -> void:
 func _build_decoder() -> void:
 	_decoder_box = UI.panel(self, Rect2(DECODER_X, BODY_Y, DECODER_W, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
 	var iw: float = DECODER_W - 2 * 14
-	_decoder_title = UI.label(_decoder_box, Rect2(14, 10, iw, 26), "THE DECODER · THREE PAPERS IN", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_decoder_title = UI.label(_decoder_box, Rect2(14, 10, iw, 26), "THE DECODER · ONE TO THREE PAPERS", "Medium", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	for k in range(Data.SIGNAL_PAPERS):
 		var p := UI.panel(_decoder_box, Rect2(14, 46 + k * (SLOT_H + SLOT_GAP), iw, SLOT_H), UI.box(Pal.BG, 7, 1, Pal.CARD_LINE))
 		var sl := {"panel": p}
-		sl["n"] = UI.label(p, Rect2(14, 8, 40, 20), "%d" % (k + 1), "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		sl["n"] = UI.label(p, Rect2(14, 8, iw - 28, 20), "%d" % (k + 1), "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 		sl["name"] = UI.label(p, Rect2(14, 30, iw - 28, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		sl["code"] = UI.label(p, Rect2(14, 62, iw - 28, 26), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_slots.append(sl)
@@ -532,8 +533,8 @@ func _show_papers() -> void:
 	# the two kinds, each with its count of the three (16 Oct): a story piece never hides that the plain ones are short
 	var plain: int = papers.filter(func(x): return sim.story_of(x) < 0).size()
 	var story: int = sim.story_held().size()
-	var kinds: String = "Plain %d of 3%s" % [mini(plain, Data.SIGNAL_PAPERS), (" · Kev's story %d of 3" % story) if story > 0 else ""]
-	UI.fit(_papers_sub, [kinds + " · pick three", kinds, "Plain %d" % plain] if not papers.is_empty() else ["None held: they're found searching, or off Kev's pile", "None held", ""])
+	var kinds: String = "Plain %d%s" % [plain, (" · Kev's story %d of 3" % story) if story > 0 else ""]
+	UI.fit(_papers_sub, [kinds + " · pick one to three", kinds, "Plain %d" % plain] if not papers.is_empty() else ["None held: they're found searching, or off Kev's pile", "None held", ""])
 	for k in range(PAPERS_MAX):
 		var r: Dictionary = _paper_rows[k]
 		var n: int = paper_page * PAPERS_MAX + k
@@ -588,20 +589,34 @@ func _show_decoder() -> void:
 		var it: Dictionary = _paper(chosen[k]) if k < chosen.size() else {}
 		var on: bool = not it.is_empty()
 		(sl["panel"] as Panel).add_theme_stylebox_override("panel", UI.box(Pal.BG, 7, 2 if on else 1, Pal.ACCENT if on else Pal.CARD_LINE))
-		UI.fit(sl["name"], [str(it["base"]) + (" · rare" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "")] if on else ["A paper from the left"])
+		var spare: bool = not on and k > 0 and k >= chosen.size() and not chosen.is_empty() and sim.story_of(_paper(chosen[0])) < 0     # 20 Oct: one paper makes a signal, more make it stronger
+		sl["n"].text = "%d · optional" % (k + 1) if spare else "%d" % (k + 1)
+		UI.fit(sl["name"], [str(it["base"]) + (" · rare" if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT else "")] if on else ([SPARE_NAME[k]] if spare else ["A paper from the left"]))
 		sl["name"].add_theme_color_override("font_color", Pal.TEXT if on else Pal.TEXT_3)
-		var cw: Array = code_words(str(it["base"])) if on else [[""], Pal.TEXT_3]
+		var more: Dictionary = sim.signal_grade(k + 1)
+		var cw: Array = code_words(str(it["base"])) if on else ([["%s signal, room for %d codes" % [more["name"], int(more["codes"])], "Room for %d codes" % int(more["codes"])], Pal.TEXT_3] if spare else [[""], Pal.TEXT_3])
 		if on and sim.story_of(it) >= 0:
 			cw = [["Kev's story · %s" % str(Data.STORY_BEATS[sim.story_of(it)]["name"]).to_lower(), "Kev's story"], STORY]
 		UI.fit(sl["code"], cw[0])
 	var band: Array = sim.signal_band(chosen)
+	var gr: Dictionary = sim.signal_grade(chosen.size())
+	UI.fit(_make_head, ["%s · %s" % ["WHAT IT'LL MAKE" if chosen.size() == 1 else "WHAT THEY'LL MAKE", str(gr["name"]).to_upper()], str(gr["name"]).to_upper()] if not chosen.is_empty() else ["WHAT THEY'LL MAKE"])
 	UI.fit(_make, ["A signal at level %d–%d" % [band[0], band[1]], "Level %d–%d" % [band[0], band[1]]])
-	UI.wrap([_make_sub, _make_sub2], "The codes as above; the site, crew and extras roll when you decrypt" if chosen.size() == Data.SIGNAL_PAPERS else "Three papers make a signal; a rare one rolls it higher")
+	if chosen.is_empty():
+		UI.wrap([_make_sub, _make_sub2], "One to three papers make a signal: more make it stronger, a rare one rolls it higher")
+	else:
+		var most: int = sim.signal_codes_most(chosen)
+		var ex: float = float(gr["extras"])
+		var extras: String = "no head, no convoy" if ex <= 0.0 else ("head or convoy as before" if ex >= 1.0 else "head or convoy, half as often")
+		UI.fit(_make_sub, ["Up to %d code%s · %s" % [most, "" if most == 1 else "s", extras], "Up to %d code%s" % [most, "" if most == 1 else "s"]])
+		var r: int = sim.reach
+		var never: bool = int(gr["papers"]) == 1 or int(band[1]) < r     # a faint win never moves the reach (20 Oct)
+		UI.fit(_make_sub2, ["Never moves your reach (%d)" % r if never else "A win at your reach (%d) or past moves it" % r, "Reach %d" % r])
 	var why: String = sim.decrypt_block(chosen)
 	_decrypt.disabled = why != "" and not decrypting()
-	_decrypt.text = "Skip" if decrypting() else "Decrypt"     # a tap mid-decrypt goes to the end (item 20)
+	_decrypt.text = "Skip" if decrypting() else ("Decrypt · %d paper%s" % [chosen.size(), "" if chosen.size() == 1 else "s"] if not chosen.is_empty() else "Decrypt")     # a tap mid-decrypt goes to the end (item 20)
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
-	var note: String = ("Decrypting spends the papers · %d more signal%s can be held" % [room, "" if room == 1 else "s"]) if why == "" or why == sim.DECRYPT_NEEDS_PAPERS else why.substr(0, 1).to_upper() + why.substr(1)
+	var note: String = ("Decrypting spends the paper%s · %d more signal%s can be held" % ["" if chosen.size() == 1 else "s", room, "" if room == 1 else "s"]) if why == "" or why == sim.DECRYPT_NEEDS_PAPERS else why.substr(0, 1).to_upper() + why.substr(1)
 	UI.fit(_decrypt_note, [note, ""])
 	var kb: String = sim.kev_block()
 	UI.fit(_kev_line, [Words.KEV_PILE, "\"Bring me notes and I'll see what's in the pile.\"", ""])
