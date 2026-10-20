@@ -81,6 +81,7 @@ func show_state(s) -> void:
 	for p in Data.PINNACLES:
 		reads += str(sim.order_odds_now(p["key"]))
 	var sig := "%s|%s|%s|%d|%d|%d|%s" % [str(sim.rebuilt), str(sim.order_beaten), reads, sim.reach, int(sim.on_mission()), int(sim.hp), str(sim.can_deploy())]
+	sig += "|" + str(Data.PINNACLES.map(func(pn): return sim.order_known(str(pn["key"]))))     # the names scramble with it (20 Oct)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -95,11 +96,13 @@ func _show_col(c: Dictionary) -> void:
 	c["state"].text = "OPEN" if open else "SHUT"
 	c["state"].add_theme_color_override("font_color", Pal.ACCENT if open else Pal.TEXT_3)
 	c["art"].modulate = Color(0.75, 0.75, 0.75) if open else Color(0.3, 0.3, 0.32)
-	c["place"].text = str(p["place"])
+	var known: bool = sim.order_known(k)     # 20 Oct: scrambled till found
+	var en := func(t: String) -> String: return t if known else Fmt.scramble(t)
+	c["place"].text = en.call(str(p["place"]))
 	c["place"].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
-	c["who"].text = str(p["who"])
+	c["who"].text = en.call(str(p["who"]))
 	c["who"].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_2)
-	UI.wrap(c["words"], str(Words.PINNACLE_WORDS.get(k, "")))
+	UI.wrap(c["words"], en.call(str(Words.PINNACLE_WORDS.get(k, ""))))
 	var beaten: int = int(sim.order_beaten.get(k, 0))
 	var chips: Array = [{"forms": ["Level %d" % sim.order_level(k)], "colour": Pal.TEXT_2}]
 	if beaten > 0:
@@ -117,15 +120,15 @@ func _show_col(c: Dictionary) -> void:
 		c["odds"].text = ""
 	var drop: Array = []
 	if p.has("first") and beaten == 0:
-		drop.append(sim.thing_name(str(p["first"])))
+		drop.append(en.call(sim.thing_label(str(p["first"]))))
 	if str(p.get("drop", "")) != "":
-		drop.append(sim.thing_name(str(p["drop"])))
-	var u_words: String = "their unique" if beaten > 0 else str(p["unique"])
+		drop.append(en.call(sim.thing_label(str(p["drop"]))))
+	var u_words: String = "their unique" if beaten > 0 else en.call(str(p["unique"]))
 	UI.fit(c["drops"], [" · ".join(drop + [u_words]), " · ".join(drop + ["their unique"]), " · ".join(drop)])
 	var why: String = sim.order_block(k)
 	c["button"].visible = open and why == ""
 	c["note"].visible = not c["button"].visible
-	UI.fit_button(c["button"], ["Go: %s" % Words.mid(str(p["place"])), "Go"])
+	UI.fit_button(c["button"], ["Go: %s" % Words.mid(en.call(str(p["place"]))), "Go"])
 	UI.fit(c["note"], [why, ""])
 	(c["panel"].get_theme_stylebox("panel") as StyleBoxFlat).border_color = Pal.ACCENT if open else Pal.CARD_LINE
 

@@ -12,6 +12,7 @@ const UI := preload("res://scripts/ui/ui.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
+const Fmt := preload("res://scripts/ui/fmt.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -98,6 +99,7 @@ func _init() -> void:
 func show_state(s) -> void:
 	sim = s
 	var sig := "%s|%s|%s|%d|%s|%d|%d" % [str(sim.materials), str(sim.key_items), str(sim.rebuilt), sim.yard_moves, str(sim.rebuild_open()), int(sim.on_mission()), sim.reach]
+	sig += "|" + str(Data.PINNACLES.map(func(pn): return sim.order_known(str(pn["key"]))))     # the names scramble with it (20 Oct)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -121,7 +123,7 @@ func show_state(s) -> void:
 		_mat_rows[k][1].add_theme_color_override("font_color", tone)
 	for k in range(Data.KEY_ORDER.size()):
 		var ki: String = Data.KEY_ORDER[k]
-		UI.fit(_key_rows[k][0], [str(Data.KEY_ITEMS[ki]["name"])])
+		UI.fit(_key_rows[k][0], [sim.thing_label(ki)])     # scrambled till known (20 Oct)
 		_key_rows[k][1].text = str(sim.held_of(ki))
 		var kt: Color = Pal.ACCENT if sim.held_of(ki) > 0 else Pal.TEXT_3
 		_key_rows[k][0].add_theme_color_override("font_color", kt)
@@ -153,7 +155,7 @@ func _show_card(c: Dictionary, open: bool) -> void:
 	for k in Data.MATERIAL_ORDER + Data.KEY_ORDER:
 		if cost.has(k):
 			var have: int = sim.held_of(k)
-			var nm: String = sim.thing_name(k)
+			var nm: String = sim.thing_label(k)
 			items.append({"forms": ["%s %d/%d" % [nm, have, int(cost[k])], "%s %d/%d" % [_cap(nm.trim_prefix("The ").get_slice(" ", 0)), have, int(cost[k])]],
 				"colour": "good" if have >= int(cost[k]) else "bad"})
 	c["chips"].show_chips(items, WANT_ROWS, true)
@@ -161,7 +163,10 @@ func _show_card(c: Dictionary, open: bool) -> void:
 	var opens: String = str(r.get("opens", ""))
 	if opens != "":
 		var p: Dictionary = Data.pinnacle(opens)
-		UI.fit(c["opens"], [("Opened %s · %s" if rank > 0 else "Opens %s · %s") % [Words.mid(p["place"]), str(p["who"])], ("Opened %s" if rank > 0 else "Opens %s") % Words.mid(p["place"])])     # after the dot a name starts its own words: The Lineman
+		var kn: bool = sim.order_known(opens)     # 20 Oct: the place and its head scrambled till found
+		var pl: String = Words.mid(p["place"]) if kn else Fmt.scramble(str(p["place"]))
+		var wh: String = str(p["who"]) if kn else Fmt.scramble(str(p["who"]))
+		UI.fit(c["opens"], [("Opened %s · %s" if rank > 0 else "Opens %s · %s") % [pl, wh], ("Opened %s" if rank > 0 else "Opens %s") % pl])     # after the dot a name starts its own words: The Lineman
 	else:
 		c["opens"].text = ""
 	var why: String = sim.rebuild_block(key)

@@ -317,9 +317,10 @@ func show_state(s, sel: int, okey: String) -> void:
 		var l: Label = _order_labels[p["key"]]
 		l.visible = sim.order_open(p["key"])
 		if l.visible:
-			l.text = str(p["place"])
+			var ok: bool = sim.order_known(p["key"])
+			l.text = str(p["place"]) if ok else Fmt.scramble(str(p["place"]))     # scrambled till its zone's open (20 Oct)
 			_snug(l)
-			l.add_theme_color_override("font_color", Pal.ACCENT if order_key == p["key"] else Pal.TEXT)
+			l.add_theme_color_override("font_color", Pal.ACCENT if order_key == p["key"] else (Pal.TEXT if ok else Pal.TEXT_3))
 	queue_redraw()
 
 
@@ -486,7 +487,7 @@ func _gui_input(ev: InputEvent) -> void:
 			best = d
 			hit_i = i
 	for p in Data.PINNACLES:
-		if sim.order_open(p["key"]):
+		if sim.order_known(p["key"]):          # a place in a shut zone doesn't pick, as its pins don't (20 Oct)
 			var d: float = at.distance_to(_px(ORDER_AT[p["key"]]))
 			if d < best:
 				best = d

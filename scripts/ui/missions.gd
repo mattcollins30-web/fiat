@@ -188,7 +188,7 @@ func show_state(s) -> void:
 	sim = s
 	if selected < 0 or selected >= Data.TIERS.size() or not sim.zone_open(int(Data.TIERS[selected]["zone"])):
 		selected = _default_site()
-	if order_key != "" and not sim.order_open(order_key):
+	if order_key != "" and not sim.order_known(order_key):     # a place unknown again (its zone shut under the level, 20 Oct) gives the card back
 		order_key = ""
 	zone = int(Data.TIERS[selected]["zone"])
 	_show_came_back()
@@ -367,7 +367,7 @@ func select(i: int) -> void:
 
 ## An order's place picked: its card in the site's place.
 func select_order(k: String) -> void:
-	if sim == null or not sim.order_open(k):
+	if sim == null or not sim.order_known(k):
 		return
 	order_key = k
 	_shown = ""

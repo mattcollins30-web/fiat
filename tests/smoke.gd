@@ -15381,6 +15381,61 @@ func _rebuild_checks(main) -> void:
 		if own_t != null:
 			_check(PeopleV.portrait(str(p["who"])) != null, "%s has a place but no face" % p["who"])
 	_check_fit(main, "Map order")
+	# an order's place in a shut zone (20 Oct, Matt: "the grid, archive and mint also need to be encoded"): its names
+	# scrambled on the Map, its card and the Town's rebuild card, and its pin doesn't pick, as a shut zone's pins don't
+	var beat2: bool = sim.bosses_beaten[2]
+	sim.bosses_beaten[2] = false
+	_check(not sim.zone_open(3) and sim.order_open("grid") and not sim.order_known("grid"), "the fixture couldn't shut the City under an open Grid")
+	mv._shown = ""
+	od._shown = ""
+	main.refresh()
+	var grid_p: Dictionary = Data.pinnacle("grid")
+	_check(main._missions.order_key == "", "the Grid stayed picked with the City shut: the title '%s'" % main._missions._title.text)
+	_check(not main._missions._title.text.contains(str(grid_p["place"]).trim_prefix("The ")), "the Map's title names the Grid with the City shut: '%s'" % main._missions._title.text)
+	od._shown = ""
+	od.show_state(sim)                        # the card itself, though the Map gives it back while the place is unknown
+	var gl: Label = mv._order_labels["grid"]
+	_check(gl.text == Fmt.scramble(str(grid_p["place"])) and od.col("grid")["place"].text == Fmt.scramble(str(grid_p["place"])) and od.col("grid")["who"].text == Fmt.scramble(str(grid_p["who"]))
+		and not od.col("grid")["words"].any(func(l): return l.text.contains("Grid")),
+		"the Grid with the City shut: the Map's '%s', the card's '%s' / '%s'" % [gl.text, od.col("grid")["place"].text, od.col("grid")["who"].text])
+	var tap := InputEventMouseButton.new()
+	tap.button_index = MOUSE_BUTTON_LEFT
+	tap.pressed = true
+	tap.position = mv.order_pin_at("grid")
+	var picked_k: Array = []
+	var on_pick := func(k: String) -> void: picked_k.append(k)
+	mv.picked_order.connect(on_pick)
+	mv._gui_input(tap)
+	mv.picked_order.disconnect(on_pick)
+	_check(picked_k.is_empty(), "the Grid's pin picked with the City shut")
+	main.show_room(main.COMMS)
+	main._radio._pick_view("town")
+	tw._shown = ""
+	main._radio._shown = ""
+	main.refresh()
+	tw.show_state(sim)
+	var opens_t: String = tw.card("substation")["opens"].text
+	var key_was: int = sim.held_of("grid_key")
+	sim.key_items["grid_key"] = 0
+	tw._shown = ""
+	tw.show_state(sim)
+	var key_t: String = " ".join(tw._key_rows.map(func(r): return str(r[0].text)))
+	for c in tw._cards:
+		key_t += " " + " ".join(c["chips"].text_nodes().map(func(l): return str(l.text))) + " " + str(c["note"].text)
+	_check(not key_t.contains("Grid"), "the Town names the Grid's key with the City shut: %s" % key_t)
+	sim.key_items["grid_key"] = key_was
+	tw._shown = ""
+	tw.show_state(sim)
+	_check(not opens_t.contains(str(grid_p["place"]).trim_prefix("The ")) and not opens_t.contains(str(grid_p["who"]).trim_prefix("The ")) and opens_t != "", "the Town's substation card names the Grid with the City shut: '%s'" % opens_t)
+	main._radio._pick_view("air")
+	main.show_room(main.MISSIONS)
+	sim.bosses_beaten[2] = beat2
+	mv._shown = ""
+	od._shown = ""
+	main.refresh()
+	_check(mv._order_labels["grid"].text == str(grid_p["place"]), "the Grid with the City open still scrambled: '%s'" % mv._order_labels["grid"].text)
+	main._missions.select_order("grid")
+	main.refresh()
 	main._missions.select_order("mint")
 	_check(main._missions.order_key == "grid", "a shut place's pin took the card")
 	main._missions.select(0)

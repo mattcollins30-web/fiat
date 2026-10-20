@@ -8,16 +8,9 @@ const MINUS := "−"
 const UNIT := "tins"                # what everything is paid in (13 Oct, Matt: a game about a collapse, paid in cash, made no sense)
 ## The glyphs a name not yet known is scrambled into (20 Oct, Matt: "scrambled like the radio broadcasts"): ItemHead's,
 ## all in Inter.
-const SCRAMBLE := "ΞЖ§¤ØÞðƷΔΣΠΩψλξζЯЮЩЦФБДЛ¶†‡※∆∑∏≈≠±÷×◊#%&@"
-
-
-## A name not yet known, glyph for glyph, the spaces kept: the same name scrambles the same way every time.
+## A name not yet known (Words.scramble: the sim's too, 20 Oct, the review: the sim never loads a UI script).
 static func scramble(text: String) -> String:
-	var out := ""
-	for i in range(text.length()):
-		var ch: String = text[i]
-		out += ch if ch == " " else SCRAMBLE[absi(hash(text + str(i))) % SCRAMBLE.length()]
-	return out
+	return preload("res://scripts/sim/words.gd").scramble(text)
 
 
 ## A plain quantity: 1,234 · 12,345 · 1.2M from a million up. Clade's biomass.

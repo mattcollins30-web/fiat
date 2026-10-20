@@ -5777,5 +5777,12 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   between its two sides). The motorway strip along the top and the moor south of the Town stay no zone; the road strip
   between the Estate and the Outskirts on the west edge went to the Outskirts. The Estate's name moved down to
   (12, 180), inside its new top edge. Every pin 30+ px inside its zone, the order's three inside theirs.
-  - For Matt: the order's names (the Grid, the Archive, the Mint) still show plain under the clouds on a fresh camp.
+- Done (20 Oct, Matt: "the grid, archive and mint also need to be encoded"): Sim.order_known - an order's place
+  rebuilt and its host site's zone open. Till then scrambled: its name on the Map (dim, and its pin doesn't pick), its
+  card (place, head, words, drops, Go), the Town's "Opens X · who", the shelf's order gaps, the rebuild's log line, and
+  the order's key items (Sim.key_known: held, or the place that drops it known) in the Town's rows, chips and notes. A
+  picked place gone unknown gives the Map's card back. Words.scramble holds the glyphs now (Fmt's calls it), so the
+  sim never loads a UI script.
+  - For Matt: the smoke's "the takings took the sale" check is wrong when takings already sit above the sale (takings
+    is a moving average); it failed once at run 85. Fix proposed, not made.
 

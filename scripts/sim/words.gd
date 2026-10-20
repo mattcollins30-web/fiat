@@ -271,6 +271,19 @@ const TRAITS := {
 ## on the action and show in the pick panel.
 
 ## A name mid-sentence (the caps pass, 8 Oct): "The Parade" stands alone; "to the Parade" in a line.
+## A name not yet known, glyph for glyph, the spaces kept: the same name scrambles the same way every time (20 Oct,
+## the Radio's glyphs; moved here from Fmt so the sim's log lines can scramble too).
+const SCRAMBLE := "ΞЖ§¤ØÞðƷΔΣΠΩψλξζЯЮЩЦФБДЛ¶†‡※∆∑∏≈≠±÷×◊#%&@"
+
+
+static func scramble(text: String) -> String:
+	var out := ""
+	for i in range(text.length()):
+		var ch: String = text[i]
+		out += ch if ch == " " else SCRAMBLE[absi(hash(text + str(i))) % SCRAMBLE.length()]
+	return out
+
+
 static func mid(name: String) -> String:
 	return ("the " + name.trim_prefix("The ")) if name.begins_with("The ") else name
 

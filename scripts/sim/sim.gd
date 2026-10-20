@@ -3019,7 +3019,7 @@ func shelf_chase() -> Array:
 					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], lv_at(int(b["tier"]), pinnacle_depth(int(b["tier"])))], "known": zone_open(int(b["zone"]))})
 	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"], "known": true})     # the depot's, Kev's last beat (15 Oct)
 	for p in Data.PINNACLES:
-		out.append({"name": p["unique"], "found": p["unique"] in shelf, "where": Words.SHELF["order_gap"] % [p["who"], Words.mid(str(p["place"]))], "known": order_open(str(p["key"]))})     # the order's (18 Oct)
+		out.append({"name": p["unique"], "found": p["unique"] in shelf, "where": Words.SHELF["order_gap"] % [p["who"], Words.mid(str(p["place"]))], "known": order_known(str(p["key"]))})     # the order's (18 Oct)
 	return out
 
 
@@ -4788,6 +4788,21 @@ func held_of(k: String) -> int:
 
 
 ## A material's or a key item's name.
+## A key item known (20 Oct): held, or the order's place that drops it known; till then its name reads scrambled.
+func key_known(k: String) -> bool:
+	if held_of(k) > 0:
+		return true
+	for p in Data.PINNACLES:
+		if (str(p.get("drop", "")) == k or str(p.get("first", "")) == k) and order_known(str(p["key"])):
+			return true
+	return false
+
+
+## A material's or key item's name as the player knows it: a key item's scrambled till key_known.
+func thing_label(k: String) -> String:
+	return thing_name(k) if not Data.KEY_ITEMS.has(k) or key_known(k) else Words.scramble(thing_name(k))
+
+
 static func thing_name(k: String) -> String:
 	if Data.KEY_ITEMS.has(k):
 		return str(Data.KEY_ITEMS[k]["name"])
@@ -4805,7 +4820,7 @@ func rebuild_block(key: String) -> String:
 	var cost := rebuild_cost(key)
 	for k in cost:
 		if held_of(k) < int(cost[k]):
-			return "Short of %s" % (Words.mid(thing_name(k)) if Data.KEY_ITEMS.has(k) else thing_name(k).to_lower())     # a key item's name keeps its proper noun
+			return "Short of %s" % ((Words.mid(thing_name(k)) if key_known(k) else thing_label(k)) if Data.KEY_ITEMS.has(k) else thing_name(k).to_lower())     # a key item's name keeps its proper noun
 	return ""
 
 
@@ -4827,7 +4842,8 @@ func rebuild_place(key: String) -> bool:
 	chron("rebuild", {"key": key, "rank": rebuild_rank(key), "worth": town_worth(), "cost": cost.duplicate()})
 	log_event(Words.REBUILD["built"] % [r["name"], rebuild_rank(key), town_worth()])
 	if rebuild_rank(key) == 1 and r.has("opens"):
-		log_event(Words.REBUILD["opened"] % Data.pinnacle(str(r["opens"]))["place"])
+		var place: String = str(Data.pinnacle(str(r["opens"]))["place"])
+		log_event(Words.REBUILD["opened"] % (place if order_known(str(r["opens"])) else Words.scramble(place)))     # scrambled while its zone's shut (20 Oct)
 	_yard_changed("")                          # the shelf and the prices read the town
 	return true
 
@@ -4932,6 +4948,13 @@ func _head_materials(m: Dictionary) -> void:
 func order_open(k: String) -> bool:
 	var p: Dictionary = Data.pinnacle(k)
 	return not p.is_empty() and rebuild_rank(str(p["opened_by"])) > 0
+
+
+## An order's place known (20 Oct, Matt: "the grid, archive and mint also need to be encoded"): its place rebuilt and
+## its host site's zone open; till then its names read scrambled, as a shut zone's do.
+func order_known(k: String) -> bool:
+	var p: Dictionary = Data.pinnacle(k)
+	return order_open(k) and zone_open(int(Data.TIERS[int(p["site"])]["zone"]))
 
 
 func any_order_open() -> bool:
