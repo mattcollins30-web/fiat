@@ -5868,3 +5868,16 @@ first. His points for the pass, to design:
 17. Kev's story signals came in 3+ under the reach every time (Matt): STORY_UNDER is 5 (D4: the head at full strength
     reckoned three levels' worth). For the pass: nearer the reach.
 
+### The batch, built (20 Oct)
+
+- Done (items 2, 3, 7, 9): a gun's try-on reads its best grade of rounds in the stash as well as the rig; on the fight
+  screen each shot shown is one shot's sound and each figure's firing pose one of theirs (off screen the sounds keep
+  their own time); a part's name in its slot is whole or its first word, the type stepping down rather than a word cut;
+  the fight's rig places every item (first fit, else the widest first, else one row). Smoke checks for each.
+- Item 8 (the Pitch's prices climbing on a click): not the click - prices rise with the camp's clock (inflation), and the
+  screen only redraws on a click, so they jump then. For Matt to decide (see the reply).
+- Found: the smoke's main is never in the tree (added in _init), so is_visible_in_tree reads false - checks filtering on
+  it checked nothing. The room-wide click sweep is dropped (anchor-laid controls have no size out of the tree); the
+  guide's, sized in code, stays. Next: the other checks that filter on it.
+- Flake seen once (run 107): "a ammo_tin's finds are 0 of 300 Ammo" - passed on the rerun; logged with run 92's.
+

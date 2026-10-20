@@ -326,11 +326,12 @@ func show_state(s) -> void:
 			r["mount"].add_theme_color_override("font_color", Pal.TEXT_2)
 			var a = gun["attachments"][mount]
 			if a == null:
+				r["fitted"].add_theme_font_size_override("font_size", UI.TILE_TEXT)
 				r["fitted"].text = "Empty"
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
 				_style(r["button"], on)
 			else:
-				UI.fit(r["fitted"], _short_names(a["base"]))
+				_fit_part(r["fitted"], str(a["base"]))
 				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))     # the part's tier, as the Lock-up bands it
 				_style(r["button"], on, rarity_tone(a))
 	for slot in Data.SOCKET_SLOTS:
@@ -366,11 +367,12 @@ func show_state(s) -> void:
 			r["mount"].add_theme_color_override("font_color", Pal.TEXT_2)
 			var a = gear["attachments"][mount]
 			if a == null:
+				r["fitted"].add_theme_font_size_override("font_size", UI.TILE_TEXT)
 				r["fitted"].text = "Empty"
 				r["fitted"].add_theme_color_override("font_color", Pal.TEXT_3)
 				_style(r["button"], on)
 			else:
-				r["fitted"].text = a["base"]
+				_fit_part(r["fitted"], str(a["base"]))
 				r["fitted"].add_theme_color_override("font_color", Pal.tier_color(int(a.get("tier", 1))))
 				_style(r["button"], on, rarity_tone(a))
 	# the heading (9 Oct): every job and mount open from the start; the Bench's picks, built in the Yard, named
@@ -399,8 +401,28 @@ static func _short_names(base: String) -> Array:
 	var out: Array = [base]
 	if words.size() > 1 and words[0].length() >= 3:
 		out.append(words[0])
-	out.append(words[0].substr(0, 6) if not words.is_empty() else base)
 	return out
+
+
+## A part's name in its slot (20 Oct, Matt: "Hundre" in the Magazine slot): the whole name, else its first word, never
+## a word cut; when even that's too wide the type steps down, PART_MIN at the least.
+const PART_MIN := UI.TILE_TEXT - 6
+
+
+static func _fit_part(l: Label, base: String) -> void:
+	l.remove_theme_font_size_override("font_size")
+	var forms: Array = _short_names(base)
+	var fs: int = UI.TILE_TEXT
+	while true:
+		l.add_theme_font_size_override("font_size", fs)
+		for o in forms:
+			if UI.text_width(l, o) <= l.size.x:
+				l.text = o
+				return
+		if fs <= PART_MIN:
+			l.text = forms.back()
+			return
+		fs -= 1
 
 
 ## The gun's own mounts, in the Bench's order, sockets apart.

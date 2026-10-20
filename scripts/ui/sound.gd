@@ -104,6 +104,8 @@ var _deeds_fate_seen := ""              # the deeds' fate last heard: burned or 
 var _dry_seen := false             # the gun was dry at the last look: rounds again is a reload
 var _sim_seen = null               # the camp the counts are of: a load or a new camp starts them again
 var view = null                    # the run view (run.gd sets it): how far down you are, where a shot came from
+var _sim = null                    # the camp the fight's sounds read (the gun, dry or not), set each look
+var _hooked = null                 # the view whose shots are wired to the sounds (20 Oct)
 var _on_run := false
 var _hurt := false
 var _indoor := false
@@ -529,7 +531,40 @@ func _dry(sim) -> bool:
 	return gun != null and Items.ammo_type(gun) not in ["", "none"] and sim.rounds_for(gun) <= 0
 
 
+## The view's shots drive the sounds while it's on screen (20 Oct, Matt: "a sound effect on every muzzle flash"): one
+## shot's sound a flash or swing, theirs as a figure takes its firing pose; off screen the sounds keep their own time.
+func _shown_view() -> bool:
+	if view == null or not is_instance_valid(view):
+		return false
+	var n: Node = view
+	while n is CanvasItem:                     # shown all the way up (is_visible_in_tree reads false with no window, headless)
+		if not (n as CanvasItem).visible:
+			return false
+		n = n.get_parent()
+	if _hooked != view:
+		view.gun_fired.connect(_on_gun_fired)
+		view.they_fired.connect(_on_they_fired)
+		_hooked = view
+	return true
+
+
+func _on_gun_fired() -> void:
+	if not _shown_view() or _sim == null or _sim.mission == null or int(_sim.mission["remaining"]) <= 0:
+		return
+	var gun = _sim.equipped["Primary"]
+	if gun != null:
+		cue("dry_click" if _dry(_sim) else _gun_sound(gun))
+
+
+func _on_they_fired(k: int) -> void:
+	if not _shown_view() or _sim == null or _sim.mission == null or int(_sim.mission["remaining"]) <= 0:
+		return
+	cue("incoming", 0.08, 1.0, view.spot_of(k) if view != null and is_instance_valid(view) else {})
+
+
 func _fight(sim, m: Dictionary, now: Dictionary) -> void:
+	_sim = sim
+	var driven: bool = _shown_view()
 	var t: float = sim.elapsed                 # the camp's clock: always running while the run is
 	if t < _tick_at or t < _incoming_at or t < _hit_at:     # the clock went back (a load): the stamps with it
 		_tick_at = t - 10.0
@@ -542,7 +577,7 @@ func _fight(sim, m: Dictionary, now: Dictionary) -> void:
 	var fighting: bool = int(m["remaining"]) > 0
 	# your gun at its rate (capped so it reads as shots, not a buzz); dry, the click
 	var gun = sim.equipped["Primary"]
-	if fighting and gun != null:
+	if fighting and gun != null and not driven:
 		var rof: float = maxf(0.3, minf(4.0, float(Items.base_of(gun).get("rof", 1.0)) * sim.pace()))
 		if t - _tick_at >= 1.0 / rof:
 			_tick_at = t
@@ -555,7 +590,7 @@ func _fight(sim, m: Dictionary, now: Dictionary) -> void:
 	if now["thrown"] > int(_seen.get("thrown", 0)):
 		cue("grenade")
 	# theirs at you, now and then
-	if fighting and t - _incoming_at >= randf_range(1.2, 2.6):
+	if fighting and not driven and t - _incoming_at >= randf_range(1.2, 2.6):
 		_incoming_at = t
 		cue("incoming", 0.08, 1.0, _spot())
 	if now["patrols"] > _seen["patrols"]:

@@ -190,7 +190,9 @@ func _init() -> void:
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, r + " (start)")
-		_check_clicks(main, r + " (start)")
+	_part_name_checks(main)
+	_rig_layout_checks()
+	_try_on_rounds_checks(main.sim)
 	# the bot: deploy to the best open tier the operator can probably survive,
 	# gear up from the stash after each mission, sell commons, treat when hurt
 	var runs := 0
@@ -3140,7 +3142,7 @@ func _melee_checks(main) -> void:
 		main._workshop._set_view("guns")
 		main.refresh()
 	# a long part name on a tile falls back to its first word, never an ellipsis
-	_check(main._workshop._short_names("Drum magazine") == ["Drum magazine", "Drum", "Drum"] and main._workshop._short_names("Tape") == ["Tape", "Tape"], "the tile's short names are off: %s" % str(main._workshop._short_names("Drum magazine")))
+	_check(main._workshop._short_names("Drum magazine") == ["Drum magazine", "Drum"] and main._workshop._short_names("Tape") == ["Tape"], "the tile's short names are off: %s" % str(main._workshop._short_names("Drum magazine")))     # no word cut (20 Oct): the type steps down instead
 	var drum_gun = sim.equipped["Primary"]
 	if drum_gun != null and drum_gun["attachments"].has("magazine"):
 		var hold_mag = drum_gun["attachments"]["magazine"]
@@ -5471,6 +5473,9 @@ func _sound_checks(main) -> void:
 	for k in range(16):
 		sim.advance(0.5)
 		main.refresh()
+		if main._run._view != null and _shown(main._run._view):
+			for _f in range(30):
+				main._run._view._process(1.0 / 60.0)     # on the fight screen the shots are the view's (20 Oct)
 		if snd.cued().any(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click"):
 			went_off = true
 			break
@@ -5488,6 +5493,31 @@ func _sound_checks(main) -> void:
 	main.refresh()
 	for want in ["gang_arrives", "kill", "hit_taken", "burn"]:
 		_check(want in snd.cued(), "%s didn't sound: %s" % [want, str(snd.cued())])
+	# on the fight screen the sounds go with what's drawn (20 Oct, Matt: "a sound effect on every muzzle flash ... same
+	# for enemies in the firing position"): each shot the view shows is one shot's sound, each figure's firing pose one
+	# of theirs, and nothing on a clock of its own
+	main.refresh()
+	var rv = main._run._view
+	if rv != null and _shown(rv):
+		var shots := [0]
+		var theirs := [0]
+		var on_shot := func(): shots[0] += 1
+		var on_theirs := func(_k: int): theirs[0] += 1
+		rv.gun_fired.connect(on_shot)
+		rv.they_fired.connect(on_theirs)
+		snd.clear_cued()
+		for f in range(240):
+			sim.advance(1.0 / 60.0)
+			if f % 30 == 0:
+				main.refresh()
+			rv._process(1.0 / 60.0)
+		rv.gun_fired.disconnect(on_shot)
+		rv.they_fired.disconnect(on_theirs)
+		var gun_cues: int = snd.cued().filter(func(c): return str(c).begins_with("shot_") or str(c).begins_with("swing_") or c == "dry_click").size()
+		var in_cues: int = snd.cued().filter(func(c): return c == "incoming").size()
+		_check(shots[0] > 0 and gun_cues == shots[0] and in_cues == theirs[0], "the fight screen's sounds: %d shots shown, %d shot sounds; %d firing poses, %d of theirs" % [shots[0], gun_cues, theirs[0], in_cues])
+	else:
+		_check(false, "the fight screen's view isn't up for the sound check: %s, run panel shown %s (own %s), room %s, on a run %s, hidden at %s" % ["none" if rv == null else ("hidden, its own visible %s" % str(rv.visible)), str(main._run.is_visible_in_tree()), str(main._run.visible), main.room, str(sim.on_mission()), _hidden_at(rv)])
 	# the world's room (17 Oct, Matt: sound in engine): the gang's dip, kills climbing, the low-pass hurt and down behind
 	# the wall, the echo under a roof, their shots from a figure's place, the camp's sounds off the world's bus
 	var wi := AudioServer.get_bus_index(snd.WORLD)
@@ -16137,6 +16167,25 @@ func _win_signal(sim, k: int) -> void:
 
 ## What a click at `at` lands on, as Godot's GUI picks it: the last-drawn visible control under the point that doesn't
 ## ignore the mouse, its children before it, a clipping control's children only inside it.
+## Shown all the way up (is_visible_in_tree reads false headless, with no window to be in).
+func _hidden_at(c: Node) -> String:
+	var n: Node = c
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return "%s (%s)" % [n.name, n.get_class()]
+		n = n.get_parent()
+	return "nowhere, in the tree %s" % str(c.is_inside_tree())
+
+
+func _shown(c: Node) -> bool:
+	var n: Node = c
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return false
+		n = n.get_parent()
+	return true
+
+
 func _click_target(c: Control, at: Vector2) -> Control:
 	if not c.visible:
 		return null
@@ -16170,15 +16219,108 @@ func _click_blocker(top: Control, b: Control) -> String:
 
 
 
-## Every visible, enabled button that takes the mouse gets a click on its middle (20 Oct: the Site guide's tabs and
-## close were covered by its own pages and never did; the smoke had only ever emitted pressed).
+## Every visible button that takes the mouse gets a click on its middle (20 Oct: the Site guide's tabs and close were
+## covered by its own pages and never did; the smoke had only ever emitted pressed). Only inside a panel sized in code
+## (`within`): the smoke's main is never in the tree, so whatever's laid out by anchors has no size to read.
 func _check_clicks(main, where: String, within: Control = null) -> void:
 	var stack: Array = [main if within == null else within]     # `within`: an overlay's own buttons (what's under it is meant to be covered)
 	while not stack.is_empty():
 		var n = stack.pop_back()
 		for ch in n.get_children():
 			stack.append(ch)
-		if n is BaseButton and n.is_visible_in_tree() and n.mouse_filter != Control.MOUSE_FILTER_IGNORE and n.get_global_rect().has_area():     # disabled too: what covers it now covers it once it's on (the review)
+		if n is BaseButton and _shown(n) and n.mouse_filter != Control.MOUSE_FILTER_IGNORE and n.get_global_rect().has_area():     # disabled too: what covers it now covers it once it's on (the review)
 			var bl: String = _click_blocker(main, n)
 			_check(bl == "", "%s: '%s' doesn't take the click: %s is over it" % [where, str(n.get("text")), bl])
+
+
+## Every part's name in every kind of slot it can sit in (20 Oct, Matt: "Hundre" in the Magazine slot): the whole name
+## or its first word, never a word cut, inside its box.
+func _part_name_checks(main) -> void:
+	var W = main._workshop
+	var labels: Array = []
+	for slot in W._guns:
+		for r in W._guns[slot]["rows"]:
+			labels.append(r["fitted"])
+			break
+	for slot in W._socks:
+		for m in W._socks[slot]["rows"]:
+			labels.append(W._socks[slot]["rows"][m]["fitted"])
+			break
+	_check(labels.size() >= 2, "the part-name check found no slots")
+	for l in labels:
+		var was: String = l.text
+		for a in Data.ATTACHMENTS:
+			var base: String = str(a["name"])
+			W._fit_part(l, base)
+			_check(str(l.text) in W._short_names(base) and UI_v_width(l) <= l.size.x + 0.5, "'%s' in a %d px slot reads '%s' (%.0f px)" % [base, int(l.size.x), l.text, UI_v_width(l)])
+		l.text = was
+		l.add_theme_font_size_override("font_size", load("res://scripts/ui/ui.gd").TILE_TEXT)
+
+
+func UI_v_width(l: Label) -> float:
+	return load("res://scripts/ui/ui.gd").text_width(l, l.text)
+
+
+## The fight's rig shows every item a full rig holds (20 Oct, Matt: two pouches empty on the fight screen, the Kit's
+## rig full): any mix of one-, two- and four-pouch items to the cap, on any row length, all placed, none overlapping.
+func _rig_layout_checks() -> void:
+	var RunV := load("res://scripts/ui/run.gd")
+	var r := RandomNumberGenerator.new()
+	r.seed = 2010
+	var bad := 0
+	var first := ""
+	# Matt's case: twelve pouches, eleven a row, a two-pouch kit last after the row's end was left one short
+	var lay0: Array = RunV.rig_layout([1, 1, 1, 1, 1, 2, 1, 1, 1, 2], 12, 11)
+	_check(lay0[0].size() == 10, "Matt's rig: %d of 10 placed" % lay0[0].size())
+	for t in range(400):
+		var cap: int = r.randi_range(3, 24)
+		var per_row: int = r.randi_range(maxi(4, ceili(cap / 2.0)), cap)
+		var widths: Array = []
+		var used := 0
+		while true:
+			var w: int = [1, 1, 1, 2, 2, 4][r.randi_range(0, 5)]
+			if used + w > cap:
+				break
+			widths.append(w)
+			used += w
+		var lay: Array = RunV.rig_layout(widths, cap, per_row)
+		var places: Array = lay[0]
+		var pr: int = int(lay[1])
+		var cells := {}
+		var ok: bool = places.size() == widths.size()
+		for n in range(places.size()):
+			var w: int = mini(int(widths[n]), pr)
+			if int(places[n]) % pr + w > pr:
+				ok = false
+			for j in range(w):
+				if cells.has(int(places[n]) + j):
+					ok = false
+				cells[int(places[n]) + j] = true
+		if not ok:
+			bad += 1
+			if first == "":
+				first = "%s in %d, %d a row" % [str(widths), cap, per_row]
+	_check(bad == 0, "the fight's rig hides or overlaps items in %d of 400 rigs, first %s" % [bad, first])
+
+
+## A gun's try-on reads the same with its rounds in the rig or the stash (20 Oct, Matt: "Weapon comparison is only
+## accurate when you have the required ammo in the rig"): the grade's damage counted from either.
+func _try_on_rounds_checks(sim) -> void:
+	var saved: Dictionary = sim.to_dict()
+	var shot := func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == "shotgun"
+	sim.rig = sim.rig.filter(func(x): return not shot.call(x))
+	sim.stash = sim.stash.filter(func(x): return not shot.call(x))
+	var cand: Dictionary = sim._plain("Primary", "Farmer's shotgun")
+	var box: Dictionary = sim._plain(Data.AMMO, "Incendiary shells")
+	sim._cmp_cache.clear()
+	var none: float = sim._try(cand, sim.damage_total)
+	sim.stash.append(box)
+	sim._cmp_key = 0
+	var in_stash: float = sim._try(cand, sim.damage_total)
+	sim.stash.erase(box)
+	sim.rig.append(box)
+	sim._cmp_key = 0
+	var in_rig: float = sim._try(cand, sim.damage_total)
+	_check(absf(in_stash - in_rig) <= maxf(0.01, in_rig * 0.001) and in_rig > none, "a shotgun's try-on: %.1f with its incendiaries in the stash, %.1f in the rig, %.1f with none" % [in_stash, in_rig, none])
+	sim.load_dict(saved)
 

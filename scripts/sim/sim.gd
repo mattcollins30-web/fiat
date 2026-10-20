@@ -2821,7 +2821,9 @@ func feed_stack(gun: Dictionary) -> Dictionary:
 	var els: Array = build_elements() if is_same(gun, equipped["Primary"]) else []
 	var best := {}
 	var bv := -1
-	for it in rig:
+	# a try-on reads the best grade on hand, the stash's too (20 Oct, Matt: a gun's compare only read right with its
+	# rounds in the rig): has_rounds already weighs it fed from the stash, so its grade comes from there as well
+	for it in (rig + stash if _trying else rig):
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
 			var b: Dictionary = Items.base_of(it)
 			var v: int = int(b.get("value", 0))
@@ -8089,7 +8091,7 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return hash([equipped, level(), tree, cls, cls2, wounds.keys(), _rig_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	return hash([equipped, level(), tree, cls, cls2, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -8100,6 +8102,17 @@ func _rig_grades() -> Array:
 		if Items.is_ammo(it) and int(it["rounds"]) > 0:
 			out.append(str(it["base"]))
 	return out
+
+
+## The grades of rounds in the stash, by name (20 Oct): a try-on feeds a gun from them too (feed_stack).
+func _stash_grades() -> Array:
+	var out := {}
+	for it in stash:
+		if Items.is_ammo(it) and int(it["rounds"]) > 0:
+			out[str(it["base"])] = true
+	var k: Array = out.keys()
+	k.sort()
+	return k
 
 
 func _compare(it: Dictionary, slot: String) -> int:

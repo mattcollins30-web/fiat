@@ -1083,6 +1083,47 @@ func _keep_out() -> Array:
 	return out
 
 
+## Where each of `widths` sits among `cap` pouches, `per_row` a row: a run of free pouches on one row each, first fit,
+## in the given order or (`widest_first`) the widest placed first; the array stops at the first that finds no run.
+static func rig_layout(widths: Array, cap: int, per_row: int) -> Array:
+	var places: Array = rig_places(widths, cap, per_row, false)
+	if places.size() < widths.size():
+		places = rig_places(widths, cap, per_row, true)
+	if places.size() < widths.size():
+		return [rig_places(widths, cap, maxi(1, cap), false), maxi(1, cap)]     # one row: everything that fits the cap
+	return [places, per_row]
+
+
+static func rig_places(widths: Array, cap: int, per_row: int, widest_first: bool) -> Array:
+	var order: Array = range(widths.size())
+	if widest_first:
+		order.sort_custom(func(a, b): return int(widths[a]) > int(widths[b]) or (int(widths[a]) == int(widths[b]) and a < b))
+	var out: Array = []
+	out.resize(widths.size())
+	var taken := {}
+	var placed := 0
+	for n in order:
+		var w: int = mini(int(widths[n]), per_row)
+		var pos := -1
+		for p in range(0, maxi(cap, 1)):
+			var ok: bool = p % per_row + w <= per_row and p + w <= cap
+			for j in range(w):
+				if taken.has(p + j):
+					ok = false
+			if ok:
+				pos = p
+				break
+		if pos < 0:
+			break
+		out[n] = pos
+		for j in range(w):
+			taken[pos + j] = true
+		placed += 1
+	if placed < widths.size():
+		return [] if widest_first else out.slice(0, placed)     # in order: the ones before the first that found no run
+	return out
+
+
 ## The rig in the Runner panel: a cell a pouch, the pouches' outlines for the empty ones.
 func _show_rig() -> void:
 	var cap: int = mini(RIG_MAX, sim.med_capacity())
@@ -1101,26 +1142,28 @@ func _show_rig() -> void:
 		cell = mini(Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
 		@warning_ignore("integer_division")
 		cell = mini(cell, int((RIG_ROOM - Pal.CELL_GAP) / 2) if rows == 2 else cell)
-	@warning_ignore("integer_division")
-	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	# a pouch a cell: an item spans as many as its cells (a first aid kit two), along the row, never across a row's end
 	# first fit (12 Oct, Matt's playtest): each item at the first run of free pouches on one row, so a single fills the
-	# gap a wide kit left at a row's end; nothing past the cap (the cells follow the rig's order, so the first that finds no run stops the rest)
+	# gap a wide kit left at a row's end. 20 Oct (Matt: two pouches shown empty on a full rig): first fit in the rig's
+	# order could leave a wide one no run and hide it; then the widest first, and failing that one row of smaller cells
+	var widths: Array = []
+	for it in sim.rig.slice(0, RIG_MAX):
+		widths.append(Items.size(it))
+	var lay: Array = rig_layout(widths, cap, per_row)
+	var places: Array = lay[0]
+	if int(lay[1]) != per_row:
+		rows = 1
+		per_row = int(lay[1])
+		@warning_ignore("integer_division")
+		cell = mini(Pal.CELL, int((INNER + Pal.CELL_GAP) / per_row) - Pal.CELL_GAP)
+	@warning_ignore("integer_division")
+	var at := func(pos: int) -> Vector2: return Vector2(PAD + (pos % per_row) * (cell + Pal.CELL_GAP), _rig_y + (pos / per_row) * (cell + Pal.CELL_GAP))
 	var k := 0
 	var taken := {}
-	for it in sim.rig:
+	for n in range(places.size()):
+		var it: Dictionary = sim.rig[n]
 		var w: int = mini(Items.size(it), per_row)
-		var pos := -1
-		for p in range(0, maxi(cap, 1)):
-			var ok: bool = p % per_row + w <= per_row and p + w <= cap
-			for j in range(w):
-				if taken.has(p + j):
-					ok = false
-			if ok:
-				pos = p
-				break
-		if k >= RIG_MAX or pos < 0:
-			break
+		var pos: int = int(places[n])
 		var c = _rig_cells[k]
 		c.position = at.call(pos)
 		var lit: bool = (Items.is_medical(it) and sim.hp / sim.max_hp() <= 0.35 and sim.mission["using"] == null and not sim.mission["t"].get("no_meds", false)) or (Items.is_grenade(it) and sim.mission["remaining"] > 0)

@@ -15,6 +15,8 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 ## A shot of yours lands, in the frame's space (13 Oct, Matt: the numbers came with no shot, and while ducked): the run
 ## screen shows what your gun's done since the last one here, on the one it hit.
 signal shot_fired(at: Vector2)
+signal gun_fired                          # each of your shots or swings, as it shows (20 Oct: its sound on the flash)
+signal they_fired(k: int)                 # figure k up in its firing pose (its sound with it)
 
 ## The placement tool on or off: the run screen clears what it lays over the frame (bars, chips, the head) while it's on.
 signal placing_changed(on: bool)
@@ -905,6 +907,7 @@ func _process(dt: float) -> void:
 				if f["next_fire"] <= 0.0:
 					f["fire_t"] = 0.25
 					f["next_fire"] = randf_range(0.8, 2.2)
+					they_fired.emit(k)
 				if f["fire_t"] > 0.0:
 					f["fire_t"] -= fdt
 				r.texture = _fig_tex(f, "fire" if f["fire_t"] > 0.0 else "stand")
@@ -1004,6 +1007,7 @@ func _process(dt: float) -> void:
 	_shot_t -= dt
 	if _firing and _shot_t <= 0.0 and _duck < 0.2 and _swing < 0.0:
 		_shot_t = 1.0 / _rof
+		gun_fired.emit()
 		var ups: Array = range(SLOTS.size()).filter(func(k_in): return _figs[k_in]["state"] == "up")
 		var k: int = _target_k if _target_k in ups else (ups[randi() % ups.size()] if not ups.is_empty() else -1)     # the one whose bar is going down
 		if _target_k >= 0 and _figs[_target_k]["state"] == "pop":
@@ -1551,6 +1555,14 @@ func shooter_spot() -> Dictionary:
 	if up.is_empty():
 		return {}
 	var k: int = up[randi() % up.size()]
+	var s: Dictionary = slot_of(mini(k, SLOTS.size() - 1))
+	return {"pan": clampf((float(s["foot"].x) - W / 2.0) / (W / 2.0), -1.0, 1.0), "near": clampf((float(s["scale"]) - 0.3) / 0.65, 0.0, 1.0)}
+
+
+## Where figure k stands for the sound's pan: across the frame, and how near.
+func spot_of(k: int) -> Dictionary:
+	if k < 0 or k >= _figs.size():
+		return {}
 	var s: Dictionary = slot_of(mini(k, SLOTS.size() - 1))
 	return {"pan": clampf((float(s["foot"].x) - W / 2.0) / (W / 2.0), -1.0, 1.0), "near": clampf((float(s["scale"]) - 0.3) / 0.65, 0.0, 1.0)}
 
