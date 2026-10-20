@@ -14158,7 +14158,7 @@ func _came_back_buttons_clear(main, where: String) -> void:
 	var cr: Rect2 = card.get_global_rect()
 	for c in main._missions._cols:
 		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
-			if b.is_visible_in_tree():
+			if _shown(b):                         # not is_visible_in_tree: the smoke's main is never in the tree (20 Oct)
 				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
 		if c["note"].text != "":
 			_check(not cr.intersects(c["note"].get_global_rect()), "the card covers the column's note '%s' (%s)" % [c["note"].text, where])
@@ -15161,7 +15161,7 @@ func _words_checks(main) -> void:
 		main.show_room(r)
 		main.refresh()
 		for n in main.find_children("*", "Control", true, false):
-			if not (n is Label or n is Button) or not n.is_visible_in_tree():
+			if not (n is Label or n is Button) or not _shown(n):     # 20 Oct: is_visible_in_tree is false out of the tree, so this sweep read nothing
 				continue
 			var t: String = n.text
 			if t == "":

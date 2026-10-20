@@ -635,7 +635,7 @@ func _show_signals(od: Array) -> void:
 	_empty.visible = n == 0
 	_empty2.visible = n == 0
 	if n == 0:
-		UI.wrap([_empty, _empty2], "No signals held. Three papers in the decoder make one: a fix on a campaign site, a crew from anywhere, run once.")
+		UI.wrap([_empty, _empty2], "No signals held. One to three papers in the decoder make one: a fix on a site, a crew from anywhere, run once.")     # 20 Oct: one to three; "campaign" a banned word on screen
 		for o in _others:
 			o["button"].visible = false
 		return
