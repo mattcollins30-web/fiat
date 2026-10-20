@@ -1522,7 +1522,7 @@ func next_words(short := false) -> String:
 			continue
 		if not zone_open(z):
 			if zone_level_shut(z):
-				return w["level"] % [Data.ZONES[z]["name"], zone_gate(z)]
+				return w["level"] % zone_gate(z)
 			break
 		for i in Data.ZONES[z]["tiers"]:
 			if best_depth[i] <= 0:
@@ -3011,15 +3011,15 @@ func shelf_chase() -> Array:
 		var u := site_unique(i)
 		if u.is_empty():
 			continue
-		out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["own_gap"] % [Data.TIERS[i]["name"], site_unique_level(i)]})
+		out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["own_gap"] % [Data.TIERS[i]["name"], site_unique_level(i)], "known": zone_open(int(Data.TIERS[i]["zone"]))})
 	for u in Data.UNIQUES:
 		if u.has("pinnacle"):
 			for b in Data.BOSSES:
 				if int(b["zone"]) == int(u["pinnacle"]):
-					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], lv_at(int(b["tier"]), pinnacle_depth(int(b["tier"])))]})
-	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"]})     # the depot's, Kev's last beat (15 Oct)
+					out.append({"name": u["name"], "found": u["name"] in shelf, "where": Words.SHELF["head_gap"] % [b["name"], lv_at(int(b["tier"]), pinnacle_depth(int(b["tier"])))], "known": zone_open(int(b["zone"]))})
+	out.append({"name": Data.CONVOY_UNIQUE, "found": Data.CONVOY_UNIQUE in shelf, "where": Words.SHELF["lorry_gap"], "known": true})     # the depot's, Kev's last beat (15 Oct)
 	for p in Data.PINNACLES:
-		out.append({"name": p["unique"], "found": p["unique"] in shelf, "where": Words.SHELF["order_gap"] % [p["who"], Words.mid(str(p["place"]))]})     # the order's (18 Oct)
+		out.append({"name": p["unique"], "found": p["unique"] in shelf, "where": Words.SHELF["order_gap"] % [p["who"], Words.mid(str(p["place"]))], "known": order_open(str(p["key"]))})     # the order's (18 Oct)
 	return out
 
 

@@ -12,6 +12,7 @@ extends Button
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 
+const Fmt := preload("res://scripts/ui/fmt.gd")
 const BADGE_PAD := 10           # each side of the badge's word
 const STAMP := 56               # the stamped square
 const STAMP_X := 16
@@ -90,7 +91,7 @@ func set_folded(on: bool) -> void:
 func _tip() -> void:
 	var lines: Array = []
 	if folded:
-		lines.append(room + ((" · " + _badge_label.text) if _badge_label.text != "" else ""))
+		lines.append((Fmt.scramble(room) if _shut else room) + ((" · " + _badge_label.text) if _badge_label.text != "" else ""))
 	if shut_words != "":
 		lines.append(shut_words)
 	tooltip_text = "\n".join(lines)
@@ -107,7 +108,7 @@ func _place() -> void:
 		_name.position.y = floorf((h - 36) / 2.0)
 
 
-## A room a head hasn't opened yet (13 Oct): not pressable, its name and glyph dimmed, "Shut" under the name.
+## A room a head hasn't opened yet (13 Oct): not pressable, its glyph dimmed, its name scrambled (20 Oct, Matt: no "Shut").
 var _shut := false
 func set_shut(on: bool) -> void:
 	if on == _shut:
@@ -116,6 +117,9 @@ func set_shut(on: bool) -> void:
 	disabled = on
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if on else Control.CURSOR_POINTING_HAND
 	_name.modulate.a = 0.45 if on else 1.0
+	_name.text = Fmt.scramble(room) if on else room
+	while on and _name.text.length() > 3 and UI.text_width(_name, _name.text) > _name.size.x:
+		_name.text = _name.text.substr(0, _name.text.length() - 1)     # the glyphs run wider than the letters: cut to the row
 	_stamp.modulate.a = 0.45 if on else 1.0
 
 

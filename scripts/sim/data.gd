@@ -83,8 +83,8 @@ const ODDS_RUNS := 24
 ## its price is the building's `costs` entry × inflation, the fifth column and the rank salvage too. The
 ## buildings move with the Yard. `short` is the tile's figure, `words` the strip's sentence.
 const YARD_COLS := 6
-const YARD_GATES := ["From the start", "With the Town open", "With the City open", "With the campaign done", "With a level %d signal beaten", "With a level %d signal beaten"]
-const YARD_GATE_SHORT := ["start", "the Town", "the City", "the campaign", "level %d", "level %d"]
+const YARD_GATES := ["From the start", "With the Town open", "With the last area open", "With the campaign done", "With a level %d signal beaten", "With a level %d signal beaten"]
+const YARD_GATE_SHORT := ["start", "the Town", "the last area", "the campaign", "level %d", "level %d"]
 const YARD_GATE_DEPTHS := [0, 0, 0, 0, 6, 9]     # the depth dug (deepest_dug) that opens the last two columns; shown as the signal level it is (18 Oct)
 
 

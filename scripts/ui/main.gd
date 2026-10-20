@@ -1296,7 +1296,7 @@ func _time_of_day(stamp: float) -> String:
 
 func _rail_status(nm: String) -> Dictionary:
 	if room_shut(nm):
-		return {"badge": "Shut", "badge_tone": ""}     # until a head's thing comes home (13 Oct)
+		return {}     # its name scrambled, no word under it (20 Oct, Matt)
 	# the rail says only when a room wants a decision (8 Oct: the status lines went - a room's state is in the room)
 	match nm:
 		OVERVIEW:

@@ -130,7 +130,7 @@ func _outskirts_checks(main) -> void:
 	# Runs: the four zones, the Outskirts first, no map; the Radio has it
 	main.show_room(main.MISSIONS)
 	var zn: Array = main._missions._map._zone_names
-	_check(zn.size() == Data.ZONES.size() and zn[0][0].text == "The Outskirts" and zn[3][0].text == "The City", "the Map does not draw the four zones, the Outskirts first")     # the drawn Map (19 Oct): areas, not tabs
+	_check(zn.size() == Data.ZONES.size() and zn[0][0].text == "The Outskirts" and zn[3][0].text == (Data.ZONES[3]["name"] if main.sim.zone_open(3) else Fmt.scramble(str(Data.ZONES[3]["name"]))), "the Map does not draw the four zones, the Outskirts first")     # the drawn Map (19 Oct): areas, not tabs
 	main.show_room(main.COMMS)
 	main.refresh()
 	_check(main._radio._views.size() == 3 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()), "the Radio's map and town buttons do not follow the campaign")
@@ -4565,7 +4565,7 @@ func _book_checks(main) -> void:
 		for nd in main._barracks._shelf_branch()["nodes"]:
 			all_names.append(str(nd["name"]).substr(str(nd["name"]).find(" ") + 1))
 	var n_ord: int = Data.PINNACLES.size()
-	_check(all_names.size() == 15 + n_ord and all_names[13 + n_ord] == "Lucky Cap" and all_names[14 + n_ord] == "Jump Leads" and all_names[12] == Data.CONVOY_UNIQUE and all_names[13] == Data.PINNACLES[0]["unique"], "the shelf's order is off: %s" % str(all_names))
+	_check(all_names.size() == 15 + n_ord and all_names[13 + n_ord] == "Lucky Cap" and all_names[14 + n_ord] == "Jump Leads" and all_names[12] == Data.CONVOY_UNIQUE and all_names[13] == (str(Data.PINNACLES[0]["unique"]) if sim.order_open(str(Data.PINNACLES[0]["key"])) else Fmt.scramble(str(Data.PINNACLES[0]["unique"]))), "the shelf's order is off: %s" % str(all_names))     # a gap from a place not yet known, scrambled (20 Oct)
 	main._barracks.drawer_page = 0
 	_check_fit(main, "Caravan (the shelf)")
 	# a site's own found fills its gap
@@ -11894,14 +11894,20 @@ func _tier_guide_checks(main) -> void:
 	var farm_text: String = " | ".join(g.text_nodes().map(func(l): return str(l.text)))
 	var missing: Array = []
 	for b in Data.BOSSES:
-		if not farm_text.contains(str(b["name"])):
+		var bn: String = str(b["name"]) if g.known(sim, int(b["tier"])) else Fmt.scramble(str(b["name"]))     # not yet known: scrambled (20 Oct)
+		if not farm_text.contains(bn):
 			missing.append(b["name"])
 	for i in range(Data.TIERS.size()):
 		var u: Dictionary = sim.site_unique(i)
-		if not u.is_empty() and not farm_text.contains(str(u["name"])):
+		if not u.is_empty() and not farm_text.contains(str(u["name"]) if g.known(sim, i) else Fmt.scramble(str(u["name"]))):
 			missing.append(u["name"])
-	var lf: Array = g.looking_for()
-	_check(missing.is_empty() and lf.any(func(x): return str(x[0]) == "Rifles" and str(x[1]).contains("The Barracks")), "Where to farm leaves out %s (looking for: %s)" % [str(missing), str(lf.slice(0, 3))])
+	var lf: Array = g.looking_for(sim)
+	_check(missing.is_empty() and lf.any(func(x): return str(x[0]) == "Rifles" and str(x[1]).contains(g.site_name(sim, 11))), "Where to farm leaves out %s (looking for: %s)" % [str(missing), str(lf.slice(0, 3))])
+	# a guide on a fresh camp: only the Outskirts known, the rest scrambled and not to be picked
+	var fresh_s = Sim.new()
+	fresh_s.start()
+	_check(g.site_name(fresh_s, 0) == str(Data.TIERS[0]["name"]) and g.site_name(fresh_s, 11) == Fmt.scramble(str(Data.TIERS[11]["name"])) and not g.known(fresh_s, 11), "the guide knows a fresh camp's Barracks")
+	_check(g.looking_for(fresh_s).all(func(x): return not str(x[1]).contains("The Barracks")), "the guide names the Barracks to a fresh camp")
 	_check_fit(main, "Runs (the tier guide, where to farm)")
 	g._close.pressed.emit()
 	main.refresh()
@@ -14722,7 +14728,7 @@ func _gates_checks(main) -> void:
 	_check(main.room == main.MISSIONS, "a fresh camp starts in a shut Yard: %s" % main.room)
 	for name in [main.MEDIC, main.MARKET, main.OVERVIEW, main.COMMS, main.WORKSHOP]:
 		var b = main._rail_buttons[name]
-		_check(b.disabled and b._badge.visible and b._badge_label.text == "Shut", "the rail's %s isn't shut" % name)
+		_check(b.disabled and not b._badge.visible and Fmt.scramble(name).begins_with(b._name.text) and b._name.text != name, "the rail's %s isn't shut and scrambled: '%s'" % [name, b._name.text])     # no "Shut" (20 Oct, Matt)
 		main.show_room(name)
 		_check(main.room == main.MISSIONS, "a shut %s opened" % name)
 	for name in [main.RUNNER, main.ARMOURY, main.MISSIONS, main.BARRACKS]:
@@ -14770,7 +14776,7 @@ func _gates_checks(main) -> void:
 	_check(sim.stash.all(func(it): return Items.opens(it) == "" or Items.is_deeds(it)), "a head's thing other than the deeds was stashed")
 	main.refresh()
 	for name in [main.MEDIC, main.MARKET, main.OVERVIEW, main.COMMS, main.WORKSHOP]:
-		_check(not main._rail_buttons[name].disabled and main._rail_buttons[name]._badge_label.text != "Shut", "the rail's %s is still shut" % name)
+		_check(not main._rail_buttons[name].disabled and main._rail_buttons[name]._name.text == name, "the rail's %s is still shut or scrambled: '%s'" % [name, main._rail_buttons[name]._name.text])
 	# a save from before the gates keeps every room; a save with them keeps what it has; a move keeps them
 	var d: Dictionary = sim.to_dict()
 	d.erase("unlocked")
@@ -15604,12 +15610,12 @@ func _site_gate_checks(main) -> void:
 	s.cls = "Scrapper"
 	s.runs_total = maxi(1, s.runs_total)
 	_check(tg > 1 and not s.zone_open(2) and s.zone_level_shut(2) and Data.ZONES[2]["tiers"].all(func(i): return not s.tier_open(i)), "the Town opened under its level %d" % tg)
-	_check(s.next_words() == Words.NEXT["level"] % [Data.ZONES[2]["name"], tg], "what's next doesn't say the Town's level: '%s'" % s.next_words())
+	_check(s.next_words() == Words.NEXT["level"] % tg, "what's next doesn't say the Town's level: '%s'" % s.next_words())
 	main.sim = s
 	main._missions._map._shown = ""
 	main.refresh()
 	var town_st: String = main._missions._map._zone_names[2][1].text
-	_check(town_st.contains("level %d" % tg), "the Map's Town doesn't say level %d: '%s'" % [tg, town_st])
+	_check(town_st.to_lower().contains("level %d" % tg), "the Map's Town doesn't say level %d: '%s'" % [tg, town_st])
 	_check_fit(main, "the Map (a zone shut for the level)")
 	s.xp = Data.xp_for_level(tg)
 	_check(s.zone_open(2) and s.tier_open(int(Data.ZONES[2]["tiers"][0])), "the Town stayed shut at level %d" % tg)
@@ -15677,15 +15683,53 @@ func _map_checks(main) -> void:
 	click.call(mv.pin_at(10))
 	main.refresh()
 	_check(M.selected == 1, "a shut zone's pin took the click")
-	_check(not mv._pin_labels[10].visible and mv._pin_labels[1].visible, "a shut zone's pins carry names, or an open one's don't")
-	_check(mv._zone_names[1][1].text.begins_with("Locked"), "a shut zone doesn't say it's locked: '%s'" % mv._zone_names[1][1].text)
+	# a zone not yet known (20 Oct, Matt): its name and its sites' scrambled like the radio's traffic, no "Locked"
+	_check(mv._pin_labels[10].text == Fmt.scramble(str(Data.TIERS[10]["name"])) and mv._pin_labels[1].text == str(Data.TIERS[1]["name"]), "a shut zone's pins read '%s', an open one's '%s'" % [mv._pin_labels[10].text, mv._pin_labels[1].text])
+	_check(mv._zone_names[1][0].text == Fmt.scramble(str(Data.ZONES[1]["name"])) and not mv._zone_names[1][1].text.contains("Locked") and mv._zone_names[1][1].text != "", "a shut zone reads '%s' / '%s'" % [mv._zone_names[1][0].text, mv._zone_names[1][1].text])
+	for zl in mv._zone_names:
+		_check(not zl[1].text.contains("Locked"), "a zone still says Locked: '%s'" % zl[1].text)
 	_check_fit(main, "the Map (a fresh camp)")
+	# the scrambled names cross nothing, on the map and inside it (the review: the glyphs run wider)
+	var fboxes: Array = []
+	for l in mv.text_nodes():
+		if l.visible and l.text != "":
+			var fw: float = UI.text_width(l, l.text)
+			var fx: float = l.position.x + ((l.size.x - fw) / 2.0 if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER else (l.size.x - fw if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT else 0.0))
+			fboxes.append([l.text, Rect2(fx, l.position.y, fw, l.size.y)])
+	var fcross: Array = []
+	for a2 in range(fboxes.size()):
+		if not Rect2(Vector2.ZERO, mv.size).encloses(fboxes[a2][1]):
+			fcross.append(fboxes[a2][0] + " (off the map)")
+		for b2 in range(a2 + 1, fboxes.size()):
+			if fboxes[a2][1].grow(-1.0).intersects(fboxes[b2][1].grow(-1.0)):
+				fcross.append("%s / %s" % [fboxes[a2][0], fboxes[b2][0]])
+	_check(fcross.is_empty(), "a fresh camp's names cross on the Map: %s" % ", ".join(fcross))
+	# nothing else names what isn't known: what's next, the shelf's gaps, the Yard's columns
+	var shut_names: Array = []
+	for z in range(1, Data.ZONES.size()):
+		shut_names.append(str(Data.ZONES[z]["name"]))
+		for t in Data.ZONES[z]["tiers"]:
+			shut_names.append(str(Data.TIERS[int(t)]["name"]))
+	var said_fresh: Array = [s.next_words(), s.next_words(true)]
+	for c in s.shelf_chase():
+		if not c["found"] and not c["known"]:
+			continue
+		said_fresh.append(str(c["where"]))
+	for col in range(Data.YARD_COLS):
+		said_fresh.append(Data.yard_gate(col))
+	var named: Array = []
+	for t in said_fresh:
+		for nm in shut_names:
+			if str(t).contains(nm) and not (nm == "The Town" and str(t) == Data.yard_gate(1)):
+				named.append("%s in '%s'" % [nm, t])
+	_check(named.is_empty(), "a fresh camp is told what it hasn't found: %s" % ", ".join(named.slice(0, 4)))
 	# a pin's name is the name only, sitting on its own pin (19 Oct, Matt); the key small and packed
 	for i in range(Data.TIERS.size()):
 		var pl: Label = mv._pin_labels[i]
 		if not pl.visible:
 			continue
-		_check(pl.text == str(Data.TIERS[i]["name"]), "a pin's name carries more than the name: '%s'" % pl.text)
+		var want_nm: String = str(Data.TIERS[i]["name"]) if mv.sim.zone_open(int(Data.TIERS[i]["zone"])) else Fmt.scramble(str(Data.TIERS[i]["name"]))
+		_check(pl.text == want_nm, "a pin's name carries more than the name: '%s'" % pl.text)
 		var side: int = int(mv.SITE_LABEL[i])
 		if side == mv.BELOW or side == mv.ABOVE:
 			var cx: float = pl.position.x + pl.size.x / 2.0

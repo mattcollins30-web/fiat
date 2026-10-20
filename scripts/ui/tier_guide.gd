@@ -11,6 +11,7 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
+const Fmt := preload("res://scripts/ui/fmt.gd")
 
 const PAD := 20
 const HEAD_H := 64
@@ -146,6 +147,14 @@ func show_state(s) -> void:
 		site = clampi(sim.best_tier, 0, Data.TIERS.size() - 1)
 	for k in range(_tabs.size()):
 		UI.style_button(_tabs[k], ["depths", "farm"][k] == tab)
+	# what isn't known yet is scrambled (20 Oct, Matt): a zone not open, its sites, its head, its uniques
+	for z in range(_zone_labels.size()):
+		_zone_labels[z].text = (str(Data.ZONES[z]["name"]) if sim.zone_open(z) else Fmt.scramble(str(Data.ZONES[z]["name"]))).to_upper()
+	for k in range(_site_buttons.size()):
+		_site_buttons[k].text = site_name(sim, k)
+		_site_buttons[k].disabled = not known(sim, k)
+	if not known(sim, site):
+		site = clampi(sim.best_tier, 0, Data.TIERS.size() - 1)
 	_depths.visible = tab == "depths"
 	_farm.visible = tab == "farm"
 	if tab == "depths":
@@ -163,6 +172,16 @@ func _pick_tab(t: String) -> void:
 func _pick_site(i: int) -> void:
 	site = i
 	show_state(sim)
+
+
+## Whether a site is known yet: its zone open. Unknown, its name and what it carries are scrambled.
+static func known(s, i: int) -> bool:
+	return s == null or s.zone_open(int(Data.TIERS[i]["zone"]))
+
+
+static func site_name(s, i: int) -> String:
+	var nm: String = str(Data.TIERS[i]["name"])
+	return nm if known(s, i) else Fmt.scramble(nm)
 
 
 ## The site's lean, from its drops: the gun type, then its two heaviest slots.
@@ -183,7 +202,7 @@ func _show_depths() -> void:
 	for k in range(_site_buttons.size()):
 		var b: Button = _site_buttons[k]
 		UI.style_button(b, k == site)
-	UI.fit(_site_title, [str(Data.TIERS[site]["name"])])
+	UI.fit(_site_title, [site_name(sim, site)])
 	UI.fit(_site_lean, [lean_words(site), ""])
 	var done: bool = sim.campaign_done()
 	UI.fit(_site_note, ["A signal at each level here, against a campaign run here" if done else "Signals open with the Radio after the campaign; each row is one signal level here", "A signal at each level here" if done else "Signals: after the campaign", ""])
@@ -245,7 +264,10 @@ func _farm_label(rect: Rect2, text: String, weight: String, sz: int, colour: Col
 
 
 func _show_farm() -> void:
-	var fsig := "%d|%d" % [sim.shelf.size(), sim.level()]
+	var zones_open := ""
+	for z in range(Data.ZONES.size()):
+		zones_open += "1" if sim.zone_open(z) else "0"
+	var fsig := "%d|%d|%s" % [sim.shelf.size(), sim.level(), zones_open]
 	if fsig == _farm_sig and not _farm_labels.is_empty():
 		return
 	_farm_sig = fsig
@@ -260,10 +282,12 @@ func _show_farm() -> void:
 	y += 34
 	for b in Data.BOSSES:
 		var i: int = int(b["tier"])
-		_farm_label(Rect2(x, y, col_w, 28), "%s · %s" % [b["name"], Data.TIERS[i]["name"]], "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT)
-		_farm_label(Rect2(x, y + 28, col_w, 24), " · ".join(b.get("uniques", [])), "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
+		var k_b: bool = known(sim, i)
+		var sc := func(t: String) -> String: return t if k_b else Fmt.scramble(t)
+		_farm_label(Rect2(x, y, col_w, 28), "%s · %s" % [sc.call(str(b["name"])), site_name(sim, i)], "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT if k_b else Pal.TEXT_2)
+		_farm_label(Rect2(x, y + 28, col_w, 24), " · ".join(b.get("uniques", []).map(func(u): return sc.call(str(u)))), "Regular", Pal.CELL_TEXT, Pal.UNIQUE)
 		var opens: Array = (b.get("opens", {}) as Dictionary).keys().map(func(r): return str(ROOM_WORDS.get(r, r)))
-		_farm_label(Rect2(x, y + 52, col_w, 24), "Opens %s · comes back at full strength as a signal's extra" % " and ".join(opens), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
+		_farm_label(Rect2(x, y + 52, col_w, 24), ("Opens %s · comes back at full strength as a signal's extra" % " and ".join(opens)) if k_b else sc.call("Opens " + " and ".join(opens)), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
 		y += 92
 	y += 10
 	_farm_label(Rect2(x, y, col_w, 28), "ANYWHERE", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_3)
@@ -281,9 +305,10 @@ func _show_farm() -> void:
 		if u.is_empty():
 			continue
 		var found: bool = str(u["name"]) in sim.shelf
-		_farm_label(Rect2(x, y, col_w - 90, 26), str(u["name"]), "SemiBold", Pal.CELL_TEXT_BIG, Pal.UNIQUE)
+		var k_s: bool = known(sim, i)
+		_farm_label(Rect2(x, y, col_w - 90, 26), str(u["name"]) if k_s else Fmt.scramble(str(u["name"])), "SemiBold", Pal.CELL_TEXT_BIG, Pal.UNIQUE)
 		_farm_label(Rect2(x + col_w - 90, y, 90, 26), "level %d" % sim.site_unique_level(i), "Regular", Pal.CELL_TEXT, Pal.TEXT_2)
-		_farm_label(Rect2(x, y + 26, col_w, 22), "%s · %s%s" % [u["slot"], Data.TIERS[i]["name"], " · on the shelf" if found else ""], "Regular", Pal.CELL_TEXT - 1, Pal.GOOD if found else Pal.TEXT_3)
+		_farm_label(Rect2(x, y + 26, col_w, 22), "%s · %s%s" % [u["slot"], site_name(sim, i), " · on the shelf" if found else ""], "Regular", Pal.CELL_TEXT - 1, Pal.GOOD if found else Pal.TEXT_3)
 		y += 58
 	y += 6
 	_farm_label(Rect2(x, y, col_w, 24), "%.0f%% of finds on a signal there, from that level" % (Data.SITE_UNIQUE_DROP * 100.0), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
@@ -293,7 +318,7 @@ func _show_farm() -> void:
 	y = 80.0
 	_farm_label(Rect2(x, y, col_w, 28), "LOOKING FOR", "Medium", Pal.CELL_TEXT - 1, Pal.TEXT_3)
 	y += 34
-	for line in looking_for():
+	for line in looking_for(sim):
 		_farm_label(Rect2(x, y, col_w, 26), str(line[0]), "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT)
 		_farm_label(Rect2(x, y + 26, col_w, 24), str(line[1]), "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2)
 		y += 58
@@ -301,13 +326,13 @@ func _show_farm() -> void:
 
 ## What leans where, from the sites' drops: [what, where] - each gun type's sites, the sites heaviest in helmets and
 ## armour, and in rigs and packs; papers from every site.
-static func looking_for() -> Array:
+static func looking_for(s = null) -> Array:
 	var out: Array = []
 	for ty in ["melee", "improvised", "shotgun", "pistol", "smg", "rifle"]:
 		var at: Array = []
 		for i in range(Data.TIERS.size()):
 			if str(Data.TIERS[i]["drops"].get("type", "")) == ty:
-				at.append(str(Data.TIERS[i]["name"]))
+				at.append(site_name(s, i))
 		if not at.is_empty():
 			out.append([str(TYPE_WORDS[ty]).capitalize() if ty != "smg" else "SMGs", " · ".join(at)])
 	for pair in [[["Helmet", "Armour"], "Helmets, armour"], [["Rig", "Backpack"], "Rigs, packs"]]:
@@ -316,13 +341,13 @@ static func looking_for() -> Array:
 			var slots: Dictionary = Data.TIERS[i]["drops"].get("slots", {})
 			var total := 0.0
 			var all := 0.0
-			for s in slots:
-				all += float(slots[s])
-				if s in pair[0]:
-					total += float(slots[s])
+			for sl in slots:
+				all += float(slots[sl])
+				if sl in pair[0]:
+					total += float(slots[sl])
 			weights.append([total / maxf(1.0, all), i])
 		weights.sort_custom(func(a, b): return float(a[0]) > float(b[0]))
-		out.append([pair[1], " · ".join(weights.slice(0, 3).map(func(w): return str(Data.TIERS[int(w[1])]["name"])))])
+		out.append([pair[1], " · ".join(weights.slice(0, 3).map(func(w): return site_name(s, int(w[1]))))])
 	out.append(["Papers", "Every site; read once the Radio's open"])
 	return out
 

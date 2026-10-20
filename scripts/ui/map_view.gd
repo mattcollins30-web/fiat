@@ -73,13 +73,22 @@ uniform sampler2D tile : repeat_enable, filter_nearest;
 uniform sampler2D mask : filter_linear;
 uniform vec2 px_size = vec2(1018.0, 844.0);
 uniform float tile_px = 228.0;
+// a tile's edges needn't meet: near an edge, a copy shifted half a tile takes over (its own edge lies mid-tile, where
+// the first is whole) - a crossfade, across and then down, not a mirror (20 Oct, Matt: the mirror's V)
+float edge_w(float f) {
+	return smoothstep(0.0, 0.18, f) * (1.0 - smoothstep(0.82, 1.0, f));
+}
+vec3 across(vec2 uv) {
+	return mix(texture(tile, uv + vec2(0.5, 0.0)).rgb, texture(tile, uv).rgb, edge_w(fract(uv.x)));
+}
+vec3 seamless(vec2 uv) {
+	return mix(across(uv + vec2(0.0, 0.5)), across(uv), edge_w(fract(uv.y)));
+}
 void fragment() {
 	vec2 px = floor(UV * px_size / 2.0) * 2.0;                 // whole 2 px steps, the painting's pixels
 	vec2 a = px / tile_px + vec2(TIME * 0.006, TIME * 0.0025);
 	vec2 b = px / (tile_px * 1.37) + vec2(0.43, 0.29) - vec2(TIME * 0.004, -TIME * 0.0015);
-	a.y = 1.0 - abs(mod(a.y, 2.0) - 1.0);                      // mirrored top to bottom: the tile's rows don't meet
-	b.y = 1.0 - abs(mod(b.y, 2.0) - 1.0);
-	vec3 col = mix(texture(tile, a).rgb, texture(tile, b).rgb, 0.42);     // two drifts crossed: no repeat
+	vec3 col = mix(seamless(a), seamless(b), 0.42);            // two drifts crossed: no repeat
 	float open = texture(mask, UV).r;
 	COLOR = vec4(col, 1.0 - smoothstep(0.3, 0.7, open));
 }
@@ -276,14 +285,17 @@ func show_state(s, sel: int, okey: String) -> void:
 		var nm: Label = _zone_names[z][0]
 		var st: Label = _zone_names[z][1]
 		var open_z: bool = sim.zone_open(z)
+		nm.text = str(Data.ZONES[z]["name"]) if open_z else Fmt.scramble(str(Data.ZONES[z]["name"]))     # not yet known (20 Oct, Matt)
 		nm.add_theme_color_override("font_color", Pal.TEXT if open_z else Pal.TEXT_2)
 		if not open_z and sim.zone_level_shut(z):
-			UI.fit(st, ["Locked · level %d required" % sim.zone_gate(z), "Level %d required" % sim.zone_gate(z), "Level %d" % sim.zone_gate(z)])
+			UI.fit(st, ["Level %d required" % sim.zone_gate(z), "Level %d" % sim.zone_gate(z)])
 			st.add_theme_color_override("font_color", Pal.TEXT_2)
 		elif not open_z:
 			var before: Dictionary = sim.zone_boss(z - 1) if z > 0 else {}
 			var after: String = str(before["name"]) if not before.is_empty() else str(Data.ZONES[maxi(0, z - 1)]["name"])
-			UI.fit(st, ["Locked · after %s" % after, "Locked"])
+			if z > 0 and not sim.zone_open(z - 1):
+				after = Fmt.scramble(after)        # a head of a zone not yet known: scrambled too
+			UI.fit(st, ["After %s" % Words.mid(after), ""])
 			st.add_theme_color_override("font_color", Pal.TEXT_3)
 		elif sim.zone_complete(z):
 			st.text = "Cleared"
@@ -295,13 +307,12 @@ func show_state(s, sel: int, okey: String) -> void:
 	for i in range(Data.TIERS.size()):
 		var l: Label = _pin_labels[i]
 		var z: int = int(Data.TIERS[i]["zone"])
-		l.visible = sim.zone_open(z)
-		if not l.visible:
-			continue
-		l.text = str(Data.TIERS[i]["name"])     # the name only: the odds, the gate and what's before it are the card's (19 Oct, Matt)
+		var known: bool = sim.zone_open(z)
+		l.visible = true
+		l.text = str(Data.TIERS[i]["name"]) if known else Fmt.scramble(str(Data.TIERS[i]["name"]))     # the name only (19 Oct); scrambled till its zone's open (20 Oct)
 		_snug(l)
 		var picked_now: bool = i == selected and order_key == ""
-		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.TEXT if sim.tier_open(i) else Pal.TEXT_2))
+		l.add_theme_color_override("font_color", Pal.ACCENT if picked_now else (Pal.TEXT if sim.tier_open(i) else (Pal.TEXT_2 if known else Pal.TEXT_3)))
 	for p in Data.PINNACLES:
 		var l: Label = _order_labels[p["key"]]
 		l.visible = sim.order_open(p["key"])

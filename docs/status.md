@@ -5746,3 +5746,19 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
     then 24). Parked till after a playtest: the fight's look (the head arenas, moving through a site, the Doom test).
 - Today's list is done. Matt exports and plays: at the export, copy every fiat* file from
   %APPDATA%\Godot\app_userdata\Fiat to %APPDATA%\Fiat once.
+
+## What you haven't found (20 Oct, Matt: "scrambled like the radio broadcasts ... removed the 'locked' text entirely")
+
+- Done: Fmt.scramble(text) - the Radio's glyphs, the same each time for the same name, spaces kept. A place is known
+  once its zone is open. Scrambled while not: the rail's shut rooms (no "Shut" badge; the name trimmed to fit), the
+  Map's zone names and every pin's name (a shut zone's status reads "Level N required" or "After <the zone before>",
+  no "Locked"), the Site guide's zone headers, sites (disabled), its title and the farm tab's heads, uniques and opens
+  lines, the Barracks shelf's gaps and their "where". What's-next and the Yard gates no longer name a shut place.
+- Done: the cloud seam. The mirror (the V Matt saw) is gone; each axis crossfades into a half-tile-shifted copy near
+  the tile's edge, so any tile Matt drops in as art/map/clouds.png tiles without a seam either way.
+- Matt's call: known follows the zone gate, so a death that shuts a zone by level scrambles its names again. The other
+  way is a stored "known" that never goes back.
+- The smoke: a fresh camp's rail, map, guide and shelf name nothing shut; a sweep of next_words, the shelf's gaps and
+  the Yard gates for shut names.
+- Next: the Radio - a signal from 1, 2 or 3 papers (Matt), to talk through first.
+

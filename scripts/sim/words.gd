@@ -989,7 +989,7 @@ const NEXT := {
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
 	"lorry": "The lorry's beaten.",
 	"moved": "A new estate, the same climb. Start at the Allotments.",
-	"level": "%s opens at level %d. The sites you have still pay the XP.",
+	"level": "The next area opens at level %d. The sites you have still pay the XP.",     # not named: it isn't known yet (20 Oct)
 }
 const NEXT_SHORT := {
 	"past": "Pick a past in Training",
@@ -999,7 +999,7 @@ const NEXT_SHORT := {
 	"head": "Arm %s on the Map",
 	"done": "The Radio's the game now",
 	"lorry": "The lorry's beaten: move the Pitch",
-	"level": "%s at level %d",
+	"level": "Next area at level %d",
 }
 const NOTES := {
 	"zones": "Heads down open the next",

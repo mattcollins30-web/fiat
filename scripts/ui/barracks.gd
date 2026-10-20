@@ -1069,9 +1069,11 @@ func _shelf_branch() -> Dictionary:
 	var names: Array = []
 	var gaps := {}
 	for c in chase:
-		names.append(c["name"])
+		var unknown: bool = not c["found"] and not c.get("known", true)     # a gap from a place not yet known: scrambled (20 Oct, Matt)
+		var nm_c: String = Fmt.scramble(str(c["name"])) if unknown else str(c["name"])
+		names.append(nm_c)
 		if not c["found"]:
-			gaps[c["name"]] = c["where"]
+			gaps[nm_c] = Fmt.scramble(str(c["where"])) if unknown else c["where"]
 	for nm in sim.shelf:
 		if not (nm in names):
 			names.append(nm)
