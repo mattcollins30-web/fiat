@@ -5824,6 +5824,8 @@ Logged, nothing built till the save lands:
     you complete a mission?"). Today: the beat's "made" line on its signal card, a "Kev's story n of 3" chip on the
     Radio, and the "won" line only in the log ticker. To design with Matt: Kev's won line on the came-back card after
     a story win, and a place on the Radio to read the beats done (the story so far).
-12. The stash: tabs for uniques and for set items (Matt), beside All, Guns, Body, Bags, Meds, Parts, Paper. The bar is
-    full to the Value sort today, so the layout wants a mockup on the canvas first.
+12. The stash's tabs, refreshed (Matt: "one of the last things that hasn't been touched by our refresh work"): Uniques
+    and Sets tabs; Paper goes (the pile's on the Radio since 18 Oct; only the deeds, a head's thing and a unique's rule
+    paper still keep the stash - they fold in elsewhere); Meds splits from rounds (inventory.gd's Meds tab is Medical,
+    Ammo and Grenade today) - Rounds a tab of its own, grenades placed in the mockup. A mockup on the canvas first.
 
