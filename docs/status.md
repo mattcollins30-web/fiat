@@ -5844,4 +5844,7 @@ Logged, nothing built till the save lands:
     lock adds to the price.
     And a range on every affix (Matt: "is 15% fire the max i can ever roll?"): its tier's low-high, and the best tier
     this piece can reach (its rarity's cap, its item level's floor), so a roll reads against what's possible.
+14. The Workshop shows three affix rows, fixed (workshop.gd builds range(3)); an Epic has four and a Legendary five, so
+    the last one or two can't be seen or picked. Rows to the most a rarity carries (five), laid out with item 13's
+    padlocks; a smoke check that every affix on a piece has its row, at every rarity.
 
