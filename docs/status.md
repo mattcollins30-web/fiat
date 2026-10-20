@@ -5833,4 +5833,9 @@ Logged, nothing built till the save lands:
     width drops them to their last forms, "This one" / "The rest", which say neither what's kept nor what's rolled.
     Redo them: the job names the affix ("Keep +15% fire damage, re-roll the rest"), full width or stacked so the long
     form always fits, and a line before any pick saying a row can be picked to keep it or re-roll it. Mockup first.
+    Matt (20 Oct): two kinds of re-roll, told apart - the figures (the same affix, a new value and tier) and the affix
+    itself (replaced by a different one). What the Bench does today (Items.reroll_one / reroll_affixes): "this one"
+    re-rolls the picked affix's figures; "the rest" keeps the picked one and replaces the others with different
+    affixes; the job "Re-roll the affixes" replaces every affix. Missing: every affix's figures at once, the affixes
+    kept. The mockup names each by what it does (figures vs new affixes) and adds that one.
 
