@@ -5824,4 +5824,6 @@ Logged, nothing built till the save lands:
     you complete a mission?"). Today: the beat's "made" line on its signal card, a "Kev's story n of 3" chip on the
     Radio, and the "won" line only in the log ticker. To design with Matt: Kev's won line on the came-back card after
     a story win, and a place on the Radio to read the beats done (the story so far).
+12. The stash: tabs for uniques and for set items (Matt), beside All, Guns, Body, Bags, Meds, Parts, Paper. The bar is
+    full to the Value sort today, so the layout wants a mockup on the canvas first.
 
