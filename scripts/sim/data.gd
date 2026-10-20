@@ -105,14 +105,14 @@ const SALVAGE_DEPTH := 4
 const SALVAGE_KILL := 0.01
 const YARD := [
 	{"key": "bench", "name": "The Bench", "salvage": "steel", "costs": [2000, 7000, 16000, 40000, 80000], "picks": [
-		[{"id": "steady_hands", "name": "Steady hands", "short": "Re-roll one: tier-up ×2", "words": "Re-rolling one affix: twice the chance it goes up a tier"},
+		[{"id": "steady_hands", "name": "Steady hands", "short": "Re-roll values: tier-up ×2", "words": "Re-rolling values: twice the chance an affix goes up a tier"},
 		 {"id": "cheap_parts", "name": "Cheap parts", "short": "−25% on Bench jobs", "words": "Every job at the Bench costs 25% less"}],
 		[{"id": "third_socket", "name": "Third socket", "short": "Up to 3 sockets", "words": "A third socket can be cut in a gun, helmet or armour"},
-		 {"id": "two_locks", "name": "Two locks", "short": "A lock keeps two", "words": "A lock keeps the affix you pick and the best of the rest"}],
+		 {"id": "two_locks", "name": "Two locks", "short": "A second padlock", "words": "A second padlock at the Bench: two affixes kept through a re-roll"}],
 		[{"id": "gunsmith", "name": "Gunsmith", "short": "Built guns at your best site's level", "words": "Improvised guns you build come at the item level of your highest open site, if that is higher"},
 		 {"id": "strip_for_parts", "name": "Strip for parts", "short": "Scrap ×2", "words": "Scrapping gives twice the scrap"}],
 		[{"id": "overbump", "name": "Overbump", "short": "+6 levels a bump", "words": "A bump raises an item 6 levels, not 3"},
-		 {"id": "fine_tuning", "name": "Fine tuning", "short": "Never rolls down", "words": "Re-rolling one affix never takes it down a tier"}],
+		 {"id": "fine_tuning", "name": "Fine tuning", "short": "Never rolls down", "words": "Re-rolling values never takes an affix down a tier"}],
 		[{"id": "masterwork", "name": "Masterwork", "short": "Top-half rolls", "words": "An affix the Bench rolls lands in the top half of its tier"},
 		 {"id": "salvage_line", "name": "Salvage line", "short": "Rares give safe steel", "words": "Scrapping a Rare or better also gives 1 safe steel"}]],
 	 "rank": {"short": "Bump cap +1 item level", "words": "Bumps can reach 1 item level higher a rank"}},
@@ -1072,7 +1072,7 @@ const FX := {
 	"yard/glasses": 60,     # Glasses: The odds shown are read from sixty dry runs, not twenty-four
 	"yard/range_cards": 0.5,     # Range cards: The first shot on every gang does half again
 	"yard/ratter": 1.1,     # Ratter: Poison and bleed do a tenth more
-	"yard/steady_hands": 2.0,     # Steady hands: Re-rolling one affix: twice the chance it goes up a tier
+	"yard/steady_hands": 2.0,     # Steady hands: re-rolling values, twice the chance an affix goes up a tier
 	"yard/weather_set": 0.5,     # Weather set: Rain and fog bite half as hard
 }
 
@@ -1760,14 +1760,18 @@ const LADDER_FLOOR_MAX := 3        # a moved yard's ladders start this many dept
 ## Perfection is dear and bottomless; that's the late game's cash sink.
 ## "bump" is in notes: the crews' thing, not the Fence's.
 const CRAFT := {
-	"reroll": {"name": "Re-roll the affixes", "cash": 40, "words": "Rerolls every affix; the count stays the same"},
-	"lock": {"name": "Lock one, re-roll the rest", "cash": 120, "words": "Keeps the affix you pick and rerolls the rest", "pick": true},
-	"one": {"name": "Re-roll one", "cash": 80, "words": "Rerolls one affix: a chance to go up a tier, a smaller one to go down, within the rarity", "pick": true},
+	# 20 Oct (Matt, the canvas "Fiat – The playtest batch"): padlocks on the affixes, and two jobs for what isn't locked -
+	# the same affixes with new figures, or new affixes in their place. "values" is priced by the unlocked affixes'
+	# tiers, both by LOCK_PRICE more a padlock. First figures; the balance pass sets them.
+	"values": {"name": "Re-roll values", "cash": 25, "words": "The same affixes, new figures: a chance to go up a tier, a smaller one to go down"},
+	"affixes": {"name": "Re-roll affixes", "cash": 40, "words": "New affixes in their place; the count stays the same"},
 	"add": {"name": "Add an affix", "cash": 100, "words": "Adds one affix and raises the rarity one step"},
 	"socket": {"name": "Cut a socket", "cash": 80, "words": "Adds a socket, up to %d"},
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Removes every affix; it becomes Common, worth less"},
 	"bump": {"name": "Raise the item's level", "notes": 10, "words": "+3 item levels, so the lowest affix tiers stop rolling; up to item level base tier + 20"},
 }
+const LOCK_PRICE := 1.0               # a padlock adds this share of a re-roll's price (20 Oct)
+const LOCKS := 1                      # padlocks at the Bench; the Pitch's Two locks adds one (Matt: "2 locks with one as an upgrade")
 const BUMP_LEVELS := 3
 const BUMP_CAP := 20
 

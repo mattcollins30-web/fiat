@@ -1909,22 +1909,17 @@ func item_by_id(id: int) -> Dictionary:
 
 ## What the Bench can do to this item: the price, in cash (notes for a bump);
 ## -1 for can't. `stat` is the affix picked, for lock and one.
-func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
+func craft_cost(it: Dictionary, kind: String, _stat := "") -> int:     # the stat: the old pick jobs' (20 Oct: padlocks now)
 	if it.is_empty() or it.has("unique") or it.has("set") or Items.is_ammo(it) or Items.is_paper(it) or not Data.CRAFT.has(kind):
 		return -1                             # a set piece's affixes are the set's: no bench job on one (the pass, 6 Oct)
-	var has_stat := false
-	for a in it["affixes"]:
-		has_stat = has_stat or a["stat"] == stat
+	var locked: Array = locks_of(it)
 	match kind:
-		"reroll", "strip":
+		"strip":
 			if it["affixes"].is_empty():
 				return -1
-		"lock":
-			if it["affixes"].size() < 2 or not has_stat:
-				return -1
-		"one":
-			if not has_stat:
-				return -1
+		"values", "affixes":
+			if it["affixes"].size() - locked.size() <= 0:
+				return -1                       # nothing left unlocked to roll
 		"add":
 			if int(it["rarity"]) >= Data.RARITIES.size() - 1 or Items.allowed_affixes(it["slot"]).size() <= it["affixes"].size():
 				return -1
@@ -1936,13 +1931,56 @@ func craft_cost(it: Dictionary, kind: String, stat := "") -> int:
 				return -1
 			return int(Data.CRAFT[kind]["notes"]) * Items.ilvl(it)
 	var price_v: int = int(Data.CRAFT[kind]["cash"]) * Items.ilvl(it) * (int(it["rarity"]) + 1)
-	if kind == "one":
+	if kind == "values":
+		var tiers := 0
 		for a in it["affixes"]:
-			if a["stat"] == stat:
-				price_v *= int(a.get("tier", 1))     # the better the tier, the dearer
+			if not (a["stat"] in locked):
+				tiers += int(a.get("tier", 1))     # the better the tiers rolled again, the dearer
+		price_v *= tiers
+	if kind in ["values", "affixes"]:
+		price_v = int(round(price_v * (1.0 + Data.LOCK_PRICE * locked.size())))     # a padlock adds to it
 	if yard_has("cheap_parts"):
 		price_v = int(round(price_v * Data.FX["yard/cheap_parts"]))      # the Bench's Cheap parts
 	return _inf(price_v)
+
+
+## The Bench's padlocks (20 Oct): the stats locked on a piece (still on it), how many it may have, and the toggle.
+func locks_of(it: Dictionary) -> Array:
+	var have: Array = it.get("affixes", []).map(func(a): return str(a["stat"]))
+	return it.get("locks", []).filter(func(s): return str(s) in have)
+
+
+func lock_max() -> int:
+	return Data.LOCKS + (1 if yard_has("two_locks") else 0)
+
+
+## Why a padlock can't go on (or come off) this affix now, or "".
+func lock_block(it: Dictionary, stat: String) -> String:
+	if it.is_empty() or it.has("unique") or it.has("set"):
+		return "Nothing to lock on it"
+	if not it.get("affixes", []).any(func(a): return str(a["stat"]) == stat):
+		return "No such affix"
+	var locked: Array = locks_of(it)
+	if stat in locked:
+		return ""
+	if locked.size() >= lock_max():
+		return "%d of %d padlocks on" % [locked.size(), lock_max()]
+	if locked.size() + 1 >= it["affixes"].size():
+		return "One has to stay unlocked"
+	return ""
+
+
+func toggle_lock(id: int, stat: String) -> bool:
+	var it := item_by_id(id)
+	if lock_block(it, stat) != "":
+		return false
+	var locked: Array = locks_of(it)
+	if stat in locked:
+		locked.erase(stat)
+	else:
+		locked.append(stat)
+	it["locks"] = locked
+	return true
 
 
 func craft_in_notes(kind: String) -> bool:
@@ -2168,13 +2206,10 @@ func craft(id: int, kind: String, stat := "") -> bool:
 	var sockets_before: int = Items.sockets(it)
 	var level_before: int = Items.ilvl(it)
 	match kind:
-		"reroll":
-			Items.reroll_affixes(it, rng, "", yard_has("masterwork"))
-		"lock":
-			Items.reroll_affixes(it, rng, stat, yard_has("masterwork"), yard_has("two_locks"))
-		"one":
-			if Items.reroll_one(it, stat, rng, Data.FX["yard/steady_hands"] if yard_has("steady_hands") else 1.0, yard_has("fine_tuning"), yard_has("masterwork")) == 0:
-				return false
+		"values":
+			Items.reroll_values(it, locks_of(it), rng, Data.FX["yard/steady_hands"] if yard_has("steady_hands") else 1.0, yard_has("fine_tuning"), yard_has("masterwork"))
+		"affixes":
+			Items.reroll_affixes(it, rng, locks_of(it), yard_has("masterwork"))
 		"add":
 			if not Items.add_affix(it, rng, yard_has("masterwork")):
 				return false
@@ -2183,6 +2218,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 				return false
 		"strip":
 			Items.strip_affixes(it)
+			it["locks"] = []
 		"bump":
 			it["ilvl"] = mini(int(it["tier"]) + bump_cap(), Items.ilvl(it) + bump_levels())
 	# what the Bench did, in words the player can check against the piece
@@ -2202,7 +2238,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 
 
 ## "Added +12% damage · T2", "Re-rolled: +4% damage · T1, +2 HP/s · T1 → ...".
-func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, _sockets_before: int, level_before: int) -> String:
+func _craft_words(it: Dictionary, kind: String, _stat: String, before: Array, _sockets_before: int, level_before: int) -> String:
 	var after: Array = Items.affix_lines(it, false, true)
 	match kind:
 		"add":
@@ -2210,26 +2246,12 @@ func _craft_words(it: Dictionary, kind: String, stat: String, before: Array, _so
 				if not (line in before):
 					return "Added %s" % line
 			return "Added an affix"
-		"reroll":
-			return "Re-rolled: %s → %s" % [", ".join(before), ", ".join(after)]
-		"lock":
-			var kept := ""
-			for line in after:
-				if line in before and line.contains(str(Items.affix_def(stat).get("label", stat))):
-					kept = line
-			var rest_before := before.filter(func(l): return l != kept)
-			var rest_after := after.filter(func(l): return l != kept)
-			return "Kept %s; re-rolled the rest: %s → %s" % [kept, ", ".join(rest_before), ", ".join(rest_after)]
-		"one":
-			var was := ""
-			var now := ""
-			for line in before:
-				if not (line in after):
-					was = line
-			for line in after:
-				if not (line in before):
-					now = line
-			return "%s → %s" % [was, now] if was != "" and now != "" else "Re-rolled one: no change"
+		"values", "affixes":
+			var kept: Array = after.filter(func(l): return l in before)
+			var gone: Array = before.filter(func(l): return not (l in after))
+			var came: Array = after.filter(func(l): return not (l in before))
+			var said: String = ("New values" if kind == "values" else "New affixes") + (": %s → %s" % [", ".join(gone), ", ".join(came)] if not came.is_empty() else ": no change")
+			return ("Kept %s; " % ", ".join(kept) + said.substr(0, 1).to_lower() + said.substr(1)) if not kept.is_empty() and not came.is_empty() else said
 		"socket":
 			return "A socket cut: %d now" % Items.sockets(it)
 		"strip":

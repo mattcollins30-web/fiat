@@ -485,12 +485,23 @@ func _bench_worn(sim) -> void:
 				weakest = a
 		if weakest.is_empty():
 			continue
-		var cost: int = sim.craft_cost(it, "one", weakest["stat"])
-		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "one", weakest["stat"]):
+		_lock_all_but(sim, it, str(weakest["stat"]))     # 20 Oct: padlocks on the rest, as many as the Bench has, then new values
+		var cost: int = sim.craft_cost(it, "values")
+		if cost >= 0 and sim.cash - cost >= maxf(2000.0, _reserve(sim)) and sim.craft(it["id"], "values"):
 			var key := "%d/%s" % [int(it["id"]), weakest["stat"]]
 			_rerolls[key] = int(_rerolls.get(key, 0)) + 1
 			bought.append([sim.elapsed, "bench: the %s's %s re-rolled for £%d" % [s.to_lower(), weakest["stat"], cost]])
 			return
+
+
+## The Bench's padlocks on every affix but `stat`, the best tiers first, as many as it has (20 Oct).
+func _lock_all_but(sim, it: Dictionary, stat: String) -> void:
+	it["locks"] = []
+	var rest: Array = it["affixes"].filter(func(a): return str(a["stat"]) != stat)
+	rest.sort_custom(func(a, b): return int(a.get("tier", 1)) > int(b.get("tier", 1)))
+	for a in rest:
+		if not sim.toggle_lock(int(it["id"]), str(a["stat"])):
+			break
 
 
 ## An affix that does nothing for this build: an element's damage share with no
@@ -529,9 +540,11 @@ func _craft_toward(sim) -> void:
 		var kind := "add"
 		var stat := ""
 		if sim.craft_cost(it, "add") < 0:
-			# full: re-roll around what's right, or the lot
-			kind = "lock" if (has_conv or has_inc) and sim.craft_cost(it, "lock", conv if has_conv else inc) >= 0 else "reroll"
-			stat = (conv if has_conv else inc) if kind == "lock" else ""
+			# full: new affixes around what's right (padlocked), or the lot (20 Oct: padlocks)
+			kind = "affixes"
+			it["locks"] = []
+			if has_conv or has_inc:
+				sim.toggle_lock(int(it["id"]), conv if has_conv else inc)
 		var cost: int = sim.craft_cost(it, kind, stat)
 		if cost < 0 or sim.cash - cost < maxf(2000.0, _reserve(sim)) or not sim.craft(it["id"], kind, stat):
 			return

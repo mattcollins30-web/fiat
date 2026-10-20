@@ -5891,4 +5891,10 @@ first. His points for the pass, to design:
   crew pick, a site's chance on the Map's card (15). Build after his OK.
 - For the balance pass: regen rolls whole numbers on a 1-6 spread over five tiers, so its T1 is already 1 HP/s - the
   floor itself is the steamroll (Items.tier_range).
+- Done (items 13, 14; Matt: "2 locks with one as an upgrade"): the Bench's padlocks. A row's press padlocks its affix
+  (one; the Pitch's Two locks a second; one always left unlocked); two jobs for the rest, Re-roll values (the same
+  affixes, new figures) and Re-roll affixes (new ones), a padlock adding LOCK_PRICE to the price (first figures). Five
+  rows, each with its tier's range at the piece's level and a mark for where the roll sits. The bot padlocks then
+  re-rolls. Smoke checks for the cap, the price, the keep, five rows on a Legendary.
+  - Noted (the review): the affix padlock is the same glyph as a gear piece's level lock; a tint apart if it confuses.
 

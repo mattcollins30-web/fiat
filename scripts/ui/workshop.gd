@@ -24,6 +24,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Inventory := preload("res://scripts/ui/inventory.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const PickPanel := preload("res://scripts/ui/pick_panel.gd")
+const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const BODY_W := Inventory.SIDE_W                              # 608
 const GAP := 24
@@ -48,17 +49,21 @@ const GRID_W := Inventory.WIDTH
 const GRID_H := Inventory.GRID_Y + GRID_ROWS * Pal.CELL + (GRID_ROWS - 1) * Pal.CELL_GAP      # 448
 const PANEL_Y := TOP + GRID_H + GAP
 const PANEL_H := Pal.ROOM_H - PANEL_Y
-const PIECE_H := 262               # the Craft view's piece card
-const AFFIX_H := 36                # an affix row
-const AFFIX_BTN_H := 40            # the picked affix's two jobs, a row under the affixes
-const JOB_COLS := 2
+const PIECE_H := 372               # the Craft view's piece card: five affix rows, their padlocks, the two re-rolls (20 Oct)
+const AFFIX_H := 38                # an affix row
+const AFFIX_ROWS := 5              # a Legendary's five (20 Oct, Matt: "i can only ever see 3 out of the 5 affixes")
+const AFFIX_BTN_H := 46            # the two re-rolls, a row under the affixes
+const JOB_COLS := 3
 const JOB_H := 104                 # a job tile
 const JOB_GAP := 8
 @warning_ignore("integer_division")
 const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
-const JOBS := ["reroll", "add", "socket", "strip", "bump", "scrap"]
-const JOB_NAMES := {"bump": "Raise the item level", "scrap": "Scrap it"}
-const JOB_WORDS := {"bump": "Item level +3: the lowest affix tiers stop rolling", "scrap": "Broken down for scrap; gone for good"}
+const JOBS := ["add", "socket", "strip", "bump", "scrap"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct)
+const JOB_NAMES := {"bump": "Item level +3", "scrap": "Scrap it", "strip": "Strip affixes"}
+const JOB_WORDS := {"add": "One more affix, the rarity a step up", "socket": "Adds a socket, up to %d", "strip": "Every affix gone; it goes Common",
+	"bump": "The lowest affix tiers stop rolling", "scrap": "Broken down for scrap; gone for good"}
+const RE_ROLLS := ["values", "affixes"]
+const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
 const GUNS := ["Primary", "Secondary"]
 
@@ -77,8 +82,9 @@ var _piece_title: Label
 var _piece_figure: Label
 var _piece_chips: Chips
 var _piece_words: Array[Label] = []           # nothing picked: what the Bench takes, three lines
-var _affix_rows: Array = []                   # three: {button, dot, label, tag}
-var _affix_buttons: Array[Button] = []        # the picked affix's two jobs: re-roll it, keep it and re-roll the others
+var _affix_rows: Array = []                   # five: {button, lock, label, tag, track, mark} - a row toggles its padlock
+var _affix_buttons: Array[Button] = []        # the two re-rolls of what isn't locked: values, affixes
+var _lock_line: Label                         # what's locked, the padlocks in use
 var _affix_actions: Array = []
 var _jobs: Panel
 var _jobs_head: Label
@@ -128,23 +134,38 @@ func _init() -> void:
 	_piece.add_child(_piece_chips)
 	for i in range(3):
 		_piece_words.append(UI.label(_piece, Rect2(PAD, 56 + i * 28, BODY_W - 2 * PAD, 28), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-	var ay := 54 + Chips.CHIP_H + 10
-	for k in range(3):
+	var ay := 54 + Chips.CHIP_H + 8
+	var rw: float = BODY_W - 2 * PAD + 20
+	for k in range(AFFIX_ROWS):
 		var b := Button.new()
 		b.position = Vector2(PAD - 10, ay + k * AFFIX_H)
-		b.size = Vector2(BODY_W - 2 * PAD + 20, AFFIX_H)
+		b.size = Vector2(rw, AFFIX_H - 2)
 		b.text = ""
 		b.focus_mode = Control.FOCUS_ALL
-		b.pressed.connect(_pick_affix.bind(k))
+		b.pressed.connect(_toggle_lock.bind(k))
 		_piece.add_child(b)
 		var r := {"button": b, "stat": ""}
-		@warning_ignore("integer_division")
-		r["dot"] = UI.panel(b, Rect2(10, AFFIX_H / 2 - 4, 8, 8), UI.box(Pal.TEXT_2, 4))
-		r["label"] = UI.label(b, Rect2(26, 0, BODY_W - 2 * PAD - 80, AFFIX_H), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		r["tag"] = UI.label(b, Rect2(BODY_W - 2 * PAD - 40, 0, 50, AFFIX_H), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_RIGHT)
+		r["lock"] = TextureRect.new()
+		r["lock"].texture = NodeGlyphs.texture("lock")
+		r["lock"].position = Vector2(10, (AFFIX_H - 2 - 22) / 2.0)
+		r["lock"].size = Vector2(22, 22)
+		r["lock"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		r["lock"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		r["lock"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(r["lock"])
+		r["label"] = UI.label(b, Rect2(42, 0, rw - 54, AFFIX_H - 8), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		r["tag"] = UI.label(b, Rect2(42, 0, rw - 54, AFFIX_H - 2), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT)     # the line's right end: the tier and its range
+		# where the roll sits in its tier: a track under the words, a mark on it
+		r["track"] = UI.panel(b, Rect2(42, AFFIX_H - 9, rw - 42 - 180, 4), UI.box(Pal.BG, 2))
+		r["track"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+		r["mark"] = UI.panel(r["track"], Rect2(0, -3, 4, 10), UI.box(Pal.TEXT_2, 2))
+		r["mark"].mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_affix_rows.append(r)
+	_lock_line = UI.label(_piece, Rect2(PAD, ay + AFFIX_ROWS * AFFIX_H + 2, BODY_W - 2 * PAD, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	@warning_ignore("integer_division")
+	var bw: int = (BODY_W - 2 * PAD - 8) / 2
 	for i in range(2):
-		var b := UI.button(_piece, Rect2(PAD, PIECE_H - 12 - AFFIX_BTN_H, 100, AFFIX_BTN_H), false)
+		var b := UI.button(_piece, Rect2(PAD + i * (bw + 8), PIECE_H - 12 - AFFIX_BTN_H, bw, AFFIX_BTN_H), i == 0)
 		b.pressed.connect(_press_affix_job.bind(i))
 		b.visible = false
 		_affix_buttons.append(b)
@@ -167,11 +188,12 @@ func _init() -> void:
 		t["name"] = UI.label(b, Rect2(12, 8, JOB_W - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		t["words"] = []
 		for i in range(2):
-			t["words"].append(UI.label(b, Rect2(12, 34 + i * 20, JOB_W - 24, 20), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
+			t["words"].append(UI.label(b, Rect2(12, 34 + i * 20, JOB_W - 24, 20), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 		t["price"] = UI.label(b, Rect2(12, JOB_H - 30, JOB_W - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 		_job_tiles.append(t)
 		_job_actions.append(Callable())
-	var fy := jy + 3 * (JOB_H + JOB_GAP) + 4
+	@warning_ignore("integer_division")
+	var fy := jy + ((JOBS.size() + JOB_COLS - 1) / JOB_COLS) * (JOB_H + JOB_GAP) + 4
 	_build = UI.button(_jobs, Rect2(BODY_W - PAD - 100, fy, 100, FOOT_H), false)
 	_build.pressed.connect(func(): build.emit())
 	_foot = UI.label(_jobs, Rect2(PAD, fy, BODY_W - 2 * PAD - 240, FOOT_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -459,7 +481,7 @@ func _signature() -> String:
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
 	if not picked.is_empty():
-		parts.append(str(hash([picked.get("ilvl", 0), picked.get("affixes", []), picked.get("attachments", {}).keys()])))
+		parts.append(str(hash([picked.get("ilvl", 0), picked.get("affixes", []), picked.get("attachments", {}).keys(), picked.get("locks", []), sim.lock_max()])))
 	for slot in Data.SOCKET_SLOTS:
 		var gun = sim.equipped[slot]
 		if gun == null:
@@ -681,8 +703,10 @@ func _show_craft(it: Dictionary) -> void:
 		r["button"].visible = not it.is_empty()
 	for b in _affix_buttons:
 		b.visible = false
+	_lock_line.text = ""
 	if it.is_empty():
-		sel_stat = ""
+		for r in _affix_rows:
+			r["button"].visible = false
 		_piece_title.text = "Pick a piece"
 		_piece_words[0].text = "Stash gear only: not parts, meds, uniques or sets"
 		_piece_words[1].text = "Worn gear: press Workshop on it in the Kit"
@@ -705,48 +729,70 @@ func _show_craft(it: Dictionary) -> void:
 		_piece_chips.show_chips(chips, 1)
 		var lines: Array = Items.affix_lines(it, false, false)
 		var short_lines: Array = Items.affix_lines(it, true, false)
-		if not it["affixes"].any(func(a): return a["stat"] == sel_stat):
-			sel_stat = ""
-		for k in range(3):
+		var locked: Array = sim.locks_of(it)
+		var n_aff: int = lines.size()
+		for k in range(AFFIX_ROWS):
 			var r: Dictionary = _affix_rows[k]
-			var has: bool = k < lines.size()
+			var has: bool = k < n_aff
 			r["stat"] = it["affixes"][k]["stat"] if has else ""
+			r["button"].visible = has or k == n_aff
 			var tier: int = Items.affix_tier(it, k)
 			var colour: Color = Pal.tier_color(tier) if has else Pal.TEXT_3
+			var on: bool = has and r["stat"] in locked
+			r["lock"].visible = has
+			r["lock"].modulate = Pal.ACCENT if on else Pal.TEXT_3
+			r["track"].visible = has
 			if has:
-				UI.fit(r["label"], [lines[k], short_lines[k]])
+				# its tier's figures at this piece's level, and where the roll sits in them (20 Oct, Matt: "we need a range displayed")
+				var rg: Array = tier_figures(it, k)
+				r["tag"].text = "T%d · %s–%s" % [tier, rg[0], rg[1]]
+				var room: float = r["label"].size.x - UI.text_width(r["tag"], r["tag"].text) - 16
+				r["label"].text = short_lines[k]
+				for o in [lines[k], short_lines[k]]:
+					if UI.text_width(r["label"], o) <= room:
+						r["label"].text = o
+						break
+				if UI.text_width(r["label"], r["label"].text) > room:
+					r["tag"].text = "T%d" % tier          # the words first: the range goes before the affix does
+				var span: float = maxf(1.0, float(rg[1]) - float(rg[0]))
+				var at: float = clampf((float(it["affixes"][k]["value"]) - float(rg[0])) / span, 0.0, 1.0) if float(rg[1]) > float(rg[0]) else 1.0
+				r["mark"].position.x = at * (r["track"].size.x - 4.0)
+				r["mark"].add_theme_stylebox_override("panel", UI.box(colour, 2))
+				r["button"].tooltip_text = "Click to %s it: a re-roll %s" % ["unlock" if on else "padlock", "will roll it again" if on else "leaves it as it is"]
 			else:
-				r["label"].text = "No %s affix" % ["first", "second", "third"][k] if k == lines.size() else ""
+				var cap_next: int = mini(Items.rarity_cap(it) + 1, Data.AFFIX_TIERS)
+				r["label"].text = "No %s affix" % ORDINAL[k]
+				UI.fit(r["tag"], ["Add one: tiers to T%d" % cap_next, "T%d" % cap_next] if int(it["rarity"]) < Data.RARITIES.size() - 1 else [""])
+				r["button"].tooltip_text = ""
 			r["label"].add_theme_color_override("font_color", colour)
-			r["tag"].text = ("T%d" % tier) if has else ""
-			r["dot"].add_theme_stylebox_override("panel", UI.box(colour, 4))
-			r["dot"].visible = has or k == lines.size()
+			r["tag"].add_theme_color_override("font_color", Pal.TEXT_2 if has else Pal.TEXT_3)
 			r["button"].disabled = not has
-			_style(r["button"], has and r["stat"] == sel_stat, "", not has, false)
+			_style(r["button"], on, "", not has, false)
 			if not has:
-				# a missing affix's row: no box at all
+				# the next empty row: no box at all
 				for st in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 					r["button"].add_theme_stylebox_override(st, UI.box(Color.TRANSPARENT, 8))
-		# the picked affix's two jobs, along the card's foot
-		if sel_stat != "":
-			# the two side by side, the longest words that fit the card's width
-			var costs := [sim.craft_cost(it, "one", sel_stat), sim.craft_cost(it, "lock", sel_stat)]
-			var forms := [["Re-roll this one", "Re-roll it", "This one"], ["Keep it, re-roll the rest", "Re-roll the rest", "The rest"]]
-			for f in range(3):
-				var x: float = PAD
-				for i in range(2):
-					var b := _affix_buttons[i]
-					b.visible = costs[i] >= 0
-					if costs[i] < 0:
-						continue
-					b.text = "%s · %s" % [forms[i][f], Fmt.money(costs[i])]
-					b.disabled = not (on_bench and sim.can_craft(it["id"], ["one", "lock"][i], sel_stat))
-					b.size.x = ceilf(UI.text_width(b, b.text)) + 32
-					b.position.x = x
-					x += b.size.x + 8
-					_affix_actions[i] = _do_craft.bind(it["id"], ["one", "lock"][i], sel_stat)
-				if x - 8 <= BODY_W - PAD:
-					break
+		# what's locked and how many padlocks; the two re-rolls of the rest, priced
+		var lk: Array = []
+		for a in it["affixes"]:
+			if a["stat"] in locked:
+				lk.append(lines[it["affixes"].find(a)])
+		var pads: String = "%d of %d padlocks" % [locked.size(), sim.lock_max()]
+		UI.fit(_lock_line, (["Locked: %s · %s" % [", ".join(lk), pads], "Locked: %s" % ", ".join(lk)] if not lk.is_empty() else
+			["Click an affix to padlock it: the re-rolls leave it as it is · %s" % pads, "Click an affix to padlock it · %s" % pads, "Click an affix to padlock it"]) if n_aff > 0 else [""])
+		_lock_line.add_theme_color_override("font_color", Pal.GOOD if not lk.is_empty() else Pal.TEXT_2)
+		for i in range(2):
+			var kind: String = RE_ROLLS[i]
+			var b := _affix_buttons[i]
+			var cost: int = sim.craft_cost(it, kind)
+			b.visible = cost >= 0
+			if cost < 0:
+				continue
+			var nm: String = str(Data.CRAFT[kind]["name"])
+			UI.fit_button(b, ["%s · %s" % [nm, Fmt.money(cost)], "%s · %s" % [nm.get_slice(" ", 1).capitalize(), Fmt.money(cost)], Fmt.money(cost)])
+			b.tooltip_text = str(Data.CRAFT[kind]["words"])
+			b.disabled = not (on_bench and sim.can_craft(it["id"], kind))
+			_affix_actions[i] = _do_craft.bind(it["id"], kind, "")
 		_pick.show_pick(it, sim, "The piece · worn" if _worn(it) else "The piece · in the stash")
 		_set_pick_buttons([])
 	# THE JOBS
@@ -754,7 +800,7 @@ func _show_craft(it: Dictionary) -> void:
 		var kind: String = JOBS[k]
 		var t: Dictionary = _job_tiles[k]
 		var b: Button = t["button"]
-		t["name"].text = JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind))
+		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind))])
 		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
 		UI.wrap(t["words"], jw % sim.socket_max() if kind == "socket" else jw)     # "up to %d": the real cap (18 Oct)
 		var cost: int = -1
@@ -800,11 +846,28 @@ func _do_craft(id: int, kind: String, stat: String) -> void:
 	craft.emit(id, kind, stat)
 
 
-func _pick_affix(k: int) -> void:
+## A row's padlock on or off (20 Oct): the re-rolls leave a locked affix as it is.
+func _toggle_lock(k: int) -> void:
+	var it := _selected_item()
 	var stat: String = _affix_rows[k]["stat"]
-	sel_stat = "" if stat == sel_stat else stat
+	if it.is_empty() or stat == "":
+		return
+	if not sim.toggle_lock(int(it["id"]), stat):
+		var why: String = sim.lock_block(it, stat)
+		if why != "":
+			_lock_line.text = why
 	_shown = ""
 	show_state(sim)
+	acted.emit()
+
+
+## An affix's tier's figures on this piece, low and high, as its line shows them (the item level's edge in).
+func tier_figures(it: Dictionary, k: int) -> Array:
+	var a: Dictionary = it["affixes"][k]
+	var d: Dictionary = Items.affix_def(str(a["stat"]))
+	var r: Array = Items.tier_range(d, int(a.get("tier", 1)))
+	var m: float = Items.ilvl_mult(Items.ilvl(it))
+	return [int(round(float(r[0]) * m)), int(round(float(r[1]) * m))]
 
 
 func _press_affix_job(i: int) -> void:
@@ -906,6 +969,8 @@ func text_nodes() -> Array:
 		for r in _affix_rows:
 			if r["button"].visible and r["label"].text != "":
 				out.append_array([r["label"], r["tag"]])
+		if _lock_line.text != "":
+			out.append(_lock_line)
 		for b in _affix_buttons:
 			if b.visible:
 				out.append(b)

@@ -1850,10 +1850,10 @@ func _craft_view_checks(main) -> void:
 	ws._pick_cell(maxi(0, piece_cell))
 	_check(ws._piece_title.text != "Pick a piece", "picking a piece did not fill the piece card")
 	_check(ws._piece_chips.words(1) == "Item level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
-	_check(ws._affix_rows[0]["tag"].text == "T2" and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
+	_check(ws._affix_rows[0]["tag"].text.begins_with("T2 ") and ws._affix_rows[0]["tag"].text.contains("–") and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
 	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
-	_check(ws._job_tiles[0]["price"].text.contains("tin") and not ws._job_tiles[0]["button"].disabled, "the re-roll tile is not priced and live: %s" % ws._job_tiles[0]["price"].text)
-	_check(ws._job_tiles[4]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[4]["price"].text)
+	_check(ws._affix_buttons[0].visible and ws._affix_buttons[0].text.contains("tin") and not ws._affix_buttons[0].disabled, "the re-roll values button is not priced and live: %s" % ws._affix_buttons[0].text)
+	_check(ws._job_tiles[ws.JOBS.find("bump")]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[ws.JOBS.find("bump")]["price"].text)
 	_check(ws._job_tiles[5]["price"].text.begins_with("+") and ws._job_tiles[5]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[5]["price"].text)
 	_check(ws._affix_buttons.all(func(b): return not b.visible), "the affix jobs are up with no affix picked")
 	_check_fit(main, "Workshop (craft, piece picked)")
@@ -4165,7 +4165,7 @@ func _craft_checks(main) -> void:
 	it["attachments"] = {}
 	it["ilvl"] = 16
 	sim.stash.append(it)
-	_check(sim.craft_cost(it, "reroll") < 0 and sim.craft_cost(it, "strip") < 0, "a plain item re-rolls or strips")
+	_check(sim.craft_cost(it, "affixes") < 0 and sim.craft_cost(it, "values") < 0 and sim.craft_cost(it, "strip") < 0, "a plain item re-rolls or strips")
 	var add_cost: int = sim.craft_cost(it, "add")
 	_check(add_cost == sim._inf(Data.CRAFT["add"]["cash"] * 16), "adding to a plain level-16 piece costs %d, not %d" % [add_cost, sim._inf(Data.CRAFT["add"]["cash"] * 16)])
 	var cash0: float = sim.cash
@@ -4174,7 +4174,7 @@ func _craft_checks(main) -> void:
 	var val0: int = it["affixes"][0]["value"]
 	var changed := false
 	for k in range(12):
-		sim.craft(it["id"], "reroll")
+		sim.craft(it["id"], "affixes")
 		changed = changed or it["affixes"][0]["stat"] != stat0 or it["affixes"][0]["value"] != val0
 	_check(changed and it["affixes"].size() == 1, "twelve re-rolls changed nothing, or the count")
 	while sim.craft_cost(it, "add") >= 0:
@@ -4185,23 +4185,37 @@ func _craft_checks(main) -> void:
 	for a in it["affixes"]:
 		_check(not (a["stat"] in stats), "an affix doubled: %s" % a["stat"])
 		stats.append(a["stat"])
-	# lock one: it stays, the others may change
+	# the padlocks (20 Oct, Matt: one, the Pitch's Two locks a second): a locked affix stays through both re-rolls
 	var keep: Dictionary = it["affixes"][0].duplicate()
-	var lock_cost: int = sim.craft_cost(it, "lock", keep["stat"])
-	_check(lock_cost == sim._inf(Data.CRAFT["lock"]["cash"] * 16 * (top + 1)), "lock on a level-16 %s costs %d, not %d" % [Data.RARITIES[top]["name"], lock_cost, sim._inf(Data.CRAFT["lock"]["cash"] * 16 * (top + 1))])
-	_check(sim.craft(it["id"], "lock", keep["stat"]) and it["affixes"].size() == top and it["affixes"][0] == keep, "locking one did not keep it: %s vs %s" % [str(it["affixes"][0]), str(keep)])
-	# re-roll one: the stat stays, the tier moves sometimes, dearer the better the tier
-	var one_stat: String = it["affixes"][1]["stat"]
+	var plain_cost: int = sim.craft_cost(it, "affixes")
+	_check(plain_cost == sim._inf(Data.CRAFT["affixes"]["cash"] * 16 * (top + 1)), "new affixes on a level-16 %s cost %d, not %d" % [Data.RARITIES[top]["name"], plain_cost, sim._inf(Data.CRAFT["affixes"]["cash"] * 16 * (top + 1))])
+	_check(sim.lock_max() == Data.LOCKS + (1 if sim.yard_has("two_locks") else 0), "the padlocks: %d" % sim.lock_max())
+	it["locks"] = []
+	_check(sim.toggle_lock(it["id"], keep["stat"]) and sim.locks_of(it) == [keep["stat"]], "a padlock didn't go on: %s" % str(it.get("locks")))
+	var lock_cost: int = sim.craft_cost(it, "affixes")
+	_check(absi(lock_cost - int(round(plain_cost * (1.0 + Data.LOCK_PRICE)))) <= 2, "a padlock on new affixes: %d, not %d" % [lock_cost, int(round(plain_cost * (1.0 + Data.LOCK_PRICE)))])
+	var over := 0
+	for a in it["affixes"]:
+		if not sim.toggle_lock(it["id"], a["stat"]) and not (a["stat"] in sim.locks_of(it)):
+			over += 1
+	_check(sim.locks_of(it).size() == mini(sim.lock_max(), it["affixes"].size() - 1) and over > 0, "the padlocks went past their cap or every affix: %s of %d" % [str(sim.locks_of(it)), sim.lock_max()])
+	it["locks"] = [keep["stat"]]
+	_check(sim.craft(it["id"], "affixes") and it["affixes"].size() == top and it["affixes"][0] == keep and sim.locks_of(it) == [keep["stat"]], "new affixes didn't keep the locked one: %s vs %s" % [str(it["affixes"][0]), str(keep)])
+	# new values: every stat stays, the locked one's figure too, the tiers move sometimes, dearer the better the tiers
+	var stats_before: Array = it["affixes"].map(func(a): return a["stat"])
 	var tiers_seen := {}
 	for k in range(240):                  # a T4 at the floor moves only up, one in sixteen: enough rolls that it does
-		sim.craft(it["id"], "one", one_stat)
-		_check(it["affixes"][1]["stat"] == one_stat, "re-rolling one changed its stat")
+		sim.craft(it["id"], "values")
+		_check(it["affixes"].map(func(a): return a["stat"]) == stats_before and it["affixes"][0] == keep, "new values changed a stat or the locked one: %s" % str(it["affixes"]))
 		tiers_seen[int(it["affixes"][1]["tier"])] = true
-	_check(tiers_seen.size() >= 2, "240 re-rolls of one never moved its tier: %s" % str(tiers_seen.keys()))
-	it["affixes"][1]["tier"] = 5
-	var dear: int = sim.craft_cost(it, "one", one_stat)
-	it["affixes"][1]["tier"] = 1
-	_check(absi(dear - sim.craft_cost(it, "one", one_stat) * 5) <= 3, "re-rolling a T5 is not five times a T1: %d vs %d" % [dear, sim.craft_cost(it, "one", one_stat)])
+	_check(tiers_seen.size() >= 2, "240 new values never moved a tier: %s" % str(tiers_seen.keys()))
+	it["locks"] = []
+	for a in it["affixes"]:
+		a["tier"] = 1
+	var cheap: int = sim.craft_cost(it, "values")
+	for a in it["affixes"]:
+		a["tier"] = 5
+	_check(absi(sim.craft_cost(it, "values") - cheap * 5) <= 3, "new values on T5s are not five times T1s: %d vs %d" % [sim.craft_cost(it, "values"), cheap])
 	# the level, in notes
 	var notes0: int = sim.notes
 	var bump_cost: int = sim.craft_cost(it, "bump")
@@ -4222,10 +4236,10 @@ func _craft_checks(main) -> void:
 	sim.stash.append(rare)
 	var lo_r: int = mini(Items.tier_floor(16), Items.rarity_cap(rare))      # the floor never above the cap: a deep Rare is T3s
 	for k in range(80):
-		sim.craft(rare["id"], "one", "armour_pct")
+		sim.craft(rare["id"], "values")
 		var row: int = int(rare["affixes"][0]["tier"])
-		_check(row >= lo_r and row <= Items.rarity_cap(rare), "re-roll one left a level-16 Rare's affix at T%d, outside T%d..T%d" % [row, lo_r, Items.rarity_cap(rare)])
-	sim.craft(rare["id"], "reroll")
+		_check(row >= lo_r and row <= Items.rarity_cap(rare), "new values left a level-16 Rare's affix at T%d, outside T%d..T%d" % [row, lo_r, Items.rarity_cap(rare)])
+	sim.craft(rare["id"], "affixes")
 	for a in rare["affixes"]:
 		_check(int(a["tier"]) <= Items.rarity_cap(rare) and int(a["tier"]) >= lo_r, "a re-roll on a level-16 Rare gave T%d" % int(a["tier"]))
 	# a set piece: no bench job at all, its affixes are the set's
@@ -4236,7 +4250,7 @@ func _craft_checks(main) -> void:
 	# not on a unique, not on paper, not without a bench, not on a run, not short
 	var u := Items.roll_unique(Data.UNIQUES[0], sim.rng)
 	sim.stash.append(u)
-	_check(sim.craft_cost(u, "reroll") < 0, "a unique re-rolls")
+	_check(sim.craft_cost(u, "affixes") < 0 and sim.lock_block(u, str(u["affixes"][0]["stat"]) if not u["affixes"].is_empty() else "") != "", "a unique re-rolls or takes a padlock")
 	sim.cash = 0.0
 	_check(not sim.can_craft(it["id"], "add"), "the Bench works with no cash")
 	sim.cash = 100000.0
@@ -4282,19 +4296,53 @@ func _craft_checks(main) -> void:
 	_check(main._workshop._foot.text.begins_with("Added"), "the jobs' foot does not say what the Bench did: '%s'" % main._workshop._foot.text)
 	_check_fit(main, "Workshop (craft, after an add)")
 	it["value"] = hold_value
+	# a Legendary at the Bench (20 Oct, Matt: "i can only ever see 3 out of the 5 affixes"): five rows, each its tier's
+	# range, a row's press its padlock, the two re-rolls priced, all of it fitting
+	var leg: Dictionary = sim._plain("Primary", "Army SMG")
+	leg["ilvl"] = 12
+	var cash_leg: float = sim.cash
+	sim.stash.append(leg)
+	while sim.craft_cost(leg, "add") >= 0:
+		sim.cash = 1e9
+		sim.craft(leg["id"], "add")
+	var have5: Array = leg["affixes"].map(func(x): return x["stat"])
+	for pa in Items.pick_affixes(leg["slot"], 5 - leg["affixes"].size(), sim.rng, have5):
+		leg["affixes"].append(Items.roll_affix(pa, Items.ilvl(leg), sim.rng, 0, Items.rarity_cap(leg)))     # a dropped Legendary's fifth (the Bench's adds stop at four)
+	leg["value"] = 99999999
+	main._workshop._shown = ""
+	main.refresh()
+	var lc: int = main._workshop._inv.cell_of(leg["id"])
+	if lc >= 0:
+		main._workshop._pick_cell(lc)
+	main.refresh()
+	var W = main._workshop
+	var shown_rows: int = W._affix_rows.filter(func(r): return r["button"].visible and r["label"].text != "" and r["tag"].text.contains("–")).size()
+	_check(leg["affixes"].size() == 5 and shown_rows == 5, "a Legendary shows %d of its %d affixes at the Bench" % [shown_rows, leg["affixes"].size()])
+	leg["locks"] = []
+	W._toggle_lock(0)
+	_check(sim.locks_of(leg) == [leg["affixes"][0]["stat"]] and W._lock_line.text.begins_with("Locked: "), "a row's press didn't padlock it: %s / '%s'" % [str(sim.locks_of(leg)), W._lock_line.text])
+	main.refresh()
+	_check(W._affix_buttons[0].visible and W._affix_buttons[1].visible and W._affix_buttons[0].text.contains(Fmt.money(sim.craft_cost(leg, "values"))), "the re-rolls aren't up and priced: '%s' / '%s'" % [W._affix_buttons[0].text, W._affix_buttons[1].text])
+	_check_fit(main, "Workshop (a Legendary, a padlock on)")
+	W._toggle_lock(0)
+	_check(sim.locks_of(leg).is_empty(), "a second press didn't take the padlock off")
+	sim.stash.erase(leg)
+	sim.cash = cash_leg
+	main._workshop.sel_id = -1
+	main._workshop._shown = ""
+	main.refresh()
 	# every kind has words: re-roll says before and after, bump the levels, one the swap
 	var words_seen := {}
 	sim.cash = 999999.0
 	sim.notes = 9999
-	for kind in ["reroll", "bump"]:
+	for kind in ["affixes", "bump"]:
 		if sim.craft_cost(it, kind) >= 0 and sim.craft(it["id"], kind):
 			words_seen[kind] = str(sim.last_craft["words"])
-	_check(words_seen.get("reroll", "").begins_with("Re-rolled: ") and words_seen.get("reroll", "").contains(" → "), "re-roll's words: '%s'" % words_seen.get("reroll", ""))
+	_check(words_seen.get("affixes", "").begins_with("New affixes") and (words_seen.get("affixes", "").contains(" → ") or words_seen.get("affixes", "").ends_with("no change")), "new affixes' words: '%s'" % words_seen.get("affixes", ""))
 	_check(not words_seen.has("bump") or (words_seen["bump"].begins_with("Item level ") and words_seen["bump"].contains(" → ")), "bump's words: '%s'" % words_seen.get("bump", ""))
-	if not it["affixes"].is_empty() and sim.craft_cost(it, "one", it["affixes"][0]["stat"]) >= 0:
-		var was_line: String = Items.affix_lines(it, false, true)[0]
-		if sim.craft(it["id"], "one", it["affixes"][0]["stat"]):
-			_check(str(sim.last_craft["words"]).begins_with(was_line + " → ") or str(sim.last_craft["words"]) == "Re-rolled one: no change", "one's words: '%s'" % str(sim.last_craft["words"]))
+	if not it["affixes"].is_empty() and sim.craft_cost(it, "values") >= 0:
+		if sim.craft(it["id"], "values"):
+			_check(str(sim.last_craft["words"]).begins_with("New values"), "new values' words: '%s'" % str(sim.last_craft["words"]))
 	# a worn piece: the Workshop works on it in place, and won't scrap it off the runner
 	var worn_gun = sim.equipped["Primary"]
 	if worn_gun != null and sim.craft_cost(worn_gun, "add") < 0 and not worn_gun.has("unique") and not worn_gun.has("set"):
@@ -6152,9 +6200,9 @@ func _inflation_checks(main) -> void:
 	_check(ws0 == 0 or absi(sim.yard_pick_cost("bench", 4) - int(round(ws0 * m))) <= 1, "the Pitch's prices did not rise: %d -> %d" % [ws0, sim.yard_pick_cost("bench", 4)])
 	_check(absi(sim.treat_cost() - int(round(treat0 * m))) <= 2, "treatment did not rise: %d -> %d" % [treat0, sim.treat_cost()])
 	_check(sim.boss_cost(3) == sim.boss_cost(3) and Data.CRAFT["bump"].has("notes"), "notes prices exist to hold")
-	var c0: int = sim.craft_cost(it, "reroll")
+	var c0: int = sim.craft_cost(it, "affixes")
 	sim.elapsed = Data.INFLATION_GRACE_H * 3600.0
-	var c_base: int = sim.craft_cost(it, "reroll")
+	var c_base: int = sim.craft_cost(it, "affixes")
 	_check(c0 < 0 or absi(c0 - int(round(c_base * m))) <= 1, "the Bench's cash price did not rise: %d -> %d" % [c_base, c0])
 	# the gangs carry today's money: a run's cash scales too
 	sim.elapsed = (Data.INFLATION_GRACE_H + 10.0) * 3600.0
@@ -11318,9 +11366,11 @@ func _yard_pick_checks(main) -> void:
 	var it: Dictionary = sim._plain("Helmet", "Hard hat")
 	it["affixes"] = [{"stat": "hp", "value": 5, "tier": 1}]
 	it["rarity"] = 1
-	var reroll0: int = sim.craft_cost(it, "reroll")
+	var reroll0: int = sim.craft_cost(it, "affixes")
 	on.call("bench", 0, "b")
-	_check(sim.craft_cost(it, "reroll") == int(round(sim._inf(int(Data.CRAFT["reroll"]["cash"]) * Items.ilvl(it) * 2) * 0.75)) or sim.craft_cost(it, "reroll") < reroll0, "Cheap parts did not take a quarter off: %d from %d" % [sim.craft_cost(it, "reroll"), reroll0])
+	_check(sim.craft_cost(it, "affixes") == int(round(sim._inf(int(Data.CRAFT["affixes"]["cash"]) * Items.ilvl(it) * 2) * 0.75)) or sim.craft_cost(it, "affixes") < reroll0, "Cheap parts did not take a quarter off: %d from %d" % [sim.craft_cost(it, "affixes"), reroll0])
+	on.call("bench", 1, "b")
+	_check(sim.lock_max() == Data.LOCKS + 1, "Two locks didn't give a second padlock: %d" % sim.lock_max())     # 20 Oct
 	on.call("bench", 1, "a")
 	on.call("bench", 3, "a")
 	_check(sim.socket_max() == Data.SOCKET_MAX + 1 and sim.bump_levels() == Data.BUMP_LEVELS * 2, "Third socket or Overbump is off")
@@ -11349,8 +11399,8 @@ func _yard_pick_checks(main) -> void:
 	var two: Dictionary = sim._plain("Armour", Data.BASES["Armour"][0]["name"])
 	two["rarity"] = 3
 	two["affixes"] = [{"stat": "hp", "value": 5, "tier": 1}, {"stat": "armour_pct", "value": 30, "tier": 3}, {"stat": "rest_pct", "value": 5, "tier": 1}]
-	Items.reroll_affixes(two, rng, "hp", false, true)
-	_check(two["affixes"].size() == 3 and two["affixes"].any(func(a): return a["stat"] == "armour_pct" and int(a["value"]) == 30), "Two locks did not keep the best of the rest: %s" % str(two["affixes"]))
+	Items.reroll_affixes(two, rng, ["hp", "armour_pct"], false)     # two padlocks (20 Oct: Two locks is the second)
+	_check(two["affixes"].size() == 3 and two["affixes"].any(func(a): return a["stat"] == "armour_pct" and int(a["value"]) == 30) and two["affixes"].any(func(a): return a["stat"] == "hp" and int(a["value"]) == 5), "two padlocks didn't keep both: %s" % str(two["affixes"]))
 	# the Stash
 	var cap0: int = sim.stash_cap()
 	on.call("stash", 0, "a")
@@ -12721,7 +12771,9 @@ func _bench_worn_checks(main) -> void:
 	it["rarity"] = 2
 	sim.equipped["Armour"] = it
 	var bot = Bot.new()
-	sim.cash = 2000.0 + sim.craft_cost(it, "one", "regen") - 1
+	it["locks"] = ["armour_pct"]                # the bot padlocks the rest and rolls new values (20 Oct)
+	sim.cash = 2000.0 + sim.craft_cost(it, "values") - 1
+	it["locks"] = []
 	bot._bench_worn(sim)
 	_check(bot.bought.is_empty(), "the bot's bench rule spent under the two grand it keeps")
 	sim.cash = 50000.0
@@ -14826,7 +14878,7 @@ func _gates_checks(main) -> void:
 	sim.cash = 100000.0
 	var spare: Dictionary = sim._plain("Helmet", "Hard hat")
 	sim.stash_put(spare)
-	_check(not sim.can_heal() and not sim.sell(spare) and not sim.buy(0) and not sim.can_word_craft(3, "tune") and sim.yard_pick_block("bench", 0, "a") == "The Yard opens with the Manager's deeds" and not sim.can_craft(spare["id"], "reroll"), "a shut room's job was done")
+	_check(not sim.can_heal() and not sim.sell(spare) and not sim.buy(0) and not sim.can_word_craft(3, "tune") and sim.yard_pick_block("bench", 0, "a") == "The Yard opens with the Manager's deeds" and not sim.can_craft(spare["id"], "affixes"), "a shut room's job was done")
 	# the Yard open before the rooms its buildings serve: those wait on their rooms (the review)
 	sim.unlocked = ["yard"]
 	_check(sim.yard_pick_block("clinic", 0, "a").begins_with("Opens with") and sim.yard_pick_block("bench", 0, "a").begins_with("Opens with") and not sim.yard_pick_block("stash", 0, "a").begins_with("Opens with"), "a building for a shut room could be built: %s" % sim.yard_pick_block("clinic", 0, "a"))

@@ -425,26 +425,25 @@ static func wear_level(it: Dictionary) -> int:
 ## The bench: the affixes rolled again (the count kept), one of them rolled
 ## again (its tier mostly kept; up a step sometimes, down a step less often,
 ## the odds narrowing as the tier rises), one more added, all of them off.
-static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: String = "", top := false, keep_best := false) -> void:
+static func reroll_affixes(it: Dictionary, rng: RandomNumberGenerator, keep: Array = [], top := false) -> void:
 	var n: int = it["affixes"].size()
 	var kept: Array = []
 	for a in it["affixes"]:
-		if a["stat"] == keep:
-			kept.append(a)
-	if keep_best and keep != "":
-		# the Bench's Two locks (9 Oct): the best of the rest kept too - the highest tier, then the bigger figure
-		var best = null
-		for a in it["affixes"]:
-			if a["stat"] != keep and (best == null or int(a.get("tier", 1)) > int(best.get("tier", 1)) or (int(a.get("tier", 1)) == int(best.get("tier", 1)) and int(a["value"]) > int(best["value"]))):
-				best = a
-		if best != null:
-			kept.append(best)
+		if a["stat"] in keep:
+			kept.append(a)                       # the padlocked ones (20 Oct: the Bench's padlocks; Two locks a second)
 	var have: Array = []
 	for a in kept:
 		have.append(a["stat"])
 	it["affixes"] = kept
 	for a in pick_affixes(it["slot"], n - kept.size(), rng, have):
 		it["affixes"].append(roll_affix(a, ilvl(it), rng, 0, rarity_cap(it), top))     # the Bench works as a drop does: the rarity's cap, the level's floor
+
+
+## Every affix but the padlocked ones rolled again where it is: the same stat, new figures (20 Oct).
+static func reroll_values(it: Dictionary, keep: Array, rng: RandomNumberGenerator, up_mult := 1.0, no_down := false, top := false) -> void:
+	for a in it["affixes"].duplicate():
+		if not (a["stat"] in keep):
+			reroll_one(it, str(a["stat"]), rng, up_mult, no_down, top)
 
 
 ## One affix rolled again. Returns the new tier, or 0 if the stat isn't on it.
