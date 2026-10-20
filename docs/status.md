@@ -5828,4 +5828,9 @@ Logged, nothing built till the save lands:
     and Sets tabs; Paper goes (the pile's on the Radio since 18 Oct; only the deeds, a head's thing and a unique's rule
     paper still keep the stash - they fold in elsewhere); Meds splits from rounds (inventory.gd's Meds tab is Medical,
     Ammo and Grenade today) - Rounds a tab of its own, grenades placed in the mockup. A mockup on the canvas first.
+13. The Workshop's affix jobs (Matt: "how do i lock an affix on this screen? this one and the rest makes no sense"):
+    picking an affix row gives two jobs, "Re-roll this one" and "Keep it, re-roll the rest" (the lock), but the card's
+    width drops them to their last forms, "This one" / "The rest", which say neither what's kept nor what's rolled.
+    Redo them: the job names the affix ("Keep +15% fire damage, re-roll the rest"), full width or stacked so the long
+    form always fits, and a line before any pick saying a row can be picked to keep it or re-roll it. Mockup first.
 
