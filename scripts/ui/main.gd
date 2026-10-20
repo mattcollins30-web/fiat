@@ -1345,20 +1345,23 @@ func _town_purse() -> Dictionary:
 		var dig_lv: int = sim.lv_at(int(sim.best_dig["tier"]), int(sim.best_dig["depth"]))
 		zlines.append(["Best signal", ["%s, level %d · Pitch no. %d" % [site, dig_lv, int(sim.best_dig["yard"])], "%s, level %d" % [site, dig_lv], "%s L%d" % [site, dig_lv], "level %d" % dig_lv], "accent"])
 	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
-	if sim.lorry_done:
-		town_note = ["The lorry's beaten: move the Pitch when you're ready", "The lorry's beaten"]
+	if sim.campaign_done():
+		# the move waits on the ground playing out (20 Oct, Matt; the canvas's PitchMove): said either way
+		var stood: int = mini(sim.reach_stood, Data.MOVE_STALL)
+		town_note = ["The ground's played out: %d signals and the reach hasn't moved. A new Pitch starts the ladders deeper" % Data.MOVE_STALL, "The ground's played out: move the Pitch", "Played out"] if sim.reach_stood >= Data.MOVE_STALL \
+			else ["The ground still gives: your reach has stood %d of %d signals" % [stood, Data.MOVE_STALL], "The reach has stood %d of %d signals" % [stood, Data.MOVE_STALL], "%d of %d" % [stood, Data.MOVE_STALL]]
 	var d := {
 		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · Pitch no. %d" % (sim.yard_moves + 1),
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d areas open" % [open_zones, Data.ZONES.size()], "lines": zlines,
-			"note": town_note, "note_tone": "good" if sim.lorry_done else ""},
+			"note": town_note, "note_tone": "good" if sim.can_move_yard() else ""},
 		"right": {"kicker": "The purse", "lines": [["Kit worth", Fmt.money(sim.loadout_value())],     # tins, notes and scrap are the top bar's (18 Oct, said once)
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]] + _rebuild_lines(),
 			"note": "Tins lose value as prices rise; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
-	if sim.can_move_yard():
-		d["button"] = {"text": "Move the Pitch", "action": _confirm_move, "enabled": true, "primary": sim.lorry_done}
+	if sim.campaign_done():
+		d["button"] = {"text": "Move the Pitch", "action": _confirm_move, "enabled": sim.can_move_yard(), "primary": sim.can_move_yard()}
 	return d
 
 

@@ -5907,4 +5907,10 @@ first. His points for the pass, to design:
   once; the Radio's fourth view, The story: the three beats with his lines (made, then beaten), the hours played at
   each, a beat to come still scrambled, and what's on now - its papers held and wanted, or past the third the depot
   again and what it's for. Smoke checks for the card, the view and the depot again.
+- Done (items 15, 16): a signal's materials are its crew's area's two, the one held fewer of the likelier
+  (1 / (held + MATERIAL_LEAN)); the signal card says what it brings and the chance, a site's Map card leads its
+  conditions with its material once the campaign's done; the decoder calls a crew's area for Kev's AIM_NOTES (the crew,
+  so its materials and its head if one comes). The Pitch's move waits till the reach has stood MOVE_STALL (10) signals
+  run at its band (a faint one doesn't count, the review), the Pitch saying how many; the button shows, shut, till then.
+  - For the balance pass: the bot's moves now wait on the same stall.
 

@@ -1753,6 +1753,7 @@ const MOVE_FIND := 5               # percent magic find a move
 const MOVE_CASH := 5               # percent cash a move
 const MOVE_POINTS := 2             # training points a move, free at the start
 const MOVE_NOTES_KEPT := 0.5
+const MOVE_STALL := 10             # signals run with the reach standing before the Pitch can move (20 Oct, Matt)
 const LADDER_FLOOR_MAX := 3        # a moved yard's ladders start this many depths up at most (the endgame, 7 Oct): the fourth yard opens every site at depth 4
 
 ## The bench's crafting, paid in notes: times the item's tier and its rarity + 1.
@@ -2356,6 +2357,8 @@ const MATERIAL_RUN := 0.08               # a campaign site's run: the chance at 
 const MATERIAL_SIGNAL := 0.20            # a signal's run, at REACH_START
 const MATERIAL_SIGNAL_STEP := 0.01       # and this more a level past it
 const MATERIAL_CAP := 0.5
+const MATERIAL_LEAN := 3.0               # a signal's two by its crew's area: each 1 / (held + this), the fewer held the likelier (20 Oct)
+const AIM_NOTES := 40                    # Kev tunes a signal to a crew's area for this (20 Oct); first figure
 const MATERIAL_MOVE := 0.01              # a move of the Pitch: this more on every run (the new Pitch knows the ground)
 const MATERIAL_HANDFUL := [1, 3]         # a drop
 const MATERIAL_HEAD := [3, 6]            # a crew's head down: theirs, guaranteed

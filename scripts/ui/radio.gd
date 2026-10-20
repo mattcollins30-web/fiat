@@ -37,7 +37,8 @@ const HEAD_ROW_H := 62              # a column's head: its title and a line unde
 const PAPER_H := 66
 const PAPER_GAP := 8
 const PAPERS_MAX := 7               # a page of them; ‹ › past that
-const SLOT_H := 104
+const SLOT_H := 92                 # (104 till the crew row came under the make box, 20 Oct)
+const CREW_H := 40                  # the crew to call: any, or an area's for Kev's notes (20 Oct)
 const SLOT_GAP := 12
 const MAKE_H := 112
 const CARD_H := 470                 # the picked signal
@@ -55,6 +56,7 @@ const KEV_H := 96                  # Kev's pile, under the decoder
 const KEV := Color("f0a868")        # Kev's voice's colour (the radio line's mockup, approved 16 Oct)
 const STORY := Color("8fb3d9")      # Kev's story's papers and signals (the mockup's blue)
 const PAY := Color("62bd8f")
+const MATERIAL := Color("d6c27a")   # the materials' sand (20 Oct)
 
 var head_band := {}
 var sim
@@ -96,6 +98,8 @@ var _make: Label
 var _make_sub: Label
 var _make_sub2: Label
 var _decrypt: Button
+var _crew_buttons: Array = []       # any crew, the Estate's, the Town's, the City's
+var crew_pick := -1                 # the crew to call, -1 any
 var _decrypt_note: Label
 var _kev_box: Panel                 # Kev's pile (16 Oct): a plain paper for notes
 var _kev_head: Label
@@ -240,12 +244,21 @@ func _build_decoder() -> void:
 	_make = UI.label(_make_box, Rect2(14, 32, iw - 28, 30), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_make_sub = UI.label(_make_box, Rect2(14, 62, iw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_make_sub2 = UI.label(_make_box, Rect2(14, 84, iw - 28, 22), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_decrypt = UI.button(_decoder_box, Rect2(14, my + MAKE_H + 14, iw, 56), true)
+	# the crew to call (20 Oct, Matt: "you can't really target farm what you are short of"): any, or an area's for notes
+	var cy: float = my + MAKE_H + 8
+	var cw: float = (iw - 3 * 6) / 4.0
+	for k in range(4):
+		var cb := UI.button(_decoder_box, Rect2(14 + k * (cw + 6), cy, cw, CREW_H), false)
+		cb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+		cb.pressed.connect(_pick_crew.bind(k if k > 0 else -1))
+		_crew_buttons.append(cb)
+	var dy: float = cy + CREW_H + 8
+	_decrypt = UI.button(_decoder_box, Rect2(14, dy, iw, 56), true)
 	_decrypt.text = "Decrypt"
 	_decrypt.pressed.connect(_on_decrypt)
-	_decrypt_note = UI.label(_decoder_box, Rect2(14, my + MAKE_H + 14 + 62, iw, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_decrypt_note = UI.label(_decoder_box, Rect2(14, dy + 62, iw, 26), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
 	# Kev's pile (16 Oct, Matt's playtest: two plain papers and a story piece, and no signal from either)
-	var ky: float = my + MAKE_H + 14 + 62 + 30
+	var ky: float = dy + 62 + 30
 	_kev_box = UI.panel(_decoder_box, Rect2(14, ky, iw, KEV_H), UI.box(Pal.CARD, 7, 1, Pal.CARD_LINE))
 	_kev_head = UI.label(_kev_box, Rect2(12, 6, iw - 24, 20), "KEV'S PILE · PLAIN PAPERS ONLY", "Medium", Pal.CELL_TEXT - 3, KEV, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_kev_line = UI.label(_kev_box, Rect2(12, 26, iw - 24, 22), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -476,6 +489,7 @@ func show_state(s) -> void:
 	var od: Array = sim.signal_odds_now(selected) if not sim.signals.is_empty() else [0.0, true]     # read in main's frame budget
 	var sig := "%s|%s|%d|%d|%d|%d|%s|%s|%d|%s|%s|%s|%d|%s|%s" % [str(chosen), str(have), paper_page, selected, sim.notes, sim.reach, str(sim.signals), str(sim.on_mission()), int(float(od[0]) * 100.0), str(od[1]),
 		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas)]
+	sig += "|%d|%s" % [crew_pick, str(sim.materials)]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -624,7 +638,19 @@ func _show_decoder() -> void:
 		var r: int = sim.reach
 		var never: bool = int(gr["papers"]) == 1 or int(band[1]) < r     # a faint win never moves the reach (20 Oct)
 		UI.fit(_make_sub2, ["Never moves your reach (%d)" % r if never else "A win at your reach (%d) or past moves it" % r, "Reach %d" % r])
-	var why: String = sim.decrypt_block(chosen)
+	# the crew row: lit on the pick; an area's for Kev's notes; a story beat's crew is its own
+	var story_in: bool = chosen.any(func(id): return not _paper(id).is_empty() and sim.story_of(_paper(id)) >= 0)
+	if story_in:
+		crew_pick = -1
+	for k in range(_crew_buttons.size()):
+		var b: Button = _crew_buttons[k]
+		var z: int = k if k > 0 else -1
+		var nm: String = "Any crew" if z < 0 else "%s · %d" % [str(Data.ZONES[z]["name"]).trim_prefix("The "), Data.AIM_NOTES]
+		UI.fit_button(b, [nm, nm.get_slice(" ·", 0)] if z > 0 else [nm, "Any"])
+		b.tooltip_text = "A crew from anywhere" if z < 0 else "Kev tunes it to the %s's crew: %d notes, their area's materials, and their head if one comes" % [str(Data.ZONES[z]["name"]).trim_prefix("The ").to_lower(), Data.AIM_NOTES]
+		b.disabled = story_in or (z > 0 and sim.notes < Data.AIM_NOTES)
+		UI.style_button(b, z == crew_pick)
+	var why: String = sim.decrypt_block(chosen, crew_pick)
 	_decrypt.disabled = why != "" and not decrypting()
 	_decrypt.text = "Skip" if decrypting() else ("Decrypt · %d paper%s" % [chosen.size(), "" if chosen.size() == 1 else "s"] if not chosen.is_empty() else "Decrypt")     # a tap mid-decrypt goes to the end (item 20)
 	var room: int = Data.SIGNALS_HELD - sim.signals.size()
@@ -685,6 +711,14 @@ func _show_signals(od: Array) -> void:
 		chips.append({"forms": ["Extra: a convoy may come", "Extra: a convoy"], "colour": Pal.WARN})
 	if bool(sg.get("sealed", false)):
 		chips.append({"forms": ["Sealed", "Sealed"], "colour": Pal.TEXT_3})
+	# what it brings for the rebuild (20 Oct, Matt: "never clear when said material drops"): its crew's area's two, the
+	# one held fewer of the likelier, and the chance a run brings any
+	var mats: Array = sim.signal_materials(selected)
+	if not (mats[0] as Dictionary).is_empty():
+		var parts_m: Array = []
+		for mk in mats[0]:
+			parts_m.append("%s %d%%" % [sim.thing_name(str(mk)).to_lower(), int(round(float(mats[0][mk]) * 100.0))])
+		chips.append({"forms": ["Brings %s · %d%% a run" % [" · ".join(parts_m), int(round(float(mats[1]) * 100.0))], "Brings %s" % " · ".join(parts_m), "%d%% a run" % int(round(float(mats[1]) * 100.0))], "colour": MATERIAL})
 	if chips.is_empty():
 		chips.append({"forms": ["No codes: a plain fix", "No codes"], "colour": Pal.TEXT_3})
 	if beat >= 0:
@@ -742,6 +776,12 @@ func _toggle_paper(k: int) -> void:
 	acted.emit()
 
 
+func _pick_crew(z: int) -> void:
+	crew_pick = z
+	_shown = ""
+	acted.emit()
+
+
 func _turn(by: int) -> void:
 	paper_page += by
 	_shown = ""
@@ -753,9 +793,10 @@ func _on_decrypt() -> void:
 		end_decrypt()
 		acted.emit()
 		return
-	var sg: Dictionary = sim.decrypt(chosen)
+	var sg: Dictionary = sim.decrypt(chosen, crew_pick)
 	if not sg.is_empty():
 		chosen = []
+		crew_pick = -1
 		selected = sim.signals.size() - 1
 		start_decrypt(sim.signal_at(selected))
 	_shown = ""

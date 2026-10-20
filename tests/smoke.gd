@@ -1173,6 +1173,7 @@ func _finish_campaign(sim) -> void:
 		sim.best_depth[k] = maxi(sim.best_depth[k], 1)
 	for z in range(Data.ZONES.size()):
 		sim.bosses_beaten[z] = true
+	sim.reach_stood = maxi(sim.reach_stood, Data.MOVE_STALL)     # the move's own gate is checked on its own (20 Oct)
 
 
 ## The campaign and the endgame: zones gate on bosses, the depth ladder and
@@ -4117,7 +4118,7 @@ func _pinnacle_checks(main) -> void:
 	sim.extract_now()
 	main.show_room(main.OVERVIEW)
 	main.refresh()
-	_check(main._yard_tree._move.visible and main._yard_tree._foot.text.begins_with("The lorry's beaten"), "the Pitch does not light the move at the lorry: button %s, note '%s'" % [str(main._yard_tree._move.visible), main._yard_tree._foot.text])
+	_check(main._yard_tree._move.visible and main._yard_tree._foot.text.begins_with("The ground's played out") == (sim.reach_stood >= Data.MOVE_STALL), "the Pitch's move at the lorry: button %s, note '%s' (the move waits on the ground, 20 Oct)" % [str(main._yard_tree._move.visible), main._yard_tree._foot.text])
 	_endgame_move_checks(main)
 	# the rules: the keys drive, the pen doubles the notes, the ledger a tier up, the load fills the pack
 	var pace0: float = sim.pace()
@@ -8801,6 +8802,29 @@ func _signal_checks(main) -> void:
 		and sim.decrypt_block(ps.slice(0, 4).map(func(x): return int(x["id"]))) != "",
 		"the decoder's block (20 Oct: one to three): '%s' with none, '%s' one, '%s' two, '%s' three, '%s' four" % [sim.decrypt_block([]), sim.decrypt_block(ids.slice(0, 1)),
 		sim.decrypt_block(ids.slice(0, 2)), sim.decrypt_block(ids), sim.decrypt_block(ps.slice(0, 4).map(func(x): return int(x["id"])))])
+	# the crew to call (20 Oct): an area's for Kev's notes, none without them, any for nothing
+	var notes_was: int = sim.notes
+	sim.notes = 0
+	_check(sim.decrypt_block(ids.slice(0, 1), 2) != "" and sim.decrypt_block(ids.slice(0, 1), -1) == "", "the crew pick with no notes: '%s'" % sim.decrypt_block(ids.slice(0, 1), 2))
+	sim.notes = Data.AIM_NOTES + 5
+	var aimed: Dictionary = sim.decrypt(ids.slice(0, 1), 2)
+	_check(not aimed.is_empty() and int(aimed["zone"]) == 2 and sim.notes == 5, "a signal tuned to the Town's crew: %s, %d notes left" % [str(aimed.get("zone", -1)), sim.notes])
+	if not aimed.is_empty():
+		main.show_room(main.COMMS)
+		main._radio._pick_view("air")
+		main._radio.selected = sim.signals.size() - 1
+		main._radio._shown = ""
+		main.refresh()
+		var chip_text: String = " ".join(main._radio._card_codes.text_nodes().map(func(l): return str(l.text)))
+		_check(chip_text.contains("Brings") or chip_text.contains("a run"), "the signal card doesn't say what it brings: %s" % chip_text)
+		_check(main._radio._crew_buttons.size() == 4 and main._radio._crew_buttons[0].text.begins_with("Any"), "the decoder's crew row: %s" % str(main._radio._crew_buttons.map(func(b): return b.text)))
+		_check_fit(main, "the Radio, a signal's materials and the crew row")
+		sim.signals.pop_back()
+		for b in bases.slice(0, 1):
+			sim.stash_put(sim._plain(Data.PAPER, b))
+		ps = sim.signal_papers()
+		ids = ps.slice(0, 3).map(func(x): return int(x["id"]))
+	sim.notes = notes_was
 	# the grades (20 Oct, Matt): one paper Faint, two Clear, three Full - each band, most codes and extras as agreed
 	for g in range(3):
 		var gb: Array = sim.signal_band(ids.slice(0, g + 1))
@@ -8838,8 +8862,24 @@ func _signal_checks(main) -> void:
 	var faint: Dictionary = sim.decrypt(fp)
 	if not faint.is_empty():
 		var faint_r: int = sim.reach
+		var stood0: int = sim.reach_stood
 		_win_signal(sim, sim.signals.size() - 1)
 		_check(sim.reach == faint_r, "a faint signal won at the first reach moved it %d -> %d" % [faint_r, sim.reach])
+		_check(sim.reach_stood == stood0, "a faint signal counted toward the ground playing out: %d from %d" % [sim.reach_stood, stood0])
+	# the move waits on the ground playing out (20 Oct, Matt: "the last thing you do once progress is truly stalled"):
+	# a signal run that doesn't move the reach counts, one that does starts the count again, ten and it opens
+	sim.reach_stood = Data.MOVE_STALL - 1
+	_check(not sim.can_move_yard() and sim.move_block().begins_with("the ground still gives"), "the move opened before the ground played out: '%s'" % sim.move_block())
+	sim.reach_stood = Data.MOVE_STALL
+	_check(sim.can_move_yard(), "the move didn't open with the reach stood %d signals: '%s'" % [Data.MOVE_STALL, sim.move_block()])
+	main.show_room(main.OVERVIEW)
+	main.refresh()
+	_check(main._yard_tree._move.visible and not main._yard_tree._move.disabled, "the Pitch's move button isn't live, the ground played out")
+	sim.reach_stood = 3
+	main._yard_tree._shown = ""
+	main.refresh()
+	_check(main._yard_tree._move.visible and main._yard_tree._move.disabled and main._yard_tree._foot.text.contains("3 of %d" % Data.MOVE_STALL), "the Pitch doesn't say the ground still gives: '%s', button %s" % [main._yard_tree._foot.text, "off" if main._yard_tree._move.disabled else "on"])
+	_check_fit(main, "the Pitch, the ground still giving")
 	sim.signals = []
 	sim.papers = []
 	for b in bases:
@@ -15403,6 +15443,24 @@ func _rebuild_checks(main) -> void:
 	s._bank_materials(m)
 	_check(s.held_of("glass") == g0 + 2, "the run's materials did not come home: %d from %d" % [s.held_of("glass"), g0])
 	_check(Data.SITE_MATERIAL.size() == Data.TIERS.size() and s.material_at(0) == "" and s.material_at(3) == "copper_wire" and s.material_odds(0) == 0.0 and is_equal_approx(s.material_odds(3), Data.MATERIAL_RUN + Data.MATERIAL_MOVE * s.yard_moves), "the sites' materials are off")
+	# a signal brings its crew's area's two, the one held fewer of the likelier (20 Oct, Matt: flooded in some, none of others)
+	var mat_was: Dictionary = s.materials.duplicate()
+	s.materials["copper_wire"] = 14
+	s.materials["paving"] = 3
+	var msg := {"id": 999, "site": 9, "zone": 1, "depth": 4, "codes": [], "papers": [], "head": false, "convoy": false, "line": 0}
+	s._sig_on(msg)
+	var split: Dictionary = s.material_split(9)
+	s._sig_off()
+	_check(split.size() == 2 and split.has("paving") and split.has("copper_wire") and float(split["paving"]) > float(split["copper_wire"]) and is_equal_approx(float(split["paving"]) + float(split["copper_wire"]), 1.0),
+		"a signal with the Estate's crew on the Services brings %s" % str(split))
+	var tally := {}
+	s._sig_on(msg)
+	for n in range(400):
+		var mk: String = s.material_at(9)
+		tally[mk] = int(tally.get(mk, 0)) + 1
+	s._sig_off()
+	_check(int(tally.get("paving", 0)) > int(tally.get("copper_wire", 0)) and tally.size() == 2, "400 rolls of the Estate's two: %s" % str(tally))
+	s.materials = mat_was
 	s.deploy(3)
 	_check(s.mission != null, "the fixture: no run to die on")
 	if s.mission != null:
@@ -15468,7 +15526,8 @@ func _rebuild_checks(main) -> void:
 	_check(s.shelf_chase().any(func(x): return x["name"] == "The Issuer's Robes"), "the shelf does not wait for the order's uniques")
 	# a move keeps it (Matt's call 1): what's built, what's held, the order's
 	var kept: Array = [s.rebuilt.duplicate(), s.materials.duplicate(), s.key_items.duplicate(), s.order_beaten.duplicate(), s.town_worth()]
-	_check(s.can_move_yard() and s.move_yard(), "the fixture: the Pitch would not move")
+	s.reach_stood = Data.MOVE_STALL              # the ground played out (20 Oct): the move's own gate
+	_check(s.can_move_yard() and s.move_yard(), "the fixture: the Pitch would not move: '%s'" % s.move_block())
 	_check([s.rebuilt, s.materials, s.key_items, s.order_beaten, s.town_worth()] == kept and s.rebuild_open(), "the move lost the rebuild: %s from %s" % [str([s.rebuilt, s.materials, s.key_items, s.order_beaten]), str(kept)])
 	# the screens: the town view and the order tab, shut and open, fit and show every chip
 	var sim = main.sim

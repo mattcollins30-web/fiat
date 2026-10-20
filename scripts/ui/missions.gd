@@ -293,7 +293,13 @@ func show_state(s) -> void:
 		for nm in t["intel"]:
 			if not (nm in names):
 				names.append(nm)                 # the Radio's words first, the sky's after
-		c["intel"].show_rows(word_rows(sim, names, wtiers) if is_open else [], WORD_ROWS)
+		var rows: Array = word_rows(sim, names, wtiers) if is_open else []
+		# what a run here brings for the rebuild (20 Oct, Matt: "never clear when said material drops"), the first row
+		if is_open and sim.campaign_done() and not sim.material_split(i).is_empty():
+			var mk: String = str(sim.material_split(i).keys()[0])
+			var pc: int = int(round(sim.material_odds(i) * 100.0))
+			rows.push_front({"forms": [sim.thing_name(mk)], "colour": MATERIAL_TONE, "tail": ["%d%% a run brings some home, a death too" % pc, "%d%% a run" % pc]})
+		c["intel"].show_rows(rows, WORD_ROWS)
 		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i, false), "CONDITIONS"])     # the weather is the row's (18 Oct, said once)     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
 		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
@@ -382,6 +388,9 @@ func _pick_zone(z: int) -> void:
 
 ## The words as chip rows: the name in its tone (amber harder, green easier),
 ## the effect as the tail, whole then cut by clause with "+N". Shared with the radio.
+const MATERIAL_TONE := Color("d6c27a")     # the materials' sand (the canvas "Fiat – The playtest batch")
+
+
 static func word_rows(sim_v, names: Array, tiers := {}) -> Array:
 	var out := []
 	for nm in names:

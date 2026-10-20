@@ -204,6 +204,7 @@ func show_state(s, purse: Dictionary) -> void:
 	if _move.visible:
 		UI.style_button(_move, bool(purse["button"].get("primary", false)))
 		_move_action = purse["button"]["action"]
+		_move.disabled = not bool(purse["button"].get("enabled", true))
 	var cols: int = sim.yard_cols()
 	for lane in _lanes:
 		_show_lane(lane, cols)

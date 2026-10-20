@@ -114,6 +114,7 @@ var signals: Array = []            # the Radio's signals held (15 Oct): [{id, si
 var reach := Data.REACH_START       # a level: the highest signal beaten, plus one (D3)
 var signal_seq := 0
 var story_beat := 0                 # Kev's story: the beats beaten (0-3); past the third the depot comes round again
+var reach_stood := 0                # signals run since the reach last moved: the Pitch's move waits on MOVE_STALL (20 Oct)
 var story_at := {}                  # a beat beaten -> the hours played then (20 Oct: the story so far, on the Radio)
 var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
@@ -1368,7 +1369,21 @@ func buy_mate() -> bool:
 # ------------------------------------------------------------------ moving the Yard
 
 func can_move_yard() -> bool:
-	return campaign_done() and mission == null and not camp_lost
+	return move_block() == ""
+
+
+## Why the Pitch can't move now, or "" (20 Oct, Matt: "the last thing you do once progress is truly stalled"): the
+## campaign done, nobody out, and the reach stood for MOVE_STALL signals run.
+func move_block() -> String:
+	if not campaign_done():
+		return "the campaign first"
+	if mission != null:
+		return "the runner is out"
+	if camp_lost:
+		return "the camp's lost"
+	if reach_stood < Data.MOVE_STALL:
+		return "the ground still gives: your reach has stood %d of %d signals" % [reach_stood, Data.MOVE_STALL]
+	return ""
 
 
 ## The move's compounding (7 Oct): a moved yard's ladders start at this depth past the first (to LADDER_FLOOR_MAX),
@@ -1443,6 +1458,7 @@ func move_yard(trade := "") -> bool:
 	notes = keep["notes"]
 	scrap = keep["scrap"]                 # scrap moves with the Yard the way notes do (34)
 	yard_moves = keep["moves"]
+	reach_stood = 0                            # a new Pitch, new ground
 	lorries = keep["lorries"]
 	best_dig = keep["best_dig"]
 	signals = keep["signals"]             # the Radio's held signals and your reach move with the Yard (15 Oct)
@@ -4924,19 +4940,41 @@ func mint_tins() -> float:
 	return town_worth() * pay * Data.MINT_TINS * inflation() * (2.0 if held_of("fiat_note") > 0 else 1.0)
 
 
-## The material a site's run brings: its own; a signal or the order's on an Outskirts site, its crew's area's first.
-func material_at(i: int) -> String:
+## What a site's run can bring, as shares: the campaign site its own; a signal or the order's laid on it its crew's
+## area's two (20 Oct, Matt: "flooded in some, barely any of others ... you can't really target farm"), the one held
+## fewer of the likelier - each weighted 1 / (held + MATERIAL_LEAN). {} for none (the Outskirts on the campaign).
+func material_split(i: int) -> Dictionary:
+	if not _sig.is_empty() and int(_sig["site"]) == i:
+		var area: int = maxi(1, int(_sig.get("zone", 1)))
+		var ks: Array = Data.MATERIAL_ORDER.filter(func(k): return int(Data.MATERIALS[k]["area"]) == area)
+		var w := {}
+		var tot := 0.0
+		for k in ks:
+			w[k] = 1.0 / (float(materials.get(k, 0)) + Data.MATERIAL_LEAN)
+			tot += float(w[k])
+		for k in w:
+			w[k] = float(w[k]) / tot
+		return w
 	var kind: String = Data.SITE_MATERIAL[i]
-	if kind == "" and not _sig.is_empty() and int(_sig["site"]) == i:
-		for k in Data.MATERIAL_ORDER:
-			if int(Data.MATERIALS[k]["area"]) == maxi(1, int(_sig["zone"])):
-				return k
-	return kind
+	return {kind: 1.0} if kind != "" else {}
+
+
+## The material a run brings, rolled from its shares (one share: that one; "" for none).
+func material_at(i: int) -> String:
+	var split: Dictionary = material_split(i)
+	if split.size() <= 1:
+		return "" if split.is_empty() else str(split.keys()[0])
+	var x: float = material_rng.randf()
+	for k in split:
+		x -= float(split[k])
+		if x <= 0.0:
+			return str(k)
+	return str(split.keys().back())
 
 
 ## A run's chance at its site's material: MATERIAL_RUN on the campaign, a signal's by its level; a move adds a share.
 func material_odds(i: int) -> float:
-	if material_at(i) == "":
+	if material_split(i).is_empty():
 		return 0.0
 	var base: float = Data.MATERIAL_RUN
 	if not _sig.is_empty() and int(_sig["site"]) == i:
@@ -4951,8 +4989,8 @@ func _bank_materials(m: Dictionary) -> void:
 	var got: Dictionary = m.get("materials", {}).duplicate()
 	var i: int = int(m["tier"])
 	if int(m["kills"]) > 0:
-		var kind: String = material_at(i)
-		if kind != "" and material_rng.randf() < material_odds(i):
+		if not material_split(i).is_empty() and material_rng.randf() < material_odds(i):
+			var kind: String = material_at(i)
 			got[kind] = int(got.get(kind, 0)) + material_rng.randi_range(Data.MATERIAL_HANDFUL[0], Data.MATERIAL_HANDFUL[1])
 		if not _sig.is_empty() and int(_sig["site"]) == i and material_rng.randf() < Data.FUSE_SIGNAL:
 			got["fuses"] = int(got.get("fuses", 0)) + material_rng.randi_range(1, 2)
@@ -5164,7 +5202,7 @@ func signal_papers() -> Array:
 
 
 ## Why three papers can't be decrypted now, or "".
-func decrypt_block(ids: Array) -> String:
+func decrypt_block(ids: Array, crew := -1) -> String:
 	if not room_open("radio"):
 		return "the Radio's shut"
 	if not campaign_done():
@@ -5191,6 +5229,11 @@ func decrypt_block(ids: Array) -> String:
 		return "Kev's papers go in together, the three of a beat"
 	if not beats.has(-1) and not beats.has(story_now()):
 		return "not the part of Kev's story he's on"
+	if crew >= 0 and beats.has(-1):
+		if crew < 1 or crew >= Data.ZONES.size():
+			return "no such crew"
+		if notes < Data.AIM_NOTES:
+			return "%d notes for Kev to tune it" % Data.AIM_NOTES
 	return ""
 
 
@@ -5269,8 +5312,10 @@ func _papers_rare(ids: Array) -> bool:
 
 ## Three papers in, a signal out: the papers spent, the place, the crew, the depth and the extras rolled, each paper's
 ## code on it. {} if it can't be made.
-func decrypt(ids: Array) -> Dictionary:
-	if decrypt_block(ids) != "":
+## `crew`: an area's crew to call (1 the Estate .. 3 the City), Kev tuning it for AIM_NOTES (20 Oct, Matt: "you can't
+## really target farm what you are short of"); -1 any crew, rolled.
+func decrypt(ids: Array, crew := -1) -> Dictionary:
+	if decrypt_block(ids, crew) != "":
 		return {}
 	var names: Array = []
 	var codes: Array = []
@@ -5305,7 +5350,11 @@ func decrypt(ids: Array) -> Dictionary:
 		step += int(Data.FX["atlas/lorrys_route"])     # The lorry's route: the top of the band a depth further, half the time it's reached
 	signal_seq += 1
 	var site: int = rng.randi_range(0, Data.TIERS.size() - 1)
-	var sig := {"id": signal_seq, "site": site, "zone": rng.randi_range(0, Data.ZONES.size() - 1),
+	var zone: int = rng.randi_range(0, Data.ZONES.size() - 1)
+	if crew >= 1:
+		zone = crew
+		notes -= Data.AIM_NOTES
+	var sig := {"id": signal_seq, "site": site, "zone": zone,
 		"depth": depth_for_level(site, maxi(Data.REACH_START, reach + step + up)), "codes": codes, "papers": names,
 		"head": rng.randf() < Data.SIGNAL_HEAD_ODDS * float(grade["extras"]), "convoy": rng.randf() < Data.SIGNAL_CONVOY_ODDS * float(grade["extras"]),
 		"line": rng.randi_range(0, Words.SIGNAL_LINES.size() - 1), "grade": int(grade["papers"])}
@@ -5458,6 +5507,18 @@ func _sig_off() -> void:
 	_sig = {}
 
 
+## What a held signal's run brings: its crew's area's materials as shares, and the chance a run brings one. [{}, 0.0].
+func signal_materials(k: int) -> Array:
+	var sg := signal_at(k)
+	if sg.is_empty() or not _sig.is_empty():
+		return [{}, 0.0]
+	_sig_on(sg)
+	var i: int = int(sg["site"])
+	var out: Array = [material_split(i), material_odds(i)]
+	_sig_off()
+	return out
+
+
 ## A held signal as it would run: its site's figures (effective) with it laid on.
 func signal_read(k: int) -> Dictionary:
 	var sg := signal_at(k)
@@ -5554,7 +5615,10 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
 	if won:
 		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
+	if int(_sig.get("grade", 0)) != 1:
+		reach_stood += 1                       # a signal run at the reach's band (a faint one is under it: it can't say the ground's out, the review)
 	if won and d >= reach and int(_sig.get("grade", 0)) != 1:     # a faint one never moves it (20 Oct; at the first reach its band is the reach)
+		reach_stood = 0
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
 		log_event(Words.SIGNAL_REACH % [d, reach])
@@ -9250,7 +9314,7 @@ func _state() -> Dictionary:
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
+		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "reach_stood": reach_stood, "trades": trades.duplicate(), "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 	}
@@ -9509,6 +9573,7 @@ func load_dict(d: Dictionary) -> void:
 	runs_total = int(d.get("runs_total", 0))
 	wounded_total = int(d.get("wounded_total", 0))
 	yard_moves = int(d.get("yard_moves", 0))
+	reach_stood = int(d.get("reach_stood", 0))
 	trades = Array(d.get("trades", []))
 	insure_next = bool(d.get("insure_next", false))
 	var bb: Array = d.get("bosses_beaten", [])
