@@ -5848,3 +5848,17 @@ Logged, nothing built till the save lands:
     the last one or two can't be seen or picked. Rows to the most a rarity carries (five), laid out with item 13's
     padlocks; a smoke check that every affix on a piece has its row, at every rarity.
 
+### The save's read (20 Oct, docs/test_saves/playtest_20oct.save; docs/balance/playtest.md)
+
+Fire Drifter, 2.7 h played (+1.6 h away), 41 runs: the Bank 29 m (level 10), the Quartermaster 50 m (17), Kev's story
+and the lorry 1.8 h, level 30 2.6 h. No deaths, one wound; every run set off at Safe 100%, regen worn 1.0 HP/s (median).
+28 signals, all three papers, all 25 run won; the reach to 21, no stall. Matt and I agree: too easy end to end, regen
+first. His points for the pass, to design:
+15. Materials after Kev's story: flooded in some, short of others (this save: cable drums 49, copper wire 14, fuses 12,
+    army kit 6, ledgers 4, glass 3, paving 3; nothing rebuilt), and no way to farm what's short - a signal's material is
+    its site's (Data.SITE_MATERIAL: paving, ledgers and army kit one site each, the others two; an Outskirts landing
+    gives its crew's area's first), and the site is random. And it's never said when or where a material drops
+    (material_odds is on no screen).
+16. The Pitch's move: open once the campaign's done (can_move_yard); Matt wants it the last thing you do, once progress
+    has truly stalled and you need what a move gives.
+
