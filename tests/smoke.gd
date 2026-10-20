@@ -190,6 +190,7 @@ func _init() -> void:
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, r + " (start)")
+		_check_clicks(main, r + " (start)")
 	# the bot: deploy to the best open tier the operator can probably survive,
 	# gear up from the stash after each mission, sell commons, treat when hurt
 	var runs := 0
@@ -15915,6 +15916,17 @@ func _map_checks(main) -> void:
 	main.refresh()
 	var g = M._guide
 	_check(g.visible and g.mouse_filter == Control.MOUSE_FILTER_STOP and g.get_index() > mv.get_index() and g.get_global_rect().encloses(mv.get_global_rect()), "the open guide doesn't stand over the map for the click: index %d against %d, stop %s" % [g.get_index(), mv.get_index(), str(g.mouse_filter == Control.MOUSE_FILTER_STOP)])
+	# the guide's tabs and its close take a real click (20 Oct, Matt: "Where to farm and the X button dont work"): its two
+	# tabs' pages were full-size and over them, so a click never got through; the smoke only ever emitted pressed
+	for b in g._tabs + [g._close]:
+		var blocker: String = _click_blocker(main, b)
+		_check(blocker == "", "the guide's '%s' doesn't take the click: %s is over it" % [b.text, blocker])
+	for tab in ["depths", "farm"]:
+		g._pick_tab(tab)
+		main.refresh()
+		_check_clicks(main, "the Site guide (%s)" % tab, g)
+	g._pick_tab("depths")
+	main.refresh()
 	g._close.pressed.emit()
 	main.refresh()
 	var card = M._came
@@ -16121,4 +16133,52 @@ func _win_signal(sim, k: int) -> void:
 		sim.mission["boss"]["alive"] = false
 	sim._clear(sim.mission, sim.mission["t"])
 	sim.extract_now()
+
+
+## What a click at `at` lands on, as Godot's GUI picks it: the last-drawn visible control under the point that doesn't
+## ignore the mouse, its children before it, a clipping control's children only inside it.
+func _click_target(c: Control, at: Vector2) -> Control:
+	if not c.visible:
+		return null
+	if c.clip_contents and not c.get_global_rect().has_point(at):
+		return null
+	for k in range(c.get_child_count() - 1, -1, -1):
+		var ch = c.get_child(k)
+		if ch is Control:
+			var hit: Control = _click_target(ch, at)
+			if hit != null:
+				return hit
+	if c.mouse_filter != Control.MOUSE_FILTER_IGNORE and c.get_global_rect().has_point(at):
+		return c
+	return null
+
+
+## "" when a click on `b`'s middle reaches it (it, or a child of it that passes the click up); else what takes it.
+func _click_blocker(top: Control, b: Control) -> String:
+	var hit: Control = _click_target(top, b.get_global_rect().get_center())
+	if hit == b:
+		return ""
+	if hit != null and b.is_ancestor_of(hit):
+		var n: Node = hit
+		while n != b:
+			if (n as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+				return "%s (%s, inside it, stops the mouse)" % [n.name, n.get_class()]
+			n = n.get_parent()
+		return ""
+	return "nothing" if hit == null else "%s (%s) under %s" % [hit.name, hit.get_class(), hit.get_parent().name]
+
+
+
+
+## Every visible, enabled button that takes the mouse gets a click on its middle (20 Oct: the Site guide's tabs and
+## close were covered by its own pages and never did; the smoke had only ever emitted pressed).
+func _check_clicks(main, where: String, within: Control = null) -> void:
+	var stack: Array = [main if within == null else within]     # `within`: an overlay's own buttons (what's under it is meant to be covered)
+	while not stack.is_empty():
+		var n = stack.pop_back()
+		for ch in n.get_children():
+			stack.append(ch)
+		if n is BaseButton and n.is_visible_in_tree() and n.mouse_filter != Control.MOUSE_FILTER_IGNORE and n.get_global_rect().has_area():     # disabled too: what covers it now covers it once it's on (the review)
+			var bl: String = _click_blocker(main, n)
+			_check(bl == "", "%s: '%s' doesn't take the click: %s is over it" % [where, str(n.get("text")), bl])
 

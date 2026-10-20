@@ -5786,4 +5786,11 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   - For Matt: the smoke's "the takings took the sale" check is wrong when takings already sit above the sale (takings
     is a moving average); it failed once at run 85. Fixed (Matt: "change it now"): the check reads the takings moving
     at a quarter's weight toward the run's sale and cash, exactly; the away bonus held off for it.
+- Done (20 Oct, Matt: "Where to farm and the X button dont work on the site guide"): the guide's two pages were its
+  full size and over its tabs and close, passing the mouse, so a click never reached them (the smoke only emitted
+  pressed). Both pages ignore the mouse now. The smoke clicks for real: _click_target picks the control under a point
+  as Godot does, and every visible button (disabled too) in each room at the start, and the guide's on both tabs, has
+  to take a click on its middle. A sweep before the fix found only the guide's three.
+  - For Matt: "no site read low enough to show its reasons" failed once (run 92): it needs a Risky site and the
+    camp the earlier smoke rolled can read all six high even hurt with no meds. Fix proposed, not made.
 

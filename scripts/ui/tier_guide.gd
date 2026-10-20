@@ -71,11 +71,11 @@ func _init() -> void:
 	UI.panel(self, Rect2(0, HEAD_H, Pal.GRID_W, 1), UI.box(Pal.CARD_LINE, 0))
 	_depths = Control.new()
 	_depths.size = size
-	_depths.mouse_filter = Control.MOUSE_FILTER_PASS
+	_depths.mouse_filter = Control.MOUSE_FILTER_IGNORE     # the page is the guide's full size: passing, it took the tabs' and the close's clicks (20 Oct)
 	add_child(_depths)
 	_farm = Control.new()
 	_farm.size = size
-	_farm.mouse_filter = Control.MOUSE_FILTER_PASS
+	_farm.mouse_filter = Control.MOUSE_FILTER_IGNORE     # the page is the guide's full size: passing, it took the tabs' and the close's clicks (20 Oct)
 	add_child(_farm)
 	_build_depths()
 	visible = false
