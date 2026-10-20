@@ -5884,4 +5884,11 @@ first. His points for the pass, to design:
   rank), its prices and glyphs plain; with every zone open the Map has no cloud left. Smoke checks for both.
 - Found by the words sweep, now really reading the screen: the Radio's empty-signals line ("Three papers ... a campaign
   site") - now one to three papers, "a site".
+- Mockups for Matt (canvas "Fiat – The playtest batch"): the Bench with padlocks, tier ranges and five rows, two jobs
+  for what isn't locked (13, 14); the stash's nine tabs, the sort an icon (12); the Fence's shelf in the Kit's
+  side-by-side (10); the move shut till the reach stands ten signals (16); Kev's line on the came-back card and the
+  story so far on the Radio, the depot again explained (11); a signal's materials on its card, the decoder's paid
+  crew pick, a site's chance on the Map's card (15). Build after his OK.
+- For the balance pass: regen rolls whole numbers on a 1-6 spread over five tiers, so its T1 is already 1 HP/s - the
+  floor itself is the steamroll (Items.tier_range).
 
