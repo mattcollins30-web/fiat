@@ -193,6 +193,7 @@ func _init() -> void:
 	_part_name_checks(main)
 	_rig_layout_checks()
 	_try_on_rounds_checks(main.sim)
+	_pitch_scramble_checks(main)
 	# the bot: deploy to the best open tier the operator can probably survive,
 	# gear up from the stash after each mission, sell commons, treat when hurt
 	var runs := 0
@@ -15898,6 +15899,15 @@ func _map_checks(main) -> void:
 		var at_px := func(p: Vector2) -> float:
 			return mk.get_pixel(int(p.x * mv.size.x / mv.W0 / mv.MASK_DIV), int(p.y * mv.size.y / mv.H0 / mv.MASK_DIV)).r
 		_check(at_px.call(mv.SITE_AT[0]) > 0.5 and at_px.call(mv.SITE_AT[10]) < 0.5 and at_px.call(Vector2(600, 800)) < 0.5, "the cloud's mask is off: the Allotments %.1f, the Hospital %.1f, the moor %.1f" % [at_px.call(mv.SITE_AT[0]), at_px.call(mv.SITE_AT[10]), at_px.call(Vector2(600, 800))])
+		# with the City open too, nothing's left clouded: the moor and the motorway strip clear with it (20 Oct, Matt)
+		var mk3: Image = mv.cloud_mask("1110", mv.size)
+		var all_open: Image = mv.cloud_mask("1111", mv.size)
+		var lit := 0
+		for yy in range(all_open.get_height()):
+			for xx in range(all_open.get_width()):
+				lit += 1 if all_open.get_pixel(xx, yy).r > 0.5 else 0
+		_check(lit == all_open.get_width() * all_open.get_height() and mk3.get_pixel(int(600 * mv.size.x / mv.W0 / mv.MASK_DIV), int(800 * mv.size.y / mv.H0 / mv.MASK_DIV)).r < 0.5,
+			"with every zone open %d of %d cells clear; the moor before the City %.1f" % [lit, all_open.get_width() * all_open.get_height(), mk3.get_pixel(int(600 * mv.size.x / mv.W0 / mv.MASK_DIV), int(800 * mv.size.y / mv.H0 / mv.MASK_DIV)).r])
 		# every pin clear of the cloud's soft edge: 12 px at least from its zone's edges, bar the map's own
 		for i in range(Data.TIERS.size()):
 			var poly: Array = mv.ZONE_SHAPES[int(Data.TIERS[i]["zone"])]["points"]
@@ -16323,4 +16333,34 @@ func _try_on_rounds_checks(sim) -> void:
 	var in_rig: float = sim._try(cand, sim.damage_total)
 	_check(absf(in_stash - in_rig) <= maxf(0.01, in_rig * 0.001) and in_rig > none, "a shotgun's try-on: %.1f with its incendiaries in the stash, %.1f in the rig, %.1f with none" % [in_stash, in_rig, none])
 	sim.load_dict(saved)
+
+
+## The Pitch's rows for a room not open yet read scrambled - name, upgrades' words, rank - and an open one's plain
+## (20 Oct, Matt: "the trees here for radio and the bench should be encrypted until they unlock").
+func _pitch_scramble_checks(main) -> void:
+	var keep = main.sim
+	var was: String = main.room
+	var s = Sim.new()
+	s.start()
+	s.mythics_on = false
+	s.unlocked = ["yard", "clinic"]
+	main.sim = s
+	main.show_room(main.OVERVIEW)
+	main._yard_tree._shown = ""
+	main.refresh()
+	var yt = main._yard_tree
+	for lane in yt._lanes:
+		var key: String = lane["key"]
+		var b: Dictionary = Data.yard_building(key)
+		var open: bool = s.room_open(Sim.building_room(key))
+		var nm: String = str(b["name"])
+		var tip: String = str(lane["tiles"][0][0]["button"].tooltip_text)
+		var pk_name: String = str(b["picks"][0][0]["name"])
+		if open:
+			_check(lane["name"].text in [nm, nm.trim_prefix("The ")] and tip.begins_with(pk_name), "the Pitch's %s, its room open, reads '%s' / '%s'" % [key, lane["name"].text, tip])
+		else:
+			_check(not lane["name"].text.contains(nm.trim_prefix("The ")) and not tip.contains(pk_name) and not lane["rank"]["name"].text.contains(str(b["rank"]["short"])), "the Pitch's %s, its room shut, names it: '%s' / '%s' / '%s'" % [key, lane["name"].text, tip, lane["rank"]["name"].text])
+	main.sim = keep
+	main.show_room(was)
+	main.refresh()
 

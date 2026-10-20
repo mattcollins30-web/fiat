@@ -185,10 +185,14 @@ func _cut_clouds() -> void:
 
 
 ## The mask for a set of open zones ("1100": the first two): each cell white when its middle is in an open zone.
+## With every zone open, the whole map, the ground that's no zone's included.
 static func cloud_mask(key: String, map_size: Vector2) -> Image:
 	var w := int(ceilf(map_size.x / MASK_DIV))
 	var h := int(ceilf(map_size.y / MASK_DIV))
 	var img := Image.create(w, h, false, Image.FORMAT_L8)
+	if key.length() >= ZONE_SHAPES.size() and not key.contains("0"):
+		img.fill(Color.WHITE)                # every zone open, the City last (20 Oct, Matt): the motorway and the moor clear with it
+		return img
 	var polys: Array = []
 	for z in range(mini(key.length(), ZONE_SHAPES.size())):
 		if key[z] == "1":

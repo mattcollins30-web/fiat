@@ -221,7 +221,8 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 	for c in range(COLS - 1):
 		if sim.yard_side(key, c) != "":
 			picked += 1
-	UI.fit(lane["name"], [b["name"], str(b["name"]).trim_prefix("The ")])
+	var en := _en_for(key)
+	UI.fit(lane["name"], [en.call(str(b["name"])), en.call(str(b["name"]).trim_prefix("The "))])
 	UI.fit(lane["count"], ["%d of 5 · rank %d" % [picked, sim.yard_rank(key)], "%d/5 · %d" % [picked, sim.yard_rank(key)]])
 	if cols < COLS:
 		UI.fit(lane["gate"], ["column %d: %s" % [cols + 1, Data.yard_gate(cols, true)], "next: %s" % Data.yard_gate(cols, true), ""])
@@ -248,7 +249,7 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 				look = "open"
 			_style(t, look, sel_here and int(selected.get("col", -1)) == c and selected.get("side", "") == side)
 			t["glyph"].texture = NodeGlyphs.texture(NodeGlyphs.of_pick(pk, key))
-			t["button"].tooltip_text = "%s: %s" % [pk["name"], pk["short"]]
+			t["button"].tooltip_text = "%s: %s" % [en.call(str(pk["name"])), en.call(str(pk["short"]))]
 			if look == "open":
 				cost = _short_money(sim.yard_pick_cost(key, c))
 			elif look == "shut" and not gate_said:
@@ -263,13 +264,20 @@ func _show_lane(lane: Dictionary, cols: int) -> void:
 	var rank: int = sim.yard_rank(key)
 	_style(r, "built" if rank > 0 else ("open" if rank_open else "shut"), sel_here and selected.get("rank", false))
 	r["glyph"].texture = NodeGlyphs.texture("star")
-	r["button"].tooltip_text = "Rank %d: %s a rank" % [rank, b["rank"]["short"]]
-	UI.fit(r["name"], ["◆ Rank %d · %s" % [rank, b["rank"]["short"]], "◆ Rank %d" % rank])
+	r["button"].tooltip_text = "Rank %d: %s a rank" % [rank, en.call(str(b["rank"]["short"]))]
+	UI.fit(r["name"], ["◆ Rank %d · %s" % [rank, en.call(str(b["rank"]["short"]))], "◆ Rank %d" % rank])
 	UI.fit(r["cost"], [_short_money(sim.yard_rank_cost(key)) if rank_open else "opens at %s" % Data.yard_gate(COLS - 1, true), Data.yard_gate(COLS - 1, true)])
 	# five pips: the ranks in this five, all five lit past each fifth
 	var lit: int = 0 if rank == 0 else ((rank - 1) % 5) + 1
 	for k in range(5):
 		(r["pips"][k].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if k < lit else Pal.CARD_LINE
+
+
+## A building whose room isn't open yet reads scrambled, its name and its upgrades' words (20 Oct, Matt: "the trees here
+## for radio and the bench should be encrypted until they unlock"); its prices and its glyphs stay.
+func _en_for(key: String) -> Callable:
+	var known: bool = sim.room_open(sim.building_room(key))
+	return func(t: String) -> String: return t if known else Fmt.scramble(t)
 
 
 ## "16,000 tins", "160k tins": a tile's price, short.
@@ -296,9 +304,10 @@ func _show_strip(purse: Dictionary) -> void:
 	var key: String = selected["key"]
 	var b := Data.yard_building(key)
 	var kind: String = str(Data.SALVAGE_NAMES[b["salvage"]]).to_lower()
+	var en := _en_for(key)
 	if selected.get("rank", false):
-		UI.fit(_title, ["%s · rank %d" % [b["name"], sim.yard_rank(key)], str(b["name"])])
-		UI.fit(_words, ["%s. Bought again and again; each rank dearer than the last." % b["rank"]["words"], str(b["rank"]["words"]) + "."])
+		UI.fit(_title, ["%s · rank %d" % [en.call(str(b["name"])), sim.yard_rank(key)], en.call(str(b["name"]))])
+		UI.fit(_words, ["%s. Bought again and again; each rank dearer than the last." % en.call(str(b["rank"]["words"])), en.call(str(b["rank"]["words"])) + "."])
 		var why_in: String = sim.yard_rank_block(key)
 		var price_in: String = "Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]
 		UI.fit(_other, [price_in + ("" if why_in == "" else " · " + why_in), price_in, "%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]])
@@ -310,9 +319,9 @@ func _show_strip(purse: Dictionary) -> void:
 	var pk: Dictionary = b["picks"][c][0 if side == "a" else 1]
 	var ot: Dictionary = b["picks"][c][1 if side == "a" else 0]
 	var built: String = sim.yard_side(key, c)
-	UI.fit(_title, ["%s · %s, column %d" % [pk["name"], b["name"], c + 1], str(pk["name"])])
-	UI.fit(_words, [str(pk["words"]) + ".", str(pk["short"])])
-	var or_line: String = "Or %s: %s" % [ot["name"], str(ot["words"]).to_lower()]
+	UI.fit(_title, ["%s · %s, column %d" % [en.call(str(pk["name"])), en.call(str(b["name"])), c + 1], en.call(str(pk["name"]))])
+	UI.fit(_words, [en.call(str(pk["words"])) + ".", en.call(str(pk["short"]))])
+	var or_line: String = "Or %s: %s" % [en.call(str(ot["name"])), en.call(str(ot["words"]).to_lower())]
 	if built == side:
 		UI.fit(_other, ["Built · %s; switching to the other costs half the column's price" % or_line, "Built · %s" % or_line, "Built"])
 		_build.text = "Built"
@@ -320,7 +329,7 @@ func _show_strip(purse: Dictionary) -> void:
 		return
 	var why: String = sim.yard_pick_block(key, c, side)
 	var price: String = Fmt.money(sim.yard_pick_cost(key, c)) + ("" if sim.yard_pick_salvage(key, c) == 0 else " and %d %s" % [sim.yard_pick_salvage(key, c), kind])
-	var head: String = ("Refit from %s: %s" % [ot["name"], price]) if built != "" else price
+	var head: String = ("Refit from %s: %s" % [en.call(str(ot["name"])), price]) if built != "" else price
 	var tail: String = "" if why == "" else " · " + why
 	var over: int = sim.yard_refit_over(key, c, side) if built != "" else 0
 	if over > 0:

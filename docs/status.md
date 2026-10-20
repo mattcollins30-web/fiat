@@ -5880,4 +5880,8 @@ first. His points for the pass, to design:
   it checked nothing. The room-wide click sweep is dropped (anchor-laid controls have no size out of the tree); the
   guide's, sized in code, stays. Next: the other checks that filter on it.
 - Flake seen once (run 107): "a ammo_tin's finds are 0 of 300 Ammo" - passed on the rerun; logged with run 92's.
+- Done (items 5, 6): a Pitch row whose room isn't open reads scrambled (its name, its upgrades' names and words, its
+  rank), its prices and glyphs plain; with every zone open the Map has no cloud left. Smoke checks for both.
+- Found by the words sweep, now really reading the screen: the Radio's empty-signals line ("Three papers ... a campaign
+  site") - now one to three papers, "a site".
 
