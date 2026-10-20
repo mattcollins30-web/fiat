@@ -5794,3 +5794,17 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   - For Matt: "no site read low enough to show its reasons" failed once (run 92): it needs a Risky site and the
     camp the earlier smoke rolled can read all six high even hurt with no meds. Fix proposed, not made.
 
+## The playtest batch (20 Oct, Matt: "we're back into batch mode now so nothing gets done until i provide a save file")
+
+Logged, nothing built till the save lands:
+1. The smoke's "no site read low enough to show its reasons" fixture (run 92's one-off fail): parked till after the
+   playtest (Matt).
+2. A gun's compare (the Kit's pick against what's fitted) reads right only with its rounds in the rig; it should read
+   the same with or without them.
+3. Gun sounds, the runner's and the gangs': one shot's sound on every muzzle flash. Now the sound keeps its own cadence,
+   apart from the flashes, the gangs' in their firing pose too; inconsistent by gun (the shotgun's seems right).
+4. For the balance pass: HP regen is too strong in the campaign (1 HP/s on any piece steamrolls; Matt's compare: a
+   Padded jacket, 10 armour and +1 HP/s, read as an upgrade over a Riot suit, 85 armour, at "21% odds"). His options:
+   keep it out of the pool till the Barracks, or tone it down (0.2, 0.4, ... the higher tiers 1, 2); and look at the
+   other strong affixes for a gate the same way.
+
