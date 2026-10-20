@@ -114,6 +114,7 @@ var signals: Array = []            # the Radio's signals held (15 Oct): [{id, si
 var reach := Data.REACH_START       # a level: the highest signal beaten, plus one (D3)
 var signal_seq := 0
 var story_beat := 0                 # Kev's story: the beats beaten (0-3); past the third the depot comes round again
+var story_at := {}                  # a beat beaten -> the hours played then (20 Oct: the story so far, on the Radio)
 var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
 var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
@@ -1423,7 +1424,7 @@ func move_yard(trade := "") -> bool:
 		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
 		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "keepsakes": keepsakes.duplicate(),
 		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
-		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "papers": papers.duplicate(true),
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at.duplicate(), "papers": papers.duplicate(true),
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
 		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
@@ -1449,6 +1450,7 @@ func move_yard(trade := "") -> bool:
 	reach = keep["reach"]
 	signal_seq = keep["signal_seq"]
 	story_beat = keep["story_beat"]
+	story_at = keep.get("story_at", {})
 	materials = keep["materials"]         # the rebuild survives a move (18 Oct, Matt's call 1): what's built, what's held, the order's
 	key_items = keep["key_items"]
 	rebuilt = keep["rebuilt"]
@@ -5561,6 +5563,8 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	var beat: int = int(_sig.get("story", -1))
 	if won and beat >= 0 and beat == story_now():
 		chron("story", {"beat": beat})
+		if not story_at.has(beat):
+			story_at[beat] = played_s / 3600.0
 		log_event(Words.STORY[beat]["won"])
 		story_beat = mini(story_beat + 1, Data.STORY_BEATS.size())
 		if rebuild_open():
@@ -9167,6 +9171,8 @@ func _came_back_line(e: Dictionary) -> void:
 			line = "The deeds, from the Bank's vault"
 		"lorry":
 			line = "The lorry beaten"
+		"story":
+			cb["kev"] = int(e.get("beat", 0))     # Kev's line on the card (20 Oct, Matt: "no pay off")
 		"move":
 			line = "The Pitch moved on"
 	if line != "":
@@ -9241,7 +9247,7 @@ func _state() -> Dictionary:
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
 		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
-		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "papers": papers,
+		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "trades": trades.duplicate(), "insure_next": insure_next,
@@ -9447,6 +9453,10 @@ func load_dict(d: Dictionary) -> void:
 	reach = int(d.get("reach", Data.REACH_START))
 	signal_seq = int(d.get("signal_seq", 0))
 	story_beat = int(d.get("story_beat", 0))
+	story_at = {}
+	var sa: Dictionary = d.get("story_at", {})
+	for kb in sa:
+		story_at[int(kb)] = float(sa[kb])           # the keys come back strings through the save
 	papers = d.get("papers", []).duplicate(true)
 	_sweep_papers()                            # a save from before the pile: its stash's papers move to it
 	materials = _counts(d.get("materials", {}))

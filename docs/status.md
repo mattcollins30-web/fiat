@@ -5903,4 +5903,8 @@ first. His points for the pass, to design:
   beside the pick, the verdict and what changes under it. Smoke checks for each.
 - Found: a script error in a check ends only its function and the smoke still read "all pass" (the craft view's
   checks, runs 118-124, after the padlocks). Fixed the check; tools/smoke.bat now fails the verdict on a script error.
+- Done (item 11): Kev's story's payoff. A beat beaten puts his line on the came-back card, which opens itself for it
+  once; the Radio's fourth view, The story: the three beats with his lines (made, then beaten), the hours played at
+  each, a beat to come still scrambled, and what's on now - its papers held and wanted, or past the third the depot
+  again and what it's for. Smoke checks for the card, the view and the depot again.
 

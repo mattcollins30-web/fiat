@@ -490,11 +490,19 @@ const GUIDE_W := 220               # the tier guide's button, the zone row's las
 const CAME_Y := ZONE_H + 4
 
 
+var _kev_opened := -1               # the beat whose line opened the came-back card
+
+
 func _show_came_back() -> void:
 	_came.show_state(sim)
 	var has: bool = _came.visible
 	if not has:
 		_came_open = false
+	# a beat of Kev's story beaten: the card opens itself, once, so his line is seen (20 Oct, Matt: "no pay off")
+	var kb: int = int(sim.came_back.get("kev", -1)) if has else -1
+	if kb >= 0 and kb != _kev_opened:
+		_came_open = true
+	_kev_opened = kb
 	_came_btn.visible = has
 	if has:
 		var cb: Dictionary = sim.came_back
@@ -509,7 +517,7 @@ func _show_came_back() -> void:
 				_came_btn.text = f
 				break
 		UI.style_button(_came_btn, _came_open, "good")
-	_came.visible = has and _came_open
+	_came.visible = has and _came_open and order_key == ""     # an order's card has the column (20 Oct: the card over it)
 	_came.position = Vector2(Pal.GRID_W - _came.size.x, CAME_Y)
 	_came.move_to_front()
 

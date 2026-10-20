@@ -11,6 +11,10 @@ const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const Words := preload("res://scripts/sim/words.gd")
+const Data := preload("res://scripts/sim/data.gd")
+const KEV := Color("f0a868")        # Kev's voice (the Radio's)
+const STORY := Color("8fb3d9")      # Kev's story (the Radio's)
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
 
 const W := 501                     # a Runs column's width
@@ -109,6 +113,16 @@ func show_state(s) -> void:
 			"worn": "worn", "gone": "sold"}[where]
 		UI.fit(_find_line, ["%s · %s · %s" % [rarity, worth, state], "%s · %s" % [worth, state], worth])
 		_find_line.add_theme_color_override("font_color", Pal.GOOD if state.begins_with("▲") else Pal.TEXT_2)
+	# a beat of Kev's story beaten (20 Oct, Matt: "no pay off"): his line takes the firsts' place, the story's count under it
+	if cb.has("kev"):
+		var beat: int = clampi(int(cb["kev"]), 0, Words.STORY.size() - 1)
+		UI.wrap([_firsts[0], _firsts[1]], str(Words.STORY[beat]["won"]))     # his words say "Kev:" already
+		for k in range(2):
+			_firsts[k].add_theme_color_override("font_color", KEV)
+		var n: int = Data.STORY_BEATS.size()
+		UI.fit(_firsts[2], ["Kev's story %d of %d · the Radio has the story so far" % [mini(beat + 1, n), n], "Kev's story %d of %d" % [mini(beat + 1, n), n]])
+		_firsts[2].add_theme_color_override("font_color", STORY)
+		return
 	# the firsts, then a death's cost
 	var lines: Array = cb.get("firsts", []).duplicate()
 	if deaths > 0:

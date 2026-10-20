@@ -133,7 +133,7 @@ func _outskirts_checks(main) -> void:
 	_check(zn.size() == Data.ZONES.size() and zn[0][0].text == "The Outskirts" and zn[3][0].text == (Data.ZONES[3]["name"] if main.sim.zone_open(3) else Fmt.scramble(str(Data.ZONES[3]["name"]))), "the Map does not draw the four zones, the Outskirts first")     # the drawn Map (19 Oct): areas, not tabs
 	main.show_room(main.COMMS)
 	main.refresh()
-	_check(main._radio._views.size() == 3 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()), "the Radio's map and town buttons do not follow the campaign")
+	_check(main._radio._views.size() == 4 and (main._radio._views[1].disabled == not sim.campaign_done()) and (main._radio._views[2].disabled == not sim.campaign_done()) and (main._radio._views[3].disabled == not sim.campaign_done()), "the Radio's map, town and story buttons do not follow the campaign")
 	_check_fit(main, "Radio (twelve sites)")
 	print("the Outskirts ok: first, three sites, no crew, the Estate after, levels, the old save moved, Runs' four zones, the Radio's map")
 
@@ -9482,6 +9482,32 @@ func _story_checks(main) -> void:
 	sim.extract_now()
 	_check(sim.story_beat == 1 and sim.story_now() == 1, "the story didn't move on: beat %d" % sim.story_beat)
 	_check(not (names[0] in sim.book), "a story paper went in the drawer's book")
+	# the payoff (20 Oct, Matt: "where are the story beats explained or displayed?"): Kev's line on the came-back card,
+	# and the Radio's Kev's story view - the beat beaten with its lines, the next on now, the last's name still on the air
+	_check(int(sim.came_back.get("kev", -1)) == 0 and sim.story_at.has(0), "the beat beaten isn't on the came-back record: %s / %s" % [str(sim.came_back.get("kev", -1)), str(sim.story_at)])
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var cbc = main._missions._came
+	var won0: String = str(Words.STORY[0]["won"])
+	_check(cbc.visible and (cbc._firsts[0].text + " " + cbc._firsts[1].text).begins_with("Kev: ") and cbc._firsts[2].text.begins_with("Kev's story 1 of"), "the came-back card hasn't Kev's line: '%s' / '%s' / '%s'" % [cbc._firsts[0].text, cbc._firsts[1].text, cbc._firsts[2].text])
+	_check_fit(main, "the came-back card, Kev's line")
+	main.show_room(main.COMMS)
+	main._radio._pick_view("story")
+	main._radio._shown = ""
+	main.refresh()
+	var ks = main._radio._story
+	var said: String = " ".join(ks._beats[0]["won"].map(func(l): return str(l.text))).strip_edges()
+	_check(ks.visible and ks._beats[0]["state"].text.begins_with("Beaten") and said == won0 and ks._beats[1]["state"].text.begins_with("On now")
+		and ks._beats[2]["name"].text == "3 · " + Fmt.scramble(str(Data.STORY_BEATS[2]["name"])) and ks._side_head.text.contains(str(Data.STORY_BEATS[1]["name"]).to_upper()),
+		"the story view: '%s' / '%s' / '%s' / '%s' / '%s'" % [ks._beats[0]["state"].text, said, ks._beats[1]["state"].text, ks._beats[2]["name"].text, ks._side_head.text])
+	_check_fit(main, "the Radio, Kev's story")
+	sim.story_beat = 3
+	main._radio._shown = ""
+	main.refresh()
+	_check(ks._side_head.text.begins_with("THE DEPOT AGAIN"), "past the third the story view doesn't say the depot again: '%s'" % ks._side_head.text)
+	_check_fit(main, "the Radio, Kev's story told")
+	sim.story_beat = 1
+	main._radio._pick_view("air")
 	# a signal beaten brings the beat's next paper now and then
 	var before: int = sim.story_held().size()
 	sim._story_find()
@@ -15457,7 +15483,7 @@ func _rebuild_checks(main) -> void:
 	sim.story_beat = 0
 	main._radio._pick_view("town")
 	main.refresh()
-	_check(main._radio.view == "town" and main._radio._town.visible and main._radio._views.size() == 3, "the Radio's town view did not open")
+	_check(main._radio.view == "town" and main._radio._town.visible and main._radio._views.size() == 4, "the Radio's town view did not open")
 	_check(main._radio._town.card("substation")["note"].text == "After Kev's story", "the town before Kev's story: '%s'" % main._radio._town.card("substation")["note"].text)
 	_check_fit(main, "Radio town (shut)")
 	sim.story_beat = Data.STORY_BEATS.size()

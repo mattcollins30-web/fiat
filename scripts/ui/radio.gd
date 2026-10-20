@@ -21,6 +21,7 @@ const Atlas := preload("res://scripts/ui/atlas.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const RadioLine := preload("res://scripts/ui/radio_line.gd")
 const Town := preload("res://scripts/ui/town.gd")
+const KevStory := preload("res://scripts/ui/kev_story.gd")
 
 const PAD := 20
 const HEAD_H := Pal.BAND_H
@@ -61,7 +62,7 @@ var selected := 0                   # the signal picked, by its place on the Rad
 var chosen: Array = []              # the papers in the decoder, by id, in order
 var paper_page := 0
 var view := "air"                   # "air": papers and signals; "map": the Dial; "town": the rebuild (18 Oct)
-const VIEWS := ["air", "map", "town"]
+const VIEWS := ["air", "map", "town", "story"]     # Kev's story its own (20 Oct, Matt: no payoff on screen)
 var _kicker: Label
 var _headline: Label
 var _unit: Label
@@ -72,6 +73,7 @@ var _heard_pill: Panel
 var _air: Control
 var _atlas
 var _town
+var _story                         # Kev's story, the fourth view (20 Oct)
 var _views: Array = []
 var _quiet: Array = []              # nothing on the air: the lines before the Quartermaster
 # the papers
@@ -171,6 +173,9 @@ func _init() -> void:
 	_town.visible = false
 	_town.acted.connect(func(): acted.emit())
 	add_child(_town)
+	_story = KevStory.new()
+	_story.visible = false
+	add_child(_story)
 	for k in range(VIEWS.size()):
 		var vb := UI.button(self, Rect2(Pal.GRID_W - PAD - (VIEWS.size() - k) * (VIEW_W + 6) + 6, VIEW_Y, VIEW_W, VIEW_H), false)
 		vb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 1)
@@ -445,11 +450,18 @@ func show_state(s) -> void:
 	_views[1].disabled = not sim.campaign_done()
 	_views[2].text = "The town" if sim.campaign_done() else "The town · locked"     # the rebuild (18 Oct): its cards read shut till Kev's story is done
 	_views[2].disabled = not sim.campaign_done()
+	_views[3].text = "The story" if sim.campaign_done() else "The story · locked"
+	_views[3].disabled = not sim.campaign_done()
 	for k in range(VIEWS.size()):
 		UI.style_button(_views[k], view == VIEWS[k])
 	_air.visible = view == "air"
 	_atlas.visible = view == "map"
 	_town.visible = view == "town"
+	_story.visible = view == "story"
+	if view == "story":
+		_shown = ""
+		_story.show_state(sim)
+		return
 	if view == "map":
 		_shown = ""
 		_atlas.show_state(sim)
@@ -814,6 +826,8 @@ func text_nodes() -> Array:
 		return _views + _atlas.text_nodes()
 	if view == "town":
 		return _views + _town.text_nodes()
+	if view == "story":
+		return _views + _story.text_nodes()
 	var out: Array = [_kicker, _headline, _unit, _sub, _heard] + _views
 	out.append_array(_chips.text_nodes())
 	for l in _quiet:
@@ -852,4 +866,6 @@ func line_pairs() -> Array:
 		return []
 	if view == "town":
 		return _town.line_pairs()
+	if view == "story":
+		return _story.line_pairs()
 	return [[_headline, _unit]]
