@@ -5807,4 +5807,8 @@ Logged, nothing built till the save lands:
    Padded jacket, 10 armour and +1 HP/s, read as an upgrade over a Riot suit, 85 armour, at "21% odds"). His options:
    keep it out of the pool till the Barracks, or tone it down (0.2, 0.4, ... the higher tiers 1, 2); and look at the
    other strong affixes for a gate the same way.
+5. The Pitch: a row whose room isn't open yet (the Radio's, the Bench's in Matt's shot) reads scrambled, its name and its
+   upgrades' words, till the room unlocks; the same rule as the rail's shut rooms.
+6. The Map: with the City open, the last cloud goes too - the motorway strip along the top and the moor south of the
+   Town (no zone of their own) clear with it, so an all-open map has no cloud left.
 
