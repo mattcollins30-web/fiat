@@ -5811,4 +5811,17 @@ Logged, nothing built till the save lands:
    upgrades' words, till the room unlocks; the same rule as the rail's shut rooms.
 6. The Map: with the City open, the last cloud goes too - the motorway strip along the top and the moor south of the
    Town (no zone of their own) clear with it, so an all-open map has no cloud left.
+7. The Kit: an attachment's name clips in its slot on the gun card (the Hundred-round drum reads "Hundre" in the
+   Magazine slot). Fix the fit, and an assertion over every attachment's name in every slot.
+8. The Pitch: a node's cost climbs on every click of it, without buying (Matt's video, 20 Oct). Fix, and a smoke check
+   that picking a node changes nothing but the pick.
+9. The fight screen's rig shows empty pouches (two, in Matt's shot) while the rig is full on the Kit ("12 of 12
+   pouches filled", Take into the rig off): the two screens count pouches differently in some case. Find the case,
+   make them agree, and assert it.
+10. The Fence's stashed items (the shelf to buy from) want the standard compare against what's fitted, as the Kit has
+    (Matt's shot: the Paramedic's Bum Bag shows a "Fitted now" line and Sidegrade, not the full side-by-side).
+11. Kev's story has no payoff on screen (Matt: two beats done, "where are the story beats explained or displayed once
+    you complete a mission?"). Today: the beat's "made" line on its signal card, a "Kev's story n of 3" chip on the
+    Radio, and the "won" line only in the log ticker. To design with Matt: Kev's won line on the came-back card after
+    a story win, and a place on the Radio to read the beats done (the story so far).
 
