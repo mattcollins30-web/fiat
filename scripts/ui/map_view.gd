@@ -27,12 +27,12 @@ const HIT_R := 30.0                # a click within this of a pin picks it
 const LABEL_W := 300.0
 const LABEL_H := 24.0
 
-## The zones' areas, fills and where their names sit (the canvas's shapes).
+## The zones' areas, fills and where their names sit (20 Oct: traced off Matt's red lines on the painting; the moor south of the Town and the motorway strip are no zone).
 const ZONE_SHAPES := [
-	{"points": [Vector2(0, 483), Vector2(282, 476), Vector2(321, 558), Vector2(410, 628), Vector2(370, 698), Vector2(390, 844), Vector2(0, 844)], "fill": Color("222c25"), "name_at": Vector2(12, 770)},
-	{"points": [Vector2(0, 108), Vector2(243, 58), Vector2(547, 58), Vector2(557, 168), Vector2(459, 208), Vector2(370, 238), Vector2(292, 298), Vector2(282, 468), Vector2(0, 473)], "fill": Color("282b30"), "name_at": Vector2(12, 116)},
-	{"points": [Vector2(292, 328), Vector2(351, 248), Vector2(459, 208), Vector2(547, 198), Vector2(626, 228), Vector2(685, 298), Vector2(685, 418), Vector2(645, 538), Vector2(640, 600), Vector2(650, 668), Vector2(560, 668), Vector2(540, 612), Vector2(488, 618), Vector2(370, 588), Vector2(302, 498)], "fill": Color("2d2a2c"), "name_at": Vector2(400, 300)},
-	{"points": [Vector2(675, 38), Vector2(1000, 38), Vector2(1000, 844), Vector2(842, 844), Vector2(763, 678), Vector2(744, 518), Vector2(753, 328), Vector2(724, 198), Vector2(665, 118)], "fill": Color("262c34"), "name_at": Vector2(770, 450)},
+	{"points": [Vector2(279, 431), Vector2(271, 433), Vector2(264, 459), Vector2(250, 467), Vector2(94, 466), Vector2(0, 457), Vector2(0, 844), Vector2(412, 844), Vector2(420, 798), Vector2(336, 729), Vector2(305, 713), Vector2(310, 701), Vector2(391, 641), Vector2(395, 630), Vector2(336, 578), Vector2(285, 507), Vector2(279, 489)], "fill": Color("222c25"), "name_at": Vector2(12, 770)},
+	{"points": [Vector2(575, 65), Vector2(528, 63), Vector2(457, 53), Vector2(327, 57), Vector2(144, 97), Vector2(94, 117), Vector2(44, 149), Vector2(0, 170), Vector2(0, 454), Vector2(94, 465), Vector2(250, 466), Vector2(262, 461), Vector2(277, 422), Vector2(281, 350), Vector2(288, 322), Vector2(340, 257), Vector2(373, 233), Vector2(449, 193), Vector2(564, 166), Vector2(567, 89)], "fill": Color("282b30"), "name_at": Vector2(12, 180)},
+	{"points": [Vector2(356, 245), Vector2(334, 266), Vector2(287, 327), Vector2(277, 429), Vector2(281, 435), Vector2(280, 489), Vector2(292, 515), Vector2(338, 578), Vector2(381, 613), Vector2(398, 633), Vector2(433, 642), Vector2(512, 646), Vector2(627, 689), Vector2(666, 690), Vector2(651, 593), Vector2(652, 575), Vector2(706, 489), Vector2(721, 451), Vector2(725, 423), Vector2(724, 374), Vector2(717, 341), Vector2(689, 286), Vector2(567, 167), Vector2(449, 194)], "fill": Color("2d2a2c"), "name_at": Vector2(400, 300)},
+	{"points": [Vector2(577, 63), Vector2(568, 89), Vector2(565, 165), Vector2(686, 281), Vector2(715, 331), Vector2(724, 365), Vector2(727, 423), Vector2(723, 451), Vector2(707, 489), Vector2(653, 575), Vector2(652, 593), Vector2(668, 689), Vector2(803, 822), Vector2(809, 844), Vector2(1000, 844), Vector2(1000, 67), Vector2(782, 70)], "fill": Color("262c34"), "name_at": Vector2(770, 450)},
 ]
 ## Each site's pin, by its index in Data.TIERS (the Outskirts' three, the Estate's, the Town's, the City's).
 const SITE_AT := [Vector2(36, 638), Vector2(262, 778), Vector2(223, 628),

@@ -5772,3 +5772,10 @@ Matt exports and plays once all of it is done, and tests it at once; changes the
   The bot makes a one- or two-paper signal only when none is held. The smoke: none to four papers' blocks, each grade's
   band, codes and extras, its odds summing to 1, six faint signals at reach 20 (no head, no convoy, under the reach, two
   codes at most), a faint win at the first reach leaving it, and the decoder with one paper in.
+- Done (20 Oct, Matt's red lines on the painting: "repaint your zones in accordance with the attached"): the four zones
+  retraced off his guide (his image registered to map.png, the areas between the lines filled, each line split
+  between its two sides). The motorway strip along the top and the moor south of the Town stay no zone; the road strip
+  between the Estate and the Outskirts on the west edge went to the Outskirts. The Estate's name moved down to
+  (12, 180), inside its new top edge. Every pin 30+ px inside its zone, the order's three inside theirs.
+  - For Matt: the order's names (the Grid, the Archive, the Mint) still show plain under the clouds on a fresh camp.
+
