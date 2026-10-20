@@ -5861,4 +5861,10 @@ first. His points for the pass, to design:
     (material_odds is on no screen).
 16. The Pitch's move: open once the campaign's done (can_move_yard); Matt wants it the last thing you do, once progress
     has truly stalled and you need what a move gives.
+    Agreed (20 Oct, Matt "agree on all counts"): 15 - a signal's material is its crew's area's, of the two the one held
+    fewer of more likely; the odds on the signal card ("Brings: paving · 32%") and on each campaign site's card; one
+    paid way to aim (a Dial node, or Kev's pile picking a crew's area for notes). 16 - the move shut till the reach has
+    stood for a stretch (say 10 signals with no gain), the Pitch saying the ground's played out when it opens.
+17. Kev's story signals came in 3+ under the reach every time (Matt): STORY_UNDER is 5 (D4: the head at full strength
+    reckoned three levels' worth). For the pass: nearer the reach.
 
