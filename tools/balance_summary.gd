@@ -17,8 +17,22 @@ const FOLDER := "res://docs/balance"
 # the pass's gates (15 Oct, Matt approved; docs/design/balance_gates.md): twice the campaign as it stands, the bot at
 # BOT_PACE of a hand's time (the 13 Oct reads' Bank against Matt's own the next day; his playtest re-measures it)
 const BOT_PACE := 0.85
-const BANK := [1.1, 1.7]        # the Manager beaten, the element builds' median, bot hours: Matt's playtest (16 Oct) 1.3 h by hand, and the Outskirts' 20 min more (17 Oct; was 0.8-1.4)
-const QM := [1.4, 2.1]          # the Quartermaster beaten, the campaign done: the same playtest's 1.5 h by hand and the 20 min (17 Oct; was 1.1-1.8)
+# the pass of 20 Oct (Matt: "Yeah I think they are a good starting place for gates"): the figures by hand, the bot's
+# read against them at BOT_PACE. The bots set the shape (deaths, odds, stalls, builds finishing); Matt's play sets the times.
+const HAND_BANK := [1.5, 2.5]
+const HAND_QM := [3.0, 4.0]
+const HAND_STORY_BY := 13.0
+const HAND_LORRY := [10.0, 13.0]   # one moment with Kev's story (20 Oct, Matt: "One gate, ~10-13 h"): his third beat is the depot, its convoy the lorry
+const BANK := [HAND_BANK[0] * BOT_PACE, HAND_BANK[1] * BOT_PACE]     # the Manager beaten, the element builds' median, bot hours (was 1.1-1.7, 17 Oct)
+const QM := [HAND_QM[0] * BOT_PACE, HAND_QM[1] * BOT_PACE]           # the Quartermaster beaten, the campaign done (was 1.4-2.1)
+const LORRY := [HAND_LORRY[0] * BOT_PACE, HAND_LORRY[1] * BOT_PACE]
+const DEATH_EVERY := [10.0, 30.0]  # a death one run in this many, the bot's (the bots set the shape)
+const FIRST_DEATH_BY := 2.0 * 1.25 # the first by about 2 h by hand (a quarter's slack: "about")
+const WOUNDED := [0.05, 0.30]      # of runs, wounded
+const ODDS_MED := [0.70, 0.90]     # the odds at the gate, the median run
+const REACH_STAND := 1.2           # the endgame's stall: the reach never stands more than about an hour (bot hours)
+const FAINT_WON := 0.85            # a faint signal won about nine in ten
+const FULL_WON := [0.35, 0.65]     # a full one at the reach about a coin flip
 const GK := [0.3, 0.5]          # the Gamekeeper beaten, the Outskirts done (17 Oct, Matt: "about 25 minutes" by hand)
 const GK_LEVEL := 3             # and the runner at least this level leaving them
 const SITE_LEVEL_UNDER := 1     # at a site's first clear, the runner no more than this under the level to wear its gear (17 Oct, Matt)
@@ -33,7 +47,7 @@ const SIGNAL_GAP := 1.0 / 3.0   # from the Radio's opening to hour 12: a signal 
 const REACH_GAP := 3.0          # and the reach never more than 3 h without a level (16 Oct, Matt: was +1 every 45 min)
 const REACH_RATE := 1.0         # and on average a level an hour or better
 const LADDER_TO := 12.0
-const STORY_BY := 10.0          # Kev's three beats done by this hour
+const STORY_BY := HAND_STORY_BY * BOT_PACE     # Kev's three beats done by this hour (bot hours)
 const LV50 := [12.0, 24.0]      # level 50 not before, and by - on the median element read (Matt, 16 Oct)
 const LV50_FLOOR := 8.0         # and no read before this
 const ODDS_FLOOR := 0.6         # survival at every open tier in the kit as it stands
@@ -104,6 +118,7 @@ func _init() -> void:
 	full = full.filter(func(b): return str(b.get("element", "")) != "")
 
 	_pace_rows(rows, full)
+	_pass_rows(rows, full)
 	_ladder_rows(rows, full, reads.filter(func(b): return str(b.get("element", "")) != ""))
 	# 9: no reds
 	if not full.is_empty():
@@ -136,7 +151,7 @@ func _init() -> void:
 		var every: float = (float(bd["runs"]) / float(bd["bails"])) if int(bd.get("bails", 0)) > 0 else 999.0
 		var wnd: float = (float(bd["wounded_runs"]) / float(bd["runs"])) if int(bd["runs"]) > 0 else 0.0
 		shown.append("%s: bails one in %s, wounded %.0f%%" % [bd["build"], ("%.0f" % every) if every < 999.0 else "never", wnd * 100.0])
-	rows.append(["Deaths and wounds", "judged at Matt's playtest (a death one run in 10-30, the first about 2 h 45 by hand; 5-30% wounded)", "the bot, not judged: " + "; ".join(shown), null])
+	rows.append(["Deaths and wounds (shown)", "the bails and wounds a build", "; ".join(shown), null])
 	var reds := 0
 	for r in rows:
 		if r[3] is bool and not r[3]:
@@ -233,6 +248,62 @@ func _feel_rows(rows: Array, el_reads: Array) -> void:
 			elif worst == "":
 				worst = "%s: %s" % [el_reads[j]["build"], r[2]]
 		rows.append([per[0][k][0] + " (as played)", per[0][k][1], ("%d of %d reads green" % [greens, judged]) + ((" · " + worst) if worst != "" else ""), Feel._judged(judged > 0, greens == judged)])
+
+
+## The pass's gates (20 Oct): deaths and wounds, the odds at the gate, the lorry, the endgame's stall, the signals.
+func _pass_rows(rows: Array, full: Array) -> void:
+	if full.is_empty():
+		return
+	var off: Array = []
+	var all_t: Array = []
+	for bd in full:
+		var runs: int = int(bd.get("runs", 0))
+		var deaths: int = int(bd.get("deaths", 0))
+		var every: float = float(runs) / float(deaths) if deaths > 0 else INF
+		var fd: float = float(bd.get("first_death_at", -1.0))
+		all_t.append("%s 1 in %s, first %s" % [bd["build"], ("%.0f" % every) if not is_inf(every) else "never", _hours(fd)])
+		if is_inf(every) or every < DEATH_EVERY[0] or every > DEATH_EVERY[1] or fd < 0.0 or fd > FIRST_DEATH_BY * BOT_PACE:
+			off.append(all_t[-1])
+	rows.append(["P1. Deaths", "a death one run in %.0f-%.0f, the first by %.1f h (bot)" % [DEATH_EVERY[0], DEATH_EVERY[1], FIRST_DEATH_BY * BOT_PACE], ("off: " + "; ".join(off)) if not off.is_empty() else "every build: " + "; ".join(all_t), off.is_empty()])
+	off = []
+	all_t = []
+	for bd in full:
+		var runs: int = int(bd.get("runs", 0))
+		var w: float = float(bd.get("wounded_runs", 0)) / float(runs) if runs > 0 else 0.0
+		all_t.append("%s %.0f%%" % [bd["build"], w * 100.0])
+		if w < WOUNDED[0] or w > WOUNDED[1]:
+			off.append(all_t[-1])
+	rows.append(["P2. Wounds", "%.0f-%.0f%% of runs wounded" % [WOUNDED[0] * 100.0, WOUNDED[1] * 100.0], ("off: " + ", ".join(off)) if not off.is_empty() else "every build: " + ", ".join(all_t), off.is_empty()])
+	var meds: Array = full.map(func(bd): return float(bd.get("odds_median", -1.0))).filter(func(v): return v >= 0.0)
+	var mo: float = _median(meds) if not meds.is_empty() else -1.0
+	rows.append(["P3. Odds at the gate", "the median run went in at %.0f-%.0f%%" % [ODDS_MED[0] * 100.0, ODDS_MED[1] * 100.0], "median %.0f%% (builds %.0f%% to %.0f%%)" % [mo * 100.0, (meds.min() if not meds.is_empty() else -1.0) * 100.0, (meds.max() if not meds.is_empty() else -1.0) * 100.0], mo >= ODDS_MED[0] and mo <= ODDS_MED[1]])
+	var lv: Array = []
+	var never: Array = []
+	for bd in full:
+		if float(bd.get("lorry_at", -1.0)) >= 0.0:
+			lv.append(float(bd["lorry_at"]))
+		else:
+			never.append(bd["build"])
+	var ml: float = _median(lv + never.map(func(_b): return INF)) if not (lv.is_empty() and never.is_empty()) else INF
+	rows.append(["P4. The lorry", "beaten at %.1f-%.1f h, the element builds' median (bot)" % [LORRY[0], LORRY[1]], "median %s%s" % [_hours(-1.0 if is_inf(ml) else ml), ("; never: " + ", ".join(never)) if not never.is_empty() else ""], not is_inf(ml) and ml >= LORRY[0] and ml <= LORRY[1]])
+	off = []
+	all_t = []
+	for bd in full:
+		var st: float = float(bd.get("reach_stand_h", -1.0))
+		all_t.append("%s %s" % [bd["build"], _hours(st)])
+		if st < 0.0 or st > REACH_STAND:
+			off.append(all_t[-1])
+	rows.append(["P5. The endgame's stall", "the reach never stands more than %.1f h, the Radio's opening to the first move (or the read's end)" % REACH_STAND, ("off: " + ", ".join(off)) if not off.is_empty() else "every build: " + ", ".join(all_t), off.is_empty()])
+	var fa := [0, 0]
+	var fu := [0, 0]
+	for bd in full:
+		for k in [0, 1]:
+			fa[k] += int(bd.get("faint", [0, 0])[k])
+			fu[k] += int(bd.get("full_at_reach", [0, 0])[k])
+	var fa_r: float = float(fa[1]) / float(fa[0]) if fa[0] > 0 else -1.0
+	var fu_r: float = float(fu[1]) / float(fu[0]) if fu[0] > 0 else -1.0
+	rows.append(["P6. The signals", "faint won %.0f%% or more; full at the reach won %.0f-%.0f%%" % [FAINT_WON * 100.0, FULL_WON[0] * 100.0, FULL_WON[1] * 100.0], "faint %d of %d (%.0f%%); full at the reach %d of %d (%.0f%%)" % [fa[1], fa[0], fa_r * 100.0, fu[1], fu[0], fu_r * 100.0],
+		fa[0] > 0 and fu[0] > 0 and fa_r >= FAINT_WON and fu_r >= FULL_WON[0] and fu_r <= FULL_WON[1]])
 
 
 ## Gates 1-5: the Manager, the Quartermaster, the builds' band, the level at him, level 30 after him.
@@ -512,7 +583,7 @@ func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
-	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk"]:
+	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk", "odds_median"]:
 		if not gs[0].has(key):
 			continue
 		# by their median, a never counted as later than any (the review, 15 Oct: one read of two that never got there
@@ -537,6 +608,18 @@ func _merged(gs: Array) -> Dictionary:
 		for g in gs:
 			n += int(g.get(key, 0))
 		m[key] = n
+	# a never-more-than gate takes the worst read (the review): the longest stand, the earliest first death; -1 is never
+	var stands: Array = gs.map(func(g): return float(g.get("reach_stand_h", -1.0)))
+	m["reach_stand_h"] = -1.0 if stands.any(func(v): return v < 0.0) else stands.max()
+	var firsts: Array = gs.map(func(g): return float(g.get("first_death_at", -1.0))).filter(func(v): return v >= 0.0)
+	m["first_death_at"] = firsts.min() if not firsts.is_empty() else -1.0
+	for key in ["faint", "full_at_reach"]:
+		var sum := [0, 0]
+		for g in gs:
+			var v: Array = g.get(key, [0, 0])
+			sum[0] += int(v[0])
+			sum[1] += int(v[1])
+		m[key] = sum
 	m["services_depth"] = gs.map(func(g): return int(g.get("services_depth", 0))).max()
 	m["loose_unique_by_qm"] = gs.filter(func(g): return bool(g.get("loose_unique_by_qm", false))).size() * 2 > gs.size()     # most of its reads
 	m["reach"] = int(_median(gs.map(func(g): return float(g.get("reach", 0)))))

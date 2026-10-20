@@ -254,7 +254,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	var g := {"build": build, "class": cls, "element": element, "hours": hours, "bank_at": -1.0, "keystone_at": -1.0, "capstone_at": -1.0,
 		"runs": 0, "deaths": 0, "wounded_runs": 0, "timeouts": 0, "depth_clears": [], "bought_bench": -1.0,
 		# the pass's gates (15 Oct, docs/design/balance_gates.md): the heads, the levels, the Radio's ladder, Kev's story, staying
-		"manager_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
+		"manager_at": -1.0, "first_death_at": -1.0, "qm_at": -1.0, "level_at_qm": -1, "lv30_at": -1.0, "lv50_at": -1.0, "radio_at": -1.0, "story_at": -1.0,
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
@@ -296,6 +296,8 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 				g["timeouts"] += 1                # out of time (9 Oct): the clock's gate
 			if sim.operators_lost > lost_before:
 				g["deaths"] += 1
+				if float(g.get("first_death_at", -1.0)) < 0.0:
+					g["first_death_at"] = snappedf(sim.elapsed / 3600.0, 0.01)     # the pass's gate (20 Oct), bot hours as every _at here (the review: played_s never moves in a read)
 			elif bool(r.get("wounded", false)):
 				g["wounded_runs"] += 1
 			mark_items += sim.stash.size() - items_before
@@ -437,6 +439,32 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	g["story_beat"] = sim.story_beat
 	g["signals_made"] = bot.bought.filter(func(x): return str(x[1]).begins_with("a signal")).size()
 	g["papers_held"] = sim.signal_papers().size()
+	# the pass's gates (20 Oct, Matt): the signals by grade - a faint one won about nine in ten, a full one at the reach
+	# about a coin flip - and the reach's longest stand over the whole read (the endgame's stall, about an hour), and
+	# the odds the runs went in at (the median about 70-90%)
+	var sg_faint := [0, 0]
+	var sg_full := [0, 0]
+	for e in sim.chronicle:
+		if str(e.get("k", "")) != "signal_done" or e.get("story", false):
+			continue
+		var gr: int = int(e.get("grade", 0))
+		if gr == 1:
+			sg_faint[0] += 1
+			sg_faint[1] += 1 if e.get("won", false) else 0
+		elif gr == 3 and int(e.get("level", 0)) >= int(e.get("reach", 0)):
+			sg_full[0] += 1
+			sg_full[1] += 1 if e.get("won", false) else 0
+	g["faint"] = sg_faint
+	g["full_at_reach"] = sg_full
+	var stand_to: float = sim.elapsed / 3600.0 if moved.is_empty() else float(moved[0][0]) / 3600.0     # to the first move: the move is the stall's answer, and the campaign again isn't a stand
+	g["reach_stand_h"] = _longest_gap(float(g["radio_at"]), stand_to, g["reach_log"].map(func(x): return float(x[0]))) if float(g["radio_at"]) >= 0.0 else -1.0
+	var gate_odds: Array = []
+	for e in sim.chronicle:
+		if str(e.get("k", "")) == "run" and e.has("odds") and float(e["odds"]) >= 0.0:
+			gate_odds.append(float(e["odds"]))
+	gate_odds.sort()
+	@warning_ignore("integer_division")
+	g["odds_median"] = gate_odds[gate_odds.size() / 2] if not gate_odds.is_empty() else -1.0
 	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
 	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
 	if first_ladder.is_empty() and sim.campaign_done():

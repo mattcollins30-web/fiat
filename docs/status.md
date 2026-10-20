@@ -5923,3 +5923,46 @@ changes, or straight on with his playtests. Bot balance passes don't repeat: thi
 starting place) is the only one. The bots set the shape (deaths, odds, stalls, every build finishing); Matt's play sets
 the times.
 
+
+## The balance pass (20 Oct, Matt: "Agreed - go for it")
+
+The gates (hand hours; the bot's read at BOT_PACE): the Bank 1.5-2.5 h; the campaign 3-4 h; a death one run in 10-30,
+the first by about 2 h; 5-30% of runs wounded; the median run in at 70-90%; Kev's story by about 10 h; the lorry about
+16 h; the reach never standing more than about 1 h; faint signals about 90% won, full ones at the reach a coin flip;
+every class's elements finish, plain builds just finish. The levers in order: regen, STORY_UNDER, the campaign's
+difficulty and length, the endgame placeholders.
+
+- Done: regen rolls tenths. The affix runs 0.2 (T1) to 0.9-1.0 (T5) HP/s at the campaign's levels, the item level's
+  edge on top past it (min 2, max 10, "div" 10 in its def; Items.fig/is_tenths); the fixed ones scaled with it - the
+  Vicar's Thermos 3 to 1.0, the Ambulance's overalls 2 to 0.5, its three-piece 2 to 0.5, the Council's three-piece 4
+  to 1.0. Its line, the Bench's range and the Kit's compare read "0.4". Smoke checks for the roll, the row, the compare.
+- Done: STORY_UNDER 5 to 2 (Kev's signals came 3+ under the reach).
+- The reads: tests/balance.gd now records the signals by grade (a faint one won, a full one at the reach), the reach's
+  longest stand over the whole read, the median run's odds at the gate and the first death; the summary judges the
+  agreed gates as P1-P6 with the hand figures times BOT_PACE. The signal's record carries its grade and the reach.
+- The baseline read (24 h, two reads, regen and STORY_UNDER in): the Bank 1.1 h and the campaign 1.8 h on the bot (Matt
+  29 min and 50 min by hand: the bot is the slower here, it farms where he walked through), no deaths, 1-4% wounded,
+  every run at 100%, the story and the lorry at 4.7 h, the reach standing 5-16 h once the kit stops growing.
+- Found: the story and the lorry are one moment - Kev's third beat is the depot, its convoy the lorry. Matt (20 Oct):
+  "One gate, ~10-13 h". The summary's story gate is 13 h, the lorry 10-13 h, both by hand.
+- Done: CAMPAIGN_HOSTILE by zone, [0.9, 1.0, 1.15, 1.05] (the Outskirts as they were). Six-hour reads, one a build:
+  1.5 everywhere killed eleven builds of fifteen at level 1; [0.9, 1.0, 1.25, 1.4] the Bank 2.1 h, five short of the
+  Quartermaster; [.., 1.15, 1.2] the Bank 1.6 h, three short; [.., 1.15, 1.05] the Bank 1.3 h, the campaign 3.0 h, all
+  ten through, 2-21% wounded.
+- Done: STORY_DROP 0.5 to 0.15 (0.3 still had the story at 4.5-6 h).
+- The bot (tests/bot.gd): COIN 0.5 - three held and none at PUSH, a full signal at the reach is run at a coin flip
+  before one's binned (the gate's own figure); the move once the lorry's ever been beaten and the move's open (the
+  ground played out), not only at level 50 (the review: lorry_done is a yard's and never comes back after a move).
+- The pass's read (24 h, two reads a build; docs/balance/summary.md, 18 RED): the Bank 2.0 h and the campaign 3.0 h on
+  the bot, both green (1.3-2.1 and 2.5-3.4: the hand gates at 0.85). Still red:
+  - The builds' band (1.7 h to 9.3 h) and the levels: the bot farms the campaign far over its gear (the Bank at 20,
+    gear 10), where Matt walked it at his gear's level.
+  - Deaths (four in 30 reads), wounds over the whole read 1-4% (2-21% on the six-hour reads: the campaign's), the odds
+    at 100%: the bot only runs what reads PUSH (0.88) or a first clear at FIRST (0.65), so these three are its policy's
+    as much as the game's - judged at Matt's playtest.
+  - The endgame's wall (P5, P4, 7, 8): the reach stands 4-16 h. The kit stops growing at the reach's 30-45 (no upgrade
+    for 14 h on one read, its cash piling), the signals two under the reach read 0%, nothing runs, so the move never
+    opens (it counts signals run). STORY_DROP 0.15 then left the story and its lorry never on eight builds of ten:
+    back to 0.3, so it lands before the wall. The wall is the next loop's: the endgame placeholders (materials, the
+    Bench's prices) and how cash buys power past the campaign.
+  - Faint signals: the bot never makes one with three papers in hand, so it's unread.

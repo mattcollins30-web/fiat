@@ -393,7 +393,22 @@ static func roll_affix(a: Dictionary, ilvl_v: int, rng: RandomNumberGenerator, t
 	var t := tier if tier > 0 else roll_tier(ilvl_v, rng, rarity_cap_v)
 	var r := tier_range(a, t)
 	var lo: int = int(ceil((r[0] + r[1]) / 2.0)) if top else int(r[0])      # the Bench's Masterwork (9 Oct): the top half of the tier
-	return {"stat": a["stat"], "value": int(round(rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl_v))), "tier": t}
+	var raw: float = rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl_v)
+	var div := float(a.get("div", 1))
+	var v: Variant = int(round(raw))
+	if div > 1.0:
+		v = snappedf(raw / div, 0.1)
+	return {"stat": a["stat"], "value": v, "tier": t}
+
+
+## A stat's figures are tenths (regen, the pass of 20 Oct): its def's "div" over 1.
+static func is_tenths(stat: String) -> bool:
+	return float(affix_def(stat).get("div", 1)) > 1.0
+
+
+## An affix figure as a line shows it: "0.4" for a tenths stat, "15" for the rest.
+static func fig(stat: String, v: float) -> String:
+	return ("%.1f" % v) if is_tenths(stat) else ("%d" % int(round(v)))
 
 
 ## The deep drop's edge (7 Oct): an affix's value times this at an item level - nothing to ILVL_FROM, ILVL_SCALE a level
@@ -406,7 +421,10 @@ static func ilvl_mult(ilvl_v: int) -> float:
 static func _scaled(affixes: Array, ilvl_v: int) -> Array:
 	var out: Array = affixes.duplicate(true)
 	for a in out:
-		a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl_v)))
+		if is_tenths(str(a["stat"])):
+			a["value"] = snappedf(float(a["value"]) * ilvl_mult(ilvl_v), 0.1)
+		else:
+			a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl_v)))
 	return out
 
 
@@ -823,7 +841,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 		if label == "pouch" and int(a["value"]) != 1:
 			label = "pouches"                    # "+1 pouch", "+2 pouches" (18 Oct)
 		var plus: String = "" if a["stat"] == "crowd_less_pct" else "+"     # "8% less damage with three or more on you"
-		line = "%s%d%s %s" % [plus, a["value"], "%" if pct else "", label]
+		line = "%s%s%s %s" % [plus, fig(str(a["stat"]), float(a["value"])), "%" if pct else "", label]
 		if tiers and a.has("tier"):
 			line += " · T%d" % int(a["tier"])
 		out.append(line)

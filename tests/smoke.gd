@@ -1879,6 +1879,24 @@ func _craft_view_checks(main) -> void:
 	_check(ws._piece_chips.words(1) == "Item level %d" % Items.ilvl(piece), "the piece card's level chip is wrong: %s" % ws._piece_chips.words(1))
 	_check(ws._affix_rows[0]["tag"].text.begins_with("T2 ") and ws._affix_rows[0]["tag"].text.contains("–") and ws._affix_rows[0]["label"].text.begins_with("+20"), "the first affix row does not read the affix and its tier: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
 	_check(ws._affix_rows[2]["label"].text == "No third affix", "the missing third affix's row is off: %s" % ws._affix_rows[2]["label"].text)
+	# regen rolls in tenths (the pass, 20 Oct): T1 0.2, T5 0.9-1.0 at the campaign's levels; the row, its range and a compare read them so
+	var rg_def: Dictionary = Items.affix_def("regen")
+	var rg_rng := RandomNumberGenerator.new()
+	rg_rng.seed = 7
+	var rg1: Dictionary = Items.roll_affix(rg_def, 1, rg_rng, 1)
+	var rg5: Dictionary = Items.roll_affix(rg_def, 1, rg_rng, 5)
+	_check(typeof(rg1["value"]) == TYPE_FLOAT and is_equal_approx(float(rg1["value"]), 0.2) and float(rg5["value"]) >= 0.9 and float(rg5["value"]) <= 1.0, "regen does not roll in tenths: T1 %s, T5 %s" % [str(rg1["value"]), str(rg5["value"])])
+	var rg_hold: Array = piece["affixes"].duplicate(true)
+	piece["affixes"][0] = {"stat": "regen", "value": 0.4, "tier": 2}
+	ws._shown = ""
+	ws.show_state(sim)
+	_check(ws._affix_rows[0]["label"].text.begins_with("+0.4") and ws._affix_rows[0]["tag"].text.begins_with("T2") and (ws._affix_rows[0]["tag"].text == "T2" or ws._affix_rows[0]["tag"].text.contains(".")), "a regen row does not read in tenths: '%s' %s" % [ws._affix_rows[0]["label"].text, ws._affix_rows[0]["tag"].text])
+	var rg_other: Dictionary = piece.duplicate(true)
+	rg_other["affixes"][0] = {"stat": "regen", "value": 0.7, "tier": 4}
+	_check(PickPanel.deltas_of(rg_other, piece).any(func(d): return str(d[1]) == "0.3 HP/s"), "a regen compare does not read in tenths: %s" % str(PickPanel.deltas_of(rg_other, piece)))
+	piece["affixes"] = rg_hold
+	ws._shown = ""
+	ws.show_state(sim)
 	_check(ws._affix_buttons[0].visible and ws._affix_buttons[0].text.contains("tin") and not ws._affix_buttons[0].disabled, "the re-roll values button is not priced and live: %s" % ws._affix_buttons[0].text)
 	_check(ws._job_tiles[ws.JOBS.find("bump")]["price"].text.ends_with("notes"), "the level tile is not priced in notes: %s" % ws._job_tiles[ws.JOBS.find("bump")]["price"].text)
 	_check(ws._job_tiles[ws.JOBS.find("scrap")]["price"].text.begins_with("+") and ws._job_tiles[ws.JOBS.find("scrap")]["price"].text.ends_with("scrap"), "the scrap tile does not say what it gives: %s" % ws._job_tiles[ws.JOBS.find("scrap")]["price"].text)
@@ -3696,7 +3714,7 @@ func _set_checks(main) -> void:
 	_check(not sim.has_set_rule("council"), "the Council's rule came at two")
 	sim.equipped["Backpack"] = Items.roll_set_piece("The Council's", council["pieces"][2], sim.rng)
 	sim.equipped["Charm"] = Items.roll_set_piece("The Council's", council["pieces"][3], sim.rng)
-	_check(sim.set_count("The Council's") == 4 and sim.has_set_rule("council") and is_equal_approx(sim.set_stat("regen"), 4.0) and sim._affix_sum("search_pct") >= 30.0 + 8.0, "the full council's did not give it all: rule %s regen %.0f search %.0f" % [str(sim.has_set_rule("council")), sim.set_stat("regen"), sim._affix_sum("search_pct")])
+	_check(sim.set_count("The Council's") == 4 and sim.has_set_rule("council") and is_equal_approx(sim.set_stat("regen"), 1.0) and sim._affix_sum("search_pct") >= 30.0 + 8.0, "the full council's did not give it all: rule %s regen %.1f search %.0f" % [str(sim.has_set_rule("council")), sim.set_stat("regen"), sim._affix_sum("search_pct")])
 	# the panel's line, in the set's tint
 	main.show_room(main.ARMOURY)
 	main._armoury._pick_slot("Armour")

@@ -838,7 +838,7 @@ const UNIQUES := [
 	{"name": "A Traffic Warden's Hat", "slot": "Helmet", "base": "Hard hat", "rule": "wardens_hat", "band": "levelling", "range": [2, 5],
 		"words": "Every gang arrives one man short; kills drop double notes", "short": "Gangs one short, notes ×2", "affixes": [{"stat": "notes_pct", "value": 25}, {"stat": "armour", "value": 10}]},
 	{"name": "The Vicar's Thermos", "slot": "Charm", "base": "Casino chip", "rule": "vicars_thermos", "band": "chase", "range": [6, 9], "site": 10,
-		"words": "A burn on you heals you instead; your fire resist is 0", "short": "Burns heal you", "affixes": [{"stat": "regen", "value": 3}, {"stat": "fire_pct", "value": 20}]},
+		"words": "A burn on you heals you instead; your fire resist is 0", "short": "Burns heal you", "affixes": [{"stat": "regen", "value": 1.0}, {"stat": "fire_pct", "value": 20}]},
 	{"name": "The Scout Leader's Whistle", "slot": "Charm", "base": "Rabbit's foot", "rule": "scouts_whistle", "band": "levelling", "range": [1, 4],
 		"words": "Every gang after the first is one man", "short": "Gangs after the first: 1 man", "affixes": [{"stat": "patrol_pct", "value": 10}, {"stat": "loot_pct", "value": 10}]},
 	{"name": "The Sergeant's Whistle", "slot": "Helmet", "base": "Composite helmet", "rule": "sergeants_whistle", "band": "chase", "range": [7, 9], "site": 4,
@@ -1090,7 +1090,7 @@ const SETS := [
 			{"name": "Breathing set", "slot": "Rig", "base": "Medic's harness", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "poison_res", "value": 25}]},
 		],
 		"bonuses": {2: {"stats": {"fire_res": 40}, "words": "Fire resist +40%"},
-			3: {"stats": {"all_res": 15, "regen": 2}, "words": "All resists +15%, +2 HP a second"}}},
+			3: {"stats": {"all_res": 15, "regen": 0.5}, "words": "All resists +15%, +0.5 HP a second"}}},
 	{"name": "The Council's", "depth": 5, "words": "Parks, highways, pest control: the Council's gear, orange and stamped.",
 		"pieces": [
 			{"name": "Council hi-vis", "slot": "Armour", "base": "Stab vest", "affixes": [{"stat": "armour", "value": 10}, {"stat": "hp", "value": 12}]},
@@ -1098,12 +1098,12 @@ const SETS := [
 			{"name": "Council rucksack", "slot": "Backpack", "base": "School bag", "affixes": [{"stat": "capacity", "value": 4}, {"stat": "loot_pct", "value": 10}]},
 			{"name": "Council lanyard", "slot": "Charm", "base": "Lucky penny", "affixes": [{"stat": "notes_pct", "value": 15}, {"stat": "rarity_pct", "value": 6}]},
 		],
-		"bonuses": {2: {"stats": {"all_res": 20}, "words": "All resists +20%"}, 3: {"stats": {"regen": 4}, "words": "+4 HP a second"},
+		"bonuses": {2: {"stats": {"all_res": 20}, "words": "All resists +20%"}, 3: {"stats": {"regen": 1.0}, "words": "+1 HP a second"},
 			4: {"stats": {"search_pct": 30, "notes_pct": 50}, "rule": "council", "words": "Searches 30% quicker, notes +50%, every locked crate opens"}}},
 	{"name": "The Ambulance's", "depth": 8, "words": "A crew's kit from the one ambulance that kept going.",
 		"pieces": [
 			{"name": "Ambulance rig", "slot": "Rig", "base": "Paramedic's rig", "affixes": [{"stat": "med_cap", "value": 2}, {"stat": "med_speed_pct", "value": 15}]},
-			{"name": "Green overalls", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "hp", "value": 25}, {"stat": "regen", "value": 2}]},
+			{"name": "Green overalls", "slot": "Armour", "base": "Padded jacket", "affixes": [{"stat": "hp", "value": 25}, {"stat": "regen", "value": 0.5}]},
 			{"name": "Crew helmet", "slot": "Helmet", "base": "Cycle helmet", "affixes": [{"stat": "armour", "value": 10}, {"stat": "med_speed_pct", "value": 10}]},
 		],
 		"bonuses": {2: {"stats": {"med_speed_pct": 50}, "words": "Meds 50% quicker"},
@@ -1164,7 +1164,7 @@ const TIER_WEIGHT := [8.0, 5.0, 3.0, 2.0, 1.0]  # T1 .. T5: the better, the rare
 const AFFIXES := [
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 4, "max": 24, "slots": ["Primary", "Secondary"]},
 	# the body: regen, life on kill, armour as a share, less from a crowd
-	{"stat": "regen", "label": "HP a second", "short": "HP/s", "min": 1, "max": 6, "slots": ["Armour", "Helmet", "Charm"], "flat": true},
+	{"stat": "regen", "label": "HP a second", "short": "HP/s", "min": 2, "max": 10, "div": 10, "slots": ["Armour", "Helmet", "Charm"], "flat": true},     # tenths (the pass, 20 Oct): T1 0.2 to T5 0.9-1.0 HP/s, the item level's edge on top
 	{"stat": "life_per_kill", "label": "HP a kill", "short": "HP/kill", "min": 2, "max": 12, "slots": ["Primary", "Secondary", "Helmet"], "flat": true},
 	# armour % short "armour", not "arm": that's the flat armour's, and "5% arm" by "3 arm" read the same (13 Oct)
 	{"stat": "armour_pct", "label": "armour", "short": "armour", "min": 3, "max": 18, "slots": ["Armour", "Helmet"]},
@@ -2153,7 +2153,7 @@ static func craft_of(key: String) -> Dictionary:
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.
-const CAMPAIGN_HOSTILE := 0.9     # D20: the campaign's (depth 1) HP and fire - with XP_SCALE 2.9 the Bank came at 1.9 h, the gate 1.1-1.6
+const CAMPAIGN_HOSTILE := [0.9, 1.0, 1.15, 1.05]     # by zone (the pass, 20 Oct): the Outskirts as they were, the Town and the City harder (six-hour reads: Town 1.15 and City 1.2 left three builds of ten short of the Quartermaster; 1.25 and 1.4 five) - 0.9 everywhere had the Bank at 29 min by hand, every run at 100% and no death in 41; 1.5 everywhere killed eleven builds of fifteen at level 1. D20: 0.9, with XP_SCALE 2.9 the Bank at 1.9 h
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
 const DEPTH_DROP := 0.03
@@ -2305,7 +2305,7 @@ const KEV_RUNS := 2.0
 const KEV_FLOOR := 10
 const SIGNALS_HELD := 3
 const REACH_START := 10                      # a level: the campaign tops at 9 (the Barracks at depth 1); the first signal's at 10
-const STORY_UNDER := 5                       # Kev's beats come this many levels under your reach (D4: the head at full strength is
+const STORY_UNDER := 2                       # Kev's beats come this many levels under your reach (D4: the head at full strength is
                                              # three levels' worth, and the odds fall from 100% to 0% in two; at the reach no build won one)
 ## The depth round the reach: [step, odds]. D2 (15 Oct, Matt: "go with your recommendation"): the band reaches three
 ## under the reach, so there's always one to win for the gear (the baseline: every build stalled with three it couldn't
@@ -2335,7 +2335,7 @@ const STORY_BEATS := [
 	{"key": "army", "name": "Whose they are", "site": 11, "zone": 3},
 	{"key": "depot", "name": "The depot", "site": 9, "zone": 3, "convoy": true},
 ]
-const STORY_DROP := 0.5
+const STORY_DROP := 0.3                    # the pass (20 Oct): 0.15 left the story and the lorry never in 24 h on most builds (the reach walls by hour 6-10 and its signals stop: the story has to land before it); 0.3 had the story at 4.5-6 h on the six-hour reads; 0.5 had the story and its lorry at 4.7 h on the bot, 1.8 h by hand (the gate 10-13 h)
 const SIGNAL_PAPERS_HOME := 2               # a signal's run home brings this many papers at the least (18 Oct, Matt)
 
 ## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "a reason to keep grinding past the lorry"): materials from runs,

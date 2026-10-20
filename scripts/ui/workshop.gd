@@ -745,7 +745,8 @@ func _show_craft(it: Dictionary) -> void:
 			if has:
 				# its tier's figures at this piece's level, and where the roll sits in them (20 Oct, Matt: "we need a range displayed")
 				var rg: Array = tier_figures(it, k)
-				r["tag"].text = "T%d · %s–%s" % [tier, rg[0], rg[1]]
+				var st: String = str(it["affixes"][k]["stat"])
+				r["tag"].text = "T%d · %s–%s" % [tier, Items.fig(st, float(rg[0])), Items.fig(st, float(rg[1]))]
 				var room: float = r["label"].size.x - UI.text_width(r["tag"], r["tag"].text) - 16
 				r["label"].text = short_lines[k]
 				for o in [lines[k], short_lines[k]]:
@@ -754,7 +755,7 @@ func _show_craft(it: Dictionary) -> void:
 						break
 				if UI.text_width(r["label"], r["label"].text) > room:
 					r["tag"].text = "T%d" % tier          # the words first: the range goes before the affix does
-				var span: float = maxf(1.0, float(rg[1]) - float(rg[0]))
+				var span: float = maxf(0.1 if Items.is_tenths(st) else 1.0, float(rg[1]) - float(rg[0]))
 				var at: float = clampf((float(it["affixes"][k]["value"]) - float(rg[0])) / span, 0.0, 1.0) if float(rg[1]) > float(rg[0]) else 1.0
 				r["mark"].position.x = at * (r["track"].size.x - 4.0)
 				r["mark"].add_theme_stylebox_override("panel", UI.box(colour, 2))
@@ -867,6 +868,9 @@ func tier_figures(it: Dictionary, k: int) -> Array:
 	var d: Dictionary = Items.affix_def(str(a["stat"]))
 	var r: Array = Items.tier_range(d, int(a.get("tier", 1)))
 	var m: float = Items.ilvl_mult(Items.ilvl(it))
+	var div := float(d.get("div", 1))
+	if div > 1.0:
+		return [snappedf(float(r[0]) * m / div, 0.1), snappedf(float(r[1]) * m / div, 0.1)]     # tenths (20 Oct)
 	return [int(round(float(r[0]) * m)), int(round(float(r[1]) * m))]
 
 

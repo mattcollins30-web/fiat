@@ -13,6 +13,7 @@ const CLIMB := 0.92            # 0.95 read depth pace under one an hour on four 
 const FIRST := 0.65            # a site not yet cleared, or a head not yet beaten, is taken at this (13 Oct, Matt's recorded odds: 17 of 22 runs at 100%, every first clear and head at 0.42-0.83, the median two in three); what's cleared is farmed at PUSH
 const CLINIC_SPARE := 2.0      # the Clinic paid whenever its price is in hand this many times over (13 Oct: Matt paid 26-380 a visit and never waited out his HP)
 const RUSH := true             # the campaign as a person plays it (12 Oct, Matt's fire Drifter: one run a site, depth 1, straight to the next when it reads PUSH): no climbing until the campaign's done; the endgame climbs as before
+const COIN := 0.5             # the pass (20 Oct, the agreed gate: a full signal at the reach about a coin flip): three held and none at PUSH, a full one at the reach is run at this, insured, before one's binned
 const LORRY_ODDS := 0.6        # the lorry is taken at better than even, the kit insured (7 Oct)
 const LORRY_EVERY := 1200.0    # seconds of the yard's time between reads of the lorry's odds (a convoy read is three long fights a dry run: the seventeenth read ran at a third of the pace)
 var lorry_read_at := -1e9      # when the lorry's odds were last read (the yard's clock, which the move keeps)
@@ -276,9 +277,9 @@ func _endgame(sim) -> void:
 	# ladder and level 50 off for the hours the campaign took again; a player with a runner climbing doesn't move yet
 	if sim.lorry_done and lorry_at < 0.0:
 		lorry_at = sim.elapsed / 3600.0
-	if sim.lorry_done and sim.level() >= Data.RETIRE_LEVEL and not _at_wall:
+	if sim.lorries >= 1 and sim.campaign_done() and (sim.level() >= Data.RETIRE_LEVEL or sim.can_move_yard()) and not _at_wall:     # or the ground played out (the pass, 20 Oct: the move opens on the reach's stand); the lorry once ever, not a yard's (the review: lorry_done is a yard's and never comes back after a move)
 		_at_wall = true                   # a tidy at the wall's level first, so the read sees level 50 before the move resets it (the review)
-	elif sim.lorry_done and _at_wall and sim.can_move_yard():
+	elif _at_wall and sim.can_move_yard():
 		if cls == "":
 			cls = sim.cls                  # the plain reads never set it: remember the class the move unpicks
 		if sim.move_yard():
@@ -410,6 +411,15 @@ func _pick_signal(sim) -> int:
 		var need: float = FIRST if int(sg.get("story", -1)) >= 0 else PUSH
 		if o >= need and (best < 0 or sim.signal_level(sg) > sim.signal_level(sim.signal_at(best))):
 			best = k
+	if best < 0 and sim.signals.size() >= Data.SIGNALS_HELD:
+		# the reach as a player meets it (the pass, 20 Oct): nothing to win sure, so the full one at the reach at a coin flip
+		var best_o := COIN
+		for k in range(sim.signals.size()):
+			var sg: Dictionary = sim.signal_at(k)
+			var o: float = float(sim.signal_odds(k)[0])
+			if int(sg.get("grade", 0)) == 3 and int(sg.get("story", -1)) < 0 and sim.signal_level(sg) >= sim.reach and o >= best_o:
+				best = k
+				best_o = o
 	return best
 
 

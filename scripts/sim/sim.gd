@@ -4539,8 +4539,9 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 		"pace": 1.0, "patrol": 1.0, "search": 1.0, "contact": 0, "intel": [], "word_tiers": {}, "armour": 1.0,
 	}
 	if d == 1:
-		e["hp"] *= Data.CAMPAIGN_HOSTILE     # D20: the campaign's crews a touch softer, the levels at the Quartermaster held by XP
-		e["dps"] *= Data.CAMPAIGN_HOSTILE
+		var hostile: float = float(Data.CAMPAIGN_HOSTILE[int(base["zone"])])     # by zone (the pass, 20 Oct); D20: the campaign's crews a touch softer
+		e["hp"] *= hostile
+		e["dps"] *= hostile
 	if d >= 2 and (campaign_done() or ahead):
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
 		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
@@ -5612,7 +5613,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 		_order_done(won)
 		_sig_off()
 		return
-	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won})
+	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won, "grade": int(_sig.get("grade", 0)), "reach": reach, "story": _sig.has("story")})     # the grade and the reach it met (the pass, 20 Oct: the signals' gate)
 	if won:
 		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
 	if int(_sig.get("grade", 0)) != 1:
