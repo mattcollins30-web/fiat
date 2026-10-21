@@ -36,6 +36,8 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   playtest. The broken builds (docs/design/broken_builds.md) sit outside it (the read switches them off).
 - One bot pass, then Matt's playtest, and iterate from his play - not pass after pass with bots his play upends.
   A second pass only when the first shows something drastically wrong (a runaway, a wall, an unwinnable stretch).
+- Balancing: always read Matt's latest save alongside the bot's figures, as the comparison (his saves:
+  `C:\Users\mattc\AppData\Roaming\Fiat`; `tools\playtest.bat` / `playtest.flag` summarises one).
 - While iterating, one read a build is enough (`balance.flag` with `24 1`, about half the time); two for a final.
 - Old saves: no compatibility work. When the save's shape changes, bump `SAVE_VERSION` in scripts/ui/main.gd so the
   old slot shows the incompatible-save warning.
