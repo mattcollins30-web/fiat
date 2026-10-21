@@ -897,12 +897,16 @@ func set_class(name: String) -> bool:
 		return true
 	var from := cls
 	var pitch: Array = tree.filter(func(id): return is_pitch(str(id)))     # the camp's: they stay out whoever runs
+	var own_tabs: Array = stash.filter(func(x): return tab_of(x) != "")     # the class's own stash tabs go with them
+	stash = stash.filter(func(x): return tab_of(x) == "")
 	roster[from] = _runner_out()
+	roster[from]["tab_items"] = own_tabs
 	_crew_odds[from] = _sig_odds                # the signals' odds read for each go with them (the review: a swap read them again)
 	_sig_odds = _crew_odds.get(name, {})
 	_crew_odds.erase(name)
 	if roster.has(name):
 		_runner_in(roster[name])
+		stash.append_array(roster[name].get("tab_items", []))     # their own tabs back in the stash
 		roster.erase(name)
 	else:
 		_runner_in(_new_runner())
@@ -1210,7 +1214,7 @@ func contract_pick(c: Dictionary, pick: Array) -> Array:
 
 ## Everything in the stash this contract takes, cheapest first.
 func contract_all(c: Dictionary) -> Array:
-	var fits: Array = stash.filter(func(it): return contract_fits(c, it))
+	var fits: Array = stash.filter(func(it): return contract_fits(c, it) and tab_of(it) == "")     # the shared tab's: a class's own is kept
 	fits.sort_custom(func(a, b): return a["value"] < b["value"])
 	return fits
 
@@ -1219,7 +1223,7 @@ func contract_all(c: Dictionary) -> Array:
 func contract_items(c: Dictionary) -> Array:
 	var fits: Array = []
 	for it in stash:
-		if contract_fits(c, it):
+		if contract_fits(c, it) and tab_of(it) == "":
 			fits.append(it)
 	fits.sort_custom(func(a, b): return a["value"] < b["value"])
 	return fits.slice(0, int(c["count"]))
@@ -2059,6 +2063,7 @@ func _take_rounds(base_name: String, n: int) -> void:
 		Items.set_stack(st, int(st["rounds"]) - take_v)
 		left -= take_v
 		if int(st["rounds"]) <= 0:
+			st.erase("tab")
 			stash.erase(st)
 
 
@@ -2970,13 +2975,61 @@ func stash_free(it: Dictionary) -> bool:
 	return yard_has("wall_of_fame") and (it.has("unique") or it.has("set"))
 
 
-## Cells in use.
+## Cells in use: the shared tab's (21 Oct: a class's own tabs count apart, tab_used). What a run brings home goes there.
 func stash_used() -> int:
+	return tab_used("")
+
+
+## The stash's tabs (21 Oct, Matt: "a shared tab between all classes and then one or two per class that isn't shared"):
+## [key, name] - the shared one "", the class out's own "own", and its second "own2" with the Stash's Dry store. A
+## class's own tabs go with it on a swap (set_class); the stash holds the shared tab and the class out's.
+func stash_tabs() -> Array:
+	var out: Array = [["", "Shared"]]
+	if cls != "":
+		out.append(["own", cls])
+		if yard_has("dry_store"):
+			out.append(["own2", "%s 2" % cls])
+	return out
+
+
+static func tab_of(it: Dictionary) -> String:
+	return str(it.get("tab", ""))
+
+
+func tab_used(tab: String) -> int:
 	var n := 0
 	for it in stash:
-		if not stash_free(it):
+		if tab_of(it) == tab and not stash_free(it):
 			n += Items.size(it)
 	return n
+
+
+func tab_cap(tab: String) -> int:
+	match tab:
+		"":
+			return stash_cap()
+		"own":
+			return Data.CLASS_TAB_CELLS if cls != "" else 0
+		"own2":
+			return Data.CLASS_TAB_CELLS if cls != "" and yard_has("dry_store") else 0
+	return 0
+
+
+## A stash piece to another tab, where there's room for it. False when it can't go.
+func move_to_tab(id: int, tab: String) -> bool:
+	var it: Dictionary = {}
+	for x in stash:
+		if int(x["id"]) == id:
+			it = x
+	if it.is_empty() or tab_of(it) == tab or not stash_tabs().any(func(t): return t[0] == tab):
+		return false
+	if not stash_free(it) and tab_used(tab) + Items.size(it) > tab_cap(tab):
+		return false
+	if tab == "":
+		it.erase("tab")
+	else:
+		it["tab"] = tab
+	return true
 
 
 func stash_room(cells: int) -> bool:
@@ -3889,6 +3942,15 @@ func _yard_changed(_key: String) -> void:
 	_yard_dirty = true
 	_dry_memo.clear()
 	_surv_cache = {}                          # the odds read the Yard too: the Jammer, the Med lab, the Charger
+	if not yard_has("dry_store"):
+		# the Dry store refitted away (the review): its second tabs fold into the first, the class out's and the crew's
+		for it in stash:
+			if tab_of(it) == "own2":
+				it["tab"] = "own"
+		for k in roster:
+			for it in roster[k].get("tab_items", []):
+				if tab_of(it) == "own2":
+					it["tab"] = "own"
 
 
 ## What a pick or a refit might grow or shrink, read before it's built: the Fence's shelf, the Back room, the
@@ -4045,7 +4107,9 @@ func fit(slot: String, id: int) -> bool:
 func _one_off(it: Dictionary) -> Dictionary:
 	if Items.stacks(it) and Items.stack_size(it) > 1:
 		Items.set_stack(it, Items.stack_size(it) - 1)
-		return Items.one_of(it)
+		var one: Dictionary = Items.one_of(it)
+		one.erase("tab")                     # the piece leaves the stash; stashed again it goes to the shared tab
+		return one
 	_remove(it)
 	return it
 
@@ -5051,6 +5115,7 @@ static func is_pile_paper(it: Dictionary) -> bool:
 func _sweep_papers() -> void:
 	for it in stash.duplicate():
 		if is_pile_paper(it):
+			it.erase("tab")
 			stash.erase(it)
 			papers.append(it)
 
@@ -8304,7 +8369,7 @@ func can_equip_item(id: int) -> bool:
 				return false
 			if equipped[slot] == null:
 				return true
-			var out_cells: int = 0 if stash_free(it) else Items.size(it)
+			var out_cells: int = 0 if stash_free(it) or tab_of(it) != "" else Items.size(it)     # a piece off a class's tab frees none of the shared tab's
 			var in_cells: int = 0 if stash_free(equipped[slot]) else Items.size(equipped[slot])
 			return stash_used() - out_cells + in_cells <= stash_cap()
 	return false
@@ -8669,6 +8734,8 @@ func can_split(id: int) -> bool:
 			if it["id"] == id:
 				if not Items.stacks(it) or Items.stack_size(it) < 2:
 					return false
+				if where == stash and tab_of(it) != "":     # the half stays in the stack's own tab
+					return stash_free(it) or tab_used(tab_of(it)) + Items.size(it) <= tab_cap(tab_of(it))
 				return stash_fits(it) if where == stash else rig_room(Items.size(it))     # the Racks hold rounds without a cell
 	return false
 
@@ -8717,6 +8784,7 @@ func stash_put(it: Dictionary) -> bool:
 func _remove(it: Dictionary) -> bool:
 	for k in range(stash.size()):
 		if stash[k]["id"] == it["id"]:
+			stash[k].erase("tab")              # out of the stash, out of its tab: whatever brings it back puts it in the shared one
 			stash.remove_at(k)
 			return true
 	return false
@@ -8726,7 +8794,7 @@ func _remove(it: Dictionary) -> bool:
 func sell_rarity(r: int) -> int:
 	var n := 0
 	for it in stash.duplicate():
-		if _spare(it, r):
+		if _spare(it, r) and tab_of(it) == "":     # the shared tab's (21 Oct): a class's own is kept
 			sell(it)
 			n += 1
 	return n
@@ -8791,7 +8859,7 @@ func sell_junk() -> int:
 	var n := 0
 	var got := 0.0
 	for it in stash.duplicate():
-		if is_junk(it):
+		if is_junk(it) and tab_of(it) == "":     # a class's own tab is kept: the junk run sells the shared one
 			var p: int = sell_price(it)
 			if sell(it):
 				got += p
@@ -9564,6 +9632,7 @@ func _roster_items() -> Array:
 			if it != null:
 				out.append(it)
 		out.append_array(roster[k].get("rig", []))
+		out.append_array(roster[k].get("tab_items", []))
 	var nested: Array = []
 	for it in out:
 		for mount in it.get("attachments", {}):

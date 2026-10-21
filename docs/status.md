@@ -6017,3 +6017,13 @@ difficulty and length, the endgame placeholders.
   odds coming with them. The shell reads them in its frame budget once the picked signal settles, a class a frame.
   Found and fixed on the way: a read for another class left that runner's rig a stale array (a dry run restores it
   as a new one), and the frame's odds key memo was the runner out's.
+- Done (step 4): the stash's tabs. The Kit's, the Workshop's and the Market's grids carry tabs on bar two: Shared
+  (every class sees it, the stash's cells as before) and the class's own, 60 cells; the Dry store adds a second own
+  tab. A drop on a tab moves the piece there. A swap takes the own tabs with the class and brings the next one's.
+  Pieces out of the stash (worn, sold, binned, a piece off a stack) lose their tab; a split stays in its tab, room
+  read there. The junk run, the rarity row and contracts sell from Shared only. The Dry store refitted away folds the
+  second tab into the first (it can read over 60 then; nothing is lost, and nothing new goes in until it's under).
+  An old flake fixed at the root: the try-on key check ran out a stack or crossed dusk in its window.
+- Matt (21 Oct), for step 6: all gear scales, uniques, mythics and sets included (sets went useless fast). And one
+  "broken" build a class - gear and points that combine into an infinite or runaway scale, outside the balance
+  passes as mythics are, there for theorycrafters to find. His playtests: one baseline build, one broken build.

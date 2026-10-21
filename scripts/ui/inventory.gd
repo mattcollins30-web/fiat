@@ -53,7 +53,8 @@ const KIND_PAD := 32                 # a button's margin round its words (the fi
 const KIND_GAP := 3
 const KIND_FONT := 18
 const SORT_W := 52
-const RARITY_W := 72                 # six buttons with five rarities, at 17 px (the pass, 6 Oct): the row ends before the pages
+const RARITY_W := 96                 # one button that steps through Any and the five (21 Oct: was six, the stash's tabs took the room)
+const TAB_PAD := 34                  # a stash tab's margin round its words
 const MANY_W := 100
 const SELL_W := 180
 const PAGE_BTN := 44
@@ -81,7 +82,10 @@ var _press_at := Vector2.ZERO      # where a cell press began, for the drag thre
 var _press_cell := -1
 var _fill: Label
 var _kind_buttons: Array = []
-var _rarity_buttons: Array = []
+var _rarity_button: Button
+var _tab_buttons: Array = []        # the stash's tabs (21 Oct, the crew): shared, the class's own, its second
+var stash_tabs := false             # set by an owner showing the stash: the tabs show and the grid is the tab's
+var tab := ""                       # the tab shown: "" shared, "own", "own2"
 var _sort_button: Button
 var _many_button: Button
 var _sell_button: Button
@@ -113,13 +117,18 @@ func _init() -> void:
 	# bar two: rarities, select many, sell, pages
 	var y := BAR_H + BAR_GAP
 	x = 0
-	for r in range(Data.RARITIES.size() + 1):
-		var b := UI.button(self, Rect2(x, y, RARITY_W, BAR_H), false)
-		b.text = "Any" if r == 0 else Data.RARITY_SHORT[r - 1]
-		b.add_theme_font_size_override("font_size", 17)
-		b.pressed.connect(_set_rarity.bind(r - 1))
-		_rarity_buttons.append(b)
-		x += RARITY_W + 6
+	_rarity_button = UI.button(self, Rect2(x, y, RARITY_W, BAR_H), false)
+	_rarity_button.add_theme_font_size_override("font_size", 17)
+	_rarity_button.pressed.connect(func(): _set_rarity(rarity + 1 if rarity + 1 < Data.RARITIES.size() else -1))
+	x += RARITY_W + 6
+	for k in range(3):
+		var tb := UI.button(self, Rect2(x, y, 100, BAR_H), false)
+		tb.add_theme_font_size_override("font_size", 17)
+		tb.pressed.connect(_set_tab.bind(k))
+		tb.set_drag_forwarding(Callable(), _can_drop_tab.bind(k), _drop_tab.bind(k))     # a piece dragged onto a tab moves to it
+		tb.visible = false
+		_tab_buttons.append(tb)
+	x = RARITY_W + 6 + 3 * 106 + 4
 	_many_button = UI.button(self, Rect2(x, y, MANY_W, BAR_H), false)
 	_many_button.add_theme_font_size_override("font_size", 20)
 	_many_button.pressed.connect(_toggle_many)
@@ -179,7 +188,16 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	sim = s
 	items = []
 	var kinds = KINDS[kind][1]
+	var tabbed: bool = stash_tabs and sim != null
+	if tabbed:
+		if not sim.stash_tabs().any(func(t): return t[0] == tab):
+			tab = ""
+		used = sim.tab_used(tab)
+		cap = sim.tab_cap(tab)
+		what = str(sim.stash_tabs().filter(func(t): return t[0] == tab)[0][1])
 	for it in source:
+		if tabbed and sim.tab_of(it) != tab:
+			continue
 		if fixed_kind != "" and it["slot"] != fixed_kind:
 			continue
 		if fixed_kind == "" and not _of_kind(it, kinds):
@@ -206,7 +224,7 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	chosen = chosen.filter(func(id): return _has(id))
 	if selected >= 0 and not _has(selected):
 		selected = -1
-	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks)]
+	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else ""]
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
@@ -227,8 +245,10 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		var flag = KINDS[k][1]
 		UI.style_button(_kind_buttons[k], k == kind and not (flag is String), (str(flag) if k == kind else "") if flag is String else "")
 	_lay_kinds()
-	for r in range(_rarity_buttons.size()):
-		UI.style_button(_rarity_buttons[r], r - 1 == rarity)
+	_rarity_button.text = "Any" if rarity < 0 else Data.RARITY_SHORT[rarity]
+	_rarity_button.tooltip_text = "Rarity: click for the next"
+	UI.style_button(_rarity_button, rarity >= 0)
+	_lay_tabs(tabbed)
 	_sort_button.text = "↕"
 	_sort_button.tooltip_text = "Sorted by %s: click for %s" % [SORTS[sort].to_lower(), SORTS[(sort + 1) % SORTS.size()].to_lower()]
 	_many_button.visible = can_many
@@ -457,6 +477,48 @@ func _set_kind(k: int) -> void:
 	picked.emit(-1)
 
 
+## The stash's tabs along bar two after the rarity, each as wide as its words and what's in it.
+func _lay_tabs(tabbed: bool) -> void:
+	var tabs: Array = sim.stash_tabs() if tabbed else []
+	var x: float = RARITY_W + 6
+	for k in range(_tab_buttons.size()):
+		var tb: Button = _tab_buttons[k]
+		tb.visible = k < tabs.size()
+		if not tb.visible:
+			continue
+		var key: String = str(tabs[k][0])
+		tb.text = str(tabs[k][1])             # the fill at bar one's start says what's in the one shown
+		tb.tooltip_text = "%s: %d of %d cells" % [tabs[k][1], sim.tab_used(key), sim.tab_cap(key)]
+		tb.size.x = ceilf(UI.text_width(tb, tb.text)) + TAB_PAD
+		tb.position.x = x
+		x += tb.size.x + 6
+		UI.style_button(tb, key == tab)
+	_many_button.position.x = x if tabbed else float(RARITY_W + 6)
+	_sell_button.position.x = _many_button.position.x + MANY_W + 6
+
+
+func _set_tab(k: int) -> void:
+	var tabs: Array = sim.stash_tabs() if sim != null else []
+	if k >= tabs.size():
+		return
+	tab = str(tabs[k][0])
+	page = 0
+	selected = -1
+	picked.emit(-1)
+
+
+func _can_drop_tab(_at: Vector2, data: Variant, k: int) -> bool:
+	var tabs: Array = sim.stash_tabs() if sim != null else []
+	return stash_tabs and k < tabs.size() and data is Dictionary and str(data.get("src", "")) == drag_src and drag_src != "" and str(tabs[k][0]) != tab
+
+
+func _drop_tab(_at: Vector2, data: Variant, k: int) -> void:
+	var tabs: Array = sim.stash_tabs()
+	if sim.move_to_tab(int(data["id"]), str(tabs[k][0])):
+		_shown = ""
+		acted.emit()
+
+
 func _set_rarity(r: int) -> void:
 	rarity = r
 	page = 0
@@ -508,7 +570,10 @@ func text_nodes() -> Array:
 	for b in _kind_buttons:
 		if b.visible:
 			out.append(b)
-	out.append_array(_rarity_buttons)
+	out.append(_rarity_button)
+	for tb in _tab_buttons:
+		if tb.visible:
+			out.append(tb)
 	for c in _cells:
 		if c.visible:
 			out.append_array(c.text_nodes())

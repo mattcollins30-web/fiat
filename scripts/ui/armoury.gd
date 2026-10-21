@@ -92,6 +92,7 @@ func _init() -> void:
 	_inv = Inventory.new()
 	_inv.position = Vector2(GRID_X, 0)
 	_inv.drag_src = "stash"
+	_inv.stash_tabs = true                 # the shared tab and the class's own (21 Oct, the crew)
 	_inv.accepts = ["rig", "body"]
 	_inv.picked.connect(_on_inv_pick)
 	_inv.acted.connect(_on_inv_acted)

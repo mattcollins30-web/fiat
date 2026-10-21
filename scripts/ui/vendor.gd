@@ -171,6 +171,7 @@ func _init() -> void:
 	_stash = Inventory.new()
 	_stash.position = Vector2(GRID_X, BODY_Y)
 	_stash.set_rows(GRID_ROWS)
+	_stash.stash_tabs = true               # the shared tab and the class's own (21 Oct, the crew)
 	_stash.visible = false
 	_stash.picked.connect(_on_pick.bind("stash"))
 	_stash.acted.connect(_on_acted)

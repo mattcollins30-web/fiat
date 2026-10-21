@@ -70,6 +70,7 @@ const FOOTPRINTS := {
 
 ## The stash in cells before the Yard's picks: one page, thirteen cells a row, seven rows.
 const STASH_CELLS := 91
+const CLASS_TAB_CELLS := 60          # a class's own stash tab (21 Oct, the crew): and a second as big with the Dry store
 ## The Clinic's rest and shelf, the Fence's shelf, the hours away, the odds' dry runs before the Yard's picks.
 const REST_BASE := 0.5
 const CLINIC_STOCK := 6

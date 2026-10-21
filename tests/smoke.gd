@@ -145,6 +145,80 @@ func _open_map(main) -> void:
 	main.refresh()
 
 
+## The stash's tabs (21 Oct, Matt: "a shared tab between all classes and then one or two per class that isn't shared"):
+## the class's own tab and its second with the Dry store, a piece moved to one and its cells counted there, the tabs
+## going with the class on a swap and back, the save, and the Kit's grid showing a tab's alone, a drop moving it.
+func _stash_tab_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	if sim.cls == "":
+		sim.set_class("Doorman")
+	var me: String = sim.cls
+	sim.yard_picks.erase("stash")
+	_check(sim.stash_tabs().map(func(t): return t[0]) == ["", "own"] and sim.tab_cap("own") == Data.CLASS_TAB_CELLS and sim.tab_cap("own2") == 0, "the tabs without the Dry store: %s" % str(sim.stash_tabs()))
+	var piece: Dictionary = sim._plain("Armour", "Work jacket")
+	sim.stash.append(piece)
+	var shared0: int = sim.stash_used()
+	_check(sim.move_to_tab(int(piece["id"]), "own") and sim.stash_used() == shared0 - Items.size(piece) and sim.tab_used("own") >= Items.size(piece) and not sim.move_to_tab(int(piece["id"]), "own2"), "a piece to the class's tab: shared %d from %d, own %d" % [sim.stash_used(), shared0, sim.tab_used("own")])
+	# the tab goes with the class: out of the stash on a swap, back on the swap back
+	var other: String = "Poacher" if me != "Poacher" else "Doorman"
+	_check(sim.set_class(other) and not sim.stash.has(piece) and sim.roster[me]["tab_items"].has(piece) and sim.item_by_id(int(piece["id"])).is_empty(), "the class's tab stayed in the stash on a swap")
+	_check(sim.tab_used("own") == 0, "the next class's tab is not their own: %d cells" % sim.tab_used("own"))
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var back = Sim.new()
+	back.load_dict(d)
+	_check(back.roster[me]["tab_items"].size() >= 1 and typeof(back.roster[me]["tab_items"][0]["id"]) == TYPE_INT, "the class's tab did not survive a save")
+	_check(sim.set_class(me) and sim.stash.has(piece) and sim.tab_of(piece) == "own", "the class's tab did not come back with them")
+	# the second tab, with the Dry store
+	_yard_set(sim, "stash", 4, "a")
+	_check(sim.yard_has("dry_store") and sim.stash_tabs().size() == 3 and sim.tab_cap("own2") == Data.CLASS_TAB_CELLS and sim.move_to_tab(int(piece["id"]), "own2"), "the Dry store's second tab: %s" % str(sim.stash_tabs()))
+	# the Kit's grid: the tabs on bar two, a tab's pieces alone, a drop on a tab moves the piece there
+	main.show_room(main.ARMOURY)
+	var inv = main._armoury._inv
+	inv._set_tab(2)
+	main.refresh()
+	_check(inv.tab == "own2" and inv.items.size() >= 1 and inv.items.all(func(it): return sim.tab_of(it) == "own2"), "the Kit's grid shows another tab's pieces on the second: %s" % str(inv.items.map(func(it): return sim.tab_of(it))))
+	var tabs_r: Array = inv._tab_buttons.filter(func(b): return b.visible).map(func(b): return Rect2(b.position, b.size))
+	_check(tabs_r.size() == 3 and tabs_r.all(func(r): return not r.intersects(Rect2(inv._page_prev.position, inv._page_prev.size)) and not r.intersects(Rect2(inv._many_button.position, inv._many_button.size)) and not r.intersects(Rect2(inv._rarity_button.position, inv._rarity_button.size))), "the stash's tabs sit on bar two's buttons: %s" % str(tabs_r))
+	_check_fit(main, "the Kit, the class's second tab")
+	# the Dry store refitted away: the second tab folds into the first, nothing left in a tab not shown
+	_yard_set(sim, "stash", 4, "b")
+	_check(not sim.yard_has("dry_store") and sim.tab_of(piece) == "own" and sim.stash.all(func(it): return sim.stash_tabs().any(func(t): return t[0] == sim.tab_of(it))), "the Dry store's refit left pieces in a tab not shown")
+	_yard_set(sim, "stash", 4, "a")
+	inv._drop_tab(Vector2.ZERO, {"id": int(piece["id"]), "src": "stash"}, 0)
+	_check(sim.tab_of(piece) == "", "a piece dropped on the shared tab did not move there")
+	# out of the stash, out of its tab: worn from the class's tab with the shared one full, and back
+	sim.move_to_tab(int(piece["id"]), "own")
+	var worn_was = sim.equipped["Armour"]
+	var fill: Array = []
+	while sim.stash_room(1):
+		var b: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+		if sim.stash_free(b):
+			break
+		sim.stash.append(b)
+		fill.append(b)
+	var can: bool = sim.can_equip_item(int(piece["id"]))
+	if can:
+		sim.equip_item(int(piece["id"]))
+		_check(sim.stash_used() <= sim.stash_cap() and not piece.has("tab"), "worn off the class's tab: the shared tab at %d of %d, the tab kept %s" % [sim.stash_used(), sim.stash_cap(), str(piece.get("tab", ""))])
+	else:
+		_check(worn_was != null and Items.size(worn_was) > 0, "a piece off the class's tab would not go on with nothing to come off")
+	# a stack in the class's tab splits there with the shared tab full; a piece taken off it leaves the tab
+	var fluid: Dictionary = sim._plain("Attachment", "Lighter fluid")
+	Items.set_stack(fluid, 4)
+	sim.stash.append(fluid)
+	fluid["tab"] = "own"
+	var shared1: int = sim.stash_used()
+	_check(Items.stacks(fluid) and sim.split_stack(int(fluid["id"])) and sim.tab_of(sim.stash[-1]) == "own" and sim.stash_used() == shared1, "a stack in the class's tab split into the shared one: shared %d from %d, the half's tab '%s'" % [sim.stash_used(), shared1, sim.tab_of(sim.stash[-1])])
+	var one: Dictionary = sim._one_off(fluid)
+	_check(not one.has("tab") and sim.tab_of(fluid) == "own", "a piece off a stack in the class's tab kept the tab: '%s'" % str(one.get("tab", "")))
+	inv._set_tab(0)
+	sim.load_dict(saved)
+	main.refresh()
+
+
 ## The runner as a class, in place (21 Oct, the crew: a pick swaps runners now, so the mechanics areas relabel the one
 ## they have): another class's trees, another class's half and an element off the pair go, as a change's did.
 func _set_cls(s, name: String) -> void:
@@ -452,7 +526,7 @@ func _init() -> void:
 	sim.rig = rig_keep
 	main.refresh()
 	_body_drops(main)
-	_check_grid(main._armoury._inv, sim.stash_cap(), "the stash")
+	_check_grid(main._armoury._inv, sim.tab_cap(main._armoury._inv.tab), "the stash")
 	# the inventory grid: kinds, rarity, sort, select-many sell, paging
 	var inv = main._armoury._inv
 	# every kind filters on real slot keys, not their screen names (18 Oct: the words pass renamed Medical/Ammo in the
@@ -2148,6 +2222,7 @@ func _tree_rules_checks(main) -> void:
 	bk._pick_class("Doorman")
 	bk._pick(Data.COMMON_TREE + "/1")
 	_check(bk._armed == "", "picking a node did not disarm the swap")
+	_stash_tab_checks(main)
 	# the camp's high-water mark: levels under the best earn nothing; past it, a point a level
 	sim.load_dict(saved)
 	sim.best_level = 10
@@ -6811,7 +6886,7 @@ func _check_fit(main, where: String) -> void:
 		bad += _stats_layout(main, where)
 	elif main.room == main.ARMOURY:
 		bad += _check_nodes(main._armoury.text_nodes(), main._armoury.line_pairs() if main._armoury.has_method("line_pairs") else [], where + " screen")
-		_check_grid(main._armoury._inv, main.sim.stash_cap(), where + " stash grid")
+		_check_grid(main._armoury._inv, main.sim.tab_cap(main._armoury._inv.tab), where + " stash grid")
 		_check(main._armoury._containers.rig_inside(), "%s: the rig (%.0f px pouches) runs out of its room" % [where, main._armoury._containers.rig_cell()])
 		# the body's boxes: inside the panel, none overlapping, and the item cell inside its box
 		var body = main._armoury._body
@@ -13938,18 +14013,28 @@ func _try_on_checks(main) -> void:
 		sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")     # a gun that spends rounds (the Allotments lean to melee: 12 Oct)
 	var box: Dictionary = sim.ammo_box(Items.ammo_type(sim.equipped["Primary"]))
 	if not box.is_empty():
-		sim.rig.push_front(sim._plain(Data.AMMO, box["name"]))     # fed whatever the smoke left in the rig
+		var fed: Dictionary = sim._plain(Data.AMMO, box["name"])
+		Items.set_stack(fed, 500)            # a stack that can't run dry in the window: an emptied stack is a change of kit
+		sim.rig.push_front(fed)              # fed whatever the smoke left in the rig
 	sim.rig.append(sim._plain(Data.MEDICAL, "Bandage"))
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
 	sim.mission["target_hp"] = 1e9
 	sim.advance(1.0)
-	var k0: int = sim._kit_key()
-	var r0: int = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
-	for k in range(5):
-		sim.hp = sim.max_hp()
-		sim.advance(1.0)
-	var r1: int = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
+	var k0: int = 0
+	var r0: int = 0
+	var r1: int = 0
+	for tries in range(3):                   # 21 Oct, a flake: the window again if dusk or the weather turned in it
+		var sky: Array = [sim.is_night(), sim.weather_of(sim.front_tier()), sim.front_tier()]
+		k0 = sim._kit_key()
+		r0 = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
+		for k in range(5):
+			sim.hp = sim.max_hp()
+			sim.advance(1.0)
+		sim.hp = sim.max_hp()                # a hit in the last second is a change of kit too (under half)
+		r1 = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
+		if [sim.is_night(), sim.weather_of(sim.front_tier()), sim.front_tier()] == sky:
+			break
 	_check(r1 < r0 and sim._kit_key() == k0, "the try-on's answers were thrown away by rounds spent (%d -> %d rounds, key %s)" % [r0, r1, "same" if sim._kit_key() == k0 else "changed"])
 	# but a thing leaving the rig is a change (armour a med, the review): a med used throws them away
 	var med: Dictionary = sim.first_med()
