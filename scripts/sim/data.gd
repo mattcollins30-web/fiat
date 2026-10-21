@@ -1380,7 +1380,9 @@ const COMBOS := {
 ## Gear scaling (21 Oct, the crew; docs/design/vision.md): past the deep tier a base's damage and armour, and the flat
 ## combat lines, compound this a level - a little under the crews' CURVE grow - every rarity the same; the armour's cut
 ## reads against the level fought at the same rate, so it holds its share rather than run to a hundred.
-const ILVL_GROW := 0.07
+const ILVL_GROW := 0.05            # 0.07 to 0.05 (21 Oct, the crew's reads and a kit probe): at 0.07 an at-level kit kept pace with the
+                                   # crews (an edge's half-life 25 levels) and the bot's edge - uniques, the Bench, paragon - ran the
+                                   # reach to 221; at 0.05 an edge halves in about 10 levels: a few levels a find, then the next
 const ILVL_GROW_FROM := 20         # DEEP_TIER_LEVELS' last: the campaign and the deep tiers as they were
 const FLAT_GROW := ["hp", "armour", "regen", "life_per_kill", "armour_per_free", "armour_per_med"]
 const CONVOY_TIER := 9             # the Services

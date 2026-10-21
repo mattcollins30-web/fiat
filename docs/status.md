@@ -6085,3 +6085,9 @@ difficulty and length, the endgame placeholders.
     level-20 campaign site is paid a tenth - D9's "fall off past 5 levels" as written, but less than before.
   - The bot's crew: the first cut sent a new class out every two hours (five level-1 runners, nobody at the reach);
     now the best played class goes back out, and a new one only once the one out is at the cap.
+- Matt (21 Oct): the over-level fall-off stays as it is. And the reads run on his machine (the watcher's
+  balance.flag), not the cloud: the convention had dropped out of my notes.
+- ILVL_GROW 0.07 to 0.05: the second cloud reads (wear by item level in) ran away the other way - a Drifter at level
+  50 and 10M dmg/s by hour 7. A kit probe (best of 40 rolls a slot at each level, 4 seeds): at 0.07 a fixed edge
+  over the crews halves every ~25 levels, so the bot's edge (uniques, the Bench, paragon - about 100× a random kit)
+  lasted ~165 levels; at 0.05 it halves in ~10. The pass on Matt's machine reads it.

@@ -53,7 +53,7 @@ body, bags, meds, rounds, parts, uniques, sets) are sorts inside a tab.
 ## Gear scaling (the endgame is forever)
 
 The crews grow about 8% a level in HP and in fire, compounding. Past the deep tier (level 20) a base's damage, armour
-and HP grow with its item level at a little under that (first figure 7%), and a drop's item level is its signal's.
+and HP grow with its item level at a little under that (7% first; 5% after the 21 Oct reads, an edge halving in about 10 levels), and a drop's item level is its signal's.
 The gap is the chase: paragon, the Bench and the right class for the crew close it. Without this the reach walls at
 35-45 whatever the Bench does (the 20 Oct reads).
 
