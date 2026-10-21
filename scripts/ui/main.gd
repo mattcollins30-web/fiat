@@ -156,7 +156,7 @@ var _rail_rule: Panel              # the hairline under the heading
 var rail_folded := false           # the rail at its glyphs while the run's on screen (15 Oct, frame_mockup_B)
 var _x0 := 0.0                     # the layout's left edge, for the fold
 var _cog_btn: Button               # the top bar's cog: the pause
-var _asked_runner := false         # the two-turn-up menu, shown once per death
+var _asked_runner := false         # the two-turn-up toast, said once per death
 
 
 func _init() -> void:
@@ -1075,10 +1075,13 @@ func room_shut(nm: String) -> bool:
 func refresh() -> void:
 	if sim == null:
 		return
-	# two turned up after a death: the choice, once, before anything else
-	if sim.candidates.size() == 2 and not _menu.visible and not sim.on_mission() and not _asked_runner:
+	# two turned up after a death: the pick is the Map's (21 Oct, off the old menu); said once, wherever you are
+	if sim.candidates.size() == 2 and not sim.on_mission() and not _asked_runner:
 		_asked_runner = true
-		_choose_runner()
+		if room != MISSIONS:
+			_juice.toast("Two turn up at the Pitch: pick a trait on the Map", "warn")
+	elif sim.candidates.size() != 2:
+		_asked_runner = false
 	_radio_line.set_sim(sim)
 	if room_shut(room):
 		room = MISSIONS                       # a new camp starts in a Yard that isn't yours yet: the Map
@@ -1389,25 +1392,6 @@ func _rebuild_lines() -> Array:
 
 
 # ------------------------------------------------------------------ comms tower
-
-## After a death, two turn up: pick who stays.
-func _choose_runner() -> void:
-	var items := []
-	for k in range(sim.candidates.size()):
-		var row: Dictionary = {}
-		for t in Data.TRAITS:
-			if t["name"] == sim.candidates[k]:
-				row = t
-		items.append({"name": row.get("name", sim.candidates[k]), "detail": row.get("words", ""), "action": _pick_runner.bind(k)})
-	_menu.open("Two turn up at the Pitch", "One stays. The other moves on.", items, Callable())
-
-
-func _pick_runner(k: int) -> void:
-	sim.choose_runner(k)
-	_asked_runner = false
-	_menu.close()
-	refresh()
-
 
 ## The Workshop's Build view's Build button (21 Oct: the view replaced the old menu).
 func _build_one(kind: String, nm: String) -> void:

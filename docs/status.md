@@ -6112,3 +6112,8 @@ difficulty and length, the endgame placeholders.
   before, for the room). A slot opens the book over the decoder and the signals: None, every known code with its
   cost and pay, the ones still to learn scrambled, what's left to learn by where (papers, zones, deep), Done. A code
   picked sets it and shuts the book. The menu's gone (its title clipped). And the dead word menu (_choose_word) out.
+- Done: the death pick in the room (canvas 2). After a death the Map's card column is the pick: "The Drifter · back
+  at level 1", the two traits as cards with their chips (a cost in red), what the death took (the kit worn, the
+  levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
+  picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
+  waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.

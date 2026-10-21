@@ -647,7 +647,7 @@ func show_state(s) -> void:
 	selected = clampi(selected, 0, maxi(0, sim.signals.size() - 1))
 	var od: Array = sim.signal_odds_now(selected) if not sim.signals.is_empty() else [0.0, true]     # read in main's frame budget
 	var sig := "%s|%s|%d|%d|%d|%d|%s|%s|%d|%s|%s|%s|%d|%s|%s" % [str(chosen), str(have), paper_page, selected, sim.notes, sim.reach, str(sim.signals), str(sim.on_mission()), int(float(od[0]) * 100.0), str(od[1]),
-		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas) + book_kind + str(book_page) + str(sim.words_known().size())]
+		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas) + book_kind + str(book_page) + str(sim.words_known().size()) + str(sim.candidates.size())]
 	sig += "|%d|%s|%s|%s" % [crew_pick, str(sim.materials), sim.cls, str(sim.crew_played().map(func(c): return sim.signal_odds_class(selected, str(c), true)) if not sim.signals.is_empty() else [])]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
@@ -981,7 +981,9 @@ func _show_signals(od: Array) -> void:
 		c["button"].disabled = why != ""
 		UI.fit(c["name"], ["%s · %d notes" % [cd["name"], sim.signal_craft_cost(selected, c["key"])], str(cd["name"])])
 		UI.fit(c["words"], [str(cd["words"]).replace("the site", "it"), ""] if why == "" else [why, ""])
-	_set_off.disabled = not sim.can_deploy() or sim.on_mission()
+	var picking: bool = sim.candidates.size() == 2     # back at level 1: the trait's picked on the Map first (21 Oct, the review)
+	_set_off.disabled = not sim.can_deploy() or sim.on_mission() or picking
+	UI.fit_button(_set_off, ["Set off · pick a trait on the Map", "Pick a trait first"] if picking else ["Set off"])
 	_show_crew()
 	var k := 0
 	for j in range(n):

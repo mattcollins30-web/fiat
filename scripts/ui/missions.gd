@@ -50,6 +50,18 @@ var _order                         # the order's places (order.gd): one card at 
 var _guide_btn: Button             # "What a site pays" (16 Oct, item 11): the map's tier guide, at the row's end
 var _guide
 var _came_open := false            # the card dropped down
+# back at level 1 (21 Oct, canvas "The code book and the death pick" 2): after a death the card's column is the trait
+# pick - the two who turned up as cards, what the death took and what stays, Set off shut till one's picked
+var _pick: Panel
+var _pick_kicker: Label
+var _pick_title: Label
+var _pick_line: Label
+var _pick_line2: Label
+var _pick_cards: Array = []         # {button, name, chips}
+var _pick_head: Label
+var _pick_lost: Chips
+var _pick_go: Button
+const PICK_CARD_H := 104
 # the map moved to the Radio (12 Oct): the zone row is the four zones, the Outskirts first; the order's fifth (18 Oct)
 const ZONE_H := 56
 const TOP := ZONE_H + 16
@@ -148,6 +160,7 @@ func _init() -> void:
 		c["boss"].visible = false
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_cols.append(c)
+	_build_pick()
 	_order = Order.new(TOP)
 	_order.visible = false
 	_order.mouse_filter = Control.MOUSE_FILTER_IGNORE     # its full-width frame over the map: only its card takes a click
@@ -163,6 +176,79 @@ func _init() -> void:
 	_guide = TierGuide.new()
 	_guide.closed.connect(func(): acted.emit())
 	add_child(_guide)
+
+
+func _build_pick() -> void:
+	_pick = UI.panel(self, Rect2(CARD_X, TOP, COL_W, Pal.ROOM_H - TOP), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
+	_pick.visible = false
+	_pick_kicker = UI.label(_pick, Rect2(PAD, 16, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pick_title = UI.label(_pick, Rect2(PAD, 42, INNER, 40), "Pick a trait", "SemiBold", Pal.TITLE, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pick_line = UI.label(_pick, Rect2(PAD, 88, INNER, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pick_line2 = UI.label(_pick, Rect2(PAD, 112, INNER, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(2):
+		var b := Button.new()
+		b.position = Vector2(PAD, 150 + k * (PICK_CARD_H + 12))
+		b.size = Vector2(INNER, PICK_CARD_H)
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_pick_trait.bind(k))
+		_pick.add_child(b)
+		UI.style_button(b, false)
+		var c := {"button": b}
+		c["name"] = UI.label(b, Rect2(16, 12, INNER - 32, 34), "", "SemiBold", Pal.TITLE - 6, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["name"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ch := Chips.new(INNER - 32, 3)
+		ch.position = Vector2(16, 58)
+		b.add_child(ch)
+		c["chips"] = ch
+		_pick_cards.append(c)
+	var hy: float = 150 + 2 * (PICK_CARD_H + 12) + 12
+	_pick.add_child(UI.panel(_pick, Rect2(PAD, hy - 10, INNER, 1), UI.box(Pal.CARD_LINE, 0)))
+	_pick_head = UI.label(_pick, Rect2(PAD, hy, INNER, 22), "WHAT THE DEATH TOOK, AND WHAT STAYS", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_pick_lost = Chips.new(INNER, 6)
+	_pick_lost.position = Vector2(PAD, hy + 28)
+	_pick.add_child(_pick_lost)
+	_pick_go = UI.button(_pick, Rect2(PAD, Pal.ROOM_H - TOP - PAD - 2 * Pal.BUTTON_H - 12, INNER, Pal.BUTTON_H), true)
+	_pick_go.disabled = true
+
+
+## The trait's words as chips: what it costs (a "−") in the bad tone, the rest good (Greedy: tins +15%, max HP −10%).
+static func trait_chips(words: String) -> Array:
+	var out: Array = []
+	for part in words.split(", "):
+		var w: String = str(part)
+		out.append({"forms": [w.substr(0, 1).to_upper() + w.substr(1)], "colour": Pal.BAD if w.contains("−") else Pal.GOOD})
+	return out
+
+
+func _show_pick() -> void:
+	var who: String = sim.cls if sim.cls != "" else "runner"
+	UI.fit(_pick_kicker, ["The %s · back at level 1" % who, "Back at level 1"])
+	UI.fit(_pick_line, ["It stays with the %s until the next death." % who, "It stays until the next death."])
+	UI.fit(_pick_line2, ["The other one goes."])
+	for k in range(2):
+		var c: Dictionary = _pick_cards[k]
+		var nm: String = str(sim.candidates[k]) if k < sim.candidates.size() else ""
+		c["button"].visible = nm != ""
+		var row: Dictionary = {}
+		for t in Data.TRAITS:
+			if t["name"] == nm:
+				row = t
+		UI.fit(c["name"], [nm])
+		c["chips"].show_chips(trait_chips(str(row.get("words", ""))), 1, true)
+	var lost: Array = [{"forms": ["The kit worn"], "colour": Pal.BAD}, {"forms": ["The %s's levels" % who, "The levels"], "colour": Pal.BAD},
+		{"forms": ["The tree's points back to spend", "The tree's points"], "colour": Pal.TEXT_2}, {"forms": ["The stash"], "colour": Pal.TEXT_2}]
+	if sim.crew_played().size() > 1:
+		lost.append({"forms": ["The rest of the crew", "The crew"], "colour": Pal.TEXT_2})
+	if sim.paragon_xp > 0.0 or not sim.paragon_board.is_empty():
+		lost.append({"forms": ["Paragon"], "colour": Pal.TEXT_2})
+	_pick_lost.show_chips(lost, 3, true)
+	UI.fit_button(_pick_go, ["Set off · pick a trait first", "Pick a trait first"])
+
+
+func _pick_trait(k: int) -> void:
+	if sim.choose_runner(k):
+		_shown = ""
+		acted.emit()
 
 
 ## The site the Map opens on: the furthest open (12 Oct: not the Outskirts every launch).
@@ -198,6 +284,18 @@ func show_state(s) -> void:
 	if _guide.visible:
 		_guide.show_state(sim)
 		_guide.move_to_front()             # over the tally's card, which comes to the front on every refresh
+	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
+	_pick.visible = picking
+	if picking:
+		_order.visible = false
+		for c in _cols:
+			c["panel"].visible = false
+			c["edge"].visible = false
+		_show_pick()
+		_shown = ""
+		_came.move_to_front()
+		_guide.move_to_front()
+		return
 	var on_order: bool = order_key != ""
 	_order.visible = on_order
 	for c in _cols:
@@ -513,7 +611,9 @@ func _show_came_back() -> void:
 				_came_btn.text = f
 				break
 		UI.style_button(_came_btn, _came_open, "good")
-	_came.visible = has and _came_open and order_key == ""     # an order's card has the column (20 Oct: the card over it)
+	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
+	_came_btn.disabled = picking
+	_came.visible = has and _came_open and order_key == "" and not picking     # an order's card has the column (20 Oct: the card over it); the trait pick too (the review)
 	_came.position = Vector2(Pal.GRID_W - _came.size.x, CAME_Y)
 	_came.move_to_front()
 
@@ -564,6 +664,16 @@ func text_nodes() -> Array:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
 	out.append(_title)
 	out.append_array(_map.text_nodes())
+	if _pick.visible:
+		out.append_array([_pick_kicker, _pick_title, _pick_line, _pick_line2, _pick_head, _pick_go])
+		for c in _pick_cards:
+			if c["button"].visible:
+				out.append(c["name"])
+				out.append_array(c["chips"].text_nodes())
+		out.append_array(_pick_lost.text_nodes())
+		if _came.visible:
+			out.append_array(_came.text_nodes())
+		return out
 	if _order.visible:
 		out.append_array(_order.text_nodes())
 		return out

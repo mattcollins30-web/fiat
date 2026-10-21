@@ -39,6 +39,7 @@ const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const Juice := preload("res://scripts/ui/juice.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
+const Missions := preload("res://scripts/ui/missions.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 
@@ -2464,12 +2465,34 @@ func _webs_traits(main) -> void:
 	sim._kia()
 	_check(sim.candidates.size() == 2 and sim.candidates[1] == "Wary", "two did not turn up with the promised one among them: %s" % str(sim.candidates))
 	_check(sim.runner_trait == sim.candidates[0], "the runner in hand is not the first candidate")
+	# the pick is the Map's card column (21 Oct, the canvas): the two as cards, what went and what stays, Set off shut
+	var menu_was: bool = main._menu.visible
+	main.show_room(main.MISSIONS)
 	main.refresh()
-	main._choose_runner()
-	_check(main._menu.visible, "the two-turn-up menu did not open")
-	_check_fit(main, "The Pitch (two turn up)")
-	main._pick_runner(1)
+	var ms = main._missions
+	_check(ms._pick.visible and not ms._cols[0]["panel"].visible and main._menu.visible == menu_was, "the trait pick isn't on the Map")
+	_check(ms._pick_cards[1]["name"].text == "Wary" and ms._pick_cards[1]["chips"].shown() >= 1 and ms._pick_go.disabled, "the pick's cards or its shut Set off are off: '%s'" % ms._pick_cards[1]["name"].text)
+	_check(ms._pick_kicker.text.contains("back at level 1") and ms._pick_lost.shown() >= 4, "the pick doesn't say what the death took: '%s', %d chips" % [ms._pick_kicker.text, ms._pick_lost.shown()])
+	_check(Missions.trait_chips("Tins +15%, max HP −10%").map(func(c): return c["colour"]) == [Pal.GOOD, Pal.BAD], "a trait's cost isn't in the bad tone")
+	_check_fit(main, "The Map (back at level 1)")
+	# away with a death: the tally's card open doesn't cover the pick (the review); the Radio's Set off waits for it
+	ms._came_open = true
+	var cb_was: Dictionary = sim.came_back.duplicate(true)
+	sim.came_back_seen()
+	sim.came_back["runs"] = 1
+	sim.came_back["deaths"] = 1
+	ms._shown = ""
+	main.refresh()
+	_check(not ms._came.visible and ms._came_btn.disabled and ms._pick.visible, "the came-back card covers the trait pick")
+	sim.came_back = cb_was
+	ms._came_open = false
+	main._radio.show_state(sim)
+	if not sim.signals.is_empty():
+		_check(main._radio._set_off.disabled and main._radio._set_off.text.contains("trait"), "the Radio's Set off doesn't wait for the trait: '%s'" % main._radio._set_off.text)
+	ms._pick_cards[1]["button"].pressed.emit()
+	main.refresh()
 	_check(sim.runner_trait == "Wary" and sim.candidates.is_empty(), "picking the second runner did not take")
+	_check(not ms._pick.visible and ms._cols[0]["panel"].visible, "the site's card did not come back after the pick")
 	_check(sim.trait_mult("patrol") > 1.1, "Wary's gangs come no later")
 	sim.load_dict(saved)
 	sim.core_gates = true
