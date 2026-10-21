@@ -5983,3 +5983,14 @@ difficulty and length, the endgame placeholders.
 - The wall, read: the crews grow 8% a level both ways (HP and fire, 17% a level together), compounding; the kit's
   growth past level 20 is the affixes' 6% an item level, straight-line (no base past the deep tier 9), and level 50's
   cap. So the reach outruns the kit at 35-45 whatever the Bench does. For Matt.
+
+## The crew (21 Oct, Matt: "this isn't an idler anymore, it's an arpg auto battler")
+
+- docs/design/vision.md: the new vision (replaces concept.md's "idler cut" as the statement; concept.md stays as the
+  history). Decided: class swap, not respec - each class its own level, XP, tree, element, kit, wounds, insurance; no
+  catch-up XP; retirement and the Pitch move gone, their bonuses to an infinite paragon board shared by the crew;
+  stash tabs (one shared, one or two a class); the second past gone; hardcore hidden for now; Kev's story as it is,
+  no move after; gear scaling with item level past the deep tier. The reviewer runs on code in balance work, not on
+  number tweaks.
+- Mockups (canvas "Fiat – The crew"): the class swap screen, a signal's odds for every class, the stash's tabs, the
+  paragon board. Build after Matt's OK.
