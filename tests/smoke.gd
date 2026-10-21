@@ -11832,6 +11832,7 @@ func _site_level_checks(main) -> void:
 	_growth_checks(main)
 	_combo_checks(main)
 	_auto_gone_checks(main)
+	_socket_find_checks(main)
 	sim.words[3] = hold_intel[0]
 	sim.words[11] = hold_intel[1]
 	sim.depth = hold_depth
@@ -11990,6 +11991,39 @@ func _tier_guide_checks(main) -> void:
 
 ## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's
 ## value by item level - so the second leg reaches further than the first and a deep drop beats a shallow one.
+## Socketables, a find of their own (21 Oct, Matt's save: 4 in 300 finds): SOCKET_FIND of every find, kills too, about half
+## the class's own pair's elements; the roll at the find's tier or under, a plain one in a stack of one.
+func _socket_find_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	_set_cls(sim, "Drifter")
+	var own := 0
+	var n := 400
+	for k in range(n):
+		var it: Dictionary = sim.socket_find_roll(9)
+		_check(Items.is_socketable(it) and it["affixes"].is_empty() and int(it.get("count", 1)) == 1, "a socketable find isn't a plain socketable: %s" % str(it).substr(0, 120))
+		if float(Items.base_of(it).get("conv_fire_pct", 0)) > 0.0 or float(Items.base_of(it).get("conv_shock_pct", 0)) > 0.0:
+			own += 1
+	_check(own > n * 0.45 and own < n * 0.85, "a Drifter's socketables: %d of %d fire or shock" % [own, n])
+	_check(int(Items.base_of(sim.socket_find_roll(1))["tier"]) <= 1, "a tier-1 find's socketable came over its tier")
+	# through the finds themselves, searches and kills
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var socks := [0, 0]
+	var finds := 1500
+	for from_kill in [false, true]:
+		for k in range(finds):
+			var f: Dictionary = sim._find(sim.mission, sim.mission["t"], from_kill, {}, true)
+			if not f.is_empty() and Items.is_socketable(f["it"]):
+				socks[1 if from_kill else 0] += 1
+	_check(socks[1] >= finds * Data.SOCKET_FIND * 0.6 and socks[0] >= finds * Data.SOCKET_FIND * 0.6, "socketables a find: %d of %d searches, %d of %d kills" % [socks[0], finds, socks[1], finds])
+	sim.extract_now()
+	sim.load_dict(hold)
+	print("socketable finds ok")
+
+
 ## What came in auto-run's place (21 Oct, Matt): the Lookout's Early warning - after the clear, no gang till the first
 ## crate's searched - and the bus depot's pack cells.
 func _auto_gone_checks(main) -> void:

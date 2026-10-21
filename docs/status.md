@@ -6091,3 +6091,10 @@ difficulty and length, the endgame placeholders.
   50 and 10M dmg/s by hour 7. A kit probe (best of 40 rolls a slot at each level, 4 seeds): at 0.07 a fixed edge
   over the crews halves every ~25 levels, so the bot's edge (uniques, the Bench, paragon - about 100× a random kit)
   lasted ~165 levels; at 0.05 it halves in ~10. The pass on Matt's machine reads it.
+- Matt (21 Oct, after the pass): one bot pass, then his playtest. The pass (24 h, two reads a build, 14:34): the
+  runaway gone - the reach ends at 53-93 (it ran to 221) - then a slow climb, one long stall a read (5-17 h, most of it
+  past his 10-12 h of endgame); level 50 early (median 6.3 h), the lorry at 4.2 h, Kev's story in its gate; deaths and
+  wounds near nothing on the bot. 20 RED, none drastic: notes for his playtest, not tuning.
+- Done: socketables a find of their own (his save: 4 in 300 finds, none his element's): Data.SOCKET_FIND 4% of every
+  find, kills too, SOCKET_OWN half of them his class's pair's elements, at the find's tier or under; a mythic still
+  comes first (the review). For Matt: the Fence's rarity row ("sell commons") sells plain socketables too, as before.

@@ -7168,6 +7168,9 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var owned: Array = owned_ammo_types(m) if slot == Data.AMMO else []
 	if slot == Data.AMMO and owned.is_empty():
 		slot = gear_slot                      # rounds for no gun you have (17 Oct, Matt's playtest: three boxes, no gun): something else instead
+	var socket_find: bool = slot != Data.PAPER and rng.randf() < Data.SOCKET_FIND     # a socketable, its own kind of find, kills too (21 Oct)
+	if socket_find:
+		slot = Data.ATTACHMENT
 	var said := ""
 	var quality: float = rarity_bonus() + float(t.get("rarity", 0.0)) + float(crate.get("rarity", 0.0))
 	var it: Dictionary
@@ -7184,8 +7187,10 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		find_lv = wearable_level()
 		find_tier = mini(find_tier, gear_tier())
 	if not myth.is_empty():
-		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere
+		it = Items.roll_unique(myth, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # a mythic: one find in MYTHIC_ODDS_IN, anywhere - ahead of a socketable (the review)
 		said = Words.MYTHIC_FOUND % it["unique"]
+	elif socket_find:
+		it = socket_find_roll(int(t["loot_tier"]))
 	elif not own.is_empty() and int(t["depth"]) >= site_unique_depth(int(t["tier"])) and rng.randf() < own_odds:
 		it = Items.roll_unique(own, rng, int(t.get("level", -1)), int(t["loot_tier"]))     # the site's own, only here and only this deep (endgame part 3), at the find's tier
 		said = "Found: %s. %s" % [it["unique"], Words.SHELF["own_found"] % site["name"]]
@@ -7233,6 +7238,18 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 	var shown: Dictionary = it.duplicate(true)     # as found: landing joins a stack and leaves the find's own count at what was left over
 	_land(m, it, said, not from_kill and not crate.is_empty() and by_hand(m))
 	return {"it": shown, "said": said}
+
+
+## A socketable found (21 Oct): one at the find's tier or under, SOCKET_OWN of the time one of the class's own pair's
+## elements (a class with no socketable for its pair - the Doorman's bleed and physical - any).
+func socket_find_roll(at_tier: int) -> Dictionary:
+	var pool: Array = []
+	for b in Data.ATTACHMENTS:
+		if str(b.get("mount", "")) == "socket" and int(b["tier"]) <= maxi(1, at_tier):
+			pool.append(b)
+	var own: Array = pool.filter(func(b): return Data.AFFINITY.get(cls, []).any(func(el): return float(b.get("conv_%s_pct" % el, 0)) > 0.0))
+	var from: Array = own if not own.is_empty() and rng.randf() < Data.SOCKET_OWN else pool
+	return _plain(Data.ATTACHMENT, str(from[rng.randi_range(0, from.size() - 1)]["name"]))
 
 
 ## A find rolled, into the pack - or onto the floor, a search's by hand (13 Oct) - its line in the log, and a gun's box

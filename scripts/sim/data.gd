@@ -629,6 +629,8 @@ const MED_PRICE := 1.5            # the Clinic's markup on a common med
 const MED_DROP := 0.08            # the share of finds that are medical
 const GRENADE_DROP := 0.04        # the share of a look's finds that are grenades (32)
 const ATT_DROP := 0.30            # the share of a look's finds that are attachments
+const SOCKET_FIND := 0.04         # a socketable, a find of its own (21 Oct, Matt's save: 4 in 300 finds, none his element's): kills too
+const SOCKET_OWN := 0.5           # and this share of them one of the class's own elements'
 
 ## Attachments: items that fit a gun's slots at the Workshop. `mount` is the
 ## gun slot they go in; the effects are read off the fitted gun. Rarer ones
