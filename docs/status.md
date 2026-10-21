@@ -6140,7 +6140,9 @@ difficulty and length, the endgame placeholders.
    once its scrap's paid - destroyed, not left on the floor.
 6. Art: the Scrapper's figure and portrait regenerated (Matt: "just awful"), and the Poacher's figure and portrait
    too - he reads too much like the Gamekeeper. And every skill tree node gets its own art (Matt: "the placeholder
-   glyphs have served their purpose"). A manifest for all of it to agree with Matt before any credits go.
+   glyphs have served their purpose"). And the fight's cover walls: they still show heavy duplication (a tile
+   repeated); Matt: generate them much bigger, one large piece you crouch behind, so there's nothing in code to fix.
+   A manifest for all of it to agree with Matt before any credits go.
 7. A gun's upgrade verdict in the fight still wants its rounds on hand: the fix that lets a gun read as an upgrade in
    the stash without its rounds in the rig (the try-on feeding from the stash's grades, 20 Oct) didn't reach the
    fight's pick, so a find there only shows as an upgrade if its rounds are already held. Matt: "that change didnt
