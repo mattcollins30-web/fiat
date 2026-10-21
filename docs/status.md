@@ -6098,3 +6098,12 @@ difficulty and length, the endgame placeholders.
 - Done: socketables a find of their own (his save: 4 in 300 finds, none his element's): Data.SOCKET_FIND 4% of every
   find, kills too, SOCKET_OWN half of them his class's pair's elements, at the find's tier or under; a mythic still
   comes first (the review). For Matt: the Fence's rarity row ("sell commons") sells plain socketables too, as before.
+- Matt (21 Oct): "Proceed with all 5 and then ill play" - socketables (done above), the Build view, the Radio's code
+  book in the room, the death pick in the room, the dead word menu out.
+- Done: the Build view (canvas A) - the Workshop's fourth view; the old Build for scrap menu is gone (Craft's button
+  opens the view). Five kind tiles with how many can be built, twelve cards a page (a pager past that), each with its
+  cost and what it wants or why not; a card picked fills the pick panel (what it makes, what it takes, Build · N
+  scrap). The grid shows what the kind takes (a grenade's socketable: the review) and rings the picked build's input,
+  turning once to the tab that holds it. SAVE_VERSION 4 rides with it (the crew's save shape).
+  - The kit key's parts are apart now (Sim._kit_parts): a try-on flake showed once (key changed in the window); the
+    smoke now says which part.

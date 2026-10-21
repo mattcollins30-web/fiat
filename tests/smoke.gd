@@ -7616,17 +7616,55 @@ func _build_checks(main) -> void:
 	main.refresh()
 	_check(main._workshop._build.visible and main._workshop._build.text == "Build for scrap", "the craft view has no Build button: '%s'" % main._workshop._build.text)
 	_check_fit(main, "Workshop (craft, build)")
-	main._open_builds(0)
-	_check(main._menu.visible and main._menu._items.size() == 5, "the build menu did not open with its kinds")
-	_check_fit(main, "Workshop (build menu)")
-	main._open_build_kind("grade", 0)
-	_check(main._menu.visible and main._menu._items[0]["name"].contains("scrap"), "the grades' menu is off: %s" % str(main._menu._items[0]))
-	_check_fit(main, "Workshop (build grades)")
-	main._menu.close()
+	# the Build view (21 Oct, off the old menu): Build for scrap opens it; a kind's builds are its cards, each priced;
+	# a card picked fills the pick panel and its Build button builds through main
+	var menu_before: String = main._menu._title.text if main._menu.visible else ""
+	main._workshop._build.pressed.emit()
+	var ws = main._workshop
+	_check(ws.view == "build" and ws._kinds.visible and ws._builds.visible and (main._menu._title.text if main._menu.visible else "") == menu_before, "Build for scrap did not open the Build view (or opened a menu): view %s, kinds %s, builds %s, menu '%s'" % [ws.view, ws._kinds.visible, ws._builds.visible, main._menu._title.text if main._menu.visible else ""])
+	_check(ws.VIEWS.size() == 4 and ws.VIEW_NAMES.size() == 4, "the Workshop's views are not four")
+	for kk in ws.BUILD_KINDS:
+		ws._pick_kind(str(kk[0]))
+		var kopts: Array = sim.build_options(str(kk[0]))
+		var shown: int = 0
+		for pg in range(ws._build_page_count()):
+			shown += ws._build_cards.filter(func(c): return c["button"].visible).size()
+			_check_fit(main, "Workshop (build, %s, page %d)" % [kk[0], pg + 1])
+			ws._turn_builds(1)
+		_check(shown == kopts.size() and ws.build_page == 0, "the Build view's pages show %d cards of %s's %d builds" % [shown, kk[0], kopts.size()])
+		_check(main._workshop._inv.fixed_kind == ws.takes_slot(str(kk[0])), "the Build view's grid shows %s, not what %s takes" % [main._workshop._inv.fixed_kind, kk[0]])
+	ws._pick_kind("grenade")
+	_check(ws._inv.fixed_kind == Data.ATTACHMENT, "the grenades' grid isn't the socketables they take")
+	sim.scrap = 500
+	ws._pick_kind("box")
+	var bopts: Array = sim.build_options("box")
+	var bk: int = -1
+	for k in range(bopts.size()):
+		if bool(bopts[k]["ok"]):
+			bk = k
+			break
+	_check(bk >= 0, "no box to build with a gun held")
+	if bk >= 0:
+		ws._pick_build_card(bk)
+		_check(ws.sel_build == str(bopts[bk]["name"]) and ws._pick.button_texts() == ["Build · %d scrap" % int(bopts[bk]["scrap"])], "the picked build's button is off: %s" % str(ws._pick.button_texts()))
+		_check_fit(main, "Workshop (build, picked)")
+		var before: int = sim.scrap
+		ws._pick.press(0)
+		_check(sim.scrap == before - int(bopts[bk]["scrap"]), "the Build button did not build: scrap %d to %d" % [before, sim.scrap])
+	# one not buildable: its card says why, its button is off
+	ws._pick_kind("grade")
+	var gopts: Array = sim.build_options("grade")
+	for k in range(gopts.size()):
+		if not bool(gopts[k]["ok"]):
+			ws._pick_build_card(k)
+			var before_g: int = sim.scrap
+			ws._pick.press(0)
+			_check(sim.scrap == before_g and ws._build_cards[k]["words"].text.contains(str(gopts[k]["why"]).substr(0, 5)), "a build it can't make went through, or its card doesn't say why: '%s'" % ws._build_cards[k]["words"].text)
+			break
 	main._workshop._set_view("guns")
 	sim.load_dict(saved)
 	main.refresh()
-	print("the Bench's builds ok: scrap from a search, a ditch and a scrapping; a box, a grade from the box below, the med ladder, a gun firing nails, a grenade from its socketable, the refusals, the view and the menus")
+	print("the Bench's builds ok: scrap from a search, a ditch and a scrapping; a box, a grade from the box below, the med ladder, a gun firing nails, a grenade from its socketable, the refusals, the craft view and the Build view")
 
 
 ## 33: ammo grades with an element. The gun's live stack of hollow point bleeds, incendiary burns, salted chills,
@@ -14326,9 +14364,11 @@ func _try_on_checks(main) -> void:
 	var k0: int = 0
 	var r0: int = 0
 	var r1: int = 0
+	var parts0: Array = []
 	for tries in range(3):                   # 21 Oct, a flake: the window again if dusk or the weather turned in it
 		var sky: Array = [sim.is_night(), sim.weather_of(sim.front_tier()), sim.front_tier()]
 		k0 = sim._kit_key()
+		parts0 = sim._kit_parts()
 		r0 = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
 		for k in range(5):
 			sim.hp = sim.max_hp()
@@ -14337,7 +14377,7 @@ func _try_on_checks(main) -> void:
 		r1 = sim.rounds_for(sim.equipped["Primary"]) if sim.equipped["Primary"] != null else 0
 		if [sim.is_night(), sim.weather_of(sim.front_tier()), sim.front_tier()] == sky:
 			break
-	_check(r1 < r0 and sim._kit_key() == k0, "the try-on's answers were thrown away by rounds spent (%d -> %d rounds, key %s)" % [r0, r1, "same" if sim._kit_key() == k0 else "changed"])
+	_check(r1 < r0 and sim._kit_key() == k0, "the try-on's answers were thrown away by rounds spent (%d -> %d rounds, key %s%s)" % [r0, r1, "same" if sim._kit_key() == k0 else "changed", _parts_changed(parts0, sim._kit_parts())])
 	# but a thing leaving the rig is a change (armour a med, the review): a med used throws them away
 	var med: Dictionary = sim.first_med()
 	if not med.is_empty():
@@ -16670,3 +16710,11 @@ func _pitch_scramble_checks(main) -> void:
 	main.show_room(was)
 	main.refresh()
 
+
+## Which of the kit key's parts differ (the try-on flake, 21 Oct), by index: equipped 0 ... the rig's size 7, the pack 8.
+func _parts_changed(a: Array, b: Array) -> String:
+	var out := []
+	for i in range(mini(a.size(), b.size())):
+		if str(a[i]) != str(b[i]):
+			out.append("%d: %s -> %s" % [i, str(a[i]).left(80), str(b[i]).left(80)])
+	return (", " + "; ".join(out)) if not out.is_empty() else ""

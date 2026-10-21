@@ -13,7 +13,7 @@ extends Control
 
 signal acted
 signal craft(id, kind, stat)       # a Bench job from the Craft view; main runs it (the toast, the refresh)
-signal build                       # the Build column's menu (34): rounds, meds, a gun, a grenade for scrap
+signal built(kind, name)            # the Build view (21 Oct, out of the old menu): main builds it and toasts it
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -33,7 +33,9 @@ const HEAD_H := Pal.BAND_H         # the rooms' one band across the top (10 Oct,
 const TOP := HEAD_H + 14           # the columns under it
 const VIEW_W := 144                # a view's tab (140 until "Weapons", 18 Oct)
 const VIEW_H := 40
-const VIEWS_X := Pal.GRID_W - PAD - 3 * VIEW_W - 12     # the views at the band's foot, right (Bands-U A)
+const VIEWS_X := Pal.GRID_W - PAD - 4 * VIEW_W - 18     # the views at the band's foot, right (Bands-U A); four since the Build view
+const VIEWS := ["guns", "sockets", "craft", "build"]
+const VIEW_NAMES := ["Weapons", "Sockets", "Craft", "Build"]
 const CARD_PAD := 14
 const HEAD_LINE_H := 26            # a gun card's first line: the slot and the figure
 const NAME_H := 34                 # the gun's name under it
@@ -66,10 +68,39 @@ const RE_ROLLS := ["values", "affixes"]
 const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
 const GUNS := ["Primary", "Secondary"]
+## The Build view (21 Oct, "Fiat – Build for scrap" A): what to build as tiles, its builds as cards, the stash's kind on
+## the right with what the picked one takes ringed, the pick panel the build.
+## A kind: its key, its tile's name, the slot it makes, the slot it takes from (the grid shows that), what it takes.
+const BUILD_KINDS := [["box", "Rounds", "Ammo", "Ammo", "A box of any type you have a gun for"], ["grade", "Grades", "Ammo", "Ammo", "Scrap and the box below it"],
+	["med", "Meds", "Medical", "Medical", "Scrap and the one below it"], ["gun", "Guns", "Primary", "Primary", "Common, plain, fires nails"],
+	["grenade", "Grenades", "Grenade", "Attachment", "Scrap and the element's socketable"]]
+const KIND_H := 70
+const KINDS_H := 40 + KIND_H + 14
+const BUILD_COLS := 2
+const BUILD_ROWS := 6               # twelve a page: the guns are eleven once the deep tiers open (the review); more pages if more
+const BUILD_CARD_H := 64
+const BUILD_GAP := 8
+@warning_ignore("integer_division")
+const BUILD_CARD_W := (BODY_W - 2 * PAD - BUILD_GAP) / BUILD_COLS
+@warning_ignore("integer_division")
+const KIND_W := (BODY_W - 2 * PAD - 4 * BUILD_GAP) / 5
 
 var head_band := {}                # the heading's painted place (10 Oct, Rooms-B)
 var sim
-var view := "guns"                 # "guns", "sockets" or "craft"
+var view := "guns"                 # "guns", "sockets", "craft" or "build"
+var build_kind := "med"            # the Build view's kind, and the build picked in it
+var sel_build := ""
+var build_page := 0
+var _tab_turned_for := ""          # the build the grid last turned its tab for: once a pick, so Shared can still be looked at
+var _kinds: Panel
+var _kind_tiles: Array = []        # five: {button, name, count}
+var _builds: Panel
+var _builds_head: Label
+var _build_cards: Array = []       # ten: {button, name, cost, words}
+var _builds_foot: Label
+var _build_prev: Button
+var _build_next: Button
+var _build_pages: Label
 var _views: Array[Button] = []
 var _kicker: Label                 # the heading: "The Bench", "Level 2", "fits optics, muzzles and magazines"
 var _headline: Label
@@ -115,10 +146,10 @@ func _init() -> void:
 	_kicker = UI.label(head, Rect2(PAD, 8, Pal.BAND_TEXT_W, 24), "Workshop", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_headline = UI.label(head, Rect2(PAD, 32, Pal.BAND_TEXT_W, 44), "", "SemiBold", Pal.HEADLINE - 4, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_unit = UI.label(head, Rect2(PAD, 38, Pal.BAND_TEXT_W, 36), "", "Medium", Pal.CELL_TEXT_BIG + 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-	for i in range(3):
+	for i in range(VIEWS.size()):
 		var v := UI.button(head, Rect2(VIEWS_X + i * (VIEW_W + 6), HEAD_H - 16 - VIEW_H, VIEW_W, VIEW_H), false)      # plain: _style skins the one that's on (a primary start left Guns' text dark, 8 Oct)
-		v.text = ["Weapons", "Sockets", "Craft"][i]     # the hammer and the knife are in it (18 Oct, Q12)
-		v.pressed.connect(_set_view.bind(["guns", "sockets", "craft"][i]))
+		v.text = VIEW_NAMES[i]     # the hammer and the knife are in it (18 Oct, Q12)
+		v.pressed.connect(_set_view.bind(VIEWS[i]))
 		_views.append(v)
 	_chips = Chips.new(Pal.BAND_TEXT_W, 3)
 	_chips.position = Vector2(PAD, Pal.BAND_CHIPS_Y)
@@ -195,7 +226,7 @@ func _init() -> void:
 	@warning_ignore("integer_division")
 	var fy := jy + ((JOBS.size() + JOB_COLS - 1) / JOB_COLS) * (JOB_H + JOB_GAP) + 4
 	_build = UI.button(_jobs, Rect2(BODY_W - PAD - 100, fy, 100, FOOT_H), false)
-	_build.pressed.connect(func(): build.emit())
+	_build.pressed.connect(func(): _set_view("build"))     # the Build view (21 Oct): the old menu's gone
 	_foot = UI.label(_jobs, Rect2(PAD, fy, BODY_W - 2 * PAD - 240, FOOT_H), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_jobs.size.y = fy + FOOT_H + 14
 	# the Guns view: a card a gun - the slot and figure, the name and its chips, the mounts as tiles
@@ -256,6 +287,7 @@ func _init() -> void:
 			g["rows"][mount] = r
 		y += SOCK_HEAD_H + ROW_GAP + UI.TILE_H + CARD_PAD + 10
 		_socks[slot] = g
+	_build_build_view()
 	_show_view()
 	# the grid: the stash's attachments, for the selected mount when one is; the gear in the Craft view
 	_inv = Inventory.new()
@@ -272,6 +304,163 @@ func _init() -> void:
 	add_child(_pick)
 	for i in range(PickPanel.BUTTONS):
 		_pick_actions.append(Callable())
+
+
+func _build_build_view() -> void:
+	_kinds = UI.panel(self, Rect2(0, TOP, BODY_W, KINDS_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	UI.label(_kinds, Rect2(PAD, 10, 300, 24), "WHAT TO BUILD", "Medium", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(BUILD_KINDS.size()):
+		var b := Button.new()
+		b.position = Vector2(PAD + k * (KIND_W + BUILD_GAP), 40)
+		b.size = Vector2(KIND_W, KIND_H)
+		b.text = ""
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_pick_kind.bind(str(BUILD_KINDS[k][0])))
+		_kinds.add_child(b)
+		var t := {"button": b}
+		t["name"] = UI.label(b, Rect2(8, 8, KIND_W - 16, 26), str(BUILD_KINDS[k][1]), "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["count"] = UI.label(b, Rect2(8, 36, KIND_W - 16, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_kind_tiles.append(t)
+	var by: float = TOP + KINDS_H + 10
+	_builds = UI.panel(self, Rect2(0, by, BODY_W, Pal.ROOM_H - by), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_builds_head = UI.label(_builds, Rect2(PAD, 10, BODY_W - 2 * PAD, 24), "", "Medium", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(BUILD_COLS * BUILD_ROWS):
+		var b := Button.new()
+		@warning_ignore("integer_division")
+		b.position = Vector2(PAD + (k % BUILD_COLS) * (BUILD_CARD_W + BUILD_GAP), 40 + (k / BUILD_COLS) * (BUILD_CARD_H + BUILD_GAP))
+		b.size = Vector2(BUILD_CARD_W, BUILD_CARD_H)
+		b.text = ""
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_pick_build_card.bind(k))
+		_builds.add_child(b)
+		var c := {"button": b, "name_key": ""}
+		c["name"] = UI.label(b, Rect2(12, 6, BUILD_CARD_W - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["cost"] = UI.label(b, Rect2(12, 34, BUILD_CARD_W - 24, 22), "", "SemiBold", Pal.CELL_TEXT - 1, Pal.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
+		c["words"] = UI.label(b, Rect2(12, 34, BUILD_CARD_W - 24, 22), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_build_cards.append(c)
+	var fy: float = 40 + BUILD_ROWS * (BUILD_CARD_H + BUILD_GAP) + 6
+	_builds_foot = UI.label(_builds, Rect2(PAD, fy, BODY_W - 2 * PAD - 150, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_build_prev = UI.button(_builds, Rect2(BODY_W - PAD - 140, fy - 4, 40, 34), false)
+	_build_prev.text = "‹"
+	_build_prev.pressed.connect(_turn_builds.bind(-1))
+	_build_pages = UI.label(_builds, Rect2(BODY_W - PAD - 100, fy, 60, 26), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_build_next = UI.button(_builds, Rect2(BODY_W - PAD - 40, fy - 4, 40, 34), false)
+	_build_next.text = "›"
+	_build_next.pressed.connect(_turn_builds.bind(1))
+
+
+static func build_slot(kind: String) -> String:
+	return _kind_field(kind, 2)
+
+
+## The slot a kind's builds take from: the grid shows it (a grenade takes a socketable: the review).
+static func takes_slot(kind: String) -> String:
+	return _kind_field(kind, 3)
+
+
+static func _kind_field(kind: String, f: int) -> String:
+	for k in BUILD_KINDS:
+		if k[0] == kind:
+			return str(k[f])
+	return ""
+
+
+func _build_page_count() -> int:
+	@warning_ignore("integer_division")
+	return maxi(1, (sim.build_options(build_kind).size() + _build_cards.size() - 1) / _build_cards.size())
+
+
+func _turn_builds(d: int) -> void:
+	build_page = posmod(build_page + d, _build_page_count())
+	_shown = ""
+	show_state(sim)
+
+
+func _pick_kind(kind: String) -> void:
+	build_kind = kind
+	sel_build = ""
+	build_page = 0
+	_shown = ""
+	show_state(sim)
+
+
+func _pick_build_card(k: int) -> void:
+	sel_build = str(_build_cards[k]["name_key"])
+	_shown = ""
+	show_state(sim)
+
+
+func _do_build(kind: String, nm: String) -> void:
+	built.emit(kind, nm)
+
+
+## What a build's card says under its name: its tier, then what it wants and whether it's in the stash, or why not.
+func build_words(o: Dictionary) -> Array:
+	var t: String = "T%d" % int(o["tier"])
+	if not bool(o["ok"]):
+		return ["%s · %s" % [t, str(o["why"])], str(o["why"]), t]
+	if str(o["from"]) != "":
+		var what: String = ("a box of %s" % str(o["from"]).to_lower()) if o["kind"] == "grade" else str(o["from"]).to_lower()
+		return ["%s · wants %s" % [t, what], "%s · %s" % [t, what], t]
+	return [t]
+
+
+func _show_build() -> void:
+	var on_bench: bool = not sim.on_mission()
+	for k in range(BUILD_KINDS.size()):
+		var t: Dictionary = _kind_tiles[k]
+		var kind: String = str(BUILD_KINDS[k][0])
+		var n: int = sim.build_options(kind).filter(func(o): return bool(o["ok"])).size()
+		UI.fit(t["count"], [("%d to build" % n) if n > 0 else "none yet", str(n)])
+		t["count"].add_theme_color_override("font_color", Pal.TEXT_2 if n > 0 else Pal.TEXT_3)
+		_style(t["button"], kind == build_kind)
+	var all_opts: Array = sim.build_options(build_kind)
+	var pages: int = _build_page_count()
+	build_page = clampi(build_page, 0, pages - 1)
+	var opts: Array = all_opts.slice(build_page * _build_cards.size(), (build_page + 1) * _build_cards.size())
+	var title: String = _kind_field(build_kind, 1).to_upper()
+	var takes: String = _kind_field(build_kind, 4).to_upper()
+	UI.fit(_builds_head, ["%s · %s · %d SCRAP IN HAND" % [title, takes, sim.scrap], "%s · %s" % [title, takes], "%s · %d SCRAP IN HAND" % [title, sim.scrap], title])
+	_build_prev.visible = pages > 1
+	_build_next.visible = pages > 1
+	_build_pages.visible = pages > 1
+	_build_pages.text = "%d/%d" % [build_page + 1, pages]
+	for k in range(_build_cards.size()):
+		var c: Dictionary = _build_cards[k]
+		var b: Button = c["button"]
+		b.visible = k < opts.size()
+		if not b.visible:
+			c["name_key"] = ""
+			continue
+		var o: Dictionary = opts[k]
+		c["name_key"] = str(o["name"])
+		UI.fit(c["name"], [str(o["name"])])
+		c["cost"].text = "%d scrap" % int(o["scrap"])
+		c["words"].size.x = BUILD_CARD_W - 24 - ceilf(UI.text_width(c["cost"], c["cost"].text)) - 16     # the cost on the words' line, right: the name has the card's width
+		UI.fit(c["words"], build_words(o))
+		var ok: bool = bool(o["ok"])
+		c["name"].add_theme_color_override("font_color", Pal.TEXT if ok else Pal.TEXT_3)
+		c["cost"].add_theme_color_override("font_color", Pal.ACCENT if ok else Pal.TEXT_3)
+		c["words"].add_theme_color_override("font_color", Pal.TEXT_2 if ok else Pal.BAD)
+		_style(b, str(o["name"]) == sel_build, "", not ok)
+	_builds_foot.text = "" if on_bench else "The runner is out: the Bench waits"
+	# the pick panel: the build, or what to do
+	var picked: Dictionary = sim.build_option(build_kind, sel_build) if sel_build != "" else {}
+	if picked.is_empty():
+		sel_build = ""
+		_pick.show_empty("Pick a build", ["%d scrap in hand" % sim.scrap, "Scrap comes from searches, scrapping here and ditching"])
+		_set_pick_buttons([])
+		return
+	var made: Dictionary = sim._plain(build_slot(build_kind), str(picked["name"]))
+	_pick.show_pick(made, sim, "Build · it makes")
+	var lines: Array = []
+	if str(picked["from"]) != "":
+		var have: int = sim._rounds_in_stash(str(picked["from"])) if build_kind == "grade" else sim._count_in_stash(str(picked["from"]))
+		lines.append(("A box of %s: %d rounds in the stash" % [str(picked["from"]).to_lower(), have]) if build_kind == "grade" else ("%s: %d in the stash" % [str(picked["from"]), have]))
+	if not bool(picked["ok"]):
+		lines.append(str(picked["why"]))
+	_pick.show_right_words("It takes", "%d of %d scrap" % [int(picked["scrap"]), sim.scrap], lines)
+	_set_pick_buttons([{"text": "Build · %d scrap" % int(picked["scrap"]), "action": _do_build.bind(build_kind, str(picked["name"])), "enabled": bool(picked["ok"]), "primary": true}])
 
 
 ## A tile's look: picked (ringed), with a part (edged in its tone), empty, dim
@@ -307,7 +496,23 @@ func show_state(s) -> void:
 	if view == "craft":
 		source = _craftable()
 		what = "Gear"
-	_inv.fixed_kind = "" if view == "craft" else Data.ATTACHMENT
+	_inv.marks = {}
+	if view == "build":
+		var slot_b: String = takes_slot(build_kind)
+		source = sim.stash.filter(func(it): return str(it["slot"]) == slot_b)
+		what = _kind_field(build_kind, 1)
+		var ob: Dictionary = sim.build_option(build_kind, sel_build) if sel_build != "" else {}
+		if not ob.is_empty() and str(ob["from"]) != "":
+			var tabs_with := {}
+			for it in source:
+				if str(it["base"]) == str(ob["from"]):
+					_inv.marks[it["id"]] = "go"     # what the picked build takes, ringed (the mock)
+					tabs_with[sim.tab_of(it)] = true
+			if sel_build != _tab_turned_for and not tabs_with.is_empty() and not tabs_with.has(_inv.tab):
+				_inv.tab = str(tabs_with.keys()[0])
+				_inv.page = 0
+		_tab_turned_for = sel_build     # the grid turns to the tab that holds it (the build takes from any: the review)
+	_inv.fixed_kind = "" if view == "craft" else (takes_slot(build_kind) if view == "build" else Data.ATTACHMENT)
 	_inv.show_items(sim, source, sim.stash_used(), sim.stash_cap(), what)
 	var sig := _signature()
 	if sig == _shown:
@@ -478,7 +683,7 @@ func _all_attachments(socketables: bool) -> Array:
 func _signature() -> String:
 	@warning_ignore("integer_division")
 	var parts := [view, sel_slot, sel_mount, str(sel_id), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
-		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", ""))]
+		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", "")), build_kind, sel_build, str(build_page), str(sim.stash.size()), str(sim.stash_used()), str(sim.gun_types_held()), str(sim.deepest_site_level()), _inv.tab]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
 	if not picked.is_empty():
@@ -547,6 +752,9 @@ func _fitted() -> Dictionary:
 func _show_panel() -> void:
 	var it := _selected_item()
 	var fitted := _fitted()
+	if view == "build":
+		_show_build()
+		return
 	if view == "craft":
 		_show_craft(it)
 		return
@@ -897,16 +1105,19 @@ func _set_view(v: String) -> void:
 	sel_mount = ""
 	sel_id = -1
 	sel_stat = ""
+	sel_build = ""
 	_show_view()
 	if sim != null:
 		show_state(sim)
 
 
 func _show_view() -> void:
-	for i in range(3):
-		_style(_views[i], ["guns", "sockets", "craft"][i] == view)
+	for i in range(VIEWS.size()):
+		_style(_views[i], VIEWS[i] == view)
 	_piece.visible = view == "craft"
 	_jobs.visible = view == "craft"
+	_kinds.visible = view == "build"
+	_builds.visible = view == "build"
 	for slot in GUNS:
 		var g: Dictionary = _guns[slot]
 		g["card"].visible = view == "guns"
@@ -986,6 +1197,17 @@ func text_nodes() -> Array:
 					out.append(l)
 			if t["price"].text != "":
 				out.append(t["price"])
+	elif view == "build":
+		out.append(_builds_head)
+		for t in _kind_tiles:
+			out.append_array([t["name"], t["count"]])
+		for c in _build_cards:
+			if c["button"].visible:
+				out.append_array([c["name"], c["cost"], c["words"]])
+		if _builds_foot.text != "":
+			out.append(_builds_foot)
+		if _build_pages.visible:
+			out.append(_build_pages)
 	elif view == "guns":
 		for slot in GUNS:
 			var g: Dictionary = _guns[slot]
@@ -1022,6 +1244,10 @@ func line_pairs() -> Array:
 	elif view == "sockets":
 		for slot in Data.SOCKET_SLOTS:
 			out.append([_socks[slot]["label"], _socks[slot]["name"]])
+	elif view == "build":
+		for c in _build_cards:
+			if c["button"].visible:
+				out.append([c["words"], c["cost"]])
 	else:
 		out.append([_piece_title, _piece_figure])
 		for r in _affix_rows:

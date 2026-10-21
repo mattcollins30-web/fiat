@@ -48,7 +48,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4               # 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -297,7 +297,7 @@ func _build() -> void:
 	_workshop = Workshop.new()
 	_workshop.acted.connect(refresh)
 	_workshop.craft.connect(_craft)                # the Workshop's jobs, done in the room (8 Oct); worn gear comes in through the Runner room's Workshop button (9 Oct)
-	_workshop.build.connect(_open_builds)
+	_workshop.built.connect(_build_one)
 	_workshop.visible = false
 	add_child(_workshop)
 	_run = Run.new()
@@ -1459,46 +1459,9 @@ func _pick_runner(k: int) -> void:
 	refresh()
 
 
-## The bench's menu for an item: what can be done to it, in notes.
-## The Build column (34): a kind, then its builds four a page, each priced in scrap and saying what it wants.
-const BUILD_KINDS := [["box", "A box of rounds", "A standard box of any type you have a gun for"], ["grade", "A better grade", "Scrap and the box below it"],
-	["med", "A med", "Scrap and the one below it"], ["gun", "An improvised gun", "Common, plain, fires nails whatever it is"], ["grenade", "A grenade", "Scrap and the element's socketable"]]
-
-func _open_builds(page := 0) -> void:
-	var items := []
-	var kinds: Array = BUILD_KINDS.slice(page * 4, page * 4 + 4)
-	for k in kinds:
-		items.append({"name": k[1], "detail": k[2], "action": _open_build_kind.bind(k[0], 0)})
-	if BUILD_KINDS.size() > (page + 1) * 4:
-		items.append({"name": "More", "detail": "", "action": _open_builds.bind(page + 1)})
-	else:
-		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("Build for scrap", "%d scrap in hand" % sim.scrap, items.slice(0, 5), _menu.close)
-
-
-func _open_build_kind(kind: String, page: int) -> void:
-	var opts: Array = sim.build_options(kind)
-	var items := []
-	for o in opts.slice(page * 4, page * 4 + 4):
-		var wants: String = (" · wants %s" % (("a box of %s" % str(o["from"]).to_lower()) if kind == "grade" else str(o["from"]).to_lower())) if o["from"] != "" else ""
-		var detail: String = ("T%d%s" % [o["tier"], wants]) + ("" if o["ok"] else " · %s" % o["why"])
-		items.append({"name": "%s · %d scrap" % [o["name"], o["scrap"]], "detail": detail, "action": _build_one.bind(kind, o["name"]), "enabled": bool(o["ok"])})
-	if opts.size() > (page + 1) * 4:
-		items.append({"name": "More", "detail": "", "action": _open_build_kind.bind(kind, page + 1)})
-	else:
-		items.append({"name": "Back", "detail": "", "action": _open_builds.bind(0)})
-	if items.size() > 5:
-		items = items.slice(0, 5)
-	var title: String = ""
-	for k in BUILD_KINDS:
-		if k[0] == kind:
-			title = k[1]
-	_menu.open(title, "%d scrap in hand" % sim.scrap, items, _open_builds.bind(0))
-
-
+## The Workshop's Build view's Build button (21 Oct: the view replaced the old menu).
 func _build_one(kind: String, nm: String) -> void:
 	if sim.build(kind, nm):
-		_menu.close()
 		refresh()
 		_juice.toast("Built: %s" % nm.to_lower(), "good")
 

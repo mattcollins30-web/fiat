@@ -8283,10 +8283,15 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 ## throw the answers away each second) and how many things it holds (armour a med), the pack's fill on a run
 ## (armour a free cell), the Yard (the Clinic's HP), the trades, and whether a run is on.
 func _kit_key() -> int:
+	return hash(_kit_parts())
+
+
+## What the key is made of (21 Oct: apart, so the smoke can say which part changed).
+func _kit_parts() -> Array:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return hash([equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon_board, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
-			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
+	return [equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon_board, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+			weather_of(front_tier()), is_night()]     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
