@@ -6123,3 +6123,7 @@ difficulty and length, the endgame placeholders.
 1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
    work with nothing." runs twice across the row, back to back (screenshot; Matt: "still happening"). Fixed once for
    the Clinic open (dceac06); this is a fresh camp, so likely the loop with only one line heard. Not looked at yet.
+2. The Gamekeeper's unique is a downgrade: The Keeper's Twelve-Bore (Unique, level 1) reads 23 dmg/s against a
+   Common Pump shotgun found earlier at 34 (screenshot: ▼ 7.9 dmg/s, with +12% dmg and +15% dmg pre-clear and "a
+   kill heals 3% max HP"). Matt: "the unique drop from the gamekeeper should be better than a random gun found
+   earlier - the unique here is pointless and should be the first big find of the game." Not looked at yet.
