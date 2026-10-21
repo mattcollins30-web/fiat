@@ -30,6 +30,7 @@ var _clip: Control                 # the words scroll inside it
 var _items: Array = []             # {"label": Label (the first part), "parts": [Label], "dot": Label or null}: on the strip, left to right
 var _queue: Array = []             # lines heard just now, first out first
 var _next_heard := 0               # the ambient turn through what's been heard
+var _last := ""                     # the line last played, queue or turn
 var _since_garble := 0             # lines played since the last garbled one
 var _garbles := 0                  # garbled lines played: picks the next one's words and glyphs
 static var _voice_of := {}         # a line's text -> its voice, from Words.RADIO
@@ -181,6 +182,13 @@ func next_parts() -> Array:
 
 ## What plays next: a line just heard, else the next of those heard in turn, else the loop's first.
 func _next_line() -> String:
+	_last = _pick_line()
+	return _last
+
+
+## The line, by the turn; never the one just played twice running (21 Oct, Matt's playtest: the medic's line, the only
+## one heard on a fresh camp, ran back to back) - with one line heard, the loop's latest fills the gap.
+func _pick_line() -> String:
 	if not _queue.is_empty():
 		return _queue.pop_front()
 	var pool: Array = []
@@ -198,9 +206,13 @@ func _next_line() -> String:
 	_next_heard = _next_heard % pool.size()
 	var s: String = pool[_next_heard]
 	_next_heard += 1
-	if pool.size() > 1 and not _items.is_empty() and s == _items.back()["label"].text:
-		s = pool[_next_heard % pool.size()]          # not the line just played again (a heard line pushed, then its turn)
-		_next_heard += 1
+	if s == _last:                                   # not the line just played again (a heard line pushed, then its turn)
+		if pool.size() > 1:
+			s = pool[_next_heard % pool.size()]
+			_next_heard += 1
+		elif not _loop_stopped():
+			var top: int = _loop_latest()
+			s = str(Words.RADIO[top if top >= 0 else 0]["text"])
 	return s
 
 

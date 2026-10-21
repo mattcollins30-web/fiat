@@ -40,6 +40,7 @@ const Juice := preload("res://scripts/ui/juice.gd")
 const People := preload("res://scripts/ui/people.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const Missions := preload("res://scripts/ui/missions.gd")
+const Workshop := preload("res://scripts/ui/workshop.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 
@@ -5594,6 +5595,7 @@ func _sound_checks(main) -> void:
 		m = sim.mission
 		main.refresh()
 	var streak0: int = int(snd.world()["streak"])
+	snd._kill_at = Time.get_ticks_msec() / 1000.0     # "straight after" in real seconds: the smoke's own pace isn't the test (a busy machine read 2 s between)
 	m["kills"] = int(m["kills"]) + 1
 	main.refresh()
 	_check(int(snd.world()["streak"]) == streak0 + 1, "a second kill straight after the first didn't climb: %d from %d" % [int(snd.world()["streak"]), streak0])
@@ -7682,7 +7684,8 @@ func _build_checks(main) -> void:
 			ws._pick_build_card(k)
 			var before_g: int = sim.scrap
 			ws._pick.press(0)
-			_check(sim.scrap == before_g and ws._build_cards[k]["words"].text.contains(str(gopts[k]["why"]).substr(0, 5)), "a build it can't make went through, or its card doesn't say why: '%s'" % ws._build_cards[k]["words"].text)
+			var why_short: String = Workshop.why_short(str(gopts[k]["why"]))
+			_check(sim.scrap == before_g and (ws._build_cards[k]["words"].text.contains(str(gopts[k]["why"])) or ws._build_cards[k]["words"].text.contains(why_short)), "a build it can't make went through, or its card doesn't say why: '%s'" % ws._build_cards[k]["words"].text)
 			break
 	main._workshop._set_view("guns")
 	sim.load_dict(saved)
@@ -15049,6 +15052,24 @@ func _radio_line_checks(main) -> void:
 		for n in range(sim.heard.size() * 2 + 2):
 			played.append(rl._next_line())
 		_check(played.has(bag_text) == shut, "the bag's line %s with the Clinic %s" % ["plays" if not shut else "never plays", "open" if not shut else "shut"])
+	# one line heard (a fresh camp: the medic's), it never runs twice running - the loop's latest fills in (21 Oct,
+	# Matt's playtest); and a heard line pushed, then its turn, is the same
+	sim.unlocked = unlocked0.filter(func(r): return r != "clinic")
+	sim.heard = ["%s/%d" % [Words.RADIO[maxi(0, bag_k)]["voice"], bag_k]]
+	rl._queue.clear()
+	rl._last = ""
+	var solo := []
+	for n in range(8):
+		solo.append(rl._next_line())
+	var twice := false
+	for n in range(1, solo.size()):
+		if solo[n] == solo[n - 1]:
+			twice = true
+	_check(not twice and solo.has(bag_text) and solo.has(str(Words.RADIO[0]["text"])), "one line heard runs back to back on the radio line: %s" % str(solo.map(func(x): return str(x).left(20))))
+	rl.push(bag_text)
+	var pushed: String = rl._next_line()
+	var after_push: String = rl._next_line()
+	_check(pushed == bag_text and after_push != bag_text, "a heard line pushed, then its turn, ran twice running")
 	# the loop stopped stays stopped (19 Oct, Matt: it said so, then played straight on): its latest heard only, and
 	# none of it in the traffic
 	var stop_k: int = -1

@@ -394,11 +394,17 @@ func _do_build(kind: String, nm: String) -> void:
 	built.emit(kind, nm)
 
 
+## A why-not, short: "Wants a box of pistol hollow point" → "No pistol hollow point".
+static func why_short(why: String) -> String:
+	return why.replace("Wants a box of ", "No ").replace("Wants a ", "No ").replace("Wants ", "No ")
+
+
 ## What a build's card says under its name: its tier, then what it wants and whether it's in the stash, or why not.
 func build_words(o: Dictionary) -> Array:
 	var t: String = "T%d" % int(o["tier"])
 	if not bool(o["ok"]):
-		return ["%s · %s" % [t, str(o["why"])], str(o["why"]), t]
+		var why: String = str(o["why"])
+		return ["%s · %s" % [t, why], why, "%s · %s" % [t, why_short(why)], why_short(why)]     # the why outlives the tier (the smoke: a card read "T2" alone)
 	if str(o["from"]) != "":
 		var what: String = ("a box of %s" % str(o["from"]).to_lower()) if o["kind"] == "grade" else str(o["from"]).to_lower()
 		return ["%s · wants %s" % [t, what], "%s · %s" % [t, what], t]

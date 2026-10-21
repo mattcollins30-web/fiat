@@ -6122,7 +6122,11 @@ difficulty and length, the endgame placeholders.
 
 1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
    work with nothing." runs twice across the row, back to back (screenshot; Matt: "still happening"). Fixed once for
-   the Clinic open (dceac06); this is a fresh camp, so likely the loop with only one line heard. Not looked at yet.
+   the Clinic open (dceac06); this is a fresh camp, so likely the loop with only one line heard.
+   - Done: the strip never plays the same line twice running - the turn's pick keyed on the last played (a pushed
+     line then its turn too); with one line heard the loop's latest fills in. Smoke checks it. Also two smoke
+     flakes at the root: a build card's why-not fell back to "T2" alone (the why outlives the tier now, with a short
+     form), and the kill-streak sound check ran on real seconds (a busy machine read 2 s between).
 2. The Gamekeeper's unique is a downgrade: The Keeper's Twelve-Bore (Unique, level 1) reads 23 dmg/s against a
    Common Pump shotgun found earlier at 34 (screenshot: ▼ 7.9 dmg/s, with +12% dmg and +15% dmg pre-clear and "a
    kill heals 3% max HP"). Matt: "the unique drop from the gamekeeper should be better than a random gun found
