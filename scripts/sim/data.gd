@@ -1361,6 +1361,22 @@ static func paragon_row(key: String) -> Dictionary:
 	return {}
 const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
 const ILVL_FROM := 15
+## The broken builds (21 Oct, Matt: "a combination of gear and skill points ... outside of balance passes (like mythics
+## do)"): a class's set at its count, a unique's rule, its element's keystone and capstone; together a stack a run with
+## no top. The words never say so; docs/design/broken_builds.md says how each is built. "step" is a stack's worth.
+##   embers - a burning kill: fire +step a stack. clean_kills - a chilled kill: the first shot's bonus holds on the
+##   next, +step a stack. overdose - poison's ticks heal step of themselves; past full, a max HP of it a stack of poison
+##   (+100%). opened_for_good - the bleed has no cap; a kill carries it +step. live_load - a shocked kill: shock +step.
+const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
+const COMBOS := {
+	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "step": 0.04},
+	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "step": 0.05},
+	"overdose": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "rat_mans_bag", "nodes": ["poison_stacks", "cap_lingers"], "step": 0.05},
+	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "step": 0.25},
+	"live_load": {"class": "Scrapper", "set": "The Bank's", "pieces": 3, "rule": "jump_leads", "nodes": ["shock_chain", "cap_arc"], "step": 0.02},
+}
+
+
 ## Gear scaling (21 Oct, the crew; docs/design/vision.md): past the deep tier a base's damage and armour, and the flat
 ## combat lines, compound this a level - a little under the crews' CURVE grow - every rarity the same; the armour's cut
 ## reads against the level fought at the same rate, so it holds its share rather than run to a hundred.

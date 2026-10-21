@@ -18,8 +18,20 @@ static func num(x: float) -> String:
 	if not is_finite(x):
 		return "—"
 	var a := absf(x)
+	var sg: String = MINUS if x < 0 else ""
+	if a >= 1e15:
+		var e: int = int(floor(log(a) / log(10.0)))     # a broken build's figures (21 Oct): 1.2e30, never an int's overflow
+		var mant: float = snappedf(a / pow(10.0, e), 0.1)
+		if mant >= 10.0:
+			mant /= 10.0                      # the log a hair under the power: 10.0e29 is 1.0e30
+			e += 1
+		return "%s%.1fe%d" % [sg, mant, e]
+	if a >= 1e12:
+		return "%s%.1fT" % [sg, a / 1e12]
+	if a >= 1e9:
+		return "%s%.1fB" % [sg, a / 1e9]
 	if a >= 1e6:
-		return "%s%.1fM" % [MINUS if x < 0 else "", a / 1e6]
+		return "%s%.1fM" % [sg, a / 1e6]
 	if a < 10.0 and a != floorf(a):
 		return "%s%.1f" % [MINUS if x < 0 else "", a]
 	return group(int(round(x)))

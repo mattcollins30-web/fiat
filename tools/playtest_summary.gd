@@ -297,15 +297,15 @@ static func summarize(s: Dictionary, ch: Array, path := "") -> String:
 		for e in dot_runs:
 			var key := "%.0f%%, %.0f%%" % [float(e.get("dot_gear", 0.0)), float(e.get("dot_tree", 0.0))]
 			if not groups.has(key):
-				groups[key] = {"n": 0, "dealt": 0, "ticked": 0, "share": 0.0}
+				groups[key] = {"n": 0, "dealt": 0.0, "ticked": 0.0, "share": 0.0}     # floats (21 Oct): a broken build's run is past an int's top
 			var g: Dictionary = groups[key]
 			g["n"] += 1
-			g["dealt"] += int(e.get("dealt", 0))
-			g["ticked"] += int(e.get("ticked", 0))
+			g["dealt"] += float(e.get("dealt", 0))
+			g["ticked"] += float(e.get("ticked", 0))
 			g["share"] += float(e.get("split_dot", 0.0)) / maxf(0.1, float(e.get("split_total", 0.0)))
 		for key in groups:
 			var g: Dictionary = groups[key]
-			L.append("| %d | %s | %d | %s | %.0f%% |" % [g["n"], key, int(g["dealt"]), _pct(int(g["ticked"]), maxi(1, int(g["dealt"]))), 100.0 * float(g["share"]) / maxf(1.0, float(g["n"]))])
+			L.append("| %d | %s | %.0f | %.0f%% (%.0f) | %.0f%% |" % [g["n"], key, float(g["dealt"]), 100.0 * float(g["ticked"]) / maxf(1.0, float(g["dealt"])), float(g["ticked"]), 100.0 * float(g["share"]) / maxf(1.0, float(g["n"]))])
 		L.append("")
 		L.append("| Gear found on | Runs | Gear | Wearable when found | At your level (from a site over it) |")
 		L.append("| --- | --- | --- | --- | --- |")

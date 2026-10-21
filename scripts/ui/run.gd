@@ -1034,9 +1034,9 @@ func held_hits() -> float:
 func _numbers_by(by: Dictionary, seen: Dictionary, bar_y: float, sgn: String, big_at: int) -> void:
 	for ty in Data.TYPES:
 		var total: float = float(by.get(ty, 0.0))
-		var n: int = int(floor(total - float(seen.get(ty, 0.0))))
-		if n >= 1:
-			juice.number(_scatter(bar_y), "%s%d" % [sgn, n], ty, n >= big_at)
+		var n: float = floorf(total - float(seen.get(ty, 0.0)))     # a float (21 Oct): a broken build's hit is past an int's top
+		if n >= 1.0:
+			juice.number(_scatter(bar_y), "%s%s" % [sgn, ("%d" % int(n)) if n < 1e6 else Fmt.num(n)], ty, n >= big_at)
 			seen[ty] = float(seen.get(ty, 0.0)) + n
 
 

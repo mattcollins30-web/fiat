@@ -6048,3 +6048,14 @@ difficulty and length, the endgame placeholders.
     piece's added affix fired the "dead" element.
 - Matt (21 Oct): no seeded saves for the broken builds - a doc per build of the points, gear and affixes to build it;
   the baseline needs nothing.
+- Done (step 6b): the broken builds, one a class (Data.COMBOS; docs/design/broken_builds.md is the recipe: points, gear,
+  affixes, where each drops). Each is the class's set at its count, a findable unique and its element's keystone and
+  capstone; together a run's stack with no top - Embers (Drifter, a burning kill +4% fire), Clean kills (Poacher, a
+  chilled kill: the first shot's bonus holds, +5% a stack), Overdose (Paramedic, poison's ticks heal; past full it's
+  more poison), Opened for good (Doorman, the bleed uncapped, ×1.25 a kill), Live load (Scrapper, a shocked kill +2%
+  shock). Nothing on screen says so; the run log's one line the first time it catches. Outside the balance: the read
+  switches them off. No mythic in any (one find in 10,000 can't be built toward). Figures past an int's top now read
+  in e-notation (1.0e30) and the run's numbers and the chronicle keep them as floats.
+  - For Matt, found mapping them, not fixed: an item's or a set's "first of each gang" line is read nowhere in the
+    fight (the Army 3-piece, the Issue rifle, Jump Leads, the Lollipop, the Starting Pistol); the Headmaster's Cap
+    grants every notable and capstone, Hit and run included, against its own comment.

@@ -808,6 +808,8 @@ func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> v
 	var grow: float = dot_grow(theirs)
 	# the cap grows with it (16 Oct, Matt): a one-stack burn sat at its cap, so +% dot damage only filled it sooner
 	var cap: float = rate_cap * float(d["ratio"]) * dot_seconds(ty, theirs) * dot_stacks(ty, theirs) * dot_depth(theirs) * maxf(grow, 1.0)
+	if ty == "bleed" and theirs and combo_on("opened_for_good"):
+		cap = Data.COMBO_CEILING                 # Opened for good: no top a gang could find (a float's, kept off INF for the save)
 	dots[ty] = minf(cap, float(dots.get(ty, 0.0)) + landed * float(d["ratio"]) * grow)     # the trees' too, on them only (16 Oct: Fumes was read nowhere)
 
 
@@ -4295,6 +4297,40 @@ func has_set_rule(rule: String) -> bool:
 	return false
 
 
+## A broken build (21 Oct, Data.COMBOS): the class, its set at its count, the unique's rule, both nodes. Outside the
+## balance passes, as the mythics: the balance read can switch them off.
+static var combos_off := false
+func combo_on(key: String) -> bool:
+	if combos_off or not Data.COMBOS.has(key):
+		return false
+	return _memo("combo/" + key, _combo_raw.bind(key))
+
+
+func _combo_raw(key: String) -> bool:
+	var c: Dictionary = Data.COMBOS[key]
+	if cls != str(c["class"]) or set_count(str(c["set"])) < int(c["pieces"]) or not has_rule(str(c["rule"])):
+		return false
+	for n in c["nodes"]:
+		if not has_node(str(n)):
+			return false
+	return true
+
+
+## A run's stacks of the build on, and a stack's worth.
+static func combo_stacks(m: Dictionary) -> float:
+	return float(m.get("combo", 0.0))
+
+
+static func combo_step(key: String) -> float:
+	return float(Data.COMBOS[key]["step"])
+
+
+func _combo_stack(m: Dictionary, key: String, n := 1.0) -> void:
+	if combo_stacks(m) <= 0.0 and not m.get("dry", false):
+		log_event(Words.COMBOS[key])          # once a run: something's catching, never what
+	m["combo"] = minf(Data.COMBO_CEILING, combo_stacks(m) + n)
+
+
 ## The sets that can turn up at a depth.
 func set_pieces_at(at_depth: int) -> Array:
 	var out: Array = []
@@ -6461,6 +6497,10 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		headshot += 0.25
 	if m["fresh"] and has_rule("grandads"):
 		headshot += Data.FX["rule/grandads"]
+	if m["fresh"]:
+		m["first_bonus"] = headshot - 1.0
+	elif combo_on("clean_kills") and combo_stacks(m) > 0.0:
+		headshot += float(m.get("first_bonus", 0.0)) + combo_step("clean_kills") * combo_stacks(m)     # Clean kills: the first shot never ends
 	if m["fresh"] and (has_node("one_shot") or has_rule("lollipop")):
 		m["target_hp"] = 0.0              # the first of the lot drops where it stands
 	if has_rule("starting_pistol") and not m.get("opened", false) and m["remaining"] > 0 and float(m["target_hp"]) > 0.0:
@@ -6491,7 +6531,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		var r_ty: float = float(res.get(ty, 0.0))
 		if ty == "physical":
 			r_ty = phys_resist(r_ty)                  # Knuckles: the Doorman's knuckles and Bust them up get through their jackets
-		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * ((1.0 + shock_amount()) if shocked else 1.0)
+		var landed: float = float(per_type[ty]) * (1.0 - r_ty) * mult * ((1.0 + shock_amount() + (combo_step("live_load") * combo_stacks(m) if combo_on("live_load") else 0.0)) if shocked else 1.0)
+		if ty == "fire" and combo_on("embers"):
+			landed *= 1.0 + combo_step("embers") * combo_stacks(m)          # Embers
+		if ty == "poison" and combo_on("overdose"):
+			landed *= 1.0 + combo_stacks(m)                                 # Overdose
 		if ty == "physical" and has_node("cap_shatter") and float(m.get("chill_t", 0.0)) > 0.0:
 			landed *= Data.FX["node/cap_shatter"]                             # Shatter: a chilled target takes double from the physical
 		if ty == "frost" and has_rule("gritters_keys") and float(m.get("chill_t", 0.0)) > 0.0:
@@ -6529,6 +6573,12 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["dealt_by"] = {}
 		var tb := {}
 		ticked_on_them = _dot_tick(m["dots"], dt, tb)
+		if combo_on("overdose") and float(tb.get("poison", 0.0)) > 0.0:
+			var dose: float = float(tb["poison"]) * combo_step("overdose")     # Overdose: the poison heals you; past full, it's more poison
+			var room: float = maxf(0.0, max_hp() - hp)
+			hp += minf(dose, room)
+			if dose > room:
+				_combo_stack(m, "overdose", (dose - room) / maxf(max_hp(), 1.0))
 		if not m.has("ticked_by"):
 			m["ticked_by"] = {}
 		for ty in tb:
@@ -6564,6 +6614,11 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m.erase("opened")                    # the Starting Pistol: the next of them has its own first shot
 		m["kill_shocked"] = float(m.get("shock_t", 0.0)) > 0.0
 		m["kill_burning"] = float(m.get("dots", {}).get("fire", 0.0)) > 0.0
+		if (combo_on("embers") and m["kill_burning"]) or (combo_on("live_load") and m["kill_shocked"]) or (combo_on("clean_kills") and float(m.get("chill_t", 0.0)) > 0.0):
+			_combo_stack(m, "embers" if combo_on("embers") else ("live_load" if combo_on("live_load") else "clean_kills"))
+		if combo_on("opened_for_good") and m.get("dots", {}).has("bleed"):
+			_combo_stack(m, "opened_for_good")
+			m["dots"]["bleed"] = minf(Data.COMBO_CEILING, float(m["dots"]["bleed"]) * (1.0 + combo_step("opened_for_good")))     # Opened for good: the bleed carries, more of it
 		if has_node("cap_flattened") and float(type_dps().get("physical", 0.0)) > 0.0:
 			m["flat_t"] = Data.FX["node/cap_flattened"]                        # Flattened: the plain put them down; the next of them fire at half for two seconds
 		m.erase("full_dose")
@@ -7866,8 +7921,8 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 		ticked += float(m["ticked_by"][ty])
 		by[ty] = roundi(float(m["ticked_by"][ty]))
 	var split: Array = m.get("split_gate", [0.0, 0.0])
-	d["dealt"] = roundi(float(m.get("dealt", 0.0)))
-	d["ticked"] = roundi(ticked)
+	d["dealt"] = snappedf(float(m.get("dealt", 0.0)), 1.0)     # a float: a broken build's run is past an int's top (21 Oct)
+	d["ticked"] = snappedf(ticked, 1.0)
 	d["ticked_by"] = by
 	d["split_total"] = snappedf(float(split[0]), 0.1)
 	d["split_dot"] = snappedf(float(split[1]), 0.1)

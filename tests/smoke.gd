@@ -11830,6 +11830,7 @@ func _site_level_checks(main) -> void:
 	_site_unique_checks(main)
 	_smg_line_checks(main)
 	_growth_checks(main)
+	_combo_checks(main)
 	sim.words[3] = hold_intel[0]
 	sim.words[11] = hold_intel[1]
 	sim.depth = hold_depth
@@ -11988,6 +11989,84 @@ func _tier_guide_checks(main) -> void:
 
 ## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's
 ## value by item level - so the second leg reaches further than the first and a deep drop beats a shallow one.
+## The broken builds (21 Oct, Data.COMBOS): on with every part, off with any one gone or the balance's switch, and a
+## run's stacks growing with no top - the class, its set at its count, the unique, the element's keystone and capstone.
+const COMBO_TREES := {"embers": "Petrol", "clean_kills": "The cold", "overdose": "The Rat Man", "opened_for_good": "Blades", "live_load": "Live"}
+func _combo_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	for key in Data.COMBOS:
+		var c: Dictionary = Data.COMBOS[key]
+		sim.load_dict(hold)
+		_set_cls(sim, str(c["class"]))
+		var et: String = COMBO_TREES[key]
+		var trees: Array = [et]
+		for j in Data.JOINTS:
+			if j["class"] == c["class"] and j["element_tree"] == et:
+				trees.append(j["tree"])            # the joint's class half: the element's tops open with it
+		sim.tree = []
+		for tn in trees:
+			for i in range(Data.tree_named(tn)["nodes"].size()):
+				sim.tree.append("%s/%d" % [tn, i])
+		for sl in Data.SLOTS:
+			sim.equipped[sl] = null
+		var st: Dictionary = Items.set_named(str(c["set"]))
+		for k in range(int(c["pieces"])):
+			var pc: Dictionary = st["pieces"][k]
+			sim.equipped[pc["slot"]] = Items.roll_set_piece(st["name"], pc, sim.rng)
+		var u: Dictionary = {}
+		for x in Data.UNIQUES:
+			if x.get("rule", "") == c["rule"]:
+				u = x
+		sim.equipped[u["slot"]] = Items.roll_unique(u, sim.rng, 10)
+		sim._dry_memo.clear()
+		_check(sim.combo_on(key), "%s's build is not on with every part: class %s, set %d, rule %s, nodes %s" % [key, sim.cls, sim.set_count(str(c["set"])), str(sim.has_rule(str(c["rule"]))), str(c["nodes"].map(func(n): return sim.has_node(str(n))))])
+		var others: Array = Data.COMBOS.keys().filter(func(k2): return k2 != key and sim.combo_on(k2))
+		_check(others.is_empty(), "%s's build turns on another's: %s" % [key, str(others)])
+		Sim.combos_off = true
+		_check(not sim.combo_on(key), "%s's build is on with the balance's switch off" % key)
+		Sim.combos_off = false
+		var piece_slot: String = st["pieces"][0]["slot"]
+		var piece = sim.equipped[piece_slot]
+		sim.equipped[piece_slot] = null
+		_check(not sim.combo_on(key), "%s's build is on a set piece short" % key)
+		sim.equipped[piece_slot] = piece
+		# a run: the stacks grow, kill on kill
+		for sl in ["Primary", "Secondary"]:
+			if sim.equipped[sl] != null:
+				var box: Dictionary = sim.ammo_box(Items.ammo_type(sim.equipped[sl]))
+				if not box.is_empty():
+					var fed: Dictionary = sim._plain(Data.AMMO, box["name"])
+					Items.set_stack(fed, 2000)
+					sim.rig.push_front(fed)
+		sim.hp = sim.max_hp()
+		sim.deploy(3)
+		sim.mission["remaining"] = 400
+		var seen: Array = []
+		for k in range(40):
+			sim.hp = sim.max_hp()
+			sim.advance(1.0)
+			if sim.mission == null:
+				break
+			if k == 19 or k == 39:
+				seen.append(Sim.combo_stacks(sim.mission))
+				seen.append(int(sim.mission["remaining"]))
+		_check(seen.size() == 4 and float(seen[0]) > 0.0 and (float(seen[2]) > float(seen[0]) or int(seen[1]) == 0) and is_finite(float(seen[2])), "%s's stacks did not grow on a run (stacks, left): %s" % [key, str(seen)])
+		if sim.on_mission():
+			sim.extract_now()
+	# their figures on screen: past an int's top, a figure in e-notation that fits its tile (the review)
+	_check(Fmt.num(1e30) == "1.0e30" and Fmt.num(2.5e12) == "2.5T" and Fmt.num(3e9) == "3.0B" and Fmt.num(-1e30) == Fmt.MINUS + "1.0e30", "a broken build's figures read %s / %s / %s" % [Fmt.num(1e30), Fmt.num(2.5e12), Fmt.num(3e9)])
+	sim.load_dict(hold)
+	sim.record["dealt"] = 1e30
+	main.show_room(main.RUNNER)
+	main.refresh()
+	_check_fit(main, "the stats, a broken build's most damage")
+	sim.load_dict(hold)
+	print("the broken builds ok")
+
+
 func _growth_checks(main) -> void:
 	var sim = main.sim
 	var hold: Dictionary = sim.to_dict()

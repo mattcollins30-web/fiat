@@ -1028,6 +1028,16 @@ const RECYCLE := {
 }
 
 ## The crew (21 Oct): a class swapped at camp.
+## The broken builds' one line a run, the first stack (21 Oct): something's catching, never what or why.
+const COMBOS := {
+	"embers": "The fire's catching on itself.",
+	"clean_kills": "The cold's doing the work now.",
+	"overdose": "The dose is coming back round.",
+	"opened_for_good": "They're not closing up.",
+	"live_load": "The current's building.",
+}
+
+
 const CREW := {
 	"swap": "The %s stands down; the %s goes out next, at level %d.",
 }
