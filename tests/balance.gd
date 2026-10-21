@@ -432,6 +432,9 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	# the endgame's two (7 Oct): the lorry's hour and the moves, and the ladders' spread - the deepest depth the
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
+	g["crew_swaps"] = bot.crew_swaps     # the crew (21 Oct, step 7): swaps, the classes played, the board's level
+	g["crew"] = sim.crew_played().map(func(c): return "%s %d" % [c, sim.crew_level(c)])
+	g["paragon"] = sim.paragon()
 	g["lorries"] = sim.lorries
 	g["services_depth"] = int(sim.best_depth[Data.CONVOY_TIER])
 	# the Radio's endgame (15 Oct): the reach, Kev's story, the signals made and the papers held

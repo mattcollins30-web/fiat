@@ -9023,6 +9023,16 @@ func _mythic_checks(sim) -> void:
 		sim.equipped[s] = null
 	var without: bool = probe != "" and sim.has_node(probe)
 	_check(with_cap and (probe == "" or not without or sim.tree.size() > 0), "the Headmaster's Cap: an untrained node of the class (%s) isn't yours" % probe)
+	# never a node with a cost (21 Oct, Matt: "fix both"): a Drifter in the Cap has Spray, not Hit and run or Ghost
+	var cls_was: String = sim.cls
+	_set_cls(sim, "Drifter")
+	var tree_was: Array = sim.tree.duplicate()
+	sim.tree = []
+	wear_one.call("headmasters_cap")
+	_check(not sim.has_node("hit_and_run") and not sim.has_node("cap_ghost") and not sim.has_node("never_there"), "the Headmaster's Cap gave a node with a cost: hit and run %s, ghost %s, never there %s" % [str(sim.has_node("hit_and_run")), str(sim.has_node("cap_ghost")), str(sim.has_node("never_there"))])
+	_check(sim.has_node("breather"), "the Headmaster's Cap held back a plain notable (Breather)")
+	sim.tree = tree_was
+	_set_cls(sim, cls_was)
 	# on a run: the Suit's cap, the Bag's meds, the clock, never lost
 	wear_one.call("bomb_suit")
 	sim.hp = sim.max_hp()
@@ -11997,6 +12007,21 @@ func _combo_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var hold: Dictionary = sim.to_dict()
+	# the first of each gang off the kit (21 Oct, Matt: "fix both"): an affix's line and a set's count in the fight's figure
+	for sl in Data.SLOTS:
+		sim.equipped[sl] = null
+	sim._dry_memo.clear()
+	var f0: float = sim.first_pct_total()
+	var hat: Dictionary = sim._plain("Helmet", "Hard hat")
+	hat["affixes"] = [{"stat": "first_pct", "value": 20, "tier": 2}]
+	sim.equipped["Helmet"] = hat
+	_check(is_equal_approx(sim.first_pct_total(), f0 + 20.0), "an affix's first of each gang isn't the fight's: %.0f from %.0f" % [sim.first_pct_total(), f0])
+	var army: Dictionary = Items.set_named("The Army's")
+	for k in range(3):
+		sim.equipped[army["pieces"][k]["slot"]] = Items.roll_set_piece(army["name"], army["pieces"][k], sim.rng)
+	var f3: float = sim.first_pct_total()
+	_check(f3 >= f0 + 40.0, "the Army's three-piece first of each gang isn't the fight's: %.0f from %.0f" % [f3, f0])
+	sim.load_dict(hold)
 	for key in Data.COMBOS:
 		var c: Dictionary = Data.COMBOS[key]
 		sim.load_dict(hold)
@@ -12921,7 +12946,35 @@ func _bench_worn_checks(main) -> void:
 	_check(bot.bought.filter(func(b): return str(b[1]).contains("helmet")).is_empty() and helm["affixes"].any(func(a): return str(a["stat"]) == "loot_pct"), "the bot's Bench rolled a loot line away: %s %s" % [str(bot.bought), str(helm["affixes"])])
 	sim.load_dict(saved)
 	print("the bot's bench rule ok")
+	_bot_crew_checks(main)
 	_build_one_checks(main)
+
+
+## The bot's crew (21 Oct, step 7): stood with nothing to run, it sends out the next class not played at the crew's
+## build for it, and the read's own class keeps its build to come back to.
+func _bot_crew_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	if sim.cls == "":
+		sim.set_class("Doorman")
+	var bot = Bot.new()
+	bot.cls = sim.cls
+	bot.element = "physical"
+	sim.signals = []                       # nothing held: no played class can run anything
+	bot.lorry_ok = true                    # the last runner's lorry read: gone with the swap (the review)
+	var was: String = sim.cls
+	var k: int = bot._crew_turn(sim)
+	var next: String = ""
+	for nm in Bot.CREW_BUILDS:
+		if nm != was:
+			next = nm
+			break
+	_check(k == -1 and sim.cls != was and bot.cls == sim.cls and bot.element == str(Bot.CREW_BUILDS[sim.cls]) and bot.crew_swaps == 1 and str(bot.builds.get(was, {}).get("element", "")) == "physical" and not bot.lorry_ok, "the bot's crew turn: %s out (from %s), its build '%s', the first's kept '%s'" % [sim.cls, was, bot.element, str(bot.builds.get(was, {}))])
+	_check(sim.cls == next or sim.crew_played().has(next), "the bot's crew turn skipped %s for %s" % [next, sim.cls])
+	sim.load_dict(saved)
+	print("the bot's crew ok")
 
 
 ## The bot's build rule: the best grade of its primary's rounds the stash can

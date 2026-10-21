@@ -34,6 +34,47 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
+## The crew (21 Oct, step 7): the reach stood CREW_STAND with nothing to run, another class goes out - a played one
+## reading PUSH on a held signal, else the next not played, at the crew's build for it (CREW_BUILDS; the read's own
+## class keeps the read's build). Swaps are free at camp; each class keeps its own tree and kit.
+const CREW_STAND := 7200.0
+const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "poison", "Scrapper": "shock"}
+var crew_on := true
+var crew_swaps := 0
+var builds := {}                  # class -> {element, keystones_first} as the bot plays it
+var _stood_from := -1.0
+
+
+func _crew_turn(sim) -> int:
+	for name in sim.crew_played():
+		if name == sim.cls:
+			continue
+		for j in range(sim.signals.size()):
+			if float(sim.signal_odds_class(j, name)[0]) >= PUSH and _crew_out(sim, name):
+				return j                  # the swap carries its odds: the signal it read runs
+	for name in CREW_BUILDS:
+		if not (name in sim.crew_played()) and _crew_out(sim, name):
+			return -1                     # a new one: the sites first, as any runner
+	return -1
+
+
+func _crew_out(sim, name: String) -> bool:
+	var from: String = sim.cls
+	builds[from] = {"element": element, "keystones_first": keystones_first}     # the class going in keeps its build (the review: the runner's, not the bot's own cls)
+	if not sim.set_class(name):
+		return false
+	cls = name
+	var b: Dictionary = builds.get(name, {"element": str(CREW_BUILDS.get(name, "")), "keystones_first": false})
+	element = str(b["element"])
+	keystones_first = bool(b["keystones_first"])
+	lorry_ok = false                      # the lorry's read and the farm were the last runner's (the review)
+	lorry_read_at = -1e9
+	_farm_at = -1e9
+	crew_swaps += 1
+	bought.append([sim.elapsed, "crew: %s out for %s (level %d)" % [name, from, sim.level()]])
+	return true
+
+
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
@@ -60,6 +101,14 @@ func step(sim) -> int:
 	if sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
 		var k := _pick_signal(sim)
+		if k >= 0:
+			_stood_from = -1.0
+		elif crew_on:
+			if _stood_from < 0.0:
+				_stood_from = sim.elapsed
+			elif sim.elapsed - _stood_from >= CREW_STAND:
+				_stood_from = -1.0
+				k = _crew_turn(sim)
 		if k >= 0:
 			t = int(sim.signal_at(k)["site"])
 			last_tier = -1                    # a signal's site is random: the endgame's tidy reads the farm it'll run next (the review)

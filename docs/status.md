@@ -6059,3 +6059,11 @@ difficulty and length, the endgame placeholders.
   - For Matt, found mapping them, not fixed: an item's or a set's "first of each gang" line is read nowhere in the
     fight (the Army 3-piece, the Issue rifle, Jump Leads, the Lollipop, the Starting Pistol); the Headmaster's Cap
     grants every notable and capstone, Hit and run included, against its own comment.
+- Matt (21 Oct): "Yes fix both items." Done: an item's and a set's "first of each gang" line now counts in the fight
+  (Sim.first_pct_total, read by the fight and the stats sheet alike: the Army 3-piece, the Issue rifle, Jump Leads,
+  the Lollipop, the Starting Pistol); the Headmaster's Cap leaves out keystones and the nodes marked "cost" in Data
+  (Hoarder, Light fingers, Ghost, Hit and run, Loud, Night work, Quiet hands, Stand and fight, Walking wounded).
+- Step 7, the bot's crew: the reach stood two hours with nothing to run, another class goes out - a played one
+  reading PUSH on a held signal, else the next not played, at the crew's build for it; each class keeps its own build
+  to come back to; the lorry's read and the farm are reset on a swap. The read records the swaps, the crew's levels
+  and the paragon.

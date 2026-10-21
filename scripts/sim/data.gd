@@ -1491,7 +1491,7 @@ const TREES := [
 		{"name": "One shot", "col": 4, "row": 0, "effect": "one_shot", "keystone": true, "words": "The first of each gang dies at once"},
 		{"name": "Lying up", "col": 3, "row": 1, "effect": "patrol_pct", "value": 10},
 		{"name": "Rat bait", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "poacher_poison", "words": "15% of every hit becomes poison"},
-		{"name": "Night work", "col": 4, "row": 1, "effect": "night_work", "notable": true, "words": "Every run counts as night: loot quality up, pace −20%"},
+		{"name": "Night work", "cost": true, "col": 4, "row": 1, "effect": "night_work", "notable": true, "words": "Every run counts as night: loot quality up, pace −20%"},
 		{"name": "Dead quiet", "col": 5, "row": 0, "effect": "cap_dead_quiet", "capstone": true, "words": "Every gang is the size of the first; they never grow"},
 		{"name": "In the hide", "col": 5, "row": 1, "beside": true, "effect": "in_the_hide", "notable": true, "words": "Killing the first of each gang gives Guard of 15% of max HP"},     # Guard (12 Oct)
 	]},
@@ -1519,7 +1519,7 @@ const TREES := [
 		{"name": "Bodyline", "col": 4, "row": 0, "effect": "bodyline", "keystone": true, "words": "Take 50% less damage with three or more on you"},
 		{"name": "Big frame", "col": 3, "row": 1, "effect": "hp", "value": 6},
 		{"name": "Glassing", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "doorman_bleed", "words": "15% of every hit becomes bleed"},
-		{"name": "Loud", "col": 4, "row": 1, "effect": "loud", "notable": true, "words": "Gangs come 40% sooner and one bigger; drops +30%"},
+		{"name": "Loud", "cost": true, "col": 4, "row": 1, "effect": "loud", "notable": true, "words": "Gangs come 40% sooner and one bigger; drops +30%"},
 		{"name": "Spoils", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Iron", "col": 5, "row": 0, "effect": "cap_iron", "capstone": true, "words": "Every kill heals 10% of max HP under half HP"},
 	]},
@@ -1533,7 +1533,7 @@ const TREES := [
 		{"name": "One at a time", "col": 4, "row": 0, "effect": "one_at_a_time", "keystone": true, "words": "Only one of a gang can ever fire on you at once; pace −25%"},
 		{"name": "Hands on", "col": 3, "row": 0, "effect": "physical_pct", "value": 20, "type": ["shotgun", "melee"], "notable": true, "joint": "doorman_physical", "words": "Shotguns and melee do 20% more physical damage"},
 		{"name": "Through the lot", "col": 3, "row": 1, "effect": "melee_sweep", "type": "melee", "notable": true, "words": "With melee, every swing hits everyone on you"},
-		{"name": "Stand and fight", "col": 4, "row": 1, "effect": "stand", "notable": true, "words": "You can't leave before the clear; the clear's XP bonus is doubled"},
+		{"name": "Stand and fight", "cost": true, "col": 4, "row": 1, "effect": "stand", "notable": true, "words": "You can't leave before the clear; the clear's XP bonus is doubled"},
 		{"name": "Held", "col": 5, "row": 0, "effect": "cap_held", "capstone": true, "words": "You never lose more than 10% of max HP in a second"},
 		{"name": "Squared up", "col": 5, "row": 1, "beside": true, "effect": "squared_up", "notable": true, "words": "Each gang that arrives gives Guard of 15% of max HP"},     # Guard (12 Oct)
 	]},
@@ -1548,7 +1548,7 @@ const TREES := [
 		{"name": "Field surgery", "col": 4, "row": 0, "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
 		{"name": "Pressure", "col": 3, "row": 1, "effect": "heal_pct", "value": 15},
 		{"name": "Syringe", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "paramedic_poison", "words": "15% of every hit becomes poison"},
-		{"name": "Walking wounded", "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Meds heal 50% less; damage +40% under half HP"},
+		{"name": "Walking wounded", "cost": true, "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Meds heal 50% less; damage +40% under half HP"},
 		{"name": "Pockets checked", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Clean hands", "col": 5, "row": 0, "effect": "cap_clean_hands", "capstone": true, "words": "A med clears burns, poison and bleeds on you, and you take no damage for 3 seconds"},
 	]},
@@ -1577,7 +1577,7 @@ const TREES := [
 		{"name": "Nothing wasted", "col": 4, "row": 0, "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
 		{"name": "Magpie eye", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Live wire", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "scrapper_shock", "words": "15% of every hit becomes shock"},
-		{"name": "Quiet hands", "col": 4, "row": 1, "effect": "quiet_hands", "notable": true, "words": "Every search finds 1 more; kills drop nothing"},
+		{"name": "Quiet hands", "cost": true, "col": 4, "row": 1, "effect": "quiet_hands", "notable": true, "words": "Every search finds 1 more; kills drop nothing"},
 		{"name": "Jerry-rigged", "col": 5, "row": 0, "effect": "cap_jerry", "capstone": true, "words": "An improvised primary does 50% more damage"},
 		{"name": "Sheet metal", "col": 5, "row": 1, "beside": true, "effect": "sheet_metal", "notable": true, "words": "Every crate searched gives Guard of 6% of max HP"},     # Guard (12 Oct)
 	]},
@@ -1591,7 +1591,7 @@ const TREES := [
 		{"name": "Buyer's market", "col": 4, "row": 0, "effect": "buyers_market", "keystone": true, "words": "The Fence pays double, and everything you buy costs double"},
 		{"name": "Lucky find", "col": 3, "row": 1, "effect": "rarity", "value": 20},
 		{"name": "Blowtorch", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "scrapper_fire", "words": "15% of every hit becomes fire"},
-		{"name": "Hoarder", "col": 4, "row": 1, "effect": "hoarder", "notable": true, "words": "The pack holds twice as much; pace −30%"},
+		{"name": "Hoarder", "cost": true, "col": 4, "row": 1, "effect": "hoarder", "notable": true, "words": "The pack holds twice as much; pace −30%"},
 		{"name": "The lot", "col": 5, "row": 0, "effect": "cap_the_lot", "capstone": true, "words": "Bring the pack home full and the run pays double tins"},
 	]},
 	# Drifter
@@ -1605,8 +1605,8 @@ const TREES := [
 		{"name": "Never there", "col": 4, "row": 0, "effect": "never_there", "keystone": true, "words": "No gangs ever come; searches take twice as long"},
 		{"name": "Wiry", "col": 3, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Bottle and rag", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "drifter_fire", "words": "15% of every hit becomes fire"},
-		{"name": "Hit and run", "col": 4, "row": 1, "effect": "hit_and_run", "notable": true, "words": "The runner leaves with the loot as the first gang arrives; kills pay 50% more"},
-		{"name": "Ghost", "col": 5, "row": 0, "effect": "cap_ghost", "capstone": true, "words": "No fight before the search: runs start searching, and bringing a full pack home counts as the clear"},
+		{"name": "Hit and run", "cost": true, "col": 4, "row": 1, "effect": "hit_and_run", "notable": true, "words": "The runner leaves with the loot as the first gang arrives; kills pay 50% more"},
+		{"name": "Ghost", "cost": true, "col": 5, "row": 0, "effect": "cap_ghost", "capstone": true, "words": "No fight before the search: runs start searching, and bringing a full pack home counts as the clear"},
 		{"name": "Breather", "col": 5, "row": 1, "beside": true, "effect": "breather", "notable": true, "words": "While searching, Guard refills 10% of its cap a second"},     # Guard (12 Oct)
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
@@ -1619,7 +1619,7 @@ const TREES := [
 		{"name": "All or nothing", "col": 4, "row": 0, "effect": "all_or_nothing", "keystone": true, "words": "No Common finds, and half as many finds"},
 		{"name": "Four-leaf", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Jump start", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "drifter_shock", "words": "15% of every hit becomes shock"},
-		{"name": "Light fingers", "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers turn up 3 times as often; tins from kills −20%"},
+		{"name": "Light fingers", "cost": true, "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers turn up 3 times as often; tins from kills −20%"},
 		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice; you keep the better"},
 	]},
 ]

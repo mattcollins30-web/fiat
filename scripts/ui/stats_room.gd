@@ -321,7 +321,6 @@ func _show_runner(lv: int) -> void:
 func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	var c: Dictionary = cards["attack"]
 	_headline(c, "%.0f" % float(split["total"]), "dmg/s", Pal.ACCENT)
-	var cd: Dictionary = sim.class_data()
 	# how it's built (the review): dps()'s own parts, in its order - the guns (their grades and the secondary's share),
 	# the level, the affixes and the tree on top of it, the attack, the past, then the trait and growth to the total
 	var p: Dictionary = sim.damage_parts()
@@ -363,7 +362,7 @@ func _show_attack(_lv: int, dps: float, split: Dictionary) -> void:
 	if chips.is_empty():
 		chips.append(["All of it physical", ""])
 	c["chips"].show_chips(chips)
-	var first_pct: float = sim._fitted_sum("first_pct") + float(cd.get("first_pct", 0)) + sim.tree_sum("first_pct")
+	var first_pct: float = sim.first_pct_total()     # the fight's own figure (21 Oct)
 	UI.fit(c["note"], [sim.split_words(split), sim.split_words(split, true)])     # the headline in its parts: the hits, then each dot's burn (item 14)
 	var firing: String = "Walking fire: SMG damage builds while firing" if sim.gun_type() == "smg" else (("Firing %s" % {"rifle": "a rifle", "shotgun": "a shotgun", "improvised": "something improvised", "pistol": "a pistol", "melee": "a blade"}.get(sim.gun_type(), sim.gun_type())) if sim.gun_type() != "" else "Nothing in hand")
 	var extra: String = ("growth ×%.2f · first of each gang %s" % [sim.growth_mult(), signed_pct(first_pct)]) if sim.growth_mult() > 1.001 else "first of each gang %s" % signed_pct(first_pct)

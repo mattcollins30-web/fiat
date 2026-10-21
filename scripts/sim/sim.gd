@@ -2441,8 +2441,8 @@ func _nodes_for(effect: String) -> Array:
 					continue                          # the class's own, not the Yard's
 				for i in range(ct.get("nodes", []).size()):
 					var cid := "%s/%d" % [ct["name"], i]
-					if not (cid in ids) and not ct["nodes"][i].get("keystone", false):
-						ids.append(cid)               # but its keystones, whose costs are the point (the review: Hit and run, Never there)
+					if not (cid in ids) and not ct["nodes"][i].get("keystone", false) and not ct["nodes"][i].get("cost", false):
+						ids.append(cid)               # but its keystones and the nodes with a cost (Data's "cost"), whose costs are the point (21 Oct, Matt: "fix both" - Hit and run, a notable, came with it)
 		for id in ids:
 			var n := node(id)
 			if n.is_empty():
@@ -6485,12 +6485,17 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 			log_event(Words.EVENTS["cache"])
 
 
+## The first of each gang's extra, in percent: the parts fitted, the class, the rounds' grade, the trees, and the
+## affixes and set lines (21 Oct, Matt: "fix both" - the affixes' and the sets' were read nowhere in the fight).
+func first_pct_total() -> float:
+	return _fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct") + tree_sum("first_pct") + _affix_sum("first_pct")
+
+
 func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var swing := rng.randf_range(1.0 - VARIANCE, 1.0 + VARIANCE)
 	var headshot := 1.0
 	if m["fresh"]:
-		headshot += (_fitted_sum("first_pct") + float(class_data().get("first_pct", 0)) + grade_stat(equipped["Primary"], "first_pct")) / 100.0   # match rounds: a flat crit on the first (33)
-	headshot += tree_sum("first_pct") / 100.0 if m["fresh"] else 0.0
+		headshot += first_pct_total() / 100.0
 	if m["fresh"] and yard_has("range_cards"):
 		headshot += Data.FX["yard/range_cards"]                       # the Lookout's Range cards: the first shot on every gang half again
 	if m["fresh"] and atlas_rank("marked_men") > 0:
