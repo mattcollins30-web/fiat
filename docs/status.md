@@ -6168,3 +6168,7 @@ difficulty and length, the endgame placeholders.
 8. Weapon sounds still aren't sorted: with a Pattern AR worn, Matt says "it feels like none of the muzzle flashes are
    getting a sound effect attached" - the fight's flashes and the shot sounds out of step, or the rifle's shots
    unvoiced.
+   - Done: the files were the cause - the three rifle takes peaked at -29 to -33 dB and the pistol's at -23 to -27
+     (the shotgun's and SMG's at 0), so a rifle's shots played and couldn't be heard. tools/sound_levels.py lists
+     every take's peak (ffmpeg) and --fix lifts a fight one-shot under -6 dB to -1: the six shot takes and
+     swing_melee_2 lifted, in place. Run it after any sound batch; the smoke can't decode audio.
