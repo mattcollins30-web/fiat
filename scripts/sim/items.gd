@@ -393,7 +393,7 @@ static func roll_affix(a: Dictionary, ilvl_v: int, rng: RandomNumberGenerator, t
 	var t := tier if tier > 0 else roll_tier(ilvl_v, rng, rarity_cap_v)
 	var r := tier_range(a, t)
 	var lo: int = int(ceil((r[0] + r[1]) / 2.0)) if top else int(r[0])      # the Bench's Masterwork (9 Oct): the top half of the tier
-	var raw: float = rng.randi_range(mini(lo, r[1]), r[1]) * ilvl_mult(ilvl_v)
+	var raw: float = rng.randi_range(mini(lo, r[1]), r[1]) * affix_mult(str(a["stat"]), ilvl_v)
 	var div := float(a.get("div", 1))
 	var v: Variant = int(round(raw))
 	if div > 1.0:
@@ -417,14 +417,28 @@ static func ilvl_mult(ilvl_v: int) -> float:
 	return 1.0 + Data.ILVL_SCALE * maxi(0, ilvl_v - Data.ILVL_FROM)
 
 
+## Gear scaling (21 Oct): a base's damage and armour, and a flat line's figure, times this past ILVL_GROW_FROM.
+static func grow(ilvl_v: int) -> float:
+	return pow(1.0 + Data.ILVL_GROW, maxi(0, ilvl_v - Data.ILVL_GROW_FROM))
+
+
+## An affix's figure at an item level: a percent line on the straight line, a flat combat line (FLAT_GROW) on it to the
+## deep tier and compounding past it, as the bases.
+static func affix_mult(stat: String, ilvl_v: int) -> float:
+	if stat in Data.FLAT_GROW:
+		return ilvl_mult(mini(ilvl_v, Data.ILVL_GROW_FROM)) * grow(ilvl_v)
+	return ilvl_mult(ilvl_v)
+
+
 ## A fixed affix list (a unique's, a set piece's) at an item level: the values scaled as a drop's would be.
 static func _scaled(affixes: Array, ilvl_v: int) -> Array:
 	var out: Array = affixes.duplicate(true)
 	for a in out:
+		var m: float = affix_mult(str(a["stat"]), ilvl_v)
 		if is_tenths(str(a["stat"])):
-			a["value"] = snappedf(float(a["value"]) * ilvl_mult(ilvl_v), 0.1)
+			a["value"] = snappedf(float(a["value"]) * m, 0.1)
 		else:
-			a["value"] = int(round(float(a["value"]) * ilvl_mult(ilvl_v)))
+			a["value"] = int(round(float(a["value"]) * m))
 	return out
 
 
@@ -524,17 +538,34 @@ static func add_socket(it: Dictionary, most := Data.SOCKET_MAX) -> bool:
 	return true
 
 
-## A set piece, rolled: its base, its fixed affixes, the set's name on it.
-static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator, level := -1) -> Dictionary:
+## A set piece, rolled: its base, its fixed affixes, the set's name on it. With a find's tier (21 Oct, Matt: "the set
+## pieces dropping became useless") it keeps its own base - its resist, its conversion, its look - lifted to the best
+## figure of its type at that tier, as a unique past its type's top is.
+static func roll_set_piece(set_name: String, piece: Dictionary, rng: RandomNumberGenerator, level := -1, tier := -1) -> Dictionary:
 	var it := roll(piece["slot"], int(base_named(piece["slot"], piece["base"]).get("tier", Data.CAMPAIGN_TIER)), rng, 0.0, false, false, "", "", 0.33, 0, level)     # at its own base's tier: a deep throwaway would set its level (10 Oct)
 	it["base"] = piece["base"]
 	it["tier"] = base_of(it)["tier"]
+	var lift := set_lift(piece, tier)
+	if lift > 1.0:
+		it["lift"] = lift
 	it["rarity"] = 2
 	it["affixes"] = _scaled(piece["affixes"], ilvl(it))
 	it["set"] = set_name
 	it["piece"] = piece["name"]
 	it["value"] = int(round(base_of(it)["value"] * Data.RARITIES[2]["value"] * 1.5))
 	return it
+
+
+## A set piece's lift at a find's tier: the best body of its type there over its own base's figure, never under 1.
+static func set_lift(piece: Dictionary, tier: int) -> float:
+	var own := base_named(piece["slot"], piece["base"])
+	if tier <= int(own.get("tier", 1)) or own.is_empty() or not (Data.SLOT_SCORE[piece["slot"]] in ["dps", "armour", "find"]):
+		return 1.0                         # a bag's or a rig's cells don't lift: a grid, not a figure (the review)
+	var at := unique_body({"name": "set|" + str(piece["name"]), "slot": piece["slot"], "base": piece["base"]}, tier)
+	var was := _base_score(piece["slot"], own)
+	if was <= 0.0:
+		return 1.0
+	return maxf(1.0, _base_score(piece["slot"], base_named(piece["slot"], at["base"])) * float(at["lift"]) / was)
 
 
 static func set_named(name: String) -> Dictionary:
@@ -684,11 +715,11 @@ static func dps(it: Dictionary) -> float:
 	var b := base_of(it)
 	if not b.has("damage") or not b.has("rof"):
 		return 0.0
-	return b["damage"] * b["rof"] * (1.0 + fitted_sum(it, "damage_pct") / 100.0) * float(it.get("lift", 1.0))     # a unique past its type's top base: lifted (12 Oct)
+	return b["damage"] * b["rof"] * (1.0 + fitted_sum(it, "damage_pct") / 100.0) * float(it.get("lift", 1.0)) * grow(ilvl(it))     # a unique past its type's top base: lifted (12 Oct); past the deep tier, its level's (21 Oct)
 
 
 static func armour(it: Dictionary) -> float:
-	return base_of(it).get("armour", 0.0) + affix_total(it, "armour")
+	return base_of(it).get("armour", 0.0) * float(it.get("lift", 1.0)) * grow(ilvl(it)) + affix_total(it, "armour")     # a set piece's lift; past the deep tier, its level's (21 Oct)
 
 
 ## A med's healing, and the seconds it takes.
@@ -806,11 +837,11 @@ static func score(it: Dictionary) -> float:
 
 ## A charm's magic find and cash, base plus affixes.
 static func find(it: Dictionary) -> float:
-	return float(base_of(it).get("find", 0)) + affix_total(it, "rarity_pct")
+	return float(base_of(it).get("find", 0)) * float(it.get("lift", 1.0)) + affix_total(it, "rarity_pct")     # a set charm's lift (21 Oct)
 
 
 static func cash_pct(it: Dictionary) -> float:
-	return float(base_of(it).get("cash", 0)) + affix_total(it, "cash_pct")
+	return float(base_of(it).get("cash", 0)) * float(it.get("lift", 1.0)) + affix_total(it, "cash_pct")
 
 
 static func is_charm(it: Dictionary) -> bool:

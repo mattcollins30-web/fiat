@@ -6035,3 +6035,16 @@ difficulty and length, the endgame placeholders.
   show the paragon's progress at the cap. The bot puts a point in three on resists while one is under the cap,
   damage and HP the rest; find and tins it leaves. The reviewer's two: the map's odds now re-read on a board change
   (a resist point moved nothing in their key), and the resists stop at the cap rather than spill into over-cap damage.
+- Done (step 6): gear scaling. Past level 20 (the deep tier) a gun's damage and a piece's armour grow 7% a level,
+  compounding, from the item level the find carries (its signal's); the flat combat lines (HP, armour, regen, life a
+  kill, armour a cell or a med) grow the same way; the percent lines keep their straight 6%. Every rarity alike:
+  uniques and mythics carry their find's level as before, the shop's uniques (the mate, the Back room, the gamble's)
+  now the gamble's level. Set pieces keep their own base (its resist, its conversion, its look) lifted to the best
+  of their type at the find's tier - damage, armour, a charm's find and cash; a bag's cells don't lift. The armour's
+  cut reads the level fought (at camp the front site's), so at-level armour holds its share; a med's heal and a
+  grenade's hit grow with the level fought too (they're bought low). The campaign, under 20, is as it was.
+  - For the pass: base values don't grow (sell prices, the gamble's price stay flat past 20).
+  - Two flakes fixed at the root in the smoke: the drop on Shared with Shared full; the Bench check, where another
+    piece's added affix fired the "dead" element.
+- Matt (21 Oct): no seeded saves for the broken builds - a doc per build of the points, gear and affixes to build it;
+  the baseline needs nothing.

@@ -187,6 +187,11 @@ func _stash_tab_checks(main) -> void:
 	_yard_set(sim, "stash", 4, "b")
 	_check(not sim.yard_has("dry_store") and sim.tab_of(piece) == "own" and sim.stash.all(func(it): return sim.stash_tabs().any(func(t): return t[0] == sim.tab_of(it))), "the Dry store's refit left pieces in a tab not shown")
 	_yard_set(sim, "stash", 4, "a")
+	while not sim.stash_room(Items.size(piece)):     # room on the shared tab for it (21 Oct, a flake: the smoke's leavings filled it)
+		var spare: Array = sim.stash.filter(func(x): return x != piece and sim.tab_of(x) == "" and not sim.stash_free(x))
+		if spare.is_empty():
+			break
+		sim.stash.erase(spare[0])
 	inv._drop_tab(Vector2.ZERO, {"id": int(piece["id"]), "src": "stash"}, 0)
 	_check(sim.tab_of(piece) == "", "a piece dropped on the shared tab did not move there")
 	# out of the stash, out of its tab: worn from the class's tab with the shared one full, and back
@@ -12077,8 +12082,53 @@ func _growth_checks(main) -> void:
 	var t: Dictionary = sim.effective(11)
 	var found: Dictionary = Items.roll_unique(sim.site_unique(11), sim.rng, int(t["level"]))
 	_check(Items.ilvl(found) == 33, "the Barracks at depth 25 did not give a level-33 unique: %d" % Items.ilvl(found))
+	# gear scaling (21 Oct): past ILVL_GROW_FROM a base's damage and armour and a flat line compound, a percent line doesn't
+	var g0: int = Data.ILVL_GROW_FROM
+	var g10: float = pow(1.0 + Data.ILVL_GROW, 10.0)
+	_check(is_equal_approx(Items.grow(g0), 1.0) and is_equal_approx(Items.grow(5), 1.0) and is_equal_approx(Items.grow(g0 + 10), g10), "the bases' growth reads %.3f at %d" % [Items.grow(g0 + 10), g0 + 10])
+	var gun: Dictionary = sim._plain("Primary", "Pipe shotgun")
+	var vest: Dictionary = sim._plain("Armour", "Work jacket")
+	vest["affixes"] = []
+	gun["ilvl"] = g0
+	vest["ilvl"] = g0
+	var gun0: float = Items.dps(gun)
+	var vest0: float = Items.armour(vest)
+	gun["ilvl"] = g0 + 10
+	vest["ilvl"] = g0 + 10
+	_check(gun0 > 0.0 and vest0 > 0.0 and is_equal_approx(Items.dps(gun) / gun0, g10) and is_equal_approx(Items.armour(vest) / vest0, g10), "a base's damage or armour did not grow past the deep tier: ×%.3f, ×%.3f" % [Items.dps(gun) / maxf(gun0, 0.001), Items.armour(vest) / maxf(vest0, 0.001)])
+	var flat: Array = Items._scaled([{"stat": "hp", "value": 100}, {"stat": "damage_pct", "value": 100}], g0 + 10)
+	_check(int(flat[0]["value"]) == int(round(100.0 * Items.ilvl_mult(g0) * g10)) and int(flat[1]["value"]) == int(round(100.0 * Items.ilvl_mult(g0 + 10))), "a fixed list at a deep level: hp %d, damage %% %d" % [int(flat[0]["value"]), int(flat[1]["value"])])
+	# a set piece at a deep find keeps its own base (its resist, its conversion, its look), lifted to its type's best there
+	var lifted := 0
+	for st in Data.SETS:
+		for pc in st["pieces"]:
+			var deep_pc: Dictionary = Items.roll_set_piece(st["name"], pc, sim.rng, g0 + 10, Data.MAX_TIER)
+			var own_pc: Dictionary = Items.roll_set_piece(st["name"], pc, sim.rng, g0 + 10)
+			var b: Dictionary = Items.base_named(pc["slot"], pc["base"])
+			_check(deep_pc["base"] == pc["base"] and own_pc["base"] == pc["base"] and Items.base_of(deep_pc).get("res", {}) == b.get("res", {}) and Items.base_of(deep_pc).get("conv_bleed_pct", 0) == b.get("conv_bleed_pct", 0) and Items.score(deep_pc) >= Items.score(own_pc) - 0.001, "%s's %s at a deep find: on %s, %.0f against its own %.0f" % [st["name"], pc["name"], deep_pc["base"], Items.score(deep_pc), Items.score(own_pc)])
+			lifted += 1 if float(deep_pc.get("lift", 1.0)) > 1.0 else 0
+	_check(lifted > 0, "no set piece found deep was lifted")
+	for st in Data.SETS:                   # a charm's lift reads in its find and cash; a bag's or a rig's none (the review)
+		for pc in st["pieces"]:
+			var deep_pc: Dictionary = Items.roll_set_piece(st["name"], pc, sim.rng, g0 + 10, Data.MAX_TIER)
+			var lf: float = float(deep_pc.get("lift", 1.0))
+			if pc["slot"] in [Data.CHARM]:
+				_check(lf <= 1.0 or Items.find(deep_pc) + Items.cash_pct(deep_pc) > Items.find(Items.roll_set_piece(st["name"], pc, sim.rng, g0 + 10)) + Items.cash_pct(Items.roll_set_piece(st["name"], pc, sim.rng, g0 + 10)), "%s's lift does nothing to its find" % pc["name"])
+			elif not (Data.SLOT_SCORE[pc["slot"]] in ["dps", "armour"]):
+				_check(lf <= 1.0, "%s carries a lift its slot never reads: %.2f" % [pc["name"], lf])
+	# the armour's cut, a med's heal and a grenade's hit read the level fought: a deep run's, the campaign's as they were
+	var m_was = sim.mission
+	sim.mission = {"t": {"level": g0 + 10}}
+	_check(sim.fight_level() == g0 + 10 and is_equal_approx(sim.armour_k(), Data.ARMOUR_K * g10) and is_equal_approx(sim.fight_grow(), g10), "the armour's cut on a deep run reads %.1f" % sim.armour_k())
+	sim.mission = {"t": {"level": 5}}
+	_check(is_equal_approx(sim.armour_k(), Data.ARMOUR_K) and is_equal_approx(sim.fight_grow(), 1.0), "the armour's cut in the campaign moved: %.1f" % sim.armour_k())
+	sim.mission = m_was
+	# a shop's unique scales as the gamble does
+	sim.mate = {"unique": "Lucky Cap", "notes": 0}
+	var shop_u: Dictionary = sim._mate_item()
+	_check(not shop_u.is_empty() and Items.ilvl(shop_u) == sim.gamble_level(), "the mate's unique at level %d, the gamble's %d" % [Items.ilvl(shop_u), sim.gamble_level()])
 	sim.load_dict(hold)
-	print("the growth ok: paragon, the lorries, the deep affix")
+	print("the growth ok: paragon, the lorries, the deep affix, the bases")
 
 
 ## The SMG line (7 Oct): a gun a tier from T2 to T6, two at T6, the top over the shotguns'; every SMG primary
@@ -12749,6 +12799,9 @@ func _bench_worn_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
+	for sl in Bot.BENCH_SLOTS:
+		if sl != "Helmet":
+			sim.equipped[sl] = null              # the helmet alone on the Bench (21 Oct, a flake: an affix added to the primary first fired the "dead" element)
 	var it: Dictionary = sim._plain("Helmet", "Hard hat")
 	var unfired := "frost"
 	for el in Data.ELEMENTS:

@@ -1361,6 +1361,12 @@ static func paragon_row(key: String) -> Dictionary:
 	return {}
 const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
 const ILVL_FROM := 15
+## Gear scaling (21 Oct, the crew; docs/design/vision.md): past the deep tier a base's damage and armour, and the flat
+## combat lines, compound this a level - a little under the crews' CURVE grow - every rarity the same; the armour's cut
+## reads against the level fought at the same rate, so it holds its share rather than run to a hundred.
+const ILVL_GROW := 0.07
+const ILVL_GROW_FROM := 20         # DEEP_TIER_LEVELS' last: the campaign and the deep tiers as they were
+const FLAT_GROW := ["hp", "armour", "regen", "life_per_kill", "armour_per_free", "armour_per_med"]
 const CONVOY_TIER := 9             # the Services
 const CONVOY_UNIQUE := "The Lorry's Load"
 const NOTES_KILL := 1              # notes a kill, times the depth factor

@@ -492,14 +492,29 @@ func _mitigation_under(t: Dictionary) -> float:
 	if f >= 1.0 or has_rule("nans_cardigan"):
 		return mitigation()
 	var a := armour() * cm("armour") * f
-	return a / (a + Data.ARMOUR_K)
+	return a / (a + armour_k())
 
 
 func _mitigation_raw() -> float:
 	if has_rule("nans_cardigan"):
 		return 0.0                               # no armour at all
 	var a := armour() * cm("armour")
-	return a / (a + Data.ARMOUR_K)
+	return a / (a + armour_k())
+
+
+## The level fought (21 Oct, gear scaling): the run's, or at camp the front site's, as the Map's odds read it.
+func fight_level() -> int:
+	return int(mission["t"].get("level", site_level(front_tier()))) if mission != null else site_level(front_tier())
+
+
+## The gear's growth at the level fought: the armour's cut reads against it (at-level armour holds its share, never
+## running to a hundred), and what's bought low and used there - a med's heal, a grenade's hit - grows with it.
+func fight_grow() -> float:
+	return Items.grow(fight_level())
+
+
+func armour_k() -> float:
+	return Data.ARMOUR_K * fight_grow()
 
 
 # ------------------------------------------------------------------ the damage model
@@ -1428,7 +1443,7 @@ func _mate_item() -> Dictionary:
 	var u := _unique_named(mate["unique"])
 	if u.is_empty():
 		return {}
-	return Items.roll_unique(u, rng, -1, int(mate.get("tier", -1)))
+	return Items.roll_unique(u, rng, gamble_level(), int(mate.get("tier", -1)))     # at the gamble's level: it scales as a find (21 Oct)
 
 
 func can_buy_mate() -> bool:
@@ -3023,11 +3038,11 @@ func __fitted_sum_raw(stat: String) -> float:
 ## The charm's figures: magic find (rarer finds) and cash, in percent.
 func charm_find() -> float:
 	# the charm's own figure, and every loot-quality affix worn (the charm's, the helmet's, the pack's)
-	return (float(Items.base_of(equipped[Data.CHARM]).get("find", 0)) if equipped[Data.CHARM] != null else 0.0) + _affix_sum("rarity_pct")
+	return (Items.find(equipped[Data.CHARM]) - Items.affix_total(equipped[Data.CHARM], "rarity_pct") if equipped[Data.CHARM] != null else 0.0) + _affix_sum("rarity_pct")     # the base's, lifted (21 Oct)
 
 
 func charm_cash() -> float:
-	return (float(Items.base_of(equipped[Data.CHARM]).get("cash", 0)) if equipped[Data.CHARM] != null else 0.0) + _affix_sum("cash_pct") + _fitted_sum("wire_pct")
+	return (Items.cash_pct(equipped[Data.CHARM]) - Items.affix_total(equipped[Data.CHARM], "cash_pct") if equipped[Data.CHARM] != null else 0.0) + _affix_sum("cash_pct") + _fitted_sum("wire_pct")
 
 
 # ------------------------------------------------------------------ the stash
@@ -4042,7 +4057,7 @@ func _yard_grew(before: Dictionary) -> void:
 	if yard_has("back_room") and not bool(before["back"]) and not market.any(func(x): return x.has("unique")):
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
 		if not bu.is_empty():
-			market.append(Items.roll_unique(bu, rng, -1, shop_unique_tier()))
+			market.append(Items.roll_unique(bu, rng, gamble_level(), shop_unique_tier()))
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
 	if contracts_open() < int(before["open"]) and contracts.size() > contracts_open():
@@ -6765,7 +6780,7 @@ func _dose(m: Dictionary) -> void:
 ## What a med heals this runner, before the max HP caps it: its own figure through the past, the trait, the trees,
 ## the nodes, the rules, the set and the Yard. The rig's hover, the pick panel and the heal itself all read this.
 func med_heal(it: Dictionary) -> float:
-	return Items.heal(it) * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (Data.FX["node/walking_wounded.heal"] if has_node("walking_wounded") else 1.0) * (Data.FX["rule/ladle.med_heal"] if has_rule("ladle") else 1.0) * (Data.FX["set/ambulance.heal"] if has_set_rule("ambulance") else 1.0) * (Data.FX["yard/med_lab"] if yard_has("med_lab") else 1.0) * (Data.FX["rule/paramedics_bumbag"] if has_rule("paramedics_bumbag") else 1.0)
+	return Items.heal(it) * fight_grow() * cm("heal") * trait_mult("heal") * (1.0 + tree_sum("heal_pct") / 100.0) * (Data.FX["node/walking_wounded.heal"] if has_node("walking_wounded") else 1.0) * (Data.FX["rule/ladle.med_heal"] if has_rule("ladle") else 1.0) * (Data.FX["set/ambulance.heal"] if has_set_rule("ambulance") else 1.0) * (Data.FX["yard/med_lab"] if yard_has("med_lab") else 1.0) * (Data.FX["rule/paramedics_bumbag"] if has_rule("paramedics_bumbag") else 1.0)
 
 
 ## A med in words: "+42 HP over 3 s" (at once with Field surgery).
@@ -6861,7 +6876,7 @@ func use_grenade(id: int) -> bool:
 		var r := float(res.get(ty, 0.0))
 		if ty == "shock" and has_rule("sparkys_gloves"):
 			r = 0.0
-		var single: float = float(b["damage"]) * (1.0 + increased(ty) / 100.0) * more(ty) * (1.0 - r) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
+		var single: float = float(b["damage"]) * fight_grow() * (1.0 + increased(ty) / 100.0) * more(ty) * (1.0 - r) * ((1.0 + shock_amount()) if float(m.get("shock_t", 0.0)) > 0.0 else 1.0)
 		if ty == "bleed" and has_node("cap_bleed_out"):
 			single *= Data.FX["node/cap_bleed_out"]                     # Bleed out: a nail bomb's bleed, half again too
 		var crowd: int = mini(m["remaining"], contact(t))
@@ -7151,7 +7166,7 @@ func _find(m: Dictionary, t: Dictionary, from_kill := false, crate: Dictionary =
 		said = "Found: %s" % it["unique"]
 	elif t["depth"] >= 2 and not pieces.is_empty() and rng.randf() < minf(Data.SET_CAP, Data.SET_DROP * (t["depth"] - 1)):
 		var pick: Array = pieces[rng.randi_range(0, pieces.size() - 1)]
-		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)))
+		it = Items.roll_set_piece(pick[0], pick[1], rng, int(t.get("level", -1)), int(t["loot_tier"]))
 		said = "Found: %s, %s" % [it["piece"], str(pick[0]).to_lower()]
 	else:
 		# quality decides the rarity: the trees', the charm's and the intel's; quantity is how much, not how good (27)
@@ -8655,7 +8670,7 @@ func _restock_market() -> void:
 	if yard_has("back_room"):
 		var bu := pick_unique(loose_uniques(0), shop_unique_tier(), true)
 		if not bu.is_empty():
-			market.append(Items.roll_unique(bu, rng, -1, shop_unique_tier()))    # the Fence's Back room: a loose one (the ungated), held in its range
+			market.append(Items.roll_unique(bu, rng, gamble_level(), shop_unique_tier()))    # the Fence's Back room: a loose one (the ungated), held in its range
 
 
 ## The Fence's gamble: GAMBLE_SHOWN kinds of the eleven, rotated with every restock.
@@ -8743,7 +8758,7 @@ func roll_gamble(k: Dictionary, unique_roll := -1.0) -> Dictionary:
 				fits.append(u)
 		var gu := pick_unique(fits, shop_unique_tier())
 		if not gu.is_empty():
-			return Items.roll_unique(gu, rng, -1, shop_unique_tier())     # one whose range takes the deepest tier dug; else a plain roll
+			return Items.roll_unique(gu, rng, gamble_level(), shop_unique_tier())     # one whose range takes the deepest tier dug; else a plain roll
 	var it: Dictionary = {}
 	for tries in range(40):
 		it = Items.roll(k["slot"], gear_tier(), rng, Data.GAMBLE_QUALITY, true, false, "", k["type"], 0.33, 0, gamble_level())     # at your deepest site's level, as its drops (15 Oct, the loot read)
