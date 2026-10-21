@@ -6107,3 +6107,8 @@ difficulty and length, the endgame placeholders.
   turning once to the tab that holds it. SAVE_VERSION 4 rides with it (the crew's save shape).
   - The kit key's parts are apart now (Sim._kit_parts): a try-on flake showed once (key changed in the window); the
     smoke now says which part.
+- Done: the Radio's code book in the room (canvas 1). The papers' foot is a "standing codes · every site" box -
+  standing 1, standing 2, the filter, each saying its code, "picking" or "not open yet" (the papers five a page, 7
+  before, for the room). A slot opens the book over the decoder and the signals: None, every known code with its
+  cost and pay, the ones still to learn scrambled, what's left to learn by where (papers, zones, deep), Done. A code
+  picked sets it and shuts the book. The menu's gone (its title clipped). And the dead word menu (_choose_word) out.

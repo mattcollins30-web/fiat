@@ -278,7 +278,6 @@ func _build() -> void:
 	add_child(_yard_tree)
 	_radio = RadioScreen.new()
 	_radio.acted.connect(refresh)
-	_radio.choose_book.connect(_choose_book)
 	_radio.visible = false
 	add_child(_radio)
 	_armoury = Armoury.new()
@@ -1390,55 +1389,6 @@ func _rebuild_lines() -> Array:
 
 
 # ------------------------------------------------------------------ comms tower
-
-## The Radio's crafts that want a word (9 Oct): Call in a word from the book, Hold one of the site's - four a page and More.
-func _choose_word(i: int, key: String, page := 0) -> void:
-	var options: Array = sim.call_options(i) if key == "call" else sim.word_names(i)
-	var items := []
-	var per := 4
-	for k in range(page * per, mini(options.size(), (page + 1) * per)):
-		var nm: String = options[k]
-		var ww: Array = sim.word_words(nm, maxi(1, sim.word_tier_cap(int(sim.depth[i]))))
-		items.append({"name": nm, "detail": "%s · %s" % [ww[0], ww[1]], "action": _do_word.bind(i, key, nm)})
-	if (page + 1) * per < options.size():
-		items.append({"name": "More", "detail": "", "action": _choose_word.bind(i, key, page + 1)})
-	else:
-		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = ("Call in a code on %s" if key == "call" else "Hold a code on %s") % Words.mid(sim.tier(i)["name"])     # "on the Allotments": names as named, a lower "the" mid-sentence (18 Oct)
-	_menu.open(title, "%s, and the codes stay until you change them" % Fmt.count(sim.word_craft_cost(i, key), "note"), items, _menu.close)
-
-
-func _do_word(i: int, key: String, nm: String) -> void:
-	sim.word_craft(i, key, nm)
-	_menu.close()
-	refresh()
-
-
-## The book's choices: a standing word (the map's Relay, the whole band) or the word never heard (Clear air).
-func _choose_book(kind: String, page := 0) -> void:
-	var options: Array = sim.words_known()
-	options.insert(0, "")
-	var items := []
-	var per := 4
-	for k in range(page * per, mini(options.size(), (page + 1) * per)):
-		var nm: String = options[k]
-		items.append({"name": nm if nm != "" else "None", "detail": "" if nm == "" else "%s · %s" % sim.word_words(nm, 1), "action": _set_book.bind(kind, nm)})
-	if (page + 1) * per < options.size():
-		items.append({"name": "More", "detail": "", "action": _choose_book.bind(kind, page + 1)})
-	else:
-		items.append({"name": "Back", "detail": "", "action": _menu.close})
-	var title: String = "A code filtered off every site" if kind == "filter" else "A standing code on every site"
-	_menu.open(title, "From the book: change it any time", items, _menu.close)
-
-
-func _set_book(kind: String, nm: String) -> void:
-	if kind == "filter":
-		sim.set_filtered(nm)
-	else:
-		sim.set_standing(int(kind.trim_prefix("standing")), nm)
-	_menu.close()
-	refresh()
-
 
 ## After a death, two turn up: pick who stays.
 func _choose_runner() -> void:

@@ -13414,14 +13414,42 @@ func _radio_juice_checks(main) -> void:
 		sim.rank_atlas(k)
 	_check(sim.atlas_rank("relay") == 1, "the air lane did not open to the Relay")
 	main.refresh()
-	_check(rd._stand[0].visible and rd._filter.visible, "the Radio has no standing word or filter button")
-	main._choose_book("standing0")
-	_check(main._menu.visible, "the standing word's chooser did not open")
-	main._menu.close()
-	sim.set_standing(0, "Ex-army")
+	_check(rd._stand_head.visible and rd._stand[0]["button"].visible and not rd._stand[0]["button"].disabled and not rd._stand[2]["button"].disabled, "the Radio has no standing code or filter slot")
+	_check(rd._stand[1]["button"].disabled and rd._stand[1]["top"].text.contains("not open yet"), "standing 2 isn't shut before the whole band: '%s'" % rd._stand[1]["top"].text)
+	# the code book (21 Oct, the canvas): over the decoder and the signals, None then the known codes, the rest scrambled
+	var menu_was: bool = main._menu.visible
+	rd._stand[0]["button"].pressed.emit()
+	main.refresh()
+	_check(rd._book.visible and not rd._decoder_box.visible and not rd._signals_box.visible and main._menu.visible == menu_was, "the code book did not open over the decoder and the signals")
+	_check(rd._book_title.text == "The code book · standing 1" and rd._stand[0]["top"].text.contains("picking"), "the book's title or its slot is off: '%s' / '%s'" % [rd._book_title.text, rd._stand[0]["top"].text])
+	var bk: Array = rd.book_entries()
+	var known_n: int = sim.words_known().size()
+	_check(bk[0]["code"] == "" and bk.filter(func(e): return e["known"]).size() == known_n + 1, "the book's cards aren't None and the %d known codes" % known_n)
+	_check(rd._book_cards[1]["chips"].visible and rd._book_cards[1]["chips"].shown() >= 1, "a known code's card has no cost or pay")
+	var unk: Array = bk.filter(func(e): return not e["known"])
+	if not unk.is_empty():
+		var uk: int = bk.find(unk[0]) % rd._book_cards.size()
+		_check(rd._book_cards[uk]["button"].disabled and rd._book_cards[uk]["name"].text != str(unk[0]["code"]), "a code not learnt shows plain, or can be picked")
+	_check(rd._book_left.visible and rd._book_left.shown() >= 1, "the book doesn't say what's still to learn")
+	_check_fit(main, "Radio (the code book)")
+	var ex: int = -1
+	for k in range(rd._book_cards.size()):
+		if rd._book_cards[k]["code"] == "Ex-army":
+			ex = k
+	_check(ex >= 0, "Ex-army isn't on the book's first page")
+	if ex >= 0:
+		rd._book_cards[ex]["button"].pressed.emit()
+	main.refresh()
+	_check(sim.standing.size() > 0 and sim.standing[0] == "Ex-army" and not rd._book.visible and rd._decoder_box.visible, "picking a code didn't set it and shut the book: %s" % str(sim.standing))
+	rd._stand[2]["button"].pressed.emit()
+	main.refresh()
+	_check(rd._book.visible and rd._book_title.text.ends_with("the filter"), "the filter's book is off: '%s'" % rd._book_title.text)
+	rd._book_done.pressed.emit()
+	main.refresh()
+	_check(not rd._book.visible and rd._signals_box.visible, "Done did not shut the book")
 	sim.set_filtered("Numbers")
 	main.refresh()
-	_check(rd._stand[0].text.contains("Ex-army") and rd._filter.text.contains("Numbers"), "the book's buttons don't name their words: '%s' / '%s'" % [rd._stand[0].text, rd._filter.text])
+	_check(rd._stand[0]["name"].text == "Ex-army" and rd._stand[2]["name"].text == "Numbers", "the slots don't name their codes: '%s' / '%s'" % [rd._stand[0]["name"].text, rd._stand[2]["name"].text])
 	_check_fit(main, "Radio (the book, the standing word)")
 	# the Runs card: a word's tier as its chip's tag
 	main.show_room(main.MISSIONS)

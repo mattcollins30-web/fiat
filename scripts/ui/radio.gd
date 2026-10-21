@@ -6,11 +6,13 @@ extends Control
 ## (its figures, its codes, Kev's line, the crafts, Set off) and the rest under it. The Dial, the endgame's tree, in
 ## the band's other view. Before the Quartermaster: nothing on the air.
 ##
-## Signals: `acted` after anything changes; `choose_book(kind)` for "standing0", "standing1", "filter" - main opens
-## its menu for those.
+## The code book (21 Oct, canvas "The code book and the death pick" 1): the standing codes and the filter are a box at
+## the papers' foot; pressing one opens the book over the decoder and the signals, every known code a card with its
+## cost and its pay, the rest scrambled, and what's still to learn. Done, or a code picked, puts them back.
+##
+## Signals: `acted` after anything changes.
 
 signal acted
-signal choose_book(kind: String)
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -36,7 +38,17 @@ const SIGNALS_W := Pal.GRID_W - SIGNALS_X
 const HEAD_ROW_H := 62              # a column's head: its title and a line under
 const PAPER_H := 66
 const PAPER_GAP := 8
-const PAPERS_MAX := 7               # a page of them; ‹ › past that
+const PAPERS_MAX := 5               # a page of them; ‹ › past that (7 till the standing codes' box, 21 Oct)
+const STAND_H := 54                 # a standing code's slot: what it is, the code
+const STAND_GAP := 6
+const BOOK_KINDS := ["standing0", "standing1", "filter"]
+const BOOK_COLS := 3
+const BOOK_ROWS := 5
+const BOOK_CARD_H := 96
+const BOOK_GAP := 8
+const BOOK_TOP := 92                # the cards under the title and the line
+const LEARN_FROM := {"paper": "off papers", "zone": "in the zones", "deep": "deep"}
+const LEARNT := {"paper": "Learnt off a paper", "zone": "Learnt in a zone", "deep": "Learnt off a deep paper"}
 const SLOT_H := 92                 # (104 till the crew row came under the make box, 20 Oct)
 const CREW_H := 40                  # the crew to call: any, or an area's for Kev's notes (20 Oct)
 const SLOT_GAP := 12
@@ -88,8 +100,21 @@ var _paper_rows: Array = []         # {button, name, code, badge, id}
 var _paper_prev: Button
 var _paper_next: Button
 var _paper_page: Label
-var _stand: Array = []
-var _filter: Button
+var _stand_head: Label
+var _stand: Array = []              # the three slots, standing 1 and 2 and the filter: {button, top, name, kind}
+# the code book, over the decoder and the signals
+var book_kind := ""                 # "" shut, else the slot it's open for (BOOK_KINDS)
+var book_page := 0
+var _book: Panel
+var _book_title: Label
+var _book_sub: Label
+var _book_done: Button
+var _book_cards: Array = []         # {button, name, on, chips, line, code}
+var _book_left_head: Label
+var _book_left: Chips
+var _book_prev: Button
+var _book_next: Button
+var _book_pages: Label
 # the decoder
 var _decoder_box: Panel
 var _decoder_title: Label
@@ -163,6 +188,10 @@ func _init() -> void:
 	_build_papers()
 	_build_decoder()
 	_build_signals()
+	_build_book()
+	visibility_changed.connect(func():
+		if not visible:
+			book_kind = "")     # the room left with the book open: back to the decoder (the review)
 	for k in range(3):
 		_quiet.append(UI.label(self, Rect2(PAD, BODY_Y + 30 + k * 40, Pal.GRID_W - 2 * PAD, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
 	_air = Control.new()
@@ -216,18 +245,129 @@ func _build_papers() -> void:
 	_paper_next.text = "›"
 	_paper_next.pressed.connect(func(): _turn(1))
 	_paper_page = UI.label(_papers_box, Rect2(14 + 46, py, 56, 32), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, false)
-	# the Dial's standing codes and Clear air's filter (9 Oct), a row at the column's foot
-	var sx: float = 14
-	var sw: float = (iw - 2 * 6) / 3.0
-	py += 40
-	for k in range(2):
-		var sb := UI.button(_papers_box, Rect2(sx + k * (sw + 6), py, sw, 32), false)
-		sb.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 4)
-		sb.pressed.connect(func(): choose_book.emit("standing%d" % k))
-		_stand.append(sb)
-	_filter = UI.button(_papers_box, Rect2(sx + 2 * (sw + 6), py, sw, 32), false)
-	_filter.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 4)
-	_filter.pressed.connect(func(): choose_book.emit("filter"))
+	# the Dial's standing codes and Clear air's filter (9 Oct): a box at the column's foot (21 Oct, the canvas), each
+	# slot opening the code book
+	py += 44
+	_stand_head = UI.label(_papers_box, Rect2(14, py, iw, 22), "STANDING CODES · EVERY SITE", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+	for k in range(BOOK_KINDS.size()):
+		var sb := Button.new()
+		sb.position = Vector2(14, py + 26 + k * (STAND_H + STAND_GAP))
+		sb.size = Vector2(iw, STAND_H)
+		sb.focus_mode = Control.FOCUS_ALL
+		sb.pressed.connect(open_book.bind(str(BOOK_KINDS[k])))
+		_papers_box.add_child(sb)
+		var t := {"button": sb, "kind": BOOK_KINDS[k]}
+		t["top"] = UI.label(sb, Rect2(12, 4, iw - 24, 20), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["name"] = UI.label(sb, Rect2(12, 24, iw - 24, 26), "", "SemiBold", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		_stand.append(t)
+
+
+func _build_book() -> void:
+	var bw: float = Pal.GRID_W - DECODER_X
+	_book = UI.panel(self, Rect2(DECODER_X, BODY_Y, bw, BODY_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
+	_book.visible = false
+	_book_title = UI.label(_book, Rect2(16, 12, bw - 32 - 140, 36), "", "SemiBold", Pal.TITLE - 4, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_book_sub = UI.label(_book, Rect2(16, 52, bw - 32 - 140, 24), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_book_done = UI.button(_book, Rect2(bw - 16 - 120, 18, 120, 42), false)
+	_book_done.text = "Done"
+	_book_done.pressed.connect(close_book)
+	var cw: float = (bw - 32 - (BOOK_COLS - 1) * BOOK_GAP) / BOOK_COLS
+	for k in range(BOOK_COLS * BOOK_ROWS):
+		var b := Button.new()
+		@warning_ignore("integer_division")
+		b.position = Vector2(16 + (k % BOOK_COLS) * (cw + BOOK_GAP), BOOK_TOP + (k / BOOK_COLS) * (BOOK_CARD_H + BOOK_GAP))
+		b.size = Vector2(cw, BOOK_CARD_H)
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_pick_book.bind(k))
+		_book.add_child(b)
+		var c := {"button": b, "code": ""}
+		c["name"] = UI.label(b, Rect2(12, 8, cw - 24 - 76, 28), "", "SemiBold", Pal.CELL_TEXT_BIG + 1, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		c["on"] = UI.label(b, Rect2(cw - 12 - 76, 12, 76, 22), "on now", "Regular", Pal.CELL_TEXT - 3, Pal.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT, false)
+		c["line"] = UI.label(b, Rect2(12, 40, cw - 24, 24), "", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var ch := Chips.new(cw - 24, 4)
+		ch.position = Vector2(12, 40)
+		b.add_child(ch)
+		c["chips"] = ch
+		for n2 in [c["name"], c["on"], c["line"]]:
+			n2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_book_cards.append(c)
+	var fy: float = BOOK_TOP + BOOK_ROWS * (BOOK_CARD_H + BOOK_GAP) + 8
+	_book_left_head = UI.label(_book, Rect2(16, fy, 140, Chips.CHIP_H), "Still to learn:", "Regular", Pal.CELL_TEXT - 1, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+	_book_left = Chips.new(bw - 32 - 150 - 160, 4)
+	_book_left.position = Vector2(16 + 150, fy)
+	_book.add_child(_book_left)
+	_book_prev = UI.button(_book, Rect2(bw - 16 - 140, fy - 4, 40, 34), false)
+	_book_prev.text = "‹"
+	_book_prev.pressed.connect(_turn_book.bind(-1))
+	_book_pages = UI.label(_book, Rect2(bw - 16 - 100, fy, 60, 26), "", "Regular", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_book_next = UI.button(_book, Rect2(bw - 16 - 40, fy - 4, 40, 34), false)
+	_book_next.text = "›"
+	_book_next.pressed.connect(_turn_book.bind(1))
+
+
+## The book's slot is open: standing 1 by the Dial's Relay, 2 by the whole band, the filter by Clear air.
+func book_open(kind: String) -> bool:
+	if kind == "filter":
+		return sim.atlas_rank("clear_air") > 0
+	return sim.standing_open(int(kind.trim_prefix("standing")))
+
+
+func _book_now(kind: String) -> String:
+	if kind == "filter":
+		return sim.filtered
+	var k: int = int(kind.trim_prefix("standing"))
+	return str(sim.standing[k]) if k < sim.standing.size() else ""
+
+
+func open_book(kind: String) -> void:
+	if not book_open(kind):
+		return
+	book_kind = "" if book_kind == kind else kind     # the slot again shuts it
+	book_page = 0
+	_shown = ""
+	show_state(sim)
+
+
+func close_book() -> void:
+	book_kind = ""
+	_shown = ""
+	show_state(sim)
+
+
+func _turn_book(d: int) -> void:
+	book_page += d
+	_shown = ""
+	show_state(sim)
+
+
+## The book's cards in order: None, then the known codes; the codes still to learn, scrambled, fill the last page.
+func book_entries() -> Array:
+	var out: Array = [{"code": "", "known": true}]
+	for nm in sim.words_known():
+		out.append({"code": str(nm), "known": true})
+	var per: int = _book_cards.size()
+	var room: int = (per - out.size() % per) % per
+	for w in Data.WORDS:
+		if room <= 0:
+			break
+		if not sim.knows_word(str(w["name"])):
+			out.append({"code": str(w["name"]), "known": false, "learn": str(w["learn"])})
+			room -= 1
+	return out
+
+
+func _pick_book(k: int) -> void:
+	var nm: String = str(_book_cards[k]["code"])
+	if book_kind == "" or not bool(_book_cards[k].get("known", false)):
+		return
+	if book_kind == "filter":
+		sim.set_filtered(nm)
+	else:
+		sim.set_standing(int(book_kind.trim_prefix("standing")), nm)
+	book_kind = ""
+	_shown = ""
+	show_state(sim)
+	acted.emit()
 
 
 func _build_decoder() -> void:
@@ -507,7 +647,7 @@ func show_state(s) -> void:
 	selected = clampi(selected, 0, maxi(0, sim.signals.size() - 1))
 	var od: Array = sim.signal_odds_now(selected) if not sim.signals.is_empty() else [0.0, true]     # read in main's frame budget
 	var sig := "%s|%s|%d|%d|%d|%d|%s|%s|%d|%s|%s|%s|%d|%s|%s" % [str(chosen), str(have), paper_page, selected, sim.notes, sim.reach, str(sim.signals), str(sim.on_mission()), int(float(od[0]) * 100.0), str(od[1]),
-		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas)]
+		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas) + book_kind + str(book_page) + str(sim.words_known().size())]
 	sig += "|%d|%s|%s|%s" % [crew_pick, str(sim.materials), sim.cls, str(sim.crew_played().map(func(c): return sim.signal_odds_class(selected, str(c), true)) if not sim.signals.is_empty() else [])]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
@@ -522,8 +662,12 @@ func show_state(s) -> void:
 	_chips.show_chips([{"tag": "Kev's story", "forms": ["%d of %d" % [mini(sim.story_beat, Data.STORY_BEATS.size()), Data.STORY_BEATS.size()]], "colour": STORY}], 1)
 	_chips.visible = on_air
 	_show_heard()
-	for b in [_papers_box, _decoder_box, _signals_box]:
-		b.visible = on_air
+	if book_kind != "" and not (on_air and book_open(book_kind)):
+		book_kind = ""
+	_papers_box.visible = on_air
+	_decoder_box.visible = on_air and book_kind == ""
+	_signals_box.visible = on_air and book_kind == ""
+	_book.visible = on_air and book_kind != ""
 	var quiet: Array = Words.RADIO_QUIET if not on_air else []
 	for k in range(_quiet.size()):
 		_quiet[k].visible = k < quiet.size()
@@ -532,6 +676,9 @@ func show_state(s) -> void:
 	if not on_air:
 		return
 	_show_papers()
+	if book_kind != "":
+		_show_book()
+		return
 	_show_decoder()
 	_show_signals(od)
 
@@ -617,15 +764,96 @@ func _show_papers() -> void:
 	_paper_page.text = "%d/%d" % [paper_page + 1, pages]
 	_paper_prev.disabled = paper_page == 0
 	_paper_next.disabled = paper_page >= pages - 1
-	for k in range(2):
-		var b: Button = _stand[k]
-		b.visible = sim.standing_open(k)
-		var sw: String = str(sim.standing[k]) if k < sim.standing.size() else ""
-		if b.visible:
-			UI.fit_button(b, ["Standing: %s" % (sw if sw != "" else "none"), sw if sw != "" else "Standing"])
-	_filter.visible = sim.atlas_rank("clear_air") > 0
-	if _filter.visible:
-		UI.fit_button(_filter, ["Filter: %s" % sim.filtered, "✕ %s" % sim.filtered, "✕ " + sim.filtered.get_slice(" ", 0)] if sim.filtered != "" else ["Filter: none", "Filter"])
+	var any_open: bool = BOOK_KINDS.any(func(kd): return book_open(str(kd)))
+	_stand_head.visible = any_open
+	for t in _stand:
+		var b: Button = t["button"]
+		var kind: String = str(t["kind"])
+		b.visible = any_open
+		if not any_open:
+			continue
+		var open: bool = book_open(kind)
+		var what: String = "Filter" if kind == "filter" else "Standing %d" % (int(kind.trim_prefix("standing")) + 1)
+		var state: String = "picking" if book_kind == kind else ("never heard" if kind == "filter" else "every site")
+		UI.fit(t["top"], ["%s · %s" % [what, state if open else "not open yet"], what])
+		var now: String = _book_now(kind) if open else ""
+		UI.fit(t["name"], [now if now != "" else ("None" if open else "Shut")])
+		t["name"].add_theme_color_override("font_color", Pal.TEXT if open else Pal.TEXT_3)
+		t["top"].add_theme_color_override("font_color", Pal.ACCENT if book_kind == kind else Pal.TEXT_2)
+		b.disabled = not open
+		var on: bool = book_kind == kind
+		var edge: Color = Pal.ACCENT if on else Pal.CARD_LINE
+		for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+			b.add_theme_stylebox_override(st, UI.box(Pal.BG if not open else (Pal.BUTTON if st == "hover" else Pal.CARD), 7, 2 if on else 1, edge))
+
+
+func _show_book() -> void:
+	var standing: bool = book_kind != "filter"
+	UI.fit(_book_title, ["The code book · %s" % ("standing %d" % (int(book_kind.trim_prefix("standing")) + 1) if standing else "the filter"), "The code book"])
+	UI.fit(_book_sub, (["On every site you run until you change it · free to change", "On every site you run · free to change"] if standing
+		else ["Never on the air while it's here · free to change", "Never on the air while it's here"]))
+	var entries: Array = book_entries()
+	var per: int = _book_cards.size()
+	var pages: int = maxi(1, ceili(float(entries.size()) / per))
+	book_page = posmod(book_page, pages)
+	var now: String = _book_now(book_kind)
+	for k in range(per):
+		var c: Dictionary = _book_cards[k]
+		var n: int = book_page * per + k
+		var b: Button = c["button"]
+		b.visible = n < entries.size()
+		if not b.visible:
+			c["code"] = ""
+			c["known"] = false
+			continue
+		var e: Dictionary = entries[n]
+		var nm: String = str(e["code"])
+		var known: bool = bool(e["known"])
+		c["code"] = nm
+		c["known"] = known
+		var on: bool = known and nm == now
+		c["on"].visible = on
+		if not known:
+			UI.fit(c["name"], [Words.scramble(nm)])
+			UI.fit(c["line"], [str(LEARNT.get(str(e["learn"]), "Not learnt yet")), "Not learnt yet"])
+			c["line"].visible = true
+			c["chips"].visible = false
+		elif nm == "":
+			UI.fit(c["name"], ["None"])
+			UI.fit(c["line"], ["The sites as they are" if standing else "Every code can come on the air", "As they are"])
+			c["line"].visible = true
+			c["chips"].visible = false
+		else:
+			UI.fit(c["name"], [nm])
+			var ww: Array = sim.word_words(nm, 1)
+			var chips: Array = []
+			if str(ww[0]) != "":
+				chips.append({"forms": [str(ww[0]), str(ww[0]).get_slice(", ", 0)], "colour": BITE})
+			if str(ww[1]) != "":
+				chips.append({"forms": [str(ww[1]), str(ww[1]).get_slice(", ", 0)], "colour": PAY})
+			c["chips"].show_chips(chips, 2, true)
+			c["chips"].visible = true
+			c["line"].visible = false
+		c["name"].add_theme_color_override("font_color", Pal.TEXT if known else Pal.TEXT_3)
+		b.disabled = not known
+		var edge: Color = Pal.ACCENT if on else Pal.CARD_LINE
+		for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+			b.add_theme_stylebox_override(st, UI.box(Pal.BG if not known else (Pal.BUTTON if st == "hover" else Pal.CARD), 7, 2 if on else 1, edge))
+	var left := {}
+	for w in Data.WORDS:
+		if not sim.knows_word(str(w["name"])):
+			left[str(w["learn"])] = int(left.get(str(w["learn"]), 0)) + 1
+	var chips_l: Array = []
+	for lk in ["paper", "zone", "deep"]:
+		if int(left.get(lk, 0)) > 0:
+			chips_l.append({"forms": ["%d %s" % [int(left[lk]), LEARN_FROM[lk]]], "colour": Pal.TEXT_2})
+	_book_left_head.visible = not chips_l.is_empty()
+	_book_left.visible = not chips_l.is_empty()
+	_book_left.show_chips(chips_l, 1, true)
+	_book_prev.visible = pages > 1
+	_book_next.visible = pages > 1
+	_book_pages.visible = pages > 1
+	_book_pages.text = "%d/%d" % [book_page + 1, pages]
 
 
 func _show_decoder() -> void:
@@ -936,17 +1164,39 @@ func text_nodes() -> Array:
 			out.append(l)
 	if not _papers_box.visible:
 		return out
-	out.append_array([_papers_title, _papers_sub, _decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _signals_title, _kev_head, _kev_line, _kev])
+	out.append_array([_papers_title, _papers_sub])
+	if _decoder_box.visible:
+		out.append_array([_decoder_title, _make_head, _make, _make_sub, _make_sub2, _decrypt_note, _signals_title, _kev_head, _kev_line, _kev])
+	if _stand_head.visible:
+		out.append(_stand_head)
+		for t in _stand:
+			out.append_array([t["top"], t["name"]])
+	if _book.visible:
+		out.append_array([_book_title, _book_sub, _book_done])
+		for c in _book_cards:
+			if c["button"].visible:
+				out.append(c["name"])
+				if c["on"].visible:
+					out.append(c["on"])
+				if c["line"].visible:
+					out.append(c["line"])
+				if c["chips"].visible:
+					out.append_array(c["chips"].text_nodes())
+		if _book_left.visible:
+			out.append(_book_left_head)
+			out.append_array(_book_left.text_nodes())
+		if _book_pages.visible:
+			out.append(_book_pages)
 	for r in _paper_rows:
 		if r["button"].visible:
 			out.append_array([r["name"], r["code"]])
 	for sl in _slots:
-		out.append_array([sl["name"], sl["code"]])
+		if _decoder_box.visible:
+			out.append_array([sl["name"], sl["code"]])
 	if _paper_page.visible:
 		out.append(_paper_page)
-	for b in _stand + [_filter]:
-		if b.visible:
-			out.append(b)
+	if not _signals_box.visible:
+		return out
 	if _card.visible:
 		out.append_array([_card_kicker, _card_title, _card_line, _card_odds, _card_odds_sub, _card_kev, _card_kev2])
 		for t in _card_tiles:
