@@ -6074,3 +6074,14 @@ difficulty and length, the endgame placeholders.
   upgrades' places (his picks): the Lookout's Early warning (after the clear, no gang till the first crate's
   searched; the whistle's place) and the bus depot's pack (+2 cells, +1 a rank; auto-run's rest's).
   - Comments in sim.gd still speak of an auto-run in places (6316, 7264, 7303, 7663, 7948, 9411); the code doesn't.
+- Step 7, the first cloud reads (24 h, a build a class): gear scaling took the Poacher's 24 h reach from 40 to 59,
+  but every read walled at the reach's ~45, and the Paramedic ran 50 → 221 in 2.5 h at 100% odds. The cause was the
+  wear rule, not the curve: 2 × item level − 2 put every endgame find (item level = its signal's, 26 and up) at
+  level 50, so a class under 50 fought the reach in its campaign kit and one at 50 put on a stash of deep finds at
+  once. Done: Items.wear_for - the campaign's curve to WEAR_FLAT 16 (the City's 12-16), then the item level itself (a
+  level-43 runner wears a level-43 signal's finds), 50 the top; Items.max_ilvl_for its inverse, read by the gamble,
+  the over-level pay and wearable_level (no top at 50).
+  - For Matt: the over-level pay now reads your level past 16 (it read half of it): a level-45 runner farming a
+    level-20 campaign site is paid a tenth - D9's "fall off past 5 levels" as written, but less than before.
+  - The bot's crew: the first cut sent a new class out every two hours (five level-1 runners, nobody at the reach);
+    now the best played class goes back out, and a new one only once the one out is at the cap.

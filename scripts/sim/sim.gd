@@ -1566,10 +1566,7 @@ func recover_s() -> float:
 
 ## The item level the runner can wear now: the highest whose wear level is theirs or under (16 Oct).
 func wearable_level() -> int:
-	var lv := 1
-	while lv < Data.MAX_LEVEL and wear_of(lv + 1) <= level():
-		lv += 1
-	return lv
+	return Items.max_ilvl_for(level())     # wear_for's inverse (21 Oct): no top at the cap, so a level-50 runner's fifth drops at the signal's own level
 
 
 ## The runner's level an item level asks to be worn.
@@ -1587,7 +1584,7 @@ func finds_words(item_level: int) -> Array:
 ## The level a gamble rolls at (15 Oct, the loot read): your deepest site's, as its drops - but never past what the
 ## runner can wear (the review: a deep signal's level would padlock every gamble for the endgame).
 func gamble_level() -> int:
-	return clampi(deepest_cleared_level(), 1, maxi(1, int((level() + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL)))
+	return clampi(deepest_cleared_level(), 1, maxi(1, Items.max_ilvl_for(level())))
 
 
 ## A loose unique a find (15 Oct, the loot read): a trickle from the Town on, growing with the depth, capped.
@@ -3813,7 +3810,7 @@ func dug_depth(i: int) -> int:
 ## item level you wear at - and never past the furthest you've got (D12: the deepest site cleared, or the highest
 ## signal won): a runner held at the Carpet Man was paid a tenth for the Estate he was stuck in, and never got out.
 func over_level_share(lv: int) -> float:
-	var mine: float = (level() + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL
+	var mine: float = float(mini(Items.max_ilvl_for(level()), Data.MAX_LEVEL))     # the item level you wear at (21 Oct: past WEAR_FLAT, your level)
 	if not campaign_done():
 		mine = minf(mine, float(deepest_cleared_level()))     # held at a wall: its last sites pay whole (D12)
 	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE

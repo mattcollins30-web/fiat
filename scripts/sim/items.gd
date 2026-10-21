@@ -451,7 +451,24 @@ static func ilvl(it: Dictionary) -> int:
 static func wear_level(it: Dictionary) -> int:
 	if not (str(it.get("slot", "")) in Data.SLOTS) or it.get("mythic", false):
 		return 1
-	return clampi(int(round(ilvl(it) * Data.WEAR_PER_ILVL - Data.WEAR_OFFSET)), 1, Data.MAX_LEVEL)
+	return wear_for(ilvl(it))
+
+
+## An item level's wear (21 Oct, the crew's read): the campaign's curve to WEAR_FLAT (the City's 12-16), then the
+## item level itself, as a signal's level is - a level-43 runner wears a level-43 signal's finds. The curve alone put
+## every find past 25 at level 50: the classes under it walled at the reach's 45 in their campaign kit, and one at 50
+## put on a stash of deep finds at once and ran the reach to 221.
+static func wear_for(ilvl_v: int) -> int:
+	return clampi(mini(int(round(ilvl_v * Data.WEAR_PER_ILVL - Data.WEAR_OFFSET)), maxi(ilvl_v, Data.WEAR_FLAT)), 1, Data.MAX_LEVEL)
+
+
+## The deepest item level a runner of `level` wears: wear_for's inverse (no top at MAX_LEVEL).
+static func max_ilvl_for(level: int) -> int:
+	if level >= Data.MAX_LEVEL:
+		return 1 << 20
+	if level >= Data.WEAR_FLAT:
+		return level
+	return int((level + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL)
 
 
 ## The bench: the affixes rolled again (the count kept), one of them rolled

@@ -35,9 +35,12 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
 ## and can't pay the tent. Returns the tier run, or -1 for a rest.
 ## The crew (21 Oct, step 7): the reach stood CREW_STAND with nothing to run, another class goes out - a played one
-## reading PUSH on a held signal, else the next not played, at the crew's build for it (CREW_BUILDS; the read's own
-## class keeps the read's build). Swaps are free at camp; each class keeps its own tree and kit.
+## reading PUSH on a held signal; else the played one CREW_AHEAD levels or more over the one out (a death's level 1
+## goes back to the best); else, the one out at the cap, the next not played, at the crew's build for it (CREW_BUILDS;
+## the read's own class keeps the read's build). Swaps are free at camp; each class keeps its own tree and kit.
+## (The first cut sent a new class out every two hours: five level-1 runners and nobody at the reach.)
 const CREW_STAND := 7200.0
+const CREW_AHEAD := 5
 const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "poison", "Scrapper": "shock"}
 var crew_on := true
 var crew_swaps := 0
@@ -52,6 +55,14 @@ func _crew_turn(sim) -> int:
 		for j in range(sim.signals.size()):
 			if float(sim.signal_odds_class(j, name)[0]) >= PUSH and _crew_out(sim, name):
 				return j                  # the swap carries its odds: the signal it read runs
+	var best := ""
+	for name in sim.crew_played():
+		if name != sim.cls and sim.crew_level(name) >= sim.level() + CREW_AHEAD and (best == "" or sim.crew_level(name) > sim.crew_level(best)):
+			best = name
+	if best != "" and _crew_out(sim, best):
+		return -1                         # the best class back out
+	if sim.level() < Data.MAX_LEVEL:
+		return -1                         # still growing: no new class yet
 	for name in CREW_BUILDS:
 		if not (name in sim.crew_played()) and _crew_out(sim, name):
 			return -1                     # a new one: the sites first, as any runner

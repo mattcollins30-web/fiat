@@ -2446,6 +2446,7 @@ const OVER_LEVEL_FLOOR := 0.1
 ## reached the Parade a level under its drops and the Barracks five under; 2 x - 2 is the levels he reached them at:
 ## the Parade 2, the Retail Park 4 ... the Barracks 16). Each site also opens at its drops' level less one (site_gate).
 const WEAR_OFFSET := 2.0
+const WEAR_FLAT := 16               # past this a find's wear is its item level (21 Oct): the endgame's finds are their signal's level
 const WEAR_PER_ILVL := 2.0           # 2.5 - 1.5 from D8 to 18 Oct (D8: x3 had the City's drops at wear 19-25); 2 - 2 now: the City's 12-16
 ## A fifth of a site's or a signal's plain gear finds at the level the runner can wear (16 Oct, Matt's playtest: "the gear
 ## gating is frustrating" - level 10 at the Bank, every drop for level 14), never past the site's own. Uniques, set pieces

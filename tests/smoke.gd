@@ -8608,6 +8608,13 @@ func _gear_gate_checks(main) -> void:
 	var W: int = Items.wear_level(big)          # the Quartermaster's item level's: 16 at 2 x - 2 (19 Oct; 21 at x2.5 - 1.5)
 	_check(W == int(round(9 * Data.WEAR_PER_ILVL - Data.WEAR_OFFSET)) and W > 15 and Items.wear_level(sim._plain("Primary", bases[0]["name"])) == 1, "the levels to wear read %d and %d, not the item level's and 1" % [Items.wear_level(big), Items.wear_level(sim._plain("Primary", bases[0]["name"]))])
 	_check(Items.wear_level({"slot": Data.MEDICAL, "base": "x", "tier": 6, "ilvl": 9}) == 1, "a med carries a level to wear")
+	# past WEAR_FLAT a find's wear is its own level (21 Oct, the crew's read): a level-43 runner wears a level-43 find
+	var wears: Array = [Items.wear_for(9), Items.wear_for(12), Items.wear_for(16), Items.wear_for(17), Items.wear_for(43), Items.wear_for(80)]
+	_check(wears == [16, 16, 16, 17, 43, Data.MAX_LEVEL] and Items.max_ilvl_for(43) == 43 and Items.max_ilvl_for(15) == 8 and Items.max_ilvl_for(Data.MAX_LEVEL) > 1000, "the wear by item level reads %s; the deepest worn at 43 %d, at 15 %d" % [str(wears), Items.max_ilvl_for(43), Items.max_ilvl_for(15)])
+	for lv in range(1, Data.MAX_LEVEL):
+		if Items.wear_for(Items.max_ilvl_for(lv)) > lv or Items.wear_for(Items.max_ilvl_for(lv) + 1) <= lv:
+			_check(false, "the deepest find a level-%d runner wears is off: %d" % [lv, Items.max_ilvl_for(lv)])
+			break
 	sim.equipped["Primary"] = sim._plain("Primary", bases[0]["name"])
 	sim.stash_put(big)
 	_check(sim.wear_lock(big) == W and not sim.can_wear(big) and not sim.can_equip_item(big["id"]) and not sim.equip_item(big["id"]), "a level 25 gun goes on a level 15 runner")
@@ -9064,7 +9071,7 @@ func _over_level_checks(sim) -> void:
 		sim.bosses_beaten[z] = true
 	_check(sim.campaign_done(), "the over-level case's campaign isn't done")
 	var low: Dictionary = sim.effective(Data.BANK)
-	var mine: float = (50.0 + Data.WEAR_OFFSET) / Data.WEAR_PER_ILVL
+	var mine: float = float(mini(Items.max_ilvl_for(50), Data.MAX_LEVEL))     # a level-50 runner reads as level 50 (21 Oct)
 	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
 	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"])),
 		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"])])
@@ -12973,6 +12980,12 @@ func _bot_crew_checks(main) -> void:
 	bot.cls = sim.cls
 	bot.element = "physical"
 	sim.signals = []                       # nothing held: no played class can run anything
+	sim.roster = {}                        # no other class played: the turn's only choice is a new one
+	sim.xp = 0.0
+	var cls0: String = sim.cls
+	var k0: int = bot._crew_turn(sim)
+	_check(k0 == -1 and sim.cls == cls0 and bot.crew_swaps == 0, "the bot sent a new class out from a runner still growing (level %d)" % sim.level())
+	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)          # at the cap: a new class next
 	bot.lorry_ok = true                    # the last runner's lorry read: gone with the swap (the review)
 	var was: String = sim.cls
 	var k: int = bot._crew_turn(sim)
