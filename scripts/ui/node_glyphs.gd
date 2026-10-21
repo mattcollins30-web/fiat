@@ -115,7 +115,7 @@ const PICK_GLYPH := {
 	"twelve_hours": "clock", "rig_wiring": "pack", "a_day": "clock", "floodlights": "quiet", "battery": "pack", "overtime": "cash",
 	"two_days": "clock", "arc_lamps": "fire", "grid": "clock", "charger": "hp",
 	"spotter": "clock", "glasses": "dice", "lookout_post": "clock", "range_cards": "first", "hold_fire": "pack", "tripwires": "clock",
-	"whistle": "runs", "watch_rota": "clock", "crows_nest": "clock", "flares": "three",
+	"early_warning": "search", "watch_rota": "clock", "crows_nest": "clock", "flares": "three",
 	"a_dog": "search", "good_nose": "quality", "guard_dog": "clock", "pedigree": "quality", "fetch": "dog", "second_dog": "search",
 	"tracker": "pen", "ratter": "poison", "pack": "search", "champion": "quality",
 }

@@ -6067,3 +6067,10 @@ difficulty and length, the endgame placeholders.
   reading PUSH on a held signal, else the next not played, at the crew's build for it; each class keeps its own build
   to come back to; the lorry's read and the farm are reset on a swap. The read records the swaps, the crew's levels
   and the paragon.
+- Matt (21 Oct): auto-run goes, as retirement and the moves did. Done: no auto-run in the sim, the save or the
+  screens; the site card's foot is Set off and the insurance, the run screen's second button "Fill up, then go".
+  Away (his pick): the run in hand plays out and comes home as "Fill up, then go" would (Sim.settling, the shell's
+  settle only - the bot's away_on doesn't), then rest; the report says if the run's still out at the cap. In its
+  upgrades' places (his picks): the Lookout's Early warning (after the clear, no gang till the first crate's
+  searched; the whistle's place) and the bus depot's pack (+2 cells, +1 a rank; auto-run's rest's).
+  - Comments in sim.gd still speak of an auto-run in places (6316, 7264, 7303, 7663, 7948, 9411); the code doesn't.

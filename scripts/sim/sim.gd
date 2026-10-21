@@ -29,6 +29,7 @@ var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
 var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
 var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
+var settling := false              # the shell's offline settle (21 Oct): the run out comes home as "Fill up, then go" would - no one's there to (the bot's away_on doesn't)
 var hardcore := false              # a death ends the Yard, stash and all
 var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {stat, what, from, hp_pct}, three at most, the Clinic the cure
 var camp_lost := false             # hardcore: set by the KIA that ended it
@@ -880,6 +881,7 @@ func capacity() -> int:
 func capacity_raw() -> int:
 	var extra := (Data.FX["node/pack_mule"] if has_node("pack_mule") else 0)
 	var base := 2 if equipped["Backpack"] == null else maxi(1, Items.capacity(equipped["Backpack"]))
+	extra += int(town_stat("pack_cells"))     # the bus depot (21 Oct, in auto-run's rest's place)
 	return int((base + extra) * (Data.FX["node/hoarder.capacity"] if has_node("hoarder") else 1) * (Data.FX["rule/the_float.capacity"] if has_rule("the_float") else 1.0))
 
 
@@ -999,7 +1001,6 @@ func set_class(name: String) -> bool:
 		_runner_in(_new_runner())
 	tree = tree.filter(func(id): return not is_pitch(str(id))) + pitch
 	cls = name
-	auto_tier = -1                             # a runner's auto-run is theirs (the review: a level-1 runner sent to the last one's site)
 	if came_back.has("lv_from"):
 		came_back["lv_from"] = level()          # the card's climb is this runner's
 	_caches_out()
@@ -4365,9 +4366,6 @@ const SEARCH_S := 15.0
 const PATROL_S := 24.0          # D6 (gate 10): 20 left 1.6-1.9 searches a gap on the early sites
 const PATROL_BASE := 2
 const SURVIVAL_RUNS := 40
-const AUTO_REST := 0.95            # auto-run redeploys at this share of max HP
-
-var auto_tier := -1                # a tier to keep running, or -1
 var _surv_cache := {}              # tier -> [key, odds]
 
 
@@ -6124,13 +6122,9 @@ func deploy(i: int) -> void:
 			log_event(line)
 
 
-## Auto-run: keep deploying to a tier between rests. Off on KIA or a full stash.
-func set_auto(i: int) -> void:
-	auto_tier = -1 if auto_tier == i else i
 
-
-## The world goes `seconds` on - a frame, or hours away. Rest, auto-run
-## redeploys and missions run in order, so an offline span plays as a live one would.
+## The world goes `seconds` on - a frame, or hours away. The run out plays on, then rest at camp, so an offline
+## span plays as a live one would (21 Oct, Matt: no auto-run - nothing sets off by itself).
 func advance(seconds: float) -> void:
 	elapsed += seconds
 	_roll_weather()
@@ -6151,24 +6145,7 @@ func advance(seconds: float) -> void:
 			prof["real_us"] += Time.get_ticks_usec() - p0
 			left -= step
 			continue
-		var ready := max_hp() * AUTO_REST
-		if auto_tier >= 0 and hp >= ready:
-			if stash_used() >= stash_cap():
-				auto_tier = -1
-				log_event("Auto-run stopped: the stash is full")
-				continue
-			deploy(auto_tier)
-			if mission == null:
-				auto_tier = -1   # the tier closed under it; rest instead
-			continue
-		if auto_tier >= 0 and rest_rate() > 0.0:
-			# rest only as far as the redeploy point, then go again; the bus depot's ranks rest it quicker (18 Oct)
-			var auto_rest: float = rest_rate() * (1.0 + town_stat("auto_rest_pct") / 100.0)
-			var dt := minf(left, (ready - hp) / auto_rest)
-			hp = minf(max_hp(), hp + auto_rest * dt)
-			left -= maxf(dt, 0.001)
-			continue
-		if hp < max_hp():
+		if hp < max_hp():     # at camp: rest (21 Oct, Matt: auto-run's gone - away, the run in hand plays out, then this)
 			hp = minf(max_hp(), hp + rest_rate() * left)
 		left = 0.0
 
@@ -6243,10 +6220,10 @@ func _tick(dt: float) -> void:
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
 			log_event(gang_line(m, size))
-			if auto_tier >= 0 or m.get("leave_full", false):
-				_extract()                  # auto-run, or "fill up then go", leaves as the gang arrives
+			if m.get("leave_full", false) or settling:
+				_extract()                  # "fill up then go", or away, leaves as the gang arrives
 				return
-	if (auto_tier >= 0 or m.get("leave_full", false)) and m["cleared"] and (pack_used(m) >= capacity() or crates_done(m)):
+	if (m.get("leave_full", false) or settling) and m["cleared"] and (pack_used(m) >= capacity() or crates_done(m)):
 		_extract()                           # the pack full, or every crate open: nothing more to stay for
 
 
@@ -6278,9 +6255,6 @@ func _time_out(m: Dictionary) -> void:
 	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var insured: bool = m.get("insured", false)
-	if auto_tier >= 0:
-		auto_tier = -1                         # out of time stops the auto-run, as a wound or a death does: no run after run lost
-		log_event("Auto-run stopped")
 	var worn_v: Array = []
 	for s in Data.SLOTS:
 		if equipped[s] != null and not equipped[s].get("mythic", false):     # a mythic is never lost (16 Oct)
@@ -6736,9 +6710,6 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 		m["taken_by"][ty] = float(m["taken_by"].get(ty, 0.0)) + float(tick_by[ty]) * reached
 	if above and hp > 0.0 and hp < max_hp() * Data.WOUND_AT and not m.get("dry", false):
 		_wound(m)                            # the hit that took them under a quarter leaves a wound (30); never a dry run's, which restores hp but not the wound
-		if auto_tier >= 0 and not yard_has("whistle"):
-			auto_tier = -1                   # auto-run stops on a wound: the Clinic is a decision, not a silent tax (the Lookout's whistle: not)
-			log_event("Auto-run stopped: wounded")
 	if hp <= 0.0:
 		if has_node("not_today") and not m.get("saved", false):
 			m["saved"] = true
@@ -7405,6 +7376,8 @@ func thin_after(t: Dictionary) -> int:
 
 ## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
 func gang_held(m: Dictionary) -> bool:
+	if m["patrols"] == 0 and yard_has("early_warning") and int(m.get("crate_i", 0)) < 1 and not m.get("dry", false) and not crates_done(m):
+		return true                           # the Lookout's Early warning (21 Oct, in the whistle's place): not before the first crate's searched
 	return m["patrols"] == 0 and yard_has("hold_fire") and pack_used(m) < capacity() and not m.get("dry", false) and not crates_done(m)     # picked clean: nothing left to wait for (13 Oct)
 
 
@@ -7609,10 +7582,10 @@ func ditch_commons() -> int:
 
 # ------------------------------------------------------------------ the floor (13 Oct, Matt)
 
-## A search's finds by hand: on the floor, for the player to take - not on an auto-run, "Fill up, then go", away,
+## A search's finds by hand: on the floor, for the player to take - not on "Fill up, then go", away,
 ## a dry run, or for the bot.
 func by_hand(m: Dictionary) -> bool:
-	return loot_by_hand and auto_tier < 0 and not m.get("leave_full", false) and not away_on and not m.get("dry", false)
+	return loot_by_hand and not m.get("leave_full", false) and not away_on and not m.get("dry", false)
 
 
 func floor_items() -> Array:
@@ -7697,9 +7670,6 @@ func can_extract() -> bool:
 
 func extract_now() -> void:
 	if mission != null and can_extract():
-		if auto_tier >= 0:
-			auto_tier = -1
-			log_event("Auto-run stopped")
 		_extract()
 
 
@@ -7714,9 +7684,6 @@ func get_out() -> void:
 		return
 	if mission.get("way_out", false):
 		return                                 # already making for it
-	if auto_tier >= 0:
-		auto_tier = -1
-		log_event("Auto-run stopped")
 	_start_way_out(mission)
 
 
@@ -7768,12 +7735,6 @@ func _seen_off(m: Dictionary) -> void:
 	m["seen_off"] = true
 	log_event("Seen off at the door. Out with the pack.")
 	_extract()
-
-
-func stop_auto() -> void:
-	if auto_tier >= 0:
-		auto_tier = -1
-		log_event("Auto-run stopped; this run goes on")
 
 
 func _extract() -> void:
@@ -7906,7 +7867,7 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	var b = m.get("boss", null)
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
 		"outcome": outcome, "time": snappedf(float(m["elapsed"]), 0.1), "kills": int(m["kills"]), "of": int(et.get("pool", 0)),
-		"auto": auto_tier >= 0, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
+		"hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
 		"kit": loadout_value(), "wound_in": ",".join(wounds.keys()),
 		# what the player saw and set off against (12 Oct, Matt: "how the bot plays isn't how a person plays"): the
 		# odds the Runs card read at the gate (-1 unread), the site's own fire and HP, and the kit's regen
@@ -8080,7 +8041,6 @@ func _kia() -> void:
 	_signal_done(m, true)
 	_sweep_papers()                           # a paper the insurance or the dog brought home: the Radio's pile
 	mission = null
-	auto_tier = -1
 	if hardcore:
 		camp_lost = true
 		log_event(Words.YARD["hardcore_lost"])
@@ -9428,7 +9388,7 @@ func _state() -> Dictionary:
 		"cash": cash, "xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "stash": stash, "market": market, "gamble": gamble,
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
-		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
+		"next_id": Items._next_id, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
 		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls, "crew": roster,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
@@ -9473,8 +9433,6 @@ static func _shift_sites(d: Dictionary) -> void:
 			else:
 				d[key].push_front(true)
 	d["best_tier"] = int(d.get("best_tier", 0)) + n
-	if int(d.get("auto_tier", -1)) >= 0:
-		d["auto_tier"] = int(d["auto_tier"]) + n
 	var m = d.get("mission", null)
 	if m is Dictionary:
 		m["tier"] = int(m.get("tier", 0)) + n
@@ -9530,7 +9488,6 @@ func load_dict(d: Dictionary) -> void:
 	last_report = d.get("last_report", null)
 	operators_lost = int(d.get("operators_lost", 0))
 	best_tier = int(d.get("best_tier", 0))
-	auto_tier = int(d.get("auto_tier", -1))
 	auto_equip = bool(d.get("auto_equip", false))
 	junk_upto = int(d.get("junk_upto", 0 if bool(d.get("auto_sell", false)) else -1))
 	junk_keep = str(d.get("junk_keep", ""))

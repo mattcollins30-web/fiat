@@ -120,10 +120,10 @@ func _outskirts_checks(main) -> void:
 	var old := {"depth": [2, 1, 1, 1, 1, 1, 1, 1, 3], "best_depth": [2, 1, 1, 1, 1, 1, 0, 0, 0], "words": [[], [], [], [], [], [], [], [], []],
 		"sealed": [false, false, false, false, false, false, false, false, true], "worn": [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
 		"worn_depth": [1, 1, 1, 1, 1, 1, 1, 1, 1], "boss_paid": [[], [], [], [], [], [], [], [], []], "weather": ["Rain", "", ""], "bosses_beaten": [true, false, false],
-		"best_tier": 6, "auto_tier": 5, "last_report": {"tier": 5, "outcome": "Extracted"}, "best_dig": {"site": "The Bank", "tier": 5, "depth": 2}}
+		"best_tier": 6, "last_report": {"tier": 5, "outcome": "Extracted"}, "best_dig": {"site": "The Bank", "tier": 5, "depth": 2}}
 	Sim._shift_sites(old)
 	_check(old["depth"] == [1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 3] and old["best_depth"].slice(0, 3) == [1, 1, 1] and old["sealed"][11] and old["weather"] == ["", "Rain", "", ""] and old["bosses_beaten"] == [true, true, false, false], "the old save's lists did not move up: %s" % str(old["depth"]))
-	_check(int(old["best_tier"]) == 9 and int(old["auto_tier"]) == 8 and int(old["last_report"]["tier"]) == 8 and int(old["best_dig"]["tier"]) == 8 and int(old["sites_v"]) == Sim.SITES_V, "the old save's site numbers did not move up three")
+	_check(int(old["best_tier"]) == 9 and int(old["last_report"]["tier"]) == 8 and int(old["best_dig"]["tier"]) == 8 and int(old["sites_v"]) == Sim.SITES_V, "the old save's site numbers did not move up three")
 	var again: Dictionary = old.duplicate(true)
 	Sim._shift_sites(again)
 	_check(again == old, "a moved save moved twice")
@@ -697,25 +697,17 @@ func _init() -> void:
 		print("barracks respec and train ok")
 	_check_fit(main, "Barracks (after)")
 	_class_trees(main)
-	# auto-run: ten minutes on tier 1 with the toggle on, then off
-	sim.set_auto(3)
-	_check(sim.auto_tier == 3, "sim.auto_tier == 3")
-	sim.advance(600.0)
-	print("auto-run: %s, last: %s" % ["still on" if sim.auto_tier == 3 else "stopped", main.sim.events.back()[1]])
-	# a manual extract during an auto-run ends the run; nothing redeploys after it
-	var guard2 := 0
-	while not sim.on_mission() and guard2 < 600:
-		sim.advance(1.0)
-		guard2 += 1
+	# a manual extract ends the run; nothing sends another out (21 Oct, Matt: auto-run's gone)
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
 	if sim.on_mission():
 		main.show_room(main.MISSIONS)
-		_check_fit(main, "Missions (auto, live)")
+		_check_fit(main, "Missions (live)")
 		sim.extract_now()
-		_check(sim.auto_tier == -1, "extract now did not stop the auto-run")
 		sim.advance(300.0)
-		_check(not sim.on_mission(), "auto-run redeployed after a manual extract")
-		print("manual extract ends auto-run ok")
-	sim.auto_tier = -1
+		_check(not sim.on_mission(), "a run set off by itself after a manual extract")
+		print("manual extract ends the run ok")
+	_check(main._missions._cols.all(func(c): return not c.has("auto")), "a site card still has an auto-run button")
 	for r in main.ROOMS:
 		main.show_room(r)
 		_check_fit(main, r + " (end)")
@@ -848,25 +840,26 @@ func _slots_offline_hardcore(main) -> void:
 	_opening_checks(main)
 	_room_intro_checks(main)
 	sim = main.sim
-	# away three hours with auto-run on: missions ran, the log moved, the clock moved
+	# away three hours with a run out (21 Oct, Matt: auto-run's gone): the run in hand plays out, then rest
 	sim.set_depth(3, 1)
 	for r in range(Data.RARITIES.size()):
-		sim.sell_rarity(r)            # room in the stash, or auto-run stops at once
-	sim.set_auto(3)
+		sim.sell_rarity(r)            # room in the stash
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
 	var before: Dictionary = sim.snapshot()
 	main._settle_away(3.0 * 3600.0)
 	var after: Dictionary = sim.snapshot()
 	_check(is_equal_approx(after["elapsed"] - before["elapsed"], 3.0 * 3600.0), "three hours away did not pass three hours")
 	_check(after["cash"] != before["cash"] or after["stash"] != before["stash"] or after["lost"] != before["lost"],
-			"three hours away with auto-run on changed nothing")
-	_check(sim.auto_tier == 0 or sim.auto_tier == -1, "auto_tier after the time away")
+			"three hours away with a run out changed nothing")
+	_check(not sim.on_mission() and int(after.get("runs", 0)) - int(before.get("runs", 0)) <= 1, "away, the run in hand did not end or another went out: %d runs" % (int(after.get("runs", 0)) - int(before.get("runs", 0))))
+	_check(after["lost"] == before["lost"] and not sim.settling and str(sim.last_report.get("outcome", "")) != "Dead", "away, the run in hand didn't come home: %s, lost %d → %d" % [str(sim.last_report.get("outcome", "")), before["lost"], after["lost"]])
 	_check(main._menu.visible and main._menu._title.text == Words.AWAY["title"] and main._menu.sub().begins_with("Gone ") and main._menu.sub().contains(" run"), "the away report is not in the voice: '%s' / '%s'" % [main._menu._title.text, main._menu.sub()])
 	_check_fit(main, "Back, then (ran)")
 	print("away 3h on tier 0: cash %s → %s, %d → %d items, level %d → %d, lost %d → %d" % [Fmt.money(before["cash"]),
 			Fmt.money(after["cash"]), before["stash"], after["stash"], before["level"], after["level"], before["lost"], after["lost"]])
 	main._menu.close()
 	# the cap: a day away settles eight hours of it
-	sim.auto_tier = -1
 	sim.hp = 1.0
 	before = sim.snapshot()
 	main._settle_away(24.0 * 3600.0)
@@ -956,7 +949,6 @@ func _worst_item(slot: String, base: Dictionary, sim) -> Dictionary:
 ## mount fitted - and shows every screen and every pick on it.
 func _worst_case(main) -> void:
 	var sim = main.sim
-	sim.auto_tier = -1
 	if sim.on_mission():
 		sim.extract_now()
 	var worst: Array = []
@@ -1549,7 +1541,6 @@ func _narrative_checks(main) -> void:
 
 func _run_screen(main) -> void:
 	var sim = main.sim
-	sim.auto_tier = -1
 	sim.hp = sim.max_hp()
 	sim.set_depth(3, 1)
 	var tries := 0
@@ -2202,7 +2193,7 @@ func _tree_rules_checks(main) -> void:
 	_check(bk._title.text.begins_with("Doorman"), "the armed swap's panel does not show the Doorman: '%s'" % bk._title.text)
 	_check_fit(main, "Caravan (a swap armed)")
 	bk._pick_class("Doorman")
-	_check(sim.cls == "Doorman" and sim.level() == 1 and is_equal_approx(sim.cash, cash0) and sim.tree == ["The Pitch/0"] and sim.node_active("The Pitch/0") and sim.auto_tier == -1 and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
+	_check(sim.cls == "Doorman" and sim.level() == 1 and is_equal_approx(sim.cash, cash0) and sim.tree == ["The Pitch/0"] and sim.node_active("The Pitch/0") and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
 	_check(sim.roster.has("Poacher") and sim.crew_level("Poacher") == 12 and is_same(sim.roster["Poacher"]["equipped"]["Primary"], poacher_gun), "the crew did not keep the Poacher's own: %s" % str(sim.roster.keys()))
 	_check(poacher_gun == null or sim.item_by_id(int(poacher_gun["id"])).is_empty(), "the Poacher's gun is still the Doorman's to reach")
 	_check(bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text.contains("12"), "the Poacher's card does not say his level: '%s'" % bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text)
@@ -8365,8 +8356,7 @@ func _wound_checks(main) -> void:
 	if not sim.on_mission():
 		sim.load_dict(saved)
 		return
-	# through the fight itself: a hair over, their fire takes the runner under it; auto-run stops on it
-	sim.auto_tier = 0
+	# through the fight itself: a hair over, their fire takes the runner under it
 	sim.hp = sim.max_hp() * Data.WOUND_AT + 0.01
 	var hp_in: float = sim.hp
 	sim.advance(1.0)
@@ -8379,7 +8369,6 @@ func _wound_checks(main) -> void:
 	if not sim.on_mission():
 		sim.load_dict(saved)
 		return
-	_check(not through_the_fight or sim.auto_tier < 0, "auto-run carried on through the wound")
 	var area: String = sim.wounds.keys()[0]
 	var cut: String = str(sim.wounds[area]["stat"])
 	_check(cut == str(Data.WOUND_AREA[area]["stat"]) and str(sim.wounds[area]["from"]) == str(Data.TIERS[3]["name"]) and str(sim.wounds[area]["what"]) != "", "the wound's record is off: %s" % str(sim.wounds[area]))
@@ -8579,7 +8568,6 @@ func _gang_pause_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	sim.auto_tier = -1
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
 	m["remaining"] = 0
@@ -9121,7 +9109,7 @@ func _loot_table_checks(sim) -> void:
 
 
 ## A full pack (15 Oct, parked item 10, agreed with Matt): by hand a drop goes to the floor and the pack's unchanged; on
-## an auto-run (and "Fill up, then go") a find that isn't an upgrade never swaps, an upgrade in the pack never leaves,
+## "Fill up, then go" a find that isn't an upgrade never swaps, an upgrade in the pack never leaves,
 ## an upgrade find swaps the cheapest thing its size that isn't one.
 ## B9 (15 Oct): a later gang can be the next zone's crew - harder a head, hotter, their fire the next zone's - said so
 ## as they come, held while they stand, the site's own again when they're down, through a save; the City's own past the last.
@@ -9129,8 +9117,6 @@ func _harder_gang_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	var auto_was: int = sim.auto_tier
-	sim.auto_tier = -1
 	sim.away_on = false
 	_check(sim.gang_next_odds(1) == 0.0 and is_equal_approx(sim.gang_next_odds(2), Data.GANG_NEXT_STEP) and sim.gang_next_odds(50) == Data.GANG_NEXT_MAX, "the odds a gang: first %.2f, second %.2f, fiftieth %.2f" % [sim.gang_next_odds(1), sim.gang_next_odds(2), sim.gang_next_odds(50)])
 	sim.hp = sim.max_hp()
@@ -9186,7 +9172,6 @@ func _harder_gang_checks(sim) -> void:
 	sim._gang_harder(m)
 	_check(int(m["t"].get("hard_zone", -1)) == 3 and "the hard core" in sim.gang_line(m, 2) and Words.GANGS[3]["name"] in sim.gang_line(m, 2), "the City's past the last: %s" % sim.gang_line(m, 2))
 	sim.extract_now()
-	sim.auto_tier = auto_was
 	sim.load_dict(saved)
 	print("harder gangs ok: the next zone's crew, harder and hotter, said so, held while they stand, through a save; the City's own past the last")
 
@@ -9196,7 +9181,6 @@ func _full_pack_checks(sim) -> void:
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
 	var by_hand_was: bool = sim.loot_by_hand
-	sim.auto_tier = -1
 	sim.away_on = false
 	sim.equipped["Armour"] = sim._plain("Armour", Data.BASES["Armour"].back()["name"])
 	sim.equipped["Helmet"] = null
@@ -9834,7 +9818,6 @@ func _crates_checks(main) -> void:
 	_yard_set(sim, "kennel", 4, "")
 	sim.equipped["Backpack"] = null
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("The Rat Man/"))
-	sim.auto_tier = -1
 	sim.set_depth(3, 1)
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
@@ -10465,7 +10448,7 @@ func _frame_checks(main) -> void:
 		print("the run's band kept simple: '%s', '%s' %s, '%s'" % [bd.title.text, bd.headline.text, bd.unit.text, bd.right[0].text])
 		# nothing on the take's row when all's well (18 Oct, Matt: "remove 'leaving keeps the loot'")
 		var mm2: Dictionary = main.sim.mission
-		if main.sim.auto_tier < 0 and main.sim.hp / main.sim.max_hp() > 0.35 and not mm2.get("leave_full", false) and main.sim.pack_used(mm2) < main.sim.capacity() and not mm2.has("crates"):
+		if main.sim.hp / main.sim.max_hp() > 0.35 and not mm2.get("leave_full", false) and main.sim.pack_used(mm2) < main.sim.capacity() and not mm2.has("crates"):
 			_check(run._note.text == "", "a plain run still says something under the take: '%s'" % run._note.text)
 		# the runner panel (16 Oct, RunPanel mockup): the rig's cells full size (two rows at most) down to the take; the
 		# take one strip over the run's line, the line over the button; "Their fire" and the icons on the six
@@ -11841,6 +11824,7 @@ func _site_level_checks(main) -> void:
 	_smg_line_checks(main)
 	_growth_checks(main)
 	_combo_checks(main)
+	_auto_gone_checks(main)
 	sim.words[3] = hold_intel[0]
 	sim.words[11] = hold_intel[1]
 	sim.depth = hold_depth
@@ -11999,6 +11983,33 @@ func _tier_guide_checks(main) -> void:
 
 ## What grows without end (7 Oct): paragon levels past the cap on the same curve, the lorries' multiplier, and an affix's
 ## value by item level - so the second leg reaches further than the first and a deep drop beats a shallow one.
+## What came in auto-run's place (21 Oct, Matt): the Lookout's Early warning - after the clear, no gang till the first
+## crate's searched - and the bus depot's pack cells.
+func _auto_gone_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var hold: Dictionary = sim.to_dict()
+	_check(not ("auto_tier" in sim.to_dict()) and not sim.has_method("set_auto"), "auto-run is still in the sim")
+	_yard_set(sim, "lookout", 3, "a")
+	_yard_set(sim, "lookout", 2, "b")      # Tripwires, not Hold fire: Early warning alone
+	_check(sim.yard_has("early_warning") and not sim.yard_has("hold_fire"), "the Lookout's fourth pick is not Early warning")
+	var m := {"patrols": 0, "crate_i": 0, "crates": [{"kind": "x"}], "found": []}
+	_check(sim.gang_held(m), "Early warning let a gang come before the first crate")
+	m["crate_i"] = 1
+	_check(not sim.gang_held(m), "Early warning held the gang past the first crate")
+	m["crate_i"] = 0
+	m["dry"] = true
+	_check(not sim.gang_held(m), "Early warning held a dry run's gang")
+	var cap0: int = sim.capacity_raw()
+	sim.rebuilt["bus_depot"] = 1
+	var cap1: int = sim.capacity_raw()
+	sim.rebuilt["bus_depot"] = 3
+	_check(cap1 - cap0 == 2 * (2 if sim.has_node("hoarder") else 1) and sim.capacity_raw() - cap0 == 4 * (2 if sim.has_node("hoarder") else 1), "the bus depot's pack: +%d at rank 1, +%d at rank 3" % [cap1 - cap0, sim.capacity_raw() - cap0])
+	sim.load_dict(hold)
+	print("auto-run gone: Early warning, the bus depot's pack ok")
+
+
 ## The broken builds (21 Oct, Data.COMBOS): on with every part, off with any one gone or the balance's switch, and a
 ## run's stacks growing with no top - the class, its set at its count, the unique, the element's keystone and capstone.
 const COMBO_TREES := {"embers": "Petrol", "clean_kills": "The cold", "overdose": "The Rat Man", "opened_for_good": "Blades", "live_load": "Live"}
@@ -12725,7 +12736,6 @@ func _fill_up_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	sim.hp = sim.max_hp()
-	sim.auto_tier = -1
 	sim.words[3] = []
 	sim.deploy(3)
 	var m: Dictionary = sim.mission
@@ -14357,7 +14367,7 @@ func _came_back_checks(main) -> void:
 	_check(card._firsts[card.FIRSTS - 1].text.begins_with("and ") and card._firsts.any(func(l): return l.text == "First clear: Test site 0"), "the card's firsts read: %s" % str(card._firsts.map(func(l): return l.text)))
 	_check(Rect2(Vector2.ZERO, main._missions.size).encloses(Rect2(card.position, card.size)) and card.position.y >= main._missions.ZONE_H, "the card leaves the Runs screen or sits on the zone row")
 	var c3: Dictionary = main._missions._cols[0]                 # the card, the right third (the drawn Map)
-	for db in [c3["depth_up"], c3["depth_down"], c3["deploy"], c3["auto"], c3["insure"], c3["boss"]]:
+	for db in [c3["depth_up"], c3["depth_down"], c3["deploy"], c3["insure"], c3["boss"]]:
 		_check(not card.get_global_rect().intersects(db.get_global_rect()), "the card would cover the right-hand column's '%s' when it shows" % db.text)
 	_check_fit(main, "Runs (what came back)")
 	_came_back_buttons_clear(main, "the run from tier 1")
@@ -14393,7 +14403,7 @@ func _came_back_buttons_clear(main, where: String) -> void:
 	var card = main._missions._came
 	var cr: Rect2 = card.get_global_rect()
 	for c in main._missions._cols:
-		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
+		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
 			if _shown(b):                         # not is_visible_in_tree: the smoke's main is never in the tree (20 Oct)
 				_check(not cr.intersects(b.get_global_rect()), "the card covers '%s' (%s)" % [b.text, where])
 		if c["note"].text != "":

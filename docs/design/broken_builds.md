@@ -11,7 +11,7 @@ builds one on purpose.
 catches. That line is the theorycrafter's hint.
 
 **Per run.** The stacks belong to the run. They build kill on kill and are gone when you come home. A long run that
-farms patrols after the clear is where they run away; auto-run with no early extract is the way to play them.
+farms patrols after the clear is where they run away: stay out, no early extract.
 
 **Points.** The paths below come from the training rules: the class tree's joint half, your element's half, the
 keystone (level 20), every notable of the element tree, then the capstone (level 30). They are about 45 points, so

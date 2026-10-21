@@ -110,7 +110,7 @@ var _take_head: Label
 var _take_strip := {}               # the take, one strip (16 Oct): {panel, tins, pack_key, pack, track, fill, counts, div1, div2}
 var _note: Label                   # the run's own line, at the take's head's right: HP low, the way out, filling up; nothing when all's well
 var _button: Button                # Get out now
-var _button2: Button               # Stop auto, or Fill up then go
+var _button2: Button               # Fill up then go
 var _inv
 var _pick                          # the pick panel (pick_panel.gd): the pick against the fitted, the buttons
 var _shown := ""
@@ -449,9 +449,8 @@ func show_state(s) -> void:
 	_take_strip["fill"].size.x = _take_strip["track"].size.x * clampf(float(used_p) / maxf(1.0, float(sim.capacity())), 0.0, 1.0)
 	(_take_strip["fill"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if used_p >= sim.capacity() else Pal.GOOD
 	UI.fit(_take_strip["counts"], ["%d passed over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d over · %d swapped" % [int(m["left"]), int(m.get("swapped", 0))], "%d · %d" % [int(m["left"]), int(m.get("swapped", 0))]])
-	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Auto-run: getting out stops it" if sim.auto_tier >= 0 else
-		("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
-		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else "")))
+	_note.text = "See them off in time: then out with the pack" if way_out else "HP low: get out or lose it all" if low else ("Leaves when the pack's full or a gang comes" if m.get("leave_full", false) else
+		(("Pack full: ditch to take from the floor" if sim.by_hand(m) and m.has("crates") else "Pack full: an upgrade swaps in") if sim.pack_used(m) >= sim.capacity() else ""))
 	_note.add_theme_color_override("font_color", Pal.ACCENT if way_out else (Pal.BAD if low else Pal.TEXT_2))
 	# the crates (14 Oct, Matt: "the crate interface ... moved into the space under the fight art"): in the left
 	# column from the clear to the door, the gangs between included, the take folded into their head and the rig under
@@ -485,13 +484,12 @@ func show_state(s) -> void:
 		_floor_pick = -1                      # taken, or the run's over
 	if _inv.selected >= 0 or _rig_pick >= 0:
 		_floor_pick = -1                      # a pick in the pack or the rig takes over
-	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d|f%d|%d" % [_rig_pick, _floor_pick, sim.floor_items().size()], str(sim.auto_tier >= 0), _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
+	var sig := "%s|%s|%d|%d|%s|%d|%d|%s|%d|%s|%s|%s" % [med_sig + "|r%d|f%d|%d" % [_rig_pick, _floor_pick, sim.floor_items().size()], "", _inv.selected, m["found"].size(), str(low or m["cleared"]), sim.pack_used(m), sim.rig.size(), str(m.get("leave_full", false)), int(m.get("swapped", 0)),
 		str(way_out), ("%d" % ceili(sim.way_out_s(t, m))) if not real_clear and not way_out else "", str(sim.can_extract())]
 	sig += "|L%d" % sim.level()             # a level mid-run takes a pick's padlock off (15 Oct, the review)
 	if sig == _shown:
 		return
 	_shown = sig
-	var auto: bool = sim.auto_tier >= 0
 	var filling: bool = m.get("leave_full", false)
 	_button.visible = true
 	_button.disabled = not sim.can_extract()
@@ -506,17 +504,17 @@ func show_state(s) -> void:
 	else:
 		# before the clear it says its price (10 Oct, the way out): the seconds and a last gang
 		var wo: String = Fmt.mss(ceilf(sim.way_out_s(t, m)))
-		var room: float = ((INNER - 12) / 2.0 if auto else float(INNER)) - 48.0     # the half-width button on an auto-run (10 Oct); the button's own padding
+		var room: float = float(INNER) - 48.0     # the button's own padding
 		_button.text = "Get out · %s" % wo
 		for o in ["Get out · %s and one last gang" % wo, "Get out · %s, a gang" % wo]:
 			if UI.text_width(_button, o) <= room:
 				_button.text = o
 				break
 		UI.style_button(_button, low)
-	# the second button: Stop auto on an auto-run; else, once the fight's won, "Fill up, then go"
-	_button2.visible = auto or m["cleared"]
-	_button2.text = "Stop auto-run" if auto else ("Filling up ✓" if filling else "Fill up, then go")
-	UI.style_button(_button2, false, "good" if (filling and not auto) else "")
+	# the second button, once the fight's won: "Fill up, then go"
+	_button2.visible = m["cleared"]
+	_button2.text = "Filling up ✓" if filling else "Fill up, then go"
+	UI.style_button(_button2, false, "good" if filling else "")
 	if _button2.visible:
 		@warning_ignore("integer_division")
 		_button.size.x = (INNER - 12) / 2
@@ -1216,16 +1214,9 @@ func _get_out() -> void:
 
 
 func _second_button() -> void:
-	if sim.auto_tier >= 0:
-		_stop_auto()
-	elif sim.on_mission():
+	if sim.on_mission():
 		sim.set_leave_full(not sim.mission.get("leave_full", false))
 		acted.emit()
-
-
-func _stop_auto() -> void:
-	sim.stop_auto()
-	acted.emit()
 
 
 func _ditch_pick() -> void:

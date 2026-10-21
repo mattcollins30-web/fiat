@@ -81,7 +81,7 @@ func _init() -> void:
 	main._menu.close()
 	# a run, live
 	if not sim.on_mission():
-		sim.deploy(sim.auto_tier if sim.auto_tier >= 0 else 0)
+		sim.deploy(0)
 	main.show_room(main.MISSIONS)
 	for k in range(20):
 		sim.advance(1.0)

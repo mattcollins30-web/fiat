@@ -185,7 +185,7 @@ const YARD := [
 		 {"id": "range_cards", "name": "Range cards", "short": "+50% damage to the first of each gang", "words": "Do 50% more damage to the first of each gang"}],
 		[{"id": "hold_fire", "name": "Hold fire", "short": "First gang waits for a full pack", "words": "After the clear, the first gang waits until the pack is full"},
 		 {"id": "tripwires", "name": "Tripwires", "short": "Gangs 10% later", "words": "Every gang takes 10% longer to arrive"}],
-		[{"id": "whistle", "name": "The whistle", "short": "Auto-run ignores wounds", "words": "Auto-run keeps going when the runner is wounded"},
+		[{"id": "early_warning", "name": "Early warning", "short": "No gang before the first crate", "words": "After the clear, no gang comes until the first crate is searched"},     # 21 Oct, Matt: the whistle went with auto-run
 		 {"id": "watch_rota", "name": "Watch rota", "short": "Night: gangs 20% later", "words": "On night runs, every gang takes 20% longer to arrive"}],
 		[{"id": "crows_nest", "name": "Crow's nest", "short": "Gangs 20% later", "words": "Every gang takes 20% longer to arrive"},
 		 {"id": "flares", "name": "Flares", "short": "Gangs one man short", "words": "Every gang arrives one man short"}]],
@@ -2394,7 +2394,7 @@ const REBUILDS := [
 	{"key": "pumping", "name": "The pumping station", "costs": {"paving": 20, "glass": 10}, "rank_key": "grid_key",
 		"fx": [{"stat": "rest_pct", "base": 50, "step": 10, "say": "+%d%% rest"}, {"stat": "clinic_pct", "base": 10, "step": 2, "cap": 40, "say": "Clinic −%d%%"}]},
 	{"key": "bus_depot", "name": "The bus depot", "costs": {"paving": 15, "army_kit": 10}, "rank_key": "grid_key",
-		"fx": [{"stat": "auto_rest_pct", "base": 100, "step": 25, "say": "Auto-run rests +%d%%"}]},
+		"fx": [{"stat": "pack_cells", "base": 2, "step": 1, "say": "Pack +%d cells"}]},     # 21 Oct, Matt: auto-run's rest went with it
 	{"key": "library", "name": "The library", "costs": {"glass": 15, "ledgers": 15}, "rank_key": "ledger_seal", "opens": "archive",
 		"fx": [{"stat": "paper_pct", "base": 25, "step": 5, "say": "+%d%% papers"}]},
 	{"key": "market_hall", "name": "The market hall", "costs": {"glass": 20, "copper_wire": 20}, "rank_key": "ledger_seal",

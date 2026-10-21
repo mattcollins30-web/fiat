@@ -133,12 +133,10 @@ func _init() -> void:
 		c["site"] = [UI.label(panel, Rect2(PAD, y, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)]
 		y += 24 + BOX_PAD
 		c["boxes"][2].size.y = y - c["boxes"][2].position.y
-		# the foot: Deploy across, Auto under it
+		# the foot: Deploy across, the insurance under it (21 Oct, Matt: auto-run's gone; the paper takes the row)
 		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
-		c["auto"] = UI.button(panel, Rect2(PAD, fy, INNER - BOSS_W - 8, Pal.BUTTON_H), false)
-		c["auto"].pressed.connect(_auto.bind(col))
 		# insurance: the Fence holds the paper on the kit for the next run
-		c["insure"] = UI.button(panel, Rect2(PAD + INNER - BOSS_W, fy, BOSS_W, Pal.BUTTON_H), false)
+		c["insure"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), false)
 		c["insure"].pressed.connect(_insure.bind(col))
 		fy -= Pal.BUTTON_H + 12
 		c["deploy"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
@@ -217,7 +215,7 @@ func show_state(s) -> void:
 	for i in range(Data.TIERS.size()):
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
-	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, sim.auto_tier,
+	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
 			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
 	if sig == _shown:
 		return
@@ -301,7 +299,6 @@ func show_state(s) -> void:
 			rows.push_front({"forms": [sim.thing_name(mk)], "colour": MATERIAL_TONE, "tail": ["%d%% a run brings some home, a death too" % pc, "%d%% a run" % pc]})
 		c["intel"].show_rows(rows, WORD_ROWS)
 		UI.fit(c["intel_head"], ["CONDITIONS · %s" % sim.sky_words(i, false), "CONDITIONS"])     # the weather is the row's (18 Oct, said once)     # the sky (13 Oct, Matt); the codes live on signals (15 Oct), so the head no longer counts them (18 Oct)
-		var auto: bool = sim.auto_tier == i
 		c["deploy"].visible = is_open
 		var walks: bool = t.get("boss_walks", false) and not sim.boss_armed.get(i, false)     # the Radio's Manager walks: free
 		c["deploy"].disabled = not sim.can_deploy_to(i) or (t.has("boss") and not walks and sim.notes < sim.boss_cost(i))
@@ -318,12 +315,9 @@ func show_state(s) -> void:
 			c["boss"].text = ("Convoy ✓" if armed else "Convoy") if convoy else ("Head ✓" if armed else "Head")
 			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
 			UI.style_button(c["boss"], false, "bad" if armed else "")
-		c["auto"].visible = is_open
-		c["auto"].text = "Auto-run: on" if auto else "Auto-run: off"
-		UI.style_button(c["auto"], false, "good" if auto else "")
 		c["insure"].visible = is_open
 		var long_text: String = "Insured ✓" if sim.insure_next else "Insure kit · %s" % Fmt.money(sim.insure_cost(i))
-		c["insure"].text = long_text if UI.text_width(c["insure"], long_text) + 32 <= BOSS_W else ("Insured ✓" if sim.insure_next else "Insure")
+		c["insure"].text = long_text if UI.text_width(c["insure"], long_text) + 32 <= INNER else ("Insured ✓" if sim.insure_next else "Insure")
 		c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
 		if not is_open:
@@ -335,8 +329,6 @@ func show_state(s) -> void:
 			UI.fit(c["note"], [("%s: free, the first time" % boss["name"]) if cost == 0 else ("%s: %d notes, you have %d" % [boss["name"], cost, sim.notes]), "%s: %d notes" % [boss["name"], cost], boss["name"]])
 		elif c["boss"].visible and not sim.boss_armed.get(i, false) and sim.boss_cost(i) > 0 and sim.notes < sim.boss_cost(i):
 			UI.fit(c["note"], ["%s wants %d notes; you have %d" % [boss["name"], sim.boss_cost(i), sim.notes], "%s: %d notes" % [boss["name"], sim.boss_cost(i)], "Not enough notes"])
-		elif auto:
-			c["note"].text = "Rests to 95% HP; leaves when the pack's full or a gang comes"
 		else:
 			c["note"].text = ""
 		UI.fit_sentences(c["site"][0], Words.site_line(Data.TIERS[i]["name"], int(t["depth"])) if is_open else "")
@@ -469,11 +461,6 @@ func _depth(k: int, by: int) -> void:
 	acted.emit()
 
 
-func _auto(k: int) -> void:
-	sim.set_auto(_tier(k))
-	acted.emit()
-
-
 func _insure(_k: int) -> void:
 	sim.set_insure(not sim.insure_next)
 	_shown = ""
@@ -591,7 +578,7 @@ func text_nodes() -> Array:
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())
 		out.append_array(c["intel"].text_nodes())
-		for b in [c["deploy"], c["auto"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
+		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:

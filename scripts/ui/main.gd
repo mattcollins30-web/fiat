@@ -952,13 +952,15 @@ func load_game(path := "") -> void:
 	refresh()
 
 
-## Offline: the time away runs through the sim - rest, or auto-run missions
-## if one was on - up to the cap, and a screen says what happened.
+## Offline: the time away runs through the sim - the run in hand plays out, then rest (21 Oct, Matt: auto-run's gone) -
+## up to the cap, and a screen says what happened.
 func _settle_away(away: float) -> void:
 	var seconds := minf(away, sim.away_cap_s())
 	var before: Dictionary = sim.snapshot()
+	var where_i: int = int(sim.mission["tier"]) if sim.mission != null else -1     # the run that was out
 	var left := seconds
 	sim.away_on = true                     # the Generator's Overtime and rank pay on the time away (9 Oct)
+	sim.settling = true                    # the run out comes home on its own (21 Oct)
 	while left > 0.0:
 		var step := minf(600.0, left)
 		sim.advance(step)
@@ -966,13 +968,14 @@ func _settle_away(away: float) -> void:
 		if sim.camp_lost:
 			break
 	sim.away_on = false
+	sim.settling = false
 	var after: Dictionary = sim.snapshot()
 	# the log's deploys all carry the replay's real time, so the summary counts
 	# by cash and items - what the player cares about
 	var words := ""
 	var runs: int = int(after.get("runs", 0)) - int(before.get("runs", 0))
-	if sim.auto_tier >= 0 or runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
-		var where: String = Words.mid(sim.tier(sim.auto_tier)["name"]) if sim.auto_tier >= 0 else "the Outskirts"
+	if runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
+		var where: String = Words.mid(sim.tier(where_i)["name"]) if where_i >= 0 else "the Outskirts"
 		var things: int = after["stash"] - before["stash"]
 		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
 				things, "" if things == 1 else "s", before["level"], after["level"]]
@@ -982,6 +985,8 @@ func _settle_away(away: float) -> void:
 			words += Words.AWAY["lost"]
 	else:
 		words = Words.AWAY["rested"] % Fmt.away(away)
+	if sim.mission != null:
+		words += Words.AWAY["still_out"] % (Words.mid(sim.tier(int(sim.mission["tier"]))["name"]))     # the cap came first (the review)
 	if away > seconds:
 		words += Words.AWAY["settled"] % Fmt.away(seconds)
 	if sim.inflation_pct() > 0:

@@ -979,6 +979,7 @@ const AWAY := {
 	"rested": "Gone %s. The runner slept, the radio played to nobody.",
 	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s in the stash, level %d to %d.",
 	"settled": "The Pitch kept going for %s of it; past that, nothing ran.",
+	"still_out": " The run at %s is still out.",
 	"lost": " One runner didn't come back.",
 	"prices": " The Fence's prices are up %d%% on when the Pitch opened.",
 }
