@@ -824,6 +824,14 @@ func _train_tree(sim) -> void:
 				joined.append(j["tree"])
 		var halves: Array = order.filter(func(t): return t["name"] in joined)
 		order = mine + halves + order.filter(func(t): return not t.has("element") and not (t["name"] in joined))
+	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
+	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
+	while sim.pitch_free() > 0:
+		var pid := _next_in(sim, pitch_t)
+		if pid == "" or not sim.can_train(pid):
+			break
+		sim.train_node(pid)
+	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE)
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:

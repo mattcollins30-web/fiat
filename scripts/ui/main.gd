@@ -1302,7 +1302,7 @@ func _rail_status(nm: String) -> Dictionary:
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
-			var free: int = sim.points_free()
+			var free: int = sim.points_free() + sim.pitch_free()
 			return {"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}
 		MEDIC:
 			var full: bool = sim.hp >= sim.max_hp() - 0.5

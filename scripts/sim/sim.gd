@@ -34,6 +34,7 @@ var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
 var cls := ""                      # the operator's class, by name; "" is none yet
+var roster := {}                   # the crew (21 Oct): every other class's own runner, by class name (RUNNER_KEYS); the one out is live in the fields
 var runner_trait := ""             # what this runner turned up with
 var candidates: Array = []         # when a runner dies, two turn up: their traits, to pick from
 var promised := ""                 # a trait the next arrival brings (a runner brought home from a run)
@@ -877,62 +878,129 @@ func cm(key: String) -> float:
 	return float(class_data().get(key, 1.0))
 
 
+## The class screen swaps (21 Oct, Matt: "you swap the class and it moves to whatever level you have in that class along
+## with its skill tree"): a runner with no class yet takes the first one picked as theirs; after that a pick puts the
+## runner out away with everything that's theirs (RUNNER_KEYS) and brings in that class's own - or a new one at level
+## 1 with the arrival's kit. At camp only.
+const RUNNER_KEYS := ["xp", "hp", "equipped", "rig", "wounds", "tree", "training_points", "best_level", "trait", "candidates", "runner_runs", "record", "insure_next"]
+
+
 func set_class(name: String) -> bool:
-	if mission != null or name == cls:
+	if mission != null or name == cls or Data.CLASSES.filter(func(c): return c["name"] == name).is_empty():
 		return false
 	_dry_memo.clear()
-	for c in Data.CLASSES:
-		if c["name"] == name:
-			# a change costs the respec of what it gives back (9 Oct: clicking a class was a free respec); a new runner picks free
-			var cost := class_change_cost(name)
-			if cost > 0 and cash < cost:
-				return false
-			var drops: Array = _change_drops(name)
-			cash -= cost
-			chron("class", {"from": cls, "to": name, "cost": cost, "dropped": drops.size()})
-			cls = name
-			# the old class's trees come back as points, and what the new class can't keep: another class's half, an
-			# element off its pair (it would cost double now); the Yard's and the pair's elements stay
-			tree = tree.filter(func(id): return not (id in drops))
-			log_event("The runner was a %s, before" % name)
-			_say_next()
-			return true
-	return false
-
-
-## What a class change to `to` costs: the respec price of what it gives back (_change_drops) - those points at
-## the respec rate, at today's prices. Nothing with no class yet, or nothing to give back.
-func class_change_cost(to := "") -> int:
 	if cls == "":
-		return 0
-	var pts := 0
-	for id in _change_drops(to):
-		pts += node_cost(id)
-	return _inf(pts * Data.RESPEC_CASH)
+		cls = name                             # the first pick: this runner is that class's
+		chron("class", {"from": "", "to": name})
+		log_event("The runner was a %s, before" % name)
+		_say_next()
+		return true
+	var from := cls
+	var pitch: Array = tree.filter(func(id): return is_pitch(str(id)))     # the camp's: they stay out whoever runs
+	roster[from] = _runner_out()
+	if roster.has(name):
+		_runner_in(roster[name])
+		roster.erase(name)
+	else:
+		_runner_in(_new_runner())
+	tree = tree.filter(func(id): return not is_pitch(str(id))) + pitch
+	cls = name
+	auto_tier = -1                             # a runner's auto-run is theirs (the review: a level-1 runner sent to the last one's site)
+	if came_back.has("lv_from"):
+		came_back["lv_from"] = level()          # the card's climb is this runner's
+	_caches_out()
+	chron("swap", {"from": from, "to": name, "level": level()})
+	log_event(Words.CREW["swap"] % [from, name, level()])
+	_say_next()
+	return true
 
 
-## The nodes a change to `to` gives back: the old class's trees; and, when `to` is named, another class's half
-## in an element tree and an element off `to`'s pair (the second past's affinities still count).
-func _change_drops(to := "") -> Array:
-	var out: Array = []
-	var keep_classes: Array = [to].filter(func(c): return c != "")
-	for id in tree:
-		var tn: String = str(id).get_slice("/", 0)
-		var t := Data.tree_named(tn)
-		if cls != "" and t.get("class", "") == cls:
-			out.append(id)                 # (a runner with no class has no class trees: the Yard's has no "class" either)
-		elif to != "" and t.has("element"):
-			var el: String = t["element"]
-			var paired: bool = has_rule("qm_manual") or keep_classes.any(func(c): return el in Data.AFFINITY.get(c, []))
-			if not paired or not Data.for_classes(node(id), keep_classes):
-				out.append(id)
-	return out
+## The runner out, as the crew holds them: the live fields, moved (not copied: the kit is the same items).
+func _runner_out() -> Dictionary:
+	return {"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "wounds": wounds, "tree": tree.filter(func(id): return not is_pitch(str(id))), "training_points": training_points,
+		"best_level": best_level, "trait": runner_trait, "candidates": candidates, "runner_runs": runner_runs, "record": record,
+		"insure_next": insure_next}
 
 
+func _runner_in(r: Dictionary) -> void:
+	xp = float(r.get("xp", 0.0))
+	hp = float(r.get("hp", Data.BASE_HP))
+	equipped = r.get("equipped", {})
+	for sl in Data.SLOTS:
+		if not equipped.has(sl):
+			equipped[sl] = null
+	rig = r.get("rig", [])
+	wounds = r.get("wounds", {})
+	tree = r.get("tree", [])
+	training_points = int(r.get("training_points", 0))
+	best_level = int(r.get("best_level", 1))
+	runner_trait = str(r.get("trait", ""))
+	candidates = r.get("candidates", [])
+	runner_runs = int(r.get("runner_runs", 0))
+	record = r.get("record", {"since": elapsed, "kills": 0, "dealt": 0.0, "cash": 0.0, "find": "", "find_value": 0, "runs": 0, "deaths_seen": operators_lost})
+	insure_next = bool(r.get("insure_next", false))
+
+
+## A class not played yet: level 1, the arrival's kit, no trait (as the first runner), no points.
+func _new_runner() -> Dictionary:
+	var hold := [equipped, rig]
+	equipped = {}
+	for sl in Data.SLOTS:
+		equipped[sl] = null
+	rig = []
+	_starter_loadout()
+	var r := {"xp": 0.0, "hp": Data.BASE_HP, "equipped": equipped, "rig": rig, "wounds": {}, "tree": [], "training_points": 0,
+		"best_level": 1, "trait": "", "candidates": [], "runner_runs": 0, "insure_next": false}
+	equipped = hold[0]
+	rig = hold[1]
+	return r
+
+
+func _caches_out() -> void:
+	_dry_memo.clear()
+	_surv_cache = {}
+	_eff_hash = 0
+	_cmp_key = 0
+	_cmp_cache.clear()
+	_level_xp = -1.0
+
+
+## A class's runner as the screens read it: the one out live, the rest from the crew. {} for a class not played.
+func crew_runner(name: String) -> Dictionary:
+	if name == cls and cls != "":
+		return _runner_out()
+	return roster.get(name, {})
+
+
+## A class's level, 0 for one not played.
+func crew_level(name: String) -> int:
+	var r := crew_runner(name)
+	return 0 if r.is_empty() else Data.level_for_xp(float(r.get("xp", 0.0)))
+
+
+## The element a class's runner has trained most (by points), "" for none or a class not played.
+func crew_element(name: String) -> String:
+	var r := crew_runner(name)
+	var best := ""
+	var most := 0
+	var count := {}
+	for id in r.get("tree", []):
+		var et := Data.element_tree(str(id).get_slice("/", 0))
+		if not et.is_empty():
+			count[et["element"]] = int(count.get(et["element"], 0)) + Data.base_cost(et, node(str(id)))
+	for el in count:
+		if int(count[el]) > most:
+			most = int(count[el])
+			best = str(el)
+	return best
 # ------------------------------------------------------------------ the tree
 
-## The three trees on show: the class's first, the Yard's, the class's second.
-## The trees on show: the class's, the Yard's, the second past's, and every element's.
+## A class swap costs nothing (21 Oct): the old respec-priced change went with the crew.
+func class_change_cost(_to := "") -> int:
+	return 0
+
+
+## The trees on show: the class's, the Yard's, and every element's.
 func trees() -> Array:
 	var out: Array = Data.trees_for(cls)
 	out.append_array(Data.ELEMENT_TREES)
@@ -2359,15 +2427,51 @@ func node_cost(id: String) -> int:
 	return cost
 
 
+## The class's points spent: its own trees (the Pitch's is the camp's, below).
 func points_spent() -> int:
 	var n := 0
 	for id in tree:
-		n += node_cost(id)
+		if not is_pitch(str(id)):
+			n += node_cost(id)
 	return n
 
 
 func points_free() -> int:
 	return training_points - points_spent()
+
+
+## The Pitch's tree is the camp's (21 Oct, Matt: "The camp's, own points"): bought once, it works for every class, and
+## its points are one a level of the crew's best class - its own pool beside each class's.
+func is_pitch(id: String) -> bool:
+	return id.get_slice("/", 0) == Data.COMMON_TREE
+
+
+func crew_best_level() -> int:
+	var b := best_level
+	for k in roster:
+		b = maxi(b, int(roster[k].get("best_level", 1)))
+	return b
+
+
+func pitch_points() -> int:
+	return maxi(0, crew_best_level() - 1)
+
+
+func pitch_spent() -> int:
+	var n := 0
+	for id in tree:
+		if is_pitch(str(id)):
+			n += node_cost(id)
+	return n
+
+
+func pitch_free() -> int:
+	return pitch_points() - pitch_spent()
+
+
+## The points a node is bought from: the Pitch's pool or the class's.
+func free_for(id: String) -> int:
+	return pitch_free() if is_pitch(id) else points_free()
 
 
 ## The classes whose halves this runner can train: its own.
@@ -2419,7 +2523,7 @@ func train_block(id: String, ignore_points := false) -> String:
 			var nd: Dictionary = t["nodes"][k]
 			if (nd.get("keystone", false) or nd.get("notable", false)) and not nd.get("beside", false) and Data.for_classes(nd, my_classes()) and not tree.has("%s/%d" % [parts[0], k]):
 				return "wants the keystone and every notable first"
-	if not ignore_points and points_free() < node_cost(id):
+	if not ignore_points and free_for(id) < node_cost(id):
 		return "wants %d point%s" % [node_cost(id), "" if node_cost(id) == 1 else "s"]
 	return ""
 
@@ -2464,7 +2568,7 @@ func train_node(id: String) -> bool:
 	log_event("Trained: %s" % nd["name"])
 	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "col": int(nd.get("col", 0)), "cost": paid,
 		"keystone": bool(nd.get("keystone", false)), "capstone": bool(nd.get("capstone", false)), "notable": bool(nd.get("notable", false)),
-		"joint": str(nd.get("joint", "")), "free": training_points - points_spent()})
+		"joint": str(nd.get("joint", "")), "free": free_for(id)})
 	return true
 
 
@@ -2475,18 +2579,19 @@ func _on_show(branch: String) -> bool:
 	return false
 
 
+## A reset is the class's own trees (21 Oct): the Pitch's is the camp's, bought once for every class, and stays.
 func respec_cost() -> int:
 	return _inf(points_spent() * Data.RESPEC_CASH)
 
 
 func respec() -> bool:
-	if tree.is_empty() or cash < respec_cost():
+	if tree.filter(func(id): return not is_pitch(str(id))).is_empty() or cash < respec_cost():
 		return false
 	_dry_memo.clear()
 	var paid := respec_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": points_spent()})
-	tree = []
+	tree = tree.filter(func(id): return is_pitch(str(id)))
 	log_event("Training reset: the points are free to spend again")
 	return true
 
@@ -7730,12 +7835,10 @@ func _kia() -> void:
 	_refund_runner_trees()
 
 
-## The runner's own trees - the class's, the second past's, and the elements'
-## (a fire build is the runner's, not the Yard's) - back to points; the class
-## unpicked. Only the Yard's tree stays taken.
+## The runner's own trees - the class's and the elements' - back to points on a death; the class stays the class
+## (21 Oct, the crew: "puts that class back to level 1 with a trait"). Only the Pitch's tree stays taken.
 func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
-	cls = ""
 	var kept := []
 	for id in tree:
 		if str(id).get_slice("/", 0) == Data.COMMON_TREE:
@@ -9052,7 +9155,7 @@ func _state() -> Dictionary:
 		"mission": mission, "last_report": last_report, "operators_lost": operators_lost,
 		"best_tier": best_tier, "depot_cleared": depot_cleared, "elapsed": elapsed, "events": events,
 		"next_id": Items._next_id, "auto_tier": auto_tier, "auto_equip": auto_equip, "junk_upto": junk_upto, "junk_keep": junk_keep, "came_back": came_back, "tree": tree, "tree_v": TREE_V, "training_points": training_points, "best_level": best_level,
-		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls,
+		"words": words, "sealed": sealed, "filtered": filtered, "standing": standing, "depth": depth, "best_depth": best_depth, "class": cls, "crew": roster,
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
@@ -9165,6 +9268,18 @@ func load_dict(d: Dictionary) -> void:
 	# saves from before the language pass carry the old names
 	const OLD_WORDS := {"Recon": "Poacher", "Enforcer": "Doorman", "Medic": "Paramedic", "Saboteur": "Scrapper", "Ghost": "Drifter"}
 	cls = OLD_WORDS.get(cls, cls)
+	roster = {}
+	var cw = d.get("crew", {})
+	if cw is Dictionary:
+		for k in cw:
+			if cw[k] is Dictionary:
+				var r: Dictionary = cw[k].duplicate(true)
+				var eq: Dictionary = {}
+				for sl in Data.SLOTS:
+					eq[sl] = r.get("equipped", {}).get(sl, null)
+				r["equipped"] = eq
+				r["xp"] = float(r.get("xp", 0.0))
+				roster[str(k)] = r     # the crew: each other class's own (21 Oct)
 	runner_trait = str(d.get("trait", ""))
 	candidates = d.get("candidates", [])
 	promised = str(d.get("promised", ""))
@@ -9363,7 +9478,7 @@ func load_dict(d: Dictionary) -> void:
 				crate_items.append(q["held"]["it"])
 	if mission != null:
 		crate_items.append_array(mission.get("floor", []))
-	for it in _all_items() + crate_items:
+	for it in _all_items() + crate_items + _roster_items():
 		it["id"] = int(it["id"])
 		it["rarity"] = int(it["rarity"])
 		it["tier"] = int(it["tier"])
@@ -9377,6 +9492,25 @@ func load_dict(d: Dictionary) -> void:
 		passes = int(d.get("passes", 0))     # the restock is the shelf's; the turn-downs stay as saved
 	if not d.has("gamble"):
 		_restock_gamble()                 # a save from before the Fence's gamble: the offer rolled now, with the tiers loaded (an empty offer is a bought-out one)
+
+
+## The crew's kit, the runners not out (21 Oct): their worn pieces, their rigs, what's fitted in them - for the load's
+## number clean-up only (the rest of the sim never reaches them).
+func _roster_items() -> Array:
+	var out: Array = []
+	for k in roster:
+		for sl in Data.SLOTS:
+			var it = roster[k].get("equipped", {}).get(sl, null)
+			if it != null:
+				out.append(it)
+		out.append_array(roster[k].get("rig", []))
+	var nested: Array = []
+	for it in out:
+		for mount in it.get("attachments", {}):
+			if it["attachments"][mount] != null:
+				nested.append(it["attachments"][mount])
+	out.append_array(nested)
+	return out
 
 
 func _all_items() -> Array:

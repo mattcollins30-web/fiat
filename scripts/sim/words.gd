@@ -85,7 +85,7 @@ const ROOM_INTROS := {
 	"training": {"room": "Training", "face": "", "title": "The caravan at the back", "voice": "training", "cues": [0.0, 7.22], "lines": [
 		"The caravan at the back. Whoever runs for you sleeps here, and gets better here.",
 		"Their past decides what they can learn. The Pitch's tree stays when they don't."],
-		"tiles": [["Their past", "What they were, before"], ["Their trees", "What they can learn"], ["The Pitch's tree", "Kept when they go"]]},
+		"tiles": [["Their past", "What they were, before"], ["Their trees", "What they can learn"], ["The crew", "Pick who goes out"]]},
 	"clinic": {"room": "The Clinic", "face": "medic", "title": "The medic", "voice": "clinic", "cues": [0.0, 4.60, 7.58, 12.74], "lines": [
 		"Sit down. Don't bleed on that, it's the only clean one.",
 		"Resting on the Pitch heals, slowly.",
@@ -104,7 +104,7 @@ const ROOM_INTROS := {
 	"yard": {"room": "The Pitch", "face": "", "title": "Yours, on paper", "voice": "pitch", "cues": [0.0, 4.84], "lines": [
 		"The deeds say it's yours. Paper's about all anyone still agrees on.",
 		"Build on it. What's built here comes with you when you move."],
-		"tiles": [["The buildings", "What's been built"], ["Ranks", "Each building, better"], ["Moving on", "Once every area's cleared"]]},
+		"tiles": [["The buildings", "What's been built"], ["Ranks", "Each building, better"], ["The purse", "What the Pitch holds"]]},
 	"radio": {"room": "Radio", "face": "", "title": "Kev", "voice": "radio", "cues": [0.0, 5.34, 11.14], "lines": [
 		"Kev here. Well, you know that. You've got a set now.",
 		"Everything worth hearing comes over this. Most of it isn't worth hearing.",
@@ -1027,6 +1027,10 @@ const RECYCLE := {
 	"listed": "Someone on the estate will be wearing it by the week's end.",
 }
 
+## The crew (21 Oct): a class swapped at camp.
+const CREW := {
+	"swap": "The %s stands down; the %s goes out next, at level %d.",
+}
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",
 	"set": "The Pitch is set. One runner, a hammer, the estate outside.",

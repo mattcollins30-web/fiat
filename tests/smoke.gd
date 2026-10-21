@@ -145,23 +145,30 @@ func _open_map(main) -> void:
 	main.refresh()
 
 
+## The runner as a class, in place (21 Oct, the crew: a pick swaps runners now, so the mechanics areas relabel the one
+## they have): another class's trees, another class's half and an element off the pair go, as a change's did.
 func _set_cls(s, name: String) -> void:
-	var c: int = s.class_change_cost(name)
-	s.cash += c
-	if not s.set_class(name):
-		s.cash -= c
+	if s.cls == name:
+		return
+	if s.cls == "":
+		s.set_class(name)                    # a runner with no class: the first pick, as the screen makes it
+		return
+	s.cls = name
+	s.tree = s.tree.filter(func(id):
+		var t: Dictionary = Data.tree_named(str(id).get_slice("/", 0))
+		if t.has("class"):
+			return t["class"] == name
+		if t.has("element"):
+			return (t["element"] in Data.AFFINITY.get(name, [])) and Data.for_classes(s.node(id), [name])
+		return true)
+	s._caches_out()
 
 
-## A class through the Training screen: two presses when the change costs, one when it's free.
+## A class through the Training screen: one press for the first pick, two for a swap.
 func _press_class(main, name: String) -> void:
-	var s = main.sim
-	var c: int = s.class_change_cost(name)
-	s.cash += c
 	main._barracks._pick_class(name)
 	if main._barracks._armed == name:
 		main._barracks._pick_class(name)
-	if s.cls != name:
-		s.cash -= c
 
 
 func _init() -> void:
@@ -604,7 +611,7 @@ func _init() -> void:
 	_press_class(main, "Doorman")
 	if sim.cash >= sim.respec_cost() and not sim.tree.is_empty():
 		main._barracks._on_respec()
-		_check(sim.tree.is_empty(), "respec did not clear the tree")
+		_check(sim.tree.all(func(id): return sim.is_pitch(str(id))), "respec did not clear the class's trees: %s" % str(sim.tree))
 		main._barracks._pick("The Pitch/0")
 		main._barracks._on_train()
 		_check(sim.tree.has("The Pitch/0"), "Train through the screen did not train")
@@ -1360,20 +1367,21 @@ func _narrative_checks(main) -> void:
 	var lost_before: int = sim.past.size()
 	sim._kia()
 	_check(sim.past.size() == lost_before + 1 and sim.past.back().has("end"), "a death did not write the runner into the past")
-	# a death takes the runner's past with them: the class unpicked, its trees back as points, the Yard's tree kept
+	# a death (21 Oct, the crew): the class stays the class, at level 1; its trees back as points, the Pitch's kept
 	var fresh2 = load("res://scripts/sim/sim.gd").new()
 	fresh2.start()
 	_set_cls(fresh2, "Doorman")
 	fresh2.training_points = 8
+	fresh2.best_level = 5                      # the Pitch's own points: one a level of the crew's best
 	var elem_tree: String = Data.ELEMENT_TREES[0]["name"]
 	_check(fresh2.train_node("Muscle/0") and fresh2.train_node("Muscle/1") and fresh2.train_node("The Pitch/0") and fresh2.train_node("%s/0" % elem_tree), "the death test could not train")
 	var spent: int = fresh2.points_spent()
 	fresh2.deploy(0)
 	fresh2._kia()
-	_check(fresh2.cls == "", "a death left the class picked: '%s'" % fresh2.cls)
+	_check(fresh2.cls == "Doorman" and fresh2.level() == 1, "a death did not keep the class at level 1: '%s' %d" % [fresh2.cls, fresh2.level()])
 	_check(fresh2.tree == ["The Pitch/0"], "a death did not refund the runner's trees (the class's and the element's) and keep the Pitch's: %s" % str(fresh2.tree))
 	_check(fresh2.points_free() == 8 - fresh2.points_spent() and fresh2.points_spent() < spent, "the refunded points are not free to spend: %d free" % fresh2.points_free())
-	_check(fresh2.next_words() == Words.NEXT["past"], "after a death the Pitch does not say to pick a past: '%s'" % fresh2.next_words())
+	_check(fresh2.next_words() != Words.NEXT["past"], "after a death the Pitch says to pick a past: '%s'" % fresh2.next_words())
 	_check(str(fresh2.events.back()[1]).contains("point") or str(fresh2.events[-2][1]).contains("point"), "the refund was not logged")
 	main.show_room(main.BARRACKS)
 	main._barracks.selected = ""
@@ -1624,6 +1632,7 @@ func _class_trees(main) -> void:
 	main._barracks._pick("Moving on/6")
 	_check_fit(main, "Caravan (keystone)")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	_set_cls(sim, "Doorman")
 	_radio_juice_checks(main)
 	_clock_checks(main)
@@ -1726,7 +1735,7 @@ func _charm_sockets(main) -> void:
 	var fire_before: float = sim.conversion()["fire"]      # the secondary or the tree may carry some already
 	_check(sim.fit(sim.equipped["Primary"]["slot"], fluid["id"]), "fit() did not seat a socketable in the first socket")
 	_check(gun["attachments"]["socket 1"] != null and gun["attachments"]["socket 1"]["base"] == "Lighter fluid", "the fluid is not in socket 1")
-	_check(sim.conversion()["fire"] >= fire_before + 0.15 - 0.001 and sim.type_dps()["fire"] > 0.0 and is_equal_approx(sim.dps(), dps_before), "fire in a socket did not convert 15%% more: %.2f -> %s" % [fire_before, str(sim.conversion())])
+	_check(sim._fitted_sum("conv_fire_pct") >= 15.0 - 0.001 and sim.conversion()["fire"] > fire_before and sim.type_dps()["fire"] > 0.0 and is_equal_approx(sim.dps(), dps_before), "fire in a socket did not convert 15%% more: %.2f -> %s" % [fire_before, str(sim.conversion())])
 	_check(sim.fit_socket("Primary", "socket 2", salt["id"]), "fit_socket() did not seat the salt in socket 2")
 	_check(sim.armour() > armour_before, "salt in a socket did not raise armour")
 	_check(not sim.stash.has(fluid) and not sim.stash.has(salt), "the socketables did not leave the stash")
@@ -2094,60 +2103,51 @@ func _tree_rules_checks(main) -> void:
 				sim.cls = c
 				_check(not sim.has_joint(j["key"]) and not sim.node_active("%s/6" % j["element_tree"]), "%s closed for a %s" % [j["key"], c])
 				break
-	# a class change: free for a new runner; two presses and the class trees' respec for one with them trained
+	# the crew (21 Oct): a runner with no class takes the first pick as theirs, one press, free, keeping what's trained
 	sim.load_dict(saved)
 	sim.cls = ""
-	sim.tree = []
-	sim.training_points = maxi(sim.training_points, 20)
+	sim.roster = {}
+	sim.tree = ["The Pitch/0", "The Rat Man/0"]
 	var cash0: float = sim.cash
 	bk._shown = ""
 	main.refresh()
-	_check(sim.class_change_cost() == 0, "a new runner's pick has a price")
-	# a new runner's pick keeps the Yard's tree and an element in the class's pair (the reviewer's catch: it threw them away)
-	sim.tree = ["The Pitch/0", "The Rat Man/0"]
 	bk._pick_class("Poacher")
-	_check(sim.cls == "Poacher" and is_equal_approx(sim.cash, cash0), "a new runner's pick took two presses or cost: %s, £%.0f" % [sim.cls, cash0 - sim.cash])
-	_check(sim.tree.has("The Pitch/0") and sim.tree.has("The Rat Man/0"), "a new runner's pick gave back the Pitch's or the pair's nodes: %s" % str(sim.tree))
-	sim.tree = []
-	_check(sim.train_node("Stalking/0") and sim.train_node("Stalking/1") and sim.train_node("The Pitch/0"), "the Poacher's first nodes did not train")
-	var price: int = sim.class_change_cost("Doorman")
-	_check(price > 0 and price == sim._inf((sim.node_cost("Stalking/0") + sim.node_cost("Stalking/1")) * Data.RESPEC_CASH), "the change's price is not the class trees' respec: £%d" % price)
-	sim.cash = float(price + 100)
-	bk._pick_class("Doorman")
-	_check(sim.cls == "Poacher" and bk._armed == "Doorman" and bk._notice.text.contains("press again") and bk._notice.text.contains(Fmt.money(price)), "the first press changed the class or did not name the price: '%s'" % bk._notice.text)
-	_check_fit(main, "Caravan (a change armed)")
-	bk._pick_class("Doorman")
-	_check(sim.cls == "Doorman" and is_equal_approx(sim.cash, 100.0) and not sim.tree.has("Stalking/0") and sim.tree.has("The Pitch/0"), "the second press did not change for the price: %s, £%.0f, %s" % [sim.cls, sim.cash, str(sim.tree)])
-	_check(sim.train_node("Muscle/0"), "the Doorman's first node did not train")
-	sim.cash = 0.0
-	bk._pick_class("Scrapper")
-	_check(bk._notice.text.contains("short") and bk._notice.get_theme_color("font_color") == Pal.BAD, "a change the cash won't cover does not say so: '%s'" % bk._notice.text)
-	_check_fit(main, "Caravan (a change short)")
-	bk._pick_class("Scrapper")
-	_check(sim.cls == "Doorman" and sim.tree.has("Muscle/0"), "a change went through without the cash")
-	bk._pick(Data.COMMON_TREE + "/0")
-	_check(bk._armed == "", "picking a node did not disarm the change")
-	bk._pick_class("Scrapper")
-	_set_cls(sim, "Paramedic")              # a change made elsewhere (a death, a move, the tests) disarms the screen's
+	_check(sim.cls == "Poacher" and is_equal_approx(sim.cash, cash0) and sim.tree.has("The Pitch/0") and sim.tree.has("The Rat Man/0") and sim.roster.is_empty(), "the first pick did not make this runner the Poacher: %s %s" % [sim.cls, str(sim.tree)])
+	# a swap: two presses, free; the Poacher's own kept by the crew; a class not played comes in at level 1 with the arrival's kit
+	sim.xp = Data.xp_for_level(12)
+	var poacher_gun = sim.equipped["Primary"]
 	bk._shown = ""
 	main.refresh()
-	_check(bk._armed == "" and not bk._notice.text.contains("press again"), "an armed change outlived the class it was armed from: '%s'" % bk._notice.text)
-	# what a change gives back: the class's trees, another class's half, an element off the new pair - never a debt
-	sim.cash = 1e6
-	_set_cls(sim, "Drifter")
-	sim.training_points = maxi(sim.training_points, 80)
-	for i in [0, 1, 2, 4, 3, 7, 5]:
-		sim.train_node("Petrol/%d" % i)
-	for i in [0, 1]:
-		sim.train_node("Live/%d" % i)
-	_check(sim.tree.has("Petrol/5"), "the Drifter's can did not train")
-	var drops: Array = sim._change_drops("Poacher")
-	_check(drops.has("Petrol/0") and drops.has("Live/0") and sim.class_change_cost("Poacher") > sim.class_change_cost(), "a change to a Poacher does not give back the Drifter's elements: %s" % str(drops))
-	_check(sim._change_drops("Scrapper").has("Petrol/5") and not sim._change_drops("Scrapper").has("Petrol/0"), "a change to a Scrapper keeps the Drifter's half, or gives back the pair's element")
-	_set_cls(sim, "Scrapper")
-	_check(not sim.tree.has("Petrol/5") and sim.tree.has("Petrol/0") and sim.points_free() >= 0, "after the change: %s, %d free" % [str(sim.tree), sim.points_free()])
-	_set_cls(sim, "Poacher")
-	_check(not sim.tree.has("Petrol/0") and not sim.tree.has("Live/0") and sim.points_free() >= 0, "an element off the new pair stayed at double: %s, %d free" % [str(sim.tree), sim.points_free()])
+	bk._pick_class("Doorman")
+	_check(sim.cls == "Poacher" and bk._armed == "Doorman" and bk._notice.text.contains("press again"), "the first press swapped, or said nothing: '%s'" % bk._notice.text)
+	_check(bk._title.text.begins_with("Doorman"), "the armed swap's panel does not show the Doorman: '%s'" % bk._title.text)
+	_check_fit(main, "Caravan (a swap armed)")
+	bk._pick_class("Doorman")
+	_check(sim.cls == "Doorman" and sim.level() == 1 and is_equal_approx(sim.cash, cash0) and sim.tree == ["The Pitch/0"] and sim.node_active("The Pitch/0") and sim.auto_tier == -1 and sim.equipped["Primary"] != null and sim.equipped["Primary"]["base"] == sim.START_WEAPON, "a swap to a new class is off: %s at level %d, %s" % [sim.cls, sim.level(), str(sim.tree)])
+	_check(sim.roster.has("Poacher") and sim.crew_level("Poacher") == 12 and is_same(sim.roster["Poacher"]["equipped"]["Primary"], poacher_gun), "the crew did not keep the Poacher's own: %s" % str(sim.roster.keys()))
+	_check(poacher_gun == null or sim.item_by_id(int(poacher_gun["id"])).is_empty(), "the Poacher's gun is still the Doorman's to reach")
+	_check(bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text.contains("12"), "the Poacher's card does not say his level: '%s'" % bk._class_cards[Data.CLASSES.map(func(c): return c["name"]).find("Poacher")]["tag"].text)
+	_check_fit(main, "Caravan (the crew)")
+	# not on a run
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	_check(sim.on_mission() and not sim.set_class("Poacher") and sim.cls == "Doorman", "a class swapped on a run")
+	sim.extract_now()
+	# and back: the Poacher's level, tree and kit as he left them, the Doorman's to the crew
+	_press_class(main, "Poacher")
+	_check(sim.cls == "Poacher" and sim.level() == 12 and sim.tree.has("The Rat Man/0") and sim.tree.has("The Pitch/0") and sim.tree.count("The Pitch/0") == 1 and is_same(sim.equipped["Primary"], poacher_gun) and sim.roster.has("Doorman") and not sim.roster.has("Poacher") and not sim.roster["Doorman"]["tree"].has("The Pitch/0"), "the swap back lost the Poacher's own: %s level %d %s" % [sim.cls, sim.level(), str(sim.tree)])
+	# saved and loaded
+	var crew_d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var cfresh = Sim.new()
+	cfresh.load_dict(crew_d)
+	_check(cfresh.cls == "Poacher" and cfresh.roster.has("Doorman") and cfresh.crew_level("Doorman") == 1 and cfresh.roster["Doorman"]["equipped"]["Primary"] != null, "the crew did not survive a save: %s" % str(cfresh.roster.keys()))
+	_check(cfresh.set_class("Doorman") and cfresh.level() == 1 and cfresh.equipped["Primary"] != null and typeof(cfresh.equipped["Primary"]["rarity"]) == TYPE_INT and typeof(cfresh.equipped["Primary"]["id"]) == TYPE_INT, "a loaded crew's runner would not come out, or came out with float figures")
+	# the Pitch's tree is the camp's, its own points (21 Oct, Matt): one a level of the crew's best class
+	_check(sim.pitch_points() == sim.crew_best_level() - 1 and sim.free_for("The Pitch/1") == sim.pitch_free() and sim.free_for("Stalking/0") == sim.points_free(), "the Pitch's points are off: %d of best %d" % [sim.pitch_points(), sim.crew_best_level()])
+	# a node picked disarms a swap
+	bk._pick_class("Doorman")
+	bk._pick(Data.COMMON_TREE + "/1")
+	_check(bk._armed == "", "picking a node did not disarm the swap")
 	# the camp's high-water mark: levels under the best earn nothing; past it, a point a level
 	sim.load_dict(saved)
 	sim.best_level = 10
@@ -2347,6 +2347,7 @@ func _webs_traits(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	_set_cls(sim, "Poacher")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.training_points += 30
 	var t: Dictionary = Data.tree_named("Stalking")
 	# the gates (9 Oct): a column opens at ⌈0.6 × the cost of every column before it⌉, counted in that tree alone
@@ -2360,6 +2361,7 @@ func _webs_traits(main) -> void:
 	_check(not sim.can_train("Stalking/2") and sim.train_block("Stalking/2").begins_with("opens at"), "the second column opened on one point: '%s'" % sim.train_block("Stalking/2"))
 	_check(not sim.can_train("Stalking/6") and not sim.can_train("Stalking/10"), "a deep node trained on a dip")
 	# points in another tree open nothing here
+	sim.best_level = maxi(sim.best_level, 10)     # the Pitch's own points (21 Oct): one a level of the crew's best
 	var yard_in: int = sim.points_in("The Pitch")
 	for i in range(3):
 		sim.train_node("The Pitch/%d" % i)
@@ -2432,6 +2434,7 @@ func _element_bot_checks(main) -> void:
 		sim.load_dict(saved)
 		_set_cls(sim, "Doorman")          # bleed and physical: four of the five are off-affinity
 		sim.respec()
+		sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 		sim.cash = 400000.0
 		sim.market = []                   # nothing to buy, no contracts: the choices below are the only ones
 		sim.contracts = []
@@ -2440,7 +2443,7 @@ func _element_bot_checks(main) -> void:
 		bot.element = el
 		bot._train_tree(sim)
 		var mine: Array = sim.tree.filter(func(id): return str(id).begins_with(t["name"] + "/"))
-		_check(not mine.is_empty() and sim.tree.all(func(id): return str(id).begins_with(t["name"] + "/")), "the %s bot did not train its own tree first: %s" % [el, sim.tree])
+		_check(not mine.is_empty() and sim.tree.all(func(id): return str(id).begins_with(t["name"] + "/") or sim.is_pitch(str(id))), "the %s bot did not train its own tree first: %s" % [el, sim.tree])
 		if not sim.affinity(el):
 			# three points and double cost: one node, one spare saved, not spent on the class
 			_check(sim.points_free() == 1, "the off-affinity %s bot did not save its odd point: %d free" % [el, sim.points_free()])
@@ -2520,8 +2523,9 @@ func _element_bot_checks(main) -> void:
 		var hold_aff: Array = gun["affixes"].duplicate(true)
 		gun["affixes"] = [{"stat": "conv_%s_pct" % el, "value": 25.0, "tier": 5}, {"stat": "%s_pct" % el, "value": 30.0, "tier": 5}]
 		var esh: Array = bot._shares(sim, "Primary")
-		var conv_full: bool = float(sim._try(gun.duplicate(true).merged({"affixes": [{"stat": "%s_pct" % el, "value": 30.0, "tier": 5}]}, true), func(): return sim.conversion()[el])) >= 0.99     # a gun all that element already: its conversion line adds nothing (the bleed's blades)
-		_check(esh.size() == 2 and esh.all(func(x): return float(x[1]) >= bot.DEAD or (str(x[0]).begins_with("conv_") and (conv_full or float(x[1]) > 0.0))), "the %s bot's Bench reads its own lines as dead: %s" % [el, str(esh)])
+		# the conversion line can read nothing or less on the figure (a gun all that element already, a crew resisting it):
+		# it's padlocked as the build's own all the same
+		_check(esh.size() == 2 and esh.all(func(x): return float(x[1]) >= bot.DEAD or str(x[0]).begins_with("conv_")) and bot._build_lines().has("conv_%s_pct" % el), "the %s bot's Bench reads its own lines as dead: %s" % [el, str(esh)])
 		gun["affixes"] = hold_aff
 	# the band: at depth 30 on every site, some element build lands at least 60% of what it would unresisted
 	var builds := {}
@@ -2552,6 +2556,7 @@ func _element_checks(main) -> void:
 	var saved: Dictionary = sim.to_dict()
 	_set_cls(sim, "Drifter")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.training_points += 80
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")     # nothing worn converts: the trees are read alone
 	sim.equipped["Secondary"] = null
@@ -2601,6 +2606,7 @@ func _element_checks(main) -> void:
 	sim.extract_now()
 	# frost: Frozen solid stops their fire while chilled and halves frost; the Poacher's frost joint closes on Snares
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	_set_cls(sim, "Poacher")
 	sim.training_points += 80
 	for i in [0, 1, 2, 4, 3, 7, 5]:
@@ -2623,9 +2629,12 @@ func _element_checks(main) -> void:
 	_check(sim.train_node("The Rat Man/6") and sim.dot_stacks("poison") == 15, "Builds did not raise the stacks: '%s'" % sim.train_block("The Rat Man/6"))
 	# bleed: Blades to both ends through the Doorman's joint; Glassing's 15% on the conversions
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	_set_cls(sim, "Doorman")
 	sim.training_points += 80
 	var held = sim.equipped["Primary"]
+	var held2 = sim.equipped["Secondary"]
+	sim.equipped["Secondary"] = null          # the conversions read off the gun alone (a secondary's conversion line read in)
 	sim.equipped["Primary"] = sim._plain("Primary", _base_of_type("shotgun"))
 	for i in [0, 1, 2, 4, 3, 7, 5, 8]:
 		sim.train_node("Blades/%d" % i)
@@ -2633,7 +2642,12 @@ func _element_checks(main) -> void:
 		_check(sim.train_node("Muscle/%d" % i), "Muscle/%d did not train: %s" % [i, sim.train_block("Muscle/%d" % i)])
 	_check(sim.train_node("Blades/6") and sim.train_node("Blades/9"), "Blades did not train past its joint: '%s' / '%s'" % [sim.train_block("Blades/6"), sim.train_block("Blades/9")])
 	_check(sim.has_node("bleed_forever") and is_equal_approx(sim.more("bleed"), 1.4), "Blades did not train to both ends")
+	var rig_held: Array = sim.rig
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x))     # a graded box's conversion (incendiary) reads in through the gun: off for the read
+	sim._dry_memo.clear()
 	_check(is_equal_approx(sim.conversion()["bleed"], 0.15 + 0.65), "Glassing did not add 15%% bleed: %s" % str(sim.conversion()))
+	sim.rig = rig_held
+	sim._dry_memo.clear()
 	sim.deploy(3)
 	m = sim.mission
 	m["dots"] = {"bleed": 60.0}
@@ -2654,6 +2668,7 @@ func _element_checks(main) -> void:
 	_check(is_equal_approx(sim._joints_on_incoming(sim.mission, false, 0.1), 0.75 * 0.9), "the Doorman's physical joint and Stagger do not cut their fire to %.3f: %.3f" % [0.75 * 0.9, sim._joints_on_incoming(sim.mission, false, 0.1)])
 	sim.extract_now()
 	sim.equipped["Primary"] = held
+	sim.equipped["Secondary"] = held2
 	# the Caravan: every lane, the joints' links, the Also row's chips each swapping the fifth lane and back
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (elements, yard)")
@@ -3142,6 +3157,7 @@ func _melee_checks(main) -> void:
 	# Through the lot: a Doorman's swing hits everyone on you
 	_set_cls(sim, "Doorman")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.training_points += 30
 	for i in [0, 1, 2, 3, 7, 8]:
 		sim.train_node("The door/%d" % i)
@@ -3177,6 +3193,7 @@ func _unique_rules_checks(main) -> void:
 		sim.equipped[s] = null
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.words[3] = []
 	sim.set_depth(3, 1)
 	var t: Dictionary = sim.effective(3)
@@ -3406,6 +3423,7 @@ func _guard_checks(main) -> void:
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
 	_set_cls(sim, "Doorman")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.words[3] = []
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
@@ -3481,6 +3499,7 @@ func _guard_checks(main) -> void:
 	saved = sim.to_dict()
 	_set_cls(sim, "Paramedic")
 	sim.respec()
+	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	for s_ in Data.SLOTS:
 		sim.equipped[s_] = null                 # a bare runner: no Guard line on the kit (they roll now)
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
@@ -3674,6 +3693,8 @@ func _set_checks(main) -> void:
 	var carpet: Dictionary = Items.set_named("The Carpet Man's")
 	for p in carpet["pieces"]:
 		sim.equipped[p["slot"]] = Items.roll_set_piece("The Carpet Man's", p, sim.rng)
+	sim.rig = sim.rig.filter(func(x): return not Items.is_ammo(x))     # a graded box's conversion reads in through the gun
+	sim._dry_memo.clear()
 	_check(is_equal_approx(sim.conversion()["bleed"], 0.3) and is_equal_approx(sim.dot_seconds("bleed"), 12.0), "the Carpet Man's: bleed %.2f seconds %.0f" % [sim.conversion()["bleed"], sim.dot_seconds("bleed")])
 	# drops by depth: nothing at depth 1, pieces by depth 12, no army's before 15
 	# (the Fire Crew's three at depth 9 join the count from 12 on)
@@ -5473,6 +5494,11 @@ func _sound_checks(main) -> void:
 	var wi := AudioServer.get_bus_index(snd.WORLD)
 	_check(wi >= 0 and AudioServer.get_bus_index(snd.BED) >= 0 and AudioServer.get_bus_effect_count(wi) >= 2 and AudioServer.get_bus_effect(wi, 1) is AudioEffectLowPassFilter, "the world's bus, the bed's or the world's effects aren't there")
 	_check(snd.world()["dip_t"] > 0.0, "a gang arrived and the bed and the music didn't dip")
+	if sim.mission == null or not is_same(sim.mission, m):
+		sim.hp = sim.max_hp()                     # the run ended in the 240 frames (a quick kit): another, so the streak reads a live one
+		sim.deploy(3)
+		m = sim.mission
+		main.refresh()
 	var streak0: int = int(snd.world()["streak"])
 	m["kills"] = int(m["kills"]) + 1
 	main.refresh()
@@ -7628,7 +7654,7 @@ func _grenade_checks(main) -> void:
 		return
 	var m: Dictionary = sim.mission
 	m["remaining"] = 0
-	_check(not sim.use_grenade(bomb["id"]) and sim.rig.size() == 1, "a grenade went off with no one there")
+	_check(not sim.use_grenade(bomb["id"]) and sim.rig.filter(func(x): return Items.is_grenade(x)).size() == 1, "a grenade went off with no one there")     # the gate's top-up can put a box in the rig beside it
 	m["remaining"] = 5
 	m["target_hp"] = 100000.0
 	m["dots"] = {}
@@ -7637,7 +7663,7 @@ func _grenade_checks(main) -> void:
 	var expect: float = 80.0 * (1.0 + sim.increased("fire") / 100.0) * sim.more("fire") * (1.0 - float(t.get("res", {}).get("fire", 0.0))) * crowd
 	var hp0: float = m["target_hp"]
 	_check(sim.use_grenade(bomb["id"]), "the petrol bomb did not throw")
-	_check(is_equal_approx(hp0 - m["target_hp"], expect) and sim.rig.is_empty() and float(m["dots"].get("fire", 0.0)) > 0.0 and int(m.get("thrown", 0)) == 1, "the throw landed %.0f, not %.0f; rig %d; fire dot %.1f" % [hp0 - m["target_hp"], expect, sim.rig.size(), float(m["dots"].get("fire", 0.0))])
+	_check(is_equal_approx(hp0 - m["target_hp"], expect) and sim.rig.filter(func(x): return Items.is_grenade(x)).is_empty() and float(m["dots"].get("fire", 0.0)) > 0.0 and int(m.get("thrown", 0)) == 1, "the throw landed %.0f, not %.0f; rig %d; fire dot %.1f" % [hp0 - m["target_hp"], expect, sim.rig.size(), float(m["dots"].get("fire", 0.0))])
 	# a throw onto a burn the gun built never shrinks it; a kill by a throw resolves on the next tick
 	var gun_rate: float = float(sim.type_dps()["fire"]) * (1.0 - float(t.get("res", {}).get("fire", 0.0))) * sim.pace() * t["pace"]
 	var gun_cap: float = gun_rate * float(Data.DOTS["fire"]["ratio"]) * sim.dot_seconds("fire") * sim.dot_stacks("fire")
@@ -12564,13 +12590,17 @@ func _bench_worn_checks(main) -> void:
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
 	var it: Dictionary = sim._plain("Helmet", "Hard hat")
-	it["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "frost_pct", "value": 10.0, "tier": 2}]     # frost on a build that fires none: dead
+	var unfired := "frost"
+	for el in Data.ELEMENTS:
+		if float(sim.conversion().get(el, 0.0)) <= 0.0:
+			unfired = el                       # an element the runner fires none of: its increase is dead
+	it["affixes"] = [{"stat": "hp", "value": 20.0, "tier": 2}, {"stat": "%s_pct" % unfired, "value": 10.0, "tier": 2}]
 	it["rarity"] = Data.RARITIES.size() - 1     # no room to add: the re-roll alone
 	sim.equipped["Helmet"] = it
 	sim.notes = 0
 	var bot = Bot.new()
 	var sh: Array = bot._shares(sim, "Helmet")
-	_check(str(sh[0][0]) == "hp" and float(sh[0][1]) > bot.DEAD and float(sh[1][1]) < bot.DEAD, "the bot's Bench doesn't read HP as the helmet's and frost (unfired) as dead: %s" % str(sh))
+	_check(str(sh[0][0]) == "hp" and float(sh[0][1]) > bot.DEAD and float(sh[1][1]) < bot.DEAD, "the bot's Bench doesn't read HP as the helmet's and an unfired element as dead: %s" % str(sh))
 	sim.cash = 1999.0
 	bot._bench_needs(sim)
 	_check(bot.bought.is_empty(), "the bot's Bench spent under the two grand it keeps: %s" % str(bot.bought))
@@ -14308,7 +14338,7 @@ func _class_card_checks(bk) -> void:
 			_check(c["lines"][r].text == str(short[r][0]) and (str(short[r][0]).begins_with("−") == not short[r][1]) and c["lines"][r].get_theme_color("font_color") == want, "%s's short line %d reads '%s' in the wrong tone" % [cd["name"], r, c["lines"][r].text])
 		_check(is_equal_approx(c["face"].modulate.a, 1.0 if lit else 0.75), "%s's face is not %s beside the picked past" % [cd["name"], "lit" if lit else "dimmed"])
 		_check(cb.tooltip_text.contains(str(cd["words"])), "%s's card does not carry its sentence" % cd["name"])
-		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else "")), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
+		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else bk._crew_tag(cd["name"]))), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
 		if k > 0:
 			_check(not Rect2(cb.position, cb.size).intersects(Rect2(bk._class_buttons[k - 1].position, bk._class_buttons[k - 1].size)), "the pasts' cards overlap")
 	_check(bk._face_q.visible == (sim.cls == ""), "the ? in the face's place shows with a past, or not without one")

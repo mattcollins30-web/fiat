@@ -5999,3 +5999,16 @@ difficulty and length, the endgame placeholders.
   move's work changed: the Stash's Dry store is "a second tab a class" (step 4 builds it), the map's Held frequency is
   Hold at half price. The next line after the lorry is the Radio's, not "move the Pitch". An element off a class's
   pair still stops at column 4 (a dip, not a build): the second past and the trade were the only ways past it.
+- Done (step 2): the crew. Each class keeps its own runner - level, XP, tree, element, worn kit and rig, wounds,
+  trait, insurance - in the roster while another's out; the Training screen's class cards swap them (the first
+  press shows that class's runner in the panel, "Swap to the Poacher", the second sends them out; free, at camp
+  only). A class not played comes in at level 1 with the arrival's kit. A death puts that class back to level 1
+  with a trait pick and its trees refunded; the class stays. Matt (21 Oct): the Pitch's tree is the camp's, bought
+  once for every class, with its own points - one a level of the crew's best class; a reset is the class's trees
+  only, the Pitch's stays. The Pitch's lane says its free points. The bot trains the Pitch first from its pool.
+  Smoke checks for the swap, the roster's kit, a run refusing it, the save, the Pitch's points. Three old flakes fixed
+  at the root (a graded box's conversion read into the Glassing, Carpet Man and socket checks; the streak on an
+  ended run; the grenade count).
+  - For the balance pass: a crew has more points than one runner did (each class its own, the Pitch's beside).
+  - Voiced lines to re-record (Matt): the opening's "Now" last line, the Pitch's and Training's room intros' second
+    lines (proposed words sent); the text waits for the takes.

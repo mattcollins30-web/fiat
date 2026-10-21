@@ -718,12 +718,12 @@ func _show_head() -> void:
 		_show_card(k)
 	_notice.add_theme_color_override("font_color", Pal.TEXT)
 	if _armed != "":
-		var cost: int = sim.class_change_cost(_armed)
-		_notice.add_theme_color_override("font_color", Pal.ACCENT if sim.cash >= cost else Pal.BAD)
-		if sim.cash >= cost:
-			UI.fit(_notice, ["Change to %s for %s (the cost of a reset) – press again" % [_armed, Fmt.money(cost)], "Change to %s for %s – press again" % [_armed, Fmt.money(cost)], "%s – press again" % Fmt.money(cost)])
+		_notice.add_theme_color_override("font_color", Pal.ACCENT)
+		var lv: int = sim.crew_level(_armed)
+		if lv > 0:
+			UI.fit(_notice, ["Swap to the %s: level %d, their own tree and kit – press again" % [_armed, lv], "Swap to the %s, level %d – press again" % [_armed, lv], "%s – press again" % _armed])
 		else:
-			UI.fit(_notice, ["Change to %s for %s – %s short" % [_armed, Fmt.money(cost), Fmt.money(cost - int(sim.cash))], "%s: %s short" % [_armed, Fmt.money(cost - int(sim.cash))]])
+			UI.fit(_notice, ["Swap to the %s: a new runner at level 1 – press again" % _armed, "Swap to the %s – press again" % _armed, "%s – press again" % _armed])
 	elif sim.cls == "":
 		UI.fit(_notice, ["Pick a past: what the runner was, and how they fight now · free for a new runner", "Pick a past · free for a new runner", "Pick a past"])
 	elif not td.is_empty():
@@ -753,13 +753,26 @@ func _show_card(k: int) -> void:
 	cb.modulate.a = 0.5 if (cb.disabled and not mine) else 1.0
 	c["face"].modulate = Color(1, 1, 1, 1.0 if lit else 0.75)
 	c["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_2)
-	c["tag"].text = "✓ your past" if mine else ("press again" if armed else "")
+	c["tag"].text = "✓ your past" if mine else ("press again" if armed else _crew_tag(nm))
 	var short: Array = cd.get("short", [])
 	for r in range(CLASS_SHORT):
 		var l: Label = c["lines"][r]
 		l.text = str(short[r][0]) if r < short.size() else ""
 		var tone: Color = Pal.GOOD if (r < short.size() and short[r][1]) else Pal.BAD
 		l.add_theme_color_override("font_color", tone if lit else Pal.TEXT_3)
+
+
+## A class's card when it isn't out (21 Oct, the crew): its level and element, wounded, or new.
+func _crew_tag(nm: String) -> String:
+	if sim.cls == "":
+		return ""
+	var lv: int = sim.crew_level(nm)
+	if lv <= 0:
+		return "new"
+	var r: Dictionary = sim.crew_runner(nm)
+	var el: String = sim.crew_element(nm)
+	var bit: String = "wounded" if not Dictionary(r.get("wounds", {})).is_empty() else el
+	return ("L%d · %s" % [lv, bit]) if bit != "" else "L%d" % lv
 
 
 ## The class's line and the notice, bottom up: a lone line sits just over the classes, where the notice would; each
@@ -890,7 +903,10 @@ func _show_lane(k: int, t) -> void:
 			var lit: bool = sim.level() >= at
 			lane["lv_at"].append({"words": ("Lv %d ✓" % at) if lit else ("Lv %d" % at), "lit": lit, "id": id,
 				"x": rc.position.x + rc.size.x / 2.0 - half - 34.0, "y": rc.position.y + rc.size.y / 2.0 - half + 6.0})
-	UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
+	if t["name"] == Data.COMMON_TREE and sim.pitch_free() > 0:     # the camp's own points (21 Oct)
+		UI.fit(lane["count"], ["%d of %d trained · %d free" % [taken, t["nodes"].size(), sim.pitch_free()], "%d of %d · %d free" % [taken, t["nodes"].size(), sim.pitch_free()], "%d free" % sim.pitch_free()])
+	else:
+		UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
 
 
 ## The two links: under a class lane, to its element's lane, in the fourth column. Solid and filled when the
@@ -1238,7 +1254,30 @@ func _show_panel() -> void:
 	var after_title := func() -> void:
 		_words.position.x = PAD + ceilf(UI.text_width(_title, _title.text)) + 14
 		_words.size.x = Pal.GRID_W - PAD - _words.position.x
-	if selected == "":
+	if selected == "" and _armed != "":
+		var lv: int = sim.crew_level(_armed)
+		var el: String = sim.crew_element(_armed)
+		var r: Dictionary = sim.crew_runner(_armed)
+		_title.text = ("%s · level %d" % [_armed, lv]) if lv > 0 else "%s · new" % _armed
+		if el != "":
+			_title.text += " · " + el
+		after_title.call()
+		var kit: Array = []
+		for sl in ["Primary", "Armour", "Helmet"]:
+			var it = r.get("equipped", {}).get(sl, null)
+			if it != null:
+				kit.append(Items.full_name(it))
+		var trt: String = str(r.get("trait", ""))
+		var state: String = "wounded: send them out to see the Clinic" if not Dictionary(r.get("wounds", {})).is_empty() else ""
+		if lv <= 0:
+			UI.fit(_words, ["A new runner: level 1, the arrival's kit, their own points from here", "A new runner at level 1", ""])
+		else:
+			UI.fit(_words, ["%s%s%s" % [", ".join(kit), (" · " + trt) if trt != "" else "", (" · " + state) if state != "" else ""], ", ".join(kit), ""])
+		_train.visible = true
+		_train.text = "Swap to the %s" % _armed
+		_train.disabled = sim.on_mission()
+		_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+	elif selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
 			_title.text = "No past yet"
@@ -1413,16 +1452,17 @@ func _turn_page() -> void:
 	show_state(sim)
 
 
-## A class button: free for a runner with no class (or nothing in the class trees); otherwise the first press
-## arms it and the header names the price, the second changes (9 Oct: a click was a free respec).
+## A class button: a runner with no class takes the first pick as theirs; after that the first press arms a swap
+## (the panel shows that class's runner), the second sends them out. Free.
 func _pick_class(nm: String) -> void:
 	if sim.on_mission() or nm == sim.cls:
 		_armed = ""
 		show_state(sim)
 		return
-	if sim.class_change_cost(nm) > 0 and _armed != nm:
-		_armed = nm
+	if sim.cls != "" and _armed != nm:
+		_armed = nm                            # a swap (21 Oct, the crew): the first press shows them, the second sends them out
 		_armed_cls = sim.cls
+		selected = ""
 		show_state(sim)
 		return
 	_armed = ""
@@ -1434,6 +1474,9 @@ func _pick_class(nm: String) -> void:
 
 
 func _on_train() -> void:
+	if _armed != "" and selected == "":
+		_pick_class(_armed)                    # the panel's Swap button: the second press (21 Oct, the crew)
+		return
 	_armed = ""
 	if selected != "" and sim.train_node(selected):
 		acted.emit()
