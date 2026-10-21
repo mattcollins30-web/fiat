@@ -506,7 +506,12 @@ func _read_odds() -> void:
 	sim.odds_time_ms = ODDS_MS
 	sim.odds_frame_start()
 	if room == COMMS and not sim.signals.is_empty():
-		sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
+		var o: Array = sim.signal_odds(_radio.selected)    # the Radio's picked signal (15 Oct), in the same few milliseconds
+		if bool(o[1]):
+			for nm in sim.crew_played():             # then the crew's, one class a frame until each has settled (21 Oct)
+				if str(nm) != sim.cls and not bool(sim.signal_odds_class(_radio.selected, str(nm), true)[1]):
+					sim.signal_odds_class(_radio.selected, str(nm))
+					break
 		sim.odds_time_ms = 0.0
 		return
 	# the drawn Map (19 Oct): the picked pin first - a site, or an order's place - then every open site's (each pin

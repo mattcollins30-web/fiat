@@ -898,6 +898,9 @@ func set_class(name: String) -> bool:
 	var from := cls
 	var pitch: Array = tree.filter(func(id): return is_pitch(str(id)))     # the camp's: they stay out whoever runs
 	roster[from] = _runner_out()
+	_crew_odds[from] = _sig_odds                # the signals' odds read for each go with them (the review: a swap read them again)
+	_sig_odds = _crew_odds.get(name, {})
+	_crew_odds.erase(name)
 	if roster.has(name):
 		_runner_in(roster[name])
 		roster.erase(name)
@@ -958,6 +961,8 @@ func _new_runner() -> Dictionary:
 
 func _caches_out() -> void:
 	_dry_memo.clear()
+	_key_memo = []                             # the odds' key is the runner's: another class's read can't take it
+	_scope_memo = []
 	_surv_cache = {}
 	_eff_hash = 0
 	_cmp_key = 0
@@ -5326,6 +5331,8 @@ func bin_signal(k: int) -> bool:
 	if signal_at(k).is_empty():
 		return false
 	log_event(Words.SIGNAL_BINNED % Words.mid(str(Data.TIERS[int(signals[k]["site"])]["name"])))
+	for c in _crew_odds:
+		_crew_odds[c].erase(int(signals[k]["id"]))     # the crew's reads of it go with it
 	signals.remove_at(k)
 	return true
 
@@ -5410,6 +5417,59 @@ func signal_odds(k: int) -> Array:
 		_surv_cache.erase(i)
 	_sig_off()
 	return [o, done]
+
+
+## A held signal's odds for another of the crew (21 Oct, Matt: "Hit a signal with 70% shock resist? Switch to your bleed
+## paramedic and steam roll it"): that class's runner put out for the read - their level, tree, kit - and back, each
+## class's reads kept apart. [odds, settled]; [0, true] for a class not played. `now`: what's read, running none.
+var _crew_odds := {}                 # class -> {signal id -> the odds' cache}
+var _crew_now := {}                  # "class/signal id" -> [odds, settled], the last read (the screens read it, no swap)
+func signal_odds_class(k: int, name: String, now := false) -> Array:
+	if name == cls or cls == "":
+		return signal_odds_now(k) if now else signal_odds(k)
+	if not roster.has(name) or mission != null:
+		return [0.0, false]
+	var sg := signal_at(k)
+	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_pitch(str(id)))])]     # the signal as crafted, and what the camp gives everyone
+	if now and _crew_now.has(ck):
+		return _crew_now[ck]                 # read once a frame by the shell's budget; the screens take it from here
+	var h := _read_as(name)
+	var held: Dictionary = _sig_odds
+	_sig_odds = _crew_odds.get(name, {})
+	var out: Array = signal_odds_now(k) if now else signal_odds(k)
+	_crew_odds[name] = _sig_odds
+	_sig_odds = held
+	_read_back(h)
+	_crew_now[ck] = out
+	return out
+
+
+## Another class's runner out for a read only (the odds), and back: nothing's moved but for the moment.
+func _read_as(name: String) -> Dictionary:
+	var h := {"out": _runner_out(), "cls": cls, "pitch": tree.filter(func(id): return is_pitch(str(id))), "surv": _surv_cache}
+	_runner_in(roster[name])
+	tree = tree + h["pitch"]
+	cls = name
+	_caches_out()
+	return h
+
+
+func _read_back(h: Dictionary) -> void:
+	roster[cls] = _runner_out()                # what the read put back where it was (a dry run restores the rig as a new array)
+	_runner_in(h["out"])
+	tree = tree + h["pitch"]
+	cls = str(h["cls"])
+	_caches_out()
+	_surv_cache = h["surv"]
+
+
+## The crew's classes played, the one out first: the Radio's crew row.
+func crew_played() -> Array:
+	var out: Array = [cls] if cls != "" else []
+	for c in Data.CLASSES:
+		if roster.has(c["name"]):
+			out.append(c["name"])
+	return out
 
 
 ## The odds read so far, without running any (the Radio's card, as odds_now is the Map's).

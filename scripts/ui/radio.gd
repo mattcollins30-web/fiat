@@ -41,7 +41,9 @@ const SLOT_H := 92                 # (104 till the crew row came under the make 
 const CREW_H := 40                  # the crew to call: any, or an area's for Kev's notes (20 Oct)
 const SLOT_GAP := 12
 const MAKE_H := 112
-const CARD_H := 470                 # the picked signal
+const CARD_H := 520                 # the picked signal (21 Oct: 470, and the crew's row under Set off)
+const CREW_ROW_Y := 446              # the crew's odds (21 Oct): a button a class played, the one out first
+const CREW_MAX := 5
 const CRAFT_H := 50
 const OTHER_H := 70
 const OTHERS_MAX := 2
@@ -120,6 +122,7 @@ var _card_kev: Label
 var _card_kev2: Label
 var _crafts: Array = []             # {button, name, words, key}
 var _set_off: Button
+var _crew_btns: Array = []           # [{button, name, odds, cls}]
 var _bin: Button
 var _empty: Label
 var _empty2: Label
@@ -305,6 +308,22 @@ func _build_signals() -> void:
 	_bin = UI.button(_card, Rect2(16 + bw * 2 + 8, 380, bw, 56), false)
 	_bin.text = "Bin it"
 	_bin.pressed.connect(_on_bin)
+	var cbw: float = (cw - (CREW_MAX - 1) * 6) / CREW_MAX
+	for k in range(CREW_MAX):
+		var cb := Button.new()
+		cb.position = Vector2(16 + k * (cbw + 6), CREW_ROW_Y)
+		cb.size = Vector2(cbw, 60)
+		cb.focus_mode = Control.FOCUS_ALL
+		cb.pressed.connect(_on_crew.bind(k))
+		_card.add_child(cb)
+		UI.style_button(cb, false)
+		var t := {"button": cb, "cls": ""}
+		t["name"] = UI.label(cb, Rect2(8, 4, cbw - 16, 26), "", "SemiBold", Pal.CELL_TEXT - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		t["odds"] = UI.label(cb, Rect2(8, 30, cbw - 16, 24), "", "Medium", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
+		for n2 in [t["name"], t["odds"]]:
+			n2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cb.visible = false
+		_crew_btns.append(t)
 	_build_dec(cw)
 	_empty = UI.label(_signals_box, Rect2(28, 60, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_empty2 = UI.label(_signals_box, Rect2(28, 88, iw - 28, 28), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -489,7 +508,7 @@ func show_state(s) -> void:
 	var od: Array = sim.signal_odds_now(selected) if not sim.signals.is_empty() else [0.0, true]     # read in main's frame budget
 	var sig := "%s|%s|%d|%d|%d|%d|%s|%s|%d|%s|%s|%s|%d|%s|%s" % [str(chosen), str(have), paper_page, selected, sim.notes, sim.reach, str(sim.signals), str(sim.on_mission()), int(float(od[0]) * 100.0), str(od[1]),
 		str(sim.standing), sim.filtered, sim.heard.size(), str(sim.campaign_done()), str(sim.atlas)]
-	sig += "|%d|%s" % [crew_pick, str(sim.materials)]     # the crew row; a signal's materials lean on what's held (20 Oct)
+	sig += "|%d|%s|%s|%s" % [crew_pick, str(sim.materials), sim.cls, str(sim.crew_played().map(func(c): return sim.signal_odds_class(selected, str(c), true)) if not sim.signals.is_empty() else [])]     # the crew row; a signal's materials lean on what's held (20 Oct)
 	if sig == _shown:
 		return
 	_shown = sig
@@ -735,6 +754,7 @@ func _show_signals(od: Array) -> void:
 		UI.fit(c["name"], ["%s · %d notes" % [cd["name"], sim.signal_craft_cost(selected, c["key"])], str(cd["name"])])
 		UI.fit(c["words"], [str(cd["words"]).replace("the site", "it"), ""] if why == "" else [why, ""])
 	_set_off.disabled = not sim.can_deploy() or sim.on_mission()
+	_show_crew()
 	var k := 0
 	for j in range(n):
 		if j == selected or k >= OTHERS_MAX:
@@ -807,6 +827,46 @@ func _on_kev() -> void:
 	sim.ask_kev()
 	_shown = ""
 	acted.emit()
+
+
+## The crew's row (21 Oct): each class played, its odds on this signal as read for its own runner, the best lit; a press
+## swaps that class out (at camp), so the card's odds and Set off are theirs.
+func _show_crew() -> void:
+	var played: Array = sim.crew_played()
+	var on_show: bool = played.size() > 1
+	var reads: Array = []
+	for nm in played:
+		reads.append(sim.signal_odds_class(selected, str(nm), true))
+	var best := -1
+	for k in range(reads.size()):
+		if bool(reads[k][1]) and (best < 0 or float(reads[k][0]) > float(reads[best][0])):
+			best = k
+	for k in range(CREW_MAX):
+		var t: Dictionary = _crew_btns[k]
+		t["button"].visible = on_show and k < played.size()
+		if not t["button"].visible:
+			continue
+		var nm: String = str(played[k])
+		t["cls"] = nm
+		var lv: int = sim.crew_level(nm)
+		UI.fit(t["name"], ["%s · L%d" % [nm, lv], nm])
+		var o: Array = reads[k]
+		var out_now: bool = nm == sim.cls
+		if sim.on_mission() and not out_now:
+			UI.fit(t["odds"], ["—"])               # read at camp, not while a run's out
+		else:
+			UI.fit(t["odds"], [("%s%s" % [Fmt.pct(float(o[0])), " · out" if out_now else ""]) if bool(o[1]) else "reading…", Fmt.pct(float(o[0])) if bool(o[1]) else "…"])
+		var tone: String = "good" if float(o[0]) >= 0.9 else ("warn" if float(o[0]) >= 0.6 else "bad")
+		t["odds"].add_theme_color_override("font_color", Pal.tone_color(tone) if bool(o[1]) else Pal.TEXT_3)
+		UI.style_button(t["button"], k == best and not out_now)
+		t["button"].disabled = out_now or sim.on_mission()
+
+
+func _on_crew(k: int) -> void:
+	var nm: String = str(_crew_btns[k]["cls"])
+	if nm != "" and sim.set_class(nm):
+		_shown = ""
+		acted.emit()
 
 
 func _on_set_off() -> void:
@@ -894,6 +954,9 @@ func text_nodes() -> Array:
 		out.append_array(_card_codes.text_nodes())
 		for c in _crafts:
 			out.append_array([c["name"], c["words"]])
+		for t in _crew_btns:
+			if t["button"].visible:
+				out.append_array([t["name"], t["odds"]])
 	for o in _others:
 		if o["button"].visible:
 			out.append_array([o["name"], o["line"]])

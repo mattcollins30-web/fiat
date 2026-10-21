@@ -6012,3 +6012,8 @@ difficulty and length, the endgame placeholders.
   - For the balance pass: a crew has more points than one runner did (each class its own, the Pitch's beside).
   - Voiced lines to re-record (Matt): the opening's "Now" last line, the Pitch's and Training's room intros' second
     lines (proposed words sent); the text waits for the takes.
+- Done (step 3): the crew's odds on a signal. Under Set off, a button a class played - its level and its odds on
+  this signal as read for its own runner, the best lit, the one out greyed; a press swaps them out at camp, their
+  odds coming with them. The shell reads them in its frame budget once the picked signal settles, a class a frame.
+  Found and fixed on the way: a read for another class left that runner's rig a stale array (a dry run restores it
+  as a new one), and the frame's odds key memo was the runner out's.

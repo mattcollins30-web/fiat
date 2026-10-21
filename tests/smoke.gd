@@ -8650,6 +8650,31 @@ func _signal_checks(main) -> void:
 		_check(chip_text.contains("Brings") or chip_text.contains("a run"), "the signal card doesn't say what it brings: %s" % chip_text)
 		_check(main._radio._crew_buttons.size() == 4 and main._radio._crew_buttons[0].text.begins_with("Any"), "the decoder's crew row: %s" % str(main._radio._crew_buttons.map(func(b): return b.text)))
 		_check_fit(main, "the Radio, a signal's materials and the crew row")
+		# the crew's odds on the card (21 Oct, Matt: "switch to your bleed paramedic and steam roll it"): a second class
+		# played, its odds read for its own runner and the one out put back; the row says both, a press swaps
+		var cls0: String = sim.cls
+		var gun0 = sim.equipped["Primary"]
+		var other: String = "Doorman" if cls0 != "Doorman" else "Poacher"
+		_check(sim.set_class(other) and sim.set_class(cls0), "the crew fixture could not swap")
+		var k_sel: int = main._radio.selected
+		var od_o: Array = [0.0, false]
+		for i in range(400):
+			od_o = sim.signal_odds_class(k_sel, other)
+			if bool(od_o[1]):
+				break
+		_check(bool(od_o[1]) and sim.cls == cls0 and is_same(sim.equipped["Primary"], gun0) and sim.roster.has(other) and not sim.roster.has(cls0), "a read of the %s's odds moved the runner: %s" % [other, sim.cls])
+		for i in range(400):
+			if bool(sim.signal_odds(k_sel)[1]):
+				break
+		_check(sim.roster[other]["rig"].size() == sim.crew_runner(other)["rig"].size() and sim.signal_odds_class(k_sel, other, true)[1], "a read of the %s's odds left their rig or its reading behind" % other)
+		main._radio._shown = ""
+		main.refresh()
+		var crew_b: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible)
+		_check(crew_b.size() >= 2 and crew_b[0]["cls"] == cls0 and crew_b[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other).size() == 1 and not crew_b.filter(func(t): return t["cls"] == other)[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other)[0]["odds"].text.ends_with("%"), "the card's crew row: %s" % str(crew_b.map(func(t): return [t["cls"], t["odds"].text])))
+		_check_fit(main, "the Radio, the crew's odds")
+		main._radio._on_crew(crew_b.find(crew_b.filter(func(t): return t["cls"] == other)[0]))
+		_check(sim.cls == other and bool(sim.signal_odds_now(k_sel)[1]) and is_equal_approx(float(sim.signal_odds_now(k_sel)[0]), float(od_o[0])), "the crew's button did not swap to the %s with their odds read: %s" % [other, str(sim.signal_odds_now(k_sel))])
+		sim.set_class(cls0)
 		sim.signals.pop_back()
 		for b in bases.slice(0, 1):
 			sim.stash_put(sim._plain(Data.PAPER, b))
