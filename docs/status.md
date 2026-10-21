@@ -6132,3 +6132,9 @@ difficulty and length, the endgame placeholders.
    one in the Scrapper's trees and one in the Pitch, and asked if that was meant (it is: the Pitch is the camp's,
    one a level of the crew's best class). Matt: "it just needs to be clear" - the band to say both, e.g. "Scrapper
    0 of 1 · the Pitch 1 free", and the rail to match.
+4. The rig's top-up before a run should be the player's call: it fills the rig with rounds and meds on its own, and
+   Matt had to move rounds out it had put there. Matt: a toggle, or three ways - off / fill up / fill up with the
+   best only.
+5. A piece ditched in a fight gives its scrap (as meant), then lies on the floor and can be picked up again at the
+   search: drop, scrap, pick it up (a second ditch gives no scrap, but it's a gap). Matt: a ditched piece is gone
+   once its scrap's paid - destroyed, not left on the floor.
