@@ -6140,3 +6140,7 @@ difficulty and length, the endgame placeholders.
    once its scrap's paid - destroyed, not left on the floor.
 6. Art: the Scrapper's figure and portrait regenerated (Matt: "just awful"), and the Poacher's figure and portrait
    too - he reads too much like the Gamekeeper. A manifest for the four to agree with Matt before any credits go.
+7. A gun's upgrade verdict in the fight still wants its rounds on hand: the fix that lets a gun read as an upgrade in
+   the stash without its rounds in the rig (the try-on feeding from the stash's grades, 20 Oct) didn't reach the
+   fight's pick, so a find there only shows as an upgrade if its rounds are already held. Matt: "that change didnt
+   make its way through to the fight".
