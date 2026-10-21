@@ -1000,8 +1000,6 @@ const NEXT := {
 	"head": "%s is behind %s. Arm him from the site's card when the odds hold.",
 	"lot": "The %s's done with. %s is open, if you're asking.",
 	"done": "The town's yours. The Radio's the game now: three papers make a signal.",
-	"lorry": "The lorry's beaten.",
-	"moved": "A new estate, the same climb. Start at the Allotments.",
 	"level": "The next area opens at level %d. The sites you have still pay the XP.",     # not named: it isn't known yet (20 Oct)
 }
 const NEXT_SHORT := {
@@ -1011,7 +1009,6 @@ const NEXT_SHORT := {
 	"site": "Next: %s",
 	"head": "Arm %s on the Map",
 	"done": "The Radio's the game now",
-	"lorry": "The lorry's beaten: move the Pitch",
 	"level": "Next area at level %d",
 }
 const NOTES := {
@@ -1037,9 +1034,7 @@ const YARD := {
 	"first_run": "Out for the first time. Nobody past the ring road knows the Pitch yet.",
 	"hardcore_lost": "Hardcore: the Pitch goes with the runner. Someone else will have the Pitch by morning.",
 	"campaign": "The Outskirts, the Estate, the Town, the City. The Pitch's name is known in all of them. Now it's a question of how far in you go.",
-	"moved": "The Pitch moves. A new estate, the same radio, the same list on the wall. The name came with it.",
-	"lorry": "The Lorry's Load is yours. There's nothing left in this town that's worth the drive; the Pitch can move on whenever you like.",
-	"trade": "The Pitch's trade came too: %s, and anyone who runs for the Pitch learns the lot of it.",
+	"lorry": "The Lorry's Load is yours. Kev's story's told; the Radio keeps talking, and the signals go on for as long as you do.",
 }
 
 

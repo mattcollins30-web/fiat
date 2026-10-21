@@ -5994,3 +5994,8 @@ difficulty and length, the endgame placeholders.
   number tweaks.
 - Mockups (canvas "Fiat – The crew"): the class swap screen, a signal's odds for every class, the stash's tabs, the
   paragon board. Build after Matt's OK.
+- Done (step 1): retirement, the Pitch move (and its stall, its bonuses, the free nodes, the ladder floor), the Yard's
+  trade and the second past are out; hardcore is hidden from the title (the code stays). Two picks that only did a
+  move's work changed: the Stash's Dry store is "a second tab a class" (step 4 builds it), the map's Held frequency is
+  Hold at half price. The next line after the lorry is the Radio's, not "move the Pitch". An element off a class's
+  pair still stops at column 4 (a dip, not a build): the second past and the trade were the only ways past it.

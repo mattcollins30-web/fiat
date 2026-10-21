@@ -23,7 +23,6 @@ const PAD := 20
 ## The heading takes the room the glyph lanes left (10 Oct, Matt: "moving everything down and making the header fit
 ## the space"): the lanes and the strip sit at the foot, the Yard's painted place above them.
 const HEAD_H := Pal.ROOM_H - 8 - (8 * LANE_H + 7 * LANE_GAP) - 6 - STRIP_H     # eight buildings, as STRIP_Y
-const MOVE_W := 220
 const CHIPS_Y := 88                  # the purse under the headline (it ends at 76), down the left
 const CHIPS_W := 330                 # the title's width
 const CHIPS_ROWS := 3
@@ -54,8 +53,6 @@ var _kicker: Label
 var _headline: Label
 var _unit: Label
 var _chips: Chips
-var _move: Button
-var _move_action: Callable
 var _lanes: Array = []              # {key, panel, bar, name, count, gate, kind, tiles: [[a, b] x5], rank}
 var _title: Label
 var _words: Label
@@ -79,10 +76,6 @@ func _init() -> void:
 	_chips = Chips.new(CHIPS_W, 9)
 	_chips.position = Vector2(PAD, CHIPS_Y)
 	head.add_child(_chips)
-	_move = UI.button(head, Rect2(Pal.GRID_W - PAD - MOVE_W, HEAD_H - 16 - Pal.BUTTON_H, MOVE_W, Pal.BUTTON_H), true)     # at the band's foot, right
-	_move.text = "Move the Pitch"
-	_move.visible = false
-	_move.pressed.connect(func(): if _move_action.is_valid(): _move_action.call())
 	for k in range(Data.YARD.size()):
 		var b: Dictionary = Data.YARD[k]
 		var y: float = LANES_Y + k * (LANE_H + LANE_GAP)
@@ -179,8 +172,8 @@ func _style(t: Dictionary, look: String, on: bool) -> void:
 
 func show_state(s, purse: Dictionary) -> void:
 	sim = s
-	var sig := "%s|%s|%s|%d|%d|%s|%s|%d|%d|%s|%s|%d|%.3f|%d" % [str(selected), str(sim.yard_picks), str(sim.yard_ranks), int(sim.cash), sim.yard_cols(), str(sim.salvage), str(sim.on_mission()),
-		sim.notes, sim.scrap, str(purse.get("left", {}).get("note", "")), str(purse.has("button")), sim.yard_moves, sim.inflation(), sim.stash_used()]
+	var sig := "%s|%s|%s|%d|%d|%s|%s|%d|%d|%s|%s|%.3f|%d" % [str(selected), str(sim.yard_picks), str(sim.yard_ranks), int(sim.cash), sim.yard_cols(), str(sim.salvage), str(sim.on_mission()),
+		sim.notes, sim.scrap, str(purse.get("left", {}).get("note", "")), str(purse.has("button")), sim.inflation(), sim.stash_used()]
 	if sig == _shown:
 		if _foot_right.visible:
 			var st = purse.get("status", "")
@@ -189,7 +182,7 @@ func show_state(s, purse: Dictionary) -> void:
 	_shown = sig
 	var built: int = sim.yard_built()
 	var of: int = Data.YARD.size() * (COLS - 1)
-	UI.fit(_kicker, ["The Pitch · no. %d" % (sim.yard_moves + 1) if sim.yard_moves > 0 else "The Pitch", "The Pitch"])
+	UI.fit(_kicker, ["The Pitch"])
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 350 - _unit.position.x
@@ -200,11 +193,6 @@ func show_state(s, purse: Dictionary) -> void:
 	for kind in Data.SALVAGE:
 		items.append({"tag": Data.SALVAGE_NAMES[kind], "forms": ["%d" % int(sim.salvage.get(kind, 0))], "colour": salvage_colour(kind)})
 	_chips.show_chips(items, CHIPS_ROWS)
-	_move.visible = purse.has("button")
-	if _move.visible:
-		UI.style_button(_move, bool(purse["button"].get("primary", false)))
-		_move_action = purse["button"]["action"]
-		_move.disabled = not bool(purse["button"].get("enabled", true))
 	var cols: int = sim.yard_cols()
 	for lane in _lanes:
 		_show_lane(lane, cols)
@@ -381,8 +369,6 @@ func text_nodes() -> Array:
 			out.append(l)
 	if _build.visible:
 		out.append(_build)
-	if _move.visible:
-		out.append(_move)
 	for lane in _lanes:
 		out.append_array([lane["name"], lane["count"], lane["kind"]])
 		for pair in lane["tiles"]:

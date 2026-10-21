@@ -432,7 +432,6 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
 	g["lorries"] = sim.lorries
-	g["moves"] = bot.moves
 	g["services_depth"] = int(sim.best_depth[Data.CONVOY_TIER])
 	# the Radio's endgame (15 Oct): the reach, Kev's story, the signals made and the papers held
 	g["reach"] = sim.reach

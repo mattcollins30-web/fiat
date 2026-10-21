@@ -98,7 +98,7 @@ func _init() -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%s|%d|%s|%d|%d" % [str(sim.materials), str(sim.key_items), str(sim.rebuilt), sim.yard_moves, str(sim.rebuild_open()), int(sim.on_mission()), sim.reach]
+	var sig := "%s|%s|%s|%s|%d|%d" % [str(sim.materials), str(sim.key_items), str(sim.rebuilt), str(sim.rebuild_open()), int(sim.on_mission()), sim.reach]
 	sig += "|" + str(Data.PINNACLES.map(func(pn): return sim.order_known(str(pn["key"]))))     # the names scramble with it (20 Oct)
 	if sig == _shown:
 		return
@@ -107,8 +107,8 @@ func show_state(s) -> void:
 	_headline.text = str(sim.town_worth())
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = 820 - _unit.position.x
-	UI.fit(_unit, ["the town's worth · Pitch no. %d" % (sim.yard_moves + 1), "the town's worth", "worth"])
-	UI.fit(_sub, ["Put back the places that made it a town. What's built stays when the Pitch moves.", "Put the town back. What's built stays when the Pitch moves.", "What's built stays when the Pitch moves."] if open
+	UI.fit(_unit, ["the town's worth", "worth"])
+	UI.fit(_sub, ["Put back the places that made it a town, one by one.", "Put the town back.", "Rebuild it."] if open
 		else ["Kev's story first: the town opens on his last line.", "After Kev's story."])
 	for c in _cards:
 		_show_card(c, open)

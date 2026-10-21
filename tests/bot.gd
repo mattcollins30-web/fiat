@@ -24,7 +24,6 @@ var keystones_first := false   # train the class trees to their keystones before
 var element := ""              # a build: its tree to the keystone first, its gear held, the bench aimed at it
 var last_tier := -1            # the tier of the last run, the one the climb reads
 var cls := ""                  # the class the gate set: put back on the runner after a move (the move unpicks it)
-var moves := 0                 # yards moved on after the lorry (the endgame's loop, 7 Oct)
 var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 var _cleared_at := {}           # tier -> the depth its words were last cleared at: none put back there
@@ -162,7 +161,6 @@ func tidy(sim) -> void:
 	if keystones_first and TYPE_OF.has(sim.cls):
 		_hold_the_type(sim, TYPE_OF[sim.cls])
 	if element != "":
-		_second_past_for(sim)
 		_hold_the_element(sim)
 	_climb(sim)
 	_train_tree(sim)
@@ -270,24 +268,8 @@ func _endgame(sim) -> void:
 				worst = name
 				worst_v = v
 		sim.set_filtered(worst)
-	# the lorry beaten: the yard moves on (the loop), the class put back, and the campaign again from the floor - once
-	# the runner's at the wall's level (D13): a move resets the runner, and one at the lorry (hour 5-6) cut the Radio's
-	# ladder and level 50 off for the hours the campaign took again; a player with a runner climbing doesn't move yet
 	if sim.lorry_done and lorry_at < 0.0:
 		lorry_at = sim.elapsed / 3600.0
-	if sim.lorries >= 1 and sim.campaign_done() and (sim.level() >= Data.RETIRE_LEVEL or sim.can_move_yard()) and not _at_wall:     # or the ground played out (the pass, 20 Oct: the move opens on the reach's stand); the lorry once ever, not a yard's (the review: lorry_done is a yard's and never comes back after a move)
-		_at_wall = true                   # a tidy at the wall's level first, so the read sees level 50 before the move resets it (the review)
-	elif _at_wall and sim.can_move_yard():
-		if cls == "":
-			cls = sim.cls                  # the plain reads never set it: remember the class the move unpicks
-		if sim.move_yard():
-			moves += 1
-			_at_wall = false
-			_farm_at = -1e9                   # the new yard's farm read fresh (the review)
-			last_tier = -1
-			if sim.cls == "" and cls != "":
-				sim.set_class(cls)
-			bought.append([sim.elapsed, "moved the pitch (%d)" % moves])
 	if sim.can_buy_mate() and sim.notes - int(sim.mate["notes"]) >= _notes_kept(sim) and sim.notes >= int(sim.mate["notes"]) * 3:
 		var name: String = sim.mate["unique"]
 		sim.buy_mate()
@@ -323,7 +305,6 @@ func _endgame(sim) -> void:
 	_gamble_one(sim)
 
 
-var _at_wall := false
 
 
 ## The farm the endgame's tidy reads for its words (15 Oct, the pass's wall): pick_tier reads every site's odds, a third
@@ -678,27 +659,6 @@ func _hold_the_element(sim) -> void:
 		return
 	if cur == null or (_elem_score(best) > _elem_score(cur) and sim.fit_value(best, "Primary") >= sim.damage_total() * ELEM_DPS_FLOOR):
 		sim.equip_item(best["id"])        # D23: the element's gun, but not at a fifth less damage, read on a try-on - a shock Scrapper took one at half at an hour and held the Estate's wall for twenty
-
-
-## At the second past, a class with the element's affinity when the first
-## hasn't: the keystone needs it.
-func _second_past_for(sim) -> void:
-	if not sim.can_ascend() or sim.cls2 != "" or sim.affinity(element):
-		return
-	# a class whose first tree holds its half of the element's joint first (9 Oct): the second past brings only
-	# that tree, so only then can the element's keystone open; any class with the affinity after
-	var picks: Array = []
-	var et: Dictionary = Data.tree_of_element(element)
-	for c in Data.CLASSES:
-		if c["name"] != sim.cls and element in Data.AFFINITY.get(c["name"], []):
-			var first: Array = Data.trees_for(c["name"])
-			var j: Dictionary = Data.joint_in(c["name"], et.get("name", ""))
-			if not j.is_empty() and not first.is_empty() and first[0]["name"] == j["tree"]:
-				picks.push_front(c["name"])
-			else:
-				picks.append(c["name"])
-	if not picks.is_empty() and sim.set_second(picks[0]):
-		bought.append([sim.elapsed, "the second past: %s, for %s" % [picks[0].to_lower(), element]])
 
 
 ## The highest tier that reads PUSH or better, stepping a tier's depth back

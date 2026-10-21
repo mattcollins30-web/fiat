@@ -224,7 +224,6 @@ func _build_wall() -> void:
 	var c: Dictionary = cards["wall"]
 	var y: float = c["y"]
 	c["sub"] = UI.label(self, Rect2(PAD, y + 76, 262, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-	c["retired"] = UI.label(self, Rect2(PAD, y + 98, 262, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	c["plates"] = []
 	var x0: float = W - PAD - PLATES * PLATE_W - (PLATES - 1) * GAP
 	var py: float = y + (R3_H - PLATE_H) / 2.0
@@ -494,8 +493,7 @@ func _show_last() -> void:
 func _show_wall() -> void:
 	var c: Dictionary = cards["wall"]
 	_headline(c, "%d" % sim.operators_lost, "lost")
-	UI.fit(c["sub"], ["%d retired · %d runs, every runner" % [sim.retired.size(), sim.runs_total], "%d retired · %d runs in all" % [sim.retired.size(), sim.runs_total], "%d retired · %d runs" % [sim.retired.size(), sim.runs_total]])
-	UI.fit(c["retired"], [("Wall: %s" % ", ".join(sim.retired)) if not sim.retired.is_empty() else "No one retired yet", "Wall: %d traits" % sim.retired.size()])
+	UI.fit(c["sub"], ["%d runs, every runner" % sim.runs_total, "%d runs in all" % sim.runs_total, "%d runs" % sim.runs_total])
 	var plates: Array = c["plates"]
 	for k in range(PLATES):
 		var p: Dictionary = plates[k]

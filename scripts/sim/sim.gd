@@ -34,7 +34,6 @@ var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
 var cls := ""                      # the operator's class, by name; "" is none yet
-var cls2 := ""                     # the second past, from ASCEND_LEVEL: its first tree opens too
 var runner_trait := ""             # what this runner turned up with
 var candidates: Array = []         # when a runner dies, two turn up: their traits, to pick from
 var promised := ""                 # a trait the next arrival brings (a runner brought home from a run)
@@ -50,7 +49,6 @@ var last_craft := {}               # the Bench's last job: {id, kind, words}, fo
 var best_tier := 0                 # highest tier extracted from
 var depot_cleared := false         # the slice's win
 var past: Array = []               # the runners before this one: {class, level, runs, end}
-var retired: Array = []            # the traits on the wall (36): a third of each stays with the Yard, newest last
 var loose_kit: Array = []          # out on the estate: {item, who, from, run} - a dead runner's kit, a unique the Fence moved on
 var book: Array = []               # the papers found, by name, in the order found: the drawer in the Caravan
 var heard: Array = []                # the radio's lines heard, in order (12 Oct, the lore pass): voice/index keys
@@ -105,20 +103,16 @@ var passes := 0                    # contracts turned down since the last run ho
 var mate := {}                     # the Fence's mate's offer: {unique, notes}
 var runs_total := 0                # every run, every runner: the mate's clock
 var wounded_total := 0             # runs that ended wounded, every runner (saved; the wounds row reads a player's save by it)
-var yard_moves := 0                # how many times the Yard has moved (the prestige)
 var lorry_done := false            # the convoy beaten in this yard (7 Oct); the move lights on it
 var lorries := 0                   # across every yard: how many times
-var paragon_banked := 0            # the paragon levels of the runners before, kept by the move (8 Oct)
 var papers: Array = []             # the Radio's pile (18 Oct, Matt: "papers found never touch the stash"): the papers a signal is made of
 var signals: Array = []            # the Radio's signals held (15 Oct): [{id, site, zone, depth, codes, papers, head, convoy, line}]
 var reach := Data.REACH_START       # a level: the highest signal beaten, plus one (D3)
 var signal_seq := 0
 var story_beat := 0                 # Kev's story: the beats beaten (0-3); past the third the depot comes round again
-var reach_stood := 0                # signals run since the reach last moved: the Pitch's move waits on MOVE_STALL (20 Oct)
 var story_at := {}                  # a beat beaten -> the hours played then (20 Oct: the story so far, on the Radio)
 var _sig: Dictionary = {}           # the signal swapped onto its site: read, or run (mission["signal"])
 var best_dig := {}                 # the Yard's deepest hold: {site, depth, yard}, kept across moves (the wall's score)
-var trades: Array = []             # the Yard's trade: elements whose keystone every class may take, one a move, for good
 var insure_next := false           # the next run is insured: the Fence holds the paper on the kit
 var materials := {}                # the rebuild (18 Oct, docs/design/rebuild.md): material key -> count; never lost, kept by a move
 var key_items := {}                # the order's drops: key -> count (the Grid's key, ledger seals, the FIAT note)
@@ -246,7 +240,7 @@ var _level_at := 1
 ## a move banks the runner's paragon levels and the next runner adds to them (the eighteenth read: a fresh yard's runner
 ## at level 44 read the stations at 0.00 that the last one held at 1.00, with every paragon level gone).
 func paragon() -> int:
-	return paragon_banked + Data.paragon_for_xp(xp)
+	return Data.paragon_for_xp(xp)
 
 
 ## The Yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
@@ -834,7 +828,7 @@ func loot_bonus() -> float:
 
 ## Rarer finds: the tree's and the class's, as a bonus the roll reads.
 func rarity_bonus() -> float:
-	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 + Data.MOVE_FIND * yard_moves / 100.0 \
+	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 \
 		+ yard_quality() / 100.0       # the dog knows what's worth carrying (27)
 	return r * (Data.FX["rule/bookies_pencil.rarity"] if has_rule("bookies_pencil") else 1.0)
 
@@ -884,8 +878,8 @@ func cm(key: String) -> float:
 
 
 func set_class(name: String) -> bool:
-	if mission != null or name == cls or name == cls2:
-		return false                       # the second past's class is taken already: a change to it would lose the second past
+	if mission != null or name == cls:
+		return false
 	_dry_memo.clear()
 	for c in Data.CLASSES:
 		if c["name"] == name:
@@ -921,7 +915,7 @@ func class_change_cost(to := "") -> int:
 ## in an element tree and an element off `to`'s pair (the second past's affinities still count).
 func _change_drops(to := "") -> Array:
 	var out: Array = []
-	var keep_classes: Array = [to, cls2].filter(func(c): return c != "")
+	var keep_classes: Array = [to].filter(func(c): return c != "")
 	for id in tree:
 		var tn: String = str(id).get_slice("/", 0)
 		var t := Data.tree_named(tn)
@@ -929,7 +923,7 @@ func _change_drops(to := "") -> Array:
 			out.append(id)                 # (a runner with no class has no class trees: the Yard's has no "class" either)
 		elif to != "" and t.has("element"):
 			var el: String = t["element"]
-			var paired: bool = has_rule("qm_manual") or el in trades or keep_classes.any(func(c): return el in Data.AFFINITY.get(c, []))
+			var paired: bool = has_rule("qm_manual") or keep_classes.any(func(c): return el in Data.AFFINITY.get(c, []))
 			if not paired or not Data.for_classes(node(id), keep_classes):
 				out.append(id)
 	return out
@@ -940,91 +934,34 @@ func _change_drops(to := "") -> Array:
 ## The three trees on show: the class's first, the Yard's, the class's second.
 ## The trees on show: the class's, the Yard's, the second past's, and every element's.
 func trees() -> Array:
-	var out: Array = Data.trees_for(cls, cls2)
+	var out: Array = Data.trees_for(cls)
 	out.append_array(Data.ELEMENT_TREES)
 	return out
 
 
 ## Whether an element is one of the runner's two (or the second past's).
 func affinity(element: String) -> bool:
-	if element == "" or has_rule("qm_manual") or element in trades:
+	if element == "" or has_rule("qm_manual"):
 		return true
-	return element in Data.AFFINITY.get(cls, []) or element in Data.AFFINITY.get(cls2, [])
+	return element in Data.AFFINITY.get(cls, [])
 
 
-## The Yard's trade: an element the move brings with it. Any of the five not taken already.
-func can_trade(element: String) -> bool:
-	return element in Data.ELEMENTS and not (element in trades)
-
-
-## The runner's trait, as a multiplier on a figure (1.0 when it has none), and
-## a third of every retired runner's with it (36).
+## The runner's trait, as a multiplier on a figure (1.0 when it has none).
 func trait_mult(key: String) -> float:
 	var m := 1.0
 	for t in Data.TRAITS:
 		if t["name"] == runner_trait:
 			m *= float(t.get(key, 1.0))
-		if t["name"] in retired:
-			m *= 1.0 + maxf(0.0, float(t.get(key, 1.0)) - 1.0) * Data.RETIRE_SHARE * retired.count(t["name"])     # the good third only: the wall keeps what they were good at
 	return m
 
 
-## A trait's additive figure (the Lucky one's loot quality), the runner's and the wall's third.
+## A trait's additive figure (the Lucky one's loot quality).
 func trait_add(key: String) -> float:
 	var a := 0.0
 	for t in Data.TRAITS:
 		if t["name"] == runner_trait:
 			a += float(t.get(key, 0.0))
-		if t["name"] in retired:
-			a += float(t.get(key, 0.0)) * Data.RETIRE_SHARE * retired.count(t["name"])
 	return a
-
-
-## Retirement (36): at RETIRE_LEVEL the runner can go to the wall instead of dying on a run. Their kit comes
-## off into the stash, their trees refund as a death's do, the Yard keeps a third of their trait, and two
-## new runners turn up to pick from.
-func can_retire() -> bool:
-	return level() >= Data.RETIRE_LEVEL and cls != "" and mission == null
-
-
-func retire() -> bool:
-	if not can_retire():
-		return false
-	chron("retire", {"trait": runner_trait, "runner_runs": runner_runs})
-	past.append({"class": cls, "level": level(), "runs": runner_runs, "end": "retired", "site": _deepest_held()[0], "depth": _deepest_held()[1], "held_lv": _deepest_held()[2]})
-	if runner_trait != "":
-		retired.append(runner_trait)
-		while retired.size() > Data.RETIRED_MAX:
-			retired.pop_front()              # the oldest makes way
-	log_event("%s retires to the wall at level %d. The Pitch keeps a little of what they were." % [cls, level()])
-	runner_runs = 0
-	_record_reset()
-	for s in Data.SLOTS:
-		if equipped[s] != null:
-			stash.append(equipped[s])        # theirs stays: whatever the room
-			equipped[s] = null
-	for it in rig:
-		if not stash_put(it):
-			stash.append(it)
-	rig = []
-	xp = 0.0
-	wounds = {}
-	hp = Data.BASE_HP
-	auto_tier = -1
-	_starter_loadout()
-	var pool: Array = []
-	for row in Data.TRAITS:
-		pool.append(row["name"])
-	pool.shuffle()
-	candidates = [pool[0], pool[1]]
-	if promised != "":
-		candidates[1] = promised
-		promised = ""
-	runner_trait = candidates[0]
-	log_event(Words.PASTS[cls]["arrives"] if Words.PASTS.has(cls) else "Two new runners turn up at the Pitch with their own kit: pick one.")
-	_refund_runner_trees()
-	_dry_memo.clear()
-	return true
 
 
 # ------------------------------------------------------------------ the Fence's contracts
@@ -1366,36 +1303,6 @@ func buy_mate() -> bool:
 	return true
 
 
-# ------------------------------------------------------------------ moving the Yard
-
-func can_move_yard() -> bool:
-	return move_block() == ""
-
-
-## Why the Pitch can't move now, or "" (20 Oct, Matt: "the last thing you do once progress is truly stalled"): the
-## campaign done, nobody out, and the reach stood for MOVE_STALL signals run.
-func move_block() -> String:
-	if not campaign_done():
-		return "the campaign first"
-	if mission != null:
-		return "the runner is out"
-	if camp_lost:
-		return "the camp's lost"
-	if reach_stood < Data.MOVE_STALL:
-		return "the ground still gives: your reach has stood %d of %d signals" % [reach_stood, Data.MOVE_STALL]
-	return ""
-
-
-## The move's compounding (7 Oct): a moved yard's ladders start at this depth past the first (to LADDER_FLOOR_MAX),
-## and its first `yard_moves` nodes of the Yard's tree are free.
-func ladder_floor() -> int:
-	return mini(yard_moves, Data.LADDER_FLOOR_MAX)
-
-
-func free_yard_nodes() -> int:
-	return yard_moves
-
-
 ## The deepest site and depth held in this yard, for the wall: [site name, depth], ["", 0] with nothing cleared.
 func _deepest_held() -> Array:
 	var best := -1
@@ -1405,117 +1312,6 @@ func _deepest_held() -> Array:
 			at = best_depth[i]
 			best = i
 	return [Data.TIERS[best]["name"] if best >= 0 else "", at, lv_at(best, at) if best >= 0 else 0]     # the level for the screens (18 Oct)
-
-
-## The Yard's tree nodes taken, in the order they were taken.
-func _yard_nodes_taken() -> Array:
-	var out: Array = []
-	for id in tree:
-		if str(id).begins_with(Data.COMMON_TREE + "/"):
-			out.append(id)
-	return out
-
-
-## Start again somewhere else. The uniques come, worn or stashed; the Yard's
-## own tree; the runners before; half the notes; the move's own bonus.
-func move_yard(trade := "") -> bool:
-	if not can_move_yard() or (trade != "" and not can_trade(trade)):
-		return false
-	chron("move", {"trade": trade, "lorries": lorries})
-	var uniques: Array = []
-	for it in stash:
-		if it.has("unique"):
-			uniques.append(it)
-	for s in Data.SLOTS:
-		if equipped[s] != null and equipped[s].has("unique"):
-			uniques.append(equipped[s])
-	var yard_tree: Array = []
-	for id in tree:
-		if str(id).begins_with("The Pitch/"):
-			yard_tree.append(id)
-	var kept_share: float = Data.FX["yard/dry_store"] if yard_has("dry_store") else Data.MOVE_NOTES_KEPT     # the Stash's Dry store
-	var keep := {"past": past, "retired": retired.duplicate(), "deeds_fate": deeds_fate, "hardcore": hardcore, "notes": int(notes * kept_share), "scrap": int(scrap * kept_share),
-		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_cols(), "salvage": salvage.duplicate(),
-		"yard_seen": yard_seen.duplicate(), "yard_seen_cols": yard_seen_cols, "filtered": filtered, "standing": standing.duplicate(),
-		"moves": yard_moves + 1, "elapsed": elapsed, "events": events, "operators_lost": operators_lost, "trades": trades.duplicate(), "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "shelf_tier": shelf_tier.duplicate(), "keepsakes": keepsakes.duplicate(),
-		"lorries": lorries, "best_dig": best_dig.duplicate(), "held": {}, "atlas": atlas.duplicate(), "atlas_points": atlas_points,
-		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at.duplicate(), "papers": papers.duplicate(true),
-		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
-		"paragon_banked": paragon(), "chronicle": chronicle, "chron_count": chron_count, "played_s": played_s,
-		"came_back": came_back.duplicate(true), "unlocked": unlocked.duplicate(), "met": met.duplicate()}     # the card's tally too: an away move mustn't wipe what came back     # the playtest record runs on through a move
-	if atlas_rank("held_frequency") > 0:
-		for i in range(words.size()):
-			keep["held"][i] = [words[i].duplicate(true), sealed[i]]     # Held frequency: every site keeps its words through the move
-	if trade != "":
-		keep["trades"].append(trade)
-	var fresh = get_script().new()
-	fresh.start()
-	load_dict(fresh.to_dict())
-	past = keep["past"]
-	retired = keep["retired"]             # the wall moves with the Yard (36)
-	deeds_fate = keep["deeds_fate"]
-	hardcore = keep["hardcore"]
-	notes = keep["notes"]
-	scrap = keep["scrap"]                 # scrap moves with the Yard the way notes do (34)
-	yard_moves = keep["moves"]
-	reach_stood = 0                            # a new Pitch, new ground
-	lorries = keep["lorries"]
-	best_dig = keep["best_dig"]
-	signals = keep["signals"]             # the Radio's held signals and your reach move with the Yard (15 Oct)
-	papers = keep["papers"]               # and its pile of papers (18 Oct)
-	reach = keep["reach"]
-	signal_seq = keep["signal_seq"]
-	story_beat = keep["story_beat"]
-	story_at = keep.get("story_at", {})
-	materials = keep["materials"]         # the rebuild survives a move (18 Oct, Matt's call 1): what's built, what's held, the order's
-	key_items = keep["key_items"]
-	rebuilt = keep["rebuilt"]
-	order_beaten = keep["order_beaten"]
-	paragon_banked = keep["paragon_banked"]
-	chronicle = keep["chronicle"]
-	chron_count = keep["chron_count"]
-	came_back = keep["came_back"]
-	if not came_back.is_empty():
-		came_back["lv_from"] = level()        # the new runner starts the climb again
-	played_s = keep["played_s"]
-	_snaps = int(played_s / SNAP_S)
-	yard_picks = keep["yard_picks"]       # the buildings move with the Yard (9 Oct): picks, ranks, the columns opened, the salvage
-	yard_ranks = keep["yard_ranks"]
-	yard_open = keep["yard_open"]
-	salvage = keep["salvage"]
-	filtered = keep["filtered"]
-	standing = keep["standing"]
-	yard_seen = keep["yard_seen"]             # what the badge has shown moves too: a move is no news
-	yard_seen_cols = keep["yard_seen_cols"]
-	atlas = keep["atlas"]                 # the map is the long tail (part 4, 7 Oct): its ranks and points move with the Yard
-	atlas_points = keep["atlas_points"]
-	for i in keep["held"]:
-		words[i] = keep["held"][i][0]
-		sealed[i] = keep["held"][i][1]
-	elapsed = keep["elapsed"]
-	events = keep["events"]
-	operators_lost = keep["operators_lost"]
-	trades = keep["trades"]
-	book = keep["book"]
-	heard = keep["heard"]
-	met = keep["met"]                     # a move doesn't introduce the rooms again
-	unlocked = keep["unlocked"]           # the rooms the heads opened stay open: the Yard moves, not the town's memory (13 Oct)
-	shelf = keep["shelf"]
-	keepsakes = keep["keepsakes"]
-	shelf_tier = keep["shelf_tier"]
-	tree = yard_tree
-	training_points = points_spent() + Data.MOVE_POINTS * yard_moves
-	for it in uniques:
-		stash.append(it)                   # whatever the new stash holds: they're the point of moving
-	_yard_changed("")
-	_yard_grew({"stock": Data.MARKET_STOCK, "back": false, "open": Data.CONTRACTS_OPEN})    # the new yard's shelf and contracts were rolled with nothing built
-	cash = float(Data.STARTING_CASH) * inflation()    # the float, at today's prices
-	log_event(Words.YARD["moved"])
-	if trade != "":
-		log_event(Words.YARD["trade"] % Words.mid(Data.tree_of_element(trade)["name"]))     # names as named (18 Oct)
-	last_next = ""
-	log_event(Words.NEXT["moved"])
-	return true
 
 
 # ------------------------------------------------------------------ what's next
@@ -1528,9 +1324,7 @@ func next_words(short := false) -> String:
 		return w["past"]
 	if runs_total == 0:
 		return w["first"]
-	if lorry_done:
-		return w["lorry"]
-	if campaign_done():
+	if campaign_done():     # the lorry's line is the log's, once (21 Oct: the move it pointed at is gone)
 		return w["done"] % convoy_depth() if "%d" in w["done"] else w["done"]
 	for k in range(contracts.size()):
 		if can_hand_in(k) and mission == null:
@@ -2367,26 +2161,12 @@ func choose_runner(k: int) -> bool:
 	return true
 
 
-## The second past: a different class, from level ASCEND_LEVEL, for its first tree.
+## The smoke's (21 Oct): every element tree's top columns open, as a joint closed there would (the Pitch's trade went
+## with the move). Not saved.
+var tops_open := false
 ## Training's 15 Oct gates (the core's points, the keystones' and capstones' levels, the second past's 20) on; only the
 ## smoke's mechanics areas turn them off, to test a joint or a keystone without the build behind it. Not saved.
 var core_gates := true
-
-
-func can_ascend() -> bool:
-	return ascend_block() == "" and mission == null
-
-
-## Why the second past can't be taken yet, or "": the level, then the points in the first class tree (15 Oct).
-func ascend_block() -> String:
-	if cls == "":
-		return "no past yet"
-	if level() < Data.ASCEND_LEVEL:
-		return "at level %d" % Data.ASCEND_LEVEL
-	var first: String = first_tree()
-	if core_gates and points_in(first) < Data.ASCEND_CORE:
-		return "at %d in %s (%d now)" % [Data.ASCEND_CORE, first, points_in(first)]
-	return ""
 
 
 ## The runner's first class tree, by name ("Muscle"), or "".
@@ -2419,24 +2199,6 @@ static func core_need(t: Dictionary, nd: Dictionary) -> int:
 		if int(nd.get("col", 0)) >= int(g[0]):
 			need = int(g[1])
 	return need
-
-
-func set_second(name: String) -> bool:
-	if not can_ascend() or name == cls or name == cls2:
-		return false
-	_dry_memo.clear()
-	for c in Data.CLASSES:
-		if c["name"] == name:
-			cls2 = name
-			chron("ascend", {"second": name})
-			var kept := []
-			for id in tree:
-				if _on_show(str(id).get_slice("/", 0)):
-					kept.append(id)
-			tree = kept
-			log_event("The runner was a %s too, once" % name)
-			return true
-	return false
 
 
 func node(id: String) -> Dictionary:
@@ -2498,22 +2260,18 @@ var _closed := {}                  # joint key -> true, closed
 var _open_tops := {}               # element tree name -> true: its columns 5 and 6 work (a joint closed there, or a trade)
 func _nodes_for(effect: String) -> Array:
 	var cap: bool = has_rule("headmasters_cap")
-	var h := hash([tree, cls, cls2, trades, cap])
+	var h := hash([tree, cls, cap])
 	if h != _eff_hash or _eff_cache.is_empty():
 		_eff_cache = {"": []}
 		_closed = {}
 		_open_tops = {}
 		for j in Data.JOINTS:
-			if (j["class"] == cls or j["class"] == cls2) and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]):
+			if j["class"] == cls and _half_trained(j, j["tree"]) and _half_trained(j, j["element_tree"]):
 				_closed[j["key"]] = true
 				_open_tops[j["element_tree"]] = true
-		for el in trades:
-			var et := Data.tree_of_element(el)
-			if not et.is_empty():
-				_open_tops[et["name"]] = true
 		var ids: Array = tree.duplicate()
 		if cap:
-			for ct in Data.trees_for(cls, cls2):      # the Headmaster's Cap (a mythic): every node of the class's trees -
+			for ct in Data.trees_for(cls):      # the Headmaster's Cap (a mythic): every node of the class's trees -
 				if str(ct.get("class", "")) == "":
 					continue                          # the class's own, not the Yard's
 				for i in range(ct.get("nodes", []).size()):
@@ -2547,17 +2305,17 @@ func _half_trained(j: Dictionary, tree_name: String) -> bool:
 	return false
 
 
-## A joint closed: both halves trained by a runner of its class (or a second past of it).
+## A joint closed: both halves trained by a runner of its class.
 func has_joint(key: String) -> bool:
 	_nodes_for("")
 	return _closed.has(key)
 
 
-## An element tree's top columns open: a joint closed there, the Yard's trade of its element, or the
+## An element tree's top columns open: a joint closed there, or the
 ## Quartermaster's Manual ("every keystone open").
 func _tops_open(tree_name: String) -> bool:
 	_nodes_for("")
-	return _open_tops.has(tree_name) or has_rule("qm_manual") or has_rule("last_orders") or has_rule("headmasters_cap")
+	return tops_open or _open_tops.has(tree_name) or has_rule("qm_manual") or has_rule("last_orders") or has_rule("headmasters_cap")
 
 
 ## A dry run reads the rules once: nothing worn or stashed changes while it runs.
@@ -2593,12 +2351,6 @@ func _snapshot_rules() -> Dictionary:
 
 func node_cost(id: String) -> int:
 	var parts := id.split("/")
-	if parts[0] == Data.COMMON_TREE:
-		# a move's free node: the first free_yard_nodes() of the Yard's tree cost nothing (7 Oct)
-		var taken := _yard_nodes_taken()
-		var k: int = taken.find(id)
-		if (k >= 0 and k < free_yard_nodes()) or (k < 0 and taken.size() < free_yard_nodes()):
-			return 0
 	var n := node(id)
 	var cost := Data.base_cost(Data.tree_named(parts[0]), n)
 	var t := Data.element_tree(parts[0])
@@ -2618,13 +2370,9 @@ func points_free() -> int:
 	return training_points - points_spent()
 
 
-## The classes whose halves this runner can train: theirs and the second past's.
+## The classes whose halves this runner can train: its own.
 func my_classes() -> Array:
-	var out: Array = []
-	for c in [cls, cls2]:
-		if c != "":
-			out.append(c)
-	return out
+	return [cls] if cls != "" else []
 
 
 ## What's been spent in a tree, at the tree's own prices: what its gates count.
@@ -3094,7 +2842,7 @@ func charm_find() -> float:
 
 
 func charm_cash() -> float:
-	return (float(Items.base_of(equipped[Data.CHARM]).get("cash", 0)) if equipped[Data.CHARM] != null else 0.0) + _affix_sum("cash_pct") + _fitted_sum("wire_pct") + Data.MOVE_CASH * yard_moves
+	return (float(Items.base_of(equipped[Data.CHARM]).get("cash", 0)) if equipped[Data.CHARM] != null else 0.0) + _affix_sum("cash_pct") + _fitted_sum("wire_pct")
 
 
 # ------------------------------------------------------------------ the stash
@@ -3583,6 +3331,8 @@ func word_craft_cost(i: int, key: String) -> int:
 	v *= (1.0 - Data.FX["atlas/good_reception"] * atlas_rank("good_reception")) * (Data.FX["yard/scanner"] if yard_has("scanner") else 1.0)
 	if key == "call":
 		v *= 1.0 - Data.FX["atlas/early_word"] * atlas_rank("early_word")
+	if key == "hold" and atlas_rank("held_frequency") > 0:
+		v *= Data.FX["atlas/held_frequency"]     # Held frequency (21 Oct: was "sites keep their codes when the Pitch moves", the move gone)
 	if key == "clear" and sealed[i]:
 		v *= Data.SEALED_CLEAR
 	return maxi(1, int(ceil(v)))
@@ -4422,12 +4172,12 @@ static func _softened(m: Dictionary, f: float) -> Dictionary:
 ## The depth a crew's head comes at full strength from on a site: PINNACLE_DEPTH for the site's zone (level 14 on his
 ## own site), a depth deeper for every move made (the endgame climbs with the loop), two sooner with Full strength.
 func pinnacle_depth(i: int) -> int:
-	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) + yard_moves - Data.FX["atlas/full_strength"] * atlas_rank("full_strength")
+	return int(Data.PINNACLE_DEPTH[int(Data.TIERS[i]["zone"])]) - Data.FX["atlas/full_strength"] * atlas_rank("full_strength")
 
 
 ## The depth the old Services' convoy ran from (the depot's signal now, 15 Oct): CONVOY_DEPTH, a depth deeper a move.
 func convoy_depth() -> int:
-	return Data.CONVOY_DEPTH + yard_moves     # the old Services' convoy (the depot's signal now, 15 Oct); its two shortcuts went to the signals
+	return Data.CONVOY_DEPTH     # the old Services' convoy (the depot's signal now, 15 Oct); its two shortcuts went to the signals
 
 
 ## From pinnacle_depth(i) a crew's head comes at full strength.
@@ -4782,8 +4532,7 @@ func modifier(name: String) -> Dictionary:
 ## Depth up or down. A site's words stay as they are; their tiers work at what the new depth allows.
 func set_depth(i: int, d: int) -> void:
 	if mission == null:
-		# the ladder is the endgame's; a moved yard's opens to the floor from a site's first clear (7 Oct)
-		var top: int = maxi(best_depth[i] + 1, (ladder_floor() + 1) if best_depth[i] > 0 else 1) if campaign_done() else 1
+		var top: int = best_depth[i] + 1 if campaign_done() else 1     # the ladder is the endgame's
 		depth[i] = clampi(d, 1, top)
 
 
@@ -4980,7 +4729,7 @@ func material_odds(i: int) -> float:
 	var base: float = Data.MATERIAL_RUN
 	if not _sig.is_empty() and int(_sig["site"]) == i:
 		base = Data.MATERIAL_SIGNAL + Data.MATERIAL_SIGNAL_STEP * maxi(0, signal_level(_sig) - Data.REACH_START)
-	return minf(Data.MATERIAL_CAP, base + Data.MATERIAL_MOVE * yard_moves)
+	return minf(Data.MATERIAL_CAP, base)
 
 
 ## The run's materials home, whatever happened (death included): a head's handful, the run's roll, a signal's fuses.
@@ -5616,10 +5365,7 @@ func _signal_done(m: Dictionary, died := false) -> void:
 	chron("signal_done", {"id": int(_sig["id"]), "level": d, "won": won, "grade": int(_sig.get("grade", 0)), "reach": reach, "story": _sig.has("story")})     # the grade and the reach it met (the pass, 20 Oct: the signals' gate)
 	if won:
 		_signal_papers_home(m)                 # beaten ones only (18 Oct, Matt)
-	if int(_sig.get("grade", 0)) != 1:
-		reach_stood += 1                       # a signal run at the reach's band (a faint one is under it: it can't say the ground's out, the review)
 	if won and d >= reach and int(_sig.get("grade", 0)) != 1:     # a faint one never moves it (20 Oct; at the first reach its band is the reach)
-		reach_stood = 0
 		reach += 1                             # a level a win (D25: d + 1 let a roll over the reach jump it two and three at a time - the reach to 30-44 by hour 12, then hours at the kit's wall)
 		atlas_points += 1
 		log_event(Words.SIGNAL_REACH % [d, reach])
@@ -5796,7 +5542,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), yard_moves, str(atlas), is_night(), wounds.keys(), _kit_ids()]
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids()]
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -7261,7 +7007,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and not m.has("signal"):     # the map's points from the Streets on (12 Oct); a signal's are its reach's (15 Oct)
 			atlas_points += 1
 	if cd >= 2 and int(m["tier"]) >= Data.OUTSKIRTS_SITES and (cd > int(best_dig.get("depth", 0)) or (cd == int(best_dig.get("depth", 0)) and m["tier"] > int(best_dig.get("tier", -1)))):
-		best_dig = {"site": t["name"], "tier": m["tier"], "depth": cd, "yard": yard_moves + 1}     # the ladder's, not the campaign's
+		best_dig = {"site": t["name"], "tier": m["tier"], "depth": cd}     # the ladder's, not the campaign's
 	if m["tier"] == Data.OUTSKIRTS_SITES + 2 and not depot_cleared:     # the Retail Park: the slice's win (index 5 since the Outskirts)
 		depot_cleared = true
 	if not seen.has("cleared/%d" % m["tier"]):
@@ -7784,7 +7530,7 @@ func _chron_run(m: Dictionary, outcome: String, extra: Dictionary) -> void:
 	var b = m.get("boss", null)
 	var d := {"tier": int(m["tier"]), "site": str(tier(m["tier"])["name"]), "depth": int(et.get("depth", 1)), "site_level": int(et.get("level", 0)),
 		"outcome": outcome, "time": snappedf(float(m["elapsed"]), 0.1), "kills": int(m["kills"]), "of": int(et.get("pool", 0)),
-		"auto": auto_tier >= 0, "cls2": cls2, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
+		"auto": auto_tier >= 0, "hp_max": int(max_hp()), "dps": snappedf(dps(), 0.1), "mit": snappedf(mitigation(), 0.001),
 		"kit": loadout_value(), "wound_in": ",".join(wounds.keys()),
 		# what the player saw and set off against (12 Oct, Matt: "how the bot plays isn't how a person plays"): the
 		# odds the Runs card read at the gate (-1 unread), the site's own fire and HP, and the kit's regen
@@ -7990,7 +7736,6 @@ func _kia() -> void:
 func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
 	cls = ""
-	cls2 = ""
 	var kept := []
 	for id in tree:
 		if str(id).get_slice("/", 0) == Data.COMMON_TREE:
@@ -8115,7 +7860,7 @@ func _rounds_on_hand() -> String:
 var _front_key := 0
 var _front := 0
 func front_tier() -> int:
-	var key: int = hash([depth, best_depth, campaign_done(), yard_moves, bosses_beaten, words, standing, atlas])     # what opens a site and what it fights with (the review)
+	var key: int = hash([depth, best_depth, campaign_done(), bosses_beaten, words, standing, atlas])     # what opens a site and what it fights with (the review)
 	if key == _front_key:
 		return _front
 	var bf := -1.0
@@ -8192,7 +7937,7 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return hash([equipped, level(), tree, cls, cls2, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, trades, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	return hash([equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -9261,7 +9006,7 @@ func chron(kind: String, data := {}) -> void:
 	if _dry_on:
 		return
 	var e := {"k": kind, "t": snappedf(elapsed, 0.1), "p": snappedf(played_s, 0.1), "w": int(Time.get_unix_time_from_system()),
-		"lv": level(), "cls": cls, "yard": yard_moves + 1, "sv": SITES_V}     # sv: the site numbering (12 Oct: the Outskirts moved every site up three)
+		"lv": level(), "cls": cls, "sv": SITES_V}     # sv: the site numbering (12 Oct: the Outskirts moved every site up three)
 	if away_on:
 		e["away"] = true
 	e.merge(data, true)
@@ -9311,11 +9056,11 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(), "paragon_banked": paragon_banked,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
-		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "retired": retired.duplicate(), "class2": cls2, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "yard_moves": yard_moves, "reach_stood": reach_stood, "trades": trades.duplicate(), "insure_next": insure_next,
+		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
+		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 	}
@@ -9420,7 +9165,6 @@ func load_dict(d: Dictionary) -> void:
 	# saves from before the language pass carry the old names
 	const OLD_WORDS := {"Recon": "Poacher", "Enforcer": "Doorman", "Medic": "Paramedic", "Saboteur": "Scrapper", "Ghost": "Drifter"}
 	cls = OLD_WORDS.get(cls, cls)
-	cls2 = str(d.get("class2", ""))
 	runner_trait = str(d.get("trait", ""))
 	candidates = d.get("candidates", [])
 	promised = str(d.get("promised", ""))
@@ -9510,7 +9254,6 @@ func load_dict(d: Dictionary) -> void:
 	deeds_fate = str(d.get("deeds_fate", d.get("ending", "")))     # the old saves' name for it
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
-	paragon_banked = int(d.get("paragon_banked", 0))
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	signals = d.get("signals", []).duplicate(true)
 	for sg in signals:
@@ -9536,9 +9279,6 @@ func load_dict(d: Dictionary) -> void:
 	scrap = int(d.get("scrap", 0))
 	takings = float(d.get("takings", 0.0))
 	gamble_base = float(d.get("gamble_base", takings))     # an older save: from where its price stood
-	retired = []
-	for r in d.get("retired", []):
-		retired.append(str(r))
 	atlas = {}
 	for k in d.get("atlas", {}):
 		if not Data.atlas_of(str(k)).is_empty():
@@ -9573,9 +9313,6 @@ func load_dict(d: Dictionary) -> void:
 		mate = roll_mate()
 	runs_total = int(d.get("runs_total", 0))
 	wounded_total = int(d.get("wounded_total", 0))
-	yard_moves = int(d.get("yard_moves", 0))
-	reach_stood = int(d.get("reach_stood", 0))
-	trades = Array(d.get("trades", []))
 	insure_next = bool(d.get("insure_next", false))
 	var bb: Array = d.get("bosses_beaten", [])
 	for z in range(Data.ZONES.size()):

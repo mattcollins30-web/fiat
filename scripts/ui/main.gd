@@ -288,8 +288,6 @@ func _build() -> void:
 	add_child(_armoury)
 	_barracks = Barracks.new()
 	_barracks.acted.connect(refresh)
-	_barracks.ascend.connect(_choose_second)
-	_barracks.retire.connect(_confirm_retire)
 	_barracks.visible = false
 	add_child(_barracks)
 	_missions = Missions.new()
@@ -585,8 +583,7 @@ func show_title() -> void:
 			"action": load_game.bind(save_file), "enabled": saved and _save_ok(_read_save(save_file)), "glyph": "menu_continue"})
 	items.append({"name": "New game", "detail": "One runner, a hammer, 150 tins",
 			"action": new_game.bind(false), "confirm": "This replaces the game in progress – press again" if saved else "", "glyph": "menu_new"})
-	items.append({"name": "New game, hardcore", "detail": "A death ends the Pitch: stash, tins, everything",
-			"action": new_game.bind(true), "confirm": "This replaces the game in progress – press again" if saved else "", "glyph": "menu_skull"})
+	# hardcore is hidden for now (21 Oct, Matt: "we're struggling to balance soft core"); new_game(true) still works
 	items.append({"name": "Load a slot", "detail": _slots_words(), "action": show_slots.bind(false, show_title), "glyph": "menu_slots"})
 	items.append({"name": "Quit", "detail": "", "action": _quit, "glyph": "menu_quit"})
 	_menu.open("Fiat", "Let it be done", items, Callable(), true, Rect2(), true)
@@ -1334,34 +1331,22 @@ func _town_purse() -> Dictionary:
 	for z in range(Data.ZONES.size()):
 		if sim.zone_open(z):
 			open_zones += 1
-	if not sim.trades.is_empty():
-		var names := []
-		for el in sim.trades:
-			names.append(Data.tree_of_element(el)["name"])
-		zlines.append(["The Pitch's trade", ", ".join(names)])
 	if not sim.best_dig.is_empty():
 		# the Yard's best dig, the score across yards (the endgame, 7 Oct)
 		var site: String = str(sim.best_dig["site"]).trim_prefix("The ")
 		var dig_lv: int = sim.lv_at(int(sim.best_dig["tier"]), int(sim.best_dig["depth"]))
-		zlines.append(["Best signal", ["%s, level %d · Pitch no. %d" % [site, dig_lv, int(sim.best_dig["yard"])], "%s, level %d" % [site, dig_lv], "%s L%d" % [site, dig_lv], "level %d" % dig_lv], "accent"])
+		zlines.append(["Best signal", ["%s, level %d" % [site, dig_lv], "%s L%d" % [site, dig_lv], "level %d" % dig_lv], "accent"])
 	var town_note: Variant = [Words.NOTES["zones"] if not sim.campaign_done() else Words.NOTES["zones_done"], Words.NOTES["patch"]]
-	if sim.campaign_done():
-		# the move waits on the ground playing out (20 Oct, Matt; the canvas's PitchMove): said either way
-		var stood: int = mini(sim.reach_stood, Data.MOVE_STALL)
-		town_note = ["The ground's played out: %d signals and the reach hasn't moved. A new Pitch starts the ladders deeper" % Data.MOVE_STALL, "The ground's played out: move the Pitch", "Played out"] if sim.reach_stood >= Data.MOVE_STALL \
-			else ["The ground still gives: your reach has stood %d of %d signals" % [stood, Data.MOVE_STALL], "The reach has stood %d of %d signals" % [stood, Data.MOVE_STALL], "%d of %d" % [stood, Data.MOVE_STALL]]
 	var d := {
-		"title": "The town and the purse" if sim.yard_moves == 0 else "The town and the purse · Pitch no. %d" % (sim.yard_moves + 1),
+		"title": "The town and the purse",
 		"headline": Fmt.money(sim.cash), "unit": "in hand",
 		"left": {"kicker": "The town · %d of %d areas open" % [open_zones, Data.ZONES.size()], "lines": zlines,
-			"note": town_note, "note_tone": "good" if sim.can_move_yard() else ""},
+			"note": town_note},
 		"right": {"kicker": "The purse", "lines": [["Kit worth", Fmt.money(sim.loadout_value())],     # tins, notes and scrap are the top bar's (18 Oct, said once)
 			["Stash", "%d of %d cells" % [sim.stash_used(), sim.stash_cap()]], ["Prices", ("up %d%%" % sim.inflation_pct()) if sim.inflation_pct() > 0 else "as they were"]] + _rebuild_lines(),
 			"note": "Tins lose value as prices rise; notes don't" if sim.inflation_pct() > 0 else "What the Fence pays"},
 		"status": ["Autosaves every 30 s · %s played" % Fmt.clock(sim.elapsed), "%s played" % Fmt.clock(sim.elapsed)],
 	}
-	if sim.campaign_done():
-		d["button"] = {"text": "Move the Pitch", "action": _confirm_move, "enabled": sim.can_move_yard(), "primary": sim.can_move_yard()}
 	return d
 
 
@@ -1458,54 +1443,6 @@ func _pick_runner(k: int) -> void:
 	refresh()
 
 
-## Moving the Yard: asked twice, since everything but the uniques goes.
-## Retirement (36): the runner to the wall, a third of their trait kept, their kit to the stash, two new to pick from.
-func _confirm_retire() -> void:
-	var td: Dictionary = sim.trait_data()
-	var kept: String = ("a third of %s kept" % td["name"].to_lower()) if not td.is_empty() else "no trait to keep"
-	var items := [
-		{"name": "Retire the %s" % sim.cls, "detail": "Level %d, %d runs. Kit to the stash, trees refunded, %s. Two new runners turn up." % [sim.level(), sim.runner_runs, kept], "action": _retire},
-		{"name": "Not yet", "detail": "", "action": _menu.close},
-	]
-	_menu.open("Retire to the wall?", "A runner who retires is not a runner who died: the wall keeps a little of what they were, up to three.", items, _menu.close)
-
-
-func _retire() -> void:
-	if sim.retire():
-		_menu.close()
-		_asked_runner = false
-		refresh()
-
-
-func _confirm_move() -> void:
-	var items := [
-		{"name": "Move the Pitch", "detail": "The uniques, the Yard, the dead, the wall, the Dial, the signals, half the notes and scrap, and the trade come. Nothing else.", "action": _pick_trade},
-		{"name": "Stay", "detail": "", "action": _menu.close},
-	]
-	_menu.open("Move the Pitch?", "A moved Pitch gets +%d%% loot quality and +%d%% tins a move, %d training points to start, and %d free perk%s in the Yard." % [Data.MOVE_FIND, Data.MOVE_CASH, Data.MOVE_POINTS * (sim.yard_moves + 1), sim.yard_moves + 1, "" if sim.yard_moves == 0 else "s"], items, _menu.close)
-
-
-## The Yard's trade: one element comes with the move, and every class after
-## takes its keystone at the class's own price. Five to pick from, one a move.
-func _pick_trade() -> void:
-	var items := []
-	for el in Data.ELEMENTS:
-		if sim.can_trade(el):
-			var t: Dictionary = Data.tree_of_element(el)
-			var key: Dictionary = t["nodes"][6]
-			items.append({"name": t["name"], "detail": "%s for every class, for good: %s" % [key["name"], key["words"]], "action": _move_yard.bind(el)})
-	if items.is_empty():
-		_move_yard("")
-		return
-	_menu.open("The Pitch's trade", "Which trade comes with the Pitch?", items, _menu.close)
-
-
-func _move_yard(trade: String) -> void:
-	sim.move_yard(trade)
-	_menu.close()
-	refresh()
-
-
 ## The bench's menu for an item: what can be done to it, in notes.
 ## The Build column (34): a kind, then its builds four a page, each priced in scrap and saying what it wants.
 const BUILD_KINDS := [["box", "A box of rounds", "A standard box of any type you have a gun for"], ["grade", "A better grade", "Scrap and the box below it"],
@@ -1568,17 +1505,3 @@ func _craft(id: int, kind: String, stat: String) -> void:
 	refresh()
 
 
-## The second past, from level 30: a different class, for its first tree.
-func _choose_second() -> void:
-	var items := []
-	for c in Data.CLASSES:
-		if c["name"] != sim.cls and c["name"] != sim.cls2 and items.size() < 4:
-			items.append({"name": c["name"], "detail": c["words"], "action": _set_second.bind(c["name"])})
-	items.append({"name": "Back", "detail": "", "action": _menu.close})
-	_menu.open("A second past", "Opens that class's first tree beside yours. Changing it refunds it.", items, _menu.close)
-
-
-func _set_second(nm: String) -> void:
-	sim.set_second(nm)
-	_menu.close()
-	refresh()

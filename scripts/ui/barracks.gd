@@ -8,8 +8,6 @@ extends Control
 ## card grid's 1536 x 916.
 
 signal acted
-signal ascend                      # the Second past button: the owner offers the classes
-signal retire                      # the Retire button (36): the owner asks, then the runner goes to the wall
 
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
@@ -125,8 +123,6 @@ var _past_bar: Panel                # the second past's points, under way (15 Oc
 var _past_fill: Panel
 var _train: Button
 var _respec: Button
-var _ascend: Button
-var _retire: Button
 
 
 func _init() -> void:
@@ -481,12 +477,6 @@ func _build_panel() -> void:
 	_train.pressed.connect(_on_train)
 	_respec = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
 	_respec.pressed.connect(_on_respec)
-	_ascend = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
-	_ascend.pressed.connect(func(): ascend.emit())
-	_ascend.visible = false
-	_retire = UI.button(_panel, Rect2(0, by, 240, Pal.BUTTON_H), false)
-	_retire.pressed.connect(func(): retire.emit())
-	_retire.visible = false
 
 
 const EFFECT_WORDS := {
@@ -691,8 +681,8 @@ func show_state(s) -> void:
 	sim = s
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
-	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, sim.cls2, sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), str(sim.trades), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size())]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
+		sim.gun_type(), sim.level(), "", _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size())]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -753,7 +743,7 @@ func _show_card(k: int) -> void:
 	var mine: bool = sim.cls == nm
 	var armed: bool = _armed == nm
 	var lit: bool = mine or armed or sim.cls == ""
-	cb.disabled = sim.on_mission() or nm == sim.cls2     # the second past's class is taken already
+	cb.disabled = sim.on_mission()
 	var edge: Color = Pal.ACCENT if (mine or armed) else Pal.CARD_LINE
 	var w: int = 2 if (mine or armed) else 1
 	for pair in [["normal", 0.0], ["hover", 0.08], ["pressed", 0.12], ["hover_pressed", 0.12], ["disabled", 0.0]]:
@@ -1322,20 +1312,6 @@ func _show_panel() -> void:
 	var x: float = Pal.GRID_W - PAD
 	x -= _respec.size.x
 	_respec.position.x = x
-	_ascend.visible = sim.cls != "" and (sim.can_ascend() or sim.cls2 != "")
-	if _ascend.visible:
-		_ascend.text = ("Second past: %s" % sim.cls2) if sim.cls2 != "" else "Take a second past"
-		_ascend.disabled = not sim.can_ascend()
-		_ascend.size.x = ceilf(UI.text_width(_ascend, _ascend.text)) + 48
-		x -= 12 + _ascend.size.x
-		_ascend.position.x = x
-	_retire.visible = sim.cls != "" and sim.level() >= Data.RETIRE_LEVEL
-	if _retire.visible:
-		_retire.text = "Retire to the wall"
-		_retire.disabled = not sim.can_retire()
-		_retire.size.x = ceilf(UI.text_width(_retire, _retire.text)) + 48
-		x -= 12 + _retire.size.x
-		_retire.position.x = x
 	if _train.visible:
 		x -= 12 + _train.size.x
 		_train.position.x = x
@@ -1348,26 +1324,6 @@ func _show_panel() -> void:
 	_past_bar.visible = false
 	if selected == "":
 		_show_past()
-
-
-## While the second past waits (15 Oct, gating_training.png): its level and the points in the first tree, a bar after,
-## from ASCEND_LINE_FROM; the runners before have the line till then.
-const ASCEND_LINE_FROM := 20
-func _show_ascend_line() -> bool:
-	if sim.cls == "" or sim.cls2 != "" or sim.ascend_block() == "" or sim.level() < ASCEND_LINE_FROM:
-		return false                       # the runners before have the line until it starts to matter
-	var first: String = sim.first_tree()
-	var now: int = sim.points_in(first)
-	UI.fit(_past, ["Second past at level %d · %d in %s: %d of %d" % [Data.ASCEND_LEVEL, Data.ASCEND_CORE, first, now, Data.ASCEND_CORE],
-		"Second past: level %d, %d in %s" % [Data.ASCEND_LEVEL, Data.ASCEND_CORE, first], "Second past at %d" % Data.ASCEND_LEVEL])
-	var tw: float = ceilf(UI.text_width(_past, _past.text))
-	var room: float = _past.size.x - tw - 14
-	_past_bar.visible = room >= 60.0
-	if _past_bar.visible:
-		_past_bar.position = Vector2(_past.position.x + tw + 14, _past.position.y + (_past.size.y - 6) / 2.0)
-		_past_bar.size = Vector2(minf(180.0, room), 6)
-		_past_fill.size = Vector2(_past_bar.size.x * clampf(float(now) / Data.ASCEND_CORE, 0.0, 1.0), 6)
-	return true
 
 
 ## A node's sentence under its title over two lines `w` wide: the longest form that wraps into them whole.
@@ -1394,8 +1350,6 @@ static func _as_sentence(x: String) -> String:
 
 ## The runners before this one, newest first: who, how long, how it ended.
 func _show_past() -> void:
-	if _show_ascend_line():
-		return
 	if sim.past.is_empty():
 		UI.fit(_past, [Words.PASTS[sim.cls]["was"] if Words.PASTS.has(sim.cls) else "", ""])
 		return
@@ -1462,7 +1416,7 @@ func _turn_page() -> void:
 ## A class button: free for a runner with no class (or nothing in the class trees); otherwise the first press
 ## arms it and the header names the price, the second changes (9 Oct: a click was a free respec).
 func _pick_class(nm: String) -> void:
-	if sim.on_mission() or nm == sim.cls or nm == sim.cls2:
+	if sim.on_mission() or nm == sim.cls:
 		_armed = ""
 		show_state(sim)
 		return
@@ -1505,7 +1459,7 @@ func text_nodes() -> Array:
 	if _chips.visible:
 		out.append_array(_chips.text_nodes())
 	out.append_array(_sum_chips.text_nodes())
-	for b in [_ascend, _retire, _train]:
+	for b in [_train]:
 		if b.visible:
 			out.append(b)
 	for c in _class_cards:

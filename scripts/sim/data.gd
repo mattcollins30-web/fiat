@@ -125,7 +125,7 @@ const YARD := [
 		 {"id": "wall_of_fame", "name": "Wall of fame", "short": "Uniques take no room", "words": "Uniques and set pieces in the stash take no cells"}],
 		[{"id": "lock_up", "name": "Container", "short": "+60 cells", "words": "60 more cells in the stash"},
 		 {"id": "filing_cabinet", "name": "Filing cabinet", "short": "Signals bring 3 papers", "words": "A signal you beat brings at least 3 papers home, not 2"}],
-		[{"id": "dry_store", "name": "Dry store", "short": "Moves keep 75%", "words": "Moving the Pitch keeps 75% of the notes and scrap, not 50%"},
+		[{"id": "dry_store", "name": "Dry store", "short": "A second tab a class", "words": "Every class gets a second stash tab of its own"},     # 21 Oct: was a move's notes kept, the move gone
 		 {"id": "annex", "name": "Annex", "short": "+100 cells", "words": "100 more cells in the stash"}]],
 	 "rank": {"short": "+20 cells", "words": "20 more stash cells a rank"}},
 	{"key": "clinic", "name": "The Clinic", "salvage": "steel", "costs": [1200, 5000, 12000, 30000, 80000], "picks": [
@@ -1067,7 +1067,7 @@ const FX := {
 	"yard/arms_dealer": 0.33,     # Arms dealer: The shelf rolls at your deepest site's level
 	"yard/cheap_parts": 0.75,     # Cheap parts: Every job at the Bench costs a quarter less
 	"yard/dead_air": 1.25,     # Dead air: At Night the gangs come a quarter later
-	"yard/dry_store": 0.75,     # Dry store: A move keeps three quarters of the notes and scrap, not half
+	"atlas/held_frequency": 0.5,     # Held frequency: Hold at half price (21 Oct)
 	"yard/forecast": 1.2,     # The forecast: A run under rain or fog brings a fifth more tins home
 	"yard/glasses": 60,     # Glasses: The odds shown are read from sixty dry runs, not twenty-four
 	"yard/range_cards": 0.5,     # Range cards: The first shot on every gang does half again
@@ -1586,8 +1586,6 @@ const TREES := [
 		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice; you keep the better"},
 	]},
 ]
-## The second past: at ASCEND_LEVEL the runner takes a second class, whose
-## first tree opens beside the first's. Its keystone and rule are theirs too.
 ## The element trees: one a type, lanes like the class ones - conversion and increased to a notable, then
 ## column 4's halves of the joints (a class's alone: "class"), then a keystone that breaks the element's rule
 ## and a notable with a cost, which want a closed joint in the tree (JOINTS), then the capstone. Any class
@@ -1725,36 +1723,17 @@ static func joint_in(cls: String, tree_name: String) -> Dictionary:
 			return j
 	return {}
 
-const ASCEND_LEVEL := 30
 ## Training's gating (15 Oct, Matt: "like Last Epoch"; endgame_radio.md §8, gating_training.png). The class tree is
 ## the core: an element tree's columns from CORE_GATES' column want so many points in the class tree its joint is in
-## (the class's first tree off its pair), its capstone CORE_CAPSTONE; the second past wants ASCEND_CORE in the first
-## class tree; keystones open at KEYSTONE_LEVEL, capstones at CAPSTONE_LEVEL, every tree.
+## (the class's first tree off its pair), its capstone CORE_CAPSTONE; keystones open at KEYSTONE_LEVEL, capstones at CAPSTONE_LEVEL, every tree.
 const CORE_GATES := [[2, 6], [4, 12]]
 const CORE_CAPSTONE := 18
-const ASCEND_CORE := 20
 const KEYSTONE_LEVEL := 20
 const CAPSTONE_LEVEL := 30
-## Retirement (36): a runner at RETIRE_LEVEL can retire to the wall; the Yard keeps RETIRE_SHARE of their
-## trait for good, up to RETIRED_MAX retired (the oldest makes way), their kit stays, their trees refund.
-## 50, the cap (Matt, 15 Oct: not 30).
-const RETIRE_LEVEL := 50
-const RETIRE_SHARE := 1.0 / 3.0
-const RETIRED_MAX := 3
 
 ## Insurance: the Fence holds the paper on the kit for a run. Dies, and the
 ## kit comes back to the Yard's stash. A share of what's worn, by depth.
 const INSURE_RATE := 0.15
-
-## Moving the Yard: after the campaign, start again somewhere else. What
-## comes: the uniques, the Yard's own tree, the list of runners before, half
-## the notes, and a yard whose name travels - magic find and cash a move.
-const MOVE_FIND := 5               # percent magic find a move
-const MOVE_CASH := 5               # percent cash a move
-const MOVE_POINTS := 2             # training points a move, free at the start
-const MOVE_NOTES_KEPT := 0.5
-const MOVE_STALL := 10             # signals run with the reach standing before the Pitch can move (20 Oct, Matt)
-const LADDER_FLOOR_MAX := 3        # a moved yard's ladders start this many depths up at most (the endgame, 7 Oct): the fourth yard opens every site at depth 4
 
 ## The bench's crafting, paid in notes: times the item's tier and its rarity + 1.
 ## The bench's crafting, in cash: a price × the item's level × (rarity + 1).
@@ -1895,8 +1874,8 @@ const ATLAS := [
 		"sum": "Never heard", "figures": ["every code", "one code filtered"], "sentence": "Name one code you know: the Radio never rolls it again. Change it at the Radio."},
 	{"key": "booster", "column": 2, "name": "Booster", "max": 3, "words": "Every code's reward bonus 10% bigger a rank",
 		"sum": "Codes pay", "figures": ["as they are", "+10%", "+20%", "+30%"], "sentence": "Every code brings a little more home, on every site."},
-	{"key": "held_frequency", "column": 2, "name": "Held frequency", "max": 1, "words": "Sites keep their codes when the Pitch moves",
-		"sum": "Codes", "figures": ["go with the move", "hold through it"], "sentence": "When the Pitch moves, every site keeps its codes."},
+	{"key": "held_frequency", "column": 2, "name": "Held frequency", "max": 1, "words": "Hold costs half at the Radio",
+		"sum": "Hold", "figures": ["full price", "half price"], "sentence": "Keeping one code and rolling the rest costs half."},     # 21 Oct: was the codes through a move, the move gone
 	{"key": "long_wave", "column": 2, "name": "Long wave", "max": 1, "notable": true, "words": "+1 code on every site",
 		"sum": "Codes a site", "figures": ["by the level", "one more"], "sentence": "Every site carries one more code."},
 	{"key": "tip_offs", "column": 2, "name": "Tip-offs", "max": 2, "words": "Loot quality +5% a rank",
@@ -2359,7 +2338,6 @@ const MATERIAL_SIGNAL_STEP := 0.01       # and this more a level past it
 const MATERIAL_CAP := 0.5
 const MATERIAL_LEAN := 3.0               # a signal's two by its crew's area: each 1 / (held + this), the fewer held the likelier (20 Oct)
 const AIM_NOTES := 40                    # Kev tunes a signal to a crew's area for this (20 Oct); first figure
-const MATERIAL_MOVE := 0.01              # a move of the Pitch: this more on every run (the new Pitch knows the ground)
 const MATERIAL_HANDFUL := [1, 3]         # a drop
 const MATERIAL_HEAD := [3, 6]            # a crew's head down: theirs, guaranteed
 const FUSE_SIGNAL := 0.10                # a signal's run: the chance at fuses too
