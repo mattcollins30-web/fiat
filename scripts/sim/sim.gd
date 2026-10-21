@@ -7052,12 +7052,12 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 			chron("lorry", {"lorries": lorries})
 			log_event(Words.YARD["lorry"])
 	if not pool.is_empty():
-		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))     # at the depth he's fought at (12 Oct)
+		var it := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)     # at the depth he's fought at (12 Oct); his own, off him (21 Oct)
 		m["found"].append(it)                  # theirs comes home whatever the pack holds
 		_read(it)
 		log_event("%s is down. %s Found: %s." % [b["name"], Words.BOSSES.get(b["name"], {}).get("down", ""), it["unique"]])
 		if atlas_rank("two_of_everything") > 0:
-			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]))
+			var it2 := Items.roll_unique(pool[rng.randi_range(0, pool.size() - 1)], rng, int(t.get("level", -1)), int(t["loot_tier"]), true)
 			m["found"].append(it2)
 			_read(it2)
 			log_event("And a second: %s." % it2["unique"])

@@ -6130,7 +6130,13 @@ difficulty and length, the endgame placeholders.
 2. The Gamekeeper's unique is a downgrade: The Keeper's Twelve-Bore (Unique, level 1) reads 23 dmg/s against a
    Common Pump shotgun found earlier at 34 (screenshot: ▼ 7.9 dmg/s, with +12% dmg and +15% dmg pre-clear and "a
    kill heals 3% max HP"). Matt: "the unique drop from the gamekeeper should be better than a random gun found
-   earlier - the unique here is pointless and should be the first big find of the game." Not looked at yet.
+   earlier - the unique here is pointless and should be the first big find of the game."
+   - Done: the cause was the body's tier - a head's unique rolled at the site's loot tier (Top Farm: 1), so the
+     Twelve-Bore wore a T1 Farmer's shotgun body under its own Pump. Off a head now (Items.roll_unique off_head):
+     the body a tier past the site's loot, never under the unique's own base, and BOSS_UNIQUE_LIFT 1.2 on its figure
+     - the Keeper's gun about 45 dmg/s against the plain Pump's 34. Off the Fence (the mate, the Back room, the
+     gamble) a unique is as before. Smoke checks both. Known gap (the review): the lift reads on damage, armour and
+     find, not a bag's or a rig's cells - a head's backpack or rig gets the tier, not the 1.2.
 3. Training's two pools aren't clear: the band's "0 of 1 point free" is the class's pool only, the rail's "1 free"
    is the Pitch's, and the Pitch's own pool shows only in its lane's small "1 free". Matt had two points, could spend
    one in the Scrapper's trees and one in the Pitch, and asked if that was meant (it is: the Pitch is the camp's,

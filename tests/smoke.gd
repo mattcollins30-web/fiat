@@ -9415,6 +9415,24 @@ func _keepsake_checks(main) -> void:
 	sim._boss_down(m, m["t"])
 	var got: Array = m["found"].slice(n0).map(func(x): return str(x.get("unique", x["base"])))
 	_check(sim.room_open("clinic") and "The vet's bag" in sim.keepsakes and "The vet's bag" in got and got.any(func(x): return x in gk["uniques"]), "the Gamekeeper's drop: %s, keepsakes %s" % [str(got), str(sim.keepsakes)])
+	# his own, off him, is the first big find (21 Oct, Matt's playtest: the Twelve-Bore read under a Pump found before
+	# him): a tier past the site's loot, never under its own base, lifted - over every plain gun of its type at the
+	# site's loot tier, and over its own base plain; off the Fence it's as before
+	var his: Array = m["found"].slice(n0).filter(func(x): return x.has("unique") and x["unique"] in gk["uniques"])
+	for it in his:
+		var lift: float = float(it.get("lift", 1.0))
+		_check(lift >= Data.BOSS_UNIQUE_LIFT - 0.001 and int(it["tier"]) >= int(Items.base_named(it["slot"], sim._unique_named(it["unique"])["base"])["tier"]), "a head's unique came plain: %s lift %.2f tier %d" % [it["unique"], lift, int(it["tier"])])
+	var tf: Dictionary = m["t"]
+	var gun: Dictionary = Items.roll_unique(sim._unique_named("The Keeper's Twelve-Bore"), sim.rng, int(tf.get("level", 1)), int(tf["loot_tier"]), true)
+	var best_plain := 0.0
+	for b in Data.BASES["Primary"]:
+		if b.get("type", "") == "shotgun" and int(b["tier"]) <= int(tf["loot_tier"]) + 1:
+			var pl: Dictionary = sim._plain("Primary", b["name"])
+			pl["ilvl"] = Items.ilvl(gun)
+			best_plain = maxf(best_plain, Items.dps(pl))
+	_check(Items.dps(gun) > best_plain * 1.1, "the Keeper's gun off him (%.0f dmg/s) doesn't beat the best plain shotgun to a tier past the site's (%.0f)" % [Items.dps(gun), best_plain])
+	var loose: Dictionary = Items.roll_unique(sim._unique_named("The Keeper's Twelve-Bore"), sim.rng, int(tf.get("level", 1)), int(tf["loot_tier"]) + 1)     # the same body's tier as off him: the cache must stay plain
+	_check(not loose.has("lift") or float(loose["lift"]) < Data.BOSS_UNIQUE_LIFT, "a unique not off its head carries the head's lift")
 	sim.extract_now()
 	_check(not sim.stash.any(func(x): return str(x["base"]) == "The vet's bag"), "the vet's bag went into the stash")
 	main.show_room(main.BARRACKS)

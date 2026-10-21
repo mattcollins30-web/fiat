@@ -1385,6 +1385,10 @@ const COMBOS := {
 const ILVL_GROW := 0.05            # 0.07 to 0.05 (21 Oct, the crew's reads and a kit probe): at 0.07 an at-level kit kept pace with the
                                    # crews (an edge's half-life 25 levels) and the bot's edge - uniques, the Bench, paragon - ran the
                                    # reach to 221; at 0.05 an edge halves in about 10 levels: a few levels a find, then the next
+## A head's own unique off the head (21 Oct, Matt's playtest: the Keeper's Twelve-Bore read 23 dmg/s against a 34 Pump
+## found before him - "the unique here is pointless and should be the first big find of the game"): its body one
+## tier past the site's loot (never under its own base's), and BOSS_UNIQUE_LIFT on its figure.
+const BOSS_UNIQUE_LIFT := 1.2
 const ILVL_GROW_FROM := 20         # DEEP_TIER_LEVELS' last: the campaign and the deep tiers as they were
 const FLAT_GROW := ["hp", "armour", "regen", "life_per_kill", "armour_per_free", "armour_per_med"]
 const CONVOY_TIER := 9             # the Services
