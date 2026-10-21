@@ -676,7 +676,7 @@ const ZONE_TYPES := [
 const ZONE_GROW := 0.02
 ## Harder gangs (B9, 15 Oct): from the second gang on, a gang can be the next zone's crew - their HP, their fire and
 ## what it's made of; the City's are its own hard core, as hard. The chance climbs a step a gang past the first.
-const GANG_NEXT_STEP := 0.2
+const GANG_NEXT_STEP := 0.3        # 0.2 to 0.3 (the tuning batch, 21 Oct): the next zone's crew from the second gang more often
 const GANG_NEXT_MAX := 0.8
 const GANG_NEXT_HP := 1.6
 const GANG_NEXT_DPS := 1.5
@@ -2177,6 +2177,18 @@ static func craft_of(key: String) -> Dictionary:
 ## Depth - the ladder on each tier. Each step compounds: hostiles +25% HP and
 ## fire, rewards +12%, drops +3 points, rarer finds - so every tier has a depth
 ## the loadout can hold and a deeper one it can't. Clearing a depth opens the next.
+## The tuning batch (21 Oct, Matt's playtest: 100% at every campaign site to the Pleasure Park, 2-3 min a run, no deaths
+## and no wounds on the bots): the campaign gets harder with the runner's level, the fights are longer, the gangs come
+## sooner a zone along, and the clock runs through the searches.
+const CAMPAIGN_LEVEL_FREE := 8     # a site this many levels under the runner fights as it is (the pass: a site's first clear comes 5-10
+                                   # levels over its own level - the Pleasure Park's at 9, the Bank's at 16)...
+const CAMPAIGN_LEVEL_GROW := 0.08  # ...and past that its heads' HP and fire compound by this a level (the Parade at level 15: x1.47)...
+const CAMPAIGN_LEVEL_MAX := 2.0    # ...to twice at most (9 levels past): a site stays a site, never a wall for a runner far past it
+const CAMPAIGN_POOL := 1.0         # the campaign's pools as they are (1.5 read Matt's Pleasure Park 75% to 0%: the length comes from the gangs)
+const PATROL_FIRST := 2.0          # the first gang after the clear waits twice the gap (the run's length, 4-5 min: Matt's runs ended at the first
+                                   # gang, "Back, chased", two searches in); the gangs after come at the zone's gap
+const PATROL_ZONE := [1.0, 0.9, 0.8, 0.7]     # the gangs' gap by zone: the City's a third sooner
+const CLOCK_SEARCH_RATE := 0.5     # the clock runs through a search at half pace (it stood while the site was clear)
 const CAMPAIGN_HOSTILE := [0.9, 1.0, 1.15, 1.05]     # by zone (the pass, 20 Oct): the Outskirts as they were, the Town and the City harder (six-hour reads: Town 1.15 and City 1.2 left three builds of ten short of the Quartermaster; 1.25 and 1.4 five) - 0.9 everywhere had the Bank at 29 min by hand, every run at 100% and no death in 41; 1.5 everywhere killed eleven builds of fifteen at level 1. D20: 0.9, with XP_SCALE 2.9 the Bank at 1.9 h
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
@@ -2190,7 +2202,7 @@ const DEPTH_RARITY := 0.10
 ## heads for the gangs after - so the damage it asks grows with its heads' HP: a DPS check. A crew's head adds
 ## CLOCK_PER_HEAD for every plain head's HP he carries when he comes out. Out of time: the pack and CLOCK_LOSE_KIT
 ## random pieces of worn kit lost, the runner home. First figures; the balance pass sets them.
-const CLOCK_BASE := 60.0            # the starting kit's 12/s on the streets' 200 HP heads is 17 s a head: the clock must let a new runner through
+const CLOCK_BASE := 90.0            # 60 to 90 (21 Oct: the clock runs through the searches now, at CLOCK_SEARCH_RATE); the starting kit's 12/s on the streets' 200 HP heads is 17 s a head: the clock must let a new runner through
 const CLOCK_PER_HEAD := 12.0        # the bot's median at the sites it picks is 6 s a head (9 Oct probe): twice that
 const CLOCK_GANGS := 5
 const CLOCK_LOSE_KIT := 2

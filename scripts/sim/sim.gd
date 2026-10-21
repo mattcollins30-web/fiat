@@ -2726,10 +2726,12 @@ func patrol_s(t: Dictionary, first := false) -> float:
 	if has_node("never_there"):
 		return INF
 	var base := (Data.FX["node/quiet_feet"] if has_node("quiet_feet") else PATROL_S) * float(t.get("patrol", 1.0)) * cm("patrol")
+	if t.has("tier"):
+		base *= float(Data.PATROL_ZONE[int(Data.TIERS[int(t["tier"])]["zone"])])     # the gangs sooner a zone along (21 Oct; the stats sheet asks with no site)
 	base *= 1.0 + (_fitted_sum("patrol_pct") + tree_sum("patrol_pct") + _affix_sum("patrol_pct")) / 100.0
 	base *= yard_patrol()
 	if first:
-		base *= (1.0 + (Data.FX["yard/spotter"] if yard_has("spotter") else 0.0) + (Data.FX["yard/lookout_post"] if yard_has("lookout_post") else 0.0)) * (Data.FX["node/early_doors"] if has_node("early_doors") else 1.0)
+		base *= Data.PATROL_FIRST * (1.0 + (Data.FX["yard/spotter"] if yard_has("spotter") else 0.0) + (Data.FX["yard/lookout_post"] if yard_has("lookout_post") else 0.0)) * (Data.FX["node/early_doors"] if has_node("early_doors") else 1.0)
 	if has_node("loud"):
 		base *= Data.FX["node/loud.patrol"]
 	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_rank("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0)
@@ -4368,7 +4370,7 @@ func loadout_value() -> int:
 
 const VARIANCE := 0.25
 const CONTACT := 3                 # hostiles firing at once; the rest wait their turn
-const SEARCH_S := 15.0
+const SEARCH_S := 20.0             # 15 to 20 (21 Oct, the tuning batch): a search is a beat
 const PATROL_S := 24.0          # D6 (gate 10): 20 left 1.6-1.9 searches a gap on the early sites
 const PATROL_BASE := 2
 const SURVIVAL_RUNS := 40
@@ -4589,8 +4591,14 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 	}
 	if d == 1:
 		var hostile: float = float(Data.CAMPAIGN_HOSTILE[int(base["zone"])])     # by zone (the pass, 20 Oct); D20: the campaign's crews a touch softer
+		# the campaign gets harder with the runner's level (21 Oct, Matt): a site past CAMPAIGN_LEVEL_FREE under the
+		# runner compounds its heads' HP and fire a level; and its pool is CAMPAIGN_POOL bigger, the fight the run's length
+		var harder: float = campaign_level_mult(lv)
+		hostile *= harder
+		e["clock_mult"] = harder               # the clock keeps pace: the level's tax is on the fight, not the time
 		e["hp"] *= hostile
 		e["dps"] *= hostile
+		e["pool"] = int(round(float(e["pool"]) * Data.CAMPAIGN_POOL))
 	if d >= 2 and (campaign_done() or ahead):
 		# the endgame (7 Oct): the curve by the site's level, bent by its shape, never under the site's own
 		# campaign curve - so the streets' ladder is gentle and long and the Barracks' steep and short; the
@@ -5897,7 +5905,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(paragon_board)]     # the board: a resist point moves no bucket (the review)
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(paragon_board), level()]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct)
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -6172,6 +6180,14 @@ func _tick(dt: float) -> void:
 			return
 		_fight(m, t, dt)
 	else:
+		# the clock runs through a search too, at CLOCK_SEARCH_RATE (21 Oct: it stood while the site was clear, so a
+		# strong build never saw it; staying has a price). A dry run ends at the clear and never gets here.
+		if not has_rule("bomb_suit"):
+			m["clock"] = float(m.get("clock", clock_budget(t))) - dt * Data.CLOCK_SEARCH_RATE
+			m["clock_used"] = float(m.get("clock_used", 0.0)) + dt * Data.CLOCK_SEARCH_RATE
+			if m["clock"] <= 0.0:
+				_time_out(m)
+				return
 		_search(m, t, dt)
 		if has_node("walk_it_off"):
 			_heal(m, dt)                         # through _heal: the Paramedic's overflow counts (12 Oct)
@@ -6237,7 +6253,13 @@ func _tick(dt: float) -> void:
 ## head of its plain pool and of the gangs after it - halved by the Radio's Last bus.
 func clock_budget(t: Dictionary) -> float:
 	var heads: int = int(t.get("plain_pool", t.get("pool", 1))) + Data.CLOCK_GANGS
-	return (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * heads) * (0.5 if t.get("clock_half", false) else 1.0)
+	return (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * heads) * (0.5 if t.get("clock_half", false) else 1.0) * float(t.get("clock_mult", 1.0))
+
+
+## The campaign's fight at a site, harder with the runner's level (21 Oct, Matt: "yes to campaign getting harder"):
+## x1 within CAMPAIGN_LEVEL_FREE of the site's level, compounding CAMPAIGN_LEVEL_GROW a level past, CAMPAIGN_LEVEL_MAX at most.
+func campaign_level_mult(site_lv: int) -> float:
+	return minf(Data.CAMPAIGN_LEVEL_MAX, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, maxi(0, level() - site_lv - Data.CAMPAIGN_LEVEL_FREE)))
 
 
 ## A crew's head brings his own time when he comes out: a head's seconds for every plain head's HP he carries.

@@ -9137,8 +9137,27 @@ func _over_level_checks(sim) -> void:
 	var low: Dictionary = sim.effective(Data.BANK)
 	var mine: float = float(mini(Items.max_ilvl_for(50), Data.MAX_LEVEL))     # a level-50 runner reads as level 50 (21 Oct)
 	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
-	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"])),
-		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"])])
+	var harder: float = sim.campaign_level_mult(int(low["level"]))     # and the fight harder with the level (21 Oct), to CAMPAIGN_LEVEL_MAX
+	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"]) * harder) and is_equal_approx(harder, Data.CAMPAIGN_LEVEL_MAX),
+		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f; the fight x%.2f (want x%.1f)" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"]), harder, Data.CAMPAIGN_LEVEL_MAX])
+	# the fight with the level (21 Oct): a level-1 runner's site as it is, a level 7 over a level-2 site x1.06^4
+	sim.xp = Data.xp_for_level(1)
+	var site2: int = -1
+	for i in range(Data.TIERS.size()):
+		if Sim.lv_at(i, 1) == 2:
+			site2 = i
+			break
+	var plain_hp: float = float(sim.effective(site2)["hp"])
+	sim.xp = Data.xp_for_level(2 + Data.CAMPAIGN_LEVEL_FREE + 4)
+	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp * pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)), "a runner 4 past the free levels over a site: HP x%.3f, want x%.3f" % [float(sim.effective(site2)["hp"]) / plain_hp, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)])
+	# and the odds read again on a level-up (the review): the key carries the level
+	sim.xp = Data.xp_for_level(1)
+	var key_lv1: Array = sim._odds_key_common().duplicate()
+	sim.xp = Data.xp_for_level(2 + Data.CAMPAIGN_LEVEL_FREE + 4)
+	sim._key_memo = []
+	sim._scope_memo = []
+	_check(sim._odds_key_common() != key_lv1, "the odds' key doesn't move with the level: the Map's reading goes stale as the fight hardens")
+	sim.xp = Data.xp_for_level(50)
 	_check(sim.over_level_share(int(low["level"]) + 100) == 1.0 and sim.over_level_share(-100) == Data.OVER_LEVEL_FLOOR, "the share isn't whole over you or floored far under")
 	# held at a wall (D12): a level-50 runner who hasn't got past the Estate is paid whole there
 	for i in range(sim.best_depth.size()):
@@ -13860,7 +13879,7 @@ func _clock_checks(main) -> void:
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
 	var t0: Dictionary = sim.effective(3)
-	_check(is_equal_approx(sim.clock_of(3), Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * (int(t0["plain_pool"]) + Data.CLOCK_GANGS)), "the streets' clock is off: %.0f" % sim.clock_of(3))
+	_check(is_equal_approx(sim.clock_of(3), (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * (int(t0["plain_pool"]) + Data.CLOCK_GANGS)) * float(t0.get("clock_mult", 1.0))), "the streets' clock is off: %.0f" % sim.clock_of(3))     # the level's tax on the fight keeps the clock's pace (21 Oct)
 	_check(is_equal_approx(sim.clock_for_head(t0, float(t0["plain_hp"]) * 10.0), Data.CLOCK_PER_HEAD * 10.0), "a head ten heads strong does not bring ten heads' time")
 	# it runs while they're on you, and stands while the site's clear
 	sim.hp = sim.max_hp()
@@ -13882,7 +13901,19 @@ func _clock_checks(main) -> void:
 	m["patrol_timer"] = -1e9                     # no gang for a while
 	var c1: float = float(m["clock"])
 	sim.advance(3.0)
-	_check(sim.on_mission() and is_equal_approx(float(m["clock"]), c1), "the clock ran while the site was clear: %.1f from %.1f" % [float(m["clock"]), c1])
+	_check(sim.on_mission() and absf(float(m["clock"]) - (c1 - 3.0 * Data.CLOCK_SEARCH_RATE)) < 0.05, "the clock did not run at %.1f through the search: %.1f from %.1f" % [Data.CLOCK_SEARCH_RATE, float(m["clock"]), c1])
+	# run out in a search: the run times out as it would in a fight
+	m["clock"] = 0.5
+	sim.advance(3.0)
+	_check(not sim.on_mission() and sim.last_report.get("timed_out", false), "the clock running out in a search did not end the run")
+	sim.hp = sim.max_hp()
+	sim.deploy(3)
+	m = sim.mission
+	m["target_hp"] = 1e12
+	sim.hp = 1e9
+	m["remaining"] = 0
+	m["cleared"] = true
+	m["patrol_timer"] = -1e9
 	main.refresh()
 	_check(rs._band.unit.text.contains("stopped") or rs._band.unit.text == "left", "the run's clock does not say it's stopped: '%s'" % rs._band.unit.text)
 	# out of time: the runner home, the pack lost, two pieces of kit with it

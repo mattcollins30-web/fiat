@@ -6172,3 +6172,28 @@ difficulty and length, the endgame placeholders.
      (the shotgun's and SMG's at 0), so a rifle's shots played and couldn't be heard. tools/sound_levels.py lists
      every take's peak (ffmpeg) and --fix lifts a fight one-shot under -6 dB to -1: the six shot takes and
      swing_melee_2 lifted, in place. Run it after any sound batch; the smoke can't decode audio.
+
+## The tuning batch (21 Oct, after Matt's first playtest of the Scrapper)
+
+Matt's save at 40 min: level 9, 13 runs, 100% at every site to the Pleasure Park (75% there, 0% at the Shopping
+Centre - the frontier), 2-3 min a run, every run ending at the first gang ("Back, chased", two searches in), no
+deaths, no wounds. Matt: "I'm concerned we aren't looking at all the variables and levers" - the mission timers for
+one; "Yes to campaign getting harder. Split the difference and aim for 4/5 mins." The levers pulled (numbers for the
+pass; the reviewer on the code):
+- The campaign gets harder with the runner's level (Sim.campaign_level_mult): a site CAMPAIGN_LEVEL_FREE 8 levels
+  under the runner fights as it is (the pass: a first clear comes 5-10 levels over a site's own level), past that
+  its heads' HP and fire compound CAMPAIGN_LEVEL_GROW 0.08 a level, CAMPAIGN_LEVEL_MAX 2.0 at most (9 past). The
+  clock keeps pace (clock_mult: the tax is on the fight, not the time). The odds' key carries the level (the
+  review: the Map's reading went stale on a level-up). Matt's frontier reads as before; the Outskirts harden from
+  level 12.
+- The run's length: PATROL_FIRST 2.0 - the first gang after the clear waits twice the gap (38-48 s at depth 1), the
+  gangs after at the zone's gap, PATROL_ZONE [1.0, 0.9, 0.8, 0.7]; SEARCH_S 15 → 20; GANG_NEXT_STEP 0.2 → 0.3 (the
+  next zone's crew from the second gang more often). A first cut of CAMPAIGN_POOL 1.5 read his Pleasure Park 75% →
+  0%: dropped (1.0); the length comes from the gangs, not a longer fight.
+- The clock runs through the searches at CLOCK_SEARCH_RATE 0.5 (it stood while the site was clear: a strong build
+  never saw it), CLOCK_BASE 60 → 90; out of time in a search ends the run as in a fight.
+- Notes for the pass (the review): KEV_RUNS reads the raw pool (unchanged); the tier guide's rows past the campaign
+  read against a taxed base (presentation only).
+- The pass's gates to read against: P1 deaths, P2 wounds, P3 odds at the gate, 10 the gang clock (the first gang's
+  wait is 2x now: the gate reads searches a gap), 11 staying costs, 14 cash, 15 scrap, and the run's length
+  (new: minutes a run, Matt's 4-5).
