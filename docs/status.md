@@ -6117,3 +6117,9 @@ difficulty and length, the endgame placeholders.
   levels) and what stays (the tree's points, the stash, the crew, paragon), Set off shut till one's picked; a card
   picks it and the site's card comes back. The menu's gone; off the Map a toast says so once; the Radio's Set off
   waits for the pick too, and the came-back card stays shut over it (the review). All five done: Matt's playtest next.
+
+## Parked from the playtest (21 Oct, the Scrapper as shock; taken up after it)
+
+1. The radio line repeats: "Anyone near Top Farm: the keeper there has a vet's bag. I can work with that. I can't
+   work with nothing." runs twice across the row, back to back (screenshot; Matt: "still happening"). Fixed once for
+   the Clinic open (dceac06); this is a fresh camp, so likely the loop with only one line heard. Not looked at yet.

@@ -28,6 +28,9 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   fixes bundled in. It's a two-way street.
 - A reviewer agent reviews every commit's diff before it's committed; in balance work only code changes (bot,
   harness, sim), not pure number tweaks.
+- During a playtest, every item Matt raises is parked, not fixed: logged in docs/status.md's "Parked from the
+  playtest" list (what he saw, his words) and taken up together once the playtest's done (21 Oct). No fixes, builds
+  or smokes mid-playtest unless he says otherwise.
 - Playtest feedback: design it together, UI mockups on the design canvas (standard for any UI work), implement, smoke
   on Matt's machine, reviewer, revise until clean, commit; one thing at a time.
 - A UI bug (clipping, overlap): fix it and add the assertion that would have caught it.
