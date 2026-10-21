@@ -6161,6 +6161,10 @@ difficulty and length, the endgame placeholders.
    the stash without its rounds in the rig (the try-on feeding from the stash's grades, 20 Oct) didn't reach the
    fight's pick, so a find there only shows as an upgrade if its rounds are already held. Matt: "that change didnt
    make its way through to the fight".
+   - Done: the gap was the pack - a box found in the same run sat in mission["found"], and the try-on read the
+     stash's rounds only (his save, Fence shut: an SMG with its rounds in the pack read 56 against 170 worn; in the
+     stash at camp, 213). Sim._rounds_held: the stash's rounds, and the pack's on a run - has_rounds, feed_stack's
+     try-on read and the kit key read it; the firing itself stays the rig's. Smoke checks the fight's try-on.
 8. Weapon sounds still aren't sorted: with a Pattern AR worn, Matt says "it feels like none of the muzzle flashes are
    getting a sound effect attached" - the fight's flashes and the shot sounds out of step, or the rifle's shots
    unvoiced.

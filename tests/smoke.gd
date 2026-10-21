@@ -16768,6 +16768,35 @@ func _try_on_rounds_checks(sim) -> void:
 	sim._cmp_key = 0
 	var in_rig: float = sim._try(cand, sim.damage_total)
 	_check(absf(in_stash - in_rig) <= maxf(0.01, in_rig * 0.001) and in_rig > none, "a shotgun's try-on: %.1f with its incendiaries in the stash, %.1f in the rig, %.1f with none" % [in_stash, in_rig, none])
+	# and in the fight, with the rounds found in the same run - in the pack (21 Oct, Matt: "you still need ammo in the
+	# stash there for it to show as an upgrade"): the pack's rounds count as the stash's would, the Fence shut
+	sim.rig.erase(box)
+	var fence_was: bool = "fence" in sim.unlocked
+	sim.unlocked.erase("fence")
+	if sim.on_mission():
+		sim.extract_now()
+	sim.hp = sim.max_hp()
+	sim.candidates = []
+	for i in range(Data.TIERS.size()):
+		if sim.can_deploy_to(i):
+			sim.deploy(i)
+			break
+	_check(sim.on_mission(), "no site to set off to for the fight's try-on")
+	if not sim.on_mission():
+		sim.load_dict(saved)
+		return
+	sim.advance(1.0)
+	sim._cmp_key = 0
+	var on_run_none: int = sim.compare(cand)
+	var none_run: float = sim._try(cand, sim.damage_total)
+	sim.mission["found"].append(box)
+	sim._cmp_key = 0
+	sim._dry_memo.clear()
+	var in_pack: float = sim._try(cand, sim.damage_total)
+	_check(in_pack > none_run and sim._try(cand, func(): return sim.has_rounds(cand)), "a gun's try-on in the fight doesn't count its rounds in the pack: %.1f with the box in the pack, %.1f without (compare without: %d)" % [in_pack, none_run, on_run_none])
+	sim.extract_now()
+	if fence_was:
+		sim.unlocked.append("fence")
 	sim.load_dict(saved)
 
 

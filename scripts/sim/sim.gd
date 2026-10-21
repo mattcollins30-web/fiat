@@ -2774,10 +2774,19 @@ func has_rounds(gun: Dictionary) -> bool:
 		var type: String = Items.ammo_type(gun)
 		if type in ["", "none"] or Items.free_rounds(gun) or room_open("fence"):
 			return true
-		return rounds_for(gun) > 0 or stash.any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == type)
+		return rounds_for(gun) > 0 or _rounds_held().any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == type)
 	if Items.ammo_type(gun) == "none" or Items.free_rounds(gun):
 		return true                          # a bat never runs dry; the burner takes nothing
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
+
+
+## The rounds a try-on counts as a trip to the rig: the stash's, and on a run the pack's too (21 Oct, Matt's playtest:
+## a gun found with its box in the same run read as a downgrade in the fight, an upgrade once home).
+func _rounds_held() -> Array:
+	var out: Array = stash.filter(func(x): return Items.is_ammo(x))
+	if mission != null:
+		out.append_array(mission.get("found", []).filter(func(x): return Items.is_ammo(x)))
+	return out
 
 
 ## A melee primary: in among them.
@@ -2811,7 +2820,7 @@ func feed_stack(gun: Dictionary) -> Dictionary:
 	var bv := -1
 	# a try-on reads the best grade on hand, the stash's too (20 Oct, Matt: a gun's compare only read right with its
 	# rounds in the rig): has_rounds already weighs it fed from the stash, so its grade comes from there as well
-	for it in (rig + stash if _trying else rig):
+	for it in (rig + _rounds_held() if _trying else rig):
 		if Items.is_ammo(it) and Items.base_of(it)["type"] == t and int(it["rounds"]) > 0:
 			var b: Dictionary = Items.base_of(it)
 			var v: int = int(b.get("value", 0))
@@ -8178,7 +8187,7 @@ func _rounds_on_hand() -> String:
 	if room_open("fence"):
 		return ""
 	var types := {}
-	for it in rig + stash:
+	for it in rig + _rounds_held():          # the pack's too (21 Oct)
 		if Items.is_ammo(it):
 			types[Items.base_of(it)["type"]] = true
 	var k: Array = types.keys()
@@ -8289,8 +8298,8 @@ func _rig_grades() -> Array:
 ## The grades of rounds in the stash, by name (20 Oct): a try-on feeds a gun from them too (feed_stack).
 func _stash_grades() -> Array:
 	var out := {}
-	for it in stash:
-		if Items.is_ammo(it) and int(it["rounds"]) > 0:
+	for it in _rounds_held():                # the stash's, and the pack's on a run (21 Oct)
+		if int(it["rounds"]) > 0:
 			out[str(it["base"])] = true
 	var k: Array = out.keys()
 	k.sort()
