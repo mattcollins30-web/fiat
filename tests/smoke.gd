@@ -9999,7 +9999,7 @@ func _crates_checks(main) -> void:
 		_check(run._pick.visible and run._crates.visible, "a pick hid the crates or the pick panel")
 		run._inv.selected = -1
 	# the floor (13 Oct, Matt): by hand, a search's finds wait on the floor; taken into the pack only if they fit; a
-	# thing ditched lands there with its scrap and comes back without it; the row shows them; a click compares, Take
+	# thing ditched is gone, its scrap paid (21 Oct, Matt: no taking it back); the row shows them; a click compares, Take
 	# takes; "Fill up, then go" picks up what fits; what's left is passed over at the door; the bot takes as it goes
 	_check(sim.by_hand(m) and not sim.floor_items().is_empty(), "a search by hand left nothing on the floor")
 	_check(m["found"].all(func(x): return not m["crates"].any(func(q): return q["finds"].any(func(f): return int(f["id"]) == int(x["id"]) and not Items.stacks(x)))), "a search by hand put a find straight in the pack")
@@ -10020,8 +10020,8 @@ func _crates_checks(main) -> void:
 		var back: Dictionary = m["found"].back()
 		var scrap0: int = int(m.get("scrap", 0))
 		if not Items.is_deeds(back) and sim.ditch(int(back["id"])):
-			_check(sim.floor_items().has(back) and int(m.get("scrap", 0)) >= scrap0, "a ditched thing did not land on the floor")
-			_check(sim.take_floor(int(back["id"])) and m["found"].has(back) and int(m.get("scrap", 0)) == scrap0, "taking a ditched thing back did not give its scrap back: %d, %d" % [int(m.get("scrap", 0)), scrap0])
+			_check(not sim.floor_items().has(back) and not m["found"].has(back) and int(m.get("scrap", 0)) == scrap0 + sim.scrap_of(back), "a ditched thing wasn't destroyed with its scrap paid: on the floor %s, scrap %d from %d" % [str(sim.floor_items().has(back)), int(m.get("scrap", 0)), scrap0])
+			_check(not sim.take_floor(int(back["id"])) and not m["found"].has(back), "a ditched thing could be taken back")
 	# no room: it stays down
 	var hold_cap_pack = sim.equipped["Backpack"]
 	var floor_n: int = sim.floor_items().size()

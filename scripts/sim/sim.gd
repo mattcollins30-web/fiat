@@ -7576,10 +7576,8 @@ func ditch(id: int) -> bool:
 				var bits: int = scrap_of(it)
 				mission["scrap"] = int(mission.get("scrap", 0)) + bits     # ditched for scrap (34): what comes home of it
 				log_event("Ditched: %s%s" % [it["base"].to_lower(), (", %d scrap" % bits) if bits > 0 else ""])
-				# onto the floor (13 Oct): it can be taken back while you're there, the scrap with it
-				it["ditch_scrap"] = bits
-				mission["floor"] = mission.get("floor", [])
-				mission["floor"].append(it)
+				# gone (21 Oct, Matt's playtest: it lay on the floor to take back, "drop, get scrap and pick up again";
+				# a ditched piece is destroyed once its scrap's paid)
 			return true
 	return false
 
@@ -7631,13 +7629,6 @@ func take_floor(id: int) -> bool:
 		var it: Dictionary = fl[k]
 		if not floor_fits(it):
 			return false
-		if it.has("ditch_scrap") and Items.stacks(it) and pack_used(mission) + Items.size(it) > capacity():
-			var room := 0
-			for f in mission["found"]:
-				if Items.same_stack(f, it):
-					room += maxi(0, Items.stack_cap(f) - Items.stack_size(f))
-			if room < Items.stack_size(it):
-				return false                      # a ditched stack comes back whole or not at all: its scrap with it (the review)
 		if Items.stacks(it):
 			for f in mission["found"]:
 				if Items.same_stack(f, it) and Items.stack_size(f) < Items.stack_cap(f):
@@ -7646,22 +7637,14 @@ func take_floor(id: int) -> bool:
 					Items.set_stack(it, Items.stack_size(it) - moved)
 			if Items.stack_size(it) <= 0:
 				fl.remove_at(k)
-				_untake_scrap(it)
 				return true
 			if pack_used(mission) + Items.size(it) > capacity():
 				return true                       # some joined; the rest stays on the floor
 		fl.remove_at(k)
 		mission["found"].append(it)
-		_untake_scrap(it)
 		_read(it)
 		return true
 	return false
-
-
-func _untake_scrap(it: Dictionary) -> void:
-	if it.has("ditch_scrap"):
-		mission["scrap"] = maxi(0, int(mission.get("scrap", 0)) - int(it["ditch_scrap"]))
-		it.erase("ditch_scrap")
 
 
 ## Everything on the floor that fits, the dearest first: "Fill up, then go" picks up what was left down.
@@ -7670,7 +7653,7 @@ func take_all() -> int:
 	var fl: Array = floor_items().duplicate()
 	fl.sort_custom(func(a, b): return int(a["value"]) > int(b["value"]))
 	for it in fl:
-		if not it.has("ditch_scrap") and take_floor(int(it["id"])):
+		if take_floor(int(it["id"])):
 			n += 1
 	return n
 
@@ -7762,7 +7745,7 @@ func _extract() -> void:
 		m["ghost_pending"] = false
 		_clear(m, m["t"])                     # Ghost: a full pack brought home is the clear (the site as deployed to, its depth with it)
 		log_event("Ghost: the pack's full, and %s counts as cleared" % Words.mid(t["name"]))
-	m["left"] = int(m["left"]) + m.get("floor", []).filter(func(x): return not x.has("ditch_scrap")).size()     # what was left on the floor: passed over
+	m["left"] = int(m["left"]) + m.get("floor", []).size()     # what was left on the floor: passed over
 	m["cash"] += _affix_sum("cash_per_cell") * pack_used(m) * inflation()
 	if has_node("cap_the_lot") and pack_used(m) >= capacity() and not timed_out:
 		m["cash"] *= Data.FX["node/cap_the_lot"]                      # The lot: a full pack pays double

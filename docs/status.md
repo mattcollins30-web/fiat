@@ -6148,6 +6148,10 @@ difficulty and length, the endgame placeholders.
 5. A piece ditched in a fight gives its scrap (as meant), then lies on the floor and can be picked up again at the
    search: drop, scrap, pick it up (a second ditch gives no scrap, but it's a gap). Matt: a ditched piece is gone
    once its scrap's paid - destroyed, not left on the floor.
+   - Done: sim.ditch pays the scrap and the piece is gone; the floor's take-back of a ditched piece (and its scrap
+     coming off again) is out, the ditch sound off the run's ditched count. Smoke checks it. For Matt (the review):
+     a mythic ditched by hand is now gone for its scrap too - the "never lost" design doesn't cover a ditch; refuse
+     it, or leave it to the player?
 6. Art: the Scrapper's figure and portrait regenerated (Matt: "just awful"), and the Poacher's figure and portrait
    too - he reads too much like the Gamekeeper. And every skill tree node gets its own art (Matt: "the placeholder
    glyphs have served their purpose"). And the fight's cover walls: they still show heavy duplication (a tile

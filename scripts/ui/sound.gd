@@ -521,7 +521,7 @@ func _look(sim, m: Dictionary) -> Dictionary:
 		"meds": int(m.get("meds_used", 0)), "way_out": bool(m.get("way_out", false)), "them": them,
 		"searches": int(m.get("searches", 0)), "crate_i": int(m.get("crate_i", 0)), "crates": cs.size(),
 		"passed": cs.filter(func(c): return c.get("passed", false)).size(), "done": sim.crates_done(m) if m.has("crates") else false,
-		"floor": m.get("floor", []).map(func(it): return it["id"]), "ditched": m.get("floor", []).filter(func(it): return it.has("ditch_scrap")).map(func(it): return it["id"]),
+		"floor": m.get("floor", []).map(func(it): return it["id"]), "ditched": int(m.get("ditched", 0)),
 		"found": m["found"].map(func(it): return it["id"]), "thrown": int(m.get("thrown", 0))}
 
 
@@ -648,7 +648,7 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 	# the floor: what's come up, by its worth; taken into the pack; ditched onto it
 	var floor_items: Array = m.get("floor", [])
 	for it in floor_items:
-		if not (it["id"] in _seen["floor"]) and not it.has("ditch_scrap"):
+		if not (it["id"] in _seen["floor"]):
 			if it.get("mythic", false):
 				find_mythic()
 			else:
@@ -657,10 +657,8 @@ func _search(sim, m: Dictionary, now: Dictionary) -> void:
 		if id in _seen["floor"] and not (id in _seen["found"]):
 			cue("take")
 			break
-	for id in now["ditched"]:
-		if not (id in _seen["ditched"]):
-			cue("ditch")
-			break
+	if now["ditched"] > int(_seen["ditched"]):
+		cue("ditch")
 	# a rare off a kill, straight into the pack
 	for it in m["found"]:
 		if not (it["id"] in _seen["found"]) and not (it["id"] in _seen["floor"]) and (int(it.get("rarity", 0)) >= 2 or it.has("unique") or it.has("set")):
