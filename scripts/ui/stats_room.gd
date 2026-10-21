@@ -286,12 +286,15 @@ static func signed_pct(v: float) -> String:
 func _show_runner(lv: int) -> void:
 	var c: Dictionary = cards["runner"]
 	_headline(c, "%d" % lv, "level" if sim.paragon() == 0 else "level · +%d paragon" % sim.paragon())
-	var shown: int = lv + Data.paragon_for_xp(sim.xp)        # this runner's own levels: the banked paragon is another yard's XP (the review)
-	var this_xp := Data.xp_for_level(shown)
-	var next_xp := Data.xp_for_level(shown + 1)
-	var fill: float = clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0)
-	c["fill"].size.x = roundf(c["track"].size.x * fill)
-	c["xp"].text = "%s / %s XP to level %d" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp), shown + 1]
+	if lv >= Data.MAX_LEVEL:                 # at the cap: the crew's paragon (21 Oct)
+		var pg: Array = sim.paragon_progress()
+		c["fill"].size.x = roundf(c["track"].size.x * clampf(pg[0] / maxf(1.0, pg[1]), 0.0, 1.0))
+		c["xp"].text = "%s / %s XP to paragon %d" % [Fmt.num(pg[0]), Fmt.num(pg[1]), sim.paragon() + 1]
+	else:
+		var this_xp := Data.xp_for_level(lv)
+		var next_xp := Data.xp_for_level(lv + 1)
+		c["fill"].size.x = roundf(c["track"].size.x * clampf((sim.xp - this_xp) / maxf(1.0, next_xp - this_xp), 0.0, 1.0))
+		c["xp"].text = "%s / %s XP to level %d" % [Fmt.num(sim.xp - this_xp), Fmt.num(next_xp - this_xp), lv + 1]
 	var who := []
 	if not sim.wounds.is_empty():
 		who.append([sim.wound_words(), "bad"])

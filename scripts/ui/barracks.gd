@@ -450,7 +450,7 @@ func _build_pages() -> void:
 		b.text = ""
 		b.focus_mode = Control.FOCUS_ALL
 		b.visible = false
-		b.pressed.connect(_turn_page)
+		b.pressed.connect(_on_cell.bind(k))
 		add_child(b)
 		var c := {"button": b, "lines": []}
 		c["name"] = UI.label(b, Rect2(PAD, 2, PAGE_W - 2 * PAD, NAME_H - 2), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
@@ -656,18 +656,23 @@ func also_names() -> Array:
 	for t in sim.trees():
 		if not (t["name"] in lanes_now) and not (t["name"] in out):
 			out.append(t["name"])
+	if sim.paragon_xp > 0.0:
+		out.append(PARAGON)                  # once a class has gone past the cap (21 Oct, the crew)
 	out.append("The drawer")
 	out.append("The mantelpiece")
 	out.append("The wireless")
 	return out
 
 
+const PARAGON := "Paragon"
 static func _is_pages(nm: String) -> bool:
-	return nm == "The drawer" or nm == "The mantelpiece" or nm == "The wireless"
+	return nm == "The drawer" or nm == "The mantelpiece" or nm == "The wireless" or nm == PARAGON
 
 
 ## The pages over the lanes, by the Also chip's name.
 func _branch_for(nm: String) -> Dictionary:
+	if nm == PARAGON:
+		return _paragon_branch()
 	if nm == "The drawer":
 		return _drawer_branch()
 	if nm == "The wireless":
@@ -682,7 +687,7 @@ func show_state(s) -> void:
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), "", _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size())]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+		sim.gun_type(), sim.level(), "", _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.paragon_board) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -976,6 +981,9 @@ func _show_also() -> void:
 			words = "%s · %s" % [nm, t["element"]]
 		elif t.get("class", "") != "":
 			words = "%s · %s" % [nm, t["class"].to_lower()]
+		elif nm == PARAGON:
+			words = "Paragon %d · %d free" % [sim.paragon(), sim.paragon_free()] if sim.paragon_free() > 0 else "Paragon %d" % sim.paragon()
+			short = "Paragon %d" % sim.paragon()
 		elif _is_pages(nm):
 			# the drawer and the shelf carry their counts, and the page when one's open over the lanes
 			var br0: Dictionary = _branch_for(nm)
@@ -1059,6 +1067,16 @@ func _paper_gap(nm: String) -> String:
 		return Words.BOOK["gap_site"] % Words.mid(site)
 	var d: int = int(Items.base_named(Data.PAPER, nm).get("depth", 0))
 	return Words.BOOK["gap_deep"] % sim.tier_level(d) if d > 0 else Words.BOOK["gap"]     # a paper's gate is a Barracks-equivalent depth: its level (18 Oct: levels on screen)
+
+
+## The paragon board (21 Oct, the crew): a card a row, its points and what they give; a press puts a free point on it.
+func _paragon_branch() -> Dictionary:
+	var nodes: Array = []
+	for r in Data.PARAGON_BOARD:
+		var n: int = sim.paragon_pts(str(r["key"]))
+		var got: String = ("%d point%s · +%s%%" % [n, "" if n == 1 else "s", Fmt.num(sim.paragon_pct(str(r["key"])))]) if n > 0 else "No points"
+		nodes.append({"name": "%s · %s" % [r["name"], got], "words": "%s%s" % [r["words"], " · press for a point" if sim.paragon_free() > 0 else ""], "key": str(r["key"]), "gap": n == 0})
+	return {"name": PARAGON, "drawer": true, "nodes": nodes, "pages": 1, "page": 0, "found": sim.paragon(), "total": sim.paragon_free(), "lines": 2, "row_h": NAME_H + 2 * WORD_H + 4, "rows": 2}
 
 
 ## The radio (12 Oct, the lore pass): every line heard, in the order heard, under its voice.
@@ -1277,6 +1295,12 @@ func _show_panel() -> void:
 		_train.text = "Swap to the %s" % _armed
 		_train.disabled = sim.on_mission()
 		_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+	elif selected == "" and alt == PARAGON:
+		var pg: Array = sim.paragon_progress()
+		_title.text = "Paragon %d" % sim.paragon() + (" · %d point%s to spend" % [sim.paragon_free(), "" if sim.paragon_free() == 1 else "s"] if sim.paragon_free() > 0 else "")
+		after_title.call()
+		UI.fit(_words, ["%s of %s XP to paragon %d · any class past level %d earns it, and every class reads every point" % [Fmt.num(pg[0]), Fmt.num(pg[1]), sim.paragon() + 1, Data.MAX_LEVEL],
+			"%s of %s XP to paragon %d" % [Fmt.num(pg[0]), Fmt.num(pg[1]), sim.paragon() + 1], ""])
 	elif selected == "":
 		var cd: Dictionary = sim.class_data()
 		if cd.is_empty():
@@ -1345,8 +1369,12 @@ func _show_panel() -> void:
 			_train.text = "Train (%d point%s)" % [cost, "" if cost == 1 else "s"]
 			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
-	_respec.text = "Reset trees for %s" % Fmt.money(sim.respec_cost())
-	_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
+	if alt == PARAGON and selected == "":
+		_respec.text = "Reset the board for %s" % Fmt.money(sim.paragon_reset_cost())
+		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
+	else:
+		_respec.text = "Reset trees for %s" % Fmt.money(sim.respec_cost())
+		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
 	var x: float = Pal.GRID_W - PAD
 	x -= _respec.size.x
@@ -1441,9 +1469,23 @@ func _pick_also_at(k: int) -> void:
 func pick_also(nm: String) -> void:
 	_armed = ""
 	alt = "" if alt == nm else nm
+	if alt == PARAGON:
+		selected = ""                          # the panel is the board's: its level, its XP, its reset
 	drawer_page = 0
 	_shown = ""
 	show_state(sim)
+
+
+## A card over the lanes: on the board a point on its row; on the pages the next page.
+func _on_cell(k: int) -> void:
+	if alt == PARAGON:
+		var nodes: Array = _paragon_branch()["nodes"]
+		if k < nodes.size() and sim.paragon_add(str(nodes[k]["key"])):
+			acted.emit()
+		_shown = ""
+		show_state(sim)
+		return
+	_turn_page()
 
 
 func _turn_page() -> void:
@@ -1485,7 +1527,7 @@ func _on_train() -> void:
 
 func _on_respec() -> void:
 	_armed = ""
-	if sim.respec():
+	if (sim.paragon_reset() if alt == PARAGON and selected == "" else sim.respec()):
 		acted.emit()
 	show_state(sim)
 

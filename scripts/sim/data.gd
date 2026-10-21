@@ -1344,7 +1344,21 @@ const CONVOY_DEPTH := 8           # back from 10 (12 Oct, the lorry-fix read: fi
 const CONVOY_HP := 0.55           # 0.25 to 0.4 to 0.7 to 0.55 (12 Oct: at 0.7/1.0 the fire Drifter and the shock Scrapper never took it and the Paramedics still did at 1.8-3 h - the halfway, for the playtest); the convoy's heads at this much of their HP each and CONVOY_DPS of their fire: they come light and tired, the crews left with the load (the probe, 7 Oct: at 35%/full fire a Poacher read 0.80 and a stronger Doorman 0.00 - the Poacher's first-of-the-gang bonus counts on every head; at 25%/0.75 both read 0.93-1.00)
 const CONVOY_DPS := 0.85          # 0.75 to 1.0 to 0.85 (12 Oct, with CONVOY_HP)
 const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, the moves in 16 h fell from 9-20 to 1-9 - the ×1.25 outran a depth's ×1.14 and each leg came easier than the last); the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
-const PARAGON_PCT := 2.0          # past MAX_LEVEL: damage and HP +this% a paragon level, uncapped, on the same XP curve
+## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
+const PARAGON_BOARD := [
+	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point"},
+	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point"},
+	{"key": "resists", "name": "Resists", "pct": 1.0, "words": "+1% to every resist a point, to the cap"},
+	{"key": "find", "name": "Find", "pct": 3.0, "words": "+3% loot quality a point"},
+	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point"},
+]
+
+
+static func paragon_row(key: String) -> Dictionary:
+	for r in PARAGON_BOARD:
+		if r["key"] == key:
+			return r
+	return {}
 const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an item level past ILVL_FROM: the deep drop beats the shallow one of the same tier
 const ILVL_FROM := 15
 const CONVOY_TIER := 9             # the Services

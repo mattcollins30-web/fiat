@@ -824,6 +824,16 @@ func _train_tree(sim) -> void:
 				joined.append(j["tree"])
 		var halves: Array = order.filter(func(t): return t["name"] in joined)
 		order = mine + halves + order.filter(func(t): return not t.has("element") and not (t["name"] in joined))
+	# the paragon board (21 Oct, the crew): the lowest resist up while it's short of the cap, a point in three; damage and HP
+	# the rest, in turn. Find and tins the bot leaves (a player's call)
+	while sim.paragon_free() > 0:
+		var low := Data.RESIST_CAP
+		for ty in Data.ELEMENTS:
+			low = minf(low, sim.resist_raw(ty))
+		var n: int = sim.paragon_spent()
+		var key: String = "resists" if low < Data.RESIST_CAP and n % 3 == 2 else ("damage" if sim.paragon_pts("damage") <= sim.paragon_pts("hp") else "hp")
+		if not sim.paragon_add(key):
+			break
 	# the Pitch's tree first, from its own pool (21 Oct: the camp's points, apart from the class's)
 	var pitch_t: Dictionary = Data.tree_named(Data.COMMON_TREE)
 	while sim.pitch_free() > 0:

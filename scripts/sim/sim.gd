@@ -237,11 +237,80 @@ var _level_xp := -1.0
 var _level_at := 1
 
 
-## Levels past the cap (7 Oct): the same curve, +PARAGON_PCT damage and HP each, no top. The Yard's, not the runner's:
-## a move banks the runner's paragon levels and the next runner adds to them (the eighteenth read: a fresh yard's runner
-## at level 44 read the stations at 0.00 that the last one held at 1.00, with every paragon level gone).
+## The paragon board (21 Oct, the crew): XP any class earns past MAX_LEVEL is the crew's, on the same curve past the cap;
+## each paragon level a point on the board (damage, HP, resists, find, tins), every class reading every point. No top; a
+## class's death keeps it. Taken back at the Barracks for tins, as a tree's points are.
+var paragon_xp := 0.0
+var paragon_board := {}
+
+
 func paragon() -> int:
-	return Data.paragon_for_xp(xp)
+	return Data.paragon_for_xp(Data.xp_for_level(Data.MAX_LEVEL) + paragon_xp)
+
+
+## The XP into the next paragon level, and what that level takes.
+func paragon_progress() -> Array:
+	var cap := Data.xp_for_level(Data.MAX_LEVEL)
+	var p := paragon()
+	var lo := Data.xp_for_level(Data.MAX_LEVEL + p) - cap
+	var hi := Data.xp_for_level(Data.MAX_LEVEL + p + 1) - cap
+	return [paragon_xp - lo, hi - lo]
+
+
+func paragon_pts(key: String) -> int:
+	return int(paragon_board.get(key, 0))
+
+
+func paragon_spent() -> int:
+	var n := 0
+	for k in paragon_board:
+		n += int(paragon_board[k])
+	return n
+
+
+func paragon_free() -> int:
+	return maxi(0, paragon() - paragon_spent())
+
+
+## A board row's figure as a multiplier (damage, HP, tins) or a percent (resists, find).
+func paragon_pct(key: String) -> float:
+	return float(Data.paragon_row(key).get("pct", 0.0)) * paragon_pts(key)
+
+
+func paragon_mult(key: String) -> float:
+	return 1.0 + paragon_pct(key) / 100.0
+
+
+func paragon_add(key: String) -> bool:
+	if paragon_free() <= 0 or Data.paragon_row(key).is_empty():
+		return false
+	_dry_memo.clear()                     # the memos read the board, as the tree
+	paragon_board[key] = paragon_pts(key) + 1
+	chron("paragon", {"key": key, "points": paragon_pts(key)})
+	return true
+
+
+func paragon_reset_cost() -> int:
+	return _inf(paragon_spent() * Data.RESPEC_CASH)
+
+
+func paragon_reset() -> bool:
+	if paragon_spent() == 0 or cash < paragon_reset_cost():
+		return false
+	_dry_memo.clear()
+	var paid := paragon_reset_cost()
+	cash -= paid
+	chron("respec", {"cost": paid, "points": paragon_spent(), "paragon": true})
+	paragon_board = {}
+	log_event("Paragon reset: the points are free to spend again")
+	return true
+
+
+## XP in: the runner's to the cap, the rest the crew's paragon.
+func _gain_xp(g: float) -> void:
+	var room := maxf(0.0, Data.xp_for_level(Data.MAX_LEVEL) - xp)
+	xp += minf(g, room)
+	paragon_xp += g - minf(g, room)
 
 
 ## The Yard's prestige: the lorries beaten, each LORRY_MULT on damage and HP, kept across moves.
@@ -250,9 +319,9 @@ func lorry_mult() -> float:
 	return 1.0 if lorry_mult_off else pow(Data.LORRY_MULT, lorries)
 
 
-## What grows without end: the paragon levels and the lorries, as one multiplier on damage and HP.
-func growth_mult() -> float:
-	return (1.0 + Data.PARAGON_PCT * paragon() / 100.0) * lorry_mult()
+## What grows without end: the paragon board's damage or HP, and the lorries.
+func growth_mult(key := "damage") -> float:
+	return paragon_mult(key) * lorry_mult()
 
 
 func max_hp() -> float:
@@ -264,7 +333,7 @@ func _max_hp_raw() -> float:
 	for s in Data.SLOTS:
 		if equipped[s] != null:
 			m += Items.affix_total(equipped[s], "hp")
-	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult() * (1.0 + (Data.FX["yard/theatre"] if yard_has("theatre") else 0.0) + Data.FX["yard_rank/clinic"] * yard_rank("clinic"))
+	return m * cm("hp") * trait_mult("hp") * wound_mult("hp") * growth_mult("hp") * (1.0 + (Data.FX["yard/theatre"] if yard_has("theatre") else 0.0) + Data.FX["yard_rank/clinic"] * yard_rank("clinic"))
 
 
 ## Damage a second: the primary, a third of the secondary, the level, the affixes.
@@ -681,6 +750,7 @@ func _resist_raw_pct(ty: String) -> float:
 	if ty == "physical" or (ty == "fire" and has_rule("vicars_thermos")):
 		return 0.0
 	var r: float = _affix_sum("%s_res" % ty) + _affix_sum("all_res") + tree_sum("%s_res" % ty) + tree_sum("all_res") + _affix_sum("%s_proofed" % ty) + (0.0 if has_rule("blue_plaque") else base_res(ty))
+	r += clampf(Data.RESIST_CAP - r, 0.0, paragon_pct("resists"))     # the board's points to the cap, never past it into over_cap's damage (the review)
 	if mission != null:
 		r -= float(mission["t"].get("soaked", 0.0)) * 100.0     # the Water cannon: your resists down for the run
 	return r
@@ -830,7 +900,7 @@ func loot_bonus() -> float:
 ## Rarer finds: the tree's and the class's, as a bonus the roll reads.
 func rarity_bonus() -> float:
 	var r := tree_sum("rarity") / 100.0 + trait_add("rarity") + charm_find() / 100.0 \
-		+ yard_quality() / 100.0       # the dog knows what's worth carrying (27)
+		+ yard_quality() / 100.0 + paragon_pct("find") / 100.0       # the dog knows what's worth carrying (27); the paragon board's find
 	return r * (Data.FX["rule/bookies_pencil.rarity"] if has_rule("bookies_pencil") else 1.0)
 
 
@@ -5495,7 +5565,7 @@ func signal_odds_class(k: int, name: String, now := false) -> Array:
 	if not roster.has(name) or mission != null:
 		return [0.0, false]
 	var sg := signal_at(k)
-	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_pitch(str(id)))])]     # the signal as crafted, and what the camp gives everyone
+	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_pitch(str(id))), paragon_board])]     # the signal as crafted, and what the camp gives everyone
 	if now and _crew_now.has(ck):
 		return _crew_now[ck]                 # read once a frame by the shell's budget; the screens take it from here
 	var h := _read_as(name)
@@ -5772,7 +5842,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids()]
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(paragon_board)]     # the board: a resist point moves no bucket (the review)
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -6865,7 +6935,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 	var gain: float = t["xp"] * (Data.FX["node/hit_and_run.kill_pay"] if has_node("hit_and_run") else 1.0) * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	m["xp"] += gain
 	var before := level()
-	xp += gain
+	_gain_xp(gain)
 	_earn_points(before)
 	var pay := 1.0 if not has_node("hit_and_run") else 1.5
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * (t["cash"] * rng.randf_range(0.5, 1.5) * (1.0 + (tree_sum("cash_pct") + charm_cash()) / 100.0) + _affix_sum("cash_per_kill")) * inflation() * pay * (Data.FX["rule/bookies_pencil.cash"] if has_rule("bookies_pencil") else 1.0) * (Data.FX["set/bank.kill_cash"] if has_set_rule("bank") else 1.0) \
@@ -6902,7 +6972,7 @@ func _boss_down(m: Dictionary, t: Dictionary) -> void:
 		return
 	m["xp"] += t["xp"] * 10.0
 	var before := level()
-	xp += t["xp"] * 10.0
+	_gain_xp(t["xp"] * 10.0)
 	_earn_points(before)
 	m["cash"] += (0.0 if t.get("no_kill_cash", false) else 1.0) * t["cash"] * 10.0 * inflation()     # the Radio's Overdrawn: no cash off the head either
 	m["notes"] = int(m.get("notes", 0)) + int(round(Data.NOTES_BOSS * int(t["depth"]) * (1.0 + Data.FX["atlas/bounties"] * atlas_rank("bounties"))))
@@ -7222,7 +7292,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 	var bonus: float = t["xp"] * t["pool"] * Data.CLEAR_BONUS * (Data.FX["node/stand"] if has_node("stand") else 1.0) * (Data.MYTHIC_PAY if has_rule("freedom") else 1.0)
 	m["xp"] += bonus
 	var before := level()
-	xp += bonus
+	_gain_xp(bonus)
 	_earn_points(before)
 	best_tier = maxi(best_tier, mini(Data.TIERS.size() - 1, m["tier"] + 1))
 	var cd: int = int(depth[m["tier"]])     # the site's own depth: a signal's t["depth"] is its level's on the Barracks (D3), not this site's (D14 review)
@@ -7648,6 +7718,7 @@ func _extract() -> void:
 		m["cash"] *= Data.FX["node/cap_the_lot"]                      # The lot: a full pack pays double
 	if has_rule("issuers_robes"):
 		m["cash"] *= 1.0 + town_worth() / 100.0                      # the Issuer's Robes: +1% a point of the town's worth
+	m["cash"] *= paragon_mult("tins")                                # the paragon board's tins
 	m["cash"] += mint_tins()                                         # the mint (18 Oct): the town's worth pays on every run home
 	_bank_materials(m)
 	_earn(float(m["cash"]))
@@ -8165,7 +8236,7 @@ var _cmp_cache := {}                 # hash of the piece -> its verdict, while t
 func _kit_key() -> int:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return hash([equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon(), hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	return hash([equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon_board, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()])     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -9287,7 +9358,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "best_dig": best_dig.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -9497,6 +9568,10 @@ func load_dict(d: Dictionary) -> void:
 	deeds_fate = str(d.get("deeds_fate", d.get("ending", "")))     # the old saves' name for it
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
+	paragon_xp = float(d.get("paragon_xp", 0.0))
+	paragon_board = {}
+	for k in d.get("paragon_board", {}):
+		paragon_board[str(k)] = int(d["paragon_board"][k])     # JSON reads the counts as floats
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	signals = d.get("signals", []).duplicate(true)
 	for sg in signals:

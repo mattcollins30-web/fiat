@@ -6027,3 +6027,11 @@ difficulty and length, the endgame placeholders.
 - Matt (21 Oct), for step 6: all gear scales, uniques, mythics and sets included (sets went useless fast). And one
   "broken" build a class - gear and points that combine into an infinite or runaway scale, outside the balance
   passes as mythics are, there for theorycrafters to find. His playtests: one baseline build, one broken build.
+- Done (step 5): the paragon board. XP past level 50, any class's, goes into the crew's pool (the runner's stops at the
+  cap); each paragon level is a point on the board - damage +2%, HP +2%, every resist +1 to the cap (never past it),
+  find +3%, tins +3% off a run - every class reading every point, a death keeping it. The Barracks' Also row has a
+  Paragon chip once a class has gone past the cap: five cards over the lanes, a press a point; the panel says the
+  level, the XP to the next, and "Reset the board" for tins as the trees' reset. The top bar and the stats sheet
+  show the paragon's progress at the cap. The bot puts a point in three on resists while one is under the cap,
+  damage and HP the rest; find and tins it leaves. The reviewer's two: the map's odds now re-read on a board change
+  (a resist point moved nothing in their key), and the resists stop at the cap rather than spill into over-cap damage.

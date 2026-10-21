@@ -2754,7 +2754,7 @@ func _element_checks(main) -> void:
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
 		bk.also_button(name).pressed.emit()
 		_check_fit(main, "Caravan (also: %s)" % name)
-		if name == "The drawer" or name == "The mantelpiece" or name == "The wireless":
+		if bk._is_pages(name):
 			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
 		else:
 			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
@@ -11992,14 +11992,74 @@ func _growth_checks(main) -> void:
 	var hp50: float = sim.max_hp()
 	var dps50: float = sim.dps()
 	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 0 and is_equal_approx(sim.growth_mult(), 1.0), "at the cap the growth reads %.2f with %d paragon" % [sim.growth_mult(), sim.paragon()])
-	sim.xp = Data.xp_for_level(Data.MAX_LEVEL + 10)
-	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 10, "ten levels past the cap read level %d, paragon %d" % [sim.level(), sim.paragon()])
-	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + Data.PARAGON_PCT * 10.0 / 100.0), "ten paragon levels did not pay: hp ×%.2f dps ×%.2f" % [sim.max_hp() / hp50, sim.dps() / dps50])
+	sim.paragon_xp = 0.0
+	sim.paragon_board = {}
+	# the paragon board (21 Oct, the crew): XP past the cap is the crew's; a level a point, nothing paid until it's spent
+	sim._gain_xp(Data.xp_for_level(Data.MAX_LEVEL + 10) - Data.xp_for_level(Data.MAX_LEVEL))
+	_check(sim.level() == Data.MAX_LEVEL and is_equal_approx(sim.xp, Data.xp_for_level(Data.MAX_LEVEL)) and sim.paragon() == 10 and sim.paragon_free() == 10, "ten levels past the cap read level %d, paragon %d, %d free, the runner's XP %.0f" % [sim.level(), sim.paragon(), sim.paragon_free(), sim.xp])
+	_check(is_equal_approx(sim.max_hp(), hp50) and is_equal_approx(sim.dps(), dps50), "paragon levels paid with no point spent: hp ×%.2f" % (sim.max_hp() / hp50))
+	for k in range(6):
+		sim.paragon_add("damage")
+	for k in range(4):
+		sim.paragon_add("hp")
+	var pct_d: float = float(Data.paragon_row("damage")["pct"])
+	var pct_h: float = float(Data.paragon_row("hp")["pct"])
+	_check(not sim.paragon_add("find") and sim.paragon_free() == 0, "a point past the paragon levels went on the board")
+	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + pct_h * 4.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + pct_d * 6.0 / 100.0), "the board's points did not pay: hp ×%.3f dps ×%.3f" % [sim.max_hp() / hp50, sim.dps() / dps50])
+	var pg: Array = sim.paragon_progress()
+	_check(is_equal_approx(pg[0], 0.0) and pg[1] > 0.0, "the next paragon level reads %s" % str(pg))
+	# resists and find, and a reset for tins: the points free again
+	var fire0: float = sim.resist_raw("fire")
+	var find0: float = sim.rarity_bonus()
+	sim.cash = 1e9
+	var cost: int = sim.paragon_reset_cost()
+	_check(cost > 0 and sim.paragon_reset() and sim.paragon_free() == 10 and is_equal_approx(sim.cash, 1e9 - cost), "the board's reset: %d free, cost %d" % [sim.paragon_free(), cost])
+	for k in range(3):
+		sim.paragon_add("resists")
+	for k in range(2):
+		sim.paragon_add("find")
+	_check(is_equal_approx(sim.resist_raw("fire") - fire0, 3.0 * float(Data.paragon_row("resists")["pct"])) and is_equal_approx(sim.rarity_bonus() - find0, 2.0 * float(Data.paragon_row("find")["pct"]) / 100.0), "resists +%.1f and find +%.3f off the board" % [sim.resist_raw("fire") - fire0, sim.rarity_bonus() - find0])
+	# the crew's, saved with the camp, not a runner's
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	var back = Sim.new()
+	back.load_dict(d)
+	_check(back.paragon() == 10 and back.paragon_pts("resists") == 3 and typeof(back.paragon_board["find"]) == TYPE_INT, "the board did not survive a save: %s" % str(back.paragon_board))
+	# a resist point re-reads the odds (the review: it moves no bucket in their key); the board's resists stop at the cap
+	var key0: Array = sim._odds_key(0)
+	sim.paragon_add("resists")
+	sim._key_memo = []
+	_check(sim._odds_key(0) != key0, "a resist point on the board left the odds' key as it was")
+	var over0: float = sim.over_cap("fire")
+	sim.paragon_board["resists"] = 500
+	sim._dry_memo.clear()
+	_check(is_equal_approx(sim.resist_raw("fire"), maxf(fire0, Data.RESIST_CAP)) and is_equal_approx(sim.over_cap("fire"), over0), "the board's resists went past the cap: %.1f, over the cap %.1f from %.1f" % [sim.resist_raw("fire"), sim.over_cap("fire"), over0])
+	# the Barracks: a chip once past the cap, the board over the lanes, a card pressed a point
+	sim.paragon_board = {}
+	sim._dry_memo.clear()
+	main.show_room(main.BARRACKS)
+	var bk = main._barracks
+	_check(bk.also_names().has(bk.PARAGON) and bk.also_button(bk.PARAGON) != null, "the paragon board is not in the Also row: %s" % str(bk.also_names()))
+	bk.pick_also(bk.PARAGON)
+	main.refresh()
+	_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible and bk._cells[Data.PARAGON_BOARD.size() - 1]["button"].visible and not bk._cells[Data.PARAGON_BOARD.size()]["button"].visible, "the board is not a card a row over the lanes")
+	_check(bk.also_button(bk.PARAGON).text.contains("10 free") and bk._title.text.contains("10 points to spend"), "the board's chip and title do not say the points: '%s' / '%s'" % [bk.also_button(bk.PARAGON).text, bk._title.text])
+	_check_fit(main, "Caravan (the paragon board)")
+	bk._cells[0]["button"].pressed.emit()
+	main.refresh()
+	_check(sim.paragon_pts(str(Data.PARAGON_BOARD[0]["key"])) == 1 and bk._cells[0]["name"].text.contains("1 point"), "a card pressed did not put a point on its row: '%s'" % bk._cells[0]["name"].text)
+	_check(bk._respec.text.begins_with("Reset the board") and not bk._respec.disabled, "the board's reset button reads '%s'" % bk._respec.text)
+	bk._on_respec()
+	_check(sim.paragon_spent() == 0, "the board's reset button did not reset it")
+	bk.pick_also(bk.PARAGON)
+	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 10) - Data.xp_for_level(Data.MAX_LEVEL)
 	_check(Data.xp_for_level(Data.MAX_LEVEL + 11) > Data.xp_for_level(Data.MAX_LEVEL + 10) and Data.xp_for_level(Data.MAX_LEVEL + 10) > Data.xp_for_level(Data.MAX_LEVEL), "the XP curve stops at the cap")
 	main.refresh()
 	_check(main._top_labels["level"].text == "%d +10" % Data.MAX_LEVEL and main._top_labels["xp"].text.contains(" / "), "the top bar does not say the paragon: '%s' / '%s'" % [main._top_labels["level"].text, main._top_labels["xp"].text])   # the figure with LEVEL beside it since the sheet (8 Oct)
 	_check_fit(main, "Top bar (paragon)")
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
+	sim.paragon_xp = 0.0
+	sim.paragon_board = {}
+	sim._dry_memo.clear()
 	sim.lorries = 3
 	_check(is_equal_approx(sim.max_hp() / hp50, pow(Data.LORRY_MULT, 3)) and is_equal_approx(sim.dps() / dps50, pow(Data.LORRY_MULT, 3)), "three lorries did not multiply the Pitch: hp ×%.2f" % (sim.max_hp() / hp50))
 	# an affix's value by item level: nothing to ILVL_FROM, a fifth more at five past, the same tier
