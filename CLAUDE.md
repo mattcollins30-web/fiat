@@ -51,6 +51,21 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - Copy or read `pixellab_secret.txt` or `tools/elevenlabs_secret.txt` anywhere off Matt's machine, or commit them.
 - Spend credits on generated art before the slice reads right with test art and the manifest is agreed.
 
+## Design stances (Matt's, for any balance or design call)
+
+- Infinite scaling is the point: players should end up having and dealing millions of HP and damage (7 Oct). A
+  balance change sets the pace of the climb, never a ceiling on it.
+- Player luck is the point of the itemisation: don't retune numbers off one lucky run; read fresh saves first (12 Oct).
+- The bot plays the campaign the way a person does (12 Oct).
+- The campaign grind is intended - it's an ARPG (13 Oct); ARPGs live and die by their length (14 Oct).
+- Fiat is an auto-battler ARPG: active play; the away settle is the only idle system (11 Oct; auto-run removed 21 Oct).
+- Balance is judged on element builds; plain builds only have to finish (11 Oct).
+
+## After a compaction or in a new chat
+
+Re-read this file, then the newest entries in docs/status.md, before carrying on. A compacted summary has dropped
+standing rules before (21 Oct: balance reads were run in the cloud against the rule above).
+
 ## Things to know
 
 - Voiced lines: the story, the room intros and Kev's story intro are ElevenLabs recordings. Changing their text means
