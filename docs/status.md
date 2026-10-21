@@ -6145,3 +6145,6 @@ difficulty and length, the endgame placeholders.
    the stash without its rounds in the rig (the try-on feeding from the stash's grades, 20 Oct) didn't reach the
    fight's pick, so a find there only shows as an upgrade if its rounds are already held. Matt: "that change didnt
    make its way through to the fight".
+8. Weapon sounds still aren't sorted: with a Pattern AR worn, Matt says "it feels like none of the muzzle flashes are
+   getting a sound effect attached" - the fight's flashes and the shot sounds out of step, or the rifle's shots
+   unvoiced.
