@@ -6138,3 +6138,5 @@ difficulty and length, the endgame placeholders.
 5. A piece ditched in a fight gives its scrap (as meant), then lies on the floor and can be picked up again at the
    search: drop, scrap, pick it up (a second ditch gives no scrap, but it's a gap). Matt: a ditched piece is gone
    once its scrap's paid - destroyed, not left on the floor.
+6. Art: the Scrapper's figure and portrait regenerated (Matt: "just awful"), and the Poacher's figure and portrait
+   too - he reads too much like the Gamekeeper. A manifest for the four to agree with Matt before any credits go.
