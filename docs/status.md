@@ -6127,3 +6127,8 @@ difficulty and length, the endgame placeholders.
    Common Pump shotgun found earlier at 34 (screenshot: ▼ 7.9 dmg/s, with +12% dmg and +15% dmg pre-clear and "a
    kill heals 3% max HP"). Matt: "the unique drop from the gamekeeper should be better than a random gun found
    earlier - the unique here is pointless and should be the first big find of the game." Not looked at yet.
+3. Training's two pools aren't clear: the band's "0 of 1 point free" is the class's pool only, the rail's "1 free"
+   is the Pitch's, and the Pitch's own pool shows only in its lane's small "1 free". Matt had two points, could spend
+   one in the Scrapper's trees and one in the Pitch, and asked if that was meant (it is: the Pitch is the camp's,
+   one a level of the crew's best class). Matt: "it just needs to be clear" - the band to say both, e.g. "Scrapper
+   0 of 1 · the Pitch 1 free", and the rail to match.
