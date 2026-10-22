@@ -3,24 +3,27 @@ extends "res://scripts/ui/web_view.gd"
 ## codes - off a centre on the Training canvas's base. A node is an atlas key; its state the sim's atlas (ranks as
 ## a stack, pathed from the region's entry); the Dial's points buy a rank.
 
-const REGION_GAP := 500.0          # the three regions side by side across the canvas (it's wide, not tall)
+const R_MAP := 90.0                # the regions' entries this far from the centre
+const MAP_ANGLES := {0: 180.0, 1: -60.0, 2: 60.0}     # the sites out to the left, the crews up and right, the codes down and right: the star, as Training's
 
 
+## Three regions out from a centre at their angles (Matt, 22 Oct: "the star like map on the class tree is what's
+## needed for both - same layout so it's consistent for a player"); the name past each lane's end.
 func lay_out() -> void:
 	layout = {}
 	_trees = {}
 	_axis = {}
 	for t in Data.MAP_WEB:
 		_trees[t["name"]] = t
-		var d := Vector2.RIGHT
-		var at := Vector2((float(t["column"]) - 1.0) * REGION_GAP - 1.5 * Data.MAP_SPINE_STEP * STEP, 0.0)
+		var d := Vector2.from_angle(deg_to_rad(float(MAP_ANGLES[int(t["column"])])))
+		var at: Vector2 = d * R_MAP
 		var side: Vector2 = d.orthogonal()
 		for i in range(t["nodes"].size()):
 			var a: Array = t["nodes"][i]["at"]
 			layout["%s/%d" % [t["name"], i]] = at + d * (float(a[0]) * STEP) + side * (float(a[1]) * ROW)
 		var tone: Color = Pal.ACCENT if t["column"] == 2 else Pal.TEXT
-		# the name over the region's middle, clear of its top branch
-		_axis[t["name"]] = {"at": at, "dir": d, "tone": tone, "label_at": at + d * (1.5 * Data.MAP_SPINE_STEP * STEP) + Vector2(0, -(Data.MAP_BRANCH_Y * ROW + 26.0))}
+		# the name past the lane's end, running away from it
+		_axis[t["name"]] = {"at": at, "dir": d, "tone": tone, "label_at": at + d * (3.0 * Data.MAP_SPINE_STEP * STEP + 40.0), "align": (-1 if d.x < -0.3 else (1 if d.x > 0.3 else 0))}
 	_find_bounds()
 
 

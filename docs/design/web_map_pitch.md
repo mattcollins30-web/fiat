@@ -24,8 +24,9 @@ column gates (ATLAS_GATES go); a node with ranks is a stack (a point a rank, as 
   the codes. The Map's card column stays; the atlas tab becomes the web.
 - Counts: 35 nodes as they are (their ranks as stacks, their figures as they are) + 29 fillers = 64. A region's
   keystone wants MAP_KEYSTONE_POINTS (10) points in the region (the review: pathing alone put it three ranks in).
-- As built: the three regions side by side across the canvas (it's wide, not tall), each a spine with its two branches
-  above and below; a filler's share reads into its ranked node's figure (Sim.atlas_level).
+- As built: the three regions out from a centre at their angles - the sites left, the crews up and right, the codes
+  down and right - the star, as Training's (Matt: "same layout so it's consistent for a player"); a filler's share
+  reads into its ranked node's figure (Sim.atlas_level).
 
 ## 2. The Pitch's web (the Yard)
 
@@ -37,8 +38,8 @@ a pick free with its rank, as now); nothing's cheaper or dearer. What changes is
 - Fillers: none (the Yard's steps are its ranks). 8 × 15 = 120 nodes.
 - As built: the picks keep their column gates (the campaign and the depth open a column, as before - the Yard's
   pacing); a column's two picks each link to both of the column before, so the lane reads as forks; the ranks a
-  chain past the fifth column, the fifth node every rank from the fifth on. Four buildings' lanes run left, four
-  right, the names over them.
+  chain past the fifth column, the fifth node every rank from the fifth on. The eight lanes out from the centre at
+  45° each, the star as Training's, the names past the lanes' ends.
 - The Yard room keeps its building cards (the costs, the salvage, Build); the lanes under them become the web.
 
 ## 3. The canvas, shared

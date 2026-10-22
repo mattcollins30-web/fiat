@@ -6301,8 +6301,10 @@ pass; the reviewer on the code):
   the ranks a chain past them; the sim's Yard rules as they were (the column gates, the prices), the names
   scrambled until the room opens. atlas.gd and yard_tree.gd host the canvases in the lanes' place with their bands,
   strips and panels (the Dial's sentence moved under its chips: beside them a long one went blank). The bot ranks
-  the Map in web order. Rendered and checked (the Dial's three regions side by side; the Pitch's lanes four a side)
-  before the smoke. Smoke: the Dial's pathing and canvas, the Pitch's canvas, the fixtures by pathing (_rank_to).
+  the Map in web order. Rendered and checked before the smoke. Matt: "the star like map on the class tree is
+  what's needed for both - same layout so it's consistent for a player": both redrawn as stars out from a centre
+  (the Dial's three regions at 180°, −60°, 60°; the Pitch's eight lanes at 45° each), the names past the lanes'
+  ends running away from them (web_view's label align). Smoke: the Dial's pathing and canvas, the Pitch's canvas, the fixtures by pathing (_rank_to).
   - For Matt: the two new scripts have no .uid files yet (the headless smoke makes none): the editor will write
     them on its next open - commit those with the next change. The Radio's "Juice" is the Dial's "The codes"
     button (no separate chip). The web is all in: the balance pass next.

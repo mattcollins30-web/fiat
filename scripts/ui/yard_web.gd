@@ -5,26 +5,26 @@ extends "res://scripts/ui/web_view.gd"
 ## pay as now; the sim's Yard rules (the columns' gates, the prices) are the state.
 
 const Fmt := preload("res://scripts/ui/fmt.gd")
-const R_YARD := 110.0              # the lanes start this far either side of the centre
-const ROW_GAP := 150.0             # four lanes a side, this far apart (room for the names over them at the whole zoom)
+const R_YARD := 150.0              # the lanes start this far from the centre
 
 
-## Four buildings' lanes run out to the left, four to the right, the centre between (the canvas is wide, not tall).
+## Eight buildings' lanes out from the centre at 45° each: the star, as Training's (Matt, 22 Oct: one layout for the
+## player across the three webs); the name past each lane's end.
 func lay_out() -> void:
 	layout = {}
 	_trees = {}
 	_axis = {}
-	for k in range(Data.YARD_WEB.size()):
-		var t: Dictionary = Data.YARD_WEB[k]
+	for t in Data.YARD_WEB:
 		_trees[t["name"]] = t
-		var d: Vector2 = Vector2.LEFT if k < 4 else Vector2.RIGHT
-		var at := Vector2(d.x * R_YARD, ((k % 4) - 1.5) * ROW_GAP)
-		var side: Vector2 = Vector2.DOWN
+		var d := Vector2.from_angle(deg_to_rad(float(t["angle"])))
+		var at: Vector2 = d * R_YARD
+		var side: Vector2 = d.orthogonal()
 		for i in range(t["nodes"].size()):
 			var a: Array = t["nodes"][i]["at"]
 			layout["%s/%d" % [t["name"], i]] = at + d * (float(a[0]) * STEP) + side * (float(a[1]) * ROW)
-		_axis[t["name"]] = {"at": at, "dir": d, "tone": Pal.ACCENT, "label_at": at + d * (2.4 * STEP) + Vector2(0, -(Data.YARD_PICK_Y * ROW + 22.0))}     # over the lane's first columns
+		_axis[t["name"]] = {"at": at, "dir": d, "tone": Pal.ACCENT, "label_at": at + d * (8.4 * STEP + 40.0), "align": (-1 if d.x < -0.3 else (1 if d.x > 0.3 else 0))}     # the name past the lane's end, running away from it
 	_find_bounds()
+	_bounds = _bounds.grow_individual(0.0, 160.0, 0.0, 60.0)     # the Bench's name over its lane, under the corner's buttons
 
 
 ## A building whose room isn't open yet reads scrambled (20 Oct, Matt: "encrypted until they unlock").

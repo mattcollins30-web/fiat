@@ -356,7 +356,9 @@ func _draw() -> void:
 		var words: String = region_words(tn)
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(_font_bold, p - Vector2(w / 2.0, -5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone_of(tn))
+		var align: int = int(_axis[tn].get("align", 0))     # -1: the words end at the point; 1: start there; 0: centred
+		var x0: float = p.x - w if align < 0 else (p.x if align > 0 else p.x - w / 2.0)
+		draw_string(_font_bold, Vector2(x0, p.y + 5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone_of(tn))
 
 
 func _joint_half(tree_name: String, key: String) -> String:
