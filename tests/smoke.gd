@@ -2139,16 +2139,19 @@ func _tree_rules_checks(main) -> void:
 		bk.alt = ""
 		bk._shown = ""
 		main.refresh()
-		var names: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
-		_check(names == table[c], "the %s's lanes are %s, not the table's" % [c, str(names)])
-		_check(bk._links[0]["chip"].visible and bk._links[1]["chip"].visible and bk._links[0]["label"].text == "⇄ CAN JOIN", "the %s's joints' links are not up and open: '%s'" % [c, bk._links[0]["label"].text])
-	# a runner with no class: the Yard's lane alone, and the Also row
+		# the web (22 Oct): every tree of the table's row is a region on the canvas, its class's two reachable at an entry
+		var wv = bk.web()
+		for tn in table[c]:
+			if tn == "":
+				continue
+			_check(wv.layout.has("%s/0" % tn), "the %s's %s is not on the web" % [c, tn])
+		_check(wv.state_of("%s/0" % table[c][0]).get("reach", false) or sim.tree.has("%s/0" % table[c][0]), "the %s's first tree's entry isn't reachable" % c)
+	# a runner with no class: the Pitch alone reachable, and the Also row the pages
 	sim.cls = ""
 	sim.tree = []
 	bk._shown = ""
 	main.refresh()
-	var bare: Array = bk.lane_trees().map(func(x): return x["name"] if x != null else "")
-	_check(bare == ["The Pitch", "", "", "", ""] and not bk._links[0]["chip"].visible and bk.also_names().has("Petrol"), "a runner with no past sees %s" % str(bare))
+	_check(bk.web().state_of("The Pitch/0").get("reach", false) and not bk.web().state_of("Stalking/0").get("reach", false) and not bk.also_names().has("Petrol"), "a runner with no past can path a class's tree, or the Also row lists a tree")
 	_check_fit(main, "Caravan (no past)")
 	# every joint
 	for j in Data.JOINTS:
@@ -2768,76 +2771,28 @@ func _element_checks(main) -> void:
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (elements, yard)")
 	var bk = main._barracks
-	_check(bk.lane_trees().map(func(x): return x["name"] if x != null else "") == ["Muscle", "Blades", "The door", "Knuckles", "The Pitch"], "the Doorman's lanes are not the table's row: %s" % str(bk.lane_trees().map(func(x): return x["name"] if x != null else "")))
-	_check(bk._links[0]["chip"].visible and bk._links[0]["label"].text == "⇄ JOINED" and bk._links[1]["label"].text == "⇄ JOINED", "the closed joints' links do not say so: '%s' / '%s'" % [bk._links[0]["label"].text, bk._links[1]["label"].text])
+	# the web (22 Oct): the Doorman's trees and the Pitch on the canvas, the closed joints drawn joined
+	var wv = bk.web()
+	for tn in ["Muscle", "Blades", "The door", "Knuckles", "The Pitch"]:
+		_check(wv.layout.has("%s/0" % tn), "%s is not on the web" % tn)
+	_check(sim.has_joint("doorman_bleed") and sim.has_joint("doorman_physical"), "the Doorman's joints aren't closed for the web check")
 	for name in bk.also_names():
 		_check(bk.also_button(name) != null, "the %s chip is not on the Also row" % name)
+		_check(bk._is_pages(name), "the Also row lists %s: the trees are the web's now" % name)
 		bk.also_button(name).pressed.emit()
 		_check_fit(main, "Caravan (also: %s)" % name)
-		if bk._is_pages(name):
-			_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible, "%s did not take the lanes' place" % name)
-		else:
-			_check(bk.lane_trees()[4]["name"] == name and bk._lanes[0]["panel"].visible, "the %s chip did not take the fifth lane" % name)
+		_check(not bk.web().visible and bk._cells[0]["button"].visible, "%s did not take the web's place" % name)
 		bk.also_button(name).pressed.emit()
-		_check(bk.alt == "" and bk.lane_trees()[4]["name"] == "The Pitch", "the %s chip pressed again did not put the Pitch back" % name)
-	# the layout: the header with the points and the classes in its top right; every tile inside its lane, in
-	# its column, none overlapping; the Also row, the sum strip and the panel under the lanes
+		_check(bk.alt == "" and bk.web().visible, "the %s chip pressed again did not give the web back" % name)
+	# the layout: the header with the points and the classes in its top right; the web, the Also row, the sum strip
+	# and the panel under it
 	_check(bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the Caravan's points read '%s'" % bk._points.text)
 	for cb in bk._class_buttons:
 		_check(cb.position.y + cb.size.y <= bk.HEAD_H and cb.position.x >= bk._kicker.position.x + bk._kicker.size.x, "a class button is not in the band, right")
-	for k in range(bk.LANES):
-		var lane: Dictionary = bk._lanes[k]
-		if not lane["panel"].visible:
-			continue
-		var box := Rect2(lane["panel"].position, lane["panel"].size)
-		var rects := []
-		for tile in lane["tiles"]:
-			if not tile["button"].visible:
-				continue
-			var rc := Rect2(tile["button"].position, tile["button"].size)
-			if not is_zero_approx(tile["button"].rotation):
-				var d: float = tile["button"].size.x * sqrt(2.0)     # a diamond's true extent: its diagonal, about its centre
-				rc = Rect2(rc.get_center() - Vector2(d, d) / 2.0, Vector2(d, d))
-			var nd: Dictionary = sim.node(tile["id"])
-			_check(box.encloses(rc) and rc.position.x >= bk.TILES_X - 0.5, "a tile leaves its lane: %s in %s" % [str(rc), str(box)])
-			var cell: Rect2 = bk.tile_rect(int(nd.get("col", 0)), int(nd.get("row", 0)), false)
-			_check(absf(rc.position.x + rc.size.x / 2.0 - (cell.position.x + cell.size.x / 2.0)) < 0.5, "%s is not centred in its column" % tile["id"])
-			# a glyph, not words (Tree-G A, 9 Oct): the glyph drawn, the cost chip on the lane, no words on the tile
-			_check(tile["glyph"].texture != null and tile["name"].text == "" and not tile["name"].visible, "%s shows words, or no glyph" % tile["id"])
-			var chip := Rect2(tile["more"].position, tile["more"].size)
-			_check(tile["more"].visible and box.grow(10).encloses(chip) and tile["more"].text != "", "%s's cost chip is off its lane: %s" % [tile["id"], str(chip)])
-			for other in rects:
-				_check(not rc.intersects(other), "tiles overlap in lane %d: %s and %s" % [k, str(rc), str(other)])
-			rects.append(rc)
-		# the gates (10 Oct, Tree-J B): one between each two columns, its number the tree's gate, lit once reached,
-		# in the lane and on no tile, no cost chip and no joint mark
-		var lt = lane["tree"]
-		var lpts: int = sim.points_in(lt["name"])
-		_check(lane["gate_at"].size() == bk.COLS - 1, "lane %d has %d gates" % [k, lane["gate_at"].size()])
-		for gd in lane["gate_at"]:
-			var gr := Rect2(Vector2(gd["x"], lane["panel"].position.y + gd["y"]) - Vector2(bk.GATE_R, bk.GATE_R), Vector2(2 * bk.GATE_R, 2 * bk.GATE_R))
-			_check(int(gd["n"]) == Data.gate(lt, int(gd["c"]), sim.my_classes()) and bool(gd["lit"]) == (lpts >= int(gd["n"])), "lane %d's gate %d reads %d (lit %s)" % [k, int(gd["c"]), int(gd["n"]), str(gd["lit"])])
-			_check(box.encloses(gr), "lane %d's gate %d leaves its lane" % [k, int(gd["c"])])
-			for o in rects:
-				_check(not gr.intersects(o), "lane %d's gate %d sits on a tile" % [k, int(gd["c"])])
-			for tile in lane["tiles"]:
-				if tile["button"].visible:
-					for mark in [tile["more"], tile["joint"]]:
-						if mark.visible:
-							_check(not gr.intersects(Rect2(mark.position, Vector2(UI.text_width(mark, mark.text), mark.size.y))), "lane %d's gate %d sits on a mark" % [k, int(gd["c"])])
-		# a joint's halves meet at the line (Matt, 10 Oct): the upper lane's on its bottom row, the lower's on its top
-		if k < 4:
-			_check_joint_rows(bk, k)
-		# a rail into a joint half stops short of its mark (the reviewer, 10 Oct)
-		for i in range(mini(lt["nodes"].size(), lane["tiles"].size())):
-			var jt: Dictionary = lane["tiles"][i]
-			if jt["button"].visible and jt["joint"].visible:
-				var jc: int = int(lt["nodes"][i].get("col", 0))
-				var jy: float = jt["button"].position.y + jt["button"].size.y / 2.0 - lane["panel"].position.y
-				_check(bk.rail_in_x(k, jc, jy) <= jt["joint"].position.x - lane["panel"].position.x + 0.5, "lane %d's rail runs into %s's joint mark" % [k, lt["name"]])
+	_web_checks(main)
 	bk._shown = ""
 	main.refresh()
-	_check(bk.ALSO_Y >= bk.lane_y(bk.LANES - 1) + bk.LANE_H and bk.PANEL_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H and bk.LANES_Y >= bk.HEAD_H, "the Caravan's strips overlap")
+	_check(bk.ALSO_Y >= bk.LANES_Y + bk.LANES_H and bk.PANEL_Y >= bk.ALSO_Y + bk.ALSO_H and bk.PANEL_Y + bk.PANEL_H <= Pal.ROOM_H and bk.LANES_Y >= bk.HEAD_H, "the Caravan's strips overlap")
 	# the band (10 Oct, Bands-U A): the rooms' one height; the sum in it under the class's line, clear of the face, the
 	# classes and the notice; the classes at its foot, right
 	var sum_r := Rect2(bk._sum.position, bk._sum.size)
@@ -2912,11 +2867,9 @@ func _element_checks(main) -> void:
 	sim.tops_open = false
 	bk._shown = ""
 	main.refresh()
-	# a node alone in its column (the capstone, most trees) spans both rows
-	var cap_tile: Button = bk.tile_for("The door/10")
-	var lane_mid: float = bk.lane_y(2) + bk.LANE_H / 2.0
-	var cap_mid: float = cap_tile.position.y + cap_tile.size.y / 2.0 if cap_tile != null else -1.0
-	_check(cap_tile != null and is_equal_approx(cap_tile.rotation_degrees, 45.0) and cap_mid > lane_mid - bk.LANE_H / 2.0 and cap_mid < lane_mid + bk.LANE_H / 2.0, "the capstone's diamond is not on its lane")     # The door has a node beside it now (12 Oct): its own row, not the lane's middle
+	# the capstone sits at the end of its region's axis, past the keystone (the web, 22 Oct)
+	var wv2 = bk.web()
+	_check(wv2.layout.has("The door/10") and wv2.layout["The door/10"].distance_to(wv2._axis["The door"]["at"]) > wv2.layout["The door/6"].distance_to(wv2._axis["The door"]["at"]), "the capstone is not at the end of its region")
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
 	for b in Data.TREES:
@@ -2946,7 +2899,7 @@ func _element_checks(main) -> void:
 		_check(bk._shown.contains(sim.gun_type()), "the Caravan's signature does not carry the gun in hand")
 	sim.load_dict(saved)
 	sim.core_gates = true
-	print("the elements ok: affinities, double cost, the gates, the joints and their payoffs, the second past's joint, Spreads, Frozen solid, Builds, Won't stop, Knuckles, the Caravan's lanes")
+	print("the elements ok: affinities, double cost, the paths, the joints and their payoffs, the second past's joint, Spreads, Frozen solid, Builds, Won't stop, Knuckles, the Caravan's web")
 	_capstone_checks(main)
 	_melee_checks(main)
 
@@ -3005,12 +2958,8 @@ func _capstone_checks(main) -> void:
 	main._barracks.selected = ""
 	main._barracks._shown = ""
 	main.refresh()
-	var cap_tile = null
-	for lane in main._barracks._lanes:
-		for n in lane["tiles"]:
-			if n["button"].visible and n["id"] == cap_id:
-				cap_tile = n
-	_check(cap_tile != null and cap_tile["kind"] == "capstone" and is_equal_approx(cap_tile["button"].rotation_degrees, 45.0) and cap_tile["glyph"].texture != null, "the capstone's tile is off: %s" % (cap_tile["kind"] if cap_tile != null else "none"))
+	var wvc = main._barracks.web()
+	_check(wvc.layout.has(cap_id) and wvc.state_of(cap_id).get("taken", false) and NodeGlyphs.texture(NodeGlyphs.of(sim.node(cap_id))) != null, "the capstone is not on the web as taken, or has no glyph")
 	_check_fit(main, "Caravan (capstone)")
 	main._barracks._pick(cap_id)
 	main.refresh()
@@ -4596,7 +4545,7 @@ func _book_checks(main) -> void:
 	_check_fit(main, "Caravan (the drawer, page 2)")
 	bk.pick_also("The drawer")
 	main.refresh()
-	_check(bk.alt == "" and bk._lanes[0]["panel"].visible and not bk._cells[0]["button"].visible, "the drawer pressed again did not give the lanes back")
+	_check(bk.alt == "" and bk.web().visible and not bk._cells[0]["button"].visible, "the drawer pressed again did not give the lanes back")
 	_check_fit(main, "Caravan (back from the drawer)")
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
@@ -9840,10 +9789,6 @@ func _training_gate_checks(main) -> void:
 	var bk = main._barracks
 	bk._shown = ""
 	bk.show_state(sim)
-	var tags := 0
-	for lane in bk._lanes:
-		tags += lane.get("lv_at", []).size()
-	_check(tags >= 2, "no level tags by the keystones and capstones (%d)" % tags)
 	bk.selected = ""
 	bk._shown = ""
 	bk.show_state(sim)
@@ -11743,7 +11688,7 @@ func _sum_strip_check(main) -> void:
 	var shown_tags: Array = []
 	for k in range(bk._sum_chips.shown()):
 		shown_tags.append(bk._sum_chips._tags[k].text)
-	var want: Array = bk.sum_items(bk.lane_trees() if bk.alt == "" or not bk._is_pages(bk.alt) else [])
+	var want: Array = bk.sum_items([])
 	_check(shown_tags.size() == want.size(), "the sum strip shows %d of its %d chips" % [shown_tags.size(), want.size()])
 	_check(not shown_tags.has("Joints") or shown_tags.back() == "Joints", "the Joints chip is not last: %s" % str(shown_tags))
 	for el in Data.ELEMENTS:
@@ -12296,7 +12241,7 @@ func _growth_checks(main) -> void:
 	_check(bk.also_names().has(bk.PARAGON) and bk.also_button(bk.PARAGON) != null, "the paragon board is not in the Also row: %s" % str(bk.also_names()))
 	bk.pick_also(bk.PARAGON)
 	main.refresh()
-	_check(not bk._lanes[0]["panel"].visible and bk._cells[0]["button"].visible and bk._cells[Data.PARAGON_BOARD.size() - 1]["button"].visible and not bk._cells[Data.PARAGON_BOARD.size()]["button"].visible, "the board is not a card a row over the lanes")
+	_check(not bk.web().visible and bk._cells[0]["button"].visible and bk._cells[Data.PARAGON_BOARD.size() - 1]["button"].visible and not bk._cells[Data.PARAGON_BOARD.size()]["button"].visible, "the board is not a card a row over the lanes")
 	_check(bk.also_button(bk.PARAGON).text.contains("10 free") and bk._title.text.contains("10 points to spend"), "the board's chip and title do not say the points: '%s' / '%s'" % [bk.also_button(bk.PARAGON).text, bk._title.text])
 	_check_fit(main, "Caravan (the paragon board)")
 	bk._cells[0]["button"].pressed.emit()
@@ -14014,25 +13959,6 @@ func _clock_checks(main) -> void:
 	print("run timers ok: the budget, the head's time, ticking only in a fight, out of time, the insurance, the dry runs, the screens")
 
 
-## A joint's halves meet at the line (Matt, 10 Oct): this pair's half on the upper lane's bottom row or the lower's
-## top row; any other class's half in that column (a second past's) off it.
-func _check_joint_rows(bk, k: int) -> void:
-	var sim = bk.sim
-	var lane: Dictionary = bk._lanes[k]
-	var lt = lane["tree"]
-	var want: int = 1 if k % 2 == 0 else 0
-	var pair: Dictionary = Data.joint_in(sim.cls, lt["name"])
-	var col := -1
-	for i in range(lt["nodes"].size()):
-		if not pair.is_empty() and str(lt["nodes"][i].get("joint", "")) == str(pair["key"]):
-			col = int(lt["nodes"][i].get("col", 0))
-			_check(int(lane["rows"][i]) == want, "%s's joint half is on row %d, not at the line" % [lt["name"], int(lane["rows"][i])])
-	for i in range(lt["nodes"].size()):
-		var nd: Dictionary = lt["nodes"][i]
-		if int(nd.get("col", 0)) == col and str(nd.get("joint", "")) != str(pair["key"]):
-			_check(int(lane["rows"][i]) != want, "%s: another half sits at the line" % lt["name"])
-
-
 ## Every visible label's text under a node, for checks on what a panel says.
 func _texts(n: Node) -> Array:
 	var out: Array = []
@@ -14836,6 +14762,109 @@ func _skull_checks(main) -> void:
 	sim.load_dict(saved)
 	main.refresh()
 	print("skull ok: on their bar and yours when the dots cover what's left, gone when they don't")
+
+
+## The web (22 Oct, docs/design/web.md, slice 1): every tree a region on one canvas - each node placed, none on
+## another, the links between neighbours; the camera pans and zooms about the pointer; a click picks the node under it
+## and the panel shows it; the corner's buttons jump the zoom; the whole web fits at its widest.
+func _web_checks(main) -> void:
+	var sim = main.sim
+	var bk = main._barracks
+	var wv = bk.web()
+	_check(wv != null and wv.visible and wv.size.x == Pal.GRID_W and wv.position.y == bk.LANES_Y, "the web is not in the lanes' place")
+	# every node of every tree placed, and no two on each other
+	var ids: Array = []
+	for t in Data.TREES + Data.ELEMENT_TREES:
+		for i in range(t["nodes"].size()):
+			var id := "%s/%d" % [t["name"], i]
+			_check(wv.layout.has(id), "%s is not on the web" % id)
+			ids.append(id)
+	var overlaps := 0
+	for a_i in range(ids.size()):
+		for b_i in range(a_i + 1, ids.size()):
+			var pa: Vector2 = wv.layout[ids[a_i]]
+			var pb: Vector2 = wv.layout[ids[b_i]]
+			var ra: float = wv.radius_of(sim.node(ids[a_i]))
+			var rb: float = wv.radius_of(sim.node(ids[b_i]))
+			if pa.distance_to(pb) < ra + rb + 4.0:
+				overlaps += 1
+				if overlaps <= 3:
+					_check(false, "%s and %s sit on each other (%.0f apart)" % [ids[a_i], ids[b_i], pa.distance_to(pb)])
+	_check(overlaps == 0, "%d pairs of nodes overlap on the web" % overlaps)
+	# the whole web fits at its widest; a region's zoom is closer
+	wv.focus_all()
+	var z_all: float = wv.zoom
+	for id in ids:
+		var p: Vector2 = wv.to_screen(wv.layout[id])
+		_check(p.x >= -1.0 and p.y >= -1.0 and p.x <= wv.size.x + 1.0 and p.y <= wv.size.y + 1.0, "%s is off the canvas at the whole web's zoom: %s" % [id, str(p)])
+	wv.focus_tree(Data.COMMON_TREE)
+	_check(wv.zoom > z_all, "the Pitch's zoom (%.2f) is no closer than the whole web's (%.2f)" % [wv.zoom, z_all])
+	for i in range(Data.tree_named(Data.COMMON_TREE)["nodes"].size()):
+		var p: Vector2 = wv.to_screen(wv.layout["The Pitch/%d" % i])
+		_check(Rect2(Vector2.ZERO, wv.size).has_point(p), "the Pitch's node %d is off the canvas at its region's zoom" % i)
+	# the camera: a zoom about a point keeps the web under it; a pan moves it by the drag
+	var at := Vector2(300.0, 200.0)
+	var under: Vector2 = wv.to_web(at)
+	wv.zoom_at(at, 1.3)
+	_check(wv.to_web(at).distance_to(under) < 0.5, "a zoom about a point moved the web under it")
+	var cam0: Vector2 = wv.cam
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_RIGHT
+	press.pressed = true
+	press.position = Vector2(400.0, 300.0)
+	wv._gui_input(press)
+	var move := InputEventMouseMotion.new()
+	move.position = Vector2(460.0, 320.0)
+	move.button_mask = MOUSE_BUTTON_MASK_RIGHT
+	wv._gui_input(move)
+	var lift := InputEventMouseButton.new()
+	lift.button_index = MOUSE_BUTTON_RIGHT
+	lift.pressed = false
+	lift.position = move.position
+	wv._gui_input(lift)
+	_check((cam0 - wv.cam).distance_to(Vector2(60.0, 20.0) / wv.zoom) < 0.5, "a right-drag did not pan by the drag: %s" % str(cam0 - wv.cam))
+	# a drag released off the canvas (the review): the next motion with no button held doesn't pan
+	wv._gui_input(press)
+	var cam1: Vector2 = wv.cam
+	var loose := InputEventMouseMotion.new()
+	loose.position = Vector2(500.0, 340.0)
+	loose.button_mask = 0
+	wv._gui_input(loose)
+	_check(wv.cam == cam1 and not wv._drag, "a drag released off the canvas kept panning")
+	# a click on a node picks it: the panel names it; a click on nothing clears the pick
+	wv.focus_tree(Data.COMMON_TREE)
+	var p0: Vector2 = wv.to_screen(wv.layout["The Pitch/0"])
+	_check(wv.node_at(p0) == "The Pitch/0", "the node under the pointer isn't found: %s" % wv.node_at(p0))
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = p0
+	wv._gui_input(click)
+	main.refresh()
+	_check(bk.selected == "The Pitch/0" and bk._title.text.begins_with(str(sim.node("The Pitch/0")["name"])), "a click on the web did not pick the node: '%s'" % bk._title.text)
+	_check_fit(main, "Caravan (a node picked on the web)")
+	var far := Vector2(wv.size.x - 4.0, wv.size.y - 4.0)
+	if wv.node_at(far) == "":
+		click.position = far
+		wv._gui_input(click)
+		main.refresh()
+		_check(bk.selected == "", "a click on nothing did not clear the pick")
+	# the state the canvas reads: a trained node taken, its neighbour reachable, another class's half theirs
+	wv.show_state(sim)
+	var any_taken := false
+	for id in sim.tree:
+		if wv.layout.has(id):
+			any_taken = true
+			_check(wv.state_of(id).get("taken", false), "%s is trained and the web doesn't show it" % id)
+	_check(any_taken or sim.tree.is_empty(), "no trained node on the web")
+	# the corner's buttons
+	for b in bk._web_buttons:
+		_check(b.visible, "a web button is hidden")
+		b.pressed.emit()
+	_check(wv.zoom > z_all, "the Pitch button did not zoom in")
+	bk._web_buttons[0].pressed.emit()
+	_check(is_equal_approx(wv.zoom, z_all), "Whole web did not go back to the widest zoom")
+	_check_fit(main, "Caravan (the web)")
 
 
 ## The Runner's cards (11 Oct, Matt): the slot's name floats over the card, not inside it, and a picked slot shows

@@ -6229,3 +6229,10 @@ pass; the reviewer on the code):
   class's half). The keystone and capstone level gates stay. The bot's walk is as it was (column by column).
   Smoke's gate checks rewritten as pathing checks. Dead in the sim now, out in 1b: core_need, core_tree,
   _tops_open, Data.gate, CORE_GATES, ELEMENT_GATED_COL.
+- Slice 1b, the canvas: scripts/ui/web_view.gd in the lanes' place in Training - every tree a region of one web
+  (slice 1's layout: the Pitch across the centre, three elements' lanes left and three right, the classes beyond;
+  the drawn layout and the fillers are slice 2), links lit between taken nodes, the joints dashed, glyphs and names
+  from a zoom, Lv 20/30 tags; right-drag pans, the wheel zooms about the pointer, a click picks into the panel;
+  Whole web / The class's / The Pitch over its corner. The lanes, their gates, rails and the core pills are gone
+  from barracks.gd; the Also row is the pages alone. Smoke: _web_checks (placed, no overlaps, fits, the camera,
+  a pick, a drag released off the canvas). Not yet: "find a node" (slice 2, with the fillers).

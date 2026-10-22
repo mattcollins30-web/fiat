@@ -18,6 +18,7 @@ const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const WebView := preload("res://scripts/ui/web_view.gd")
 
 const PAD := 20
 # the header: the face, the class and trait, the points free, the class's line; the classes top right
@@ -103,8 +104,8 @@ var _line_pills: Array = []        # a glass pill a line, behind the class's lin
 var _class_buttons: Array = []
 var _class_cards: Array = []       # a card a past: {face, name, tag, lines[]}
 var _face_q: Panel                 # no past yet: a ? in the face's place
-var _lanes: Array = []             # a slot each: {panel, bar, name, tag, gates, count, tiles: [{button, name, more, effect, id}], tree}
-var _links: Array = []             # two: {bar, chip, label}, under lanes 0 and 2
+var _web                            # the web (22 Oct): every tree as a region of one canvas, in the lanes' place
+var _web_buttons: Array = []       # over the web's corner: the whole web, the class's region, the Pitch
 var _also_panel: Panel
 var _also_head: Label
 var _also: Array = []              # {button, name}
@@ -129,7 +130,7 @@ func _init() -> void:
 	size = Vector2(Pal.GRID_W, Pal.ROOM_H)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_build_head()
-	_build_lanes()
+	_build_web()
 	_build_also()
 	_build_pages()
 	_sum = Panel.new()                  # a frame in the band: the head's words column, two chip rows
@@ -203,234 +204,41 @@ static func _words_w() -> float:
 	return _classes_x() - 24 - _words_x()
 
 
-## Where lane `k` starts: two pairs, each a lane, its link and its element's lane, then the Yard's.
-static func lane_y(k: int) -> float:
-	var y: float = LANES_Y
-	for i in range(k):
-		y += LANE_H
-		if i == 0 or i == 2:
-			y += LINK_H
-		elif i == 1 or i == 3:
-			y += PAIR_GAP
-	return y
+## The web in the lanes' place (22 Oct): the canvas, and three buttons over its corner to jump the zoom.
+func _build_web() -> void:
+	_web = WebView.new(Vector2(Pal.GRID_W, LANES_H))
+	_web.position = Vector2(0, LANES_Y)
+	_web.picked.connect(_pick_web)
+	add_child(_web)
+	var x: float = 12.0
+	for words in ["Whole web", "The class's", "The Pitch"]:
+		var b := UI.button(self, Rect2(x, LANES_Y + 10, 120, 30), false)
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+		b.text = words
+		b.pressed.connect(_web_jump.bind(words))
+		var w: float = ceilf(UI.text_width(b, words)) + 40.0
+		b.size.x = w
+		_web_buttons.append(b)
+		x += w + 6.0
 
 
-## A tile's rect in its lane: column `c`, row `r`; `span` a node alone in its column, the two rows' height.
-static func tile_rect(c: int, r: int, span := false) -> Rect2:
-	return Rect2(TILES_X + c * (TILE_W + TILE_GAP), TILE_TOP + (0 if span else r * (TILE_H + ROW_GAP)), TILE_W, (2 * TILE_H + ROW_GAP) if span else TILE_H)
+func _web_jump(words: String) -> void:
+	match words:
+		"Whole web":
+			_web.focus_all()
+		"The Pitch":
+			_web.focus_tree(Data.COMMON_TREE)
+		_:
+			if sim != null and sim.cls != "":
+				_web.focus_class(sim.cls)
+			else:
+				_web.focus_all()
 
 
-## A node's tile in its lane: centred in its column's cell (tile_rect), square; a keystone's diamond smaller (it
-## turns), the capstone's bigger and centred on the lane when it's alone in its column.
-static func node_rect(c: int, r: int, span: bool, kind: String) -> Rect2:
-	var cell := tile_rect(c, r, span)
-	var n: float = DIAMOND_BIG if (kind == "capstone" and span) else (DIAMOND if kind in ["keystone", "capstone"] else NODE)
-	return Rect2(cell.position + (cell.size - Vector2(n, n)) / 2.0, Vector2(n, n))
-
-
-## A gate's place: the boundary between column c-1 and c, at the lane's middle.
-static func gate_pos(c: int) -> Vector2:
-	return Vector2(TILES_X + c * (TILE_W + TILE_GAP) - TILE_GAP / 2.0, TILE_TOP + TILE_H + ROW_GAP / 2.0)
-
-
-const GATE_R := 13.0
-
-
-## A lane's gates as they stand: [{c, n, lit, x, y}] and each column's rows' y (one: the lane's middle). Laid with
-## the lane (the tests read it), drawn by _draw_gates.
-func _lay_gates(k: int) -> void:
-	var lane: Dictionary = _lanes[k]
-	lane["gate_at"] = []
-	lane["rows_at"] = {}
-	var t = lane["tree"]
-	if t == null or sim == null:
-		return
-	var mine: Array = sim.my_classes()
-	var pts: int = sim.points_in(t["name"])
-	var per_col := {}
-	for nd in t["nodes"]:
-		per_col[int(nd.get("col", 0))] = int(per_col.get(int(nd.get("col", 0)), 0)) + 1
-	for c in per_col.keys():
-		lane["rows_at"][c] = [gate_pos(0).y] if int(per_col[c]) == 1 else [TILE_TOP + TILE_H / 2.0, TILE_TOP + TILE_H + ROW_GAP + TILE_H / 2.0]
-	for c in range(1, COLS):
-		if not per_col.has(c) or not per_col.has(c - 1):
-			continue
-		var g: int = Data.gate(t, c, mine)
-		var gp := gate_pos(c)
-		lane["gate_at"].append({"c": c, "n": g, "lit": pts >= g, "x": gp.x, "y": gp.y})
-	# the core's locks (15 Oct, gating_training.png): an element tree's later columns want points in its class tree - a
-	# pill over each band's first boundary, the first unmet with how far along it is
-	lane["core_at"] = []
-	var core: String = sim.core_tree(t["name"]) if sim.core_gates else ""
-	if core != "":
-		var now: int = sim.points_in(core)
-		var first := true
-		for b in range(Data.CORE_GATES.size()):
-			var c0: int = int(Data.CORE_GATES[b][0])
-			var need: int = int(Data.CORE_GATES[b][1])
-			var cap: bool = b == Data.CORE_GATES.size() - 1 and now >= need and now < Data.CORE_CAPSTONE
-			if cap:
-				need = Data.CORE_CAPSTONE           # the band's met: the capstone's 18 in its place
-			if now >= need:
-				continue
-			var forms: Array = ["%d in %s · %d now" % [need, core, now], "%d in %s" % [need, core], "%d · %d now" % [need, now], "%d" % need] if first else ["%d in %s" % [need, core], "%d" % need]
-			lane["core_at"].append({"c": c0, "need": need, "now": now, "forms": forms, "words": forms[0], "bar": first, "x": gate_pos(c0).x, "y": CORE_PILL_Y})
-			first = false
-
-
-## Each column's rows into the gate before the next, and out of it: curves, and the gate a numbered disc.
-func _draw_gates(k: int) -> void:
-	var lane: Dictionary = _lanes[k]
-	var conn: Control = lane["conn"]
-	var t = lane["tree"]
-	if t == null or not lane.has("gate_at"):
-		return
-	var colour := lane_colour(t)
-	var tone: Color = colour if colour != Pal.CARD_LINE else YARD_TONE
-	var font: Font = UI.font("SemiBold", true)
-	for gd in lane["gate_at"]:
-		var c: int = int(gd["c"])
-		var lit: bool = gd["lit"]
-		var line: Color = Color(tone, 0.85) if lit else Pal.CARD_LINE
-		var gp := Vector2(gd["x"], gd["y"])
-		var x_from: float = TILES_X + (c - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0 + NODE / 2.0 + 2.0
-		for y0 in lane["rows_at"][c - 1]:
-			_curve(conn, Vector2(x_from, y0), gp - Vector2(GATE_R, 0), line)
-		for y1 in lane["rows_at"][c]:
-			_curve(conn, gp + Vector2(GATE_R, 0), Vector2(rail_in_x(k, c, y1), y1), line)
-		conn.draw_circle(gp, GATE_R, Pal.SELECT if lit else Pal.BG)
-		conn.draw_arc(gp, GATE_R, 0.0, TAU, 32, tone if lit else Pal.CARD_LINE, 1.5, true)
-		var s := str(gd["n"])
-		var sw: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		conn.draw_string(font, gp + Vector2(-sw / 2.0, 5.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, tone if lit else Pal.TEXT_2)
-	for cd in lane.get("core_at", []):
-		var r := core_pill_rect(cd, font)
-		cd["rect"] = r
-		conn.draw_style_box(UI.box(Color(Pal.BG, 0.95), 6, 1, Pal.CARD_LINE), r)
-		conn.draw_texture_rect(NodeGlyphs.texture("lock"), Rect2(r.position + Vector2(6, (r.size.y - 13) / 2.0 - (1.5 if cd["bar"] else 0.0)), Vector2(13, 13)), false, Pal.TEXT_2)
-		conn.draw_string(font, r.position + Vector2(24, 16), str(cd["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, CORE_FONT, Pal.TEXT)
-		if cd["bar"]:
-			var bw: float = r.size.x - 30
-			var bar := Rect2(r.position + Vector2(24, r.size.y - 6), Vector2(bw, 3))
-			conn.draw_rect(bar, Pal.CARD_LINE)
-			conn.draw_rect(Rect2(bar.position, Vector2(bw * clampf(float(cd["now"]) / float(cd["need"]), 0.0, 1.0), 3)), Pal.ACCENT)
-	for lv in lane.get("lv_at", []):
-		conn.draw_string(font, Vector2(lv["x"], lv["y"]), str(lv["words"]), HORIZONTAL_ALIGNMENT_LEFT, -1, LV_FONT, Pal.GOOD if lv["lit"] else Pal.BAD)
-
-
-const CORE_PILL_H := 26.0
-const CORE_PILL_Y := LANE_H - CORE_PILL_H - 3.0     # the core's pill: under the gate's disc, over the bottom row's rails, clear of a Lv tag
-const CORE_FONT := 13
-const LV_FONT := 12
-
-
-## A core pill's place in its lane: in the gap before its band, from just past the last column's cost to short of
-## the band's first tile; as wide as its words.
-## The words are the longest of its forms that fit the gap (cd["words"] set to them).
-static func core_pill_rect(cd: Dictionary, font: Font) -> Rect2:
-	var room: float = core_gap_end(int(cd["c"])) - core_gap_x(int(cd["c"]))
-	var w := 0.0
-	for f in cd["forms"]:
-		cd["words"] = str(f)
-		w = 24 + font.get_string_size(str(f), HORIZONTAL_ALIGNMENT_LEFT, -1, CORE_FONT).x + 8
-		if w <= room:
-			break
-	return Rect2(core_gap_x(int(cd["c"])), CORE_PILL_Y, w, CORE_PILL_H)
-
-
-## The gap before column `c` a core pill may take: [from, to], clear of the costs and the tiles.
-static func core_gap_x(c: int) -> float:
-	return TILES_X + (c - 1) * (TILE_W + TILE_GAP) + TILE_W / 2.0 + NODE / 2.0 + 3.0 + COST_W + 4.0
-
-
-static func core_gap_end(c: int) -> float:
-	return TILES_X + c * (TILE_W + TILE_GAP) + TILE_W / 2.0 - NODE / 2.0 - 4.0
-
-
-## Where a rail into column `c`'s row at lane-local `y` ends: just short of the tile, or of a joint half's mark at
-## its left (the reviewer, 10 Oct: the rail ran through the ⇄).
-func rail_in_x(k: int, c: int, y: float) -> float:
-	var x: float = TILES_X + c * (TILE_W + TILE_GAP) + TILE_W / 2.0 - NODE / 2.0 - 2.0
-	if _lanes[k].get("marked", {}).has("%d:%d" % [c, int(round(y))]):
-		x -= 26.0
-	return x
-
-
-## A rail: flat out of `a`, a bend, flat into `b`.
-static func _curve(c: Control, a: Vector2, b: Vector2, colour: Color) -> void:
-	var pts := PackedVector2Array()
-	var mx: float = (a.x + b.x) / 2.0
-	for i in range(17):
-		var u: float = float(i) / 16.0
-		var p := a.bezier_interpolate(Vector2(mx, a.y), Vector2(mx, b.y), b, u)
-		pts.append(p)
-	c.draw_polyline(pts, colour, 1.5, true)
-
-
-## The joint's link's x: the fourth column's middle.
-static func link_x() -> float:
-	return TILES_X + Data.JOINT_COL * (TILE_W + TILE_GAP) + TILE_W / 2.0
-
-
-func _build_lanes() -> void:
-	for k in range(LANES):
-		var y := lane_y(k)
-		var p := UI.panel(self, Rect2(0, y, Pal.GRID_W, LANE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-		var lane := {"panel": p, "tree": null, "tiles": []}
-		lane["bar"] = UI.panel(p, Rect2(0, 0, 4, LANE_H), UI.box(Pal.CARD_LINE, 2))
-		lane["name"] = UI.label(p, Rect2(14, 6, LABEL_W - 14, 26), "", "SemiBold", Pal.CELL_TEXT_BIG + 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["tag"] = UI.label(p, Rect2(14, 32, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["gates"] = UI.label(p, Rect2(14, 54, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		lane["count"] = UI.label(p, Rect2(14, 76, LABEL_W - 14, 22), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		# the rails meet at a gate between columns (10 Oct, Tree-J B; Matt: the rails read node to node, but a column
-		# opens on the points in its tree): each column's rows run into a numbered gate - the points that open the
-		# next - and out of it to the next column's, lit in the tree's tone once reached
-		lane["rails"] = []
-		var conn := Control.new()
-		conn.size = Vector2(Pal.GRID_W, LANE_H)
-		conn.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		conn.draw.connect(_draw_gates.bind(k))
-		p.add_child(conn)
-		lane["conn"] = conn
-		lane["gate_at"] = []                # [{x, y, n, lit}] as drawn, for the tests
-		for i in range(LANE_NODES):
-			var btn := Button.new()
-			btn.text = ""
-			btn.focus_mode = Control.FOCUS_ALL
-			btn.position = Vector2(TILES_X, y + 6)
-			btn.size = Vector2(NODE, NODE)
-			btn.pressed.connect(_pick_at.bind(k, i))
-			add_child(btn)
-			var t := {"button": btn, "id": "", "kind": ""}
-			var g := TextureRect.new()
-			g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			g.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			g.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-			g.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			g.size = Vector2(GLYPH, GLYPH)
-			g.pivot_offset = g.size / 2.0
-			btn.add_child(g)
-			t["glyph"] = g
-			# the cost on the tile's corner and a joint's half mark under it: beside the tile, not on it (a diamond turns)
-			t["more"] = UI.label(self, Rect2(0, 0, COST_W, 23), "", "SemiBold", 13, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_CENTER, false)
-			t["more"].add_theme_stylebox_override("normal", UI.box(Pal.BG, 9, 1, Pal.CARD_LINE))
-			t["more"].mouse_filter = Control.MOUSE_FILTER_IGNORE
-			t["joint"] = UI.label(self, Rect2(0, 0, 22, 23), "⇄", "SemiBold", 15, Pal.BAD, HORIZONTAL_ALIGNMENT_CENTER, false)
-			t["joint"].mouse_filter = Control.MOUSE_FILTER_IGNORE
-			t["joint"].visible = false
-			# the old tile's words, kept empty: the node's words are the panel's (9 Oct)
-			t["name"] = UI.label(btn, Rect2(0, 0, 1, 23), "", "Regular", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["effect"] = UI.label(btn, Rect2(0, 0, 1, 23), "", "Regular", Pal.CELL_TEXT, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["name"].visible = false
-			t["effect"].visible = false
-			lane["tiles"].append(t)
-		_lanes.append(lane)
-	for k in [0, 2]:
-		var y: float = lane_y(k) + LANE_H
-		var bar := UI.panel(self, Rect2(link_x() - 1.5, y - 2, 3, LINK_H + 4), UI.box(Pal.CARD_LINE, 1))
-		var chip := UI.panel(self, Rect2(TILES_X, y + 1, 10, LINK_H - 2), UI.box(Pal.PANEL, 9, 1, Pal.CARD_LINE))
-		var l := UI.label(chip, Rect2(10, 0, 10, LINK_H - 2), "", "SemiBold", 14, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_links.append({"bar": bar, "chip": chip, "label": l})
+func _pick_web(id: String) -> void:
+	_armed = ""
+	selected = id
+	show_state(sim)
 
 
 func _build_also() -> void:
@@ -576,86 +384,12 @@ func _style_card(b: Button, look: String) -> void:
 	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, 6, 2, Pal.TEXT))
 
 
-func _style(b: Button, look: String, edge := Color.TRANSPARENT, kind := "node", tone := Pal.ACCENT, picked := false) -> void:
-	# "taken": filled in the tree's tone, edged with it; "idle": taken, not working, edged grey; "open": trainable,
-	# a light edge; "locked": dim. A notable is round, a keystone or capstone a diamond (the button turned), a
-	# plain node square; a notable or keystone carries its tree's tone on its edge; a joint's half its joint's;
-	# the picked one is ringed white (9 Oct, Tree-G A)
-	var radius: int = int(b.size.x / 2.0) if kind == "notable" else (5 if kind in ["keystone", "capstone"] else 8)
-	var big: bool = kind != "node"
-	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		var bg: Color
-		var line: Color
-		var w := 1
-		match look:
-			"taken":
-				bg = Pal.CARD.lerp(tone, 0.22)
-				line = tone
-				w = 2
-			"idle":
-				bg = Pal.CARD
-				line = Pal.TEXT_3
-				w = 2
-			"open":
-				bg = Pal.BUTTON if state in ["hover", "hover_pressed"] else Pal.CARD
-				line = tone if big else Pal.TEXT_2
-				w = 2 if big else 1
-			_:
-				bg = Pal.BG
-				line = Color(tone, 0.45) if big else Pal.CARD_LINE
-		if edge != Color.TRANSPARENT and look != "taken":
-			line = edge
-			w = 2
-		if picked:
-			line = Pal.TEXT
-			w = 3
-		b.add_theme_stylebox_override(state, UI.box(bg, radius, w, line))
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, radius, 2, Pal.TEXT))
-
-
 # ------------------------------------------------------------------ the trees on show
 
-## The five lanes' trees, top to bottom (nulls where there's none): the class's first tree, the element its
-## joint is in, the class's second, its element, then the Yard's or the Also chip in its place. No class
-## yet: the Yard's alone, in the first lane.
-func lane_trees() -> Array:
-	var out: Array = [null, null, null, null, null]
-	var on_show: Array = sim.trees()
-	var yard: Dictionary = Data.tree_named(Data.COMMON_TREE)
-	var fifth = yard
-	if alt != "" and not _is_pages(alt):
-		for t in on_show:
-			if t["name"] == alt:
-				fifth = t
-	if sim.cls == "":
-		out[0] = fifth
-		return out
-	var mine: Array = []
-	for t in Data.TREES:
-		if t.get("class", "") == sim.cls:
-			mine.append(t)
-	for k in range(mini(2, mine.size())):
-		out[2 * k] = mine[k]
-		var j: Dictionary = Data.joint_in(sim.cls, mine[k]["name"])
-		if not j.is_empty():
-			out[2 * k + 1] = Data.tree_named(j["element_tree"])
-	out[4] = fifth
-	return out
-
-
-## The Also row's chips: every tree on show that isn't in a lane, then the drawer and the shelf.
+## The Also row's chips: the pages over the web - paragon once earned, the drawer, the shelf and the wireless (the
+## trees are all on the web now, 22 Oct).
 func also_names() -> Array:
-	var lanes_now: Array = []
-	var saved := alt
-	alt = ""
-	for t in lane_trees():
-		if t != null:
-			lanes_now.append(t["name"])
-	alt = saved
 	var out: Array = []
-	for t in sim.trees():
-		if not (t["name"] in lanes_now) and not (t["name"] in out):
-			out.append(t["name"])
 	if sim.paragon_xp > 0.0:
 		out.append(PARAGON)                  # once a class has gone past the cap (21 Oct, the crew)
 	out.append("The drawer")
@@ -695,13 +429,15 @@ func show_state(s) -> void:
 		alt = ""                           # the chip went (a class change took that tree into a lane)
 	_show_head()
 	var pages: bool = _is_pages(alt)
-	var lanes: Array = lane_trees()
-	for k in range(LANES):
-		_show_lane(k, null if pages else lanes[k])
-	_show_links(lanes, pages)
+	_web.visible = not pages
+	for b in _web_buttons:
+		b.visible = not pages
+	_web.selected = selected
+	if not pages:
+		_web.show_state(sim)
 	_show_pages(pages)
 	_show_also()
-	_show_sum(lanes if not pages else [])
+	_show_sum([])
 	_show_panel()
 
 
@@ -795,157 +531,6 @@ func _lay_lines() -> void:
 		var right: float = l.position.x + l.size.x + PILL_PAD
 		pill.position = Vector2(right - w, l.position.y + (l.size.y - PILL_H) / 2.0)
 		pill.size = Vector2(w, PILL_H)
-
-
-func _show_lane(k: int, t) -> void:
-	var lane: Dictionary = _lanes[k]
-	lane["tree"] = t
-	lane["panel"].visible = t != null
-	for tile in lane["tiles"]:
-		tile["button"].visible = false
-		tile["more"].visible = false
-		tile["joint"].visible = false
-		tile["id"] = ""
-	if t == null:
-		return
-	var y := lane_y(k)
-	var colour := lane_colour(t)
-	(lane["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = colour
-	UI.fit(lane["name"], [t["name"]])
-	var mine: Array = sim.my_classes()
-	if t.has("element"):
-		var j: Dictionary = {}
-		for c in mine:
-			if j.is_empty():
-				j = Data.joint_in(c, t["name"])
-		if not j.is_empty():
-			UI.fit(lane["tag"], ["%s · joins %s" % [t["element"], j["tree"]], "%s · %s" % [t["element"], j["tree"]], t["element"]])
-		else:
-			UI.fit(lane["tag"], ["%s · double cost" % t["element"] if not sim.affinity(t["element"]) else t["element"], t["element"]])
-	elif t.get("class", "") != "":
-		UI.fit(lane["tag"], ["the %s's" % t["class"].to_lower(), t["class"]])
-	else:
-		UI.fit(lane["tag"], ["the Pitch's · kept on death", "the Pitch's"])
-	lane["tag"].add_theme_color_override("font_color", colour if colour != Pal.CARD_LINE else Pal.TEXT_2)
-	var pts: int = sim.points_in(t["name"])
-	UI.fit(lane["gates"], ["%d point%s in" % [pts, "" if pts == 1 else "s"], "%d in" % pts])     # the gates say what opens next (Tree-J B)
-	_lay_gates(k)
-	lane["conn"].queue_redraw()
-	var taken := 0
-	var per_col := {}
-	for nd in t["nodes"]:
-		per_col[int(nd.get("col", 0))] = int(per_col.get(int(nd.get("col", 0)), 0)) + 1
-	# a joint's halves meet at the line that joins them (Matt, 10 Oct): the upper lane's on its bottom row, the lower
-	# lane's on its top row - the column's other node takes the row it leaves
-	var rows := {}
-	for i in range(t["nodes"].size()):
-		rows[i] = int(t["nodes"][i].get("row", 0))
-	if k < 4:
-		var want: int = 1 if k % 2 == 0 else 0
-		# only this pair's joint: a second past's half in the same column stays off the line (the reviewer, 10 Oct)
-		var pair: Dictionary = Data.joint_in(sim.cls, t["name"])
-		for i in range(t["nodes"].size()):
-			var nj: Dictionary = t["nodes"][i]
-			if not pair.is_empty() and str(nj.get("joint", "")) == str(pair["key"]) and rows[i] != want:
-				for o in range(t["nodes"].size()):
-					if o != i and int(t["nodes"][o].get("col", 0)) == int(nj.get("col", 0)):
-						rows[o] = rows[i]
-				rows[i] = want
-	lane["rows"] = rows
-	lane["lv_at"] = []      # the level a keystone or capstone opens at (15 Oct): "Lv 20" over its left, red till then
-	lane["marked"] = {}     # "col:y" of each shown joint mark, so its rail stops at the mark
-	for i in range(mini(t["nodes"].size(), LANE_NODES)):
-		var nd: Dictionary = t["nodes"][i]
-		var id := "%s/%d" % [t["name"], i]
-		var tile: Dictionary = lane["tiles"][i]
-		var b: Button = tile["button"]
-		var c: int = int(nd.get("col", 0))
-		var span: bool = int(per_col.get(c, 0)) == 1
-		var kind: String = "capstone" if nd.get("capstone", false) else ("keystone" if nd.get("keystone", false) else ("notable" if nd.get("notable", false) else "node"))
-		var rc := node_rect(c, int(rows[i]), span, kind)
-		b.position = Vector2(rc.position.x, y + rc.position.y)
-		b.size = rc.size
-		b.pivot_offset = rc.size / 2.0
-		b.rotation_degrees = 45.0 if kind in ["keystone", "capstone"] else 0.0
-		b.visible = true
-		tile["id"] = id
-		tile["kind"] = kind
-		var g: TextureRect = tile["glyph"]
-		g.texture = NodeGlyphs.texture(NodeGlyphs.of(nd))
-		g.position = (rc.size - g.size) / 2.0
-		g.rotation_degrees = -b.rotation_degrees
-		var is_taken: bool = sim.tree.has(id)
-		if is_taken:
-			taken += 1
-		var theirs: bool = not Data.for_classes(nd, mine)
-		var block: String = sim.train_block(id, true)
-		var reach: bool = not is_taken and block == ""
-		var look := ("taken" if sim.node_active(id) else "idle") if is_taken else ("open" if reach else "locked")
-		var j_key: String = str(nd.get("joint", ""))
-		var edge := Color.TRANSPARENT
-		if j_key != "" and not theirs:
-			edge = joint_colour(Data.joint(j_key))
-		var tone: Color = colour if colour != Pal.CARD_LINE else YARD_TONE
-		_style(b, look, edge, kind, tone, id == selected)
-		g.modulate = tone if look == "taken" else (Pal.TEXT if look == "open" else Pal.TEXT_3)
-		# the cost on the corner (a tick once trained); another class's half says nothing - the panel names it
-		var cost: int = sim.node_cost(id)
-		var more: Label = tile["more"]
-		more.text = "✓" if is_taken else str(cost)
-		more.add_theme_color_override("font_color", Pal.GOOD if is_taken else (Pal.ACCENT if reach else Pal.TEXT_3))
-		var half: float = rc.size.x * (0.71 if kind in ["keystone", "capstone"] else 0.5)     # a diamond's half-width is its half-diagonal
-		more.position = Vector2(b.position.x + rc.size.x / 2.0 + half + 3.0, b.position.y + rc.size.y / 2.0 - half - 2.0)     # beside the tile's top right, never on a tile
-		more.visible = true
-		tile["joint"].visible = edge != Color.TRANSPARENT
-		if tile["joint"].visible:
-			lane["marked"]["%d:%d" % [c, int(round(rc.position.y + rc.size.y / 2.0))]] = true     # lane-local, as rows_at
-		tile["joint"].position = Vector2(b.position.x + rc.size.x / 2.0 - half - 24.0, b.position.y + rc.size.y / 2.0 - 11.5)     # at its left, clear of the tile
-		tile["joint"].add_theme_color_override("font_color", edge if edge != Color.TRANSPARENT else Pal.BAD)
-		tile["name"].text = ""
-		tile["effect"].text = ""
-		if kind in ["keystone", "capstone"] and not is_taken and not theirs:
-			var at: int = Data.KEYSTONE_LEVEL if kind == "keystone" else Data.CAPSTONE_LEVEL
-			var lit: bool = sim.level() >= at
-			lane["lv_at"].append({"words": ("Lv %d ✓" % at) if lit else ("Lv %d" % at), "lit": lit, "id": id,
-				"x": rc.position.x + rc.size.x / 2.0 - half - 34.0, "y": rc.position.y + rc.size.y / 2.0 - half + 6.0})
-	if t["name"] == Data.COMMON_TREE and sim.pitch_free() > 0:     # the camp's own points (21 Oct)
-		UI.fit(lane["count"], ["%d of %d trained · %d free" % [taken, t["nodes"].size(), sim.pitch_free()], "%d of %d · %d free" % [taken, t["nodes"].size(), sim.pitch_free()], "%d free" % sim.pitch_free()])
-	else:
-		UI.fit(lane["count"], ["%d of %d trained" % [taken, t["nodes"].size()], "%d of %d" % [taken, t["nodes"].size()]])
-
-
-## The two links: under a class lane, to its element's lane, in the fourth column. Solid and filled when the
-## joint's closed; dim when it's open, with whose halves they are.
-func _show_links(lanes: Array, pages: bool) -> void:
-	for n in range(2):
-		var link: Dictionary = _links[n]
-		var a = lanes[2 * n]
-		var b = lanes[2 * n + 1]
-		var j: Dictionary = {} if (pages or a == null or b == null) else Data.joint_in(sim.cls, a["name"])
-		var on: bool = not j.is_empty() and j["element_tree"] == b["name"]
-		for key in ["bar", "chip"]:
-			link[key].visible = on
-		if not on:
-			continue
-		var closed: bool = sim.has_joint(j["key"])
-		var colour := joint_colour(j)
-		(link["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = colour if closed else Color(colour, 0.4)
-		var room: float = link_x() - 10.0 - TILES_X - 20.0
-		var l: Label = link["label"]
-		l.size.x = room
-		if closed:
-			l.text = "⇄ JOINED"          # the joint's words are the halves' to say, once picked (14 Oct, Matt: "keeps it simple")
-		else:
-			l.text = "⇄ CAN JOIN"
-		l.add_theme_color_override("font_color", Pal.ACCENT_TEXT if closed else colour)
-		var w: float = ceilf(UI.text_width(l, l.text)) + 20.0
-		var chip: Panel = link["chip"]
-		chip.size.x = w
-		chip.position.x = link_x() - 10.0 - w
-		l.size.x = w - 20.0
-		var sb: StyleBoxFlat = chip.get_theme_stylebox("panel")
-		sb.bg_color = colour if closed else Pal.PANEL
-		sb.border_color = colour
 
 
 ## A joint's two halves' names: the class tree's, the element tree's.
@@ -1438,19 +1023,9 @@ func _pick(id: String) -> void:
 	show_state(sim)
 
 
-func _pick_at(lane: int, i: int) -> void:
-	var id: String = _lanes[lane]["tiles"][i]["id"]
-	if id != "":
-		_pick(id)
-
-
-## A tile's button by node id, or null when it's not on show (for the tests).
-func tile_for(id: String) -> Button:
-	for lane in _lanes:
-		for t in lane["tiles"]:
-			if t["id"] == id and t["button"].visible:
-				return t["button"]
-	return null
+## The web, for the tests.
+func web():
+	return _web
 
 
 ## An Also chip's button by name, or null (for the tests).
@@ -1549,17 +1124,9 @@ func text_nodes() -> Array:
 			out.append(b)
 	for c in _class_cards:
 		out.append_array([c["name"], c["tag"]] + c["lines"])
-	for lane in _lanes:
-		if lane["panel"].visible:
-			out.append_array([lane["name"], lane["tag"], lane["gates"], lane["count"]])
-		for t in lane["tiles"]:
-			if t["button"].visible and t["more"].visible:
-				out.append(t["more"])
-			if t["button"].visible and t["joint"].visible:
-				out.append(t["joint"])
-	for l in _links:
-		if l["chip"].visible:
-			out.append(l["label"])
+	for b in _web_buttons:
+		if b.visible:
+			out.append(b)
 	for a in _also:
 		if a["button"].visible:
 			out.append(a["button"])
