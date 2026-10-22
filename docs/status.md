@@ -6205,3 +6205,10 @@ pass; the reviewer on the code):
   CAMPAIGN_LEVEL_FREE 3 levels after, then 1.08 a level to x2. The odds' key carries it. One pass again.
   - For Matt (the review): the clear level is the camp's, not the class's - a second class reaching a site a
     first one cleared pays the tax from the first's clear. Simpler; bounded at x2. Per-class if it bites.
+- The second pass (22 Oct, 08:50; docs/balance/summary_tuning2.md): the frontier wall gone but one - the Scrapper
+  as shock cleared the Shopping Centre at level 14 on lucky kit, its kit then stalled at ~280 dmg/s while its level
+  ran to 28, both its sites hardened to the x2 cap and the Bank stayed out of reach, 20 h. Levels come steadily, kit
+  is luck: a tax keyed to levels punishes a lagging kit. Matt: soften it - CAMPAIGN_LEVEL_GROW 0.08 → 0.04,
+  CAMPAIGN_LEVEL_MAX 2.0 → 1.3. The rest held: the Bank at a median 1.0 h, the Quartermaster 2.0 h, the lorry 3.9 h;
+  deaths one in 445-2842 runs, wounds 0-5%, every run in at 100%, no build into a third gang (the bot leaves at the
+  first gang: the gangs and the clock never bit it). Gang clock and no-reds green. A third pass.

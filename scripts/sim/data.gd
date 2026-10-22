@@ -2184,8 +2184,10 @@ const CAMPAIGN_LEVEL_FREE := 3     # a site cleared this many levels ago fights 
                                    # level and walled four builds at the frontier: the Bank's first clear comes 10-22 levels over its
                                    # level 6, so the frontier itself hardened to x2 as the runner levelled under it; a site never cleared
                                    # takes no tax now)...
-const CAMPAIGN_LEVEL_GROW := 0.08  # ...and past that its heads' HP and fire compound by this a level you've gained since (5 levels on: x1.47)...
-const CAMPAIGN_LEVEL_MAX := 2.0    # ...to twice at most (9 levels on): a site stays a site, never a wall for a runner far past it
+const CAMPAIGN_LEVEL_GROW := 0.04  # ...and past that its heads' HP and fire compound by this a level you've gained since (5 levels on: x1.22)...
+const CAMPAIGN_LEVEL_MAX := 1.3    # ...to 1.3 at most (7 levels on). 0.08 to x2 (22 Oct, the second pass): a Scrapper whose kit stalled at
+                                   # level 14's while its level ran to 28 found both its sites at the cap and the Bank out of reach, for
+                                   # 20 h - levels come steadily, kit is luck (Matt's stance): a lagging runner slows, never sticks
 const CAMPAIGN_POOL := 1.0         # the campaign's pools as they are (1.5 read Matt's Pleasure Park 75% to 0%: the length comes from the gangs)
 const PATROL_FIRST := 2.0          # the first gang after the clear waits twice the gap (the run's length, 4-5 min: Matt's runs ended at the first
                                    # gang, "Back, chased", two searches in); the gangs after come at the zone's gap
