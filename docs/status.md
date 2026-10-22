@@ -6340,4 +6340,16 @@ pass; the reviewer on the code):
   width; the duplication was the live tiles). Wiring once judged: web_view draws a node's picture in place of its
   glyph when the file exists, an emblem beside a label, a backdrop under the links. The test first (no credits
   before it reads).
+- The final pass on the web's settings (22 Oct, 18:21-19:11, 364b2ee; summary.md, kept as summary_web1.md; the
+  read before it as the figures in brackets): the Bank 1.3 h (1.0; the gate 1.3-2.1), the Quartermaster 2.4 h (1.7;
+  2.5-3.4), level 23-35 at him (22-34; 20-24), level 50 on the median read 15.1 h (4.9; 12-24, four never, one at
+  7.9), the lorry 4.4 h (3.5; 8.5-11), the reach at 24 h 38-54 (63-149), full signals at the reach won 87% (96%;
+  35-65), odds 100% everywhere still, deaths one in 500-9,000, cash in hand 20-400M. 20 red to 19: the campaign is
+  at or near its gates now and the Outskirts as Matt played them; the endgame is still a runaway in shape - the
+  reach climbs 3-4 levels an hour at 87% won until a wall (then stands 10-17 h), the farmed sites at 100% pay
+  compounding tins (the Drifter as fire ran 9,591 runs in 24 h), and the cash sink and scrap gates read off it.
+  That shape (the coin flip at the reach, the wall, the rewards past it) is the design question for after Matt's
+  playtest, not a number. The wall: 1-49 min a build (the Drifter as fire's 9,591 runs the long one; the plain
+  reads a minute each to the Quartermaster), the pass 50 min end to end; tidy's parts now read in the wall table.
+  Next: Matt plays; a further pass only if something's drastically wrong.
 
