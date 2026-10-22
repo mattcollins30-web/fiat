@@ -2321,41 +2321,77 @@ func atlas_free() -> int:
 
 
 func can_rank_atlas(key: String) -> bool:
-	if mission != null or atlas_free() < 1:
+	return atlas_block(key) == ""
+
+
+## Why a map node can't take a rank now, or "" (the Map's web, 22 Oct: pathed - its region's entry, or touching a
+## ranked node - not a column's gate).
+func atlas_block(key: String, ignore_points := false) -> String:
+	var a: Dictionary = Data.atlas_of(key)
+	if a.is_empty():
+		return "no such node"
+	if mission != null:
+		return "the runner is out"
+	if atlas_rank(key) >= int(a["max"]):
+		return "top rank"
+	if not atlas_open(key):
+		var near := atlas_path_next(key)
+		return "wants a path to it: %s first" % (Data.map_node(near).get("name", near) if near != "" else "an entry")
+	if a.get("keystone", false) and atlas_in_lane(int(a["column"])) < Data.MAP_KEYSTONE_POINTS:
+		return "opens at %d points in %s" % [Data.MAP_KEYSTONE_POINTS, str(Data.ATLAS_COLUMNS[int(a["column"])]).to_lower()]
+	if not ignore_points and atlas_free() < 1:
+		return "wants a point"
+	return ""
+
+
+## The Map's pathing: a node is open when it's its region's entry or touches a ranked node along a link.
+func atlas_open(key: String) -> bool:
+	var id := Data.map_id(key)
+	if id == "":
 		return false
-	for a in Data.ATLAS:
-		if a["key"] == key:
-			return atlas_rank(key) < int(a["max"]) and atlas_open(key)
+	if Data.map_node(id).get("entry", false) or atlas_rank(key) > 0:
+		return true                           # an entry, or one already ranked (its next rank wants no path)
+	for other in Data.map_links().get(id, []):
+		if atlas_rank(str(Data.map_node(other)["key"])) > 0:
+			return true
 	return false
 
 
-## The map as lanes (9 Oct): a node's column in its lane is its place there, two to a column; the column opens
-## on the points spent in that lane (Data.ATLAS_GATES), like the trees.
-func atlas_open(key: String) -> bool:
-	var col := atlas_col(key)
-	if col < 0:
-		return false
-	return atlas_in_lane(int(Data.atlas_of(key)["column"])) >= int(Data.ATLAS_GATES[mini(col, Data.ATLAS_GATES.size() - 1)])
-
-
-func atlas_col(key: String) -> int:
-	var lane: int = int(Data.atlas_of(key).get("column", -1))
-	var k := 0
-	for a in Data.ATLAS:
-		if int(a["column"]) != lane:
-			continue
-		if a["key"] == key:
-			@warning_ignore("integer_division")
-			return k / 2
-		k += 1
-	return -1
+## The next node to rank on the way to one not yet open (the screen's hint, the bot's walk): a breadth-first walk
+## back from it to the ranked set or an entry; "" if none.
+func atlas_path_next(key: String) -> String:
+	var id := Data.map_id(key)
+	var links: Dictionary = Data.map_links()
+	var parent := {id: ""}
+	var queue: Array = [id]
+	while not queue.is_empty():
+		var cur: String = queue.pop_front()
+		for other in links.get(cur, []):
+			if parent.has(other):
+				continue
+			parent[other] = cur
+			if atlas_rank(str(Data.map_node(other)["key"])) > 0:
+				return cur
+			if Data.map_node(other).get("entry", false):
+				return other
+			queue.append(other)
+	return ""
 
 
 func atlas_in_lane(lane: int) -> int:
 	var n := 0
-	for a in Data.ATLAS:
+	for a in Data.ATLAS_ALL:
 		if int(a["column"]) == lane:
 			n += atlas_rank(a["key"])
+	return n
+
+
+## A ranked node's figure with the fillers' shares in (the Map's web): "Searches 3% quicker" is 0.3 of Deeper pockets.
+func atlas_level(key: String) -> float:
+	var n: float = float(atlas_rank(key))
+	for a in Data.ATLAS_ALL:
+		if a.get("filler", false) and str(a.get("as", "")) == key and atlas_rank(str(a["key"])) > 0:
+			n += float(a["ranks"])
 	return n
 
 
@@ -2927,7 +2963,7 @@ func contact(t: Dictionary) -> int:
 ## Seconds a search takes: the intel's multiple, cut by Fieldcraft's search nodes.
 func search_s(t: Dictionary) -> float:
 	return SEARCH_S * (Data.FX["rule/miners_lamp"] if has_rule("miners_lamp") else 1.0) * float(t.get("search", 1.0)) * maxf(0.4, 1.0 - (tree_sum("search_pct") + _affix_sum("search_pct")) / 100.0) * cm("search") * (Data.FX["node/never_there.search"] if has_node("never_there") else 1.0) * trait_mult("search") \
-		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_rank("deeper_pockets")) * (Data.FX["yard/second_dog"] if yard_has("second_dog") else 1.0)
+		* (1.0 - Data.FX["atlas/deeper_pockets"] * atlas_level("deeper_pockets")) * (Data.FX["yard/second_dog"] if yard_has("second_dog") else 1.0)
 
 
 ## Seconds to the next lot. The first lot waits for the lookout too; "never
@@ -2944,7 +2980,7 @@ func patrol_s(t: Dictionary, first := false) -> float:
 		base *= Data.PATROL_FIRST * (1.0 + (Data.FX["yard/spotter"] if yard_has("spotter") else 0.0) + (Data.FX["yard/lookout_post"] if yard_has("lookout_post") else 0.0)) * (Data.FX["node/early_doors"] if has_node("early_doors") else 1.0) * (2.0 if has_node("b_roads") else 1.0)     # B-roads (22 Oct): the first takes 100% longer
 	if has_node("loud"):
 		base *= Data.FX["node/loud.patrol"]
-	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_rank("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0)
+	return base * trait_mult("patrol") * (1.0 + Data.FX["atlas/quiet_roads"] * atlas_level("quiet_roads")) * (Data.FX["rule/lollipop"] if has_rule("lollipop") else 1.0)
 
 
 func use_time(it: Dictionary) -> float:
@@ -3603,7 +3639,7 @@ func word_effect(name: String, t: int) -> Dictionary:
 		return out
 	var pw: float = float(Data.WORD_TIER_POW[clampi(t, 1, 4) - 1])
 	var jam: bool = yard_has("jammer")
-	var boost: float = (Data.FX["yard/military_band"] if yard_has("military_band") else 0.0) + Data.FX["yard_rank/radio"] * yard_rank("radio") + Data.FX["atlas/booster"] * atlas_rank("booster")
+	var boost: float = (Data.FX["yard/military_band"] if yard_has("military_band") else 0.0) + Data.FX["yard_rank/radio"] * yard_rank("radio") + Data.FX["atlas/booster"] * atlas_level("booster")
 	for side in ["bite", "pay"]:
 		var part: Dictionary = w[side]
 		for k in part:
@@ -3797,9 +3833,9 @@ func word_craft_cost(i: int, key: String) -> int:
 	if c.is_empty():
 		return 0
 	var v: float = float(c["cost"]) * maxf(1.0, float(depth[i]))
-	v *= (1.0 - Data.FX["atlas/good_reception"] * atlas_rank("good_reception")) * (Data.FX["yard/scanner"] if yard_has("scanner") else 1.0)
+	v *= (1.0 - Data.FX["atlas/good_reception"] * atlas_level("good_reception")) * (Data.FX["yard/scanner"] if yard_has("scanner") else 1.0)
 	if key == "call":
-		v *= 1.0 - Data.FX["atlas/early_word"] * atlas_rank("early_word")
+		v *= 1.0 - Data.FX["atlas/early_word"] * atlas_level("early_word")
 	if key == "hold" and atlas_rank("held_frequency") > 0:
 		v *= Data.FX["atlas/held_frequency"]     # Held frequency (21 Oct: was "sites keep their codes when the Pitch moves", the move gone)
 	if key == "clear" and sealed[i]:
@@ -4915,12 +4951,12 @@ func effective(i: int) -> Dictionary:
 		e["rarity"] += town_stat("night_rarity_pct") / 100.0     # the substation's ranks past the first
 		e["intel"].append("Night")
 	# the map at thirty-six (7 Oct): the sites' and the crews' columns, on every site
-	e["drop"] *= 1.0 + Data.FX["atlas/easy_pickings"] * atlas_rank("easy_pickings")
-	e["cash"] *= (1.0 + Data.FX["atlas/every_penny"] * atlas_rank("every_penny")) * (Data.FX["atlas/heavy_crews.cash"] if atlas_rank("heavy_crews") > 0 else 1.0)
-	e["xp"] *= (1.0 + Data.FX["atlas/wages"] * atlas_rank("wages")) * (Data.FX["atlas/heavy_crews.xp"] if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["drop"] *= 1.0 + Data.FX["atlas/easy_pickings"] * atlas_level("easy_pickings")
+	e["cash"] *= (1.0 + Data.FX["atlas/every_penny"] * atlas_level("every_penny")) * (Data.FX["atlas/heavy_crews.cash"] if atlas_rank("heavy_crews") > 0 else 1.0)
+	e["xp"] *= (1.0 + Data.FX["atlas/wages"] * atlas_level("wages")) * (Data.FX["atlas/heavy_crews.xp"] if atlas_rank("heavy_crews") > 0 else 1.0)
 	e["pace"] *= 1.0 + Data.FX["atlas/short_cuts"] * atlas_rank("short_cuts")
 	e["contact"] += (Data.FX["atlas/heavy_crews.contact"] if atlas_rank("heavy_crews") > 0 else 0) - (Data.FX["atlas/open_ground"] if atlas_rank("open_ground") > 0 else 0)
-	e["rarity"] += Data.FX["atlas/tip_offs"] * atlas_rank("tip_offs")
+	e["rarity"] += Data.FX["atlas/tip_offs"] * atlas_level("tip_offs")
 	if atlas_rank("local_knowledge") > 0:
 		e["loot_tier"] = mini(loot_cap(lv), int(e["loot_tier"]) + 1)
 	if night_run and yard_has("dead_air"):
@@ -7304,7 +7340,7 @@ func _kill(m: Dictionary, t: Dictionary) -> void:
 
 ## The old paper money: every kill carries some, more the deeper you are.
 func notes_a_kill(t: Dictionary) -> int:
-	return (int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0) * (1.0 + _affix_sum("notes_pct") / 100.0))) + atlas_rank("paid_in_notes")) * (Data.FX["rule/wardens_hat.notes"] if has_rule("wardens_hat") else 1)
+	return (int(ceil(Data.NOTES_KILL * (1.0 + (int(t["depth"]) - 1) / 3.0) * (1.0 + _affix_sum("notes_pct") / 100.0))) + int(round(atlas_level("paid_in_notes")))) * (Data.FX["rule/wardens_hat.notes"] if has_rule("wardens_hat") else 1)
 
 
 ## The crew's head is down: their drop, the notes they held, the zone's boss beaten.

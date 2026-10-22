@@ -1,12 +1,10 @@
 extends Control
-## The map as lanes (Map-L, 9 Oct; Matt: "the map screen also needs to be updated to follow the changes we've
-## made to the skill tree and yard"). The band (the points free, what earns one, the zones' depths as chips);
-## three lanes - the sites, the crews, the air - in the Training screen's layout: a label block (the points in
-## the lane, the next column's gate), six columns of two nodes, the lane's keystone last (alone in its column,
-## the lane's height). A column opens on the points spent in its lane (Data.ATLAS_GATES); the ranks as pips, a
-## taken tile lined in the accent; the sum strip as the taken nodes' figures; and the panel under: the pick's
-## name and rank (and the gate when shut), its figure as a chip with the next rank's beside, one sentence, Take
-## a rank and Start the map again.
+## The Dial as a web (22 Oct, docs/design/web_map_pitch.md §1; the lanes of 9 Oct before it). The band (the points
+## free, what earns one, the zones' levels as chips); the Map's web on the canvas (map_web.gd): three regions off a
+## centre - the sites, the crews, the codes - each a spine to its keystone with two branches, pathed from the
+## region's entry, a ranked node a stack; the sum strip as the taken nodes' figures; and the panel under: the pick's
+## name and rank (and why it's shut), its figure as a chip with the next rank's beside, one sentence, Take a rank
+## and Start the Dial again.
 
 signal acted
 
@@ -17,42 +15,24 @@ const Band := preload("res://scripts/ui/band.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const MapWeb := preload("res://scripts/ui/map_web.gd")
 
 const W := Pal.GRID_W
 const PAD := 20
 const BAND_H := 170                # the band's chips sit under the headline at this height (150 puts them over it)
 const LANES_Y := BAND_H + 12
-const LANE_H := 140
-const LANE_GAP := 6
-const LABEL_W := 180
-const TILES_X := LABEL_W + 10
-const COLS := 6
-const TILE_GAP := 6
-const ROW_GAP := 4
-@warning_ignore("integer_division")
-const TILE_W := (W - TILES_X - 8 - (COLS - 1) * TILE_GAP) / COLS
-@warning_ignore("integer_division")
-const TILE_H := (LANE_H - 14 - ROW_GAP) / 2
-const SUM_Y := LANES_Y + 3 * LANE_H + 2 * LANE_GAP + 12
+const WEB_H := 432                 # the canvas, in the three lanes' room
+const SUM_Y := LANES_Y + WEB_H + 12
 const SUM_H := 10 + Chips.CHIP_H + 10
 const SUM_HEAD_W := 150
 const SUM_CHIPS := 7               # the taken nodes' figures, so many and a count
 const PANEL_Y := SUM_Y + SUM_H + 12
-const PIP := 10
-const PIP_GAP := 4
-# the nodes as glyph tiles (10 Oct, Lanes-G; Matt: the map "looks really bad now" beside Training): a 52 px tile in
-# its column, the ranks as pips under it, a one-rank node round, the lane's keystone bigger and alone; the words are
-# the panel's and the tooltip's
-const NODE := 52
-const KEY_SIDE := 46                # a keystone's diamond: a 46 px square turned 45° (65 across), the Training tree's mark
-const ROW_Y := [2, 72]              # the two rows' tops in a 140 px lane: a tile and its pips, each row inside the lane
-const GLYPH := 30
 
 var sim
 var selected := ""                 # a passive's key, or ""
 var _band: Band
-var _heads: Array = []             # per lane: {name, count, gate, bar}
-var _tiles := {}                   # key -> {button, name, words, pips: [Panel]}
+var _web: MapWeb
+var _web_buttons: Array = []       # over the canvas's corner: the whole Dial, each region
 var _sum_head: Label
 var _sum_chips: Chips
 var _panel: Panel
@@ -72,66 +52,20 @@ func _init(h: float) -> void:
 	_band = Band.new(W, BAND_H, 4)
 	_band.set_site("the map")                 # the band's art (art/places/the_map.png): the Dial (13 Oct) keeps the map's picture
 	top.add_child(_band)
-	for c in range(Data.ATLAS_COLUMNS.size()):
-		var y: float = LANES_Y + c * (LANE_H + LANE_GAP)
-		var lane := UI.panel(self, Rect2(0, y, W, LANE_H), UI.box(Pal.PANEL, 8, 1, Pal.CARD_LINE))
-		var head := {}
-		head["bar"] = UI.panel(lane, Rect2(0, 0, 4, LANE_H), UI.box(Pal.CARD_LINE, 2))
-		head["name"] = UI.label(lane, Rect2(16, 8, LABEL_W - 20, 30), Data.ATLAS_COLUMNS[c], "SemiBold", Pal.LINE - 2, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		head["count"] = UI.label(lane, Rect2(16, 42, LABEL_W - 20, 23), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-		head["gate"] = UI.label(lane, Rect2(16, 66, LABEL_W - 20, 23), "", "Regular", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_heads.append(head)
-		var nodes: Array = Data.ATLAS.filter(func(a): return int(a["column"]) == c)
-		for k in range(nodes.size()):
-			var a: Dictionary = nodes[k]
-			var key: String = a["key"]
-			@warning_ignore("integer_division")
-			var col: int = k / 2
-			var row: int = k % 2
-			var alone: bool = k == nodes.size() - 1 and row == 0
-			var keystone: bool = a.get("keystone", false)
-			var side: float = KEY_SIDE if keystone else NODE
-			var slot_x: float = TILES_X + col * (TILE_W + TILE_GAP)
-			var mid_y: float = (y + LANE_H / 2.0) if alone else (y + ROW_Y[row] + NODE / 2.0)
-			var rc := Rect2(slot_x + (TILE_W - side) / 2.0, mid_y - side / 2.0, side, side)
-			# the shapes say what a node is, as on Training: a notable round, a keystone a diamond, the rest square
-			var t := {"max": int(a["max"]), "round": a.get("notable", false) and not keystone, "keystone": keystone}
-			var b := Button.new()
-			b.position = rc.position
-			b.size = rc.size
-			b.tooltip_text = "%s: %s" % [a["name"], a["words"]]
-			b.pressed.connect(_pick.bind(key))
-			add_child(b)
-			t["button"] = b
-			t["glyph"] = TextureRect.new()
-			t["glyph"].position = (rc.size - Vector2(GLYPH, GLYPH)) / 2.0
-			t["glyph"].size = Vector2(GLYPH, GLYPH)
-			t["glyph"].expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			t["glyph"].stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			t["glyph"].texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-			t["glyph"].texture = NodeGlyphs.texture(NodeGlyphs.of_atlas(key))
-			t["glyph"].mouse_filter = Control.MOUSE_FILTER_IGNORE
-			b.add_child(t["glyph"])
-			if keystone:
-				b.pivot_offset = rc.size / 2.0
-				b.rotation_degrees = 45.0
-				t["glyph"].pivot_offset = t["glyph"].size / 2.0
-				t["glyph"].rotation_degrees = -45.0              # upright inside the turned tile
-			# the words live in the panel: the labels stay, empty, for the tests' sake of a tile's shape
-			t["name"] = UI.label(b, Rect2(0, 0, 0, 0), "", "SemiBold", Pal.CELL_TEXT, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["words"] = UI.label(b, Rect2(0, 0, 0, 0), "", "Regular", Pal.CELL_TEXT - 3, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
-			t["name"].visible = false
-			t["words"].visible = false
-			# the ranks as pips under it, for a node of two ranks or more (one rank: its fill says it)
-			var pips: Array = []
-			var n: int = int(a["max"]) if int(a["max"]) > 1 else 0
-			var px0: float = rc.position.x + (side - (n * PIP + (n - 1) * PIP_GAP)) / 2.0
-			for j in range(n):
-				@warning_ignore("integer_division")
-				pips.append(UI.panel(self, Rect2(px0 + j * (PIP + PIP_GAP), rc.position.y + side + 4, PIP, PIP), UI.box(Color.TRANSPARENT, PIP / 2, 1, Pal.CARD_LINE)))
-			t["pips"] = pips
-			_tiles[key] = t
-			_style(b, "open")
+	_web = MapWeb.new(Vector2(W, WEB_H))
+	_web.position = Vector2(0, LANES_Y)
+	_web.picked.connect(_pick_web)
+	add_child(_web)
+	var x: float = 12.0
+	for words in ["The whole Dial", "The sites", "The crews", "The codes"]:
+		var b := UI.button(self, Rect2(x, LANES_Y + 10, 120, 30), false)
+		b.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+		b.text = words
+		b.pressed.connect(_web.focus_named.bind(words))
+		var w: float = ceilf(UI.text_width(b, words)) + 40.0
+		b.size.x = w
+		_web_buttons.append(b)
+		x += w + 6.0
 	var sum := UI.panel(self, Rect2(0, SUM_Y, W, SUM_H), UI.box(Pal.CARD, 8, 1, Pal.CARD_LINE))
 	_sum_head = UI.head(sum, Rect2(PAD, 10, SUM_HEAD_W, Chips.CHIP_H), "In total")
 	_sum_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -156,26 +90,6 @@ static func _passive(key: String) -> Dictionary:
 	return Data.atlas_of(key)
 
 
-## A node's look, the tree's (Tree-G): taken filled and gold-edged, its glyph gold; open white; locked dim; the
-## picked one ringed white. A one-rank node is round.
-func _style(b: Button, look: String, rnd := false, picked := false) -> void:
-	var r: int = int(b.size.x / 2.0) if rnd else 8
-	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		var sb: StyleBoxFlat
-		match look:
-			"taken":
-				sb = UI.box(Pal.SELECT, r, 2, Pal.ACCENT)
-			"locked":
-				sb = UI.box(Color.TRANSPARENT, r, 1, Pal.CARD_LINE)
-			_:
-				sb = UI.box(Pal.CARD if state == "hover" else Pal.PANEL, r, 1, Pal.TEXT_2)
-		if picked:
-			sb.set_border_width_all(3)
-			sb.border_color = Pal.TEXT
-		b.add_theme_stylebox_override(state, sb)
-	b.add_theme_stylebox_override("focus", UI.box(Color.TRANSPARENT, r, 2, Pal.TEXT))
-
-
 # ------------------------------------------------------------------ showing
 
 func show_state(s) -> void:
@@ -195,41 +109,18 @@ func show_state(s) -> void:
 				best_lv = maxi(best_lv, sim.lv_at(i, sim.best_depth[i]))
 		zones.append({"forms": ["%s · level %d" % [Data.ZONES[z]["name"], best_lv], "level %d" % best_lv], "colour": Pal.TEXT_2})
 	_band.set_chips(zones)
-	var taken_of: Array = [[0, 0], [0, 0], [0, 0]]
 	var items := []
 	var more := 0
-	for a in Data.ATLAS:
+	for a in Data.ATLAS:                   # the ranked nodes' figures; the fillers' are the ranked nodes' shares (atlas_level)
 		var key: String = a["key"]
-		var c: int = int(a["column"])
 		var rank: int = sim.atlas_rank(key)
-		taken_of[c][0] += rank
-		taken_of[c][1] += int(a["max"])
-		var t: Dictionary = _tiles[key]
-		var open: bool = sim.atlas_open(key)
-		var figs: Array = a["figures"]
-		for k in range(t["pips"].size()):
-			@warning_ignore("integer_division")
-			t["pips"][k].add_theme_stylebox_override("panel", UI.box(Pal.ACCENT if k < rank else Color.TRANSPARENT, PIP / 2, 1, Pal.ACCENT if k < rank else Pal.CARD_LINE))
-		var look: String = "taken" if rank > 0 else ("open" if open else "locked")
-		t["look"] = look
-		_style(t["button"], look, t["round"], key == selected)
-		t["glyph"].modulate = {"taken": Pal.ACCENT, "open": Pal.TEXT, "locked": Color(Pal.TEXT_3, 0.6)}[look]
-		t["button"].tooltip_text = "%s · rank %d of %d: %s" % [a["name"], rank, int(a["max"]), str(figs[rank]) if rank > 0 else str(a["words"])]
 		if rank > 0:
 			if items.size() < SUM_CHIPS:
-				items.append({"tag": str(a["sum"]), "forms": [str(figs[rank])], "colour": Pal.GOOD})
+				items.append({"tag": str(a["sum"]), "forms": [str(a["figures"][rank])], "colour": Pal.GOOD})
 			else:
 				more += 1
-	for c in range(Data.ATLAS_COLUMNS.size()):
-		var pts: int = sim.atlas_in_lane(c)
-		UI.fit(_heads[c]["count"], ["%d point%s in · %d of %d ranks" % [pts, "" if pts == 1 else "s", taken_of[c][0], taken_of[c][1]], "%d points in" % pts, "%d in" % pts])
-		var nxt := -1
-		for g in Data.ATLAS_GATES:
-			if int(g) > pts:
-				nxt = int(g)
-				break
-		UI.fit(_heads[c]["gate"], ["next column at %d" % nxt if nxt >= 0 else "every column open", "next at %d" % nxt if nxt >= 0 else "all open"])
-		(_heads[c]["bar"].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Pal.ACCENT if pts > 0 else Pal.CARD_LINE
+	_web.selected = Data.map_id(selected)
+	_web.show_state(sim)
 	# the sum strip: the taken nodes' figures, so many and a count; nothing taken, the point's worth
 	if more > 0:
 		items.append({"tag": "and", "forms": ["%d more" % more], "colour": Pal.TEXT_2})
@@ -251,9 +142,9 @@ func _show_panel() -> void:
 	else:
 		var rank: int = sim.atlas_rank(selected)
 		var figs: Array = a["figures"]
-		var needs: String = ""
-		if not sim.atlas_open(selected):
-			needs = "opens at %d points in %s" % [int(Data.ATLAS_GATES[sim.atlas_col(selected)]), str(Data.ATLAS_COLUMNS[int(a["column"])]).to_lower()]
+		var needs: String = sim.atlas_block(selected, true) if rank < int(a["max"]) else ""     # the path's want, or nothing
+		if needs == "the runner is out":
+			needs = ""
 		UI.fit(_title, ["%s · rank %d of %d%s" % [a["name"], rank, int(a["max"]), (" · " + needs) if needs != "" else ""], "%s · rank %d of %d" % [a["name"], rank, int(a["max"])], str(a["name"])])
 		var items := []
 		if rank > 0:
@@ -261,8 +152,8 @@ func _show_panel() -> void:
 		if rank < int(a["max"]):
 			items.append({"forms": [("next: " if rank > 0 else "") + str(figs[rank + 1])], "colour": Pal.TEXT_2 if rank > 0 else Pal.ACCENT})
 		_chips.show_chips(items)
-		_words.position.x = PAD + _chips.used_width() + 10
-		_words.size.x = W - PAD - _words.position.x
+		_words.position = Vector2(PAD, 52 + Chips.CHIP_H + 10)     # under the chips, the panel's width (22 Oct: beside them a long sentence fit nowhere and went blank)
+		_words.size.x = W - 2 * PAD
 		UI.fit(_words, [str(a["sentence"]), str(a["words"]), ""])
 		_take.text = "Take a rank (1 point)" if rank < int(a["max"]) else "Top rank"
 		_take.disabled = not sim.can_rank_atlas(selected)
@@ -274,15 +165,8 @@ func _show_panel() -> void:
 	if _take.visible:
 		x -= 12 + _take.size.x
 		_take.position.x = x
-	# the sentence stops short of the buttons (the panel is one line shorter under the lanes)
-	var room: float = x - 16 - _words.position.x
-	if _words.size.x > room:
-		_words.size.x = room
-		var a2: Dictionary = _passive(selected)
-		if a2.is_empty():
-			UI.fit(_words, [Words.MAP["empty_short"], "Pick a node above."])
-		else:
-			UI.fit(_words, [str(a2["sentence"]), str(a2["words"]), ""])
+	if _passive(selected).is_empty():
+		_words.position = Vector2(PAD, 52)
 
 
 # ------------------------------------------------------------------ acting
@@ -291,6 +175,22 @@ func _pick(key: String) -> void:
 	selected = key
 	_shown = ""
 	show_state(sim)
+
+
+## A node picked on the canvas: its key is the panel's.
+func _pick_web(id: String) -> void:
+	_pick(str(Data.map_node(id).get("key", "")) if id != "" else "")
+
+
+## Focus the canvas on a region by its column (the Radio's Juice chip: the codes).
+func focus_column(c: int) -> void:
+	for t in Data.MAP_WEB:
+		if int(t["column"]) == c:
+			_web.focus_tree(t["name"])
+
+
+func web():
+	return _web
 
 
 func _on_take() -> void:
@@ -315,13 +215,9 @@ func text_nodes() -> Array:
 		out.append_array(_chips.text_nodes())
 	if _take.visible:
 		out.append(_take)
-	for h in _heads:
-		out.append_array([h["name"], h["count"], h["gate"]])
+	out.append_array(_web_buttons)
 	return out
 
 
 func line_pairs() -> Array:
-	var out: Array = []
-	for h in _heads:
-		out.append([h["name"], h["count"]])
-	return out
+	return []

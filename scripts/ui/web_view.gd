@@ -5,6 +5,10 @@ extends Control
 ## laid out along each region's axis; the fillers and the drawn layout come in slice 2.
 ##
 ## Signals: `picked(id)` when a node is clicked ("" for a click on nothing).
+##
+## Slice 4 (web_map_pitch.md §3): the canvas is a base - the camera, the drawing, the input - with the web it draws
+## behind hooks (node_of, links_all, lay_out, state_for, state_sig, region_words, stack_of, draw_between); Training's
+## web is the default, the Map's (map_web.gd) and the Pitch's (yard_web.gd) override them.
 
 signal picked(id: String)
 
@@ -52,6 +56,7 @@ var _state := {}                   # id -> {"taken", "active", "reach", "theirs"
 var _state_sig := ""
 var _font: Font
 var _font_bold: Font
+var _focused := false              # the first show frames the whole web
 var _bounds := Rect2()
 
 
@@ -102,6 +107,10 @@ func lay_out() -> void:
 	for i in range(ring["nodes"].size()):
 		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
 	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(0, -R_RING - 30.0)}
+	_find_bounds()
+
+
+func _find_bounds() -> void:
 	_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	var first := true
 	for id in layout:
@@ -111,6 +120,95 @@ func lay_out() -> void:
 		else:
 			_bounds = _bounds.expand(layout[id])
 	_bounds = _bounds.grow(90.0)
+
+
+# ------------------------------------------------------------------ the hooks (Training's web by default)
+
+func node_of(id: String) -> Dictionary:
+	return sim.node(id)
+
+
+func links_all() -> Dictionary:
+	return Data.web_links_all()
+
+
+## The signature of what the state reads: a change relays the state.
+func state_sig() -> String:
+	return "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points)]     # the Cap turns every class node active (the review)
+
+
+## A node's state as drawn: taken, active, reach (open to train now, the points aside), theirs (another class's), cost, block.
+func state_for(id: String) -> Dictionary:
+	var nd: Dictionary = sim.node(id)
+	var taken: bool = sim.tree.has(id)
+	var block: String = sim.train_block(id, true) if not taken else ""
+	return {"taken": taken, "active": taken and sim.node_active(id), "reach": not taken and block == "",
+		"theirs": not Data.for_classes(nd, sim.my_classes()), "cost": sim.node_cost(id), "block": block}
+
+
+## A node's points on it of its stack, [n, top], or [] for a plain node.
+func stack_of(id: String, nd: Dictionary) -> Array:
+	if nd.has("ring"):
+		return [int(sim.ring.get(id, 0)), int(nd["stack"])]
+	return []
+
+
+## A region's name over it.
+func region_words(tn: String) -> String:
+	var t: Dictionary = _trees[tn]
+	if t.get("ring", false):
+		return "%s · paragon %d" % [tn, sim.paragon()] + ((" · %d free" % sim.paragon_free()) if sim.paragon_free() > 0 else "")
+	if t.has("element"):
+		var words: String = "%s · %s" % [tn, t["element"]]
+		var free_v: int = sim.element_free(t["element"])
+		if free_v > 0:
+			words += " · %d free" % free_v     # the element's own points (slice 3)
+		return words + " · meter %d%%" % int(round(100.0 * float(sim.element_xp.get(t["element"], 0.0)) / Data.ELEMENT_METER))
+	if t.get("class", "") != "":
+		return "%s · the %s's" % [tn, str(t["class"]).to_lower()]
+	return "%s · the camp's" % tn
+
+
+## A node's glyph key (node_glyphs.gd), or "" for none.
+func glyph_of(nd: Dictionary) -> String:
+	return NodeGlyphs.of(nd)
+
+
+## A node's level tag (Training's keystones and capstones) as [words, met], or [].
+func level_tag(nd: Dictionary) -> Array:
+	if nd.get("keystone", false) or nd.get("capstone", false):
+		var at: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
+		return ["Lv %d" % at, sim.level() >= at]
+	return []
+
+
+## What's drawn between the links and the nodes: Training's joints and bridges.
+func draw_between(view: Rect2) -> void:
+	for j in Data.JOINTS:
+		var ids: Array = [_joint_half(j["tree"], j["key"]), _joint_half(j["element_tree"], j["key"])]
+		if "" in ids:
+			continue
+		var pa: Vector2 = to_screen(layout[ids[0]])
+		var pb: Vector2 = to_screen(layout[ids[1]])
+		if view.has_point(pa) or view.has_point(pb):
+			var closed: bool = sim.has_joint(j["key"])
+			draw_dashed_line(pa, pb, tone_of(j["element_tree"]) if closed else Color(Pal.TEXT_3, 0.6), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
+	for id in layout:
+		var bn: Dictionary = sim.node(id)
+		if not bn.has("bridge"):
+			continue
+		var to := ""
+		for t in Data.TREES:
+			if t.get("class", "") == bn["bridge"]:
+				to = "%s/0" % t["name"]
+				break
+		if to == "" or not layout.has(to):
+			continue
+		var pa: Vector2 = to_screen(layout[id])
+		var pb: Vector2 = to_screen(layout[to])
+		if view.has_point(pa) or view.has_point(pb):
+			var taken_b: bool = _state.get(id, {}).get("taken", false)
+			draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
 
 
 ## A tree's nodes at their built places ("at": columns along the lane, rows across it); the name over the lane's
@@ -190,17 +288,15 @@ func focus_class(cls: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points)]     # the Cap turns every class node active (the review)
+	if not _focused:
+		_focused = true
+		focus_all()
+	var sig := state_sig()
 	if sig != _state_sig:
 		_state_sig = sig
 		_state = {}
-		var mine: Array = sim.my_classes()
 		for id in layout:
-			var nd: Dictionary = sim.node(id)
-			var taken: bool = sim.tree.has(id)
-			var block: String = sim.train_block(id, true) if not taken else ""
-			_state[id] = {"taken": taken, "active": taken and sim.node_active(id), "reach": not taken and block == "",
-				"theirs": not Data.for_classes(nd, mine), "cost": sim.node_cost(id), "block": block}
+			_state[id] = state_for(id)
 	queue_redraw()
 
 
@@ -228,7 +324,7 @@ func _draw() -> void:
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
 	# the links first, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise
-	var links: Dictionary = Data.web_links_all()
+	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
 			if str(a) > str(b):
@@ -245,33 +341,7 @@ func _draw() -> void:
 			elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
 				col = Pal.TEXT_2
 			draw_line(pa, pb, col, LINK_W * maxf(0.6, zoom), true)
-	# the joints: a dashed line between the two halves
-	for j in Data.JOINTS:
-		var ids: Array = [_joint_half(j["tree"], j["key"]), _joint_half(j["element_tree"], j["key"])]
-		if "" in ids:
-			continue
-		var pa: Vector2 = to_screen(layout[ids[0]])
-		var pb: Vector2 = to_screen(layout[ids[1]])
-		if view.has_point(pa) or view.has_point(pb):
-			var closed: bool = sim.has_joint(j["key"])
-			draw_dashed_line(pa, pb, tone_of(j["element_tree"]) if closed else Color(Pal.TEXT_3, 0.6), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
-	# the bridges (slice 3): a dashed line from each to the region it opens, lit when taken
-	for id in layout:
-		var bn: Dictionary = sim.node(id)
-		if not bn.has("bridge"):
-			continue
-		var to := ""
-		for t in Data.TREES:
-			if t.get("class", "") == bn["bridge"]:
-				to = "%s/0" % t["name"]
-				break
-		if to == "" or not layout.has(to):
-			continue
-		var pa: Vector2 = to_screen(layout[id])
-		var pb: Vector2 = to_screen(layout[to])
-		if view.has_point(pa) or view.has_point(pb):
-			var taken_b: bool = _state.get(id, {}).get("taken", false)
-			draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
+	draw_between(view)
 	# the nodes
 	for id in layout:
 		var p: Vector2 = to_screen(layout[id])
@@ -283,20 +353,7 @@ func _draw() -> void:
 		var p: Vector2 = to_screen(_axis[tn]["label_at"])
 		if not view.has_point(p):
 			continue
-		var t: Dictionary = _trees[tn]
-		var words: String = tn
-		if t.get("ring", false):
-			words = "%s · paragon %d" % [tn, sim.paragon()] + ((" · %d free" % sim.paragon_free()) if sim.paragon_free() > 0 else "")
-		elif t.has("element"):
-			words = "%s · %s" % [tn, t["element"]]
-			var free_v: int = sim.element_free(t["element"])
-			if free_v > 0:
-				words += " · %d free" % free_v     # the element's own points (slice 3)
-			words += " · meter %d%%" % int(round(100.0 * float(sim.element_xp.get(t["element"], 0.0)) / Data.ELEMENT_METER))
-		elif t.get("class", "") != "":
-			words = "%s · the %s's" % [tn, str(t["class"]).to_lower()]
-		else:
-			words = "%s · the camp's" % tn
+		var words: String = region_words(tn)
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(_font_bold, p - Vector2(w / 2.0, -5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone_of(tn))
@@ -311,7 +368,7 @@ func _joint_half(tree_name: String, key: String) -> String:
 
 
 func _draw_node(id: String, p: Vector2) -> void:
-	var nd: Dictionary = sim.node(id)
+	var nd: Dictionary = node_of(id)
 	var st: Dictionary = _state.get(id, {})
 	var tn: String = id.get_slice("/", 0)
 	var tone: Color = tone_of(tn)
@@ -352,15 +409,17 @@ func _draw_node(id: String, p: Vector2) -> void:
 		draw_circle(p, r, fill)
 		draw_arc(p, r, 0.0, TAU, 32, line, w, true)
 	# the glyph, from half zoom
-	if zoom >= 0.5 and (nd.get("notable", false) or diamond):
-		var tex: Texture2D = NodeGlyphs.texture(NodeGlyphs.of(nd))
+	if zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
+		var tex: Texture2D = NodeGlyphs.texture(glyph_of(nd))
 		if tex != null:
 			var g: float = r * 1.1
 			draw_texture_rect(tex, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
-	if nd.has("ring") and zoom >= 0.6:
-		var stack_v: String = "%d/%d" % [int(sim.ring.get(id, 0)), int(nd["stack"])]
+	var stack: Array = stack_of(id, nd)
+	if not stack.is_empty() and zoom >= 0.6:
+		var stack_v: String = "%d/%d" % [int(stack[0]), int(stack[1])]
 		var sw: float = _font.get_string_size(stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-		draw_string(_font, p + Vector2(-sw / 2.0, r + 13.0), stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT if taken else Pal.TEXT_3)
+		var named: bool = (nd.get("notable", false) or diamond) and (zoom >= LABEL_ZOOM or id == hover or id == selected)
+		draw_string(_font, p + Vector2(-sw / 2.0, r + 13.0 + (14.0 if named else 0.0)), stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT if taken else Pal.TEXT_3)
 	# the name under a notable, the keystone's level by it, from the label zoom
 	if (zoom >= LABEL_ZOOM or id == hover or id == selected) and (nd.get("notable", false) or diamond):
 		var fs: int = 12
@@ -368,9 +427,9 @@ func _draw_node(id: String, p: Vector2) -> void:
 		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(_font, p + Vector2(-tw / 2.0, r + 14.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Pal.TEXT if taken or reach else Pal.TEXT_3)
 	if diamond and not taken and not theirs and zoom >= 0.6:
-		var at: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
-		var lv: String = "Lv %d" % at
-		draw_string(_font, p + Vector2(r + 6.0, -r + 4.0), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.GOOD if sim.level() >= at else Pal.TEXT_3)
+		var tag: Array = level_tag(nd)
+		if not tag.is_empty():
+			draw_string(_font, p + Vector2(r + 6.0, -r + 4.0), str(tag[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.GOOD if tag[1] else Pal.TEXT_3)
 
 
 # ------------------------------------------------------------------ input
@@ -380,7 +439,7 @@ func node_at(screen_p: Vector2) -> String:
 	var best_d := INF
 	for id in layout:
 		var p: Vector2 = to_screen(layout[id])
-		var r: float = maxf(12.0, radius_of(sim.node(id)) * zoom) + 4.0
+		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom) + 4.0
 		var d: float = p.distance_to(screen_p)
 		if d <= r and d < best_d:
 			best_d = d
@@ -451,7 +510,7 @@ func find_named(words: String) -> String:
 	var best := ""
 	var best_rank := 9
 	for id in layout:
-		var nd: Dictionary = sim.node(id)
+		var nd: Dictionary = node_of(id)
 		var nm := str(nd.get("name", "")).to_lower()
 		var rank := -1
 		if nm.begins_with(w):

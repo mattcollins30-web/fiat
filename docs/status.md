@@ -6288,3 +6288,21 @@ pass; the reviewer on the code):
   .txt (no delete permission; Godot would have parsed them): Matt to bin the folder.
 - Matt (22 Oct): the Map's atlas, the Pitch's buildings and the Radio's codes as pathed webs with real choices
   ("do you path into loot quality or signal strength; the stash bigger or more useful"): the design next.
+- Slices 4b and 4c, the Map's web and the Pitch's web (22 Oct; docs/design/web_map_pitch.md, Matt: "build it all").
+  web_view.gd is a base - the camera, the drawing, the input - with the web behind hooks (node_of, links_all,
+  lay_out, state_for, state_sig, stack_of, region_words, level_tag, glyph_of, draw_between, focus_named); Training's
+  is the default, map_web.gd and yard_web.gd override them. The Map (the Radio's Dial view): Data.MAP_WEB from
+  MAP_REGIONS - the sites, the crews, the codes, each a spine to its keystone with two branches (the quiet way or
+  the rich way; the heads or the pay; the quality or the reach), a filler between a branch's nodes (29, atlas
+  nodes of one rank in ATLAS_ALL, each a share of a ranked node's figure: Sim.atlas_level, read where atlas_rank
+  was); pathing in place of the column gates (atlas_block, atlas_open, atlas_path_next; ATLAS_GATES gone); a
+  keystone wants MAP_KEYSTONE_POINTS 10 in its region (the review); a ranked node a stack. The Pitch: Data.YARD_WEB,
+  a building a region, a column's two picks each linked to both of the column before (one or the other, as now),
+  the ranks a chain past them; the sim's Yard rules as they were (the column gates, the prices), the names
+  scrambled until the room opens. atlas.gd and yard_tree.gd host the canvases in the lanes' place with their bands,
+  strips and panels (the Dial's sentence moved under its chips: beside them a long one went blank). The bot ranks
+  the Map in web order. Rendered and checked (the Dial's three regions side by side; the Pitch's lanes four a side)
+  before the smoke. Smoke: the Dial's pathing and canvas, the Pitch's canvas, the fixtures by pathing (_rank_to).
+  - For Matt: the two new scripts have no .uid files yet (the headless smoke makes none): the editor will write
+    them on its next open - commit those with the next change. The Radio's "Juice" is the Dial's "The codes"
+    button (no separate chip). The web is all in: the balance pass next.

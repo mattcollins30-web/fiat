@@ -295,10 +295,15 @@ func _endgame(sim) -> void:
 		var took := false
 		for k in range(3):
 			var c: int = (col + k) % 3
-			for a in Data.ATLAS:
-				if int(a["column"]) == c and sim.can_rank_atlas(a["key"]):
-					sim.rank_atlas(a["key"])
-					took = true
+			for t in Data.MAP_WEB:
+				if int(t["column"]) != c:
+					continue
+				for nd in t["nodes"]:         # the Map's web (slice 4): the spine first, then each branch with its fillers, as pathed
+					if sim.can_rank_atlas(str(nd["key"])):
+						sim.rank_atlas(str(nd["key"]))
+						took = true
+						break
+				if took:
 					break
 			if took:
 				col = (c + 1) % 3

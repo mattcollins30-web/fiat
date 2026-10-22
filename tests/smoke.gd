@@ -2818,6 +2818,36 @@ func _web_rule_checks(main) -> void:
 ## to the Bench until the element's affixes are on it. Then the band: at
 ## depth 30 on every site, some build still lands most of its damage.
 ## Trains a tree's nodes, cheapest columns first, until `n` points are in it (or nothing more will train).
+## The Map's web (22 Oct): a rank on a node by pathing to it - the fillers and the spine on the way ranked too, the
+## points added as needed (a fixture's way in, not a player's).
+## A node already at its top rank counts as taken; the fillers ranked on the way are let go after (their shares would
+## move the figures the checks read).
+func _rank_to(sim, key: String) -> bool:
+	var ok := false
+	for k in range(40):
+		if sim.atlas_rank(key) >= int(Data.atlas_of(key)["max"]):
+			ok = true
+			break
+		if sim.atlas_open(key):
+			if sim.atlas_free() < 1:
+				sim.atlas_points += 1
+			ok = sim.rank_atlas(key)
+			break
+		var nxt: String = sim.atlas_path_next(key)
+		if nxt == "":
+			break
+		var nk: String = str(Data.map_node(nxt)["key"])
+		if sim.atlas_free() < 1:
+			sim.atlas_points += 1
+		if not sim.rank_atlas(nk):
+			break
+	for a in Data.ATLAS_ALL:
+		if a.get("filler", false) and sim.atlas.has(a["key"]):
+			sim.atlas.erase(a["key"])
+	sim._surv_cache = {}
+	return ok
+
+
 ## The web (22 Oct): a node trained by pathing to it, the fillers on the way too (their points added as needed).
 func _walk(sim, id: String) -> bool:
 	for k in range(60):
@@ -4099,25 +4129,33 @@ func _atlas_checks(main) -> void:
 	var search0: float = sim.search_s(t2)
 	var cost0: int = sim.word_craft_cost(3, "retune")
 	var notes0: int = sim.notes_a_kill(t2)
-	# the lanes (9 Oct): a column opens on the points spent in its lane, two nodes to a column
-	_check(sim.atlas_open("picked_over") and sim.atlas_open("deeper_pockets") and not sim.atlas_open("quiet_roads") and not sim.can_rank_atlas("quiet_roads"), "the sites' second column is open with nothing spent in the lane")
+	# the Map's web (22 Oct): a region's entry is open, the rest by pathing - a branch's first node past a filler off
+	# the entry; the other regions' nodes don't open on this one's points
+	_check(sim.atlas_open("picked_over") and not sim.atlas_open("deeper_pockets") and not sim.atlas_open("quiet_roads") and not sim.can_rank_atlas("quiet_roads"), "the sites' branches are open with nothing ranked: '%s'" % sim.atlas_block("quiet_roads"))
+	_check(sim.atlas_block("quiet_roads").begins_with("wants a path") and sim.atlas_path_next("quiet_roads") == Data.map_id("picked_over"), "the path hint to Quiet roads isn't the entry: '%s'" % sim.atlas_path_next("quiet_roads"))
 	_check(sim.rank_atlas("picked_over") and sim.atlas_rank("picked_over") == 1, "a rank did not take")
 	_check(not sim.rank_atlas("deeper_pockets"), "a rank took with no point free")
 	sim.atlas_points += 10
-	_check(not sim.atlas_open("heads_up") and sim.atlas_col("heads_up") == 1, "the crews' lane reads the sites' points")
-	_check(sim.rank_atlas("deeper_pockets") and sim.atlas_in_lane(0) == 2 and sim.atlas_open("quiet_roads") and sim.rank_atlas("quiet_roads") and sim.atlas_rank("quiet_roads") == 1, "the second column did not open at two points in the lane")
-	_check(not sim.atlas_open("easy_pickings"), "the sites' fourth column opened at three points")
+	_check(not sim.atlas_open("heads_up") and sim.atlas_open("paid_in_notes"), "the crews' region reads the sites' ranks")
+	var f_quiet: String = str(Data.map_node(sim.atlas_path_next("quiet_roads"))["key"])
+	_check(Data.atlas_of(f_quiet).get("filler", false) and sim.rank_atlas(f_quiet) and sim.atlas_open("quiet_roads") and sim.rank_atlas("quiet_roads") and sim.atlas_rank("quiet_roads") == 1, "the branch did not open past its filler: %s" % f_quiet)
+	_check(not sim.atlas_open("easy_pickings") and sim.atlas_open("second_look"), "the rich way opened off the quiet one, or the spine's next is shut")
+	_check(sim.atlas_block("lie_of_the_land").begins_with("wants a path"), "the keystone's block isn't the path first: '%s'" % sim.atlas_block("lie_of_the_land"))
+	var f_deep: String = str(Data.map_node(sim.atlas_path_next("deeper_pockets"))["key"])
+	_check(Data.atlas_of(f_deep).get("filler", false) and sim.rank_atlas(f_deep) and sim.atlas_open("deeper_pockets") and sim.rank_atlas("deeper_pockets"), "the rich way did not open past its filler: %s" % f_deep)
+	_check(is_equal_approx(sim.atlas_level("deeper_pockets"), 0.3) or is_equal_approx(sim.atlas_level("quiet_roads"), 1.3) or is_equal_approx(sim.atlas_level("easy_pickings"), 0.3) or is_equal_approx(sim.atlas_level("every_penny"), 0.3), "a filler's share did not read into its ranked node's figure: %s / %s" % [f_quiet, f_deep])
 	_check(sim.patrol_s(t2) > patrol0 * 1.09, "Quiet roads did not slow the gangs")
+	sim.atlas_points += 10
 	for i in range(2):
-		sim.rank_atlas("deeper_pockets")
+		_rank_to(sim, "deeper_pockets")
 	_check(sim.atlas_rank("deeper_pockets") == 3 and not sim.can_rank_atlas("deeper_pockets"), "Deeper pockets went past its max")
 	_check(sim.search_s(t2) < search0 * 0.75, "Deeper pockets did not quicken searches")
-	_check(sim.rank_atlas("good_reception") and sim.word_craft_cost(3, "retune") <= int(ceil(cost0 * 0.85)) and sim.word_craft_cost(3, "retune") < cost0 + 1, "Good reception did not cheapen the crafts: %d from %d" % [sim.word_craft_cost(3, "retune"), cost0])
+	_check(_rank_to(sim, "good_reception") and sim.word_craft_cost(3, "retune") <= int(ceil(cost0 * 0.85)) and sim.word_craft_cost(3, "retune") < cost0 + 1, "Good reception did not cheapen the crafts: %d from %d" % [sim.word_craft_cost(3, "retune"), cost0])
 	# a note more a kill - doubled by the Traffic Warden's Hat when the camp's kit is wearing it (17 Oct: the check read
 	# +1 and failed whenever the smoke's earlier runs had left the hat on)
 	var hat: int = int(Data.FX["rule/wardens_hat.notes"]) if sim.has_rule("wardens_hat") else 1
-	_check(sim.rank_atlas("paid_in_notes") and sim.notes_a_kill(t2) == notes0 + hat, "Paid in notes did not add a note: %d from %d (the hat x%d)" % [sim.notes_a_kill(t2), notes0, hat])
-	_check(sim.rank_atlas("two_of_everything"), "Two of everything did not take")
+	_check(_rank_to(sim, "paid_in_notes") and sim.notes_a_kill(t2) == notes0 + hat, "Paid in notes did not add a note: %d from %d (the hat x%d)" % [sim.notes_a_kill(t2), notes0, hat])
+	_check(_rank_to(sim, "two_of_everything"), "Two of everything did not take")
 	# the boss drops two with it
 	sim.notes += 1000
 	sim.arm_boss(5, true)
@@ -4138,9 +4176,10 @@ func _atlas_checks(main) -> void:
 	main._radio._pick_view("air")
 	# the round trip keeps it
 	sim.rank_atlas("picked_over")
+	var pts_held: int = sim.atlas_points
 	var d: Dictionary = sim.to_dict()
 	sim.load_dict(d)
-	_check(sim.atlas_rank("picked_over") == 1 and sim.atlas_points == 11, "the map did not survive a save")
+	_check(sim.atlas_rank("picked_over") == 1 and sim.atlas_points == pts_held, "the map did not survive a save")
 	_map_nodes_checks(main)
 	sim.load_dict(saved)
 	print("the map ok: points, ranks, effects, two of everything, reset")
@@ -6544,7 +6583,7 @@ func _sink_checks(main) -> void:
 	var yf: float = 0.75 if sim.yard_has("scanner") else 1.0
 	_check(sim.word_craft_cost(3, "retune") == maxi(1, int(ceil(8.0 * yf))) and sim.word_craft_cost(3, "call") == maxi(1, int(ceil(32.0 * yf))) and sim.word_craft_cost(3, "clear") == maxi(1, int(ceil(2.0 * yf))), "the crafts' prices are off at depth 4: retune %d, call %d, clear %d" % [sim.word_craft_cost(3, "retune"), sim.word_craft_cost(3, "call"), sim.word_craft_cost(3, "clear")])
 	sim.atlas_points = 1
-	sim.rank_atlas("good_reception")
+	_rank_to(sim, "good_reception")
 	_check(sim.word_craft_cost(3, "call") == maxi(1, int(ceil(32.0 * yf * 0.85))), "Good reception did not take 15%% off: %d" % sim.word_craft_cost(3, "call"))
 	sim.atlas = {}
 	# insurance: priced on the kit by depth, paid at deploy, pays out on a death
@@ -7191,39 +7230,18 @@ func _check_fit(main, where: String) -> void:
 					_check(not ra.intersects(body.box_rect(b)), "%s: the %s and %s boxes overlap" % [where, a, b])
 	if main.room == main.OVERVIEW and main._yard_tree.visible:
 		bad += _check_nodes(main._yard_tree.text_nodes(), main._yard_tree.line_pairs(), where + " yard tree")
-		# the lanes in glyphs (10 Oct, Lanes-G): every tile a glyph inside its lane, no tile on another, each price and
-		# the rank's words inside the lane and on no tile
+		# the Pitch's web (22 Oct): every pick and rank on the canvas, none on another, the whole Pitch in view
 		var yt = main._yard_tree
-		for lane in yt._lanes:
-			var lr := Rect2(lane["panel"].position, lane["panel"].size)
-			var rects: Array = []
-			var tiles: Array = [lane["rank"]]
-			for pair in lane["tiles"]:
-				tiles.append_array(pair)
-			for tl in tiles:
-				var br := Rect2(tl["button"].position, tl["button"].size)
-				if not lr.encloses(br) or tl["glyph"].texture == null:
-					push_error("%s: a yard tile leaves its lane or has no glyph (%s)" % [where, lane["key"]])
-					bad += 1
-				for o in rects:
-					if br.intersects(o):
-						push_error("%s: two yard tiles overlap in %s" % [where, lane["key"]])
-						bad += 1
-				rects.append(br)
-			var words: Array = [lane["rank"]["name"], lane["rank"]["cost"]]
-			for pair in lane["tiles"]:
-				words.append(pair[0]["cost"])
-			for l in words:
-				if l.text == "":
-					continue
-				var wr := Rect2(l.position, Vector2(UI.text_width(l, l.text), l.size.y))
-				if not lr.encloses(wr):
-					push_error("%s: '%s' leaves its lane" % [where, l.text])
-					bad += 1
-				for o in rects:
-					if wr.intersects(o):
-						push_error("%s: '%s' runs onto a tile" % [where, l.text])
-						bad += 1
+		var yw = yt.web()
+		var yids: Array = yw.layout.keys()
+		var yover := 0
+		for a_i in range(yids.size()):
+			for b_i in range(a_i + 1, yids.size()):
+				if yw.layout[yids[a_i]].distance_to(yw.layout[yids[b_i]]) < yw.radius_of(yw.node_of(yids[a_i])) + yw.radius_of(yw.node_of(yids[b_i])) + 4.0:
+					yover += 1
+		if yover > 0:
+			push_error("%s: %d pairs of Pitch nodes sit on each other" % [where, yover])
+			bad += yover
 	var rail_nodes := []
 	for name in main.ROOMS:
 		var b = main._rail_buttons[name]
@@ -10380,9 +10398,12 @@ func _crates_checks(main) -> void:
 		m["leave_full"] = true
 		sim.advance(0.5)
 		_check(not sim.on_mission(), "Fill up, then go stayed on a picked-clean site")
-	# the leans: an ammo tin's finds mostly rounds, a medicine cabinet's meds
+	# the leans: an ammo tin's finds mostly rounds, a medicine cabinet's meds (rounds come only for a gun owned: a
+	# pistol in the stash for the read, 22 Oct)
 	sim.deploy(3)
 	m = sim.mission
+	var lean_pistol: Dictionary = sim._plain("Secondary", "Service pistol")
+	sim.stash.append(lean_pistol)
 	for pair in [["ammo_tin", Data.AMMO, 0.55], ["medicine", Data.MEDICAL, 0.45], ["filing", Data.PAPER, 0.3]]:
 		var hit := 0
 		var all := 0
@@ -10392,7 +10413,8 @@ func _crates_checks(main) -> void:
 				continue
 			all += 1
 			hit += 1 if got["it"]["slot"] == pair[1] else 0
-		_check(all > 0 and float(hit) / float(all) >= float(pair[2]), "a %s's finds are %d of %d %s" % [pair[0], hit, all, pair[1]])
+		_check(all > 0 and float(hit) / float(all) >= float(pair[2]), "a %s's finds are %d of %d %s (ammo types owned: %s)" % [pair[0], hit, all, pair[1], str(sim.owned_ammo_types(m))])
+	sim.stash.erase(lean_pistol)
 	# a site's own: the Barracks' military crates, the Bank's safes, none of either in the Outskirts
 	var w_barracks: Dictionary = sim.crate_weights({"tier": Data.TIERS.size() - 1, "depth": 1})
 	var w_bank: Dictionary = sim.crate_weights({"tier": 8, "depth": 1})
@@ -11607,8 +11629,8 @@ func _yard_wide_checks(main) -> void:
 	_check(yt.STRIP_Y + yt.STRIP_H <= yt.size.y and yt._build.position.y + yt._build.size.y <= yt.STRIP_H, "the Pitch's strip runs past the room or its button out of it")
 	# the heading takes the room the lanes left (Matt, 10 Oct): the strip ends at the room's foot, the heading its band
 	_check(is_equal_approx(yt.STRIP_Y + yt.STRIP_H, yt.size.y) and yt.HEAD_H >= 200 and yt.LANES_Y == yt.HEAD_H + 8, "the Pitch leaves room unused or its heading short: strip to %d of %d, heading %d" % [yt.STRIP_Y + yt.STRIP_H, int(yt.size.y), yt.HEAD_H])
-	var names: Array = yt._lanes.map(func(l): return l["name"].text)
-	_check(names == Data.YARD.map(func(b): return b["name"]), "the Pitch's lanes are off: %s" % str(names))
+	var names: Array = Data.YARD_WEB.map(func(t): return t["name"])
+	_check(names == Data.YARD.map(func(b): return b["name"]) and yt.web().layout.size() == Data.YARD.size() * 15, "the Pitch's regions are off: %s, %d nodes" % [str(names), yt.web().layout.size()])
 	# a fresh Yard: column 1 open, the rest shut with their gates; nothing affordable with no cash
 	sim.yard_picks = {}
 	sim.yard_ranks = {}
@@ -12790,18 +12812,19 @@ func _map_nodes_checks(main) -> void:
 	sim.words[3] = []
 	var take := func(keys: Array):
 		for k in keys:
-			_check(sim.rank_atlas(k), "%s did not take" % k)
+			_check(_rank_to(sim, k), "%s did not take" % k)
 	sim.set_depth(3, 2)
 	var e0: Dictionary = sim.effective(3)
 	# the sites' column, down the chain
 	take.call(["picked_over", "deeper_pockets", "quiet_roads", "after_dark"])
 	var e1: Dictionary = sim.effective(3)
 	_check("Night" in e1["intel"] and float(e1["rarity"]) - float(e0["rarity"]) >= 0.5 * 1.5 - 0.001, "After dark did not make the run a night run with the dark's half again: %.2f" % (float(e1["rarity"]) - float(e0["rarity"])))
-	take.call(["second_look", "second_look", "worn_in", "worn_in"])
+	var ep1: int = sim.atlas_rank("easy_pickings")     # the Map's web (22 Oct): the way to After dark ranks Easy pickings on the rich way
+	take.call(["second_look", "second_look", "open_ground", "short_cuts", "short_cuts", "worn_in", "worn_in"])     # the quiet way in its order: a shortcut through the keystone would rank it
 	_check(is_equal_approx(sim.recover_s(), Data.RECOVER_H * 3600.0 / 2.0), "Worn in did not halve the recovery: %.0f" % sim.recover_s())
-	take.call(["easy_pickings", "easy_pickings", "local_knowledge", "short_cuts", "short_cuts", "open_ground", "every_penny", "every_penny"])
+	take.call(["easy_pickings", "easy_pickings", "local_knowledge", "every_penny", "every_penny"])
 	var e2: Dictionary = sim.effective(3)
-	_check(is_equal_approx(float(e2["drop"]) / float(e1["drop"]), 1.2), "Easy pickings is off: %.2f" % (float(e2["drop"]) / float(e1["drop"])))
+	_check(is_equal_approx(float(e2["drop"]) / float(e1["drop"]), (1.0 + 0.1 * 2.0) / (1.0 + 0.1 * ep1)), "Easy pickings is off: %.2f" % (float(e2["drop"]) / float(e1["drop"])))
 	_check(int(e2["loot_tier"]) == int(e1["loot_tier"]) + 1, "Local knowledge did not add a gear tier")
 	_check(is_equal_approx(float(e2["pace"]) / float(e1["pace"]), 1.1), "Short cuts is off")
 	_check(int(e2["contact"]) == int(e1["contact"]) - 1, "Open ground did not take one off")
@@ -12869,18 +12892,17 @@ func _map_nodes_checks(main) -> void:
 	var rc0: int = sim.word_craft_cost(3, "retune")
 	take.call(["good_reception", "good_reception"])
 	_check(sim.word_craft_cost(3, "retune") == maxi(1, int(ceil(rc0 * 0.7 - 0.0001))), "Good reception is off: %d of %d" % [sim.word_craft_cost(3, "retune"), rc0])
-	_check(not sim.atlas_open("long_wave"), "the air's third column opened at two points")
+	_check(not sim.atlas_open("long_wave") or sim.atlas_rank("clear_air") > 0, "the codes' third spine node opened with the second not ranked")
 	take.call(["clear_air"])
 	_check(sim.set_filtered("Numbers") and sim.filtered == "Numbers", "Clear air did not take a filter")
 	var heard := false
 	for k in range(40):
 		heard = heard or sim._roll_words(3, [], 2).any(func(wd): return wd["w"] == "Numbers")
 	_check(not heard, "Clear air's word was still heard")
-	take.call(["booster", "booster", "booster"])
-	_check(is_equal_approx(float(sim.word_effect("Numbers", 1)["drop"]), 1.0 + 0.3 * 1.3), "Booster is off: %s" % str(sim.word_effect("Numbers", 1)))
 	var mw2: int = sim.max_words(3)
 	var er0: Dictionary = sim.effective(3)
-	take.call(["long_wave", "tip_offs", "tip_offs"])
+	take.call(["tip_offs", "tip_offs", "booster", "booster", "booster", "long_wave"])     # the quality way in its order (22 Oct: Booster sits past Tip-offs)
+	_check(is_equal_approx(float(sim.word_effect("Numbers", 1)["drop"]), 1.0 + 0.3 * 1.3), "Booster is off: %s" % str(sim.word_effect("Numbers", 1)))
 	_check(sim.max_words(3) == mw2 + 1 and mw2 == 2, "Long wave did not add a word at depth 2: %d from %d" % [sim.max_words(3), mw2])
 	_check(is_equal_approx(float(sim.effective(3)["rarity"]) - float(er0["rarity"]), 0.1), "Tip-offs is off")
 	take.call(["strong_signal", "strong_signal"])
@@ -12901,7 +12923,7 @@ func _map_nodes_checks(main) -> void:
 	var ranks := 0
 	for a in Data.ATLAS:
 		ranks += int(a["max"])
-	_check(ranks == 59 and sim.atlas_free() == 100 + 1 - sim.atlas_spent(), "the map's ranks do not add to fifty-nine: %d, %d free" % [ranks, sim.atlas_free()])
+	_check(ranks == 59 and Data.ATLAS_ALL.size() >= Data.ATLAS.size() + 24 and sim.atlas_free() == sim.atlas_points - sim.atlas_spent(), "the map's ranks do not add to fifty-nine with the fillers: %d, %d free" % [ranks, sim.atlas_free()])
 	_open_map(main)
 	main._radio._atlas._shown = ""
 	main.refresh()
@@ -12919,64 +12941,54 @@ func _map_nodes_checks(main) -> void:
 func _map_screen_checks(main) -> void:
 	var sim = main.sim
 	var at = main._radio._atlas
-	_check(at.visible and at._tiles.size() == Data.ATLAS.size(), "the map shows %d tiles of %d" % [at._tiles.size(), Data.ATLAS.size()])
-	# every passive on a tile, in a column, inside the room; tiles apart
-	var rects: Array = []
-	for key in at._tiles:
-		var b: Button = at._tiles[key]["button"]
-		var r := Rect2(b.position, b.size)
-		_check(Rect2(Vector2.ZERO, at.size).encloses(r), "the %s tile runs out of the map: %s" % [key, str(r)])
-		for other in rects:
-			_check(not r.intersects(other), "two map tiles overlap: %s and %s" % [str(r), str(other)])
-		rects.append(r)
-		var pips: Array = at._tiles[key]["pips"]
-		var a: Dictionary = at._passive(key)
-		_check(pips.size() == (int(a["max"]) if int(a["max"]) > 1 else 0), "%s has %d pips for %d ranks" % [key, pips.size(), int(a["max"])])
-		# the glyphs (10 Oct, Lanes-G): a glyph on every node, a one-rank node round, its pips under it and on no tile
-		_check(at._tiles[key]["glyph"].texture != null and NodeGlyphs.ATLAS_GLYPH.has(key), "the %s node has no glyph of its own" % key)
-		var sb0: StyleBoxFlat = b.get_theme_stylebox("normal")
-		var notable: bool = a.get("notable", false) and not a.get("keystone", false)
-		_check(notable == (sb0.corner_radius_top_left >= int(b.size.x / 2.0) - 1), "the %s node's roundness does not follow its being notable" % key)
-		_check(a.get("keystone", false) == is_equal_approx(b.rotation_degrees, 45.0), "the %s node's diamond does not follow its being the keystone" % key)
-		var lane_y: float = at.LANES_Y + int(a["column"]) * (at.LANE_H + at.LANE_GAP)
-		var reach: float = b.size.x * 0.21 if a.get("keystone", false) else 0.0       # a turned square reaches past its box
-		_check(r.position.y - reach >= lane_y and r.end.y + reach <= lane_y + at.LANE_H, "the %s node leaves its lane" % key)
-		for p in pips:
-			var pr := Rect2(p.position, p.size)
-			_check(pr.position.y >= r.end.y and pr.end.y <= lane_y + at.LANE_H and pr.position.x >= r.position.x - 1.0 and pr.end.x <= r.end.x + 1.0, "the %s node's pips are not under it in its lane" % key)
-		var lit := 0
-		for p in pips:
-			if (p.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Pal.ACCENT:
-				lit += 1
-		if pips.is_empty():
-			_check((sim.atlas_rank(key) > 0) == (at._tiles[key].get("look", "") == "taken"), "%s (one rank) does not read taken by its fill: rank %d, %s" % [key, sim.atlas_rank(key), at._tiles[key].get("look", "")])
-		else:
-			_check(lit == sim.atlas_rank(key), "%s shows %d pips lit for rank %d" % [key, lit, sim.atlas_rank(key)])
+	var wv = at.web()
+	# the Map's web (22 Oct): every atlas node and every filler on the canvas, none on another, the whole Dial in view
+	var ids: Array = []
+	for t in Data.MAP_WEB:
+		for i in range(t["nodes"].size()):
+			ids.append("%s/%d" % [t["name"], i])
+	_check(at.visible and wv.visible and ids.size() == Data.ATLAS_ALL.size() and ids.size() >= Data.ATLAS.size() + 24, "the Map's web has %d nodes for %d atlas nodes" % [ids.size(), Data.ATLAS_ALL.size()])
+	for a in Data.ATLAS:
+		_check(Data.map_id(a["key"]) != "", "%s is not on the Map's web" % a["key"])
+	var overlaps := 0
+	for a_i in range(ids.size()):
+		for b_i in range(a_i + 1, ids.size()):
+			var pa: Vector2 = wv.layout[ids[a_i]]
+			var pb: Vector2 = wv.layout[ids[b_i]]
+			if pa.distance_to(pb) < wv.radius_of(wv.node_of(ids[a_i])) + wv.radius_of(wv.node_of(ids[b_i])) + 4.0:
+				overlaps += 1
+	_check(overlaps == 0, "%d pairs of Map nodes sit on each other" % overlaps)
+	wv.focus_all()
+	for id in ids:
+		var p: Vector2 = wv.to_screen(wv.layout[id])
+		_check(p.x >= -1.0 and p.y >= -1.0 and p.x <= wv.size.x + 1.0 and p.y <= wv.size.y + 1.0, "%s is off the Dial's canvas at the whole zoom" % id)
+	wv.show_state(sim)
+	for key in sim.atlas:
+		if sim.atlas_rank(key) > 0 and Data.map_id(key) != "":
+			_check(wv.state_of(Data.map_id(key)).get("taken", false), "%s is ranked and the canvas doesn't show it" % key)
 	var taken := 0
 	for key in sim.atlas:
-		if sim.atlas_rank(key) > 0:
+		if sim.atlas_rank(key) > 0 and not Data.atlas_of(key).get("filler", false):
 			taken += 1
-	_check(at._sum_chips.shown() == mini(taken, at.SUM_CHIPS) + (1 if taken > at.SUM_CHIPS else 0), "the map's sum strip shows %d chips for %d taken" % [at._sum_chips.shown(), taken])
-	# the columns: twelve a column, the keystone the width and last, a locked tile dim and its panel saying what it needs
-	for c in range(3):
-		var n := 0
-		var last := {}
-		for a in Data.ATLAS:
-			if int(a["column"]) == c:
-				n += 1
-				last = a
-		_check((n == 12 or (c == 2 and n == 11)) and last.get("keystone", false), "lane %d is not its nodes ending in a keystone" % c)
-		var kb: Button = at._tiles[last["key"]]["button"]
-		_check(is_equal_approx(kb.rotation_degrees, 45.0), "the lane's keystone is not a diamond")
-		_check(kb.position.x > at.TILES_X + 4 * at.TILE_W, "the keystone is not in the lane's last column")
+	_check(at._sum_chips.shown() >= mini(taken, at.SUM_CHIPS) - 1 and at._sum_chips.shown() <= mini(taken, at.SUM_CHIPS) + 1, "the map's sum strip shows %d chips for %d taken" % [at._sum_chips.shown(), taken])
+	# the regions: a spine ending in the keystone, two branches; a shut node's panel says what it needs
+	for t in Data.MAP_WEB:
+		var keys: Array = t["nodes"].filter(func(n): return not n.get("filler", false)).map(func(n): return n["key"])
+		var last: Dictionary = Data.atlas_of(t["nodes"][3]["key"])
+		_check(keys.size() == (12 if t["column"] != 2 else 11) and last.get("keystone", false), "%s is not its nodes with the keystone at the spine's end" % t["name"])
 	at._pick("lie_of_the_land")
-	_check((at._title.text.contains("opens at 14 points in the sites") or sim.atlas_open("lie_of_the_land")) and (at._take.disabled or sim.atlas_open("lie_of_the_land")), "a shut node's panel does not say what opens it: '%s'" % at._title.text)
+	_check((at._title.text.contains("wants a path") or at._title.text.contains("opens at %d points" % Data.MAP_KEYSTONE_POINTS) or sim.can_rank_atlas("lie_of_the_land")) and (at._take.disabled or sim.can_rank_atlas("lie_of_the_land")), "a shut node's panel does not say what it needs: '%s'" % at._title.text)
+	for b in at._web_buttons:
+		_check(b.visible, "a Dial web button is hidden")
+	at._web_buttons[3].pressed.emit()
+	_check(wv.zoom > 0.3, "The codes button did not zoom the canvas")
+	at._web_buttons[0].pressed.emit()
 	# a pick fills the panel; a rank through it takes; the pips follow
 	var rank0: int = sim.atlas_rank("quiet_roads")
 	sim.atlas_points += 1
 	at._pick("quiet_roads")
 	_check(at._title.text.begins_with("Quiet roads · rank %d of 3" % rank0) and at._take.visible and not at._take.disabled and at._words.text.ends_with("."), "the map's panel after a pick is off: '%s' / '%s'" % [at._title.text, at._words.text])
-	_check(at._words.position.x >= at._chips.position.x + at._chips.used_width(), "the map panel's sentence sits on its chips")
+	_check(at._words.position.y >= at._chips.position.y + Chips.CHIP_H, "the map panel's sentence sits on its chips")
 	at._on_take()
 	_check(sim.atlas_rank("quiet_roads") == rank0 + 1 and at._title.text.begins_with("Quiet roads · rank %d of 3" % (rank0 + 1)), "a rank through the panel did not take: %d, '%s'" % [sim.atlas_rank("quiet_roads"), at._title.text])
 	_check_fit(main, "Runs (the map, picked)")
@@ -13768,7 +13780,7 @@ func _radio_juice_checks(main) -> void:
 	_check_fit(main, "Radio (on the air)")
 	sim.atlas_points = 40
 	for k in ["good_reception", "good_reception", "clear_air", "booster", "booster", "booster", "long_wave", "tip_offs", "tip_offs", "strong_signal", "strong_signal", "early_word", "early_word", "held_frequency", "relay"]:
-		sim.rank_atlas(k)
+		_rank_to(sim, k)
 	_check(sim.atlas_rank("relay") == 1, "the air lane did not open to the Relay")
 	main.refresh()
 	_check(rd._stand_head.visible and rd._stand[0]["button"].visible and not rd._stand[0]["button"].disabled and not rd._stand[2]["button"].disabled, "the Radio has no standing code or filter slot")
@@ -17223,17 +17235,16 @@ func _pitch_scramble_checks(main) -> void:
 	main._yard_tree._shown = ""
 	main.refresh()
 	var yt = main._yard_tree
-	for lane in yt._lanes:
-		var key: String = lane["key"]
+	for t in Data.YARD_WEB:
+		var key: String = str(t["yard"])
 		var b: Dictionary = Data.yard_building(key)
 		var open: bool = s.room_open(Sim.building_room(key))
-		var nm: String = str(b["name"])
-		var tip: String = str(lane["tiles"][0][0]["button"].tooltip_text)
 		var pk_name: String = str(b["picks"][0][0]["name"])
+		var shown: String = str(yt.web().node_of("%s/0" % t["name"])["name"])
 		if open:
-			_check(lane["name"].text in [nm, nm.trim_prefix("The ")] and tip.begins_with(pk_name), "the Pitch's %s, its room open, reads '%s' / '%s'" % [key, lane["name"].text, tip])
+			_check(shown == pk_name, "the Pitch's %s, its room open, reads '%s'" % [key, shown])
 		else:
-			_check(not lane["name"].text.contains(nm.trim_prefix("The ")) and not tip.contains(pk_name) and not lane["rank"]["name"].text.contains(str(b["rank"]["short"])), "the Pitch's %s, its room shut, names it: '%s' / '%s' / '%s'" % [key, lane["name"].text, tip, lane["rank"]["name"].text])
+			_check(shown != pk_name and not shown.contains(pk_name), "the Pitch's %s, its room shut, names it: '%s'" % [key, shown])
 	main.sim = keep
 	main.show_room(was)
 	main.refresh()

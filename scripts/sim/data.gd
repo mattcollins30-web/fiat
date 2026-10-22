@@ -2239,15 +2239,174 @@ const ATLAS := [
 	{"key": "whole_band", "column": 2, "name": "The whole band", "max": 1, "keystone": true, "words": "Pick a second code to run on every site",
 		"sum": "Standing", "figures": ["one code", "two codes"], "sentence": "Two standing codes on every site with codes."},
 ]
-## The map as lanes (9 Oct): a node's column in its lane is its place in the lane's list, two to a column; a
-## column opens on the points spent in that lane (the mockup's figures).
-const ATLAS_GATES := [0, 2, 4, 7, 10, 14]
 const ATLAS_COLUMNS := ["The sites", "The crews", "The codes"]
+## The Map's web (22 Oct, docs/design/web_map_pitch.md §1): the atlas's three lanes as three regions off a centre,
+## pathed, not gated (ATLAS_GATES went). A region: a spine (its first node the entry, its last the keystone) and two
+## branches off the spine's first node, back into its last; a filler between the nodes of a branch, each one small
+## stat that counts as a share of a ranked node's figure ("as" and "ranks": atlas_level reads them).
+const MAP_REGIONS := [
+	{"name": "The sites", "column": 0, "angle": 180.0, "spine": ["picked_over", "second_look", "local_knowledge", "lie_of_the_land"],
+	 "branches": [["quiet_roads", "open_ground", "short_cuts", "worn_in"], ["deeper_pockets", "easy_pickings", "after_dark", "every_penny"]],
+	 "fillers": [["deeper_pockets", 0.3, "Searches 3% quicker", "Quick feet"], ["quiet_roads", 0.3, "Gangs come 3% later", "Back ways"], ["easy_pickings", 0.3, "Drops +3%", "Light fingers"], ["every_penny", 0.3, "Tins +3%", "Loose change"]]},
+	{"name": "The crews", "column": 1, "angle": 0.0, "spine": ["paid_in_notes", "their_own_kit", "marked_men", "lorrys_route"],
+	 "branches": [["heads_up", "two_of_everything", "full_strength", "long_memory", "head_start"], ["wages", "bounties", "heavy_crews"]],
+	 "fillers": [["wages", 0.3, "XP +3%", "Lessons"], ["paid_in_notes", 1.0, "+1 note a kill", "Pocket money"], ["every_penny", 0.3, "Tins +3%", "Loose change"], ["easy_pickings", 0.3, "Drops +3%", "Light fingers"]]},
+	{"name": "The codes", "column": 2, "angle": 90.0, "spine": ["good_reception", "clear_air", "long_wave", "whole_band"],
+	 "branches": [["tip_offs", "booster", "strong_signal", "bent"], ["early_word", "held_frequency", "relay"]],
+	 "fillers": [["good_reception", 0.333, "Crafts −5%", "Spare valves"], ["booster", 0.3, "Codes pay +3%", "Gain"], ["early_word", 0.2, "Call in −5%", "Short dial"], ["tip_offs", 0.4, "Loot quality +2%", "Hearsay"]]},
+]
+const MAP_KEYSTONE_POINTS := 10    # a region's keystone wants this many points in the region (the lanes' last gate was 14; the review: pathing alone put it three ranks in)
+const MAP_SPINE_STEP := 1.3
+const MAP_BRANCH_Y := 2.4
+static var ATLAS_ALL: Array = []       # the atlas's nodes and the Map web's fillers: what atlas_of reads (filled as MAP_WEB builds, below it in order)
+static var MAP_WEB: Array = _map_build()
 
 
-## A map node by key, or {}.
+## The Map's web built: a tree a region, its nodes the atlas's by key with "at" and "links"; the fillers made here and
+## added to ATLAS_ALL as atlas nodes of one rank.
+static func _map_build() -> Array:
+	var out := []
+	ATLAS_ALL = ATLAS.duplicate()
+	for rg in MAP_REGIONS:
+		var t := {"name": rg["name"], "map": true, "column": rg["column"], "angle": rg["angle"], "nodes": []}
+		var nodes: Array = t["nodes"]
+		var by_key := {}
+		var spine: Array = rg["spine"]
+		for i in range(spine.size()):
+			var a: Dictionary = atlas_of(spine[i])
+			assert(not a.is_empty(), "no atlas node " + str(spine[i]))
+			nodes.append({"name": a["name"], "key": spine[i], "at": [i * MAP_SPINE_STEP, 0.0], "links": [], "notable": a.get("notable", false) or a.get("keystone", false), "keystone": a.get("keystone", false), "entry": i == 0})
+			by_key[spine[i]] = nodes.size() - 1
+			if i > 0:
+				_web_link(nodes, by_key[spine[i - 1]], by_key[spine[i]])
+		var fcount := 0
+		for b in range(rg["branches"].size()):
+			var side: float = -1.0 if b == 0 else 1.0
+			var branch: Array = rg["branches"][b]
+			var last: int = by_key[spine[0]]
+			for j in range(branch.size()):
+				var x: float = 0.65 + j * MAP_SPINE_STEP
+				var f := _map_filler(rg, t, [x - 0.65 + (0.3 if j == 0 else 0.0), side * (MAP_BRANCH_Y / 2.0 if j == 0 else MAP_BRANCH_Y)], fcount)
+				fcount += 1
+				_web_link(nodes, last, f)
+				var a: Dictionary = atlas_of(branch[j])
+				assert(not a.is_empty(), "no atlas node " + str(branch[j]))
+				nodes.append({"name": a["name"], "key": branch[j], "at": [x, side * MAP_BRANCH_Y], "links": [], "notable": a.get("notable", false)})
+				by_key[branch[j]] = nodes.size() - 1
+				_web_link(nodes, f, by_key[branch[j]])
+				last = by_key[branch[j]]
+			# the branch's end back into the spine's last node (the keystone) by a filler
+			var f2 := _map_filler(rg, t, [(spine.size() - 1) * MAP_SPINE_STEP - 0.3, side * MAP_BRANCH_Y / 2.0], fcount)
+			fcount += 1
+			_web_link(nodes, last, f2)
+			_web_link(nodes, f2, by_key[spine[spine.size() - 1]])
+		out.append(t)
+	return out
+
+
+static func _map_filler(rg: Dictionary, t: Dictionary, at: Array, n: int) -> int:
+	var fl: Array = rg["fillers"][n % rg["fillers"].size()]
+	var key := "%s_f%d" % [str(rg["spine"][0]), n]
+	var words: String = str(fl[2])
+	ATLAS_ALL.append({"key": key, "column": int(rg["column"]), "name": str(fl[3]), "max": 1, "filler": true, "as": str(fl[0]), "ranks": float(fl[1]),
+		"words": words, "sum": words, "figures": ["as it is", words], "sentence": words + ", on every site."})
+	t["nodes"].append({"name": str(fl[3]), "key": key, "at": at, "links": [], "filler": true})
+	return t["nodes"].size() - 1
+
+
+## A Map web node's id for an atlas key, or "".
+static func map_id(key: String) -> String:
+	for t in MAP_WEB:
+		for i in range(t["nodes"].size()):
+			if t["nodes"][i]["key"] == key:
+				return "%s/%d" % [t["name"], i]
+	return ""
+
+
+static func map_node(id: String) -> Dictionary:
+	for t in MAP_WEB:
+		if t["name"] == id.get_slice("/", 0):
+			var i := int(id.get_slice("/", 1))
+			return t["nodes"][i] if i < t["nodes"].size() else {}
+	return {}
+
+
+static var _map_links := {}
+static func map_links() -> Dictionary:
+	if not _map_links.is_empty():
+		return _map_links
+	var out := {}
+	for t in MAP_WEB:
+		for i in range(t["nodes"].size()):
+			var ia := "%s/%d" % [t["name"], i]
+			out[ia] = []
+			for j in t["nodes"][i]["links"]:
+				out[ia].append("%s/%d" % [t["name"], int(j)])
+	_map_links = out
+	return out
+
+
+## The Pitch's web (web_map_pitch.md §2): a building a region, its five columns' picks as forks along the spine (a
+## column's two picks link to both of the column before: one or the other, as now) and its ranks a chain past them.
+const YARD_PICK_Y := 1.3
+static var YARD_WEB: Array = _yard_build()
+
+
+static func _yard_build() -> Array:
+	var out := []
+	for k in range(YARD.size()):
+		var b: Dictionary = YARD[k]
+		var t := {"name": b["name"], "yard": b["key"], "angle": -90.0 + k * 45.0, "nodes": []}
+		var nodes: Array = t["nodes"]
+		var prev: Array = []
+		for c in range(b["picks"].size()):
+			var now: Array = []
+			for side in range(2):
+				var pk: Dictionary = b["picks"][c][side]
+				nodes.append({"name": pk["name"], "pick": pk["id"], "yard": b["key"], "col": c, "side": "a" if side == 0 else "b", "at": [c * 1.2, (-YARD_PICK_Y if side == 0 else YARD_PICK_Y)], "links": [], "notable": true, "entry": c == 0})
+				now.append(nodes.size() - 1)
+			for i in prev:
+				for j in now:
+					_web_link(nodes, i, j)
+			prev = now
+		for r in range(1, 6):
+			nodes.append({"name": ("Rank %d" % r) if r < 5 else "Rank 5 and on", "rank": r, "yard": b["key"], "at": [b["picks"].size() * 1.2 + (r - 1) * 0.9, 0.0], "links": [], "keystone": r == 5})
+			var i := nodes.size() - 1
+			if r == 1:
+				for j in prev:
+					_web_link(nodes, j, i)
+			else:
+				_web_link(nodes, i - 1, i)
+		out.append(t)
+	return out
+
+
+static func yard_node(id: String) -> Dictionary:
+	for t in YARD_WEB:
+		if t["name"] == id.get_slice("/", 0):
+			var i := int(id.get_slice("/", 1))
+			return t["nodes"][i] if i < t["nodes"].size() else {}
+	return {}
+
+
+static var _yard_links := {}
+static func yard_links() -> Dictionary:
+	if not _yard_links.is_empty():
+		return _yard_links
+	var out := {}
+	for t in YARD_WEB:
+		for i in range(t["nodes"].size()):
+			var ia := "%s/%d" % [t["name"], i]
+			out[ia] = []
+			for j in t["nodes"][i]["links"]:
+				out[ia].append("%s/%d" % [t["name"], int(j)])
+	_yard_links = out
+	return out
+
+
+## A map node by key, or {} - the atlas's and the Map web's fillers (ATLAS_ALL, once built).
 static func atlas_of(key: String) -> Dictionary:
-	for a in ATLAS:
+	for a in (ATLAS_ALL if not ATLAS_ALL.is_empty() else ATLAS):
 		if a["key"] == key:
 			return a
 	return {}
