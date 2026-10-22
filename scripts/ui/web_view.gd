@@ -33,6 +33,7 @@ const YARD_TONE := Color("8fb3d9")
 ## elements, Data.LANE_OFF rows either side of the angle, their notables hung outward.
 const R_ELEMENT := 280.0
 const R_CLASS := 740.0
+const R_RING := 1300.0             # the paragon ring (slice 4), round the outside
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
 const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
 
@@ -73,7 +74,7 @@ func lay_out() -> void:
 	layout = {}
 	_trees = {}
 	_axis = {}
-	for t in Data.TREES + Data.ELEMENT_TREES:
+	for t in Data.TREES + Data.ELEMENT_TREES + [Data.RING]:
 		_trees[t["name"]] = t
 	var by_class := {}
 	for t in Data.TREES:
@@ -96,6 +97,11 @@ func lay_out() -> void:
 		for k in range(mine.size()):
 			var off: float = (k - (mine.size() - 1) / 2.0) * 2.0 * Data.LANE_OFF * ROW
 			_lay_tree(mine[k], d * R_CLASS + d.orthogonal() * off, d, Pal.TEXT)
+	# the ring: its nodes round the outside at their angles; the name at the top
+	var ring: Dictionary = Data.RING
+	for i in range(ring["nodes"].size()):
+		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
+	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(0, -R_RING - 30.0)}
 	_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	var first := true
 	for id in layout:
@@ -279,7 +285,9 @@ func _draw() -> void:
 			continue
 		var t: Dictionary = _trees[tn]
 		var words: String = tn
-		if t.has("element"):
+		if t.get("ring", false):
+			words = "%s · paragon %d" % [tn, sim.paragon()] + ((" · %d free" % sim.paragon_free()) if sim.paragon_free() > 0 else "")
+		elif t.has("element"):
 			words = "%s · %s" % [tn, t["element"]]
 			var free_v: int = sim.element_free(t["element"])
 			if free_v > 0:
@@ -349,6 +357,10 @@ func _draw_node(id: String, p: Vector2) -> void:
 		if tex != null:
 			var g: float = r * 1.1
 			draw_texture_rect(tex, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
+	if nd.has("ring") and zoom >= 0.6:
+		var stack_v: String = "%d/%d" % [int(sim.ring.get(id, 0)), int(nd["stack"])]
+		var sw: float = _font.get_string_size(stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+		draw_string(_font, p + Vector2(-sw / 2.0, r + 13.0), stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT if taken else Pal.TEXT_3)
 	# the name under a notable, the keystone's level by it, from the label zoom
 	if (zoom >= LABEL_ZOOM or id == hover or id == selected) and (nd.get("notable", false) or diamond):
 		var fs: int = 12

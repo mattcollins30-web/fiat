@@ -239,7 +239,7 @@ func _show_pick() -> void:
 		{"forms": ["The tree's points back to spend", "The tree's points"], "colour": Pal.TEXT_2}, {"forms": ["The stash"], "colour": Pal.TEXT_2}]
 	if sim.crew_played().size() > 1:
 		lost.append({"forms": ["The rest of the crew", "The crew"], "colour": Pal.TEXT_2})
-	if sim.paragon_xp > 0.0 or not sim.paragon_board.is_empty():
+	if sim.paragon_xp > 0.0 or not sim.ring.is_empty():
 		lost.append({"forms": ["Paragon"], "colour": Pal.TEXT_2})
 	_pick_lost.show_chips(lost, 3, true)
 	UI.fit_button(_pick_go, ["Set off · pick a trait first", "Pick a trait first"])

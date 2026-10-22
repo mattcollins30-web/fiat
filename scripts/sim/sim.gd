@@ -244,7 +244,7 @@ var _level_at := 1
 ## each paragon level a point on the board (damage, HP, resists, find, tins), every class reading every point. No top; a
 ## class's death keeps it. Taken back at the Barracks for tins, as a tree's points are.
 var paragon_xp := 0.0
-var paragon_board := {}
+var ring := {}                     # the ring (slice 4, web.md §6): ring node id -> the paragon points on it, to RING_STACK
 
 
 func paragon() -> int:
@@ -261,14 +261,22 @@ func paragon_progress() -> Array:
 
 
 func paragon_pts(key: String) -> int:
-	return int(paragon_board.get(key, 0))
+	var n := 0
+	for id in ring:
+		if str(node(str(id)).get("key", "")) == key:
+			n += int(ring[id])
+	return n
 
 
 func paragon_spent() -> int:
 	var n := 0
-	for k in paragon_board:
-		n += int(paragon_board[k])
+	for k in ring:
+		n += int(ring[k])
 	return n
+
+
+func is_ring(id: String) -> bool:
+	return id.get_slice("/", 0) == Data.RING_TREE
 
 
 func paragon_free() -> int:
@@ -284,17 +292,53 @@ func paragon_mult(key: String) -> float:
 	return 1.0 + paragon_pct(key) / 100.0
 
 
+## A paragon point on the ring's nearest open node of a row (the bot's and the tests' way in): one with room on it
+## that's reached, the fullest first (a stack before a new node); none reached, a point on the way round the ring
+## to the nearest, as a player paths (the step is a point on a node of another row).
 func paragon_add(key: String) -> bool:
 	if paragon_free() <= 0 or Data.paragon_row(key).is_empty():
 		return false
-	_dry_memo.clear()                     # the memos read the board, as the tree
-	paragon_board[key] = paragon_pts(key) + 1
-	chron("paragon", {"key": key, "points": paragon_pts(key)})
-	return true
+	var best := ""
+	var best_stack := -1
+	var nodes: Array = Data.RING["nodes"]
+	for i in range(nodes.size()):
+		if str(nodes[i].get("key", "")) != key:
+			continue
+		var id := "%s/%d" % [Data.RING_TREE, i]
+		if train_block(id) != "":
+			continue
+		var st: int = int(ring.get(id, 0))
+		if st > best_stack:
+			best_stack = st
+			best = id
+	if best != "":
+		return train_node(best)
+	# the way round: the reachable node nearest (by steps round the ring) to a node of the row with room on it
+	var step := ""
+	var step_d := 1 << 20
+	for i in range(nodes.size()):
+		var id := "%s/%d" % [Data.RING_TREE, i]
+		if train_block(id) != "":
+			continue
+		for j in range(nodes.size()):
+			if str(nodes[j].get("key", "")) != key or int(ring.get("%s/%d" % [Data.RING_TREE, j], 0)) >= int(nodes[j]["stack"]):
+				continue
+			var d: int = mini(absi(i - j), nodes.size() - absi(i - j))
+			if d < step_d:
+				step_d = d
+				step = id
+	return step != "" and train_node(step)
 
 
 func paragon_reset_cost() -> int:
 	return _inf(paragon_spent() * Data.RESPEC_CASH)
+
+
+## The ring cleared for nothing (the tests' fixtures).
+func paragon_reset_free() -> void:
+	ring = {}
+	tree = tree.filter(func(id): return not is_ring(str(id)))
+	_dry_memo.clear()
 
 
 func paragon_reset() -> bool:
@@ -304,7 +348,8 @@ func paragon_reset() -> bool:
 	var paid := paragon_reset_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": paragon_spent(), "paragon": true})
-	paragon_board = {}
+	ring = {}
+	tree = tree.filter(func(id): return not is_ring(str(id)))
 	log_event("Paragon reset: the points are free to spend again")
 	return true
 
@@ -1109,6 +1154,7 @@ func class_change_cost(_to := "") -> int:
 func trees() -> Array:
 	var out: Array = Data.trees_for(cls, bridge())
 	out.append_array(Data.ELEMENT_TREES)
+	out.append(Data.RING)
 	return out
 
 
@@ -2560,7 +2606,7 @@ func is_pitch(id: String) -> bool:
 ## The camp's nodes (slice 3, web.md §1): the Pitch's and every element's stay allocated whoever runs; a class's
 ## region (and a bridged one) is the runner's.
 func is_camp(id: String) -> bool:
-	return is_pitch(id) or not Data.element_tree(id.get_slice("/", 0)).is_empty()
+	return is_pitch(id) or is_ring(id) or not Data.element_tree(id.get_slice("/", 0)).is_empty()
 
 
 ## The element points (web.md §3): not bought - earned on the element's use meter, spent in its region alone.
@@ -2629,6 +2675,8 @@ func pitch_free() -> int:
 func free_for(id: String) -> int:
 	if is_pitch(id):
 		return pitch_free()
+	if is_ring(id):
+		return paragon_free()
 	var el := element_of(id)
 	return element_free(el) if el != "" else points_free()
 
@@ -2665,11 +2713,13 @@ func points_in(tree_name: String) -> int:
 ## Why a node can't be trained now, in words, or "" when it can (the Training screen's line, the tests').
 ## `ignore_points`: everything but the points free - the screen draws a node it could reach with more points as open.
 func train_block(id: String, ignore_points := false) -> String:
-	if tree.has(id):
-		return "trained"
 	var n := node(id)
 	if n.is_empty():
 		return "no such node"
+	if n.has("ring") and int(ring.get(id, 0)) >= int(n["stack"]):
+		return "full: %d points on it" % int(n["stack"])
+	if tree.has(id) and not n.has("ring"):
+		return "trained"
 	var parts := id.split("/")
 	if not _on_show(parts[0]):
 		return "not one of this runner's trees"
@@ -2691,6 +2741,8 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "opens at level %d" % Data.CAPSTONE_LEVEL
 	if n.has("bridge") and core_gates and level() < Data.BRIDGE_LEVEL:
 		return "opens at level %d" % Data.BRIDGE_LEVEL
+	if n.has("ring") and not Data.web_entry(n) and not touches_trained(id):
+		return "wants a path round the ring"
 	var held := keystone_held_against(id)
 	var back := 0
 	if held != "":
@@ -2811,6 +2863,12 @@ func train_node(id: String) -> bool:
 	if held != "":
 		tree.erase(held)                  # the keystone choice: the one held goes, its points back (free_for reads the tree)
 		log_event("Let go: %s" % node(held)["name"])
+	if nd.has("ring"):
+		ring[id] = int(ring.get(id, 0)) + 1     # the ring (slice 4): a paragon point on the node, stacked
+		if not tree.has(id):
+			tree.append(id)
+		chron("paragon", {"key": str(nd["key"]), "points": paragon_pts(str(nd["key"]))})
+		return true
 	tree.append(id)
 	log_event("Trained: %s" % nd["name"])
 	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "col": int(nd.get("col", 0)), "cost": paid,
@@ -5785,7 +5843,7 @@ func signal_odds_class(k: int, name: String, now := false) -> Array:
 	if not roster.has(name) or mission != null:
 		return [0.0, false]
 	var sg := signal_at(k)
-	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_pitch(str(id))), paragon_board])]     # the signal as crafted, and what the camp gives everyone
+	var ck := "%s/%d/%d" % [name, int(sg.get("id", -1)), hash([sg, atlas, yard_picks, yard_ranks, tree.filter(func(id): return is_camp(str(id))), ring])]     # the signal as crafted, and what the camp gives everyone
 	if now and _crew_now.has(ck):
 		return _crew_now[ck]                 # read once a frame by the shell's budget; the screens take it from here
 	var h := _read_as(name)
@@ -6062,7 +6120,7 @@ func _odds_key_common() -> Array:
 	if odds_time_ms > 0.0 and _key_memo_t == _odds_t0 and not _key_memo.is_empty():
 		return _key_memo
 	prof["key_common"] = int(prof.get("key_common", 0)) + 1
-	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(paragon_board), level()]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct)
+	var k: Array = [int(round(hp * 10.0 / maxf(max_hp(), 1.0))), _odds_bucket(max_hp()), _odds_bucket(dps()), _odds_bucket(armour()), _odds_bucket(pace() * 100.0), str(standing), tree.size(), rig.size(), campaign_done(), str(atlas), is_night(), wounds.keys(), _kit_ids(), str(ring), level()]     # the board: a resist point moves no bucket (the review); the level: the campaign's fight moves with it (21 Oct)
 	if odds_time_ms > 0.0:
 		_key_memo = k
 		_key_memo_t = _odds_t0
@@ -8535,7 +8593,7 @@ func _kit_key() -> int:
 func _kit_parts() -> Array:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
-	return [equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, paragon_board, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
+	return [equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, ring, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
 			weather_of(front_tier()), is_night()]     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
@@ -9657,7 +9715,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(), "ring": ring.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -9875,9 +9933,9 @@ func load_dict(d: Dictionary) -> void:
 	lorry_done = bool(d.get("lorry_done", false))
 	lorries = int(d.get("lorries", 0))
 	paragon_xp = float(d.get("paragon_xp", 0.0))
-	paragon_board = {}
-	for k in d.get("paragon_board", {}):
-		paragon_board[str(k)] = int(d["paragon_board"][k])     # JSON reads the counts as floats
+	ring = {}
+	for k in d.get("ring", {}):
+		ring[str(k)] = int(d["ring"][k])     # JSON reads the counts as floats
 	best_dig = d.get("best_dig", {}).duplicate() if d.get("best_dig", {}) is Dictionary else {}
 	signals = d.get("signals", []).duplicate(true)
 	for sg in signals:

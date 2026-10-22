@@ -1670,7 +1670,7 @@ func _class_trees(main) -> void:
 	sim.core_gates = false            # Training's 15 Oct gates are _training_gate_checks'; this area tests the mechanics
 	_set_cls(sim, "Doorman")
 	sim.training_points += 20
-	_check(sim.trees().size() == 3 + Data.ELEMENT_TREES.size() and sim.trees()[1]["name"] == "The Pitch", "a Doorman does not see three trees with the Pitch's in the middle, and the elements'")
+	_check(sim.trees().size() == 4 + Data.ELEMENT_TREES.size() and sim.trees()[1]["name"] == "The Pitch" and sim.trees().back()["name"] == Data.RING_TREE, "a Doorman does not see three trees with the Pitch's in the middle, the elements' and the ring")
 	_check(_walk(sim, "Muscle/0") and _walk(sim, "Muscle/1") and _walk(sim, "Muscle/2") and _walk(sim, "Muscle/3"), "the Muscle tree did not train")
 	var spent_before: int = sim.points_spent()
 	_check(not sim.can_train("Stalking/0"), "a Poacher's tree trained for a Doorman")
@@ -2626,7 +2626,7 @@ func _web_pool_checks(main) -> void:
 	sim.xp = Data.xp_for_level(30)
 	sim.training_points += 20
 	_check(sim.can_train(to_drifter) and sim.train_node(to_drifter) and sim.bridge() == "Drifter", "the bridge did not take at 30: '%s'" % sim.train_block(to_drifter))
-	_check(sim._on_show("Moving on") and sim._on_show("Luck") and sim.my_classes() == ["Scrapper"] and sim.trees().size() == 5 + Data.ELEMENT_TREES.size(), "the bridge did not open the Drifter's region (and the halves stay the class's): %s" % str(sim.trees().map(func(x): return x["name"])))
+	_check(sim._on_show("Moving on") and sim._on_show("Luck") and sim.my_classes() == ["Scrapper"] and sim.trees().size() == 6 + Data.ELEMENT_TREES.size(), "the bridge did not open the Drifter's region (and the halves stay the class's): %s" % str(sim.trees().map(func(x): return x["name"])))
 	var dr_half := ""
 	for i in range(Data.tree_named("Petrol")["nodes"].size()):
 		if str(Data.tree_named("Petrol")["nodes"][i].get("class", "")) == "Drifter":
@@ -12525,8 +12525,10 @@ func _growth_checks(main) -> void:
 	var dps50: float = sim.dps()
 	_check(sim.level() == Data.MAX_LEVEL and sim.paragon() == 0 and is_equal_approx(sim.growth_mult(), 1.0), "at the cap the growth reads %.2f with %d paragon" % [sim.growth_mult(), sim.paragon()])
 	sim.paragon_xp = 0.0
-	sim.paragon_board = {}
-	# the paragon board (21 Oct, the crew): XP past the cap is the crew's; a level a point, nothing paid until it's spent
+	sim.paragon_reset_free()
+	# the paragon board (21 Oct, the crew; the web's ring from 22 Oct, slice 4): XP past the cap is the crew's; a level a
+	# point, nothing paid until it's spent; a point goes on a ring node (RING_STACK to a node, pathed round from a
+	# class's entry)
 	sim._gain_xp(Data.xp_for_level(Data.MAX_LEVEL + 10) - Data.xp_for_level(Data.MAX_LEVEL))
 	_check(sim.level() == Data.MAX_LEVEL and is_equal_approx(sim.xp, Data.xp_for_level(Data.MAX_LEVEL)) and sim.paragon() == 10 and sim.paragon_free() == 10, "ten levels past the cap read level %d, paragon %d, %d free, the runner's XP %.0f" % [sim.level(), sim.paragon(), sim.paragon_free(), sim.xp])
 	_check(is_equal_approx(sim.max_hp(), hp50) and is_equal_approx(sim.dps(), dps50), "paragon levels paid with no point spent: hp ×%.2f" % (sim.max_hp() / hp50))
@@ -12546,43 +12548,65 @@ func _growth_checks(main) -> void:
 	sim.cash = 1e9
 	var cost: int = sim.paragon_reset_cost()
 	_check(cost > 0 and sim.paragon_reset() and sim.paragon_free() == 10 and is_equal_approx(sim.cash, 1e9 - cost), "the board's reset: %d free, cost %d" % [sim.paragon_free(), cost])
-	for k in range(3):
-		sim.paragon_add("resists")
+	for k in range(4):
+		sim.paragon_add("resists")           # the ring (slice 4): no resists node is an entry, so the first point is the step round to one
 	for k in range(2):
 		sim.paragon_add("find")
+	_check(sim.paragon_pts("resists") == 3 and sim.paragon_pts("hp") == 1 and sim.paragon_pts("find") == 2, "the way round the ring to resists reads wrong: %s" % str(sim.ring))
 	_check(is_equal_approx(sim.resist_raw("fire") - fire0, 3.0 * float(Data.paragon_row("resists")["pct"])) and is_equal_approx(sim.rarity_bonus() - find0, 2.0 * float(Data.paragon_row("find")["pct"]) / 100.0), "resists +%.1f and find +%.3f off the board" % [sim.resist_raw("fire") - fire0, sim.rarity_bonus() - find0])
 	# the crew's, saved with the camp, not a runner's
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	var back = Sim.new()
 	back.load_dict(d)
-	_check(back.paragon() == 10 and back.paragon_pts("resists") == 3 and typeof(back.paragon_board["find"]) == TYPE_INT, "the board did not survive a save: %s" % str(back.paragon_board))
+	_check(back.paragon() == 10 and back.paragon_pts("resists") == 3 and back.paragon_pts("find") == 2 and back.ring.values().all(func(v): return typeof(v) == TYPE_INT), "the ring did not survive a save: %s" % str(back.ring))
 	# a resist point re-reads the odds (the review: it moves no bucket in their key); the board's resists stop at the cap
 	var key0: Array = sim._odds_key(0)
 	sim.paragon_add("resists")
 	sim._key_memo = []
 	_check(sim._odds_key(0) != key0, "a resist point on the board left the odds' key as it was")
 	var over0: float = sim.over_cap("fire")
-	sim.paragon_board["resists"] = 500
+	for id in sim.ring:
+		if sim.node(str(id))["key"] == "resists":
+			sim.ring[id] = 500                   # past any stack: the cap holds
 	sim._dry_memo.clear()
 	_check(is_equal_approx(sim.resist_raw("fire"), maxf(fire0, Data.RESIST_CAP)) and is_equal_approx(sim.over_cap("fire"), over0), "the board's resists went past the cap: %.1f, over the cap %.1f from %.1f" % [sim.resist_raw("fire"), sim.over_cap("fire"), over0])
-	# the Barracks: a chip once past the cap, the board over the lanes, a card pressed a point
-	sim.paragon_board = {}
+	# the Barracks (slice 4): the ring on the web - a node picked says its stack, Train puts a paragon point on it, the
+	# reset button is the ring's; the ring's label carries the points free
+	sim.paragon_reset_free()
 	sim._dry_memo.clear()
 	main.show_room(main.BARRACKS)
 	var bk = main._barracks
-	_check(bk.also_names().has(bk.PARAGON) and bk.also_button(bk.PARAGON) != null, "the paragon board is not in the Also row: %s" % str(bk.also_names()))
-	bk.pick_also(bk.PARAGON)
+	var wv = bk.web()
+	_check(not bk.also_names().has("Paragon"), "the paragon board is still in the Also row: %s" % str(bk.also_names()))
+	var ring_t: Dictionary = Data.RING
+	_check(ring_t["nodes"].size() == Data.RING_NODES and wv.layout.has("%s/0" % Data.RING_TREE), "the ring is not on the web")
+	var entry_id := ""
+	for i in range(ring_t["nodes"].size()):
+		if ring_t["nodes"][i].get("entry", false) and ring_t["nodes"][i]["key"] == Data.PARAGON_BOARD[0]["key"]:
+			entry_id = "%s/%d" % [Data.RING_TREE, i]
+	if entry_id == "":
+		for i in range(ring_t["nodes"].size()):
+			if ring_t["nodes"][i].get("entry", false):
+				entry_id = "%s/%d" % [Data.RING_TREE, i]
+	_check(entry_id != "" and sim.can_train(entry_id), "a ring entry can't take a paragon point: '%s'" % sim.train_block(entry_id))
+	var off_id := "%s/%d" % [Data.RING_TREE, (int(entry_id.get_slice("/", 1)) + 3) % Data.RING_NODES]
+	_check(sim.train_block(off_id).begins_with("wants a path"), "a ring node three on from an entry took a point with nothing before it: '%s'" % sim.train_block(off_id))
+	wv.pick(entry_id)
 	main.refresh()
-	_check(not bk.web().visible and bk._cells[0]["button"].visible and bk._cells[Data.PARAGON_BOARD.size() - 1]["button"].visible and not bk._cells[Data.PARAGON_BOARD.size()]["button"].visible, "the board is not a card a row over the lanes")
-	_check(bk.also_button(bk.PARAGON).text.contains("10 free") and bk._title.text.contains("10 points to spend"), "the board's chip and title do not say the points: '%s' / '%s'" % [bk.also_button(bk.PARAGON).text, bk._title.text])
-	_check_fit(main, "Caravan (the paragon board)")
-	bk._cells[0]["button"].pressed.emit()
+	_check(bk._title.text.contains("the ring") and bk._title.text.contains("0 of %d" % Data.RING_STACK) and bk._train.visible and bk._train.text.contains("paragon point"), "a ring node picked reads '%s' / '%s'" % [bk._title.text, bk._train.text])
+	_check_fit(main, "Caravan (a ring node picked)")
+	bk._on_train()
 	main.refresh()
-	_check(sim.paragon_pts(str(Data.PARAGON_BOARD[0]["key"])) == 1 and bk._cells[0]["name"].text.contains("1 point"), "a card pressed did not put a point on its row: '%s'" % bk._cells[0]["name"].text)
-	_check(bk._respec.text.begins_with("Reset the board") and not bk._respec.disabled, "the board's reset button reads '%s'" % bk._respec.text)
+	_check(int(sim.ring.get(entry_id, 0)) == 1 and sim.paragon_free() == 9 and bk._title.text.contains("1 of %d" % Data.RING_STACK), "Train did not put a paragon point on the ring node: '%s'" % bk._title.text)
+	var next_id := "%s/%d" % [Data.RING_TREE, (int(entry_id.get_slice("/", 1)) + 1) % Data.RING_NODES]
+	_check(sim.can_train(next_id), "the next ring node is not reached from a stacked one: '%s'" % sim.train_block(next_id))
+	for k in range(Data.RING_STACK):
+		sim.train_node(entry_id)
+	_check(sim.train_block(entry_id).begins_with("full") and int(sim.ring[entry_id]) == Data.RING_STACK, "a ring node took points past its stack: %d, '%s'" % [int(sim.ring[entry_id]), sim.train_block(entry_id)])
+	_check(bk._respec.text.begins_with("Reset the ring") and not bk._respec.disabled, "the ring's reset button reads '%s'" % bk._respec.text)
 	bk._on_respec()
-	_check(sim.paragon_spent() == 0, "the board's reset button did not reset it")
-	bk.pick_also(bk.PARAGON)
+	_check(sim.paragon_spent() == 0 and sim.ring.is_empty() and not sim.tree.any(func(id): return sim.is_ring(str(id))), "the ring's reset button did not reset it")
+	wv.pick("")
 	sim.paragon_xp = Data.xp_for_level(Data.MAX_LEVEL + 10) - Data.xp_for_level(Data.MAX_LEVEL)
 	_check(Data.xp_for_level(Data.MAX_LEVEL + 11) > Data.xp_for_level(Data.MAX_LEVEL + 10) and Data.xp_for_level(Data.MAX_LEVEL + 10) > Data.xp_for_level(Data.MAX_LEVEL), "the XP curve stops at the cap")
 	main.refresh()
@@ -12590,7 +12614,7 @@ func _growth_checks(main) -> void:
 	_check_fit(main, "Top bar (paragon)")
 	sim.xp = Data.xp_for_level(Data.MAX_LEVEL)
 	sim.paragon_xp = 0.0
-	sim.paragon_board = {}
+	sim.paragon_reset_free()
 	sim._dry_memo.clear()
 	sim.lorries = 3
 	_check(is_equal_approx(sim.max_hp() / hp50, pow(Data.LORRY_MULT, 3)) and is_equal_approx(sim.dps() / dps50, pow(Data.LORRY_MULT, 3)), "three lorries did not multiply the Pitch: hp ×%.2f" % (sim.max_hp() / hp50))

@@ -1897,6 +1897,26 @@ const WEB_EXTRA := {
 }
 static var TREES: Array = _web_build(TREES_SRC)
 static var ELEMENT_TREES: Array = _web_build(ELEMENT_TREES_SRC)
+## The paragon ring (slice 4, web.md §6): the board's five rows as RING_NODES nodes round the outside of the web, RING_STEP
+## degrees apart, cycling damage, HP, resists, find, tins; the five at the classes' angles are entries. A node holds up
+## to RING_STACK paragon points (the board had no top); a point costs one. The crew's, as the board was.
+const RING_TREE := "The ring"
+const RING_NODES := 30
+const RING_STEP := 12.0
+const RING_STACK := 10
+const RING_ENTRY_ANGLES := [-120.0, -60.0, 60.0, 120.0, 180.0]     # the classes' angles on the canvas (web_view's CLASS_LAY)
+static var RING: Dictionary = _ring_build()
+
+
+static func _ring_build() -> Dictionary:
+	var nodes := []
+	for i in range(RING_NODES):
+		var row: Dictionary = PARAGON_BOARD[(i + floori(i / 5.0)) % PARAGON_BOARD.size()]     # the cycle slips a row every five: the entries aren't all one row
+		var angle: float = -120.0 + i * RING_STEP     # from the Drifter's angle: every class's angle lands on a node
+		var a: float = angle if angle <= 180.0 else angle - 360.0
+		nodes.append({"name": row["name"], "effect": "paragon", "key": row["key"], "value": row["pct"], "ring": a, "at": [a, 0.0], "stack": RING_STACK,
+			"cost_fixed": 1, "words": row["words"], "entry": a in RING_ENTRY_ANGLES, "links": [(i + RING_NODES - 1) % RING_NODES, (i + 1) % RING_NODES]})
+	return {"name": RING_TREE, "ring": true, "nodes": nodes}
 
 
 ## A lane built into its region of the web: the source's nodes first (their indices, so their ids, as they were),
@@ -2326,7 +2346,7 @@ static func web_links_all() -> Dictionary:
 	if not _web_all.is_empty():
 		return _web_all
 	var out := {}
-	for t in TREES + ELEMENT_TREES:
+	for t in TREES + ELEMENT_TREES + [RING]:
 		for a in web_links(t):
 			if not out.has(a):
 				out[a] = []
@@ -2436,6 +2456,8 @@ static func tree_named(name: String) -> Dictionary:
 	for t in TREES:
 		if t["name"] == name:
 			return t
+	if name == RING_TREE:
+		return RING
 	return {}
 
 

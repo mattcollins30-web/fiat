@@ -908,7 +908,7 @@ func _train_tree(sim) -> void:
 			if eid == "" or not sim.can_train(eid):
 				break
 			sim.train_node(eid)
-	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE and not t.has("element"))
+	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE and not t.has("element") and not t.get("ring", false))     # the class's lanes alone: the Pitch, the elements and the ring have their pools above
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:

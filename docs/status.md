@@ -6277,3 +6277,14 @@ pass; the reviewer on the code):
     earns its first element point off kit and its class's joint conversion alone, so keystone_at for the element
     builds will read later - §8's Quartermaster gate on the meters is for the pass to set.
   - For Matt: element nodes have no reset of their own (a reset is the class's region); say if the elements want one.
+- Slice 4a, the paragon ring (22 Oct; web.md §6). The board is gone: Data.RING, 30 nodes 12° apart round the outside
+  of the web (R_RING), the board's five rows cycled (the cycle slips a row every five so the five entries at the
+  classes' angles aren't one row); a node holds up to RING_STACK 10 paragon points (no top, as the board had none);
+  a point costs one, pathed round from an entry. Sim.ring {id: points}, saved; paragon_pts/paragon_spent read it;
+  paragon_add(key) (the bot's and the tests' way) stacks the fullest reached node of the row or steps round toward
+  the nearest; the ring is the camp's (is_camp). The panel: a ring node picked reads "Damage · the ring · 3 of 10",
+  Train puts a paragon point on, the reset button is the ring's. The bot's class loop leaves the ring alone (the
+  review). Two stray copies my file delivery left (barracks-1.gd, smoke-1.gd, 11:14) are moved to _to_delete/ as
+  .txt (no delete permission; Godot would have parsed them): Matt to bin the folder.
+- Matt (22 Oct): the Map's atlas, the Pitch's buildings and the Radio's codes as pathed webs with real choices
+  ("do you path into loot quality or signal strength; the stash bigger or more useful"): the design next.
