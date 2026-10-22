@@ -566,12 +566,18 @@ func _show_side() -> void:
 		_sell.show_state(sim)
 
 
-## A contract's ask as a row's title: whole, then shorter.
+## A contract's ask as a row's title: whole, then shorter - an affix ask down to the slot and the glossary's word for
+## the affix, then the slot alone (22 Oct, the smoke: "A secondary with damage over time" fit no form at 276 px).
+const AFFIX_TIGHT := {"dot_pct": "lasting", "first_lot_pct": "first lot", "fire_proofed": "fire-proof", "frost_proofed": "frost-proof",
+	"poison_proofed": "poison-proof", "shock_proofed": "shock-proof", "bleed_proofed": "bleed-proof"}     # the glossary's one name (the sum strip's "Lasting"); the long shorts (the review)
 func _contract_title(c: Dictionary) -> Array:
 	var short_t: String = _cap(sim.contract_words(c))
+	var tight: Array = []
 	if c.get("kind", "") == "affix":
 		var slot_n: String = "Gun part" if c["slot"] == Data.ATTACHMENT else str(c["slot"])
-		short_t = "%s · %s" % [slot_n, str(Items.affix_def(c["stat"]).get("short", c["stat"]))]
+		var short_a: String = str(Items.affix_def(c["stat"]).get("short", c["stat"]))
+		short_t = "%s · %s" % [slot_n, short_a]
+		tight = ["%s · %s" % [slot_n, AFFIX_TIGHT.get(str(c["stat"]), short_a)], slot_n]
 	var w: String = sim.contract_words(c)
 	var nums := ["one", "two", "three", "four", "five", "six"]
 	var first: String = w.get_slice(" ", 0)
@@ -580,7 +586,7 @@ func _contract_title(c: Dictionary) -> Array:
 	if first in nums:
 		digits = "%d %s" % [nums.find(first) + 1, w.substr(first.length() + 1)]
 		bare = w.substr(first.length() + 1)
-	return [_cap(w), _cap(digits), short_t, _cap(bare)]
+	return [_cap(w), _cap(digits), short_t, _cap(bare)] + tight
 
 
 ## What goes for the picked contract (Fence B): the player's swap while it still holds, else the cheapest that fit.

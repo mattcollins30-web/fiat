@@ -4297,7 +4297,17 @@ func _contracts_checks(main) -> void:
 				main._fence._shown = ""
 				main.refresh()
 				var tt: String = main._fence._list.row_of(0)["title"].text
-				_check(tt.contains(sim.contract_affix_phrase(a["stat"])) or tt.ends_with(str(a["short"])), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
+				var tight: String = str(main._fence.AFFIX_TIGHT.get(str(a["stat"]), a["short"]))     # the glossary's word where the short won't fit (22 Oct); the slot alone never passes
+				_check(tt.contains(sim.contract_affix_phrase(a["stat"])) or tt.ends_with(str(a["short"])) or tt.ends_with(tight), "an affix ask does not name its affix: '%s' for %s on a %s" % [tt, a["stat"], slot])
+				# and the tight form fits the row whatever the RNG rolls (the review): the widest slot's name with every affix's word
+				var lbl: Label = main._fence._list.row_of(0)["title"]
+				var wide_slot := ""
+				for sl in Data.CONTRACT_SLOTS:
+					var sn: String = "Gun part" if sl == Data.ATTACHMENT else str(sl)
+					if wide_slot == "" or UI.text_width(lbl, sn) > UI.text_width(lbl, wide_slot):
+						wide_slot = sn
+				var widest: String = "%s · %s" % [wide_slot, tight]
+				_check(UI.text_width(lbl, widest) <= lbl.size.x, "an affix ask's tight form is too wide for the row: '%s' needs %d px, has %d" % [widest, int(UI.text_width(lbl, widest)), int(lbl.size.x)])
 				_check(main._fence._list.row_of(0)["have"].text != "", "the row's count went blank for %s on a %s" % [a["stat"], slot])
 		_check(sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}) == "an armour with fire conversion", "the affix ask reads '%s'" % sim.contract_words({"kind": "affix", "slot": "Armour", "stat": "conv_fire_pct", "count": 1}))
 		_check_fit(main, "Fence (contracts in the voice)")

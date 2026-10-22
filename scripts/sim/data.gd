@@ -95,7 +95,7 @@ static func yard_gate(col: int, short := false) -> String:
 	return w % (int(YARD_GATE_DEPTHS[col]) + TIERS.size() - 1 - OUTSKIRTS_SITES) if w.contains("%d") else w
 const YARD_PICK_SALVAGE := 10            # the fifth column's salvage
 const YARD_RANK_CASH := 50000            # a rank's cash, × YARD_RANK_GROWTH a rank bought, × inflation
-const YARD_RANK_GROWTH := 1.25
+const YARD_RANK_GROWTH := 1.5             # 1.25 to 1.5 (22 Oct, the web pass: the bot bought 340 ranks across the Pitch on the endgame's tins - the Clinic's 46 alone +138% HP)
 const YARD_RANK_SALVAGE := 5             # a rank's salvage, one more a rank bought
 const YARD_REFIT := 0.5                  # changing a pick: this share of the column's price
 ## Salvage (9 Oct): one kind a zone, from kills on its sites from SALVAGE_DEPTH, SALVAGE_KILL a kill a depth past.
@@ -1306,7 +1306,7 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## what they drop, not how hard they are. Depth 2 is the first rung.
 ## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five; D28 0.05: the strong builds out-earned the rest up the reach, level 50 from 9.3 h to never) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
-const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.08, "reward": 0.05, "rarity": 0.10}
+const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.08 to 0.12 (22 Oct, the web pass: the reach ran 11 to 70 in 1.4 h at 96% won at the reach, then 149; a probe at 0.12 held it to 39 by hour 6)
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that
@@ -2720,7 +2720,7 @@ const CAMPAIGN_LEVEL_FREE := 3     # a site cleared this many levels ago fights 
                                    # level 6, so the frontier itself hardened to x2 as the runner levelled under it; a site never cleared
                                    # takes no tax now)...
 const CAMPAIGN_LEVEL_GROW := 0.04  # ...and past that its heads' HP and fire compound by this a level you've gained since (5 levels on: x1.22)...
-const CAMPAIGN_LEVEL_MAX := 1.3    # ...to 1.3 at most (7 levels on). 0.08 to x2 (22 Oct, the second pass): a Scrapper whose kit stalled at
+const CAMPAIGN_LEVEL_MAX := 1.5    # 1.3 to 1.5 (22 Oct, the web pass: every site 100%); was ...to 1.3 at most (7 levels on). 0.08 to x2 (22 Oct, the second pass): a Scrapper whose kit stalled at
                                    # level 14's while its level ran to 28 found both its sites at the cap and the Bank out of reach, for
                                    # 20 h - levels come steadily, kit is luck (Matt's stance): a lagging runner slows, never sticks
 const CAMPAIGN_POOL := 1.0         # the campaign's pools as they are (1.5 read Matt's Pleasure Park 75% to 0%: the length comes from the gangs)
@@ -2728,7 +2728,7 @@ const PATROL_FIRST := 2.0          # the first gang after the clear waits twice 
                                    # gang, "Back, chased", two searches in); the gangs after come at the zone's gap
 const PATROL_ZONE := [1.0, 0.9, 0.8, 0.7]     # the gangs' gap by zone: the City's a third sooner
 const CLOCK_SEARCH_RATE := 0.5     # the clock runs through a search at half pace (it stood while the site was clear)
-const CAMPAIGN_HOSTILE := [0.9, 1.0, 1.15, 1.05]     # by zone (the pass, 20 Oct): the Outskirts as they were, the Town and the City harder (six-hour reads: Town 1.15 and City 1.2 left three builds of ten short of the Quartermaster; 1.25 and 1.4 five) - 0.9 everywhere had the Bank at 29 min by hand, every run at 100% and no death in 41; 1.5 everywhere killed eleven builds of fifteen at level 1. D20: 0.9, with XP_SCALE 2.9 the Bank at 1.9 h
+const CAMPAIGN_HOSTILE := [0.9, 1.15, 1.3, 1.3]     # 22 Oct, the web pass (the fillers +40-60% by level 30, web.md §8): the Estate +15%, the Town and the City +30%; the Outskirts as Matt played them.     # by zone (the pass, 20 Oct): the Outskirts as they were, the Town and the City harder (six-hour reads: Town 1.15 and City 1.2 left three builds of ten short of the Quartermaster; 1.25 and 1.4 five) - 0.9 everywhere had the Bank at 29 min by hand, every run at 100% and no death in 41; 1.5 everywhere killed eleven builds of fifteen at level 1. D20: 0.9, with XP_SCALE 2.9 the Bank at 1.9 h
 const DEPTH_HOSTILE := 0.25       # hostile HP and dps compound by this a depth
 const DEPTH_REWARD := 0.12        # XP and cash compound by this a depth - slower, so each tier has a natural depth
 const DEPTH_DROP := 0.03
@@ -3017,7 +3017,7 @@ const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from
 static var _xp_table: Array = []
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
-const XP_SCALE := 2.9     # D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
+const XP_SCALE := 3.3     # 22 Oct, the web pass: 2.9 to 3.3 (level 25-34 at the Quartermaster against 20-24; the sites cleared 5-8 levels over their gear). D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
 ## D11: past the campaign the scale eases, XP_SCALE at XP_TAPER_FROM to XP_TAPER_END at XP_TAPER_TO and on: the reads had
 ## the levels stall from hour 4 at x2.4 (level 35-43 at 24 h; retirement never on nine builds of ten).
 ## The first levels (16 Oct, Matt's playtest: level 2 at 27 minutes on the Retail Park, every drop four levels over him):
