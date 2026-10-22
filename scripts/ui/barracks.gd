@@ -106,6 +106,7 @@ var _class_cards: Array = []       # a card a past: {face, name, tag, lines[]}
 var _face_q: Panel                 # no past yet: a ? in the face's place
 var _web                            # the web (22 Oct): every tree as a region of one canvas, in the lanes' place
 var _web_buttons: Array = []       # over the web's corner: the whole web, the class's region, the Pitch
+var _find: LineEdit                # "Find a perk" (22 Oct, slice 2): typing centres the web on the first name that fits
 var _also_panel: Panel
 var _also_head: Label
 var _also: Array = []              # {button, name}
@@ -220,6 +221,29 @@ func _build_web() -> void:
 		b.size.x = w
 		_web_buttons.append(b)
 		x += w + 6.0
+	_find = LineEdit.new()
+	_find.position = Vector2(x + 6.0, LANES_Y + 10)
+	_find.size = Vector2(200, 30)
+	_find.placeholder_text = "Find a perk"
+	_find.add_theme_font_override("font", UI.font("Regular", false))
+	_find.add_theme_font_size_override("font_size", Pal.CELL_TEXT - 2)
+	_find.add_theme_stylebox_override("normal", UI.box(Pal.CARD, 6, 1, Pal.CARD_LINE))
+	_find.add_theme_stylebox_override("focus", UI.box(Pal.CARD, 6, 1, Pal.ACCENT))
+	_find.add_theme_color_override("font_color", Pal.TEXT)
+	_find.add_theme_color_override("font_placeholder_color", Pal.TEXT_3)
+	_find.text_changed.connect(_find_perk)
+	add_child(_find)
+
+
+## The first perk whose name fits the words, centred and picked; nothing found, nothing moves.
+func _find_perk(words: String) -> void:
+	if sim == null:
+		return
+	var id: String = _web.find_named(words)
+	if id == "":
+		return
+	_web.centre_on(id)
+	_web.pick(id)
 
 
 func _web_jump(words: String) -> void:
@@ -296,6 +320,10 @@ const EFFECT_WORDS := {
 	"conv_fire_pct": "%d%% as fire", "conv_frost_pct": "%d%% as frost", "conv_poison_pct": "%d%% as poison", "conv_shock_pct": "%d%% as shock", "conv_bleed_pct": "%d%% as bleed",
 	"fire_pct": "+%d%% fire", "frost_pct": "+%d%% frost", "poison_pct": "+%d%% poison", "shock_pct": "+%d%% shock", "bleed_pct": "+%d%% bleed", "physical_pct": "+%d%% physical",
 	"dot_pct": "+%d%% damage over time", "phys_pen": "Ignores %d%% resist",
+	# the web's fillers and hung notables (22 Oct)
+	"regen": "+%.1f HP a second", "fire_res": "+%d%% fire resist", "frost_res": "+%d%% frost resist", "poison_res": "+%d%% poison resist",
+	"shock_res": "+%d%% shock resist", "bleed_res": "+%d%% bleed resist", "buy_pct": "Fence sells −%d%%", "cells": "+%d cells",
+	"fire_last_pct": "Burns last %d%% longer", "bleed_last_pct": "Bleeds last %d%% longer", "frost_last_pct": "Chills last %d%% longer", "poison_last_pct": "Poison lasts %d%% longer",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
@@ -310,6 +338,8 @@ const PANEL_WORDS := {
 	"conv_shock_pct": "A share of every hit lands as shock, and they take more damage.", "conv_bleed_pct": "A share of every hit lands as bleed and keeps bleeding.",
 	"fire_pct": "Fire hits harder.", "frost_pct": "Frost hits harder.", "poison_pct": "Poison hits harder.", "shock_pct": "Shock hits harder.",
 	"bleed_pct": "Bleed hits harder.", "physical_pct": "The plain share of every hit, the part not converted, hits harder.", "dot_pct": "Burns, poison and bleeds all do more.",
+	"regen": "A little HP comes back every second, in a fight or out of one.", "fire_res": "Less of their fire gets through.", "frost_res": "Less of their frost gets through.",
+	"poison_res": "Less of their poison gets through.", "shock_res": "Less of their shock gets through.", "bleed_res": "Less of their bleed gets through.",
 }
 
 
@@ -721,7 +751,7 @@ func _pages_branch(title: String, list: Array, total: int, empty: String, words:
 ## each the share of the hit the trees convert to it and the increase they give it, notables included, in its
 ## colour; the dots; the joints closed of the runner's. A plain figure at nothing is left off; when the row is
 ## still too long the plain figures go from the least telling up (SUM_DROP), never an element's or the joints'.
-const SUM_DROP := ["Search", "Quantity", "First of each gang", "Quality", "Gangs", "Max HP", "Damage"]
+const SUM_DROP := ["Search", "Quantity", "First of each gang", "Quality", "Gangs", "Max HP", "Damage", "Lasting"]     # Lasting last (22 Oct: the web's figures run to three digits)
 func _show_sum(lanes: Array) -> void:
 	_sum_chips.show_chips(sum_items(lanes), SUM_ROWS)
 

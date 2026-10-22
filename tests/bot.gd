@@ -966,7 +966,12 @@ func _next_in(sim, b: Dictionary) -> String:
 		if why != "" and (not why.begins_with("opens at") or why.begins_with("opens at level")):
 			continue                      # a level's wait (15 Oct) isn't saved for: the points go elsewhere meanwhile
 		var nd: Dictionary = b["nodes"][i]
-		var key: int = int(nd.get("col", 0)) * 10 + int(nd.get("row", 0))
+		if nd.get("keystone", false) and sim.keystone_held_against(id) != "":
+			continue                      # the keystone choice (22 Oct): the bot keeps the first it took
+		if nd.has("type") and not sim._active(nd):
+			continue                      # a notable typed for a gun not in hand (the review): no point in it
+		var at: Array = nd.get("at", [nd.get("col", 0), nd.get("row", 0)])
+		var key: int = int(round(float(at[0]) * 100.0)) + int(round(absf(float(at[1])) * 10.0))     # along the lane, the rails before what hangs off them
 		if key < best_key:
 			best_key = key
 			best = id

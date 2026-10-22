@@ -34,6 +34,10 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - Playtest feedback: design it together, UI mockups on the design canvas (standard for any UI work), implement, smoke
   on Matt's machine, reviewer, revise until clean, commit; one thing at a time.
 - A UI bug (clipping, overlap): fix it and add the assertion that would have caught it.
+- New words on screen (perk names and lines, items, chips, any player-facing string) get the language pass before they
+  go in (22 Oct): two reviewer agents, each briefed with docs/language/style_guide.md and the existing names (clashes),
+  then an editor's call on their lists; the calls folded into the design doc. Rules of thumb they enforce: "head" is a
+  site's boss only; figures, never words; the glossary's one name a thing.
 - A mockup is rendered and checked before it goes to Matt (22 Oct: a band came to him twice with its text
   overflowing). Draw the board at the game's size (1920 x 1080, the band 1532 wide beside the 320 rail), render it
   headless (the scratchpad's shot_web.py: Chromium, no text wider than its box), look at the screenshot, then publish.

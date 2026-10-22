@@ -73,6 +73,13 @@ const OF_EFFECT := {
 	# beside the capstone (12 Oct): over the cap's by element, Guard's as armour
 	"proof_fire": "fire", "proof_frost": "frost", "proof_poison": "poison", "proof_shock": "shock", "proof_bleed": "bleed", "thick_skinned": "armour",
 	"overtime": "med", "squared_up": "armour", "in_the_hide": "armour", "sheet_metal": "armour", "breather": "armour",
+	# the web's fillers and hung notables (22 Oct)
+	"regen": "hp", "fire_res": "fire", "frost_res": "frost", "poison_res": "poison", "shock_res": "shock", "bleed_res": "bleed", "buy_pct": "cash", "cells": "quantity",
+	"fire_last_pct": "fire", "bleed_last_pct": "bleed", "frost_last_pct": "frost", "poison_last_pct": "poison",
+	"word_of_mouth": "cash", "salvage": "wrench", "workbench": "wrench", "breakers_yard": "wrench", "back_pocket": "cash",
+	"clocked": "first", "snare_and_wait": "clock", "twine": "clock", "off_the_canvas": "armour", "bin_lid": "armour", "last_orders": "dmg",
+	"worst_first": "med", "jab": "med", "clocking_off": "search", "b_roads": "clock", "on_a_roll": "dice", "spare_change": "cash",
+	"backdraught": "fire", "capacitor": "shock", "overload": "shock", "arterial": "bleed", "floored": "phys", "brittle": "frost", "catching": "poison",
 }
 
 

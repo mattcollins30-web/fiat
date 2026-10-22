@@ -15,11 +15,11 @@ const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 
 const STEP := 80.0                 # a column along a region's axis
 const ROW := 26.0                  # a row off the axis
-const CLASS_GAP := 60.0            # a class's two trees, either side of its axis
-const ZOOM_MIN := 0.3
+const ZOOM_MIN := 0.18
 const ZOOM_MAX := 2.2
 const ZOOM_STEP := 1.15
-const LABEL_ZOOM := 0.75           # the nodes' names show from here
+const LABEL_ZOOM := 1.3            # the nodes' names show from here (the cluster zoom); the hovered and the picked always
+const R_FILLER := 6.0
 const R_PLAIN := 9.0
 const R_NOTABLE := 15.0
 const R_KEYSTONE := 18.0
@@ -28,10 +28,13 @@ const LINK_W := 2.0
 const YARD_TONE := Color("8fb3d9")
 ## The web lies wide, as the canvas is (slice 1): the Pitch across the centre, three elements' lanes out to the left
 ## and three to the right, the classes' beyond them. [the entry, the lane's direction].
-const ELEMENT_LAY := {"Live": [Vector2(-330, -190), Vector2.LEFT], "The Rat Man": [Vector2(-330, 0), Vector2.LEFT], "Blades": [Vector2(-330, 190), Vector2.LEFT],
-	"Petrol": [Vector2(330, -190), Vector2.RIGHT], "The cold": [Vector2(330, 0), Vector2.RIGHT], "Knuckles": [Vector2(330, 190), Vector2.RIGHT]}
-const CLASS_LAY := {"Drifter": [Vector2(-820, -230), Vector2.LEFT], "Poacher": [Vector2(-820, 0), Vector2.LEFT], "Paramedic": [Vector2(-820, 230), Vector2.LEFT],
-	"Scrapper": [Vector2(820, -160), Vector2.RIGHT], "Doorman": [Vector2(820, 160), Vector2.RIGHT]}
+## Slice 2 (the drawn layout, the canvas "Fiat – The web"): the Pitch across the centre, the elements' lanes out from
+## R_ELEMENT at an angle each (a class's pair side by side), the classes' two lanes out from R_CLASS between their
+## elements, Data.LANE_OFF rows either side of the angle, their notables hung outward.
+const R_ELEMENT := 280.0
+const R_CLASS := 740.0
+const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
+const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
 
 var sim
 var selected := ""
@@ -85,14 +88,14 @@ func lay_out() -> void:
 		var t: Dictionary = _trees.get(nm, {})
 		if t.is_empty():
 			continue
-		_lay_tree(t, ELEMENT_LAY[nm][0], ELEMENT_LAY[nm][1], Pal.ELEMENT_COLOURS.get(t["element"], Pal.TEXT))
+		var d := Vector2.from_angle(deg_to_rad(ELEMENT_LAY[nm]))
+		_lay_tree(t, d * R_ELEMENT, d, Pal.ELEMENT_COLOURS.get(t["element"], Pal.TEXT))
 	for cls in CLASS_LAY:
 		var mine: Array = by_class.get(cls, [])
-		var at: Vector2 = CLASS_LAY[cls][0]
-		var d: Vector2 = CLASS_LAY[cls][1]
+		var d := Vector2.from_angle(deg_to_rad(CLASS_LAY[cls]))
 		for k in range(mine.size()):
-			var off: float = (k - (mine.size() - 1) / 2.0) * 2.0 * CLASS_GAP
-			_lay_tree(mine[k], at + Vector2(0, off), d, Pal.TEXT)
+			var off: float = (k - (mine.size() - 1) / 2.0) * 2.0 * Data.LANE_OFF * ROW
+			_lay_tree(mine[k], d * R_CLASS + d.orthogonal() * off, d, Pal.TEXT)
 	_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	var first := true
 	for id in layout:
@@ -104,19 +107,21 @@ func lay_out() -> void:
 	_bounds = _bounds.grow(90.0)
 
 
+## A tree's nodes at their built places ("at": columns along the lane, rows across it); the name over the lane's
+## middle, above whatever hangs there.
 func _lay_tree(t: Dictionary, at: Vector2, dir: Vector2, tone: Color) -> void:
 	var side: Vector2 = dir.orthogonal()
-	_axis[t["name"]] = {"at": at, "dir": dir, "tone": tone, "label_at": at + dir * (2.5 * STEP) + Vector2(0, -ROW - 16.0)}     # the name over the lane's middle
+	var top: float = 0.0
 	for i in range(t["nodes"].size()):
 		var nd: Dictionary = t["nodes"][i]
-		var c: int = int(nd.get("col", 0))
-		var r: int = int(nd.get("row", 0))
-		var rows := 0
-		for other in t["nodes"]:
-			if int(other.get("col", 0)) == c:
-				rows += 1
-		var off: float = 0.0 if rows == 1 else (ROW if r == 1 else -ROW)
-		layout["%s/%d" % [t["name"], i]] = at + dir * (c * STEP) + side * off
+		var a: Array = nd.get("at", [0, 0])
+		var p: Vector2 = at + dir * (float(a[0]) * STEP) + side * (float(a[1]) * ROW)
+		layout["%s/%d" % [t["name"], i]] = p
+		if not nd.has("xlinks"):
+			top = minf(top, p.y - at.y)
+	# the name: over the Pitch's middle; past the end of a lane that runs out from the centre
+	var label_at: Vector2 = at + dir * (2.5 * STEP) + Vector2(0, top - 24.0) if dir == Vector2.RIGHT and at.x < 0.0 else at + dir * (5.0 * STEP + R_CAPSTONE + 34.0)
+	_axis[t["name"]] = {"at": at, "dir": dir, "tone": tone, "label_at": label_at}
 
 
 ## A tree's tone: an element's colour, the Pitch's accent, a class's text.
@@ -206,6 +211,8 @@ static func radius_of(nd: Dictionary) -> float:
 		return R_KEYSTONE
 	if nd.get("notable", false):
 		return R_NOTABLE
+	if nd.get("filler", false):
+		return R_FILLER
 	return R_PLAIN
 
 
@@ -215,24 +222,23 @@ func _draw() -> void:
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
 	# the links first, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise
-	for tn in _trees:
-		var links: Dictionary = Data.web_links(_trees[tn])
-		for a in links:
-			for b in links[a]:
-				if str(a) > str(b):
-					continue              # each pair once
-				var pa: Vector2 = to_screen(layout[a])
-				var pb: Vector2 = to_screen(layout[b])
-				if not view.has_point(pa) and not view.has_point(pb):
-					continue
-				var sa: Dictionary = _state.get(a, {})
-				var sb: Dictionary = _state.get(b, {})
-				var col: Color = Pal.CARD_LINE
-				if sa.get("taken", false) and sb.get("taken", false):
-					col = tone_of(tn)
-				elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
-					col = Pal.TEXT_2
-				draw_line(pa, pb, col, LINK_W * maxf(0.6, zoom), true)
+	var links: Dictionary = Data.web_links_all()
+	for a in links:
+		for b in links[a]:
+			if str(a) > str(b):
+				continue              # each pair once (the links run both ways)
+			var pa: Vector2 = to_screen(layout[a])
+			var pb: Vector2 = to_screen(layout[b])
+			if not view.has_point(pa) and not view.has_point(pb):
+				continue
+			var sa: Dictionary = _state.get(a, {})
+			var sb: Dictionary = _state.get(b, {})
+			var col: Color = Pal.CARD_LINE
+			if sa.get("taken", false) and sb.get("taken", false):
+				col = tone_of(str(a).get_slice("/", 0))
+			elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
+				col = Pal.TEXT_2
+			draw_line(pa, pb, col, LINK_W * maxf(0.6, zoom), true)
 	# the joints: a dashed line between the two halves
 	for j in Data.JOINTS:
 		var ids: Array = [_joint_half(j["tree"], j["key"]), _joint_half(j["element_tree"], j["key"])]
@@ -262,7 +268,7 @@ func _draw() -> void:
 			words = "%s · the %s's" % [tn, str(t["class"]).to_lower()]
 		else:
 			words = "%s · the camp's" % tn
-		var fs: int = 15 if zoom >= LABEL_ZOOM else 13
+		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(_font_bold, p - Vector2(w / 2.0, -5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone_of(tn))
 
@@ -323,12 +329,12 @@ func _draw_node(id: String, p: Vector2) -> void:
 			var g: float = r * 1.1
 			draw_texture_rect(tex, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
 	# the name under a notable, the keystone's level by it, from the label zoom
-	if zoom >= LABEL_ZOOM and (nd.get("notable", false) or diamond):
+	if (zoom >= LABEL_ZOOM or id == hover or id == selected) and (nd.get("notable", false) or diamond):
 		var fs: int = 12
 		var words: String = str(nd["name"])
 		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(_font, p + Vector2(-tw / 2.0, r + 14.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Pal.TEXT if taken or reach else Pal.TEXT_3)
-	if diamond and not taken and not theirs and zoom >= LABEL_ZOOM:
+	if diamond and not taken and not theirs and zoom >= 0.6:
 		var at: int = Data.KEYSTONE_LEVEL if nd.get("keystone", false) else Data.CAPSTONE_LEVEL
 		var lv: String = "Lv %d" % at
 		draw_string(_font, p + Vector2(r + 6.0, -r + 4.0), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.GOOD if sim.level() >= at else Pal.TEXT_3)
@@ -402,3 +408,28 @@ func centre_on(id: String) -> void:
 		cam = layout[id]
 		zoom = maxf(zoom, 1.0)
 		queue_redraw()
+
+
+## The node whose name starts with (or holds) the words, notables before fillers, or "" (the screen's "find a perk").
+func find_named(words: String) -> String:
+	var w := words.strip_edges().to_lower()
+	if w == "":
+		return ""
+	var best := ""
+	var best_rank := 9
+	for id in layout:
+		var nd: Dictionary = sim.node(id)
+		var nm := str(nd.get("name", "")).to_lower()
+		var rank := -1
+		if nm.begins_with(w):
+			rank = 0
+		elif nm.contains(w):
+			rank = 2
+		if rank < 0:
+			continue
+		if nd.get("filler", false):
+			rank += 1
+		if rank < best_rank:
+			best_rank = rank
+			best = id
+	return best

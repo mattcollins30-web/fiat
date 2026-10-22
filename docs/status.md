@@ -6236,3 +6236,27 @@ pass; the reviewer on the code):
   Whole web / The class's / The Pitch over its corner. The lanes, their gates, rails and the core pills are gone
   from barracks.gd; the Also row is the pages alone. Smoke: _web_checks (placed, no overlaps, fits, the camera,
   a pick, a drag released off the canvas). Not yet: "find a node" (slice 2, with the fillers).
+- Slice 2, the nodes (22 Oct; web.md §2a, Matt: "all looks good"; the two language reviewers' pass on every new word -
+  now a standing rule in CLAUDE.md - and the editor's calls: no "head" for a man of a gang, figures not words, the
+  clashes and the American names renamed). Data.TREES and ELEMENT_TREES are built from TREES_SRC/ELEMENT_TREES_SRC by
+  _web_build: a lane is two rails with a filler between each pair of columns (the ladder; a lone node on the axis, both
+  rails into it), a class's halves hang off their rail, four notables a lane (six the Pitch) hang past a branch filler,
+  and a new keystone a class sits between its two lanes, linked to both (xlinks). Every node carries "at" and "links";
+  web_links reads them, web_links_all merges the trees for the pathing. 525 nodes (250 fillers; the paragon ring is slice 4). Fillers: one stat each, eight
+  cycled a lane (Hardy +4 HP, Keen, Brisk, Mending +0.2 HP/s - regen_rate -, Tough, Lucky, Nimble, the region's
+  resist). The keystone choice: a class's three, one held - taking another lets the held one go for its points, free
+  (the review: the held one's points pay for it), unless a trained node hangs off it ("X hangs off Y: let that go
+  first"; strands_without). The new rules in the sim: Snare and wait, Twine, B-roads, Bin lid, Clocked, Last orders,
+  Jab (+20% damage and pace, the rounds with it), Capacitor, Overload, Brittle, Arterial, Floored, Backdraught,
+  Catching, Worst first, Clocking off, Spare change, Word of mouth, On a roll, Breaker's yard, Back pocket, Workbench
+  (workbench_day, saved), Salvage, Shop local, Light pack, the dots' lengths. The kettle became a rest chip (a wound is
+  the Clinic's alone). The canvas: the drawn layout from the canvas mockup - the Pitch across the centre, the elements
+  out from R_ELEMENT at 60° each (a class's pair side by side), the classes out from R_CLASS between their elements
+  with their notables hung outward; names only at the cluster zoom (1.3) or on the hovered and picked node (every
+  name at once overlapped on a diagonal lane); "Find a perk" over the canvas centres the first name that fits. The
+  bot walks by place (the rails before what hangs off them), keeps its first keystone, skips a notable typed for a
+  gun it doesn't hold. The sum strip drops Lasting last (the web's figures run to three digits). Smoke: the ladder's
+  links, the swap and its block, the counts, a resist filler, and a check a rule (_web_rule_checks). Reviewer's
+  finds fixed. Not yet: slice 3 (use meters, camp-wide allocation, the bridge), slice 4 (paragon ring, Map/Pitch).
+  - For Matt: the long dashed joint lines cross the web at the whole-web zoom (a class's region isn't beside both its
+    elements); the whole-web zoom is an overview, the work is at a region's.

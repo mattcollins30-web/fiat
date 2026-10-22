@@ -1471,7 +1471,7 @@ const RENAMES := {
 }
 
 const COMMON_TREE := "The Pitch"
-const TREES := [
+const TREES_SRC := [
 	{"name": "The Pitch", "nodes": [
 		{"name": "Dry fire", "col": 0, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Long walks", "col": 0, "row": 1, "effect": "hp", "value": 4},
@@ -1636,7 +1636,7 @@ const TREES := [
 ## and a notable with a cost, which want a closed joint in the tree (JOINTS), then the capstone. Any class
 ## can walk any of them; its two affinities (AFFINITY) come at the normal price, the others cost double and
 ## stop at column 4 - a dip, not a build. Knuckles is the physical: the share of a hit that isn't converted.
-const ELEMENT_TREES := [
+const ELEMENT_TREES_SRC := [
 	{"name": "Petrol", "element": "fire", "nodes": [
 		{"name": "A can of it", "col": 0, "row": 0, "effect": "conv_fire_pct", "value": 20},     # 30 to 20 (the twenty-seventh read: the fire Drifter to the Bank in 0.3-0.8 h, the next element build 1.0)
 		{"name": "Rags", "col": 0, "row": 1, "effect": "fire_pct", "value": 10},
@@ -1731,6 +1731,260 @@ const ELEMENT_TREES := [
 		 "words": "Every 10 armour over 200 gives +1% physical damage, up to +50%"},     # over the cap's physical (12 Oct): armour is its resist
 	]},
 ]
+
+## The web, slice 2 (22 Oct, docs/design/web.md §2 and §2a): the lanes above are the hand-written notables; the
+## built trees (TREES, ELEMENT_TREES) carry them with the fillers, the hung notables and the keystone choice, every
+## node with "at" [x along the lane in columns, y across it in rows] and "links" (indices in its tree; "xlinks" names
+## in another). A lane is two rails, y −1 and +1, a filler between each pair of columns on both; a column with one node
+## sits on the axis and both rails run into it; a class's half in an element lane hangs off its rail at y ±3; a hung
+## notable sits at y ±HANG_Y past a branch filler at ±BRANCH_Y, off the rail's node or filler at its x. The new
+## keystone of a class sits between its two lanes (LANE_OFF rows off the first) linked to both lanes' third column.
+const FILLERS := [
+	{"name": "Hardy", "effect": "hp", "value": 4}, {"name": "Keen", "effect": "damage_pct", "value": 3},
+	{"name": "Brisk", "effect": "pace_pct", "value": 2}, {"name": "Mending", "effect": "regen", "value": 0.2},
+	{"name": "Tough", "effect": "armour_pct", "value": 4}, {"name": "Lucky", "effect": "loot_pct", "value": 2},
+	{"name": "Nimble", "effect": "search_pct", "value": 5}, {"name": "Proofed", "effect": "res", "value": 3},
+]
+const RES_NAMES := {"fire": "Singed", "frost": "Wrapped up", "poison": "Hardened", "shock": "Insulated", "bleed": "Clotted"}
+const HANG_Y := 3.7
+const BRANCH_Y := 2.3
+const HALF_Y := 3.0
+const LANE_OFF := 3.0              # a class's two lanes, rows off the class's axis
+## The hung notables and the keystone choice a tree: "hang" [x, side] places one; the keystones carry "at" (the
+## first lane's rows) and link by name ("links" in the tree, "xlinks" "Tree/Name").
+const WEB_EXTRA := {
+	"The Pitch": [
+		{"name": "Home ground", "hang": [0.5, -1], "effect": "hp", "value": 8, "notable": true},
+		{"name": "Good boots", "hang": [2.5, -1], "effect": "pace_pct", "value": 4, "notable": true},
+		{"name": "Well stocked", "hang": [4.5, -1], "effect": "med_cap", "value": 1, "notable": true},
+		{"name": "Market day", "hang": [1.5, 1], "effect": "sell_pct", "value": 10, "notable": true},
+		{"name": "The kettle", "hang": [3.5, 1], "effect": "rest_pct", "value": 15, "notable": true},     # a wound is the Clinic's alone, so the kettle is the rest
+		{"name": "Word of mouth", "hang": [4.5, 1], "effect": "word_of_mouth", "notable": true, "words": "A note on each site's first clear"},
+	],
+	"Stripping": [
+		{"name": "Socket set", "hang": [1.5, -1], "effect": "att_share", "value": 10, "notable": true},
+		{"name": "Oily rag", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "improvised", "notable": true, "words": "Improvised guns do 15% more"},
+		{"name": "Salvage", "hang": [3.5, -1], "effect": "salvage", "notable": true, "words": "+50% scrap from a ditch"},
+		{"name": "Workbench", "hang": [4.5, -1], "effect": "workbench", "notable": true, "words": "One Bench job a day is free"},
+		{"name": "Breaker's yard", "at": [4, LANE_OFF], "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Magpie eye"], "xlinks": ["Fencing/Blowtorch"],
+		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
+	],
+	"Fencing": [
+		{"name": "Haggler", "hang": [1.5, 1], "effect": "sell_pct", "value": 15, "notable": true},
+		{"name": "Shop local", "hang": [2.5, 1], "effect": "buy_pct", "value": 10, "notable": true, "words": "The Fence sells 10% cheaper"},
+		{"name": "Pub talk", "hang": [3.5, 1], "effect": "cash_pct", "value": 15, "notable": true},
+		{"name": "Back pocket", "hang": [4.5, 1], "effect": "back_pocket", "notable": true, "words": "The Fence keeps one piece of kit free on a death"},
+	],
+	"Stalking": [
+		{"name": "Still air", "hang": [1.5, -1], "effect": "first_pct", "value": 20, "notable": true},
+		{"name": "Long glass", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "rifle", "notable": true, "words": "Rifles do 15% more"},
+		{"name": "Sit tight", "hang": [3.5, -1], "effect": "patrol_pct", "value": 15, "notable": true},
+		{"name": "Clocked", "hang": [4.5, -1], "effect": "clocked", "notable": true, "words": "Killing the first of each gang gives +10% damage for the rest of it"},
+		{"name": "Snare and wait", "at": [4, LANE_OFF], "col": 4, "effect": "snare_and_wait", "keystone": true, "links": ["Lying up"], "xlinks": ["Snares/Cold snap"],
+		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
+	],
+	"Snares": [
+		{"name": "Gaps in the hedge", "hang": [1.5, 1], "effect": "search_pct", "value": 10, "notable": true},
+		{"name": "Game bag", "hang": [2.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
+		{"name": "Off the path", "hang": [3.5, 1], "effect": "patrol_pct", "value": 10, "notable": true},
+		{"name": "Twine", "hang": [4.5, 1], "effect": "twine", "notable": true, "words": "The next gang arrives one fewer after every search"},
+	],
+	"Muscle": [
+		{"name": "Bulk", "hang": [1.5, -1], "effect": "hp", "value": 10, "notable": true},
+		{"name": "Shoulder", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "shotgun", "notable": true, "words": "Shotguns do 15% more"},
+		{"name": "Hard case", "hang": [3.5, -1], "effect": "armour_pct", "value": 12, "notable": true},
+		{"name": "Off the canvas", "hang": [4.5, -1], "effect": "off_the_canvas", "notable": true, "words": "Guard of 20% max HP at 33% HP, once a run"},
+		{"name": "Bin lid", "at": [4, LANE_OFF], "col": 4, "effect": "bin_lid", "keystone": true, "links": ["Big frame"], "xlinks": ["The door/Hands on"],
+		 "words": "Guard of 25% as each gang arrives. −20% damage while it holds."},
+	],
+	"The door": [
+		{"name": "Doorframe", "hang": [1.5, 1], "effect": "armour_pct", "value": 10, "notable": true},
+		{"name": "Hands up", "hang": [2.5, 1], "effect": "physical_pct", "value": 15, "notable": true},
+		{"name": "Big lad", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
+		{"name": "Last orders", "hang": [4.5, 1], "effect": "last_orders", "notable": true, "words": "+40% damage to the last of each gang"},
+	],
+	"Triage": [
+		{"name": "Good hands", "hang": [1.5, -1], "effect": "heal_pct", "value": 20, "notable": true},
+		{"name": "Quick dressing", "hang": [2.5, -1], "effect": "med_speed_pct", "value": 20, "notable": true},
+		{"name": "Grab bag", "hang": [3.5, -1], "effect": "med_cap", "value": 1, "notable": true},
+		{"name": "Worst first", "hang": [4.5, -1], "effect": "worst_first", "notable": true, "words": "A med heals +50% under 50% HP"},
+		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Pressure"], "xlinks": ["Shifts/Ice pack"],
+		 "words": "+20% damage and pace for 8 seconds after a med. A med costs 5% max HP."},
+	],
+	"Shifts": [
+		{"name": "Flask", "hang": [1.5, 1], "effect": "rest_pct", "value": 30, "notable": true},
+		{"name": "Regulars", "hang": [2.5, 1], "effect": "treat_pct", "value": 20, "notable": true},
+		{"name": "Last bus", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
+		{"name": "Clocking off", "hang": [4.5, 1], "effect": "clocking_off", "notable": true, "words": "The first search after a clear is instant"},
+	],
+	"Moving on": [
+		{"name": "Tarmac", "hang": [1.5, -1], "effect": "pace_pct", "value": 6, "notable": true},
+		{"name": "Thumb out", "hang": [2.5, -1], "effect": "patrol_pct", "value": 10, "notable": true},
+		{"name": "Light pack", "hang": [3.5, -1], "effect": "cells", "value": 3, "notable": true, "words": "The pack holds 3 more cells"},
+		{"name": "B-roads", "hang": [4.5, -1], "effect": "b_roads", "notable": true, "words": "The first gang after a clear takes 100% longer to arrive"},
+		{"name": "On a roll", "at": [4, LANE_OFF], "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Jump start"],
+		 "words": "+5% find and loot quality a kill untouched, to +50%. A hit resets it."},
+	],
+	"Luck": [
+		{"name": "Lucky penny", "hang": [1.5, 1], "effect": "rarity", "value": 15, "notable": true},
+		{"name": "Coppers", "hang": [2.5, 1], "effect": "cash_pct", "value": 12, "notable": true},
+		{"name": "Beady eye", "hang": [3.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
+		{"name": "Spare change", "hang": [4.5, 1], "effect": "spare_change", "notable": true, "words": "20% chance a search finds a note"},
+	],
+	"Petrol": [
+		{"name": "Accelerant", "hang": [1.5, -1], "effect": "fire_pct", "value": 15, "notable": true},
+		{"name": "Oil drum", "hang": [2, 1], "effect": "fire_last_pct", "value": 25, "notable": true, "words": "Burns last 25% longer"},
+		{"name": "Flashpoint", "hang": [4.5, -1], "effect": "conv_fire_pct", "value": 10, "notable": true},
+		{"name": "Backdraught", "hang": [4, 1], "effect": "backdraught", "notable": true, "words": "A burning one that dies lights the next"},
+	],
+	"Live": [
+		{"name": "Live rail", "hang": [1.5, -1], "effect": "shock_pct", "value": 15, "notable": true},
+		{"name": "Capacitor", "hang": [2, 1], "effect": "capacitor", "notable": true, "words": "The first of each gang is shocked"},
+		{"name": "Stripped wire", "hang": [4.5, -1], "effect": "conv_shock_pct", "value": 10, "notable": true},
+		{"name": "Overload", "hang": [4, 1], "effect": "overload", "notable": true, "words": "A shocked one dies under 20% HP"},
+	],
+	"Blades": [
+		{"name": "Honed", "hang": [1.5, -1], "effect": "bleed_pct", "value": 15, "notable": true},
+		{"name": "Serrated", "hang": [2, 1], "effect": "bleed_last_pct", "value": 25, "notable": true, "words": "Bleeds last 25% longer"},
+		{"name": "Whetstone", "hang": [4.5, -1], "effect": "conv_bleed_pct", "value": 10, "notable": true},
+		{"name": "Arterial", "hang": [4, 1], "effect": "arterial", "notable": true, "words": "Bleed does ×2 for its first second"},
+	],
+	"Knuckles": [
+		{"name": "Knuckleduster", "hang": [1.5, -1], "effect": "physical_pct", "value": 15, "notable": true},
+		{"name": "Shin pads", "hang": [2, 1], "effect": "armour_pct", "value": 8, "notable": true},
+		{"name": "Low blow", "hang": [4.5, -1], "effect": "first_pct", "value": 15, "notable": true},
+		{"name": "Floored", "hang": [4, 1], "effect": "floored", "notable": true, "words": "A staggered one loses a second of fire"},
+	],
+	"The cold": [
+		{"name": "Chilblains", "hang": [1.5, -1], "effect": "frost_pct", "value": 15, "notable": true},
+		{"name": "Deep freeze", "hang": [2, 1], "effect": "frost_last_pct", "value": 25, "notable": true, "words": "Chills last 25% longer"},
+		{"name": "Sleet", "hang": [4.5, -1], "effect": "conv_frost_pct", "value": 10, "notable": true},
+		{"name": "Brittle", "hang": [4, 1], "effect": "brittle", "notable": true, "words": "+30% physical to a frozen one"},
+	],
+	"The Rat Man": [
+		{"name": "Strychnine", "hang": [1.5, -1], "effect": "poison_pct", "value": 15, "notable": true},
+		{"name": "Takes its time", "hang": [2, 1], "effect": "poison_last_pct", "value": 25, "notable": true, "words": "Poison lasts 25% longer"},
+		{"name": "Tainted", "hang": [4.5, -1], "effect": "conv_poison_pct", "value": 10, "notable": true},
+		{"name": "Catching", "hang": [4, 1], "effect": "catching", "notable": true, "words": "A poisoned one that dies doses the next"},
+	],
+}
+static var TREES: Array = _web_build(TREES_SRC)
+static var ELEMENT_TREES: Array = _web_build(ELEMENT_TREES_SRC)
+
+
+## A lane built into its region of the web: the source's nodes first (their indices, so their ids, as they were),
+## then the fillers and the extras, every node with "at" and "links".
+static func _web_build(src: Array) -> Array:
+	var out := []
+	for k in range(src.size()):
+		var t: Dictionary = src[k].duplicate(true)
+		var nodes: Array = t["nodes"]
+		var count := [0]                                       # the fillers made, for the cycle
+		var cols := {}                                         # col -> {row: index}, the rails' nodes
+		var halves := {}                                       # col -> {row: index}, a class's halves (off the rail)
+		for i in range(nodes.size()):
+			var nd: Dictionary = nodes[i]
+			nd["links"] = []
+			var c: int = int(nd.get("col", 0))
+			if c == 0:
+				nd["entry"] = true
+			var into: Dictionary = halves if nd.has("class") else cols
+			if not into.has(c):
+				into[c] = {}
+			into[c][int(nd.get("row", 0))] = i
+			if nd.has("class"):
+				nd["at"] = [float(c), HALF_Y if int(nd.get("row", 0)) == 1 else -HALF_Y]
+		for c in cols:
+			if cols[c].size() == 2:
+				nodes[cols[c][0]]["at"] = [float(c), -1.0]
+				nodes[cols[c][1]]["at"] = [float(c), 1.0]
+				_web_link(nodes, cols[c][0], cols[c][1])         # the rung
+			elif halves.has(c):
+				var r: int = cols[c].keys()[0]
+				nodes[cols[c][r]]["at"] = [float(c), -1.0 if r == 0 else 1.0]     # on its rail: a half takes the other's place
+			else:
+				nodes[cols[c].values()[0]]["at"] = [float(c), 0.0]      # alone in its column: on the axis, both rails run into it
+		# the rails: a station a column (the rail's node, the lone node, or a filler where a half hangs), a filler between
+		for y in [-1.0, 1.0]:
+			var r: int = 0 if y < 0 else 1
+			var last := -1
+			for c in range(COLUMNS):
+				var station := -1
+				if cols.has(c) and (cols[c].has(r) or not halves.has(c)):
+					station = cols[c].get(r, cols[c].values()[0])
+				else:
+					station = _web_filler(t, [float(c), y], count, k)
+					if halves.get(c, {}).has(r):
+						_web_link(nodes, halves[c][r], station)     # the half hangs off its rail
+				if last >= 0:
+					var f := _web_filler(t, [c - 0.5, y], count, k)
+					_web_link(nodes, last, f)
+					_web_link(nodes, f, station)
+				last = station
+		# the extras
+		for ex in WEB_EXTRA.get(t["name"], []):
+			var nd: Dictionary = ex.duplicate(true)
+			nd["links"] = []
+			nodes.append(nd)
+			var i := nodes.size() - 1
+			if nd.has("hang"):
+				var x: float = float(nd["hang"][0])
+				var side: float = float(nd["hang"][1])
+				nd["at"] = [x, side * HANG_Y]
+				nd["col"] = int(x)
+				var b := _web_filler(t, [x, side * BRANCH_Y], count, k)
+				_web_link(nodes, b, i)
+				var rail := _web_at(nodes, [x, side])
+				_web_link(nodes, b, rail if rail >= 0 else _web_at(nodes, [x, 0.0]))
+			for nm in ex.get("links", []):
+				_web_link(nodes, i, _web_named(nodes, nm))
+		for i in range(nodes.size()):
+			assert(not nodes[i]["links"].is_empty() or not nodes[i].get("xlinks", []).is_empty(), "%s/%s links to nothing" % [t["name"], nodes[i]["name"]])     # the review: a lane's shape that leaves a node off the web
+		out.append(t)
+	return out
+
+
+static func _web_link(nodes: Array, a: int, b: int) -> void:
+	assert(a >= 0 and b >= 0, "a web link to nothing")
+	if not (b in nodes[a]["links"]):
+		nodes[a]["links"].append(b)
+	if not (a in nodes[b]["links"]):
+		nodes[b]["links"].append(a)
+
+
+## A filler appended to the tree at a place: the next of the cycle (offset by the lane, so neighbours differ), its
+## resist the region's element, or armour where there's none.
+static func _web_filler(t: Dictionary, at: Array, count: Array, lane: int) -> int:
+	var f: Dictionary = FILLERS[(count[0] + lane * 3) % FILLERS.size()].duplicate()
+	count[0] += 1
+	var el: String = str(t.get("element", ""))
+	if f["effect"] == "res":
+		if el == "" or el == "physical":
+			f = {"name": "Tough", "effect": "armour_pct", "value": 4}
+		else:
+			f = {"name": RES_NAMES[el], "effect": "%s_res" % el, "value": 3}
+	f["filler"] = true
+	f["at"] = at
+	f["links"] = []
+	t["nodes"].append(f)
+	return t["nodes"].size() - 1
+
+
+static func _web_at(nodes: Array, at: Array) -> int:
+	for i in range(nodes.size()):
+		var a: Array = nodes[i].get("at", [])
+		if a.size() == 2 and is_equal_approx(float(a[0]), float(at[0])) and is_equal_approx(float(a[1]), float(at[1])):
+			return i
+	return -1
+
+
+static func _web_named(nodes: Array, nm: String) -> int:
+	for i in range(nodes.size()):
+		if str(nodes[i].get("name", "")) == nm:
+			return i
+	return -1
+
+
 const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
@@ -2009,9 +2263,8 @@ static func base_cost(t: Dictionary, nd: Dictionary) -> int:
 
 
 ## The web (22 Oct, docs/design/web.md): a tree is a region of the web, its nodes linked by pathing, not opened by
-## column gates. The links a lane's shape gives (slice 1, the lanes' nodes as they are): a node links to both of the
-## next column's and to the other row of its own; the capstone to both of the column before it. A node is an entry
-## when it's in column 0 (the region's join). Slice 2 lays the regions out as drawn and adds the fillers.
+## column gates. The links are the built tree's ("links" indices, "xlinks" "Tree/Name" into another), as ids, both
+## ways. A node is an entry when it's the lane's first column (the region's join).
 static var _web_links := {}
 static func web_links(t: Dictionary) -> Dictionary:
 	var key: String = str(t.get("name", ""))
@@ -2019,29 +2272,56 @@ static func web_links(t: Dictionary) -> Dictionary:
 		return _web_links[key]
 	var out := {}
 	var nodes: Array = t.get("nodes", [])
-	var halves := {}                           # a column that's every class's half (the joints' column): a bypass for the rest
-	for nd in nodes:
-		var c: int = int(nd.get("col", 0))
-		halves[c] = halves.get(c, true) and nd.has("class")
 	for i in range(nodes.size()):
-		var a: Dictionary = nodes[i]
 		var ia := "%s/%d" % [key, i]
-		out[ia] = []
-		for j in range(nodes.size()):
-			if i == j:
-				continue
-			var b: Dictionary = nodes[j]
-			var ca: int = int(a.get("col", 0))
-			var cb: int = int(b.get("col", 0))
-			var skip: bool = absi(ca - cb) == 2 and halves.get(mini(ca, cb) + 1, false)     # past the halves' column (a class with no half there)
-			if absi(ca - cb) == 1 or skip or (ca == cb and int(a.get("row", 0)) != int(b.get("row", 0))):
-				out[ia].append("%s/%d" % [key, j])
+		if not out.has(ia):
+			out[ia] = []
+		for j in nodes[i].get("links", []):
+			var ib := "%s/%d" % [key, int(j)]
+			if not (ib in out[ia]):
+				out[ia].append(ib)
+		for nm in nodes[i].get("xlinks", []):
+			var ib := node_id_named(str(nm))
+			assert(ib != "", "a web xlink to nothing: " + str(nm))
+			if not (ib in out[ia]):
+				out[ia].append(ib)
 	_web_links[key] = out
 	return out
 
 
+## Every tree's links in one dictionary, the cross-tree ones both ways (a path can cross a class's two lanes).
+static var _web_all := {}
+static func web_links_all() -> Dictionary:
+	if not _web_all.is_empty():
+		return _web_all
+	var out := {}
+	for t in TREES + ELEMENT_TREES:
+		for a in web_links(t):
+			if not out.has(a):
+				out[a] = []
+			for b in web_links(t)[a]:
+				if not (b in out[a]):
+					out[a].append(b)
+				if not out.has(b):
+					out[b] = []
+				if not (a in out[b]):
+					out[b].append(a)
+	_web_all = out
+	return out
+
+
+## "Tree/Name" to the node's id, or "".
+static func node_id_named(path: String) -> String:
+	var t := tree_named(path.get_slice("/", 0))
+	var nm := path.get_slice("/", 1)
+	for i in range(t.get("nodes", []).size()):
+		if str(t["nodes"][i].get("name", "")) == nm:
+			return "%s/%d" % [t["name"], i]
+	return ""
+
+
 static func web_entry(nd: Dictionary) -> bool:
-	return int(nd.get("col", 0)) == 0
+	return nd.get("entry", false)
 
 
 ## Whether a node is for these classes: a class's half in an element tree is that class's alone.
@@ -2065,8 +2345,8 @@ static func capstone_cost(t: Dictionary) -> int:
 	var total := 0
 	var half := 0                                      # a class's half counts once: one class trains one of them
 	for nd in t["nodes"]:
-		if nd.get("capstone", false) or nd.get("beside", false):
-			continue                                       # a node beside the capstone (12 Oct) is its peer, not behind it
+		if nd.get("capstone", false) or nd.get("beside", false) or not nd.has("col") or nd.has("hang") or nd.has("xlinks"):
+			continue                                       # a node beside the capstone (12 Oct) is its peer, not behind it; the web's fillers and extras (22 Oct) don't price it
 		var c := node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
 		if nd.has("class"):
 			half = maxi(half, c)
