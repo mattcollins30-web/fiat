@@ -6173,6 +6173,10 @@ difficulty and length, the endgame placeholders.
      every take's peak (ffmpeg) and --fix lifts a fight one-shot under -6 dB to -1: the six shot takes and
      swing_melee_2 lifted, in place. Run it after any sound batch; the smoke can't decode audio.
 
+9. The Radio's pile has no cap and no way to bin or sell from it (22 Oct, found profiling the pass: the bot's runaway
+   reads piled 9,000-28,000 papers; a long player session will show "THE PAPERS · 400" too). A cull, or a sell from
+   the pile, once the balance is in.
+
 ## The tuning batch (21 Oct, after Matt's first playtest of the Scrapper)
 
 Matt's save at 40 min: level 9, 13 runs, 100% at every site to the Pleasure Park (75% there, 0% at the Shopping
@@ -6308,3 +6312,32 @@ pass; the reviewer on the code):
   - For Matt: the two new scripts have no .uid files yet (the headless smoke makes none): the editor will write
     them on its next open - commit those with the next change. The Radio's "Juice" is the Dial's "The codes"
     button (no separate chip). The web is all in: the balance pass next.
+- The pass's wall halved (22 Oct, 23b427d; Matt: "we're losing too much time on balance passes"). A 24-hour read
+  had gone from 30 to 60 minutes after the web. Profiled on two end-of-pass saves (20 simulated minutes each): the
+  time was has_rule walking the stash fifty times a tick; the bot's sell culling "plain papers" that live on the
+  Radio's pile since 18 Oct, where the Fence can't reach them - a pile of 9,000-28,000 papers sorted and
+  failed-to-sell every tidy; best_in_stash asked once an item with the kit's key hashed per ask; a find into a full
+  pack trying on every pack item; the compare's baseline tried on per piece; the signal-making filtering the pile
+  four times a step; attachment sorting scoring per comparison. The sim caches each (has_rule's shape, a try-on's
+  own memo and feed, the worn affixes by stat, the pack's keep verdicts, the pile's ids, the parts' scores); the
+  bot's kit tidy runs once a camp minute (the Yard, the meds and the endgame's business every run), reads the pile
+  once a shape and the sell's keepers once; a plain build's read ends at the Quartermaster; the summary's wall table
+  splits tidy into its parts. The Doorman's 20 minutes 30 s -> 11 s, the Scrapper as fire's 17.6 s -> 7.6 s.
+  Reviewer two rounds (the has_rule key's swap of equals, the keeps' key, the tidy's split, the pile's key); smoke
+  run 51.
+- The web's balance pass (22 Oct, 15:32-17:34, summary.md: 19 RED, as the morning's 20): the campaign too quick
+  (the Bank 1.0 h, the Quartermaster 1.7 h), odds 100% everywhere, one death in a thousand runs, the lorry at
+  3.5 h, level 50 at 4.9 h, then the runaway: 2-3 second runs, hundreds of millions of tins, 270k HP off the
+  lorries compounding. The reds and the settings next, against Matt's save.
+- The web's art manifest (22 Oct, Matt: "proceed with the art manifest ... all the tree nodes and whatever else we
+  had parked", then the regions' and the Map's labels and the Dial's and Pitch's canvases too): tools/
+  make_web_art_manifest.py -> tools/pixellab_web_art_manifest.json (343) and _test_ (16). The nodes (304: every
+  notable, keystone, capstone and bridge of Training's regions, the Map's 35 ranked, the Pitch's 80 picks and 8
+  ranks, the ring's 5 kinds; 64 px to art/nodes/, the UI icons' style; small nodes and fillers stay dots), the
+  regions' emblems (21: the six elements, the Map's three, the ring, the Pitch, and the ten class lanes; 96 px to
+  art/web/), the three canvases' backdrops (744 wide, the API's most, drawn x2), the Scrapper's and Poacher's new
+  face and figure (parked item 6), the eleven cover walls not yet run from the fight kit (one piece at the frame's
+  width; the duplication was the live tiles). Wiring once judged: web_view draws a node's picture in place of its
+  glyph when the file exists, an emblem beside a label, a backdrop under the links. The test first (no credits
+  before it reads).
+
