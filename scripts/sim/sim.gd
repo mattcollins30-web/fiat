@@ -2393,10 +2393,7 @@ func _active(n: Dictionary) -> bool:
 
 func node_active(id: String) -> bool:
 	var n := node(id)
-	if n.is_empty() or not _active(n):
-		return false
-	var tname: String = id.get_slice("/", 0)
-	return not (not Data.element_tree(tname).is_empty() and int(n.get("col", 0)) >= Data.ELEMENT_GATED_COL and not _tops_open(tname))
+	return not n.is_empty() and _active(n)     # the web (22 Oct): an element's top works for anyone who paths to it
 
 
 func has_node(effect: String) -> bool:
@@ -2446,8 +2443,7 @@ func _nodes_for(effect: String) -> Array:
 			var n := node(id)
 			if n.is_empty():
 				continue
-			var tname: String = str(id).get_slice("/", 0)
-			var waits: String = tname if (not Data.element_tree(tname).is_empty() and int(n.get("col", 0)) >= Data.ELEMENT_GATED_COL) else ""
+			var waits: String = ""                # the web (22 Oct): no element top waits on a joint
 			var e: String = n.get("effect", "")
 			if not _eff_cache.has(e):
 				_eff_cache[e] = []
@@ -2598,36 +2594,53 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "not one of this runner's trees"
 	if not Data.for_classes(n, my_classes()):
 		return "%s only" % n["class"]
-	var t := Data.tree_named(parts[0])
-	var col: int = int(n.get("col", 0))
-	var g: int = Data.gate(t, col, my_classes())
-	if points_in(parts[0]) < g:
-		return "opens at %d points in %s (%d now)" % [g, parts[0], points_in(parts[0])]
-	var need: int = core_need(t, n) if core_gates else 0
-	var core: String = core_tree(parts[0]) if need > 0 else ""
-	if core != "" and points_in(core) < need:
-		return "opens at %d points in %s (%d now)" % [need, core, points_in(core)]     # the core first (15 Oct)
+	# the web (22 Oct): a node is reached by pathing - an entry, or touching a node trained - not by a column's gate;
+	# every element's region is open to every class (the pair gates went with the lanes)
+	if not Data.web_entry(n) and not touches_trained(id):
+		var near: String = path_next(id)
+		return "wants a path to it: %s first" % (node(near).get("name", near) if near != "" else "an entry")
 	if core_gates and n.get("keystone", false) and level() < Data.KEYSTONE_LEVEL:
 		return "opens at level %d" % Data.KEYSTONE_LEVEL
 	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
 		return "opens at level %d" % Data.CAPSTONE_LEVEL
-	if t.has("element") and col >= Data.ELEMENT_GATED_COL and not _tops_open(parts[0]):
-		return "wants a joint joined in %s" % parts[0]
-	if n.get("capstone", false):
-		# the capstone wants the tree's shape behind it: the keystone and every notable this runner can train
-		for k in range(t["nodes"].size()):
-			var nd: Dictionary = t["nodes"][k]
-			if (nd.get("keystone", false) or nd.get("notable", false)) and not nd.get("beside", false) and Data.for_classes(nd, my_classes()) and not tree.has("%s/%d" % [parts[0], k]):
-				return "wants the keystone and every notable first"
 	if not ignore_points and free_for(id) < node_cost(id):
 		return "wants %d point%s" % [node_cost(id), "" if node_cost(id) == 1 else "s"]
 	return ""
 
 
-## A node can be trained: its column open in its tree, a point free for it, and for an element tree's top
-## a closed joint there; a class's half is that class's alone.
+## A node can be trained: reached by a path from its region's entry, a point free for it; a class's half is that
+## class's alone.
 func can_train(id: String) -> bool:
 	return train_block(id) == ""
+
+
+## The web's pathing (22 Oct): a node touches a trained one along a link.
+func touches_trained(id: String) -> bool:
+	var links: Dictionary = Data.web_links(Data.tree_named(id.get_slice("/", 0)))
+	for other in links.get(id, []):
+		if tree.has(other):
+			return true
+	return false
+
+
+## The nearest node to train on the way to one not yet reachable: the linked node closest to the trained set (or an
+## entry), by a breadth-first walk back from the target; "" if none. The screen's path hint and the bot's walk.
+func path_next(id: String) -> String:
+	var links: Dictionary = Data.web_links(Data.tree_named(id.get_slice("/", 0)))
+	var parent := {id: ""}
+	var queue: Array = [id]
+	while not queue.is_empty():
+		var cur: String = queue.pop_front()
+		for other in links.get(cur, []):
+			if parent.has(other) or not Data.for_classes(node(other), my_classes()):
+				continue                        # never through another class's half (the review)
+			parent[other] = cur
+			if tree.has(other):
+				return cur                      # the untrained node beside the trained one: the next step
+			if Data.web_entry(node(other)):
+				return other                    # an entry not yet taken: start there
+			queue.append(other)
+	return ""
 
 
 ## What a node adds to the one damage figure (16 Oct, item 14): damage_split's total with it and without it - taken

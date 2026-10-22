@@ -1695,8 +1695,8 @@ func _class_trees(main) -> void:
 	_check(sim.points_spent() < spent_before, "the refund did not free the points")
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (Drifter)")
-	# a keystone: Never there - no lot ever comes
-	for i in range(8):
+	# a keystone: Never there - no lot ever comes (the path up the lane to it: the web, 22 Oct)
+	for i in [0, 1, 2, 4, 3, 5, 7, 8, 6]:
 		sim.train_node("Moving on/%d" % i)
 	_check(sim.tree.has("Moving on/6"), "the Drifter's keystone did not train: %d points free" % sim.points_free())
 	_check(sim.patrol_s(sim.effective(3)) == INF, "Never there still has lots coming")
@@ -2173,7 +2173,7 @@ func _tree_rules_checks(main) -> void:
 		for c in table:
 			if c != j["class"]:
 				sim.cls = c
-				_check(not sim.has_joint(j["key"]) and not sim.node_active("%s/6" % j["element_tree"]), "%s closed for a %s" % [j["key"], c])
+				_check(not sim.has_joint(j["key"]), "%s closed for a %s" % [j["key"], c])     # the keystone itself works for any class pathed to it (the web, 22 Oct)
 				break
 	# the crew (21 Oct): a runner with no class takes the first pick as theirs, one press, free, keeping what's trained
 	sim.load_dict(saved)
@@ -2423,33 +2423,30 @@ func _webs_traits(main) -> void:
 	sim.tree = []                    # the Pitch's too: a respec keeps the camp's (21 Oct), the fixture wants it bare
 	sim.training_points += 30
 	var t: Dictionary = Data.tree_named("Stalking")
-	# the gates (9 Oct): a column opens at ⌈0.6 × the cost of every column before it⌉, counted in that tree alone
-	for c in range(1, Data.COLUMNS):
-		var before := 0
-		for nd in t["nodes"]:
-			if int(nd.get("col", 0)) < c and Data.for_classes(nd, ["Poacher"]):
-				before += Data.base_cost(t, nd)
-		_check(Data.gate(t, c, ["Poacher"]) == ceili(Data.GATE_SHARE * before), "Stalking's gate %d is %d, not the share of %d" % [c, Data.gate(t, c, ["Poacher"]), before])
+	# the web (22 Oct, docs/design/web.md): a node is reached by pathing, not a column's gate - an entry (column 0) any
+	# time, the rest touching a node trained along a link; a lane's links run to both of the next column and across its own
+	var links: Dictionary = Data.web_links(t)
+	_check(links["Stalking/0"].has("Stalking/1") and links["Stalking/0"].has("Stalking/2") and links["Stalking/0"].has("Stalking/4") and not links["Stalking/0"].has("Stalking/3"), "Stalking's first node links wrong: %s" % str(links["Stalking/0"]))
+	_check(not sim.can_train("Stalking/2") and sim.train_block("Stalking/2").begins_with("wants a path"), "a second-column node trained with nothing before it: '%s'" % sim.train_block("Stalking/2"))
+	_check(sim.path_next("Stalking/6") == "Stalking/0" or sim.path_next("Stalking/6") == "Stalking/1", "the path to the keystone doesn't start at an entry: %s" % sim.path_next("Stalking/6"))
 	_check(sim.train_node("Stalking/0"), "Stalking's first node did not train")
-	_check(not sim.can_train("Stalking/2") and sim.train_block("Stalking/2").begins_with("opens at"), "the second column opened on one point: '%s'" % sim.train_block("Stalking/2"))
+	_check(sim.can_train("Stalking/2") and sim.can_train("Stalking/4") and not sim.can_train("Stalking/3"), "pathing is off: the next column should open, the one after not")
 	_check(not sim.can_train("Stalking/6") and not sim.can_train("Stalking/10"), "a deep node trained on a dip")
+	_check(sim.path_next("Stalking/6") in ["Stalking/2", "Stalking/4"], "the next step to the keystone isn't the touching column: %s" % sim.path_next("Stalking/6"))
 	# points in another tree open nothing here
 	sim.best_level = maxi(sim.best_level, 10)     # the Pitch's own points (21 Oct): one a level of the crew's best
 	var yard_in: int = sim.points_in("The Pitch")
 	for i in range(3):
 		sim.train_node("The Pitch/%d" % i)
-	_check(sim.points_in("The Pitch") > yard_in and not sim.can_train("Stalking/2"), "the Pitch's points opened Stalking's columns")
-	sim.train_node("Stalking/1")
-	_check(sim.can_train("Stalking/2") and sim.can_train("Stalking/4"), "the second column did not open at its gate")
-	for i in [2, 4, 3]:
-		sim.train_node("Stalking/%d" % i)
-	_check(sim.points_in("Stalking") < Data.gate(t, 4, ["Poacher"]) and not sim.can_train("Stalking/6"), "the keystone trained under its gate: %d in, gate %d" % [sim.points_in("Stalking"), Data.gate(t, 4, ["Poacher"])])
-	_check(sim.train_node("Stalking/7") and sim.train_node("Stalking/8"), "the fourth column did not train")
-	_check(sim.points_in("Stalking") >= Data.gate(t, 4, ["Poacher"]) and sim.train_node("Stalking/9"), "the fifth column did not open at its gate")
+	_check(sim.points_in("The Pitch") > yard_in and not sim.can_train("Stalking/3"), "the Pitch's points opened Stalking's path")
+	for i in [2, 3, 7]:
+		_check(sim.train_node("Stalking/%d" % i), "Stalking/%d did not train along the path" % i)
+	_check(sim.can_train("Stalking/6") and sim.train_node("Stalking/6"), "the keystone did not train once pathed to (the level gate off)")
+	_check(sim.train_node("Stalking/9"), "the fifth column did not train")
 	_check(sim.has_node("night_work"), "Night work did not take")
 	_check(sim.effective(3)["rarity"] > 0.0 and sim.effective(3)["pace"] < 1.0, "Night work did not make the site Night")
-	_check(not sim.can_train("Stalking/10") and sim.train_block("Stalking/10").begins_with("wants the keystone"), "the capstone trained before the keystone: '%s'" % sim.train_block("Stalking/10"))
-	_check(sim.train_node("Stalking/5") and sim.train_node("Stalking/6"), "the keystone did not train once its column opened")
+	_check(sim.can_train("Stalking/10") and sim.train_node("Stalking/10"), "the capstone did not train from the column before it: '%s'" % sim.train_block("Stalking/10"))
+	_check(sim.train_node("Stalking/5") and sim.train_node("Stalking/8"), "the nodes beside the path did not train")
 	main.show_room(main.BARRACKS)
 	_check_fit(main, "Caravan (web)")
 	# the traits: one on the runner now; a death brings two to choose from
@@ -2554,7 +2551,7 @@ func _element_bot_checks(main) -> void:
 		if closable:
 			_check(sim.tree.has("%s/6" % t["name"]) and sim.has_joint(Data.joint_in(sim.cls, t["name"])["key"]), "the %s bot did not close its joint and reach its keystone: %s" % [el, sim.tree])
 		else:
-			_check(not sim.tree.has("%s/6" % t["name"]) and sim.train_block("%s/6" % t["name"], true).begins_with("wants a joint"), "the %s keystone opened with no joint to close: %s" % [el, sim.tree])
+			_check(sim.tree.has("%s/6" % t["name"]), "the %s bot did not reach the keystone past the halves' column (the web: full access): %s" % [el, sim.tree])
 		if el == "physical":
 			continue                      # Knuckles scales what isn't converted: no element gun, socketable or affix to chase
 		# the gun: a plain better one in the stash loses to the one carrying the element
@@ -2661,8 +2658,9 @@ func _element_checks(main) -> void:
 	for i in [0, 1, 2, 4, 3, 7, 5]:
 		_check(sim.train_node("Petrol/%d" % i), "Petrol/%d did not train: %s" % [i, sim.train_block("Petrol/%d" % i)])
 	_check(sim.train_block("Petrol/8") == "Scrapper only", "another class's half trained for a Drifter: '%s'" % sim.train_block("Petrol/8"))
-	# the joint (9 Oct): one half alone gives its own figure and not the payoff; the element's top waits on it
-	_check(not sim.has_joint("drifter_fire") and sim.train_block("Petrol/6").begins_with("wants a joint"), "the keystone opened on one half: '%s'" % sim.train_block("Petrol/6"))
+	# the joint (9 Oct): one half alone gives its own figure and not the payoff; the element's top is reached by the
+	# path, joint or none (the web, 22 Oct: full access)
+	_check(not sim.has_joint("drifter_fire") and sim.can_train("Petrol/6"), "the keystone isn't reached by its path: '%s'" % sim.train_block("Petrol/6"))
 	for i in [0, 1, 2, 4, 3, 5, 8]:
 		_check(sim.train_node("Moving on/%d" % i), "Moving on/%d did not train: %s" % [i, sim.train_block("Moving on/%d" % i)])
 	_check(sim.has_joint("drifter_fire") and not sim.has_joint("drifter_shock"), "both halves trained and the joint did not close")
@@ -2682,10 +2680,12 @@ func _element_checks(main) -> void:
 	_check(float(jm["dots"].get("fire", 0.0)) > 0.0, "the Drifter's joined bursts did not ignite")
 	sim.extract_now()
 	sim.equipped["Primary"] = sim._plain("Primary", "Nail gun")
-	# off the pair: the rat man stops at column 4 - no joint of the Drifter's is in it
+	# off the pair: the rat man's top is reached too (the web, 22 Oct: full access) - the halves' column, every node
+	# another class's, is bypassed by the path; the nodes themselves stay those classes' own
 	for i in [0, 1, 2, 4, 3, 7]:
 		sim.train_node("The Rat Man/%d" % i)
-	_check(sim.points_in("The Rat Man") >= Data.gate(Data.tree_named("The Rat Man"), 4, ["Drifter"]) and sim.train_block("The Rat Man/6", true).begins_with("wants a joint"), "an off-pair keystone was not stopped at column 4: '%s'" % sim.train_block("The Rat Man/6", true))
+	_check(sim.train_block("The Rat Man/5") == "Poacher only" and sim.train_block("The Rat Man/8") == "Paramedic only", "the Rat Man's halves trained for a Drifter")
+	_check(sim.can_train("The Rat Man/6") and sim.train_node("The Rat Man/6"), "an off-pair keystone wasn't reached past the halves' column: '%s'" % sim.train_block("The Rat Man/6", true))
 	# the fight: Spreads multiplies fire by those on you; a shocked gang takes more under Live
 	sim.words[3] = []
 	sim.set_depth(3, 1)
@@ -2977,29 +2977,18 @@ func _capstone_checks(main) -> void:
 				others += c
 		_check(Data.capstone_cost(b) == ceili((others + half) / 4.0), "%s's capstone costs %d, not a quarter of %d" % [b["name"], Data.capstone_cost(b), others + half])
 		_check(int(last["col"]) == Data.COLUMNS - 1, "%s's capstone is not in the last column" % b["name"])
-	# it opens only once the keystone and every notable are taken
+	# it opens when the path reaches it (the web, 22 Oct): nothing behind it, shut; the column before it taken, open
 	_set_cls(sim, "Poacher")
 	sim.tree = sim.tree.filter(func(id): return not str(id).begins_with("Snares/"))
 	sim.training_points = 200
 	var snares: Dictionary = Data.tree_named("Snares")
 	var cap_id := "Snares/%d" % (snares["nodes"].size() - 1)
-	_check(not sim.can_train(cap_id), "the capstone opened with nothing behind it")
-	# train the spine and the notables, not the keystone yet
+	_check(not sim.can_train(cap_id) and sim.train_block(cap_id).begins_with("wants a path"), "the capstone opened with nothing behind it: '%s'" % sim.train_block(cap_id))
+	# a path up the lane to the column before it
 	for i in range(snares["nodes"].size() - 1):
-		if not snares["nodes"][i].get("keystone", false):
+		if int(snares["nodes"][i].get("col", 0)) < Data.COLUMNS - 1 and not snares["nodes"][i].get("beside", false):
 			sim.tree.append("Snares/%d" % i)
-	_check(not sim.can_train(cap_id), "the capstone opened without the keystone")
-	# the keystone in, one notable out: still shut
-	var a_notable := ""
-	for i in range(snares["nodes"].size() - 1):
-		if snares["nodes"][i].get("keystone", false):
-			sim.tree.append("Snares/%d" % i)
-		elif snares["nodes"][i].get("notable", false) and a_notable == "":
-			a_notable = "Snares/%d" % i
-	sim.tree.erase(a_notable)
-	_check(not sim.can_train(cap_id), "the capstone opened with a notable missing")
-	sim.tree.append(a_notable)
-	_check(sim.can_train(cap_id) and sim.node_cost(cap_id) == Data.capstone_cost(snares), "the capstone did not open with the whole tree behind it (cost %d)" % sim.node_cost(cap_id))
+	_check(sim.can_train(cap_id) and sim.node_cost(cap_id) == Data.capstone_cost(snares), "the capstone did not open with the path behind it (cost %d): '%s'" % [sim.node_cost(cap_id), sim.train_block(cap_id)])
 	_check(sim.train_node(cap_id) and sim.has_node("cap_poached"), "the capstone did not train")
 	# Poached: a gang's arrival brings a find
 	sim.deploy(3)
@@ -9806,17 +9795,24 @@ func _training_gate_checks(main) -> void:
 			key_id = "Blades/%d" % i
 		if nd.get("capstone", false):
 			cap_id = "Blades/%d" % i
-	# Blades' first two columns, to their gates
+	# Blades' first two columns, then the third straight off the path (the web, 22 Oct: no core gate, the pair gates gone)
 	for i in range(bt["nodes"].size()):
 		if int(bt["nodes"][i].get("col", 0)) < 2:
 			sim.train_node("Blades/%d" % i)
-	_check(sim.train_block(col2).begins_with("opens at 6 points in Muscle"), "Blades' third column with nothing in Muscle: '%s'" % sim.train_block(col2))
+	_check(sim.train_block(col2) == "", "Blades' third column with nothing in Muscle wants something: '%s'" % sim.train_block(col2))
+	# the path hint never names another class's half (the review): a Poacher on Blades past the Doorman's half
+	var cls_was: String = sim.cls
+	var tree_was: Array = sim.tree.duplicate()
+	sim.cls = "Poacher"
+	sim.tree = []
+	for i in range(bt["nodes"].size()):
+		if int(bt["nodes"][i].get("col", 0)) < 3:
+			sim.tree.append("Blades/%d" % i)
+	var hint: String = sim.path_next(key_id)
+	_check(hint != "" and not sim.node(hint).has("class") and sim.train_block(hint) == "", "the path hint to Blades' keystone for a Poacher is '%s' (%s)" % [hint, sim.train_block(hint) if hint != "" else "none"])
+	sim.cls = cls_was
+	sim.tree = tree_was
 	var mt: Dictionary = Data.tree_named("Muscle")
-	var k := 0
-	while sim.points_in("Muscle") < 6 and k < mt["nodes"].size():
-		sim.train_node("Muscle/%d" % k)
-		k += 1
-	_check(sim.points_in("Muscle") >= 6 and sim.train_block(col2) == "", "Blades' third column with %d in Muscle: '%s'" % [sim.points_in("Muscle"), sim.train_block(col2)])
 	# keystones and capstones wait for their levels, everything else met
 	var t_was: Array = sim.tree.duplicate()
 	for i in range(mt["nodes"].size()):
@@ -9836,7 +9832,6 @@ func _training_gate_checks(main) -> void:
 	sim.tree.append(mkey)
 	_check(sim.train_block(mcap, true) == "opens at level %d" % Data.CAPSTONE_LEVEL, "a capstone at level 20: '%s'" % sim.train_block(mcap, true))
 	_check(key_id != "" and cap_id != "", "Blades has no keystone or capstone")
-	_check(sim.core_need(bt, sim.node(cap_id)) == Data.CORE_CAPSTONE and sim.core_need(bt, sim.node(key_id)) == 12 and sim.core_need(mt, sim.node(mkey)) == 0, "the core's needs read %d (capstone), %d (keystone), %d (a class tree's)" % [sim.core_need(bt, sim.node(cap_id)), sim.core_need(bt, sim.node(key_id)), sim.core_need(mt, sim.node(mkey))])
 	sim.tree = t_was
 	sim.xp = Data.xp_for_level(30)
 	# the screen: pills and tags placed
@@ -9845,20 +9840,6 @@ func _training_gate_checks(main) -> void:
 	var bk = main._barracks
 	bk._shown = ""
 	bk.show_state(sim)
-	var font: Font = UI.font("SemiBold", true)
-	var pills := 0
-	for lane in bk._lanes:
-		if lane["tree"] == null:
-			continue
-		for cd in lane.get("core_at", []):
-			pills += 1
-			var r: Rect2 = bk.core_pill_rect(cd, font)
-			_check(Rect2(0, 0, Pal.GRID_W, bk.LANE_H).encloses(r) and r.end.x <= bk.core_gap_end(int(cd["c"])) + 0.5, "a core pill leaves its gap: %s ('%s')" % [str(r), cd["words"]])
-			for tile in lane["tiles"]:
-				if tile["button"].visible:
-					var tile_r := Rect2(tile["button"].position - Vector2(0, bk.lane_y(bk._lanes.find(lane))), tile["button"].size)
-					_check(not r.intersects(tile_r), "a core pill sits on a tile: %s on %s" % [str(r), str(tile_r)])
-	_check(pills >= 2, "no core pills on the element lanes (%d)" % pills)
 	var tags := 0
 	for lane in bk._lanes:
 		tags += lane.get("lv_at", []).size()

@@ -2008,6 +2008,42 @@ static func base_cost(t: Dictionary, nd: Dictionary) -> int:
 	return maxi(1, node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false)) - less)
 
 
+## The web (22 Oct, docs/design/web.md): a tree is a region of the web, its nodes linked by pathing, not opened by
+## column gates. The links a lane's shape gives (slice 1, the lanes' nodes as they are): a node links to both of the
+## next column's and to the other row of its own; the capstone to both of the column before it. A node is an entry
+## when it's in column 0 (the region's join). Slice 2 lays the regions out as drawn and adds the fillers.
+static var _web_links := {}
+static func web_links(t: Dictionary) -> Dictionary:
+	var key: String = str(t.get("name", ""))
+	if _web_links.has(key):
+		return _web_links[key]
+	var out := {}
+	var nodes: Array = t.get("nodes", [])
+	var halves := {}                           # a column that's every class's half (the joints' column): a bypass for the rest
+	for nd in nodes:
+		var c: int = int(nd.get("col", 0))
+		halves[c] = halves.get(c, true) and nd.has("class")
+	for i in range(nodes.size()):
+		var a: Dictionary = nodes[i]
+		var ia := "%s/%d" % [key, i]
+		out[ia] = []
+		for j in range(nodes.size()):
+			if i == j:
+				continue
+			var b: Dictionary = nodes[j]
+			var ca: int = int(a.get("col", 0))
+			var cb: int = int(b.get("col", 0))
+			var skip: bool = absi(ca - cb) == 2 and halves.get(mini(ca, cb) + 1, false)     # past the halves' column (a class with no half there)
+			if absi(ca - cb) == 1 or skip or (ca == cb and int(a.get("row", 0)) != int(b.get("row", 0))):
+				out[ia].append("%s/%d" % [key, j])
+	_web_links[key] = out
+	return out
+
+
+static func web_entry(nd: Dictionary) -> bool:
+	return int(nd.get("col", 0)) == 0
+
+
 ## Whether a node is for these classes: a class's half in an element tree is that class's alone.
 static func for_classes(nd: Dictionary, classes: Array) -> bool:
 	return not nd.has("class") or nd["class"] in classes

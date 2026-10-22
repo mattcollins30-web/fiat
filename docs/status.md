@@ -6219,3 +6219,13 @@ pass; the reviewer on the code):
 - Matt (22 Oct): the trees become one web (docs/design/web.md). Slices built end to end, no playtest between
   them, one balance pass at the end. The Training band's class cards stay where they are: the web's figures and
   buttons fold into the band as it is.
+
+## The web (22 Oct, docs/design/web.md): the build
+
+- Slice 1a, the sim: a node is reached by pathing (Data.web_links off the lane's shape, Sim.touches_trained,
+  path_next for the screen's hint and "wants a path to it: X first"), not a column's gate; the column gates, the
+  core gates, the element-top joint gate and the capstone's "every notable first" are gone - full access, every
+  element's region to any class, a column of class halves bypassed (the review: the hint never names another
+  class's half). The keystone and capstone level gates stay. The bot's walk is as it was (column by column).
+  Smoke's gate checks rewritten as pathing checks. Dead in the sim now, out in 1b: core_need, core_tree,
+  _tops_open, Data.gate, CORE_GATES, ELEMENT_GATED_COL.

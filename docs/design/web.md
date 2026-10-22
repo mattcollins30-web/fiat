@@ -73,7 +73,9 @@ Counts a region: a class ~50 (its two lanes' 24, 6 new notables, 20 fillers), an
 - **Paragon points**: XP past 50 as now, spent on the outer ring (§6).
 
 The pair gates go: any class can path any element's region to its end. What stays is the joint: the class's
-conversion notable is only in its own region, so a Scrapper gets all of frost's nodes but not a frost joint.
+conversion notable is only in its own region, so a Scrapper gets all of frost's nodes but not a frost joint. And a
+keystone no longer waits on a joint: the path reaches it (slice 1: a column of class halves is bypassed by a link
+two columns long); the joint's payoff still wants both halves.
 
 ## 4. Another class's region: the second past, reskinned
 
