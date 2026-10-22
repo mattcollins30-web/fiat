@@ -34,6 +34,9 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - Playtest feedback: design it together, UI mockups on the design canvas (standard for any UI work), implement, smoke
   on Matt's machine, reviewer, revise until clean, commit; one thing at a time.
 - A UI bug (clipping, overlap): fix it and add the assertion that would have caught it.
+- A mockup is rendered and checked before it goes to Matt (22 Oct: a band came to him twice with its text
+  overflowing). Draw the board at the game's size (1920 x 1080, the band 1532 wide beside the 320 rail), render it
+  headless (the scratchpad's shot_web.py: Chromium, no text wider than its box), look at the screenshot, then publish.
 - Balance: features first, every number change in before the pass, gates chosen up front; no RED left as an accepted
   known issue. Judged on the element builds; plain builds only have to finish. Bot-timing gates aren't tuned before a
   playtest. The broken builds (docs/design/broken_builds.md) sit outside it (the read switches them off).
