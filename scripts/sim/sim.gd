@@ -993,7 +993,7 @@ func set_class(name: String) -> bool:
 		_say_next()
 		return true
 	var from := cls
-	var pitch: Array = tree.filter(func(id): return is_pitch(str(id)))     # the camp's: they stay out whoever runs
+	var pitch: Array = tree.filter(func(id): return is_camp(str(id)))     # the camp's (the Pitch's and the elements', slice 3): they stay out whoever runs
 	var own_tabs: Array = stash.filter(func(x): return tab_of(x) != "")     # the class's own stash tabs go with them
 	stash = stash.filter(func(x): return tab_of(x) == "")
 	roster[from] = _runner_out()
@@ -1007,7 +1007,7 @@ func set_class(name: String) -> bool:
 		roster.erase(name)
 	else:
 		_runner_in(_new_runner())
-	tree = tree.filter(func(id): return not is_pitch(str(id))) + pitch
+	tree = tree.filter(func(id): return not is_camp(str(id))) + pitch
 	cls = name
 	if came_back.has("lv_from"):
 		came_back["lv_from"] = level()          # the card's climb is this runner's
@@ -1020,7 +1020,7 @@ func set_class(name: String) -> bool:
 
 ## The runner out, as the crew holds them: the live fields, moved (not copied: the kit is the same items).
 func _runner_out() -> Dictionary:
-	return {"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "wounds": wounds, "tree": tree.filter(func(id): return not is_pitch(str(id))), "training_points": training_points,
+	return {"xp": xp, "hp": hp, "equipped": equipped, "rig": rig, "wounds": wounds, "tree": tree.filter(func(id): return not is_camp(str(id))), "training_points": training_points,
 		"best_level": best_level, "trait": runner_trait, "candidates": candidates, "runner_runs": runner_runs, "record": record,
 		"insure_next": insure_next}
 
@@ -1107,7 +1107,7 @@ func class_change_cost(_to := "") -> int:
 
 ## The trees on show: the class's, the Yard's, and every element's.
 func trees() -> Array:
-	var out: Array = Data.trees_for(cls)
+	var out: Array = Data.trees_for(cls, bridge())
 	out.append_array(Data.ELEMENT_TREES)
 	return out
 
@@ -2406,6 +2406,8 @@ func gun_type() -> String:
 ## change reopened it, so it stays trained and does nothing until a joint there closes again (9 Oct).
 ## `_active` reads the type alone; `node_active` (by id) reads both - the screen's and the tests'.
 func _active(n: Dictionary) -> bool:
+	if n.has("class") and not (n["class"] in my_classes()):
+		return false                          # another class's half, trained by them (the camp's tree, slice 3)
 	if not n.has("type"):
 		return true
 	var ty = n["type"]
@@ -2533,18 +2535,14 @@ func _snapshot_rules() -> Dictionary:
 func node_cost(id: String) -> int:
 	var parts := id.split("/")
 	var n := node(id)
-	var cost := Data.base_cost(Data.tree_named(parts[0]), n)
-	var t := Data.element_tree(parts[0])
-	if not t.is_empty() and not affinity(t["element"]):
-		cost *= Data.OFF_AFFINITY_COST       # off the class's pair: double
-	return cost
+	return Data.base_cost(Data.tree_named(parts[0]), n)     # slice 3: an element's region is paid in its own points - no doubling off the pair
 
 
 ## The class's points spent: its own trees (the Pitch's is the camp's, below).
 func points_spent() -> int:
 	var n := 0
 	for id in tree:
-		if not is_pitch(str(id)):
+		if not is_camp(str(id)):
 			n += node_cost(id)
 	return n
 
@@ -2557,6 +2555,51 @@ func points_free() -> int:
 ## its points are one a level of the crew's best class - its own pool beside each class's.
 func is_pitch(id: String) -> bool:
 	return id.get_slice("/", 0) == Data.COMMON_TREE
+
+
+## The camp's nodes (slice 3, web.md §1): the Pitch's and every element's stay allocated whoever runs; a class's
+## region (and a bridged one) is the runner's.
+func is_camp(id: String) -> bool:
+	return is_pitch(id) or not Data.element_tree(id.get_slice("/", 0)).is_empty()
+
+
+## The element points (web.md §3): not bought - earned on the element's use meter, spent in its region alone.
+var element_xp := {}               # element -> the meter, in site-pools of damage dealt
+var element_points := {}           # element -> points earned
+func element_of(id: String) -> String:
+	return str(Data.element_tree(id.get_slice("/", 0)).get("element", ""))
+
+
+func element_spent(el: String) -> int:
+	var n := 0
+	for id in tree:
+		if element_of(str(id)) == el:
+			n += node_cost(id)
+	return n
+
+
+func element_free(el: String) -> int:
+	return int(element_points.get(el, 0)) - element_spent(el)
+
+
+## A run's damage by type fills each element's meter: the site's pool of HP (its heads' times their number) is one
+## unit, ELEMENT_METER of them a point. Never a dry run's.
+func _fill_meters(m: Dictionary) -> void:
+	if m.get("dry", false):
+		return
+	var t: Dictionary = m["t"]
+	var pool_hp: float = maxf(1.0, float(t["hp"]) * maxf(1.0, float(t.get("pool", 1))))
+	for ty in m.get("dealt_by", {}):
+		var units: float = float(m["dealt_by"][ty]) / pool_hp
+		if not is_finite(units) or units <= 0.0:
+			continue                          # a broken build's figure (the smoke's 1e30): no meter for it
+		var xp_v: float = float(element_xp.get(ty, 0.0)) + minf(units, Data.ELEMENT_METER * 2.0)     # a run earns two points at most (the review: a broken build's 1e30 filled a region)
+		var earned := int(floor(xp_v / Data.ELEMENT_METER))
+		element_xp[ty] = fmod(xp_v, Data.ELEMENT_METER)
+		if earned > 0:
+			element_points[ty] = int(element_points.get(ty, 0)) + earned
+			var et: Dictionary = Data.element_tree_of(ty)
+			log_event("%s: %d point%s earned by use" % [et.get("name", ty), earned, "" if earned == 1 else "s"])
 
 
 func crew_best_level() -> int:
@@ -2584,12 +2627,29 @@ func pitch_free() -> int:
 
 ## The points a node is bought from: the Pitch's pool or the class's.
 func free_for(id: String) -> int:
-	return pitch_free() if is_pitch(id) else points_free()
+	if is_pitch(id):
+		return pitch_free()
+	var el := element_of(id)
+	return element_free(el) if el != "" else points_free()
 
 
 ## The classes whose halves this runner can train: its own.
 func my_classes() -> Array:
-	return [cls] if cls != "" else []
+	return [cls] if cls != "" else []     # the halves and the joints are the class's own: a bridge (slice 3) opens a region, not its halves (web.md §3, the review)
+
+
+## The bridge (slice 3, web.md §4): the neighbouring class whose region this runner opened, or "". Memoised with the
+## dry memo (the review: trees() and the screen read it often; the memo clears with the tree).
+func bridge() -> String:
+	return _memo("bridge", _bridge_raw)
+
+
+func _bridge_raw() -> String:
+	for id in tree:
+		var n := node(str(id))
+		if n.has("bridge") and not is_camp(str(id)) and str(Data.tree_named(str(id).get_slice("/", 0)).get("class", "")) == cls:
+			return str(n["bridge"])
+	return ""
 
 
 ## What's been spent in a tree, at the tree's own prices: what its gates count.
@@ -2615,6 +2675,11 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "not one of this runner's trees"
 	if not Data.for_classes(n, my_classes()):
 		return "%s only" % n["class"]
+	if n.has("bridge"):
+		if bridge() != "":
+			return "one bridge a class: the %s's is taken" % bridge()
+		if str(Data.tree_named(parts[0]).get("class", "")) != cls:
+			return "a bridge is taken from your own region"
 	# the web (22 Oct): a node is reached by pathing - an entry, or touching a node trained - not by a column's gate;
 	# every element's region is open to every class (the pair gates went with the lanes)
 	if not Data.web_entry(n) and not touches_trained(id):
@@ -2624,6 +2689,8 @@ func train_block(id: String, ignore_points := false) -> String:
 		return "opens at level %d" % Data.KEYSTONE_LEVEL
 	if core_gates and n.get("capstone", false) and level() < Data.CAPSTONE_LEVEL:
 		return "opens at level %d" % Data.CAPSTONE_LEVEL
+	if n.has("bridge") and core_gates and level() < Data.BRIDGE_LEVEL:
+		return "opens at level %d" % Data.BRIDGE_LEVEL
 	var held := keystone_held_against(id)
 	var back := 0
 	if held != "":
@@ -2765,13 +2832,13 @@ func respec_cost() -> int:
 
 
 func respec() -> bool:
-	if tree.filter(func(id): return not is_pitch(str(id))).is_empty() or cash < respec_cost():
+	if tree.filter(func(id): return not is_camp(str(id))).is_empty() or cash < respec_cost():
 		return false
 	_dry_memo.clear()
 	var paid := respec_cost()
 	cash -= paid
 	chron("respec", {"cost": paid, "points": points_spent()})
-	tree = tree.filter(func(id): return is_pitch(str(id)))
+	tree = tree.filter(func(id): return is_camp(str(id)))     # the class's region (and its bridge, slice 3) back to points; the camp's stay
 	log_event("Training reset: the points are free to spend again")
 	return true
 
@@ -7925,6 +7992,7 @@ func _extract() -> void:
 	if mission != null and mission.get("dry", false):
 		return
 	var m: Dictionary = mission
+	_fill_meters(m)                       # the elements' use meters (slice 3), whatever the run's end
 	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var timed_out: bool = m.get("timed_out", false)
@@ -8145,6 +8213,7 @@ func _kia() -> void:
 	if m.get("dry", false):
 		m["dead"] = true                     # a dry run: the answer, nothing lost
 		return
+	_fill_meters(m)                       # the elements' use meters (slice 3): the damage dealt counts, death or not
 	_floor_mythics_in(m)
 	var t := tier(m["tier"])
 	var dogs_share: bool = has_node("cap_dogs_share") and not m.get("insured", false) and not rig.is_empty()
@@ -8261,9 +8330,10 @@ func _refund_runner_trees() -> void:
 	var spent_before := points_spent()
 	var kept := []
 	for id in tree:
-		if str(id).get_slice("/", 0) == Data.COMMON_TREE:
-			kept.append(id)
+		if is_camp(str(id)):
+			kept.append(id)                  # the Pitch's and the elements' (slice 3) are the camp's: they stay
 	tree = kept
+	_dry_memo.clear()
 	var freed := spent_before - points_spent()
 	if freed > 0:
 		log_event(Words.YARD["runner_refund"] % [freed, "" if freed == 1 else "s"])
@@ -9587,7 +9657,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day,
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(), "workbench_day": workbench_day, "element_xp": element_xp.duplicate(), "element_points": element_points.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -9786,6 +9856,12 @@ func load_dict(d: Dictionary) -> void:
 	for k in d.get("clear_level", {}):
 		clear_level[int(k)] = int(d["clear_level"][k])     # JSON's keys come back as strings
 	workbench_day = int(d.get("workbench_day", -1))
+	element_xp = {}
+	for k in d.get("element_xp", {}):
+		element_xp[str(k)] = float(d["element_xp"][k])
+	element_points = {}
+	for k in d.get("element_points", {}):
+		element_points[str(k)] = int(d["element_points"][k])
 	deeds_found = bool(d.get("deeds_found", false))
 	if d.has("unlocked"):
 		unlocked = Array(d["unlocked"])

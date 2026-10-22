@@ -1750,6 +1750,13 @@ const HANG_Y := 3.7
 const BRANCH_Y := 2.3
 const HALF_Y := 3.0
 const LANE_OFF := 3.0              # a class's two lanes, rows off the class's axis
+## Slice 3 (web.md §3-4): an element's points come off its use meter - a run's damage in the element over the site's
+## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
+## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
+const ELEMENT_METER := 1.5
+const BRIDGE_LEVEL := 30
+const BRIDGE_COST := 3
+const BRIDGES := {"Drifter": ["Poacher", "Scrapper"], "Scrapper": ["Drifter", "Doorman"], "Doorman": ["Scrapper", "Paramedic"], "Paramedic": ["Doorman", "Poacher"], "Poacher": ["Paramedic", "Drifter"]}
 ## The hung notables and the keystone choice a tree: "hang" [x, side] places one; the keystones carry "at" (the
 ## first lane's rows) and link by name ("links" in the tree, "xlinks" "Tree/Name").
 const WEB_EXTRA := {
@@ -1762,6 +1769,8 @@ const WEB_EXTRA := {
 		{"name": "Word of mouth", "hang": [4.5, 1], "effect": "word_of_mouth", "notable": true, "words": "A note on each site's first clear"},
 	],
 	"Stripping": [
+		{"name": "The second past", "bridge": "Drifter", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
 		{"name": "Socket set", "hang": [1.5, -1], "effect": "att_share", "value": 10, "notable": true},
 		{"name": "Oily rag", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "improvised", "notable": true, "words": "Improvised guns do 15% more"},
 		{"name": "Salvage", "hang": [3.5, -1], "effect": "salvage", "notable": true, "words": "+50% scrap from a ditch"},
@@ -1770,12 +1779,16 @@ const WEB_EXTRA := {
 		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
 	],
 	"Fencing": [
+		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
 		{"name": "Haggler", "hang": [1.5, 1], "effect": "sell_pct", "value": 15, "notable": true},
 		{"name": "Shop local", "hang": [2.5, 1], "effect": "buy_pct", "value": 10, "notable": true, "words": "The Fence sells 10% cheaper"},
 		{"name": "Pub talk", "hang": [3.5, 1], "effect": "cash_pct", "value": 15, "notable": true},
 		{"name": "Back pocket", "hang": [4.5, 1], "effect": "back_pocket", "notable": true, "words": "The Fence keeps one piece of kit free on a death"},
 	],
 	"Stalking": [
+		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
 		{"name": "Still air", "hang": [1.5, -1], "effect": "first_pct", "value": 20, "notable": true},
 		{"name": "Long glass", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "rifle", "notable": true, "words": "Rifles do 15% more"},
 		{"name": "Sit tight", "hang": [3.5, -1], "effect": "patrol_pct", "value": 15, "notable": true},
@@ -1784,12 +1797,16 @@ const WEB_EXTRA := {
 		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
 	],
 	"Snares": [
+		{"name": "The second past", "bridge": "Drifter", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
 		{"name": "Gaps in the hedge", "hang": [1.5, 1], "effect": "search_pct", "value": 10, "notable": true},
 		{"name": "Game bag", "hang": [2.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
 		{"name": "Off the path", "hang": [3.5, 1], "effect": "patrol_pct", "value": 10, "notable": true},
 		{"name": "Twine", "hang": [4.5, 1], "effect": "twine", "notable": true, "words": "The next gang arrives one fewer after every search"},
 	],
 	"Muscle": [
+		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
 		{"name": "Bulk", "hang": [1.5, -1], "effect": "hp", "value": 10, "notable": true},
 		{"name": "Shoulder", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "shotgun", "notable": true, "words": "Shotguns do 15% more"},
 		{"name": "Hard case", "hang": [3.5, -1], "effect": "armour_pct", "value": 12, "notable": true},
@@ -1798,12 +1815,16 @@ const WEB_EXTRA := {
 		 "words": "Guard of 25% as each gang arrives. −20% damage while it holds."},
 	],
 	"The door": [
+		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
 		{"name": "Doorframe", "hang": [1.5, 1], "effect": "armour_pct", "value": 10, "notable": true},
 		{"name": "Hands up", "hang": [2.5, 1], "effect": "physical_pct", "value": 15, "notable": true},
 		{"name": "Big lad", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
 		{"name": "Last orders", "hang": [4.5, 1], "effect": "last_orders", "notable": true, "words": "+40% damage to the last of each gang"},
 	],
 	"Triage": [
+		{"name": "The second past", "bridge": "Doorman", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
 		{"name": "Good hands", "hang": [1.5, -1], "effect": "heal_pct", "value": 20, "notable": true},
 		{"name": "Quick dressing", "hang": [2.5, -1], "effect": "med_speed_pct", "value": 20, "notable": true},
 		{"name": "Grab bag", "hang": [3.5, -1], "effect": "med_cap", "value": 1, "notable": true},
@@ -1812,12 +1833,16 @@ const WEB_EXTRA := {
 		 "words": "+20% damage and pace for 8 seconds after a med. A med costs 5% max HP."},
 	],
 	"Shifts": [
+		{"name": "The second past", "bridge": "Poacher", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
 		{"name": "Flask", "hang": [1.5, 1], "effect": "rest_pct", "value": 30, "notable": true},
 		{"name": "Regulars", "hang": [2.5, 1], "effect": "treat_pct", "value": 20, "notable": true},
 		{"name": "Last bus", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
 		{"name": "Clocking off", "hang": [4.5, 1], "effect": "clocking_off", "notable": true, "words": "The first search after a clear is instant"},
 	],
 	"Moving on": [
+		{"name": "The second past", "bridge": "Poacher", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
 		{"name": "Tarmac", "hang": [1.5, -1], "effect": "pace_pct", "value": 6, "notable": true},
 		{"name": "Thumb out", "hang": [2.5, -1], "effect": "patrol_pct", "value": 10, "notable": true},
 		{"name": "Light pack", "hang": [3.5, -1], "effect": "cells", "value": 3, "notable": true, "words": "The pack holds 3 more cells"},
@@ -1826,6 +1851,8 @@ const WEB_EXTRA := {
 		 "words": "+5% find and loot quality a kill untouched, to +50%. A hit resets it."},
 	],
 	"Luck": [
+		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
 		{"name": "Lucky penny", "hang": [1.5, 1], "effect": "rarity", "value": 15, "notable": true},
 		{"name": "Coppers", "hang": [2.5, 1], "effect": "cash_pct", "value": 12, "notable": true},
 		{"name": "Beady eye", "hang": [3.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
@@ -1938,6 +1965,8 @@ static func _web_build(src: Array) -> Array:
 				_web_link(nodes, b, rail if rail >= 0 else _web_at(nodes, [x, 0.0]))
 			for nm in ex.get("links", []):
 				_web_link(nodes, i, _web_named(nodes, nm))
+			if nd.has("link_at"):
+				_web_link(nodes, i, _web_at(nodes, [float(nd["link_at"][0]), float(nd["link_at"][1])]))     # the bridge (slice 3): off the rail's last filler
 		for i in range(nodes.size()):
 			assert(not nodes[i]["links"].is_empty() or not nodes[i].get("xlinks", []).is_empty(), "%s/%s links to nothing" % [t["name"], nodes[i]["name"]])     # the review: a lane's shape that leaves a node off the web
 		out.append(t)
@@ -2256,6 +2285,8 @@ static func node_cost(col: int, notable: bool, keystone := false) -> int:
 ## A node's base cost from its data, the capstone's included: what a gate counts (a move's free node and
 ## an off-pair element's doubling are the runner's price, not the tree's shape).
 static func base_cost(t: Dictionary, nd: Dictionary) -> int:
+	if nd.has("cost_fixed"):
+		return int(nd["cost_fixed"])                    # the bridge (slice 3): its own price
 	var less: int = int(nd.get("cost_less", 0))        # a node priced under its column (bleed's keystone and capstone, 9 Oct)
 	if nd.get("capstone", false):
 		return maxi(1, capstone_cost(t) - less)
@@ -2345,7 +2376,7 @@ static func capstone_cost(t: Dictionary) -> int:
 	var total := 0
 	var half := 0                                      # a class's half counts once: one class trains one of them
 	for nd in t["nodes"]:
-		if nd.get("capstone", false) or nd.get("beside", false) or not nd.has("col") or nd.has("hang") or nd.has("xlinks"):
+		if nd.get("capstone", false) or nd.get("beside", false) or not nd.has("col") or nd.has("hang") or nd.has("xlinks") or nd.has("bridge"):
 			continue                                       # a node beside the capstone (12 Oct) is its peer, not behind it; the web's fillers and extras (22 Oct) don't price it
 		var c := node_cost(int(nd.get("col", 0)), nd.get("notable", false), nd.get("keystone", false))
 		if nd.has("class"):
@@ -2371,14 +2402,21 @@ static func trees_for(cls: String, cls2 := "") -> Array:
 	if cls2 != "" and cls2 != cls:
 		for t in TREES:
 			if t.get("class", "") == cls2:
-				out.append(t)
-				break
+				out.append(t)                 # the bridge (slice 3): the whole region, both lanes
 	return out
 
 
 static func element_tree(name: String) -> Dictionary:
 	for t in ELEMENT_TREES:
 		if t["name"] == name:
+			return t
+	return {}
+
+
+## The element tree for a damage type ("fire" is Petrol's), or {}.
+static func element_tree_of(ty: String) -> Dictionary:
+	for t in ELEMENT_TREES:
+		if t.get("element", "") == ty:
 			return t
 	return {}
 

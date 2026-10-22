@@ -901,7 +901,14 @@ func _train_tree(sim) -> void:
 		if pid == "" or not sim.can_train(pid):
 			break
 		sim.train_node(pid)
-	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE)
+	# the elements' regions from their own pools (slice 3: points earned on the use meter), each as far as it goes
+	for et in Data.ELEMENT_TREES:
+		while sim.element_free(et["element"]) > 0:
+			var eid := _next_in(sim, et)
+			if eid == "" or not sim.can_train(eid):
+				break
+			sim.train_node(eid)
+	order = order.filter(func(t): return t["name"] != Data.COMMON_TREE and not t.has("element"))
 	while sim.points_free() > 0 and spent:
 		spent = false
 		for b in order:
@@ -914,8 +921,6 @@ func _train_tree(sim) -> void:
 				break
 			if keystones_first:
 				return                    # save up for it rather than spend elsewhere
-			if element != "" and b.get("element", "") == element and sim.points_free() < sim.node_cost(next_id):
-				return                    # an off-affinity node at double: save for it
 
 
 ## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
@@ -968,8 +973,10 @@ func _next_in(sim, b: Dictionary) -> String:
 		var nd: Dictionary = b["nodes"][i]
 		if nd.get("keystone", false) and sim.keystone_held_against(id) != "":
 			continue                      # the keystone choice (22 Oct): the bot keeps the first it took
-		if nd.has("type") and not sim._active(nd):
-			continue                      # a notable typed for a gun not in hand (the review): no point in it
+		if nd.has("type") and not nd.has("joint") and not sim._active(nd):
+			continue                      # a notable typed for a gun not in hand (the review): no point in it - a joint's half is the build's whatever's in hand now
+		if nd.has("bridge"):
+			continue                      # the bridge (slice 3) is a player's call: the bot reads its own class
 		var at: Array = nd.get("at", [nd.get("col", 0), nd.get("row", 0)])
 		var key: int = int(round(float(at[0]) * 100.0)) + int(round(absf(float(at[1])) * 10.0))     # along the lane, the rails before what hangs off them
 		if key < best_key:

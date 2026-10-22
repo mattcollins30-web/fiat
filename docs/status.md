@@ -6260,3 +6260,20 @@ pass; the reviewer on the code):
   finds fixed. Not yet: slice 3 (use meters, camp-wide allocation, the bridge), slice 4 (paragon ring, Map/Pitch).
   - For Matt: the long dashed joint lines cross the web at the whole-web zoom (a class's region isn't beside both its
     elements); the whole-web zoom is an overview, the work is at a region's.
+- Slice 3, the pools and the bridge (22 Oct; web.md §1, §3, §4). The Pitch's and the elements' nodes are the camp's
+  (Sim.is_camp): kept through a swap, a death and a reset; a runner's record holds its class region alone. Element
+  points are earned, not bought: at a run's end (a death's too) _fill_meters turns the damage dealt by type over the
+  site's pool of HP into element_xp, ELEMENT_METER 1.5 of it a point (two a run at most: a broken build's 1e30 was
+  a region); element_points spend in the element's region alone (free_for; no off-pair doubling - the element's own
+  currency), saved. Another class's half on the camp's tree does nothing for the runner out. The bridge: "The second
+  past", a node a side of each class past its lane's last filler, 3 points at level 30, one a class, from your own
+  region; it puts the neighbour's whole region (Data.BRIDGES, both lanes) on show for the class's points; a reset or
+  a death takes it and what's past it. The halves and the joints stay the class's own (the review: a bridge opens a
+  region, not its halves). The canvas: an element's label carries its free points and meter; a dashed line from a
+  bridge to the region it opens; the rail's badge counts every pool. SAVE_VERSION 5. The bot trains each element's
+  region from its own pool, skips the bridges, takes a joint's half whatever gun's in hand. Smoke: _web_pool_checks.
+  The first cut's meter loop hung the smoke on the broken builds' 1e30 (Matt killed it; division now).
+  - For the balance pass: points_spent is class-only now (not like for like with the last pass); an element build
+    earns its first element point off kit and its class's joint conversion alone, so keystone_at for the element
+    builds will read later - §8's Quartermaster gate on the meters is for the pass to set.
+  - For Matt: element nodes have no reset of their own (a reset is the class's region); say if the elements want one.

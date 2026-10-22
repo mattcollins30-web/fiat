@@ -184,7 +184,7 @@ func focus_class(cls: String) -> void:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%s|%s|%d|%s|%s|%d|%d|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap"))]     # the Cap turns every class node active (the review)
+	var sig := "%s|%s|%d|%s|%s|%d|%d|%s|%s" % [str(sim.tree), sim.cls, sim.level(), selected, sim.gun_type(), sim.training_points, int(sim.best_level), str(sim.has_rule("headmasters_cap")), str(sim.element_points)]     # the Cap turns every class node active (the review)
 	if sig != _state_sig:
 		_state_sig = sig
 		_state = {}
@@ -249,6 +249,23 @@ func _draw() -> void:
 		if view.has_point(pa) or view.has_point(pb):
 			var closed: bool = sim.has_joint(j["key"])
 			draw_dashed_line(pa, pb, tone_of(j["element_tree"]) if closed else Color(Pal.TEXT_3, 0.6), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
+	# the bridges (slice 3): a dashed line from each to the region it opens, lit when taken
+	for id in layout:
+		var bn: Dictionary = sim.node(id)
+		if not bn.has("bridge"):
+			continue
+		var to := ""
+		for t in Data.TREES:
+			if t.get("class", "") == bn["bridge"]:
+				to = "%s/0" % t["name"]
+				break
+		if to == "" or not layout.has(to):
+			continue
+		var pa: Vector2 = to_screen(layout[id])
+		var pb: Vector2 = to_screen(layout[to])
+		if view.has_point(pa) or view.has_point(pb):
+			var taken_b: bool = _state.get(id, {}).get("taken", false)
+			draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
 	# the nodes
 	for id in layout:
 		var p: Vector2 = to_screen(layout[id])
@@ -264,6 +281,10 @@ func _draw() -> void:
 		var words: String = tn
 		if t.has("element"):
 			words = "%s · %s" % [tn, t["element"]]
+			var free_v: int = sim.element_free(t["element"])
+			if free_v > 0:
+				words += " · %d free" % free_v     # the element's own points (slice 3)
+			words += " · meter %d%%" % int(round(100.0 * float(sim.element_xp.get(t["element"], 0.0)) / Data.ELEMENT_METER))
 		elif t.get("class", "") != "":
 			words = "%s · the %s's" % [tn, str(t["class"]).to_lower()]
 		else:
