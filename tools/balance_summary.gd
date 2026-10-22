@@ -144,7 +144,7 @@ func _init() -> void:
 				stuck.append("%s %s in %s" % [g["build"], _hours(h), _hours(float(g.get("elapsed_h", g.get("hours", 0.0))))])
 			else:
 				times.append(h)
-		rows.append(["The plain floor", "every read of a plain build beats the Quartermaster by hour %.0f" % PLAIN_BY, ("every read (latest %s)" % _hours(times.max())) if stuck.is_empty() else "stuck: " + ", ".join(stuck), stuck.is_empty()])
+		rows.append(["The plain floor", "every read of a plain build beats the Quartermaster by hour %.0f (a plain read ends at him, 22 Oct: its rows above are to there)" % PLAIN_BY, ("every read (latest %s)" % _hours(times.max())) if stuck.is_empty() else "stuck: " + ", ".join(stuck), stuck.is_empty()])
 	# shown, not judged: the playtest's (deaths, wounds) - the bot doesn't take a player's risks
 	var shown: Array = []
 	for bd in full:
@@ -215,9 +215,16 @@ func _init() -> void:
 			var p: Dictionary = b["prof"]
 			var wall: int = int(b.get("wall_s", 0))
 			var rest: int = wall - int(p["step_s"]) - int(p["tidy_s"]) - int(p["ladder_s"])
-			out.append("| %s | %d s | %d s (%d reads of %d calls: %d dry runs, %s dry ticks, snapshots %d s) | %d s (%s) | %d s | %d s | %d s |" % [
+			var parts: Array = []           # the tidy's parts (22 Oct), the biggest first
+			var tp: Dictionary = p.get("tidy_parts", {})
+			var keys: Array = tp.keys()
+			keys.sort_custom(func(x, y): return int(tp[x]) > int(tp[y]))
+			for k in keys:
+				if int(tp[k]) > 0:
+					parts.append("%s %d" % [k, int(tp[k])])
+			out.append("| %s | %d s | %d s (%d reads of %d calls: %d dry runs, %s dry ticks, snapshots %d s) | %d s (%s) | %d s%s | %d s | %d s |" % [
 				b["build"], wall, int(p["surv_s"]) - int(p["ladder_s"]), int(p["surv_reads"]), int(p["surv_calls"]), int(p["dry_runs"]), _thousands(int(p["dry_ticks"])), int(p["snap_s"]),
-				int(p["real_s"]), _thousands(int(p["real_ticks"])), int(p["tidy_s"]), int(p["ladder_s"]), rest])
+				int(p["real_s"]), _thousands(int(p["real_ticks"])), int(p["tidy_s"]), (" (" + ", ".join(parts) + ")") if not parts.is_empty() else "", int(p["ladder_s"]), rest])
 		out.append("")
 	var f := FileAccess.open(FOLDER + "/summary.md", FileAccess.WRITE)
 	f.store_string("\n".join(out))

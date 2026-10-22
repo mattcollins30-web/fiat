@@ -1106,6 +1106,7 @@ func _new_runner() -> Dictionary:
 
 func _caches_out() -> void:
 	_dry_memo.clear()
+	_rules_key = []                            # the rules in play are the runner's (22 Oct)
 	_key_memo = []                             # the odds' key is the runner's: another class's read can't take it
 	_scope_memo = []
 	_surv_cache = {}
@@ -2595,8 +2596,16 @@ var _dry_memo := {}
 var fast_memo := false
 const FAST_MEMO_S := 30.0
 var _memo_age := 0.0
+var _try_memo := {}                # a try-on's own memo (22 Oct, the pass's wall): the kit stands still inside one try, and
+                                   # a try-on's damage asked each affix sum twenty times over; cleared as a try begins and ends
 func _memo(key: String, f: Callable) -> Variant:
-	if _trying or not (_dry_on or (fast_memo and mission != null)):     # a try-on reads the kit it's trying, never a memo
+	if _trying:                        # a try-on reads the kit it's trying, never the dry memo
+		if _try_memo.has(key):
+			return _try_memo[key]
+		var tv = f.call()
+		_try_memo[key] = tv
+		return tv
+	if not (_dry_on or (fast_memo and mission != null)):
 		return f.call()
 	if _dry_memo.has(key):
 		return _dry_memo[key]
@@ -3061,6 +3070,15 @@ func grade_stat(gun, stat: String) -> float:
 ## (Matt, the same day) - then by the grade's worth (Rifle 40, Match 100, Salted 150, Depot 170), the first in the
 ## rig on a tie. {} when it's dry.
 func feed_stack(gun: Dictionary) -> Dictionary:
+	if _trying:                           # a try-on's kit stands still: the feed read once a gun (22 Oct, the pass's wall:
+		var fk := "feed/%d" % int(gun.get("id", hash(gun)))     # a try read the stash's rounds six times); a run's feed is never memoised, its stacks run dry
+		if not _try_memo.has(fk):
+			_try_memo[fk] = _feed_stack_raw(gun)
+		return _try_memo[fk]
+	return _feed_stack_raw(gun)
+
+
+func _feed_stack_raw(gun: Dictionary) -> Dictionary:
 	var t := Items.ammo_type(gun)
 	# the element only counts for the primary: a secondary's grade is damage only (the conversion reads the primary's)
 	var els: Array = build_elements() if is_same(gun, equipped["Primary"]) else []
@@ -3179,16 +3197,25 @@ func sustain_mult(m: Dictionary) -> float:
 
 
 ## A unique's rule, by its flag, when one is worn.
+## The rules in play, read from the kit and the stash once a shape of them (22 Oct, the pass's wall: a tick asked
+## fifty times, each a walk of the stash). The shape: the worn pieces' rules, the stash's count, the item count and
+## the count of what's left the stash - a paper comes or goes by one of those (the review: a paper sold as an old
+## piece comes in off the rig keeps the count, so the leavings count too); a load or a class swap reads afresh.
+var _rules := {}
+var _rules_key := []
+var _removed := 0                  # what _remove and the pile's sweep have taken out of the stash, ever
 func has_rule(rule: String) -> bool:
 	if _dry_on:
 		return _dry_rules.has(rule)
+	var on_body := []
 	for s in Data.SLOTS:
-		if equipped[s] != null and equipped[s].get("rule", "") == rule:
-			return true
-	for it in stash:
-		if Items.is_paper(it) and it.get("rule", "") == rule:
-			return true                          # a paper with a rule counts from the stash
-	return false
+		if equipped[s] != null:
+			on_body.append(equipped[s].get("rule", ""))
+	var key := [on_body, stash.size(), Items._next_id, _removed]
+	if key != _rules_key:
+		_rules_key = key
+		_rules = _snapshot_rules()
+	return _rules.has(rule)
 
 
 ## The loose uniques that can turn up at a depth: the ones gated at it or
@@ -4489,12 +4516,15 @@ func strip(slot: String, mount: String) -> bool:
 ## The stash's attachments that go on this mount, best first.
 ## The stash's parts for a mount, best first; `gun_type` given, only the ones that go on that type of gun.
 func attachments_for(mount: String, gun_type_v := "") -> Array:
-	var out: Array = []
+	var scored: Array = []                # [score, item]: the score read once a part, not once a comparison (22 Oct, the pass's wall)
 	for it in stash:
 		if Items.is_attachment(it) and (it["mount"] == mount or (mount.begins_with("socket") and it["mount"] == "socket")):
 			if gun_type_v == "" or Items.att_fits(it, gun_type_v):
-				out.append(it)
-	out.sort_custom(func(a, b): return Items.score(a) > Items.score(b))
+				scored.append([Items.score(it), it])
+	scored.sort_custom(func(a, b): return a[0] > b[0])
+	var out: Array = []
+	for p in scored:
+		out.append(p[1])
 	return out
 
 
@@ -4508,14 +4538,27 @@ func _affix_sum(stat: String) -> float:
 
 
 func __affix_sum_raw(stat: String) -> float:
-	var t := 0.0
-	for s in Data.SLOTS:
-		if equipped[s] != null:
-			t += Items.affix_total(equipped[s], stat)
-	t += set_stat(stat)
 	if stat != "all_res" and has_rule("blue_plaque"):
 		return 0.0                               # a Blue Plaque: nothing else on you counts
-	return t
+	return float(_affix_index().get(stat, 0.0))
+
+
+## Every worn affix and set bonus added up by stat in one walk of the kit, memoised with the rest (22 Oct, the pass's
+## wall: a try-on asked thirty stats, each a walk of the six pieces) - as Items.affix_total and set_stat add them.
+func _affix_index() -> Dictionary:
+	return _memo("affix_index", _affix_index_raw)
+
+
+func _affix_index_raw() -> Dictionary:
+	var out := {}
+	for s in Data.SLOTS:
+		if equipped[s] != null:
+			for a in equipped[s]["affixes"]:
+				out[a["stat"]] = float(out.get(a["stat"], 0.0)) + float(a["value"])
+	for b in set_bonuses():
+		for st in b.get("stats", {}):
+			out[st] = float(out.get(st, 0.0)) + float(b["stats"][st])
+	return out
 
 
 # ------------------------------------------------------------------ sets
@@ -5501,6 +5544,7 @@ func _sweep_papers() -> void:
 		if is_pile_paper(it):
 			it.erase("tab")
 			stash.erase(it)
+			_removed += 1
 			papers.append(it)
 
 
@@ -5508,6 +5552,20 @@ func _sweep_papers() -> void:
 func signal_papers() -> Array:
 	_sweep_papers()
 	return papers
+
+
+## The pile's ids, read once a shape of it (22 Oct): a paper comes by the count or the item count, goes by a signal made.
+var _pile_ids_key: Array = []
+var _pile_ids_set := {}
+func _pile_ids() -> Dictionary:
+	var all: Array = signal_papers()
+	var key := [all.size(), Items._next_id, signal_seq]
+	if key != _pile_ids_key:
+		_pile_ids_key = key
+		_pile_ids_set = {}
+		for x in all:
+			_pile_ids_set[int(x["id"])] = true
+	return _pile_ids_set
 
 
 ## Why three papers can't be decrypted now, or "".
@@ -5522,10 +5580,10 @@ func decrypt_block(ids: Array, crew := -1) -> String:
 		return DECRYPT_NEEDS_PAPERS
 	if ids.size() > Data.SIGNAL_PAPERS:
 		return "three papers at most"
-	var have: Array = signal_papers().map(func(x): return int(x["id"]))
+	var have: Dictionary = _pile_ids()    # (22 Oct, the pass's wall: a pile of thousands walked thrice a paper)
 	var seen_ids := {}
 	for id in ids:
-		if not (int(id) in have) or seen_ids.has(int(id)):
+		if not have.has(int(id)) or seen_ids.has(int(id)):
 			return "papers from the Radio's pile"
 		seen_ids[int(id)] = true
 	var beats := {}
@@ -5628,20 +5686,24 @@ func decrypt(ids: Array, crew := -1) -> Dictionary:
 		return {}
 	var names: Array = []
 	var codes: Array = []
-	for it in papers.duplicate():
-		if int(it["id"]) in ids:
-			names.append(str(it["base"]))
-			var code: String = word_taught_by(str(it["base"]))
-			if code != "" and not (code in codes):
-				codes.append(code)
-	var up: int = 1 if _papers_rare(ids) else 0
+	var want := {}
+	for id in ids:
+		want[int(id)] = true
+	var up := 0
 	var beat: int = -1
-	for it in papers:
-		if int(it["id"]) in ids:
-			beat = story_of(it)
-	for it in papers.duplicate():
-		if int(it["id"]) in ids:
-			papers.erase(it)                   # spent off the Radio's pile
+	var left: Array = []
+	for it in papers:                      # one pass of the pile (22 Oct, the pass's wall): the spent read, the rest kept
+		if not want.has(int(it["id"])):
+			left.append(it)
+			continue
+		names.append(str(it["base"]))
+		var code: String = word_taught_by(str(it["base"]))
+		if code != "" and not (code in codes):
+			codes.append(code)
+		if int(it.get("rarity", 0)) >= Data.PAPER_DEEPER_AT:
+			up = 1                             # a rare paper in: a level up (as _papers_rare read it)
+		beat = story_of(it)
+	papers = left                          # spent off the Radio's pile
 	if beat >= 0:
 		return _story_signal(beat, names)
 	var grade: Dictionary = signal_grade(ids.size())
@@ -7636,11 +7698,30 @@ func _place_find(m: Dictionary, it: Dictionary) -> void:
 	if not _pack_keeps(it):
 		m["left"] += 1
 		return
-	var cheapest := -1
+	# the cheapest thing its size that isn't kept: cheapest first, stopping at the first not kept (22 Oct, the pass's
+	# wall: a full pack of a hundred was tried on piece by piece for every find - the keep check is a try-on)
+	var order: Array = []
 	for k in range(m["found"].size()):
 		var f: Dictionary = m["found"][k]
-		if Items.size(f) >= Items.size(it) and not _pack_keeps(f) and Items.opens(f) == "" and (cheapest < 0 or f["value"] < m["found"][cheapest]["value"]):
+		if Items.size(f) >= Items.size(it) and Items.opens(f) == "":
+			order.append(k)
+	order.sort_custom(func(a, b): return m["found"][a]["value"] < m["found"][b]["value"])
+	var cheapest := -1
+	# the pack's verdicts, kept while what they read stands: the kit, the level, the feed, the wounds, HP under half
+	# (the review: a gun runs dry, an upgrade goes on mid-run) - not the pack itself, which every find moves
+	var keeps: Dictionary = m.get("keeps", {})
+	var kk: int = hash([equipped, level(), _rig_grades(), _rounds_on_hand(), wounds.keys(), hp < max_hp() * 0.5])
+	if int(keeps.get("key", 0)) != kk:
+		keeps = {"key": kk}
+		m["keeps"] = keeps
+	for k in order:
+		var f: Dictionary = m["found"][k]
+		var fid: int = int(f["id"])
+		if not keeps.has(fid):
+			keeps[fid] = _pack_keeps(f)
+		if not keeps[fid]:
 			cheapest = k
+			break
 	if cheapest >= 0:
 		m["found"][cheapest] = it
 		m["swapped"] = m.get("swapped", 0) + 1
@@ -8457,6 +8538,7 @@ const TRY_EPS := 0.005               # half a percent either way is the same
 func _try(it: Dictionary, f: Callable) -> Variant:
 	var was_trying := _trying
 	_trying = true
+	_try_memo.clear()                  # the kit's about to differ from whatever the last try read
 	var slot: String = str(it.get("slot", ""))
 	var swap: bool = not it.is_empty() and equipped.has(slot)
 	var was = equipped[slot] if swap else null
@@ -8465,6 +8547,7 @@ func _try(it: Dictionary, f: Callable) -> Variant:
 	var v = f.call()
 	if swap:
 		equipped[slot] = was
+	_try_memo.clear()                  # and differs again now the piece is off (an outer try reads afresh)
 	_trying = was_trying
 	return v
 
@@ -8472,11 +8555,13 @@ func _try(it: Dictionary, f: Callable) -> Variant:
 ## The runner's figure for a slot with `it` worn ({} for the kit as it is): the damage for a gun, the survival figure
 ## for the body (survival_value: HP, regen, armour and resists against the fight being pushed), the piece's score for
 ## bags and charms.
-func fit_value(it: Dictionary, slot := "") -> float:
+## `key`: the kit's key when the caller has it (a scan of the stash reads it once, not once an item).
+func fit_value(it: Dictionary, slot := "", key := -1) -> float:
 	if slot == "":
 		slot = str(it.get("slot", ""))
 	# cached with the verdicts (the bot's sell loop asks for the best of a slot once a stash item)
-	var key := _kit_key()
+	if key < 0:
+		key = _kit_key()
 	if key != _cmp_key:
 		_cmp_key = key
 		_cmp_cache.clear()
@@ -8585,14 +8670,15 @@ func survival_gain(it: Dictionary) -> float:
 ## by the runner's damage with it on; anything else by its own job and the damage with it on, and a helmet, coat,
 ## charm or rig by the survival figure too (12 Oct; a helmet's or coat's job is that figure). An empty slot takes
 ## anything that goes in it.
-func compare(it: Dictionary) -> int:
+func compare(it: Dictionary, key := -1) -> int:
 	var slot: String = str(it.get("slot", ""))
 	if not equipped.has(slot):
 		return 0
 	if equipped[slot] == null:
 		return 1
 	# the grids ask for every cell ten times a second: an answer stands until the kit or the piece changes
-	var key := _kit_key()
+	if key < 0:
+		key = _kit_key()
 	if key != _cmp_key:
 		_cmp_key = key
 		_cmp_cache.clear()
@@ -8654,7 +8740,11 @@ func _stash_grades() -> Array:
 
 
 func _compare(it: Dictionary, slot: String) -> int:
-	var d0: float = _try({}, damage_total)     # the top bar's figure, the dots in (18 Oct): the hits alone called a fire build's Epic a downgrade
+	# the top bar's figure, the dots in (18 Oct: the hits alone called a fire build's Epic a downgrade); once a kit, as
+	# the survival baseline is (22 Oct, the pass's wall: it was tried on again for every piece compared)
+	if not _cmp_cache.has("d0"):
+		_cmp_cache["d0"] = _try({}, damage_total)
+	var d0: float = _cmp_cache["d0"]
 	var rel: float = (_try(it, damage_total) - d0) / maxf(d0, 0.01)
 	var g: int = 1 if rel > TRY_EPS else (-1 if rel < -TRY_EPS else 0)
 	var kind: String = Data.SLOT_SCORE.get(slot, "")
@@ -8698,9 +8788,10 @@ func upgrade_gain(it: Dictionary) -> float:
 func best_in_stash(slot: String) -> Dictionary:
 	var best := {}
 	var bs := -INF
+	var key := _kit_key()                # once a scan (22 Oct, the pass's wall): nothing moves while it looks
 	for it in stash:
 		if it["slot"] == slot:
-			var v := fit_value(it)
+			var v := fit_value(it, slot, key)
 			if v > bs:
 				best = it
 				bs = v
@@ -8713,9 +8804,10 @@ func equip_best(slot: String) -> bool:
 	# the best of the ones that are better outright (a trade is the player's to make)
 	var best := {}
 	var bs := -INF
+	var key := _kit_key()                # once a scan (22 Oct, the pass's wall)
 	for it in stash:
-		if it["slot"] == slot and can_wear(it) and compare(it) == 1:
-			var v := fit_value(it)
+		if it["slot"] == slot and can_wear(it) and compare(it, key) == 1:
+			var v := fit_value(it, slot, key)
 			if v > bs:
 				best = it
 				bs = v
@@ -9250,6 +9342,7 @@ func _remove(it: Dictionary) -> bool:
 		if stash[k]["id"] == it["id"]:
 			stash[k].erase("tab")              # out of the stash, out of its tab: whatever brings it back puts it in the shared one
 			stash.remove_at(k)
+			_removed += 1
 			return true
 	return false
 
@@ -9828,6 +9921,8 @@ static func _shift_sites(d: Dictionary) -> void:
 
 func load_dict(d: Dictionary) -> void:
 	_els_key = -1                         # the build's elements read again from the loaded tree
+	_rules_key = []                       # and the rules in play (22 Oct), and the pile's ids
+	_pile_ids_key = []
 	d = d.duplicate(true)                # the save's items stay the save's; the live ones are copies
 	_rename_old(d)                       # a save from before the caps pass (8 Oct) carries the old names
 	_shift_sites(d)                      # a save from before the Outskirts (12 Oct): every site up three, every zone up one

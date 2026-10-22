@@ -109,9 +109,12 @@ func step(sim) -> int:
 	# the endgame (15 Oct): the Radio's signals - made when there are papers, run when one reads its odds; else a
 	# campaign site farmed for the papers
 	var t := -1
+	var t0 := Time.get_ticks_usec()
 	if sim.campaign_done() and sim.room_open("radio"):
 		_make_signals(sim)
+		t0 = _lap("step/signals", t0)
 		var k := _pick_signal(sim)
+		t0 = _lap("step/pick_signal", t0)
 		if k >= 0:
 			_stood_from = -1.0
 		elif crew_on:
@@ -137,7 +140,9 @@ func step(sim) -> int:
 	if t < 0:
 		t = pick_tier(sim)
 		last_tier = t
+		t0 = _lap("step/pick_tier", t0)
 		sim.deploy(t)
+	t0 = _lap("step/deploy", t0)
 	var guard := 0
 	while sim.on_mission() and guard < 3000:
 		sim.advance(1.0)
@@ -150,6 +155,7 @@ func step(sim) -> int:
 		guard += 1
 	if sim.on_mission():
 		sim.extract_now()                 # never back with a run still on: the yard would stand still
+	_lap("step/run", t0)
 	if bool(sim.last_report.get("timed_out", false)) and float(sim.last_report.get("time", -1.0)) >= 0.0 and int(sim.runs_total) != _to_seen:
 		_to_seen = int(sim.runs_total)
 		bought.append([sim.elapsed, "out of time: tier %d%s, %d of %d down, %d gangs, way out %s, clock used %.0f s" % [int(sim.last_report["tier"]),
@@ -214,17 +220,50 @@ func _clock_short(sim) -> bool:
 ## Between missions: fit the best of every slot and mount, spend points, buy
 ## the camp with £500 to spare, sell spares, buy the one market item that
 ## beats what's fitted, refill the rig.
+var prof := {}                    # where a tidy's wall goes, in microseconds a part (the reader's wall table)
+func _lap(key: String, t0: int) -> int:
+	var now := Time.get_ticks_usec()
+	prof[key] = int(prof.get(key, 0)) + now - t0
+	return now
+
+
+## The fitting, training, selling and shopping once a minute of the camp's time at most (22 Oct, the pass's wall: a
+## level-50 build's runs are seconds long, and a tidy after each was half the wall; a player doesn't re-fit every run
+## either) - every run while runs are longer than that, and whenever the stash is nearly full, the runner changed or
+## the run wounded. The Yard, the meds and the endgame's business every run (the review: the gates read those).
+const TIDY_EVERY := 60.0
+var _tidied_at := -1e9
+var _tidied_runner := ""
 func tidy(sim) -> void:
 	sim.away_on = false                   # the player's back between runs: sales and contracts are theirs, not away's
+	var t0 := Time.get_ticks_usec()
+	_climb(sim)
+	_build_yard(sim)
+	t0 = _lap("yard", t0)
+	var runner: String = "%s/%d" % [sim.cls, sim.operators_lost]
+	var hurt: bool = sim.last_report is Dictionary and bool(sim.last_report.get("wounded", false))     # a wound: the kit looked over now
+	if sim.elapsed - _tidied_at >= TIDY_EVERY or runner != _tidied_runner or hurt or sim.stash_used() >= sim.stash_cap() * 0.9:
+		_tidied_at = sim.elapsed
+		_tidied_runner = runner
+		_tidy_kit(sim)
+	t0 = Time.get_ticks_usec()
+	_restock_meds(sim)                    # every run: the rig's meds and the endgame's business (the review: a run out with no meds, a signal waiting)
+	_endgame(sim)
+	_lap("endgame", t0)
+
+
+## The kit looked over: the best of everything fitted, the points spent, the mounts, the spares sold, the shop.
+func _tidy_kit(sim) -> void:
+	var t0 := Time.get_ticks_usec()
 	for s in Data.SLOTS:
 		sim.equip_best(s)
 	if keystones_first and TYPE_OF.has(sim.cls):
 		_hold_the_type(sim, TYPE_OF[sim.cls])
 	if element != "":
 		_hold_the_element(sim)
-	_climb(sim)
+	t0 = _lap("fit", t0)
 	_train_tree(sim)
-	_build_yard(sim)
+	t0 = _lap("train", t0)
 	var slots: Array = Data.SOCKET_SLOTS.duplicate()
 	slots.erase("Primary")
 	slots.push_front("Primary")              # the primary's sockets before the secondary's
@@ -250,10 +289,11 @@ func tidy(sim) -> void:
 					continue
 			if cur == null or Items.score(want) > Items.score(cur) or (element != "" and not is_same(want, best[0])):
 				sim.fit(slot, want["id"])
+	t0 = _lap("mounts", t0)
 	_sell_spares(sim)
+	t0 = _lap("sell", t0)
 	_buy_upgrade(sim)
-	_restock_meds(sim)
-	_endgame(sim)
+	_lap("shop", t0)
 
 
 ## The endgame's business: contracts handed in when ready, the map's points
@@ -386,9 +426,43 @@ const FARM_KEEP_S := 600.0
 
 ## The Radio (15 Oct): signals made while there's room - Kev's beat when its three are held, else three papers, the
 ## rare first - and, the Radio full with none worth running, the worst held binned for a fresh roll.
+## The pile by kind, read once a shape of it (22 Oct, the pass's wall: a runaway read's pile ran to thousands of
+## papers, and each step filtered it four times and sorted it): {plain: the rarest PILE_TOP, rarest first; plain_n:
+## how many plain there are; story: this beat's}. One pass, no sort: a step makes three signals at most.
+const PILE_TOP := 3 * Data.SIGNAL_PAPERS
+var _pile_key: Array = []
+var _pile := {"plain": [], "plain_n": 0, "story": []}
+func _pile_of(sim) -> Dictionary:
+	var all: Array = sim.signal_papers()
+	var key := [all.size(), sim.story_now(), int(sim.signal_seq), Items._next_id]     # the item count: a same-size swap in a step (the review)
+	if key == _pile_key:
+		return _pile
+	_pile_key = key
+	var plain: Array = []
+	var plain_n := 0
+	var story: Array = []
+	var now: int = sim.story_now()
+	for x in all:
+		var st: int = sim.story_of(x)
+		if st < 0:
+			plain_n += 1
+			var r: int = int(x.get("rarity", 0))
+			if plain.size() < PILE_TOP or r > int(plain[plain.size() - 1].get("rarity", 0)):
+				var at: int = plain.size()
+				while at > 0 and int(plain[at - 1].get("rarity", 0)) < r:
+					at -= 1                   # the rarest first; a tie behind what came first (as the sort left them)
+				plain.insert(at, x)
+				if plain.size() > PILE_TOP:
+					plain.pop_back()
+		elif st == now:
+			story.append(x)
+	_pile = {"plain": plain, "plain_n": plain_n, "story": story}
+	return _pile
+
+
 func _make_signals(sim) -> void:
 	# three held and none to run, and papers for another: a player bins the worst (never Kev's) for a fresh roll (D2)
-	if sim.signals.size() >= Data.SIGNALS_HELD and _pick_signal(sim) < 0 and sim.signal_papers().filter(func(x): return sim.story_of(x) < 0).size() >= Data.SIGNAL_PAPERS:
+	if sim.signals.size() >= Data.SIGNALS_HELD and _pick_signal(sim) < 0 and int(_pile_of(sim)["plain_n"]) >= Data.SIGNAL_PAPERS:
 		var worst := -1
 		var wo := 2.0
 		for k in range(sim.signals.size()):
@@ -411,7 +485,7 @@ func _make_signals(sim) -> void:
 	var guard := 0
 	while sim.signals.size() < Data.SIGNALS_HELD and guard < Data.SIGNALS_HELD:
 		guard += 1
-		var story: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) == sim.story_now())
+		var story: Array = _pile_of(sim)["story"]
 		var ids: Array = []
 		if sim.story_held().size() == Data.SIGNAL_PAPERS and story.size() >= Data.SIGNAL_PAPERS:
 			var seen := {}
@@ -420,7 +494,7 @@ func _make_signals(sim) -> void:
 					seen[str(it["base"])] = true
 					ids.append(int(it["id"]))
 		else:
-			var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
+			var plain: Array = _pile_of(sim)["plain"]
 			# short of three with the notes for Kev's pile (16 Oct): a player buys the rest of a signal
 			while plain.size() < Data.SIGNAL_PAPERS and sim.campaign_done() and sim.kev_block() == "":
 				var price: int = sim.kev_price()
@@ -428,9 +502,8 @@ func _make_signals(sim) -> void:
 				if got.is_empty():
 					break
 				bought.append([sim.elapsed, "off Kev's pile: %s for %d notes" % [str(got["base"]).to_lower(), price]])
-				plain = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0)
-			plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
-			if plain.size() < Data.SIGNAL_PAPERS and not sim.signals.is_empty():
+				plain = _pile_of(sim)["plain"]
+			if plain.size() < Data.SIGNAL_PAPERS and not sim.signals.is_empty():     # plain holds every plain paper when there are under PILE_TOP
 				break                         # short of three with a signal held: wait for the rest (20 Oct: one or two only when there's nothing to run)
 			ids = plain.slice(0, Data.SIGNAL_PAPERS).map(func(x): return int(x["id"]))
 		if sim.decrypt(ids).is_empty():
@@ -1066,7 +1139,6 @@ const AMMO_STACKS_KEPT := 6
 
 const HELD_READ_S := 1200.0
 const ELEM_DPS_FLOOR := 0.8
-const PAPERS_KEPT := 30
 var _held_at := {}
 
 
@@ -1095,16 +1167,27 @@ func _sell_spares(sim) -> void:
 			if not by_type.has(ty):
 				by_type[ty] = []
 			by_type[ty].append(it)
-	# plain papers: the rarest thirty stay (D18: a hundred and more piled while three signals were read, a stash filling)
-	var plain: Array = sim.signal_papers().filter(func(x): return sim.story_of(x) < 0) if sim.room_open("radio") else []     # before the Radio a paper's unread: kept for its code (the review)
-	plain.sort_custom(func(a, b_in): return int(a.get("rarity", 0)) > int(b_in.get("rarity", 0)))
-	for it in plain.slice(PAPERS_KEPT):
-		_dispose(sim, it)
+	# (the plain papers' cull went 22 Oct: papers live on the Radio's pile since 18 Oct, which no sell reaches - the
+	# cull sorted a pile of thousands and failed to sell each one, every tidy, for nothing)
 	for ty in by_type:
 		var stacks: Array = by_type[ty]
 		stacks.sort_custom(func(a, b_in): return int(a.get("value", 0)) > int(b_in.get("value", 0)))     # the dearest: grade and rounds (the review)
 		for it in stacks.slice(AMMO_STACKS_KEPT):
 			_dispose(sim, it)
+	# the keepers read once (22 Oct, the pass's wall: the best of a slot was asked once an item, a scan of the stash
+	# each, with the kit's key hashed every ask): the best of each slot, of the class's type, of each mount
+	var best_id := {}
+	for slot in Data.SLOTS:
+		var b: Dictionary = sim.best_in_stash(slot)
+		if not b.is_empty():
+			best_id[slot] = int(b["id"])
+	var type_best: Dictionary = _best_of_type(sim, keep_type) if keep_type != "" else {}
+	var mount_rank := {}                  # item id -> its rank among the mount's parts, best first
+	for it in sim.stash:
+		if Items.is_attachment(it) and not mount_rank.has(str(it["mount"])):
+			var ranked: Array = sim.attachments_for(it["mount"])
+			for r in range(ranked.size()):
+				mount_rank[int(ranked[r]["id"])] = r
 	for it in sim.stash.duplicate():
 		if Items.is_medical(it) or Items.is_paper(it) or it.get("mythic", false):
 			continue                      # a paper's a key to the endgame now (15 Oct): kept; a mythic never goes
@@ -1115,7 +1198,7 @@ func _sell_spares(sim) -> void:
 			if not fired:
 				_dispose(sim, it)
 			continue
-		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and _best_of_type(sim, keep_type) == it:
+		if keep_type != "" and it["slot"] == "Primary" and Items.base_of(it).get("type", "") == keep_type and not type_best.is_empty() and int(type_best["id"]) == int(it["id"]):
 			continue                      # the best spare of the class's type stays; the rest of them go
 		if element != "" and Items.is_socketable(it) and float(Items.base_of(it).get("conv_%s_pct" % element, 0)) > 0.0:
 			continue
@@ -1125,12 +1208,10 @@ func _sell_spares(sim) -> void:
 				continue
 		if Items.is_attachment(it):
 			# the best three of a mount stay; attachments_for() is sorted best first
-			var rank: int = sim.attachments_for(it["mount"]).find(it)
-			if rank >= 3:
+			if int(mount_rank.get(int(it["id"]), 99)) >= 3:
 				_dispose(sim, it)
 			continue
-		var best: Dictionary = sim.best_in_stash(it["slot"])
-		if best.is_empty() or best["id"] != it["id"]:
+		if int(best_id.get(str(it["slot"]), -1)) != int(it["id"]):
 			_dispose(sim, it)
 
 

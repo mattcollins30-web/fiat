@@ -338,6 +338,9 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 				if float(g["capstone_at"]) < 0.0 and nd.get("capstone", false):
 					g["capstone_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 		_gate_firsts(sim, g, loose_seen)
+		if element == "" and float(g["qm_at"]) >= 0.0:
+			print("  the plain floor's beaten at %s: the read ends here (22 Oct, the pass's wall)" % _hm(sim.elapsed))
+			break                           # a plain build's one gate is the Quartermaster by hour 24; past him its hours were the pass's slowest
 		if sim.reach != reach_seen:
 			reach_seen = sim.reach
 			g["reach_log"].append([snappedf(sim.elapsed / 3600.0, 0.01), sim.reach])
@@ -479,13 +482,17 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	# where the wall went, in seconds: the bot's step holds the odds reads (survival: the dry runs, their snapshots)
 	# and the real run's ticks; the tidy is the fitting, selling and building; the ladder reads are their own
 	var pr: Dictionary = sim.prof
+	var tidy_parts := {}
+	for k in bot.prof:
+		@warning_ignore("integer_division")
+		tidy_parts[k] = int(bot.prof[k]) / 1000000     # the tidy's parts (22 Oct): fit, train, yard, mounts, sell, shop, endgame
 	@warning_ignore("integer_division")
-	g["prof"] = {"step_s": step_us / 1000000, "tidy_s": tidy_us / 1000000, "ladder_s": ladder_us / 1000000,
+	g["prof"] = {"step_s": step_us / 1000000, "tidy_s": tidy_us / 1000000, "tidy_parts": tidy_parts, "ladder_s": ladder_us / 1000000,
 		"surv_s": int(pr["surv_us"]) / 1000000, "surv_calls": pr["surv_calls"], "surv_reads": pr["surv_reads"],
 		"dry_runs": pr["dry_runs"], "dry_ticks": pr["dry_ticks"], "snap_s": int(pr["snap_us"]) / 1000000,
 		"real_ticks": pr["real_ticks"], "real_s": int(pr["real_us"]) / 1000000}
-	print("  wall %ds: step %ds (odds %ds on %d reads of %d calls, %d dry runs, %d dry ticks, snapshots %ds; the run %d ticks %ds), tidy %ds, ladders %ds" % [g["wall_s"],
-		g["prof"]["step_s"], g["prof"]["surv_s"], pr["surv_reads"], pr["surv_calls"], pr["dry_runs"], pr["dry_ticks"], g["prof"]["snap_s"], pr["real_ticks"], g["prof"]["real_s"], g["prof"]["tidy_s"], g["prof"]["ladder_s"]])
+	print("  wall %ds: step %ds (odds %ds on %d reads of %d calls, %d dry runs, %d dry ticks, snapshots %ds; the run %d ticks %ds), tidy %ds (%s), ladders %ds" % [g["wall_s"],
+		g["prof"]["step_s"], g["prof"]["surv_s"], pr["surv_reads"], pr["surv_calls"], pr["dry_runs"], pr["dry_ticks"], g["prof"]["snap_s"], pr["real_ticks"], g["prof"]["real_s"], g["prof"]["tidy_s"], str(tidy_parts), g["prof"]["ladder_s"]])
 	g["scrap_per_h"] = snappedf(scrap_16 / minf(16.0, maxf(0.01, sim.elapsed / 3600.0)), 0.1)      # the first sixteen hours' (Matt, 8 Oct)
 	g["bails_per_h"] = snappedf(bot.bails / maxf(0.01, sim.elapsed / 3600.0), 0.01)
 	g["runs_per_bail"] = snappedf(float(g["runs"]) / maxf(1.0, float(bot.bails)), 0.1) if bot.bails > 0 else 999.0
