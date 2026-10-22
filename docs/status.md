@@ -6212,3 +6212,10 @@ pass; the reviewer on the code):
   CAMPAIGN_LEVEL_MAX 2.0 → 1.3. The rest held: the Bank at a median 1.0 h, the Quartermaster 2.0 h, the lorry 3.9 h;
   deaths one in 445-2842 runs, wounds 0-5%, every run in at 100%, no build into a third gang (the bot leaves at the
   first gang: the gangs and the clock never bit it). Gang clock and no-reds green. A third pass.
+- The third pass (22 Oct, 09:28; docs/balance/summary_tuning3.md, 20 RED): no wall - every element build
+  through the campaign, the Bank at a median 0.9 h (0.6-1.7), the Quartermaster 2.4 h (1.1-3.6), the lorry 4.2 h,
+  the plain Poacher the one read short of him. Deaths one in 480-2306 and none on four builds, wounds 0-4%, every
+  run in at 100%, no build into a third gang. Not drastic; no tuning off it (the web, below, moves every number).
+- Matt (22 Oct): the trees become one web (docs/design/web.md). Slices built end to end, no playtest between
+  them, one balance pass at the end. The Training band's class cards stay where they are: the web's figures and
+  buttons fold into the band as it is.
