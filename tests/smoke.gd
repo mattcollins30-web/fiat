@@ -9137,19 +9137,31 @@ func _over_level_checks(sim) -> void:
 	var low: Dictionary = sim.effective(Data.BANK)
 	var mine: float = float(mini(Items.max_ilvl_for(50), Data.MAX_LEVEL))     # a level-50 runner reads as level 50 (21 Oct)
 	var want: float = clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, mine - float(low["level"]) - Data.OVER_LEVEL_FREE), Data.OVER_LEVEL_FLOOR, 1.0)
-	var harder: float = sim.campaign_level_mult(int(low["level"]))     # and the fight harder with the level (21 Oct), to CAMPAIGN_LEVEL_MAX
-	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"]) * harder) and is_equal_approx(harder, Data.CAMPAIGN_LEVEL_MAX),
-		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f; the fight x%.2f (want x%.1f)" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"]), harder, Data.CAMPAIGN_LEVEL_MAX])
-	# the fight with the level (21 Oct): a level-1 runner's site as it is, a level 7 over a level-2 site x1.06^4
+	var harder: float = sim.campaign_level_mult(Data.BANK)     # and the fight harder with the levels since its first clear (21 Oct), to CAMPAIGN_LEVEL_MAX
+	_check(is_equal_approx(float(low["over_level"]), want) and want < 1.0 and is_equal_approx(float(low["xp"]), float(whole["xp"]) * want) and is_equal_approx(float(low["cash"]), float(whole["cash"]) * want) and is_equal_approx(float(low["hp"]), float(whole["hp"]) * harder),
+		"a level-50 runner at the Bank: paid %.2f, want %.2f; xp %.1f of %.1f; the fight x%.2f" % [float(low["over_level"]), want, float(low["xp"]), float(whole["xp"]), harder])
+	# the fight with the level (21 Oct): a site never cleared is as it is at any level (the frontier never hardens); one
+	# cleared at level 2 is as it was to 2 + the free levels, then x1.08 a level gained, twice at most
+	var site2: int = Data.OUTSKIRTS_SITES
+	var cl0: Dictionary = sim.clear_level.duplicate()
+	sim.clear_level.erase(site2)
 	sim.xp = Data.xp_for_level(1)
-	var site2: int = -1
-	for i in range(Data.TIERS.size()):
-		if Sim.lv_at(i, 1) == 2:
-			site2 = i
-			break
 	var plain_hp: float = float(sim.effective(site2)["hp"])
+	sim.xp = Data.xp_for_level(40)
+	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp), "a site never cleared hardened with the level: x%.2f" % (float(sim.effective(site2)["hp"]) / plain_hp))
+	sim.clear_level[site2] = 2
+	sim.xp = Data.xp_for_level(2 + Data.CAMPAIGN_LEVEL_FREE)
+	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp), "a site cleared the free levels ago hardened: x%.2f" % (float(sim.effective(site2)["hp"]) / plain_hp))
 	sim.xp = Data.xp_for_level(2 + Data.CAMPAIGN_LEVEL_FREE + 4)
-	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp * pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)), "a runner 4 past the free levels over a site: HP x%.3f, want x%.3f" % [float(sim.effective(site2)["hp"]) / plain_hp, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)])
+	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp * pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)), "a runner 4 past the free levels since the clear: HP x%.3f, want x%.3f" % [float(sim.effective(site2)["hp"]) / plain_hp, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, 4)])
+	sim.xp = Data.xp_for_level(40)
+	_check(is_equal_approx(float(sim.effective(site2)["hp"]), plain_hp * Data.CAMPAIGN_LEVEL_MAX), "the level's tax runs past its cap: x%.2f" % (float(sim.effective(site2)["hp"]) / plain_hp))
+	# a first clear records the level, and the save keeps it
+	var rt: Dictionary = sim.to_dict()
+	var back = Sim.new()
+	back.load_dict(rt)
+	_check(back.clear_level.has(site2) and int(back.clear_level[site2]) == 2, "the first clear's level didn't survive the save: %s" % str(back.clear_level))
+	sim.clear_level = cl0
 	# and the odds read again on a level-up (the review): the key carries the level
 	sim.xp = Data.xp_for_level(1)
 	var key_lv1: Array = sim._odds_key_common().duplicate()

@@ -2180,10 +2180,12 @@ static func craft_of(key: String) -> Dictionary:
 ## The tuning batch (21 Oct, Matt's playtest: 100% at every campaign site to the Pleasure Park, 2-3 min a run, no deaths
 ## and no wounds on the bots): the campaign gets harder with the runner's level, the fights are longer, the gangs come
 ## sooner a zone along, and the clock runs through the searches.
-const CAMPAIGN_LEVEL_FREE := 8     # a site this many levels under the runner fights as it is (the pass: a site's first clear comes 5-10
-                                   # levels over its own level - the Pleasure Park's at 9, the Bank's at 16)...
-const CAMPAIGN_LEVEL_GROW := 0.08  # ...and past that its heads' HP and fire compound by this a level (the Parade at level 15: x1.47)...
-const CAMPAIGN_LEVEL_MAX := 2.0    # ...to twice at most (9 levels past): a site stays a site, never a wall for a runner far past it
+const CAMPAIGN_LEVEL_FREE := 3     # a site cleared this many levels ago fights as it was (the first pass keyed the tax to the site's own
+                                   # level and walled four builds at the frontier: the Bank's first clear comes 10-22 levels over its
+                                   # level 6, so the frontier itself hardened to x2 as the runner levelled under it; a site never cleared
+                                   # takes no tax now)...
+const CAMPAIGN_LEVEL_GROW := 0.08  # ...and past that its heads' HP and fire compound by this a level you've gained since (5 levels on: x1.47)...
+const CAMPAIGN_LEVEL_MAX := 2.0    # ...to twice at most (9 levels on): a site stays a site, never a wall for a runner far past it
 const CAMPAIGN_POOL := 1.0         # the campaign's pools as they are (1.5 read Matt's Pleasure Park 75% to 0%: the length comes from the gangs)
 const PATROL_FIRST := 2.0          # the first gang after the clear waits twice the gap (the run's length, 4-5 min: Matt's runs ended at the first
                                    # gang, "Back, chased", two searches in); the gangs after come at the zone's gap

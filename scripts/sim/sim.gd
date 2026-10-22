@@ -45,6 +45,7 @@ var filtered := ""                 # the map's Clear air: a known word the Radio
 var standing: Array = []           # the map's Relay and the whole band: words on every site with a ladder
 var depth: Array = []              # per tier: the depth chosen, 1 up
 var best_depth: Array = []         # per tier: the deepest cleared, 0 if none
+var clear_level: Dictionary = {}   # tier -> the runner's level at its first clear (21 Oct): the campaign's fight hardens from there
 var training_points := 0           # earned, one a level, across operators
 var best_level := 1                # the camp's best level (9 Oct): a level earns a point only past it, so a new runner re-levels for nothing
 var last_craft := {}               # the Bench's last job: {id, kind, words}, for the toast and the craft panel
@@ -4593,7 +4594,7 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 		var hostile: float = float(Data.CAMPAIGN_HOSTILE[int(base["zone"])])     # by zone (the pass, 20 Oct); D20: the campaign's crews a touch softer
 		# the campaign gets harder with the runner's level (21 Oct, Matt): a site past CAMPAIGN_LEVEL_FREE under the
 		# runner compounds its heads' HP and fire a level; and its pool is CAMPAIGN_POOL bigger, the fight the run's length
-		var harder: float = campaign_level_mult(lv)
+		var harder: float = campaign_level_mult(i)
 		hostile *= harder
 		e["clock_mult"] = harder               # the clock keeps pace: the level's tax is on the fight, not the time
 		e["hp"] *= hostile
@@ -5880,7 +5881,7 @@ func _odds_key(i: int) -> Array:
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
 	var common: Array = _odds_key_common()
-	return common + [depth[i], str(words[i]), weather_of(i), boss_armed.get(i, false),
+	return common + [depth[i], str(words[i]), weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
 		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0]     # a signal laid on the site reads apart from it (15 Oct)
 
 
@@ -6256,10 +6257,13 @@ func clock_budget(t: Dictionary) -> float:
 	return (Data.CLOCK_BASE + Data.CLOCK_PER_HEAD * heads) * (0.5 if t.get("clock_half", false) else 1.0) * float(t.get("clock_mult", 1.0))
 
 
-## The campaign's fight at a site, harder with the runner's level (21 Oct, Matt: "yes to campaign getting harder"):
-## x1 within CAMPAIGN_LEVEL_FREE of the site's level, compounding CAMPAIGN_LEVEL_GROW a level past, CAMPAIGN_LEVEL_MAX at most.
-func campaign_level_mult(site_lv: int) -> float:
-	return minf(Data.CAMPAIGN_LEVEL_MAX, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, maxi(0, level() - site_lv - Data.CAMPAIGN_LEVEL_FREE)))
+## The campaign's fight at a site, harder with the runner's level (21 Oct, Matt: "yes to campaign getting harder"): x1
+## until the site's first clear and for CAMPAIGN_LEVEL_FREE levels after it, then compounding CAMPAIGN_LEVEL_GROW a
+## level gained since, CAMPAIGN_LEVEL_MAX at most. The frontier never hardens: a site you haven't cleared is as it is.
+func campaign_level_mult(i: int) -> float:
+	if not clear_level.has(i):
+		return 1.0
+	return minf(Data.CAMPAIGN_LEVEL_MAX, pow(1.0 + Data.CAMPAIGN_LEVEL_GROW, maxi(0, level() - int(clear_level[i]) - Data.CAMPAIGN_LEVEL_FREE)))
 
 
 ## A crew's head brings his own time when he comes out: a head's seconds for every plain head's HP he carries.
@@ -7403,6 +7407,8 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 		depot_cleared = true
 	if not seen.has("cleared/%d" % m["tier"]):
 		seen["cleared/%d" % m["tier"]] = true
+		if not clear_level.has(int(m["tier"])):
+			clear_level[int(m["tier"])] = level()     # the level the site was first cleared at: its fight hardens from here (21 Oct)
 		log_event(Words.site_cleared(t["name"]))
 	else:
 		log_event("%s cleared. Picking it over; more will come." % t["name"])
@@ -9426,7 +9432,7 @@ func _state() -> Dictionary:
 		"yard_picks": yard_picks.duplicate(true), "yard_ranks": yard_ranks.duplicate(), "yard_open": yard_open, "salvage": salvage.duplicate(),
 		"yard_seen": yard_seen.keys(), "yard_seen_cols": yard_seen_cols,
 		"hardcore": hardcore, "camp_lost": camp_lost, "clinic": clinic, "wounds": wounds.duplicate(true),
-		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(),
+		"past": past, "loose_kit": loose_kit, "book": book.duplicate(), "heard": heard.duplicate(), "shelf": shelf.duplicate(), "keepsakes": keepsakes.duplicate(), "shelf_tier": shelf_tier.duplicate(), "worn": worn.duplicate(), "worn_depth": worn_depth.duplicate(), "weather": weather.duplicate(), "weather_at": weather_at, "last_next": last_next, "events_total": events_total, "runner_runs": runner_runs, "record": record.duplicate(), "seen": seen, "deeds_found": deeds_found, "unlocked": unlocked.duplicate(), "met": met.duplicate(), "deeds_fate": deeds_fate, "lorry_done": lorry_done, "lorries": lorries, "paragon_xp": paragon_xp, "paragon_board": paragon_board.duplicate(), "best_dig": best_dig.duplicate(), "clear_level": clear_level.duplicate(),
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
@@ -9621,6 +9627,9 @@ func load_dict(d: Dictionary) -> void:
 	if d.has("record"):
 		record = d["record"].duplicate()
 	seen = d.get("seen", {})
+	clear_level = {}
+	for k in d.get("clear_level", {}):
+		clear_level[int(k)] = int(d["clear_level"][k])     # JSON's keys come back as strings
 	deeds_found = bool(d.get("deeds_found", false))
 	if d.has("unlocked"):
 		unlocked = Array(d["unlocked"])

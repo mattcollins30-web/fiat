@@ -6197,3 +6197,11 @@ pass; the reviewer on the code):
 - The pass's gates to read against: P1 deaths, P2 wounds, P3 odds at the gate, 10 the gang clock (the first gang's
   wait is 2x now: the gate reads searches a gap), 11 staying costs, 14 cash, 15 scrap, and the run's length
   (new: minutes a run, Matt's 4-5).
+- The pass on the batch (21 Oct, 23:33; kept as docs/balance/summary_tuning1.md): drastic - four builds never
+  reached the Bank (the Scrapper as shock sat at the Pleasure Park and the Shopping Centre for 24 h, 0% ↔ 100%).
+  The tax was keyed to the site's own level (the Bank's 6), and a first clear comes 10-22 levels over that, so the
+  frontier itself hardened to x2 as the runner levelled under it. Fixed: the tax is keyed to the runner's own first
+  clear of the site (Sim.clear_level, saved): a site never cleared is as it is at any level, a cleared one x1 for
+  CAMPAIGN_LEVEL_FREE 3 levels after, then 1.08 a level to x2. The odds' key carries it. One pass again.
+  - For Matt (the review): the clear level is the camp's, not the class's - a second class reaching a site a
+    first one cleared pays the tax from the first's clear. Simpler; bounded at x2. Per-class if it bites.
