@@ -6302,9 +6302,11 @@ func survival(i: int) -> float:
 	for k in range(to_do):
 		if k > 0 and _odds_time_up():
 			break
+		_dry_last = {}                        # the tally pairs with this run alone (the review: a probe's run could sit there)
 		if _dry_run(i, c[4]):
 			c[3] += 1
 		c[2] += 1
+		_tally(i, key)
 		c[5] = minf(float(c[5]), _dry_min_hp)
 		if c[2] == EARLY_FEW and (c[3] == EARLY_FEW and float(c[5]) >= EARLY_FEW_HP or c[3] == 0) and odds_runs_max > 0 and not boss_armed.get(i, false):
 			c[3] = runs if c[3] > 0 else 0   # (15 Oct, refactor A4) the gate's read only: four clean - none under 70% - or four dead says it sooner; the Map's own number reads on
@@ -6323,6 +6325,125 @@ func survival(i: int) -> float:
 	c[1] = float(c[3]) / maxf(1.0, c[2])
 	prof["surv_us"] += Time.get_ticks_usec() - p0
 	return c[1]
+
+
+## What the dry runs saw (23 Oct, parked item 7, Matt: "we need to do a better job of telling players why the odds
+## are 0% and what they can do to bump things up"): a tally a site, kept with the odds' key - the runs read, how many
+## came back, how many were killed and how many ran out of time, the seconds and the heads down when the lost ones
+## ended, what reached HP and by what type, the lowest HP seen.
+var _odds_tally := {}
+var _dry_last := {}
+
+
+func _tally(i: int, key: Array) -> void:
+	if _dry_last.is_empty():
+		return
+	var tl: Dictionary = _odds_tally.get(i, {})
+	if tl.is_empty() or tl["key"] != key:
+		tl = {"key": key, "runs": 0, "alive": 0, "killed": 0, "timed": 0, "lost_s": 0.0, "lost_down": 0, "taken": 0.0, "fight_s": 0.0, "taken_by": {}, "pool": 0, "min_hp": 1.0}
+		_odds_tally[i] = tl
+	var d: Dictionary = _dry_last
+	tl["runs"] += 1
+	tl["pool"] = int(d["pool"])
+	tl["fight_s"] += float(d["elapsed"])
+	tl["taken"] += float(d["taken"])
+	tl["min_hp"] = minf(float(tl["min_hp"]), float(d["min_hp"]))
+	for ty in d["taken_by"]:
+		tl["taken_by"][ty] = float(tl["taken_by"].get(ty, 0.0)) + float(d["taken_by"][ty])
+	if d["alive"]:
+		tl["alive"] += 1
+	else:
+		if d["timed"]:
+			tl["timed"] += 1
+		else:
+			tl["killed"] += 1
+		tl["lost_s"] += float(d["elapsed"])
+		tl["lost_down"] += int(d["kills"])
+	_dry_last = {}
+
+
+## The site before a site: the one before it in its zone, else the zone before's last; -1 for the first of all (23 Oct,
+## the Map's green chip: "grind the site before").
+func site_before(i: int) -> int:
+	var z: int = int(Data.TIERS[i]["zone"])
+	var tiers: Array = Data.ZONES[z]["tiers"]
+	var k: int = tiers.find(i)
+	if k > 0:
+		return int(tiers[k - 1])
+	if z > 0:
+		return int(Data.ZONES[z - 1]["tiers"].back())
+	return -1
+
+
+## The tally as it stands for a site's current read, {} before any run of it.
+func odds_read(i: int) -> Dictionary:
+	var tl: Dictionary = _odds_tally.get(i, {})
+	if tl.is_empty() or tl["key"] != _odds_key(i) or int(tl["runs"]) == 0:
+		return {}
+	return tl
+
+
+## Why a site reads as it does, in the runner's own figures (23 Oct, parked item 7): how the lost runs ended (killed
+## or out of time, at what second, with how many heads down), what reached HP a second and by what type, and what
+## would close the gap - the HP, the armour, the damage a second, the resist - each alone, from the fight's length
+## as the card has it (estimate) and what reached HP over the runs. {} with nothing read.
+func odds_gap(i: int) -> Dictionary:
+	var r: Dictionary = odds_read(i)
+	if r.is_empty():
+		return {}
+	var lost: int = int(r["killed"]) + int(r["timed"])
+	var out := {"runs": int(r["runs"]), "alive": int(r["alive"]), "killed": int(r["killed"]), "timed": int(r["timed"]), "pool": int(r["pool"]), "min_hp": float(r["min_hp"])}
+	if lost > 0:
+		out["lost_s"] = float(r["lost_s"]) / lost
+		out["lost_down"] = float(r["lost_down"]) / lost
+	var rate: float = float(r["taken"]) / maxf(float(r["fight_s"]), 1.0)
+	out["rate"] = rate
+	var top := ""
+	var total := 0.0
+	for ty in r["taken_by"]:
+		total += float(r["taken_by"][ty])
+		if top == "" or float(r["taken_by"][ty]) > float(r["taken_by"][top]):
+			top = str(ty)
+	out["top_type"] = top
+	out["top_share"] = (float(r["taken_by"][top]) / total) if top != "" and total > 0.0 else 0.0
+	out["phys_share"] = (float(r["taken_by"].get("physical", 0.0)) / total) if total > 0.0 else 0.0
+	var el := ""                                        # the element that did most, armour's counterpart
+	for ty in r["taken_by"]:
+		if str(ty) != "physical" and (el == "" or float(r["taken_by"][ty]) > float(r["taken_by"][el])):
+			el = str(ty)
+	out["el_type"] = el
+	out["el_share"] = (float(r["taken_by"][el]) / total) if el != "" and total > 0.0 else 0.0
+	if lost == 0 or rate <= 0.0:
+		return out
+	var fight_s: float = estimate(i)
+	var heals: float = regen_rate() * fight_s
+	for it in rig:
+		if Items.is_medical(it):
+			heals += med_heal(it)
+	var need: float = rate * fight_s
+	var have: float = max_hp() * (1.0 - BAIL) + heals
+	if int(r["timed"]) > int(r["killed"]):
+		out["dps_need"] = int(ceil(dps() * fight_s / maxf(clock_of(i), 1.0)))     # the fight inside the clock
+		return out
+	if have >= need:
+		return out
+	var f: float = have / need                        # what's taken must come down to this share of itself
+	out["hp_need"] = int(ceil((need - heals) / (1.0 - BAIL)))
+	out["dps_need"] = int(ceil(dps() / f))             # or the fight that much shorter
+	var p: float = float(r["taken_by"].get("physical", 0.0)) / maxf(total, 0.001)
+	if p > 0.0:
+		var fp: float = (f - (1.0 - p)) / p             # the physical part's share of itself, the rest as it is
+		if fp > 0.0:
+			out["armour_need"] = int(ceil((armour() + armour_k()) / fp - armour_k()))
+	if el != "" and total > 0.0:
+		var e: float = float(r["taken_by"][el]) / total
+		var fe: float = (f - (1.0 - e)) / e
+		if fe > 0.0:
+			var res_need: float = 1.0 - fe * (1.0 - resist(el))
+			if res_need * 100.0 <= Data.RESIST_CAP:
+				out["resist_type"] = el
+				out["resist_need"] = int(ceil(res_need * 100.0))
+	return out
 
 
 ## Whether the odds for a tier have read enough to show (19 Oct, Matt: Glasses' sixty runs kept the Map on "reading
@@ -6400,6 +6521,8 @@ func _dry_run(i: int, r: RandomNumberGenerator) -> bool:
 			use_med(first_med()["id"])
 		guard_v += 1
 	var alive: bool = not m.get("dead", false) and hp > 0.0 and guard_v < 450     # out of time reads as dead
+	_dry_last = {"alive": alive, "timed": not alive and (m.get("timed_out", false) or guard_v >= 450), "kills": int(m["kills"]), "pool": maxi(1, pool),
+		"elapsed": float(m["elapsed"]), "taken": float(m.get("taken", 0.0)), "taken_by": m.get("taken_by", {}), "min_hp": _dry_min_hp}     # for the tally (23 Oct)
 	_dry_on = false
 	hp = keep["hp"]
 	xp = keep["xp"]
@@ -6420,8 +6543,8 @@ func deploy(i: int) -> void:
 		return
 	if not candidates.is_empty():
 		choose_runner(0)                  # nobody picked: the first one stays
-	_top_up()                                 # the worn guns' rounds from the stash, into the rig's room (16 Oct): before the insurance and the odds read
-	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1)
+	var odds_seen: float = odds_now(i) if odds_settled(i) else -1.0     # what the Runs card read at the gate, settled (12 Oct: the record; a part-read card logs -1); before the top-up, whose pouches re-key the odds (23 Oct)
+	_top_up()                                 # the worn guns' rounds and the meds from the stash, into the rig's room (16 Oct): before the insurance
 	var gate_split: Dictionary = {} if _dry_on else damage_split()     # the one figure as it went out, for the record (the review: at the end a dry gun reads low)
 	_dry_memo.clear()                     # the run reads the kit as it stands at the gate (fast_memo)
 	_memo_age = 0.0
@@ -8857,12 +8980,25 @@ func equip_best(slot: String) -> bool:
 	return true
 
 
+## The rig at the gate (23 Oct, parked item 4, the 21 Oct mockup): what the gate takes out of the stash into the
+## rig's room before a run. "fill": every grade of the worn guns' rounds and the meds, the build's grade first;
+## "best": the top grade of each, nothing plainer; "leave": the rig goes as packed. Set once on the Map, kept.
+const TOP_UP_MODES := ["leave", "fill", "best"]
+var top_up_mode := "fill"
+
+
+func set_top_up(mode: String) -> void:
+	if mode in TOP_UP_MODES and mode != top_up_mode:
+		top_up_mode = mode
+		_dry_memo.clear()
+
+
 ## At the gate (16 Oct, Matt's playtest: the drum shotgun went dry at the Bank with 110 slugs in the stash): the worn
 ## guns' rounds come out of the stash into the rig, as much as its room holds - the grade the gun fires first first
-## (its build's element, then the dearer grade, as feed_stack reads them), topping a stack before taking a pouch.
-## Meds and what's in the rig already stay. Logs what went in.
+## (its build's element, then the dearer grade, as feed_stack reads them), topping a stack before taking a pouch -
+## then the meds, the best first, into the pouches left (23 Oct). What's in the rig already stays. Logs what went in.
 func _top_up() -> void:
-	if mission != null:
+	if mission != null or top_up_mode == "leave":
 		return
 	var lists: Array = []
 	for slot in ["Primary", "Secondary"]:
@@ -8882,6 +9018,9 @@ func _top_up() -> void:
 					v += 100000
 			return v
 		stacks.sort_custom(func(a, b): return worth.call(a) > worth.call(b))
+		if top_up_mode == "best" and not stacks.is_empty():
+			var top: String = str(stacks[0]["base"])
+			stacks = stacks.filter(func(x): return str(x["base"]) == top)     # the top grade alone
 		lists.append(stacks)
 	# each gun's first grade before either gun's second (the review: a primary's boxes took every pouch, the secondary none)
 	var order: Array = []
@@ -8899,9 +9038,21 @@ func _top_up() -> void:
 		var before: int = int(it["rounds"])
 		take(int(it["id"]))                    # all of it, some of it (a stack topped, no pouch left) or none; the next grade still tries
 		moved += before - (int(it["rounds"]) if stash.has(it) else 0)
-	if moved > 0:
+	# the meds, the best first (23 Oct): a pouch each while the rig has one
+	var meds: Array = stash.filter(func(x): return Items.is_medical(x))
+	meds.sort_custom(func(a, b): return med_heal(a) > med_heal(b))
+	if top_up_mode == "best" and not meds.is_empty():
+		var top_med: String = str(meds[0]["base"])
+		meds = meds.filter(func(x): return str(x["base"]) == top_med)
+	var meds_in := 0
+	for it in meds:
+		if not rig_room(Items.size(it)):
+			continue                              # a kit takes two pouches; a bandage after it may still fit
+		if take(int(it["id"])):
+			meds_in += 1
+	if moved > 0 or meds_in > 0:
 		_dry_memo.clear()
-		log_event("Topped up: %d rounds from the stash into the rig" % moved)
+		log_event(Words.TOPPED_UP % [moved, meds_in] if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved)
 
 
 ## A gun put on with its rounds in the stash and none in the rig: a box of them to the rig, a stack of rounds no gun
@@ -9883,7 +10034,7 @@ func _state() -> Dictionary:
 		"signals": signals.duplicate(true), "reach": reach, "signal_seq": signal_seq, "story_beat": story_beat, "story_at": story_at, "papers": papers,
 		"materials": materials.duplicate(), "key_items": key_items.duplicate(), "rebuilt": rebuilt.duplicate(), "order_beaten": order_beaten.duplicate(),
 		"bosses_beaten": bosses_beaten, "notes": notes, "scrap": scrap, "takings": takings, "gamble_base": gamble_base, "atlas": atlas, "atlas_points": atlas_points, "boss_paid": boss_paid,
-		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next,
+		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
 	}
@@ -10162,6 +10313,7 @@ func load_dict(d: Dictionary) -> void:
 	runs_total = int(d.get("runs_total", 0))
 	wounded_total = int(d.get("wounded_total", 0))
 	insure_next = bool(d.get("insure_next", false))
+	top_up_mode = str(d.get("top_up_mode", "fill")) if str(d.get("top_up_mode", "fill")) in TOP_UP_MODES else "fill"
 	var bb: Array = d.get("bosses_beaten", [])
 	for z in range(Data.ZONES.size()):
 		bosses_beaten[z] = bool(bb[z]) if z < bb.size() else false

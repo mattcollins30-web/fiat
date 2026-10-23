@@ -5362,7 +5362,7 @@ func _idle_checks(main) -> void:
 	sim.deploy(3)
 	sim.mission["found"] = []
 	sim.extract_now()
-	_check(not sim.stash.has(junk) and (sim.stash + sim.rig).any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and sim.stash.has(keep_med) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med), sim.stash.has(keep_bottle)])
+	_check(not sim.stash.has(junk) and (sim.stash + sim.rig).any(func(x): return Items.is_ammo(x) and x["base"] == "Nails") and (sim.stash.has(keep_med) or sim.rig.has(keep_med)) and sim.stash.has(keep_bottle), "the junk run sold the wrong things: junk %s ammo %s med %s bottle %s" % [sim.stash.has(junk), sim.stash.has(keep_ammo), sim.stash.has(keep_med) or sim.rig.has(keep_med), sim.stash.has(keep_bottle)])     # the gate carries the med now (23 Oct)
 	_check(sim.equipped["Armour"] != null and sim.equipped["Armour"]["id"] == better["id"], "the better armour did not go on")
 	_check(sim.events.any(func(ev): return str(ev[1]).begins_with("The Fence took the junk")) and sim.events.any(func(ev): return str(ev[1]).begins_with("Put on: ")), "the idle tidy had no lines")
 	main._armoury._toggle(0)
@@ -5836,9 +5836,21 @@ func _why_checks(main) -> void:
 			var low: bool = sim.odds_settled(i) and sim.odds_now(i) < M.WHY_UNDER and not M.odds_reasons(sim, i).is_empty()
 			lows += 1 if low else 0
 			highs += 0 if low else 1
-			_check(band.chips.visible == low and (not low or band.chips.words(0) == "No meds"), "site %d at %s: the reasons %s, first '%s'" % [i, str(sim.odds_now(i)), "shown" if band.chips.visible else "hidden", band.chips.words(0) if band.chips.visible else ""])
+			# the green chip leads where there's a site before (23 Oct, Matt: "grind previous level"); No meds first else
+			var first_want: String = "No meds" if sim.site_before(i) < 0 else "Grind"
+			_check(band.chips.visible == low and (not low or band.chips.words(0).begins_with(first_want)), "site %d at %s: the reasons %s, first '%s'" % [i, str(sim.odds_now(i)), "shown" if band.chips.visible else "hidden", band.chips.words(0) if band.chips.visible else ""])
 			if low:
 				_check(band.headline.position.y + band.headline.size.y <= band.chips.position.y + 1.0 and band.title.position.y + band.title.size.y <= band.headline.position.y + 1.0, "the odds' headline and the reasons overlap on site %d" % i)
+				_check(band.chips.position.y + band.chips.size.y <= band.size.y, "the reasons' rows leave the band on site %d" % i)
+			# the hints at 0% (23 Oct, parked item 7; Matt: "just hints in the form of chips"): what's short, never a figure or
+			# a word of how the odds are read; the green one first
+			if sim.odds_settled(i) and sim.odds_now(i) == 0.0:
+				var rs: Array = M.odds_reasons(sim, i)
+				var hint_n: int = rs.filter(func(r): return str(r["forms"][0]).begins_with("Not enough ") or str(r["forms"][0]).begins_with("HP ")).size()     # the HP's own chip stands for the HP hint (the review)
+				_check(hint_n >= 1 and (sim.site_before(i) < 0 or str(rs[0]["colour"]) == "good"), "site %d at 0%% hints %d, first %s" % [i, hint_n, str(rs[0])])
+				for r in rs:
+					for f in r["forms"]:
+						_check(not str(f).to_lower().contains("dry") and not str(f).to_lower().contains("odds") and (not str(f).begins_with("Not enough") or str(f).find("%") < 0), "a hint carries a figure or the method: '%s'" % str(f))
 		_check_fit(main, "Map zone %d (the reasons under the odds)" % z)
 	_check(lows > 0, "no site read low enough to show its reasons (%d read high)" % highs)
 	sim.hp = sim.max_hp()
@@ -6211,6 +6223,18 @@ func _playtest_checks(main) -> void:
 	_check(r1.encloses(Rect2(c["chips"].position, c["chips"].size)) and r1.encloses(Rect2(c["resist"].position, c["resist"].size)) and r1.encloses(Rect2(c["resist_label"].position, c["resist_label"].size)), "the elements' box does not hold its chips")
 	_check(r2.encloses(Rect2(c["intel"].position, Vector2(c["intel"].size.x, main._missions.WORD_ROWS * (Chips.CHIP_H + Chips.ROW_GAP)))) and r2.encloses(Rect2(c["site"][0].position, c["site"][0].size)) and r2.encloses(Rect2(c["intel_head"].position, c["intel_head"].size)), "the word's box does not hold its rows")
 	_check(r0.end.y + 8 <= r1.position.y and r1.end.y + 8 <= r2.position.y and r2.end.y <= c["note"].position.y, "the Runs card's boxes run into each other or the note: %s %s %s note %.0f" % [str(r0), str(r1), str(r2), c["note"].position.y])
+	# the foot (23 Oct, parked item 4): the insurance and the rig's top-up share a row under Set off, neither on the other;
+	# the rig's button cycles Fill up, Best grades only, Leave it and back, and says which
+	_check(c["insure"].position.y == c["rig"].position.y and c["insure"].position.x + c["insure"].size.x <= c["rig"].position.x and c["deploy"].position.y + c["deploy"].size.y <= c["insure"].position.y, "the foot's buttons overlap")
+	var mode0: String = sim.top_up_mode
+	var seen_modes: Array = []
+	for k in range(3):
+		main._missions._rig(0)
+		main.refresh()
+		seen_modes.append(sim.top_up_mode)
+		_check(c["rig"].text.contains(Words.TOP_UP[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
+		_check_fit(main, "Runs (the rig %s)" % sim.top_up_mode)
+	_check(seen_modes.size() == 3 and seen_modes.back() == mode0 and seen_modes.has("leave") and seen_modes.has("best") and seen_modes.has("fill"), "the rig's button didn't cycle the three: %s" % str(seen_modes))
 	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
 	_check(c["resist_label"].text == "THEY RESIST" and c["resist"].visible and c["resist"].shown() >= 1, "the resist chips are missing")
 	var t0: Dictionary = sim.effective(Data.ZONES[main._missions.zone]["tiers"][0])
@@ -6947,6 +6971,41 @@ func _ammo_checks(sim) -> void:
 	sim._top_up()
 	_check(sim.rounds_for(sim.equipped["Secondary"]) > 0, "the shotgun's boxes took every pouch and the pistol went without")
 	for it in extra:
+		sim.stash.erase(it)
+	# the rig at the gate's three settings (23 Oct, parked item 4): Leave it moves nothing; Best grades only takes the top
+	# grade of the rounds and the best med alone; Fill up takes every grade, then the meds, the best first
+	sim.rig = []
+	var tu: Array = [sim._plain(Data.AMMO, "Shells"), sim._plain(Data.AMMO, "Slugs"), sim._plain(Data.MEDICAL, "Bandage"), sim._plain(Data.MEDICAL, "First aid kit")]
+	sim.stash.append_array(tu)
+	var stash_n: int = sim.stash.size()
+	sim.set_top_up("leave")
+	sim._top_up()
+	_check(sim.rig.is_empty() and sim.stash.size() == stash_n, "Leave it moved something into the rig: %d" % sim.rig.size())
+	sim.set_top_up("best")
+	sim._top_up()
+	_check(sim.rig.any(func(x): return str(x["base"]) == "Slugs") and not sim.rig.any(func(x): return str(x["base"]) == "Shells"), "Best grades only didn't take the top grade alone: %s" % str(sim.rig.map(func(x): return x["base"])))
+	_check(sim.rig.any(func(x): return str(x["base"]) == "First aid kit") and not sim.rig.any(func(x): return str(x["base"]) == "Bandage"), "Best grades only didn't take the best med alone: %s" % str(sim.rig.map(func(x): return x["base"])))
+	_check(sim.events.any(func(e): return str(e[1]).begins_with("Topped up:") and str(e[1]).contains("med")), "the meds' top-up wasn't logged")
+	for it in sim.rig.duplicate():
+		sim.leave(int(it["id"]))
+	sim.rig = []
+	sim.set_top_up("fill")
+	sim._top_up()
+	# the rounds first, every grade, then the meds best first into what's left (a kit takes two pouches, a bandage one):
+	# nothing left in the stash that would still fit
+	var fill_bases: Array = sim.rig.map(func(x): return str(x["base"]))
+	var left_fits: bool = sim.stash.any(func(x): return Items.is_medical(x) and sim.rig_room(Items.size(x)))
+	_check(fill_bases.has("Slugs") and fill_bases.has("Shells") and not left_fits and sim.rig.any(func(x): return Items.is_medical(x)), "Fill up took the wrong things for %d pouches: %s" % [sim.med_capacity(), str(fill_bases)])
+	sim.set_top_up("best")
+	var td: Dictionary = sim.to_dict()
+	var s_tu = Sim.new()
+	s_tu.load_dict(td)
+	_check(s_tu.top_up_mode == "best", "the rig's setting didn't save: '%s'" % s_tu.top_up_mode)
+	sim.set_top_up("fill")
+	for it in sim.rig.duplicate():
+		sim.leave(int(it["id"]))
+	sim.rig = []
+	for it in tu:
 		sim.stash.erase(it)
 	sim.equipped["Secondary"] = null
 	sim.stash.append_array(kept_ammo)
@@ -16491,9 +16550,13 @@ func _paper_pile_checks(_main) -> void:
 	s.extract_now()
 	_check(s.papers.has(found_paper) and not s.stash.has(found_paper) and s.stash.any(func(x): return Items.is_deeds(x)), "a paper home went to the stash, or the deeds left it: pile %d" % s.papers.size())
 	_check(s.stash_used() >= cells0, "the fixture: the stash lost cells")
-	# Kev's, the stash full
-	while s.stash_room(1):
+	# Kev's, the stash full: hammers while two cells are free, then a bandage for the last (23 Oct: the gate's meds top-up
+	# left an odd cell, and a hammer refused forever)
+	while s.stash_room(Items.size(s._plain("Primary", "Claw hammer"))):
 		s.stash_put(s._plain("Primary", "Claw hammer"))
+	while s.stash_room(1):
+		if not s.stash_put(s._plain(Data.MEDICAL, "Bandage")):
+			break
 	s.notes = 9999
 	var pile0: int = s.papers.size()
 	var kev: Dictionary = s.ask_kev()

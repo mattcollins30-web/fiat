@@ -291,6 +291,17 @@ func set_right(lines: Array) -> void:
 	_lay_compact()
 
 
+## The chips along the foot in `n` rows (23 Oct, the Map's hint chips): a second row climbs from the foot and the
+## headline under the title gives it the room. One row: as built.
+func chip_rows(n: int) -> void:
+	if n > 1:
+		chips.position.y = size.y - 6.0 - (n * (Chips.CHIP_H + Chips.ROW_GAP) - Chips.ROW_GAP)
+		if _under:
+			headline.size.y = minf(headline.size.y, chips.position.y - headline.position.y)
+	else:
+		chips.position.y = size.y - 14.0 - Chips.CHIP_H
+
+
 ## A progress bar along the foot, in place of the chips.
 func set_bar(fraction: float, words: String) -> void:
 	bar.visible = true

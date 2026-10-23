@@ -23,3 +23,9 @@ Later, if they still look right:
   on the bar shows when they'd finish it (built). Next, after the playtest: a bot probe of the dot damage lost on
   kills, by build - small, leave it; large for poison and bleed, half carries by default and the carry nodes take it
   to all; an execute only if both fall short.
+
+- **The odds swing on the weather** (23 Oct, found rendering the Map's hint chips on Matt's 22 Oct save, a level-12
+  Drifter at the Bank): the same runner read 0% in plain weather and 100% in fog ("one fewer on you": contact 3 to 2).
+  A third of their fire off turning a certain death into a certain clear says the fight's knife-edge is too sharp at
+  the frontier - or that contact is too strong a lever. A number for the balance phase: read the odds across every
+  weather on the pass's saves, and the contact's share of the incoming.

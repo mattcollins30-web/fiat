@@ -16,7 +16,10 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 
 - From a cloud session the smoke is `bash $HOME/flaky/run.sh N` in the device shell: it drops the flag, waits for a
   fresh `smoke.done`, copies the log to `$HOME/flaky/smoke_N.txt` and greps `CHECK FAILED\|SCRIPT ERROR`. Check the
-  done timestamp is new (it's Matt's local time, UTC+1).
+  done timestamp is new (it's Matt's local time, UTC+1). The verdict is run.sh's own "run N (done ...)" line, never
+  `smoke_N.txt` read on its own: the numbers wrap and an old run's file sits there (23 Oct: runs 61-63 read "green" off
+  the 19th's files while the smoke hung). A run that writes no done file within run.sh's wait has hung: find where
+  `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
 - The watcher runs one job at a time: no smoke while a balance pass runs.
 - Long sim and balance runs are Matt's machine's (6 Oct: it's about twice as fast). One quick read between passes:
   `tools\read.bat <hours> <class> [element]`.
@@ -73,6 +76,17 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; the balance phase
   starts milestone 8. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
   and notes it in docs/status.md.
+
+## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")
+
+- "Let's sort X out" is a conversation, not a go: say what's wrong, what I'd do and why, then wait for the word. No
+  debugging, no commands, no fixes until the approach is agreed.
+- A smoke failure is reported first - the cause and the proposed fix - before anything is touched. A fix explained in
+  that report may then be applied and the smoke re-run without asking again; a new failure starts the loop over.
+- A mockup needs Matt's word before the build, every time, even inside a batch he approved as a whole. "Do
+  everything" is the list, not the designs.
+- No sleep or poll loops in the device shell while Matt's about: they block his messages. Drop the flag, say so, and
+  read the result when he says it's done (or on the next turn).
 
 ## Git
 

@@ -6462,4 +6462,22 @@ pass; the reviewer on the code):
   rare and Kev's stay, the oldest plainest go first; run 60 green. Reviewer clean; its two notes: the trim
   one-at-a-time was O(n^2) on a 28k save (now sort-and-slice); the cap bites on signal_papers() reads, not every
   append (fine - every reader goes through it).
+- Batch C, the Map's card (items 4 of the 21 Oct list and 7 of the 22 Oct list). The rig at the gate: sim.top_up_mode
+  - "fill" (every grade of the worn guns' rounds, then the meds from the stash, the best first, into the pouches
+  left), "best" (the top grade of each, nothing plainer), "leave" (the rig goes as packed) - saved, one button on the
+  card's foot that cycles the three, sharing the insurance's row (the 21 Oct board had three buttons and a head; the
+  card had no room once the hints came in). The 0% hints: a dry run records how it ended (killed or out of time, the
+  seconds, the heads down, what reached HP by type); survival() tallies them a site under the odds' key
+  (_odds_tally; odds_read, odds_gap with the levers that would close the gap - the HP, the armour by the a/(a+K)
+  inversion, the damage a second, the resist); odds_reasons turns that into chips: "Not enough HP / armour /
+  <element> resist / damage / meds in the rig" after the hard reasons, and a green "Grind <the site before> first"
+  leading - hints only, no figures, never a word of how the odds are read (Matt, on the first mockup: "we don't
+  expose that that's how we work out the odds"; the dry runs' box with its figures came out). The band's chips take
+  two rows (band.chip_rows). Smoke: the three settings and their save, the button's cycle and words, the foot's row,
+  the hints at 0% (the green one first where there's a site before, no figure or method in any), the chips' rows
+  inside the band; the pile fixture's stash fill fixed (hammers refused forever on the odd cell the meds' top-up
+  left - the smoke hung at it for three runs while stale smoke_N files read green; CLAUDE.md has the rule now).
+  Reviewer's three notes in (the tally pairs with its own run; the rig's modes from the sim's list; the HP chip
+  counts as the HP hint). To the backlog: the odds swing 0% to 100% between plain weather and fog on the same Bank
+  (contact 3 to 2) - a number for the balance phase.
 

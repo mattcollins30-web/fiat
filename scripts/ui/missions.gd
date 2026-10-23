@@ -35,6 +35,7 @@ const BOX_PAD := 10                # the outline round the fight, the elements a
 const BOX_GAP := 9                 # between the boxes (12 Oct: 12, the 6 paid the resists' second row)
 const RESIST_ROWS := 2             # what they resist wraps to a second row (12 Oct: one row dropped chips - the city showed 2 of 4)
 const WORD_ROWS := 4               # the radio's two words and the sky's two, a row each
+const FOOT_H := 48                 # the insurance's row, the rig's top-up beside it (23 Oct, parked item 4)
 
 var sim
 var zone := 0                      # the picked site's zone
@@ -145,11 +146,18 @@ func _init() -> void:
 		c["site"] = [UI.label(panel, Rect2(PAD, y, INNER, 24), "", "Regular", Pal.CELL_TEXT_BIG + 1, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)]
 		y += 24 + BOX_PAD
 		c["boxes"][2].size.y = y - c["boxes"][2].position.y
-		# the foot: Deploy across, the insurance under it (21 Oct, Matt: auto-run's gone; the paper takes the row)
-		var fy := Pal.ROOM_H - TOP - PAD - Pal.BUTTON_H
+		# the foot: Set off across, the insurance and the rig's top-up sharing the row under it (21 Oct, Matt: auto-run's
+		# gone; 23 Oct: the top-up beside the paper)
+		var fy := Pal.ROOM_H - TOP - PAD - FOOT_H
+		@warning_ignore("integer_division")
+		var half: int = (INNER - 8) / 2
 		# insurance: the Fence holds the paper on the kit for the next run
-		c["insure"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), false)
+		c["insure"] = UI.button(panel, Rect2(PAD, fy, half, FOOT_H), false)
 		c["insure"].pressed.connect(_insure.bind(col))
+		# the rig at the gate: one button that cycles Fill up, Best grades only, Leave it (parked item 4, the 21 Oct board)
+		c["rig"] = UI.button(panel, Rect2(PAD + INNER - half, fy, half, FOOT_H), false)
+		c["rig"].pressed.connect(_rig.bind(col))
+		c["rig"].tooltip_text = Words.TOP_UP_TIP
 		fy -= Pal.BUTTON_H + 12
 		c["deploy"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
 		c["deploy"].text = "Set off"
@@ -314,7 +322,7 @@ func show_state(s) -> void:
 		settled += ("2" if sim.odds_settled(i) else "1") if sim.odds_ready(i) else "0"
 	@warning_ignore("integer_division")
 	var sig := "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s" % [str(sim.depth), str(sim.best_depth), str(sim.words) + str(sim.standing) + str(sim.weather) + str(int(sim.elapsed / 60.0)) + settled, 0,
-			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50]
+			int(sim.hp), sim.best_tier, int(sim.dps()), int(sim.armour()), sim.tree.size(), selected, str(sim.depot_cleared)] + "|%d|%s|%s|%s|%s|%d" % [sim.notes, str(sim.boss_armed), str(sim.bosses_beaten), str(sim.campaign_done()), str(sim.atlas), sim.atlas_points] + "|%s|%d|%s|%d" % [str(sim.insure_next), int(sim.cash) / 50, sim.top_up_mode, int(sim.odds_read(selected).get("runs", 0))]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -344,7 +352,8 @@ func show_state(s) -> void:
 			band.headline_under_title(not why.is_empty())
 			band.chips.visible = not why.is_empty()
 			if not why.is_empty():
-				band.chips.show_chips(why, 1, true)
+				band.chips.show_chips(why, 2, true)     # two rows for the hints (23 Oct)
+			band.chip_rows(band.chips._rows_used if not why.is_empty() else 1)
 		elif sim.level_gated(i) and (tiers.find(i) == 0 or int(sim.best_depth[i - 1]) > 0):
 			band.set_words("%s · Tier %d" % [Data.ZONES[zone]["name"], tier_n], Data.TIERS[i]["name"], "Locked", "Opens at level %d" % sim.site_gate(i), Pal.TEXT_3)     # its drops' level less one (19 Oct)
 			band.headline_under_title(false)
@@ -414,10 +423,12 @@ func show_state(s) -> void:
 			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
 			UI.style_button(c["boss"], false, "bad" if armed else "")
 		c["insure"].visible = is_open
-		var long_text: String = "Insured ✓" if sim.insure_next else "Insure kit · %s" % Fmt.money(sim.insure_cost(i))
-		c["insure"].text = long_text if UI.text_width(c["insure"], long_text) + 32 <= INNER else ("Insured ✓" if sim.insure_next else "Insure")
+		UI.fit_button(c["insure"], ["Insured ✓"] if sim.insure_next else ["Insure kit · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)).replace(" tins", ""), "Insure"])
 		c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
+		c["rig"].visible = is_open
+		c["rig"].disabled = sim.on_mission()
+		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode]])
 		if not is_open:
 			c["note"].text = ""
 		elif sim.hp < sim.max_hp() * 0.5:
@@ -559,6 +570,14 @@ func _depth(k: int, by: int) -> void:
 	acted.emit()
 
 
+## The rig at the gate's button: Fill up, Best grades only, Leave it, round again (23 Oct).
+func _rig(_k: int) -> void:
+	var modes: Array = sim.TOP_UP_MODES
+	sim.set_top_up(modes[(modes.find(sim.top_up_mode) + 1) % modes.size()])
+	_shown = ""
+	acted.emit()
+
+
 func _insure(_k: int) -> void:
 	sim.set_insure(not sim.insure_next)
 	_shown = ""
@@ -651,6 +670,31 @@ static func odds_reasons(s, i: int) -> Array:
 	var gear_lv: int = s.wear_of(int(s.effective(i)["level"]))
 	if s.level() < gear_lv:
 		out.append({"forms": ["Level %d; its gear needs level %d" % [s.level(), gear_lv], "Gear needs level %d" % gear_lv], "colour": "warn"})
+	# hints off the odds' own runs (23 Oct, parked item 7; Matt: "just hints in the form of chips", never the figures or
+	# how the odds are worked): what the body or the guns are short of
+	var g: Dictionary = s.odds_gap(i)
+	var lost: int = int(g.get("runs", 0)) - int(g.get("alive", 0))
+	if not g.is_empty() and lost > 0 and lost * 3 >= int(g["runs"]):
+		var hints: Array = []
+		if int(g["timed"]) > int(g["killed"]):
+			hints.append("Not enough damage")
+		else:
+			if not out.any(func(r): return str(r["forms"][0]).begins_with("HP ")):
+				hints.append("Not enough HP")
+			if float(g["phys_share"]) >= 0.35:
+				hints.append("Not enough armour")
+			if str(g["el_type"]) != "" and float(g["el_share"]) >= 0.35 and s.resist(str(g["el_type"])) < 0.5:
+				hints.append("Not enough %s resist" % str(g["el_type"]))
+			if float(g.get("lost_down", 0.0)) * 2.0 < float(g["pool"]):
+				hints.append("Not enough damage")
+			if s.meds_carried() > 0 and s.meds_carried() < 3:
+				hints.append("Not enough meds in the rig")
+		for h in hints:
+			out.append({"forms": [h, h.replace("Not enough ", "Low ").replace(" in the rig", "")], "colour": "warn"})
+	# and the one thing to do about it, in green: the site before this one, ground (Matt: "grind previous level")
+	var before: int = s.site_before(i)
+	if before >= 0 and not out.is_empty():
+		out.push_front({"forms": ["Grind %s first" % Words.mid(Data.TIERS[before]["name"]), "Grind %s" % Words.mid(Data.TIERS[before]["name"]), "Grind before"], "colour": "good"})
 	return out
 
 
@@ -688,7 +732,7 @@ func text_nodes() -> Array:
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())
 		out.append_array(c["intel"].text_nodes())
-		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"]]:
+		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:
