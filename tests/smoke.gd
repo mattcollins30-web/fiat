@@ -15389,6 +15389,19 @@ func _web_checks(main) -> void:
 	var bk = main._barracks
 	var wv = bk.web()
 	_check(wv != null and wv.visible and wv.size.x == Pal.GRID_W and wv.position.y == bk.LANES_Y, "the web is not in the lanes' place")
+	# 0.7.2 (Matt's 0.7.1 playtest): one starter a region - the elements' and the Pitch's as the classes'; a class's
+	# starter carries its emblem, bigger, and its rim label doesn't; the pictures from half zoom; the links inside the
+	# lit wheel brighter and thicker than outside it
+	for t in Data.ELEMENT_TREES + Data.TREES.filter(func(x): return not x.has("class")):
+		var n_entry: int = t["nodes"].filter(func(x): return x.get("entry", false)).size()
+		_check(n_entry == 1, "%s has %d starting nodes, not one" % [t["name"], n_entry])
+	for t in Data.TREES.filter(func(x): return x.has("class") and int(x.get("lane", 0)) == 0):
+		for nd in t["nodes"]:
+			if nd.get("entry", false):
+				var em = wv.emblem_of(t["name"])
+				_check(em == null or (wv.radius_of(nd) == wv.R_ENTRY and wv.entry_emblem(nd) == em), "%s's starter doesn't carry its emblem: r %.0f" % [t["name"], wv.radius_of(nd)])
+	_check(wv.PIC_ZOOM <= 0.5, "the pictures give way to glyphs from %.2f" % wv.PIC_ZOOM)
+	_check(wv.LINK_LIT_DIM.get_luminance() > wv.LINK_DIM.get_luminance() + 0.1 and wv.LINK_DIM.get_luminance() > Pal.CARD_LINE.get_luminance(), "the lit wheel's links don't stand off the dim ones")
 	# every node of every tree placed, and no two on each other
 	var ids: Array = []
 	for t in Data.TREES + Data.ELEMENT_TREES:

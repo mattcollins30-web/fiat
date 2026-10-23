@@ -6187,6 +6187,52 @@ difficulty and length, the endgame placeholders.
     playtest, with their node paths rewritten on the web.
 
 
+## 0.7.2: the 0.7.1 playtest's first five (23 Oct; Matt: "do those 5 - the playtest after as they are going to
+## impact my playtest")
+
+- The five below, built. 1: inside the class's lit wheel the disc is darker than the links (Pal.BG at 0.55, a faint
+  accent and a 1.5 px rim) and the links read LINK_LIT_DIM at 1.4x the width; outside it LINK_DIM, a step above the
+  old CARD_LINE so they hold against the backdrop. 2: tools/make_web_small_manifest.py - 104 small nodes and the 8
+  fillers, still-lifes to art/nodes/ by slug, no wiring needed (Matt: "art batch for item 2"); about 70 small nodes
+  (the Map's crews and codes, the Workshop's crafts, the papers' words) stay dots. 3: one starter a region for the
+  elements and the Pitch (data.gd _web_build: the first column's row-1 node isn't an entry; the rung reaches it);
+  every node carries "region". 4: PIC_ZOOM 0.8 → 0.5. 5: a class's starter draws its first lane's emblem at R_ENTRY
+  20; the class's rim label drops the emblem. Smoke asserts each; run 209 green. Reviewer: a 0.7.1 save that opened a
+  region from the old second starter strands it, and every keystone swap would refuse - SAVE_VERSION 6 (Matt: "I
+  don't care about saves, we never care if one gets broken"; CLAUDE.md's save rule says so now). VERSION 0.7.2.
+
+## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
+
+1. The class's wheel, highlighted: the lines between its nodes are far too faint to read (Matt: "selected class
+   highlighted means the lines connecting nodes is far too faint and really hard to read"). The warm disc under the
+   wheel and the backdrop behind it both sit under the links, which draw dim where a node isn't reachable yet; the
+   three together lose the lines. A drawing fix: the links over the lit wheel want a brighter, thicker stroke (or
+   the disc wants to be darker than the links, not warmer), checked against the backdrop.
+
+2. Most nodes have no art (Matt: "why are there no art in most of the nodes?", screenshot: the plain discs beside
+   Magpie and Haggler). The manifest's rule (22 Oct, agreed with the list): pictures for the notables, keystones and
+   capstones; small nodes and fillers stay dots. Counted 23 Oct: 366 named nodes, 176 with a picture, 190 without -
+   the small tier; Still air and Arc owed a re-roll; 22 of the 343 jobs didn't land. The choice after the playtest:
+   a second manifest for the 190 (a day of the batch), or dots with a glyph or a stat tint so they aren't blank.
+
+3. The elements' regions and the Pitch's need a single starting node each, as the classes have now (Matt: "elemental
+   trees and the pitches tree need a single starting node same as the classes"). Batch A gave each class one entry
+   (the first lane's first node, the second lane's first column linked to it); the elements and the Pitch kept their
+   two. The same builder change (data.gd _web_build / _web_wheel) for those regions; their nodes and costs stay.
+   Changes a path's cost by a point or two at the join, so it goes in before the balance phase.
+
+4. Zoomed out, the nodes' pictures give way to glyphs (Matt, screenshot of the whole web: "at a certain view distance
+   the icons revert to glyphs instead of art"). By design in batch A: PIC_ZOOM 0.8 draws the picture from that zoom
+   and the glyph under it. The pictures are 64 px pixel art, so under 0.8 they'd be drawn smaller than painted; the
+   call is whether a small picture still beats a glyph (likely yes down to about 0.5, with the filter nearest) - a
+   threshold change and a look, not a system.
+
+5. Each class's picture (the emblem beside its label on the outer rim) should sit on the class's first node instead,
+   so it's plain where that class's journey starts (Matt: "the art for each class needs to move from its outer rim to
+   be the first node of the tree so its clear where each classes node journey starts"). With item 3 every region has
+   one entry; the entry node draws the class's face or emblem as its picture, bigger than a notable, and the rim
+   label loses the emblem (keeps the words). A drawing change in web_view.
+
 ## Parked from the playtest (22 Oct, the web's settings; taken up after it)
 
 1. Training's canvas: the class you're on should have its region highlighted, subtly, so you know where you're

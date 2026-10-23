@@ -1987,6 +1987,11 @@ static func _web_build(src: Array) -> Array:
 					_web_link(nodes, last, f)
 					_web_link(nodes, f, station)
 				last = station
+		# one starter a region (23 Oct, Matt's 0.7.1 playtest: "elemental trees and the pitch's tree need a single starting
+		# node same as the classes"): the first column's row-0 node is the entry; the other first-column node reaches it
+		# by the rung, as the classes' second lane reaches theirs across
+		if not t.has("class") and cols.has(0) and cols[0].size() == 2:
+			nodes[cols[0][1]].erase("entry")
 		# the extras
 		for ex in WEB_EXTRA.get(t["name"], []):
 			var nd: Dictionary = ex.duplicate(true)
@@ -2009,6 +2014,7 @@ static func _web_build(src: Array) -> Array:
 		if t.get("class", "") != "":
 			_web_wheel(t, src, k)
 		for i in range(nodes.size()):
+			nodes[i]["region"] = t["name"]                      # the node knows its region (23 Oct: the entry's emblem)
 			assert(not nodes[i]["links"].is_empty() or not nodes[i].get("xlinks", []).is_empty(), "%s/%s links to nothing" % [t["name"], nodes[i]["name"]])     # the review: a lane's shape that leaves a node off the web
 		out.append(t)
 	return out

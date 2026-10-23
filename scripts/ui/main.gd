@@ -48,7 +48,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 5               # 5 (22 Oct): the web - the trees' ids, the elements' points; 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
+const SAVE_VERSION := 6               # 6 (23 Oct): one starter a region - a Pitch or element opened from its second node strands; 5 (22 Oct): the web - the trees' ids, the elements' points; 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)

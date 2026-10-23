@@ -53,7 +53,8 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   `C:\Users\mattc\AppData\Roaming\Fiat`; `tools\playtest.bat` / `playtest.flag` summarises one).
 - While iterating, one read a build is enough (`balance.flag` with `24 1`, about half the time); two for a final.
 - Old saves: no compatibility work. When the save's shape changes, bump `SAVE_VERSION` in scripts/ui/main.gd so the
-  old slot shows the incompatible-save warning.
+  old slot shows the incompatible-save warning. A change that would leave an old save wrong (not just a new shape)
+  gets the same bump, without asking: Matt never cares if a save breaks (23 Oct).
 - docs/status.md is Claude's: keep it current as the work goes. Docs Claude wrote are Claude's to update.
 
 ## The project manager (22 Oct, Matt: "I'm assigning you the official role of project manager ... carry versioning

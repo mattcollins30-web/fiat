@@ -1,0 +1,2273 @@
+{
+ "_readme": "The web's small nodes (23 Oct, Matt's 0.7.1 playtest): 108 still-lifes to art/nodes/, 64 px, the first manifest's style; web_view finds them by slug with no new wiring. The fillers are the last eight.",
+ "jobs": [
+  {
+   "out": "art/nodes/the_pitch.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98600,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a scuffed white football with its panels gone grey. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/long_walks.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98601,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of grey walking socks rolled into a ball. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/knowing_the_streets.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98602,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a folded paper street map, creased soft, the panels blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/zeroing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98603,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rifle's rear iron sight, the aperture ring and its two screws. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/circuits.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98604,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a stopwatch on a cord, the face blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/keen_eyes.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98605,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of small black folding binoculars, the lenses catching light. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/stashing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98606,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain dented biscuit tin with its lid half off and a rag inside. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/stalking.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98607,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single muddy boot print pressed into soft earth, cut out as a clod. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/breathing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98608,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a cloth face scarf, grey, loosely knotted. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/patience.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98609,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a camp stool of canvas and wood, folded. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/wind_reading.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98610,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a tuft of dry grass stems bending one way. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/long_shot.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98611,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single long brass rifle round standing on its base. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/lying_up.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98612,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rolled green groundsheet tied with twine. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/snares.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98613,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a loop of brass snare wire with its wooden peg. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/hedgerows.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98614,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a sprig of hawthorn with a few red berries. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/soft_ground.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98615,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a cut square of wet turf with a boot heel's dent. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/night_eyes.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98616,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small rubber torch with a red filter over the lens, off. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/snare_lines.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98617,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of three brass snares bundled together with string. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/knowing_the_land.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98618,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a hand-drawn field map on brown paper, the lines plain and no words. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/muscle.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98619,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single rusted iron dumbbell. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/gym.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98620,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a worn brown leather punchbag on a short chain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/broad_shoulders.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98621,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a black bomber jacket's padded shoulder, the seam showing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/weights.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98622,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of two black iron weight plates leaning together. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/thick_skin.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98623,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a square of thick black leather, scuffed, one edge turned. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/big_frame.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98624,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a wide black leather belt with a plain steel buckle, coiled. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/spoils.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98625,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a handful of loose British coins and a wristwatch. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/the_door.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98626,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a steel pub door's push plate with a worn brass handle, plain, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/heads_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98627,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a black knitted beanie hat, folded flat. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/eye_contact.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98628,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of round black sunglasses, one arm folded. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/bouncing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98629,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a brass door chain and its slide, unhooked. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/keep_back.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98630,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a red velvet rope's brass hook end, the rope frayed. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/triage.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98631,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a set of coloured paper triage tags on a steel ring, no writing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/fast_hands.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98632,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of blue nitrile gloves laid flat. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/kit_bag.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98633,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small green canvas medical pouch with a plain white patch. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/good_veins.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98634,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a blue elastic tourniquet strap with its plastic clip. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/stock_take.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98635,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a stack of three sealed gauze packets, plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/pressure.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98636,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rolled crepe bandage with a steel safety pin. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/pockets_checked.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98637,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a hi-vis jacket's chest pocket, the flap open. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/shifts.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98638,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain clock-in card and its steel punch clip, the card blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/rest_easy.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98639,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a thin grey hospital blanket folded square. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/mates_rates.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98640,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a mug of tea with a biscuit on the saucer. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/long_shift.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98641,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a half-drunk cardboard cup of coffee with a plastic lid. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/cold_tea.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98642,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a mug of tea gone cold, a skin on it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/discount.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98643,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a paper price ticket with a line through where the number was, blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/stripping.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98644,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of yellow-handled wire strippers. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/quick_fingers.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98645,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small flat-head screwdriver with a worn red handle. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/tools.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98646,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an adjustable spanner, rusted at the jaw. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/spare_parts.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98647,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a jam jar of loose screws and washers. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/fast_strip.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98648,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a cordless drill's bare battery pack. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/magpie_eye.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98649,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a jeweller's loupe on a cord. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/fencing.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98650,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a brown paper bag of mixed coins, the top rolled. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/contacts.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98651,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small black address book with a rubber band round it, no writing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/weighing_it_up.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98652,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small brass pocket balance with its weights. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/known_face.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98653,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a dog-eared playing card, the face down, plain back. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/fair_price.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98654,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain blank card tag on a loop of string. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/lucky_find.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98655,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a gold ring caked in dried dirt. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/moving_on.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98656,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of worn trainers tied together by the laces. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/road_legs.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98657,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a walking stick cut from a hedge, the bark worn where the hand goes. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/head_start.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98658,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bus timetable torn from a shelter, the columns blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/keep_moving.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98659,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bedroll strapped with a belt, slung. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/never_still.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98660,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a cheap plastic wristwatch with a cracked face, blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/wiry.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98661,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a coil of thin steel wire. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/luck.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98662,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a horseshoe, rusted, points up. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/found_tins.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98663,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of two tins of beans with the labels gone, dented. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/charmed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98664,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rabbit's foot keyring on a brass chain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/touch_wood.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98665,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short piece of sawn oak, the grain showing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/pockets.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98666,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of the turned-out pocket of a pair of jeans, the lining grey. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/four_leaf.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98667,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a four-leaf clover pressed flat. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/petrol.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98668,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a red steel jerrycan with a brass cap, scuffed. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/rags.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98669,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bundle of oily grey rags. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/siphoned.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98670,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a length of clear rubber tubing, coiled, a dark fluid in it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/wick.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98671,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a glass milk bottle with a rag stuffed in its neck. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/fumes.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98672,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a petrol can's open cap with a heat shimmer above it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/the_cold.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98673,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain hessian sack of road grit, split at one corner. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/frost.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98674,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a frosted windowpane corner with ice ferns on the glass. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/a_hard_winter.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98675,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a shovel blade with a crust of ice on it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/numb.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98676,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of fingerless wool gloves, grey. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/wind_chill.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98677,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a wet grey woollen scarf hanging stiff. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/the_rat_man.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98678,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small grey rat trap, the spring set. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/bait.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98679,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a paper twist of poisoned grain, blue, a few grains spilt. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/council_issue.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98680,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a council-grey plastic bait box with its lid shut, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/cumulative.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98681,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a brown glass bottle with a plain label, the cork out. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/slow_acting.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98682,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a dropper bottle of dark fluid, the dropper beside it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/live.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98683,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bare copper wire's stripped end, the strands splayed. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/charge.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98684,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a square lantern battery with two spring terminals. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/off_the_mains.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98685,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a wall socket with the face plate off and the wires showing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/amps.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98686,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a car battery's clamp on a cable, red. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/volts.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98687,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small analogue voltmeter, the needle swung, the face blank. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/blades.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98688,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a Stanley knife with the blade out. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/an_edge.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98689,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a grey whetstone with a dark wet patch. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/sharpened.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98690,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a kitchen knife ground thin, the edge bright. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/deep.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98691,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short-bladed knife with a dark stain near the hilt. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/nicked.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98692,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a razor blade, the old double-edged kind. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/butcher_s.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98693,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a meat cleaver on a scored wooden block. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/knuckles.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98694,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a brass knuckleduster, dull and worn. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/wraps.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98695,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a roll of white boxing hand wrap, the end loose. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/half_a_brick.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98696,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of half a red house brick, broken edge towards you. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/thick_skull.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98697,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a black cycle helmet with a crack in the shell. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/weight_behind_it.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98698,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a short length of lead pipe. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/sovereign_rings.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98699,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of three gold sovereign rings. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/hardy.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98700,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a tin of plain biscuits, the lid dented. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/keen.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98701,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small pocket knife, open. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/brisk.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98702,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain brass whistle on a lanyard. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/mending.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98703,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a reel of thread with a needle through it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/tough.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98704,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a square of canvas patched with a darker square. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/lucky.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98705,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single playing die, worn. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/nimble.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98706,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bent hair grip and a padlock, the lock open. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  },
+  {
+   "out": "art/nodes/proofed.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 98707,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain round tin of black wax boot polish, the lid off. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background."
+  }
+ ]
+}

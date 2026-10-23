@@ -29,6 +29,8 @@ const R_NOTABLE := 15.0
 const R_KEYSTONE := 18.0
 const R_CAPSTONE := 22.0
 const LINK_W := 2.0
+const LINK_DIM := Color("4a5059")       # a link to nothing reached yet (23 Oct: CARD_LINE was lost on the backdrop and the lit disc)
+const LINK_LIT_DIM := Color("7a8290")   # the same inside the class's lit wheel (Matt: "far too faint and really hard to read")
 const YARD_TONE := Color("8fb3d9")
 ## The web lies wide, as the canvas is (slice 1): the Pitch across the centre, three elements' lanes out to the left
 ## and three to the right, the classes' beyond them. [the entry, the lane's direction].
@@ -43,7 +45,8 @@ const R_CLASS := 740.0
 const WHEEL_OUT := 3.4 * STEP
 const WHEEL_GLOW := 1.3 * STEP     # the disc past the tracks
 const R_NOTABLE_PIC := 17.0        # a notable's disc with a picture in it (the art, 23 Oct: 15 read as a blob)
-const PIC_ZOOM := 0.8              # the pictures draw from here; the glyph before (and where no picture is)
+const PIC_ZOOM := 0.5              # the pictures draw from here; the glyph before (and where no picture is). 0.8 till 23 Oct (Matt: the glyphs read worse than a small picture)
+const R_ENTRY := 20.0              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
 const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
@@ -379,6 +382,11 @@ func backdrop_slug() -> String:
 	return "training"
 
 
+## Whether a region is the class on show's (its wheel lit).
+func _lit_wheel(tn: String) -> bool:
+	return str(_trees.get(tn, {}).get("class", "")) != "" and str(_trees[tn]["class"]) == str(sim.cls)
+
+
 ## A region's emblem beside its label (23 Oct, the manifest): art/web/region_<slug>.png, drawn EMBLEM tall.
 const EMBLEM := 26.0
 func emblem_of(tn: String) -> Texture2D:
@@ -388,7 +396,17 @@ func emblem_of(tn: String) -> Texture2D:
 func radius_of(nd: Dictionary) -> float:
 	if nd.get("notable", false) and not nd.get("keystone", false) and not nd.get("capstone", false) and picture(picture_slug(nd)) != null:
 		return R_NOTABLE_PIC
+	if nd.get("entry", false) and entry_emblem(nd) != null:
+		return R_ENTRY
 	return _radius_plain(nd)
+
+
+## A class's entry node carries the class's emblem (23 Oct): the first lane's region emblem, moved off the rim label.
+func entry_emblem(nd: Dictionary) -> Texture2D:
+	var tn: String = str(nd.get("region", ""))
+	if tn == "" or not _trees.has(tn) or not _trees[tn].has("class"):
+		return null
+	return emblem_of(tn)
 
 
 static func _radius_plain(nd: Dictionary) -> float:
@@ -427,12 +445,13 @@ func _draw() -> void:
 				continue
 			var sa: Dictionary = _state.get(a, {})
 			var sb: Dictionary = _state.get(b, {})
-			var col: Color = Pal.CARD_LINE
+			var lit: bool = _lit_wheel(str(a).get_slice("/", 0))     # inside the class's lit wheel the dim links read brighter and thicker (23 Oct)
+			var col: Color = LINK_LIT_DIM if lit else LINK_DIM
 			if sa.get("taken", false) and sb.get("taken", false):
 				col = tone_of(str(a).get_slice("/", 0))
 			elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
-				col = Pal.TEXT_2
-			draw_line(pa, pb, col, LINK_W * maxf(0.6, zoom), true)
+				col = Pal.TEXT
+			draw_line(pa, pb, col, LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom), true)
 	draw_between(view)
 	# the nodes
 	for id in layout:
@@ -451,7 +470,7 @@ func _draw() -> void:
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var align: int = int(_axis[tn].get("align", 0))     # -1: the words end at the point; 1: start there; 0: centred
-		var em: Texture2D = emblem_of(tn)
+		var em: Texture2D = emblem_of(tn) if str(_axis[tn].get("class", "")) == "" else null     # a class's emblem is on its entry node (23 Oct)
 		var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if em != null else 0.0
 		var full: float = w + (es + 6.0 if em != null else 0.0)     # the emblem leads the words
 		var x0: float = p.x - full if align < 0 else (p.x if align > 0 else p.x - full / 2.0)
@@ -471,8 +490,9 @@ func draw_under(view: Rect2) -> void:
 			var c: Vector2 = to_screen(ax["wheel"])
 			var r: float = ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0) * ROW + WHEEL_GLOW) * zoom
 			if view.grow(r).has_point(c):
-				draw_circle(c, r, Color(Pal.ACCENT, 0.05))
-				draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.22), 1.0, true)
+				draw_circle(c, r, Color(Pal.BG, 0.55))        # darker than the links, not warmer (23 Oct: the warm wash lost the lines)
+				draw_circle(c, r, Color(Pal.ACCENT, 0.04))
+				draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
 	for tn in _trees:
 		var t: Dictionary = _trees[tn]
 		if not t.has("element"):
@@ -563,6 +583,8 @@ func _draw_node(id: String, p: Vector2) -> void:
 		draw_arc(p, r, 0.0, TAU, 32, line, w, true)
 	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
 	var pic: Texture2D = picture(picture_slug(nd)) if (nd.get("notable", false) or diamond) else null
+	if pic == null and nd.get("entry", false) and _trees.get(tn, {}).has("class"):
+		pic = emblem_of(tn)                     # the class's emblem on its entry (23 Oct)
 	if pic != null and zoom >= PIC_ZOOM:
 		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
 		g = minf(g, r * 1.7)
