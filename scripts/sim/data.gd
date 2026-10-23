@@ -3007,6 +3007,8 @@ const STORY_BEATS := [
 ]
 const STORY_DROP := 0.3                    # the pass (20 Oct): 0.15 left the story and the lorry never in 24 h on most builds (the reach walls by hour 6-10 and its signals stop: the story has to land before it); 0.3 had the story at 4.5-6 h on the six-hour reads; 0.5 had the story and its lorry at 4.7 h on the bot, 1.8 h by hand (the gate 10-13 h)
 const SIGNAL_PAPERS_HOME := 2               # a signal's run home brings this many papers at the least (18 Oct, Matt)
+const PILE_CAP := 60                        # the Radio's pile holds this many (23 Oct, parked item 9: it had no top - the pass's bot piled
+                                            # 28,000; a long session hundreds); past it the plainest plain paper goes, never Kev's
 
 ## The rebuild (18 Oct, docs/design/rebuild.md; Matt: "a reason to keep grinding past the lorry"): materials from runs,
 ## the town's places put back with them, and the order's true pinnacles behind them. Every number here is a

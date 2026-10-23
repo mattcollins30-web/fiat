@@ -180,6 +180,7 @@ const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
 const SIGNAL_LOST := "The signal's gone with the run"
 const SIGNAL_PAPERS := "Off the signal, for the Radio: %s"
+const PILE_FULL := "The pile's at %d: the plainest paper went on the fire."     # the Radio's pile at its cap (23 Oct)
 const RADIO_READ := "The Radio reads the papers you hold: %d new to the drawer"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [

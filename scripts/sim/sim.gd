@@ -846,6 +846,21 @@ func incoming_rate(t: Dictionary, on_you: int, chilled := false) -> float:
 	return total * ((1.0 - chill_amount()) if chilled else 1.0) * (Data.MELEE_INCOMING if melee() else 1.0)
 
 
+## What a crowd on you takes off their fire (23 Oct, Matt's compare: the Doorman's Jacket read a downgrade - its rule
+## was the fight's alone, the body's figure never saw it): Bodyline, the crowd_less affixes, the Jacket, with three or
+## more on you. The fight and survival_value read the same.
+func crowd_mult(on_you: int) -> float:
+	if on_you < 3:
+		return 1.0
+	var m := 1.0
+	if has_node("bodyline"):
+		m *= Data.FX["node/bodyline"]
+	m *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
+	if has_rule("doormans"):
+		m *= Data.FX["rule/doormans"]
+	return m
+
+
 ## A dot's pool grows by a share of what landed and drains over its seconds;
 ## stacks cap the pool. `dots` is {type: pool}.
 func _dot_add(dots: Dictionary, ty: String, landed: float, rate_cap: float) -> void:
@@ -5546,6 +5561,30 @@ func _sweep_papers() -> void:
 			stash.erase(it)
 			_removed += 1
 			papers.append(it)
+	_pile_trim()
+
+
+## The pile at its cap (23 Oct, parked item 9): past PILE_CAP the plainest plain paper goes - the lowest rarity, the
+## oldest of those - never Kev's; said once a trim.
+func _pile_trim() -> void:
+	var over: int = papers.size() - Data.PILE_CAP
+	if over <= 0:
+		return
+	var plain: Array = []                       # [rarity, place] - the plainest first, the oldest of a rarity first
+	for i in range(papers.size()):
+		if story_of(papers[i]) < 0:
+			plain.append([int(papers[i].get("rarity", 0)), i])
+	plain.sort_custom(func(a, b): return a[0] < b[0] if a[0] != b[0] else a[1] < b[1])
+	var went: int = mini(over, plain.size())    # sorted once and sliced (the review: a 28k-paper save trimmed one at a time)
+	var gone: Array = []
+	for k in range(went):
+		gone.append(plain[k][1])
+	gone.sort()
+	gone.reverse()                              # the places from the back so the front's hold
+	for i in gone:
+		papers.remove_at(i)
+	if went > 0 and not _dry_on:
+		log_event(Words.PILE_FULL % Data.PILE_CAP)
 
 
 ## The papers a signal can be made of: the Radio's pile.
@@ -7030,12 +7069,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			incoming = 0.0                     # the first two seconds of a gang land on the underlay
 	elif not m["fresh"]:
 		m["grace"] = 0.0
-	if on_you >= 3 and has_node("bodyline"):
-		incoming *= Data.FX["node/bodyline"]
-	if on_you >= 3:
-		incoming *= 1.0 - _affix_sum("crowd_less_pct") / 100.0
-	if on_you >= 3 and has_rule("doormans"):
-		incoming *= Data.FX["rule/doormans"]
+	incoming *= crowd_mult(on_you)
 	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
@@ -8597,7 +8631,8 @@ func survival_value(fight := -1.0) -> float:
 	var t := effective(i)
 	if fight <= 0.0:
 		fight = front_fight()
-	var took: float = incoming_rate(t, contact(t)) * fight
+	var on_you: int = contact(t)
+	var took: float = incoming_rate(t, on_you) * crowd_mult(on_you) * fight     # the crowd's rules too (23 Oct)
 	var back: float = max_hp() + regen_rate() * fight + _affix_sum("life_per_kill") * float(t["pool"])
 	return back / maxf(took, 0.000001)       # an easy front still reads the armour (a floor of 1 HP hid it: the review)
 

@@ -6450,4 +6450,16 @@ pass; the reviewer on the code):
   in (the key's widest case; a picture's load quiet where a clone has no import cache).
   - For Matt: web_key.gd has no .uid yet (the editor writes it); the shot's "Can't add child" line in the cloud
     render is the shot script's, not the game's.
+- Batch B, the sim pass (item 11 of the 22 Oct list; item 9 of the pre-playtest list). The compare's discrepancy:
+  the Doorman's Jacket's rule (a quarter off their fire with three or more on you) lived in the fight alone; the
+  body's figure (survival_value, the compare's verdict and odds delta) never saw it, so 42 armour and 20 HP lost to
+  0.4 HP/s one way and the odds delta read a different mix each way round. sim.crowd_mult(on_you) - Bodyline, the
+  crowd_less affixes, the Jacket's rule - read by the fight and survival_value alike; the verdict is one figure
+  either way now. The Radio's pile capped at Data.PILE_CAP 60 (the pass's bot piled 28k papers in a day): past it
+  the plainest plain papers go - lowest rarity, oldest first, sorted once and sliced (the review) - never Kev's;
+  one log line a trim (Words.PILE_FULL), the Radio's title "THE PAPERS · n OF 60". Smoke: the vest with the
+  Jacket's rule reads better by the rule's share with three on you and the same with fewer; the cap holds 60, the
+  rare and Kev's stay, the oldest plainest go first; run 60 green. Reviewer clean; its two notes: the trim
+  one-at-a-time was O(n^2) on a 28k save (now sort-and-slice); the cap bites on signal_papers() reads, not every
+  append (fine - every reader goes through it).
 

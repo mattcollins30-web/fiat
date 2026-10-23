@@ -14772,6 +14772,19 @@ func _try_on_checks(main) -> void:
 	var s0: float = sim.survival_value()
 	_check(sim.survival_gain(regen_hat) > 0.0 and sim.compare(regen_hat) == 1, "a hard hat with +%.0f HP/s over a plain one: survival %+.3f, verdict %d" % [rg, sim.survival_gain(regen_hat), sim.compare(regen_hat)])
 	_check(is_equal_approx(sim.survival_value(), s0), "trying the regen hat on moved the kit's own figure: %.3f against %.3f" % [sim.survival_value(), s0])
+	# a unique's rule on the body counts in its figure (23 Oct, Matt's compare: the Doorman's Jacket read a downgrade to
+	# lighter plates - its quarter off with three on you was the fight's alone): the same vest with the Jacket's rule
+	# reads better by the rule's share where three are on you, the same where fewer are
+	var ruled: Dictionary = sim._plain("Armour", "Stab vest")
+	ruled["rule"] = "doormans"
+	var front_t: Dictionary = sim.effective(sim.front_tier())
+	var on_you: int = sim.contact(front_t)
+	var with_rule: float = sim._try(ruled, sim.survival_value)
+	var plain_v: float = sim._try(vest, sim.survival_value)
+	if on_you >= 3:
+		_check(is_equal_approx(snappedf(with_rule / plain_v, 0.01), snappedf(1.0 / Data.FX["rule/doormans"], 0.01)), "the Jacket's rule isn't in the body's figure: %.3f against %.3f with %d on you" % [with_rule, plain_v, on_you])
+	else:
+		_check(is_equal_approx(with_rule, plain_v), "the Jacket's rule counted with under three on you: %.3f against %.3f" % [with_rule, plain_v])
 	var hd: Array = PickPanel.deltas_for(sim, regen_hat, hat)
 	_check(not hd.is_empty() and float(hd[0][0]) > 0.0 and str(hd[0][1]).ends_with("odds"), "the helmet's deltas don't lead with the survival: %s" % str(hd))
 	sim.equipped["Helmet"] = regen_hat
@@ -16570,7 +16583,29 @@ func _paper_pile_checks(_main) -> void:
 	var s3 = Sim.new()
 	s3.load_dict(d3)
 	_check(not s3.contracts.any(func(c): return str(c["kind"]) == "papers"), "an old save's papers contract survived the load")
-	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted, old contracts rolled" % Data.SIGNAL_PAPERS_HOME)
+	# the pile's cap (23 Oct, parked item 9): past PILE_CAP the plainest plain papers go, the rarest and Kev's stay
+	s.papers = []
+	var pages0: Array = s.book_pages() if s.has_method("book_pages") else []
+	var page_name: String = str(pages0[0]) if not pages0.is_empty() else str(Data.BASES[Data.PAPER][0]["name"])
+	for i in range(Data.PILE_CAP + 10):
+		var pp: Dictionary = s._plain(Data.PAPER, page_name)
+		pp["rarity"] = 2 if i % 7 == 0 else (1 if i % 2 == 0 else 0)
+		s.papers.append(pp)
+	var kev_kept := -1
+	if not kev_names.is_empty():
+		var kp: Dictionary = s._plain(Data.PAPER, str(kev_names[0]))
+		kev_kept = int(kp["id"])
+		s.papers.append(kp)
+	var rare_before: int = s.papers.filter(func(x): return int(x["rarity"]) == 2).size()
+	var plain_ids: Array = s.papers.filter(func(x): return int(x["rarity"]) == 0).map(func(x): return int(x["id"]))
+	var seen: Array = s.signal_papers()
+	var plain_left: Array = seen.filter(func(x): return int(x["rarity"]) == 0).map(func(x): return int(x["id"]))
+	_check(plain_left == plain_ids.slice(plain_ids.size() - plain_left.size()), "the trim didn't take the oldest of the plainest first")
+	_check(seen.size() == Data.PILE_CAP, "the pile holds %d past its cap of %d" % [seen.size(), Data.PILE_CAP])
+	_check(seen.filter(func(x): return int(x["rarity"]) == 2).size() == rare_before, "the trim took a rare paper")
+	_check(kev_kept < 0 or seen.any(func(x): return int(x["id"]) == kev_kept), "the trim took Kev's paper")
+	_check(seen.filter(func(x): return int(x["rarity"]) == 0).size() * 2 < Data.PILE_CAP, "the plainest didn't go first")
+	print("the Radio's pile ok: a paper home and Kev's go to it, the deeds stay, an old save moves, a signal beaten brings %d, a death or a loss none; the top-up shallow, Kev's not counted, old contracts rolled; the cap %d" % [Data.SIGNAL_PAPERS_HOME, Data.PILE_CAP])
 
 
 

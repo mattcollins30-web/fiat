@@ -721,7 +721,7 @@ func _show_papers() -> void:
 	var papers: Array = sim.signal_papers()
 	var pages: int = maxi(1, ceili(float(papers.size()) / PAPERS_MAX))
 	paper_page = clampi(paper_page, 0, pages - 1)
-	UI.fit(_papers_title, ["THE PAPERS · %d" % papers.size()])
+	UI.fit(_papers_title, ["THE PAPERS · %d OF %d" % [papers.size(), Data.PILE_CAP], "THE PAPERS · %d" % papers.size()])     # the pile's cap (23 Oct)
 	# the two kinds, each with its count of the three (16 Oct): a story piece never hides that the plain ones are short
 	var plain: int = papers.filter(func(x): return sim.story_of(x) < 0).size()
 	var story: int = sim.story_held().size()
