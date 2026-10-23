@@ -321,7 +321,7 @@ func _init() -> void:
 	move_child(_figs[2]["rect"], _plate.get_index() + 1)
 	# the sky (23 Oct, parked item 8): night's and fog's wash and the rain in the air between the gang and the wall,
 	# under the wall, the hands, the bars and the numbers
-	_sky = SkyLayer.new(Vector2(W, H))
+	_sky = SkyLayer.new(Vector2(W, H), true)     # the fight's fog thinner (23 Oct)
 	add_child(_sky)
 	_cover = _rect(null)
 	_cover_fill = _rect(null)

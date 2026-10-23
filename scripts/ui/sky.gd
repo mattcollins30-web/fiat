@@ -6,8 +6,38 @@ extends Control
 ## with the gusts. Nothing here changes a number; the words on the cards are the sim's as before.
 
 const NIGHT := Color(0.04, 0.07, 0.2, 0.52)
-const FOG := Color(0.77, 0.79, 0.82, 0.34)
-const FOG_BAND := Color(0.86, 0.88, 0.9, 0.22)        # heavier at the top and the foot
+# the fog (23 Oct, Matt: "the fog needs some work on the map, it's drawing weirdly" - a flat sheet and two hard bands):
+# banks of it, two layers of one seamless noise drifting at their own speeds, thick in places and clear in others,
+# over a faint tint, so the painting keeps its contrast. A shader on TIME: nothing ticks on the CPU, and hidden it
+# isn't drawn. The Map's: MAP_FOG; the fight's thinner and a little quicker (FIGHT_FOG), under the figures.
+const FOG_TINT := Color(0.84, 0.863, 0.894)
+const MAP_FOG := {"tile_a": 870.0, "tile_b": 512.0, "drift_a": Vector2(9.0, 2.0), "drift_b": Vector2(15.0, -1.5), "max_a": 0.46, "max_b": 0.3, "base": 0.035}
+const FIGHT_FOG := {"tile_a": 666.0, "tile_b": 410.0, "drift_a": Vector2(16.0, 1.5), "drift_b": Vector2(26.0, -1.0), "max_a": 0.36, "max_b": 0.24, "base": 0.035}
+const FOG_SHADER := """
+shader_type canvas_item;
+uniform sampler2D noise : repeat_enable, filter_linear;
+uniform vec2 px_size = vec2(1018.0, 844.0);
+uniform vec3 tint = vec3(0.84, 0.863, 0.894);
+uniform float tile_a = 870.0;
+uniform float tile_b = 512.0;
+uniform vec2 drift_a = vec2(9.0, 2.0);
+uniform vec2 drift_b = vec2(15.0, -1.5);
+uniform float max_a = 0.46;
+uniform float max_b = 0.3;
+uniform float base = 0.035;
+// a bank where the noise is high: nothing under 0.46, the whole bank by 0.76, eased
+float bank(float n) {
+	float a = clamp((n - 0.46) / 0.3, 0.0, 1.0);
+	return a * a * (3.0 - 2.0 * a);
+}
+void fragment() {
+	vec2 p = UV * px_size;
+	float a = bank(texture(noise, (p - TIME * drift_a) / tile_a).r) * max_a;
+	float b = bank(texture(noise, (p - TIME * drift_b) / tile_b + vec2(0.37, 0.61)).r) * max_b;
+	COLOR = vec4(tint, 1.0 - (1.0 - base) * (1.0 - a) * (1.0 - b));     // the tint, then the two banks over it
+}
+"""
+static var _fog_noise: NoiseTexture2D
 const RAIN_WASH := Color(0.08, 0.11, 0.16, 0.32)
 const RAIN_COLOUR := Color(0.82, 0.88, 0.97, 0.7)
 # Greenhorn's figures, for a 1920 x 1080 view: the count scales with the view's area, the streak with its height
@@ -22,31 +52,31 @@ var night := false
 var weather := ""
 var _night: ColorRect
 var _fog: ColorRect
-var _fog_top: ColorRect
-var _fog_foot: ColorRect
 var _wash: ColorRect
 var _light: CPUParticles2D
 var _heavy: CPUParticles2D
 var _t := 0.0
 
 
-func _init(sz: Vector2) -> void:
+func _init(sz: Vector2, thin := false) -> void:
 	size = sz
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
 	_night = _rect(NIGHT)
 	_wash = _rect(RAIN_WASH)
-	_fog = _rect(FOG)
-	_fog_top = _rect(FOG_BAND)
-	_fog_top.size.y = sz.y * 0.22
-	_fog_foot = _rect(FOG_BAND)
-	_fog_foot.size.y = sz.y * 0.22
-	_fog_foot.position.y = sz.y - _fog_foot.size.y
+	_fog = _rect(Color.WHITE)
+	_fog.material = _fog_material(FIGHT_FOG if thin else MAP_FOG)
 	_light = _rain(LIGHT)
 	_heavy = _rain(HEAVY)
 	add_child(_light)
 	add_child(_heavy)
 	set_sky(false, "")
+
+
+## Godot turns _process on at ready for a script that has one (23 Oct, the fans: the Map's and the fight's layers
+## ticked every frame dry); off again unless it's raining.
+func _ready() -> void:
+	_apply()
 
 
 func _rect(c: Color) -> ColorRect:
@@ -57,6 +87,30 @@ func _rect(c: Color) -> ColorRect:
 	r.visible = false
 	add_child(r)
 	return r
+
+
+## The fog's shader, its noise made once for both layers (seamless, so the drift never shows an edge).
+func _fog_material(cfg: Dictionary) -> ShaderMaterial:
+	if _fog_noise == null:
+		var fn := FastNoiseLite.new()
+		fn.noise_type = FastNoiseLite.TYPE_PERLIN
+		fn.frequency = 4.0 / 256.0
+		fn.fractal_octaves = 3
+		_fog_noise = NoiseTexture2D.new()
+		_fog_noise.width = 256
+		_fog_noise.height = 256
+		_fog_noise.seamless = true
+		_fog_noise.noise = fn
+	var sh := Shader.new()
+	sh.code = FOG_SHADER
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("noise", _fog_noise)
+	mat.set_shader_parameter("px_size", size)
+	mat.set_shader_parameter("tint", Vector3(FOG_TINT.r, FOG_TINT.g, FOG_TINT.b))
+	for k in cfg:
+		mat.set_shader_parameter(k, cfg[k])
+	return mat
 
 
 ## A rain layer, Greenhorn's _build_falling: a pixel streak, falling from a line above the top, leaning LEAN.
@@ -98,8 +152,6 @@ func set_sky(is_night: bool, w: String) -> void:
 	var foggy: bool = w == "Fog"
 	_wash.visible = raining
 	_fog.visible = foggy
-	_fog_top.visible = foggy
-	_fog_foot.visible = foggy
 	_apply()
 
 

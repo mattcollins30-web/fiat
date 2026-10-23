@@ -6236,6 +6236,9 @@ difficulty and length, the endgame placeholders.
   243 and 215). The bot's run can leave the gun dry; the settle loop fed a box of rounds and took it out again before
   the level-90 read, and a dry gun loses all eight there. The box now comes out after it. Reviewer: pack once, not a
   frame at a time while panning (done); the Map's and Pitch's counts were trivial without a sim (lent one). Run 216.
+- Parked (Matt, after 0.7.3: "park this until the art gen has done"): the fans still spin up from game start. The
+  art batch's headless Godot is running and uncapped; Matt restarts the laptop after it to rule that out, then we
+  look again (next suspects: the sky's _process on when it isn't raining, the title screen).
 - Parked, not a playtest item: a runner with an empty gun reads 0% and the odds chips don't say why; a "No rounds"
   chip beside "No meds" would. For after Matt's playtest.
 

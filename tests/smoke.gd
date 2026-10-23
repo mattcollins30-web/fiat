@@ -6292,6 +6292,26 @@ func _playtest_checks(main) -> void:
 	main._missions._shown = ""
 	main.refresh()
 	_check(not bool(mv0._sky.showing()["rain"]) and not mv0._sky.is_processing(), "dry again and the Map still rains: %s" % str(mv0._sky.showing()))
+	# and Godot's ready doesn't turn the tick back on (23 Oct, the fans: it did, every frame, dry). The smoke never
+	# runs a frame, so it's done by hand: the engine's set_process(true), then the script's _ready (not the
+	# notification - Control's own ready handler would connect twice when the real one comes at the end)
+	mv0._sky.set_process(true)
+	mv0._sky._ready()
+	_check(not mv0._sky.is_processing(), "the Map's sky ticks every frame with no rain")
+	# the fog as banks (23 Oct, Matt: "drawing weirdly" - a flat sheet and two hard bands): one layer, its drifting
+	# shader on the seamless noise, the Map's figures; nothing ticks on the CPU for it; gone when it lifts
+	for z in range(Data.ZONES.size()):
+		sim.weather[z] = "Fog"
+	main._missions._shown = ""
+	main.refresh()
+	var fog_mat = mv0._sky._fog.material
+	_check(bool(mv0._sky.showing()["fog"]) and fog_mat is ShaderMaterial and fog_mat.get_shader_parameter("noise") is NoiseTexture2D and (fog_mat.get_shader_parameter("noise") as NoiseTexture2D).seamless and is_equal_approx(float(fog_mat.get_shader_parameter("max_a")), float(mv0._sky.MAP_FOG["max_a"])) and not mv0._sky.is_processing(), "fog on every zone and the Map's fog isn't the drifting banks: %s" % str(mv0._sky.showing()))
+	_check(mv0._sky.get_children().filter(func(n): return n is ColorRect and n.visible and n != mv0._sky._night).size() == 1, "the Map's fog shows more than its one layer (the old bands?)")     # night's wash stacks with it (the review)
+	for z in range(Data.ZONES.size()):
+		sim.weather[z] = ""
+	main._missions._shown = ""
+	main.refresh()
+	_check(not bool(mv0._sky.showing()["fog"]) and not mv0._sky._fog.visible, "the fog lifted and the Map still shows it")
 	sim.weather = held_w0
 	sim.weather_at = held_at0
 	main._missions._shown = ""
@@ -13425,6 +13445,12 @@ func _fill_up_checks(main) -> void:
 		main.refresh()
 		_check(bool(rn._view._sky.showing()["rain"]) and rn._view._sky._light.emitting and rn._view._sky._light.amount >= 24, "rain set and the fight's layer isn't raining: %s" % str(rn._view._sky.showing()))
 		_check(rn._view._sky.get_index() < rn._view._cover.get_index() and rn._view._sky.get_index() > rn._view._plate.get_index(), "the fight's sky isn't between the plate and the wall")
+		# the fight's fog thinner than the Map's (23 Oct)
+		for z in range(Data.ZONES.size()):
+			sim.weather[z] = "Fog"
+		main.refresh()
+		var fmat = rn._view._sky._fog.material
+		_check(bool(rn._view._sky.showing()["fog"]) and fmat is ShaderMaterial and is_equal_approx(float(fmat.get_shader_parameter("max_a")), float(rn._view._sky.FIGHT_FOG["max_a"])) and float(rn._view._sky.FIGHT_FOG["max_a"]) < float(rn._view._sky.MAP_FOG["max_a"]), "fog set and the fight's isn't its thinner banks: %s" % str(rn._view._sky.showing()))
 		sim.weather = held_w
 		sim.weather_at = held_at
 		main.refresh()
