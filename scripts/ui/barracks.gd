@@ -19,6 +19,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Chips := preload("res://scripts/ui/chips.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
 const WebView := preload("res://scripts/ui/web_view.gd")
+const WebKey := preload("res://scripts/ui/web_key.gd")
 
 const PAD := 20
 # the header: the face, the class and trait, the points free, the class's line; the classes top right
@@ -106,6 +107,7 @@ var _class_cards: Array = []       # a card a past: {face, name, tag, lines[]}
 var _face_q: Panel                 # no past yet: a ? in the face's place
 var _web                            # the web (22 Oct): every tree as a region of one canvas, in the lanes' place
 var _web_buttons: Array = []       # over the web's corner: the whole web, the class's region, the Pitch
+var _key: WebKey                   # the points key (23 Oct): every pool's free points and the elements' meters, over the canvas's corner
 var _find: LineEdit                # "Find a perk" (22 Oct, slice 2): typing centres the web on the first name that fits
 var _also_panel: Panel
 var _also_head: Label
@@ -221,6 +223,9 @@ func _build_web() -> void:
 		b.size.x = w
 		_web_buttons.append(b)
 		x += w + 6.0
+	_key = WebKey.new()
+	_key.position = Vector2(12.0, LANES_Y + LANES_H - _key.size.y - 12.0)
+	add_child(_key)
 	_find = LineEdit.new()
 	_find.position = Vector2(x + 6.0, LANES_Y + 10)
 	_find.size = Vector2(200, 30)
@@ -458,8 +463,10 @@ func show_state(s) -> void:
 	for b in _web_buttons:
 		b.visible = not pages
 	_web.selected = selected
+	_key.visible = not pages
 	if not pages:
 		_web.show_state(sim)
+		_key.show_state(sim)
 	_show_pages(pages)
 	_show_also()
 	_show_sum([])
@@ -472,12 +479,15 @@ func _show_head() -> void:
 	_face.visible = faced
 	_face_q.visible = not faced
 	UI.fit(_kicker, [("Training · %s" % td["name"]) if not td.is_empty() else "Training", "Training"])     # the class is the card's and the panel's (18 Oct, said once)
-	var free: int = sim.points_free()
-	_points.text = "%d of %d" % [free, sim.training_points]
+	# every pool's points free in one figure (23 Oct, the key): the class's, the Pitch's, the ring's, the elements'
+	var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()
+	for el in Data.TYPES:
+		free += maxi(0, sim.element_free(el))
+	_points.text = "%d" % free
 	_points.add_theme_color_override("font_color", Pal.ACCENT if free > 0 else Pal.TEXT_2)
 	_unit.position.x = _points.position.x + ceilf(UI.text_width(_points, _points.text)) + 10
 	_unit.size.x = _kicker.position.x + _kicker.size.x - _unit.position.x
-	UI.fit(_unit, ["point%s free" % ("" if sim.training_points == 1 else "s"), "free", ""])
+	UI.fit(_unit, ["point%s free across the web · the key says where" % ("" if free == 1 else "s"), "point%s free across the web" % ("" if free == 1 else "s"), "free", ""])
 	_class_line.text = ""                  # the class's sentence is its card's tooltip now (14 Oct); the notice is the line
 	_class_line.visible = false
 	for k in range(Data.CLASSES.size()):

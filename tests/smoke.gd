@@ -659,7 +659,7 @@ func _init() -> void:
 	var says_gain: bool = node_chips.any(func(x): return str(x).contains("+%.0f" % float(pitch_gain[0])) and (str(x).contains("a second") or str(x).contains("/s")))
 	_check(says_gain == (float(pitch_gain[0]) >= 0.5), "The Pitch/0 adds %.1f a second; its chips read %s" % [float(pitch_gain[0]), str(node_chips)])
 	# the points read "N of M points free" top right, the panel says whose the node is, and no node's words are the old "for every runner the Yard sends"
-	_check(main._barracks._points.text.begins_with("%d of %d" % [sim.points_free(), sim.training_points]), "the points line reads '%s'" % main._barracks._points.text)
+	_check(main._barracks._points.text == "%d" % _web_free(sim), "the points line reads '%s' (every pool's free, 23 Oct)" % main._barracks._points.text)
 	_check(not main._barracks._past.visible, "a node's strip still carries the runners before")
 	_sum_strip_check(main)
 	_check(not main._barracks._words.text.contains("the Pitch sends"), "a plain node still says 'for every runner the Pitch sends'")
@@ -2434,11 +2434,32 @@ func _webs_traits(main) -> void:
 	# time, the rest touching a node trained along a link; a lane's links run to both of the next column and across its own
 	# slice 2: a lane is two rails with a filler between each pair of columns (the ladder), the two rows rung across
 	var links: Dictionary = Data.web_links_all()
-	_check(links["Stalking/0"].has("Stalking/1") and not links["Stalking/0"].has("Stalking/2") and links["Stalking/0"].size() == 2, "Stalking's first node links wrong: %s" % str(links["Stalking/0"]))
+	_check(links["Stalking/0"].has("Stalking/1") and not links["Stalking/0"].has("Stalking/2"), "Stalking's first node links wrong: %s" % str(links["Stalking/0"]))
 	var f01: String = ""
 	for other in links["Stalking/0"]:
-		if other != "Stalking/1":
+		if other != "Stalking/1" and sim.node(other).get("filler", false) and str(other).begins_with("Stalking/"):
 			f01 = other
+	# the wheel (23 Oct, the canvas pass): one starter a class - Stalking's first node - the second lane's first column
+	# linked to it across; the keystones on the hub, the capstones at the centre, the hung notables between the
+	# stations (strictly alternating, Matt)
+	for cls_t in Data.TREES:
+		if cls_t.get("class", "") == "":
+			continue
+		var entries := 0
+		for nd in cls_t["nodes"]:
+			if nd.get("entry", false):
+				entries += 1
+			var w: Array = nd.get("wheel", [])
+			_check(w.size() == 2, "%s/%s has no place on the wheel" % [cls_t["name"], nd["name"]])
+			if nd.has("hang"):
+				_check(is_zero_approx(fmod(float(w[0]), Data.WHEEL_COL)), "a hung notable isn't between two stations: %s at %s" % [nd["name"], str(w)])
+			elif nd.get("capstone", false):
+				_check(is_equal_approx(float(w[1]), Data.WHEEL_CAP), "the capstone isn't at the wheel's centre: %s" % nd["name"])
+			elif nd.get("keystone", false):
+				_check(is_equal_approx(float(w[1]), Data.WHEEL_HUB), "a keystone isn't on the hub: %s" % nd["name"])
+		_check(entries == (1 if int(cls_t["lane"]) == 0 else 0), "%s has %d entries (one starter a class)" % [cls_t["name"], entries])
+	_check(links["Snares/0"].has("Stalking/0") and links["Snares/1"].has("Stalking/0"), "the second lane's first column doesn't reach the starter: %s" % str(links["Snares/0"]))
+	_check(not Data.web_entry(sim.node("Snares/0")) and Data.web_entry(sim.node("Stalking/0")), "the entries aren't one a class")
 	_check(sim.node(f01).get("filler", false) and links[f01].has("Stalking/2"), "no filler between Stalking's first and second columns: %s" % f01)
 	_check(not sim.can_train("Stalking/2") and sim.train_block("Stalking/2").begins_with("wants a path"), "a second-column node trained with nothing before it: '%s'" % sim.train_block("Stalking/2"))
 	_check(sim.path_next("Stalking/6") == "Stalking/0" or sim.path_next("Stalking/6") == "Stalking/1", "the path to the keystone doesn't start at an entry: %s" % sim.path_next("Stalking/6"))
@@ -3144,7 +3165,7 @@ func _element_checks(main) -> void:
 		_check(bk.alt == "" and bk.web().visible, "the %s chip pressed again did not give the web back" % name)
 	# the layout: the header with the points and the classes in its top right; the web, the Also row, the sum strip
 	# and the panel under it
-	_check(bk._points.text == "%d of %d" % [sim.points_free(), sim.training_points], "the Caravan's points read '%s'" % bk._points.text)
+	_check(bk._points.text == "%d" % _web_free(sim), "the Caravan's points read '%s'" % bk._points.text)
 	for cb in bk._class_buttons:
 		_check(cb.position.y + cb.size.y <= bk.HEAD_H and cb.position.x >= bk._kicker.position.x + bk._kicker.size.x, "a class button is not in the band, right")
 	_web_checks(main)
@@ -3225,9 +3246,24 @@ func _element_checks(main) -> void:
 	sim.tops_open = false
 	bk._shown = ""
 	main.refresh()
-	# the capstone sits at the end of its region's axis, past the keystone (the web, 22 Oct)
+	# the capstone sits at the wheel's centre, inside the keystones (the wheel, 23 Oct); the points key fits its box and
+	# the regions' labels carry no meter words
 	var wv2 = bk.web()
-	_check(wv2.layout.has("The door/10") and wv2.layout["The door/10"].distance_to(wv2._axis["The door"]["at"]) > wv2.layout["The door/6"].distance_to(wv2._axis["The door"]["at"]), "the capstone is not at the end of its region")
+	var wc: Vector2 = wv2._axis["The door"]["wheel"]
+	_check(wv2.layout.has("The door/10") and wv2.layout["The door/10"].distance_to(wc) < wv2.layout["The door/6"].distance_to(wc), "the capstone is not inside the keystones on the wheel")
+	_check(bk._key.fit_fails().is_empty(), "the points key's words don't fit: %s" % str(bk._key.fit_fails()))
+	# and at the widest the key gets (the review): a level-50 Paramedic with points unspent, an element pool past 99
+	var key_sim = Sim.new()
+	key_sim.start()
+	key_sim.set_class("Paramedic")
+	key_sim.training_points = 49
+	key_sim.element_points = {"shock": 412}
+	key_sim.paragon_xp = 1e9
+	bk._key.show_state(key_sim)
+	_check(bk._key.fit_fails().is_empty(), "the points key's widest words don't fit: %s" % str(bk._key.fit_fails()))
+	bk._key.show_state(sim)
+	for tn in wv2._axis:
+		_check(not wv2.region_words(tn).contains("meter") and not (wv2._trees[tn].has("element") and wv2.region_words(tn).contains("free")), "a region's label still carries the key's words: '%s'" % wv2.region_words(tn))
 	# the gun in hand changes a typed node's look without anything else moving (the reviewer's catch)
 	var typed_id := ""
 	for b in Data.TREES:
@@ -7196,6 +7232,14 @@ func _stats_layout(main, where: String) -> int:
 		push_error("%s: the sheet's band title and headline overlap" % where)
 		bad += 1
 	return bad
+
+
+## The points free across the web, as the band and the key add them (23 Oct): the class's, the Pitch's, the ring's, the elements'.
+func _web_free(sim) -> int:
+	var n: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()
+	for el in Data.TYPES:
+		n += maxi(0, sim.element_free(el))
+	return n
 
 
 func _check_fit(main, where: String) -> void:

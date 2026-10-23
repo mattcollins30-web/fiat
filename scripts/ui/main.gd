@@ -1320,7 +1320,7 @@ func _rail_status(nm: String) -> Dictionary:
 		MISSIONS:
 			return {"badge": "Live" if sim.on_mission() else "", "badge_tone": "good"}
 		BARRACKS:
-			var free: int = sim.points_free() + sim.pitch_free()
+			var free: int = sim.points_free() + sim.pitch_free() + sim.paragon_free()     # every pool (23 Oct, the key)
 			for el in Data.TYPES:
 				free += maxi(0, sim.element_free(el))     # the elements' own points (slice 3)
 			return {"badge": ("%d free" % free) if free > 0 else "", "badge_tone": "good"}

@@ -53,6 +53,27 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   old slot shows the incompatible-save warning.
 - docs/status.md is Claude's: keep it current as the work goes. Docs Claude wrote are Claude's to update.
 
+## The project manager (22 Oct, Matt: "I'm assigning you the official role of project manager ... carry versioning
+## and act as a creep warden")
+
+- Matt is design director; Claude runs the project: the plan, the version, the scope, the parked list, the order of
+  work, and says so when something asked for breaks the plan. Design calls stay Matt's.
+- The plan as set (22 Oct): 1. Matt's playtest of the web build. 2. Every parked item (docs/status.md's "Parked from
+  the playtest" lists, oldest first), designed together, built, smoked, committed. 3. Then balance and nothing else:
+  the endgame's shape, the gates, the passes, Matt's playtests, until the game's balanced. Nothing new goes into the
+  build in phase 3.
+- The creep rule: a new feature or system raised after phase 2 begins goes to docs/design/ideas_backlog.md with the
+  date and Matt's words, not into the build, and Claude says where it went. It comes back when phase 3 is done or
+  Matt overrules in words. A parked item that grows a feature in the designing is the same: the fix goes in, the
+  growth goes to the backlog. Something that changes numbers (a class, a node, a rule) belongs before the balance
+  phase or after it, never during.
+- The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>. The milestone counts the
+  systems that changed what the game is - 1 the first slice, 2 the tree, 3 depth and intel, 4 the Yard, 5 the
+  Radio's endgame, 6 the crew, 7 the web; the build counts the commits Matt plays within it (a playtest build bumps
+  it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; the balance phase
+  starts milestone 8. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
+  and notes it in docs/status.md.
+
 ## Git
 
 - Add files by explicit list, never `git add -A`.

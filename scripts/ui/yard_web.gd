@@ -81,6 +81,13 @@ func level_tag(_nd: Dictionary) -> Array:
 	return []
 
 
+func picture_slug(nd: Dictionary) -> String:
+	if nd.has("pick"):
+		var b: Dictionary = Data.yard_building(str(nd["yard"]))
+		return "pick_%s_%s" % [str(nd["yard"]), str(b["picks"][int(nd["col"])][0 if nd["side"] == "a" else 1]["id"])]     # art/nodes/pick_<building>_<id>.png
+	return "pick_%s_rank" % str(nd["yard"])
+
+
 func glyph_of(nd: Dictionary) -> String:
 	if nd.has("pick"):
 		var b: Dictionary = Data.yard_building(str(nd["yard"]))

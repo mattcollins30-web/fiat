@@ -6145,6 +6145,9 @@ difficulty and length, the endgame placeholders.
 4. The rig's top-up before a run should be the player's call: it fills the rig with rounds and meds on its own, and
    Matt had to move rounds out it had put there. Matt: a toggle, or three ways - off / fill up / fill up with the
    best only.
+   - Mocked up 21 Oct on the canvas "Training's two pools and the rig's top-up" (the TopUp board): on the Map's card
+     above Set off, "THE RIG AT THE GATE" with Leave it / Fill up / Best grades only, a line each, kept once set.
+     Shown, not yet approved in words, not built (22 Oct, Matt: "I'm 100% sure I've seen the mockup" - he had).
 5. A piece ditched in a fight gives its scrap (as meant), then lies on the floor and can be picked up again at the
    search: drop, scrap, pick it up (a second ditch gives no scrap, but it's a gap). Matt: a ditched piece is gone
    once its scrap's paid - destroyed, not left on the floor.
@@ -6176,6 +6179,79 @@ difficulty and length, the endgame placeholders.
 9. The Radio's pile has no cap and no way to bin or sell from it (22 Oct, found profiling the pass: the bot's runaway
    reads piled 9,000-28,000 papers; a long player session will show "THE PAPERS · 400" too). A cull, or a sell from
    the pile, once the balance is in.
+
+10. The broken builds (docs/design/broken_builds.md: one a class - Embers, Clean kills, Overdose, Opened for good, Live
+    load) want tuning again for the web (22 Oct, Matt): their paths name nodes by the old lanes (the joint half, the
+    element's keystone and capstone - about 45 points), and the fillers and the keystone choice change what a path
+    costs and what else is on it. Outside the balance read as before (Sim.combos_off); a pass of their own after the
+    playtest, with their node paths rewritten on the web.
+
+
+## Parked from the playtest (22 Oct, the web's settings; taken up after it)
+
+1. Training's canvas: the class you're on should have its region highlighted, subtly, so you know where you're
+   starting from (Matt: "when you have a class selected its tree should be highlighted subtly so you know where
+   you're starting").
+2. One starter node a class, not two: today each of a class's two lanes has its own entry at the join. Matt: "each
+   class should have one starter node". The entry becomes the class's single join node, both lanes off it.
+3. A sixth class: there's room on the star (five classes at 72° leave the sixth angle open) and on the panel's class
+   pills. Matt: "worth doing now while we're in balance mode" - a class, its two lanes, its element pair, its joint
+   halves, its broken build, its figure and face, its ring entry. The concept wants agreeing first.
+   - And (Matt, later the same playtest): stagger the classes' unlocks through the campaign, so each is new when it
+     comes ("players have a reason to play each of them because it's new and exciting"). A design item with the
+     sixth class: which site or head opens which class, and what the crew does before then. It changes numbers (the
+     crew's reads, the campaign's pace), so it goes in with the parked list, before the balance phase, or not at all
+     until after it (the PM's call, CLAUDE.md).
+4. The run's pack card, empty: "A long gun takes 4 or 5 cells by 1, armour 3 by 3, a bandage 1 / 12 cells free /
+   Nothing found yet" (screenshot). Matt: unchanged since the first version, "it needs to go" - cut the sizes line,
+   or replace the empty state with something better. New words get the language pass.
+5. Points free, all of them, in one place: a level-1 Drifter with a free Knuckles point (the physical meter) saw it
+   only as "1 free" in that region's label on the canvas; the band said "0 of 0 points free" (the class's pool) and
+   the rail's badge "1 free" (screenshot). Matt: "something somewhere needs to tell you all points that are
+   available - a key on the map tree itself would be easiest". A key on the canvas (a corner panel): every pool with
+   points free - the class's, the Pitch's, each element's, the ring's - and the band to match. Takes in the 21 Oct
+   parked item 3 (the two pools' band).
+   - And (Matt, later): the key carries each element's use meter as a drawn meter (a bar), not a figure, and the
+     "meter 15%" / "1 free" words come off the region labels on the canvas - the label is the region's name alone;
+     the key is where the pools and the meters live.
+6. The elements on the canvas: each element's region gets a coloured outline in its element's colour, so it reads at a
+   glance; and the joint lines between an element's region and a class's lane are coloured the same (today they're
+   dashed in the plain tone). Matt, with the art running: "each element needs a coloured outline so it's easy to
+   identify and ... the join lines between element and class tree need to be coloured too". With the art manifest's
+   wiring (item 1's highlight is the same drawing pass).
+7. The odds at 0% on a site's card say nothing of why or what to do. Matt: "we need to do a better job of telling
+   players why the odds are 0% and what they can do to bump things up - recommended DPS, armour, HP etc." The site
+   guide has the fight's figures; the card wants the gap in the player's own terms: which of damage, HP, armour or a
+   resist is the short one, and by how much, read off the dry runs (what killed the runner, how far the pool got).
+8. Day, night and the weather are words only: the Map's card says "09:12, day" and "Rain · searches 30% slower, gangs
+   25% later", and nothing in the game shows it - not the map, not the fight's plate, not the run. Matt: "we
+   advertise night/day on the map and then rain but nothing in game signifies those states." A tint and a layer on
+   the map (the clouds are there already) and on the fight's plate (night's dark, rain's streaks), the run's card
+   naming it. A drawing pass, not a system; no new numbers.
+9. A class region's shape: the two lanes run out as parallel rails with the notables hung off one side, so a player
+   who paths up one lane sees "all the good stuff" (the keystones, the hung notables, the halves) off to the other
+   side with no way across but back (screenshot: the Drifter's Moving on and Luck). Matt: "I love this design but as
+   with PoE I think those nodes ... should be in a spiral/circle with the nodes around and then you reach the middle
+   on your way or through somewhere else - mock up first once we get there." A layout change to the web builder (the
+   lanes' geometry: a loop or wheel per region with the keystones in the middle, reachable from either rail), on the
+   canvas first; the nodes and their costs stay as they are. With the single starter node (item 2) and the outlines
+   (item 6): one canvas pass.
+10. The Clinic's shelf sells one med a click. Matt: "select multiple meds in the clinic to buy - single buying at a
+    time is a chore." A count on the buy (×1 / ×5 / fill the rig, or a stepper), the price shown for the lot; the
+    Fence's shelf the same if it has the same chore.
+11. The armour compare's verdict (two screenshots): the Doorman's Jacket (Unique, 152 armour, +12 arm, +20 HP, −25%
+    damage taken with 3+ on you) over Light plates (Rare, 110 armour, +6% pace, +0.4 HP/s, +8 fire res & dmg) reads
+    "Downgrade · −2% odds · +42 arm · −0.4 HP/s"; the plates over the Jacket read "Upgrade · +5% odds · −42 arm".
+    Matt: "discrepancy here". Two things to check: the unique's rule (−25% taken with three on you) isn't in the
+    try-on's survival figure, or the front fight it reads has under three on you, so 42 armour and 20 HP lose to
+    0.4 HP/s; and the odds delta isn't symmetric (−2 one way, +5 the other), so one side of the compare reads a
+    stale or differently-keyed odds. The verdict should be the same figure either way round, and a unique's rule
+    should count in it (the design: the body's figure is the fight being pushed, 12 Oct).
+
+- The project manager (22 Oct, Matt, mid-playtest): Claude carries the plan, the version and the scope from here
+  (CLAUDE.md, "The project manager"). The plan: his playtest, then every parked item, then balance and nothing else.
+  The version on the title had sat at 0.1 since the first slice: the scheme is 0.<milestone>.<build>, the web build
+  he's playing 0.7.0 (bumped in the parked-list commit, not mid-playtest), the parked-list build 0.7.1.
 
 ## The tuning batch (21 Oct, after Matt's first playtest of the Scrapper)
 
@@ -6352,4 +6428,26 @@ pass; the reviewer on the code):
   playtest, not a number. The wall: 1-49 min a build (the Drifter as fire's 9,591 runs the long one; the plain
   reads a minute each to the Quartermaster), the pass 50 min end to end; tidy's parts now read in the wall table.
   Next: Matt plays; a further pass only if something's drastically wrong.
+
+## 0.7.1: the parked list (23 Oct; Matt: "do everything up to 14, 15 and 16 - they are all annoying enough to make
+## my playtest miserable")
+
+- Batch A, the canvas pass (items 1, 2, 5, 6, 9 of the 22 Oct list and the art's wiring; the mockup on the web
+  canvas, boards 2 and 3, Matt: "wheel's size is fine and alternate strictly. Proceed."). data.gd _web_wheel: a
+  class's two lanes are the two halves of one ring ("wheel" [degrees, rows] on every node; "at" and the ids stay) -
+  the rails on two tracks, fillers between columns on the arc, the hung notables outward off the inter-column
+  fillers so they alternate with the stations, the halves inward toward their element, the keystones on a hub, the
+  capstones at the centre and linked to their lane's keystones (the middle off either half: three or four points
+  cheaper from the second lane, the review), the bridges past the far pole; one starter a class (the first lane's
+  first node, the second lane's first column linked to it). web_view: _lay_wheel; a warm disc under the wheel of
+  the class on; each element's region in a hull of its colour, the joint lines in it open or closed; one label a
+  class, the elements' labels the name alone; R_RING 1480 (outside the wheels); a node's picture (art/nodes/
+  <slug>.png) across its disc from zoom 0.8 when the file exists, the glyph else; a pictured notable at radius 17.
+  web_key.gd: the points key over the canvas's corner - the class's, the Pitch's and the ring's free points, the
+  six elements' meters as bars with their free points (99+ past that); the band's headline the total across the
+  web; the rail's badge counts paragon too. Smoke: the wheel's shape, one entry a class, the key's fit at its
+  widest (a level-50 Paramedic, 412 shock points), labels without meter words; run 58 green. Reviewer's two notes
+  in (the key's widest case; a picture's load quiet where a clone has no import cache).
+  - For Matt: web_key.gd has no .uid yet (the editor writes it); the shot's "Can't add child" line in the cloud
+    render is the shot script's, not the game's.
 

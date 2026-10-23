@@ -68,6 +68,10 @@ func glyph_of(nd: Dictionary) -> String:
 	return NodeGlyphs.of_atlas(str(nd["key"])) if not nd.get("filler", false) else ""
 
 
+func picture_slug(nd: Dictionary) -> String:
+	return ("map_" + str(nd["key"])) if not nd.get("filler", false) else ""     # art/nodes/map_<key>.png (the manifest, 22 Oct)
+
+
 func draw_between(_view: Rect2) -> void:
 	pass
 

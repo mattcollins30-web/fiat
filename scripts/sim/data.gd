@@ -1750,6 +1750,25 @@ const HANG_Y := 3.7
 const BRANCH_Y := 2.3
 const HALF_Y := 3.0
 const LANE_OFF := 3.0              # a class's two lanes, rows off the class's axis
+## The wheel (23 Oct, Matt's playtest: "those nodes on the right of where I've pathed should be in a spiral/circle with
+## the nodes around and then you reach the middle on your way or through somewhere else"): a class's two lanes are
+## the two halves of one ring - the rails its two tracks, a column WHEEL_COL degrees of arc, the first lane round one
+## way and the second the other from a single starter node at the near pole - the hung notables outward off the
+## inter-column fillers (so they alternate with the stations, strictly), the halves inward toward their element, the
+## keystones on spokes to a hub, the capstones at the centre (linked to their lane's keystones: the middle is reached
+## off either half), the bridges past the far pole. "wheel": [degrees along the half, radius in rows] on every node of
+## a class lane; "at" stays the lane's own coordinates (the bot's order, the tests). The elements and the Pitch keep
+## their lanes.
+const WHEEL_R := 9.5               # the tracks' middle, in rows
+const WHEEL_TRACK := 1.6           # the two rails, this many rows apart
+const WHEEL_COL := 30.0            # a column's arc, degrees: six columns a half
+const WHEEL_BRANCH := 1.8          # a hung notable's branch filler, rows outside the outer track
+const WHEEL_HANG := 3.6            # the hung notable itself
+const WHEEL_HALF := 3.2            # a joint's half, rows inside the inner track (toward the element)
+const WHEEL_HUB := 5.2             # the keystones' radius
+const WHEEL_CAP := 1.1             # the capstones', either side of the centre
+const WHEEL_BRIDGE := 4.6          # the bridge, rows past the outer track at WHEEL_BRIDGE_DEG
+const WHEEL_BRIDGE_DEG := 168.0
 ## Slice 3 (web.md §3-4): an element's points come off its use meter - a run's damage in the element over the site's
 ## pool (its heads' HP times their number): ELEMENT_METER of those earns a point. The bridge: at BRIDGE_LEVEL a class
 ## takes one neighbour's region on the ring (BRIDGES) for BRIDGE_COST of its points; the region spends its points.
@@ -1987,10 +2006,86 @@ static func _web_build(src: Array) -> Array:
 				_web_link(nodes, i, _web_named(nodes, nm))
 			if nd.has("link_at"):
 				_web_link(nodes, i, _web_at(nodes, [float(nd["link_at"][0]), float(nd["link_at"][1])]))     # the bridge (slice 3): off the rail's last filler
+		if t.get("class", "") != "":
+			_web_wheel(t, src, k)
 		for i in range(nodes.size()):
 			assert(not nodes[i]["links"].is_empty() or not nodes[i].get("xlinks", []).is_empty(), "%s/%s links to nothing" % [t["name"], nodes[i]["name"]])     # the review: a lane's shape that leaves a node off the web
 		out.append(t)
 	return out
+
+
+## A class lane's nodes placed on its half of the class's wheel (the constants above): "wheel" on every node; the
+## first lane's first rail node the class's one starter, the second lane's first column linked to it across; each
+## keystone linked to the lane's capstone.
+static func _web_wheel(t: Dictionary, src: Array, k: int) -> void:
+	var lane := 0                                                   # the class's first or second lane, by the source's order
+	for j in range(k):
+		if str(src[j].get("class", "")) == str(t["class"]):
+			lane += 1
+	t["lane"] = lane
+	var nodes: Array = t["nodes"]
+	var keystones: Array = []
+	var capstone := -1
+	var entry := -1
+	for i in range(nodes.size()):
+		var nd: Dictionary = nodes[i]
+		var a: Array = nd["at"]
+		var x: float = float(a[0])
+		var y: float = float(a[1])
+		var deg: float = (x + 0.5) * WHEEL_COL                      # a station at the column's middle; a filler at x = c - 0.5 lands at c * WHEEL_COL, between two
+		var r: float = WHEEL_R
+		if nd.has("bridge"):
+			deg = WHEEL_BRIDGE_DEG
+			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_BRIDGE
+		elif nd.get("capstone", false):
+			deg = 90.0
+			r = WHEEL_CAP
+			capstone = i
+		elif nd.get("keystone", false):
+			keystones.append(i)
+			r = WHEEL_HUB
+		elif nd.has("class"):
+			r = WHEEL_R - WHEEL_TRACK / 2.0 - WHEEL_HALF              # a joint's half: inward, toward its element
+		elif nd.has("hang"):
+			deg = (float(nd["hang"][0]) + 0.5) * WHEEL_COL
+			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_HANG
+		elif nd.get("filler", false) and absf(y) > 1.5:
+			r = WHEEL_R + WHEEL_TRACK / 2.0 + WHEEL_BRANCH             # a hung notable's branch filler
+		elif absf(y) < 0.5:
+			r = WHEEL_R                                              # a lone node: on the middle track
+		else:
+			r = WHEEL_R + (WHEEL_TRACK / 2.0 if y > 0.0 else -WHEEL_TRACK / 2.0)
+		nd["wheel"] = [deg, r]
+		if lane == 0 and int(nd.get("col", -1)) == 0 and int(nd.get("row", 0)) == 0 and not nd.get("filler", false) and not nd.has("class"):
+			entry = i
+	# the keystones spread round the hub's half, the capstone linked to each
+	for j in range(keystones.size()):
+		var frac: float = (j + 1.0) / (keystones.size() + 1.0)
+		nodes[keystones[j]]["wheel"][0] = 40.0 + frac * 110.0
+		if capstone >= 0:
+			_web_link(nodes, keystones[j], capstone)
+	# one starter a class (Matt, 22 Oct): the first lane's first rail node at the near pole; the other first-column
+	# nodes aren't entries, and the second lane's reach it across (xlinks by name)
+	for i in range(nodes.size()):
+		if nodes[i].get("entry", false) and i != entry:
+			nodes[i].erase("entry")
+	if entry >= 0:
+		nodes[entry]["wheel"] = [0.0, WHEEL_R]
+		nodes[entry]["entry"] = true
+	else:
+		for j in range(k):
+			if str(src[j].get("class", "")) == str(t["class"]):
+				var first: Dictionary = src[j]
+				var ename := ""
+				for nd in first["nodes"]:
+					if int(nd.get("col", -1)) == 0 and int(nd.get("row", 0)) == 0 and not nd.has("class"):
+						ename = str(nd["name"])
+						break
+				for i in range(nodes.size()):
+					if int(nodes[i].get("col", -1)) == 0 and not nodes[i].get("filler", false) and not nodes[i].has("class") and ename != "":
+						if not nodes[i].has("xlinks"):
+							nodes[i]["xlinks"] = []
+						nodes[i]["xlinks"].append("%s/%s" % [first["name"], ename])
 
 
 static func _web_link(nodes: Array, a: int, b: int) -> void:

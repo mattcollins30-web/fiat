@@ -37,7 +37,14 @@ const YARD_TONE := Color("8fb3d9")
 ## elements, Data.LANE_OFF rows either side of the angle, their notables hung outward.
 const R_ELEMENT := 280.0
 const R_CLASS := 740.0
-const R_RING := 1300.0             # the paragon ring (slice 4), round the outside
+## The wheel (23 Oct, the canvas pass; Data.WHEEL_*): a class's two lanes round one ring whose centre sits WHEEL_OUT
+## past R_CLASS along the class's angle, the starter at the near pole; the first lane runs round one way, the second
+## the other. The class on show has a warm disc under its wheel; each element's region a hull in its colour.
+const WHEEL_OUT := 3.4 * STEP
+const WHEEL_GLOW := 1.3 * STEP     # the disc past the tracks
+const R_NOTABLE_PIC := 17.0        # a notable's disc with a picture in it (the art, 23 Oct: 15 read as a blob)
+const PIC_ZOOM := 0.8              # the pictures draw from here; the glyph before (and where no picture is)
+const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
 const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
 
@@ -100,13 +107,12 @@ func lay_out() -> void:
 		var mine: Array = by_class.get(cls, [])
 		var d := Vector2.from_angle(deg_to_rad(CLASS_LAY[cls]))
 		for k in range(mine.size()):
-			var off: float = (k - (mine.size() - 1) / 2.0) * 2.0 * Data.LANE_OFF * ROW
-			_lay_tree(mine[k], d * R_CLASS + d.orthogonal() * off, d, Pal.TEXT)
+			_lay_wheel(mine[k], cls, d, CLASS_LAY[cls])
 	# the ring: its nodes round the outside at their angles; the name at the top
 	var ring: Dictionary = Data.RING
 	for i in range(ring["nodes"].size()):
 		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
-	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(0, -R_RING - 30.0)}
+	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(R_RING + 30.0, 0.0), "align": 1}     # at the right, where no class sits (23 Oct: the top's is the Drifter's)
 	_find_bounds()
 
 
@@ -157,15 +163,15 @@ func stack_of(id: String, nd: Dictionary) -> Array:
 func region_words(tn: String) -> String:
 	var t: Dictionary = _trees[tn]
 	if t.get("ring", false):
-		return "%s · paragon %d" % [tn, sim.paragon()] + ((" · %d free" % sim.paragon_free()) if sim.paragon_free() > 0 else "")
+		return "%s · paragon %d" % [tn, sim.paragon()]     # its free points are the key's (23 Oct)
 	if t.has("element"):
-		var words: String = "%s · %s" % [tn, t["element"]]
-		var free_v: int = sim.element_free(t["element"])
-		if free_v > 0:
-			words += " · %d free" % free_v     # the element's own points (slice 3)
-		return words + " · meter %d%%" % int(round(100.0 * float(sim.element_xp.get(t["element"], 0.0)) / Data.ELEMENT_METER))
+		return "%s · %s" % [tn, t["element"]]     # the name alone: the meter and the free points are the key's (23 Oct, Matt)
 	if t.get("class", "") != "":
-		return "%s · the %s's" % [tn, str(t["class"]).to_lower()]
+		var lanes: Array = []
+		for other in Data.TREES:
+			if other.get("class", "") == t["class"]:
+				lanes.append(str(other["name"]))
+		return "%s · %s" % [str(t["class"]), " and ".join(lanes)]
 	return "%s · the camp's" % tn
 
 
@@ -192,7 +198,8 @@ func draw_between(view: Rect2) -> void:
 		var pb: Vector2 = to_screen(layout[ids[1]])
 		if view.has_point(pa) or view.has_point(pb):
 			var closed: bool = sim.has_joint(j["key"])
-			draw_dashed_line(pa, pb, tone_of(j["element_tree"]) if closed else Color(Pal.TEXT_3, 0.6), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
+			var tone: Color = tone_of(j["element_tree"])     # the element's colour, closed or open (23 Oct: the join lines coloured too)
+			draw_dashed_line(pa, pb, tone if closed else Color(tone, 0.55), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
 	for id in layout:
 		var bn: Dictionary = sim.node(id)
 		if not bn.has("bridge"):
@@ -226,6 +233,22 @@ func _lay_tree(t: Dictionary, at: Vector2, dir: Vector2, tone: Color) -> void:
 	# the name: over the Pitch's middle; past the end of a lane that runs out from the centre
 	var label_at: Vector2 = at + dir * (2.5 * STEP) + Vector2(0, top - 24.0) if dir == Vector2.RIGHT and at.x < 0.0 else at + dir * (5.0 * STEP + R_CAPSTONE + 34.0)
 	_axis[t["name"]] = {"at": at, "dir": dir, "tone": tone, "label_at": label_at}
+
+
+## A class lane on its half of the class's wheel: a node's "wheel" [degrees along the half, radius in rows] turned
+## into a point - the half's degrees run from the near pole (facing the centre) round, the first lane one way and
+## the second the other. The class's name past the far pole, once (the first lane's label; the second's hidden).
+func _lay_wheel(t: Dictionary, cls: String, d: Vector2, deg: float) -> void:
+	var centre: Vector2 = d * (R_CLASS + WHEEL_OUT)
+	var sgn: float = -1.0 if int(t.get("lane", 0)) == 0 else 1.0
+	for i in range(t["nodes"].size()):
+		var nd: Dictionary = t["nodes"][i]
+		var w: Array = nd.get("wheel", [0.0, Data.WHEEL_R])
+		var a: float = deg + 180.0 + sgn * float(w[0])
+		layout["%s/%d" % [t["name"], i]] = centre + Vector2.from_angle(deg_to_rad(a)) * (float(w[1]) * ROW)
+	var label_at: Vector2 = centre + d * ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0 + Data.WHEEL_HANG) * ROW + 44.0)
+	_axis[t["name"]] = {"at": centre - d * (Data.WHEEL_R * ROW), "dir": d, "tone": Pal.TEXT, "label_at": label_at, "wheel": centre, "class": cls,
+		"align": (-1 if d.x < -0.3 else (1 if d.x > 0.3 else 0)), "hide_label": int(t.get("lane", 0)) != 0}
 
 
 ## A tree's tone: an element's colour, the Pitch's accent, a class's text.
@@ -306,7 +329,49 @@ func state_of(id: String) -> Dictionary:
 
 # ------------------------------------------------------------------ drawing
 
-static func radius_of(nd: Dictionary) -> float:
+## A node's picture (23 Oct, the art): art/nodes/<slug>.png when the file exists, else "" and the glyph draws. The
+## hooks name the slug (Training's: the node's name; the Map's, the Pitch's and the ring's their own).
+static var _pics := {}
+func picture_slug(nd: Dictionary) -> String:
+	if nd.has("ring"):
+		return "ring_" + str(nd.get("key", ""))
+	return slug_of(str(nd.get("name", "")))
+
+
+static func slug_of(words: String) -> String:
+	var out := ""
+	var gap := false
+	for ch in words.to_lower():
+		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
+			if gap and out != "":
+				out += "_"
+			gap = false
+			out += ch
+		else:
+			gap = true
+	return out
+
+
+static func picture(slug: String) -> Texture2D:
+	if slug == "":
+		return null
+	if _pics.has(slug):
+		return _pics[slug]
+	var path := "res://art/nodes/%s.png" % slug
+	var tex: Texture2D = null
+	if ResourceLoader.exists(path, "Texture2D"):
+		tex = ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)     # null, quietly, where a clone's import cache isn't built yet (the review)
+	_pics[slug] = tex
+	return tex
+
+
+func radius_of(nd: Dictionary) -> float:
+	if nd.get("notable", false) and not nd.get("keystone", false) and not nd.get("capstone", false) and picture(picture_slug(nd)) != null:
+		return R_NOTABLE_PIC
+	return _radius_plain(nd)
+
+
+static func _radius_plain(nd: Dictionary) -> float:
 	if nd.get("capstone", false):
 		return R_CAPSTONE
 	if nd.get("keystone", false):
@@ -323,6 +388,7 @@ func _draw() -> void:
 	if sim == null:
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
+	draw_under(view)
 	# the links first, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise
 	var links: Dictionary = links_all()
 	for a in links:
@@ -350,6 +416,8 @@ func _draw() -> void:
 		_draw_node(id, p)
 	# the regions' names
 	for tn in _axis:
+		if _axis[tn].get("hide_label", false):
+			continue
 		var p: Vector2 = to_screen(_axis[tn]["label_at"])
 		if not view.has_point(p):
 			continue
@@ -358,7 +426,58 @@ func _draw() -> void:
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var align: int = int(_axis[tn].get("align", 0))     # -1: the words end at the point; 1: start there; 0: centred
 		var x0: float = p.x - w if align < 0 else (p.x if align > 0 else p.x - w / 2.0)
-		draw_string(_font_bold, Vector2(x0, p.y + 5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone_of(tn))
+		var tone: Color = Pal.ACCENT if str(_axis[tn].get("class", "")) != "" and str(_axis[tn]["class"]) == str(sim.cls) else tone_of(tn)
+		draw_string(_font_bold, Vector2(x0, p.y + 5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone)
+
+
+## Under everything (23 Oct, the canvas pass): a warm disc under the wheel of the class on show, so you know where
+## you're starting from; each element's region in a hull of its colour - a faint wash, a line - so it reads at a glance.
+func draw_under(view: Rect2) -> void:
+	for tn in _axis:
+		var ax: Dictionary = _axis[tn]
+		if ax.has("wheel") and not ax.get("hide_label", false) and str(ax.get("class", "")) == str(sim.cls):
+			var c: Vector2 = to_screen(ax["wheel"])
+			var r: float = ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0) * ROW + WHEEL_GLOW) * zoom
+			if view.grow(r).has_point(c):
+				draw_circle(c, r, Color(Pal.ACCENT, 0.05))
+				draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.22), 1.0, true)
+	for tn in _trees:
+		var t: Dictionary = _trees[tn]
+		if not t.has("element"):
+			continue
+		var box := Rect2()
+		var first := true
+		for i in range(t["nodes"].size()):
+			var p: Vector2 = layout["%s/%d" % [tn, i]]
+			box = Rect2(p, Vector2.ZERO) if first else box.expand(p)
+			first = false
+		var d: Vector2 = _axis[tn]["dir"]
+		var tone: Color = tone_of(tn)
+		# the hull: a capsule along the lane's axis, the nodes' extent plus a margin, drawn as a rotated rounded rect
+		var along: float = 0.0
+		var across: float = 0.0
+		var centre: Vector2 = box.get_center()
+		for i in range(t["nodes"].size()):
+			var q: Vector2 = layout["%s/%d" % [tn, i]] - centre
+			along = maxf(along, absf(q.dot(d)))
+			across = maxf(across, absf(q.dot(d.orthogonal())))
+		var sc: Vector2 = to_screen(centre)
+		if not view.grow((along + 60.0) * zoom).has_point(sc):
+			continue
+		var hw: float = (along + 0.6 * STEP) * zoom
+		var hh: float = (across + 0.9 * ROW) * zoom
+		var pts := PackedVector2Array()
+		var rr: float = minf(hh, 18.0 * zoom)
+		for k in range(4):
+			var cx: float = (hw - rr) * (1.0 if k in [0, 1] else -1.0)
+			var cy: float = (hh - rr) * (1.0 if k in [1, 2] else -1.0)
+			var a0: float = [-PI / 2.0, 0.0, PI / 2.0, PI][k]
+			for j in range(7):
+				var a: float = a0 + j * (PI / 2.0) / 6.0
+				pts.append(sc + (Vector2(cx, cy) + Vector2(cos(a), sin(a)) * rr).rotated(d.angle()))
+		draw_colored_polygon(pts, Color(tone, 0.05))
+		pts.append(pts[0])
+		draw_polyline(pts, Color(tone, 0.6), 1.4 * maxf(0.7, zoom), true)
 
 
 func _joint_half(tree_name: String, key: String) -> String:
@@ -410,8 +529,14 @@ func _draw_node(id: String, p: Vector2) -> void:
 	else:
 		draw_circle(p, r, fill)
 		draw_arc(p, r, 0.0, TAU, 32, line, w, true)
-	# the glyph, from half zoom
-	if zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
+	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
+	var pic: Texture2D = picture(picture_slug(nd)) if (nd.get("notable", false) or diamond) else null
+	if pic != null and zoom >= PIC_ZOOM:
+		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
+		g = minf(g, r * 1.7)
+		var shade: Color = Color.WHITE if taken else (Color(0.85, 0.85, 0.85) if reach else Color(0.5, 0.5, 0.5, 0.8))
+		draw_texture_rect(pic, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, shade)
+	elif zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
 		var tex: Texture2D = NodeGlyphs.texture(glyph_of(nd))
 		if tex != null:
 			var g: float = r * 1.1
