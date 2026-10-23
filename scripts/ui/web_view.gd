@@ -50,7 +50,8 @@ const R_SMALL_PIC := 13.0         # a small node with a picture (23 Oct, Matt: a
 const R_FILLER_PIC := 10.0        # a filler with one: drawn from FILLER_PIC_ZOOM, a dot before
 const FILLER_PIC_ZOOM := 0.9
 static var assume_pics := false   # the smoke: every node sized as if its picture had landed, so the overlap checks hold before the art does
-const R_ENTRY := 20.0              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
+const R_ENTRY := 20.0
+const ENTRY_LABEL_ZOOM := 0.8     # the names move from the rim to the starters from here (23 Oct; 0.6 boxed the cold's name 150 px off its starter)              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
 const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
@@ -121,6 +122,90 @@ func lay_out() -> void:
 		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
 	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(R_RING + 30.0, 0.0), "align": 1}     # at the right, where no class sits (23 Oct: the top's is the Drifter's)
 	_find_bounds()
+	_labels_by_entry()
+
+
+## Every region's name by its first node (23 Oct, Matt: "the naming for every tree class/element/pitch needs to sit by
+## their first node"): the label goes beside the region's one starter - below it, above, right or left, the first of
+## those (and then a step further out) whose words cover no node and no name already placed, at full zoom's size.
+func _labels_by_entry() -> void:
+	var placed: Array = []
+	for tn in _axis:
+		if _axis[tn].get("hide_label", false) or not _trees.has(tn) or _trees[tn].get("ring", false):
+			continue
+		var t: Dictionary = _trees[tn]
+		var entry_id := ""
+		for i in range(t["nodes"].size()):
+			if t["nodes"][i].get("entry", false):
+				entry_id = "%s/%d" % [tn, i]
+				break
+		if entry_id == "" or not layout.has(entry_id):
+			continue
+		var p: Vector2 = layout[entry_id]
+		var r: float = radius_of(node_of(entry_id)) if sim != null else R_ENTRY
+		var words: String = region_words(tn) if sim != null else tn
+		# the words are a fixed screen size, so they're measured at the closest zoom they show at (the review): there a
+		# screen pixel is 1/ENTRY_LABEL_ZOOM of the web's; further in they only take less
+		var k: float = 1.0 / ENTRY_LABEL_ZOOM
+		var es: float = EMBLEM * 0.7 if str(_axis[tn].get("class", "")) == "" else 0.0     # the emblem as drawn at that zoom (clamped to 0.7)
+		var w: float = (_font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + (es + 6.0 if es > 0.0 else 0.0)) * k
+		var top: float = maxf(14.0, es / 2.0 + 8.0) * k        # above the anchor: the cap height, or the emblem's top
+		var foot: float = maxf(10.0, es / 2.0 - 4.0) * k        # below it: the descenders, or the emblem's foot
+		var gap: float = 10.0 * k
+		var best: Array = []
+		for far in [0.0, 18.0, 36.0, 60.0, 90.0, 130.0]:
+			var f: float = far * k
+			var d: float = (r + gap + f) * 0.72               # the diagonals: the corner of the words nearest the node
+			for c in [[Vector2(0, r + gap + top + f), 0], [Vector2(0, -r - gap - foot - f), 0], [Vector2(r + gap + f, 0), 1], [Vector2(-r - gap - f, 0), -1],
+					[Vector2(d, d + top), 1], [Vector2(-d, d + top), -1], [Vector2(d, -d - foot), 1], [Vector2(-d, -d - foot), -1]]:
+				var at: Vector2 = p + c[0]
+				var al: int = c[1]
+				var x0: float = at.x - w if al < 0 else (at.x if al > 0 else at.x - w / 2.0)
+				var box := Rect2(x0, at.y - top, w, top + foot)
+				if _label_clear(box, placed):
+					best = [at, al, box]
+					break
+			if not best.is_empty():
+				break
+		if best.is_empty():
+			var at0: Vector2 = p + Vector2(0, r + gap + top)
+			best = [at0, 0, Rect2(at0.x - w / 2.0, at0.y - top, w, top + foot)]
+		if not _axis[tn].has("rim_at"):
+			_axis[tn]["rim_at"] = _axis[tn]["label_at"]           # the rim's place, for the whole web (below)
+			_axis[tn]["rim_align"] = int(_axis[tn].get("align", 0))
+		_axis[tn]["entry_at"] = best[0]
+		_axis[tn]["entry_align"] = best[1]
+		_axis[tn]["label_box"] = best[2]
+		placed.append(best[2])
+
+
+## A region's name on screen as it's drawn at this zoom (for the smoke): the words and the emblem, by the starter.
+func entry_label_rect(tn: String) -> Rect2:
+	var ax: Dictionary = _axis.get(tn, {})
+	if not ax.has("entry_at"):
+		return Rect2()
+	var p: Vector2 = to_screen(ax["entry_at"])
+	var fs: int = 15 if zoom >= 0.6 else 13
+	var w: float = _font_bold.get_string_size(region_words(tn), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if str(ax.get("class", "")) == "" and emblem_of(tn) != null else 0.0
+	var full: float = w + (es + 6.0 if es > 0.0 else 0.0)
+	var al: int = int(ax.get("entry_align", 0))
+	var x0: float = p.x - full if al < 0 else (p.x if al > 0 else p.x - full / 2.0)
+	var top: float = maxf(fs * 0.8, es / 2.0 + 7.0)
+	var foot: float = maxf(fs * 0.3, es / 2.0 - 5.0)
+	return Rect2(x0, p.y - top, full, top + foot)
+
+
+func _label_clear(box: Rect2, placed: Array) -> bool:
+	for b in placed:
+		if box.intersects(b):
+			return false
+	for id in layout:
+		var q: Vector2 = layout[id]
+		var rr: float = (radius_of(node_of(id)) if sim != null else R_PLAIN) + 2.0
+		if box.grow(rr).has_point(q):
+			return false
+	return true
 
 
 func _find_bounds() -> void:
@@ -316,8 +401,12 @@ func focus_class(cls: String) -> void:
 
 # ------------------------------------------------------------------ the state
 
+var _labels_sim := false
 func show_state(s) -> void:
 	sim = s
+	if not _labels_sim:
+		_labels_sim = true
+		_labels_by_entry()                   # again with the sim: the real radii and the words as drawn
 	if not _focused:
 		_focused = true
 		focus_all()
@@ -477,13 +566,16 @@ func _draw() -> void:
 	for tn in _axis:
 		if _axis[tn].get("hide_label", false):
 			continue
-		var p: Vector2 = to_screen(_axis[tn]["label_at"])
+		# by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at the whole web, where
+		# twelve starters round the centre would put twelve names on each other (23 Oct)
+		var by_entry: bool = zoom >= ENTRY_LABEL_ZOOM and _axis[tn].has("entry_at")
+		var p: Vector2 = to_screen(_axis[tn]["entry_at"] if by_entry else _axis[tn].get("rim_at", _axis[tn]["label_at"]))
 		if not view.has_point(p):
 			continue
 		var words: String = region_words(tn)
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var align: int = int(_axis[tn].get("align", 0))     # -1: the words end at the point; 1: start there; 0: centred
+		var align: int = int(_axis[tn]["entry_align"] if by_entry else _axis[tn].get("rim_align", _axis[tn].get("align", 0)))     # -1: the words end at the point; 1: start there; 0: centred
 		var em: Texture2D = emblem_of(tn) if str(_axis[tn].get("class", "")) == "" else null     # a class's emblem is on its entry node (23 Oct)
 		var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if em != null else 0.0
 		var full: float = w + (es + 6.0 if em != null else 0.0)     # the emblem leads the words
@@ -602,7 +694,7 @@ func _draw_node(id: String, p: Vector2) -> void:
 	if pic != null and zoom >= (FILLER_PIC_ZOOM if nd.get("filler", false) else PIC_ZOOM):
 		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
 		g = minf(g, r * 1.7)
-		var shade: Color = Color.WHITE if taken else (Color(0.85, 0.85, 0.85) if reach else Color(0.5, 0.5, 0.5, 0.8))
+		var shade: Color = Color(1.25, 1.25, 1.25) if taken else (Color(1.1, 1.1, 1.1) if reach else Color(0.85, 0.85, 0.85))     # brighter all round (23 Oct, Matt: "way too dark"): the paintings are dark, so taken lifts past white; untaken 0.5 → 0.85
 		draw_texture_rect(pic, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, shade)
 	elif zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
 		var tex: Texture2D = NodeGlyphs.texture(glyph_of(nd))

@@ -9,6 +9,12 @@ const MAP_ANGLES := {0: 180.0, 1: -60.0, 2: 60.0}     # the sites out to the lef
 
 ## Three regions out from a centre at their angles (Matt, 22 Oct: "the star like map on the class tree is what's
 ## needed for both - same layout so it's consistent for a player"); the name past each lane's end.
+## The names stay where this canvas lays them (the starter's label is Training's: Matt, 23 Oct, of the class, element
+## and Pitch regions).
+func _labels_by_entry() -> void:
+	pass
+
+
 func lay_out() -> void:
 	layout = {}
 	_trees = {}

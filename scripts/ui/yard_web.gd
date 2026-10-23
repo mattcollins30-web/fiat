@@ -10,6 +10,12 @@ const R_YARD := 150.0              # the lanes start this far from the centre
 
 ## Eight buildings' lanes out from the centre at 45° each: the star, as Training's (Matt, 22 Oct: one layout for the
 ## player across the three webs); the name past each lane's end.
+## The names stay where this canvas lays them (the starter's label is Training's: Matt, 23 Oct, of the class, element
+## and Pitch regions).
+func _labels_by_entry() -> void:
+	pass
+
+
 func lay_out() -> void:
 	layout = {}
 	_trees = {}

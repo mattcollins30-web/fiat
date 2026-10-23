@@ -210,7 +210,7 @@ func _build_pick() -> void:
 		c["chips"] = ch
 		_pick_cards.append(c)
 	var hy: float = 150 + 2 * (PICK_CARD_H + 12) + 12
-	_pick.add_child(UI.panel(_pick, Rect2(PAD, hy - 10, INNER, 1), UI.box(Pal.CARD_LINE, 0)))
+	UI.panel(_pick, Rect2(PAD, hy - 10, INNER, 1), UI.box(Pal.CARD_LINE, 0))     # UI.panel adds it (23 Oct: a second add_child logged "Can't add child" at every launch)
 	_pick_head = UI.label(_pick, Rect2(PAD, hy, INNER, 22), "WHAT THE DEATH TOOK, AND WHAT STAYS", "Medium", Pal.CELL_TEXT - 2, Pal.TEXT_3, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_pick_lost = Chips.new(INNER, 6)
 	_pick_lost.position = Vector2(PAD, hy + 28)

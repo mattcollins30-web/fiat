@@ -9743,12 +9743,14 @@ func _harder_gang_checks(sim) -> void:
 	sim.load_dict(d)
 	m = sim.mission
 	_check(m != null and m.has("t_home") and m["t_home"]["depth"] is int and int(m["t"].get("hard_zone", -1)) == 1 and is_equal_approx(float(m["t"]["hp"]), float(m["t_home"]["hp"]) * Data.GANG_NEXT_HP), "a harder gang through a save: %s" % str(m.get("t", {}).get("hard_zone", "none") if m != null else "no run"))
-	# down: the site's own again
+	# down: the site's own again - the one held aside, not the site read again (23 Oct: the clock crossing night or the
+	# weather between the two reads moved the site's HP, and this failed with the code right)
+	var held_home: Dictionary = m["t_home"]
 	m["cleared"] = true
 	m["remaining"] = 1
 	m["target_hp"] = -1.0
 	sim._fight(m, m["t"], 0.05)
-	_check(not m.has("t_home") and not m["t"].has("hard_zone") and is_equal_approx(float(m["t"]["hp"]), float(sim.effective(0)["hp"])), "the harder gang down, the site's own didn't come back: %s" % str(m["t"].get("hard_zone", "none")))
+	_check(not m.has("t_home") and not m["t"].has("hard_zone") and is_same(m["t"], held_home), "the harder gang down, the site's own didn't come back: %s" % str(m["t"].get("hard_zone", "none")))
 	# the patrol arriving rolls it: at the cap's odds, most of a dozen come harder, and the first never does
 	var hard := 0
 	for k in range(12):
@@ -15401,6 +15403,48 @@ func _web_checks(main) -> void:
 				var em = wv.emblem_of(t["name"])
 				_check(em == null or (wv.radius_of(nd) == wv.R_ENTRY and wv.entry_emblem(nd) == em), "%s's starter doesn't carry its emblem: r %.0f" % [t["name"], wv.radius_of(nd)])
 	_check(wv.PIC_ZOOM <= 0.5, "the pictures give way to glyphs from %.2f" % wv.PIC_ZOOM)
+	# every region's name by its first node (23 Oct, Matt): within reach of the starter, on no node and no other name
+	var boxes: Array = []
+	for tn in wv._axis:
+		var ax: Dictionary = wv._axis[tn]
+		if ax.get("hide_label", false) or not wv._trees.has(tn) or wv._trees[tn].get("ring", false):
+			continue
+		var t: Dictionary = wv._trees[tn]
+		var eid := ""
+		for i in range(t["nodes"].size()):
+			if t["nodes"][i].get("entry", false):
+				eid = "%s/%d" % [tn, i]
+		_check(eid != "" and ax.has("label_box"), "%s's name has no place by its starter" % tn)
+		if eid == "" or not ax.has("label_box"):
+			continue
+		var bx: Rect2 = ax["label_box"]
+		_check(bx.grow(80.0).has_point(wv.layout[eid]), "%s's name isn't by its first node: %s, the node at %s" % [tn, str(bx), str(wv.layout[eid])])
+		for b in boxes:
+			_check(not bx.intersects(b), "%s's name sits on another region's" % tn)
+		boxes.append(bx)
+	_check(boxes.size() >= 1 + Data.ELEMENT_TREES.size() + Data.CLASSES.size(), "only %d regions' names placed by their starters" % boxes.size())
+	_check(wv.ENTRY_LABEL_ZOOM > 0.0 and wv._axis.values().all(func(a): return a.get("hide_label", false) or a.has("rim_at") or not a.has("entry_at")), "a name lost its rim place for the whole web")
+	# and on screen at the closest zoom they show at (the review): no name on another, none on a node's disc
+	var zoom_held: float = wv.zoom
+	var cam_held: Vector2 = wv.cam
+	for zl in [wv.ENTRY_LABEL_ZOOM, 1.0]:
+		wv.zoom = zl
+		var rects := {}
+		for tn in wv._axis:
+			if wv._axis[tn].has("entry_at") and not wv._axis[tn].get("hide_label", false):
+				rects[tn] = wv.entry_label_rect(tn)
+		var names: Array = rects.keys()
+		for a_i in range(names.size()):
+			for b_i in range(a_i + 1, names.size()):
+				_check(not rects[names[a_i]].intersects(rects[names[b_i]]), "at zoom %.1f %s's name sits on %s's" % [zl, names[a_i], names[b_i]])
+			var hits := 0
+			for id in wv.layout:
+				var q: Vector2 = wv.to_screen(wv.layout[id])
+				if rects[names[a_i]].grow(wv.radius_of(wv.node_of(id)) * zl).has_point(q):
+					hits += 1
+			_check(hits == 0, "at zoom %.1f %s's name covers %d nodes" % [zl, names[a_i], hits])
+	wv.zoom = zoom_held
+	wv.cam = cam_held
 	_check(wv.LINK_LIT_DIM.get_luminance() > wv.LINK_DIM.get_luminance() + 0.1 and wv.LINK_DIM.get_luminance() > Pal.CARD_LINE.get_luminance(), "the lit wheel's links don't stand off the dim ones")
 	# every node of every tree placed, and no two on each other
 	var ids: Array = []

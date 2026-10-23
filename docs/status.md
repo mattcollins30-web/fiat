@@ -6208,6 +6208,15 @@ difficulty and length, the endgame placeholders.
   canvas drew pictures only on notables and diamonds: now every node with one draws it, a small node 9 → 13 px from
   zoom 0.5, a filler 6 → 10 px from 0.9 (a dot below that keeps a dot's size). No overlaps at the pictured sizes on
   any canvas (web_view.assume_pics, the smoke). Reviewer: slugs built once a name; the filler's size by zoom. Run 211.
+- And three more of Matt's, "do these now": (1) the launch error "Can't add child" from missions.gd's death-pick
+  divider (UI.panel parents it; the second add_child went) - in the game since 21 Oct and written off here on 22 Oct
+  as the shot script's, wrongly; tools/smoke.bat now fails a run whose log has "Can't add child". (2) The node
+  pictures brighter (Matt: "way too dark"): taken ×1.25, reachable ×1.1, untaken 0.85 (was 0.5). (3) Every Training
+  region's name by its first node (_labels_by_entry: beside the one starter, the first spot clear of every node and
+  name, measured at the closest zoom it shows at) from zoom 0.8; on the rim below that, where twelve starters round
+  the centre would stack twelve names. Reviewer: the boxes first measured at zoom 1 (fixed); the cold's name fell
+  150 px off at 0.6, so 0.8. The smoke checks the names on screen at 0.8 and 1. Also the "harder gang down" check
+  compared with the site read again after the clock moved; it compares with the held gang now. Run 214.
 
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 
