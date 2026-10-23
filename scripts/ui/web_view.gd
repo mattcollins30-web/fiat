@@ -46,6 +46,10 @@ const WHEEL_OUT := 3.4 * STEP
 const WHEEL_GLOW := 1.3 * STEP     # the disc past the tracks
 const R_NOTABLE_PIC := 17.0        # a notable's disc with a picture in it (the art, 23 Oct: 15 read as a blob)
 const PIC_ZOOM := 0.5              # the pictures draw from here; the glyph before (and where no picture is). 0.8 till 23 Oct (Matt: the glyphs read worse than a small picture)
+const R_SMALL_PIC := 13.0         # a small node with a picture (23 Oct, Matt: art in every node): 9 can't hold a painting
+const R_FILLER_PIC := 10.0        # a filler with one: drawn from FILLER_PIC_ZOOM, a dot before
+const FILLER_PIC_ZOOM := 0.9
+static var assume_pics := false   # the smoke: every node sized as if its picture had landed, so the overlap checks hold before the art does
 const R_ENTRY := 20.0              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
@@ -341,7 +345,10 @@ func picture_slug(nd: Dictionary) -> String:
 	return slug_of(str(nd.get("name", "")))
 
 
+static var _slugs := {}
 static func slug_of(words: String) -> String:
+	if _slugs.has(words):
+		return _slugs[words]                  # built once a name (the review: every node, every redraw and hover)
 	var out := ""
 	var gap := false
 	for ch in words.to_lower():
@@ -352,6 +359,7 @@ static func slug_of(words: String) -> String:
 			out += ch
 		else:
 			gap = true
+	_slugs[words] = out
 	return out
 
 
@@ -394,10 +402,16 @@ func emblem_of(tn: String) -> Texture2D:
 
 
 func radius_of(nd: Dictionary) -> float:
-	if nd.get("notable", false) and not nd.get("keystone", false) and not nd.get("capstone", false) and picture(picture_slug(nd)) != null:
-		return R_NOTABLE_PIC
+	var diamond: bool = nd.get("keystone", false) or nd.get("capstone", false)
+	var pictured: bool = assume_pics or picture(picture_slug(nd)) != null
 	if nd.get("entry", false) and entry_emblem(nd) != null:
 		return R_ENTRY
+	if pictured and not diamond:
+		if nd.get("notable", false):
+			return R_NOTABLE_PIC
+		if nd.get("filler", false):
+			return R_FILLER_PIC if assume_pics or zoom >= FILLER_PIC_ZOOM else R_FILLER     # a dot below its picture's zoom stays a dot's size (the review)
+		return R_SMALL_PIC
 	return _radius_plain(nd)
 
 
@@ -582,10 +596,10 @@ func _draw_node(id: String, p: Vector2) -> void:
 		draw_circle(p, r, fill)
 		draw_arc(p, r, 0.0, TAU, 32, line, w, true)
 	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
-	var pic: Texture2D = picture(picture_slug(nd)) if (nd.get("notable", false) or diamond) else null
+	var pic: Texture2D = picture(picture_slug(nd))          # every node with a picture draws it (23 Oct; notables and diamonds only before)
 	if pic == null and nd.get("entry", false) and _trees.get(tn, {}).has("class"):
 		pic = emblem_of(tn)                     # the class's emblem on its entry (23 Oct)
-	if pic != null and zoom >= PIC_ZOOM:
+	if pic != null and zoom >= (FILLER_PIC_ZOOM if nd.get("filler", false) else PIC_ZOOM):
 		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
 		g = minf(g, r * 1.7)
 		var shade: Color = Color.WHITE if taken else (Color(0.85, 0.85, 0.85) if reach else Color(0.5, 0.5, 0.5, 0.8))

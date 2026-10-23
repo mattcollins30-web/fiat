@@ -73,7 +73,9 @@ func backdrop_slug() -> String:
 
 
 func picture_slug(nd: Dictionary) -> String:
-	return ("map_" + str(nd["key"])) if not nd.get("filler", false) else ""     # art/nodes/map_<key>.png (the manifest, 22 Oct)
+	if nd.get("filler", false):
+		return "map_f_" + slug_of(str(nd.get("name", "")))     # art/nodes/map_f_<slug>.png (the second wave, 23 Oct): never a Training node's
+	return "map_" + str(nd["key"])     # art/nodes/map_<key>.png (the manifest, 22 Oct)
 
 
 func draw_between(_view: Rect2) -> void:

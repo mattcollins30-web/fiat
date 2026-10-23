@@ -6200,6 +6200,14 @@ difficulty and length, the endgame placeholders.
   20; the class's rim label drops the emblem. Smoke asserts each; run 209 green. Reviewer: a 0.7.1 save that opened a
   region from the old second starter strands it, and every keystone swap would refuse - SAVE_VERSION 6 (Matt: "I
   don't care about saves, we never care if one gets broken"; CLAUDE.md's save rule says so now). VERSION 0.7.2.
+- And the small nodes' art, wired (Matt: "why aren't the other nodes in this batch? send the manifest", then "ok go
+  ahead"). The first list was read off data.gd's sources and missed the lanes' extras and the elements' resist
+  fillers; the second wave (tools/pixellab_web_small2_manifest.json, 32 jobs) was read off what the three canvases
+  draw: Training's 22 more and the Dial's 10 fillers (map_f_<slug>, so its "Light fingers" never takes the Training
+  notable's). The "about 70 left as dots" was wrong - those were crafts, signal words and classes, not nodes. The
+  canvas drew pictures only on notables and diamonds: now every node with one draws it, a small node 9 → 13 px from
+  zoom 0.5, a filler 6 → 10 px from 0.9 (a dot below that keeps a dot's size). No overlaps at the pictured sizes on
+  any canvas (web_view.assume_pics, the smoke). Reviewer: slugs built once a name; the filler's size by zoom. Run 211.
 
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 

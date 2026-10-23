@@ -15421,6 +15421,22 @@ func _web_checks(main) -> void:
 				if overlaps <= 3:
 					_check(false, "%s and %s sit on each other (%.0f apart)" % [ids[a_i], ids[b_i], pa.distance_to(pb)])
 	_check(overlaps == 0, "%d pairs of nodes overlap on the web" % overlaps)
+	# every node at its pictured size (23 Oct, Matt: art in every node): the three canvases hold it before the art lands
+	var WV = load("res://scripts/ui/web_view.gd")
+	WV.assume_pics = true
+	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+		if cv == null:
+			continue
+		var cids: Array = cv.layout.keys()
+		var cover := 0
+		for a_i in range(cids.size()):
+			for b_i in range(a_i + 1, cids.size()):
+				if cv.layout[cids[a_i]].distance_to(cv.layout[cids[b_i]]) < cv.radius_of(cv.node_of(cids[a_i])) + cv.radius_of(cv.node_of(cids[b_i])) + 4.0:
+					cover += 1
+		_check(cover == 0, "%s: %d pairs of nodes overlap at their pictured size" % [cv.get_script().resource_path.get_file(), cover])
+	WV.assume_pics = false
+	_check(wv.radius_of({"name": "Nothing drawn here"}) == wv.R_PLAIN and wv.R_SMALL_PIC > wv.R_PLAIN and wv.R_FILLER_PIC > wv.R_FILLER, "a small node without a picture isn't plain, or the pictured sizes don't grow")
+	_check(main._radio._atlas._web.picture_slug({"name": "Light fingers", "filler": true}).begins_with("map_f_"), "the Dial's fillers borrow Training's pictures")
 	# the whole web fits at its widest; a region's zoom is closer
 	wv.focus_all()
 	var z_all: float = wv.zoom
