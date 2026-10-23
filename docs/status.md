@@ -6501,4 +6501,19 @@ pass; the reviewer on the code):
   `return` skipped the cells' layout; restart() turned the dry rain back on; the fixture's filler bandages left the
   stash full for eleven checks after it. Reviewer's notes in (the room check, the visibility, the emitter's width,
   the lifetimes). The art commit (3d7b49f) took everything the manifests had landed, so a checkout reads the art.
+- The build's last commit: the art wired, the words passed, the version. The regions' emblems (art/web/region_<slug>.png)
+  lead every label on the three canvases; the backdrops (backdrop_training / dial / pitch) cover each canvas under
+  the links, proportions kept; web_view.art_at loads by path with a file fallback for a clone without the import
+  cache. The Scrapper's and the Poacher's new face and figure read first (people_new/, body_new/; Matt: "swap both
+  faces and figures"), the old files kept. The language pass (two reviewers briefed with the style guide, the
+  editor's call mine): "the camp's" → "the Yard" (the key, the Pitch's label); THE ELEMENTS as a caps label with its
+  note in sentence case; the pile line as mechanics ("The papers are at 60, the cap: the lowest one was burnt"); the
+  rig's "Fill up" → "Top up" (one verb with the log's "Topped up"; "fill up" beside Petrol read as fuel), lower case
+  after the button's colon, "nothing lower", "Press to change"; the hint shorts "Low …" → "More …" (Low HP read as
+  hurt); "Grind before" → "Grind first"; the sky words "raining"/"fog down" → "rain"/"fog"; the shelf's "Buy 4 ·
+  180 tins" / "Buy all 6 · 270 tins"; the shelf hint without an input verb. Declined: "free" → "to spend" for points
+  (the house idiom across the rail, the Dial and Training; the clash they named was with a string not in the build);
+  renaming the element Live (clashes with the perk Live wire) and capping The Cold / The Ring - Matt's names, put to
+  him as questions. VERSION "0.7.1" on the title (menu.gd). Smoke green on run 207 (two old checks wanted the old
+  words and the old figure path). Next: Matt plays 0.7.1; items 14-16 and the backlog wait for the balance phase.
 

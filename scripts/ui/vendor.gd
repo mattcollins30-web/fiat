@@ -768,7 +768,7 @@ func _show_panel() -> void:
 				counts[ch["base"]] += 1
 				cost += _price(ch)
 			if order.is_empty():
-				_hint.text = "Tap the shelf's cells to pick several; Buy takes the lot"
+				_hint.text = "Pick several cells on the shelf; Buy takes the lot"     # no input verb (the language pass: tap/click, and the Deck)
 			else:
 				var words: Array = order.map(func(nm): return nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
 				UI.fit(_hint, ["%d picked: %s · %s" % [_shelf.chosen.size(), ", ".join(words), Fmt.money(cost)], "%d picked · %s" % [_shelf.chosen.size(), Fmt.money(cost)]])

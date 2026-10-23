@@ -40,7 +40,7 @@ func show_state(s) -> void:
 	var rows: Array = []
 	var pf: int = sim.points_free()
 	rows.append([str(sim.cls) if sim.cls != "" else "The class", "class", "%d of %d free" % [pf, sim.training_points], Pal.TEXT_2, -1.0])
-	rows.append(["The Pitch", "the camp's", "%d free" % sim.pitch_free(), Pal.TEXT_2, -1.0])
+	rows.append(["The Pitch", "the Yard", "%d free" % sim.pitch_free(), Pal.TEXT_2, -1.0])     # the glossary: the Pitch's tree is the Yard, never "camp" (the language pass)
 	rows.append(["The ring", "paragon", "%d free" % sim.paragon_free(), Pal.TEXT_2, -1.0])
 	for et in Data.ELEMENT_TREES:
 		var el: String = str(et["element"])
@@ -92,7 +92,9 @@ func _draw() -> void:
 	y += 10.0
 	draw_line(Vector2(x, y), Vector2(size.x - PAD, y), Pal.CARD_LINE, 1.0)
 	y += HEAD_H - 4.0
-	draw_string(_font, Vector2(x, y), "THE ELEMENTS · a point when the meter fills", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
+	draw_string(_font_bold, Vector2(x, y), "THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)     # the label in caps, the note after it in sentence case (the language pass: one role a string)
+	var hw: float = _font_bold.get_string_size("THE ELEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	draw_string(_font, Vector2(x + hw + 10.0, y), "A point when the meter fills", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT_3)
 	y += 4.0
 	for r in _rows.slice(3):
 		y += ROW_H

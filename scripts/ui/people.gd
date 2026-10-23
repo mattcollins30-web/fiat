@@ -12,14 +12,18 @@ static var _cache := {}
 static func portrait(name: String) -> Texture2D:
 	var s := Items.slug(name)
 	if not _cache.has(s):
-		var path := "res://art/people/%s.png" % s
 		_cache[s] = null
-		if ResourceLoader.exists(path):
-			_cache[s] = load(path)
-		elif FileAccess.file_exists(path):
-			var img := Image.load_from_file(ProjectSettings.globalize_path(path))
-			if img != null:
-				_cache[s] = ImageTexture.create_from_image(img)
+		# the manifest's new faces first (23 Oct, Matt: "swap both faces and figures"): art/people_new/<slug>.png where
+		# one was made, the old face else
+		for path in ["res://art/people_new/%s.png" % s, "res://art/people/%s.png" % s]:
+			if ResourceLoader.exists(path):
+				_cache[s] = load(path)
+				break
+			elif FileAccess.file_exists(path):
+				var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+				if img != null:
+					_cache[s] = ImageTexture.create_from_image(img)
+					break
 	return _cache[s]
 
 

@@ -180,14 +180,15 @@ const SIGNAL_BINNED := "The signal on %s, binned"
 const SIGNAL_REACH := "A signal beaten at level %d: your reach is level %d"
 const SIGNAL_LOST := "The signal's gone with the run"
 const SIGNAL_PAPERS := "Off the signal, for the Radio: %s"
-const PILE_FULL := "The pile's at %d: the plainest paper went on the fire."     # the Radio's pile at its cap (23 Oct)
+const PILE_FULL := "The papers are at %d, the cap: the lowest one was burnt"     # the Radio's pile at its cap (23 Oct; the language pass: mechanics, one sentence, the panel's name)
 const TOPPED_UP := "Topped up: %d rounds and %d meds from the stash into the rig"     # the rig at the gate (23 Oct)
-const TOP_UP := {"leave": "Leave it", "fill": "Fill up", "best": "Best grades only"}     # the rig at the gate, the Map's button (23 Oct)
+const TOP_UP := {"leave": "Leave it", "fill": "Top up", "best": "Best grades only"}     # the rig at the gate, the Map's button (23 Oct; "Top up" as the log's "Topped up", the language pass)
+const TOP_UP_MID := {"leave": "leave it", "fill": "top up", "best": "best grades only"}     # after the button's colon: sentence case
 const TOPPED_UP_MEDS := "Topped up: %d meds from the stash into the rig"     # meds alone
 const PACK_EMPTY := "Nothing found yet. What the run turns up lands here; pick a cell to read it."     # the run's pack card, empty (23 Oct)
 const PACK_PICK := "Pick a cell for its figures; Select ditches several at once"
-const TOP_UP_SHORT := {"leave": "Leave it", "fill": "Fill up", "best": "Best only"}
-const TOP_UP_TIP := "The rig at the gate, before every run. Fill up: every grade of the worn guns' rounds, then the meds, the best first, into the pouches left. Best grades only: the top grade of each, nothing plainer. Leave it: the rig goes as packed. Click to change; it stays set."
+const TOP_UP_SHORT := {"leave": "Leave it", "fill": "Top up", "best": "Best only"}
+const TOP_UP_TIP := "The rig at the gate, before every run. Top up: every grade of the worn guns' rounds, then the meds, the best first, into the pouches left. Best grades only: the top grade of each, nothing lower. Leave it: the rig goes as packed. Press to change; it stays set."
 const RADIO_READ := "The Radio reads the papers you hold: %d new to the drawer"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
 const RADIO := [
@@ -994,7 +995,7 @@ const AWAY := {
 const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay.", "Don't ask who for."]
 const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
 const SKY := {
-	"night": "night", "day": "day", "rain": "raining", "fog": "fog down", "clear": "clear",
+	"night": "night", "day": "day", "rain": "rain", "fog": "fog", "clear": "clear",     # nouns, all four (the language pass: "fog down" was flavour among values)
 	"worn": "Picked over · back in %s",
 	"fresh": "Fresh",
 	"settling": "Settling · back in %s",

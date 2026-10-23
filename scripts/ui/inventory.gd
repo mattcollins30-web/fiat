@@ -280,8 +280,8 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		var all_cost := 0
 		for it in items:
 			all_cost += _buy_price(it)
-		UI.fit_button(_sell_button, Fmt.money_forms(cost).map(func(m): return "Buy %d for %s" % [chosen.size(), m]) + ["Buy %d" % chosen.size()])
-		UI.fit_button(_all_button, Fmt.money_forms(all_cost).map(func(m): return "All %d · %s" % [items.size(), m]) + ["All %d" % items.size()])
+		UI.fit_button(_sell_button, Fmt.money_forms(cost).map(func(m): return "Buy %d · %s" % [chosen.size(), m]) + ["Buy %d" % chosen.size()])     # the price after the separator, as the All button's (the language pass)
+		UI.fit_button(_all_button, Fmt.money_forms(all_cost).map(func(m): return "Buy all %d · %s" % [items.size(), m]) + ["All %d" % items.size()])
 		var room: bool = sim.stash_room(cells_in)
 		_sell_button.disabled = chosen.is_empty() or sim.cash < cost or not room
 		_sell_button.tooltip_text = "" if chosen.is_empty() or not _sell_button.disabled else ("No room in the stash" if not room else "Short by %s" % Fmt.money(cost - sim.cash))

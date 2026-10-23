@@ -5166,7 +5166,7 @@ func _places_checks(main) -> void:
 	sim.weather[1] = "Rain"
 	var rain: Dictionary = sim.effective(3)
 	_check("Rain" in rain["intel"] and is_equal_approx(rain["search"], fresh["search"] * 1.3) and is_equal_approx(rain["patrol"], fresh["patrol"] * 1.25), "rain did not take: %s search %.2f" % [str(rain["intel"]), rain["search"]])
-	_check(sim.sky_words(3).ends_with(", raining"), "the sky's words do not say rain: %s" % sim.sky_words(3))
+	_check(sim.sky_words(3).ends_with(", " + Words.SKY["rain"]), "the sky's words do not say rain: %s" % sim.sky_words(3))     # the sky word as the glossary has it (the language pass: "rain")
 	sim.weather[1] = "Fog"
 	var fog: Dictionary = sim.effective(3)
 	_check(fog["contact"] == fresh["contact"] - 1 and is_equal_approx(fog["drop"], fresh["drop"] * 0.9), "fog did not take: %s" % str(fog["intel"]))
@@ -6336,7 +6336,7 @@ func _playtest_checks(main) -> void:
 		main._missions._rig(0)
 		main.refresh()
 		seen_modes.append(sim.top_up_mode)
-		_check(c["rig"].text.contains(Words.TOP_UP[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
+		_check(c["rig"].text.contains(Words.TOP_UP_MID[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
 		_check_fit(main, "Runs (the rig %s)" % sim.top_up_mode)
 	_check(seen_modes.size() == 3 and seen_modes.back() == mode0 and seen_modes.has("leave") and seen_modes.has("best") and seen_modes.has("fill"), "the rig's button didn't cycle the three: %s" % str(seen_modes))
 	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
@@ -14217,8 +14217,10 @@ func _backdrop_checks(main) -> void:
 		sim.cls = cd["name"]
 		body.show_state(sim)
 		var own: String = body.BODY_CLASS_ART % str(cd["name"]).to_lower()
+		var new_own: String = body.BODY_NEW_ART % str(cd["name"]).to_lower()     # the manifest's figure first where there is one (23 Oct, Matt: "swap")
+		var has_new: bool = ResourceLoader.exists(new_own) or FileAccess.file_exists(new_own)
 		var has_own: bool = ResourceLoader.exists(own) or FileAccess.file_exists(own)
-		_check(body.figure_path == (own if has_own else body.figure_for("")), "%s shows %s, not its own figure" % [cd["name"], body.figure_path])
+		_check(body.figure_path == (new_own if has_new else (own if has_own else body.figure_for(""))), "%s shows %s, not its own figure" % [cd["name"], body.figure_path])
 		var fd2: Vector2 = body.figure_drawn()
 		_check(body.figure_path == "" or (fd2.x <= body.FIGURE_W + 0.5 and fd2.y <= body.FIGURE_H + 0.5), "%s's figure is drawn %s, past the %d × %d gap" % [cd["name"], str(fd2), body.FIGURE_W, body.FIGURE_H])
 		if body.figure_path != "":

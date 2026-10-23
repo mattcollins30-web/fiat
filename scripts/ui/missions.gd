@@ -428,7 +428,7 @@ func show_state(s) -> void:
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
 		c["rig"].visible = is_open
 		c["rig"].disabled = sim.on_mission()
-		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode]])
+		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode]])
 		if not is_open:
 			c["note"].text = ""
 		elif sim.hp < sim.max_hp() * 0.5:
@@ -690,11 +690,11 @@ static func odds_reasons(s, i: int) -> Array:
 			if s.meds_carried() > 0 and s.meds_carried() < 3:
 				hints.append("Not enough meds in the rig")
 		for h in hints:
-			out.append({"forms": [h, h.replace("Not enough ", "Low ").replace(" in the rig", "")], "colour": "warn"})
+			out.append({"forms": [h, h.replace("Not enough ", "More ").replace(" in the rig", "")], "colour": "warn"})     # "Low HP" read as hurt (the language pass)
 	# and the one thing to do about it, in green: the site before this one, ground (Matt: "grind previous level")
 	var before: int = s.site_before(i)
 	if before >= 0 and not out.is_empty():
-		out.push_front({"forms": ["Grind %s first" % Words.mid(Data.TIERS[before]["name"]), "Grind %s" % Words.mid(Data.TIERS[before]["name"]), "Grind before"], "colour": "good"})
+		out.push_front({"forms": ["Grind %s first" % Words.mid(Data.TIERS[before]["name"]), "Grind %s" % Words.mid(Data.TIERS[before]["name"]), "Grind first"], "colour": "good"})
 	return out
 
 

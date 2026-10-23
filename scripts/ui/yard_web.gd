@@ -81,6 +81,10 @@ func level_tag(_nd: Dictionary) -> Array:
 	return []
 
 
+func backdrop_slug() -> String:
+	return "pitch"
+
+
 func picture_slug(nd: Dictionary) -> String:
 	if nd.has("pick"):
 		var b: Dictionary = Data.yard_building(str(nd["yard"]))

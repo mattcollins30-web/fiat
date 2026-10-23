@@ -172,7 +172,7 @@ func region_words(tn: String) -> String:
 			if other.get("class", "") == t["class"]:
 				lanes.append(str(other["name"]))
 		return "%s · %s" % [str(t["class"]), " and ".join(lanes)]
-	return "%s · the camp's" % tn
+	return "%s · the Yard" % tn                   # the glossary: never "camp" (the language pass)
 
 
 ## A node's glyph key (node_glyphs.gd), or "" for none.
@@ -355,14 +355,34 @@ static func slug_of(words: String) -> String:
 static func picture(slug: String) -> Texture2D:
 	if slug == "":
 		return null
-	if _pics.has(slug):
-		return _pics[slug]
-	var path := "res://art/nodes/%s.png" % slug
+	return art_at("res://art/nodes/%s.png" % slug)
+
+
+## A picture by path, looked for once (23 Oct): the nodes', the regions' emblems, the canvases' backdrops.
+static func art_at(path: String) -> Texture2D:
+	if _pics.has(path):
+		return _pics[path]
 	var tex: Texture2D = null
 	if ResourceLoader.exists(path, "Texture2D"):
 		tex = ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)     # null, quietly, where a clone's import cache isn't built yet (the review)
-	_pics[slug] = tex
+	elif FileAccess.file_exists(path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(path))     # a clone without the import cache (the cloud's renders): the file itself
+		if img != null:
+			tex = ImageTexture.create_from_image(img)
+	_pics[path] = tex
 	return tex
+
+
+## The canvas's backdrop (23 Oct, the manifest): art/web/backdrop_<slug>.png under everything, covering the view.
+## Training's is "training"; the Map's and the Pitch's name their own.
+func backdrop_slug() -> String:
+	return "training"
+
+
+## A region's emblem beside its label (23 Oct, the manifest): art/web/region_<slug>.png, drawn EMBLEM tall.
+const EMBLEM := 26.0
+func emblem_of(tn: String) -> Texture2D:
+	return art_at("res://art/web/region_%s.png" % slug_of(tn))
 
 
 func radius_of(nd: Dictionary) -> float:
@@ -385,6 +405,12 @@ static func _radius_plain(nd: Dictionary) -> float:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Pal.BG)
+	var bd: Texture2D = art_at("res://art/web/backdrop_%s.png" % backdrop_slug())
+	if bd != null:
+		# the backdrop covers the canvas whole, its proportions kept (the painting's 744 wide at the API's most)
+		var k: float = maxf(size.x / bd.get_width(), size.y / bd.get_height())
+		var bs: Vector2 = bd.get_size() * k
+		draw_texture_rect(bd, Rect2((size - bs) / 2.0, bs), false, Color(1, 1, 1, 0.9))
 	if sim == null:
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
@@ -425,8 +451,14 @@ func _draw() -> void:
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var align: int = int(_axis[tn].get("align", 0))     # -1: the words end at the point; 1: start there; 0: centred
-		var x0: float = p.x - w if align < 0 else (p.x if align > 0 else p.x - w / 2.0)
+		var em: Texture2D = emblem_of(tn)
+		var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if em != null else 0.0
+		var full: float = w + (es + 6.0 if em != null else 0.0)     # the emblem leads the words
+		var x0: float = p.x - full if align < 0 else (p.x if align > 0 else p.x - full / 2.0)
 		var tone: Color = Pal.ACCENT if str(_axis[tn].get("class", "")) != "" and str(_axis[tn]["class"]) == str(sim.cls) else tone_of(tn)
+		if em != null:
+			draw_texture_rect(em, Rect2(x0, p.y + 5.0 - fs * 0.78 - (es - fs) / 2.0, es, es), false)
+			x0 += es + 6.0
 		draw_string(_font_bold, Vector2(x0, p.y + 5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone)
 
 

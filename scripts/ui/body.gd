@@ -46,6 +46,7 @@ const FIGURE_Y := PAD
 const BODY_ART := "res://art/body.png"         # a drawn figure: its transparent margin cropped, scaled to fill the gap between the columns
 ## A figure a class (Matt, 10 Oct): art/body_<class>.png for the runner's past, art/body.png while one is missing.
 const BODY_CLASS_ART := "res://art/body_%s.png"
+const BODY_NEW_ART := "res://art/body_new/body_%s.png"     # the manifest's new figures, read first (23 Oct, Matt: "swap both faces and figures")
 var figure_path := "-"                         # the drawing showing now, for the tests ("-" until the first is set)
 var _figures := {}                             # path -> cropped texture, loaded once
 ## The backdrop (10 Oct, Kit-B): the painted kit room at 40%, dark at the edges, the cards as glass over it (Matt,
@@ -203,9 +204,9 @@ static func _cropped(tex: Texture2D) -> Texture2D:
 ## The drawing for a past: its own when painted, art/body.png when not; "" when neither is.
 static func figure_for(cls: String) -> String:
 	if cls != "":
-		var own: String = BODY_CLASS_ART % cls.to_lower()
-		if ResourceLoader.exists(own) or FileAccess.file_exists(own):
-			return own
+		for own in [BODY_NEW_ART % cls.to_lower(), BODY_CLASS_ART % cls.to_lower()]:
+			if ResourceLoader.exists(own) or FileAccess.file_exists(own):
+				return own
 	return BODY_ART if (ResourceLoader.exists(BODY_ART) or FileAccess.file_exists(BODY_ART)) else ""
 
 
