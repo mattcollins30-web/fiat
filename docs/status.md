@@ -6266,8 +6266,14 @@ difficulty and length, the endgame placeholders.
   white: Knuckles), two taken the tone; rings the tone mixed in at ELEMENT_RING_DIM, reach_tone once reachable, the
   tone once taken and active, the dim ring for trained-but-idle (the review: another class's half, a gun not in
   hand). The classes and the Pitch unchanged. Smoke: hulls off, element links in colour, class links grey. Run 220.
-- Next, mockups asked for: the Pitch made its own (square nodes, its colour in the lines and rings, its emblem as the
-  hub - Matt "mockup 1,2,4"); and the class's portrait faint under the lit wheel (Matt's idea).
+- And 0.7.6, from the mockups (Matt: "square sand + portraits"): the Pitch its own - square nodes (an atlas "square"
+  shape), its links and rings in PITCH_TONE sand under the element scheme (tinted()), its emblem the hub on its
+  starting node and off its label, its hit area widened for the corners (the review); and the class's portrait
+  (art/people/<class>.png, faded out over its outer third) at 16% under its lit wheel. Smoke: the Pitch's tone, hub
+  and squares; every class's portrait faded at the rim. Run 221.
+- The art, counted (Matt: "every single node on every single tree will have art?"): the three canvases draw 420
+  pictures; 369 landed, the other 51 in the two running manifests (25 small, 26 small2), none unplanned. The
+  starters draw their emblems.
 
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 

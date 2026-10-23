@@ -15495,13 +15495,25 @@ func _web_checks(main) -> void:
 			if ra != str(lb).get_slice("/", 0) or wv._state.get(la, {}).get("taken", false) or wv._state.get(lb, {}).get("taken", false):
 				continue
 			var lc: Color = wv.link_colour(str(la), str(lb))
-			if wv.is_element(ra):
+			if wv.tinted(ra):
 				el_links += 1
 				_check(lc.is_equal_approx(Color(wv.tone_of(ra), wv.ELEMENT_LINK_DIM)), "%s-%s in %s isn't in its colour: %s" % [la, lb, ra, lc])
 			elif wv._trees[ra].has("class"):
 				cl_links += 1
 				_check(lc == wv.LINK_DIM or lc == wv.LINK_LIT_DIM, "the class link %s-%s took a colour: %s" % [la, lb, lc])
 	_check(el_links > 20 and cl_links > 20, "the link colours checked too few links: %d element, %d class" % [el_links, cl_links])
+	# the Pitch its own (23 Oct, Matt: "square sand + portraits"): its colour, its hub the emblem, its nodes squares from
+	# the atlas; and every class's portrait for under its wheel, faded to nothing at the rim
+	_check(wv.tone_of(Data.COMMON_TREE) == wv.PITCH_TONE and wv.tinted(Data.COMMON_TREE) and wv.entry_emblem({"region": Data.COMMON_TREE}) != null, "the Pitch isn't in its sand, or has no hub")
+	var held_zoom: float = wv.zoom
+	wv.focus_tree(Data.COMMON_TREE)
+	wv.count_batches()
+	_check(wv._atlas_of.keys().any(func(k): return str(k).begins_with("square:")), "the Pitch's nodes didn't draw as squares")
+	wv.zoom = held_zoom
+	for t in Data.TREES.filter(func(x): return x.has("class") and int(x.get("lane", 0)) == 0):
+		var face: Texture2D = wv.wheel_portrait(str(t["class"]))
+		var fimg: Image = face.get_image() if face != null else null
+		_check(fimg != null and fimg.get_pixel(0, 0).a == 0.0 and fimg.get_pixel(int(fimg.get_width() / 2.0), int(fimg.get_height() / 2.0)).a > 0.5, "%s has no portrait for its wheel, or it isn't faded at the rim" % t["class"])
 	# every node of every tree placed, and no two on each other
 	var ids: Array = []
 	for t in Data.TREES + Data.ELEMENT_TREES:

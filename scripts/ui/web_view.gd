@@ -31,12 +31,16 @@ const R_CAPSTONE := 22.0
 const LINK_W := 2.0
 const LINK_DIM := Color("4a5059")       # a link to nothing reached yet (23 Oct: CARD_LINE was lost on the backdrop and the lit disc)
 const LINK_LIT_DIM := Color("7a8290")   # the same inside the class's lit wheel (Matt: "far too faint and really hard to read")
-const YARD_TONE := Color("8fb3d9")
 ## The elements' regions in their colour (23 Oct, Matt: "the coloured boxes for the elements just look cheap - the
 ## lines and node outlines should carry the element's colour instead"): no hull; a link between two of its nodes in
 ## its colour at ELEMENT_LINK_DIM, lighter where it reaches, whole where both are taken; a ring its colour mixed in
 ## at ELEMENT_RING_DIM, whole once reachable or taken.
 const ELEMENT_HULLS := false
+## The Pitch its own (23 Oct, Matt: "square sand + portraits"): the camp's tree built, not grown - square nodes, its
+## links and rings in PITCH_TONE as the elements' in theirs, its emblem the hub on its starting node.
+const PITCH_TONE := Color("d1a65f")       # sand: apart from The cold's blue and softer than the class's amber
+## And the class's portrait faint under its lit wheel, faded out before the rim.
+const PORTRAIT_SHADE := Color(0.75, 0.72, 0.68, 0.16)
 const ELEMENT_LINK_DIM := 0.5
 const ELEMENT_RING_DIM := 0.55
 ## The web lies wide, as the canvas is (slice 1): the Pitch across the centre, three elements' lanes out to the left
@@ -356,6 +360,8 @@ func _lay_wheel(t: Dictionary, cls: String, d: Vector2, deg: float) -> void:
 
 ## A tree's tone: an element's colour, the Pitch's accent, a class's text.
 func tone_of(tree_name: String) -> Color:
+	if tree_name == Data.COMMON_TREE:
+		return PITCH_TONE
 	return _axis.get(tree_name, {}).get("tone", Pal.TEXT)
 
 
@@ -537,6 +543,10 @@ static func shape(kind: String, radius: float) -> Texture2D:
 		for x in range(n):
 			var d := Vector2(x + 0.5 - h, y + 0.5 - h)
 			var cover: float = h - d.length() if kind == "disc" else (h - absf(d.x) - absf(d.y)) / sqrt(2.0)
+			if kind == "square":                 # a rounded square, its corners a third of the half
+				var rc: float = h * 0.33
+				var q := Vector2(absf(d.x), absf(d.y)) - Vector2(h - rc, h - rc)
+				cover = -(Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - rc)
 			img.set_pixel(x, y, Color(1, 1, 1, clampf(cover + 0.5, 0.0, 1.0)))
 	var out: Texture2D = _pack(img)
 	if out == null:
@@ -581,9 +591,12 @@ static func _pack(src: Image) -> AtlasTexture:
 ## Everything this canvas can draw packed at once, on its first show (the review): packed lazily, a pan across the
 ## web packed a few pictures a frame and sent the whole atlas up on each of them.
 func _pack_all() -> void:
-	for kind in ["disc", "diamond"]:
+	for kind in ["disc", "diamond", "square"]:
 		for n in DISC_SIZES:
 			shape(kind, n / 2.0)
+	for tn in _trees:
+		if _trees[tn].has("class"):
+			atlased(wheel_portrait(str(_trees[tn]["class"])))
 	for id in layout:
 		var nd: Dictionary = node_of(id)
 		atlased(picture(picture_slug(nd)))
@@ -607,9 +620,37 @@ func backdrop_slug() -> String:
 	return "training"
 
 
+## The class's portrait for under its lit wheel (23 Oct): art/people/<class>.png, faded to nothing at its
+## rim, made once.
+static var _portraits := {}
+static func wheel_portrait(cls: String) -> Texture2D:
+	if _portraits.has(cls):
+		return _portraits[cls]
+	var tex: Texture2D = art_at("res://art/people/%s.png" % cls.to_lower())
+	var out: Texture2D = null
+	if tex != null:
+		var img: Image = tex.get_image()
+		if img != null and not img.is_empty():
+			img = img.duplicate()
+			if img.is_compressed():
+				img.decompress()
+			img.convert(Image.FORMAT_RGBA8)
+			var n := img.get_width()
+			for y in range(img.get_height()):
+				for x in range(n):
+					var d: float = Vector2(x + 0.5 - n / 2.0, y + 0.5 - img.get_height() / 2.0).length() / (n / 2.0)
+					var c: Color = img.get_pixel(x, y)
+					c.a *= clampf((1.0 - d) / 0.35, 0.0, 1.0)
+					img.set_pixel(x, y, c)
+			out = ImageTexture.create_from_image(img)
+	_portraits[cls] = out
+	return out
+
+
 ## Whether a region is the class on show's (its wheel lit).
-func is_element(tn: String) -> bool:
-	return _trees.get(tn, {}).has("element")
+## A region drawn in its own colour (its links and rings): an element's, and the Pitch's.
+func tinted(tn: String) -> bool:
+	return _trees.get(tn, {}).has("element") or tn == Data.COMMON_TREE
 
 
 func _lit_wheel(tn: String) -> bool:
@@ -639,6 +680,8 @@ func radius_of(nd: Dictionary) -> float:
 ## A class's entry node carries the class's emblem (23 Oct): the first lane's region emblem, moved off the rim label.
 func entry_emblem(nd: Dictionary) -> Texture2D:
 	var tn: String = str(nd.get("region", ""))
+	if tn == Data.COMMON_TREE:
+		return emblem_of(tn)
 	if tn == "" or not _trees.has(tn) or not _trees[tn].has("class"):
 		return null
 	return emblem_of(tn)
@@ -775,7 +818,7 @@ func link_colour(a: String, b: String) -> Color:
 	var sa: Dictionary = _state.get(a, {})
 	var sb: Dictionary = _state.get(b, {})
 	var ta: String = a.get_slice("/", 0)
-	var elem: bool = is_element(ta) and ta == b.get_slice("/", 0)
+	var elem: bool = tinted(ta) and ta == b.get_slice("/", 0)
 	if sa.get("taken", false) and sb.get("taken", false):
 		return tone_of(ta)
 	if (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
@@ -799,7 +842,7 @@ func _draw_region_names(view: Rect2) -> void:
 		var fs: int = 15 if zoom >= 0.6 else 13
 		var w: float = _font_bold.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var align: int = int(_axis[tn]["entry_align"] if by_entry else _axis[tn].get("rim_align", _axis[tn].get("align", 0)))     # -1: the words end at the point; 1: start there; 0: centred
-		var em: Texture2D = emblem_of(tn) if str(_axis[tn].get("class", "")) == "" else null     # a class's emblem is on its entry node (23 Oct)
+		var em: Texture2D = emblem_of(tn) if str(_axis[tn].get("class", "")) == "" and tn != Data.COMMON_TREE else null     # a class's emblem is on its entry node, the Pitch's on its hub (23 Oct)
 		var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if em != null else 0.0
 		var full: float = w + (es + 6.0 if em != null else 0.0)     # the emblem leads the words
 		var x0: float = p.x - full if align < 0 else (p.x if align > 0 else p.x - full / 2.0)
@@ -824,6 +867,10 @@ func draw_under(view: Rect2) -> void:
 				if not dry:
 					draw_circle(c, r, Color(Pal.BG, 0.55))        # darker than the links, not warmer (23 Oct: the warm wash lost the lines)
 					draw_circle(c, r, Color(Pal.ACCENT, 0.04))
+				var face: Texture2D = atlased(wheel_portrait(str(sim.cls)))
+				if face != null:
+					_sprite(face, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), PORTRAIT_SHADE)
+				if not dry:
 					draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
 	for tn in _trees:
 		var t: Dictionary = _trees[tn]
@@ -882,8 +929,6 @@ func _draw_node(id: String, p: Vector2) -> void:
 	var st: Dictionary = _state.get(id, {})
 	var tn: String = id.get_slice("/", 0)
 	var tone: Color = tone_of(tn)
-	if tn == Data.COMMON_TREE:
-		tone = YARD_TONE
 	var r: float = radius_of(nd) * zoom
 	var taken: bool = st.get("taken", false)
 	var reach: bool = st.get("reach", false)
@@ -892,7 +937,7 @@ func _draw_node(id: String, p: Vector2) -> void:
 	var fill: Color = Pal.BG
 	var line: Color = Pal.CARD_LINE
 	var w: float = 1.0
-	var elem: bool = is_element(tn)          # an element's rings carry its colour (23 Oct, Matt: the boxes "look cheap")
+	var elem: bool = tinted(tn)          # an element's rings carry its colour (23 Oct, Matt: the boxes "look cheap"), the Pitch's too
 	if elem:
 		line = Pal.CARD_LINE.lerp(tone, ELEMENT_RING_DIM)
 	if taken:
@@ -917,11 +962,16 @@ func _draw_node(id: String, p: Vector2) -> void:
 		var o: float = w / 2.0 * sqrt(2.0)          # the outline's half width, along the diagonal
 		_shape("diamond", p, r + o, line)
 		_shape("diamond", p, r - o, fill)
+	elif tn == Data.COMMON_TREE:
+		_shape("square", p, r * 0.9 + w / 2.0, line)     # the Pitch's nodes built, not grown (23 Oct)
+		_shape("square", p, r * 0.9 - w / 2.0, fill)
 	else:
 		_shape("disc", p, r + w / 2.0, line)
 		_shape("disc", p, r - w / 2.0, fill)
 	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
 	var pic: Texture2D = picture(picture_slug(nd))          # every node with a picture draws it (23 Oct; notables and diamonds only before)
+	if nd.get("entry", false) and tn == Data.COMMON_TREE:
+		pic = emblem_of(tn)                     # the Pitch's emblem its hub (23 Oct)
 	if pic == null and nd.get("entry", false) and _trees.get(tn, {}).has("class"):
 		pic = emblem_of(tn)                     # the class's emblem on its entry (23 Oct)
 	if pic != null and zoom >= (FILLER_PIC_ZOOM if nd.get("filler", false) else PIC_ZOOM):
@@ -957,7 +1007,7 @@ func node_at(screen_p: Vector2) -> String:
 	var best_d := INF
 	for id in layout:
 		var p: Vector2 = to_screen(layout[id])
-		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom) + 4.0
+		var r: float = maxf(12.0, radius_of(node_of(id)) * zoom * (1.15 if id.get_slice("/", 0) == Data.COMMON_TREE else 1.0)) + 4.0     # the Pitch's square corners reach past r (the review)
 		var d: float = p.distance_to(screen_p)
 		if d <= r and d < best_d:
 			best_d = d
