@@ -13,6 +13,8 @@ saves/
 
 # the watcher's scratch: smoke logs, flags, review diffs, balance output (14 Oct)
 docs/balance/
+# the art handoff's flags between sessions (23 Oct, docs/art/pixellab_lessons.md)
+docs/art/handoff/
 # exported builds
 /Fiat.*
 # leftovers

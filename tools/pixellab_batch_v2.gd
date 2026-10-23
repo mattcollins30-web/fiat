@@ -40,7 +40,7 @@ extends SceneTree
 ##
 ## RUN (from the project root):
 ##   godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_ships_v2_manifest.json
-##   options: ++ --dry-run   ++ --only <name>   ++ --force
+##   options: ++ --dry-run   ++ --only <name>   ++ --force   ++ --parallel <N> (N jobs in flight; default 1)
 ##
 ## JOB FIELDS (manifest "jobs" entries):
 ##   out            output path WITHOUT the _NN suffix (e.g. art/ships/v2/ship_anvil.png)
@@ -79,9 +79,16 @@ const POLL_DEFAULT_SECONDS: float = 5.0
 const POLL_TIMEOUT_SECONDS: float = 600.0
 const RETRY_DELAY_SECONDS: float = 20.0
 const MAX_RETRIES: int = 3
+## A 429 is the account's limit (too many jobs at once under --parallel), not a fault: waited out for up to ~10 min.
+const MAX_RETRIES_429: int = 30
+const WORKER_STAGGER_SECONDS: float = 3.0
 const KNOWN_FIELDS: Array[String] = ["seed", "no_background", "style_options"]
 
-var _http: HTTPRequest
+var _workers_left: int = 0
+var _generated: int = 0
+var _skipped: int = 0
+var _failed: int = 0
+var _total_usd: float = 0.0
 
 
 func _initialize() -> void:
@@ -117,95 +124,120 @@ func _run() -> void:
 	var jobs: Array = manifest.get("jobs", [])
 	print("PixelLab v2 batch — %d job(s) in %s." % [jobs.size(), manifest_path.get_file()])
 
-	_http = HTTPRequest.new()
-	get_root().add_child(_http)
+	# ++ --parallel N: N jobs in flight at once (23 Oct, Matt: one at a time was the 16-hour runs). Each worker takes
+	# the next job off the shared queue when its last one is written; 1 (the default) is the old one-at-a-time run.
+	var parallel: int = 1
+	var parallel_index: int = args.find("--parallel")
+	if parallel_index >= 0 and parallel_index + 1 < args.size():
+		parallel = maxi(1, int(args[parallel_index + 1]))
+	if dry_run:
+		parallel = 1
+	elif parallel > 1:
+		print("%d jobs in flight at once." % parallel)
 
-	var generated: int = 0
-	var skipped: int = 0
-	var failed: int = 0
-	var total_usd: float = 0.0
-	for job in jobs:
-		var out_path: String = String(job.get("out", ""))
-		var label: String = out_path.get_file().get_basename()
-		if only_filter != "" and not label.contains(only_filter):
-			continue
-		if out_path == "" or String(job.get("description", "")) == "":
-			print("  SKIP (malformed job — needs 'out' and 'description'): %s" % [job])
-			failed += 1
-			continue
-		var endpoint: String = String(job.get("endpoint", "generate-image-v2"))
-		var animate: bool = endpoint == "animate-with-text-v3"
-		var single: bool = bool(job.get("single", false))
-		var first_out: String = out_path if (animate or single) else _numbered(out_path, 1)
-		if not force and FileAccess.file_exists("res://" + first_out):
-			print("  skip (exists): %s" % first_out)
-			skipped += 1
-			continue
-		if dry_run:
-			if animate:
-				print("  would animate: %s from %s (%d frames)  \"%s\"" % [out_path, String(job.get("first_frame", "")), int(job.get("frame_count", 8)), String(job.get("description", "")).left(70)])
-			else:
-				print("  would generate: %s via /%s (%dx%d)  \"%s\"" % [out_path, endpoint, int(job.get("width", 0)), int(job.get("height", 0)), String(job.get("description", "")).left(70)])
-			continue
+	var queue: Array = jobs.duplicate()
+	var flags: Dictionary = {"secret": secret, "dry_run": dry_run, "force": force, "only": only_filter}
+	_workers_left = parallel
+	for w in range(parallel):
+		_worker(queue, flags, w)
+	while _workers_left > 0:
+		await create_timer(0.5).timeout
 
-		var result: Dictionary = await _generate(secret, job, endpoint)
-		if result.get("ok", false) and animate:
-			var frames: Array = result.get("images", [])
-			var cells: int = _write_clip_sheet(out_path, String(job.get("first_frame", "")), frames)
-			_write_response_dump(out_path, result.get("raw", {}))
-			var usd_clip: float = float(result.get("usd", 0.0))
-			total_usd += usd_clip
-			if cells > 1:
-				generated += 1
-				print("  wrote %s (%d cells, %d frames from the API, $%.4f)" % [out_path, cells, frames.size(), usd_clip])
-			else:
-				failed += 1
-				print("  FAIL %s: job completed but no frame decoded" % out_path)
-			await create_timer(DELAY_BETWEEN_JOBS_SECONDS).timeout
-			continue
-		if result.get("ok", false):
-			var images: Array = result.get("images", [])
-			var written: int = 0
-			for i in range(images.size()):
-				if single and written > 0:
-					break
-				var png: PackedByteArray = _decode(String(images[i]))
-				if png.is_empty():
-					print("  WARN: result %d did not decode" % (i + 1))
-					continue
-				if job.get("flip_h", false):
-					var image := Image.new()
-					if image.load_png_from_buffer(png) == OK:
-						image.flip_x()
-						png = image.save_png_to_buffer()
-				var target: String = "res://" + (out_path if single else _numbered(out_path, i + 1))
-				DirAccess.make_dir_recursive_absolute(target.get_base_dir())
-				var f := FileAccess.open(target, FileAccess.WRITE)
-				if f == null:
-					print("  FAIL (can't write %s): %s" % [target, FileAccess.get_open_error()])
-					continue
-				f.store_buffer(png)
-				f.close()
-				written += 1
-			if written > 1:
-				_write_sheet(out_path, images, job.get("flip_h", false))
-			if not single:
-				_write_response_dump(out_path, result.get("raw", {}))
-			var usd: float = float(result.get("usd", 0.0))
-			total_usd += usd
-			if written > 0:
-				generated += 1
-				print("  wrote %d image(s) for %s ($%.4f)" % [written, out_path, usd])
-			else:
-				failed += 1
-				print("  FAIL %s: job completed but no image decoded" % out_path)
+	print("Done: %d generated, %d skipped (already on disk), %d failed. Batch cost: $%.4f" % [_generated, _skipped, _failed, _total_usd])
+	quit(0 if _failed == 0 else 1)
+
+
+## One worker: jobs off the shared queue until it's empty. Workers after the first start a few seconds apart so their
+## submissions don't land together.
+func _worker(queue: Array, flags: Dictionary, index: int) -> void:
+	if index > 0 and not flags["dry_run"]:
+		await create_timer(WORKER_STAGGER_SECONDS * index).timeout
+	while not queue.is_empty():
+		await _do_job(queue.pop_front(), flags)
+	_workers_left -= 1
+
+
+## One job: skipped if on disk (or filtered out), else generated and written; the run's counts kept on the script.
+func _do_job(job: Dictionary, flags: Dictionary) -> void:
+	var out_path: String = String(job.get("out", ""))
+	var label: String = out_path.get_file().get_basename()
+	if flags["only"] != "" and not label.contains(flags["only"]):
+		return
+	if out_path == "" or String(job.get("description", "")) == "":
+		print("  SKIP (malformed job — needs 'out' and 'description'): %s" % [job])
+		_failed += 1
+		return
+	var endpoint: String = String(job.get("endpoint", "generate-image-v2"))
+	var animate: bool = endpoint == "animate-with-text-v3"
+	var single: bool = bool(job.get("single", false))
+	var first_out: String = out_path if (animate or single) else _numbered(out_path, 1)
+	if not flags["force"] and FileAccess.file_exists("res://" + first_out):
+		print("  skip (exists): %s" % first_out)
+		_skipped += 1
+		return
+	if flags["dry_run"]:
+		if animate:
+			print("  would animate: %s from %s (%d frames)  \"%s\"" % [out_path, String(job.get("first_frame", "")), int(job.get("frame_count", 8)), String(job.get("description", "")).left(70)])
 		else:
-			print("  FAIL %s: %s" % [out_path, result.get("error", "unknown")])
-			failed += 1
-		await create_timer(DELAY_BETWEEN_JOBS_SECONDS).timeout
+			print("  would generate: %s via /%s (%dx%d)  \"%s\"" % [out_path, endpoint, int(job.get("width", 0)), int(job.get("height", 0)), String(job.get("description", "")).left(70)])
+		return
 
-	print("Done: %d generated, %d skipped (already on disk), %d failed. Batch cost: $%.4f" % [generated, skipped, failed, total_usd])
-	quit(0 if failed == 0 else 1)
+	print("  start %s" % out_path)
+	var result: Dictionary = await _generate(flags["secret"], job, endpoint)
+	if result.get("ok", false) and animate:
+		var frames: Array = result.get("images", [])
+		var cells: int = _write_clip_sheet(out_path, String(job.get("first_frame", "")), frames)
+		_write_response_dump(out_path, result.get("raw", {}))
+		var usd_clip: float = float(result.get("usd", 0.0))
+		_total_usd += usd_clip
+		if cells > 1:
+			_generated += 1
+			print("  wrote %s (%d cells, %d frames from the API, $%.4f)" % [out_path, cells, frames.size(), usd_clip])
+		else:
+			_failed += 1
+			print("  FAIL %s: job completed but no frame decoded" % out_path)
+		await create_timer(DELAY_BETWEEN_JOBS_SECONDS).timeout
+		return
+	if result.get("ok", false):
+		var images: Array = result.get("images", [])
+		var written: int = 0
+		for i in range(images.size()):
+			if single and written > 0:
+				break
+			var png: PackedByteArray = _decode(String(images[i]))
+			if png.is_empty():
+				print("  WARN: result %d did not decode" % (i + 1))
+				continue
+			if job.get("flip_h", false):
+				var image := Image.new()
+				if image.load_png_from_buffer(png) == OK:
+					image.flip_x()
+					png = image.save_png_to_buffer()
+			var target: String = "res://" + (out_path if single else _numbered(out_path, i + 1))
+			DirAccess.make_dir_recursive_absolute(target.get_base_dir())
+			var f := FileAccess.open(target, FileAccess.WRITE)
+			if f == null:
+				print("  FAIL (can't write %s): %s" % [target, FileAccess.get_open_error()])
+				continue
+			f.store_buffer(png)
+			f.close()
+			written += 1
+		if written > 1:
+			_write_sheet(out_path, images, job.get("flip_h", false))
+		if not single:
+			_write_response_dump(out_path, result.get("raw", {}))
+		var usd: float = float(result.get("usd", 0.0))
+		_total_usd += usd
+		if written > 0:
+			_generated += 1
+			print("  wrote %d image(s) for %s ($%.4f)" % [written, out_path, usd])
+		else:
+			_failed += 1
+			print("  FAIL %s: job completed but no image decoded" % out_path)
+	else:
+		print("  FAIL %s: %s" % [out_path, result.get("error", "unknown")])
+		_failed += 1
+	await create_timer(DELAY_BETWEEN_JOBS_SECONDS).timeout
 
 
 ## art/ships/v2/ship_anvil.png, 3 -> art/ships/v2/ship_anvil_03.png
@@ -525,13 +557,24 @@ func _merge_extra(body: Dictionary, job: Dictionary) -> void:
 ## first — signed URLs can reject foreign auth — then with it.
 func _download(url: String, headers: PackedStringArray) -> PackedByteArray:
 	for attempt_headers in [PackedStringArray(), headers]:
-		var err: int = _http.request(url, attempt_headers, HTTPClient.METHOD_GET, "")
-		if err != OK:
+		var response: Array = await _http_request(url, attempt_headers, HTTPClient.METHOD_GET, "")
+		if response.is_empty():
 			continue
-		var response: Array = await _http.request_completed
 		if response[0] == HTTPRequest.RESULT_SUCCESS and response[1] == 200:
 			return response[3]
 	return PackedByteArray()
+
+
+## One request on its own HTTPRequest node (one node can't carry two requests at once, and --parallel runs several):
+## the request_completed array, or [] if it couldn't be dispatched.
+func _http_request(url: String, headers: PackedStringArray, method: int, payload: String) -> Array:
+	var http := HTTPRequest.new()
+	get_root().add_child(http)
+	var response: Array = []
+	if http.request(url, headers, method, payload) == OK:
+		response = await http.request_completed
+	http.queue_free()
+	return response
 
 
 ## Base64Image: {type:"base64", base64:"data:image/png;base64,...", format:"png"}.
@@ -608,15 +651,18 @@ func _usd(response: Dictionary) -> float:
 
 ## One HTTP round trip with retry on 429/5xx. Returns {"ok", "json"} or {"ok": false, "error"}.
 func _request_json(url: String, headers: PackedStringArray, method: int, payload: String) -> Dictionary:
-	for attempt in range(1, MAX_RETRIES + 1):
-		var err: int = _http.request(url, headers, method, payload)
-		if err != OK:
-			return {"ok": false, "error": "request dispatch error %d" % err}
-		var response: Array = await _http.request_completed
+	# Each kind of trouble keeps its own count, so a run of 429s doesn't spend a later 5xx's or transport error's tries.
+	var tries: Dictionary = {"429": 0, "other": 0}
+	while true:
+		var response: Array = await _http_request(url, headers, method, payload)
+		if response.is_empty():
+			return {"ok": false, "error": "request dispatch error"}
 		var http_result: int = response[0]
 		var code: int = response[1]
 		var text: String = (response[3] as PackedByteArray).get_string_from_utf8()
 		if http_result != HTTPRequest.RESULT_SUCCESS:
+			tries["other"] += 1
+			var attempt: int = tries["other"]
 			if attempt < MAX_RETRIES:
 				print("    transport error (result %d), retry %d/%d in %ds..." % [http_result, attempt, MAX_RETRIES, int(RETRY_DELAY_SECONDS)])
 				await create_timer(RETRY_DELAY_SECONDS).timeout
@@ -627,12 +673,16 @@ func _request_json(url: String, headers: PackedStringArray, method: int, payload
 			if parsed is Dictionary:
 				return {"ok": true, "json": parsed}
 			return {"ok": false, "error": "HTTP %d but not a JSON object: %s" % [code, text.left(200)]}
-		if (code == 429 or code >= 500) and attempt < MAX_RETRIES:
-			print("    HTTP %d, retry %d/%d in %ds..." % [code, attempt, MAX_RETRIES, int(RETRY_DELAY_SECONDS)])
-			await create_timer(RETRY_DELAY_SECONDS).timeout
-			continue
+		if code == 429 or code >= 500:
+			var kind: String = "429" if code == 429 else "other"
+			tries[kind] += 1
+			var limit: int = MAX_RETRIES_429 if code == 429 else MAX_RETRIES
+			if tries[kind] < limit:
+				print("    HTTP %d, retry %d/%d in %ds..." % [code, tries[kind], limit, int(RETRY_DELAY_SECONDS)])
+				await create_timer(RETRY_DELAY_SECONDS).timeout
+				continue
 		return {"ok": false, "error": "HTTP %d: %s" % [code, text.left(400)]}
-	return {"ok": false, "error": "retries exhausted"}
+	return {"ok": false, "error": "unreachable"}
 
 
 func _read_secret() -> String:

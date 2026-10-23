@@ -8,7 +8,7 @@ total. Run before every commit; the total should be 0.
 usage: python3 tools/gdlint.py <godot executable> <project dir> [port]
 Fixing one: a whole-number division that's meant gets @warning_ignore("integer_division") on the line before its
 statement; a local that shadows a property or function is renamed; an unused parameter gets a leading underscore."""
-import json, os, socket, subprocess, sys, time, glob
+import json, os, pathlib, socket, subprocess, sys, time, glob, urllib.parse
 godot, proj = sys.argv[1], os.path.abspath(sys.argv[2])
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 6011
 p = subprocess.Popen([godot, "--headless", "--editor", "--path", proj, "--lsp-port", str(port)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -40,11 +40,11 @@ def read_all(wait):
             if len(rest) < n: break
             out.append(json.loads(rest[:n])); buf = rest[n:]
     return out
-uri = lambda f: "file://" + f
+uri = lambda f: pathlib.Path(f).as_uri()  # file:///C:/... on Windows too (a bare "file://" + path broke every URI there)
 send({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"processId": None, "rootUri": uri(proj), "capabilities": {}}})
 read_all(3)
 send({"jsonrpc": "2.0", "method": "initialized", "params": {}})
-files = sorted(f for f in glob.glob(proj + "/**/*.gd", recursive=True) if "/.godot/" not in f and "/docs/" not in f and "/addons/" not in f)
+files = sorted(f for f in glob.glob(proj + "/**/*.gd", recursive=True) if not any(d in f.replace("\\", "/") for d in ("/.godot/", "/docs/", "/addons/")))
 diags = {}
 for f in files:
     send({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {"textDocument": {"uri": uri(f), "languageId": "gdscript", "version": 1, "text": open(f, encoding="utf-8").read()}}})
@@ -59,6 +59,6 @@ total = 0
 for u in sorted(diags):
     for d in diags[u]:
         total += 1
-        rel = u.replace(uri(proj) + "/", "")
+        rel = urllib.parse.unquote(u).replace(urllib.parse.unquote(uri(proj)) + "/", "")
         print("%s:%d: %s %s" % (rel, d["range"]["start"]["line"] + 1, d.get("code", ""), d["message"]))
 print("TOTAL %d in %d files of %d" % (total, sum(1 for u in diags if diags[u]), len(files)))
