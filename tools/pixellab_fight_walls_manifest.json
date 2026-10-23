@@ -1,0 +1,226 @@
+{
+ "_readme": [
+  "FIAT FIGHT WALLS, THE SET (23 Oct, Matt): every site's wall, tall (12). After the test reads; the test's Parade is skipped as made.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_walls_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <site> ++ --force)",
+  "Walls only: art/fight_walls/<site>_cover.png, 744x256, the body filling the lower 85% down to the bottom edge - tall enough that the full duck needs no tiled fill. The 17 Oct walls in art/fight_new/ are their style and stay untouched.",
+  "Regenerate with python3 tools/make_fight_walls_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_walls/the_allotments_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101000,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_allotments_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a raised vegetable bed built of old railway sleepers, weeds and a broken cane over the top, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_allotments (styled on art/fight_new/the_allotments_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_garden_centre_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101001,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_garden_centre_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a pallet stacked with split plain unprinted compost bags, soil spilling over the edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_garden_centre (styled on art/fight_new/the_garden_centre_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/top_farm_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101002,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/top_farm_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a dry-stone wall with a gate post, nettles at its foot, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: top_farm (styled on art/fight_new/top_farm_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/ransacked_streets_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101003,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/ransacked_streets_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a front-garden wall of pebbledash with a toppled wheelie bin against it, no number on it, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: ransacked_streets (styled on art/fight_new/ransacked_streets_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_parade_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_parade_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a wall of grimy red brick with a broken concrete coping, moss in the joints, a weed growing from a crack, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_parade (styled on art/fight_new/the_parade_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_retail_park_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101005,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_retail_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a long concrete planter with dead shrubs and a run of trolleys jammed against it, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_retail_park (styled on art/fight_new/the_retail_park_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_pleasure_park_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101006,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_pleasure_park_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the side of an overturned dodgem car, no numbers on it, its pole bent, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_pleasure_park (styled on art/fight_new/the_pleasure_park_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/shopping_centre_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101007,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/shopping_centre_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a row of upturned mall benches and a broken planter edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: shopping_centre (styled on art/fight_new/shopping_centre_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_bank_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101008,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_bank_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: the front of a plain wooden bank counter, pens on chains hanging over its edge, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_bank (styled on art/fight_new/the_bank_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_services_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101009,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_services_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a run of steel crash barrier, dented, with a traffic cone tipped against it, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_services (styled on art/fight_new/the_services_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_hospital_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101010,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_hospital_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: an overturned hospital trolley and its thin mattress on its side, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_hospital (styled on art/fight_new/the_hospital_cover.png)"
+  },
+  {
+   "out": "art/fight_walls/the_barracks_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101011,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_barracks_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a wall of sandbags, some split, a strip of hessian flapping, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_barracks (styled on art/fight_new/the_barracks_cover.png)"
+  }
+ ]
+}

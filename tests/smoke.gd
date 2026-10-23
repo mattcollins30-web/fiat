@@ -11250,18 +11250,17 @@ func _run_view_checks(main) -> void:
 	for k in range(4):
 		v._process(0.1)
 	_check(float(v.state()["duck"]) > 0.3, "the runner never ducks: %s" % str(v.state()))
-	# down behind the wall, the wall runs to the frame's foot (Matt, 13 Oct: "too short when crouching")
+	# down behind the wall, the wall runs to the frame's foot (Matt, 13 Oct: "too short when crouching") - the wall
+	# itself, one piece, nothing tiled under it (23 Oct, Matt: "you can see the same tiled wall 3 times")
 	v._duck_t = 5.0
 	for k in range(10):
 		v._process(0.1)
 	var cv: TextureRect = v._cover
-	var fill: TextureRect = v._cover_fill
-	_check(v._duck > 0.95 and fill.visible and fill.texture != null and fill.position.y <= cv.position.y + cv.size.y and fill.position.y + fill.size.y >= RunView.H, "ducked, the wall stops short of the frame's foot: cover to %.0f, fill %.0f to %.0f" % [cv.position.y + cv.size.y, fill.position.y, fill.position.y + fill.size.y])
-	# and what it draws is the wall's body, the cover's own bricks from 72% down, not the whole cover again (the review)
-	var cimg: Image = cv.texture.get_image()
-	var fimg: Image = fill.texture.get_image()
-	var y72: int = int(cimg.get_height() * 0.72)
-	_check(fimg.get_height() == cimg.get_height() - y72 and fimg.get_pixel(5, 0) == cimg.get_pixel(5, y72) and fimg.get_pixel(300, fimg.get_height() - 1) == cimg.get_pixel(300, cimg.get_height() - 1), "the wall's fill isn't the cover's bricks: %dx%d" % [fimg.get_width(), fimg.get_height()])
+	_check(v._duck > 0.95 and cv.position.y + cv.size.y * cv.scale.y >= RunView.H, "ducked, the wall stops short of the frame's foot: cover to %.0f" % (cv.position.y + cv.size.y * cv.scale.y))
+	# and every site's wall reaches by itself, from art/fight_walls/
+	for wkey in RunView.SITE_FAR.keys():
+		var wct: Texture2D = RunView.tex(str(wkey) + "_cover")
+		_check(wct != null and RunView.tex_from(str(wkey) + "_cover") == RunView.WALLS_DIR and RunView.cover_reaches(wct), "%s's wall isn't the tall one, or stops short ducked (from %s)" % [wkey, RunView.tex_from(str(wkey) + "_cover")])
 	v._duck_t = 0.0
 	# the far one stands further down the street than the middle one, smaller, wholly in the frame
 	# every site's three: the far one above the wall, smaller than the middle one, in frame, clear of the other two

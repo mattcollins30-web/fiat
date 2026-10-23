@@ -6286,6 +6286,12 @@ difficulty and length, the endgame placeholders.
   against the ~130 the full duck needs; to art/fight_walls/ (nothing overwritten), styled on the 17 Oct walls, new
   seeds. Once judged: the fight view loads art/fight_walls/ first, _cover_fill goes, and the smoke checks the wall
   reaches the frame's foot at the full duck.
+- Done (0.7.8): the twelve ran on 23 Oct (21:01-21:16, from the first version of the manifest); the generator then
+  checked against docs/art/pixellab_lessons.md - seeds moved to 101000+ (98500+ were the web art's), "signs" out of
+  the wording, "a low" dropped against "tall" - for any reroll. run_view reads art/fight_walls/ first; the tiled fill
+  is gone, the fallback with it (the review: nothing untested left); cover_reaches() and the smoke hold every site's
+  wall to the frame's foot at the full duck. Run 222. Three walls (barracks, hospital, services) have no .import yet:
+  the editor makes them on its next open, and they want committing then.
 
 ## Parked from the playtest (23 Oct, 0.7.6; Matt: "park the fact we need to revisit this")
 

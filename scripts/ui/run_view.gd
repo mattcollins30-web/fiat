@@ -31,6 +31,10 @@ const FULL_DIR := "res://art/fight/%s.png"       # the full pass (13 Oct, tools/
 ## size (744 wide, drawn as the old 688 - so every slot and the pan keep their numbers), and a pair of hands for every
 ## gun base (art/fight/hands/<base>.png, 280x210, drawn as the kind's 256x192 were). The kit's plates are read first.
 const KIT_DIR := "res://art/fight_new/%s.png"
+## The walls tall (23 Oct, tools/make_fight_walls_manifest.py; Matt: ducked "you can see the same tiled wall 3 times"):
+## 744x256, one piece reaching the frame's foot at the full duck, so nothing is tiled under them. Read first.
+const WALLS_DIR := "res://art/fight_walls/%s.png"
+const DUCK_REACH_SLACK := 6.0                     # the jolt's most (3 px x1.5) under a ducked wall
 const PLATE_VIEW_W := 688.0                       # a plate's width in the frame's space, whatever its picture's
 const COVER_VIEW_W := 688.0
 const HANDS_VIEW_W := 256.0 * 0.8                 # the hands' drawn width in the frame's space (the kind's at HANDS_SCALE)
@@ -98,7 +102,6 @@ var _hands_at := HANDS_AT                 # the hands' top-left for the gun's pi
 var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fire}
 var _crates: Array = []                   # the crates in the street while searching
 var _cover: TextureRect
-var _cover_fill: TextureRect               # the wall's brick carried on down under it, for the duck (Matt: "too short when crouching")
 var _sky                                   # the sky's layer (23 Oct): night, rain, fog over the scene
 var _shadows: Array = []                   # a shadow under each crate
 var _open_c: TextureRect                   # the crate just opened, open (OPEN_SPOT)
@@ -199,7 +202,7 @@ static func tex(nm: String) -> Texture2D:
 	if _tex.has(nm):
 		return _tex[nm]
 	var t: Texture2D = null
-	var dirs: Array = ([KIT_DIR] if (nm.ends_with("_plate") or nm.ends_with("_cover")) else []) + [FULL_DIR, DIR]
+	var dirs: Array = ([WALLS_DIR] if nm.ends_with("_cover") else []) + ([KIT_DIR] if (nm.ends_with("_plate") or nm.ends_with("_cover")) else []) + [FULL_DIR, DIR]
 	for dir in dirs:
 		var path: String = dir % nm
 		if ResourceLoader.exists(path):
@@ -210,9 +213,17 @@ static func tex(nm: String) -> Texture2D:
 				img.generate_mipmaps()
 				t = ImageTexture.create_from_image(img)
 		if t != null:
+			_tex_from[nm] = dir
 			break
 	_tex[nm] = t
 	return t
+
+
+## The folder a picture was found in (the smoke: the walls from art/fight_walls/).
+static var _tex_from := {}
+static func tex_from(nm: String) -> String:
+	tex(nm)
+	return str(_tex_from.get(nm, ""))
 
 
 ## The first of the names that has a picture (the site's own, then the slice's).
@@ -324,10 +335,6 @@ func _init() -> void:
 	_sky = SkyLayer.new(Vector2(W, H), true)     # the fight's fog thinner (23 Oct)
 	add_child(_sky)
 	_cover = _rect(null)
-	_cover_fill = _rect(null)
-	_cover_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_cover_fill.stretch_mode = TextureRect.STRETCH_TILE
-	move_child(_cover_fill, _cover.get_index())     # under the cover's coping
 	_site("")
 	_hands = _rect(null)                       # the gun's own, set by show_state (and its corner with it)
 	_hands.scale = Vector2(HANDS_SCALE, HANDS_SCALE)
@@ -489,7 +496,6 @@ func set_slot(k: int, foot: Vector2, sc: float) -> void:
 func _place_tick() -> void:
 	_plate.position = PLATE_AT
 	_cover.position = Vector2(COVER_X, _cover_y)
-	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y * _cover_s - 1)
 	_hands.position = _hands_at
 	_marker.visible = false
 	_red.modulate.a = 0.0
@@ -526,19 +532,24 @@ func _site(key: String) -> void:
 		_plate.scale = Vector2.ONE * (PLATE_VIEW_W / _plate.size.x)     # the kit's 744 drawn as the old 688: the slots and the pan keep their numbers
 	var ct: Texture2D = tex(key + "_cover") if own else tex("parade_cover")
 	_cover.texture = ct
-	_cover_fill.texture = null
 	if ct == null:
 		return
 	_cover.size = ct.get_size()
 	_cover_s = COVER_VIEW_W / _cover.size.x
 	_cover.scale = Vector2.ONE * _cover_s
-	_cover_fill.scale = Vector2.ONE * _cover_s
 	_cover_y = COVER_TOP - wall_top(ct) * _cover_s     # the body's top at COVER_TOP, not its tallest weed (17 Oct)
-	# the wall's body, cut out as its own picture (an AtlasTexture won't tile in a TextureRect): not the coping,
-	# nothing caught on it
-	var y0: int = int(ct.get_height() * 0.72)
-	_cover_fill.texture = ImageTexture.create_from_image(ct.get_image().get_region(Rect2i(0, y0, ct.get_width(), ct.get_height() - y0)))
-	_cover_fill.size = Vector2(ct.get_width(), H / _cover_s)
+	# the wall runs to the frame's foot at the full duck by itself (art/fight_walls/, 23 Oct): the tiled fill that
+	# carried a short wall's bricks down under it is gone (Matt: "you can see the same tiled wall 3 times"); the smoke
+	# holds every site's wall to cover_reaches
+
+
+## Whether a wall's picture runs to the frame's foot at the full duck, by itself (23 Oct): its top at COVER_TOP,
+## raised DUCK_COVER, its foot past H by the jolt's slack.
+static func cover_reaches(ct: Texture2D) -> bool:
+	if ct == null:
+		return false
+	var s: float = COVER_VIEW_W / ct.get_width()
+	return COVER_TOP - wall_top(ct) * s - DUCK_COVER + ct.get_height() * s >= H + DUCK_REACH_SLACK
 
 
 ## Whether a site's plate and wall are the kit's (art/fight_new/), both.
@@ -988,7 +999,6 @@ func _process(dt: float) -> void:
 		jolt = Vector2(randf_range(-4.0, 4.0), randf_range(-3.0, 3.0))
 	_plate.position = PLATE_AT + Vector2(-_pan, -DUCK_SCENE * _duck) + jolt
 	_cover.position = Vector2(COVER_X - _pan * 1.4, _cover_y - DUCK_COVER * _duck) + jolt * 1.5
-	_cover_fill.position = _cover.position + Vector2(0, _cover.size.y * _cover_s - 1)
 	# the crates ride the street as it pans in (the review: they stood still while the plate slid under them)
 	for k in range(_crates.size()):
 		for n in [_crates[k], _shadows[k]]:

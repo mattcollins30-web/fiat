@@ -1,0 +1,28 @@
+{
+ "_readme": [
+  "FIAT FIGHT WALLS, THE TEST (23 Oct, Matt): the Parade's wall, tall. Judge it ducked in the frame before the set.",
+  "Run: godot --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_fight_walls_test_manifest.json   (++ --dry-run to list; one that came out wrong: ++ --only <site> ++ --force)",
+  "Walls only: art/fight_walls/<site>_cover.png, 744x256, the body filling the lower 85% down to the bottom edge - tall enough that the full duck needs no tiled fill. The 17 Oct walls in art/fight_new/ are their style and stay untouched.",
+  "Regenerate with python3 tools/make_fight_walls_manifest.py."
+ ],
+ "jobs": [
+  {
+   "out": "art/fight_walls/the_parade_cover.png",
+   "width": 744,
+   "height": 256,
+   "no_background": true,
+   "seed": 101004,
+   "endpoint": "generate-image-v2",
+   "single": true,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/fight_new/the_parade_cover.png",
+   "description": "Seen very close from behind, running unbroken across the whole width of the frame: a wall of grimy red brick with a broken concrete coping, moss in the joints, a weed growing from a crack, as the cover a player crouches behind in a light-gun arcade game. One single continuous piece edge to edge, no repeated sections, no seams, no tiles. The cover is tall and fills the lower 85% of the image as one solid face, running all the way down to the bottom edge of the image with no gap, no ground and nothing below it, so a player crouched low behind it sees only the cover; only its uneven top edge sits above that, nothing above or behind it. Everything on it plain and unprinted, no lettering, numbers or pictures anywhere. Realistic painted pixel art, soft overcast light, muted cool northern palette, worn and lived-in, post-collapse Britain on a grey day; no black outlines, not anime, not a cartoon, not glossy; no text, no logos.",
+   "_where": "the wall, tall enough for the full duck: the_parade (styled on art/fight_new/the_parade_cover.png)"
+  }
+ ]
+}
