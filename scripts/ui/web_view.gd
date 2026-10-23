@@ -291,7 +291,9 @@ func draw_between(view: Rect2) -> void:
 		if view.has_point(pa) or view.has_point(pb):
 			var closed: bool = sim.has_joint(j["key"])
 			var tone: Color = tone_of(j["element_tree"])     # the element's colour, closed or open (23 Oct: the join lines coloured too)
-			draw_dashed_line(pa, pb, tone if closed else Color(tone, 0.55), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
+			_tally("lines")
+			if not dry:
+				draw_dashed_line(pa, pb, tone if closed else Color(tone, 0.55), (3.0 if closed else 1.5) * maxf(0.6, zoom), 8.0)
 	for id in layout:
 		var bn: Dictionary = sim.node(id)
 		if not bn.has("bridge"):
@@ -307,7 +309,9 @@ func draw_between(view: Rect2) -> void:
 		var pb: Vector2 = to_screen(layout[to])
 		if view.has_point(pa) or view.has_point(pb):
 			var taken_b: bool = _state.get(id, {}).get("taken", false)
-			draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
+			_tally("lines")
+			if not dry:
+				draw_dashed_line(pa, pb, Pal.ACCENT if taken_b else Color(Pal.TEXT_3, 0.5), (3.0 if taken_b else 1.5) * maxf(0.6, zoom), 10.0)
 
 
 ## A tree's nodes at their built places ("at": columns along the lane, rows across it); the name over the lane's
@@ -407,6 +411,7 @@ func show_state(s) -> void:
 	if not _labels_sim:
 		_labels_sim = true
 		_labels_by_entry()                   # again with the sim: the real radii and the words as drawn
+		_pack_all()
 	if not _focused:
 		_focused = true
 		focus_all()
@@ -473,6 +478,122 @@ static func art_at(path: String) -> Texture2D:
 	return tex
 
 
+## The atlas (23 Oct, Matt: the fans spun on the skill tree). The web drew ~2,500 draw calls a frame at the whole
+## web: every disc, ring and polygon is a call of its own, and a node's picture between them broke the batch again.
+## Every node is drawn from one texture now - its disc, its ring (a disc of the line's colour under the fill's), its
+## picture, its glyph, the regions' emblems - packed here on first use, so the nodes batch into one call; the links
+## and the words follow in passes of their own. Shared by the three canvases. Linear-filtered as the textures were,
+## each cell's edge pixels copied into its padding so a picture's edge samples as it did standalone.
+const ATLAS := 2048
+const ATLAS_PAD := 2
+const DISC_SIZES := [16, 32, 64, 128]   # the disc and the diamond in four sizes, each drawn at most halved
+static var _atlas_img: Image
+static var _atlas_tex: ImageTexture
+static var _atlas_of := {}               # a texture's instance id (or a shape's key) -> its AtlasTexture, or the texture where it didn't pack
+static var _atlas_dirty := false
+static var _shelf := Vector3i(0, 0, 0)   # the packing's x, y and the shelf's height
+static var atlas_misses := 0             # textures that didn't pack (the smoke: none)
+
+
+## A texture's region of the atlas, packed the first time it's asked for; the texture itself where it can't be.
+static func atlased(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var key: int = tex.get_instance_id()
+	if _atlas_of.has(key):
+		return _atlas_of[key]
+	var img: Image = tex.get_image()
+	if (img == null or img.is_empty()) and tex.resource_path != "" and FileAccess.file_exists(tex.resource_path):
+		img = Image.load_from_file(ProjectSettings.globalize_path(tex.resource_path))
+	var out: Texture2D = _pack(img)
+	if out == null:
+		atlas_misses += 1
+		out = tex
+	_atlas_of[key] = out
+	return out
+
+
+## A disc or a diamond ("disc" / "diamond"), white, anti-aliased, for a radius on screen: the smallest of
+## DISC_SIZES that holds it, so it's never shrunk past half.
+static func shape(kind: String, radius: float) -> Texture2D:
+	var n: int = DISC_SIZES[-1]
+	for s in DISC_SIZES:
+		if s >= radius * 2.0:
+			n = s
+			break
+	var key := "%s:%d" % [kind, n]
+	if _atlas_of.has(key):
+		return _atlas_of[key]
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var h: float = n / 2.0
+	for y in range(n):
+		for x in range(n):
+			var d := Vector2(x + 0.5 - h, y + 0.5 - h)
+			var cover: float = h - d.length() if kind == "disc" else (h - absf(d.x) - absf(d.y)) / sqrt(2.0)
+			img.set_pixel(x, y, Color(1, 1, 1, clampf(cover + 0.5, 0.0, 1.0)))
+	var out: Texture2D = _pack(img)
+	if out == null:
+		atlas_misses += 1
+		out = ImageTexture.create_from_image(img)
+	_atlas_of[key] = out
+	return out
+
+
+static func _pack(src: Image) -> AtlasTexture:
+	if src == null or src.is_empty():
+		return null
+	var img: Image = src.duplicate()
+	if img.is_compressed():
+		img.decompress()
+	img.clear_mipmaps()
+	if img.get_format() != Image.FORMAT_RGBA8:
+		img.convert(Image.FORMAT_RGBA8)
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	if _atlas_img == null:
+		_atlas_img = Image.create(ATLAS, ATLAS, false, Image.FORMAT_RGBA8)
+		_atlas_tex = ImageTexture.create_from_image(_atlas_img)
+	if _shelf.x + w + 2 * ATLAS_PAD > ATLAS:
+		_shelf = Vector3i(0, _shelf.y + _shelf.z, 0)     # the next shelf
+	if _shelf.y + h + 2 * ATLAS_PAD > ATLAS or w + 2 * ATLAS_PAD > ATLAS:
+		return null
+	var at := Vector2i(_shelf.x + ATLAS_PAD, _shelf.y + ATLAS_PAD)
+	var whole := Rect2i(0, 0, w, h)
+	for dy in [-1, 0, 1]:
+		for dx in [-1, 0, 1]:
+			_atlas_img.blit_rect(img, whole, at + Vector2i(dx, dy) * (ATLAS_PAD - 1))     # the edge into the padding, then the picture over it
+	_atlas_img.blit_rect(img, whole, at)
+	_shelf = Vector3i(_shelf.x + w + 2 * ATLAS_PAD, _shelf.y, maxi(_shelf.z, h + 2 * ATLAS_PAD))
+	_atlas_dirty = true
+	var a := AtlasTexture.new()
+	a.atlas = _atlas_tex
+	a.region = Rect2(at, Vector2(w, h))
+	return a
+
+
+## Everything this canvas can draw packed at once, on its first show (the review): packed lazily, a pan across the
+## web packed a few pictures a frame and sent the whole atlas up on each of them.
+func _pack_all() -> void:
+	for kind in ["disc", "diamond"]:
+		for n in DISC_SIZES:
+			shape(kind, n / 2.0)
+	for id in layout:
+		var nd: Dictionary = node_of(id)
+		atlased(picture(picture_slug(nd)))
+		if glyph_of(nd) != "":
+			atlased(NodeGlyphs.texture(glyph_of(nd)))
+	for tn in _axis:
+		atlased(emblem_of(tn))
+	_atlas_flush()
+
+
+## The atlas's new cells sent up, once a frame at most (the pictures land on the first draws, then never again).
+static func _atlas_flush() -> void:
+	if _atlas_dirty and _atlas_tex != null:
+		_atlas_tex.update(_atlas_img)
+		_atlas_dirty = false
+
+
 ## The canvas's backdrop (23 Oct, the manifest): art/web/backdrop_<slug>.png under everything, covering the view.
 ## Training's is "training"; the Map's and the Pitch's name their own.
 func backdrop_slug() -> String:
@@ -524,19 +645,92 @@ static func _radius_plain(nd: Dictionary) -> float:
 	return R_PLAIN
 
 
+## The frame in passes (23 Oct, the fans): the backdrop and the hulls; the links, one call a colour; the joins; every
+## node's disc, ring and picture from the atlas, one call; the regions' emblems from it too; then the words, grouped by
+## font and size. `batches` counts the calls as the canvas issues them (the smoke holds it under BATCH_MAX).
+const BATCH_MAX := 60
+var batches := 0
+var dry := false                       # the smoke: the frame's passes run and count, nothing drawn (it never draws headless)
+var _batch_key := ""
+var _texts := {}                       # "font:size" -> [[font, at, words, size, colour]], the words' pass
+
+
+## The calls a frame takes here, the passes run dry (the smoke can't draw).
+func count_batches() -> int:
+	dry = true
+	_draw()
+	dry = false
+	return batches
+
+
+func _tally(key: String) -> void:
+	if key == "" or key != _batch_key:
+		batches += 1                       # a polygon is a call of its own (""); a run of the same texture is one
+	_batch_key = key
+
+
+func _sprite(tex: Texture2D, rect: Rect2, col: Color = Color.WHITE) -> void:
+	if tex == null:
+		return
+	_tally("atlas" if tex is AtlasTexture and (tex as AtlasTexture).atlas == _atlas_tex else "tex:%d" % tex.get_instance_id())
+	if not dry:
+		draw_texture_rect(tex, rect, false, col)
+
+
+func _shape(kind: String, p: Vector2, radius: float, col: Color) -> void:
+	if radius > 0.0:
+		_sprite(shape(kind, radius), Rect2(p - Vector2(radius, radius), Vector2(radius, radius) * 2.0), col)
+
+
+func _text(font: Font, at: Vector2, words: String, fs: int, col: Color) -> void:
+	var key := "%d:%d" % [font.get_instance_id(), fs]
+	if not _texts.has(key):
+		_texts[key] = []
+	_texts[key].append([font, at, words, fs, col])
+
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Pal.BG)
+	batches = 0
+	_batch_key = ""
+	_texts = {}
+	_tally("")
+	if not dry:
+		draw_rect(Rect2(Vector2.ZERO, size), Pal.BG)
 	var bd: Texture2D = art_at("res://art/web/backdrop_%s.png" % backdrop_slug())
 	if bd != null:
 		# the backdrop covers the canvas whole, its proportions kept (the painting's 744 wide at the API's most)
 		var k: float = maxf(size.x / bd.get_width(), size.y / bd.get_height())
 		var bs: Vector2 = bd.get_size() * k
-		draw_texture_rect(bd, Rect2((size - bs) / 2.0, bs), false, Color(1, 1, 1, 0.9))
+		_tally("backdrop")
+		if not dry:
+			draw_texture_rect(bd, Rect2((size - bs) / 2.0, bs), false, Color(1, 1, 1, 0.9))
 	if sim == null:
 		return
 	var view := Rect2(Vector2.ZERO, size).grow(60.0)
 	draw_under(view)
-	# the links first, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise
+	_draw_links(view)
+	draw_between(view)
+	# the nodes
+	for id in layout:
+		var p: Vector2 = to_screen(layout[id])
+		if not view.has_point(p):
+			continue
+		_draw_node(id, p)
+	_draw_region_names(view)
+	# the words last, a font and size at a time
+	for key in _texts:
+		_tally("text:" + key)
+		for t in _texts[key]:
+			if not dry:
+				draw_string(t[0], t[1], t[2], HORIZONTAL_ALIGNMENT_LEFT, -1, t[3], t[4])
+	_texts = {}
+	_atlas_flush()
+
+
+## The links, under the nodes: lit between two taken, half-lit to a reachable one, dim otherwise; gathered by colour
+## and width, one draw_multiline each.
+func _draw_links(view: Rect2) -> void:
+	var runs := {}                         # [colour, width] -> PackedVector2Array of pairs
 	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
@@ -554,20 +748,23 @@ func _draw() -> void:
 				col = tone_of(str(a).get_slice("/", 0))
 			elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
 				col = Pal.TEXT
-			draw_line(pa, pb, col, LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom), true)
-	draw_between(view)
-	# the nodes
-	for id in layout:
-		var p: Vector2 = to_screen(layout[id])
-		if not view.has_point(p):
-			continue
-		_draw_node(id, p)
-	# the regions' names
+			var run := [col, LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom)]
+			if not runs.has(run):
+				runs[run] = PackedVector2Array()
+			runs[run].append(pa)
+			runs[run].append(pb)
+	for run in runs:
+		_tally("lines")
+		if not dry:
+			draw_multiline(runs[run], run[0], run[1], true)
+
+
+## The regions' names: by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at
+## the whole web, where twelve starters round the centre would put twelve names on each other (23 Oct).
+func _draw_region_names(view: Rect2) -> void:
 	for tn in _axis:
 		if _axis[tn].get("hide_label", false):
 			continue
-		# by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at the whole web, where
-		# twelve starters round the centre would put twelve names on each other (23 Oct)
 		var by_entry: bool = zoom >= ENTRY_LABEL_ZOOM and _axis[tn].has("entry_at")
 		var p: Vector2 = to_screen(_axis[tn]["entry_at"] if by_entry else _axis[tn].get("rim_at", _axis[tn]["label_at"]))
 		if not view.has_point(p):
@@ -582,9 +779,9 @@ func _draw() -> void:
 		var x0: float = p.x - full if align < 0 else (p.x if align > 0 else p.x - full / 2.0)
 		var tone: Color = Pal.ACCENT if str(_axis[tn].get("class", "")) != "" and str(_axis[tn]["class"]) == str(sim.cls) else tone_of(tn)
 		if em != null:
-			draw_texture_rect(em, Rect2(x0, p.y + 5.0 - fs * 0.78 - (es - fs) / 2.0, es, es), false)
+			_sprite(atlased(em), Rect2(x0, p.y + 5.0 - fs * 0.78 - (es - fs) / 2.0, es, es))
 			x0 += es + 6.0
-		draw_string(_font_bold, Vector2(x0, p.y + 5.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tone)
+		_text(_font_bold, Vector2(x0, p.y + 5.0), words, fs, tone)
 
 
 ## Under everything (23 Oct, the canvas pass): a warm disc under the wheel of the class on show, so you know where
@@ -596,9 +793,12 @@ func draw_under(view: Rect2) -> void:
 			var c: Vector2 = to_screen(ax["wheel"])
 			var r: float = ((Data.WHEEL_R + Data.WHEEL_TRACK / 2.0) * ROW + WHEEL_GLOW) * zoom
 			if view.grow(r).has_point(c):
-				draw_circle(c, r, Color(Pal.BG, 0.55))        # darker than the links, not warmer (23 Oct: the warm wash lost the lines)
-				draw_circle(c, r, Color(Pal.ACCENT, 0.04))
-				draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
+				for k in range(3):
+					_tally("")                     # two discs and a ring, a call each
+				if not dry:
+					draw_circle(c, r, Color(Pal.BG, 0.55))        # darker than the links, not warmer (23 Oct: the warm wash lost the lines)
+					draw_circle(c, r, Color(Pal.ACCENT, 0.04))
+					draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
 	for tn in _trees:
 		var t: Dictionary = _trees[tn]
 		if not t.has("element"):
@@ -633,9 +833,12 @@ func draw_under(view: Rect2) -> void:
 			for j in range(7):
 				var a: float = a0 + j * (PI / 2.0) / 6.0
 				pts.append(sc + (Vector2(cx, cy) + Vector2(cos(a), sin(a)) * rr).rotated(d.angle()))
-		draw_colored_polygon(pts, Color(tone, 0.05))
-		pts.append(pts[0])
-		draw_polyline(pts, Color(tone, 0.6), 1.4 * maxf(0.7, zoom), true)
+		_tally("")
+		_tally("")                             # the wash and the line
+		if not dry:
+			draw_colored_polygon(pts, Color(tone, 0.05))
+			pts.append(pts[0])
+			draw_polyline(pts, Color(tone, 0.6), 1.4 * maxf(0.7, zoom), true)
 
 
 func _joint_half(tree_name: String, key: String) -> String:
@@ -646,6 +849,8 @@ func _joint_half(tree_name: String, key: String) -> String:
 	return ""
 
 
+## A node, all from the atlas: the ring as a disc of the line's colour under the fill's (the arc's width either side of
+## the radius, as draw_arc drew it), the picture or the glyph over; its words go to the words' pass.
 func _draw_node(id: String, p: Vector2) -> void:
 	var nd: Dictionary = node_of(id)
 	var st: Dictionary = _state.get(id, {})
@@ -680,13 +885,12 @@ func _draw_node(id: String, p: Vector2) -> void:
 		w = 2.0
 	w *= maxf(0.7, zoom)
 	if diamond:
-		var pts := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)])
-		draw_colored_polygon(pts, fill)
-		pts.append(pts[0])
-		draw_polyline(pts, line, w, true)
+		var o: float = w / 2.0 * sqrt(2.0)          # the outline's half width, along the diagonal
+		_shape("diamond", p, r + o, line)
+		_shape("diamond", p, r - o, fill)
 	else:
-		draw_circle(p, r, fill)
-		draw_arc(p, r, 0.0, TAU, 32, line, w, true)
+		_shape("disc", p, r + w / 2.0, line)
+		_shape("disc", p, r - w / 2.0, fill)
 	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom
 	var pic: Texture2D = picture(picture_slug(nd))          # every node with a picture draws it (23 Oct; notables and diamonds only before)
 	if pic == null and nd.get("entry", false) and _trees.get(tn, {}).has("class"):
@@ -695,28 +899,26 @@ func _draw_node(id: String, p: Vector2) -> void:
 		var g: float = (r - 2.0 * maxf(0.7, zoom)) * (1.42 if diamond else 1.7)
 		g = minf(g, r * 1.7)
 		var shade: Color = Color(1.25, 1.25, 1.25) if taken else (Color(1.1, 1.1, 1.1) if reach else Color(0.85, 0.85, 0.85))     # brighter all round (23 Oct, Matt: "way too dark"): the paintings are dark, so taken lifts past white; untaken 0.5 → 0.85
-		draw_texture_rect(pic, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, shade)
+		_sprite(atlased(pic), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), shade)
 	elif zoom >= 0.5 and (nd.get("notable", false) or diamond) and glyph_of(nd) != "":
-		var tex: Texture2D = NodeGlyphs.texture(glyph_of(nd))
-		if tex != null:
-			var g: float = r * 1.1
-			draw_texture_rect(tex, Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), false, tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
+		var g: float = r * 1.1
+		_sprite(atlased(NodeGlyphs.texture(glyph_of(nd))), Rect2(p - Vector2(g, g) / 2.0, Vector2(g, g)), tone if taken else (Pal.TEXT if reach else Pal.TEXT_3))
 	var stack: Array = stack_of(id, nd)
 	if not stack.is_empty() and zoom >= 0.6:
 		var stack_v: String = "%d/%d" % [int(stack[0]), int(stack[1])]
 		var sw: float = _font.get_string_size(stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 		var named: bool = (nd.get("notable", false) or diamond) and (zoom >= LABEL_ZOOM or id == hover or id == selected)
-		draw_string(_font, p + Vector2(-sw / 2.0, r + 13.0 + (14.0 if named else 0.0)), stack_v, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT if taken else Pal.TEXT_3)
+		_text(_font, p + Vector2(-sw / 2.0, r + 13.0 + (14.0 if named else 0.0)), stack_v, 11, Pal.TEXT if taken else Pal.TEXT_3)
 	# the name under a notable, the keystone's level by it, from the label zoom
 	if (zoom >= LABEL_ZOOM or id == hover or id == selected) and (nd.get("notable", false) or diamond):
 		var fs: int = 12
 		var words: String = str(nd["name"])
 		var tw: float = _font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(_font, p + Vector2(-tw / 2.0, r + 14.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Pal.TEXT if taken or reach else Pal.TEXT_3)
+		_text(_font, p + Vector2(-tw / 2.0, r + 14.0), words, fs, Pal.TEXT if taken or reach else Pal.TEXT_3)
 	if diamond and not taken and not theirs and zoom >= 0.6:
 		var tag: Array = level_tag(nd)
 		if not tag.is_empty():
-			draw_string(_font, p + Vector2(r + 6.0, -r + 4.0), str(tag[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.GOOD if tag[1] else Pal.TEXT_3)
+			_text(_font, p + Vector2(r + 6.0, -r + 4.0), str(tag[0]), 11, Pal.GOOD if tag[1] else Pal.TEXT_3)
 
 
 # ------------------------------------------------------------------ input

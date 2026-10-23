@@ -6218,6 +6218,27 @@ difficulty and length, the endgame placeholders.
   150 px off at 0.6, so 0.8. The smoke checks the names on screen at 0.8 and 1. Also the "harder gang down" check
   compared with the site read again after the clock moved; it compares with the held gang now. Run 214.
 
+## 0.7.3: the skill tree's draw calls (23 Oct; Matt: the fans spin on Training and stop when the game closes)
+
+- The cause, measured: Training's whole web drew ~2,500 GL draw calls a frame (the other rooms ~230). Every
+  draw_circle, AA draw_arc and polygon is a call of its own (an AA arc three), and a picture drawn between them broke
+  the batch again; Godot re-submits the canvas every frame though it doesn't redraw. Not an off-screen image (Matt:
+  "every time i look around the tree my CPU is taking a hit"): each frame made cheap instead. web_view.gd now packs
+  every node picture, glyph and region emblem into one 2048 atlas (static, shared by the three canvases; packed on a
+  canvas's first show, lazily after; edges extruded, linear as before), and draws a node's disc and ring as atlas
+  sprites in four sizes (the ring a disc of the line's colour under the fill's, the arc's width either side of r), so
+  every node batches into one call. The links go one draw_multiline a colour and width; the words last, a font and
+  size at a time (so names now sit over the nodes, not under later ones). Measured in the cloud: the whole screen
+  ~223 calls at the whole web, the canvas itself ~20; the Map's and the Pitch's 5-7. Renders diffed against the old:
+  ring edges only (anti-aliased now). The smoke runs the passes dry (web_view.count_batches; the smoke never draws)
+  and holds each canvas under BATCH_MAX 60 at its whole view and close in, and every picture packed.
+- And an old intermittent red found: "a level-90 runner on the first site did not read as settled 100%: 0.00" (runs
+  243 and 215). The bot's run can leave the gun dry; the settle loop fed a box of rounds and took it out again before
+  the level-90 read, and a dry gun loses all eight there. The box now comes out after it. Reviewer: pack once, not a
+  frame at a time while panning (done); the Map's and Pitch's counts were trivial without a sim (lent one). Run 216.
+- Parked, not a playtest item: a runner with an empty gun reads 0% and the odds chips don't say why; a "No rounds"
+  chip beside "No meds" would. For after Matt's playtest.
+
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 
 1. The class's wheel, highlighted: the lines between its nodes are far too faint to read (Matt: "selected class

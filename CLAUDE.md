@@ -123,3 +123,6 @@ standing rules before (21 Oct: balance reads were run in the cloud against the r
   a re-record (propose the words to Matt; the text waits for his takes).
 - Times to Matt in his local time, UTC+1.
 - Images to Matt as files (SendUserFile), not described.
+- The web canvases (web_view.gd and its Map and Pitch hooks) draw every node from one atlas (23 Oct, Matt's fans:
+  ~2,500 draw calls a frame before). A new node mark goes through _sprite/_shape/_text, never a draw_circle or
+  draw_arc per node; the smoke holds each canvas under BATCH_MAX.

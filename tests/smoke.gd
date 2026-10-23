@@ -6558,8 +6558,6 @@ func _playtest_checks(main) -> void:
 		if sim.tier_open(i):
 			var oc: Array = sim._surv_cache.get(i, [])
 			_check(sim.odds_settled(i), "tier %d's odds never settled in %d frames: on a run %s, %s of %d reads (cap %d), key moved %d times, cache key now %s" % [i, frames, sim.on_mission(), str(oc[2]) if oc.size() > 2 else "none", sim.odds_runs(), sim.odds_runs_max, int(key_moves.get(i, 0)), str(oc.size() > 0 and str(oc[0]) == str(sim._odds_key(i)))])
-	if not fed_box.is_empty():
-		sim.rig.erase(fed_box)
 	main._missions._shown = ""
 	main.refresh()
 	_check_fit(main, "Runs (odds settled)")
@@ -6576,6 +6574,8 @@ func _playtest_checks(main) -> void:
 	_check(sim.survival(3) >= 0.999 and sim._surv_cache[3][2] == sim.odds_runs(), "a level-90 runner on the first site did not read as settled 100%%: %.2f" % sim.survival(3))
 	sim.xp = hold_x
 	sim.hp = hold_hp
+	if not fed_box.is_empty():
+		sim.rig.erase(fed_box)                   # after the level-90 read (23 Oct): a gun the bot's run left dry reads 0% there too
 	sim._surv_cache = {}
 	# the balance gate's brakes stay off in the shell (8 Oct): the player's read is the lookout's full count, read fresh
 	_check(not sim.fast_memo and sim.odds_runs_max == 0, "the shell's sim has the gate's brakes on: fast_memo %s, odds_runs_max %d" % [sim.fast_memo, sim.odds_runs_max])
@@ -15481,6 +15481,25 @@ func _web_checks(main) -> void:
 	WV.assume_pics = false
 	_check(wv.radius_of({"name": "Nothing drawn here"}) == wv.R_PLAIN and wv.R_SMALL_PIC > wv.R_PLAIN and wv.R_FILLER_PIC > wv.R_FILLER, "a small node without a picture isn't plain, or the pictured sizes don't grow")
 	_check(main._radio._atlas._web.picture_slug({"name": "Light fingers", "filler": true}).begins_with("map_f_"), "the Dial's fillers borrow Training's pictures")
+	# the frame's calls (23 Oct, Matt's fans: ~2,500 a frame at the whole web): the nodes from the one atlas, the links
+	# a colour at a time, the words a size at a time - each canvas under BATCH_MAX at its whole view and close in, and
+	# every picture, glyph and emblem packed
+	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+		if cv == null:
+			continue
+		var cam_was: Vector2 = cv.cam
+		var zoom_was: float = cv.zoom
+		var sim_was = cv.sim
+		cv.sim = sim                         # the Map's and the Pitch's canvases haven't been shown a save yet here: lent one for the count
+		cv.focus_all()
+		var n_all: int = cv.count_batches()
+		cv.zoom = 1.6
+		var n_close: int = cv.count_batches()
+		_check(n_all > 2 and n_all <= cv.BATCH_MAX and n_close > 2 and n_close <= cv.BATCH_MAX, "%s: a frame takes %d calls at the whole view, %d close in (BATCH_MAX %d)" % [cv.get_script().resource_path.get_file(), n_all, n_close, cv.BATCH_MAX])
+		cv.cam = cam_was
+		cv.zoom = zoom_was
+		cv.sim = sim_was
+	_check(WV.atlas_misses == 0, "%d of the web's pictures didn't pack into the atlas" % WV.atlas_misses)
 	# the whole web fits at its widest; a region's zoom is closer
 	wv.focus_all()
 	var z_all: float = wv.zoom
