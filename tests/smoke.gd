@@ -15483,6 +15483,25 @@ func _web_checks(main) -> void:
 	wv.zoom = zoom_held
 	wv.cam = cam_held
 	_check(wv.LINK_LIT_DIM.get_luminance() > wv.LINK_DIM.get_luminance() + 0.1 and wv.LINK_DIM.get_luminance() > Pal.CARD_LINE.get_luminance(), "the lit wheel's links don't stand off the dim ones")
+	# the elements in their colour, no hulls (23 Oct, Matt: the boxes "look cheap"): an untaken link inside an element's
+	# region in its colour, a class's grey as before
+	_check(not wv.ELEMENT_HULLS, "the elements' hulls are back on")
+	var el_links := 0
+	var cl_links := 0
+	var all_links: Dictionary = wv.links_all()
+	for la in all_links:
+		for lb in all_links[la]:
+			var ra: String = str(la).get_slice("/", 0)
+			if ra != str(lb).get_slice("/", 0) or wv._state.get(la, {}).get("taken", false) or wv._state.get(lb, {}).get("taken", false):
+				continue
+			var lc: Color = wv.link_colour(str(la), str(lb))
+			if wv.is_element(ra):
+				el_links += 1
+				_check(lc.is_equal_approx(Color(wv.tone_of(ra), wv.ELEMENT_LINK_DIM)), "%s-%s in %s isn't in its colour: %s" % [la, lb, ra, lc])
+			elif wv._trees[ra].has("class"):
+				cl_links += 1
+				_check(lc == wv.LINK_DIM or lc == wv.LINK_LIT_DIM, "the class link %s-%s took a colour: %s" % [la, lb, lc])
+	_check(el_links > 20 and cl_links > 20, "the link colours checked too few links: %d element, %d class" % [el_links, cl_links])
 	# every node of every tree placed, and no two on each other
 	var ids: Array = []
 	for t in Data.TREES + Data.ELEMENT_TREES:

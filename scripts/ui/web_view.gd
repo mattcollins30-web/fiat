@@ -32,6 +32,13 @@ const LINK_W := 2.0
 const LINK_DIM := Color("4a5059")       # a link to nothing reached yet (23 Oct: CARD_LINE was lost on the backdrop and the lit disc)
 const LINK_LIT_DIM := Color("7a8290")   # the same inside the class's lit wheel (Matt: "far too faint and really hard to read")
 const YARD_TONE := Color("8fb3d9")
+## The elements' regions in their colour (23 Oct, Matt: "the coloured boxes for the elements just look cheap - the
+## lines and node outlines should carry the element's colour instead"): no hull; a link between two of its nodes in
+## its colour at ELEMENT_LINK_DIM, lighter where it reaches, whole where both are taken; a ring its colour mixed in
+## at ELEMENT_RING_DIM, whole once reachable or taken.
+const ELEMENT_HULLS := false
+const ELEMENT_LINK_DIM := 0.5
+const ELEMENT_RING_DIM := 0.55
 ## The web lies wide, as the canvas is (slice 1): the Pitch across the centre, three elements' lanes out to the left
 ## and three to the right, the classes' beyond them. [the entry, the lane's direction].
 ## Slice 2 (the drawn layout, the canvas "Fiat – The web"): the Pitch across the centre, the elements' lanes out from
@@ -601,6 +608,10 @@ func backdrop_slug() -> String:
 
 
 ## Whether a region is the class on show's (its wheel lit).
+func is_element(tn: String) -> bool:
+	return _trees.get(tn, {}).has("element")
+
+
 func _lit_wheel(tn: String) -> bool:
 	return str(_trees.get(tn, {}).get("class", "")) != "" and str(_trees[tn]["class"]) == str(sim.cls)
 
@@ -740,15 +751,8 @@ func _draw_links(view: Rect2) -> void:
 			var pb: Vector2 = to_screen(layout[b])
 			if not view.has_point(pa) and not view.has_point(pb):
 				continue
-			var sa: Dictionary = _state.get(a, {})
-			var sb: Dictionary = _state.get(b, {})
 			var lit: bool = _lit_wheel(str(a).get_slice("/", 0))     # inside the class's lit wheel the dim links read brighter and thicker (23 Oct)
-			var col: Color = LINK_LIT_DIM if lit else LINK_DIM
-			if sa.get("taken", false) and sb.get("taken", false):
-				col = tone_of(str(a).get_slice("/", 0))
-			elif (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
-				col = Pal.TEXT
-			var run := [col, LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom)]
+			var run := [link_colour(str(a), str(b)), LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom)]
 			if not runs.has(run):
 				runs[run] = PackedVector2Array()
 			runs[run].append(pa)
@@ -757,6 +761,28 @@ func _draw_links(view: Rect2) -> void:
 		_tally("lines")
 		if not dry:
 			draw_multiline(runs[run], run[0], run[1], true)
+
+
+## An element's reachable link and ring: its colour lighter, or darker where the colour's near white already (the
+## review: Knuckles' is Pal.TEXT, and lighter read the same as taken).
+static func reach_tone(tone: Color) -> Color:
+	return tone.lerp(Color.WHITE, 0.4) if tone.get_luminance() < 0.7 else tone.darkened(0.35)
+
+
+## A link's colour: lit between two taken, half-lit to a reachable one, dim otherwise; inside an element's region its
+## colour throughout (23 Oct).
+func link_colour(a: String, b: String) -> Color:
+	var sa: Dictionary = _state.get(a, {})
+	var sb: Dictionary = _state.get(b, {})
+	var ta: String = a.get_slice("/", 0)
+	var elem: bool = is_element(ta) and ta == b.get_slice("/", 0)
+	if sa.get("taken", false) and sb.get("taken", false):
+		return tone_of(ta)
+	if (sa.get("taken", false) and sb.get("reach", false)) or (sb.get("taken", false) and sa.get("reach", false)):
+		return reach_tone(tone_of(ta)) if elem else Pal.TEXT
+	if elem:
+		return Color(tone_of(ta), ELEMENT_LINK_DIM)
+	return LINK_LIT_DIM if _lit_wheel(ta) else LINK_DIM
 
 
 ## The regions' names: by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at
@@ -801,7 +827,7 @@ func draw_under(view: Rect2) -> void:
 					draw_arc(c, r, 0.0, TAU, 96, Color(Pal.ACCENT, 0.3), 1.5, true)
 	for tn in _trees:
 		var t: Dictionary = _trees[tn]
-		if not t.has("element"):
+		if not ELEMENT_HULLS or not t.has("element"):
 			continue
 		var box := Rect2()
 		var first := true
@@ -866,13 +892,16 @@ func _draw_node(id: String, p: Vector2) -> void:
 	var fill: Color = Pal.BG
 	var line: Color = Pal.CARD_LINE
 	var w: float = 1.0
+	var elem: bool = is_element(tn)          # an element's rings carry its colour (23 Oct, Matt: the boxes "look cheap")
+	if elem:
+		line = Pal.CARD_LINE.lerp(tone, ELEMENT_RING_DIM)
 	if taken:
 		fill = Pal.CARD.lerp(tone, 0.35) if st.get("active", false) else Pal.CARD
-		line = tone if st.get("active", false) else Pal.TEXT_3
+		line = tone if st.get("active", false) else (Pal.CARD_LINE.lerp(tone, ELEMENT_RING_DIM) if elem else Pal.TEXT_3)     # an element's trained-but-idle node keeps the dim ring (the review: another class's half, a gun not in hand)
 		w = 2.0
 	elif reach:
 		fill = Pal.CARD
-		line = tone if nd.get("notable", false) or diamond else Pal.TEXT_2
+		line = reach_tone(tone) if elem else (tone if nd.get("notable", false) or diamond else Pal.TEXT_2)     # an element's reachable ring apart from its taken ones, as its links
 		w = 2.0
 	elif theirs:
 		fill = Pal.BG

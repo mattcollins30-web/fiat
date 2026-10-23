@@ -6259,6 +6259,16 @@ difficulty and length, the endgame placeholders.
   yellow boundaries just read wrong"); the wash alone is faint (LIT 8%), 15% offered if it doesn't read.
   Smoke green on run 219. VERSION 0.7.4.
 
+## 0.7.5: the elements in their colour (23 Oct; Matt: "the coloured boxes for the elements just look cheap")
+
+- Mockup approved ("All approved"). web_view: ELEMENT_HULLS off; link_colour() - inside an element's region an
+  untaken link its tone at ELEMENT_LINK_DIM, a reach link reach_tone() (lighter, or darker where the tone is near
+  white: Knuckles), two taken the tone; rings the tone mixed in at ELEMENT_RING_DIM, reach_tone once reachable, the
+  tone once taken and active, the dim ring for trained-but-idle (the review: another class's half, a gun not in
+  hand). The classes and the Pitch unchanged. Smoke: hulls off, element links in colour, class links grey. Run 220.
+- Next, mockups asked for: the Pitch made its own (square nodes, its colour in the lines and rings, its emblem as the
+  hub - Matt "mockup 1,2,4"); and the class's portrait faint under the lit wheel (Matt's idea).
+
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 
 1. The class's wheel, highlighted: the lines between its nodes are far too faint to read (Matt: "selected class
