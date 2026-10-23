@@ -15502,6 +15502,24 @@ func _web_checks(main) -> void:
 				cl_links += 1
 				_check(lc == wv.LINK_DIM or lc == wv.LINK_LIT_DIM, "the class link %s-%s took a colour: %s" % [la, lb, lc])
 	_check(el_links > 20 and cl_links > 20, "the link colours checked too few links: %d element, %d class" % [el_links, cl_links])
+	# no link through a node that isn't one of its ends (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so
+	# Keen read as the next step): every link's drawn path clears every other node by 2 px past its radius, on the
+	# three canvases; the ones that had to bend round counted
+	for cv in [wv, main._radio._atlas._web, main._yard_tree.web()]:
+		if cv == null:
+			continue
+		var through := 0
+		var cv_links: Dictionary = cv.links_all()
+		for la in cv_links:
+			for lb in cv_links[la]:
+				if str(la) > str(lb) or not cv.layout.has(la) or not cv.layout.has(lb):
+					continue
+				if cv._blockers(cv.link_path(str(la), str(lb)), str(la), str(lb)) > cv.BEND_CLEAR - 2.0:
+					through += 1
+					if through <= 3:
+						_check(false, "%s: the link %s-%s runs through a node" % [cv.get_script().resource_path.get_file(), la, lb])
+		_check(through == 0, "%s: %d links run through a node not theirs" % [cv.get_script().resource_path.get_file(), through])
+	_check(wv._bends.size() > 20, "Training's wheels bent only %d links round their middle tracks" % wv._bends.size())
 	# the Pitch its own (23 Oct, Matt: "square sand + portraits"): its colour, its hub the emblem, its nodes squares from
 	# the atlas; and every class's portrait for under its wheel, faded to nothing at the rim
 	_check(wv.tone_of(Data.COMMON_TREE) == wv.PITCH_TONE and wv.tinted(Data.COMMON_TREE) and wv.entry_emblem({"region": Data.COMMON_TREE}) != null, "the Pitch isn't in its sand, or has no hub")

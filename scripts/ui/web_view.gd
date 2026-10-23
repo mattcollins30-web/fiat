@@ -605,6 +605,7 @@ func _pack_all() -> void:
 	for tn in _axis:
 		atlased(emblem_of(tn))
 	_atlas_flush()
+	_ensure_bends()                        # the curved links worked here too, not on a pan's first frame
 
 
 ## The atlas's new cells sent up, once a frame at most (the pictures land on the first draws, then never again).
@@ -785,6 +786,7 @@ func _draw() -> void:
 ## and width, one draw_multiline each.
 func _draw_links(view: Rect2) -> void:
 	var runs := {}                         # [colour, width] -> PackedVector2Array of pairs
+	_ensure_bends()
 	var links: Dictionary = links_all()
 	for a in links:
 		for b in links[a]:
@@ -798,8 +800,14 @@ func _draw_links(view: Rect2) -> void:
 			var run := [link_colour(str(a), str(b)), LINK_W * (1.4 if lit else 1.0) * maxf(0.6, zoom)]
 			if not runs.has(run):
 				runs[run] = PackedVector2Array()
-			runs[run].append(pa)
-			runs[run].append(pb)
+			var bent: PackedVector2Array = bend_of(str(a), str(b))
+			if bent.is_empty():
+				runs[run].append(pa)
+				runs[run].append(pb)
+			else:
+				for k in range(bent.size() - 1):
+					runs[run].append(to_screen(bent[k]))
+					runs[run].append(to_screen(bent[k + 1]))
 	for run in runs:
 		_tally("lines")
 		if not dry:
@@ -826,6 +834,102 @@ func link_colour(a: String, b: String) -> Color:
 	if elem:
 		return Color(tone_of(ta), ELEMENT_LINK_DIM)
 	return LINK_LIT_DIM if _lit_wheel(ta) else LINK_DIM
+
+
+## A link's path in web space (23 Oct, Matt: Tough's line to Lucky ran straight through Keen, so it read as Tough to
+## Keen - the wheel puts a node on the middle track at the same angle as two it lies between): straight, or where it
+## would pass through a node that isn't one of its ends, a gentle curve bowed round it, the side that clears it first.
+## Worked once a layout (_bends), drawn as short segments in the links' one call.
+const BEND_CLEAR := 8.0                # the room a bent link leaves its node, past the node's own radius
+const BEND_STEPS := 12
+var _bends := {}                       # "a|b" -> the curve's points, web space, worked once
+var _bends_for := Vector3.ZERO         # the layout they were worked for: its size and its points' sum (a moved layout re-works them, the review)
+
+
+func _layout_sig() -> Vector3:
+	var sum := Vector2.ZERO
+	for id in layout:
+		sum += layout[id]
+	return Vector3(layout.size(), sum.x, sum.y)
+
+
+## The bends worked for the layout as it stands: once a frame at most (the sum walks every node).
+func _ensure_bends() -> void:
+	if _bends_for != _layout_sig():
+		_find_bends()
+
+
+## A bent link's points, web space; empty for a straight one. _ensure_bends first.
+func bend_of(a: String, b: String) -> PackedVector2Array:
+	return _bends.get(a + "|" + b if a < b else b + "|" + a, PackedVector2Array())
+
+
+func link_path(a: String, b: String) -> PackedVector2Array:
+	_ensure_bends()
+	var bent: PackedVector2Array = bend_of(a, b)
+	return bent if not bent.is_empty() else PackedVector2Array([layout[a], layout[b]])
+
+
+func _curve(pa: Vector2, c: Vector2, pb: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for k in range(BEND_STEPS + 1):
+		var t: float = float(k) / BEND_STEPS
+		out.append(pa.lerp(c, t).lerp(c.lerp(pb, t), t))     # the quadratic through the control point
+	return out
+
+
+## How far a path comes short of clearing the nodes it passes, its ends aside (0: clear).
+func _blockers(path: PackedVector2Array, a: String, b: String) -> float:
+	var worst := 0.0
+	var box := Rect2(path[0], Vector2.ZERO)
+	for q in path:
+		box = box.expand(q)
+	box = box.grow(R_CAPSTONE + BEND_CLEAR + 4.0)
+	for id in layout:
+		if id == a or id == b or not box.has_point(layout[id]):
+			continue
+		var p: Vector2 = layout[id]
+		var need: float = _bend_r(id) + BEND_CLEAR
+		for k in range(path.size() - 1):
+			var d: float = p.distance_to(Geometry2D.get_closest_point_to_segment(p, path[k], path[k + 1]))
+			worst = maxf(worst, need - d)
+	return worst
+
+
+func _bend_r(id: String) -> float:
+	var was: bool = assume_pics
+	assume_pics = true                    # sized as if its picture had landed: the curve clears it either way
+	var r: float = radius_of(node_of(id))
+	assume_pics = was
+	return r
+
+
+func _find_bends() -> void:
+	_bends = {}
+	_bends_for = _layout_sig()
+	var links: Dictionary = links_all()
+	for a in links:
+		for b in links[a]:
+			if str(a) > str(b) or not layout.has(a) or not layout.has(b):
+				continue
+			var pa: Vector2 = layout[a]
+			var pb: Vector2 = layout[b]
+			if _blockers(PackedVector2Array([pa, pb]), str(a), str(b)) <= 0.0:
+				continue
+			var mid: Vector2 = (pa + pb) / 2.0
+			var side: Vector2 = (pb - pa).orthogonal().normalized()
+			var best := Vector2.ZERO
+			var best_short := INF
+			for push in [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]:
+				for sgn in [1.0, -1.0]:
+					var c: Vector2 = mid + side * sgn * (_bend_r(str(a)) + BEND_CLEAR) * push * 1.2     # a quadratic peaks half way to its control point
+					var short: float = _blockers(_curve(pa, c, pb), str(a), str(b))
+					if short < best_short:
+						best_short = short
+						best = c
+				if best_short <= 0.0:
+					break
+			_bends[str(a) + "|" + str(b)] = _curve(pa, best, pb)
 
 
 ## The regions' names: by the region's first node from ENTRY_LABEL_ZOOM (a region's or a class's view); on the rim at

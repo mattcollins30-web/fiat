@@ -6275,6 +6275,30 @@ difficulty and length, the endgame placeholders.
   pictures; 369 landed, the other 51 in the two running manifests (25 small, 26 small2), none unplanned. The
   starters draw their emblems.
 
+## The fight's walls, tall (23 Oct; Matt: ducking "you can see the same tiled wall 3 times")
+
+- Parked item 6 (21 Oct) asked for the cover walls much bigger, one piece, nothing in code to fix. They went into the
+  web art manifest on 22 Oct and I dropped them the same day as "ran with the fight kit on 17 Oct" - wrong: those are
+  the same 744x173 strips, and ducked (the wall up DUCK_COVER 80 px) their picture stops short of the frame's foot,
+  so run_view's _cover_fill tiles the bottom 28% of the bricks down under it: the repeat Matt sees.
+- tools/make_fight_walls_manifest.py writes a walls-only manifest (Matt: "a new manifest with only these walls"):
+  the test (the Parade) and the set (12), 744x256, the body the lower 85% down to the bottom edge, ~200 px drawn
+  against the ~130 the full duck needs; to art/fight_walls/ (nothing overwritten), styled on the 17 Oct walls, new
+  seeds. Once judged: the fight view loads art/fight_walls/ first, _cover_fill goes, and the smoke checks the wall
+  reaches the frame's foot at the full duck.
+
+## Parked from the playtest (23 Oct, 0.7.6; Matt: "park the fact we need to revisit this")
+
+1. The wheels' links through their middle track. A class half's row -1 node links its row -2.3 one; on the wheel
+   rows -1, +1 and +/-2.3 sit on tracks 8.7, 10.3 and 12.1 at the same angle, so the link runs straight through the
+   row +1 node between them (Matt: Tough's line to Lucky read as Tough to Keen; "the skill tree is why I stopped
+   playing the last playtest"). 33 on Training (six spots on each of the ten halves), 1 on the Dial. Fixed for the
+   playtest in the drawing (0.7.7): a link that would pass a node not its own bends round it (web_view.link_path,
+   _find_bends), the smoke holding every link clear. To revisit: the layout itself - the rows' order on the tracks,
+   or the links - so nothing needs bending; with the balance phase, as a link change moves paths and costs. Also
+   then (the review): the dashed joins and bridges are still straight and unchecked, and a bend takes the side that
+   clears first, not the one away from the hub.
+
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 
 1. The class's wheel, highlighted: the lines between its nodes are far too faint to read (Matt: "selected class
