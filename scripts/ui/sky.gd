@@ -89,8 +89,8 @@ func _rect(c: Color) -> ColorRect:
 	return r
 
 
-## The fog's shader, its noise made once for both layers (seamless, so the drift never shows an edge).
-func _fog_material(cfg: Dictionary) -> ShaderMaterial:
+## The seamless noise the fog's banks and the Map's cloud edge are drawn from (23 Oct), made once.
+static func noise() -> NoiseTexture2D:
 	if _fog_noise == null:
 		var fn := FastNoiseLite.new()
 		fn.noise_type = FastNoiseLite.TYPE_PERLIN
@@ -101,11 +101,16 @@ func _fog_material(cfg: Dictionary) -> ShaderMaterial:
 		_fog_noise.height = 256
 		_fog_noise.seamless = true
 		_fog_noise.noise = fn
+	return _fog_noise
+
+
+## The fog's shader, its noise made once for both layers (seamless, so the drift never shows an edge).
+func _fog_material(cfg: Dictionary) -> ShaderMaterial:
 	var sh := Shader.new()
 	sh.code = FOG_SHADER
 	var mat := ShaderMaterial.new()
 	mat.shader = sh
-	mat.set_shader_parameter("noise", _fog_noise)
+	mat.set_shader_parameter("noise", noise())
 	mat.set_shader_parameter("px_size", size)
 	mat.set_shader_parameter("tint", Vector3(FOG_TINT.r, FOG_TINT.g, FOG_TINT.b))
 	for k in cfg:

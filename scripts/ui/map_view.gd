@@ -74,6 +74,8 @@ const CLOUD_SHADER := """
 shader_type canvas_item;
 uniform sampler2D tile : repeat_enable, filter_nearest;
 uniform sampler2D mask : filter_linear;
+uniform sampler2D noise : repeat_enable, filter_linear;
+uniform vec2 warp_px = vec2(40.0, 34.0);
 uniform vec2 px_size = vec2(1018.0, 844.0);
 uniform float tile_px = 228.0;
 // a tile's edges needn't meet: near an edge, a copy shifted half a tile takes over (its own edge lies mid-tile, where
@@ -87,13 +89,21 @@ vec3 across(vec2 uv) {
 vec3 seamless(vec2 uv) {
 	return mix(across(uv + vec2(0.0, 0.5)), across(uv), edge_w(fract(uv.y)));
 }
+// the edge (23 Oct, Matt's yes to the mockup): the softened mask, sampled where two drifting noises push it, so the
+// line wanders a little either side; near it the cloud thins in patches into wisps over the open land. The drifts
+// four times what they were (1.4 px a second read as a still painting)
 void fragment() {
 	vec2 px = floor(UV * px_size / 2.0) * 2.0;                 // whole 2 px steps, the painting's pixels
-	vec2 a = px / tile_px + vec2(TIME * 0.006, TIME * 0.0025);
-	vec2 b = px / (tile_px * 1.37) + vec2(0.43, 0.29) - vec2(TIME * 0.004, -TIME * 0.0015);
+	vec2 a = px / tile_px + vec2(TIME * 0.024, TIME * 0.01);
+	vec2 b = px / (tile_px * 1.37) + vec2(0.43, 0.29) - vec2(TIME * 0.016, -TIME * 0.006);
 	vec3 col = mix(seamless(a), seamless(b), 0.42);            // two drifts crossed: no repeat
-	float open = texture(mask, UV).r;
-	COLOR = vec4(col, 1.0 - smoothstep(0.3, 0.7, open));
+	float n1 = texture(noise, px / 420.0 + vec2(TIME * 0.012, TIME * 0.005)).r;
+	float n2 = texture(noise, px / 150.0 - vec2(TIME * 0.02, -TIME * 0.008)).r;
+	vec2 warp = (vec2(n1, n2) - 0.5) * warp_px / px_size;
+	float open = texture(mask, UV + warp).r;
+	float near = smoothstep(0.0, 0.25, open) * (1.0 - smoothstep(0.75, 1.0, open));
+	float edge = open + (n2 - 0.5) * 1.1 * near;
+	COLOR = vec4(col, 1.0 - smoothstep(0.15, 0.85, edge));
 }
 """
 static var _art := {}                  # path -> Texture2D or null, looked for once
@@ -124,6 +134,8 @@ func _init(rect: Rect2) -> void:
 		mat.set_shader_parameter("tile", tile)
 		mat.set_shader_parameter("px_size", size)
 		mat.set_shader_parameter("tile_px", tile.get_width() * 2.0)
+		mat.set_shader_parameter("noise", SkyLayer.noise())
+		mat.set_shader_parameter("warp_px", CLOUD_WARP)
 		_clouds.material = mat
 		add_child(_clouds)
 	_key_bg = Control.new()
@@ -192,7 +204,42 @@ func _cut_clouds() -> void:
 	if key == _clouds_open:
 		return
 	_clouds_open = key
-	(_clouds.material as ShaderMaterial).set_shader_parameter("mask", ImageTexture.create_from_image(cloud_mask(key, size)))
+	(_clouds.material as ShaderMaterial).set_shader_parameter("mask", ImageTexture.create_from_image(soft_mask(cloud_mask(key, size))))
+
+
+## The mask softened for the cloud's edge (23 Oct): the open land grown SOFT_GROW cells into the shut first, so the ramp
+## and the wisps fall mostly on the cloud's side and the open sites' pins stay clear (the review: a pin 31 px in sat
+## under them); then halved twice, each an average of four (a shrink straight to a quarter samples, and loses a thin
+## strip), and grown back.
+const SOFT_GROW := 2
+const CLOUD_WARP := Vector2(40.0, 34.0)  # the most the edge wanders, px, the two noises' full swing
+static func soft_mask(img: Image) -> Image:
+	var w := img.get_width()
+	var h := img.get_height()
+	var out := Image.create(w, h, false, Image.FORMAT_L8)
+	for y in range(h):
+		for x in range(w):
+			var m := 0.0
+			for dy in range(-SOFT_GROW, SOFT_GROW + 1):
+				for dx in range(-SOFT_GROW, SOFT_GROW + 1):
+					m = maxf(m, img.get_pixel(clampi(x + dx, 0, w - 1), clampi(y + dy, 0, h - 1)).r)
+			out.set_pixel(x, y, Color(m, m, m))
+	for i in range(2):
+		out.resize(maxi(1, int(out.get_width() / 2.0)), maxi(1, int(out.get_height() / 2.0)), Image.INTERPOLATE_BILINEAR)
+	out.resize(w, h, Image.INTERPOLATE_CUBIC)
+	return out
+
+
+## The most cloud the shader can lay over a point (the smoke: every open site's pin under 0.1): the least open of the
+## soft mask across the edge's wander, the wisps' pull at their strongest.
+static func cloud_cover_bound(soft: Image, p: Vector2, map_size: Vector2) -> float:
+	var lo := 1.0
+	for fy in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+		for fx in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+			var q: Vector2 = (p + Vector2(fx, fy) * CLOUD_WARP) / map_size * Vector2(soft.get_width(), soft.get_height())
+			lo = minf(lo, soft.get_pixel(clampi(int(q.x), 0, soft.get_width() - 1), clampi(int(q.y), 0, soft.get_height() - 1)).r)
+	var near: float = smoothstep(0.0, 0.25, lo) * (1.0 - smoothstep(0.75, 1.0, lo))
+	return 1.0 - smoothstep(0.15, 0.85, lo - 0.55 * near)
 
 
 ## The mask for a set of open zones ("1100": the first two): each cell white when its middle is in an open zone.
@@ -347,13 +394,11 @@ func _draw() -> void:
 		draw_texture_rect(pic, Rect2(MAP_AT, pic.get_size() * 2.0), false)
 	else:
 		_draw_flat()
-	# the picked site's zone, lit: its shape washed warm and outlined
+	# the picked site's zone, lit: its shape washed warm (its yellow outline gone, 23 Oct, Matt: "the yellow boundaries
+	# just read wrong")
 	var lit_z := lit_zone()
 	if lit_z >= 0 and sim != null and sim.zone_open(lit_z):
-		var pts := _scaled(PackedVector2Array(ZONE_SHAPES[lit_z]["points"]))
-		draw_colored_polygon(pts, LIT)
-		pts.append(pts[0])
-		draw_polyline(pts, Color(Pal.ACCENT, 0.7), 2.0)
+		draw_colored_polygon(_scaled(PackedVector2Array(ZONE_SHAPES[lit_z]["points"])), LIT)
 	# a shut zone under a hatch, where there's no cloud
 	for z in range(Data.ZONES.size()):
 		if _clouds == null and sim != null and not sim.zone_open(z):

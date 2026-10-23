@@ -6278,6 +6278,17 @@ func _playtest_checks(main) -> void:
 	var w_sel: String = sim.weather_of(main._missions.selected)
 	_check(bool(sky_m["rain"]) == (w_sel == "Rain") and bool(sky_m["fog"]) == (w_sel == "Fog") and bool(sky_m["night"]) == sim.is_night(), "the Map's sky disagrees with the picked zone: %s against %s, night %s" % [str(sky_m), w_sel, str(sim.is_night())])
 	_check(mv0._sky.get_index() < mv0._pins.get_index() and (mv0._clouds == null or mv0._pins.get_index() < mv0._clouds.get_index()), "the Map's pins aren't over the sky and under the cloud")
+	# the cloud's edge (23 Oct): the noise to wander it by, and a softened mask - a ramp, not a cut
+	if mv0._clouds != null:
+		var cmat: ShaderMaterial = mv0._clouds.material
+		var cmask: Image = (cmat.get_shader_parameter("mask") as Texture2D).get_image()
+		var ramp := 0
+		for my in range(cmask.get_height()):
+			for mx in range(cmask.get_width()):
+				var lum: float = cmask.get_pixel(mx, my).r
+				if lum > 0.1 and lum < 0.9:
+					ramp += 1
+		_check(cmat.get_shader_parameter("noise") is NoiseTexture2D and ramp > cmask.get_width(), "the Map's cloud edge has no noise or a hard mask (%d cells on the ramp)" % ramp)
 	# rain set on every zone: the Map's layer rains, its streaks counted and emitting; dry again, it stops (the review)
 	var held_w0: Array = sim.weather.duplicate()
 	var held_at0 = sim.weather_at
@@ -17170,6 +17181,14 @@ func _map_checks(main) -> void:
 				if not on_rim:
 					near = minf(near, pp.distance_to(Geometry2D.get_closest_point_to_segment(pp, a2, b2)))
 			_check(near >= 12.0, "%s's pin is %.0f px from its zone's edge: the cloud's fade reaches it" % [Data.TIERS[i]["name"], near])
+		# and under the moving edge (23 Oct, the review): with each run of zones open, no open site's pin under more than
+		# a tenth of cloud at the edge's worst wander and wisps
+		for ckey in ["1000", "1100", "1110"]:
+			var csoft: Image = mv.soft_mask(mv.cloud_mask(ckey, mv.size))
+			for i in range(Data.TIERS.size()):
+				if ckey[int(Data.TIERS[i]["zone"])] == "1":
+					var cov: float = mv.cloud_cover_bound(csoft, mv.pin_at(i), mv.size)
+					_check(cov < 0.1, "%s's pin can sit under %.2f of cloud with zones %s open" % [Data.TIERS[i]["name"], cov, ckey])
 		_check(mv._clouds_open == "1000" or mv._clouds_open.length() == Data.ZONES.size(), "the cloud wasn't cut for the zones open: '%s'" % mv._clouds_open)
 	_check(mv._key_rect.size.x <= 340.0 and mv._key_rect.size.y <= 32.0 and mv._legend.all(func(e): return mv._key_rect.encloses(Rect2(e[0].position, e[0].size))), "the Map's key is %s, or a word leaves it" % str(mv._key_rect))
 	# a pad or the keys step the pins, round the open zones' sites (the review: the tabs were buttons; the Deck's d-pad)

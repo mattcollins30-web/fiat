@@ -6242,6 +6242,23 @@ difficulty and length, the endgame placeholders.
 - Parked, not a playtest item: a runner with an empty gun reads 0% and the odds chips don't say why; a "No rounds"
   chip beside "No meds" would. For after Matt's playtest.
 
+## 0.7.4: the fog, the clouds, the sky's idle tick (23 Oct)
+
+- The fog (Matt: "the fog needs some work on the map, it's drawing weirdly"; mockup approved, "looks awesome"): the
+  flat sheet and the two hard bands gone; one layer, a shader drifting two scales of a seamless noise (sky.gd
+  noise(), shared) into banks over a faint tint, thinner and quicker on the fight (SkyLayer.new(size, true)). Nothing
+  on the CPU. Commit dbdad0a, with the sky's fix: Godot turned the layer's _process on at ready, so the Map's and the
+  fight's ticked every frame dry; _ready turns it off unless it rains (Matt: "fix it in this round too").
+- The Map's clouds (mockup of a soft moving edge and a visible drift approved; Matt: "make the cloud change"): the
+  cloud shader's drifts four times as fast (~5 px a second), the edge wandering on the same noise and thinning into
+  wisps. Reviewer: the soft band reached pins 31-47 px inside their zones (the Parade, the Services, Ransacked
+  Streets), so the open land is grown SOFT_GROW cells into the shut before the mask is softened (halved twice,
+  averaging, a straight shrink lost thin strips), and the wander is ±20 px; the smoke bounds the cloud over every
+  open site's pin with one, two and three zones open (cloud_cover_bound, all 0). The wisps reach a little less far
+  over the open land than the mockup's. And the picked zone's yellow outline gone, its warm wash kept (Matt: "the
+  yellow boundaries just read wrong"); the wash alone is faint (LIT 8%), 15% offered if it doesn't read.
+  Smoke green on run 219. VERSION 0.7.4.
+
 ## Parked from the playtest (23 Oct, 0.7.1; taken up after it)
 
 1. The class's wheel, highlighted: the lines between its nodes are far too faint to read (Matt: "selected class
