@@ -329,7 +329,7 @@ func show_state(s) -> void:
 		_band.set_words("The way out", t["name"], Fmt.mss(ceilf(maxf(0.0, float(m["way_out_t"])))),
 			["to the way out · see them off", "see them off", "left"], Pal.BAD if float(m["way_out_t"]) <= 5.0 else Pal.ACCENT)
 	else:
-		_band.set_words("", t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)     # no depth, no zone: the site's name and the clock (16 Oct)
+		_band.set_words(sim.sky_words(tier_i), t["name"], Fmt.mss(ceilf(clock)), clock_unit, clock_colour)     # the sky over the site's name, the clock (16 Oct; the sky 23 Oct, parked item 8)
 	_clock_fill.size.x = _clock_track.size.x * clampf(clock / clock_max, 0.0, 1.0)
 	(_clock_fill.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = clock_colour if clock_colour != Pal.TEXT else Pal.TEXT_2
 	_band.headline_under_title(true)
@@ -747,14 +747,13 @@ func _show_pick(m: Dictionary) -> void:
 		_show_rig_pick(m, r)
 		return
 	if it.is_empty():
-		var lines := ["A long gun takes 4 or 5 cells by 1, armour 3 by 3, a bandage 1"]
+		# the pack's empty words (23 Oct, parked item 4 of the 21 Oct list; Matt: "it hasn't changed since the very first
+		# version and it needs to go"): what the card's for, in one line; the sizes gone, the cells free are the header's
+		var lines: Array = [Words.PACK_EMPTY if m["found"].is_empty() else Words.PACK_PICK]
 		if sim.pack_used(m) >= sim.capacity():
 			var cheap: Dictionary = sim.cheapest_in_pack()
 			lines.append("Full: what drops goes to the floor; ditch to take it" if sim.by_hand(m) and m.has("crates") else "Full: a find that beats what's worn replaces the pack's cheapest item")
 			lines.append("Cheapest now: %s, %s" % [Words.mid_base(str(cheap["base"])), Fmt.money(sim.sell_price(cheap))] if not cheap.is_empty() else "")
-		else:
-			lines.append("%d cell%s free" % [sim.capacity() - sim.pack_used(m), "" if sim.capacity() - sim.pack_used(m) == 1 else "s"])
-		lines.append("Pick a cell for its figures; Select ditches several at once" if m["found"].size() > 0 else "Nothing found yet")
 		_pick.show_empty("The pack", lines)     # its fill is the grid's header and the cells free (18 Oct, said once)
 		_pick.set_buttons([])
 		return

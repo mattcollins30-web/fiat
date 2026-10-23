@@ -9052,7 +9052,7 @@ func _top_up() -> void:
 			meds_in += 1
 	if moved > 0 or meds_in > 0:
 		_dry_memo.clear()
-		log_event(Words.TOPPED_UP % [moved, meds_in] if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved)
+		log_event((Words.TOPPED_UP % [moved, meds_in]) if meds_in > 0 and moved > 0 else ((Words.TOPPED_UP_MEDS % meds_in) if meds_in > 0 else "Topped up: %d rounds from the stash into the rig" % moved))
 
 
 ## A gun put on with its rounds in the stash and none in the rig: a box of them to the rig, a stack of rounds no gun

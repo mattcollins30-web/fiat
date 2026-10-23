@@ -165,8 +165,9 @@ func _init() -> void:
 	_shelf = Inventory.new()
 	_shelf.position = Vector2(GRID_X, BODY_Y)
 	_shelf.set_rows(GRID_ROWS)
-	_shelf.can_many = false
+	_shelf.can_many = true                 # Select-many buys (23 Oct, parked item 10)
 	_shelf.picked.connect(_on_pick.bind("shelf"))
+	_shelf.acted.connect(_on_acted)             # the lot bought (23 Oct)
 	add_child(_shelf)
 	_stash = Inventory.new()
 	_stash.position = Vector2(GRID_X, BODY_Y)
@@ -247,6 +248,7 @@ func _init() -> void:
 
 func setup(k: String) -> void:
 	kind = k
+	_shelf.buying = kind                        # Select-many on the shelf buys the lot (23 Oct)
 	if kind == "fence":
 		for i in range(4):                          # four at the band's foot, right
 			_tabs[i].position.x = _tab_x(i, 4)
@@ -451,7 +453,7 @@ func _stash_meds() -> int:
 
 
 func _signature() -> String:
-	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
+	var parts := [kind, showing, str(selected), str(sim.on_mission()), str(int(sim.cash)), str(_stash.many), str(_shelf.many) + str(_shelf.chosen), str(sim.yard_picks.get("fence", [])) + str(sim.yard_picks.get("clinic", [])) + str(sim.yard_ranks), str(sim.gamble), str(sim.last_craft),
 		str(sim.hp >= sim.max_hp() - 0.5), str(int(sim.treat_cost() / 10)), str(sim.contracts), str(sim.mate), str(sim.notes), str(sim.wounds.keys()),
 		str(hash(sim.tree)), sim.cls,          # the tree and the class move the heal and rest figures
 		str(_go.keys().map(func(k): return _go_ids(k))), str(_list.selected) if _list != null else ""]     # the contract picked and its swap (Fence B)
@@ -751,6 +753,25 @@ func _show_panel() -> void:
 			_right_title.text = "Their shelf"
 			_right_lines[0].text = "No more until the next run"
 		_hint.text = "Pick an item on the shelf or in the stash"
+		if _shelf.visible and _shelf.many:
+			# the shelf's lot (23 Oct): what's picked, by name, and what it comes to
+			var counts := {}
+			var order: Array = []
+			var cost := 0
+			for id in _shelf.chosen:
+				var ch: Dictionary = _shelf._item(id)
+				if ch.is_empty():
+					continue
+				if not counts.has(ch["base"]):
+					counts[ch["base"]] = 0
+					order.append(ch["base"])
+				counts[ch["base"]] += 1
+				cost += _price(ch)
+			if order.is_empty():
+				_hint.text = "Tap the shelf's cells to pick several; Buy takes the lot"
+			else:
+				var words: Array = order.map(func(nm): return nm if counts[nm] == 1 else "%s ×%d" % [nm, counts[nm]])
+				UI.fit(_hint, ["%d picked: %s · %s" % [_shelf.chosen.size(), ", ".join(words), Fmt.money(cost)], "%d picked · %s" % [_shelf.chosen.size(), Fmt.money(cost)]])
 		_lay_buttons()
 		return
 	_hint.text = ""
@@ -958,7 +979,7 @@ func _on_pick(id: int, which: String) -> void:
 		return
 	if id >= 0:
 		selected = {"kind": which, "id": id}
-	elif _stash.many or _selected_item().is_empty():
+	elif _stash.many or _shelf.many or _selected_item().is_empty():
 		selected = {}
 	show_state(sim)
 

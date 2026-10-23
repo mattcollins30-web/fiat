@@ -57,6 +57,7 @@ const RARITY_W := 96                 # one button that steps through Any and the
 const TAB_PAD := 34                  # a stash tab's margin round its words
 const MANY_W := 100
 const SELL_W := 180
+const ALL_W := 200                 # the shelf's "All n · price" (23 Oct)
 const PAGE_BTN := 44
 const PAGE_LBL := 56
 const SORTS := ["Value", "New", "Slot"]
@@ -73,7 +74,9 @@ var page := 0
 var fixed_kind := ""               # set by the Workshop: only this kind, bar hidden
 var ditching := false              # set by the Run screen: Select-many ditches instead of selling
 var binning := false               # the Kit room with the Fence shut (13 Oct): Select-many bins for scrap instead
-var can_many := true               # a vendor's shelf has no Select-many
+var buying := ""                   # a vendor's shelf (23 Oct, parked item 10, Matt: "single buying at a time is a chore"): Select-many buys - "clinic" or "fence"
+var can_many := true               # a shelf without the many: the Kit's compare shelf
+var _all_button: Button            # the shelf's "All n · price" beside Buy (23 Oct)
 var page_rows := ROWS              # rows a page; set_rows() for fewer
 var drag_src := ""                 # set by the owner: cells can be dragged out, carrying this name
 var accepts := []                  # drag sources this grid takes drops from, e.g. ["rig"]
@@ -135,6 +138,10 @@ func _init() -> void:
 	_sell_button = UI.button(self, Rect2(x + MANY_W + 6, y, SELL_W, BAR_H), true)
 	_sell_button.add_theme_font_size_override("font_size", 20)
 	_sell_button.pressed.connect(_sell_chosen)
+	_all_button = UI.button(self, Rect2(x + MANY_W + 6 + SELL_W + 6, y, ALL_W, BAR_H), false)
+	_all_button.add_theme_font_size_override("font_size", 20)
+	_all_button.pressed.connect(_choose_all)
+	_all_button.visible = false
 	var px := WIDTH - PAGE_BTN - 4 - PAGE_LBL - 4 - PAGE_BTN
 	_page_prev = UI.button(self, Rect2(px, y, PAGE_BTN, BAR_H), false)
 	_page_prev.text = "‹"
@@ -224,7 +231,8 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 	chosen = chosen.filter(func(id): return _has(id))
 	if selected >= 0 and not _has(selected):
 		selected = -1
-	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else ""]
+	var sig := "%s|%d|%d|%d|%d|%s|%d|%s|%d|%d|%s|%s|%s|%s|%s" % [what, used, cap, kind, rarity, str(many), sort, str(chosen), selected, page, str(binning), str(marks), tab, str(sim.stash_tabs()) + str(sim.tab_used("own")) + str(sim.tab_used("own2")) if tabbed else "",
+		("%d|%d" % [int(sim.cash), sim.stash_used()]) if buying != "" and sim != null else ""]     # the lot's button reads the cash and the room (23 Oct)
 	var ups := {}                     # the arrows, worked out once a show (the review: twice a cell, ten times a second)
 	var locks := {}                   # the padlocks (15 Oct): the level a piece waits for, 0 when it can be worn
 	for it in items:
@@ -260,7 +268,25 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		worth += sim.sell_price(_item(id))
 		cells += Items.size(_item(id))
 	_sell_button.visible = many
-	if ditching:
+	_all_button.visible = many and buying != ""
+	if buying != "":
+		# the shelf's lot (23 Oct): what the chosen cost together, and the whole shelf's
+		var cost := 0
+		var cells_in := 0                      # the cells the lot wants: a stack that merges whole wants none (the review: the check mirrors the buys)
+		for id in chosen:
+			cost += _buy_price(_item(id))
+			if not sim._stack_room(_item(id)):
+				cells_in += Items.size(_item(id))
+		var all_cost := 0
+		for it in items:
+			all_cost += _buy_price(it)
+		UI.fit_button(_sell_button, Fmt.money_forms(cost).map(func(m): return "Buy %d for %s" % [chosen.size(), m]) + ["Buy %d" % chosen.size()])
+		UI.fit_button(_all_button, Fmt.money_forms(all_cost).map(func(m): return "All %d · %s" % [items.size(), m]) + ["All %d" % items.size()])
+		var room: bool = sim.stash_room(cells_in)
+		_sell_button.disabled = chosen.is_empty() or sim.cash < cost or not room
+		_sell_button.tooltip_text = "" if chosen.is_empty() or not _sell_button.disabled else ("No room in the stash" if not room else "Short by %s" % Fmt.money(cost - sim.cash))
+		_all_button.disabled = items.is_empty() or chosen.size() == items.size()
+	elif ditching:
 		_sell_button.text = "Ditch %d: %d cell%s" % [chosen.size(), cells, "" if cells == 1 else "s"]
 	elif binning:
 		var bits := 0
@@ -272,7 +298,8 @@ func show_items(s, source: Array, used: int, cap: int, what: String) -> void:
 		UI.fit_button(_sell_button, ["Bin %d: %d scrap" % [n, bits], "Bin %d" % n])
 	else:
 		UI.fit_button(_sell_button, Fmt.money_forms(worth).map(func(m): return "Sell %d: %s" % [chosen.size(), m]))
-	_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id))))     # the Fence buys; shut till the Carpet Man (13 Oct)
+	if buying == "":
+		_sell_button.disabled = chosen.is_empty() or (not ditching and not binning and not sim.room_open("fence")) or (binning and not chosen.any(func(id): return _many_bins(_item(id))))     # the Fence buys; shut till the Carpet Man (13 Oct)
 	# pack the items first-fit into the columns, never across a page's edge
 	_placed = _pack(items, page_rows)
 	var reach := 0
@@ -495,6 +522,7 @@ func _lay_tabs(tabbed: bool) -> void:
 		UI.style_button(tb, key == tab)
 	_many_button.position.x = x if tabbed else float(RARITY_W + 6)
 	_sell_button.position.x = _many_button.position.x + MANY_W + 6
+	_all_button.position.x = _sell_button.position.x + SELL_W + 6
 
 
 func _set_tab(k: int) -> void:
@@ -542,18 +570,37 @@ func _turn(by: int) -> void:
 	picked.emit(-1)
 
 
+## The shelf's price for a thing (23 Oct): the Clinic's or the Fence's.
+func _buy_price(it: Dictionary) -> int:
+	if it.is_empty():
+		return 0
+	return sim.clinic_price(it) if buying == "clinic" else sim.price(it)
+
+
+## Every cell shown, chosen (the shelf's All).
+func _choose_all() -> void:
+	chosen = items.map(func(it): return int(it["id"]))
+	_shown = ""
+	picked.emit(-1)
+
+
 func _sell_chosen() -> void:
+	var left: Array = []
 	for id in chosen.duplicate():
 		var it := _item(id)
 		if not it.is_empty():
-			if ditching:
+			if buying != "":
+				var bought: bool = sim.buy_clinic(id) if buying == "clinic" else sim.buy_id(id)
+				if not bought:
+					left.append(id)             # no room or no cash for this one: it stays picked, so the player sees what didn't go
+			elif ditching:
 				sim.ditch(id)
 			elif binning:
 				if _many_bins(it):
 					sim.bin(id)
 			else:
 				sim.sell(it)
-	chosen = []
+	chosen = left
 	acted.emit()
 
 
@@ -567,6 +614,8 @@ func text_nodes() -> Array:
 	var out: Array = [_fill, _sort_button, _many_button, _page_label]
 	if _sell_button.visible:
 		out.append(_sell_button)
+	if _all_button.visible:
+		out.append(_all_button)
 	for b in _kind_buttons:
 		if b.visible:
 			out.append(b)

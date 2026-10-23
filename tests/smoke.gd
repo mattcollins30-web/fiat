@@ -1127,6 +1127,15 @@ func _worst_case(main) -> void:
 
 
 ## The Clinic as a vendor screen: Treat, Buy off its shelf, Take from your meds, Leave from the rig.
+## The two shelves as areas for `only` (23 Oct): `only clinic_shelf fence_shelf`.
+func _clinic_shelf_checks(main) -> void:
+	_clinic_screen(main)
+
+
+func _fence_shelf_checks(main) -> void:
+	_fence_screen(main)
+
+
 func _clinic_screen(main) -> void:
 	var sim = main.sim
 	main.show_room(main.MEDIC)
@@ -1144,6 +1153,56 @@ func _clinic_screen(main) -> void:
 	var shelf_before: int = sim.clinic.size()
 	main._clinic._press(0)              # Buy
 	_check(sim.clinic.size() == shelf_before - 1 or not sim.stash_room(1), "Buy off the Clinic's shelf did not buy, or the shelf did not shrink")
+	# Select-many buys the lot (23 Oct, parked item 10, Matt: "single buying at a time is a chore"): Select, two cells,
+	# Buy 2 for their prices; All picks the shelf
+	if sim.clinic.size() >= 2:
+		while not sim.stash_room(4) and not sim.stash.is_empty():
+			sim.sell(sim.stash[0])
+		var shelf_v = main._clinic._shelf
+		shelf_v._toggle_many()
+		main.refresh()
+		_check(shelf_v.many and shelf_v._sell_button.visible and shelf_v._all_button.visible and shelf_v._sell_button.disabled, "the shelf's Select didn't offer Buy and All: many %s" % str(shelf_v.many))
+		var two: Array = [int(sim.clinic[0]["id"]), int(sim.clinic[1]["id"])]
+		var cost2: int = sim.clinic_price(sim.clinic[0]) + sim.clinic_price(sim.clinic[1])
+		for id in two:
+			shelf_v._pick(shelf_v.cell_of(id))
+		main.refresh()
+		_check(shelf_v.chosen.size() == 2 and shelf_v._sell_button.text.begins_with("Buy 2") and not shelf_v._sell_button.disabled, "two picked on the shelf read '%s' (%d chosen, disabled %s)" % [shelf_v._sell_button.text, shelf_v.chosen.size(), str(shelf_v._sell_button.disabled)])
+		_check(main._clinic._hint.text.begins_with("2 picked"), "the Clinic's panel doesn't say what's picked: '%s'" % main._clinic._hint.text)
+		_check_fit(main, "Clinic (shelf, two picked)")
+		var cash0: float = sim.cash
+		var shelf0: int = sim.clinic.size()
+		shelf_v._sell_chosen()
+		main.refresh()
+		_check(sim.clinic.size() == shelf0 - 2 and is_equal_approx(sim.cash, cash0 - cost2) and two.all(func(id): return sim.stash.any(func(x): return int(x["id"]) == id)), "Buy 2 off the shelf: %d left of %d, cash %.0f of %.0f" % [sim.clinic.size(), shelf0, sim.cash, cash0 - cost2])
+		if not sim.clinic.is_empty():
+			shelf_v._choose_all()
+			main.refresh()
+			_check(shelf_v.chosen.size() == sim.clinic.size() and shelf_v._all_button.disabled, "All didn't pick the shelf: %d of %d" % [shelf_v.chosen.size(), sim.clinic.size()])
+		# a lot the stash can't all hold (the review): the button reads the cells the lot wants; what won't go stays picked
+		if sim.clinic.size() >= 2:
+			shelf_v.chosen = []
+			var pair: Array = [sim.clinic[0], sim.clinic[1]]
+			var want: int = Items.size(pair[0]) + Items.size(pair[1])
+			var fillers: Array = []
+			while sim.stash_room(want) and sim.stash_room(1):
+				var fb: Dictionary = sim._plain(Data.MEDICAL, "Bandage")
+				fillers.append(fb)
+				sim.stash_put(fb)                                       # fill till one cell short of the pair
+			for pit in pair:
+				shelf_v._pick(shelf_v.cell_of(int(pit["id"])))
+			sim.cash += sim.clinic_price(pair[0]) + sim.clinic_price(pair[1])
+			main.refresh()
+			_check(shelf_v._sell_button.disabled or sim.stash_room(want), "Buy 2 reads enabled with the stash a cell short: room %s" % str(sim.stash_room(want)))
+			var shelf1: int = sim.clinic.size()
+			shelf_v._sell_chosen()
+			main.refresh()
+			var went: int = shelf1 - sim.clinic.size()
+			_check(went < 2 and shelf_v.chosen.size() == 2 - went, "a lot the stash can't hold: %d bought, %d still picked" % [went, shelf_v.chosen.size()])
+			for fb in fillers:
+				sim.stash.erase(fb)                                        # the stash as it was (a full stash failed eleven checks after this one)
+		shelf_v._toggle_many()
+		main.refresh()
 	main._clinic._show("stash")
 	main.refresh()
 	_check_fit(main, "Clinic (your meds)")
@@ -1183,6 +1242,27 @@ func _fence_screen(main) -> void:
 		main._fence._press(0)
 		_check(sim.stash.size() == n_before + 1 or sim.market.size() == shelf_before - 1 or not sim.stash_room(Items.size(it)), "Buy through the screen did not buy: %s at %d, cash %.0f, stash %d" % [it["base"], sim.price(it), sim.cash, sim.stash.size()])     # a box of rounds tops up a stack (19 Oct)
 		_check(sim.market.size() == shelf_before - 1 or not sim.stash_room(Items.size(it)), "the shelf did not shrink: finite stock")
+		# the Fence's shelf has the many too (23 Oct): Select, two, Buy 2 at his prices
+		if sim.market.size() >= 2:
+			var fsh = main._fence._shelf
+			fsh._toggle_many()
+			var two_f: Array = [int(sim.market[0]["id"]), int(sim.market[1]["id"])]
+			var cost_f: int = sim.price(sim.market[0]) + sim.price(sim.market[1])
+			for id in two_f:
+				fsh._pick(fsh.cell_of(id))
+			sim.cash += cost_f
+			while not sim.stash_room(Items.size(sim.market[0]) + Items.size(sim.market[1])) and not sim.stash.is_empty():
+				sim.sell(sim.stash[0])
+			main.refresh()
+			_check(fsh._sell_button.visible and fsh._sell_button.text.begins_with("Buy 2") and not fsh._sell_button.disabled, "the Fence's shelf many reads '%s' (disabled %s; cash %.0f for %d, room %s for %d+%d, tip '%s')" % [fsh._sell_button.text, str(fsh._sell_button.disabled), sim.cash, cost_f, str(sim.stash_room(Items.size(sim.market[0]) + Items.size(sim.market[1]))), Items.size(sim.market[0]), Items.size(sim.market[1]), fsh._sell_button.tooltip_text])
+			_check_fit(main, "Fence (shelf, two picked)")
+			var cash_f: float = sim.cash
+			var mk0: int = sim.market.size()
+			fsh._sell_chosen()
+			main.refresh()
+			_check(sim.market.size() == mk0 - 2 and is_equal_approx(sim.cash, cash_f - cost_f), "Buy 2 off the Fence's shelf: %d left of %d, cash %.0f of %.0f" % [sim.market.size(), mk0, sim.cash, cash_f - cost_f])
+			fsh._toggle_many()
+			main.refresh()
 	main._fence._show("stash")
 	main.refresh()
 	_check_fit(main, "Fence (your stash)")
@@ -6192,6 +6272,30 @@ func _playtest_checks(main) -> void:
 	main.refresh()
 	var c: Dictionary = main._missions._cols[0]
 	_check(c["tiles"][main._missions.DEPTH_TILE]["key"].text == "Papers" and c["tiles"][main._missions.DEPTH_TILE]["value"].text.begins_with("1 in") and not c["depth_up"].visible and not c["depth_down"].visible, "the Papers tile is off, or the depth's −/+ show: '%s'" % c["tiles"][main._missions.DEPTH_TILE]["value"].text)     # 15 Oct, signals_map.png
+	# the Map's sky (23 Oct, parked item 8): the layer under the pins follows the picked site's zone and the clock
+	var mv0 = main._missions._map
+	var sky_m: Dictionary = mv0._sky.showing()
+	var w_sel: String = sim.weather_of(main._missions.selected)
+	_check(bool(sky_m["rain"]) == (w_sel == "Rain") and bool(sky_m["fog"]) == (w_sel == "Fog") and bool(sky_m["night"]) == sim.is_night(), "the Map's sky disagrees with the picked zone: %s against %s, night %s" % [str(sky_m), w_sel, str(sim.is_night())])
+	_check(mv0._sky.get_index() < mv0._pins.get_index() and (mv0._clouds == null or mv0._pins.get_index() < mv0._clouds.get_index()), "the Map's pins aren't over the sky and under the cloud")
+	# rain set on every zone: the Map's layer rains, its streaks counted and emitting; dry again, it stops (the review)
+	var held_w0: Array = sim.weather.duplicate()
+	var held_at0 = sim.weather_at
+	for z in range(Data.ZONES.size()):
+		sim.weather[z] = "Rain"
+	sim.weather_at = 1e9
+	main._missions._shown = ""
+	main.refresh()
+	_check(bool(mv0._sky.showing()["rain"]) and mv0._sky._light.amount >= 24 and mv0._sky._heavy.amount >= 72 and mv0._sky.is_processing(), "rain on every zone and the Map isn't raining: %s" % str(mv0._sky.showing()))
+	for z in range(Data.ZONES.size()):
+		sim.weather[z] = ""
+	main._missions._shown = ""
+	main.refresh()
+	_check(not bool(mv0._sky.showing()["rain"]) and not mv0._sky.is_processing(), "dry again and the Map still rains: %s" % str(mv0._sky.showing()))
+	sim.weather = held_w0
+	sim.weather_at = held_at0
+	main._missions._shown = ""
+	main.refresh()
 	_check_fit(main, "Runs (locked)")
 	# the band: the art never covers the words; the odds sit at its foot with the figure beside, and both inside it
 	var band0 = c["band"]
@@ -10957,7 +11061,7 @@ func _frame_checks(main) -> void:
 		main.show_room(main.MISSIONS)
 	if main.sim.on_mission() and not main.sim.mission.get("way_out", false):
 		main.refresh()
-		_check(bd.kicker.text == "" and bd.unit.text == "left" and not bd.right[0].text.contains("clock") and not bd.right[1].text.contains("clock"), "the run's band says more than the site and the time left: '%s' / '%s' / '%s', '%s'" % [bd.kicker.text, bd.unit.text, bd.right[0].text, bd.right[1].text])
+		_check(bd.kicker.text == main.sim.sky_words(int(main.sim.mission["tier"])) and bd.unit.text == "left" and not bd.right[0].text.contains("clock") and not bd.right[1].text.contains("clock"), "the run's band says more than the site, the sky and the time left: '%s' / '%s' / '%s', '%s'" % [bd.kicker.text, bd.unit.text, bd.right[0].text, bd.right[1].text])     # the sky on the kicker (23 Oct, parked item 8)
 		print("the run's band kept simple: '%s', '%s' %s, '%s'" % [bd.title.text, bd.headline.text, bd.unit.text, bd.right[0].text])
 		# nothing on the take's row when all's well (18 Oct, Matt: "remove 'leaving keeps the loot'")
 		var mm2: Dictionary = main.sim.mission
@@ -13304,7 +13408,24 @@ func _fill_up_checks(main) -> void:
 	main.refresh()
 	# the run screen's column: the band carries the site and the clock, the sections stack without overlap, the buttons at the foot
 	var rn = main._run
-	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text == "", "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
+	_check(rn._band.title.text == sim.mission["t"]["name"] and rn._band.headline.text.contains(":") and rn._band.kicker.text == sim.sky_words(int(sim.mission["tier"])), "the run's band is off: '%s' / '%s' / '%s'" % [rn._band.kicker.text, rn._band.title.text, rn._band.headline.text])
+	# the sky on the fight (23 Oct, parked item 8): the view's layer follows the site's weather and the clock; the pack
+	# card's empty words are the new ones
+	if rn._view != null:
+		var sky_v: Dictionary = rn._view._sky.showing()
+		var w_now: String = sim.weather_of(int(sim.mission["tier"]))
+		_check(bool(sky_v["rain"]) == (w_now == "Rain") and bool(sky_v["fog"]) == (w_now == "Fog") and bool(sky_v["night"]) == sim.is_night(), "the fight's sky disagrees with the sim: %s against %s, night %s" % [str(sky_v), w_now, str(sim.is_night())])
+		var held_w: Array = sim.weather.duplicate()
+		var held_at = sim.weather_at
+		for z in range(Data.ZONES.size()):
+			sim.weather[z] = "Rain"
+		sim.weather_at = 1e9
+		main.refresh()
+		_check(bool(rn._view._sky.showing()["rain"]) and rn._view._sky._light.emitting and rn._view._sky._light.amount >= 24, "rain set and the fight's layer isn't raining: %s" % str(rn._view._sky.showing()))
+		_check(rn._view._sky.get_index() < rn._view._cover.get_index() and rn._view._sky.get_index() > rn._view._plate.get_index(), "the fight's sky isn't between the plate and the wall")
+		sim.weather = held_w
+		sim.weather_at = held_at
+		main.refresh()
 	_check(rn._band.bar.visible and rn._band._bar_label.text.ends_with(" down") or rn._band._bar_label.text == "Cleared", "the run's band has no progress bar: '%s'" % rn._band._bar_label.text)
 	_check(rn.FIGHT_Y >= rn.BAND_H and rn.RUNNER_Y > rn.FIGHT_BAR_Y + rn.BAR_H and rn.RIG_Y > rn.RUNNER_NOTE_Y and rn.TAKE_Y > rn.RIG_Y + Pal.CELL and rn.STRIP_Y + rn.STRIP_H <= rn.BUTTON_Y, "the run column's sections overlap: fight %d runner %d rig %d take %d strip %d button %d" % [rn.FIGHT_Y, rn.RUNNER_Y, rn.RIG_Y, rn.TAKE_Y, rn.STRIP_Y, rn.BUTTON_Y])
 	# them and you each in a box: the box holds its head, tiles and bar, and the two boxes sit apart

@@ -6480,4 +6480,25 @@ pass; the reviewer on the code):
   Reviewer's three notes in (the tally pairs with its own run; the rig's modes from the sim's list; the HP chip
   counts as the HP hint). To the backlog: the odds swing 0% to 100% between plain weather and fog on the same Bank
   (contact 3 to 2) - a number for the balance phase.
+- Batch D, the three drawn ones (item 8 of the 22 Oct list, item 4 of the 21 Oct list, item 10; the canvas "Fiat -
+  The sky, the pack, the shelf", three boards, Matt: "approved for everything apart from the rain - it needs to read
+  like showers and drops ... the rain we had in Greenhorn", then "perfect - build all of D"). The sky shown
+  (scripts/ui/sky.gd, new): a layer over a scene - night's blue wash, fog's pale one heavier top and foot, and the
+  rain as Greenhorn's watch_deck_fx/atmosphere rig ported: two CPUParticles2D layers of pixel streaks (40 light, 150
+  heavy a full screen, scaled by the view's area with floors so the fight's window still rains), the heavy one
+  coming and going in showers on a 14 s swell, both leaning with gusts; it emits only while its screen shows (the
+  walk up stops before the root Window - headless reads the root as hidden, the smoke on Matt's machine). The Map
+  draws it over the painting and its pins on a layer of their own above it (_draw_pins), the clouds and words above
+  those; the fight has it between the plate and the wall, under the figures' numbers; the run's band kicker carries
+  sky_words ("18:49, day, raining"). Nothing in it changes a number. The pack card's empty words: Words.PACK_EMPTY
+  ("Nothing found yet. What the run turns up lands here; pick a cell to read it."), the sizes line gone, the cells
+  free left to the header; the full rule as before. Select-many buying on both shelves (inventory.buying "clinic" /
+  "fence"): Select, tap cells, "Buy n for X" and "All n · X" (_choose_all); the button counts the cells the lot wants
+  the way the buys do (a stack that merges whole wants none) and what won't go stays picked; the vendor's panel lists
+  what's picked and what it comes to. Also: "Topped up: 2 meds ..." when only meds moved. Smoke: the sky on the Map
+  and the fight against the sim (rain on, rain off, the layer order), the kicker, the shelves' many (Buy 2, All, a lot
+  the stash can't hold), `only clinic_shelf fence_shelf` as areas. Three red runs on the way: the many block's
+  `return` skipped the cells' layout; restart() turned the dry rain back on; the fixture's filler bandages left the
+  stash full for eleven checks after it. Reviewer's notes in (the room check, the visibility, the emitter's width,
+  the lifetimes). The art commit (3d7b49f) took everything the manifests had landed, so a checkout reads the art.
 

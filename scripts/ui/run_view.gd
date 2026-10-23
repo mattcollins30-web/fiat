@@ -11,6 +11,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const CratesPanel := preload("res://scripts/ui/crates_panel.gd")
 const NodeGlyphs := preload("res://scripts/ui/node_glyphs.gd")
+const SkyLayer := preload("res://scripts/ui/sky.gd")
 
 ## A shot of yours lands, in the frame's space (13 Oct, Matt: the numbers came with no shot, and while ducked): the run
 ## screen shows what your gun's done since the last one here, on the one it hit.
@@ -98,6 +99,7 @@ var _figs: Array = []                     # {rect, state: "", t, fire_t, next_fi
 var _crates: Array = []                   # the crates in the street while searching
 var _cover: TextureRect
 var _cover_fill: TextureRect               # the wall's brick carried on down under it, for the duck (Matt: "too short when crouching")
+var _sky                                   # the sky's layer (23 Oct): night, rain, fog over the scene
 var _shadows: Array = []                   # a shadow under each crate
 var _open_c: TextureRect                   # the crate just opened, open (OPEN_SPOT)
 var _open_sh: TextureRect
@@ -317,6 +319,10 @@ func _init() -> void:
 	_open_c.visible = false
 	# the figures stand in depth order: the far one behind, the near one in front
 	move_child(_figs[2]["rect"], _plate.get_index() + 1)
+	# the sky (23 Oct, parked item 8): night's and fog's wash and the rain in the air between the gang and the wall,
+	# under the wall, the hands, the bars and the numbers
+	_sky = SkyLayer.new(Vector2(W, H))
+	add_child(_sky)
 	_cover = _rect(null)
 	_cover_fill = _rect(null)
 	_cover_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -700,6 +706,7 @@ func _vignette(c := Color(0.75, 0.1, 0.08), strength := 0.85) -> Texture2D:
 
 ## What the sim says, each refresh: how many are on you, kills, your HP, the search's crates.
 func show_state(sim, m: Dictionary) -> void:
+	_sky.set_sky(sim.is_night(), sim.weather_of(int(m["tier"])))     # the site's sky as the Map's card had it (23 Oct)
 	if placing:
 		return                                   # F3's on: the fight holds still
 	if sim.runs_total != _run_seen:

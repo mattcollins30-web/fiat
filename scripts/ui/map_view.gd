@@ -18,6 +18,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Words := preload("res://scripts/sim/words.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const SkyLayer := preload("res://scripts/ui/sky.gd")
 
 const W0 := 1000.0                 # the drawing's own space, as the canvas drew it
 const H0 := 844.0
@@ -64,6 +65,8 @@ var _key_rect := Rect2()           # the key's panel, fitted to its words
 var _label_at := {}                # Label -> [the pin's point, its side]: a name sits snug on its own pin
 var _shown := ""
 var _clouds: ColorRect                 # the cloud over all but the open zones (19 Oct, Matt), when art/map/clouds.png is made
+var _sky                               # the sky's layer (23 Oct): night, rain, fog over the painting, under the pins
+var _pins: Control                     # the pins, drawn on their own layer over the sky
 var _clouds_open := "-"
 var _key_bg: Control                   # the key's panel and dots, over the cloud, under its words                # the open zones the cloud's mask was cut for
 const MASK_DIV := 6.0                  # the mask at a sixth of the map: smoothed up, a soft edge
@@ -101,6 +104,14 @@ func _init(rect: Rect2) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL         # a pad or the keys step the pins (the zone tabs were buttons: the Deck's d-pad got there)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # the painting's pixels whole at x2; the words below set back to smooth
+	# the sky over the painting (23 Oct, parked item 8), the pins on a layer over it so they keep their colour
+	_sky = SkyLayer.new(size)
+	add_child(_sky)
+	_pins = Control.new()
+	_pins.size = size
+	_pins.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pins.draw.connect(_draw_pins)
+	add_child(_pins)
 	var tile := art("clouds")
 	if tile != null:                        # over the map's drawing and the pins, under every word
 		_clouds = ColorRect.new()
@@ -280,11 +291,12 @@ func show_state(s, sel: int, okey: String) -> void:
 	var opens := ""
 	for p in Data.PINNACLES:
 		opens += "1" if sim.order_open(p["key"]) else "0"
-	var sig := "%s|%d|%s|%s|%s|%s|%s|%d" % [settled, selected, order_key, opens, str(sim.best_depth), str(sim.bosses_beaten), str(sim.weather), sim.level()]
+	var sig := "%s|%d|%s|%s|%s|%s|%s|%d|%d" % [settled, selected, order_key, opens, str(sim.best_depth), str(sim.bosses_beaten), str(sim.weather), sim.level(), int(sim.is_night())]
 	if sig == _shown:
 		return
 	_shown = sig
 	_cut_clouds()
+	_sky.set_sky(sim.is_night(), sim.weather_of(selected) if selected >= 0 else "")     # the picked site's zone's sky, as its card says (23 Oct)
 	for z in range(Data.ZONES.size()):
 		var nm: Label = _zone_names[z][0]
 		var st: Label = _zone_names[z][1]
@@ -326,6 +338,7 @@ func show_state(s, sel: int, okey: String) -> void:
 			_snug(l)
 			l.add_theme_color_override("font_color", Pal.ACCENT if order_key == p["key"] else (Pal.TEXT if ok else Pal.TEXT_3))
 	queue_redraw()
+	_pins.queue_redraw()
 
 
 func _draw() -> void:
@@ -345,6 +358,12 @@ func _draw() -> void:
 	for z in range(Data.ZONES.size()):
 		if _clouds == null and sim != null and not sim.zone_open(z):
 			_hatch(ZONE_SHAPES[z]["points"])
+	# the pins: their own layer (_draw_pins), over the sky
+	# the key's panel and its dots: their own layer (_draw_key), over the cloud
+
+
+## The pins, on their own layer over the sky (23 Oct): the sites in their odds' colour, the order's places as diamonds.
+func _draw_pins() -> void:
 	if sim == null:
 		return
 	for i in range(Data.TIERS.size()):
@@ -353,24 +372,23 @@ func _draw() -> void:
 		var zone_open: bool = sim.zone_open(int(Data.TIERS[i]["zone"]))
 		var r: float = PIN_R if zone_open else PIN_R_SHUT
 		if i == selected and order_key == "":
-			draw_circle(c, r + 9.0, Color(Pal.ACCENT, 0.25))
-			draw_circle(c, r + 5.0, Pal.ACCENT)
-		draw_circle(c, r + 3.0, Pal.BG)
+			_pins.draw_circle(c, r + 9.0, Color(Pal.ACCENT, 0.25))
+			_pins.draw_circle(c, r + 5.0, Pal.ACCENT)
+		_pins.draw_circle(c, r + 3.0, Pal.BG)
 		if open:
-			draw_circle(c, r, _tone(i))
+			_pins.draw_circle(c, r, _tone(i))
 		else:
-			draw_circle(c, r, Pal.BUTTON)
-			draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if zone_open else Color("5a6068"), 2.0)
+			_pins.draw_circle(c, r, Pal.BUTTON)
+			_pins.draw_arc(c, r, 0.0, TAU, 24, Pal.TEXT_3 if zone_open else Color("5a6068"), 2.0)
 	for p in Data.PINNACLES:
 		if not sim.order_open(p["key"]):
 			continue
 		var c: Vector2 = _px(ORDER_AT[p["key"]])
 		if order_key == p["key"]:
-			draw_circle(c, PIN_R + 9.0, Color(Pal.ACCENT, 0.25))
+			_pins.draw_circle(c, PIN_R + 9.0, Color(Pal.ACCENT, 0.25))
 		var d := PIN_R + 3.0                 # a diamond: the order's places aren't the campaign's
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), Pal.ACCENT)
-	# the key's panel and its dots: their own layer (_draw_key), over the cloud
+		_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d - 3), c + Vector2(d + 3, 0), c + Vector2(0, d + 3), c + Vector2(-d - 3, 0)]), Pal.BG)
+		_pins.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d, 0), c + Vector2(0, d), c + Vector2(-d, 0)]), Pal.ACCENT)
 
 
 ## The key's panel and its dots, on their own layer over the cloud.
