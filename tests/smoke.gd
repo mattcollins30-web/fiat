@@ -2098,6 +2098,8 @@ func _tree_effect_checks(sim) -> void:
 					read = read or src.contains('tree_sum("%s_res" % ty)')          # the web's resist fillers (22 Oct)
 				if e == "%s_last_pct" % el:
 					read = read or src.contains('tree_sum("%s_last_pct" % ty)')     # Oil drum, Serrated, Deep freeze, Takes its time
+			if e == "skill_" + str(n.get("skill", "")):
+				read = read or (Data.SKILLS.has(str(n["skill"])) and src.contains('has_node("skill_" + id)'))     # the skill nodes, through skill_known (milestone 8)
 			if not read and not (e in orphans):
 				orphans.append("%s (%s)" % [e, n["name"]])
 	_check(orphans.is_empty(), "tree effects nothing reads: %s" % ", ".join(orphans))
@@ -9607,6 +9609,10 @@ func _mythic_checks(sim) -> void:
 	wear_one.call("headmasters_cap")
 	_check(not sim.has_node("hit_and_run") and not sim.has_node("cap_ghost") and not sim.has_node("never_there"), "the Headmaster's Cap gave a node with a cost: hit and run %s, ghost %s, never there %s" % [str(sim.has_node("hit_and_run")), str(sim.has_node("cap_ghost")), str(sim.has_node("never_there"))])
 	_check(sim.has_node("breather"), "the Headmaster's Cap held back a plain notable (Breather)")
+	_set_cls(sim, "Poacher")
+	sim.tree = []
+	wear_one.call("headmasters_cap")
+	_check(sim.skills_learnt().is_empty() and sim.has_node("clocked"), "the Headmaster's Cap: skills %s (want none), Clocked %s" % [str(sim.skills_learnt()), str(sim.has_node("clocked"))])
 	sim.tree = tree_was
 	_set_cls(sim, cls_was)
 	# on a run: the Suit's cap, the Bag's meds, the clock, never lost
@@ -17734,10 +17740,31 @@ func _skills_checks(sim) -> void:
 	sim.yard_picks.erase("generator")
 	sim.yard_ranks.erase("generator")
 	sim._yard_changed("")
-	# the loadout: learnt ones only, one copy, locked on a run
-	sim.skills_known = []
-	_check(not sim.set_skill_slot(0, "clean_shot"), "an unlearnt skill went in a slot")
-	sim.skills_known = Data.SKILLS.keys()
+	# the Poacher's tree teaches his eight: four a lane on the hung notables, the fourth the signature
+	_set_cls(sim, "Poacher")
+	var sk_ids: Dictionary = _skill_node_ids()
+	_check(sk_ids.size() == 8 and Data.SKILLS.keys().all(func(k): return sk_ids.has(k)), "the Poacher's tree doesn't hold his eight skills: %s" % str(sk_ids.keys()))
+	for lane in ["Stalking", "Snares"]:
+		var in_lane: Array = sk_ids.keys().filter(func(k): return str(sk_ids[k]).begins_with(lane + "/"))
+		_check(in_lane.size() == 4 and in_lane.filter(func(k): return Data.SKILLS[k].get("signature", false)).size() == 1 and in_lane.all(func(k): return Data.SKILLS[k]["lane"] == lane), "%s holds %s" % [lane, str(in_lane)])
+	for k in sk_ids:
+		_check(sim.node(sk_ids[k])["name"] == Data.SKILLS[k]["name"] and str(sim.node(sk_ids[k])["words"]) == Data.SKILLS[k]["line"], "%s's node isn't named and worded as the skill" % k)
+	sim.tree = sim.tree.filter(func(id): return not sk_ids.values().has(id))
+	_check(not sim.set_skill_slot(0, "clean_shot") and sim.skills_learnt().is_empty(), "an unlearnt skill went in a slot")
+	sim.skill_slots = ["", "", ""]
+	sim.training_points += 40
+	var path_to: String = sk_ids["clean_shot"]
+	for step_i in range(12):
+		if sim.tree.has(path_to):
+			break
+		var nxt: String = path_to if sim.touches_trained(path_to) or sim.node(path_to).get("entry", false) else sim.path_next(path_to)
+		if nxt == "" or not sim.train_node(nxt):
+			break
+	_check(sim.tree.has(path_to) and sim.skill_slots[0] == "clean_shot", "training Clean shot didn't teach it into the first empty slot: %s, slots %s" % [str(sim.tree.has(path_to)), str(sim.skill_slots)])
+	for k in sk_ids:
+		if not sim.tree.has(sk_ids[k]):
+			sim.tree.append(sk_ids[k])
+	_check(sim.skills_learnt().size() == 8, "the trained skill nodes don't teach their skills: %s" % str(sim.skills_learnt()))
 	_check(sim.set_skill_slot(0, "clean_shot") and sim.set_skill_slot(1, "collared") and sim.set_skill_slot(2, "gin_trap"), "a learnt skill would not go in a slot")
 	_check(sim.set_skill_slot(1, "clean_shot") and sim.skill_slots[0] == "" and sim.skill_slots[1] == "clean_shot", "a skill sat in two slots: %s" % str(sim.skill_slots))
 	sim.set_skill_slot(0, "clean_shot")
@@ -17972,6 +17999,43 @@ func _skills_checks(sim) -> void:
 	sim.set_skill_auto(2, false)
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
-	_check(sim.skills_known.size() == Data.SKILLS.size() and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
+	_check(sim.skills_learnt().size() == Data.SKILLS.size() and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
+	# only your class's: another runner with the Poacher's nodes on the camp's tree has none of his skills, and a slot
+	# of his never fires for them
+	_set_cls(sim, "Doorman")
+	for k in sk_ids:
+		if not sim.tree.has(sk_ids[k]):
+			sim.tree.append(sk_ids[k])
+	_check(sim.skills_learnt().is_empty() and not sim.skill_known("clean_shot"), "a Doorman has the Poacher's skills: %s" % str(sim.skills_learnt()))
+	_set_cls(sim, "Poacher")
+	# the cooldown cap: the kit's and the Flywheel's past 40% stop at 40
+	if sim.equipped["Helmet"] == null:
+		sim.equipped["Helmet"] = sim._plain("Helmet", Data.BASES["Helmet"][0]["name"])
+	var helm = sim.equipped["Helmet"]
+	_check(helm != null, "no helmet to stage the skills' affixes on")
+	if helm != null:
+		helm["affixes"].append({"stat": "cdr_pct", "value": 39.0})
+		sim.yard_picks["generator"] = ["", "", "", "a", ""]
+		sim._yard_changed("")
+		_check(is_equal_approx(sim.cooldown_cut(), Data.CDR_CAP) and is_equal_approx(sim.skill_cooldown("clean_shot"), 8.0 * 0.6), "the cooldown cap: %.1f%%, Clean shot %.2f s" % [sim.cooldown_cut(), sim.skill_cooldown("clean_shot")])
+		helm["affixes"].pop_back()
+		helm["affixes"].append({"stat": "energy_max", "value": 10.0})
+		helm["affixes"].append({"stat": "energy_regen_pct", "value": 8.0})
+		_check(is_equal_approx(sim.max_energy(), Data.ENERGY_POOL + 10.0) and is_equal_approx(sim.energy_regen(), Data.ENERGY_REGEN * (1.0 + (sim.pace() - 1.0) * Data.ENERGY_PACE_SHARE) * 1.08), "the energy affixes: %.1f max, %.3f a second" % [sim.max_energy(), sim.energy_regen()])
+		var lines: Array = Items.affix_lines({"affixes": [{"stat": "cdr_pct", "value": 8.0}, {"stat": "energy_regen_pct", "value": 8.0}, {"stat": "energy_max", "value": 10.0}]})
+		_check(lines == ["8% shorter cooldowns", "+8% energy gain", "+10 max energy"], "the skills' affixes read: %s" % str(lines))
+		helm["affixes"].pop_back()
+		helm["affixes"].pop_back()
 	sim.load_dict(saved)
 	print("skills ok: the loadout and its lock, energy, cooldowns, the rules, the press, eight effects, a real fight's casts, the save")
+
+
+## The skill nodes on the trees, skill id -> node id.
+func _skill_node_ids() -> Dictionary:
+	var out := {}
+	for t in Data.TREES:
+		var nodes: Array = Data.tree_named(str(t["name"]))["nodes"]
+		for k in range(nodes.size()):
+			if nodes[k].has("skill"):
+				out[str(nodes[k]["skill"])] = "%s/%d" % [t["name"], k]
+	return out

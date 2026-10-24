@@ -338,6 +338,12 @@ Each slice is smoked, reviewed and committed before the next.
    - Stunned men are a share of their fire, not figures; Net every hole's bleed lands on the man in front, Flush them
      out's +20% on whoever you're shooting. A skill's own hit (Gin trap, One for the pot) skips resists and shock.
    - Timed effects count by the share of a tick they cover, so the odds' 2 s steps read them as play does.
+   *3b, the tree (24 Oct, Matt agreed the swaps on the canvas):* each skill takes one of its lane's hung notables
+   in order, the signature the deepest (4.5). Sit tight, Gaps in the hedge, Off the path and Game bag go onto fillers
+   of their kind; Clocked and Twine take the fillers Long shot and Knowing the land; Still air, Long glass and those
+   two fillers go. Only your class learns its skills (a bridge opens passives, never skills); the Headmaster's Cap
+   never teaches one; a learnt skill goes in the first empty slot; the bot keeps none until 3d. The three affixes
+   (cooldowns 2-8%, energy gain 3-12%, max energy 3-12) roll on the non-weapon slots at half weight.
    - Still to come in 3b-3d: the skill nodes on the tree (and only your class's skills), the three affixes, the fight
      buttons and the picker, the bot's three.
 4. **The other four existing classes' skills,** 32 more.

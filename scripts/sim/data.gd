@@ -1250,6 +1250,10 @@ const AFFIXES := [
 	{"stat": "overflow_pct", "label": "of its overheal as Guard", "short": "overflow", "min": 50, "max": 100, "slots": ["Medical"], "weight": 0.5},
 	{"stat": "guard_gang", "label": "of max HP as Guard as each gang arrives", "short": "guard/gang", "min": 2, "max": 8, "slots": ["Armour", "Helmet"], "weight": 0.5},
 	{"stat": "guard_pct", "label": "Guard cap", "short": "guard", "min": 10, "max": 50, "slots": ["Rig", "Armour"], "weight": 0.5},
+	# the skills' (24 Oct, milestone 8): "8% shorter cooldowns" (CDR_CAP the most), "+8% energy gain", "+10 max energy"
+	{"stat": "cdr_pct", "label": "shorter cooldowns", "short": "cooldowns", "min": 2, "max": 8, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "weight": 0.5},
+	{"stat": "energy_regen_pct", "label": "energy gain", "short": "energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "weight": 0.5},
+	{"stat": "energy_max", "label": "max energy", "short": "max energy", "min": 3, "max": 12, "slots": ["Helmet", "Armour", "Rig", "Backpack", "Charm"], "flat": true, "weight": 0.5},
 	{"stat": "damage_pct", "label": "damage", "short": "dmg", "min": 2, "max": 6, "slots": ["Attachment"]},
 	# conditional: they pay only in a situation, which is where builds come from
 	{"stat": "damage_low_pct", "label": "damage under half HP", "short": "dmg <½HP", "min": 8, "max": 20, "slots": ["Primary", "Secondary"]},
@@ -1530,23 +1534,23 @@ const TREES_SRC := [
 		{"name": "Patience", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
 		{"name": "Rifleman", "col": 2, "row": 0, "effect": "first_pct", "value": 100, "type": "rifle", "notable": true, "words": "Do double damage to the first of each gang with a rifle"},
 		{"name": "Wind reading", "col": 1, "row": 1, "effect": "first_pct", "value": 10},
-		{"name": "Long shot", "col": 2, "row": 1, "effect": "damage_pct", "value": 4},
+		{"name": "Clocked", "col": 2, "row": 1, "effect": "clocked", "notable": true, "words": "Killing the first of each gang gives +10% damage for the rest of it"},     # moved off its hang for One for the pot (24 Oct, milestone 8)
 		{"name": "One shot", "col": 4, "row": 0, "effect": "one_shot", "keystone": true, "words": "The first of each gang dies at once"},
-		{"name": "Lying up", "col": 3, "row": 1, "effect": "patrol_pct", "value": 10},
+		{"name": "Lying up", "col": 3, "row": 1, "effect": "patrol_pct", "value": 25},     # 10 + Sit tight's 15 (24 Oct: its hang went to Go to ground)
 		{"name": "Rat bait", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "poacher_poison", "words": "15% of every hit becomes poison"},
 		{"name": "Night work", "cost": true, "col": 4, "row": 1, "effect": "night_work", "notable": true, "words": "Every run counts as night: loot quality up, pace −20%"},
 		{"name": "Dead quiet", "col": 5, "row": 0, "effect": "cap_dead_quiet", "capstone": true, "words": "Every gang is the size of the first; they never grow"},
 		{"name": "In the hide", "col": 5, "row": 1, "beside": true, "effect": "in_the_hide", "notable": true, "words": "Killing the first of each gang gives Guard of 15% of max HP"},     # Guard (12 Oct)
 	]},
 	{"name": "Snares", "class": "Poacher", "nodes": [
-		{"name": "Quick hands", "col": 0, "row": 0, "effect": "search_pct", "value": 15},
+		{"name": "Quick hands", "col": 0, "row": 0, "effect": "search_pct", "value": 25},     # 15 + Gaps in the hedge's 10 (24 Oct)
 		{"name": "Hedgerows", "col": 0, "row": 1, "effect": "loot_pct", "value": 3},
-		{"name": "Soft ground", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
+		{"name": "Soft ground", "col": 1, "row": 0, "effect": "patrol_pct", "value": 20},     # 10 + Off the path's 10 (24 Oct)
 		{"name": "Quiet feet", "col": 2, "row": 0, "effect": "quiet_feet", "notable": true, "words": "A new gang comes every 30 seconds, not 24"},
 		{"name": "Night eyes", "col": 1, "row": 1, "effect": "rarity", "value": 20},
-		{"name": "Snare lines", "col": 2, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Snare lines", "col": 2, "row": 1, "effect": "loot_pct", "value": 10},     # 4 + Game bag's 6 (24 Oct)
 		{"name": "Trapline", "col": 4, "row": 0, "effect": "trapline", "keystone": true, "words": "Every gang arrives one man short, the first included"},
-		{"name": "Knowing the land", "col": 3, "row": 1, "effect": "loot_pct", "value": 5},
+		{"name": "Twine", "col": 3, "row": 1, "effect": "twine", "notable": true, "words": "The next gang arrives one fewer after every search"},     # moved off its hang for Net every hole (24 Oct)
 		{"name": "Cold snap", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "poacher_frost", "words": "15% of every hit becomes frost, which slows their fire"},
 		{"name": "Early doors", "col": 4, "row": 1, "effect": "early_doors", "notable": true, "words": "The first gang takes twice as long to arrive"},
 		{"name": "Poached", "col": 5, "row": 0, "effect": "cap_poached", "capstone": true, "words": "Every gang that arrives gives you a find"},
@@ -1843,20 +1847,20 @@ const WEB_EXTRA := {
 	"Stalking": [
 		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
-		{"name": "Still air", "hang": [1.5, -1], "effect": "first_pct", "value": 20, "notable": true},
-		{"name": "Long glass", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "rifle", "notable": true, "words": "Rifles do 15% more"},
-		{"name": "Sit tight", "hang": [3.5, -1], "effect": "patrol_pct", "value": 15, "notable": true},
-		{"name": "Clocked", "hang": [4.5, -1], "effect": "clocked", "notable": true, "words": "Killing the first of each gang gives +10% damage for the rest of it"},
+		{"name": "Clean shot", "hang": [1.5, -1], "effect": "skill_clean_shot", "skill": "clean_shot", "notable": true, "words": "Your next shot does ×2.5 damage"},     # the skills take the hung notables (24 Oct, milestone 8)
+		{"name": "Flush them out", "hang": [2.5, -1], "effect": "skill_flush_them_out", "skill": "flush_them_out", "notable": true, "words": "Pulls the man at the back to the middle; he takes 20% more damage for 8 seconds"},
+		{"name": "Go to ground", "hang": [3.5, -1], "effect": "skill_go_to_ground", "skill": "go_to_ground", "notable": true, "words": "Out of sight for 3 seconds: nothing can hit you. Clears bleed and poison on you."},
+		{"name": "One for the pot", "hang": [4.5, -1], "effect": "skill_one_for_the_pot", "skill": "one_for_the_pot", "notable": true, "words": "A man on you under 25% HP dies at once. A head takes ×5 damage instead."},
 		{"name": "Snare and wait", "at": [4, LANE_OFF], "col": 4, "effect": "snare_and_wait", "keystone": true, "links": ["Lying up"], "xlinks": ["Snares/Cold snap"],
 		 "words": "Each gang arrives one fewer, snared before it fires. −50% damage to the first of each gang."},
 	],
 	"Snares": [
 		{"name": "The second past", "bridge": "Drifter", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
-		{"name": "Gaps in the hedge", "hang": [1.5, 1], "effect": "search_pct", "value": 10, "notable": true},
-		{"name": "Game bag", "hang": [2.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
-		{"name": "Off the path", "hang": [3.5, 1], "effect": "patrol_pct", "value": 10, "notable": true},
-		{"name": "Twine", "hang": [4.5, 1], "effect": "twine", "notable": true, "words": "The next gang arrives one fewer after every search"},
+		{"name": "Collared", "hang": [1.5, 1], "effect": "skill_collared", "skill": "collared", "notable": true, "words": "The nearest man is stunned for 3 seconds: he can't fire"},
+		{"name": "Gin trap", "hang": [2.5, 1], "effect": "skill_gin_trap", "skill": "gin_trap", "notable": true, "words": "The next man to join the fight takes ×3 damage and starts to bleed"},
+		{"name": "Decoy", "hang": [3.5, 1], "effect": "skill_decoy", "skill": "decoy", "notable": true, "words": "Everyone on you does 30% less damage to you for 6 seconds"},
+		{"name": "Net every hole", "hang": [4.5, 1], "effect": "skill_net_every_hole", "skill": "net_every_hole", "notable": true, "words": "Everyone on you is stunned for 2 seconds and starts to bleed"},
 	],
 	"Muscle": [
 		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,

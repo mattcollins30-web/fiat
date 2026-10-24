@@ -29,7 +29,6 @@ var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
 var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
 var hardcore := false              # a death ends the Yard, stash and all
-var skills_known: Array = []       # skill ids learnt (24 Oct, milestone 8: the tree's skill nodes teach them)
 var skill_slots: Array = ["", "", ""]     # the three a run takes, set before it on the Runs card; locked out on a run
 var skill_auto: Array = [true, true, true]    # a slot's rule on (it fires by itself) or off (only when pressed)
 var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {stat, what, from, hp_pct}, three at most, the Clinic the cure
@@ -2559,8 +2558,8 @@ func _nodes_for(effect: String) -> Array:
 					continue                          # the class's own, not the Yard's
 				for i in range(ct.get("nodes", []).size()):
 					var cid := "%s/%d" % [ct["name"], i]
-					if not (cid in ids) and not ct["nodes"][i].get("keystone", false) and not ct["nodes"][i].get("cost", false):
-						ids.append(cid)               # but its keystones and the nodes with a cost (Data's "cost"), whose costs are the point (21 Oct, Matt: "fix both" - Hit and run, a notable, came with it)
+					if not (cid in ids) and not ct["nodes"][i].get("keystone", false) and not ct["nodes"][i].get("cost", false) and not ct["nodes"][i].has("skill"):
+						ids.append(cid)               # nor its skills (24 Oct, milestone 8: a mythic that taught all eight was the review's catch);               # but its keystones and the nodes with a cost (Data's "cost"), whose costs are the point (21 Oct, Matt: "fix both" - Hit and run, a notable, came with it)
 		for id in ids:
 			var n := node(id)
 			if n.is_empty():
@@ -2932,6 +2931,10 @@ func train_node(id: String) -> bool:
 		return true
 	tree.append(id)
 	log_event("Trained: %s" % nd["name"])
+	if nd.has("skill") and skill_known(str(nd["skill"])) and mission == null and not skill_slots.has(str(nd["skill"])):
+		var free_slot: int = skill_slots.find("")
+		if free_slot >= 0:
+			skill_slots[free_slot] = str(nd["skill"])     # a skill learnt goes in the first empty slot; the Runs card changes them (milestone 8)
 	chron("train", {"id": id, "name": str(nd["name"]), "tree": id.get_slice("/", 0), "col": int(nd.get("col", 0)), "cost": paid,
 		"keystone": bool(nd.get("keystone", false)), "capstone": bool(nd.get("capstone", false)), "notable": bool(nd.get("notable", false)),
 		"joint": str(nd.get("joint", "")), "free": free_for(id)})
@@ -9782,8 +9785,15 @@ func skill_cooldown(id: String) -> float:
 	return float(skill(id).get("cd", 0.0)) * (1.0 - cooldown_cut() / 100.0)
 
 
+## Learnt: its skill node trained, and the node working for this runner (another class's half doesn't teach them its
+## skills - skills.md §3, only your class's).
 func skill_known(id: String) -> bool:
-	return skills_known.has(id)
+	return str(skill(id).get("cls", "")) == cls and has_node("skill_" + id)     # a bridge opens a region's passives, never its class's skills
+
+
+## The skills this runner has learnt, in the order of Data.SKILLS (the picker's).
+func skills_learnt() -> Array:
+	return Data.SKILLS.keys().filter(func(id): return skill_known(str(id)))
 
 
 ## Puts a learnt skill in slot `i` ("" empties it); one copy a loadout, never on a run.
@@ -9943,7 +9953,7 @@ func _skills_tick(m: Dictionary, t: Dictionary, dt: float, on_you: int) -> void:
 
 func _skill_can(m: Dictionary, i: int) -> bool:
 	var id: String = str(skill_slots[i])
-	return id != "" and not skill(id).is_empty() and float(m["sk"]["cd"][i]) <= 0.0 and skill_cost_now(i) <= float(m["sk"]["energy"]) and m["remaining"] > 0
+	return id != "" and not skill(id).is_empty() and skill_known(id) and float(m["sk"]["cd"][i]) <= 0.0 and skill_cost_now(i) <= float(m["sk"]["energy"]) and m["remaining"] > 0
 
 
 ## A skill goes off: its energy and cooldown, then what it does.
@@ -10337,7 +10347,7 @@ func _state() -> Dictionary:
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
-		"skills_known": skills_known, "skill_slots": skill_slots, "skill_auto": skill_auto,
+		"skill_slots": skill_slots, "skill_auto": skill_auto,
 	}
 
 
@@ -10465,7 +10475,6 @@ func load_dict(d: Dictionary) -> void:
 			kept.append(id)
 	tree = kept
 	_load_yard(d)
-	skills_known = d.get("skills_known", []).duplicate()
 	skill_slots = d.get("skill_slots", ["", "", ""]).duplicate()
 	skill_auto = d.get("skill_auto", [true, true, true]).duplicate()
 	hardcore = bool(d.get("hardcore", false))

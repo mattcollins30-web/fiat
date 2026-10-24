@@ -86,6 +86,8 @@ func _crew_out(sim, name: String) -> bool:
 
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
+	if not sim.on_mission():
+		sim.skill_slots = ["", "", ""]        # no skills until the bot picks its three itself (milestone 8, step 3d): a learnt one auto-slotted would fire unchosen
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
 	# patched up first, then the pick: the odds read at full strength, so a
 	# boss gets armed when the runner can take him, not refused because he's hurt

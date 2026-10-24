@@ -894,7 +894,7 @@ static func affix_lines(it: Dictionary, short := false, tiers := false) -> Array
 		var line: String
 		if label == "pouch" and int(a["value"]) != 1:
 			label = "pouches"                    # "+1 pouch", "+2 pouches" (18 Oct)
-		var plus: String = "" if a["stat"] == "crowd_less_pct" else "+"     # "8% less damage with three or more on you"
+		var plus: String = "" if a["stat"] in ["crowd_less_pct", "cdr_pct"] else "+"     # "8% less damage with three or more on you", "8% shorter cooldowns"
 		line = "%s%s%s %s" % [plus, fig(str(a["stat"]), float(a["value"])), "%" if pct else "", label]
 		if tiers and a.has("tier"):
 			line += " · T%d" % int(a["tier"])
