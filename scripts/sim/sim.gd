@@ -28,8 +28,6 @@ var yard_seen := {}                # what the Yard has been looked at with buyab
 var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
 var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
-var away_on := false               # the shell's away-settling is running: Overtime and the Generator's rank pay on it
-var settling := false              # the shell's offline settle (21 Oct): the run out comes home as "Fill up, then go" would - no one's there to (the bot's away_on doesn't)
 var hardcore := false              # a death ends the Yard, stash and all
 var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {stat, what, from, hp_pct}, three at most, the Clinic the cure
 var camp_lost := false             # hardcore: set by the KIA that ended it
@@ -3451,8 +3449,6 @@ func market_stock() -> int:
 
 ## Cash in, counted: the sinks are priced off what the Yard takes a run.
 func _earn(x: float) -> void:
-	if away_on and x > 0.0:
-		x *= 1.0 + (Data.FX["yard/overtime.away"] if yard_has("overtime") else 0.0) + Data.FX["yard_rank/generator"] * yard_rank("generator")     # the Generator's Overtime and rank: cash made while you're away
 	cash += x
 	_takings_run += x
 	cash_in += x
@@ -6612,8 +6608,8 @@ func deploy(i: int) -> void:
 
 
 
-## The world goes `seconds` on - a frame, or hours away. The run out plays on, then rest at camp, so an offline
-## span plays as a live one would (21 Oct, Matt: no auto-run - nothing sets off by itself).
+## The world goes `seconds` on, a frame at a time: the run out plays on, or rest at camp (21 Oct, Matt: no auto-run -
+## nothing sets off by itself; 24 Oct: no offline - the world waits while the game's shut).
 func advance(seconds: float) -> void:
 	elapsed += seconds
 	_roll_weather()
@@ -6634,7 +6630,7 @@ func advance(seconds: float) -> void:
 			prof["real_us"] += Time.get_ticks_usec() - p0
 			left -= step
 			continue
-		if hp < max_hp():     # at camp: rest (21 Oct, Matt: auto-run's gone - away, the run in hand plays out, then this)
+		if hp < max_hp():     # at camp: rest
 			hp = minf(max_hp(), hp + rest_rate() * left)
 		left = 0.0
 
@@ -6721,10 +6717,10 @@ func _tick(dt: float) -> void:
 			if m["target_hp"] <= 0.0:
 				m["target_hp"] = float(t["hp"])
 			log_event(gang_line(m, size))
-			if m.get("leave_full", false) or settling:
-				_extract()                  # "fill up then go", or away, leaves as the gang arrives
+			if m.get("leave_full", false):
+				_extract()                  # "fill up then go" leaves as the gang arrives
 				return
-	if (m.get("leave_full", false) or settling) and m["cleared"] and (pack_used(m) >= capacity() or crates_done(m)):
+	if m.get("leave_full", false) and m["cleared"] and (pack_used(m) >= capacity() or crates_done(m)):
 		_extract()                           # the pack full, or every crate open: nothing more to stay for
 
 
@@ -8180,10 +8176,10 @@ func ditch_commons() -> int:
 
 # ------------------------------------------------------------------ the floor (13 Oct, Matt)
 
-## A search's finds by hand: on the floor, for the player to take - not on "Fill up, then go", away,
+## A search's finds by hand: on the floor, for the player to take - not on "Fill up, then go",
 ## a dry run, or for the bot.
 func by_hand(m: Dictionary) -> bool:
-	return loot_by_hand and not m.get("leave_full", false) and not away_on and not m.get("dry", false)
+	return loot_by_hand and not m.get("leave_full", false) and not m.get("dry", false)
 
 
 func floor_items() -> Array:
@@ -9723,12 +9719,27 @@ func buy_med(name: String) -> bool:
 
 # ------------------------------------------------------------------ the Yard's upgrades
 
-func away_cap_s() -> float:
-	var hours: int = Data.AWAY_HOURS
-	for pair in [["twelve_hours", 12], ["a_day", 24], ["two_days", 48], ["grid", 72]]:
-		if yard_has(pair[0]):
-			hours = maxi(hours, int(pair[1]))
-	return hours * 3600.0
+## The Generator's energy (24 Oct, milestone 8: its away picks gone, docs/design/skills.md). The skill engine reads
+## these; until it lands they're the figures alone.
+func generator_max_energy() -> float:
+	return (Data.FX["yard/jerry_can"] if yard_has("jerry_can") else 0.0) + Data.FX["yard_rank/generator"] * yard_rank("generator")
+
+
+func generator_energy_regen() -> float:
+	return Data.FX["yard/dynamo"] if yard_has("dynamo") else 0.0
+
+
+func generator_kill_energy() -> float:
+	return Data.FX["yard/kickback"] if yard_has("kickback") else 0.0
+
+
+func generator_cooldown_pct() -> float:
+	return Data.FX["yard/flywheel"] if yard_has("flywheel") else 0.0
+
+
+## Pilot light: a fight's first skill costs no energy.
+func generator_first_free() -> bool:
+	return yard_has("pilot_light")
 
 
 ## The HP back, and the wound seen to: WOUND_CASH a level, the Clinic's discount on both.
@@ -9811,12 +9822,6 @@ func treat() -> bool:
 # ------------------------------------------------------------------ events, saving
 
 ## An event carries the time of day it happened, as the mission log shows it.
-## The figures a return-from-away summary compares: a snapshot before and after.
-func snapshot() -> Dictionary:
-	return {"cash": cash, "xp": xp, "level": level(), "stash": stash.size(), "lost": operators_lost,
-		"events": events.size(), "elapsed": elapsed, "runs": runs_total}
-
-
 var events_total := 0              # every line ever logged, counted (the log keeps twenty)
 ## A gang as it arrives (12 Oct, the lore pass): the zone's gang by name, how many, and a line of theirs, in turn.
 ## A harder gang (B9) is the next zone's, said so; the City's own hard core past the last.
@@ -9981,8 +9986,6 @@ func chron(kind: String, data := {}) -> void:
 		return
 	var e := {"k": kind, "t": snappedf(elapsed, 0.1), "p": snappedf(played_s, 0.1), "w": int(Time.get_unix_time_from_system()),
 		"lv": level(), "cls": cls, "sv": SITES_V}     # sv: the site numbering (12 Oct: the Outskirts moved every site up three)
-	if away_on:
-		e["away"] = true
 	e.merge(data, true)
 	chronicle.append(e)
 	chron_count += 1

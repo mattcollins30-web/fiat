@@ -112,7 +112,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - Player luck is the point of the itemisation: don't retune numbers off one lucky run; read fresh saves first (12 Oct).
 - The bot plays the campaign the way a person does (12 Oct).
 - The campaign grind is intended - it's an ARPG (13 Oct); ARPGs live and die by their length (14 Oct).
-- Fiat is an auto-battler ARPG: active play; the away settle is the only idle system (11 Oct; auto-run removed 21 Oct).
+- Fiat is an auto-battler ARPG: active play, no idle systems - no offline progress (removed 24 Oct; auto-run removed 21 Oct). The world waits while the game is shut.
 - Balance is judged on element builds; plain builds only have to finish (11 Oct).
 
 ## After a compaction or in a new chat

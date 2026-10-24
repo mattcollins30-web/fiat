@@ -968,7 +968,7 @@ const EVENTS := {
 	"cache_shut": "A locked cabinet, council green. Nothing on you opens it. Another time.",
 }
 
-## The voice where the UI used to explain itself: the away report, the
+## The voice where the UI used to explain itself: the
 ## fence's contracts, the cards' notes.
 ## The odds to clear a fight, in the Yard's words: the headline on a site's
 ## card, the figure small beside it. Bands from the top down.
@@ -983,15 +983,6 @@ static func odds_words(odds: float) -> String:
 	return ODDS.back()[1]
 
 
-const AWAY := {
-	"title": "Back, then.",
-	"rested": "Gone %s. The runner slept, the radio played to nobody.",
-	"ran": "Gone %s. %d run%s on %s: %s%s in, %d thing%s in the stash, level %d to %d.",
-	"settled": "The Pitch kept going for %s of it; past that, nothing ran.",
-	"still_out": " The run at %s is still out.",
-	"lost": " One runner didn't come back.",
-	"prices": " The Fence's prices are up %d%% on when the Pitch opened.",
-}
 const CONTRACT_ASKS_SHORT := ["If you're asking.", "No questions.", "He'll pay.", "Don't ask who for."]
 const CONTRACT_ASKS := ["Wants %s, if you're asking.", "Could use %s. No questions.", "Someone's after %s; the Fence is in the middle.", "%s wanted, and he'll pay.", "Looking for %s. Don't ask who for."]
 const SKY := {

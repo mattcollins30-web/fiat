@@ -184,7 +184,10 @@ func _show_strip(purse: Dictionary) -> void:
 		var why_in: String = sim.yard_rank_block(key)
 		var price_in: String = "Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]
 		UI.fit(_other, [price_in + ("" if why_in == "" else " · " + why_in), price_in, "%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]])
-		_build.text = "Buy rank %d" % (sim.yard_rank(key) + 1)
+		# the price on the button itself (24 Oct, Matt: "the buy button doesn't list the cost"), as Train shows its points
+		var rank_money: String = Fmt.money(sim.yard_rank_cost(key))
+		# just the price (24 Oct, Matt: "should just be 'buy N tins'"): the rank's in the title and the copper's on the line above
+		UI.fit_button(_build, ["Buy (%s)" % rank_money, "Buy (%s)" % Fmt.money_k(sim.yard_rank_cost(key))])
 		_build.disabled = why_in != ""
 		return
 	var c: int = int(selected["col"])
@@ -212,7 +215,10 @@ func _show_strip(purse: Dictionary) -> void:
 		_other.add_theme_color_override("font_color", Pal.WARN)
 	else:
 		UI.fit(_other, ["%s · %s%s" % [head, or_line, tail], "%s%s" % [head, tail], head])
-	_build.text = "Refit" if built != "" else "Build"
+	var verb: String = "Refit" if built != "" else "Build"
+	var pick_money: String = Fmt.money(sim.yard_pick_cost(key, c))
+	var pick_salv: int = sim.yard_pick_salvage(key, c)
+	UI.fit_button(_build, (["%s (%s, %d %s)" % [verb, pick_money, pick_salv, kind]] if pick_salv > 0 else []) + ["%s (%s)" % [verb, pick_money], "%s (%s)" % [verb, Fmt.money_k(sim.yard_pick_cost(key, c))]])
 	_build.disabled = why != ""
 
 

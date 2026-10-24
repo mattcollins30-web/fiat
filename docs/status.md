@@ -6684,3 +6684,17 @@ pass; the reviewer on the code):
   him as questions. VERSION "0.7.1" on the title (menu.gd). Smoke green on run 207 (two old checks wanted the old
   words and the old figure path). Next: Matt plays 0.7.1; items 14-16 and the backlog wait for the balance phase.
 
+## Milestone 8, step 1: the Pitch's quick fixes (24 Oct)
+
+- Every buy button on the Pitch says its price: "Build (2,500 tins, 3 copper)", "Refit (...)", shorter when it won't
+  fit; a rank's button is just "Buy (79,000 tins)" (Matt: the rank is in the title). Smoke: every building's rank and
+  first build button carry their price and fit. One red on the way (run 223): the rank check wanted "Buy rank 2 (",
+  the button had fallen to its short form - Matt's call, the price alone.
+- Offline progress is gone (Matt: "remove all offline stuff"): the away settle, its report, the cap, the sim's away
+  and settling flags, the bot's away third. A save loads as it was saved, a run out included. SAVE_VERSION 7.
+- The Generator's away side is energy: Jerry can, Dynamo, Kickback, Flywheel, Pilot light, the rank +2 max energy
+  (docs/design/skills.md section 7). The sim reads the figures (generator_*); nothing spends them until the skill
+  engine. Pilot light became "the first skill free" - skills start every fight ready. The five pictures need an art
+  run; the web-art manifest still lists the old picks. The bot now builds Battery over Overtime: expect drift in the
+  balance gates that isn't the skills'.
+- Smoke green on run 224. Not a build to play (the picks do nothing yet), so VERSION stays 0.7.8.

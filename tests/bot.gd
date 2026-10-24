@@ -27,8 +27,6 @@ var cls := ""                  # the class the gate set: put back on the runner 
 var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 var _cleared_at := {}           # tier -> the depth its words were last cleared at: none put back there
-const AWAY_SHARE := 1.0 / 3.0  # the share of the yard's time the bot counts as away (Overtime, the Generator's rank)
-const AWAY_EVERY := 3.0 * 3600.0
 const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
 
 
@@ -89,9 +87,6 @@ func _crew_out(sim, name: String) -> bool:
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
-	# away a third of the time (Matt, 9 Oct): one hour in three counts as the player off the machine, so Overtime
-	# and the Generator's rank pay on it as they would for someone who idles
-	sim.away_on = fmod(sim.elapsed, AWAY_EVERY) >= AWAY_EVERY * (1.0 - AWAY_SHARE)
 	# patched up first, then the pick: the odds read at full strength, so a
 	# boss gets armed when the runner can take him, not refused because he's hurt
 	# whole before the pick: treated when the cash is there three times over,
@@ -235,7 +230,6 @@ const TIDY_EVERY := 60.0
 var _tidied_at := -1e9
 var _tidied_runner := ""
 func tidy(sim) -> void:
-	sim.away_on = false                   # the player's back between runs: sales and contracts are theirs, not away's
 	var t0 := Time.get_ticks_usec()
 	_climb(sim)
 	_build_yard(sim)
@@ -1003,7 +997,7 @@ func _train_tree(sim) -> void:
 
 ## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
-const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [2], "lookout": [], "kennel": [3]}   # Overtime over Battery: away a third of the time, it's ~8% on cash
+const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [], "lookout": [], "kennel": [3]}   # the Generator's first sides (24 Oct: its away picks gone; the energy ones read in milestone 9)
 func _build_yard(sim) -> void:
 	if _lorry_watch_saving(sim) > 0.0 and sim.cash >= _lorry_watch_saving(sim) and sim.can_yard_pick("radio", LORRY_WATCH_COL, "a"):
 		var cost: int = sim.yard_pick_cost("radio", LORRY_WATCH_COL)

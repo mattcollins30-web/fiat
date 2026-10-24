@@ -71,10 +71,9 @@ const FOOTPRINTS := {
 ## The stash in cells before the Yard's picks: one page, thirteen cells a row, seven rows.
 const STASH_CELLS := 91
 const CLASS_TAB_CELLS := 60          # a class's own stash tab (21 Oct, the crew): and a second as big with the Dry store
-## The Clinic's rest and shelf, the Fence's shelf, the hours away, the odds' dry runs before the Yard's picks.
+## The Clinic's rest and shelf, the Fence's shelf, the odds' dry runs before the Yard's picks.
 const REST_BASE := 0.5
 const CLINIC_STOCK := 6
-const AWAY_HOURS := 8
 const ODDS_RUNS := 24
 
 ## The Yard's buildings as lanes (9 Oct, docs/design/yard.md; Matt: the upgrades were done before the City, "I
@@ -167,17 +166,17 @@ const YARD := [
 		 {"id": "military_band", "name": "Military band", "short": "Code reward bonuses ×1.5", "words": "Every code's reward bonus is 50% bigger: tins, XP, drops, loot quality"}]],
 	 "rank": {"short": "Code reward bonuses +5%", "words": "Every code's reward bonus 5% bigger a rank"}},
 	{"key": "generator", "name": "The Generator", "salvage": "copper", "costs": [2500, 8000, 20000, 50000, 80000], "picks": [
-		[{"id": "twelve_hours", "name": "Twelve hours", "short": "Away counts to 12 h", "words": "Time away counts up to 12 hours, not 8"},
+		[{"id": "jerry_can", "name": "Jerry can", "short": "+10 max energy", "words": "Max energy +10"},
 		 {"id": "rig_wiring", "name": "Rig wiring", "short": "+4 pouches", "words": "The rig holds 4 more pouches"}],
-		[{"id": "a_day", "name": "A day away", "short": "Away counts to 24 h", "words": "Time away counts up to 24 hours"},
+		[{"id": "dynamo", "name": "Dynamo", "short": "+0.5 energy a second", "words": "Energy refills 0.5 more a second"},
 		 {"id": "floodlights", "name": "Floodlights", "short": "Night, no pace cut", "words": "Night's loot quality without its pace −20%"}],
 		[{"id": "battery", "name": "Battery", "short": "+8 pouches", "words": "The rig holds 8 more pouches"},
-		 {"id": "overtime", "name": "Overtime", "short": "+25% tins while away", "words": "Tins earned while you're away +25%"}],
-		[{"id": "two_days", "name": "Two days", "short": "Away counts to 48 h", "words": "Time away counts up to 48 hours"},
+		 {"id": "kickback", "name": "Kickback", "short": "+5 energy a kill", "words": "Every kill gives 5 energy"}],
+		[{"id": "flywheel", "name": "Flywheel", "short": "5% shorter cooldowns", "words": "Every skill's cooldown is 5% shorter"},
 		 {"id": "arc_lamps", "name": "Arc lamps", "short": "Fire, shock +10%", "words": "Fire and shock do 10% more"}],
-		[{"id": "grid", "name": "The grid", "short": "Away counts to 72 h", "words": "Time away counts up to 72 hours"},
+		[{"id": "pilot_light", "name": "Pilot light", "short": "First skill free", "words": "Each fight, your first skill costs no energy"},
 		 {"id": "charger", "name": "Charger", "short": "Runs start on full HP", "words": "Every run sets off on full HP"}]],
-	 "rank": {"short": "+3% tins while away", "words": "Tins earned while you're away +3% a rank"}},
+	 "rank": {"short": "+2 max energy", "words": "Max energy +2 a rank"}},
 	{"key": "lookout", "name": "The Lookout", "salvage": "steel", "costs": [2500, 8000, 20000, 45000, 80000], "picks": [
 		[{"id": "spotter", "name": "Spotter", "short": "First gang 50% later", "words": "The first gang takes 50% longer to arrive"},
 		 {"id": "glasses", "name": "Glasses", "short": "Odds from 60 test runs", "words": "The odds are worked out from 60 test runs, not 24"}],
@@ -971,7 +970,10 @@ const FX := {
 	"yard/night_set": 0.5,     # Night set: Night's slower feet halved
 	"yard/orders": 2,     # Orders: Five contracts open, not three
 	"yard/overbump": 2,     # Overbump: A bump raises an item six levels, not three
-	"yard/overtime.away": 0.25,     # Overtime: Tins found while you're away come in a quarter higher
+	"yard/jerry_can": 10.0,     # Jerry can: Max energy +10 (24 Oct, milestone 8: the Generator's away picks gone)
+	"yard/dynamo": 0.5,     # Dynamo: Energy refills 0.5 more a second
+	"yard/kickback": 5.0,     # Kickback: Every kill gives 5 energy
+	"yard/flywheel": 5.0,     # Flywheel: Every skill's cooldown is 5% shorter (inside the 40% cap)
 	"yard/pack": 2,     # The pack: Two more finds every search
 	"yard/pedigree": 10.0,     # Pedigree: Ten per cent better finds
 	"yard/rig_wiring": 4,     # Rig wiring: Four more pouches on the rig
@@ -996,7 +998,7 @@ const FX := {
 	# yard_rank
 	"yard_rank/clinic": 0.03,     # a rank of the Yard's clinic
 	"yard_rank/fence": 2.0,     # a rank of the Yard's fence
-	"yard_rank/generator": 0.03,     # a rank of the Yard's generator
+	"yard_rank/generator": 2.0,     # a rank of the Yard's generator: max energy +2
 	"yard_rank/kennel": 2.0,     # a rank of the Yard's kennel
 	"yard_rank/lookout": 0.02,     # a rank of the Yard's lookout
 	"yard_rank/radio": 0.05,     # a rank of the Yard's radio

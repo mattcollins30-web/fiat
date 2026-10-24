@@ -803,7 +803,7 @@ func _finish() -> void:
 	quit(0)
 
 
-## Save slots, the time away, and a hardcore camp lost.
+## Save slots, no time away, and a hardcore camp lost.
 func _slots_offline_hardcore(main) -> void:
 	var sim = main.sim
 	# a slot round-trip, and the title/slot menus' words
@@ -842,52 +842,33 @@ func _slots_offline_hardcore(main) -> void:
 	_opening_checks(main)
 	_room_intro_checks(main)
 	sim = main.sim
-	# away three hours with a run out (21 Oct, Matt: auto-run's gone): the run in hand plays out, then rest
+	# no offline (24 Oct, Matt: "remove all offline stuff"): a save two hours old with a run out loads as it was saved -
+	# the clock, the cash, the stash and the run all where they were, and no screen about the time away
 	sim.set_depth(3, 1)
 	for r in range(Data.RARITIES.size()):
 		sim.sell_rarity(r)            # room in the stash
 	sim.hp = sim.max_hp()
 	sim.deploy(3)
-	var before: Dictionary = sim.snapshot()
-	main._settle_away(3.0 * 3600.0)
-	var after: Dictionary = sim.snapshot()
-	_check(is_equal_approx(after["elapsed"] - before["elapsed"], 3.0 * 3600.0), "three hours away did not pass three hours")
-	_check(after["cash"] != before["cash"] or after["stash"] != before["stash"] or after["lost"] != before["lost"],
-			"three hours away with a run out changed nothing")
-	_check(not sim.on_mission() and int(after.get("runs", 0)) - int(before.get("runs", 0)) <= 1, "away, the run in hand did not end or another went out: %d runs" % (int(after.get("runs", 0)) - int(before.get("runs", 0))))
-	_check(after["lost"] == before["lost"] and not sim.settling and str(sim.last_report.get("outcome", "")) != "Dead", "away, the run in hand didn't come home: %s, lost %d → %d" % [str(sim.last_report.get("outcome", "")), before["lost"], after["lost"]])
-	_check(main._menu.visible and main._menu._title.text == Words.AWAY["title"] and main._menu.sub().begins_with("Gone ") and main._menu.sub().contains(" run"), "the away report is not in the voice: '%s' / '%s'" % [main._menu._title.text, main._menu.sub()])
-	_check_fit(main, "Back, then (ran)")
-	print("away 3h on tier 0: cash %s → %s, %d → %d items, level %d → %d, lost %d → %d" % [Fmt.money(before["cash"]),
-			Fmt.money(after["cash"]), before["stash"], after["stash"], before["level"], after["level"], before["lost"], after["lost"]])
-	main._menu.close()
-	# the cap: a day away settles eight hours of it
-	sim.hp = 1.0
-	before = sim.snapshot()
-	main._settle_away(24.0 * 3600.0)
-	after = sim.snapshot()
-	_check(is_equal_approx(after["elapsed"] - before["elapsed"], sim.away_cap_s()), "the away cap did not hold")
-	_check(sim.hp == sim.max_hp(), "the operator did not rest while away")
-	_check(main._menu.sub().begins_with("Gone ") and main._menu.sub().contains("slept") and main._menu.sub().contains("kept going for"), "the rested report is not in the voice: '%s'" % main._menu.sub())
-	_check_fit(main, "Back, then (rested)")
-	_check(main._menu.sub_lines() < 2 or main._menu._rows[0].position.y > main._menu.ROWS_Y,
-			"a two-line away report did not push the row down")
-	main._menu.close()
-	# the worst the away report gets: every clause, long numbers - it wraps, nothing trails off
-	var worst: String = Words.AWAY["ran"] % ["2 d 17 h", 1234, "s", "the north estate", "+", Fmt.money(1234567.0), 42, "s", 12, 48]
-	worst += Words.AWAY["lost"] + Words.AWAY["settled"] % "8 h" + Words.AWAY["prices"] % 1100
-	main._menu.open(Words.AWAY["title"], worst, [{"name": "Continue", "detail": "", "action": main._menu.close}], main._menu.close)
-	_check(main._menu.sub() == worst, "the worst away report lost words in the wrap: '%s'" % main._menu.sub())
-	_check(main._menu.sub_lines() <= main._menu.SUB_LINES, "the worst away report needs %d lines" % main._menu.sub_lines())
-	_check_fit(main, "Back, then (worst)")
-	main._menu.close()
-	# a saved stamp two hours old goes through the away screen on load
+	var was := {"elapsed": sim.elapsed, "cash": sim.cash, "stash": sim.stash.size(), "runs": sim.runs_total, "hp": sim.hp, "out": sim.on_mission()}
 	var f := FileAccess.open(main.save_file, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"version": main.SAVE_VERSION, "saved": Time.get_unix_time_from_system() - 7200.0, "sim": sim.to_dict()}))
 	f.close()
 	main.load_game()
 	main.sim.mythics_on = false            # the smoke's camps find no mythics on their own (17 Oct: a full pack keeps one now - a bot's Bomb Disposal Suit stopped the clock, its moment held the game); the mythics' own checks make theirs
-	_check(main._menu.visible, "a two-hour-old save did not open the away screen")
+	sim = main.sim
+	var now := {"elapsed": sim.elapsed, "cash": sim.cash, "stash": sim.stash.size(), "runs": sim.runs_total, "hp": sim.hp, "out": sim.on_mission()}
+	_check(is_equal_approx(float(now["elapsed"]), float(was["elapsed"])) and is_equal_approx(float(now["cash"]), float(was["cash"])) and now["stash"] == was["stash"] and now["runs"] == was["runs"] and now["out"] and was["out"],
+			"two hours shut moved the world: %s → %s" % [str(was), str(now)])
+	_check(not main._menu.visible, "a two-hour-old save opened a screen: '%s'" % main._menu._title.text)
+	_check(not sim.has_method("away_cap_s") and not main.has_method("_settle_away"), "the away settle is still in the game")
+	print("no offline: two hours shut, the run still out, nothing moved")
+	# the card's line wraps over its four lines without losing a word, and pushes the row down
+	var worst: String = "The longest line a card carries: a heading's worth of words, then more, a clause after a clause, with long numbers like %s in it and a place like the north estate, so that it has to wrap over every line the card has, and nothing trails off." % Fmt.money(1234567.0)
+	main._menu.open("A long line", worst, [{"name": "Continue", "detail": "", "action": main._menu.close}], main._menu.close)
+	_check(main._menu.sub() == worst, "a long card line lost words in the wrap: '%s'" % main._menu.sub())
+	_check(main._menu.sub_lines() <= main._menu.SUB_LINES, "a long card line needs %d lines" % main._menu.sub_lines())
+	_check(main._menu.sub_lines() < 2 or main._menu._rows[0].position.y > main._menu.ROWS_Y, "a two-line card line did not push the row down")
+	_check_fit(main, "A card (a long line)")
 	main._menu.close()
 	# hardcore: a KIA ends the camp
 	main.new_game(true)
@@ -922,7 +903,7 @@ func _slots_offline_hardcore(main) -> void:
 	main._to_title_no_save()
 	_check(main.sim == null, "the title after a lost camp still has a sim")
 	DirAccess.remove_absolute(slot)
-	print("slots, offline and hardcore ok")
+	print("slots, no offline and hardcore ok")
 
 
 ## An elite of this base with every affix it can carry at its top roll.
@@ -1801,7 +1782,7 @@ func _class_trees(main) -> void:
 		sim.yard_picks.erase(k)                 # the bot may have built them already
 	sim._yard_changed("")
 	_check(sim.yard_pick("generator", 0, "a") and sim.yard_pick("lookout", 0, "a") and sim.yard_pick("kennel", 0, "a"), "a yard pick did not buy: %s / %s / %s" % [sim.yard_pick_block("generator", 0, "a"), sim.yard_pick_block("lookout", 0, "a"), sim.yard_pick_block("kennel", 0, "a")])
-	_check(sim.away_cap_s() == 12.0 * 3600.0, "Twelve hours did not raise the away cap")
+	_check(is_equal_approx(sim.generator_max_energy() - Data.FX["yard_rank/generator"] * sim.yard_rank("generator"), Data.FX["yard/jerry_can"]), "the Jerry can did not add its max energy: %.1f" % sim.generator_max_energy())
 	main.show_room(main.OVERVIEW)
 	_check_fit(main, "The Pitch (upgrades)")
 	# every class's trees on the screen, for the fit check
@@ -9754,7 +9735,6 @@ func _harder_gang_checks(sim) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	sim.away_on = false
 	_check(sim.gang_next_odds(1) == 0.0 and is_equal_approx(sim.gang_next_odds(2), Data.GANG_NEXT_STEP) and sim.gang_next_odds(50) == Data.GANG_NEXT_MAX, "the odds a gang: first %.2f, second %.2f, fiftieth %.2f" % [sim.gang_next_odds(1), sim.gang_next_odds(2), sim.gang_next_odds(50)])
 	sim.hp = sim.max_hp()
 	sim.deploy(0)                                   # the Allotments: the Outskirts' field lads; next, the Estate's
@@ -9820,7 +9800,6 @@ func _full_pack_checks(sim) -> void:
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
 	var by_hand_was: bool = sim.loot_by_hand
-	sim.away_on = false
 	sim.equipped["Armour"] = sim._plain("Armour", Data.BASES["Armour"].back()["name"])
 	sim.equipped["Helmet"] = null
 	sim._dry_memo.clear()
@@ -11927,7 +11906,7 @@ func _yard_wide_checks(main) -> void:
 	main.show_room(main.OVERVIEW)
 	yt._press("kennel", 0, "a")
 	main.refresh()
-	_check(yt._title.visible and yt._title.text.begins_with("A dog") and yt._build.text == "Build" and not yt._build.disabled, "the strip does not offer A dog: '%s' / '%s'" % [yt._title.text, yt._build.text])
+	_check(yt._title.visible and yt._title.text.begins_with("A dog") and yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(sim.yard_pick_cost("kennel", 0))) and not yt._build.disabled, "the strip does not offer A dog with its price: '%s' / '%s'" % [yt._title.text, yt._build.text])
 	_check_fit(main, "Yard (a pick picked)")
 	var c1: int = sim.yard_pick_cost("kennel", 0)
 	var cash1: float = sim.cash
@@ -11937,7 +11916,7 @@ func _yard_wide_checks(main) -> void:
 	_check(yt._build.text == "Built" and yt._build.disabled, "a built pick still offers a build")
 	yt._press("kennel", 0, "b")
 	main.refresh()
-	_check(yt._build.text == "Refit" and absi(sim.yard_pick_cost("kennel", 0) - int(round(c1 * Data.YARD_REFIT))) <= 100, "the other side does not refit for half: '%s', %d of %d" % [yt._build.text, sim.yard_pick_cost("kennel", 0), c1])
+	_check(yt._build.text.begins_with("Refit (") and yt._build.text.contains(Fmt.money(sim.yard_pick_cost("kennel", 0))) and absi(sim.yard_pick_cost("kennel", 0) - int(round(c1 * Data.YARD_REFIT))) <= 100, "the other side does not refit for half: '%s', %d of %d" % [yt._build.text, sim.yard_pick_cost("kennel", 0), c1])
 	yt._on_build()
 	_check(sim.yard_has("good_nose") and not sim.yard_has("a_dog"), "the refit did not swap the pick")
 	_check_fit(main, "Yard (a refit)")
@@ -11966,8 +11945,24 @@ func _yard_wide_checks(main) -> void:
 	yt._press_rank("stash")
 	yt._shown = ""
 	main.refresh()
-	_check(yt._build.text == "Buy rank 2" and yt._title.text.contains("rank 1"), "the rank's strip is off: '%s' / '%s'" % [yt._title.text, yt._build.text])
+	_check(yt._build.text == "Buy (%s)" % Fmt.money(sim.yard_rank_cost("stash")) and yt._title.text.contains("rank 1"), "the rank's strip is off: '%s' / '%s'" % [yt._title.text, yt._build.text])
 	_check_fit(main, "Yard (a rank)")
+	# every buy button on the Pitch says what it costs (24 Oct, Matt: "the buy button doesn't list the cost"): each
+	# building's rank and its first column's unbuilt side, in tins
+	for yb in Data.YARD:
+		yt._press_rank(str(yb["key"]))
+		yt._shown = ""
+		main.refresh()
+		_check((yt._build.text.contains(Fmt.money(sim.yard_rank_cost(str(yb["key"])))) or yt._build.text.contains(Fmt.money_k(sim.yard_rank_cost(str(yb["key"]))))), "%s's rank button has no price: '%s'" % [yb["key"], yt._build.text])
+		_check(UI.text_width(yt._build, yt._build.text) + 32.0 <= yt._build.size.x, "%s's rank button runs past its edge: '%s'" % [yb["key"], yt._build.text])
+		for yside in ["a", "b"]:
+			if sim.yard_side(str(yb["key"]), 0) != yside:
+				yt._press(str(yb["key"]), 0, yside)
+				yt._shown = ""
+				main.refresh()
+				_check((yt._build.text.contains(Fmt.money(sim.yard_pick_cost(str(yb["key"]), 0))) or yt._build.text.contains(Fmt.money_k(sim.yard_pick_cost(str(yb["key"]), 0)))), "%s's build button has no price: '%s'" % [yb["key"], yt._build.text])
+				_check(UI.text_width(yt._build, yt._build.text) + 32.0 <= yt._build.size.x, "%s's build button runs past its edge: '%s'" % [yb["key"], yt._build.text])
+				break
 	yt.selected = {}
 	sim.cash = cash0
 	yt._shown = ""
@@ -12200,16 +12195,28 @@ func _yard_pick_checks(main) -> void:
 	_check(is_equal_approx(float(sim.word_effect("Numbers", 1)["drop"]), 1.0 + 0.3 * 1.6), "the Radio's rank did not add to the pay")
 	sim.yard_ranks = {}
 	sim.words[3] = []
-	# the Generator
-	for pair in [[0, 12], [1, 24], [3, 48], [4, 72]]:
-		on.call("generator", pair[0], "a")
-		_check(is_equal_approx(sim.away_cap_s(), float(pair[1]) * 3600.0), "the Generator's hours are off at column %d: %.0f" % [pair[0] + 1, sim.away_cap_s() / 3600.0])
-	var c0: float = sim.cash
-	sim.away_on = true
+	# the Generator (24 Oct, milestone 8: energy where the time away was): each pick's figure, and the rank's
+	_check(sim.generator_max_energy() == 0.0 and sim.generator_energy_regen() == 0.0 and sim.generator_kill_energy() == 0.0 and sim.generator_cooldown_pct() == 0.0 and not sim.generator_first_free(), "the Generator gives energy unbuilt")
+	on.call("generator", 0, "a")
+	_check(is_equal_approx(sim.generator_max_energy(), 10.0), "the Jerry can is not +10 max energy: %.1f" % sim.generator_max_energy())
+	on.call("generator", 1, "a")
+	_check(is_equal_approx(sim.generator_energy_regen(), 0.5), "the Dynamo is not +0.5 energy a second: %.2f" % sim.generator_energy_regen())
 	on.call("generator", 2, "b")
-	sim._earn(100.0)
-	sim.away_on = false
-	_check(is_equal_approx(sim.cash - c0, 125.0), "Overtime did not pay a quarter on the time away: %.1f" % (sim.cash - c0))
+	_check(is_equal_approx(sim.generator_kill_energy(), 5.0), "Kickback is not 5 energy a kill: %.1f" % sim.generator_kill_energy())
+	on.call("generator", 3, "a")
+	_check(is_equal_approx(sim.generator_cooldown_pct(), 5.0), "the Flywheel is not 5%% shorter cooldowns: %.1f" % sim.generator_cooldown_pct())
+	on.call("generator", 4, "a")
+	_check(sim.generator_first_free(), "the Pilot light does not make the first skill free")
+	sim.yard_ranks["generator"] = 3
+	_check(is_equal_approx(sim.generator_max_energy(), 16.0), "the Generator's rank is not +2 max energy a rank: %.1f" % sim.generator_max_energy())
+	sim.yard_ranks = {}
+	# no pick or rank on the Pitch reads time away (24 Oct, Matt: the offline nodes go)
+	for yb in Data.YARD:
+		var yb_lines: Array = [str(yb.get("rank", {}).get("words", "")), str(yb.get("rank", {}).get("short", ""))]
+		for col in yb["picks"]:
+			for pk in col:
+				yb_lines.append_array([str(pk["words"]), str(pk["short"])])
+		_check(not yb_lines.any(func(w): return w.to_lower().contains("away")), "%s still reads time away: %s" % [yb["key"], str(yb_lines.filter(func(w): return w.to_lower().contains("away")))])
 	var fire0: float = sim.more("fire")
 	on.call("generator", 3, "b")
 	_check(is_equal_approx(sim.more("fire"), fire0 * 1.1), "Arc lamps did not add a tenth to fire")
@@ -13765,8 +13772,6 @@ func _gamble_checks(main) -> void:
 	sim.deploy(0)
 	sim._takings_run += gb0 * 20.0
 	var run_in: float = sim._takings_run
-	var away_was: bool = sim.away_on
-	sim.away_on = false                       # _earn's away bonus would credit past the report's cash
 	sim.mission["cleared"] = true
 	sim.extract_now()
 	var gb1: float = sim.a_gamble_base()
@@ -13774,7 +13779,6 @@ func _gamble_checks(main) -> void:
 	# the takings are a run's moving average (20 Oct: "took the sale" failed whenever they already sat above it): the
 	# sale and the run's cash go in at a quarter's weight, the first run whole
 	var run_total: float = run_in + float(sim.last_report.get("cash", 0.0))
-	sim.away_on = away_was
 	var tk_want: float = run_total if tk_g0 <= 0.0 else lerpf(tk_g0, run_total, 0.25)
 	_check(absf(sim.takings - tk_want) <= 0.5, "the takings didn't take the sale at a quarter's weight (the contracts read them): %.1f, want %.1f from %.1f, the sale %.1f, the run's report %s" % [sim.takings, tk_want, tk_g0, gb0 * 20.0, str(sim.last_report.get("cash", "-"))])
 	var loaded = load("res://scripts/sim/sim.gd").new()

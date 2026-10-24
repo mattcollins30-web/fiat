@@ -104,7 +104,7 @@ const PICK_RULES := [
 	["affix", "dice"], ["rolls", "dice"], ["socket", "wrench"], ["lock", "wrench"], ["bump", "wrench"], ["level", "wrench"],
 	["job", "wrench"], ["crafts", "wrench"], ["scrap", "scrap"], ["steel", "steel"], ["guns at", "dmg"], ["first shot", "first"],
 	["fire, shock", "fire"], ["poison, bleed", "poison"], ["gang", "clock"], ["head short", "three"], ["convoy", "depth"],
-	["night", "quiet"], ["rain", "quiet"], ["weather", "quiet"], ["word", "loud"], ["away", "clock"], [" h away", "clock"],
+	["night", "quiet"], ["rain", "quiet"], ["weather", "quiet"], ["word", "loud"], ["energy", "shock"], ["cooldown", "clock"],
 	["odds", "dice"], ["auto", "runs"], ["runs start", "runs"],
 ]
 ## Each pick's own (the review, 10 Oct: the rules gave nine pairs one glyph for both sides); the rules are the fallback.
@@ -119,8 +119,8 @@ const PICK_GLYPH := {
 	"gamblers_table": "dice", "insurance_desk": "armour", "arms_dealer": "dmg", "dealers_cut": "cash",
 	"weather_set": "half", "night_set": "quiet", "forecast": "cash", "dead_air": "clock", "scanner": "wrench", "two_channels": "dice",
 	"lorry_watch": "pen", "long_range": "loud", "jammer": "half", "military_band": "cash",
-	"twelve_hours": "clock", "rig_wiring": "pack", "a_day": "clock", "floodlights": "quiet", "battery": "pack", "overtime": "cash",
-	"two_days": "clock", "arc_lamps": "fire", "grid": "clock", "charger": "hp",
+	"jerry_can": "shock", "rig_wiring": "pack", "dynamo": "shock", "floodlights": "quiet", "battery": "pack", "kickback": "shock",
+	"flywheel": "clock", "arc_lamps": "fire", "pilot_light": "first", "charger": "hp",
 	"spotter": "clock", "glasses": "dice", "lookout_post": "clock", "range_cards": "first", "hold_fire": "pack", "tripwires": "clock",
 	"early_warning": "search", "watch_rota": "clock", "crows_nest": "clock", "flares": "three",
 	"a_dog": "search", "good_nose": "quality", "guard_dog": "clock", "pedigree": "quality", "fetch": "dog", "second_dog": "search",

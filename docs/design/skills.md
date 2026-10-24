@@ -22,7 +22,7 @@ affix."
 | 5 | The sixth class | **The Recruit**, folded in now so the tree is built once. |
 | 6 | Unlock order | **One class at the start, the rest unlocked by bosses** (section 6). |
 
-The sim, the odds' dry runs, the bot and offline progress all fight with skills through the same auto rules. A watched
+The sim, the odds' dry runs and the bot all fight with skills through the same auto rules. A watched
 fight and an unwatched one are the same fight unless you press something.
 
 ---
@@ -116,7 +116,7 @@ He's the only class for the first stretch, so his first skills are simple and hi
 7. **Decoy** - the gang's fire drops 30% for 6 s while they turn on it. 35 / 20. *Hurting.*
 8. **Net every hole** (signature) - every figure is held for 2 s and bleeds. 60 / 40. *Pressed.*
 
-### The Paramedic - Triage and Shifts (the Gamekeeper's apprentice)
+### The Paramedic - Triage and Shifts (the Clinic doctor's apprentice)
 
 The cleanse class: most of the game's debuff answers live here, and her signature is the one way back from going down.
 
@@ -240,7 +240,7 @@ two region emblems (96), about 30 node pictures (64) and his 8 skill icons.
 | Beaten | Unlocks | Who they are |
 |---|---|---|
 | (start) | the Poacher | The hunter |
-| The Gamekeeper | the Clinic, the Paramedic | The girl who patched up his dogs (his vet's bag) |
+| The Gamekeeper | the Clinic, the Paramedic | The Clinic doctor's apprentice: the doctor stays, she runs |
 | The Carpet Man | the Doorman | His old bodyguard |
 | The Bank Manager | the Fence, the Scrapper | The bank's repair man |
 | The Quartermaster | the Recruit | The recruit who walked out with the stores |
@@ -263,10 +263,27 @@ two region emblems (96), about 30 node pictures (64) and his 8 skill icons.
 Three things, the first two before anything else in the milestone:
 
 1. **The buy button doesn't show its cost.** It reads like Train: "Build (6,000 tins)", greyed with the shortfall
-   when you can't afford it. A smoke check makes every buy button on the Pitch show its price.
+   when you can't afford it. A smoke check makes every buy button on the Pitch show its price. *Done 24 Oct:* a pick
+   reads "Build (2,500 tins, 3 copper)", shorter when it won't fit; a rank reads just "Buy (79,000 tins)" (Matt: the
+   rank is in the title). Ranks have no cap, so the title says "rank 1", not "1/10".
 2. **Nodes for the removed offline progress go.** Overtime ("tins found while you're away come in a quarter higher")
    and anything else reading time away is replaced with an effect during runs. The build lists each one and its
-   replacement for Matt before changing it.
+   replacement for Matt before changing it. *Done 24 Oct (Matt: "remove all offline stuff"):* the catch-up is gone
+   too - the world waits while the game is shut, a run out included (SAVE_VERSION 7). The Generator's away side
+   becomes energy (the language pass's names; the skill engine reads them, until then they do nothing):
+
+   | Was | Now | Short | Words |
+   |---|---|---|---|
+   | Twelve hours | Jerry can | +10 max energy | Max energy +10 |
+   | A day away | Dynamo | +0.5 energy a second | Energy refills 0.5 more a second |
+   | Overtime | Kickback | +5 energy a kill | Every kill gives 5 energy |
+   | Two days | Flywheel | 5% shorter cooldowns | Every skill's cooldown is 5% shorter (inside the 40% cap) |
+   | The grid | Pilot light | First skill free | Each fight, your first skill costs no energy |
+   | Rank: +3% tins while away | | +2 max energy | Max energy +2 a rank |
+
+   Skills start every fight ready (Opener needs it), so the agreed "first skill ready at once" did nothing; Pilot
+   light makes the first skill free instead. Names changed in the pass: Spare cells ("cells" is stash room), Live
+   wire and Capacitor (both perks already), Mains (Off the mains). The five new pictures need an art run.
 3. **The binary choices become a real tree.** Each building's column is a fork today (a or b, one locks the other).
    Proposed: each column becomes a small group of nodes you can rank up, two or three per column with a trade-off
    between them, so a building grows in the direction you choose rather than being picked once. Mocked up on the
@@ -432,22 +449,20 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
 | Places in the fight | the nearest man · the middle · the man at the back, each with a tooltip where it first shows |
 | The class | the Recruit; lanes Ordnance and Drill; his line "Walked out of the Barracks with the stores." |
 | Unlocks | Beat the Gamekeeper: the Clinic opens, and Training offers the Paramedic · Beat the Carpet Man: Training offers the Doorman · Beat the Manager: the Fence and the Yard open, and Training offers the Scrapper · Beat the Quartermaster: the Radio and the Workshop open, and Training offers the Recruit · After Kev's first story, Training offers the Drifter |
-| Flavour, per unlock | The Paramedic: "She patched up the Gamekeeper's dogs from his own vet's bag." · The Doorman: "The Carpet Man's old bodyguard." · The Scrapper: "The Bank's repair man." · The Drifter: "Found on the road." |
+| Flavour, per unlock | The Paramedic: "The doctor's apprentice. The doctor keeps the Clinic; she goes out." · The Doorman: "The Carpet Man's old bodyguard." · The Scrapper: "The Bank's repair man." · The Drifter: "Found on the road." |
 
-### Matt's calls
+### Matt's calls (settled 24 Oct)
 
-1. **"Skill" is a banned word** in the glossary (a variant of *perk*), so the smoke fails on the feature's own name.
-   Proposed: unban it and add *skill*: "something you slot before a run and fire in a fight; costs energy and has a
-   cooldown". *Perk* stays the point bought in Training; "skill node" and "loadout" stay off screen.
-2. **Code blue does what Not today already does.** Not today is the Paramedic's keystone in the same lane: once a run,
-   a hit that would kill you leaves you on half HP. Proposed: Code blue takes that job, and Not today gets a new
-   effect in the build (put to you then).
-3. **3+ on you can never fire** with Chokepoints, One at a time or in fog, where only 2 can fire on you. Five of the
-   Doorman's eight use it. Proposed: those rules count the men in the fight, not just the ones firing, and the
-   tooltip says so.
-4. **The Paramedic's story.** "The girl" is gone ("she", a woman). Her past line is "Stayed on the ambulances after
-   the pay stopped". Is she also the Clinic's medic, who already wants that vet's bag on the radio?
-5. **The Scrapper's story.** "The Bank's repair man" against his past line "Stripped the estate's own cars for
-   copper". Keep both (he did both), or change one?
-6. **The house style, v3:** the guide's caps table says "Damage +7%" but section 1 says "+8% damage"; the new
-   affixes follow section 1. And seconds: "8 seconds" in lines, "8 s" in chips, a new house rule.
+1. **"Skill" is unbanned** and has its own glossary entry (style guide v3): something you slot before a run and fire
+   in a fight; costs energy and has a cooldown. *Perk* stays the point bought in Training; "skill node" and "loadout"
+   stay off screen. *Ailment* and *energy* join the glossary too.
+2. **Code blue replaces Not today.** Surviving a killing hit once a run is Code blue's; the Not today keystone gets a
+   new effect, put to Matt when the Paramedic's tree is built.
+3. **"3+ on you" counts everyone in the fight**, not just the ones firing, so Chokepoints, One at a time and fog don't
+   switch those skills off. The rule's tooltip says so.
+4. **The Paramedic is the Clinic doctor's apprentice.** They come as a pair: beating the Gamekeeper opens the Clinic
+   with the doctor in it, and Training offers the Paramedic, who runs while the doctor stays. Her line: "The doctor's
+   apprentice. The doctor keeps the Clinic; she goes out." (The vet's bag is no longer her link; the doctor's name is
+   checked against the radio's medic in the build.)
+5. **The Scrapper keeps both:** the Bank's repair man who stripped the estate's cars for copper on the side.
+6. **Style guide v3:** affix lines number first ("+8% damage"); "8 seconds" in lines, "8 s" in chips.

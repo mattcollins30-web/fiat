@@ -1,7 +1,8 @@
 # Fiat: words on screen
 
 The house rules for every player-facing string. v2 (18 Oct): Matt's four calls made (depth, "the", the Pitch,
-first shot); the rest as the reviewers proposed, for sign-off with the approval table. The smoke checks the parts a
+first shot); the rest as the reviewers proposed, for sign-off with the approval table. v3 (24 Oct, Matt, the skills'
+language pass): "skill" unbanned and given its own meaning; affix lines number first; seconds in lines and chips. The smoke checks the parts a
 machine can check (caps by role, banned glossary variants, fit); the rest is for the reviewers and for whoever writes
 the next line.
 
@@ -43,7 +44,7 @@ Yard works and Atlas nodes: the name has character, the line under it is plain.
 | Section and box labels (the small headers over a group or tile) | ALL CAPS | THEY FIRE, ON THE AIR, ROOMS, DEPTH |
 | Screen titles, card titles, buttons, tabs, chip text, keys, values, body | Sentence case | Set off, Site guide, Take it, Auto-run off |
 | Names of places, people and unique things | As named | The Allotments, Kev, The Last Orders, The Fence |
-| Item bases and affixes | Sentence case | Pump shotgun, Bum bag, Damage +7% |
+| Item bases and affixes | Sentence case, an affix's number first (v3) | Pump shotgun, Bum bag, +7% damage |
 | Room names on the rail | As named (they are places) | The Map, The Kit, Training |
 
 - Sentence case means: capital on the first word and on names only. "Auto-run off", not "Auto-Run Off".
@@ -88,7 +89,10 @@ fails on them); flavour may use them only where a character is talking.
 | What the runner carries out | pack | bag, inventory |
 | What the runner wears on the chest for meds/ammo | rig | belt |
 | Everything worn | kit | loadout, gear (gear only as the generic "gear" contract kind) |
-| A point bought in Training | perk | node, talent, skill |
+| A point bought in Training | perk | node, talent |
+| Something slotted before a run and fired in a fight; costs energy, has a cooldown (v3) | skill | ability, power, move, skill node |
+| A bleed, burn, poison, chill or shock on the runner (v3) | ailment | debuff, status, dot |
+| What skills cost (v3) | energy | mana, stamina, pool |
 | Home (Matt, 18 Oct) | the Pitch | camp, base, home |
 | The tree of works on the Pitch | the Yard | — |
 | A save | game ("New game", "Load game") | camp |
@@ -117,7 +121,8 @@ approval table.
 ## 4. Grammar and spelling
 
 - British spelling: armour, colour, favourite, defence, -ise (organise, recognise), grey, programme (not software).
-- Numbers: figures in mechanics ("3 in 10"), words allowed in flavour. Times as m:ss ("1:50"). Thousands with a comma
+- Numbers: figures in mechanics ("3 in 10"), words allowed in flavour. Times as m:ss ("1:50"). A duration in a line is
+  "8 seconds"; in a chip "8 s" (v3). Thousands with a comma
   ("1,288 tins").
 - Punctuation: no full stop on buttons, chips, tile values or one-line tooltips; full stops on any line of two
   sentences or more and on flavour sentences. Curly apostrophes are not needed (the font draws straight ones well);

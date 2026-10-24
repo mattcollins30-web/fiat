@@ -48,7 +48,7 @@ var slot_file := SLOT_FILE
 const SLOTS := 3
 ## A save from before SAVE_VERSION isn't loaded (Matt, 15 Oct: one save in existence, a fresh camp after the pass -
 ## no conversions; its slot says so). 2: gear gated by level.
-const SAVE_VERSION := 6               # 6 (23 Oct): one starter a region - a Pitch or element opened from its second node strands; 5 (22 Oct): the web - the trees' ids, the elements' points; 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
+const SAVE_VERSION := 7               # 7 (24 Oct): no offline - the Generator's away picks gone for energy; 6 (23 Oct): one starter a region - a Pitch or element opened from its second node strands; 5 (22 Oct): the web - the trees' ids, the elements' points; 4 (21 Oct): the crew - the roster, the stash tabs, paragon, no auto-run
 const AUTOSAVE_S := 30.0
 const REFRESH_S := 0.1
 const ODDS_BUDGET := 24             # dry runs a tier a call at most on the Runs screen; the brake is the time (7 Oct)
@@ -942,59 +942,10 @@ func load_game(path := "") -> void:
 	speed = 1.0
 	_speed_label.visible = false
 	_menu.close()
-	var away := Time.get_unix_time_from_system() - float(d.get("saved", 0.0))
-	# a session in the playtest record, ahead of the runs the settle adds: how long away, how much of it the sim
-	# settles (11 Oct; the away runs carry their own flag)
-	sim.chron("session", {"away_s": int(away), "settled_s": int(minf(away, sim.away_cap_s())) if away >= 60.0 else 0})
-	if away >= 60.0:
-		_settle_away(away)
+	# a session in the playtest record (11 Oct): how long the game was shut. Nothing ran meanwhile (24 Oct, Matt: offline
+	# progress gone) - the world waits, a run out included
+	sim.chron("session", {"away_s": int(Time.get_unix_time_from_system() - float(d.get("saved", 0.0)))})
 	refresh()
-
-
-## Offline: the time away runs through the sim - the run in hand plays out, then rest (21 Oct, Matt: auto-run's gone) -
-## up to the cap, and a screen says what happened.
-func _settle_away(away: float) -> void:
-	var seconds := minf(away, sim.away_cap_s())
-	var before: Dictionary = sim.snapshot()
-	var where_i: int = int(sim.mission["tier"]) if sim.mission != null else -1     # the run that was out
-	var left := seconds
-	sim.away_on = true                     # the Generator's Overtime and rank pay on the time away (9 Oct)
-	sim.settling = true                    # the run out comes home on its own (21 Oct)
-	while left > 0.0:
-		var step := minf(600.0, left)
-		sim.advance(step)
-		left -= step
-		if sim.camp_lost:
-			break
-	sim.away_on = false
-	sim.settling = false
-	var after: Dictionary = sim.snapshot()
-	# the log's deploys all carry the replay's real time, so the summary counts
-	# by cash and items - what the player cares about
-	var words := ""
-	var runs: int = int(after.get("runs", 0)) - int(before.get("runs", 0))
-	if runs > 0 or after["cash"] != before["cash"] or after["lost"] != before["lost"]:
-		var where: String = Words.mid(sim.tier(where_i)["name"]) if where_i >= 0 else "the Outskirts"
-		var things: int = after["stash"] - before["stash"]
-		words = Words.AWAY["ran"] % [Fmt.away(away), runs, "" if runs == 1 else "s", where, "+" if after["cash"] >= before["cash"] else "", Fmt.money(after["cash"] - before["cash"]),
-				things, "" if things == 1 else "s", before["level"], after["level"]]
-		if int(before["level"]) == int(after["level"]):
-			words = words.replace(" level %d to %d." % [before["level"], after["level"]], "").trim_suffix(",") + "."     # no "level 5 to 5"
-		if after["lost"] > before["lost"]:
-			words += Words.AWAY["lost"]
-	else:
-		words = Words.AWAY["rested"] % Fmt.away(away)
-	if sim.mission != null:
-		words += Words.AWAY["still_out"] % (Words.mid(sim.tier(int(sim.mission["tier"]))["name"]))     # the cap came first (the review)
-	if away > seconds:
-		words += Words.AWAY["settled"] % Fmt.away(seconds)
-	if sim.inflation_pct() > 0:
-		words += Words.AWAY["prices"] % sim.inflation_pct()
-	if sim.camp_lost:
-		show_camp_lost()
-		return
-	_menu.open(Words.AWAY["title"], words, [{"name": "Continue", "detail": "", "action": _menu.close}], _menu.close)
-	save_game()
 
 
 ## Hardcore: the KIA that ended the camp. The autosave goes; the slots stay.
