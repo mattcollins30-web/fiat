@@ -34,7 +34,14 @@ words through the language pass; the art in one manifest at the end, once the sl
    pinnacle beaten. No power from it (it would turn mandatory); Steam's achievements can hang off it later.
 7. **Loadouts and build codes** (medium). Three loadouts a runner, holding gear and skills (the tree stays out: its
    respec has its own price); a code that exports the tree and skills. SAVE_VERSION 9.
-8. **The art batch, the language pass, then the single balance pass at 32 hours.** Then Matt's playtest on 0.9.0.
+8. **The balance harness plays one save** (medium, bot and harness code, reviewed). Matt (24 Oct): the per-class
+   reads play "effectively a different game" now that classes unlock through the campaign and swap freely. The main
+   read starts as the Poacher with `class_open` honoured (`set_class` skips it today), takes its target build when
+   that class opens, and switches to the next class in the same world when the main's reach has stood a set time:
+   the 30 hours are one save's. Build parity: every class and element run a fixed spell from one checkpoint save
+   (the Radio's opening). The campaign gates re-aimed at the Poacher's route; each gate retired or re-aimed listed to
+   Matt first. His playtest's route (when each class opened, what he switched to) is what the one-save read copies.
+9. **The art batch, the language pass, then the single balance pass at 32 hours.** Then Matt's playtest on 0.9.0.
 
 ## Not in this plan (product, before any release)
 
