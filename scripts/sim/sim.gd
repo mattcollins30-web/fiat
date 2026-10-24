@@ -21,7 +21,7 @@ var clinic: Array = []             # the Clinic's shelf: meds, so many a level, 
 var mission = null                 # null, or the mission in progress (a Dictionary)
 var last_report = null             # the last mission's outcome, for Mission Control
 var operators_lost := 0
-var yard_picks := {}               # the Yard's lanes (9 Oct): building key -> [five sides, "a", "b" or ""]
+var yard_picks := {}               # the Yard's lanes (9 Oct): building key -> [five columns' sides, "a", "b", "ab" (both, 24 Oct) or ""]
 var yard_ranks := {}               # building key -> ranks bought
 var yard_open := 1                 # the columns opened, for good: a move doesn't close them
 var yard_seen := {}                # what the Yard has been looked at with buyable ("key/col", "key/rN"): the rail's badge is for the rest
@@ -4064,8 +4064,10 @@ func yard_has(id: String) -> bool:
 			var sides: Array = yard_picks.get(b["key"], [])
 			for c in range(mini(sides.size(), b["picks"].size())):
 				var sd: String = str(sides[c])
-				if sd == "a" or sd == "b":
-					_yard_set[b["picks"][c][0 if sd == "a" else 1]["id"]] = true
+				if sd.contains("a"):
+					_yard_set[b["picks"][c][0]["id"]] = true
+				if sd.contains("b"):
+					_yard_set[b["picks"][c][1]["id"]] = true     # both sides built (24 Oct, option B)
 		_yard_dirty = false
 	return _yard_set.has(id)
 
@@ -4074,19 +4076,18 @@ func yard_rank(key: String) -> int:
 	return int(yard_ranks.get(key, 0))
 
 
-## The side built in a building's column: "a", "b" or "".
+## The sides built in a building's column: "a", "b", "ab" (both, 24 Oct: option B) or "".
 func yard_side(key: String, col: int) -> String:
 	var sides: Array = yard_picks.get(key, [])
 	return str(sides[col]) if col < sides.size() else ""
 
 
-## How many picks are built, of how many there are.
+## How many picks are built: both sides of a column count (24 Oct, option B; the record and the balance read it).
 func yard_built() -> int:
 	var n := 0
 	for b in Data.YARD:
 		for c in range(b["picks"].size()):
-			if yard_side(b["key"], c) != "":
-				n += 1
+			n += yard_side(b["key"], c).length()
 	return n
 
 
@@ -4158,18 +4159,23 @@ func yard_cols() -> int:
 	return yard_open
 
 
-## A column's price: the building's figure at today's prices; changing a built pick costs YARD_REFIT of it.
+## Whether this side of a column is built.
+func yard_built_side(key: String, col: int, side: String) -> bool:
+	return side != "" and yard_side(key, col).contains(side)
+
+
+## A column's next price: the building's figure at today's prices; its other side, once one is built, YARD_SECOND of it.
 func yard_pick_cost(key: String, col: int) -> int:
 	var b := Data.yard_building(key)
 	if b.is_empty() or col < 0 or col >= b["costs"].size():
 		return -1
 	var c: int = _inf(int(b["costs"][col]))
-	return _round_price(int(round(c * Data.YARD_REFIT)) if yard_side(key, col) != "" else c)
+	return _round_price(int(round(c * Data.YARD_SECOND)) if yard_side(key, col) != "" else c)
 
 
-## The salvage a column wants: the fifth's, YARD_PICK_SALVAGE of the building's kind (none for a refit).
+## The salvage a column wants: the fifth's, YARD_PICK_SALVAGE of the building's kind, for each side.
 func yard_pick_salvage(key: String, col: int) -> int:
-	return Data.YARD_PICK_SALVAGE if col == 4 and yard_side(key, col) == "" else 0
+	return Data.YARD_PICK_SALVAGE if col == 4 and yard_side(key, col).length() < 2 else 0
 
 
 ## Why a pick can't be built now, or "": the column shut, built already, the cash or the salvage short.
@@ -4185,7 +4191,7 @@ func yard_pick_block(key: String, col: int, side: String) -> String:
 		return "The runner is out"
 	if col >= yard_cols():
 		return Data.yard_gate(col)
-	if yard_side(key, col) == side:
+	if yard_built_side(key, col, side):
 		return "Built"
 	if cash < yard_pick_cost(key, col):
 		return "Short of tins"
@@ -4198,26 +4204,26 @@ func can_yard_pick(key: String, col: int, side: String) -> bool:
 	return yard_pick_block(key, col, side) == ""
 
 
-## Build a pick, or change one (a refit, for YARD_REFIT of the price).
+## Build a pick: the column's first side at its price, the other later at YARD_SECOND of it (nothing locks, 24 Oct).
 func yard_pick(key: String, col: int, side: String) -> bool:
 	if not can_yard_pick(key, col, side):
 		return false
 	var b := Data.yard_building(key)
-	var refit: bool = yard_side(key, col) != ""
+	var second: bool = yard_side(key, col) != ""
 	var pk0: Dictionary = b["picks"][col][0 if side == "a" else 1]
-	chron("yard", {"key": key, "col": col, "side": side, "name": str(pk0["name"]), "cost": yard_pick_cost(key, col), "salvage": yard_pick_salvage(key, col), "refit": refit})
+	chron("yard", {"key": key, "col": col, "side": side, "name": str(pk0["name"]), "cost": yard_pick_cost(key, col), "salvage": yard_pick_salvage(key, col), "second": second})
 	cash -= yard_pick_cost(key, col)
 	salvage[b["salvage"]] = int(salvage.get(b["salvage"], 0)) - yard_pick_salvage(key, col)
 	var sides: Array = yard_picks.get(key, ["", "", "", "", ""]).duplicate()
 	while sides.size() < b["picks"].size():
 		sides.append("")
-	sides[col] = side
+	sides[col] = "ab" if second else side
 	var before := _yard_before()
 	yard_picks[key] = sides
 	_yard_changed(key)
 	_yard_grew(before)
 	var pk: Dictionary = b["picks"][col][0 if side == "a" else 1]
-	log_event("%s %s: %s" % [b["name"], "refitted" if refit else "built", "%s - %s" % [pk["name"], str(pk["words"]).to_lower()]])
+	log_event("%s built: %s" % [b["name"], "%s - %s" % [pk["name"], str(pk["words"]).to_lower()]])
 	return true
 
 
@@ -4291,8 +4297,8 @@ func _yard_buyable_ids() -> Array:
 	for b in Data.YARD:
 		var have: int = int(salvage.get(b["salvage"], 0))
 		for c in range(b["picks"].size()):
-			if c < yard_cols() and yard_side(b["key"], c) == "" and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
-				out.append("%s/%d" % [b["key"], c])
+			if c < yard_cols() and yard_side(b["key"], c).length() < 2 and cash >= yard_pick_cost(b["key"], c) and have >= yard_pick_salvage(b["key"], c):
+				out.append("%s/%d%s" % [b["key"], c, "" if yard_side(b["key"], c) == "" else "+"])     # "+": its other side (option B)
 		if yard_cols() >= Data.YARD_COLS and cash >= yard_rank_cost(b["key"]) and have >= yard_rank_salvage(b["key"]):
 			out.append("%s/r%d" % [b["key"], yard_rank(b["key"]) + 1])
 	return out
@@ -4304,8 +4310,8 @@ func yard_news() -> bool:
 	if yard_cols() > yard_seen_cols:
 		return true
 	for id in _yard_buyable_ids():
-		if not yard_seen.has(id):
-			return true
+		if not yard_seen.has(id) and not str(id).ends_with("+"):
+			return true                        # a column's other side lights nothing (the review: every first side built would)
 	return false
 
 
@@ -4315,28 +4321,13 @@ func yard_mark_seen() -> void:
 		yard_seen[id] = true
 
 
-## A refit that takes cells away (off Shelving, Racks, the Annex...): how many cells the stash would be over after
-## it, 0 if none. Allowed, but the strip says so first.
-func yard_refit_over(key: String, col: int, side: String) -> int:
-	var was: Dictionary = yard_picks.duplicate(true)
-	var sides: Array = yard_picks.get(key, ["", "", "", "", ""]).duplicate()
-	sides[col] = side
-	yard_picks[key] = sides
-	_yard_dirty = true
-	var over: int = stash_used() - stash_cap()
-	yard_picks = was
-	_yard_dirty = true
-	var now_over: int = stash_used() - stash_cap()
-	return maxi(0, over) if over > now_over else 0
-
-
 ## What a pick changed: the figures read fresh; the Fence's and the Clinic's shelves and the odds again.
 func _yard_changed(_key: String) -> void:
 	_yard_dirty = true
 	_dry_memo.clear()
 	_surv_cache = {}                          # the odds read the Yard too: the Jammer, the Med lab, the Charger
 	if not yard_has("dry_store"):
-		# the Dry store refitted away (the review): its second tabs fold into the first, the class out's and the crew's
+		# the Dry store gone (a guard: no refit takes a pick away since 24 Oct, option B; a fixture can): its second tabs fold into the first, the class out's and the crew's
 		for it in stash:
 			if tab_of(it) == "own2":
 				it["tab"] = "own"

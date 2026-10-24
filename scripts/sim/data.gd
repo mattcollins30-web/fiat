@@ -96,7 +96,7 @@ const YARD_PICK_SALVAGE := 10            # the fifth column's salvage
 const YARD_RANK_CASH := 50000            # a rank's cash, × YARD_RANK_GROWTH a rank bought, × inflation
 const YARD_RANK_GROWTH := 1.5             # 1.25 to 1.5 (22 Oct, the web pass: the bot bought 340 ranks across the Pitch on the endgame's tins - the Clinic's 46 alone +138% HP)
 const YARD_RANK_SALVAGE := 5             # a rank's salvage, one more a rank bought
-const YARD_REFIT := 0.5                  # changing a pick: this share of the column's price
+const YARD_SECOND := 2.5                # a column's other side, built after the first (24 Oct, Matt: option B - nothing locks, nothing to refit)
 ## Salvage (9 Oct): one kind a zone, from kills on its sites from SALVAGE_DEPTH, SALVAGE_KILL a kill a depth past.
 const SALVAGE := ["copper", "steel", "army"]
 const ZONE_SALVAGE := ["", "copper", "steel", "army"]     # by zone (12 Oct): the Outskirts has none

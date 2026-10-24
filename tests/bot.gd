@@ -1037,6 +1037,15 @@ func _train_tree(sim) -> void:
 ## The Yard's lanes (9 Oct): every open column's pick, its first side unless PICK_B names the second, cheapest
 ## first, with £500 kept back; then a rank where one is open, with half its price again kept back.
 const PICK_B := {"bench": [1], "stash": [], "clinic": [], "fence": [1, 4], "radio": [], "generator": [], "lookout": [], "kennel": [3]}   # the Generator's first sides (24 Oct: its away picks gone; the energy ones read in milestone 9)
+## The cheapest rank the Pitch could buy now (no rank open: a price past any).
+func _cheapest_rank(sim) -> int:
+	var out := 1 << 40
+	for b in Data.YARD:
+		if sim.can_yard_rank(b["key"]) or sim.yard_rank_block(b["key"]) == "Short of tins":
+			out = mini(out, sim.yard_rank_cost(b["key"]))
+	return out
+
+
 func _build_yard(sim) -> void:
 	if _lorry_watch_saving(sim) > 0.0 and sim.cash >= _lorry_watch_saving(sim) and sim.can_yard_pick("radio", LORRY_WATCH_COL, "a"):
 		var cost: int = sim.yard_pick_cost("radio", LORRY_WATCH_COL)
@@ -1060,6 +1069,29 @@ func _build_yard(sim) -> void:
 		if sim.yard_pick(best_key, best_col, side):
 			bought.append([sim.elapsed, "%s %s for £%d" % [best_key, Data.yard_building(best_key)["picks"][best_col][0 if side == "a" else 1]["id"], best_cost]])
 		return
+	var firsts_left: bool = Data.YARD.any(func(yb): return range(yb["picks"].size()).any(func(c): return c < sim.yard_cols() and sim.yard_side(yb["key"], c) == "" and not sim.yard_pick_block(yb["key"], c, "a").begins_with("Opens with")))
+	if best_key == "" and not firsts_left:
+		# every open column has its first side (its price or salvage aside - the review): a column's other side (24 Oct,
+		# option B), the cheapest, with half again in hand
+		var sec_key := ""
+		var sec_col := -1
+		var sec_side := ""
+		var sec_cost := 1 << 40
+		for b in Data.YARD:
+			for c in range(b["picks"].size()):
+				var have: String = sim.yard_side(b["key"], c)
+				if have.length() != 1:
+					continue
+				var other: String = "b" if have == "a" else "a"
+				if sim.can_yard_pick(b["key"], c, other) and sim.yard_pick_cost(b["key"], c) < sec_cost:
+					sec_key = b["key"]
+					sec_col = c
+					sec_side = other
+					sec_cost = sim.yard_pick_cost(b["key"], c)
+		if sec_key != "" and sim.cash >= sec_cost * 1.5 and sim.cash - sec_cost >= _lorry_watch_saving(sim) and sec_cost <= _cheapest_rank(sim):
+			if sim.yard_pick(sec_key, sec_col, sec_side):
+				bought.append([sim.elapsed, "%s %s (its other side) for £%d" % [sec_key, Data.yard_building(sec_key)["picks"][sec_col][0 if sec_side == "a" else 1]["id"], sec_cost]])
+			return
 	for b in Data.YARD:
 		if sim.can_yard_rank(b["key"]) and sim.cash >= sim.yard_rank_cost(b["key"]) * 1.5 and sim.cash - sim.yard_rank_cost(b["key"]) >= _lorry_watch_saving(sim):
 			var cost: int = sim.yard_rank_cost(b["key"])

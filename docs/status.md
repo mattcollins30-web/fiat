@@ -6740,3 +6740,16 @@ pass; the reviewer on the code):
   missed an effect's last tick; the language pass twice (skills.md section 11).
 - For Matt: Not today only works under 25% HP, where the bot and the odds' dry runs have already left (they bail at a
   quarter), so the balance read never sees it.
+
+## Milestone 8, step 5 (24 Oct): the Pitch's columns, option B; the art in
+
+- Nothing locks (Matt: "B"): either side of a column builds first at its price, the other later at 2.5 times; refit
+  and its over-the-stash warning are gone. The header counts both sides (of 80), and so do the record's and the
+  balance's yard_built. The bot builds a column's other side once every open column has its first (cash aside), no
+  dearer than its cheapest rank; a second side lights no badge. Reviewer's notes in (the bot's condition with its
+  reverse check, the count, the badge). Smoke green on run 237.
+- The skills' art (65 images, $5.27): the 48 skills (art/skills/), the Recruit's 13 tree pictures, his emblems, face
+  and figure; found by name, no wiring. The runner's look-alikes for Matt: Chancer and Four leaf (clovers), Shoulder
+  charge and Broad shoulders, the round grenades (Back of the van, Lob one in, Cook it off, the Ordnance emblem), the
+  boots (Quick march, Recruit's boots, the Drill emblem), the bayonets. Their .import files come when the editor next
+  opens; until then the fight's buttons show the glyphs (SkillBar reads the import), the web the pictures.

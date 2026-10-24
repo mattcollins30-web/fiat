@@ -614,9 +614,11 @@ func show_state(s) -> void:
 	var bench := Data.yard_building("bench")
 	for c in range(bench["picks"].size()):
 		var sd: String = sim.yard_side("bench", c)
-		if sd != "":
-			picks.append(str(bench["picks"][c][0 if sd == "a" else 1]["name"]))
-	_headline.text = "%d of 5" % picks.size()
+		for k in range(2):
+			if sd.contains("ab"[k]):
+				picks.append(str(bench["picks"][c][k]["name"]))     # both sides of a column can be built (24 Oct, option B)
+	var cols_built: int = range(bench["picks"].size()).filter(func(c): return sim.yard_side("bench", c) != "").size()
+	_headline.text = "%d of 5" % cols_built
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
 	_unit.size.x = PAD + Pal.BAND_TEXT_W + 120 - _unit.position.x
 	UI.fit(_unit, ["upgrades built · rank %d" % sim.yard_rank("bench") if sim.yard_rank("bench") > 0 else "upgrades built", "upgrades"])

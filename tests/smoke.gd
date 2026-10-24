@@ -11916,12 +11916,20 @@ func _yard_wide_checks(main) -> void:
 	main.refresh()
 	_check(sim.yard_has("a_dog") and is_equal_approx(sim.cash, cash1 - c1) and yt.tile("kennel", 0, "a")["look"] == "built" and yt.tile("kennel", 0, "b")["look"] == "other", "Build did not build A dog: %s, £%.0f" % [str(sim.yard_picks.get("kennel", [])), cash1 - sim.cash])
 	_check(yt._build.text == "Built" and yt._build.disabled, "a built pick still offers a build")
+	# its other side (24 Oct, Matt: option B - nothing locks): open at 2.5 times, both built after, the strip saying so
 	yt._press("kennel", 0, "b")
 	main.refresh()
-	_check(yt._build.text.begins_with("Refit (") and yt._build.text.contains(Fmt.money(sim.yard_pick_cost("kennel", 0))) and absi(sim.yard_pick_cost("kennel", 0) - int(round(c1 * Data.YARD_REFIT))) <= 100, "the other side does not refit for half: '%s', %d of %d" % [yt._build.text, sim.yard_pick_cost("kennel", 0), c1])
+	var c2: int = sim.yard_pick_cost("kennel", 0)
+	_check(yt._build.text.begins_with("Build (") and yt._build.text.contains(Fmt.money(c2)) and absi(c2 - int(round(c1 * Data.YARD_SECOND))) <= 100 and yt._other.text.contains("is built · this one costs ×2.5"), "the other side isn't offered at 2.5 times: '%s', '%s', %d from %d" % [yt._build.text, yt._other.text, c2, c1])
+	_check_fit(main, "Yard (a column's other side)")
+	sim.cash = maxf(sim.cash, float(c2) + 10.0)
+	var cash2: float = sim.cash
 	yt._on_build()
-	_check(sim.yard_has("good_nose") and not sim.yard_has("a_dog"), "the refit did not swap the pick")
-	_check_fit(main, "Yard (a refit)")
+	main.refresh()
+	_check(sim.yard_has("good_nose") and sim.yard_has("a_dog") and sim.yard_side("kennel", 0) == "ab" and is_equal_approx(sim.cash, cash2 - c2) and yt.tile("kennel", 0, "b")["look"] == "built" and yt.tile("kennel", 0, "a")["look"] == "built", "the other side didn't build beside the first: %s" % str(sim.yard_picks.get("kennel", [])))
+	_check(sim.yard_pick_block("kennel", 0, "a") == "Built" and sim.yard_pick_block("kennel", 0, "b") == "Built" and yt._build.text == "Built" and yt._build.disabled, "a column with both sides built still offers a build")
+	_check(not sim._yard_buyable_ids().any(func(x): return str(x).begins_with("kennel/0")), "a full column still counts as buyable")
+	_check_fit(main, "Yard (both sides built)")
 	# the columns open on the campaign and the depth, and stay open
 	sim.best_dig = {}
 	for i in range(sim.depth.size()):
@@ -11958,7 +11966,7 @@ func _yard_wide_checks(main) -> void:
 		_check((yt._build.text.contains(Fmt.money(sim.yard_rank_cost(str(yb["key"])))) or yt._build.text.contains(Fmt.money_k(sim.yard_rank_cost(str(yb["key"]))))), "%s's rank button has no price: '%s'" % [yb["key"], yt._build.text])
 		_check(UI.text_width(yt._build, yt._build.text) + 32.0 <= yt._build.size.x, "%s's rank button runs past its edge: '%s'" % [yb["key"], yt._build.text])
 		for yside in ["a", "b"]:
-			if sim.yard_side(str(yb["key"]), 0) != yside:
+			if not sim.yard_built_side(str(yb["key"]), 0, yside):     # an unbuilt side (both can be built, option B)
 				yt._press(str(yb["key"]), 0, yside)
 				yt._shown = ""
 				main.refresh()
@@ -11969,7 +11977,7 @@ func _yard_wide_checks(main) -> void:
 	sim.cash = cash0
 	yt._shown = ""
 	main.refresh()
-	_check(yt._headline.text.contains(" of 40") and yt._unit.text == "upgrades built", "the Pitch's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
+	_check(yt._headline.text == "%d of 80" % sim.yard_built() and yt._unit.text == "upgrades built", "the Pitch's headline is off: '%s' %s" % [yt._headline.text, yt._unit.text])
 	_check(yt._chips.shown() == 6 and yt._chips._labels[0].text.begins_with(Fmt.money(sim.cash)), "the Pitch's purse chips are off: %d shown, first '%s'" % [yt._chips.shown(), yt._chips._labels[0].text])
 	# the purse down the left under the title (Matt, 10 Oct): below the headline, inside the title's width and the band,
 	# clear of Move; every chip shown with the most salvage the Yard can hold
@@ -12059,24 +12067,8 @@ func _yard_pick_checks(main) -> void:
 	sim.yard_ranks["stash"] = 1
 	_check(sim.stash_cap() == cap0 + 40 + 50 + 60 + 100 + 20, "the Stash's cells are off: %d from %d" % [sim.stash_cap(), cap0])
 	sim.yard_ranks = {}
-	# a refit off cells is allowed, and the strip says first how far over it leaves the stash (9 Oct)
-	var stash_keep: Array = sim.stash.duplicate(true)
-	sim.stash = sim.stash.filter(func(x): return not Items.rig_item(x))     # Racks frees what's left of the rounds and meds: the fixture's own (19 Oct, the rarity rows keep them now)
-	while sim.stash_used() < sim.stash_cap():
-		sim.stash.append(sim._plain("Helmet", "Hard hat"))
-	var picks_keep: Dictionary = sim.yard_picks.duplicate(true)
-	var over_want: int = sim.yard_refit_over("stash", 0, "b")         # Shelving's forty, less what Racks frees, plus a hard hat past the cap
-	_check(over_want > 30 and over_want <= sim.stash_used() - sim.stash_cap() + 40 and sim.yard_picks == picks_keep, "the refit off Shelving reads %d over, or the reading changed the picks" % sim.yard_refit_over("stash", 0, "b"))
-	_yard_set(sim, "kennel", 0, "a")
-	_check(sim.yard_refit_over("kennel", 0, "b") == 0, "a refit that takes no cells reads over")
 	var yt = main._yard_tree
-	main.show_room(main.OVERVIEW)
-	yt._press("stash", 0, "b")
-	main.refresh()
-	_check(yt._other.text.contains("%d cells over" % over_want) or yt._other.text.contains("%d over" % over_want), "the strip does not warn of the stash going over: '%s'" % yt._other.text)
-	_check_fit(main, "Yard (a refit over the stash's cap)")
 	yt.selected = {}
-	sim.stash = stash_keep
 	on.call("stash", 0, "b")
 	on.call("stash", 2, "b")
 	on.call("stash", 3, "b")
@@ -12287,7 +12279,7 @@ func _yard_pick_checks(main) -> void:
 	_check(sim.yard_has("shelving") and sim.yard_has("another_unit") and sim.yard_has("lock_up") and sim.yard_has("weather_set") and sim.yard_has("forecast") and not sim.yard_has("scanner") and sim.yard_has("fetch"), "an old save's levels did not become picks: %s" % str(sim.yard_picks))
 	sim.load_dict(saved)
 	main.refresh()
-	print("the Pitch's lanes ok: the screen, a build and a refit, the gates kept, salvage, ranks, every building's picks, the move, the old saves")
+	print("the Pitch's lanes ok: the screen, a build and its other side, the gates kept, salvage, ranks, every building's picks, the move, the old saves")
 
 
 ## The sum strip's tiles sit inside their panel (7 Oct: the strip was sized by the node tile's height, four
@@ -13781,6 +13773,35 @@ func _build_one_checks(main) -> void:
 	sim.scrap = int(want["scrap"]) * 2
 	bot._build_one(sim)
 	_check(bot.bought.size() == 1 and sim.scrap == int(want["scrap"]) and sim.stash.any(func(it): return it["base"] == "Hardened bolts"), "the bot did not build the grade for its rounds: %s, scrap %d" % [str(bot.bought), sim.scrap])
+	# the Pitch (24 Oct, option B): every open column's first side built, the bot builds a column's other side
+	var yard_keep: Dictionary = sim.yard_picks.duplicate(true)
+	for yb in Data.YARD:
+		var sides: Array = []
+		for c in range(yb["picks"].size()):
+			sides.append("a" if c < sim.yard_cols() else "")
+		sim.yard_picks[yb["key"]] = sides
+	sim._yard_dirty = true
+	sim.cash = 1.0e9
+	var bot_y = Bot.new()
+	bot_y._build_yard(sim)
+	_check(bot_y.bought.size() == 1 and str(bot_y.bought[0][1]).contains("its other side") and Data.YARD.any(func(yb): return sim.yard_picks[yb["key"]].has("ab")), "the bot didn't build a column's other side with every first built: %s" % str(bot_y.bought))
+	# and not while an open column still wants its first side, too dear for now (the review: the cash hid it)
+	var dear_key: String = str(Data.YARD[0]["key"])
+	sim.yard_picks[dear_key][0] = ""
+	for yb in Data.YARD:
+		for c in range(yb["picks"].size()):
+			if sim.yard_side(yb["key"], c) == "a":
+				sim.yard_picks[yb["key"]][c] = "ab"
+	sim.yard_picks[str(Data.YARD[1]["key"])][0] = "a"     # one other side left to buy, cheap
+	sim._yard_dirty = true
+	sim.cash = float(sim.yard_pick_cost(str(Data.YARD[1]["key"]), 0)) * 2.0
+	if sim.cash >= float(sim.yard_pick_cost(dear_key, 0)):
+		sim.cash = float(sim.yard_pick_cost(dear_key, 0)) - 1.0
+	var bot_y2 = Bot.new()
+	bot_y2._build_yard(sim)
+	_check(sim.yard_side(dear_key, 0) == "" and sim.yard_side(str(Data.YARD[1]["key"]), 0) == "a", "the bot built a column's other side with a first side still to buy: %s" % str(bot_y2.bought))
+	sim.yard_picks = yard_keep
+	sim._yard_dirty = true
 	sim.load_dict(saved)
 	print("the bot's build rule ok")
 	_gamble_checks(main)

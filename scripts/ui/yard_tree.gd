@@ -1,7 +1,7 @@
 extends Control
 ## The Pitch as a web (22 Oct, docs/design/web_map_pitch.md §2; the lanes of 9 Oct, docs/design/yard.md, before
 ## it). Eight buildings as eight regions off the centre on the canvas (yard_web.gd): a building's five columns as
-## forks along its spine - the two picks of a column, one or the other, the other dim and refittable for half -
+## forks along its spine - the two picks of a column, either first, the other later at 2.5 times (24 Oct, option B) -
 ## and its ranks a chain past them, bought again and again. A column opens on the campaign and the depth, for
 ## good, as before. The header: the picks built, the purse (cash, notes, scrap and the three salvages) and Move the
 ## Yard. The strip at the foot: the picked node's sentence, its other half, its price and its button; with nothing
@@ -102,7 +102,7 @@ func show_state(s, purse: Dictionary) -> void:
 		return
 	_shown = sig
 	var built: int = sim.yard_built()
-	var of: int = Data.YARD.size() * (COLS - 1)
+	var of: int = Data.YARD.size() * (COLS - 1) * 2     # both sides of every column (24 Oct, option B)
 	UI.fit(_kicker, ["The Pitch"])
 	_headline.text = "%d of %d" % [built, of]
 	_unit.position.x = PAD + ceilf(UI.text_width(_headline, _headline.text)) + 10
@@ -198,27 +198,23 @@ func _show_strip(purse: Dictionary) -> void:
 	UI.fit(_title, ["%s · %s, column %d" % [en.call(str(pk["name"])), en.call(str(b["name"])), c + 1], en.call(str(pk["name"]))])
 	UI.fit(_words, [en.call(str(pk["words"])) + ".", en.call(str(pk["short"]))])
 	var or_line: String = "Or %s: %s" % [en.call(str(ot["name"])), en.call(str(ot["words"]).to_lower())]
-	if built == side:
-		UI.fit(_other, ["Built · %s; switching to the other costs half the column's price" % or_line, "Built · %s" % or_line, "Built"])
+	if built.contains(side):
+		UI.fit(_other, ["Built"] if built.length() > 1 else ["Built · %s" % or_line, "Built"])
 		_build.text = "Built"
 		_build.disabled = true
 		return
 	var why: String = sim.yard_pick_block(key, c, side)
 	var price: String = Fmt.money(sim.yard_pick_cost(key, c)) + ("" if sim.yard_pick_salvage(key, c) == 0 else " and %d %s" % [sim.yard_pick_salvage(key, c), kind])
-	var head: String = ("Refit from %s: %s" % [en.call(str(ot["name"])), price]) if built != "" else price
 	var tail: String = "" if why == "" else " · " + why
-	var over: int = sim.yard_refit_over(key, c, side) if built != "" else 0
-	if over > 0:
-		# a refit off cells (Matt, 9 Oct): allowed, but said first - an over-full stash takes nothing until it's under
-		var warn: String = "the stash goes %d cell%s over: nothing goes in until it's under" % [over, "" if over == 1 else "s"]
-		UI.fit(_other, ["%s · %s%s" % [head, warn, tail], "%s · %d over cap%s" % [head, over, tail], "%d over cap%s" % [over, tail], "%d over cap" % over])
-		_other.add_theme_color_override("font_color", Pal.WARN)
+	if built != "":
+		# the column's other side built (24 Oct, option B: nothing locks): this one at its dearer price
+		var second: String = "%s is built · this one costs ×%s" % [en.call(str(ot["name"])), str(Data.YARD_SECOND)]
+		UI.fit(_other, ["%s · %s%s" % [second, price, tail], "%s%s" % [second, tail], second])
 	else:
-		UI.fit(_other, ["%s · %s%s" % [head, or_line, tail], "%s%s" % [head, tail], head])
-	var verb: String = "Refit" if built != "" else "Build"
+		UI.fit(_other, ["%s · %s%s" % [price, or_line, tail], "%s%s" % [price, tail], price])
 	var pick_money: String = Fmt.money(sim.yard_pick_cost(key, c))
 	var pick_salv: int = sim.yard_pick_salvage(key, c)
-	UI.fit_button(_build, (["%s (%s, %d %s)" % [verb, pick_money, pick_salv, kind]] if pick_salv > 0 else []) + ["%s (%s)" % [verb, pick_money], "%s (%s)" % [verb, Fmt.money_k(sim.yard_pick_cost(key, c))]])
+	UI.fit_button(_build, (["Build (%s, %d %s)" % [pick_money, pick_salv, kind]] if pick_salv > 0 else []) + ["Build (%s)" % pick_money, "Build (%s)" % Fmt.money_k(sim.yard_pick_cost(key, c))])
 	_build.disabled = why != ""
 
 
@@ -244,16 +240,16 @@ func _on_build() -> void:
 
 
 ## For the smoke: a pick's look by building key, column and side ("rank" for the rank) - "built", "open", "other"
-## (the column's other side built) or "shut" (its column shut), as the lanes' tiles read.
+## (the column's other side built, this one at the dearer price) or "shut" (its column shut), as the lanes' tiles read.
 func tile(key: String, col: int, side: String) -> Dictionary:
 	if side == "rank":
 		return {"look": "built" if sim.yard_rank(key) > 0 else ("open" if sim.yard_cols() >= COLS else "shut")}
 	var built: String = sim.yard_side(key, col)
 	var look := "shut"
-	if built == side:
+	if built.contains(side):
 		look = "built"
 	elif built != "":
-		look = "other"
+		look = "other"                        # its other side built: open, at the dearer price (option B)
 	elif col < sim.yard_cols():
 		look = "open"
 	return {"look": look}

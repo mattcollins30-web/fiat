@@ -419,7 +419,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0) -> void:
 	g["level"] = sim.level()
 	g["best_tier"] = sim.best_tier
 	g["best_depth"] = sim.best_depth
-	g["yard_built"] = sim.yard_built()           # the Yard's lanes (9 Oct): picks built, ranks bought
+	g["yard_built"] = sim.yard_built()           # the Yard's lanes (9 Oct): picks built, both sides of a column counted (24 Oct), ranks bought
 	var ranks := 0
 	for k in sim.yard_ranks:
 		ranks += int(sim.yard_ranks[k])

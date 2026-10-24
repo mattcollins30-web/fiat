@@ -66,7 +66,8 @@ func state_for(id: String) -> Dictionary:
 	var built: String = sim.yard_side(key, c)
 	var block: String = sim.yard_pick_block(key, c, side)
 	var open: bool = block == "" or block.begins_with("Short") or block.begins_with("Wants")     # open but for the price: drawn as reachable
-	return {"taken": built == side, "active": built == side, "reach": built != side and open, "theirs": built != "" and built != side, "cost": sim.yard_pick_cost(key, c), "block": block}
+	var mine: bool = built.contains(side)
+	return {"taken": mine, "active": mine, "reach": not mine and open, "theirs": false, "cost": sim.yard_pick_cost(key, c), "block": block}     # nothing locks (24 Oct, option B): the other side reachable, never "theirs"
 
 
 func stack_of(_id: String, _nd: Dictionary) -> Array:
