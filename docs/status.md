@@ -6698,3 +6698,45 @@ pass; the reviewer on the code):
   run; the web-art manifest still lists the old picks. The bot now builds Battery over Overtime: expect drift in the
   balance gates that isn't the skills'.
 - Smoke green on run 224. Not a build to play (the picks do nothing yet), so VERSION stays 0.7.8.
+
+## Milestone 8, steps 2-3 (24 Oct): the mockups, the engine, the Poacher's eight, on screen, the bot
+
+- Step 2 (d3852c9): the mockups agreed on the canvas (the fight's buttons at the frame's foot, the picker on the Runs
+  card, the Pitch's columns option B), the words through the language pass (skills.md section 11), the Generator's
+  five energy pictures run.
+- Step 3a (6285452): the skill engine in the sim: energy (a pool filled each fight, regen with a share of pace),
+  cooldowns (capped cut), the auto rules, the press and the switch, the Poacher's eight in the fight; the odds' dry runs
+  read them through the same code. Smoke 228.
+- Step 3b (2c21422): the Poacher's eight on his tree (the hung notables, swaps agreed on the canvas), only your class
+  learns its skills, the Headmaster's Cap never teaches one; cdr, energy gain and max energy affixes. SAVE_VERSION 8.
+  Smoke 230.
+- Step 3c (6c7496b): the fight's energy bar and three buttons, the Runs card's foot in thirds with the skills' button,
+  the picker, skill nodes ringed on the web. Smoke 232.
+- Step 3d (c21ce2f): the bot picks its three. Smoke 233.
+
+## Milestone 8, step 4 (24 Oct): every class's skills, the Recruit, the unlocks, the broken builds
+
+- Every class's eight on its tree (32 hung notables swapped; the table in skills.md "Step 4's swaps"); the effects
+  generalised in the sim (wards, cleanses, buffs, holds, hits, energy, kills, Code blue's last stand, Bung's tins, Back
+  of the van's grenade once a fight).
+- The Recruit, the sixth class (the Quartermaster opens him): Ordnance and Drill at 0° on the wheel, joints with
+  Knuckles and Blades (Petrol had no free place; its class halves' generic +20% folded onto Deep and Weight behind it),
+  skills 10% cheaper and energy 20% quicker. The ring's 0° node is now a resists entry.
+- The unlock order: the Poacher first; the Gamekeeper opens the Paramedic, the Carpet Man the Doorman, the Manager the
+  Scrapper (and the Fence, moved off the Carpet Man), the Quartermaster the Recruit, Kev's first story the Drifter.
+- Training's band (Matt: option B on the canvas's Band board): the class cards in two rows of three, a lock and the
+  head's name on a locked one, the perks in the tooltip; the words column back to 718 px.
+- Matt's calls (all recommended): Not today now "Under 25% HP, you take 40% less damage" (Code blue took the killing
+  hit); Look lively "+40% pace for 6 seconds"; Sedative dart "One man on you sleeps for 4 seconds"; the Poacher's card
+  "+40% to the first"; Barred pays XP only; Smoke and Suppressing fire don't stack.
+- The broken builds redone (docs/design/broken_builds.md): each recipe now four nodes in Data.COMBOS, walked from
+  nothing under the real gates by the smoke (the web had left the doc's paths behind); the Recruit's Drilled (the
+  Army's three, the Quartermaster's Rifle, Bust them up and Flattened; a kill while a skill of his runs, +3% physical a
+  stack).
+- Art (tools/make_skills_art_manifest.py, 65 jobs, about $5.20): the 48 skills' pictures (art/skills/<id>.png, the web's
+  skill nodes draw the same), the Recruit's 13 tree pictures, his two emblems, face and figure.
+- The reviewer's catches over three rounds, all in with checks a mutation turned red: Ringing ears froze a gang with
+  nothing slotted; Code blue could be pressed as a cleanse; Back of the van was once a run; Barred paid out; Drilled
+  missed an effect's last tick; the language pass twice (skills.md section 11).
+- For Matt: Not today only works under 25% HP, where the bot and the odds' dry runs have already left (they bail at a
+  quarter), so the balance read never sees it.

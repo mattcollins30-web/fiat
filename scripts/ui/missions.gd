@@ -456,7 +456,7 @@ func show_state(s) -> void:
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
 		c["rig"].visible = is_open
 		c["rig"].disabled = sim.on_mission()
-		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode]])
+		UI.fit_button(c["rig"], ["Rig at the gate: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "Rig: %s ▾" % Words.TOP_UP_MID[sim.top_up_mode], "%s ▾" % Words.TOP_UP_SHORT[sim.top_up_mode], "%s ▾" % Words.TOP_UP_TINY[sim.top_up_mode]])
 		if not is_open:
 			c["note"].text = ""
 		elif sim.hp < sim.max_hp() * 0.5:

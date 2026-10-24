@@ -421,7 +421,7 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
 | Adrenaline | +25% damage and rate of fire for 8 seconds | 3+ on you |
 | Major incident | Clears every ailment on you, and you take no wound this run | 2+ ailments |
 | Two sugars | Energy refills 50% quicker for 10 seconds | When ready |
-| Sedative dart | The nearest man sleeps for 4 seconds; a hit wakes him | 3+ on you |
+| Sedative dart | One man on you sleeps for 4 seconds | 3+ on you |
 | Strapped up | The next hit that would wound you leaves no wound | Under half HP |
 | Code blue | Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared | Last stand |
 
@@ -431,11 +431,11 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
 | Shoulder charge | Hits the nearest man for ×3 damage and sends him to the back | When ready |
 | Headbutt | Hits the nearest man for ×1.5 damage and stuns him for 2 seconds | 3+ on you |
 | Brace | +60% armour for 6 seconds | 3+ on you |
-| Barred | The nearest man is out of the fight: he counts as a kill but drops nothing. Never works on a head. | 3+ on you |
+| Barred | Throws the nearest man out: a kill, but he drops nothing. Not on a head. | 3+ on you |
 | Not on the list | One fewer on you for 10 seconds | 3+ on you |
 | Shutters down | Take 80% less damage for 4 seconds | Under half HP |
 | Pat down | The nearest man loses his armour and resists for 10 seconds | Opener, then ready |
-| Chucking-out time | Everyone on you is stunned for 2 seconds, then takes 50% more damage from you for 6 seconds | 3+ on you |
+| Chucking-out time | Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds | 3+ on you |
 
 **The Scrapper**
 | Skill | Line | Rule |
@@ -465,7 +465,7 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
 | Skill | Line | Rule |
 |---|---|---|
 | Duck and weave | The next 3 hits on you miss | 3+ on you |
-| Look lively | +40% pace and rate of fire for 6 seconds | When ready |
+| Look lively | +40% pace for 6 seconds | When ready |
 | Elbow room | Everyone on you does 25% less damage to you and takes 15% more from you, for 8 seconds | 3+ on you |
 | Gone | Out of sight for 4 seconds: nothing can hit you. Your next shot does triple damage. | Under half HP |
 | Coin toss | A 50% chance of double damage for 8 seconds | When ready |
@@ -504,3 +504,84 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
    checked against the radio's medic in the build.)
 5. **The Scrapper keeps both:** the Bank's repair man who stripped the estate's cars for copper on the side.
 6. **Style guide v3:** affix lines number first ("+8% damage"); "8 seconds" in lines, "8 s" in chips.
+
+### Step 4's swaps (24 Oct): the hung notables the other four classes' skills took
+
+As the Poacher's (the canvas's Swaps board): each skill takes one of its lane's four hung notables; the passive goes onto a filler of its kind nearby, is kept whole on a filler's place, or is dropped. The Recruit's two element halves took Blades' Butcher's and Knuckles' Sovereign rings; their +20% went onto Deep (bleed 20 → 40) and Weight behind it (physical 12 → 32).
+
+| Lane | Column | Was | Now | Its passive |
+|---|---|---|---|---|
+| Muscle | 1.5 | Bulk | Shoulder charge | onto Gym (hp 4 -> 14) |
+| Muscle | 2.5 | Shoulder | Headbutt | dropped (typed damage_pct 15) |
+| Muscle | 3.5 | Hard case | Brace | onto Broad shoulders (armour_pct 5 -> 17) |
+| Muscle | 4.5 | Off the canvas | Barred | kept whole on Thick skin's place (armour_pct 8 gone) |
+| The door | 1.5 | Doorframe | Not on the list | onto Eye contact (armour_pct 5 -> 15) |
+| The door | 2.5 | Hands up | Shutters down | dropped (physical_pct 15, no physical_pct filler in the lane) |
+| The door | 3.5 | Big lad | Pat down | onto Stance (hp 10 -> 18) |
+| The door | 4.5 | Last orders | Chucking-out time | kept whole on Keep back's place (armour_pct 5 gone) |
+| Triage | 1.5 | Good hands | Tourniquet | onto Steady pulse (heal_pct 10 -> 30) |
+| Triage | 2.5 | Quick dressing | Antidote | onto Fast hands (med_speed_pct 15 -> 35) |
+| Triage | 3.5 | Grab bag | Adrenaline | onto Stock take (med_cap 1 -> 2) |
+| Triage | 4.5 | Worst first | Major incident | kept whole on Pressure's place (heal_pct 15 gone) |
+| Shifts | 1.5 | Flask | Two sugars | onto Rest easy (rest_pct 25 -> 55) |
+| Shifts | 2.5 | Regulars | Sedative dart | onto Mates' rates (treat_pct 20 -> 40) |
+| Shifts | 3.5 | Last bus | Strapped up | onto Night shift (hp 5 -> 13) |
+| Shifts | 4.5 | Clocking off | Code blue | kept whole on Cold tea's place (rest_pct 25 gone) |
+| Stripping | 1.5 | Socket set | Ring main | onto Nose for parts (att_share 5 -> 15) |
+| Stripping | 2.5 | Oily rag | Hot work | dropped (typed damage_pct 15) |
+| Stripping | 3.5 | Salvage | Breakdown | kept whole on Fast strip's place (search_pct 15 gone) |
+| Stripping | 4.5 | Workbench | Short circuit | kept whole on Magpie eye's place (loot_pct 4 gone) |
+| Fencing | 1.5 | Haggler | Bung | onto Gift of the gab (sell_pct 10 -> 25) |
+| Fencing | 2.5 | Shop local | Knock-off kit | dropped (buy_pct 10, no buy_pct filler in the lane) |
+| Fencing | 3.5 | Pub talk | Back of the van | onto Contacts (cash_pct 10 -> 25) |
+| Fencing | 4.5 | Back pocket | Everything must go | kept whole on Fair price's place (sell_pct 10 gone) |
+| Moving on | 1.5 | Tarmac | Duck and weave | onto Light feet (pace_pct 5 -> 11) |
+| Moving on | 2.5 | Thumb out | Look lively | onto Head start (patrol_pct 10 -> 20) |
+| Moving on | 3.5 | Light pack | Elbow room | dropped (cells 3, no cells filler in the lane) |
+| Moving on | 4.5 | B-roads | Gone | kept whole on Never still's place (patrol_pct 10 gone) |
+| Luck | 1.5 | Lucky penny | Coin toss | onto Jammy (rarity 10 -> 25) |
+| Luck | 2.5 | Coppers | Close shave | onto Found tins (cash_pct 10 -> 22) |
+| Luck | 3.5 | Beady eye | Chancer | onto Charmed (loot_pct 3 -> 9) |
+| Luck | 4.5 | Spare change | Jackpot | kept whole on Pockets's place (cash_pct 10 gone) |
+
+### Step 4's pass (24 Oct): the Recruit, his tree, the unlocks
+
+Two reviewers (the style guide v3 and this section), then the editor's call. What went in:
+
+| Was | Now | Why |
+|---|---|---|
+| Card "Skills −10% cost" | "Skills 10% cheaper" | a line starting "−" is a cost on the cards (red); as "Search 25% quicker" |
+| Recruit "was": "Walked out of the Barracks with the stores. …" | "Joined up for the meals. Still folds his kit square." | his unlock line already says the Barracks; no class repeats it |
+| Recruit "arrives": "… a crate he won't open …" | "… a box he won't open …" | *crate* is what a search opens |
+| Recruit wall: "Went over the top. Somebody had to." | "Folded his kit square and went first." | the medic says "Somebody had to"; *over the top* is 1916 |
+| Unlock line "Training offers the Recruit. Walked out …" | "… He walked out of the Barracks with the stores." | without *He* it reads as Training walking out |
+| Paramedic "was": "Stayed on the ambulances after the pay stopped. …" | "Was a student paramedic when the ambulances stopped. The doctor taught her the rest." | Matt's call 4 (the apprentice); keeps her "still in the green" |
+| Ledger: "… He banked it with the Manager. …" | "… The Carpet Man banked it with the Manager. …" | *He* was unclear |
+| Kit list · Webbing · Pace stick · Ammo boxes | Cookhouse · Spare pouch · Flak jacket · Detonators | *kit* is the worn gear; Issue Webbing is a unique; *pace* is a stat; *ammo* is banned |
+| Rifle drill · Stand easy · Bed block | Range day · At ease · Lights out | reads as rifles only; beside the skill Stand to; obscure |
+| Hard targets · Danger area · Shock and awe | Brute force · Grenadier · Ringing ears | reads as defence; beside Danger close; *shock* is an element, and American |
+| Live firing · Covering fire · On the double · Passing out | Firing blanks · Cover me · Quick march · Passing-out parade | the Live tree; a third "…fire" in Drill; same as Double time; reads as fainting |
+| Cook it off: "Every grenade hits one more man" | "Every grenade also hits a man who isn't on you yet" | grenades already hit everyone on you |
+| Blast burns: "Your grenades set …" | "Every grenade sets everyone it hits burning; …" | as its siblings |
+| Firing blanks: "… your guns do 15% less damage" | "… you do 15% less damage" | it cuts all his damage |
+| Cover me: "While a skill of yours is running, the gang …" | "Take 25% less damage while one of your skills is in effect" | *running* collides with a run; *the gang* is loose |
+| Double time: "… twice as fast …" | "… twice as quickly …" | the glossary's *quicker* |
+| Joints: "Your skills' own hits and throws …" | "Hits and throws from your skills do 25% more damage" / "… open a bleed" | *own* didn't say what it leaves out |
+| Barred: "The nearest man is out of the fight: … Never works on a head." | "Throws the nearest man out: a kill, but he drops nothing. Not on a head." | two lines in Training's panel at 430 px |
+| Chucking-out time: "Everyone on you is stunned for 2 seconds, then takes 50% more damage from you for 6 seconds" | "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds" | the same; Flashbang's form |
+| Rig at the gate, narrowest | "Best ▾" · "As is ▾" · "Top up ▾" (after "Best only ▾") | a third of the card's foot now every class has skills; "Leave ▾" read as leaving the run (second pass) |
+| The Recruit's broken build's log line | "The drill's taking over." | as its siblings; "drill" points at his lane |
+| A locked card's tooltip, second line | "Opens after the Quartermaster" | the card shows a lock and "the Quartermaster" (option B) |
+| Locked card: "After the Ma…" (cut) | "Opens after" / "the Manager" | over two lines, whole |
+| The fillers' chips (were "Notable") | "+10% grenade damage" · "+10% energy gain" · "4% shorter cooldowns" · "+10 max energy"; sentences "Every grenade hits harder." · "Energy refills quicker." · "Skills come round again sooner." · "More energy to spend on skills." | the affixes' words |
+
+Kept: Pull the pin, Square bashing, Sandbags, Reveille, Brasso (Stanley knife is the precedent), Spit and polish, Kit
+inspection, Fix bayonets, Double time, Recruit's boots, Recruit's bayonet, "Opens after", the other unlock lines, "the
+ledger in the Manager's vault".
+
+Matt's calls on these (24 Oct, "all recommended are good with me"): the Poacher's card line "+40% first hit" →
+"+40% to the first"; the Clinic's shut slot keeps "the Gamekeeper's vet's bag" (it's what opens the Clinic for the
+doctor); Not today's new effect "Under 25% HP, you take 40% less damage" (figures, not "a quarter": the mechanics lines' rule) (Code blue took the killing hit); Look
+lively "+40% pace for 6 seconds" (pace covers the rate of fire: its ×1.4 as it was); Sedative dart "One man on you
+sleeps for 4 seconds" (the sim holds one of them, not the man you're shooting). Kept: Ordnance↔Knuckles, Drill↔Blades;
+Barred pays his XP only; Smoke and Suppressing fire don't stack (the stronger holds).

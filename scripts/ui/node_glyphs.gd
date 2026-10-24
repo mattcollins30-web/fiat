@@ -85,7 +85,17 @@ const OF_EFFECT := {
 
 ## A skill's glyph until its picture is painted (24 Oct, milestone 8): what it does at a glance.
 const SKILL := {"clean_shot": "first", "flush_them_out": "spread", "go_to_ground": "quiet", "one_for_the_pot": "dmg",
-	"collared": "lock", "gin_trap": "bleed", "decoy": "person", "net_every_hole": "three"}
+	"collared": "lock", "gin_trap": "bleed", "decoy": "person", "net_every_hole": "three",
+	"tourniquet": "bleed", "antidote": "poison", "adrenaline": "up", "major_incident": "med",
+	"two_sugars": "clock", "sedative_dart": "quiet", "strapped_up": "armour", "code_blue": "hp",
+	"shoulder_charge": "phys", "headbutt": "lock", "brace": "armour", "barred": "stand",
+	"not_on_the_list": "pen", "shutters_down": "half", "pat_down": "search", "chucking_out_time": "three",
+	"ring_main": "shock", "hot_work": "fire", "breakdown": "runs", "short_circuit": "spread",
+	"bung": "cash", "knock_off_kit": "wrench", "back_of_the_van": "crate", "everything_must_go": "loud",
+	"lob_one_in": "army", "flashbang": "lock", "smoke": "quiet", "danger_close": "skull",
+	"suppressing_fire": "runs", "make_ready": "dmg", "stand_to": "clock", "fire_and_manoeuvre": "pace",
+	"duck_and_weave": "pace", "look_lively": "up", "elbow_room": "person", "gone": "where",
+	"coin_toss": "dice", "close_shave": "forever", "chancer": "gem", "jackpot": "cash"}     # every class's eight (24 Oct, milestone 8 step 4)
 
 
 ## A node's glyph: its effect's; an element's figure (a conversion, "+% fire", "fire_more") its element's; else a star.

@@ -27,7 +27,7 @@ var cls := ""                  # the class the gate set: put back on the runner 
 var lorry_at := -1.0           # the hour the first lorry was beaten
 var bails := 0                 # runs left under a quarter HP: the deaths a player who pushes on takes (the deaths row)
 var _cleared_at := {}           # tier -> the depth its words were last cleared at: none put back there
-const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg"}   # the gun a class builds around
+const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvised", "Drifter": "smg", "Recruit": "rifle"}   # the gun a class builds around
 
 
 ## One mission on the tier the bot would pick, or a minute's rest if it's hurt
@@ -187,7 +187,7 @@ func _sig_tags(sg: Dictionary) -> String:
 ## the cleanse that clears what site `i` fires (bleed, poison, burn), then a control or defensive skill; what's left
 ## filled dearest first, a cleanse the site doesn't call for last. Every rule on auto: the bot never presses.
 func pick_skills(sim, i: int) -> void:
-	var learnt: Array = sim.skills_learnt()
+	var learnt: Array = sim.skills_learnt().filter(func(id): return id != "back_of_the_van" and str(Data.SKILLS[id].get("rule", "")) != "last_stand")     # the bot throws no grenades, and leaves at a quarter HP before a killing hit (the review)
 	var rank := func(id) -> float: return (100.0 if Data.SKILLS[id].get("signature", false) else 0.0) + float(Data.SKILLS[id]["cost"])
 	var by_rank := func(ids: Array) -> Array:
 		var out: Array = ids.duplicate()

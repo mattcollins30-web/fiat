@@ -188,6 +188,7 @@ const TOPPED_UP_MEDS := "Topped up: %d meds from the stash into the rig"     # m
 const PACK_EMPTY := "Nothing found yet. What the run turns up lands here; pick a cell to read it."     # the run's pack card, empty (23 Oct)
 const PACK_PICK := "Pick a cell for its figures; Select ditches several at once"
 const TOP_UP_SHORT := {"leave": "Leave it", "fill": "Top up", "best": "Best only"}
+const TOP_UP_TINY := {"leave": "As is", "fill": "Top up", "best": "Best"}     # a third of the card's foot, beside the skills (24 Oct)
 const TOP_UP_TIP := "The rig at the gate, before every run. Top up: every grade of the worn guns' rounds, then the meds, the best first, into the pouches left. Best grades only: the top grade of each, nothing lower. Leave it: the rig goes as packed. Press to change; it stays set."
 const RADIO_READ := "The Radio reads the papers you hold: %d new to the drawer"     # the Radio open (15 Oct): the papers held, read at once
 const RADIO_LEAD := "On the radio: "     # a heard line in the log (13 Oct, Matt: no speaker; the radio has its own voice)
@@ -235,7 +236,7 @@ const RADIO := [
 const KEEPSAKE := "A keepsake: it opened %s"
 const GATE_ITEMS := {
 	"The vet's bag": "The keeper's, for the dogs. Everything a vet carries, and the medic says that's most of what a doctor does.",
-	"The Carpet Man's ledger": "Who bought what, and who paid. The Fence will want this more than anyone.",
+	"The Carpet Man's ledger": "Who bought what, and who paid. The Carpet Man banked it with the Manager. The Fence will want this more than anyone.",
 	"A military radio": "Army issue, the set the lorry never delivered. It reaches further than Kev does.",
 	"The armourer's tool roll": "Punches, a hammer, a cleaning rod, and the gun oil gone into the canvas. A workshop in a roll.",
 }
@@ -247,7 +248,7 @@ const GATES := {
 	"yard": "The deeds are the Pitch's. Build on it.",
 	"radio": "The set's in and working. The Radio's on the air.",
 	"workshop": "The armourer's roll goes on the bench. The Workshop's open.",
-	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the Carpet Man's ledger", "yard": "the Manager's deeds", "radio": "the Quartermaster's military radio", "workshop": "the Quartermaster's tool roll"},
+	"shut": {"clinic": "the Gamekeeper's vet's bag", "fence": "the ledger in the Manager's vault", "yard": "the Manager's deeds", "radio": "the Quartermaster's military radio", "workshop": "the Quartermaster's tool roll"},
 }
 
 ## The gangs (12 Oct, now they have faces): a name a zone, and a line as one arrives, in turn.
@@ -359,12 +360,15 @@ const PASTS := {
 	"Doorman": {"was": "Worked the door of a club that closed the week after. Still stands like it's open.",
 		"arrives": "A doorman turns up at the Pitch. Big, polite, looks at your hands first.",
 		"wall": "Stood in the doorway to the end. Nobody got past while he did."},
-	"Paramedic": {"was": "Stayed on the ambulances after the pay stopped. Left when the fuel did.",
+	"Paramedic": {"was": "Was a student paramedic when the ambulances stopped. The doctor taught her the rest.",
 		"arrives": "A paramedic turns up at the Pitch, still in the green. Asks where the kit is.",
 		"wall": "Stayed with the last one. Always did."},
 	"Scrapper": {"was": "Stripped the estate's own cars for copper. Knows what everything's worth, to the penny.",
 		"arrives": "A scrapper turns up at the Pitch with a trolley. Prices the Pitch before saying hello.",
 		"wall": "Knew what everything was worth. The Fence got the trolley."},
+	"Recruit": {"was": "Joined up for the meals. Still folds his kit square.",
+		"arrives": "A recruit turns up at the Pitch with a kit bag and a box he won't open in front of you.",
+		"wall": "Folded his kit square and went first."},
 	"Drifter": {"was": "Walked in from somewhere worse. Doesn't say where; doesn't plan to stay.",
 		"arrives": "A drifter turns up at the Pitch. Light pack, good boots, already looking at the road.",
 		"wall": "Kept walking. Not far enough."},
@@ -1036,11 +1040,22 @@ const COMBOS := {
 	"overdose": "The dose is coming back round.",
 	"opened_for_good": "They're not closing up.",
 	"live_load": "The current's building.",
+	"drilled": "The drill's taking over.",
 }
 
 
 const CREW := {
 	"swap": "The %s stands down; the %s goes out next, at level %d.",
+}
+## A class arrives (24 Oct, milestone 8: skills.md §6 and §11): who unlocks them, the log's line and the card's tag
+## until then.
+const OPENS_AFTER := "Opens after"     # a locked class's card, over the head that opens it (24 Oct)
+const CLASS_UNLOCK := {
+	"Paramedic": {"who": "the Gamekeeper", "line": "Training offers the Paramedic. The doctor's apprentice. The doctor keeps the Clinic; she goes out."},
+	"Doorman": {"who": "the Carpet Man", "line": "Training offers the Doorman. The Carpet Man's old bodyguard."},
+	"Scrapper": {"who": "the Manager", "line": "Training offers the Scrapper. The Bank's repair man."},
+	"Recruit": {"who": "the Quartermaster", "line": "Training offers the Recruit. He walked out of the Barracks with the stores."},
+	"Drifter": {"who": "Kev's first story", "line": "Training offers the Drifter. Found on the road."},
 }
 const YARD := {
 	"runner_refund": "The last runner's training went with them: %d point%s back to spend, and a past to pick for the next.",

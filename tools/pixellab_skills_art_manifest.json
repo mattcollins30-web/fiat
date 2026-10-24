@@ -1,0 +1,1431 @@
+{
+ "_readme": "Milestone 8's art (24 Oct, Matt: \"anything else parked plus art for everything new\"). Two manifests:\n\n  python3 tools/make_skills_art_manifest.py\n    -> tools/pixellab_skills_art_test_manifest.json   (8: the Recruit's face, one emblem, four skills, two nodes)\n    -> tools/pixellab_skills_art_manifest.json        (the lot, the test's jobs included)\n\n  C:\\Godot\\godot.console.exe --headless --script res://tools/pixellab_batch_v2.gd ++ --manifest res://tools/pixellab_skills_art_manifest.json ++ --parallel 3\n  (++ --dry-run to list; one that came out wrong: ++ --only <name> ++ --force)\n\nWhat's in it, and where each lands (every file new; nothing on disk is overwritten):\n- The 48 skills' pictures (art/skills/<id>.png, 64 px, transparent): the fight's buttons, the Runs card and the picker\n  find them by id (SkillBar.picture), and the web's skill nodes draw the same picture (web_view). The web art's\n  node template (make_web_art_manifest.node_job: its ICON tail, style and references), out to art/skills/.\n- The Recruit's tree (art/nodes/<slug>.png, 64 px): his eleven notables, keystones and capstones, and his two halves in\n  Blades and Knuckles. Found by name, no wiring.\n- The Recruit's two emblems (art/web/region_ordnance.png, region_drill.png, 96 px), as the other class lanes'.\n- The Recruit's face (art/people_new/recruit.png, 128) and figure (art/body_new/body_recruit.png, 208 x 488): People and\n  Body read those paths first; the wheel's portrait is cut from the face. Run the face before the figure (it is the\n  figure's first reference).\n\nChecked against docs/art/pixellab_lessons.md: every object alone with no setting (no floor, table, grass or sky named);\neverything usually printed or stencilled said plain, unprinted, no lettering, no number; no dials, clock faces or\nlabels with marks; British coins named British; no \"sign\"; a seed range of its own (103xxx).\n\nskills 48, nodes 13, emblems 2, people 2",
+ "jobs": [
+  {
+   "out": "art/skills/clean_shot.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103000,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single brass rifle cartridge standing upright, its tip polished bright, plain, no stamp or lettering on its base. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill clean_shot: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/flush_them_out.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103001,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a long beater's stick of rough hazel with a strip of white rag tied near its end. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill flush_them_out: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/go_to_ground.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103002,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a folded camouflage scrim net, green and brown strips of cloth knotted through it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill go_to_ground: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/one_for_the_pot.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103003,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small dented black cooking pot with a wire bail handle, a wisp of steam rising from it, plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill one_for_the_pot: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/collared.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103004,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heavy worn leather dog collar with a brass buckle, closed in a loop, plain, no tag. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill collared: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/gin_trap.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103005,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an old rusted gin trap with its iron jaws sprung open, a short chain hanging from it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill gin_trap: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/decoy.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103006,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a carved wooden decoy duck, its paint faded and flaking. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill decoy: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/net_every_hole.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103007,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bundle of purse nets of brown twine with wooden pegs, gathered in a heap. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill net_every_hole: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/tourniquet.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103008,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rolled black tourniquet strap with a plain metal windlass rod through it, unprinted, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill tourniquet: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/antidote.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103009,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a small brown glass vial with a rubber stopper and a short syringe beside it, the vial plain, no label. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill antidote: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/adrenaline.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103010,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an orange auto-injector pen, plain, unprinted, no lettering, no label, no numbers. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill adrenaline: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/major_incident.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103011,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a hard green paramedic's response bag, unzipped, rolls of bandage showing, plain, no cross, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill major_incident: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/two_sugars.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103012,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a chipped white enamel mug of strong tea with two sugar cubes beside it, plain, no print on the mug. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill two_sugars: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/sedative_dart.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103013,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single tranquilliser dart with a red feathered tail and a steel needle, plain, no markings. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill sedative_dart: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/strapped_up.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103014,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a tight roll of white crepe bandage held with two small metal clips. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill strapped_up: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/code_blue.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103015,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of defibrillator paddles with coiled grey leads, plain, no lettering, no numbers, no screen. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill code_blue: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/shoulder_charge.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103016,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heavy padded black bomber jacket shoulder, the leather scuffed and creased, the jacket alone. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill shoulder_charge: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/headbutt.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103017,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a cracked white plaster cast of a broad forehead and brow, the plaster alone. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill headbutt: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/brace.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103018,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a thick black leather weightlifting belt, buckled in a loop, plain, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill brace: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/barred.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103019,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heavy steel door bar dropped across two iron brackets, the bar and brackets alone. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill barred: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/not_on_the_list.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103020,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a black clipboard with a blank sheet of paper on it and a pen clipped to the top, the paper plain with no writing. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill not_on_the_list: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/shutters_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103021,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a section of corrugated steel roller shutter, pulled down, dented and rust-streaked, plain, no graffiti. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill shutters_down: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/pat_down.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103022,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of black leather gloves lying open, palms up, worn. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill pat_down: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/chucking_out_time.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103023,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a large brass hand bell with a wooden handle, the bell plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill chucking_out_time: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/ring_main.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103024,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a coil of copper electrical cable, stripped bare at both ends, the copper bright. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill ring_main: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/hot_work.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103025,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a welding torch with a bright blue-white flame at its nozzle and a short hose trailing off. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill hot_work: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/breakdown.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103026,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a loose handful of brass bullet cartridges spilling from a plain steel tin, unprinted, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill breakdown: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/short_circuit.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103027,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a burnt-out plain grey electrical junction box with sparks bursting from its open front, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill short_circuit: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/bung.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103028,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a fat folded wad of old British banknotes held by a rubber band, the notes plain and blank, no faces, no numbers. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill bung: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/knock_off_kit.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103029,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a battered plain cardboard box with its flaps open and a gun part showing inside, unprinted, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill knock_off_kit: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/back_of_the_van.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103030,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single round green hand grenade, its pin and lever in place, plain, no markings. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill back_of_the_van: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/everything_must_go.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103031,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a crowbar and a hacksaw crossed over each other, both worn. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill everything_must_go: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/lob_one_in.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103032,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single round olive-drab hand grenade with its pin pulled out and the ring hanging free, plain, no markings. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill lob_one_in: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/flashbang.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103033,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain grey cylindrical stun grenade with a bright white flash bursting from its top, no markings, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill flashbang: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/smoke.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103034,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a plain green smoke canister pouring thick grey-white smoke, no markings, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill smoke: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/danger_close.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103035,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a jagged burst of shrapnel fragments flying outwards from a bright orange blast, the blast alone. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill danger_close: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/suppressing_fire.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103036,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a long belt of brass machine-gun rounds in plain steel links, coiled. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill suppressing_fire: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/make_ready.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103037,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a rifle magazine with brass rounds showing at its lips, plain steel, unprinted, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill make_ready: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/stand_to.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103038,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an army bugle of dented brass with a faded red cord, plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill stand_to: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/fire_and_manoeuvre.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103039,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of two olive-drab army helmets side by side, one a little ahead of the other, plain, no badges. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill fire_and_manoeuvre: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/duck_and_weave.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103040,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of worn black boxing gloves tied together by their laces, plain, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill duck_and_weave: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/look_lively.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103041,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of battered running trainers with frayed laces, plain, no logos. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill look_lively: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/elbow_room.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103042,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a bent elbow pad of scuffed black plastic and foam, plain, no logos. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill elbow_room: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/gone.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103043,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an empty hooded grey jacket hanging on nothing, slumped, as if its wearer just slipped out of it. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill gone: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/coin_toss.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103044,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a single old British penny spinning on its edge, copper, worn smooth. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill coin_toss: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/close_shave.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103045,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of an open cut-throat razor with a bone handle, its blade bright. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill close_shave: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/chancer.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103046,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a four-leaf clover pressed flat and dry, pale green. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill chancer: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/skills/jackpot.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103047,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heap of old British coins spilling over each other, copper and silver, worn. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "the skill jackpot: its button, the Runs card, the picker, its web node"
+  },
+  {
+   "out": "art/nodes/cook_it_off.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103100,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a hand grenade with a thin curl of smoke rising from its fuse, its pin gone, plain, no markings. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Cook it off (the Recruit)"
+  },
+  {
+   "out": "art/nodes/grenadier.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103101,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a canvas grenade pouch on a webbing strap holding two round grenades, plain, unprinted, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Grenadier (the Recruit)"
+  },
+  {
+   "out": "art/nodes/brute_force.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103102,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a heavy army rifle butt of scarred dark wood with a steel butt plate. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Brute force (the Recruit)"
+  },
+  {
+   "out": "art/nodes/blast_burns.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103103,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a blackened scorched scrap of olive cloth, its edges still glowing orange. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Blast burns (the Recruit)"
+  },
+  {
+   "out": "art/nodes/ringing_ears.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103104,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of foam ear defenders on a plain grey headband, one cup dented, plain, no lettering. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Ringing ears (the Recruit)"
+  },
+  {
+   "out": "art/nodes/firing_blanks.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103105,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a handful of crimped brass blank cartridges, their tips closed in a star, plain, no stamps. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Firing blanks (the Recruit)"
+  },
+  {
+   "out": "art/nodes/cover_me.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103106,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a waist-high wall of stacked sandbags, the sacks plain, unprinted. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Cover me (the Recruit)"
+  },
+  {
+   "out": "art/nodes/quick_march.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103107,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a pair of polished black army boots, laced tight, standing together, plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Quick march (the Recruit)"
+  },
+  {
+   "out": "art/nodes/fix_bayonets.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103108,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a steel army bayonet with a dark wooden grip, its blade long and bright. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Fix bayonets (the Recruit)"
+  },
+  {
+   "out": "art/nodes/double_time.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103109,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a battered steel army mess tin with a folding handle, plain, unprinted. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Double time (the Recruit)"
+  },
+  {
+   "out": "art/nodes/passing_out_parade.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103110,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a dark green beret with a plain brass badge with no lettering, folded neat. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Passing-out parade (the Recruit)"
+  },
+  {
+   "out": "art/nodes/recruit_s_bayonet.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103111,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of a steel bayonet tip, its edge nicked and dark at the point. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Recruit's bayonet (the Recruit)"
+  },
+  {
+   "out": "art/nodes/recruit_s_boots.png",
+   "endpoint": "generate-image-v2",
+   "width": 64,
+   "height": 64,
+   "no_background": true,
+   "single": true,
+   "seed": 103112,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art still-life of one heavy black army boot with a scuffed steel toecap, plain. The object alone and cut out, centred and filling the frame: no floor, wall, ground or sky around it, a single bold silhouette that still reads at a quarter of this size, soft directional overcast daylight, natural material rendering with painterly shading; no black outlines, not anime, not a cartoon, not a glossy video-game icon. Muted cool northern palette, worn, nothing new. Nothing else in the frame, no hands, no person, no text, no logos, no numbers, every label, clock face, page, note and packet plain and blank, a transparent background.",
+   "_where": "Training's web: Recruit's boots (the Recruit)"
+  },
+  {
+   "out": "art/web/region_ordnance.png",
+   "endpoint": "generate-image-v2",
+   "width": 96,
+   "height": 96,
+   "no_background": true,
+   "single": true,
+   "seed": 103200,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art emblem of a round hand grenade with its pin and ring, painted as a pictogram on a weathered metal plate: one strong shape, centred, filling the frame, read at a glance from across a room. Soft overcast daylight, painterly shading, muted cool northern palette with olive drab and brass; no black outlines, not anime, not a cartoon, not a glossy video-game badge. Nothing else in the frame, no person, no text, no lettering, no numbers, a transparent background.",
+   "_where": "the region's emblem beside its label: ordnance"
+  },
+  {
+   "out": "art/web/region_drill.png",
+   "endpoint": "generate-image-v2",
+   "width": 96,
+   "height": 96,
+   "no_background": true,
+   "single": true,
+   "seed": 103201,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/ui/dps.png",
+   "reference_images": [
+    "res://art/ui/dps.png",
+    "res://art/ui/hp.png"
+   ],
+   "description": "A realistic painted pixel-art emblem of a pair of army boots side by side at attention, painted as a pictogram on a weathered metal plate: one strong shape, centred, filling the frame, read at a glance from across a room. Soft overcast daylight, painterly shading, muted cool northern palette with black leather and khaki; no black outlines, not anime, not a cartoon, not a glossy video-game badge. Nothing else in the frame, no person, no text, no lettering, no numbers, a transparent background.",
+   "_where": "the region's emblem beside its label: drill"
+  },
+  {
+   "out": "art/people_new/recruit.png",
+   "endpoint": "generate-image-v2",
+   "width": 128,
+   "height": 128,
+   "no_background": false,
+   "single": true,
+   "seed": 103300,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people/fence.png",
+   "description": "A realistic painted pixel-art portrait, head and shoulders, of the Recruit, a young man of about twenty who walked out of the army barracks with the stores: a soldier's short back and sides grown out, a thin hungry face, a faded olive army-surplus jacket with the badges cut off, a plain khaki scarf, a steady wary look, a little too serious for his age. Looking just past the viewer. Post-collapse Britain, overcast light. One person centred, filling the frame, no text, no border, plain dark background.",
+   "_where": "the Recruit's face: his card, the Stats room, his wheel (cut from it)"
+  },
+  {
+   "out": "art/body_new/body_recruit.png",
+   "endpoint": "generate-image-v2",
+   "width": 208,
+   "height": 488,
+   "no_background": true,
+   "single": true,
+   "seed": 103301,
+   "style_options": {
+    "color_palette": true,
+    "outline": true,
+    "detail": true,
+    "shading": true
+   },
+   "style_image": "res://art/people_new/recruit.png",
+   "reference_images": [
+    "res://art/people_new/recruit.png",
+    "res://art/body_new/body_poacher.png"
+   ],
+   "description": "A realistic painted pixel-art full-length figure of the Recruit: a young lean man of about twenty, a grown-out army haircut; a faded olive army-surplus jacket with the badges cut off over a plain grey jumper, khaki trousers tucked into polished black army boots, webbing belt with empty pouches. The same person and clothes as the first reference image, in the pose and framing of the second: standing still, facing the viewer, weight on both feet, arms down and a little away from the body, hands empty, no weapon, no bag, no helmet. Head top near the top edge, boot soles near the bottom edge, the whole figure inside the middle of the frame. Cold light from above and slightly in front, the legs darker towards the boots, no ground shadow. Muted post-collapse British palette, one dark outline. Transparent background, no text, no border.",
+   "_where": "the Recruit's figure (run after his face)"
+  }
+ ]
+}

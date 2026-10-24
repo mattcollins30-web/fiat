@@ -65,7 +65,7 @@ const R_ENTRY := 20.0
 const ENTRY_LABEL_ZOOM := 0.8     # the names move from the rim to the starters from here (23 Oct; 0.6 boxed the cold's name 150 px off its starter)              # a class's entry node, with the class's emblem on it (23 Oct, Matt: "so it's clear where each class's journey starts")
 const R_RING := 1480.0             # the paragon ring (slice 4), round the outside (1300 to 1480, 23 Oct: outside the wheels)
 const ELEMENT_LAY := {"Live": -90.0, "Petrol": -30.0, "Blades": 30.0, "Knuckles": 90.0, "The cold": 150.0, "The Rat Man": -150.0}
-const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}
+const CLASS_LAY := {"Drifter": -120.0, "Scrapper": -60.0, "Recruit": 0.0, "Doorman": 60.0, "Paramedic": 120.0, "Poacher": 180.0}     # the Recruit on the free spoke (24 Oct, milestone 8)
 
 var sim
 var selected := ""
@@ -131,7 +131,7 @@ func lay_out() -> void:
 	var ring: Dictionary = Data.RING
 	for i in range(ring["nodes"].size()):
 		layout["%s/%d" % [ring["name"], i]] = Vector2.from_angle(deg_to_rad(float(ring["nodes"][i]["ring"]))) * R_RING
-	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2(R_RING + 30.0, 0.0), "align": 1}     # at the right, where no class sits (23 Oct: the top's is the Drifter's)
+	_axis[ring["name"]] = {"at": Vector2(0, -R_RING), "dir": Vector2.RIGHT, "tone": Pal.ACCENT, "label_at": Vector2.from_angle(deg_to_rad(30.0)) * (R_RING + 30.0), "align": 1}     # between the Recruit and the Doorman, where no class sits (24 Oct: the right is the Recruit's now)
 	_find_bounds()
 	_labels_by_entry()
 
@@ -190,17 +190,18 @@ func _labels_by_entry() -> void:
 		placed.append(best[2])
 
 
-## A region's name on screen as it's drawn at this zoom (for the smoke): the words and the emblem, by the starter.
-func entry_label_rect(tn: String) -> Rect2:
+## A region's name on screen as it's drawn at this zoom (for the smoke): the words and the emblem, by the starter -
+## or, `rim`, at its place for the whole web (24 Oct: the ring's sat on the Recruit's).
+func entry_label_rect(tn: String, rim := false) -> Rect2:
 	var ax: Dictionary = _axis.get(tn, {})
-	if not ax.has("entry_at"):
+	if not ax.has("entry_at") and not rim:
 		return Rect2()
-	var p: Vector2 = to_screen(ax["entry_at"])
+	var p: Vector2 = to_screen(ax.get("rim_at", ax.get("label_at", Vector2.ZERO)) if rim else ax["entry_at"])
 	var fs: int = 15 if zoom >= 0.6 else 13
 	var w: float = _font_bold.get_string_size(region_words(tn), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if str(ax.get("class", "")) == "" and emblem_of(tn) != null else 0.0
+	var es: float = EMBLEM * clampf(zoom, 0.7, 1.2) if str(ax.get("class", "")) == "" and tn != Data.COMMON_TREE and emblem_of(tn) != null else 0.0
 	var full: float = w + (es + 6.0 if es > 0.0 else 0.0)
-	var al: int = int(ax.get("entry_align", 0))
+	var al: int = int(ax.get("rim_align", ax.get("align", 0))) if rim else int(ax.get("entry_align", 0))
 	var x0: float = p.x - full if al < 0 else (p.x if al > 0 else p.x - full / 2.0)
 	var top: float = maxf(fs * 0.8, es / 2.0 + 7.0)
 	var foot: float = maxf(fs * 0.3, es / 2.0 - 5.0)
@@ -449,6 +450,8 @@ static var _pics := {}
 func picture_slug(nd: Dictionary) -> String:
 	if nd.has("ring"):
 		return "ring_" + str(nd.get("key", ""))
+	if nd.has("skill"):
+		return "skill/" + str(nd["skill"])         # a skill node draws the skill's own picture (art/skills/<id>.png, 24 Oct)
 	return slug_of(str(nd.get("name", "")))
 
 
@@ -473,6 +476,8 @@ static func slug_of(words: String) -> String:
 static func picture(slug: String) -> Texture2D:
 	if slug == "":
 		return null
+	if slug.begins_with("skill/"):
+		return art_at("res://art/skills/%s.png" % slug.substr(6))
 	return art_at("res://art/nodes/%s.png" % slug)
 
 
@@ -627,7 +632,9 @@ static var _portraits := {}
 static func wheel_portrait(cls: String) -> Texture2D:
 	if _portraits.has(cls):
 		return _portraits[cls]
-	var tex: Texture2D = art_at("res://art/people/%s.png" % cls.to_lower())
+	var tex: Texture2D = art_at("res://art/people_new/%s.png" % cls.to_lower())     # the new face first, as the card's (24 Oct: the Recruit's is only there)
+	if tex == null:
+		tex = art_at("res://art/people/%s.png" % cls.to_lower())
 	var out: Texture2D = null
 	if tex != null:
 		var img: Image = tex.get_image()

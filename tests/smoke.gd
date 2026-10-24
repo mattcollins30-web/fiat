@@ -738,6 +738,7 @@ func _init() -> void:
 	_med_over_time_checks(main)
 	_skills_checks(main.sim)
 	_skills_ui_checks(main)
+	_class_skills_checks(main.sim)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -2772,7 +2773,7 @@ func _web_rule_checks(main) -> void:
 	sim.tree = []
 	var nodes := {}
 	for path in ["Stalking/Snare and wait", "Snares/Twine", "The door/Last orders", "Live/Overload", "Muscle/Bin lid", "Triage/Jab", "Triage/Worst first",
-			"Moving on/B-roads", "Moving on/Light pack", "Fencing/Shop local", "Stripping/Workbench", "Moving on/On a roll", "Petrol/Oil drum", "The cold/Brittle",
+			"Moving on/B-roads", "Stripping/Workbench", "Moving on/On a roll", "Petrol/Oil drum", "The cold/Brittle",
 			"Blades/Arterial", "Knuckles/Floored", "Live/Capacitor", "Stalking/Clocked", "Shifts/Clocking off", "Fencing/Back pocket", "Stripping/Breaker's yard", "Muscle/Off the canvas"]:
 		nodes[path] = Data.node_id_named(path)
 		_check(nodes[path] != "", "%s is not on the web" % path)
@@ -2851,17 +2852,7 @@ func _web_rule_checks(main) -> void:
 		sim.hp = sim.max_hp() * 0.3
 		_check(sim.use_med(it["id"]) and m["using"] != null and is_equal_approx(float(m["using"]["heal"]), full * 1.5), "Worst first did not add half: %s of %.1f" % [str(m["using"]["heal"]) if m["using"] != null else "nil", full])
 	sim.extract_now()
-	# Light pack, Shop local, Workbench, On a roll, the dots' lengths
-	var cap0: int = sim.capacity_raw()
-	with.call(["Moving on/Light pack"])
-	_check(sim.capacity_raw() == cap0 + 3, "Light pack did not add 3 cells: %d -> %d" % [cap0, sim.capacity_raw()])
-	sim.tree = []
-	sim._dry_memo.clear()
-	var it_p: Dictionary = sim._plain("Primary", sim.START_WEAPON)
-	it_p["value"] = 1000
-	var p0: int = sim.price(it_p)
-	with.call(["Fencing/Shop local"])
-	_check(sim.price(it_p) < p0 and sim.price(it_p) >= int(p0 * 0.89), "Shop local did not take a tenth off: %d -> %d" % [p0, sim.price(it_p)])
+	# Workbench, On a roll, the dots' lengths (Light pack and Shop local went for the Drifter's and the Scrapper's skills, 24 Oct)
 	with.call(["Stripping/Workbench"])
 	var piece: Dictionary = sim.stash.filter(func(x): return x.has("affixes") and not x["affixes"].is_empty() and not Items.is_ammo(x))[0] if not sim.stash.filter(func(x): return x.has("affixes") and not x["affixes"].is_empty() and not Items.is_ammo(x)).is_empty() else {}
 	if not piece.is_empty():
@@ -3241,9 +3232,12 @@ func _element_checks(main) -> void:
 	# classes and the notice; the classes at its foot, right
 	var sum_r := Rect2(bk._sum.position, bk._sum.size)
 	_check(bk.HEAD_H == Pal.BAND_H and Rect2(0, 0, Pal.GRID_W, bk.HEAD_H).encloses(sum_r) and sum_r.position.y >= bk._points.position.y + 40 and sum_r.position.x >= bk._face.position.x + bk._face.size.x and not sum_r.intersects(Rect2(bk._class_line.position, bk._class_line.size)), "the sum is not in the band under the points: %s" % str(sum_r))
+	var classes_r := Rect2()
 	for cb in bk._class_buttons:
 		var cr := Rect2(cb.position, cb.size)
-		_check(not cr.intersects(sum_r) and cr.end.y <= bk.HEAD_H - 8 and cr.end.y >= bk.HEAD_H - 24, "a class button is off the band's foot or on the sum: %s" % str(cr))
+		classes_r = cr if classes_r.size == Vector2.ZERO else classes_r.merge(cr)
+		_check(not cr.intersects(sum_r), "a class button is on the sum: %s" % str(cr))
+	_check(classes_r.end.y <= bk.HEAD_H - 8 and classes_r.end.y >= bk.HEAD_H - 24 and classes_r.position.y >= bk._class_line.position.y + bk._class_line.size.y, "the classes' two rows are off the band's foot: %s" % str(classes_r))     # two rows of three (24 Oct, option B)
 	_check(not Rect2(bk._notice.position, bk._notice.size).intersects(sum_r), "the class notice sits on the sum")
 	_class_card_checks(bk)
 	# the lines over the classes (12 Oct): as the screen stands, with no past (two lines), and with a past and no trait (one)
@@ -6352,7 +6346,7 @@ func _playtest_checks(main) -> void:
 		main._missions._rig(0)
 		main.refresh()
 		seen_modes.append(sim.top_up_mode)
-		_check(c["rig"].text.contains(Words.TOP_UP_MID[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
+		_check(c["rig"].text.contains(Words.TOP_UP_MID[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_SHORT[sim.top_up_mode]) or c["rig"].text.contains(Words.TOP_UP_TINY[sim.top_up_mode]), "the rig's button doesn't say its setting: '%s' for %s" % [c["rig"].text, sim.top_up_mode])
 		_check_fit(main, "Runs (the rig %s)" % sim.top_up_mode)
 	_check(seen_modes.size() == 3 and seen_modes.back() == mode0 and seen_modes.has("leave") and seen_modes.has("best") and seen_modes.has("fill"), "the rig's button didn't cycle the three: %s" % str(seen_modes))
 	# what they resist reads as chips in the element's colour, the shape of what they fire; "Nothing" when they resist nothing
@@ -12710,7 +12704,8 @@ func _auto_gone_checks(main) -> void:
 
 ## The broken builds (21 Oct, Data.COMBOS): on with every part, off with any one gone or the balance's switch, and a
 ## run's stacks growing with no top - the class, its set at its count, the unique, the element's keystone and capstone.
-const COMBO_TREES := {"embers": "Petrol", "clean_kills": "The cold", "overdose": "The Rat Man", "opened_for_good": "Blades", "live_load": "Live"}
+const COMBO_TREES := {"embers": "Petrol", "clean_kills": "The cold", "overdose": "The Rat Man", "opened_for_good": "Blades", "live_load": "Live", "drilled": "Knuckles"}
+const COMBO_STOPPERS := ["never_there", "hit_and_run", "walking_wounded"]     # the nodes that would stop a run's stacks: no recipe walks through one
 func _combo_checks(main) -> void:
 	var sim = main.sim
 	if sim.on_mission():
@@ -12756,6 +12751,22 @@ func _combo_checks(main) -> void:
 				u = x
 		sim.equipped[u["slot"]] = Items.roll_unique(u, sim.rng, 10)
 		sim._dry_memo.clear()
+		# its recipe (24 Oct): each node it needs walked to from nothing under the real gates, the build on at the end
+		var tree_full: Array = sim.tree.duplicate()
+		var gates_was: bool = sim.core_gates
+		sim.core_gates = true
+		sim.tree = []
+		sim.xp = maxf(sim.xp, Data.xp_for_level(50))
+		var walked: Array = []
+		for path in c.get("recipe", []):
+			var rid: String = Data.node_id_named(str(path))
+			_check(rid != "" and _walk(sim, rid), "%s's recipe: %s does not train from nothing ('%s')" % [key, path, sim.train_block(rid) if rid != "" else "no such node"])
+			walked.append(rid)
+		_check(c.get("recipe", []).size() == 4 and sim.combo_on(key), "%s's recipe doesn't turn the build on: %s" % [key, str(c.get("recipe", []))])
+		_check(not COMBO_STOPPERS.any(func(e): return sim.has_node(e)), "%s's recipe walks through a node that stops the stacks" % key)
+		sim.core_gates = gates_was
+		sim.tree = tree_full
+		sim._dry_memo.clear()
 		_check(sim.combo_on(key), "%s's build is not on with every part: class %s, set %d, rule %s, nodes %s" % [key, sim.cls, sim.set_count(str(c["set"])), str(sim.has_rule(str(c["rule"]))), str(c["nodes"].map(func(n): return sim.has_node(str(n))))])
 		var others: Array = Data.COMBOS.keys().filter(func(k2): return k2 != key and sim.combo_on(k2))
 		_check(others.is_empty(), "%s's build turns on another's: %s" % [key, str(others)])
@@ -12775,6 +12786,14 @@ func _combo_checks(main) -> void:
 					var fed: Dictionary = sim._plain(Data.AMMO, box["name"])
 					Items.set_stack(fed, 2000)
 					sim.rig.push_front(fed)
+		if key == "drilled":                   # the Recruit's: a kill while a skill of his runs - three of his slotted, auto
+			var sk_d: Dictionary = _skill_node_ids()
+			for sid in ["make_ready", "suppressing_fire", "smoke"]:
+				if not sim.tree.has(sk_d[sid]):
+					sim.tree.append(sk_d[sid])
+			sim.skill_slots = ["make_ready", "suppressing_fire", "smoke"]
+			sim.skill_auto = [true, true, true]
+			sim._dry_memo.clear()
 		sim.hp = sim.max_hp()
 		sim.deploy(3)
 		sim.mission["remaining"] = 400
@@ -12790,6 +12809,20 @@ func _combo_checks(main) -> void:
 		_check(seen.size() == 4 and float(seen[0]) > 0.0 and (float(seen[2]) > float(seen[0]) or int(seen[1]) == 0) and is_finite(float(seen[2])), "%s's stacks did not grow on a run (stacks, left): %s" % [key, str(seen)])
 		if sim.on_mission():
 			sim.extract_now()
+		if key == "drilled":                   # and none with no skill of his running (the review: the condition alone)
+			sim.skill_slots = ["", "", ""]
+			sim._dry_memo.clear()
+			sim.hp = sim.max_hp()
+			sim.deploy(3)
+			sim.mission["remaining"] = 400
+			for k in range(20):
+				sim.hp = sim.max_hp()
+				sim.advance(1.0)
+				if sim.mission == null:
+					break
+			_check(sim.mission != null and int(sim.mission["kills"]) > 0 and Sim.combo_stacks(sim.mission) == 0.0, "Drilled stacked with no skill of his running: %s" % (str(Sim.combo_stacks(sim.mission)) if sim.mission != null else "no run"))
+			if sim.on_mission():
+				sim.extract_now()
 	# their figures on screen: past an int's top, a figure in e-notation that fits its tile (the review)
 	_check(Fmt.num(1e30) == "1.0e30" and Fmt.num(2.5e12) == "2.5T" and Fmt.num(3e9) == "3.0B" and Fmt.num(-1e30) == Fmt.MINUS + "1.0e30", "a broken build's figures read %s / %s / %s" % [Fmt.num(1e30), Fmt.num(2.5e12), Fmt.num(3e9)])
 	sim.load_dict(hold)
@@ -12835,16 +12868,17 @@ func _growth_checks(main) -> void:
 	var cost: int = sim.paragon_reset_cost()
 	_check(cost > 0 and sim.paragon_reset() and sim.paragon_free() == 10 and is_equal_approx(sim.cash, 1e9 - cost), "the board's reset: %d free, cost %d" % [sim.paragon_free(), cost])
 	for k in range(4):
-		sim.paragon_add("resists")           # the ring (slice 4): no resists node is an entry, so the first point is the step round to one
+		sim.paragon_add("resists")           # the ring: the Recruit's spoke at 0° is a resists entry (24 Oct; it was a step round from hp)
 	for k in range(2):
 		sim.paragon_add("find")
-	_check(sim.paragon_pts("resists") == 3 and sim.paragon_pts("hp") == 1 and sim.paragon_pts("find") == 2, "the way round the ring to resists reads wrong: %s" % str(sim.ring))
-	_check(is_equal_approx(sim.resist_raw("fire") - fire0, 3.0 * float(Data.paragon_row("resists")["pct"])) and is_equal_approx(sim.rarity_bonus() - find0, 2.0 * float(Data.paragon_row("find")["pct"]) / 100.0), "resists +%.1f and find +%.3f off the board" % [sim.resist_raw("fire") - fire0, sim.rarity_bonus() - find0])
+	_check(sim.paragon_pts("resists") == 4 and sim.paragon_pts("hp") == 0 and sim.paragon_pts("find") == 2, "the way round the ring to resists reads wrong: %s" % str(sim.ring))
+	_check(Data.RING["nodes"].filter(func(nd): return nd["entry"]).map(func(nd): return str(nd["key"])).size() == Data.CLASSES.size(), "the ring has an entry off a class's spoke")
+	_check(is_equal_approx(sim.resist_raw("fire") - fire0, 4.0 * float(Data.paragon_row("resists")["pct"])) and is_equal_approx(sim.rarity_bonus() - find0, 2.0 * float(Data.paragon_row("find")["pct"]) / 100.0), "resists +%.1f and find +%.3f off the board" % [sim.resist_raw("fire") - fire0, sim.rarity_bonus() - find0])
 	# the crew's, saved with the camp, not a runner's
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	var back = Sim.new()
 	back.load_dict(d)
-	_check(back.paragon() == 10 and back.paragon_pts("resists") == 3 and back.paragon_pts("find") == 2 and back.ring.values().all(func(v): return typeof(v) == TYPE_INT), "the ring did not survive a save: %s" % str(back.ring))
+	_check(back.paragon() == 10 and back.paragon_pts("resists") == 4 and back.paragon_pts("find") == 2 and back.ring.values().all(func(v): return typeof(v) == TYPE_INT), "the ring did not survive a save: %s" % str(back.ring))
 	# a resist point re-reads the odds (the review: it moves no bucket in their key); the board's resists stop at the cap
 	var key0: Array = sim._odds_key(0)
 	sim.paragon_add("resists")
@@ -13392,7 +13426,7 @@ func _yard_checks(main) -> void:
 		main._barracks.selected = ""
 		main.refresh()
 		_check(main._barracks._words.text.begins_with(tdata["name"] + ": "), "Training does not give the trait's figures: '%s'" % main._barracks._words.text)
-		_check(main._barracks._class_cards.all(func(c): return c["lines"][0].text != "") and main._barracks._class_buttons.all(func(cb): return cb.visible), "Training does not keep the pasts' cards up")
+		_check(main._barracks._class_cards.all(func(c): return c["name"].text != "") and main._barracks._class_buttons.all(func(cb): return cb.visible), "Training does not keep the pasts' cards up")
 		_check_fit(main, "Caravan (trait)")
 		main.show_room(main.OVERVIEW)
 		main.refresh()
@@ -15491,6 +15525,17 @@ func _web_checks(main) -> void:
 				if rects[names[a_i]].grow(wv.radius_of(wv.node_of(id)) * zl).has_point(q):
 					hits += 1
 			_check(hits == 0, "at zoom %.1f %s's name covers %d nodes" % [zl, names[a_i], hits])
+	# the whole web: every name at its rim place, none on another (24 Oct: the ring's sat on the Recruit's at 0°)
+	wv.zoom = wv.ENTRY_LABEL_ZOOM * 0.5
+	var rim_rects := {}
+	for tn in wv._axis:
+		if not wv._axis[tn].get("hide_label", false):
+			rim_rects[tn] = wv.entry_label_rect(tn, true)
+	var rim_names: Array = rim_rects.keys()
+	_check(rim_names.has(Data.RING_TREE) and rim_names.size() >= 2 + Data.ELEMENT_TREES.size() + Data.CLASSES.size(), "only %d names at the rim" % rim_names.size())
+	for a_i in range(rim_names.size()):
+		for b_i in range(a_i + 1, rim_names.size()):
+			_check(not rim_rects[rim_names[a_i]].intersects(rim_rects[rim_names[b_i]]), "the whole web: %s's name sits on %s's" % [rim_names[a_i], rim_names[b_i]])
 	wv.zoom = zoom_held
 	wv.cam = cam_held
 	_check(wv.LINK_LIT_DIM.get_luminance() > wv.LINK_DIM.get_luminance() + 0.1 and wv.LINK_DIM.get_luminance() > Pal.CARD_LINE.get_luminance(), "the lit wheel's links don't stand off the dim ones")
@@ -15578,6 +15623,7 @@ func _web_checks(main) -> void:
 	WV.assume_pics = false
 	_check(wv.radius_of({"name": "Nothing drawn here"}) == wv.R_PLAIN and wv.R_SMALL_PIC > wv.R_PLAIN and wv.R_FILLER_PIC > wv.R_FILLER, "a small node without a picture isn't plain, or the pictured sizes don't grow")
 	_check(main._radio._atlas._web.picture_slug({"name": "Light fingers", "filler": true}).begins_with("map_f_"), "the Dial's fillers borrow Training's pictures")
+	_check(main._barracks.web().picture_slug({"name": "Clean shot", "skill": "clean_shot"}) == "skill/clean_shot", "a skill node doesn't take the skill's own picture")
 	# the frame's calls (23 Oct, Matt's fans: ~2,500 a frame at the whole web): the nodes from the one atlas, the links
 	# a colour at a time, the words a size at a time - each canvas under BATCH_MAX at its whole view and close in, and
 	# every picture, glyph and emblem packed
@@ -15700,7 +15746,7 @@ func _card_frame_checks(main) -> void:
 	_check(Menu._build_words() == "FIAT · v" + Menu.VERSION and not Menu._build_words().contains("×"), "the title's foot reads '%s', not the version" % Menu._build_words())
 	print("card frames ok: the label over the card, one frame picked; the title's version")
 
-## The pasts as cards (14 Oct, Matt; mockup class_cards_mockup.png): a face, the name and the short lines inside each
+## The pasts as cards (14 Oct, Matt; two rows of three from 24 Oct, the Band board): a face, the name and its tag in each
 ## card, in a row, none overlapping; the runner's lit and ticked; a short line for each part of the sentence (a cost red);
 ## the sentence a tooltip; a ? in the face's place with no past.
 func _class_card_checks(bk) -> void:
@@ -15710,18 +15756,22 @@ func _class_card_checks(bk) -> void:
 		var c: Dictionary = bk._class_cards[k]
 		var cd: Dictionary = Data.CLASSES[k]
 		var box := Rect2(Vector2.ZERO, cb.size)
-		for n in [c["face"], c["name"], c["tag"]] + c["lines"]:
-			_check(box.encloses(Rect2(n.position, n.size)), "%s's card: a part runs out of it: %s" % [cd["name"], str(Rect2(n.position, n.size))])
+		for n in [c["face"], c["name"], c["tag"], c["lock"]]:
+			_check(not n.visible or box.encloses(Rect2(n.position, n.size)), "%s's card: a part runs out of it: %s" % [cd["name"], str(Rect2(n.position, n.size))])
 		_check(c["face"].visible and c["face"].texture != null, "%s's card has no face" % cd["name"])
 		var short: Array = cd.get("short", [])
-		_check(short.size() >= 2 and short.size() <= bk.CLASS_SHORT and short.size() == str(cd["words"]).split(";").size(), "%s's short lines don't match its sentence: %s" % [cd["name"], str(short)])
-		var lit: bool = sim.cls == "" or sim.cls == cd["name"] or bk._armed == cd["name"]
-		for r in range(short.size()):
-			var want: Color = (Pal.GOOD if short[r][1] else Pal.BAD) if lit else Pal.TEXT_3
-			_check(c["lines"][r].text == str(short[r][0]) and (str(short[r][0]).begins_with("−") == not short[r][1]) and c["lines"][r].get_theme_color("font_color") == want, "%s's short line %d reads '%s' in the wrong tone" % [cd["name"], r, c["lines"][r].text])
+		_check(short.size() >= 2 and short.size() <= 3 and short.size() == str(cd["words"]).split(";").size(), "%s's short lines don't match its sentence: %s" % [cd["name"], str(short)])
+		var open: bool = sim.cls == cd["name"] or sim.class_open(str(cd["name"]))     # a locked class: a lock and the head that opens it (24 Oct, option B)
+		var lit: bool = (sim.cls == "" or sim.cls == cd["name"] or bk._armed == cd["name"]) and open
+		var who: String = str(Words.CLASS_UNLOCK.get(cd["name"], {}).get("who", ""))
+		if not open:
+			_check(cb.disabled and c["lock"].visible and c["tag"].text == who and c["tag"].get_theme_color("font_color") == Pal.TEXT_3 and c["tag"].position.x >= c["lock"].position.x + c["lock"].size.x and cb.tooltip_text.contains("%s %s" % [Words.OPENS_AFTER, who]), "%s's locked card: '%s', lock %s" % [cd["name"], c["tag"].text, str(c["lock"].visible)])
+		else:
+			_check(not c["lock"].visible, "%s's card shows a lock and it's open" % cd["name"])
+		_check(UI.text_width(c["tag"], c["tag"].text) <= c["tag"].size.x + 0.5 and UI.text_width(c["name"], c["name"].text) <= c["name"].size.x + 0.5, "%s's card's words run past it: '%s' '%s'" % [cd["name"], c["name"].text, c["tag"].text])
 		_check(is_equal_approx(c["face"].modulate.a, 1.0 if lit else 0.75), "%s's face is not %s beside the picked past" % [cd["name"], "lit" if lit else "dimmed"])
 		_check(cb.tooltip_text.contains(str(cd["words"])), "%s's card does not carry its sentence" % cd["name"])
-		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else bk._crew_tag(cd["name"]))), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
+		_check(c["tag"].text == ("✓ your past" if sim.cls == cd["name"] else ("press again" if bk._armed == cd["name"] else (bk._crew_tag(cd["name"]) if open else who))), "%s's card's tag reads '%s'" % [cd["name"], c["tag"].text])
 		if k > 0:
 			_check(not Rect2(cb.position, cb.size).intersects(Rect2(bk._class_buttons[k - 1].position, bk._class_buttons[k - 1].size)), "the pasts' cards overlap")
 	_check(bk._face_q.visible == (sim.cls == ""), "the ? in the face's place shows with a past, or not without one")
@@ -16123,7 +16173,7 @@ func _gates_checks(main) -> void:
 		sim.runs_total = 1
 		sim._radio_after_run()
 		var said_before: bool = sim.heard.size() > before_heard and str(sim.events.back()[1]).begins_with(Words.RADIO_LEAD)
-		_check(said_before, "%s's line before wasn't said with his site open" % b["name"])
+		_check(said_before or b["opens"].is_empty(), "%s's line before wasn't said with his site open" % b["name"])     # a head who opens no room (the Carpet Man, 24 Oct) has his class instead
 		sim.hp = sim.max_hp()
 		sim.boss_armed[bt] = true
 		sim.deploy(bt)
@@ -16140,7 +16190,9 @@ func _gates_checks(main) -> void:
 		for th in things:
 			_check(Items.is_deeds(th) or str(th["base"]) in sim.keepsakes, "%s's %s isn't a keepsake" % [b["name"], th["base"]])
 		sim.extract_now()
-		_check(sim.heard.size() > heard_before, "%s's line after wasn't said" % b["name"])
+		_check(sim.heard.size() > heard_before or b["opens"].is_empty(), "%s's line after wasn't said" % b["name"])
+		var opened_cls: Array = Words.CLASS_UNLOCK.keys().filter(func(nm): return sim.class_open(nm))
+		_check(sim.events.any(func(e): return opened_cls.any(func(nm): return str(e[1]) == str(Words.CLASS_UNLOCK[nm]["line"]))) or b["zone"] > 3, "%s down: no class's arrival said (%s open)" % [b["name"], str(opened_cls)])
 	_check(sim.unlocked.size() == Data.ROOMS_SHUT.size() and sim.stash.any(func(it): return Items.is_deeds(it)), "not every room opened, or the deeds didn't come home: %s" % str(sim.unlocked))
 	_check(sim.stash.all(func(it): return Items.opens(it) == "" or Items.is_deeds(it)), "a head's thing other than the deeds was stashed")
 	main.refresh()
@@ -17744,10 +17796,15 @@ func _skills_checks(sim) -> void:
 	# the Poacher's tree teaches his eight: four a lane on the hung notables, the fourth the signature
 	_set_cls(sim, "Poacher")
 	var sk_ids: Dictionary = _skill_node_ids()
-	_check(sk_ids.size() == 8 and Data.SKILLS.keys().all(func(k): return sk_ids.has(k)), "the Poacher's tree doesn't hold his eight skills: %s" % str(sk_ids.keys()))
-	for lane in ["Stalking", "Snares"]:
+	_check(sk_ids.size() == Data.SKILLS.size() and Data.SKILLS.size() == 8 * Data.CLASSES.size() and Data.SKILLS.keys().all(func(k): return sk_ids.has(k)), "the trees don't hold every class's eight skills: %d of %d" % [sk_ids.size(), Data.SKILLS.size()])
+	for t in Data.TREES:
+		if str(t.get("class", "")) == "":
+			continue
+		var lane: String = str(t["name"])
 		var in_lane: Array = sk_ids.keys().filter(func(k): return str(sk_ids[k]).begins_with(lane + "/"))
-		_check(in_lane.size() == 4 and in_lane.filter(func(k): return Data.SKILLS[k].get("signature", false)).size() == 1 and in_lane.all(func(k): return Data.SKILLS[k]["lane"] == lane), "%s holds %s" % [lane, str(in_lane)])
+		_check(in_lane.size() == 4 and in_lane.filter(func(k): return Data.SKILLS[k].get("signature", false)).size() == 1 and in_lane.all(func(k): return Data.SKILLS[k]["lane"] == lane and Data.SKILLS[k]["cls"] == t["class"]), "%s holds %s" % [lane, str(in_lane)])
+		for k in in_lane:
+			_check(Data.SKILL_RULES.has(str(Data.SKILLS[k]["rule"])) and str(Data.SKILLS[k].get("kind", "")) in ["damage", "cleanse", "control", "defence"], "%s's rule or kind isn't one: %s / %s" % [k, Data.SKILLS[k]["rule"], Data.SKILLS[k].get("kind", "")])
 	for k in sk_ids:
 		_check(sim.node(sk_ids[k])["name"] == Data.SKILLS[k]["name"] and str(sim.node(sk_ids[k])["words"]) == Data.SKILLS[k]["line"], "%s's node isn't named and worded as the skill" % k)
 	sim.tree = sim.tree.filter(func(id): return not sk_ids.values().has(id))
@@ -18000,7 +18057,7 @@ func _skills_checks(sim) -> void:
 	sim.set_skill_auto(2, false)
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
-	_check(sim.skills_learnt().size() == Data.SKILLS.size() and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
+	_check(sim.skills_learnt().size() == 8 and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
 	# the bot's three (3d): its best damage skill, the cleanse for what the site fires, a control or defensive one
 	var bot_b = Bot.new()
 	var poison_at := -1
@@ -18029,7 +18086,7 @@ func _skills_checks(sim) -> void:
 	for k in sk_ids:
 		if not sim.tree.has(sk_ids[k]):
 			sim.tree.append(sk_ids[k])
-	_check(sim.skills_learnt().is_empty() and not sim.skill_known("clean_shot"), "a Doorman has the Poacher's skills: %s" % str(sim.skills_learnt()))
+	_check(not sim.skills_learnt().any(func(k): return Data.SKILLS[k]["cls"] == "Poacher") and not sim.skill_known("clean_shot"), "a Doorman has the Poacher's skills: %s" % str(sim.skills_learnt()))
 	_set_cls(sim, "Poacher")
 	# the cooldown cap: the kit's and the Flywheel's past 40% stop at 40
 	if sim.equipped["Helmet"] == null:
@@ -18072,6 +18129,18 @@ func _skills_ui_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
+	var NG = load("res://scripts/ui/node_glyphs.gd")
+	var no_glyph: Array = Data.SKILLS.keys().filter(func(id): return not NG.SKILL.has(id) or not NG.SVG.has(NG.SKILL[id]))
+	_check(no_glyph.is_empty(), "skills with no glyph of their own: %s" % str(no_glyph))
+	# every plain node's figure and sentence in Training (24 Oct: the Recruit's fillers read "Notable" with no sentence)
+	var BK = load("res://scripts/ui/barracks.gd")
+	var no_words: Array = []
+	for t in Data.TREES + Data.ELEMENT_TREES:
+		for nd in t["nodes"]:
+			if nd.has("value") and not (nd.get("notable", false) or nd.get("keystone", false) or nd.get("capstone", false)):
+				if not BK.EFFECT_WORDS.has(nd["effect"]) or not BK.PANEL_WORDS.has(nd["effect"]):
+					no_words.append("%s (%s)" % [nd["name"], nd["effect"]])
+	_check(no_words.is_empty(), "plain nodes Training has no words for: %s" % str(no_words))
 	_set_cls(sim, "Poacher")
 	var sk_ids: Dictionary = _skill_node_ids()
 	for k in ["clean_shot", "flush_them_out", "collared", "gin_trap"]:
@@ -18125,10 +18194,15 @@ func _skills_ui_checks(main) -> void:
 	_check(not pk.visible and c["skills"].disabled, "on a run the picker stayed open or its button live: %s, %s" % [str(pk.visible), str(c["skills"].disabled)])
 	sim.extract_now()
 	main.refresh()
-	# a class with no skills yet: halves, no skills button
+	# every class has skills now: a Doorman's card has the button and his picker his eight
 	_set_cls(sim, "Doorman")
+	ms._shown = ""
 	main.refresh()
-	_check(not c["skills"].visible, "a Doorman's card shows a skills button")
+	_check(c["skills"].visible, "a Doorman's card has no skills button")
+	ms._skills_open()
+	main.refresh()
+	_check(pk.rows.filter(func(r): return r["btn"].visible and Data.SKILLS[str(r["id"])]["cls"] == "Doorman").size() == 8, "the Doorman's picker isn't his eight")
+	pk.visible = false
 	_set_cls(sim, "Poacher")
 	for k in ["clean_shot", "flush_them_out", "collared", "gin_trap"]:
 		if not sim.tree.has(sk_ids[k]):
@@ -18192,6 +18266,20 @@ func _skills_ui_checks(main) -> void:
 		_check(not sb.visible, "a Doorman's fight shows the Poacher's skills")
 		_set_cls(sim, "Poacher")
 	sim.extract_now()
+	# Training's class cards with nothing beaten: each locked one says what opens it, whole (24 Oct: "After the Ma…")
+	for b in range(sim.bosses_beaten.size()):
+		sim.bosses_beaten[b] = false
+	sim.story_beat = 0
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	var bk = main._barracks
+	for k in range(Data.CLASSES.size()):
+		var cnm: String = Data.CLASSES[k]["name"]
+		if Words.CLASS_UNLOCK.has(cnm):
+			var cc: Dictionary = bk._class_cards[k]
+			_check(bk._class_buttons[k].disabled and cc["lock"].visible and cc["tag"].text == str(Words.CLASS_UNLOCK[cnm]["who"]), "%s's locked card doesn't say what opens it: '%s'" % [cnm, cc["tag"].text])
+	_check_fit(main, "Training (the locked classes)")
+	main.show_room(main.MISSIONS)
 	sim.load_dict(saved)
 	main.refresh()
 	print("skills on screen ok: the card's button and picker, its lock, a class without, the fight's bar and buttons, a press, auto off")
@@ -18206,3 +18294,349 @@ func _stunned_chip(run) -> bool:
 		if ch._panels[k].visible and str(ch._labels[k].text).begins_with("Stunned"):
 			return true
 	return false
+
+
+## Every class's skills (24 Oct, milestone 8, step 4): each new effect does what its line says on a staged fight, and
+## ends on time; Code blue's last stand and its kept energy; Bung's tins; Back of the van once a fight; the Recruit's
+## tree and joints; who each head opens.
+func _class_skills_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var t: Dictionary = m["t"]
+	var fire := func(id: String) -> void:
+		sim._skills_fight_start(m)
+		m["sk"]["dt"] = 0.0
+		sim._skill_effect(m, t, sim.skill(id)["fx"])
+	m["remaining"] = 4
+	# wards and cleanses
+	m["my_dots"] = {"bleed": 9.0}
+	fire.call("tourniquet")
+	_check(not m["my_dots"].has("bleed") and not sim._skill_dot_lands(m, "bleed") and sim._skill_dot_lands(m, "fire"), "Tourniquet: the bleed stays or lands again, or wards fire too")
+	m["my_dots"] = {"poison": 9.0, "fire": 9.0}
+	fire.call("antidote")
+	_check(m["my_dots"].is_empty() and not sim._skill_dot_lands(m, "poison") and not sim._skill_dot_lands(m, "fire"), "Antidote: %s" % str(m["my_dots"]))
+	m["my_dots"] = {"poison": 9.0, "fire": 9.0, "bleed": 9.0}
+	fire.call("major_incident")
+	_check(m["my_dots"].is_empty() and sim._skill_wound_kept(m) and sim._skill_wound_kept(m), "Major incident: ailments %s, no wound this run %s" % [str(m["my_dots"]), str(m.get("no_wound", false))])
+	m["no_wound"] = false
+	fire.call("strapped_up")
+	_check(sim._skill_wound_kept(m) and not sim._skill_wound_kept(m), "Strapped up didn't keep one wound off, and only one")
+	fire.call("close_shave")
+	_check(not sim._skill_dot_lands(m, "poison") and sim._skill_dot_lands(m, "poison"), "Close shave didn't make one ailment miss, and only one")
+	# buffs, in and out
+	fire.call("adrenaline")
+	_check(is_equal_approx(sim._skill_hit_mult(m), 1.5625), "Adrenaline: ×%.3f" % sim._skill_hit_mult(m))
+	fire.call("knock_off_kit")
+	_check(is_equal_approx(sim._skill_hit_mult(m), 1.3), "Knock-off kit: ×%.2f" % sim._skill_hit_mult(m))
+	fire.call("everything_must_go")
+	_check(is_equal_approx(sim._skill_hit_mult(m), 2.0), "Everything must go: ×%.2f" % sim._skill_hit_mult(m))
+	fire.call("shutters_down")
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 0.2), "Shutters down: ×%.2f in" % sim._skill_in_mult(m, 3))
+	fire.call("suppressing_fire")
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 0.65), "Suppressing fire: ×%.2f in" % sim._skill_in_mult(m, 3))
+	fire.call("elbow_room")
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 0.75) and is_equal_approx(sim._skill_hit_mult(m), 1.15), "Elbow room: ×%.2f in, ×%.2f out" % [sim._skill_in_mult(m, 3), sim._skill_hit_mult(m)])
+	if sim.armour() <= 0.0:
+		sim.equipped["Armour"] = sim._plain("Armour", "Stab plates")     # Brace needs armour to brace (the review: it passed with none)
+	fire.call("brace")
+	_check(sim.armour() > 0.0 and sim._skill_in_mult(m, 3) < 1.0, "Brace took nothing off their fire: ×%.3f on %.0f armour" % [sim._skill_in_mult(m, 3), sim.armour()])
+	fire.call("short_circuit")
+	_check(is_equal_approx(sim._skill_type_mult(m, "shock"), 1.3) and sim._skill_in_mult(m, 3) == 0.0 and float(m["shock_t"]) > 0.0, "Short circuit: shock ×%.2f, in ×%.2f" % [sim._skill_type_mult(m, "shock"), sim._skill_in_mult(m, 3)])
+	fire.call("pat_down")
+	_check(is_equal_approx(sim._skill_pat(m), 1.0), "Pat down didn't take their resists")
+	fire.call("two_sugars")
+	_check(is_equal_approx(float(m["sk"]["fx"]["regen_x"]), 1.5) and float(m["sk"]["fx"]["regen_t"]) > 0.0, "Two sugars")
+	fire.call("gone")
+	_check(sim._skill_in_mult(m, 3) == 0.0 and is_equal_approx(sim._skill_hit_mult(m), 3.0), "Gone: in ×%.2f, out ×%.2f" % [sim._skill_in_mult(m, 3), sim._skill_hit_mult(m)])
+	fire.call("duck_and_weave")
+	_check(sim._skill_in_mult(m, 3) == 0.0 and float(m["sk"]["fx"]["hidden_t"]) > 0.0, "Duck and weave: in ×%.2f" % sim._skill_in_mult(m, 3))
+	# hits now
+	m["target_hp"] = 10000.0
+	fire.call("shoulder_charge")
+	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 3.0) < 0.5 and m["sk"]["fx"]["stuns"].size() + int(m["sk"]["stun_share"] > 0.0) > 0, "Shoulder charge: %.1f off" % (10000.0 - float(m["target_hp"])))
+	m["target_hp"] = 10000.0
+	fire.call("ring_main")
+	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 1.5 * mini(3, mini(4, sim.contact(t)))) < 0.5, "Ring main: %.1f off" % (10000.0 - float(m["target_hp"])))
+	m["target_hp"] = 10000.0
+	var hp0: float = sim.hp
+	fire.call("danger_close")
+	_check(float(m["target_hp"]) < 10000.0 and absf(hp0 - sim.hp - sim.max_hp() * 0.1) < 0.01, "Danger close: %.1f off them, %.1f off you" % [10000.0 - float(m["target_hp"]), hp0 - sim.hp])
+	sim.hp = sim.max_hp()
+	m["target_hp"] = 10000.0
+	m["dots"] = {}
+	fire.call("hot_work")
+	_check(float(m["dots"].get("fire", 0.0)) > 0.0, "Hot work didn't set him burning")
+	m["target_hp"] = 10000.0
+	fire.call("lob_one_in")
+	_check(float(m["target_hp"]) < 10000.0 and int(m.get("thrown", 0)) > 0, "Lob one in threw nothing")
+	# the rest of the 48 (the review: nine had no check)
+	fire.call("look_lively")
+	_check(is_equal_approx(sim._skill_hit_mult(m), 1.4), "Look lively: ×%.2f" % sim._skill_hit_mult(m))
+	fire.call("make_ready")
+	_check(is_equal_approx(sim._skill_hit_mult(m), 1.25) and float(m["sk"]["fx"]["buff_t"]) > 0.0, "Make ready: ×%.2f for %.1f s" % [sim._skill_hit_mult(m), float(m["sk"]["fx"].get("buff_t", 0.0))])
+	var heads := 0
+	for k in range(40):
+		fire.call("coin_toss")
+		heads += 1 if is_equal_approx(sim._skill_hit_mult(m), 2.0) else 0
+	_check(heads > 5 and heads < 35, "Coin toss came up %d of 40" % heads)
+	for id in ["flashbang", "smoke"]:
+		fire.call(id)
+		_check(sim._skill_in_mult(m, 3) <= 0.5 + 0.001, "%s: their fire ×%.2f" % [id, sim._skill_in_mult(m, 3)])
+	for id in ["headbutt", "not_on_the_list", "sedative_dart"]:
+		m["target_hp"] = 10000.0
+		fire.call(id)
+		var lasts_s: float = float(sim.skill(id)["fx"]["stun_one_s"])
+		_check(is_equal_approx(sim._skill_in_mult(m, 4), 0.75) and m["sk"]["fx"]["stuns"].size() == 1 and is_equal_approx(float(m["sk"]["fx"]["stuns"][0]), lasts_s), "%s: one of 4 held for %.0f s: ×%.2f, %s" % [id, lasts_s, sim._skill_in_mult(m, 4), str(m["sk"]["fx"]["stuns"])])
+	_check(absf(10000.0 - float(m["target_hp"])) < 0.01, "Sedative dart hit him")
+	m["target_hp"] = 10000.0
+	fire.call("headbutt")
+	_check(absf(10000.0 - float(m["target_hp"]) - sim.damage_total() * 1.5) < 0.5, "Headbutt: %.1f off" % (10000.0 - float(m["target_hp"])))
+	var gun_keep = sim.equipped["Primary"]
+	var rig_keep: Array = sim.rig.duplicate()
+	sim.equipped["Primary"] = sim._plain("Primary", "Pipe shotgun")     # a gun that takes rounds, and room for them
+	sim.rig = []
+	var gun_bd = sim.equipped["Primary"]
+	var r_bd: int = sim.rounds_for(gun_bd)
+	fire.call("breakdown")
+	sim._skills_on_kill(m)
+	_check(sim.rounds_for(gun_bd) == r_bd + 20, "Breakdown: %d rounds → %d" % [r_bd, sim.rounds_for(gun_bd)])
+	sim.equipped["Primary"] = gun_keep
+	sim.rig = rig_keep
+	# the timed ones end on time, nothing slotted (the review: §8's "effects end" untested; Ringing ears held a gang)
+	var slots0: Array = sim.skill_slots.duplicate()
+	sim.skill_slots = ["", "", ""]
+	for id in ["tourniquet", "brace", "suppressing_fire", "adrenaline", "net_every_hole"]:
+		fire.call(id)
+		var lasts: float = 0.0
+		for k in sim.skill(id)["fx"].keys():
+			if str(k).ends_with("_s"):
+				lasts = maxf(lasts, float(sim.skill(id)["fx"][k]))
+		var on_now := func() -> bool: return sim._skill_in_mult(m, 3) < 1.0 or sim._skill_hit_mult(m) > 1.0 or not sim._skill_dot_lands(m, "bleed")
+		var on_before: bool = on_now.call()
+		var ticks := 0
+		for step in range(int(floor(lasts)) - 1):
+			sim._skills_tick(m, t, 1.0, 3)
+			ticks += 1
+		_check(on_now.call(), "%s ended early: off after %d of its %.0f s" % [id, ticks, lasts])
+		for step in range(int(ceil(lasts)) + 2 - ticks):
+			sim._skills_tick(m, t, 1.0, 3)
+		_check(on_before and lasts > 0.0, "%s did nothing to time out (%.1f s)" % [id, lasts])
+		_check(is_equal_approx(sim._skill_in_mult(m, 3), 1.0) and is_equal_approx(sim._skill_hit_mult(m), 1.0) and sim._skill_dot_lands(m, "bleed"), "%s outlasted its %.0f s: in ×%.2f, out ×%.2f" % [id, lasts, sim._skill_in_mult(m, 3), sim._skill_hit_mult(m)])
+	sim.skill_slots = slots0
+	# energy, cooldowns, costs
+	sim._skills_fight_start(m)
+	m["sk"]["energy"] = 10.0
+	m["sk"]["cd"] = [5.0, 5.0, 5.0]
+	sim._skill_effect(m, t, sim.skill("stand_to")["fx"])
+	_check(is_equal_approx(float(m["sk"]["energy"]), 40.0) and is_equal_approx(float(m["sk"]["cd"][0]), 3.0), "Stand to: %.1f energy, %.1f s" % [float(m["sk"]["energy"]), float(m["sk"]["cd"][0])])
+	sim.skill_slots = ["clean_shot", "", ""]
+	var full_cost: float = sim.skill_cost_now(0)
+	fire.call("fire_and_manoeuvre")
+	_check(is_equal_approx(sim.skill_cost_now(0), full_cost * 0.5), "Fire and manoeuvre: %.1f, not half of %.1f" % [sim.skill_cost_now(0), full_cost])
+	# kills: Jackpot's cooldowns, Chancer's find, Barred's man out, nothing from him
+	fire.call("jackpot")
+	m["sk"]["cd"] = [10.0, 10.0, 10.0]
+	sim._skills_on_kill(m)
+	_check(is_equal_approx(float(m["sk"]["cd"][0]), 8.0), "Jackpot: a kill took %.1f s off" % (10.0 - float(m["sk"]["cd"][0])))
+	var rem: int = int(m["remaining"])
+	var kills0: int = int(m["kills"])
+	var finds0: int = int(m.get("finds", 0))
+	var cash0: float = float(m["cash"])
+	var notes0: int = int(m.get("notes", 0))
+	var salv0: String = str(m.get("salvage", {}))
+	var xp0: float = float(m["xp"])
+	fire.call("barred")
+	_check(int(m["remaining"]) == rem - 1 and int(m["kills"]) == kills0 + 1 and float(m["xp"]) > xp0, "Barred: %d → %d on you, %d kills, %.0f XP" % [rem, int(m["remaining"]), int(m["kills"]) - kills0, float(m["xp"]) - xp0])
+	_check(int(m.get("finds", 0)) == finds0 and float(m["cash"]) == cash0 and int(m.get("notes", 0)) == notes0 and str(m.get("salvage", {})) == salv0, "Barred's man paid out: %d finds, %.1f tins, %d notes, salvage %s" % [int(m.get("finds", 0)) - finds0, float(m["cash"]) - cash0, int(m.get("notes", 0)) - notes0, str(m.get("salvage", {}))])
+	var quiet: Array = sim.tree.filter(func(id): return str(id).contains("/") and str(Data.tree_named(str(id).get_slice("/", 0)).get("nodes", [])[int(str(id).get_slice("/", 1))].get("effect", "") if int(str(id).get_slice("/", 1)) < Data.tree_named(str(id).get_slice("/", 0)).get("nodes", []).size() else "") == "quiet_hands")
+	for id in quiet:
+		sim.tree.erase(id)                    # Chancer's find with nothing in its way (the review: it passed on Quiet hands)
+	fire.call("chancer")
+	finds0 = int(m.get("finds", 0))
+	sim._kill(m, t)
+	_check(not sim.has_node("quiet_hands") and int(m.get("finds", 0)) == finds0 + 1, "Chancer's kill dropped nothing")
+	sim.tree.append_array(quiet)
+	# Code blue: its energy kept back all run; the killing hit leaves 30%
+	_set_cls(sim, "Paramedic")
+	var sk_ids: Dictionary = _skill_node_ids()
+	# Not today now: under a quarter HP, 40% less in; no longer a second killing-hit save (24 Oct, Matt)
+	var nt: String = Data.node_id_named("Shifts/Not today")
+	_check(nt != "", "no Not today on the Paramedic's tree")
+	if nt != "":
+		sim.tree.append(nt)
+		sim._dry_memo.clear()
+		sim.hp = sim.max_hp() * 0.5
+		var above_q: float = sim.low_hp_mult()
+		sim.hp = sim.max_hp() * 0.2
+		_check(sim.has_node("not_today") and is_equal_approx(above_q, 1.0) and is_equal_approx(sim.low_hp_mult(), 0.6), "Not today: ×%.2f over a quarter, ×%.2f under" % [above_q, sim.low_hp_mult()])
+		sim.hp = sim.max_hp()
+		# and the fight takes it (the review: only the function was read): a tick at a fifth HP, with it and without
+		var lost := []
+		for with_nt in [false, true]:
+			if with_nt:
+				sim.tree.append(nt)
+			else:
+				sim.tree.erase(nt)
+			sim._dry_memo.clear()
+			sim._skills_fight_start(m)
+			m["remaining"] = 4
+			m["target_hp"] = 1.0e12
+			m["fresh"] = false
+			m["grace"] = 10.0
+			m["my_dots"] = {}
+			sim.hp = sim.max_hp() * 0.2
+			m["taken_by"] = {}
+			sim.rng.seed = 4242                     # the same tick both ways
+			sim._fight(m, t, 0.1)
+			var took: float = 0.0
+			for ty_k in m["taken_by"]:
+				took += float(m["taken_by"][ty_k])
+			lost.append(took)
+		_check(float(lost[0]) > 0.0 and absf(float(lost[1]) / float(lost[0]) - 0.6) < 0.02, "the fight under a quarter HP took %s with Not today, against %s without" % [str(lost[1]), str(lost[0])])
+		sim.hp = sim.max_hp()
+	sim.tree.append(sk_ids["code_blue"])
+	sim.tree.append(sk_ids["tourniquet"])
+	sim.skill_slots = ["tourniquet", "code_blue", ""]
+	sim._skills_fight_start(m)
+	m["sk"]["energy"] = 70.0
+	_check(not sim._skill_can(m, 0), "Code blue's 60 kept back left Tourniquet castable on 70")
+	m["sk"]["energy"] = 80.0
+	_check(sim._skill_can(m, 0), "Tourniquet couldn't be cast over Code blue's kept 60")
+	m["sk"]["energy"] = 100.0
+	_check(not sim._skill_can(m, 1), "Code blue could be pressed: a full cleanse on demand (the review)")
+	m["sk"]["energy"] = 60.0
+	sim.hp = 1.0
+	m["my_dots"] = {"bleed": 99.0}
+	_check(sim._skill_last_stand(m) and is_equal_approx(sim.hp, sim.max_hp() * 0.3) and m["my_dots"].is_empty() and not sim._skill_last_stand(m), "Code blue: hp %.1f, ailments %s, twice %s" % [sim.hp, str(m["my_dots"]), str(m.get("last_stand_used", false))])
+	sim.hp = sim.max_hp()
+	# Bung: twenty tins, or not at all; Back of the van: a grenade, once a fight
+	_set_cls(sim, "Scrapper")
+	sk_ids = _skill_node_ids()
+	sim.tree.append(sk_ids["bung"])
+	sim.tree.append(sk_ids["back_of_the_van"])
+	sim.skill_slots = ["bung", "back_of_the_van", ""]
+	sim._skills_fight_start(m)
+	m["sk"]["energy"] = 100.0
+	sim.cash = 10.0
+	_check(not sim._skill_can(m, 0), "Bung with 10 tins")
+	sim.cash = 100.0
+	sim._skill_fire(m, t, 0)
+	_check(is_equal_approx(sim.cash, 80.0), "Bung didn't take its 20 tins: %.0f" % sim.cash)
+	sim.rig = []                              # room for it (the review: a full rig passed)
+	_check(sim.rig_room(1), "no room in an empty rig")
+	sim._skill_fire(m, t, 1)
+	_check(sim.rig.size() == 1 and Items.is_grenade(sim.rig[0]), "Back of the van put no grenade in the rig")
+	m["sk"]["energy"] = 100.0
+	sim.rig = []
+	_check(not sim._skill_can(m, 1), "Back of the van twice in a fight")
+	sim._skills_fight_start(m)
+	m["sk"]["energy"] = 100.0
+	_check(sim._skill_can(m, 1), "Back of the van once a run, not once a fight (the review)")
+	# the Recruit: his class, his lanes' figures, his joints
+	_set_cls(sim, "Recruit")
+	_check(sim.cls == "Recruit" and is_equal_approx(sim.skill_cost_mult(), 0.9), "the Recruit's skills don't cost 10%% less: ×%.2f" % sim.skill_cost_mult())
+	_check(Data.joint("recruit_physical").get("element_tree", "") == "Knuckles" and Data.joint("recruit_bleed").get("element_tree", "") == "Blades", "the Recruit's joints")
+	var learn := func(tree_name: String, node_name: String) -> void:
+		var ns: Array = Data.tree_named(tree_name)["nodes"]
+		for k in range(ns.size()):
+			if str(ns[k]["name"]) == node_name and not sim.tree.has("%s/%d" % [tree_name, k]):
+				sim.tree.append("%s/%d" % [tree_name, k])
+	if sim.equipped["Rig"] == null:
+		sim.equipped["Rig"] = sim._plain("Rig", str(Data.BASES["Rig"][0]["name"]))     # pouches to lose (the review: none passed)
+	var g0: float = sim.grenade_mult()
+	var med0: int = sim.med_capacity()
+	var dmg0: float = sim.damage_total()
+	var cd0: float = sim.skill_cooldown("make_ready")
+	var cost0: float = sim.skill_cost_mult()
+	var emax0: float = sim.max_energy()
+	var regen0: float = sim.energy_regen()
+	learn.call("Ordnance", "Grenadier")
+	_check(is_equal_approx(sim.grenade_mult(), g0 * 2.0) and med0 > 0 and sim.med_capacity() == med0 - 1, "Grenadier: grenades ×%.2f, pouches %d → %d" % [sim.grenade_mult() / g0, med0, sim.med_capacity()])
+	learn.call("Ordnance", "Firing blanks")
+	_check(is_equal_approx(sim.damage_total(), dmg0 * 0.85) and is_equal_approx(sim.skill_cost_mult(), cost0 * 0.75), "Firing blanks: damage ×%.3f, costs ×%.3f" % [sim.damage_total() / dmg0, sim.skill_cost_mult() / cost0])
+	learn.call("Drill", "Quick march")
+	_check(is_equal_approx(sim.skill_cooldown("make_ready"), cd0 * 0.7) and is_equal_approx(sim.skill_cost_mult(), cost0 * 0.75 * 1.25), "Quick march: cooldown ×%.2f, cost ×%.3f" % [sim.skill_cooldown("make_ready") / cd0, sim.skill_cost_mult() / cost0])
+	learn.call("Drill", "Double time")
+	_check(is_equal_approx(sim.max_energy(), emax0 - 30.0) and is_equal_approx(sim.energy_regen(), regen0 * 2.0), "Double time: max %.0f → %.0f, refill ×%.2f" % [emax0, sim.max_energy(), sim.energy_regen() / regen0])
+	sim._skills_fight_start(m)
+	m["sk"]["dt"] = 0.0
+	learn.call("Drill", "Cover me")
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 1.0), "Cover me with nothing running: ×%.2f" % sim._skill_in_mult(m, 3))
+	sim._skill_effect(m, t, sim.skill("make_ready")["fx"])
+	sim._sk_set(m["sk"], "buff_t", 5.0)
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 0.75), "Cover me with a skill running: ×%.2f" % sim._skill_in_mult(m, 3))
+	# an effect no longer than the tick still counts that tick (the review: the countdown runs before the hit), at the
+	# bot's step and the dry runs'
+	for dt_e in [1.0, 2.0]:
+		sim._skills_fight_start(m)
+		m["sk"]["dt"] = dt_e
+		sim._sk_set(m["sk"], "regen_t", dt_e)
+		_check(sim._sk_running(m["sk"]) and is_equal_approx(sim._skill_in_mult(m, 3), 0.75), "an effect as long as a %.0f s tick doesn't count that tick: running %s, ×%.2f" % [dt_e, str(sim._sk_running(m["sk"])), sim._skill_in_mult(m, 3)])
+	sim._skills_fight_start(m)
+	sim._sk_set(m["sk"], "stun_all_t", 1.0)
+	_check(not sim._sk_running(m["sk"]), "Ringing ears' stun counted as a skill of his running")
+	sim._skills_fight_start(m)
+	m["sk"]["dt"] = 0.0
+	# a throw: Blast burns, Ringing ears (and it runs down with nothing slotted), Cook it off's one more
+	learn.call("Ordnance", "Blast burns")
+	learn.call("Ordnance", "Ringing ears")
+	sim._skills_fight_start(m)
+	m["sk"]["dt"] = 0.0
+	m["dots"] = {}
+	sim.skill_slots = ["", "", ""]
+	sim._grenade_after(m, 100.0)
+	_check(float(m["dots"].get("fire", 0.0)) > 0.0 and sim._skill_in_mult(m, 3) == 0.0, "a throw: burning %s, their fire ×%.2f" % [str(m["dots"]), sim._skill_in_mult(m, 3)])
+	sim._skills_tick(m, t, 1.0, 3)
+	sim._skills_tick(m, t, 1.0, 3)
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 1.0), "Ringing ears held their fire past its second with nothing slotted: ×%.2f (the review)" % sim._skill_in_mult(m, 3))
+	m["remaining"] = 9
+	var lob: Dictionary = {"type": "physical", "damage": 100.0}
+	m["target_hp"] = 1.0e9
+	sim._skill_lob(m, t, lob)
+	var without: float = 1.0e9 - float(m["target_hp"])
+	learn.call("Ordnance", "Cook it off")
+	m["target_hp"] = 1.0e9
+	sim._skill_lob(m, t, lob)
+	var with_one: float = 1.0e9 - float(m["target_hp"])
+	var crowd0: int = mini(9, sim.contact(t))
+	_check(is_equal_approx(with_one / without, float(crowd0 + 1) / float(crowd0)), "Cook it off: ×%.3f, not one more than %d" % [with_one / without, crowd0])
+	# Passing-out parade: 5 energy back a skill
+	learn.call("Drill", "Passing-out parade")
+	var sk_r: Dictionary = _skill_node_ids()
+	sim.tree.append(sk_r["make_ready"])
+	sim.skill_slots = ["make_ready", "", ""]
+	sim._skills_fight_start(m)
+	m["sk"]["energy"] = 50.0
+	var paid: float = sim.skill_cost_now(0)
+	sim._skill_fire(m, t, 0)
+	_check(is_equal_approx(float(m["sk"]["energy"]), 50.0 - paid + 5.0), "Passing-out parade: %.1f energy, not %.1f" % [float(m["sk"]["energy"]), 50.0 - paid + 5.0])
+	# the joints: a skill's own hit 25% harder, and it opens a bleed
+	m["dots"] = {}
+	m["target_hp"] = 10000.0
+	sim._skill_damage(m, 100.0)
+	_check(is_equal_approx(10000.0 - float(m["target_hp"]), 100.0) and not m["dots"].has("bleed"), "a skill's hit with no joints closed: %.1f" % (10000.0 - float(m["target_hp"])))
+	learn.call("Ordnance", "Brute force")
+	learn.call("Knuckles", "Recruit's boots")
+	learn.call("Drill", "Fix bayonets")
+	learn.call("Blades", "Recruit's bayonet")
+	m["target_hp"] = 10000.0
+	sim._skill_damage(m, 100.0)
+	_check(sim.has_joint("recruit_physical") and sim.has_joint("recruit_bleed") and is_equal_approx(10000.0 - float(m["target_hp"]), 125.0) and float(m["dots"].get("bleed", 0.0)) > 0.0, "the Recruit's joints: %.1f, bleed %s" % [10000.0 - float(m["target_hp"]), str(m["dots"])])
+	sim.extract_now()
+	# who each head opens
+	var fresh = load("res://scripts/sim/sim.gd").new()
+	fresh.start()
+	_check(fresh.class_open("Poacher") and not Data.CLASSES.any(func(c): return c["name"] != "Poacher" and fresh.class_open(str(c["name"]))), "a fresh camp has more than the Poacher")
+	var order := ["Paramedic", "Doorman", "Scrapper", "Recruit"]
+	for z in range(4):
+		fresh.bosses_beaten[z] = true
+		_check(fresh.class_open(order[z]) and (z == 3 or not fresh.class_open(order[z + 1])), "head %d doesn't open the %s alone" % [z, order[z]])
+	_check(not fresh.class_open("Drifter"), "the Drifter came before Kev's first story")
+	fresh.story_beat = 1
+	_check(fresh.class_open("Drifter"), "Kev's first story didn't bring the Drifter")
+	sim.load_dict(saved)
+	print("every class's skills ok: wards, cleanses, buffs, hits, energy and costs, kills, Code blue, Bung, the van, the Recruit, the heads' classes")

@@ -27,14 +27,16 @@ const HEAD_H := Pal.BAND_H                                     # the rooms' one 
 const FACE := Pal.BAND_FACE
 # the pasts as cards (14 Oct, Matt; docs/design/mockups/class_cards_mockup.png): a face, the name, the short lines in
 # their tones (a cost red); the picked one lit, the rest dimmed; the whole sentence a tooltip
-const CLASS_W := 164                # the words column keeps the width the sum strip needs
-const CLASS_H := 122
+const CLASS_W := 200                # two rows of three (24 Oct, Matt: option B on the canvas's Band board): six full cards
+const CLASS_H := 58                 # left the words column 310 px and the sum strip lost four chips; the perks went to the tooltip
 const CLASS_GAP := 8
-const CLASS_FACE := 48
-const CLASS_SHORT := 3             # short lines a card holds
+const CLASS_ROW_GAP := 6
+const CLASS_COLS := 3
+const CLASS_FACE := 40
+const CLASSES_H := 2 * CLASS_H + CLASS_ROW_GAP     # the two rows, the old one row's height
 # the line over the cards (the trait, the change's price, or the prompt) on a glass pill so the art doesn't eat it
 # (12 Oct); the class's own sentence went to the cards' tooltips (14 Oct)
-const NOTICE_Y := HEAD_H - 14 - CLASS_H - 34
+const NOTICE_Y := HEAD_H - 14 - CLASSES_H - 34
 const LINE_TOP_Y := NOTICE_Y
 const PILL_H := 28                 # a hairline between two pills, 4 px over the classes
 const PILL_PAD := 12
@@ -173,7 +175,8 @@ func _build_head() -> void:
 	for k in range(Data.CLASSES.size()):
 		var cd: Dictionary = Data.CLASSES[k]
 		var cb := Button.new()
-		cb.position = Vector2(cx0 + k * (CLASS_W + CLASS_GAP), HEAD_H - 14 - CLASS_H)
+		@warning_ignore("integer_division")
+		cb.position = Vector2(cx0 + (k % CLASS_COLS) * (CLASS_W + CLASS_GAP), HEAD_H - 14 - CLASSES_H + (k / CLASS_COLS) * (CLASS_H + CLASS_ROW_GAP))
 		cb.size = Vector2(CLASS_W, CLASS_H)
 		cb.focus_mode = Control.FOCUS_ALL
 		cb.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -181,21 +184,27 @@ func _build_head() -> void:
 		cb.pressed.connect(_pick_class.bind(cd["name"]))
 		head.add_child(cb)
 		_class_buttons.append(cb)
-		var face := People.rect(cb, Vector2(8, 8), CLASS_FACE / 128.0)
+		var face := People.rect(cb, Vector2(8, (CLASS_H - CLASS_FACE) / 2.0), CLASS_FACE / 128.0)
 		People.show(face, str(cd["name"]))
-		var nm := UI.label(cb, Rect2(CLASS_FACE + 12, 10, CLASS_W - CLASS_FACE - 16, 26), str(cd["name"]), "SemiBold", 19, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var tag := UI.label(cb, Rect2(CLASS_FACE + 12, 37, CLASS_W - CLASS_FACE - 16, 20), "", "Medium", 14, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
-		var lines: Array = []
-		for r in range(CLASS_SHORT):
-			lines.append(UI.label(cb, Rect2(9, CLASS_FACE + 13 + r * 17, CLASS_W - 14, 18), "", "Medium", 14, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false))
-		for n in [nm, tag] + lines:
+		var tx: float = CLASS_FACE + 12
+		var nm := UI.label(cb, Rect2(tx, 6, CLASS_W - tx - 6, 24), str(cd["name"]), "SemiBold", 19, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var tag := UI.label(cb, Rect2(tx, 31, CLASS_W - tx - 6, 18), "", "Medium", 14, Pal.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var lock := TextureRect.new()      # a locked class: a lock before the head that opens it
+		lock.texture = NodeGlyphs.texture("lock")
+		lock.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lock.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		lock.position = Vector2(tx, 33)
+		lock.size = Vector2(14, 14)
+		lock.modulate = Pal.TEXT_3
+		cb.add_child(lock)
+		for n in [nm, tag, lock]:
 			n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_class_cards.append({"face": face, "name": nm, "tag": tag, "lines": lines})
+		_class_cards.append({"face": face, "name": nm, "tag": tag, "lock": lock, "tag_x": tx})
 	_notice = UI.label(head, Rect2(cx0, NOTICE_Y, Pal.GRID_W - PAD - cx0, 30), "", "Regular", Pal.CELL_TEXT_BIG, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 
 static func _classes_x() -> float:
-	return Pal.GRID_W - PAD - Data.CLASSES.size() * CLASS_W - CLASS_GAP * (Data.CLASSES.size() - 1)
+	return Pal.GRID_W - PAD - CLASS_COLS * CLASS_W - CLASS_GAP * (CLASS_COLS - 1)
 
 
 ## The band's words column: past the face, up to the classes.
@@ -329,6 +338,8 @@ const EFFECT_WORDS := {
 	"regen": "+%.1f HP a second", "paragon": "+%d%% a point", "fire_res": "+%d%% fire resist", "frost_res": "+%d%% frost resist", "poison_res": "+%d%% poison resist",
 	"shock_res": "+%d%% shock resist", "bleed_res": "+%d%% bleed resist", "buy_pct": "Fence sells −%d%%", "cells": "+%d cells",
 	"fire_last_pct": "Burns last %d%% longer", "bleed_last_pct": "Bleeds last %d%% longer", "frost_last_pct": "Chills last %d%% longer", "poison_last_pct": "Poison lasts %d%% longer",
+	# the skills' fillers (24 Oct, milestone 8: the affixes' words, skills.md §11)
+	"grenade_pct": "+%d%% grenade damage", "energy_regen_pct": "+%d%% energy gain", "cdr_pct": "%d%% shorter cooldowns", "energy_max": "+%d max energy",
 }
 const TYPE_WORDS := {"rifle": "rifles", "shotgun": "shotguns", "smg": "SMGs", "improvised": "improvised", "pistol": "pistols", "melee": "melee"}
 ## The panel's sentence for a plain node: what happens, in words; the figure is the chip's (Caravan-E, 7 Oct).
@@ -345,6 +356,7 @@ const PANEL_WORDS := {
 	"bleed_pct": "Bleed hits harder.", "physical_pct": "The plain share of every hit, the part not converted, hits harder.", "dot_pct": "Burns, poison and bleeds all do more.",
 	"regen": "A little HP comes back every second, in a fight or out of one.", "fire_res": "Less of their fire gets through.", "frost_res": "Less of their frost gets through.",
 	"poison_res": "Less of their poison gets through.", "shock_res": "Less of their shock gets through.", "bleed_res": "Less of their bleed gets through.",
+	"grenade_pct": "Every grenade hits harder.", "energy_regen_pct": "Energy refills quicker.", "cdr_pct": "Skills come round again sooner.", "energy_max": "More energy to spend on skills.",
 }
 
 
@@ -518,8 +530,9 @@ func _show_card(k: int) -> void:
 	var nm: String = cd["name"]
 	var mine: bool = sim.cls == nm
 	var armed: bool = _armed == nm
-	var lit: bool = mine or armed or sim.cls == ""
-	cb.disabled = sim.on_mission()
+	var open: bool = mine or sim.class_open(nm)     # each class after its head (milestone 8; skills.md §6)
+	var lit: bool = (mine or armed or sim.cls == "") and open
+	cb.disabled = sim.on_mission() or not open
 	var edge: Color = Pal.ACCENT if (mine or armed) else Pal.CARD_LINE
 	var w: int = 2 if (mine or armed) else 1
 	for pair in [["normal", 0.0], ["hover", 0.08], ["pressed", 0.12], ["hover_pressed", 0.12], ["disabled", 0.0]]:
@@ -529,13 +542,13 @@ func _show_card(k: int) -> void:
 	cb.modulate.a = 0.5 if (cb.disabled and not mine) else 1.0
 	c["face"].modulate = Color(1, 1, 1, 1.0 if lit else 0.75)
 	c["name"].add_theme_color_override("font_color", Pal.TEXT if lit else Pal.TEXT_2)
-	c["tag"].text = "✓ your past" if mine else ("press again" if armed else _crew_tag(nm))
-	var short: Array = cd.get("short", [])
-	for r in range(CLASS_SHORT):
-		var l: Label = c["lines"][r]
-		l.text = str(short[r][0]) if r < short.size() else ""
-		var tone: Color = Pal.GOOD if (r < short.size() and short[r][1]) else Pal.BAD
-		l.add_theme_color_override("font_color", tone if lit else Pal.TEXT_3)
+	var who: String = str(Words.CLASS_UNLOCK.get(nm, {}).get("who", ""))
+	c["tag"].text = "✓ your past" if mine else ("press again" if armed else (_crew_tag(nm) if open else who))
+	c["lock"].visible = not open                # a locked class: the lock and the head that opens it (24 Oct, option B)
+	c["tag"].position.x = float(c["tag_x"]) + (16.0 if not open else 0.0)
+	c["tag"].size.x = CLASS_W - float(c["tag_x"]) - 6.0 - (16.0 if not open else 0.0)
+	c["tag"].add_theme_color_override("font_color", Pal.ACCENT if open else Pal.TEXT_3)
+	cb.tooltip_text = "%s: %s" % [nm, cd["words"]] + ("" if open else "\n%s %s" % [Words.OPENS_AFTER, who])     # the perks in the sentence (the card's lines went, option B)
 
 
 ## A class's card when it isn't out (21 Oct, the crew): its level and element, wounded, or new.
@@ -1134,7 +1147,7 @@ func text_nodes() -> Array:
 		if b.visible:
 			out.append(b)
 	for c in _class_cards:
-		out.append_array([c["name"], c["tag"]] + c["lines"])
+		out.append_array([c["name"], c["tag"]])
 	for b in _web_buttons:
 		if b.visible:
 			out.append(b)

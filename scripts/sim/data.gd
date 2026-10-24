@@ -577,7 +577,7 @@ const BASES := {
 		{"name": "The deeds", "tier": 5, "value": 5000},
 		# the gates (13 Oct, docs/design/campaign_gates.md): a head's own, home in the pack whatever it holds; each opens a room
 		{"name": "The vet's bag", "tier": 5, "value": 0},           # tier 5, as the deeds: never a paper's roll
-		{"name": "The Carpet Man's ledger", "tier": 5, "value": 0},
+		{"name": "The Carpet Man's ledger", "tier": 8, "value": 0},
 		{"name": "A military radio", "tier": 5, "value": 0},
 		{"name": "The armourer's tool roll", "tier": 5, "value": 0},
 	],
@@ -906,7 +906,13 @@ const OPENER_S := 5.0                    # the Opener rule: the first five secon
 const FINISHER_AT := 0.25                # the Finisher rule: a man on you under a quarter HP
 ## The rules a skill fires on by itself (the chips' words are skills.md section 11's).
 const SKILL_RULES := {"ready": "When ready", "on_you_2": "2+ on you", "on_you_3": "3+ on you", "under_half": "Under half HP",
-	"ailing": "Ailing", "finisher": "Finisher", "opener": "Opener", "opener_ready": "Opener, then ready"}
+	"ailing": "Ailing", "finisher": "Finisher", "opener": "Opener", "opener_ready": "Opener, then ready", "bleeding": "Bleeding",
+	"poison_burn": "Poisoned or burning", "ailments_2": "2+ ailments", "low_rounds": "Low on rounds", "no_grenade": "No grenade",
+	"last_stand": "Last stand", "on_you_3_half": "3+ on you, over half HP"}
+const LOW_ROUNDS := 60                   # the Low on rounds rule: fewer in the rig for the gun in hand
+## The rules' tooltips (skills.md §11).
+const SKILL_RULE_TIPS := {"ailing": "An ailment on you: a bleed, burn, poison, chill or shock", "finisher": "Fires when a man on you is under 25% HP",
+	"opener": "Fires in the first 5 seconds of a fight", "last_stand": "Fires when a hit would kill you; its energy is kept back all run"}
 ## A skill: its class and lane, cost, cooldown (s), its kind (damage, cleanse, control, defence: the bot's pick reads
 ## it), rule and what it does (`fx`, read by sim._skill_fire). Names and
 ## lines are the language pass's; `fx` figures are first figures for the balance pass.
@@ -927,6 +933,91 @@ const SKILLS := {
 		"line": "Everyone on you does 30% less damage to you for 6 seconds", "fx": {"less_in": 0.3, "less_in_s": 6.0}},
 	"net_every_hole": {"name": "Net every hole", "cls": "Poacher", "lane": "Snares", "cost": 60, "cd": 40, "kind": "control", "rule": "on_you_3", "signature": true,
 		"line": "Everyone on you is stunned for 2 seconds and starts to bleed", "fx": {"stun_all_s": 2.0, "bleed_s": 1.0}},
+	# the Paramedic (24 Oct, step 4): the cleanse class; her signature the one way back from going down
+	"tourniquet": {"name": "Tourniquet", "cls": "Paramedic", "lane": "Triage", "cost": 20, "cd": 12, "kind": "cleanse", "rule": "bleeding",
+		"line": "Clears bleed on you; no new bleed lands for 10 seconds", "fx": {"clears": ["bleed"], "ward": ["bleed"], "ward_s": 10.0}},
+	"antidote": {"name": "Antidote", "cls": "Paramedic", "lane": "Triage", "cost": 25, "cd": 15, "kind": "cleanse", "rule": "poison_burn",
+		"line": "Clears poison and burns on you; neither lands again for 8 seconds", "fx": {"clears": ["poison", "fire"], "ward": ["poison", "fire"], "ward_s": 8.0}},
+	"adrenaline": {"name": "Adrenaline", "cls": "Paramedic", "lane": "Triage", "cost": 30, "cd": 20, "kind": "damage", "rule": "on_you_3",
+		"line": "+25% damage and rate of fire for 8 seconds", "fx": {"hit_mult": 1.5625, "hit_s": 8.0}},
+	"major_incident": {"name": "Major incident", "cls": "Paramedic", "lane": "Triage", "cost": 55, "cd": 40, "kind": "cleanse", "rule": "ailments_2", "signature": true,
+		"line": "Clears every ailment on you, and you take no wound this run", "fx": {"clears": ["bleed", "poison", "fire"], "clear_all": true, "no_wound_run": true}},
+	"two_sugars": {"name": "Two sugars", "cls": "Paramedic", "lane": "Shifts", "cost": 15, "cd": 25, "kind": "defence", "rule": "ready",
+		"line": "Energy refills 50% quicker for 10 seconds", "fx": {"regen_mult": 1.5, "regen_s": 10.0}},
+	"sedative_dart": {"name": "Sedative dart", "cls": "Paramedic", "lane": "Shifts", "cost": 25, "cd": 14, "kind": "control", "rule": "on_you_3",
+		"line": "One man on you sleeps for 4 seconds", "fx": {"stun_one_s": 4.0}},
+	"strapped_up": {"name": "Strapped up", "cls": "Paramedic", "lane": "Shifts", "cost": 30, "cd": 25, "kind": "defence", "rule": "under_half",
+		"line": "The next hit that would wound you leaves no wound", "fx": {"wound_ward": true}},
+	"code_blue": {"name": "Code blue", "cls": "Paramedic", "lane": "Shifts", "cost": 60, "cd": 0, "kind": "defence", "rule": "last_stand", "signature": true, "once_run": true,
+		"line": "Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared", "fx": {"last_stand_hp": 0.3, "clears": ["bleed", "poison", "fire"], "clear_all": true}},
+	# the Doorman: control and armour
+	"shoulder_charge": {"name": "Shoulder charge", "cls": "Doorman", "lane": "Muscle", "cost": 25, "cd": 10, "kind": "damage", "rule": "ready",
+		"line": "Hits the nearest man for ×3 damage and sends him to the back", "fx": {"hit_now": 3.0, "stun_one_s": 2.0}},
+	"headbutt": {"name": "Headbutt", "cls": "Doorman", "lane": "Muscle", "cost": 20, "cd": 9, "kind": "control", "rule": "on_you_3",
+		"line": "Hits the nearest man for ×1.5 damage and stuns him for 2 seconds", "fx": {"hit_now": 1.5, "stun_one_s": 2.0}},
+	"brace": {"name": "Brace", "cls": "Doorman", "lane": "Muscle", "cost": 30, "cd": 18, "kind": "defence", "rule": "on_you_3",
+		"line": "+60% armour for 6 seconds", "fx": {"armour_mult": 1.6, "armour_s": 6.0}},
+	"barred": {"name": "Barred", "cls": "Doorman", "lane": "Muscle", "cost": 60, "cd": 45, "kind": "control", "rule": "on_you_3", "signature": true,
+		"line": "Throws the nearest man out: a kill, but he drops nothing. Not on a head.", "fx": {"barred": true}},
+	"not_on_the_list": {"name": "Not on the list", "cls": "Doorman", "lane": "The door", "cost": 30, "cd": 20, "kind": "control", "rule": "on_you_3",
+		"line": "One fewer on you for 10 seconds", "fx": {"stun_one_s": 10.0}},
+	"shutters_down": {"name": "Shutters down", "cls": "Doorman", "lane": "The door", "cost": 35, "cd": 22, "kind": "defence", "rule": "under_half",
+		"line": "Take 80% less damage for 4 seconds", "fx": {"less_in": 0.8, "less_in_s": 4.0}},
+	"pat_down": {"name": "Pat down", "cls": "Doorman", "lane": "The door", "cost": 25, "cd": 15, "kind": "damage", "rule": "opener_ready",
+		"line": "The nearest man loses his armour and resists for 10 seconds", "fx": {"pat_down_s": 10.0}},
+	"chucking_out_time": {"name": "Chucking-out time", "cls": "Doorman", "lane": "The door", "cost": 60, "cd": 40, "kind": "control", "rule": "on_you_3", "signature": true,
+		"line": "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds", "fx": {"stun_all_s": 2.0, "exposed": 0.5, "exposed_s": 8.0}},
+	# the Scrapper: kit and wiring
+	"ring_main": {"name": "Ring main", "cls": "Scrapper", "lane": "Stripping", "cost": 25, "cd": 9, "kind": "damage", "rule": "ready",
+		"line": "×1.5 shock damage that jumps through 3 men", "fx": {"hit_now": 1.5, "spread": 3, "shock": true}},
+	"hot_work": {"name": "Hot work", "cls": "Scrapper", "lane": "Stripping", "cost": 25, "cd": 10, "kind": "damage", "rule": "ready",
+		"line": "Sets the nearest man burning for ×2 fire damage over 4 seconds", "fx": {"dot": "fire", "dot_x": 2.0}},
+	"breakdown": {"name": "Breakdown", "cls": "Scrapper", "lane": "Stripping", "cost": 20, "cd": 15, "kind": "defence", "rule": "low_rounds",
+		"line": "The next man you kill drops 20 rounds for your gun", "fx": {"rounds_on_kill": 20}},
+	"short_circuit": {"name": "Short circuit", "cls": "Scrapper", "lane": "Stripping", "cost": 60, "cd": 40, "kind": "control", "rule": "on_you_3", "signature": true,
+		"line": "Shocks everyone on you and stuns them for 1.5 seconds. Your shock damage +30% for 6 seconds.", "fx": {"stun_all_s": 1.5, "shock": true, "type_mult": {"shock": 1.3}, "type_s": 6.0}},
+	"bung": {"name": "Bung", "cls": "Scrapper", "lane": "Fencing", "cost": 20, "cd": 20, "kind": "control", "rule": "on_you_3", "cash": 20,
+		"line": "Pay 20 tins: the nearest man is stunned for 8 seconds", "fx": {"stun_one_s": 8.0}},
+	"knock_off_kit": {"name": "Knock-off kit", "cls": "Scrapper", "lane": "Fencing", "cost": 30, "cd": 18, "kind": "damage", "rule": "ready",
+		"line": "+30% gun damage for 8 seconds", "fx": {"hit_mult": 1.3, "hit_s": 8.0}},
+	"back_of_the_van": {"name": "Back of the van", "cls": "Scrapper", "lane": "Fencing", "cost": 40, "cd": 0, "kind": "damage", "rule": "no_grenade", "once_fight": true,
+		"line": "Puts a grenade in your rig. Once a fight.", "fx": {"grenade_to_rig": "Nail bomb"}},
+	"everything_must_go": {"name": "Everything must go", "cls": "Scrapper", "lane": "Fencing", "cost": 60, "cd": 45, "kind": "damage", "rule": "opener", "signature": true,
+		"line": "For 5 seconds, every shot fires twice", "fx": {"hit_mult": 2.0, "hit_s": 5.0}},
+	# the Recruit (24 Oct, the sixth class): he casts most often
+	"lob_one_in": {"name": "Lob one in", "cls": "Recruit", "lane": "Ordnance", "cost": 25, "cd": 10, "kind": "damage", "rule": "on_you_3",
+		"line": "Throws a grenade at everyone on you without using one from your rig", "fx": {"lob": "Petrol bomb"}},
+	"flashbang": {"name": "Flashbang", "cls": "Recruit", "lane": "Ordnance", "cost": 30, "cd": 16, "kind": "control", "rule": "on_you_3",
+		"line": "Stuns everyone on you for 1.5 seconds; they do 50% less damage to you for 4 seconds", "fx": {"stun_all_s": 1.5, "less_in": 0.5, "less_in_s": 5.5}},
+	"smoke": {"name": "Smoke", "cls": "Recruit", "lane": "Ordnance", "cost": 30, "cd": 18, "kind": "defence", "rule": "under_half",
+		"line": "Half their shots at you miss for 6 seconds", "fx": {"less_in": 0.5, "less_in_s": 6.0}},
+	"danger_close": {"name": "Danger close", "cls": "Recruit", "lane": "Ordnance", "cost": 60, "cd": 40, "kind": "damage", "rule": "on_you_3_half", "signature": true,
+		"line": "×4 blast damage to everyone on you; you lose 10% of max HP", "fx": {"hit_now": 4.0, "spread": 99, "self_hp": 0.1}},
+	"suppressing_fire": {"name": "Suppressing fire", "cls": "Recruit", "lane": "Drill", "cost": 30, "cd": 18, "kind": "defence", "rule": "on_you_3",
+		"line": "Everyone on you fires 35% slower for 8 seconds", "fx": {"less_in": 0.35, "less_in_s": 8.0}},
+	"make_ready": {"name": "Make ready", "cls": "Recruit", "lane": "Drill", "cost": 15, "cd": 8, "kind": "damage", "rule": "ready",
+		"line": "+25% damage for your next 10 shots", "fx": {"hit_mult": 1.25, "hit_shots": 10}},
+	"stand_to": {"name": "Stand to", "cls": "Recruit", "lane": "Drill", "cost": 0, "cd": 30, "kind": "defence", "rule": "ready",
+		"line": "Gives 30 energy and takes 2 seconds off every cooldown", "fx": {"energy_now": 30.0, "cd_cut": 2.0}},
+	"fire_and_manoeuvre": {"name": "Fire and manoeuvre", "cls": "Recruit", "lane": "Drill", "cost": 60, "cd": 50, "kind": "damage", "rule": "opener", "signature": true,
+		"line": "For 10 seconds, skills cost half and cooldowns pass twice as quickly", "fx": {"fam_s": 10.0}},
+	# the Drifter: evasion, big single hits and chance
+	"duck_and_weave": {"name": "Duck and weave", "cls": "Drifter", "lane": "Moving on", "cost": 25, "cd": 12, "kind": "defence", "rule": "on_you_3",
+		"line": "The next 3 hits on you miss", "fx": {"dodge_hits": 3}},
+	"look_lively": {"name": "Look lively", "cls": "Drifter", "lane": "Moving on", "cost": 30, "cd": 18, "kind": "damage", "rule": "ready",
+		"line": "+40% pace for 6 seconds", "fx": {"hit_mult": 1.4, "hit_s": 6.0}},
+	"elbow_room": {"name": "Elbow room", "cls": "Drifter", "lane": "Moving on", "cost": 30, "cd": 18, "kind": "defence", "rule": "on_you_3",
+		"line": "Everyone on you does 25% less damage to you and takes 15% more from you, for 8 seconds", "fx": {"less_in": 0.25, "less_in_s": 8.0, "exposed": 0.15, "exposed_s": 8.0}},
+	"gone": {"name": "Gone", "cls": "Drifter", "lane": "Moving on", "cost": 60, "cd": 40, "kind": "defence", "rule": "under_half", "signature": true,
+		"line": "Out of sight for 4 seconds: nothing can hit you. Your next shot does triple damage.", "fx": {"hidden_s": 4.0, "clears": [], "shot_mult": 3.0, "shot_s": 1.0}},
+	"coin_toss": {"name": "Coin toss", "cls": "Drifter", "lane": "Luck", "cost": 20, "cd": 10, "kind": "damage", "rule": "ready",
+		"line": "A 50% chance of double damage for 8 seconds", "fx": {"coin": 0.5, "hit_mult": 2.0, "hit_s": 8.0}},
+	"close_shave": {"name": "Close shave", "cls": "Drifter", "lane": "Luck", "cost": 25, "cd": 15, "kind": "cleanse", "rule": "ailing",
+		"line": "The next ailment that would land on you misses", "fx": {"close_shave": true}},
+	"chancer": {"name": "Chancer", "cls": "Drifter", "lane": "Luck", "cost": 30, "cd": 20, "kind": "damage", "rule": "finisher",
+		"line": "The next man you kill always drops something, at +50% loot quality", "fx": {"chancer": 0.5}},
+	"jackpot": {"name": "Jackpot", "cls": "Drifter", "lane": "Luck", "cost": 60, "cd": 45, "kind": "damage", "rule": "opener", "signature": true,
+		"line": "For 8 seconds, every kill takes 2 seconds off every cooldown", "fx": {"jackpot_s": 8.0, "jackpot_cut": 2.0}},
 }
 
 const FX := {
@@ -1068,6 +1159,8 @@ const FX := {
 	"joint/paramedic_frost.heal": 1.2,     # Chilled gangs do 30% less to you; meds heal 20% more while one is
 	"joint/paramedic_frost.taken": 0.7,     # Chilled gangs do 30% less to you; meds heal 20% more while one is
 	"joint/poacher_frost.chill_s": 2.0,     # Every gang arrives chilled, and one head short
+	"node/not_today": 0.6,     # Not today: under a quarter HP, 40% less in (24 Oct: Code blue took its killing hit)
+	"node/not_today.under": 0.25,
 	"node/bodyline": 0.5,     # Bodyline: With three on you, you take half the damage
 	"node/cap_bleed_out": 1.5,     # Bleed out (capstone): bleed builds half again
 	"node/cap_flattened": 2.0,     # Flattened: A kill with the plain staggers the next gang: they fire at half for two seconds
@@ -1352,7 +1445,7 @@ const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5,
 ## after its pool is down. Free the first time (the campaign); after that
 ## the crew's price in notes, by depth. Each has their own drops.
 ## `opens`: the rooms a head's things open, brought home (13 Oct, Matt: the campaign's pacing): the Gamekeeper's vet's bag
-## the Clinic, the Carpet Man's ledger the Fence, the Manager's deeds the Yard, the Quartermaster's set and roll the Radio
+## the Clinic, the Manager's deeds the Yard and the Carpet Man's ledger from his vault the Fence, the Quartermaster's set and roll the Radio
 ## and the Workshop. Until then the room is shut.
 const BOSSES := [
 	{"zone": 0, "name": "The Gamekeeper", "tier": 2, "hp": 5.0, "dps": 2.0, "notes": 10,     # the Outskirts' edge: soft
@@ -1360,10 +1453,10 @@ const BOSSES := [
 		"uniques": ["The Keeper's Twelve-Bore", "The Keeper's Wax Jacket"], "opens": {"clinic": "The vet's bag"}},
 	{"zone": 1, "name": "The Carpet Man", "tier": 5, "hp": 8.0, "dps": 2.5, "notes": 20,     # D18: 10/3.0 to 8/2.5 - a read in seven held at him for hours (the Estate's kit, a dps of 50, nothing better dropping)
 		"words": "The crew in the carpet warehouse have a head. He had a van and a lock-up before; he has the car park now.",
-		"uniques": ["The Van's Spare", "Underlay"], "opens": {"fence": "The Carpet Man's ledger"}},
+		"uniques": ["The Van's Spare", "Underlay"], "opens": {}},     # the Doorman his (24 Oct, milestone 8); the ledger went to the Manager's vault
 	{"zone": 2, "name": "The Manager", "tier": 8, "hp": 12.0, "dps": 3.5, "notes": 40,
 		"words": "The Bank's crew call themselves staff. He was. He's behind the vault, and he's not coming out for you.",
-		"uniques": ["The Manager's Coat", "The Branch Pistol"], "opens": {"yard": "The deeds"}},
+		"uniques": ["The Manager's Coat", "The Branch Pistol"], "opens": {"yard": "The deeds", "fence": "The Carpet Man's ledger"}},     # the Fence with the Yard (24 Oct, milestone 8: skills.md §6) - the Carpet Man banked with him
 	{"zone": 3, "name": "The Quartermaster", "tier": 11, "hp": 6.0, "dps": 2.5, "notes": 60,     # the Barracks went up; he came down to match: the pool before him is the fight
 		"words": "The lorry that never reached the Barracks reached him. He's been issuing it ever since, to people he chooses.",
 		"uniques": ["The Quartermaster's Rifle", "Issue Webbing"], "opens": {"radio": "A military radio", "workshop": "The armourer's tool roll"}},
@@ -1405,17 +1498,20 @@ const ILVL_SCALE := 0.06          # an affix's rolled value grows this much an i
 const ILVL_FROM := 15
 ## The broken builds (21 Oct, Matt: "a combination of gear and skill points ... outside of balance passes (like mythics
 ## do)"): a class's set at its count, a unique's rule, its element's keystone and capstone; together a stack a run with
-## no top. The words never say so; docs/design/broken_builds.md says how each is built. "step" is a stack's worth.
+## no top. The words never say so; docs/design/broken_builds.md says how each is built. "step" is a stack's worth;
+## "recipe" the nodes it needs, by tree/name, the smoke walking each from nothing (24 Oct: the web had left the doc's paths behind).
 ##   embers - a burning kill: fire +step a stack. clean_kills - a chilled kill: the first shot's bonus holds on the
 ##   next, +step a stack. overdose - poison's ticks heal step of themselves; past full, a max HP of it a stack of poison
 ##   (+100%). opened_for_good - the bleed has no cap; a kill carries it +step. live_load - a shocked kill: shock +step.
+##   drilled - the Recruit's (24 Oct): a kill while a skill of his runs: physical +step a stack.
 const COMBO_CEILING := 1e30        # what a stack or a pool runs to: past any gang, short of INF (the save's JSON has none)
 const COMBOS := {
-	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "step": 0.04},
-	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "step": 0.05},
-	"overdose": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "rat_mans_bag", "nodes": ["poison_stacks", "cap_lingers"], "step": 0.05},
-	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "step": 0.25},
-	"live_load": {"class": "Scrapper", "set": "The Bank's", "pieces": 3, "rule": "jump_leads", "nodes": ["shock_chain", "cap_arc"], "step": 0.02},
+	"embers": {"class": "Drifter", "set": "The Fire Crew's", "pieces": 3, "rule": "weed_burner", "nodes": ["fire_spread", "cap_spread"], "recipe": ["Moving on/Bottle and rag", "Petrol/Drifter's can", "Petrol/Spreads", "Petrol/Wildfire"], "step": 0.04},
+	"clean_kills": {"class": "Poacher", "set": "The Army's", "pieces": 4, "rule": "gritters_keys", "nodes": ["frost_freeze", "cap_shatter"], "recipe": ["Snares/Cold snap", "The cold/Poacher's snare", "The cold/Frozen solid", "The cold/Shatter"], "step": 0.05},
+	"overdose": {"class": "Paramedic", "set": "The Ambulance's", "pieces": 3, "rule": "rat_mans_bag", "nodes": ["poison_stacks", "cap_lingers"], "recipe": ["Triage/Syringe", "The Rat Man/Paramedic's dose", "The Rat Man/Builds", "The Rat Man/Lingers"], "step": 0.05},
+	"opened_for_good": {"class": "Doorman", "set": "The Carpet Man's", "pieces": 2, "rule": "butchers_steel", "nodes": ["bleed_forever", "cap_bleed_out"], "recipe": ["Muscle/Glassing", "Blades/Doorman's glass", "Blades/Won't stop", "Blades/Bleed out"], "step": 0.25},
+	"live_load": {"class": "Scrapper", "set": "The Bank's", "pieces": 3, "rule": "jump_leads", "nodes": ["shock_chain", "cap_arc"], "recipe": ["Stripping/Live wire", "Live/Scrapper's mains", "Live/Daisy chain", "Live/Arc"], "step": 0.02},
+	"drilled": {"class": "Recruit", "set": "The Army's", "pieces": 3, "rule": "qm_rifle", "nodes": ["bust_them_up", "cap_flattened"], "recipe": ["Ordnance/Brute force", "Knuckles/Recruit's boots", "Knuckles/Bust them up", "Knuckles/Flattened"], "step": 0.03},
 }
 
 
@@ -1559,11 +1655,11 @@ const TREES_SRC := [
 	# Doorman
 	{"name": "Muscle", "class": "Doorman", "nodes": [
 		{"name": "Heavy hands", "col": 0, "row": 0, "effect": "damage_pct", "value": 4},
-		{"name": "Gym", "col": 0, "row": 1, "effect": "hp", "value": 4},
-		{"name": "Broad shoulders", "col": 1, "row": 0, "effect": "armour_pct", "value": 5},
+		{"name": "Gym", "col": 0, "row": 1, "effect": "hp", "value": 14},     # 4 + Bulk's 10 (24 Oct, step 4: its hang went to Shoulder charge),
+		{"name": "Broad shoulders", "col": 1, "row": 0, "effect": "armour_pct", "value": 17},     # 5 + Hard case's 12 (24 Oct, step 4: its hang went to Brace),
 		{"name": "Shotgunner", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "shotgun", "notable": true, "words": "Shotgun damage +25%"},
 		{"name": "Weights", "col": 1, "row": 1, "effect": "damage_pct", "value": 5},
-		{"name": "Thick skin", "col": 2, "row": 1, "effect": "armour_pct", "value": 8},
+		{"name": "Off the canvas", "col": 2, "row": 1, "effect": "off_the_canvas", "notable": true, "words": "Guard of 20% max HP at 33% HP, once a run"},     # moved off its hang for Barred (24 Oct, step 4)
 		{"name": "Bodyline", "col": 4, "row": 0, "effect": "bodyline", "keystone": true, "words": "Take 50% less damage with three or more on you"},
 		{"name": "Big frame", "col": 3, "row": 1, "effect": "hp", "value": 6},
 		{"name": "Glassing", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "doorman_bleed", "words": "15% of every hit becomes bleed"},
@@ -1572,12 +1668,12 @@ const TREES_SRC := [
 		{"name": "Iron", "col": 5, "row": 0, "effect": "cap_iron", "capstone": true, "words": "Every kill heals 10% of max HP under half HP"},
 	]},
 	{"name": "The door", "class": "Doorman", "nodes": [
-		{"name": "Stance", "col": 0, "row": 0, "effect": "hp", "value": 10},
+		{"name": "Stance", "col": 0, "row": 0, "effect": "hp", "value": 18},     # 10 + Big lad's 8 (24 Oct, step 4: its hang went to Pat down),
 		{"name": "Heads down", "col": 0, "row": 1, "effect": "damage_pct", "value": 3},
-		{"name": "Eye contact", "col": 1, "row": 0, "effect": "armour_pct", "value": 5},
+		{"name": "Eye contact", "col": 1, "row": 0, "effect": "armour_pct", "value": 15},     # 5 + Doorframe's 10 (24 Oct, step 4: its hang went to Not on the list),
 		{"name": "Chokepoints", "col": 2, "row": 0, "effect": "overwatch", "notable": true, "words": "Only 2 of a gang can fire on you at once, not 3"},
 		{"name": "Bouncing", "col": 1, "row": 1, "effect": "hp", "value": 5},
-		{"name": "Keep back", "col": 2, "row": 1, "effect": "armour_pct", "value": 5},
+		{"name": "Last orders", "col": 2, "row": 1, "effect": "last_orders", "notable": true, "words": "+40% damage to the last of each gang"},     # moved off its hang for Chucking-out time (24 Oct, step 4)
 		{"name": "One at a time", "col": 4, "row": 0, "effect": "one_at_a_time", "keystone": true, "words": "Only one of a gang can ever fire on you at once; pace −25%"},
 		{"name": "Hands on", "col": 3, "row": 0, "effect": "physical_pct", "value": 20, "type": ["shotgun", "melee"], "notable": true, "joint": "doorman_physical", "words": "Shotguns and melee do 20% more physical damage"},
 		{"name": "Through the lot", "col": 3, "row": 1, "effect": "melee_sweep", "type": "melee", "notable": true, "words": "With melee, every swing hits everyone on you"},
@@ -1587,27 +1683,27 @@ const TREES_SRC := [
 	]},
 	# Paramedic
 	{"name": "Triage", "class": "Paramedic", "nodes": [
-		{"name": "Steady pulse", "col": 0, "row": 0, "effect": "heal_pct", "value": 10},
-		{"name": "Fast hands", "col": 0, "row": 1, "effect": "med_speed_pct", "value": 15},
+		{"name": "Steady pulse", "col": 0, "row": 0, "effect": "heal_pct", "value": 30},     # 10 + Good hands's 20 (24 Oct, step 4: its hang went to Tourniquet),
+		{"name": "Fast hands", "col": 0, "row": 1, "effect": "med_speed_pct", "value": 35},     # 15 + Quick dressing's 20 (24 Oct, step 4: its hang went to Antidote),
 		{"name": "Kit bag", "col": 1, "row": 0, "effect": "heal_pct", "value": 10},
 		{"name": "Fast work", "col": 2, "row": 0, "effect": "triage", "notable": true, "words": "Meds take half the time"},
 		{"name": "Good veins", "col": 1, "row": 1, "effect": "heal_pct", "value": 15},
-		{"name": "Stock take", "col": 2, "row": 1, "effect": "med_cap", "value": 1},
+		{"name": "Stock take", "col": 2, "row": 1, "effect": "med_cap", "value": 2},     # 1 + Grab bag's 1 (24 Oct, step 4: its hang went to Adrenaline),
 		{"name": "Field surgery", "col": 4, "row": 0, "effect": "field_surgery", "keystone": true, "words": "Meds work at once, not over seconds"},
-		{"name": "Pressure", "col": 3, "row": 1, "effect": "heal_pct", "value": 15},
+		{"name": "Worst first", "col": 3, "row": 1, "effect": "worst_first", "notable": true, "words": "A med heals +50% under 50% HP"},     # moved off its hang for Major incident (24 Oct, step 4)
 		{"name": "Syringe", "col": 3, "row": 0, "effect": "conv_poison_pct", "value": 15, "notable": true, "joint": "paramedic_poison", "words": "15% of every hit becomes poison"},
 		{"name": "Walking wounded", "cost": true, "col": 4, "row": 1, "effect": "walking_wounded", "notable": true, "words": "Meds heal 50% less; damage +40% under half HP"},
 		{"name": "Pockets checked", "col": 5, "row": 1, "effect": "rarity", "value": 15},
 		{"name": "Clean hands", "col": 5, "row": 0, "effect": "cap_clean_hands", "capstone": true, "words": "A med clears burns, poison and bleeds on you, and you take no damage for 3 seconds"},
 	]},
 	{"name": "Shifts", "class": "Paramedic", "nodes": [
-		{"name": "Night shift", "col": 0, "row": 0, "effect": "hp", "value": 5},
-		{"name": "Rest easy", "col": 0, "row": 1, "effect": "rest_pct", "value": 25},
-		{"name": "Mates' rates", "col": 1, "row": 0, "effect": "treat_pct", "value": 20},
+		{"name": "Night shift", "col": 0, "row": 0, "effect": "hp", "value": 13},     # 5 + Last bus's 8 (24 Oct, step 4: its hang went to Strapped up),
+		{"name": "Rest easy", "col": 0, "row": 1, "effect": "rest_pct", "value": 55},     # 25 + Flask's 30 (24 Oct, step 4: its hang went to Two sugars),
+		{"name": "Mates' rates", "col": 1, "row": 0, "effect": "treat_pct", "value": 40},     # 20 + Regulars's 20 (24 Oct, step 4: its hang went to Sedative dart),
 		{"name": "Walk it off", "col": 2, "row": 0, "effect": "walk_it_off", "notable": true, "words": "Heal 1 HP a second while searching"},
 		{"name": "Long shift", "col": 1, "row": 1, "effect": "hp", "value": 5},
-		{"name": "Cold tea", "col": 2, "row": 1, "effect": "rest_pct", "value": 25},
-		{"name": "Not today", "col": 4, "row": 0, "effect": "not_today", "keystone": true, "words": "Once a run, a hit that would kill you leaves you on half HP instead"},
+		{"name": "Clocking off", "col": 2, "row": 1, "effect": "clocking_off", "notable": true, "words": "The first search after a clear is instant"},     # moved off its hang for Code blue (24 Oct, step 4)
+		{"name": "Not today", "col": 4, "row": 0, "effect": "not_today", "keystone": true, "words": "Under 25% HP, you take 40% less damage"},
 		{"name": "Discount", "col": 3, "row": 1, "effect": "treat_pct", "value": 20},
 		{"name": "Ice pack", "col": 3, "row": 0, "effect": "conv_frost_pct", "value": 15, "notable": true, "joint": "paramedic_frost", "words": "15% of every hit becomes frost, which slows their fire"},
 		{"name": "Second shift", "col": 4, "row": 1, "effect": "second_shift", "notable": true, "words": "The first med you use on a run isn't used up"},
@@ -1616,26 +1712,26 @@ const TREES_SRC := [
 	]},
 	# Scrapper
 	{"name": "Stripping", "class": "Scrapper", "nodes": [
-		{"name": "Nose for parts", "col": 0, "row": 0, "effect": "att_share", "value": 5},
+		{"name": "Nose for parts", "col": 0, "row": 0, "effect": "att_share", "value": 15},     # 5 + Socket set's 10 (24 Oct, step 4: its hang went to Ring main),
 		{"name": "Quick fingers", "col": 0, "row": 1, "effect": "search_pct", "value": 15},
 		{"name": "Tools", "col": 1, "row": 0, "effect": "damage_pct", "value": 3},
 		{"name": "Bodger", "col": 2, "row": 0, "effect": "damage_pct", "value": 40, "type": "improvised", "notable": true, "words": "Improvised gun damage +40%"},
 		{"name": "Spare parts", "col": 1, "row": 1, "effect": "att_share", "value": 5},
-		{"name": "Fast strip", "col": 2, "row": 1, "effect": "search_pct", "value": 15},
+		{"name": "Salvage", "col": 2, "row": 1, "effect": "salvage", "notable": true, "words": "+50% scrap from a ditch"},     # moved off its hang for Breakdown (24 Oct, step 4)
 		{"name": "Nothing wasted", "col": 4, "row": 0, "effect": "nothing_wasted", "keystone": true, "words": "Every kill drops something"},
-		{"name": "Magpie eye", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
+		{"name": "Workbench", "col": 3, "row": 1, "effect": "workbench", "notable": true, "words": "One Bench job a day is free"},     # moved off its hang for Short circuit (24 Oct, step 4)
 		{"name": "Live wire", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "scrapper_shock", "words": "15% of every hit becomes shock"},
 		{"name": "Quiet hands", "cost": true, "col": 4, "row": 1, "effect": "quiet_hands", "notable": true, "words": "Every search finds 1 more; kills drop nothing"},
 		{"name": "Jerry-rigged", "col": 5, "row": 0, "effect": "cap_jerry", "capstone": true, "words": "An improvised primary does 50% more damage"},
 		{"name": "Sheet metal", "col": 5, "row": 1, "beside": true, "effect": "sheet_metal", "notable": true, "words": "Every crate searched gives Guard of 6% of max HP"},     # Guard (12 Oct)
 	]},
 	{"name": "Fencing", "class": "Scrapper", "nodes": [
-		{"name": "Gift of the gab", "col": 0, "row": 0, "effect": "sell_pct", "value": 10},
-		{"name": "Contacts", "col": 0, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "Gift of the gab", "col": 0, "row": 0, "effect": "sell_pct", "value": 25},     # 10 + Haggler's 15 (24 Oct, step 4: its hang went to Bung),
+		{"name": "Contacts", "col": 0, "row": 1, "effect": "cash_pct", "value": 25},     # 10 + Pub talk's 15 (24 Oct, step 4: its hang went to Back of the van),
 		{"name": "Weighing it up", "col": 1, "row": 0, "effect": "sell_pct", "value": 10},
 		{"name": "Magpie", "col": 2, "row": 0, "effect": "scavenger", "notable": true, "words": "Every search finds 1 more"},
 		{"name": "Known face", "col": 1, "row": 1, "effect": "cash_pct", "value": 10},
-		{"name": "Fair price", "col": 2, "row": 1, "effect": "sell_pct", "value": 10},
+		{"name": "Back pocket", "col": 2, "row": 1, "effect": "back_pocket", "notable": true, "words": "The Fence keeps one piece of kit free on a death"},     # moved off its hang for Everything must go (24 Oct, step 4)
 		{"name": "Buyer's market", "col": 4, "row": 0, "effect": "buyers_market", "keystone": true, "words": "The Fence pays double, and everything you buy costs double"},
 		{"name": "Lucky find", "col": 3, "row": 1, "effect": "rarity", "value": 20},
 		{"name": "Blowtorch", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "scrapper_fire", "words": "15% of every hit becomes fire"},
@@ -1644,12 +1740,12 @@ const TREES_SRC := [
 	]},
 	# Drifter
 	{"name": "Moving on", "class": "Drifter", "nodes": [
-		{"name": "Light feet", "col": 0, "row": 0, "effect": "pace_pct", "value": 5},
+		{"name": "Light feet", "col": 0, "row": 0, "effect": "pace_pct", "value": 11},     # 5 + Tarmac's 6 (24 Oct, step 4: its hang went to Duck and weave),
 		{"name": "Road legs", "col": 0, "row": 1, "effect": "hp", "value": 5},
-		{"name": "Head start", "col": 1, "row": 0, "effect": "patrol_pct", "value": 10},
+		{"name": "Head start", "col": 1, "row": 0, "effect": "patrol_pct", "value": 20},     # 10 + Thumb out's 10 (24 Oct, step 4: its hang went to Look lively),
 		{"name": "Spray", "col": 2, "row": 0, "effect": "damage_pct", "value": 25, "type": "smg", "notable": true, "words": "SMG damage +25%"},
 		{"name": "Keep moving", "col": 1, "row": 1, "effect": "pace_pct", "value": 5},
-		{"name": "Never still", "col": 2, "row": 1, "effect": "patrol_pct", "value": 10},
+		{"name": "B-roads", "col": 2, "row": 1, "effect": "b_roads", "notable": true, "words": "The first gang after a clear takes 100% longer to arrive"},     # moved off its hang for Gone (24 Oct, step 4)
 		{"name": "Never there", "col": 4, "row": 0, "effect": "never_there", "keystone": true, "words": "No gangs ever come; searches take twice as long"},
 		{"name": "Wiry", "col": 3, "row": 1, "effect": "hp", "value": 5},
 		{"name": "Bottle and rag", "col": 3, "row": 0, "effect": "conv_fire_pct", "value": 15, "notable": true, "joint": "drifter_fire", "words": "15% of every hit becomes fire"},
@@ -1658,17 +1754,47 @@ const TREES_SRC := [
 		{"name": "Breather", "col": 5, "row": 1, "beside": true, "effect": "breather", "notable": true, "words": "While searching, Guard refills 10% of its cap a second"},     # Guard (12 Oct)
 	]},
 	{"name": "Luck", "class": "Drifter", "nodes": [
-		{"name": "Jammy", "col": 0, "row": 0, "effect": "rarity", "value": 10},
-		{"name": "Found tins", "col": 0, "row": 1, "effect": "cash_pct", "value": 10},
-		{"name": "Charmed", "col": 1, "row": 0, "effect": "loot_pct", "value": 3},
+		{"name": "Jammy", "col": 0, "row": 0, "effect": "rarity", "value": 25},     # 10 + Lucky penny's 15 (24 Oct, step 4: its hang went to Coin toss),
+		{"name": "Found tins", "col": 0, "row": 1, "effect": "cash_pct", "value": 22},     # 10 + Coppers's 12 (24 Oct, step 4: its hang went to Close shave),
+		{"name": "Charmed", "col": 1, "row": 0, "effect": "loot_pct", "value": 9},     # 3 + Beady eye's 6 (24 Oct, step 4: its hang went to Chancer),
 		{"name": "Dead man's shoes", "col": 2, "row": 0, "effect": "damage_low_pct", "value": 20, "notable": true, "words": "Damage +20% under half HP"},
 		{"name": "Touch wood", "col": 1, "row": 1, "effect": "rarity", "value": 15},
-		{"name": "Pockets", "col": 2, "row": 1, "effect": "cash_pct", "value": 10},
+		{"name": "Spare change", "col": 2, "row": 1, "effect": "spare_change", "notable": true, "words": "20% chance a search finds a note"},     # moved off its hang for Jackpot (24 Oct, step 4)
 		{"name": "All or nothing", "col": 4, "row": 0, "effect": "all_or_nothing", "keystone": true, "words": "No Common finds, and half as many finds"},
 		{"name": "Four-leaf", "col": 3, "row": 1, "effect": "loot_pct", "value": 4},
 		{"name": "Jump start", "col": 3, "row": 0, "effect": "conv_shock_pct", "value": 15, "notable": true, "joint": "drifter_shock", "words": "15% of every hit becomes shock"},
 		{"name": "Light fingers", "cost": true, "col": 4, "row": 1, "effect": "light_fingers", "notable": true, "words": "Papers turn up 3 times as often; tins from kills −20%"},
 		{"name": "Loaded dice", "col": 5, "row": 0, "effect": "cap_loaded_dice", "capstone": true, "words": "A Rare or better find rolls twice; you keep the better"},
+	]},
+	# Recruit (24 Oct, milestone 8: the sixth class, docs/design/skills.md §5): the class built round skills - Ordnance
+	# the throws, Drill the casting
+	{"name": "Ordnance", "class": "Recruit", "nodes": [
+		{"name": "Pull the pin", "col": 0, "row": 0, "effect": "grenade_pct", "value": 10},
+		{"name": "Cookhouse", "col": 0, "row": 1, "effect": "hp", "value": 5},
+		{"name": "Spare pouch", "col": 1, "row": 0, "effect": "med_cap", "value": 1},
+		{"name": "Cook it off", "col": 2, "row": 0, "effect": "grenade_extra", "notable": true, "words": "Every grenade also hits a man who isn't on you yet"},
+		{"name": "Square bashing", "col": 1, "row": 1, "effect": "damage_pct", "value": 4},
+		{"name": "Flak jacket", "col": 2, "row": 1, "effect": "armour_pct", "value": 6},
+		{"name": "Grenadier", "col": 4, "row": 0, "effect": "danger_area", "keystone": true, "words": "Grenades do double damage; the rig holds one fewer pouch"},
+		{"name": "Detonators", "col": 3, "row": 1, "effect": "grenade_pct", "value": 15},
+		{"name": "Brute force", "col": 3, "row": 0, "effect": "physical_pct", "value": 15, "notable": true, "joint": "recruit_physical", "words": "Physical damage +15%"},
+		{"name": "Blast burns", "cost": true, "col": 4, "row": 1, "effect": "blast_burns", "notable": true, "words": "Every grenade sets everyone it hits burning; you take 10% more fire damage"},
+		{"name": "Sandbags", "col": 5, "row": 1, "effect": "armour_pct", "value": 10},
+		{"name": "Ringing ears", "col": 5, "row": 0, "effect": "cap_shock_awe", "capstone": true, "words": "Every grenade stuns everyone it hits for 1 second"},
+	]},
+	{"name": "Drill", "class": "Recruit", "nodes": [
+		{"name": "Reveille", "col": 0, "row": 0, "effect": "energy_regen_pct", "value": 10},
+		{"name": "Lights out", "col": 0, "row": 1, "effect": "hp", "value": 5},
+		{"name": "At ease", "col": 1, "row": 0, "effect": "cdr_pct", "value": 4},
+		{"name": "Cover me", "col": 2, "row": 0, "effect": "cover_pct", "value": 25, "notable": true, "words": "Take 25% less damage while one of your skills is in effect"},
+		{"name": "Range day", "col": 1, "row": 1, "effect": "damage_pct", "value": 4},
+		{"name": "Kit inspection", "col": 2, "row": 1, "effect": "energy_max", "value": 10},
+		{"name": "Quick march", "col": 4, "row": 0, "effect": "on_the_double", "keystone": true, "words": "Cooldowns 30% shorter; skills cost 25% more"},
+		{"name": "Brasso", "col": 3, "row": 1, "effect": "energy_regen_pct", "value": 15},
+		{"name": "Fix bayonets", "col": 3, "row": 0, "effect": "conv_bleed_pct", "value": 15, "notable": true, "joint": "recruit_bleed", "words": "15% of every hit becomes bleed"},
+		{"name": "Double time", "cost": true, "col": 4, "row": 1, "effect": "double_time", "notable": true, "words": "Energy refills twice as quickly; max energy −30"},
+		{"name": "Spit and polish", "col": 5, "row": 1, "effect": "cdr_pct", "value": 4},
+		{"name": "Passing-out parade", "col": 5, "row": 0, "effect": "cap_passing_out", "capstone": true, "words": "Every skill you use gives 5 energy back"},
 	]},
 ]
 ## The element trees: one a type, lanes like the class ones - conversion and increased to a notable, then
@@ -1743,12 +1869,12 @@ const ELEMENT_TREES_SRC := [
 		{"name": "An edge", "col": 0, "row": 1, "effect": "bleed_pct", "value": 25},          # 10 to 25 (the twenty-fifth read): bleed meets the town's 20% resist on the way to the Bank, fire and poison don't
 		{"name": "Sharpened", "col": 1, "row": 0, "effect": "conv_bleed_pct", "value": 35},     # 15 to 35, as every element's second conversion (the twenty-fifth read: bleed the slowest to the Bank, 2.6 h against fire's 0.7)
 		{"name": "Opened up", "col": 2, "row": 0, "effect": "bleed_pct", "value": 30, "notable": true, "words": "Bleed damage +30%; bleeds last twice as long"},
-		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 20},             # 12 to 20, the same
+		{"name": "Deep", "col": 1, "row": 1, "effect": "bleed_pct", "value": 40},             # 12 to 20, the same; 20 to 40, Butcher's 20 (24 Oct: its place is the Recruit's half)
 		{"name": "Doorman's glass", "col": 3, "row": 0, "effect": "bleed_pct", "value": 25, "type": ["shotgun", "melee"], "class": "Doorman", "notable": true, "joint": "doorman_bleed", "words": "Shotguns and melee do 25% more bleed damage"},
 		{"name": "Won't stop", "col": 4, "row": 0, "effect": "bleed_forever", "keystone": true, "cost_less": 2,     # two under (the twenty-seventh read 3.1 h, the twenty-eighth 2.9, against the 2 h gate)
 		 "words": "Bleeds last until the target dies, and stack to 3"},
 		{"name": "Nicked", "col": 2, "row": 1, "effect": "dot_pct", "value": 20},
-		{"name": "Butcher's", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20},          # was conv 20: the conversion moved up the tree to Sharpened
+		{"name": "Recruit's bayonet", "col": 3, "row": 1, "effect": "bleed_pct", "value": 20, "class": "Recruit", "notable": true, "joint": "recruit_bleed", "words": "Bleed damage +20%"},     # Butcher's place (24 Oct: the Recruit's half)
 		{"name": "Blood up", "col": 4, "row": 1, "effect": "bleed_more", "notable": true, "words": "Bleed damage +40%; meds take 30% longer"},
 		{"name": "Bleed out", "col": 5, "row": 0, "effect": "cap_bleed_out", "capstone": true, "cost_less": 2,     # two under (its capstone 8.9 h, then 5.8, against 5)
 		 "words": "Bleed damage +50%; a bleed carries to the next man when one dies"},
@@ -1763,8 +1889,8 @@ const ELEMENT_TREES_SRC := [
 		{"name": "Thick skull", "col": 1, "row": 1, "effect": "armour_pct", "value": 5},
 		{"name": "Doorman's knuckles", "col": 3, "row": 0, "effect": "phys_pen", "value": 20, "class": "Doorman", "notable": true, "joint": "doorman_physical", "words": "Your physical damage ignores 20% of their resist"},
 		{"name": "Bust them up", "col": 4, "row": 0, "effect": "bust_them_up", "keystone": true, "words": "Physical damage ignores armour and resist; none of it becomes an element"},
-		{"name": "Weight behind it", "col": 2, "row": 1, "effect": "physical_pct", "value": 12},
-		{"name": "Sovereign rings", "col": 3, "row": 1, "effect": "physical_pct", "value": 20},
+		{"name": "Weight behind it", "col": 2, "row": 1, "effect": "physical_pct", "value": 32},     # 12 + Sovereign rings' 20 (24 Oct: its place is the Recruit's half)
+		{"name": "Recruit's boots", "col": 3, "row": 1, "effect": "physical_pct", "value": 20, "class": "Recruit", "notable": true, "joint": "recruit_physical", "words": "Physical damage +20%"},     # Sovereign rings' place (24 Oct: the Recruit's half)
 		{"name": "Heavy", "col": 4, "row": 1, "effect": "physical_more", "notable": true, "words": "Physical damage +40%; pace −15%"},
 		{"name": "Flattened", "col": 5, "row": 0, "effect": "cap_flattened", "capstone": true, "words": "A physical kill halves the fire of everyone on you for 2 seconds"},
 		{"name": "Thick-skinned", "col": 5, "row": 1, "beside": true, "effect": "thick_skinned", "notable": true,
@@ -1815,10 +1941,28 @@ const WHEEL_BRIDGE_DEG := 168.0
 const ELEMENT_METER := 1.5
 const BRIDGE_LEVEL := 30
 const BRIDGE_COST := 3
-const BRIDGES := {"Drifter": ["Poacher", "Scrapper"], "Scrapper": ["Drifter", "Doorman"], "Doorman": ["Scrapper", "Paramedic"], "Paramedic": ["Doorman", "Poacher"], "Poacher": ["Paramedic", "Drifter"]}
+const BRIDGES := {"Drifter": ["Poacher", "Scrapper"], "Scrapper": ["Drifter", "Recruit"], "Recruit": ["Scrapper", "Doorman"], "Doorman": ["Recruit", "Paramedic"], "Paramedic": ["Doorman", "Poacher"], "Poacher": ["Paramedic", "Drifter"]}
 ## The hung notables and the keystone choice a tree: "hang" [x, side] places one; the keystones carry "at" (the
 ## first lane's rows) and link by name ("links" in the tree, "xlinks" "Tree/Name").
 const WEB_EXTRA := {
+	"Ordnance": [
+		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
+		{"name": "Lob one in", "hang": [1.5, -1], "effect": "skill_lob_one_in", "skill": "lob_one_in", "notable": true, "words": "Throws a grenade at everyone on you without using one from your rig"},
+		{"name": "Flashbang", "hang": [2.5, -1], "effect": "skill_flashbang", "skill": "flashbang", "notable": true, "words": "Stuns everyone on you for 1.5 seconds; they do 50% less damage to you for 4 seconds"},
+		{"name": "Smoke", "hang": [3.5, -1], "effect": "skill_smoke", "skill": "smoke", "notable": true, "words": "Half their shots at you miss for 6 seconds"},
+		{"name": "Danger close", "hang": [4.5, -1], "effect": "skill_danger_close", "skill": "danger_close", "notable": true, "words": "×4 blast damage to everyone on you; you lose 10% of max HP"},
+		{"name": "Firing blanks", "at": [4, LANE_OFF], "col": 4, "effect": "live_firing", "keystone": true, "links": ["Detonators"], "xlinks": ["Drill/Fix bayonets"],
+		 "words": "Skills cost 25% less; you do 15% less damage"},
+	],
+	"Drill": [
+		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
+		{"name": "Suppressing fire", "hang": [1.5, 1], "effect": "skill_suppressing_fire", "skill": "suppressing_fire", "notable": true, "words": "Everyone on you fires 35% slower for 8 seconds"},
+		{"name": "Make ready", "hang": [2.5, 1], "effect": "skill_make_ready", "skill": "make_ready", "notable": true, "words": "+25% damage for your next 10 shots"},
+		{"name": "Stand to", "hang": [3.5, 1], "effect": "skill_stand_to", "skill": "stand_to", "notable": true, "words": "Gives 30 energy and takes 2 seconds off every cooldown"},
+		{"name": "Fire and manoeuvre", "hang": [4.5, 1], "effect": "skill_fire_and_manoeuvre", "skill": "fire_and_manoeuvre", "notable": true, "words": "For 10 seconds, skills cost half and cooldowns pass twice as quickly"},
+	],
 	"The Pitch": [
 		{"name": "Home ground", "hang": [0.5, -1], "effect": "hp", "value": 8, "notable": true},
 		{"name": "Good boots", "hang": [2.5, -1], "effect": "pace_pct", "value": 4, "notable": true},
@@ -1830,20 +1974,20 @@ const WEB_EXTRA := {
 	"Stripping": [
 		{"name": "The second past", "bridge": "Drifter", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Drifter\'s region to your points. One bridge a class."},
-		{"name": "Socket set", "hang": [1.5, -1], "effect": "att_share", "value": 10, "notable": true},
-		{"name": "Oily rag", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "improvised", "notable": true, "words": "Improvised guns do 15% more"},
-		{"name": "Salvage", "hang": [3.5, -1], "effect": "salvage", "notable": true, "words": "+50% scrap from a ditch"},
-		{"name": "Workbench", "hang": [4.5, -1], "effect": "workbench", "notable": true, "words": "One Bench job a day is free"},
-		{"name": "Breaker's yard", "at": [4, LANE_OFF], "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Magpie eye"], "xlinks": ["Fencing/Blowtorch"],
+		{"name": "Ring main", "hang": [1.5, -1], "effect": "skill_ring_main", "skill": "ring_main", "notable": true, "words": "×1.5 shock damage that jumps through 3 men"},
+		{"name": "Hot work", "hang": [2.5, -1], "effect": "skill_hot_work", "skill": "hot_work", "notable": true, "words": "Sets the nearest man burning for ×2 fire damage over 4 seconds"},
+		{"name": "Breakdown", "hang": [3.5, -1], "effect": "skill_breakdown", "skill": "breakdown", "notable": true, "words": "The next man you kill drops 20 rounds for your gun"},
+		{"name": "Short circuit", "hang": [4.5, -1], "effect": "skill_short_circuit", "skill": "short_circuit", "notable": true, "words": "Shocks everyone on you and stuns them for 1.5 seconds. Your shock damage +30% for 6 seconds."},
+		{"name": "Breaker's yard", "at": [4, LANE_OFF], "col": 4, "effect": "breakers_yard", "keystone": true, "links": ["Workbench"], "xlinks": ["Fencing/Blowtorch"],
 		 "words": "1 kill in 3 drops a gun part or a socketable. No plain kit drops."},
 	],
 	"Fencing": [
-		{"name": "The second past", "bridge": "Doorman", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
-		{"name": "Haggler", "hang": [1.5, 1], "effect": "sell_pct", "value": 15, "notable": true},
-		{"name": "Shop local", "hang": [2.5, 1], "effect": "buy_pct", "value": 10, "notable": true, "words": "The Fence sells 10% cheaper"},
-		{"name": "Pub talk", "hang": [3.5, 1], "effect": "cash_pct", "value": 15, "notable": true},
-		{"name": "Back pocket", "hang": [4.5, 1], "effect": "back_pocket", "notable": true, "words": "The Fence keeps one piece of kit free on a death"},
+		{"name": "The second past", "bridge": "Recruit", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
+		{"name": "Bung", "hang": [1.5, 1], "effect": "skill_bung", "skill": "bung", "notable": true, "words": "Pay 20 tins: the nearest man is stunned for 8 seconds"},
+		{"name": "Knock-off kit", "hang": [2.5, 1], "effect": "skill_knock_off_kit", "skill": "knock_off_kit", "notable": true, "words": "+30% gun damage for 8 seconds"},
+		{"name": "Back of the van", "hang": [3.5, 1], "effect": "skill_back_of_the_van", "skill": "back_of_the_van", "notable": true, "words": "Puts a grenade in your rig. Once a fight."},
+		{"name": "Everything must go", "hang": [4.5, 1], "effect": "skill_everything_must_go", "skill": "everything_must_go", "notable": true, "words": "For 5 seconds, every shot fires twice"},
 	],
 	"Stalking": [
 		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
@@ -1864,58 +2008,58 @@ const WEB_EXTRA := {
 		{"name": "Net every hole", "hang": [4.5, 1], "effect": "skill_net_every_hole", "skill": "net_every_hole", "notable": true, "words": "Everyone on you is stunned for 2 seconds and starts to bleed"},
 	],
 	"Muscle": [
-		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
-		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
-		{"name": "Bulk", "hang": [1.5, -1], "effect": "hp", "value": 10, "notable": true},
-		{"name": "Shoulder", "hang": [2.5, -1], "effect": "damage_pct", "value": 15, "type": "shotgun", "notable": true, "words": "Shotguns do 15% more"},
-		{"name": "Hard case", "hang": [3.5, -1], "effect": "armour_pct", "value": 12, "notable": true},
-		{"name": "Off the canvas", "hang": [4.5, -1], "effect": "off_the_canvas", "notable": true, "words": "Guard of 20% max HP at 33% HP, once a run"},
+		{"name": "The second past", "bridge": "Recruit", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
+		 "words": "Opens the Recruit\'s region to your points. One bridge a class."},
+		{"name": "Shoulder charge", "hang": [1.5, -1], "effect": "skill_shoulder_charge", "skill": "shoulder_charge", "notable": true, "words": "Hits the nearest man for ×3 damage and sends him to the back"},
+		{"name": "Headbutt", "hang": [2.5, -1], "effect": "skill_headbutt", "skill": "headbutt", "notable": true, "words": "Hits the nearest man for ×1.5 damage and stuns him for 2 seconds"},
+		{"name": "Brace", "hang": [3.5, -1], "effect": "skill_brace", "skill": "brace", "notable": true, "words": "+60% armour for 6 seconds"},
+		{"name": "Barred", "hang": [4.5, -1], "effect": "skill_barred", "skill": "barred", "notable": true, "words": "Throws the nearest man out: a kill, but he drops nothing. Not on a head."},
 		{"name": "Bin lid", "at": [4, LANE_OFF], "col": 4, "effect": "bin_lid", "keystone": true, "links": ["Big frame"], "xlinks": ["The door/Hands on"],
 		 "words": "Guard of 25% as each gang arrives. −20% damage while it holds."},
 	],
 	"The door": [
 		{"name": "The second past", "bridge": "Paramedic", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Paramedic\'s region to your points. One bridge a class."},
-		{"name": "Doorframe", "hang": [1.5, 1], "effect": "armour_pct", "value": 10, "notable": true},
-		{"name": "Hands up", "hang": [2.5, 1], "effect": "physical_pct", "value": 15, "notable": true},
-		{"name": "Big lad", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
-		{"name": "Last orders", "hang": [4.5, 1], "effect": "last_orders", "notable": true, "words": "+40% damage to the last of each gang"},
+		{"name": "Not on the list", "hang": [1.5, 1], "effect": "skill_not_on_the_list", "skill": "not_on_the_list", "notable": true, "words": "One fewer on you for 10 seconds"},
+		{"name": "Shutters down", "hang": [2.5, 1], "effect": "skill_shutters_down", "skill": "shutters_down", "notable": true, "words": "Take 80% less damage for 4 seconds"},
+		{"name": "Pat down", "hang": [3.5, 1], "effect": "skill_pat_down", "skill": "pat_down", "notable": true, "words": "The nearest man loses his armour and resists for 10 seconds"},
+		{"name": "Chucking-out time", "hang": [4.5, 1], "effect": "skill_chucking_out_time", "skill": "chucking_out_time", "notable": true, "words": "Stuns everyone on you for 2 seconds, then they take 50% more for 6 seconds"},
 	],
 	"Triage": [
 		{"name": "The second past", "bridge": "Doorman", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Doorman\'s region to your points. One bridge a class."},
-		{"name": "Good hands", "hang": [1.5, -1], "effect": "heal_pct", "value": 20, "notable": true},
-		{"name": "Quick dressing", "hang": [2.5, -1], "effect": "med_speed_pct", "value": 20, "notable": true},
-		{"name": "Grab bag", "hang": [3.5, -1], "effect": "med_cap", "value": 1, "notable": true},
-		{"name": "Worst first", "hang": [4.5, -1], "effect": "worst_first", "notable": true, "words": "A med heals +50% under 50% HP"},
-		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Pressure"], "xlinks": ["Shifts/Ice pack"],
+		{"name": "Tourniquet", "hang": [1.5, -1], "effect": "skill_tourniquet", "skill": "tourniquet", "notable": true, "words": "Clears bleed on you; no new bleed lands for 10 seconds"},
+		{"name": "Antidote", "hang": [2.5, -1], "effect": "skill_antidote", "skill": "antidote", "notable": true, "words": "Clears poison and burns on you; neither lands again for 8 seconds"},
+		{"name": "Adrenaline", "hang": [3.5, -1], "effect": "skill_adrenaline", "skill": "adrenaline", "notable": true, "words": "+25% damage and rate of fire for 8 seconds"},
+		{"name": "Major incident", "hang": [4.5, -1], "effect": "skill_major_incident", "skill": "major_incident", "notable": true, "words": "Clears every ailment on you, and you take no wound this run"},
+		{"name": "Jab", "at": [4, LANE_OFF], "col": 4, "effect": "jab", "keystone": true, "links": ["Worst first"], "xlinks": ["Shifts/Ice pack"],
 		 "words": "+20% damage and pace for 8 seconds after a med. A med costs 5% max HP."},
 	],
 	"Shifts": [
 		{"name": "The second past", "bridge": "Poacher", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
-		{"name": "Flask", "hang": [1.5, 1], "effect": "rest_pct", "value": 30, "notable": true},
-		{"name": "Regulars", "hang": [2.5, 1], "effect": "treat_pct", "value": 20, "notable": true},
-		{"name": "Last bus", "hang": [3.5, 1], "effect": "hp", "value": 8, "notable": true},
-		{"name": "Clocking off", "hang": [4.5, 1], "effect": "clocking_off", "notable": true, "words": "The first search after a clear is instant"},
+		{"name": "Two sugars", "hang": [1.5, 1], "effect": "skill_two_sugars", "skill": "two_sugars", "notable": true, "words": "Energy refills 50% quicker for 10 seconds"},
+		{"name": "Sedative dart", "hang": [2.5, 1], "effect": "skill_sedative_dart", "skill": "sedative_dart", "notable": true, "words": "One man on you sleeps for 4 seconds"},
+		{"name": "Strapped up", "hang": [3.5, 1], "effect": "skill_strapped_up", "skill": "strapped_up", "notable": true, "words": "The next hit that would wound you leaves no wound"},
+		{"name": "Code blue", "hang": [4.5, 1], "effect": "skill_code_blue", "skill": "code_blue", "notable": true, "words": "Once a run, a hit that would kill you leaves you on 30% HP with every ailment cleared"},
 	],
 	"Moving on": [
 		{"name": "The second past", "bridge": "Poacher", "at": [5.3, -3.2], "link_at": [4.5, -1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Poacher\'s region to your points. One bridge a class."},
-		{"name": "Tarmac", "hang": [1.5, -1], "effect": "pace_pct", "value": 6, "notable": true},
-		{"name": "Thumb out", "hang": [2.5, -1], "effect": "patrol_pct", "value": 10, "notable": true},
-		{"name": "Light pack", "hang": [3.5, -1], "effect": "cells", "value": 3, "notable": true, "words": "The pack holds 3 more cells"},
-		{"name": "B-roads", "hang": [4.5, -1], "effect": "b_roads", "notable": true, "words": "The first gang after a clear takes 100% longer to arrive"},
+		{"name": "Duck and weave", "hang": [1.5, -1], "effect": "skill_duck_and_weave", "skill": "duck_and_weave", "notable": true, "words": "The next 3 hits on you miss"},
+		{"name": "Look lively", "hang": [2.5, -1], "effect": "skill_look_lively", "skill": "look_lively", "notable": true, "words": "+40% pace for 6 seconds"},
+		{"name": "Elbow room", "hang": [3.5, -1], "effect": "skill_elbow_room", "skill": "elbow_room", "notable": true, "words": "Everyone on you does 25% less damage to you and takes 15% more from you, for 8 seconds"},
+		{"name": "Gone", "hang": [4.5, -1], "effect": "skill_gone", "skill": "gone", "notable": true, "words": "Out of sight for 4 seconds: nothing can hit you. Your next shot does triple damage."},
 		{"name": "On a roll", "at": [4, LANE_OFF], "col": 4, "effect": "on_a_roll", "keystone": true, "links": ["Wiry"], "xlinks": ["Luck/Jump start"],
 		 "words": "+5% find and loot quality a kill untouched, to +50%. A hit resets it."},
 	],
 	"Luck": [
 		{"name": "The second past", "bridge": "Scrapper", "at": [5.3, 3.2], "link_at": [4.5, 1], "col": 5, "cost_fixed": BRIDGE_COST, "notable": true,
 		 "words": "Opens the Scrapper\'s region to your points. One bridge a class."},
-		{"name": "Lucky penny", "hang": [1.5, 1], "effect": "rarity", "value": 15, "notable": true},
-		{"name": "Coppers", "hang": [2.5, 1], "effect": "cash_pct", "value": 12, "notable": true},
-		{"name": "Beady eye", "hang": [3.5, 1], "effect": "loot_pct", "value": 6, "notable": true},
-		{"name": "Spare change", "hang": [4.5, 1], "effect": "spare_change", "notable": true, "words": "20% chance a search finds a note"},
+		{"name": "Coin toss", "hang": [1.5, 1], "effect": "skill_coin_toss", "skill": "coin_toss", "notable": true, "words": "A 50% chance of double damage for 8 seconds"},
+		{"name": "Close shave", "hang": [2.5, 1], "effect": "skill_close_shave", "skill": "close_shave", "notable": true, "words": "The next ailment that would land on you misses"},
+		{"name": "Chancer", "hang": [3.5, 1], "effect": "skill_chancer", "skill": "chancer", "notable": true, "words": "The next man you kill always drops something, at +50% loot quality"},
+		{"name": "Jackpot", "hang": [4.5, 1], "effect": "skill_jackpot", "skill": "jackpot", "notable": true, "words": "For 8 seconds, every kill takes 2 seconds off every cooldown"},
 	],
 	"Petrol": [
 		{"name": "Accelerant", "hang": [1.5, -1], "effect": "fire_pct", "value": 15, "notable": true},
@@ -1963,7 +2107,7 @@ const RING_TREE := "The ring"
 const RING_NODES := 30
 const RING_STEP := 12.0
 const RING_STACK := 10
-const RING_ENTRY_ANGLES := [-120.0, -60.0, 60.0, 120.0, 180.0]     # the classes' angles on the canvas (web_view's CLASS_LAY)
+const RING_ENTRY_ANGLES := [-120.0, -60.0, 0.0, 60.0, 120.0, 180.0]     # the classes' angles on the canvas (web_view's CLASS_LAY)
 static var RING: Dictionary = _ring_build()
 
 
@@ -2175,7 +2319,7 @@ static func _web_named(nodes: Array, nm: String) -> int:
 	return -1
 
 
-const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"]}
+const AFFINITY := {"Drifter": ["fire", "shock"], "Doorman": ["bleed", "physical"], "Poacher": ["poison", "frost"], "Scrapper": ["shock", "fire"], "Paramedic": ["poison", "frost"], "Recruit": ["physical", "bleed"]}     # the Recruit: Knuckles and Blades, his joints (24 Oct)
 const OFF_AFFINITY_COST := 2       # an element off the class's pair costs double a node
 
 ## The joints (9 Oct, docs/design/trees.md): one notable split across a class tree and an element tree of the
@@ -2193,6 +2337,8 @@ const JOINTS := [
 	{"key": "paramedic_frost", "class": "Paramedic", "tree": "Shifts", "element_tree": "The cold", "words": "Chilled gangs do 30% less damage to you; meds heal 20% more while any are chilled"},
 	{"key": "doorman_bleed", "class": "Doorman", "tree": "Muscle", "element_tree": "Blades", "words": "With a shotgun or melee, every hit opens a bleed; bleeding gangs do 20% less damage to you"},
 	{"key": "doorman_physical", "class": "Doorman", "tree": "The door", "element_tree": "Knuckles", "words": "With a shotgun or melee in hand, the gangs on you fire 25% slower"},
+	{"key": "recruit_physical", "class": "Recruit", "tree": "Ordnance", "element_tree": "Knuckles", "words": "Hits and throws from your skills do 25% more damage"},
+	{"key": "recruit_bleed", "class": "Recruit", "tree": "Drill", "element_tree": "Blades", "words": "Hits and throws from your skills open a bleed"},
 ]
 const JOINT_COL := 3               # the column both halves sit in (the fourth)
 const ELEMENT_GATED_COL := 4       # an element tree's columns from here want a closed joint
@@ -2573,7 +2719,7 @@ const RESPEC_CASH := 50
 ## reads by key; "words" is what the Barracks says.
 const CLASSES := [
 	{"name": "Poacher", "words": "Damage +40% to the first of each gang; every gang takes 25% longer to arrive",
-		"short": [["+40% first hit", true], ["Gangs 25% later", true]],     # the card's lines (14 Oct, Training's cards): the words a tooltip
+		"short": [["+40% to the first", true], ["Gangs 25% later", true]],     # the card's lines (14 Oct, Training's cards): the words a tooltip
 		"first_pct": 40, "patrol": 1.25},          # the −10% max HP went (Matt, 9 Oct, the twenty-sixth read: the slowest class to the Bank two passes running, 2.2 and 2.8 h against the Drifter's 0.9)
 	{"name": "Doorman", "words": "Damage +15%; armour +20%; pace −10%",
 		"short": [["+15% damage", true], ["+20% armour", true], ["−10% pace", false]],
@@ -2584,6 +2730,9 @@ const CLASSES := [
 	{"name": "Scrapper", "words": "Searches 25% quicker; loot quantity +10%; improvised guns do 20% more damage",
 		"short": [["Search 25% quicker", true], ["+10% loot quantity", true], ["+20% improvised", true]],
 		"search": 0.75, "loot": 0.10, "improvised": 1.2},     # improvised +20% (12 Oct, Matt's playtest: the only class with no damage in its line; the bot's Scrappers ended on an SMG, their improvised nodes idle)             # searches 30% to 25% faster, the loot back to +10% (12 Oct: +5% loot read 9.3 crafts an hour against 8 - the search pace is the source)              # +15% to +10% (Matt, 9 Oct, the twenty-sixth read: 8.4 crafts of scrap an hour against its band's 8)              # the pass (6 Oct): the −5% damage went; second slowest to the Bank
+	{"name": "Recruit", "words": "Skills cost 10% less; energy refills 20% quicker",
+		"short": [["Skills 10% cheaper", true], ["+20% energy gain", true]],
+		"skill_cost": 0.9, "energy_regen": 1.2},     # the sixth class (24 Oct, milestone 8): the Quartermaster's
 	{"name": "Drifter", "words": "Damage +5%; one fewer on you at a time; pace +10%",
 		"short": [["+5% damage", true], ["One fewer on you", true], ["+10% pace", true]],
 		"damage": 1.05,     # +15% to +5% (Matt, 9 Oct, the twenty-eighth read: with its HP back, the fastest to the Bank at 0.6 h)
