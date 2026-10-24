@@ -22,14 +22,19 @@ only**; **pay sized by income**; **a few new kinds of ask**.
   5, 10, 20, 40 ... (`CONTRACT_PASS_NOTES`), back to free when a run comes home.
 - The button says its price: "Turn it down · free", "Turn it down · 10 n".
 
-## 2. What they pay: currency only
+## 2. What they pay: notes, materials, salvage
 
-| Pay | Weight | Amount (first figures) |
+(24 Oct, Matt: "remove tins from contracts entirely, in the early game they don't offer enough and in the end game
+they offer too much - instead contracts are notes and materials only." The bot's 24-hour read had contracts paying
+about 26 times the runs. Salvage kept; scrap dropped, as the runs already pay plenty of it. `Data.CONTRACT_PAYS`.)
+
+| Pay | Weight | Amount |
 |---|---|---|
-| Cash | 40% | half a run's takings (`a_runs_takings`) × the ask's weight, the weight held to 4 (two runs at most); never for meds (the Clinic sells them for pennies); paid straight in, not counted in a run's takings (which price the next) |
-| Notes | 25% | 4 × the ask's weight × (1 + the deepest depth / 5) |
-| Scrap | 20% | 6 × the ask's weight × (1 + the deepest depth / 5) |
-| Salvage | 15% | the ask's weight, rounded up, of a zone's kind - only zones whose sites have been dug to depth 4 |
+| Notes | 45% | 4 × the ask's weight × (1 + the deepest depth / 5) |
+| Material | 35% | a rebuild material of a cleared site (`contract_materials()`), the ask's weight × `CONTRACT_MATERIAL` (1) rounded up, 1 to `CONTRACT_MATERIAL_MAX` (6); a rebuild place wants 10-30. None cleared yet (the Outskirts alone): notes |
+| Salvage | 20% | the ask's weight, rounded up, of a zone's kind - only zones whose sites have been dug to depth 4 |
+
+An older save's contract paying cash or scrap is rolled again on load.
 
 The ask's weight: the count × 1 at magic, × 2 at rare (and the new asks' own weights, below). Every slot at a
 rarity pays alike, the pay keeps pace with depth, and there is no outlier to fish for. Uniques, socketables and
@@ -58,5 +63,5 @@ top with how many are ready and the turn-down's price this run; the mate under t
 ## 5. Saves and balance
 
 - An older save's contracts paying a unique, a socketable or rounds are rolled again on load.
-- Balance gates: a contract pays between a quarter of a run and two runs' takings in cash terms; turning down
+- Balance gates: (the cash gate and the feel gate "Contracts against runs" went with the tins, 24 Oct); turning down
   five in a run costs no more than a run's notes at the deepest site.

@@ -94,8 +94,9 @@ static func yard_gate(col: int, short := false) -> String:
 	return w % (int(YARD_GATE_DEPTHS[col]) + TIERS.size() - 1 - OUTSKIRTS_SITES) if w.contains("%d") else w
 const YARD_PICK_SALVAGE := 10            # the fifth column's salvage
 const YARD_RANK_CASH := 50000            # a rank's cash, × YARD_RANK_GROWTH a rank bought, × inflation
-const YARD_RANK_GROWTH := 1.5             # 1.25 to 1.5 (22 Oct, the web pass: the bot bought 340 ranks across the Pitch on the endgame's tins - the Clinic's 46 alone +138% HP)
+const YARD_RANK_GROWTH := 1.5             # 1.25 to 1.5 (22 Oct, the web pass: 340 ranks on the endgame's tins; 24 Oct: salvage stops at rank YARD_RANK_SALVAGE_TO, tins alone past it)
 const YARD_RANK_SALVAGE := 5             # a rank's salvage, one more a rank bought
+const YARD_RANK_SALVAGE_TO := 5          # ranks past this want tins alone (24 Oct: the endgame held 100M+ tins, the ranks stopped on salvage - a rank is the tins' sink, each 1.5 times the last)
 const YARD_SECOND := 2.5                # a column's other side, built after the first (24 Oct, Matt: option B - nothing locks, nothing to refit)
 ## Salvage (9 Oct): one kind a zone, from kills on its sites from SALVAGE_DEPTH, SALVAGE_KILL a kill a depth past.
 const SALVAGE := ["copper", "steel", "army"]
@@ -1440,6 +1441,8 @@ const BANK := 8                    # the tier whose vault holds the deeds
 ## D15: grow 0.14 to 0.11, D19 0.08 (D20: reward 0.10 to 0.08 with it - level 50 at 6.5-11 h on five; D28 0.05: the strong builds out-earned the rest up the reach, level 50 from 9.3 h to never) - the reach is the runner's power against this slope (signals since D3), and at 14% a level
 ## a signal past the reach went from 100% to 0% in one level and the reach stood hours at a time.
 const CURVE := {"hp": 3200.0, "dps": 3.6, "xp": 30.0, "cash": 40.0, "drop": 0.5, "grow": 0.12, "reward": 0.05, "rarity": 0.10}     # grow 0.08 to 0.12 (22 Oct, the web pass: the reach ran 11 to 70 in 1.4 h at 96% won at the reach, then 149; a probe at 0.12 held it to 39 by hour 6)
+const CURVE_LATE_FROM := 50       # past this level the crews grow CURVE_LATE_GROW a level, not CURVE's grow (24 Oct, Matt: an endgame "at least 30ish" hours -
+const CURVE_LATE_GROW := 0.07     # at 12% a level the kit's ~10% and the paragon's flat points fell behind by level 45-68 and the reach stood 7-19 h; a slope, not a wall)
 
 ## The bosses: one a zone, the crew's head, fought at the zone's last site
 ## after its pool is down. Free the first time (the campaign); after that
@@ -2432,12 +2435,12 @@ const CONTRACTS_MAX := 5
 const CONTRACT_SLOTS := ["Primary", "Secondary", "Helmet", "Armour", "Rig", "Backpack", "Attachment"]
 const CONTRACT_KINDS := {"gear": 0.5, "deep": 0.125, "affix": 0.125, "meds": 0.125}     # no papers (18 Oct, Matt): they're the Radio's, off the stash
 const CONTRACT_KIND_NAMES := {"gear": "Gear", "deep": "Deep gear", "affix": "Named affix", "papers": "Papers", "meds": "Meds"}
-const CONTRACT_PAYS := {"cash": 0.4, "notes": 0.25, "scrap": 0.2, "salvage": 0.15}
-const CONTRACT_CASH := 0.5         # a run's takings, times the ask's weight
-const CONTRACT_CASH_WEIGHT_MAX := 4.0   # a cash contract pays two runs' takings at most
+const CONTRACT_PAYS := {"notes": 0.45, "material": 0.35, "salvage": 0.2}     # notes and materials (24 Oct, Matt: tins "in the early game they don't offer enough and in the end game they offer too much" - the 24 Oct pass's contracts paid 26 times the runs; scrap out too, far over its gate); a material once its site's cleared, a salvage once a site drops it
+const CONTRACT_MATERIAL := 1.0     # a material contract: this times the ask's weight, rounded up (a rebuild wants 10-30)
+const CONTRACT_MATERIAL_MAX := 6   # and never more than this a contract (24 Oct review: 15-23 a contract swamped the rebuild)
 const CONTRACT_NOTES := 4          # notes, times the weight and (1 + the deepest depth / 5)
 const CONTRACT_SCRAP := 6          # scrap, the same
-const CONTRACT_OVER_FENCE := 1.5   # a gear ask pays at least this times what the Fence gives for what it asks (12 Oct, Matt: "why would I accept these prices when the items sell for 6x+ alone at the fence") - cash at the Fence's price, scrap at what the pieces would scrap for
+const CONTRACT_OVER_FENCE := 1.5   # a gear ask paid in scrap pays at least this times what its pieces would scrap for (12 Oct, Matt: "why would I accept these prices when the items sell for 6x+ alone at the fence")
 const CONTRACT_DEEP_LESS := 3      # a deep piece: from the deepest site's level less this
 const CONTRACT_DEEP_FROM := 6      # and asked for only once that's this level or more
 const CONTRACT_PASS_NOTES := 5     # the second turn-down in a run; doubling after
@@ -3307,6 +3310,7 @@ const CAMPAIGN_TIER := 6          # gear tiers: the town drops to 5, the city 6
 const MAX_TIER := 9               # the deep bases (10 Oct): 7, 8 and 9, past the campaign
 const DEEP_TIER_LEVELS := [12, 16, 20]   # the site level a deep tier drops from: the Barracks at depth 4, 8 and 12
 static var _xp_table: Array = []
+const PARAGON_XP_GROW := 0.05     # a paragon level costs level 50's XP and this much more a level past it (24 Oct, Matt: an endgame "at least 30ish" hours)
 ## D5 (15 Oct, the pass's gate 4): the XP a level costs, times this. The reads had the Quartermaster at level 26-39 and
 ## level 50 by hour 3-8; the curve doubles every seven levels, so 2.4 puts level 28's XP at level 20.
 const XP_SCALE := 3.3     # 22 Oct, the web pass: 2.9 to 3.3 (level 25-34 at the Quartermaster against 20-24; the sites cleared 5-8 levels over their gear). D19: 2.4 to 2.9 - level 23-26 at the Quartermaster on seven of ten (the gate 18-22)
@@ -3335,7 +3339,10 @@ static func xp_for_level(level: int) -> float:
 		_xp_table.append(0.0)
 	while _xp_table.size() < maxi(level, MAX_LEVEL):        # the curve runs on past the cap: the paragon levels (7 Oct)
 		var l: int = _xp_table.size()
-		_xp_table.append(float(_xp_table[l - 1]) + floorf((l + 300.0 * pow(2.0, l / 7.0)) / 4.0 * xp_scale(l)))
+		var step: float = floorf((mini(l, MAX_LEVEL - 1) + 300.0 * pow(2.0, mini(l, MAX_LEVEL - 1) / 7.0)) / 4.0 * xp_scale(mini(l, MAX_LEVEL - 1)))
+		if l >= MAX_LEVEL:
+			step = floorf(step * (1.0 + PARAGON_XP_GROW * (l - MAX_LEVEL + 1)))     # a paragon level: the last level's XP, a little more each (24 Oct: doubling every seven, the paragon stopped and the reach walled)
+		_xp_table.append(float(_xp_table[l - 1]) + step)
 	return _xp_table[maxi(level, 1) - 1]
 
 
@@ -3354,6 +3361,8 @@ static func paragon_for_xp(xp: float) -> int:
 	if _paragon_memo[0] == xp:
 		return _paragon_memo[1]                  # read many times a tick from the HP and the damage
 	var l := MAX_LEVEL
+	if xp > float(_paragon_memo[0]) and int(_paragon_memo[1]) > 0:
+		l = MAX_LEVEL + int(_paragon_memo[1])     # XP only climbs in a run: walk on from the last answer
 	while l < 10000 and xp >= xp_for_level(l + 1):
 		l += 1
 	_paragon_memo = [xp, l - MAX_LEVEL]

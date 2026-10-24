@@ -182,8 +182,9 @@ func _show_strip(purse: Dictionary) -> void:
 		UI.fit(_title, ["%s · rank %d" % [en.call(str(b["name"])), sim.yard_rank(key)], en.call(str(b["name"]))])
 		UI.fit(_words, ["%s. Bought again and again; each rank dearer than the last." % en.call(str(b["rank"]["words"])), en.call(str(b["rank"]["words"])) + "."])
 		var why_in: String = sim.yard_rank_block(key)
-		var price_in: String = "Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]
-		UI.fit(_other, [price_in + ("" if why_in == "" else " · " + why_in), price_in, "%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), sim.yard_rank_salvage(key), kind]])
+		var rank_salv: int = sim.yard_rank_salvage(key)
+		var price_in: String = ("Rank %d: %s and %d %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key)), rank_salv, kind]) if rank_salv > 0 else ("Rank %d: %s" % [sim.yard_rank(key) + 1, Fmt.money(sim.yard_rank_cost(key))])     # past the fifth, tins alone
+		UI.fit(_other, [price_in + ("" if why_in == "" else " · " + why_in), price_in, ("%s · %d %s" % [Fmt.money(sim.yard_rank_cost(key)), rank_salv, kind]) if rank_salv > 0 else Fmt.money(sim.yard_rank_cost(key))])
 		# the price on the button itself (24 Oct, Matt: "the buy button doesn't list the cost"), as Train shows its points
 		var rank_money: String = Fmt.money(sim.yard_rank_cost(key))
 		# just the price (24 Oct, Matt: "should just be 'buy N tins'"): the rank's in the title and the copper's on the line above

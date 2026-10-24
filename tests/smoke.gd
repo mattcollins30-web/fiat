@@ -4292,8 +4292,8 @@ func _contracts_checks(main) -> void:
 		var c: Dictionary = sim.roll_contract()
 		_check(c["count"] >= 1 and c["count"] <= 5 and c["rarity"] >= 1 and c["rarity"] <= 2, "a contract rolled outside its bounds: %s" % str(c))
 		_check(c["pay"] in Data.CONTRACT_PAYS and c["amount"] > 0, "a contract pays nothing, or not in currency: %s" % str(c))
-	# a cash contract: two uncommon helmets, hand in through the screen
-	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 500, "salvage": ""}
+	# a scrap contract: two uncommon helmets, hand in through the screen (no tins since 24 Oct)
+	sim.contracts[0] = {"kind": "gear", "slot": "Helmet", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 500, "salvage": ""}
 	var cheap: Dictionary = sim._plain("Helmet", "Hard hat")
 	cheap["rarity"] = 1
 	cheap["value"] = 1
@@ -4317,9 +4317,10 @@ func _contracts_checks(main) -> void:
 	main._fence._show("contracts")
 	_check_fit(main, "Fence (contracts)")
 	var cash0: float = sim.cash
+	var scrap0: int = sim.scrap
 	main._fence._pick_contract(0)
 	main._fence._hand_contract(0)
-	_check(sim.cash == cash0 + 500.0, "handing in did not pay £500")
+	_check(sim.scrap == scrap0 + 500 and sim.cash == cash0, "handing in did not pay its 500 scrap, or paid tins: scrap +%d, tins +%.0f" % [sim.scrap - scrap0, sim.cash - cash0])
 	_check(not sim.stash.has(cheap) and not sim.stash.has(mid) and sim.stash.has(common), "the wrong helmets went")
 	_check(sim.contracts.size() == Data.CONTRACTS_OPEN, "the handed-in contract was not replaced")
 	# notes, and the mate
@@ -4347,7 +4348,7 @@ func _contracts_checks(main) -> void:
 	main._fence._show("contracts")
 	_check_fit(main, "Fence (contracts, after)")
 	# the contracts show from the rail and the tab when one's ready; what's next says so
-	sim.contracts = [{"kind": "gear", "amount": 400, "count": 3, "pay": "cash", "rarity": 2, "slot": "Attachment", "level": 0, "stat": "", "salvage": ""}]
+	sim.contracts = [{"kind": "gear", "amount": 400, "count": 3, "pay": "notes", "rarity": 2, "slot": "Attachment", "level": 0, "stat": "", "salvage": ""}]
 	for it in sim.stash.duplicate():
 		if sim.contract_fits(sim.contracts[0], it):
 			sim.stash.erase(it)              # nothing in the stash to hand in: open, not ready
@@ -7953,7 +7954,7 @@ func _contract_material_checks(main) -> void:
 	if sim.on_mission():
 		sim.extract_now()
 	var saved: Dictionary = sim.to_dict()
-	# the contracts (9 Oct, docs/design/contracts.md): five kinds of ask, four currencies, no uniques, no items
+	# the contracts (9 Oct, docs/design/contracts.md): the kinds of ask, notes and materials (no tins, 24 Oct), no uniques, no items
 	for i in range(Data.TIERS.size()):
 		sim.best_depth[i] = mini(sim.best_depth[i], 3)
 	var kinds := {}
@@ -7962,21 +7963,16 @@ func _contract_material_checks(main) -> void:
 		var c: Dictionary = sim.roll_contract()
 		kinds[c["kind"]] = kinds.get(c["kind"], 0) + 1
 		pays[c["pay"]] = pays.get(c["pay"], 0) + 1
-		_check(c["pay"] in ["cash", "notes", "scrap"] and int(c["amount"]) > 0 and sim.contract_pay_words(c) != "" and sim.contract_words(c) != "", "a contract before any salvage drops is off: %s" % str(c))
-		if c["pay"] == "scrap":
-			_check(int(c["amount"]) == maxi(1, int(ceil(maxf(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0), sim.contract_worth(c) / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))) or (sim.contract_worth(c) <= 0.0 and int(c["amount"]) == maxi(1, int(ceil(Data.CONTRACT_SCRAP * sim.contract_weight(c) * (1.0 + sim.deepest() / 5.0))))), "a scrap contract's amount is off: %s" % str(c))
-		_check(not (c["kind"] == "meds" and c["pay"] == "cash"), "a meds ask pays cash: %s" % str(c))
-		if c["pay"] == "cash":
-			var fence: float = float(sim.sell_price({"value": int(round(sim.contract_worth(c)))})) if sim.contract_worth(c) > 0.0 else 0.0
-			_check(absi(int(c["amount"]) - int(round(maxf(sim.a_runs_takings() * Data.CONTRACT_CASH * minf(sim.contract_weight(c), Data.CONTRACT_CASH_WEIGHT_MAX), fence * Data.CONTRACT_OVER_FENCE)))) <= 10 or int(c["amount"]) == 10, "a cash contract is not its share of a run's takings, or under the pieces' price: %s" % str(c))
-			if c["kind"] == "gear":
-				_check(fence > 0.0 and float(c["amount"]) >= fence * Data.CONTRACT_OVER_FENCE - 5.0, "a gear contract pays under what the Fence gives for its pieces: %s against %.0f" % [str(c), fence])
-	_check(kinds.size() == (4 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 3) and not kinds.has("papers") and pays.size() == 3, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
+		_check(c["pay"] in ["notes", "material"] and int(c["amount"]) > 0 and sim.contract_pay_words(c) != "" and sim.contract_words(c) != "", "a contract before any salvage drops is off: %s" % str(c))
+		if c["pay"] == "material":
+			_check(sim.contract_materials().has(str(c["material"])) and int(c["amount"]) == clampi(int(ceil(sim.contract_weight(c) * Data.CONTRACT_MATERIAL)), 1, Data.CONTRACT_MATERIAL_MAX), "a material contract is off: %s, earnable %s" % [str(c), str(sim.contract_materials())])
+		_check(c["pay"] != "cash" and c["pay"] != "scrap", "a contract pays tins or scrap (24 Oct: notes and materials): %s" % str(c))
+	_check(kinds.size() == (4 if sim.deepest_site_level() - Data.CONTRACT_DEEP_LESS >= Data.CONTRACT_DEEP_FROM else 3) and not kinds.has("papers") and pays.size() == 2, "four hundred contracts did not cover every kind and pay: %s / %s" % [str(kinds), str(pays)])
 	# every slot weighs alike at a rarity (the pay's floor follows the pieces' price since 12 Oct)
 	for slot in Data.CONTRACT_SLOTS:
-		var probe_c := {"kind": "gear", "slot": slot, "rarity": 2, "count": 1, "level": 0, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+		var probe_c := {"kind": "gear", "slot": slot, "rarity": 2, "count": 1, "level": 0, "stat": "", "pay": "scrap", "amount": 0, "salvage": ""}
 		_check(sim.contract_worth(probe_c) > 0.0, "a %s ask is worth nothing to price" % slot)
-	var deep_c := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 30, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+	var deep_c := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 30, "stat": "", "pay": "scrap", "amount": 0, "salvage": ""}
 	_check(sim.contract_worth(deep_c) > 0.0, "a deep ask at level 30 is worth nothing to price")
 	var prim := {"kind": "gear", "slot": "Primary", "rarity": 2, "count": 2, "level": 0, "stat": "", "pay": "", "amount": 0, "salvage": ""}
 	var helm: Dictionary = prim.duplicate()
@@ -7992,6 +7988,17 @@ func _contract_material_checks(main) -> void:
 			sv = c
 			break
 	_check(not sv.is_empty() and sv["salvage"] == "steel" and int(sv["amount"]) == maxi(1, int(ceil(sim.contract_weight(sv)))), "no salvage contract, or the wrong kind: %s" % str(sv))
+	# a material pays into the rebuild's counts; the Outskirts alone pays notes (24 Oct)
+	var mat_c := {"kind": "meds", "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "material", "amount": 4, "salvage": "", "material": "copper_wire"}
+	_check(sim.contract_pay_words(mat_c) == "4 copper wire", "a material contract reads '%s'" % sim.contract_pay_words(mat_c))
+	var bd_keep: Array = sim.best_depth.duplicate()
+	for i in range(sim.best_depth.size()):
+		sim.best_depth[i] = 1 if i < Data.OUTSKIRTS_SITES else 0
+	var outs_pays := {}
+	for k in range(100):
+		outs_pays[sim.roll_contract()["pay"]] = true
+	_check(sim.contract_materials().is_empty() and sim.salvage_kinds().is_empty() and outs_pays.keys() == ["notes"], "the Outskirts alone pays %s" % str(outs_pays.keys()))
+	sim.best_depth = bd_keep
 	# each kind of ask takes what it says, and pays
 	var deep := {"kind": "deep", "slot": "", "rarity": 1, "count": 1, "level": 12, "stat": "", "pay": "salvage", "amount": 3, "salvage": "steel"}
 	var helmet: Dictionary = sim._plain("Helmet", "Hard hat")
@@ -8006,7 +8013,7 @@ func _contract_material_checks(main) -> void:
 	arm_h["affixes"] = [{"stat": "armour_pct", "value": 5, "tier": 1}]
 	_check(not sim.contract_fits(affix, plain_h) and sim.contract_fits(affix, arm_h) and sim.contract_words(affix).contains("% armour"), "the affix ask is off: '%s'" % sim.contract_words(affix))
 	var papers := {"kind": "papers", "slot": "", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "scrap", "amount": 9, "salvage": ""}
-	var meds := {"kind": "meds", "slot": "", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "cash", "amount": 50, "salvage": ""}
+	var meds := {"kind": "meds", "slot": "", "rarity": 1, "count": 2, "level": 0, "stat": "", "pay": "notes", "amount": 5, "salvage": ""}
 	_check(sim.contract_fits(papers, sim._plain(Data.PAPER, "A P45")) and not sim.contract_fits(papers, sim._plain(Data.PAPER, "The deeds")) and sim.contract_fits(meds, sim._plain(Data.MEDICAL, "Bandage")) and not sim.contract_fits(meds, helmet), "papers or meds asks take the wrong things")
 	for it in sim.stash.duplicate():
 		if sim.contract_fits(deep, it):
@@ -8015,6 +8022,12 @@ func _contract_material_checks(main) -> void:
 	sim.contracts[0] = deep
 	var st0: int = int(sim.salvage.get("steel", 0))
 	_check(sim.can_hand_in(0) and sim.hand_in(0) and int(sim.salvage["steel"]) == st0 + 3 and not sim.stash.has(helmet), "a deep ask paying safe steel did not pay")
+	var mat_h := {"kind": "meds", "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "material", "amount": 4, "salvage": "", "material": "copper_wire"}
+	sim.stash.append(sim._plain(Data.MEDICAL, "Bandage"))
+	sim.contracts[0] = mat_h
+	var cw0: int = int(sim.materials.get("copper_wire", 0))
+	var tins0: float = sim.cash
+	_check(sim.can_hand_in(0) and sim.hand_in(0) and int(sim.materials.get("copper_wire", 0)) == cw0 + 4 and sim.cash == tins0, "a material contract didn't pay its copper wire: %d from %d" % [int(sim.materials.get("copper_wire", 0)), cw0])
 	var u: Dictionary = Items.roll_unique(Data.UNIQUES[0], sim.rng)
 	_check(not sim.contract_fits(deep, u), "a unique fits a contract")
 	# turning one down: free once a run, then notes doubling, free again after a run
@@ -8060,7 +8073,7 @@ func _contract_material_checks(main) -> void:
 	main._fence._show("shelf")
 	sim.load_dict(saved)
 	main.refresh()
-	print("the contracts ok: five kinds of ask, four currencies, salvage from its depth, the turn-down's price, the old saves, five rows")
+	print("the contracts ok: five kinds of ask, notes and materials, salvage from its depth, the turn-down's price, the old saves, five rows")
 
 
 ## 34: crafting at the Bench. Scrap in hand from searches, scrapping and ditching; the Build column: a box of rounds,
@@ -11962,6 +11975,14 @@ func _yard_wide_checks(main) -> void:
 	var r0: int = sim.yard_rank_cost("stash")
 	_check(sim.yard_pick("stash", 4, "b") and sim.salvage["copper"] == 30 and sim.buy_yard_rank("stash") and sim.yard_rank("stash") == 1 and sim.salvage["copper"] == 25, "the salvage did not pay: %s" % str(sim.salvage))
 	_check(sim.yard_rank_cost("stash") > r0 and sim.yard_rank_salvage("stash") == Data.YARD_RANK_SALVAGE + 1, "the rank's price did not climb")
+	var rk_keep: int = sim.yard_rank("stash")
+	sim.yard_ranks["stash"] = Data.YARD_RANK_SALVAGE_TO
+	_check(sim.yard_rank_salvage("stash") == 0 and sim.yard_rank_cost("stash") > r0, "a rank past the fifth still wants salvage (24 Oct: tins alone): %d" % sim.yard_rank_salvage("stash"))
+	yt._press_rank("stash")
+	yt._shown = ""
+	main.refresh()
+	_check(not yt._other.text.contains("salvage") and not yt._other.text.contains(" copper") and yt._other.text.contains(Fmt.money(sim.yard_rank_cost("stash"))), "the rank strip past the fifth still asks salvage: '%s'" % yt._other.text)
+	sim.yard_ranks["stash"] = rk_keep
 	yt._press_rank("stash")
 	yt._shown = ""
 	main.refresh()
@@ -12863,6 +12884,9 @@ func _growth_checks(main) -> void:
 	_check(is_equal_approx(sim.max_hp() / hp50, 1.0 + pct_h * 4.0 / 100.0) and is_equal_approx(sim.dps() / dps50, 1.0 + pct_d * 6.0 / 100.0), "the board's points did not pay: hp ×%.3f dps ×%.3f" % [sim.max_hp() / hp50, sim.dps() / dps50])
 	var pg: Array = sim.paragon_progress()
 	_check(is_equal_approx(pg[0], 0.0) and pg[1] > 0.0, "the next paragon level reads %s" % str(pg))
+	# the paragon's levels grow gently past 50, not doubling every seven (24 Oct: they stopped coming and the reach walled)
+	var step_at := func(l: int) -> float: return Data.xp_for_level(l + 1) - Data.xp_for_level(l)
+	_check(is_equal_approx(step_at.call(Data.MAX_LEVEL), floorf(step_at.call(Data.MAX_LEVEL - 1) * (1.0 + Data.PARAGON_XP_GROW))) and step_at.call(Data.MAX_LEVEL + 20) < step_at.call(Data.MAX_LEVEL) * 2.2 and step_at.call(Data.MAX_LEVEL + 20) > step_at.call(Data.MAX_LEVEL), "the paragon's levels: %.0f at 50, %.0f at 70" % [step_at.call(Data.MAX_LEVEL), step_at.call(Data.MAX_LEVEL + 20)])
 	# resists and find, and a reset for tins: the points free again
 	var fire0: float = sim.resist_raw("fire")
 	var find0: float = sim.rarity_bonus()
@@ -17202,17 +17226,17 @@ func _feel_gate_checks() -> void:
 		{"k": "contract", "pay": "notes", "amount": 99},
 	]
 	var f: Dictionary = Feel.read(ch)
-	_check(f["runs"] == 2 and f["wound_runs"] == 1 and f["gear"] == 4 and f["wearable"] == 1 and f["wounded"] == 1 and is_equal_approx(float(f["contract_cash"]), 5000.0), "the feel read is off: %s" % str(f))
+	_check(f["runs"] == 2 and f["wound_runs"] == 1 and f["gear"] == 4 and f["wearable"] == 1 and f["wounded"] == 1, "the feel read is off: %s" % str(f))
 	var bot_f: Dictionary = Feel.read(ch, true)
 	_check(bot_f["runs"] == 3 and bot_f["gear"] == 8, "the bot's away hours weren't counted: %s" % str(bot_f))
 	var rows: Array = Feel.rows(f)
 	var by := {}
 	for r in rows:
 		by[r[0]] = r[3]
-	_check(by.get("Level on entry") == false and by.get("Gear to wear") == false and by.get("Contracts against runs") == false and by.get("Deaths") == null, "the feel gates judged it wrong: %s" % str(by))
+	_check(by.get("Level on entry") == false and by.get("Gear to wear") == false and not by.has("Contracts against runs") and by.get("Deaths") == null, "the feel gates judged it wrong: %s" % str(by))
 	var empty: Array = Feel.rows(Feel.read([]))
 	_check(empty.all(func(r): return r[3] == null), "an empty record was judged: %s" % str(empty.map(func(r): return r[3])))
-	print("the feel gates ok: one reader, the entries, the wearable share, wounds, deaths, contracts")
+	print("the feel gates ok: one reader, the entries, the wearable share, wounds, deaths")
 
 
 ## The drawn Map (19 Oct, Matt's pick B): a pin picked shows its card; a shut zone's pins take no click and carry no

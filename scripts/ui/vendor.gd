@@ -344,7 +344,7 @@ func show_state(s) -> void:
 	_show_panel()
 
 
-## A pay's colour: tins in gold, notes in the paper's, scrap grey, a salvage in its own.
+## A pay's colour: notes in the paper's, a material in its sand, a salvage in its own (no tins or scrap since 24 Oct).
 static func _pay_colour(c: Dictionary) -> Color:
 	match str(c["pay"]):
 		"cash":
@@ -353,6 +353,8 @@ static func _pay_colour(c: Dictionary) -> Color:
 			return Color("c9b98f")
 		"salvage":
 			return {"copper": Color("d08a5a"), "steel": Color("9fb3c8"), "army": Color("a3b06a")}.get(str(c["salvage"]), Pal.TEXT_2)
+		"material":
+			return Color("d6c27a")                 # the materials' sand, as the Map's and the Radio's (24 Oct: contracts pay them)
 	return Pal.TEXT_2
 
 

@@ -15,14 +15,13 @@ const WEARABLE_MIN := 0.6          # PROPOSED: of the campaign's plain gear find
 const WOUNDED := [0.05, 0.30]      # of runs, wounded (Matt's, the bot's summary says "judged at Matt's playtest")
 const DEATH_EVERY := [10.0, 30.0]  # a death one run in this many (the same)
 const DEATHS_FROM := 30            # judged once there are this many runs; fewer, shown
-const CONTRACTS_MAX := 0.5         # PROPOSED: the Fence's contracts' tins, at most this share of the runs' tins
 
 
 ## The figures, off a chronicle's lines (the record's dictionaries). A player's away runs (the offline settle) count
 ## for nothing here; the bot's "away" hours are the same play flagged for pay (bot.gd's AWAY_SHARE), so it counts them.
 ## Wounds are counted from the Clinic's opening: before it a run can't wound (sim._wound).
 static func read(ch: Array, count_away := false) -> Dictionary:
-	var f := {"entries": [], "gear": 0, "wearable": 0, "runs": 0, "wound_runs": 0, "wounded": 0, "deaths": 0, "run_cash": 0.0, "contract_cash": 0.0}
+	var f := {"entries": [], "gear": 0, "wearable": 0, "runs": 0, "wound_runs": 0, "wounded": 0, "deaths": 0}
 	var campaign := true
 	var clinic := false
 	for e in ch:
@@ -43,7 +42,6 @@ static func read(ch: Array, count_away := false) -> Dictionary:
 				if e.get("away", false) and not count_away:
 					continue
 				f["runs"] += 1
-				f["run_cash"] += float(e.get("cash", 0.0))
 				if clinic:
 					f["wound_runs"] += 1
 				if str(e.get("outcome", "")) == "Dead":
@@ -53,9 +51,6 @@ static func read(ch: Array, count_away := false) -> Dictionary:
 				if campaign and not e.get("signal", false):
 					f["gear"] += int(e.get("gear", 0))
 					f["wearable"] += int(e.get("gear_wearable", 0))
-			"contract":
-				if str(e.get("pay", "")) == "cash":
-					f["contract_cash"] += float(e.get("amount", 0.0))
 	return f
 
 
@@ -87,10 +82,7 @@ static func rows(f: Dictionary) -> Array:
 		dead_ok = deaths > 0 and every >= DEATH_EVERY[0] and every <= DEATH_EVERY[1]
 	out.append(["Deaths", "one run in %d-%d (judged from %d runs)" % [int(DEATH_EVERY[0]), int(DEATH_EVERY[1]), DEATHS_FROM],
 		("%d in %d runs: one in %.0f" % [deaths, runs, every]) if deaths > 0 else "none in %d runs" % runs, dead_ok])
-	var rc: float = float(f.get("run_cash", 0.0))
-	var cc: float = float(f.get("contract_cash", 0.0))
-	out.append(["Contracts against runs", "the Fence's contracts' tins at most %d%% of the runs' tins" % roundi(CONTRACTS_MAX * 100.0),
-		"contracts %s, runs %s (%d%%)" % [_k(cc), _k(rc), roundi(cc / maxf(rc, 1.0) * 100.0)], _judged(rc > 0.0, cc <= rc * CONTRACTS_MAX)])
+	# (the contracts' gate went with their tins, 24 Oct: they pay notes, materials and salvage)
 	return out
 
 
@@ -99,7 +91,3 @@ static func _judged(can: bool, ok: bool) -> Variant:
 	if not can:
 		return null
 	return ok
-
-
-static func _k(v: float) -> String:
-	return ("%.1fk" % (v / 1000.0)) if v >= 1000.0 else "%d" % int(v)

@@ -6771,3 +6771,19 @@ pass; the reviewer on the code):
 - Parked items left: the fans from game start (Matt's look after the art batch: a laptop restart first); the wheels'
   links (the bends hold them clear; revisit only if the playtest still reads them wrong).
 - VERSION 0.8.0 (milestone 8's first build to play). Smoke 239. Next: Matt's playtest.
+
+## The endgame slowed (24 Oct): contracts without tins, ranks, the paragon, the crews
+
+Matt: the endgame ran away (the 0.8.0 read had the bot's reach climbing at the pace of its power and tins piling to
+the hundreds of millions); "at least 30ish" hours of endgame for an indie ARPG autobattler.
+- Contracts pay notes (45%), a rebuild material of a cleared site (35%, the ask's weight, 1 to 6) or salvage (20%);
+  no tins, no scrap (Matt: "in the early game they don't offer enough and in the end game they offer too much"). An
+  old save's cash or scrap contract is rolled again. The feel gate "Contracts against runs" retired with them.
+  docs/design/contracts.md section 2.
+- The Pitch's ranks ask salvage up to rank 5 (`YARD_RANK_SALVAGE_TO`), tins alone past it.
+- The paragon: a level past 50 costs level 49's step and 5% more a level (`PARAGON_XP_GROW`), not doubling every
+  seven (the paragon had stopped and the reach walled at 50).
+- The crews past level 50 grow 7% a level (`CURVE_LATE_FROM`, `CURVE_LATE_GROW`), not the curve's 12% compounding.
+- Tried and reverted: the reach climbing only after three wins at it (the bot won 97% at the reach; the climb is
+  power-limited, not signal-limited).
+- Next: one balance pass at 32 hours, then Matt plays.

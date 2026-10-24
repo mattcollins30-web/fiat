@@ -1208,12 +1208,12 @@ func trait_add(key: String) -> float:
 
 # ------------------------------------------------------------------ the Fence's contracts
 
-## One contract (9 Oct): a kind of ask and what it pays, in currency.
+## One contract (9 Oct): a kind of ask and what it pays: notes or materials, never tins (24 Oct).
 func roll_contract() -> Dictionary:
 	var kind: String = _weighted(Data.CONTRACT_KINDS)
 	if kind == "deep" and deepest_site_level() - Data.CONTRACT_DEEP_LESS < Data.CONTRACT_DEEP_FROM:
 		kind = "gear"                             # a deep ask wants a deep site first: early, any piece would do
-	var c := {"kind": kind, "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "cash", "amount": 0, "salvage": ""}
+	var c := {"kind": kind, "slot": "", "rarity": 1, "count": 1, "level": 0, "stat": "", "pay": "notes", "amount": 0, "salvage": "", "material": ""}
 	match kind:
 		"gear":
 			c["slot"] = Data.CONTRACT_SLOTS[rng.randi_range(0, Data.CONTRACT_SLOTS.size() - 1)]
@@ -1277,21 +1277,30 @@ func salvage_kinds() -> Array:
 	return out
 
 
-## What it pays: cash a share of a run's takings (today's prices), notes and scrap by the deepest depth, salvage by
-## the weight - never a salvage no site drops yet.
+## The materials a contract can pay (24 Oct): those of the sites cleared (Data.SITE_MATERIAL), in their order.
+func contract_materials() -> Array:
+	var out: Array = []
+	for i in range(mini(Data.SITE_MATERIAL.size(), best_depth.size())):
+		var k: String = str(Data.SITE_MATERIAL[i])
+		if k != "" and int(best_depth[i]) >= 1 and not out.has(k):
+			out.append(k)
+	return out
+
+
+## What it pays: notes by the deepest depth, a material or a salvage by the weight - never one the camp can't earn yet;
+## never tins or scrap (24 Oct, Matt: "notes and materials only").
 func _price_contract(c: Dictionary) -> void:
 	var pays: Dictionary = Data.CONTRACT_PAYS.duplicate()
 	var kinds := salvage_kinds()
 	if kinds.is_empty():
 		pays.erase("salvage")
-	if c["kind"] == "meds":
-		pays.erase("cash")                        # meds the Clinic sells for pennies: never a cash pump
+	var mats := contract_materials()
+	if mats.is_empty():
+		pays.erase("material")                    # the Outskirts alone: notes
 	c["pay"] = _weighted(pays)
 	var w := contract_weight(c)
 	var deep: float = 1.0 + deepest() / 5.0
 	match c["pay"]:
-		"cash":
-			c["amount"] = maxi(10, int(round(a_runs_takings() * Data.CONTRACT_CASH * minf(w, Data.CONTRACT_CASH_WEIGHT_MAX) / 10.0)) * 10)     # a share of a run's takings
 		"notes":
 			c["amount"] = maxi(1, int(ceil(Data.CONTRACT_NOTES * w * deep)))
 		"scrap":
@@ -1299,19 +1308,19 @@ func _price_contract(c: Dictionary) -> void:
 		"salvage":
 			c["salvage"] = kinds[rng.randi_range(0, kinds.size() - 1)]
 			c["amount"] = maxi(1, int(ceil(w)))
+		"material":
+			c["material"] = mats[rng.randi_range(0, mats.size() - 1)]
+			c["amount"] = clampi(int(ceil(w * Data.CONTRACT_MATERIAL)), 1, Data.CONTRACT_MATERIAL_MAX)
 	_contract_floor(c)
 
 
-## A gear ask's pay never under CONTRACT_OVER_FENCE of what its pieces fetch (12 Oct): cash at the Fence's price, scrap
-## at what they'd scrap for. Raises, never lowers: a save's contracts come up to it on load.
+## A gear ask paid in scrap never under CONTRACT_OVER_FENCE of what its pieces would scrap for (12 Oct). Raises, never
+## lowers: a save's contracts come up to it on load.
 func _contract_floor(c: Dictionary) -> void:
 	var worth := contract_worth(c)
 	if worth <= 0.0:
 		return
 	match str(c.get("pay", "")):
-		"cash":
-			var price_v: float = float(sell_price({"value": int(round(worth))}))
-			c["amount"] = maxi(int(c["amount"]), int(round(price_v * Data.CONTRACT_OVER_FENCE / 10.0)) * 10)
 		"scrap":
 			c["amount"] = maxi(int(c["amount"]), int(ceil(worth / Data.SCRAP_PER_POUND * Data.CONTRACT_OVER_FENCE)))
 
@@ -1409,10 +1418,6 @@ func hand_in(k: int, pick := []) -> bool:
 		_remove(it)
 	var paid := ""
 	match c["pay"]:
-		"cash":
-			cash += float(c["amount"])          # not through _earn: a run's takings price the contracts, and this would feed them
-			cash_in += float(c["amount"])
-			paid = _cash_words(float(c["amount"]))
 		"notes":
 			var n_paid: int = int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1)     # the Fence's Fixer
 			notes += n_paid
@@ -1422,6 +1427,9 @@ func hand_in(k: int, pick := []) -> bool:
 			paid = "%d scrap" % int(c["amount"])
 		"salvage":
 			salvage[c["salvage"]] = int(salvage.get(c["salvage"], 0)) + int(c["amount"])
+			paid = contract_pay_words(c)
+		"material":
+			materials[c["material"]] = int(materials.get(c["material"], 0)) + int(c["amount"])
 			paid = contract_pay_words(c)
 	log_event("Handed in: %s. %s" % [contract_words(c), paid])
 	chron("contract", {"kind": str(c.get("kind", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0))})
@@ -1486,14 +1494,14 @@ func contract_affix_phrase(stat: String) -> String:
 
 func contract_pay_words(c: Dictionary) -> String:
 	match c["pay"]:
-		"cash":
-			return _cash_words(float(c["amount"]))
 		"notes":
 			return "%d notes" % (int(c["amount"]) * (Data.FX["yard/fixer"] if yard_has("fixer") else 1))     # what the hand-in pays, the Fixer's double with it
 		"scrap":
 			return "%d scrap" % int(c["amount"])
 		"salvage":
 			return "%d %s" % [int(c["amount"]), str(Data.SALVAGE_NAMES.get(c["salvage"], c["salvage"])).to_lower()]
+		"material":
+			return "%d %s" % [int(c["amount"]), thing_name(str(c.get("material", ""))).to_lower()]
 	return ""
 
 
@@ -4243,7 +4251,7 @@ static func _round_price(x: int) -> int:
 
 
 func yard_rank_salvage(key: String) -> int:
-	return Data.YARD_RANK_SALVAGE + yard_rank(key)
+	return Data.YARD_RANK_SALVAGE + yard_rank(key) if yard_rank(key) < Data.YARD_RANK_SALVAGE_TO else 0     # past the fifth, tins alone (24 Oct)
 
 
 func yard_rank_block(key: String) -> String:
@@ -4914,7 +4922,7 @@ func depth_figures(i: int, d: int, lv: int, on_sig := false, ahead := false) -> 
 		# bases a find draws from and its item level follow the level too (the sites were the same fight before)
 		var shape: Dictionary = base["shape"]
 		var c: Dictionary = Data.CURVE
-		var g: float = pow(1.0 + float(c["grow"]), lv - 9)
+		var g: float = pow(1.0 + float(c["grow"]), mini(lv, Data.CURVE_LATE_FROM) - 9) * pow(1.0 + Data.CURVE_LATE_GROW, maxi(0, lv - Data.CURVE_LATE_FROM))     # gentler past CURVE_LATE_FROM (24 Oct): a slope, not a wall
 		var r: float = pow(1.0 + float(c["reward"]), lv - 9)
 		e["pool"] = int(shape["pool"])
 		# a signal's fight is its level's curve alone, bent by the site's shape (D14): the site's own campaign floor made
@@ -10966,7 +10974,7 @@ func load_dict(d: Dictionary) -> void:
 			contracts.append(roll_contract())    # a save from before (9 Oct): a unique, a socketable or rounds, rolled again; papers too (18 Oct: the pile)
 			continue
 		contracts.append({"kind": str(c["kind"]), "slot": str(c.get("slot", "")), "rarity": int(c.get("rarity", 1)), "count": int(c.get("count", 1)), "level": int(c.get("level", 0)),
-			"stat": str(c.get("stat", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0)), "salvage": str(c.get("salvage", ""))})
+			"stat": str(c.get("stat", "")), "pay": str(c["pay"]), "amount": int(c.get("amount", 0)), "salvage": str(c.get("salvage", "")), "material": str(c.get("material", ""))})
 	passes = int(d.get("passes", 0))
 	while contracts.size() < contracts_open():
 		contracts.append(roll_contract())
