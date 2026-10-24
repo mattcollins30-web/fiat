@@ -6786,4 +6786,6 @@ the hundreds of millions); "at least 30ish" hours of endgame for an indie ARPG a
 - The crews past level 50 grow 7% a level (`CURVE_LATE_FROM`, `CURVE_LATE_GROW`), not the curve's 12% compounding.
 - Tried and reverted: the reach climbing only after three wins at it (the bot won 97% at the reach; the climb is
   power-limited, not signal-limited).
-- Next: one balance pass at 32 hours, then Matt plays.
+- Next: the 32-hour balance pass (a read of this slowdown), Matt's evening playtest, then on his go-ahead the endgame's
+  chase (docs/design/endgame_chase.md: the breakdown, the pinnacles' mechanics and uniques, moving a unique's power,
+  the filter, the collection log, loadouts), then the single balance pass and his playtest on 0.9.0.
