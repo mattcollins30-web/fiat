@@ -93,6 +93,14 @@ When two skills want to fire on the same tick, the more expensive one goes first
 - **When a skill fires:** a short flash on its button, a word over the frame ("Collared"), the effect on the figure
   it hits, then the beat where the numbers land.
 - **Mockups** on the design canvas before any UI is built: the frame with buttons and bar, and the loadout picker.
+  *Agreed 24 Oct (canvas "Fiat – Skills in the fight, the picker, the Pitch"; Matt: "this spot"):* the energy bar under
+  Your HP at its size, in #7d8ff0; the three skills as 76 px picture buttons at the frame's foot, between the bars and
+  the hands; on each the picture, the cost under it, a pip (A for auto, a dash off), the cooldown as a dark sweep with
+  the seconds, a cost it can't meet in red with the picture grey. Press fires; right-click (hold on the Deck) switches
+  auto. The name, line, chip and rule on hover. Firing: the button lights, the name over the frame for a beat, the man
+  hit ringed with his state ("Stunned 3 s"). The numbers that land on you move up clear of the buttons. The picker:
+  a SKILLS row on the Runs card (Conditions gives up its empty half) - three pictures and a button that opens the
+  picker over the map, both lanes, the picked three numbered with an amber edge, ones not learned faded.
 
 ---
 
@@ -111,10 +119,10 @@ He's the only class for the first stretch, so his first skills are simple and hi
 4. **One for the pot** (signature) - a figure under a quarter HP drops outright; never a boss, who takes a heavy hit instead. 50 / 30. *Finisher.*
 
 **Snares**
-5. **Collared** - the nearest is held for 3 s and can't fire. 25 / 12. *Pressed (2 or more).*
+5. **Collared** - the nearest is stunned for 3 s and can't fire. 25 / 12. *Pressed (2 or more).*
 6. **Gin trap** - the next one to step up takes a big hit and bleeds. 30 / 15. *Opener, then on cooldown.*
 7. **Decoy** - the gang's fire drops 30% for 6 s while they turn on it. 35 / 20. *Hurting.*
-8. **Net every hole** (signature) - every figure is held for 2 s and bleeds. 60 / 40. *Pressed.*
+8. **Net every hole** (signature) - every figure is stunned for 2 s and bleeds. 60 / 40. *Pressed.*
 
 ### The Paramedic - Triage and Shifts (the Clinic doctor's apprentice)
 
@@ -201,7 +209,7 @@ Last to arrive: evasion, big single hits and chance.
 Most of these build on effects the fight already has: hits, damage over time, armour, resists, ducking, the
 number on you, grenades. New to the sim:
 
-- held, stunned and asleep figures;
+- stunned and asleep figures;
 - wards against a damage type;
 - your misses and dodges;
 - a figure thrown out of the fight;
@@ -287,7 +295,9 @@ Three things, the first two before anything else in the milestone:
 3. **The binary choices become a real tree.** Each building's column is a fork today (a or b, one locks the other).
    Proposed: each column becomes a small group of nodes you can rank up, two or three per column with a trade-off
    between them, so a building grows in the direction you choose rather than being picked once. Mocked up on the
-   design canvas before it's built.
+   design canvas before it's built. *Agreed 24 Oct (Matt: "B"):* nothing locks - either side of a column builds
+   first at its price, the other later at 2.5 times it, today's figures untouched. Refit goes (nothing to refit).
+   Option A (three ranks a column, shared) was the other on the canvas.
 
 ---
 
@@ -299,7 +309,7 @@ Three things, the first two before anything else in the milestone:
 - **Manual override:** a pressed skill fires once; a slot switched off never fires by itself.
 - **The odds:** two dry runs with the same build, one with skills and one without, read differently (the odds see
   skills).
-- **Each new state:** held, stunned, asleep, warded, thrown out, Last stand; each has an effect that ends on time.
+- **Each new state:** stunned, asleep, warded, thrown out, Last stand; each has an effect that ends on time.
 - **Classes:** every class has 8 skills on its tree, 4 a lane, each reachable.
 - **Loadout:** three slots, locked on setting off.
 - **Unlocks:** each boss unlocks its class (and room); a fresh camp has only the Poacher.
@@ -450,6 +460,9 @@ Name · the line under it · its rule chip. Cost and cooldown show on the slot a
 | The class | the Recruit; lanes Ordnance and Drill; his line "Walked out of the Barracks with the stores." |
 | Unlocks | Beat the Gamekeeper: the Clinic opens, and Training offers the Paramedic · Beat the Carpet Man: Training offers the Doorman · Beat the Manager: the Fence and the Yard open, and Training offers the Scrapper · Beat the Quartermaster: the Radio and the Workshop open, and Training offers the Recruit · After Kev's first story, Training offers the Drifter |
 | Flavour, per unlock | The Paramedic: "The doctor's apprentice. The doctor keeps the Clinic; she goes out." · The Doorman: "The Carpet Man's old bodyguard." · The Scrapper: "The Bank's repair man." · The Drifter: "Found on the road." |
+| The fight's buttons (24 Oct pass) | Pip "Auto" / "Off" (tooltip "Auto off"). Hover: the name; the line; the cost chip ("25 energy · 12 s"); the rule on its own line; "Right-click to turn auto off" / "…on", by the state. State chips over a man hit: "Stunned 3 s", "Asleep 4 s", "Bleeding". |
+| The picker (24 Oct pass) | Card head SKILLS; button "Change skills" (no ▾: it opens a picker, not a setting); title "Skills for the run"; under it "Pick 3 you've learnt. They lock when you set off."; lane heads in caps; a row not learnt: "Learn it in Training"; footer "3 of 3 picked · press one to take it out"; "Done"; fewer learnt: "2 learnt · learn more in Training". |
+| The Pitch, nothing locks (24 Oct pass) | Neither side built: "Or Kickback: every kill gives 5 energy" as now. The other side built: "Jerry can is built · this one costs ×2.5". The refit lines and verb go; the second side's button is "Build (…)". |
 
 ### Matt's calls (settled 24 Oct)
 
