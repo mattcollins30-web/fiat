@@ -6753,3 +6753,21 @@ pass; the reviewer on the code):
   charge and Broad shoulders, the round grenades (Back of the van, Lob one in, Cook it off, the Ordnance emblem), the
   boots (Quick march, Recruit's boots, the Drill emblem), the bayonets. Their .import files come when the editor next
   opens; until then the fight's buttons show the glyphs (SkillBar reads the import), the web the pictures.
+
+## Milestone 8, the balance run and 0.8.0 (24 Oct)
+
+- The Recruit in the reads (tools/balance.bat: plain, physical, bleed) and the bot's crew turn; the Radio's crew row
+  holds six (a sixth class played had no button; a check holds every class's button and its fit). Smoke 238.
+- One pass (24 Oct, 15:39-16:42; summary.md kept as summary_m8.md, Matt's latest save read alongside as
+  playtest_m8.md): 21 RED (19 on the 22 Oct pass), the same shape. The campaign: the Bank 1.5 h median (green; 1.3
+  on 22 Oct), the Quartermaster 2.2 h (2.4; the gate 2.5-3.4), level 22-30 at him, retirement's median 16.3 h (15.1),
+  the lorry 3.4 h (4.4). The endgame still runs away as before (odds 100% everywhere, cash in hand 3-1,255M,
+  deaths one in 2,000-13,000): the design question parked for after Matt's playtest, not a number. The Recruit's
+  builds sit in the band: the Quartermaster at 2.1-3.1 h, level 50 at 6.5-15.9 h or never. Doorman as physical's
+  first read ends at level 3: its crew turn sent a fresh Drifter out at the cap (by design), the deep sites read in
+  the new runner's kit. Nothing drastic (no wall, no unwinnable stretch): no second pass (CLAUDE.md).
+- Matt's save (0.7.8, a Drifter, 57 min played): the Manager at 54 min at level 13, every site entered at its
+  gear's level, wounds 8%.
+- Parked items left: the fans from game start (Matt's look after the art batch: a laptop restart first); the wheels'
+  links (the bends hold them clear; revisit only if the playtest still reads them wrong).
+- VERSION 0.8.0 (milestone 8's first build to play). Smoke 239. Next: Matt's playtest.

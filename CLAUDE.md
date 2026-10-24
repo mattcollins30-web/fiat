@@ -78,7 +78,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   systems that changed what the game is - 1 the first slice, 2 the tree, 3 depth and intel, 4 the Yard, 5 the
   Radio's endgame, 6 the crew, 7 the web; the build counts the commits Matt plays within it (a playtest build bumps
   it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; milestone 8 is the
-  skills (docs/design/skills.md), and the balance phase starts milestone 9. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
+  skills (docs/design/skills.md; 0.8.0 its first build to play, 24 Oct), and the balance phase starts milestone 9. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
   and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")
