@@ -6789,3 +6789,7 @@ the hundreds of millions); "at least 30ish" hours of endgame for an indie ARPG a
 - Next: the 32-hour balance pass (a read of this slowdown), Matt's evening playtest, then on his go-ahead the endgame's
   chase (docs/design/endgame_chase.md: the breakdown, the pinnacles' mechanics and uniques, moving a unique's power,
   the filter, the collection log, loadouts), then the single balance pass and his playtest on 0.9.0.
+- The 32-hour read (36 reads, 18 red): no runaway past 50 now, but the reach climbs fast to about hour 8, then stands
+  12-24 h at 43-79 by read (P5 red on every build; full at the reach won 85%, the climb power-limited). Cash still piles
+  on five builds (kill tins); deaths and wounds near none, as before. For after the playtest, with the chase plan.
+- VERSION 0.8.1 (the endgame slowed). Smoke 242. Next: Matt's evening playtest.
