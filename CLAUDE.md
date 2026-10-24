@@ -66,6 +66,9 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
   the playtest" lists, oldest first), designed together, built, smoked, committed. 3. Then balance and nothing else:
   the endgame's shape, the gates, the passes, Matt's playtests, until the game's balanced. Nothing new goes into the
   build in phase 3.
+- Changed 24 Oct (Matt overruled in words: "Our skill tree has no skills and fights devolve into watching bats and
+  clicking meds"): milestone 8 is active skills and energy, the sixth class (the Recruit), the unlock order and the
+  Pitch's tree, per docs/design/skills.md; balance moves to milestone 9 and starts once 8 is in.
 - The creep rule: a new feature or system raised after phase 2 begins goes to docs/design/ideas_backlog.md with the
   date and Matt's words, not into the build, and Claude says where it went. It comes back when phase 3 is done or
   Matt overrules in words. A parked item that grows a feature in the designing is the same: the fix goes in, the
@@ -74,8 +77,8 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - The version (scripts/ui/menu.gd VERSION, shown on the title): 0.<milestone>.<build>. The milestone counts the
   systems that changed what the game is - 1 the first slice, 2 the tree, 3 depth and intel, 4 the Yard, 5 the
   Radio's endgame, 6 the crew, 7 the web; the build counts the commits Matt plays within it (a playtest build bumps
-  it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; the balance phase
-  starts milestone 8. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
+  it). The web build Matt is playing is 0.7.0; the parked-list build after it 0.7.1 and so on; milestone 8 is the
+  skills (docs/design/skills.md), and the balance phase starts milestone 9. SAVE_VERSION is its own count and stays so. Claude bumps the version in the commit Matt plays
   and notes it in docs/status.md.
 
 ## Talk first (23 Oct, Matt: "lets talk before you blindly start doing stuff")

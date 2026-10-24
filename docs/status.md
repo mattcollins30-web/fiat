@@ -6293,6 +6293,23 @@ difficulty and length, the endgame placeholders.
   wall to the frame's foot at the full duck. Run 222. Three walls (barracks, hospital, services) have no .import yet:
   the editor makes them on its next open, and they want committing then.
 
+## Milestone 8 opened (24 Oct): skills, energy, the Recruit, the unlock order, the Pitch
+
+- Matt: "Our skill tree has no skills and fights devolve into watching bats and clicking meds. We need active skills
+  ... 8 per character with 3 available for a fight ... an energy system plus a cooldown reduction affix." Designed
+  together and written up in docs/design/skills.md: auto-cast with a manual override; energy (100, 4 a second, a
+  quarter of pace's bonus); three new affixes; 48 skills, 8 a class taught by the tree; defensive skills clear
+  ailments, meds stay the heal; the sixth class the Recruit on the wheel's free spoke; the unlock order by heads
+  (start the Poacher; the Gamekeeper the Clinic and the Paramedic; the Carpet Man the Doorman; the Manager the Fence
+  and the Scrapper; the Quartermaster the Recruit; Kev's first story the Drifter); the Pitch's tree reworked.
+- Matt's answers: the Recruit (not the Deserter); Bung keeps its tin cost; Leg it changed (surviving death is Code
+  blue's alone); the removal skills never work on heads.
+- The language pass (house rule): two reviewers (docs/language/review_m8_a.md, review_m8_b.md), my calls folded into
+  the design's section 11: 17 renames for clashes, no crits or reloads (the game has neither), the rule labels
+  replaced, figures not words. Six calls left for Matt (section 11): unbanning "skill", Code blue against Not today,
+  3+ on you under Chokepoints, the Paramedic's and the Scrapper's stories, the style guide v3.
+- CLAUDE.md's plan updated: balance is milestone 9. Next: the Pitch's quick fixes, then the mockups.
+
 ## Parked from the playtest (23 Oct, 0.7.6; Matt: "park the fact we need to revisit this")
 
 1. The wheels' links through their middle track. A class half's row -1 node links its row -2.3 one; on the wheel
