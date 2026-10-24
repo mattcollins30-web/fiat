@@ -736,6 +736,7 @@ func _init() -> void:
 	_feel_gate_checks()
 	_map_checks(main)
 	_med_over_time_checks(main)
+	_skills_checks(main.sim)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -17721,3 +17722,256 @@ func _parts_changed(a: Array, b: Array) -> String:
 		if str(a[i]) != str(b[i]):
 			out.append("%d: %s -> %s" % [i, str(a[i]).left(80), str(b[i]).left(80)])
 	return (", " + "; ".join(out)) if not out.is_empty() else ""
+
+
+## Skills (24 Oct, milestone 8: docs/design/skills.md §8): the loadout and its lock, energy and cooldowns in bounds,
+## each rule firing when its condition holds and not otherwise, the press and the switch, each effect ending on time,
+## the real fight casting, the odds' key reading the loadout, the save.
+func _skills_checks(sim) -> void:
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	sim.yard_picks.erase("generator")
+	sim.yard_ranks.erase("generator")
+	sim._yard_changed("")
+	# the loadout: learnt ones only, one copy, locked on a run
+	sim.skills_known = []
+	_check(not sim.set_skill_slot(0, "clean_shot"), "an unlearnt skill went in a slot")
+	sim.skills_known = Data.SKILLS.keys()
+	_check(sim.set_skill_slot(0, "clean_shot") and sim.set_skill_slot(1, "collared") and sim.set_skill_slot(2, "gin_trap"), "a learnt skill would not go in a slot")
+	_check(sim.set_skill_slot(1, "clean_shot") and sim.skill_slots[0] == "" and sim.skill_slots[1] == "clean_shot", "a skill sat in two slots: %s" % str(sim.skill_slots))
+	sim.set_skill_slot(0, "clean_shot")
+	sim.set_skill_slot(1, "collared")
+	_check(not sim.set_skill_slot(0, "no_such_skill"), "a skill that isn't one went in a slot")
+	var key0: int = sim._kit_key()
+	sim.set_skill_auto(0, false)
+	_check(sim._kit_key() != key0, "the odds' key doesn't read a slot's rule switched off")
+	sim.set_skill_auto(0, true)
+	sim.set_skill_slot(2, "decoy")
+	_check(sim._kit_key() != key0, "the odds' key doesn't read the loadout")
+	sim.set_skill_slot(2, "gin_trap")
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var m: Dictionary = sim.mission
+	var t: Dictionary = m["t"]
+	_check(not sim.set_skill_slot(0, "decoy") and sim.skill_slots[0] == "clean_shot", "the loadout changed on a run")
+	# a fight starts full and ready
+	_check(m.has("sk") and is_equal_approx(sim.energy_now(), sim.max_energy()) and sim.skill_wait(0) == 0.0 and sim.skill_wait(2) == 0.0, "a fight didn't start with full energy and every skill ready: %s" % str(m.get("sk", {})))
+	_check(is_equal_approx(sim.max_energy(), Data.ENERGY_POOL) and is_equal_approx(sim.energy_regen(), Data.ENERGY_REGEN * (1.0 + (sim.pace() - 1.0) * Data.ENERGY_PACE_SHARE)), "energy's figures: %.1f max, %.2f a second" % [sim.max_energy(), sim.energy_regen()])
+	_check(sim.cooldown_cut() <= Data.CDR_CAP and is_equal_approx(sim.skill_cooldown("clean_shot"), 8.0 * (1.0 - sim.cooldown_cut() / 100.0)), "a cooldown is off: %.2f" % sim.skill_cooldown("clean_shot"))
+	# the rules, staged: each holds when its condition does and not otherwise
+	var holds := func(rule: String, on_you: int) -> bool: return sim._skill_rule_holds(m, t, rule, on_you)
+	_check(not holds.call("on_you_2", 1) and holds.call("on_you_2", 2) and not holds.call("on_you_3", 2) and holds.call("on_you_3", 3), "the crowd rules are off")
+	sim.hp = sim.max_hp() * 0.6
+	var half_off: bool = holds.call("under_half", 1)
+	sim.hp = sim.max_hp() * 0.4
+	_check(not half_off and holds.call("under_half", 1), "Under half HP is off")
+	sim.hp = sim.max_hp()
+	m["my_dots"] = {}
+	var ail_off: bool = holds.call("ailing", 1)
+	m["my_dots"] = {"bleed": 5.0}
+	_check(not ail_off and holds.call("ailing", 1), "Ailing is off")
+	m["my_dots"] = {}
+	m["target_hp"] = float(t["hp"]) * 0.5
+	var fin_off: bool = holds.call("finisher", 1)
+	m["target_hp"] = float(t["hp"]) * 0.2
+	_check(not fin_off and holds.call("finisher", 1), "Finisher is off")
+	m["target_hp"] = float(t["hp"])
+	m["sk"]["fight_t"] = 1.0
+	var op_on: bool = holds.call("opener", 1)
+	m["sk"]["fight_t"] = Data.OPENER_S + 1.0
+	_check(op_on and not holds.call("opener", 1), "Opener is off")
+	# never without the energy, never off its cooldown; the dearest first, one a tick
+	m["remaining"] = maxi(2, int(m["remaining"]))
+	m["sk"]["energy"] = 10.0
+	var c0: int = int(m["sk"]["cast"])
+	sim._skills_tick(m, t, 0.0, 1)
+	_check(int(m["sk"]["cast"]) == c0, "a skill fired without the energy for it")
+	m["sk"]["energy"] = sim.max_energy()
+	sim._skills_tick(m, t, 0.0, 2)
+	_check(int(m["sk"]["cast"]) == c0 + 1 and str(m["sk"]["last"]["id"]) == "gin_trap", "the dearest ready skill didn't go first: %s" % str(m["sk"].get("last", {})))
+	sim._skills_tick(m, t, 0.0, 2)
+	_check(int(m["sk"]["cast"]) == c0 + 2 and str(m["sk"]["last"]["id"]) != "gin_trap", "the second skill didn't wait its tick and then go: %s" % str(m["sk"].get("last", {})))
+	var e1: float = float(m["sk"]["energy"])
+	_check(e1 >= 0.0 and e1 <= sim.max_energy(), "energy left its bounds: %.1f" % e1)
+	for k in range(200):
+		sim._skills_tick(m, t, 0.05, 0)
+		_check(float(m["sk"]["energy"]) >= 0.0 and float(m["sk"]["energy"]) <= sim.max_energy() + 0.001, "energy left its bounds while it refilled: %.2f" % float(m["sk"]["energy"]))
+	# the press and the switch: off, it never fires by itself; pressed, it fires once
+	sim._skills_fight_start(m)
+	for i in range(3):
+		sim.set_skill_auto(i, false)
+	c0 = int(m["sk"]["cast"])
+	sim._skills_tick(m, t, 0.0, 3)
+	_check(int(m["sk"]["cast"]) == c0, "a slot switched off fired by itself")
+	_check(sim.press_skill(1), "a ready skill wouldn't take a press")
+	sim._skills_tick(m, t, 0.0, 1)
+	sim._skills_tick(m, t, 0.0, 1)
+	_check(int(m["sk"]["cast"]) == c0 + 1 and str(m["sk"]["last"]["id"]) == "collared", "a press didn't fire once: %d casts" % (int(m["sk"]["cast"]) - c0))
+	_check(not sim.press_skill(1) and sim.skill_wait(1) > 0.0, "a skill on its cooldown took a press")
+	for i in range(3):
+		sim.set_skill_auto(i, true)
+	# each effect, and its end on time
+	var fire := func(id: String) -> void:
+		sim.skill_slots[0] = id
+		m["sk"]["energy"] = sim.max_energy()
+		m["sk"]["cd"] = [0.0, 0.0, 0.0]
+		sim._skill_fire(m, t, 0)
+	var run_down := func(secs: float) -> void:
+		var left := secs
+		while left > 0.0:
+			sim._skills_tick(m, t, minf(0.25, left), 0)
+			left -= 0.25
+	sim._skills_fight_start(m)
+	sim.skill_slots = ["", "", ""]
+	fire.call("clean_shot")
+	var on_hit: float = sim._skill_hit_mult(m)
+	run_down.call(1.1)
+	_check(is_equal_approx(on_hit, 2.5) and is_equal_approx(sim._skill_hit_mult(m), 1.0), "Clean shot: ×%.2f, then ×%.2f" % [on_hit, sim._skill_hit_mult(m)])
+	fire.call("flush_them_out")
+	on_hit = sim._skill_hit_mult(m)
+	run_down.call(8.1)
+	_check(is_equal_approx(on_hit, 1.2) and is_equal_approx(sim._skill_hit_mult(m), 1.0), "Flush them out: ×%.2f, then ×%.2f" % [on_hit, sim._skill_hit_mult(m)])
+	m["my_dots"] = {"bleed": 9.0, "poison": 9.0, "fire": 9.0}
+	fire.call("go_to_ground")
+	var in_hid: float = sim._skill_in_mult(m, 3)
+	_check(not m["my_dots"].has("bleed") and not m["my_dots"].has("poison") and m["my_dots"].has("fire"), "Go to ground didn't clear the bleed and the poison alone: %s" % str(m["my_dots"]))
+	run_down.call(3.1)
+	_check(in_hid == 0.0 and is_equal_approx(sim._skill_in_mult(m, 3), 1.0), "Go to ground: ×%.2f in, then ×%.2f" % [in_hid, sim._skill_in_mult(m, 3)])
+	m["my_dots"] = {}
+	fire.call("collared")
+	var in_one: float = sim._skill_in_mult(m, 2)
+	run_down.call(3.1)
+	_check(is_equal_approx(in_one, 0.5) and is_equal_approx(sim._skill_in_mult(m, 2), 1.0), "Collared, two on you: ×%.2f in, then ×%.2f" % [in_one, sim._skill_in_mult(m, 2)])
+	fire.call("decoy")
+	var in_dec: float = sim._skill_in_mult(m, 3)
+	run_down.call(6.1)
+	_check(is_equal_approx(in_dec, 0.7) and is_equal_approx(sim._skill_in_mult(m, 3), 1.0), "Decoy: ×%.2f in, then ×%.2f" % [in_dec, sim._skill_in_mult(m, 3)])
+	m["dots"] = {}
+	fire.call("net_every_hole")
+	var in_net: float = sim._skill_in_mult(m, 4)
+	_check(float(m["dots"].get("bleed", 0.0)) > 0.0, "Net every hole didn't start a bleed")
+	run_down.call(2.1)
+	_check(in_net == 0.0 and is_equal_approx(sim._skill_in_mult(m, 4), 1.0), "Net every hole: ×%.2f in, then ×%.2f" % [in_net, sim._skill_in_mult(m, 4)])
+	# an effect cast inside a tick lasts its length, at the frame's step, the bot's and the dry runs' (the review: a
+	# skill set mid-tick counted that tick twice)
+	var cover := func(id: String, on_you: int, frac: Callable, step: float) -> float:
+		sim.skill_slots = [id, "", ""]
+		sim._skills_fight_start(m)
+		m["my_dots"] = {"bleed": 50.0} if id == "go_to_ground" else {}
+		var secs := 0.0
+		var ticks: int = int(ceil((float(sim.skill(id)["fx"].values().filter(func(v): return v is float).max()) + 2.0 * step) / step))
+		for k in range(ticks):
+			sim._skills_tick(m, t, step, on_you)
+			secs += float(frac.call()) * step
+		m["my_dots"] = {}
+		return secs
+	for step in [0.25, 1.0, sim.DRY_STEP]:
+		var cs: float = cover.call("clean_shot", 1, func() -> float: return (sim._skill_hit_mult(m) - 1.0) / 1.5, step)
+		var gg: float = cover.call("go_to_ground", 3, func() -> float: return 1.0 - sim._skill_in_mult(m, 3), step)
+		var co: float = cover.call("collared", 2, func() -> float: return (1.0 - sim._skill_in_mult(m, 2)) / 0.5, step)
+		_check(absf(cs - 1.0) < 0.01 and absf(gg - 3.0) < 0.01 and absf(co - 3.0) < 0.01, "at a %.2f s step: Clean shot covers %.2f s (want 1), Go to ground %.2f (3), Collared %.2f (3)" % [step, cs, gg, co])
+	# a fight's effects end with it
+	fire.call("net_every_hole")
+	sim._skills_fight_start(m)
+	_check(is_equal_approx(sim._skill_in_mult(m, 3), 1.0), "Net every hole held the next gang's fire")
+	m["target_hp"] = float(t["hp"]) * 0.2
+	fire.call("one_for_the_pot")
+	_check(float(m["target_hp"]) <= 0.0, "One for the pot left him standing: %.1f" % float(m["target_hp"]))
+	# Gin trap waits for the next man, then springs once
+	m["target_hp"] = float(t["hp"])
+	m["dots"] = {}
+	fire.call("gin_trap")
+	sim._skills_tick(m, t, 0.0, 0)
+	_check(is_equal_approx(float(m["target_hp"]), float(t["hp"])), "Gin trap sprang on the man already in front")
+	m["sk"]["seq"] = int(m["sk"]["seq"]) + 1
+	var before_trap: float = float(m["target_hp"])
+	sim._skills_tick(m, t, 0.0, 0)
+	_check(absf(before_trap - float(m["target_hp"]) - sim.damage_total() * 3.0) < 0.01 and float(m["dots"].get("bleed", 0.0)) > 0.0, "Gin trap on the next man: %.1f off, bleed %s" % [before_trap - float(m["target_hp"]), str(m["dots"])])
+	before_trap = float(m["target_hp"])
+	m["sk"]["seq"] = int(m["sk"]["seq"]) + 1
+	sim._skills_tick(m, t, 0.0, 0)
+	_check(is_equal_approx(float(m["target_hp"]), before_trap), "Gin trap sprang twice")
+	# the Generator: Pilot light's first free, Kickback's energy a kill
+	sim.yard_picks["generator"] = ["", "", "b", "", "a"]
+	sim._yard_changed("")
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	sim._skills_fight_start(m)
+	_check(sim.skill_cost_now(0) == 0.0 and sim.skill_cost_now(2) == 0.0, "Pilot light's first skill isn't free")
+	sim._skill_fire(m, t, 0)
+	_check(is_equal_approx(sim.energy_now(), sim.max_energy()) and sim.skill_cost_now(1) == 25.0, "Pilot light: %.1f energy after the free one, the next costs %.1f" % [sim.energy_now(), sim.skill_cost_now(1)])
+	m["sk"]["energy"] = 40.0
+	m["remaining"] = 3
+	m["target_hp"] = -1.0
+	for i in range(3):
+		sim.set_skill_auto(i, false)
+	sim._fight(m, t, 0.001)
+	_check(float(m["sk"]["energy"]) >= 45.0 - 0.01, "Kickback didn't give energy on a kill: %.2f" % float(m["sk"]["energy"]))
+	# "3+ on you" counts everyone in the fight, not just those firing (Matt's call 3): one at a time, three in it
+	sim.yard_picks.erase("generator")
+	sim._yard_changed("")
+	sim.skill_slots = ["net_every_hole", "", ""]
+	for i in range(3):
+		sim.set_skill_auto(i, true)
+	sim._skills_fight_start(m)
+	m["remaining"] = 3
+	m["target_hp"] = float(t["hp"])
+	var one_at: Dictionary = t.duplicate()
+	one_at["contact"] = 1 - sim.CONTACT
+	c0 = int(m["sk"]["cast"])
+	sim._fight(m, one_at, 0.001)
+	_check(sim.contact(one_at) == 1 and int(m["sk"]["cast"]) == c0 + 1, "with one firing and three in the fight, a 3+ skill didn't fire (contact %d)" % sim.contact(one_at))
+	# a run's skills come through a save mid-fight
+	m["sk"]["energy"] = 33.0
+	var mid: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	sim.load_dict(mid)
+	m = sim.mission
+	_check(m != null and m.has("sk") and is_equal_approx(float(m["sk"]["energy"]), 33.0) and m["sk"]["cd"].size() == 3, "a run's skills didn't come through a save")
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	for i in range(3):
+		sim.set_skill_auto(i, true)
+	sim.yard_picks.erase("generator")
+	sim._yard_changed("")
+	sim.extract_now()
+	# the odds see the skills: the same seeded dry run with and without Clean shot, Net every hole and Collared reads a
+	# different fight - its length or what reached HP - at a site that's a real fight for this camp (a strong one walks
+	# the Allotments in a step)
+	var plain: Dictionary = {}
+	var skilled: Dictionary = {}
+	for ti in range(Data.TIERS.size() - 1, -1, -1):
+		var r1 := RandomNumberGenerator.new()
+		r1.seed = 7
+		sim.skill_slots = ["", "", ""]
+		sim.hp = sim.max_hp()
+		sim._dry_run(ti, r1)
+		if float(sim._dry_last["elapsed"]) < 4.0 * sim.DRY_STEP and ti > 0:
+			continue
+		plain = sim._dry_last.duplicate()
+		var r2 := RandomNumberGenerator.new()
+		r2.seed = 7
+		sim.skill_slots = ["clean_shot", "net_every_hole", "collared"]
+		sim._dry_run(ti, r2)
+		skilled = sim._dry_last.duplicate()
+		break
+	_check(float(plain["elapsed"]) != float(skilled["elapsed"]) or float(plain["taken"]) != float(skilled["taken"]), "the dry runs read the same fight with skills and without: %.1f s, %.1f taken both" % [float(plain["elapsed"]), float(plain["taken"])])
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	# the real fight casts: a run of the Allotments with Clean shot on When ready
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	var casts := 0
+	for k in range(60):
+		if not sim.on_mission() or sim.mission["remaining"] <= 0:
+			break
+		sim.advance(0.25)
+		if sim.on_mission():
+			casts = maxi(casts, int(sim.mission.get("sk", {}).get("cast", 0)))
+	_check(casts > 0, "the fight never cast a skill")
+	if sim.on_mission():
+		sim.extract_now()
+	# the save keeps the learnt, the slots and the switches
+	sim.set_skill_auto(2, false)
+	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
+	sim.load_dict(d)
+	_check(sim.skills_known.size() == Data.SKILLS.size() and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
+	sim.load_dict(saved)
+	print("skills ok: the loadout and its lock, energy, cooldowns, the rules, the press, eight effects, a real fight's casts, the save")

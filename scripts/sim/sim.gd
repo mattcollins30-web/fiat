@@ -29,6 +29,9 @@ var yard_seen_cols := 1            # and the columns open then
 var salvage := {"copper": 0, "steel": 0, "army": 0}    # the deep sites' salvage, one kind a zone (9 Oct)
 var loot_by_hand := true          # the floor (13 Oct, Matt): a search's finds wait on the floor for the player to take; the bot reads them in as before
 var hardcore := false              # a death ends the Yard, stash and all
+var skills_known: Array = []       # skill ids learnt (24 Oct, milestone 8: the tree's skill nodes teach them)
+var skill_slots: Array = ["", "", ""]     # the three a run takes, set before it on the Runs card; locked out on a run
+var skill_auto: Array = [true, true, true]    # a slot's rule on (it fires by itself) or off (only when pressed)
 var wounds := {}                   # the wounds (30; stacked, 19 Oct): area -> {stat, what, from, hp_pct}, three at most, the Clinic the cure
 var camp_lost := false             # hardcore: set by the KIA that ended it
 var tree: Array = []               # node ids taken, "Branch/index"; the camp's, kept across operators
@@ -6886,7 +6889,11 @@ func guard_sources() -> Array:
 
 
 ## A gang arriving (the first, a patrol, the convoy's, the door's): Squared up and the `guard_gang` lines.
-func _gang_arrives(m: Dictionary) -> void:
+func _gang_arrives(m: Dictionary, new_fight := true) -> void:
+	if new_fight or not m.has("sk"):
+		_skills_fight_start(m)                # a fight starts: energy full, the skills ready (milestone 8)
+	else:
+		m["sk"]["seq"] = int(m["sk"]["seq"]) + 1     # men join the fight in progress: Gin trap's next one
 	var share: float = (Data.FX["node/squared_up"] if has_node("squared_up") else 0.0) + _affix_sum("guard_gang") + (25.0 if has_node("bin_lid") else 0.0)     # Bin lid (22 Oct): Guard of 25% as each gang arrives
 	if share > 0.0:
 		_guard_add(m, max_hp() * share / 100.0)
@@ -6936,8 +6943,9 @@ func _event(m: Dictionary, t: Dictionary) -> void:
 	match what:
 		"convoy":
 			var size: int = PATROL_BASE + 2
+			var mid_fight: bool = int(m["remaining"]) > 0
 			m["remaining"] += size
-			_gang_arrives(m)
+			_gang_arrives(m, not mid_fight)       # a convoy into a fight in progress joins it: no fresh energy (the review)
 			m["clock"] = float(m.get("clock", 0.0)) + Data.CLOCK_PER_HEAD * size      # a convoy's crew brings its own time
 			m["clock_max"] = float(m.get("clock_max", 0.0)) + Data.CLOCK_PER_HEAD * size
 			if m["target_hp"] <= 0.0:
@@ -7025,6 +7033,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	var per_type := type_dps()
 	var landed_total := 0.0
 	var crowd_on_you: int = mini(m["remaining"], contact(t))
+	_skills_tick(m, t, dt, 1 if (m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]) else int(m["remaining"]))     # the skills before the hit (milestone 8); "3+ on you" counts everyone in the fight, not just those firing (Matt's call 3, skills.md §11)
+	mult *= _skill_hit_mult(m)
 	var held := gun_type()
 	mult *= _joint_hit_mult(m, held)
 	for ty in Data.TYPES:
@@ -7116,6 +7126,8 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 			m["floor_t"] = 1.0                   # Floored: the next of them, staggered, loses a second of fire
 		m["fresh"] = false
 		if boss_on:
+			if m.has("sk"):
+				m["sk"]["energy"] = minf(max_energy(), float(m["sk"]["energy"]) + generator_kill_energy())     # Kickback: a head's a kill too
 			m["target_hp"] = 0.0
 			_boss_down(m, t)
 			boss_on = false
@@ -7124,6 +7136,9 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 				m["remaining"] = 0                           # comes out below
 			break
 		m["target_hp"] += t["hp"]
+		if m.has("sk"):
+			m["sk"]["seq"] = int(m["sk"]["seq"]) + 1     # a man joins the fight: Gin trap's next one
+			m["sk"]["energy"] = minf(max_energy(), float(m["sk"]["energy"]) + generator_kill_energy())     # Kickback
 		m.erase("opened")                    # the Starting Pistol: the next of them has its own first shot
 		m["kill_shocked"] = float(m.get("shock_t", 0.0)) > 0.0
 		m["kill_burning"] = float(m.get("dots", {}).get("fire", 0.0)) > 0.0
@@ -7189,6 +7204,7 @@ func _fight(m: Dictionary, t: Dictionary, dt: float) -> void:
 	elif not m["fresh"]:
 		m["grace"] = 0.0
 	incoming *= crowd_mult(on_you)
+	incoming *= _skill_in_mult(m, on_you)        # the skills: out of sight, stunned, the decoy (milestone 8)
 	incoming *= _joints_on_incoming(m, chilled, dt)
 	if float(m.get("immune_t", 0.0)) > 0.0:
 		incoming = 0.0                                  # Clean hands: nothing lands for a while after a med
@@ -8870,7 +8886,7 @@ func _kit_parts() -> Array:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
 	return [equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, ring, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
-			weather_of(front_tier()), is_night()]     # the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
+			weather_of(front_tier()), is_night(), skill_slots, skill_auto]     # the skills a run takes, and their rules on or off (milestone 8); the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
@@ -9742,6 +9758,287 @@ func generator_first_free() -> bool:
 	return yard_has("pilot_light")
 
 
+# ------------------------------------------------------------------ skills (24 Oct, milestone 8: docs/design/skills.md)
+
+func skill(id: String) -> Dictionary:
+	return Data.SKILLS.get(id, {})
+
+
+func max_energy() -> float:
+	return Data.ENERGY_POOL + _affix_sum("energy_max") + generator_max_energy()
+
+
+## A second's energy: the base, a quarter of pace's bonus, energy gain (%), the Dynamo.
+func energy_regen() -> float:
+	return Data.ENERGY_REGEN * (1.0 + (pace() - 1.0) * Data.ENERGY_PACE_SHARE) * (1.0 + _affix_sum("energy_regen_pct") / 100.0) + generator_energy_regen()
+
+
+## Cooldowns shorter by this per cent: the kit's and the Flywheel's, CDR_CAP at most.
+func cooldown_cut() -> float:
+	return minf(Data.CDR_CAP, _affix_sum("cdr_pct") + generator_cooldown_pct())
+
+
+func skill_cooldown(id: String) -> float:
+	return float(skill(id).get("cd", 0.0)) * (1.0 - cooldown_cut() / 100.0)
+
+
+func skill_known(id: String) -> bool:
+	return skills_known.has(id)
+
+
+## Puts a learnt skill in slot `i` ("" empties it); one copy a loadout, never on a run.
+func set_skill_slot(i: int, id: String) -> bool:
+	if i < 0 or i >= Data.SKILL_SLOTS or mission != null:
+		return false
+	if id != "" and (not skill_known(id) or skill(id).is_empty()):
+		return false
+	for k in range(Data.SKILL_SLOTS):
+		if k != i and id != "" and skill_slots[k] == id:
+			skill_slots[k] = ""
+	skill_slots[i] = id
+	return true
+
+
+func set_skill_auto(i: int, on: bool) -> void:
+	if i >= 0 and i < Data.SKILL_SLOTS:
+		skill_auto[i] = on
+
+
+## Fires slot `i` on the next tick if it can (the player's press: the rule set aside, not the cost or the cooldown).
+func press_skill(i: int) -> bool:
+	if mission == null or i < 0 or i >= Data.SKILL_SLOTS or str(skill_slots[i]) == "":
+		return false
+	var sk: Dictionary = mission.get("sk", {})
+	if sk.is_empty() or skill_wait(i) > 0.0 or skill_cost_now(i) > float(sk["energy"]) or mission["remaining"] <= 0:
+		return false
+	sk["press"] = i
+	return true
+
+
+## Seconds before slot `i` is off its cooldown (0 ready; 0 off a run).
+func skill_wait(i: int) -> float:
+	if mission == null or not mission.has("sk"):
+		return 0.0
+	return float(mission["sk"]["cd"][i])
+
+
+## What slot `i` costs now: nothing while Pilot light's first is still to come.
+func skill_cost_now(i: int) -> float:
+	var id: String = str(skill_slots[i])
+	if id == "":
+		return 0.0
+	if mission != null and mission.get("sk", {}).get("free", false):
+		return 0.0
+	return float(skill(id).get("cost", 0.0))
+
+
+func energy_now() -> float:
+	return float(mission["sk"]["energy"]) if mission != null and mission.has("sk") else max_energy()
+
+
+## A fight starts (each gang, the head's too): energy full, every slot ready, Pilot light's first free again.
+func _skills_fight_start(m: Dictionary) -> void:
+	var sk: Dictionary = m.get("sk", {})
+	sk["energy"] = max_energy()
+	sk["cd"] = [0.0, 0.0, 0.0]
+	sk["free"] = generator_first_free()
+	sk["fight_t"] = 0.0
+	sk["press"] = -1
+	sk["seq"] = int(sk.get("seq", 0)) + 1     # a man joins: Gin trap's next one
+	if not sk.has("fx"):
+		sk["fx"] = {}
+	sk["fx"]["stuns"] = []                    # the last gang's stunned men are gone with it, and its timed effects
+	for k in sk["fx"].keys():
+		if str(k).ends_with("_t"):
+			sk["fx"][k] = 0.0                     # (the review: a Net on the last man held the next gang's fire); a set trap stays
+	sk["share"] = {}
+	sk["stun_share"] = 0.0
+	if not sk.has("cast"):
+		sk["cast"] = 0
+	m["sk"] = sk
+
+
+## Whether slot `i`'s rule holds now.
+func _skill_rule_holds(m: Dictionary, t: Dictionary, rule: String, on_you: int) -> bool:
+	match rule:
+		"ready", "opener_ready":
+			return true
+		"on_you_2":
+			return on_you >= 2
+		"on_you_3":
+			return on_you >= 3
+		"under_half":
+			return hp < max_hp() * 0.5
+		"ailing":
+			for ty in m.get("my_dots", {}):
+				if float(m["my_dots"][ty]) > 0.0:
+					return true
+			return false
+		"finisher":
+			return float(m["target_hp"]) > 0.0 and float(m["target_hp"]) < Data.FINISHER_AT * _target_max(m, t)
+		"opener":
+			return float(m["sk"]["fight_t"]) < Data.OPENER_S
+	return false
+
+
+## The man in front's full HP: the head's when he's out.
+func _target_max(m: Dictionary, t: Dictionary) -> float:
+	if m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]:
+		return float(m["boss"]["hp"])
+	return float(t["hp"])
+
+
+## A tick of the skills, before the hit: energy and cooldowns, effects running down, then at most one skill fires -
+## the pressed one, else the dearest whose rule holds (two on one tick: the other waits a tick).
+func _skills_tick(m: Dictionary, t: Dictionary, dt: float, on_you: int) -> void:
+	if not m.has("sk"):
+		_skills_fight_start(m)
+	var sk: Dictionary = m["sk"]
+	if skill_slots == ["", "", ""] and int(sk["fx"].get("trap_at", -1)) < 0:
+		return                                # nothing slotted: nothing to run (every dry run of a camp without skills)
+	sk["fight_t"] = float(sk["fight_t"]) + dt
+	sk["dt"] = dt
+	sk["energy"] = minf(max_energy(), float(sk["energy"]) + energy_regen() * dt)
+	for i in range(Data.SKILL_SLOTS):
+		sk["cd"][i] = maxf(0.0, float(sk["cd"][i]) - dt)
+	var fx: Dictionary = sk["fx"]
+	var share: Dictionary = {}
+	for k in fx.keys():
+		if str(k).ends_with("_t"):
+			share[k] = clampf(float(fx[k]) / dt, 0.0, 1.0) if dt > 0.0 else (1.0 if float(fx[k]) > 0.0 else 0.0)     # the share of this tick it still covers (the review: a 2 s dry step read a 1 s window whole)
+			fx[k] = maxf(0.0, float(fx[k]) - dt)
+	sk["share"] = share
+	var stuns: Array = fx.get("stuns", [])
+	var stun_share := 0.0
+	for j in range(stuns.size()):
+		stun_share += clampf(float(stuns[j]) / dt, 0.0, 1.0) if dt > 0.0 else 1.0     # each stun by the share of the tick it covers
+		stuns[j] = float(stuns[j]) - dt
+	fx["stuns"] = stuns.filter(func(x): return float(x) > 0.0)
+	sk["stun_share"] = stun_share
+	# Gin trap: a man joined since it was set
+	if fx.get("trap_at", -1) >= 0 and int(sk["seq"]) > int(fx["trap_at"]) and float(m["target_hp"]) > 0.0:
+		var trap: Dictionary = skill("gin_trap")["fx"]
+		_skill_damage(m, damage_total() * float(trap["trap_mult"]))
+		_skill_bleed(m, float(trap["bleed_s"]))
+		fx["trap_at"] = -1
+	var pick := -1
+	var pressed: int = int(sk.get("press", -1))
+	sk["press"] = -1
+	if pressed >= 0 and _skill_can(m, pressed):
+		pick = pressed
+	else:
+		var best := -1.0
+		for i in range(Data.SKILL_SLOTS):
+			var id: String = str(skill_slots[i])
+			if id == "" or not skill_auto[i] or not _skill_can(m, i):
+				continue
+			if not _skill_rule_holds(m, t, str(skill(id)["rule"]), on_you):
+				continue
+			if float(skill(id)["cost"]) > best:
+				best = float(skill(id)["cost"])
+				pick = i
+	if pick >= 0:
+		_skill_fire(m, t, pick)
+
+
+func _skill_can(m: Dictionary, i: int) -> bool:
+	var id: String = str(skill_slots[i])
+	return id != "" and not skill(id).is_empty() and float(m["sk"]["cd"][i]) <= 0.0 and skill_cost_now(i) <= float(m["sk"]["energy"]) and m["remaining"] > 0
+
+
+## A skill goes off: its energy and cooldown, then what it does.
+func _skill_fire(m: Dictionary, _t: Dictionary, i: int) -> void:
+	var sk: Dictionary = m["sk"]
+	var id: String = str(skill_slots[i])
+	var d: Dictionary = skill(id)
+	var f: Dictionary = d["fx"]
+	sk["energy"] = float(sk["energy"]) - skill_cost_now(i)
+	sk["free"] = false
+	sk["cd"][i] = skill_cooldown(id)
+	sk["cast"] = int(sk["cast"]) + 1
+	sk["last"] = {"slot": i, "id": id, "at": float(m["elapsed"])}     # for the frame: the button's flash, the word over it
+	var fx: Dictionary = sk["fx"]
+	if f.has("shot_mult"):
+		_sk_set(sk, "shot_t", float(f["shot_s"]))
+	if f.has("exposed"):
+		_sk_set(sk, "exposed_t", float(f["exposed_s"]))
+	if f.has("hidden_s"):
+		_sk_set(sk, "hidden_t", float(f["hidden_s"]))
+		for ty in f["clears"]:
+			m.get("my_dots", {}).erase(ty)
+	if f.get("execute", false):
+		if m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]:
+			_skill_damage(m, damage_total() * float(f["head_mult"]))
+		else:
+			_skill_damage(m, maxf(0.0, float(m["target_hp"])))
+	if f.has("stun_one_s"):
+		var dt_now: float = float(sk.get("dt", 0.0))
+		var dur: float = float(f["stun_one_s"])
+		sk["stun_share"] = float(sk.get("stun_share", 0.0)) + (clampf(dur / dt_now, 0.0, 1.0) if dt_now > 0.0 else 1.0)
+		if dur - dt_now > 0.0:
+			fx["stuns"] = fx.get("stuns", []) + [dur - dt_now]
+	if f.has("trap_mult"):
+		fx["trap_at"] = int(sk["seq"])
+	if f.has("less_in"):
+		_sk_set(sk, "less_in_t", float(f["less_in_s"]))
+	if f.has("stun_all_s"):
+		_sk_set(sk, "stun_all_t", float(f["stun_all_s"]))
+		_skill_bleed(m, float(f["bleed_s"]))
+
+
+## A timed effect starts in the tick it's cast in: that tick counts its share now and the timer keeps only what's left
+## after it (the review: setting the whole length mid-tick counted the tick twice).
+func _sk_set(sk: Dictionary, key: String, dur: float) -> void:
+	var dt: float = float(sk.get("dt", 0.0))
+	if not sk.has("share"):
+		sk["share"] = {}
+	sk["share"][key] = clampf(dur / dt, 0.0, 1.0) if dt > 0.0 else 1.0
+	sk["fx"][key] = maxf(0.0, dur - dt)
+
+
+## A skill's hit on the man in front, counted with the rest (the run screen's numbers read `dealt`). Its own figure:
+## no resist or shock on it (first figures, skills.md).
+func _skill_damage(m: Dictionary, amount: float) -> void:
+	m["target_hp"] -= amount
+	m["dealt"] = float(m.get("dealt", 0.0)) + amount
+	if not m.has("dealt_by"):
+		m["dealt_by"] = {}
+	m["dealt_by"]["physical"] = float(m["dealt_by"].get("physical", 0.0)) + amount
+
+
+## A skill's bleed on the man in front: `secs` of your damage into his bleed.
+func _skill_bleed(m: Dictionary, secs: float) -> void:
+	if not m.has("dots"):
+		m["dots"] = {}
+	_dot_add(m["dots"], "bleed", damage_total() * secs, damage_total())
+
+
+## The share of this tick a timed effect covers: a whole tick while it runs, the part left in its last.
+func _sk_share(m: Dictionary, key: String) -> float:
+	var sk: Dictionary = m.get("sk", {})
+	if sk.get("share", {}).has(key):
+		return float(sk["share"][key])
+	return 1.0 if float(sk.get("fx", {}).get(key, 0.0)) > 0.0 else 0.0
+
+
+## Your hit this tick, after the skills: Clean shot's window, Flush them out's exposure.
+func _skill_hit_mult(m: Dictionary) -> float:
+	var x := 1.0
+	x *= 1.0 + (float(skill("clean_shot")["fx"]["shot_mult"]) - 1.0) * _sk_share(m, "shot_t")
+	x *= 1.0 + float(skill("flush_them_out")["fx"]["exposed"]) * _sk_share(m, "exposed_t")
+	return x
+
+
+## Their fire this tick, after the skills: out of sight, all stunned, some stunned, the decoy.
+func _skill_in_mult(m: Dictionary, on_you: int) -> float:
+	var x := 1.0 - maxf(_sk_share(m, "hidden_t"), _sk_share(m, "stun_all_t"))
+	var stunned: float = float(m.get("sk", {}).get("stun_share", 0.0))
+	if stunned > 0.0 and on_you > 0:
+		x *= maxf(0.0, float(on_you) - stunned) / float(on_you)
+	x *= 1.0 - float(skill("decoy")["fx"]["less_in"]) * _sk_share(m, "less_in_t")
+	return x
+
+
 ## The HP back, and the wound seen to: WOUND_CASH a level, the Clinic's discount on both.
 ## The Clinic's two jobs, priced apart (Matt, 7 Oct: "heal my HP and treat the wound separately"): the HP back
 ## at TREAT_CASH_PER_HP a point, the wound at WOUND_CASH a level; the Clinic's discount on both.
@@ -10040,6 +10337,7 @@ func _state() -> Dictionary:
 		"contracts": contracts, "passes": passes, "mate": mate, "runs_total": runs_total, "wounded_total": wounded_total, "insure_next": insure_next, "top_up_mode": top_up_mode,
 		"trait": runner_trait, "candidates": candidates, "promised": promised,
 		"chron_count": chron_count, "chronicle_v": CHRONICLE_V, "played_s": played_s, "sites_v": SITES_V,
+		"skills_known": skills_known, "skill_slots": skill_slots, "skill_auto": skill_auto,
 	}
 
 
@@ -10167,6 +10465,9 @@ func load_dict(d: Dictionary) -> void:
 			kept.append(id)
 	tree = kept
 	_load_yard(d)
+	skills_known = d.get("skills_known", []).duplicate()
+	skill_slots = d.get("skill_slots", ["", "", ""]).duplicate()
+	skill_auto = d.get("skill_auto", [true, true, true]).duplicate()
 	hardcore = bool(d.get("hardcore", false))
 	wounds = {}
 	var saved_w = d.get("wounds", {})

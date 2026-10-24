@@ -895,6 +895,39 @@ const UNIQUES := [
 ## Yard pick or rank and a map node puts into the sim, in one table, so the balance pass tunes them here. Key:
 ## "kind/id", ".what" after it where one effect has more than one number. Sim reads Data.FX["..."]; the
 ## figures are as they were in sim.gd (the fingerprint unmoved). What each is comes from the data's own words.
+## Skills (24 Oct, milestone 8: docs/design/skills.md). Energy: a pool that fills at the start of every fight (each
+## gang), refills at ENERGY_REGEN a second plus a share of pace's bonus; every skill costs energy and has a cooldown.
+const ENERGY_POOL := 100.0
+const ENERGY_REGEN := 4.0
+const ENERGY_PACE_SHARE := 0.25          # a quarter of pace's bonus: pace 1.20 gives +5% regen
+const CDR_CAP := 40.0                    # cooldown reduction, per cent, at most
+const SKILL_SLOTS := 3
+const OPENER_S := 5.0                    # the Opener rule: the first five seconds of a fight
+const FINISHER_AT := 0.25                # the Finisher rule: a man on you under a quarter HP
+## The rules a skill fires on by itself (the chips' words are skills.md section 11's).
+const SKILL_RULES := {"ready": "When ready", "on_you_2": "2+ on you", "on_you_3": "3+ on you", "under_half": "Under half HP",
+	"ailing": "Ailing", "finisher": "Finisher", "opener": "Opener", "opener_ready": "Opener, then ready"}
+## A skill: its class and lane, cost, cooldown (s), rule and what it does (`fx`, read by sim._skill_fire). Names and
+## lines are the language pass's; `fx` figures are first figures for the balance pass.
+const SKILLS := {
+	"clean_shot": {"name": "Clean shot", "cls": "Poacher", "lane": "Stalking", "cost": 25, "cd": 8, "rule": "ready",
+		"line": "Your next shot does ×2.5 damage", "fx": {"shot_mult": 2.5, "shot_s": 1.0}},
+	"flush_them_out": {"name": "Flush them out", "cls": "Poacher", "lane": "Stalking", "cost": 30, "cd": 15, "rule": "on_you_3",
+		"line": "Pulls the man at the back to the middle; he takes 20% more damage for 8 seconds", "fx": {"exposed": 0.2, "exposed_s": 8.0}},
+	"go_to_ground": {"name": "Go to ground", "cls": "Poacher", "lane": "Stalking", "cost": 35, "cd": 25, "rule": "ailing",
+		"line": "Out of sight for 3 seconds: nothing can hit you. Clears bleed and poison on you.", "fx": {"hidden_s": 3.0, "clears": ["bleed", "poison"]}},
+	"one_for_the_pot": {"name": "One for the pot", "cls": "Poacher", "lane": "Stalking", "cost": 50, "cd": 30, "rule": "finisher", "signature": true,
+		"line": "A man on you under 25% HP dies at once. A head takes ×5 damage instead.", "fx": {"execute": true, "head_mult": 5.0}},
+	"collared": {"name": "Collared", "cls": "Poacher", "lane": "Snares", "cost": 25, "cd": 12, "rule": "on_you_2",
+		"line": "The nearest man is stunned for 3 seconds: he can't fire", "fx": {"stun_one_s": 3.0}},
+	"gin_trap": {"name": "Gin trap", "cls": "Poacher", "lane": "Snares", "cost": 30, "cd": 15, "rule": "opener_ready",
+		"line": "The next man to join the fight takes ×3 damage and starts to bleed", "fx": {"trap_mult": 3.0, "bleed_s": 1.0}},
+	"decoy": {"name": "Decoy", "cls": "Poacher", "lane": "Snares", "cost": 35, "cd": 20, "rule": "under_half",
+		"line": "Everyone on you does 30% less damage to you for 6 seconds", "fx": {"less_in": 0.3, "less_in_s": 6.0}},
+	"net_every_hole": {"name": "Net every hole", "cls": "Poacher", "lane": "Snares", "cost": 60, "cd": 40, "rule": "on_you_3", "signature": true,
+		"line": "Everyone on you is stunned for 2 seconds and starts to bleed", "fx": {"stun_all_s": 2.0, "bleed_s": 1.0}},
+}
+
 const FX := {
 	# node
 	"node/bleed_more.med_time": 1.3,     # Blood up: Bleed does 40% more; your meds 30% slower

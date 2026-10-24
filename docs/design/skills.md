@@ -327,6 +327,19 @@ Each slice is smoked, reviewed and committed before the next.
 2. **Mockups:** the fight frame with buttons and bar, the loadout picker, the Pitch's columns.
 3. **The engine with the Poacher's 8:** energy, cooldowns, auto rules, the new states, the loadout, the fight UI, the
    bot and the odds reading skills. Played before going on.
+   *3a, the sim (24 Oct):* `Data.SKILLS`, the energy constants, `sim._skills_tick` in `_fight` before the hit, the
+   loadout and its switches saved, the odds' key reading them. How the design maps onto the sim's fight (one man in
+   front, a count on you):
+   - A fight is a gang (the head is his own): each starts with full energy, every skill ready, the last fight's
+     timed effects gone; a set Gin trap stays for the next man. A convoy joining a fight in progress refills nothing.
+   - The crowd rules count everyone in the fight, not just those firing (Matt's call 3); a head counts as one.
+   - Clean shot's "next shot" is the next second of fire. "Opener, then ready" acts as When ready (a fight's
+     cooldowns start at 0).
+   - Stunned men are a share of their fire, not figures; Net every hole's bleed lands on the man in front, Flush them
+     out's +20% on whoever you're shooting. A skill's own hit (Gin trap, One for the pot) skips resists and shock.
+   - Timed effects count by the share of a tick they cover, so the odds' 2 s steps read them as play does.
+   - Still to come in 3b-3d: the skill nodes on the tree (and only your class's skills), the three affixes, the fight
+     buttons and the picker, the bot's three.
 4. **The other four existing classes' skills,** 32 more.
 5. **The Recruit:** his lanes on the wheel, his 8 skills.
 6. **The unlock order** and its words.
