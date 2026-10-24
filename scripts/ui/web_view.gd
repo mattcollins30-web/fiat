@@ -1070,6 +1070,12 @@ func _draw_node(id: String, p: Vector2) -> void:
 		_shape("square", p, r * 0.9 + w / 2.0, line)     # the Pitch's nodes built, not grown (23 Oct)
 		_shape("square", p, r * 0.9 - w / 2.0, fill)
 	else:
+		if nd.has("skill"):
+			# a skill (24 Oct, milestone 8; skills.md §3): its own ring outside the node's, in the energy colour - dim until
+			# it's reached, full once trained
+			var z: float = maxf(0.7, zoom)
+			_shape("disc", p, r + w / 2.0 + 4.0 * z, Pal.ENERGY if taken else (Pal.ENERGY.lerp(Pal.BG, 0.25) if reach else Pal.ENERGY.lerp(Pal.BG, 0.6)))
+			_shape("disc", p, r + w / 2.0 + 2.0 * z, Pal.BG)
 		_shape("disc", p, r + w / 2.0, line)
 		_shape("disc", p, r - w / 2.0, fill)
 	# the picture across the disc from PIC_ZOOM (23 Oct, the art), dimmed until it's reached; else the glyph from half zoom

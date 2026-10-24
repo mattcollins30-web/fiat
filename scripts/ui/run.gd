@@ -10,6 +10,7 @@ extends Control
 signal acted
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -140,6 +141,7 @@ var _crates                        # the crates (crates_panel.gd): in the left c
 var _rig_y: float = RIG_Y          # the rig's row: under the take in a fight, under the crates in the search
 var _floor_pick := -1              # a thing on the floor picked (13 Oct): its comparison, and Take
 var _view = null                   # the run view (run_view.gd), when its art is there; else the boxes as they were
+var _skills = null                 # the skills over the frame (skill_bar.gd, milestone 8): the energy bar and the three buttons
 var _six: Array = []               # the six figures under the frame
 var _six_groups: Array = []        # their two panels, THEM and YOU (17 Oct)
 
@@ -274,6 +276,31 @@ func _view_make() -> void:
 	for k in [_fight["key"], _runner["key"]]:
 		k.add_theme_color_override("font_color", Pal.TEXT)
 		UI.shadow(k)
+	# the skills (24 Oct, milestone 8; the canvas, Matt: "this spot"): the energy bar in Your HP's place at the foot, Your
+	# HP over it; the three buttons between the bars and the hands
+	_skills = SkillBar.new()
+	_skills.position = Vector2(VIEW_X, FIGHT_BOX_Y)
+	_skills.lay_out(Vector2(VIEW_W, VIEW_H), Vector2(BOX_PAD, OVER_Y - FIGHT_BOX_Y), BOX_PAD + OVER_W + 20)
+	_left.add_child(_skills)
+	_left.move_child(_skills, _view.get_index() + 1)
+
+
+## With skills on the frame, Your HP goes up a bar for the energy and the "On you" chips with it; without, as before.
+func _skill_shift(on: bool) -> void:
+	var lift: float = BAR_H + 6.0 if on else 0.0
+	if _runner["track"].position.y != OVER_Y - lift:
+		_bar_place(_runner, Rect2(PAD, OVER_Y - lift, OVER_W, BAR_H))
+	_runner["key"].position.y = FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H - lift
+	_runner["chips"].position.y = FIGHT_BOX_Y + VIEW_H - BAR_H - 14 - Chips.CHIP_H - lift
+
+
+## The longest a skill holds the man in front (Collared's, Net every hole's), seconds; 0 when none does.
+static func _stunned_s(m: Dictionary) -> float:
+	var fx: Dictionary = m.get("sk", {}).get("fx", {})
+	var s: float = float(fx.get("stun_all_t", 0.0))
+	for x in fx.get("stuns", []):
+		s = maxf(s, float(x))
+	return s
 
 
 ## A bar moved: its track, its width, its words.
@@ -420,11 +447,16 @@ func show_state(s) -> void:
 			var on_now: int = mini(m["remaining"], sim.contact(t))
 			_fight["head"].text += " · %d ON YOU%s" % [on_now, (" · %d MORE" % (m["remaining"] - on_now)) if m["remaining"] > on_now else ""]
 		_view.show_state(sim, m)
+		_skills.show_state(sim)
+		_skill_shift(SkillBar.wanted(sim))        # the whole run, so Your HP doesn't jump at every clear (the review)
 		if sound != null:
 			sound.view = _view                   # the duck's low-pass, and where their shots come from (17 Oct)
 		_fig_bars()
 	# on them: the chips under their bar; nothing while there's no one to be on
 	var them: Array = sim.dots_on_them()
+	var stun_s: float = _stunned_s(m) if m["remaining"] > 0 else 0.0     # a gang down mid-hold leaves no one stunned (the review)
+	if stun_s > 0.0:
+		them.push_front(["Stunned %d s" % int(ceil(stun_s)), "Stunned", Pal.ENERGY])     # a skill's hold on them (milestone 8; the pass's chip)
 	_fight["key"].visible = not them.is_empty()
 	_fight["chips"].visible = not them.is_empty()
 	if not them.is_empty():
@@ -1066,6 +1098,8 @@ func _number_path(at: Vector2) -> Rect2:
 ## What the numbers keep off in the run view, in the panel's space: both bars, the head, the keys, the chips as laid.
 func _keep_out() -> Array:
 	var out := []
+	if _skills != null:
+		out.append_array(_skills.keep_rects())     # the numbers keep off the skills' buttons (the canvas)
 	for c in [_fight["track"], _runner["track"]]:
 		if c.visible:
 			out.append(Rect2(c.position, c.size))
@@ -1269,6 +1303,8 @@ func text_nodes() -> Array:
 	var out: Array = _pick.text_nodes()
 	out.append_array(_band.text_nodes())
 	out.append_array([_fight["head"], _fight["bar_text"], _runner["head"], _rig_head])
+	if _skills != null:
+		out.append_array(_skills.text_nodes())
 	if _runner["track"].visible:
 		out.append(_runner["bar_text"])
 	if _take_head.visible:

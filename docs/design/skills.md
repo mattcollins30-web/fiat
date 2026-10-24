@@ -344,6 +344,12 @@ Each slice is smoked, reviewed and committed before the next.
    two fillers go. Only your class learns its skills (a bridge opens passives, never skills); the Headmaster's Cap
    never teaches one; a learnt skill goes in the first empty slot; the bot keeps none until 3d. The three affixes
    (cooldowns 2-8%, energy gain 3-12%, max energy 3-12) roll on the non-weapon slots at half weight.
+   *3c, on screen (24 Oct):* the fight's energy bar under Your HP and the three buttons at the frame's foot
+   (skill_bar.gd); a hold on them shows as a "Stunned 3 s" chip with their dots, not a ring round the man (the frame
+   has no figure to ring in the sim's terms); the Runs card's foot in thirds - Insure, Rig ▾, the skills button with
+   the three pictures (Matt: "A", the Conditions box being full when the radio and the sky speak) - and the picker over
+   the map (skill_picker.gd); the skill nodes ringed in the energy colour on the web. Pictures are glyphs until the
+   skills' art run.
    - Still to come in 3b-3d: the skill nodes on the tree (and only your class's skills), the three affixes, the fight
      buttons and the picker, the bot's three.
 4. **The other four existing classes' skills,** 32 more.

@@ -737,6 +737,7 @@ func _init() -> void:
 	_map_checks(main)
 	_med_over_time_checks(main)
 	_skills_checks(main.sim)
+	_skills_ui_checks(main)
 	_slots_offline_hardcore(main)
 	_record_file_checks(main)
 	_finish()
@@ -18039,3 +18040,147 @@ func _skill_node_ids() -> Dictionary:
 			if nodes[k].has("skill"):
 				out[str(nodes[k]["skill"])] = "%s/%d" % [t["name"], k]
 	return out
+
+
+## The skills on screen (24 Oct, milestone 8; the canvas): the fight's energy bar and three buttons fit and keep clear
+## of Your HP and each other, a press fires, a right-click switches auto; the Runs card's skills button for a class
+## with skills, the picker's rows, a press in it, its lock on a run.
+func _skills_ui_checks(main) -> void:
+	var sim = main.sim
+	if sim.on_mission():
+		sim.extract_now()
+	var saved: Dictionary = sim.to_dict()
+	_set_cls(sim, "Poacher")
+	var sk_ids: Dictionary = _skill_node_ids()
+	for k in ["clean_shot", "flush_them_out", "collared", "gin_trap"]:
+		if not sim.tree.has(sk_ids[k]):
+			sim.tree.append(sk_ids[k])
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	sim.skill_auto = [true, true, true]
+	# the card: thirds, the skills' button with its pictures; the picker
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var ms = main._missions
+	var c: Dictionary = ms._cols[0]
+	_check(c["skills"].visible and c["skill_pics"].all(func(p): return p.texture != null), "the Runs card has no skills button with its pictures")
+	_check(c["insure"].position.x + c["insure"].size.x <= c["rig"].position.x and c["rig"].position.x + c["rig"].size.x <= c["skills"].position.x, "the card's foot buttons overlap")
+	ms._skills_open()
+	main.refresh()
+	var pk = ms._skill_pick
+	_check(pk.visible and pk.rows.filter(func(r): return r["btn"].visible).size() == 8, "the picker doesn't show the Poacher's eight")
+	_check(pk.position.y + pk.size.y <= ms.TOP + ms._map.size.y + 1, "the picker runs off the map: %.0f" % (pk.position.y + pk.size.y))
+	_check_fit(main, "Runs (the skills' picker)")
+	var flush_row: int = -1
+	for k in range(pk.rows.size()):
+		if pk.rows[k]["id"] == "flush_them_out":
+			flush_row = k
+	pk._press(flush_row)
+	_check(not sim.skill_slots.has("flush_them_out"), "the picker put a fourth skill in with three picked")
+	var collar_row: int = -1
+	for k in range(pk.rows.size()):
+		if pk.rows[k]["id"] == "collared":
+			collar_row = k
+	pk._press(collar_row)
+	pk._press(flush_row)
+	_check(sim.skill_slots == ["clean_shot", "flush_them_out", "gin_trap"], "the picker's take-out and put-in: %s" % str(sim.skill_slots))
+	var not_learnt: Array = pk.rows.filter(func(r): return r["btn"].visible and not sim.skill_known(str(r["id"])))
+	_check(not not_learnt.is_empty() and not_learnt.all(func(r): return r["btn"].disabled), "a skill not learnt can be picked")
+	pk._done.pressed.emit()
+	_check(not pk.visible, "Done didn't close the picker")
+	# all three empty: the button says what it's for, and fits
+	sim.skill_slots = ["", "", ""]
+	ms._shown = ""
+	main.refresh()
+	_check(c["skills"].text != "" and c["skill_pics"].all(func(p): return p.texture == null), "the empty skills button says nothing: '%s'" % c["skills"].text)
+	_check_fit(main, "Runs (no skills picked)")
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	# setting off closes the picker and locks the button
+	ms._skills_open()
+	sim.hp = sim.max_hp()
+	ms._deploy(0)
+	ms._shown = ""
+	ms.show_state(sim)
+	_check(not pk.visible and c["skills"].disabled, "on a run the picker stayed open or its button live: %s, %s" % [str(pk.visible), str(c["skills"].disabled)])
+	sim.extract_now()
+	main.refresh()
+	# a class with no skills yet: halves, no skills button
+	_set_cls(sim, "Doorman")
+	main.refresh()
+	_check(not c["skills"].visible, "a Doorman's card shows a skills button")
+	_set_cls(sim, "Poacher")
+	for k in ["clean_shot", "flush_them_out", "collared", "gin_trap"]:
+		if not sim.tree.has(sk_ids[k]):
+			sim.tree.append(sk_ids[k])          # a class change took the region's nodes
+	# the fight: the bar under Your HP, the buttons between the bars and the hands, clear of each other
+	sim.hp = sim.max_hp()
+	sim.deploy(0)
+	main.show_room(main.MISSIONS)
+	main.refresh()
+	var run = main._run
+	_check(run._skills != null, "the run screen has no skills over its frame")
+	if run._skills != null:
+		var sb = run._skills
+		_check(sb.visible, "the fight has skills slotted but shows no skills")
+		var hp_r := Rect2(run._runner["track"].position, run._runner["track"].size)
+		var en_r := Rect2(sb.position + sb.energy_track.position, sb.energy_track.size)
+		_check(hp_r.end.y <= en_r.position.y and absf(hp_r.position.x - en_r.position.x) < 1.0, "the energy bar isn't under Your HP: %s / %s" % [str(hp_r), str(en_r)])
+		var btns: Array = sb.keep_rects()
+		_check(btns.size() == 3, "the fight shows %d skill buttons" % btns.size())
+		for k in range(btns.size()):
+			_check(not btns[k].intersects(hp_r) and not btns[k].intersects(en_r) and btns[k].end.x <= run._view.position.x + run.VIEW_W and btns[k].end.y <= run.FIGHT_BOX_Y + run.VIEW_H, "skill button %d sits on a bar or off the frame: %s" % [k, str(btns[k])])
+			for j in range(k):
+				_check(not btns[k].intersects(btns[j]), "skill buttons %d and %d overlap" % [j, k])
+		_check_fit(main, "The fight (the skills)")
+		# a right-click switches auto; the pip says so
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_RIGHT
+		ev.pressed = true
+		sb._input_on(1, ev)
+		_check(not sim.skill_auto[1] and sb.buttons[1]["pip"].text == "Off", "a right-click didn't switch auto off: %s, '%s'" % [str(sim.skill_auto[1]), sb.buttons[1]["pip"].text])
+		sb._input_on(1, ev)
+		_check(sim.skill_auto[1] and sb.buttons[1]["pip"].text == "Auto", "a second right-click didn't switch auto back on")
+		# a press fires on the next tick; the word stands over the frame
+		for k in range(3):
+			sim.set_skill_auto(k, false)
+		var c0: int = int(sim.mission["sk"]["cast"])
+		sb._press(2)
+		sim.advance(0.05)
+		main.refresh()
+		_check(int(sim.mission["sk"]["cast"]) == c0 + 1 and str(sim.mission["sk"]["last"]["id"]) == "gin_trap" and sb.word.visible and sb.word.text == "Gin trap", "a press didn't fire and say so: %d casts, word '%s'" % [int(sim.mission["sk"]["cast"]) - c0, sb.word.text])
+		for k in range(3):
+			sim.set_skill_auto(k, true)
+		# the numbers keep off the buttons
+		var keep: Array = run._keep_out()
+		_check(sb.keep_rects().all(func(r): return keep.has(r)), "the numbers don't keep off the skills' buttons")
+		_check_fit(main, "The fight (a skill's word)")
+		# the stunned chip on them
+		sim.mission["sk"]["fx"]["stun_all_t"] = 2.0
+		main.refresh()
+		_check(run._fight["chips"].visible and _stunned_chip(run), "Stunned isn't on them")
+		# a clear: no one stunned, the buttons gone for the search's bar, Your HP where it was
+		var hp_y: float = run._runner["track"].position.y
+		var rem: int = int(sim.mission["remaining"])
+		sim.mission["remaining"] = 0
+		main.refresh()
+		_check(not _stunned_chip(run) and not sb.visible and run._runner["track"].position.y == hp_y, "at a clear: stunned shown, the buttons up, or Your HP moved (%.0f → %.0f)" % [hp_y, run._runner["track"].position.y])
+		sim.mission["remaining"] = rem
+		# a class that hasn't these skills shows none of them, the slots left from another class
+		_set_cls(sim, "Doorman")
+		main.refresh()
+		_check(not sb.visible, "a Doorman's fight shows the Poacher's skills")
+		_set_cls(sim, "Poacher")
+	sim.extract_now()
+	sim.load_dict(saved)
+	main.refresh()
+	print("skills on screen ok: the card's button and picker, its lock, a class without, the fight's bar and buttons, a press, auto off")
+
+
+## Whether a chip on them reads "Stunned" (a skill's hold).
+func _stunned_chip(run) -> bool:
+	var ch = run._fight["chips"]
+	if not ch.visible:
+		return false
+	for k in range(ch._panels.size()):
+		if ch._panels[k].visible and str(ch._labels[k].text).begins_with("Stunned"):
+			return true
+	return false

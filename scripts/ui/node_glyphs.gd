@@ -83,8 +83,15 @@ const OF_EFFECT := {
 }
 
 
+## A skill's glyph until its picture is painted (24 Oct, milestone 8): what it does at a glance.
+const SKILL := {"clean_shot": "first", "flush_them_out": "spread", "go_to_ground": "quiet", "one_for_the_pot": "dmg",
+	"collared": "lock", "gin_trap": "bleed", "decoy": "person", "net_every_hole": "three"}
+
+
 ## A node's glyph: its effect's; an element's figure (a conversion, "+% fire", "fire_more") its element's; else a star.
 static func of(nd: Dictionary) -> String:
+	if nd.has("skill"):
+		return SKILL.get(str(nd["skill"]), "star")
 	var e: String = str(nd.get("effect", ""))
 	if OF_EFFECT.has(e):
 		return OF_EFFECT[e]

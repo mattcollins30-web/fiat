@@ -18,6 +18,8 @@ const TierGuide := preload("res://scripts/ui/tier_guide.gd")
 const Order := preload("res://scripts/ui/order.gd")
 const MapView := preload("res://scripts/ui/map_view.gd")
 const Items := preload("res://scripts/sim/items.gd")
+const SkillPicker := preload("res://scripts/ui/skill_picker.gd")
+const SkillBar := preload("res://scripts/ui/skill_bar.gd")
 const WHY_UNDER := 0.6                # the reasons show at Risky and worse
 
 const COL_GAP := 16
@@ -44,6 +46,7 @@ var order_key := ""                # an order's place picked instead (its card i
 var _map                           # map_view.gd
 var _title: Label                  # the row's left: the picked site's zone and its sky
 var _cols: Array = []              # the card (one, at the right since the drawn Map): its labels and buttons
+var _skill_pick: SkillPicker       # the run's three skills, over the map (milestone 8)
 var _shown := ""
 var _came                          # what came back (came_back.gd): the runs since the player last looked, under its button
 var _came_btn: Button              # the tally's button at the zone row's right, before the guide's
@@ -158,6 +161,20 @@ func _init() -> void:
 		c["rig"] = UI.button(panel, Rect2(PAD + INNER - half, fy, half, FOOT_H), false)
 		c["rig"].pressed.connect(_rig.bind(col))
 		c["rig"].tooltip_text = Words.TOP_UP_TIP
+		# the skills (24 Oct, milestone 8; Matt: A): a third button in the row, the three pictures on it, the picker
+		# over the map behind it
+		c["skills"] = UI.button(panel, Rect2(PAD, fy, half, FOOT_H), false)
+		c["skills"].tooltip_text = "Change skills"
+		c["skills"].pressed.connect(_skills_open)
+		c["skill_pics"] = []
+		for k in range(Data.SKILL_SLOTS):
+			var sp := TextureRect.new()
+			sp.size = Vector2(32, 32)
+			sp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			sp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			c["skills"].add_child(sp)
+			c["skill_pics"].append(sp)
 		fy -= Pal.BUTTON_H + 12
 		c["deploy"] = UI.button(panel, Rect2(PAD, fy, INNER, Pal.BUTTON_H), true)
 		c["deploy"].text = "Set off"
@@ -169,6 +186,12 @@ func _init() -> void:
 		c["note"] = UI.label(panel, Rect2(PAD, fy - 36, INNER, 30), "", "Regular", Pal.FLOOR, Pal.TEXT_2, HORIZONTAL_ALIGNMENT_LEFT, false)
 		_cols.append(c)
 	_build_pick()
+	_skill_pick = SkillPicker.new()
+	_skill_pick.position = Vector2(20, TOP + 8)
+	_skill_pick.acted.connect(func():
+		_shown = ""
+		acted.emit())
+	add_child(_skill_pick)
 	_order = Order.new(TOP)
 	_order.visible = false
 	_order.mouse_filter = Control.MOUSE_FILTER_IGNORE     # its full-width frame over the map: only its card takes a click
@@ -292,6 +315,10 @@ func show_state(s) -> void:
 	if _guide.visible:
 		_guide.show_state(sim)
 		_guide.move_to_front()             # over the tally's card, which comes to the front on every refresh
+	if _skill_pick.visible:
+		_skill_pick.visible = not sim.on_mission()     # set off: the three are locked
+		_skill_pick.show_state(sim)
+		_skill_pick.move_to_front()
 	var picking: bool = sim.candidates.size() == 2 and not sim.on_mission()
 	_pick.visible = picking
 	if picking:
@@ -423,6 +450,7 @@ func show_state(s) -> void:
 			c["boss"].disabled = sim.on_mission() or (not armed and not sim.can_arm_boss(i))
 			UI.style_button(c["boss"], false, "bad" if armed else "")
 		c["insure"].visible = is_open
+		_foot_lay(c, is_open)
 		UI.fit_button(c["insure"], ["Insured ✓"] if sim.insure_next else ["Insure kit · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)), "Insure · %s" % Fmt.money(sim.insure_cost(i)).replace(" tins", ""), "Insure"])
 		c["insure"].disabled = sim.on_mission() or (not sim.insure_next and not sim.can_insure(i))
 		UI.style_button(c["insure"], false, "good" if sim.insure_next else "")
@@ -578,6 +606,40 @@ func _rig(_k: int) -> void:
 	acted.emit()
 
 
+## The card's foot: Insure and Rig ▾ in halves, or in thirds with the skills' button when this class has skills.
+func _foot_lay(c: Dictionary, is_open: bool) -> void:
+	var with_skills: bool = is_open and Data.SKILLS.values().any(func(d): return str(d["cls"]) == sim.cls)
+	c["skills"].visible = with_skills
+	@warning_ignore("integer_division")
+	var w: int = ((INNER - 16) / 3) if with_skills else ((INNER - 8) / 2)
+	c["insure"].size.x = w
+	c["rig"].position.x = PAD + w + 8 if with_skills else PAD + INNER - w
+	c["rig"].size.x = w
+	if not with_skills:
+		return
+	c["skills"].position.x = PAD + INNER - w
+	c["skills"].size.x = w
+	c["skills"].disabled = sim.on_mission()
+	var span: float = 3 * 32 + 2 * 6
+	for k in range(Data.SKILL_SLOTS):
+		var sp: TextureRect = c["skill_pics"][k]
+		var id: String = str(sim.skill_slots[k])
+		sp.position = Vector2((w - span) / 2.0 + k * 38, (FOOT_H - 32) / 2.0)
+		sp.texture = SkillBar.picture(id) if id != "" else null
+		sp.modulate = Color.WHITE if id != "" and sim.skill_known(id) else Color(1, 1, 1, 0.35)
+	if sim.skill_slots.all(func(x): return str(x) == ""):
+		UI.fit_button(c["skills"], ["Change skills", "Skills"])
+	else:
+		c["skills"].text = ""
+
+
+func _skills_open() -> void:
+	if sim == null:
+		return
+	_skill_pick.open(sim)
+	_skill_pick.move_to_front()
+
+
 func _insure(_k: int) -> void:
 	sim.set_insure(not sim.insure_next)
 	_shown = ""
@@ -586,6 +648,7 @@ func _insure(_k: int) -> void:
 
 func _deploy(k: int) -> void:
 	sim.deploy(_tier(k))
+	_skill_pick.visible = false                # set off: the three are locked
 	acted.emit()
 
 
@@ -707,7 +770,8 @@ func text_nodes() -> Array:
 	if _guide.visible:
 		return _guide.text_nodes() + [_guide_btn]     # over the room: its labels are what shows
 	out.append(_title)
-	out.append_array(_map.text_nodes())
+	if not _skill_pick.visible:
+		out.append_array(_map.text_nodes())     # the picker covers the map
 	if _pick.visible:
 		out.append_array([_pick_kicker, _pick_title, _pick_line, _pick_line2, _pick_head, _pick_go])
 		for c in _pick_cards:
@@ -721,6 +785,7 @@ func text_nodes() -> Array:
 	if _order.visible:
 		out.append_array(_order.text_nodes())
 		return out
+	out.append_array(_skill_pick.text_nodes())
 	for c in _cols:
 		out.append_array(c["band"].text_nodes())
 		out.append_array([c["intel_head"], c["note"], c["fire_label"], c["resist_label"]])
@@ -732,7 +797,7 @@ func text_nodes() -> Array:
 		if c["chips"].visible:
 			out.append_array(c["chips"].text_nodes())
 		out.append_array(c["intel"].text_nodes())
-		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"]]:
+		for b in [c["deploy"], c["depth_down"], c["depth_up"], c["boss"], c["insure"], c["rig"], c["skills"]]:
 			if b.visible:
 				out.append(b)
 	if _came.visible:

@@ -27,6 +27,7 @@ const GOOD := Color("62bd8f")
 const WARN := Color("e3a33b")
 const BAD := Color("ee7663")
 const SET := Color("3fd4e8")          # a set's own tint, apart from the rarity colours (17 Oct: bluer, off the uncommon green)
+const ENERGY := Color("7d8ff0")       # energy (24 Oct, milestone 8): its bar and the skills' costs, apart from the rarities' blue and purple
 ## The rarities' own colours (Rarity-A, 7 Oct: Rare, Legendary and a unique all read as one orange before, and the
 ## pick ring was the same amber): none, green, blue, purple, gold; a unique pink; the pick ring white, so gold
 ## only ever means a legendary.
