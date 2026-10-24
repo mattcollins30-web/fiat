@@ -87,7 +87,7 @@ func _crew_out(sim, name: String) -> bool:
 func step(sim) -> int:
 	sim.loot_by_hand = false                  # the bot takes what it finds as it goes (13 Oct: the floor is the player's)
 	if not sim.on_mission():
-		sim.skill_slots = ["", "", ""]        # no skills until the bot picks its three itself (milestone 8, step 3d): a learnt one auto-slotted would fire unchosen
+		pick_skills(sim, sim.front_tier())     # its three, before the odds read the sites (milestone 8, step 3d)
 	sim.mythics_on = false                    # a read is never a mythic's (16 Oct, docs/design/mythics.md)
 	# patched up first, then the pick: the odds read at full strength, so a
 	# boss gets armed when the runner can take him, not refused because he's hurt
@@ -183,6 +183,43 @@ func _sig_tags(sg: Dictionary) -> String:
 ## When the bot leaves a run: under a quarter HP; or with the site cleared,
 ## the pack full, a second gang in, or the site picked over (its finds down to
 ## the floor - a Never there runner, whom no gang moves on, leaves on this).
+## The bot's three skills (skills.md §3): the best damage skill it has learnt (a signature first, then the dearest),
+## the cleanse that clears what site `i` fires (bleed, poison, burn), then a control or defensive skill; what's left
+## filled dearest first, a cleanse the site doesn't call for last. Every rule on auto: the bot never presses.
+func pick_skills(sim, i: int) -> void:
+	var learnt: Array = sim.skills_learnt()
+	var rank := func(id) -> float: return (100.0 if Data.SKILLS[id].get("signature", false) else 0.0) + float(Data.SKILLS[id]["cost"])
+	var by_rank := func(ids: Array) -> Array:
+		var out: Array = ids.duplicate()
+		out.sort_custom(func(a, b): return rank.call(a) > rank.call(b) or (rank.call(a) == rank.call(b) and str(a) < str(b)))     # ties by id: the same picks whatever the table's order (the review)
+		return out
+	var picks: Array = []
+	var dmg: Array = by_rank.call(learnt.filter(func(id): return Data.SKILLS[id].get("kind", "") == "damage"))
+	if not dmg.is_empty():
+		picks.append(dmg[0])
+	var fires: Array = []
+	if i >= 0:
+		for ty in sim.effective(i).get("types", {}):
+			if float(sim.effective(i)["types"][ty]) > 0.0:
+				fires.append(str(ty))
+	var cleanse: Array = by_rank.call(learnt.filter(func(id): return Data.SKILLS[id].get("kind", "") == "cleanse" and Data.SKILLS[id]["fx"].get("clears", []).any(func(ty): return ty in fires)))
+	if not cleanse.is_empty():
+		picks.append(cleanse[0])
+	var guard: Array = by_rank.call(learnt.filter(func(id): return Data.SKILLS[id].get("kind", "") in ["control", "defence"]))
+	if not guard.is_empty():
+		picks.append(guard[0])
+	for pass_i in range(2):
+		for id in by_rank.call(learnt):
+			if picks.size() >= Data.SKILL_SLOTS:
+				break
+			if not picks.has(id) and (pass_i == 1 or Data.SKILLS[id].get("kind", "") != "cleanse"):
+				picks.append(id)          # a cleanse the site doesn't call for only when nothing else is left
+	while picks.size() < Data.SKILL_SLOTS:
+		picks.append("")
+	sim.skill_slots = picks.slice(0, Data.SKILL_SLOTS)
+	sim.skill_auto = [true, true, true]
+
+
 func should_leave(sim) -> bool:
 	if not sim.on_mission():
 		return false

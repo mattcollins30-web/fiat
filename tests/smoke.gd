@@ -18001,6 +18001,28 @@ func _skills_checks(sim) -> void:
 	var d: Dictionary = JSON.parse_string(JSON.stringify(sim.to_dict()))
 	sim.load_dict(d)
 	_check(sim.skills_learnt().size() == Data.SKILLS.size() and sim.skill_slots == ["clean_shot", "collared", "gin_trap"] and sim.skill_auto == [true, true, false], "the skills didn't come through a save: %s %s" % [str(sim.skill_slots), str(sim.skill_auto)])
+	# the bot's three (3d): its best damage skill, the cleanse for what the site fires, a control or defensive one
+	var bot_b = Bot.new()
+	var poison_at := -1
+	for ti in range(Data.TIERS.size()):
+		var tys: Dictionary = sim.effective(ti).get("types", {})
+		if poison_at < 0 and float(tys.get("poison", 0.0)) > 0.0:
+			poison_at = ti
+	if poison_at >= 0:
+		bot_b.pick_skills(sim, poison_at)
+		_check(sim.skill_slots == ["one_for_the_pot", "go_to_ground", "net_every_hole"] and sim.skill_auto == [true, true, true], "the bot's three at a poison site: %s" % str(sim.skill_slots))
+	_check(poison_at >= 0, "no poison site to read the bot's three at")
+	bot_b.pick_skills(sim, -1)                      # no site: nothing ails
+	_check(sim.skill_slots == ["one_for_the_pot", "net_every_hole", "decoy"], "the bot's three where nothing ails: %s" % str(sim.skill_slots))
+	_set_cls(sim, "Doorman")
+	bot_b.pick_skills(sim, -1)
+	_check(sim.skill_slots == ["", "", ""], "a Doorman bot kept the Poacher's skills: %s" % str(sim.skill_slots))
+	_set_cls(sim, "Poacher")
+	for k in sk_ids:
+		if not sim.tree.has(sk_ids[k]):
+			sim.tree.append(sk_ids[k])
+	sim.skill_slots = ["clean_shot", "collared", "gin_trap"]
+	sim.skill_auto = [true, true, false]
 	# only your class's: another runner with the Poacher's nodes on the camp's tree has none of his skills, and a slot
 	# of his never fires for them
 	_set_cls(sim, "Doorman")
