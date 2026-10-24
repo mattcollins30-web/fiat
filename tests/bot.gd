@@ -39,7 +39,7 @@ const TYPE_OF := {"Poacher": "rifle", "Doorman": "shotgun", "Scrapper": "improvi
 ## (The first cut sent a new class out every two hours: five level-1 runners and nobody at the reach.)
 const CREW_STAND := 7200.0
 const CREW_AHEAD := 5
-const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "poison", "Scrapper": "shock"}
+const CREW_BUILDS := {"Doorman": "bleed", "Drifter": "fire", "Poacher": "frost", "Paramedic": "poison", "Scrapper": "shock", "Recruit": "physical"}     # the Recruit (24 Oct)
 var crew_on := true
 var crew_swaps := 0
 var builds := {}                  # class -> {element, keystones_first} as the bot plays it

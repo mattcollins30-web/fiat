@@ -3,10 +3,10 @@ rem The balance pass, in one command: every gate read at once, then the summary.
 rem   tools\balance.bat           twenty-four simulated hours a build (the pass's gates, 15 Oct: retirement by 24)
 rem   tools\balance.bat 8         eight hours a build
 rem   tools\balance.bat 32 3      thirty-two hours, three reads a build (the final pass, 8 Oct)
-rem Runs thirty-one Godot jobs side by side, twice each build (one run is a noisy
-rem read of when the bank falls; the summary takes the median): the ten element
-rem builds - every class on each of its two affinities - which every gate judges
-rem (Matt, 11 Oct: the element builds are the game), the five plain classes to
+rem Runs thirty-eight Godot jobs side by side, twice each build (one run is a noisy
+rem read of when the bank falls; the summary takes the median): the twelve element
+rem builds - every class on each of its two affinities, the Recruit too (24 Oct) - which every gate judges
+rem (Matt, 11 Oct: the element builds are the game), the six plain classes to
 rem their keystones for at least twenty-four hours, which only have to beat the
 rem lorry (the plain floor: slow is fine, stuck isn't), and the loot probe. Each writes docs\balance\<build>-N.txt; the summary lands in
 rem docs\balance\summary.md.
@@ -31,11 +31,11 @@ del /q docs\balance\*.txt docs\balance\*.done 2>nul
 
 set N=0
 for /l %%S in (1,1,%READS%) do (
-	for %%C in (Doorman Drifter Poacher Scrapper Paramedic) do (
+	for %%C in (Doorman Drifter Poacher Scrapper Paramedic Recruit) do (
 		set /a N+=1
 		start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %PLAIN_HOURS% gate %%C > docs\balance\%%C-%%S.txt 2>&1 & echo done > docs\balance\%%C-%%S.done"
 	)
-	for %%E in ("fire Drifter" "shock Drifter" "frost Poacher" "poison Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "poison Paramedic" "frost Paramedic") do (
+	for %%E in ("fire Drifter" "shock Drifter" "frost Poacher" "poison Poacher" "bleed Doorman" "physical Doorman" "shock Scrapper" "fire Scrapper" "poison Paramedic" "frost Paramedic" "physical Recruit" "bleed Recruit") do (
 		for /f "tokens=1,2" %%A in (%%E) do (
 			set /a N+=1
 			start "" /b cmd /c ""%GODOT%" --headless --path . -s tests/balance.gd -- %HOURS% gate %%B %%A > docs\balance\%%B-%%A-%%S.txt 2>&1 & echo done > docs\balance\%%B-%%A-%%S.done"

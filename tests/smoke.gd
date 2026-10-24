@@ -9325,6 +9325,16 @@ func _signal_checks(main) -> void:
 		var crew_b: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible)
 		_check(crew_b.size() >= 2 and crew_b[0]["cls"] == cls0 and crew_b[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other).size() == 1 and not crew_b.filter(func(t): return t["cls"] == other)[0]["button"].disabled and crew_b.filter(func(t): return t["cls"] == other)[0]["odds"].text.ends_with("%"), "the card's crew row: %s" % str(crew_b.map(func(t): return [t["cls"], t["odds"].text])))
 		_check_fit(main, "the Radio, the crew's odds")
+		# every class played: a button each, fitting (24 Oct: the Radio held five, the Recruit made six)
+		_check(main._radio.CREW_MAX >= Data.CLASSES.size(), "the Radio's crew row holds %d of %d classes" % [main._radio.CREW_MAX, Data.CLASSES.size()])
+		for cd_c in Data.CLASSES:
+			sim.set_class(str(cd_c["name"]))
+		sim.set_class(cls0)
+		main._radio._shown = ""
+		main.refresh()
+		var crew_all: Array = main._radio._crew_btns.filter(func(t): return t["button"].visible)
+		_check(sim.crew_played().size() == Data.CLASSES.size() and crew_all.size() == sim.crew_played().size(), "%d classes played, %d crew buttons" % [sim.crew_played().size(), crew_all.size()])
+		_check_fit(main, "the Radio, every class in the crew")
 		main._radio._on_crew(crew_b.find(crew_b.filter(func(t): return t["cls"] == other)[0]))
 		_check(sim.cls == other and bool(sim.signal_odds_now(k_sel)[1]) and is_equal_approx(float(sim.signal_odds_now(k_sel)[0]), float(od_o[0])), "the crew's button did not swap to the %s with their odds read: %s" % [other, str(sim.signal_odds_now(k_sel))])
 		sim.set_class(cls0)
