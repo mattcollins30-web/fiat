@@ -6921,3 +6921,10 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
 - The fourth pass's numbers (25 Oct, Matt: "do as you recommend"): TEMPER_CASH 4 to 8, OVER_LEVEL_STEP 0.15 to 0.25,
   XP_TAPER_END 3.4 to 3.1; gate 15 judges scrap held in hours of the whole read's scrap income, as gate 14 cash.
   Smoke 247 green; the fourth 32 h pass flagged 16:43 GMT.
+- The fourth pass (25 Oct, 32 h, on 3ee77d4; 50 reads, all ok): 17 red - 7 design, 4 bot timing, 6 bot play (the third:
+  15). Retirement's median into its window (18.9 h, 4 of 24 never; one read at 4.0 h keeps it red); cash nearer (three
+  builds at 2.0-2.2 h). Levels against the sites 1 better and still one over the window from the Bank on; at the
+  Quartermaster 20-22, the bottom of gate 4's 20-24 - the two gates can't both hold (the Barracks' gear 16 + 3 = 19).
+  The stall now waits on tins: tempers x8 priced the bot out (Recruit as physical at level 50 with its kit at item
+  levels 25-30, 18,792 scrap held, one temper a pass); gate 15's new measure shows the scrap stranded behind it (2.3-13.4 h
+  held on five builds). Gate 6 red at a 190 min stretch, Kev's story late on one read.
