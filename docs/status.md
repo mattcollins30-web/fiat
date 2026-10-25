@@ -6883,3 +6883,12 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   greed after the clear (+10% quality, +5% finds a gang that comes after it, a chip by Your HP); over-level free
   levels 5 → 3.
 - Smoke: the cloud's full run green but for its 12 art-less reds. The second 32 h pass follows.
+- The second pass (25 Oct, 32 h, on the fixes; docs/balance/summary.md): 19 red - 9 design, 5 bot timing, 5 bot play
+  (the first: 20). Kev's story went green; the Bank 1.6 h, the Radio open at 3:06 (2:07 before). Still red: cash held
+  2.2-2.5 h of income, scrap 10-80 crafts an hour, the reach standing 10-22 h, full signals won 82%, five builds under
+  half the best's reach, levels over each site's gear, retirement's median 25.8 h (11 of 24 never), the bot's
+  safety (deaths one in 1,250-2,350, odds 100%). Compounding paragon and greed show no runaway.
+- The rain halved (half the drops at half the speed) and none in the four roofed sites' fights (smoke 245 green).
+- The second review (docs/review/game2.md, ui2.md, tools2.md, manifests.md): tempering's price and its wear cap at the
+  heart of the stall, OVER_LEVEL_FREE clamped out in the campaign, the Fence's arm never clearing, the temper tile not
+  saying why it's blocked, gate 17's window and P3's odds measured so they can't pass; the outstanding art and sound.
