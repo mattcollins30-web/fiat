@@ -717,7 +717,7 @@ func _vignette(c := Color(0.75, 0.1, 0.08), strength := 0.85) -> Texture2D:
 
 ## What the sim says, each refresh: how many are on you, kills, your HP, the search's crates.
 func show_state(sim, m: Dictionary) -> void:
-	_sky.set_sky(sim.is_night(), sim.weather_of(int(m["tier"])))     # the site's sky as the Map's card had it (23 Oct)
+	_sky.set_sky(sim.is_night(), sim.fight_weather_of(int(m["tier"])))     # the site's sky as the Map's card had it (23 Oct), dry under a roof (25 Oct)
 	if placing:
 		return                                   # F3's on: the fight holds still
 	if sim.runs_total != _run_seen:

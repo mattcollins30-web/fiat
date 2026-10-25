@@ -3170,6 +3170,9 @@ const CLOCK_START := 9.0
 const NIGHT_FROM := 21.0
 const NIGHT_TO := 6.0
 const WEATHER_H := 1.0
+## The sites under a roof (the Shopping Centre's atrium, the Bank's hall, the Garden Centre's glasshouse, the
+## Hospital's ward): the zone's rain is on the Map, never in their fight (25 Oct, Matt); the sound's echo too.
+const INDOOR_SITES := ["Shopping Centre", "The Bank", "The Garden Centre", "The Hospital"]
 const WEATHER_ODDS := [[0.35, 0.15], [0.35, 0.15], [0.25, 0.2], [0.2, 0.25]]   # by zone: rain, fog (the Outskirts' the Estate's, 12 Oct)
 ## Stacks. Rounds of a base merge into one stack, up to STACK_BOXES boxes'
 ## worth; socketables (no affixes, a bottle is a bottle) merge by count, up

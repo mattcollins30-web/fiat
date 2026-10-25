@@ -40,9 +40,10 @@ void fragment() {
 static var _fog_noise: NoiseTexture2D
 const RAIN_WASH := Color(0.08, 0.11, 0.16, 0.32)
 const RAIN_COLOUR := Color(0.82, 0.88, 0.97, 0.7)
-# Greenhorn's figures, for a 1920 x 1080 view: the count scales with the view's area, the streak with its height
-const LIGHT := {"amount": 40, "floor": 40, "speed": 1350.0, "w": 6.0, "len": 21.0}
-const HEAVY := {"amount": 150, "floor": 120, "speed": 1950.0, "w": 7.5, "len": 39.0}
+# Greenhorn's figures, for a 1920 x 1080 view: the count scales with the view's area, the streak with its height. Half
+# the drops at half the speed (25 Oct, Matt: "too fast and too much ... dialling back by about 50%")
+const LIGHT := {"amount": 20, "floor": 20, "speed": 675.0, "w": 6.0, "len": 21.0}
+const HEAVY := {"amount": 75, "floor": 60, "speed": 975.0, "w": 7.5, "len": 39.0}
 const LEAN := 0.28                                     # the fall's slant, as Greenhorn's FALL_DIRECTION
 const GUST := 0.22                                     # how far the gusts swing the slant
 const SHOWER_S := 14.0                                 # a shower's round, seconds; the heavy layer comes and goes on it

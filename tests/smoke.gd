@@ -6107,7 +6107,7 @@ func _sound_checks(main) -> void:
 	_check(not snd.world()["echo"], "an echo out on %s" % str(Data.TIERS[tier0]["name"]))
 	for id in snd.UI_IDS:
 		_check(snd.SOUNDS.has(id), "the camp's sound %s isn't one the game has" % id)
-	for nm in snd.INDOOR:
+	for nm in Data.INDOOR_SITES:
 		_check(Data.TIERS.any(func(t): return str(t["name"]) == nm), "the echo's site %s isn't a site" % nm)
 	snd.clear_cued()
 	snd.find_mythic()
@@ -6325,7 +6325,7 @@ func _playtest_checks(main) -> void:
 	sim.weather_at = 1e9
 	main._missions._shown = ""
 	main.refresh()
-	_check(bool(mv0._sky.showing()["rain"]) and mv0._sky._light.amount >= 24 and mv0._sky._heavy.amount >= 72 and mv0._sky.is_processing(), "rain on every zone and the Map isn't raining: %s" % str(mv0._sky.showing()))
+	_check(bool(mv0._sky.showing()["rain"]) and mv0._sky._light.amount >= 12 and mv0._sky._heavy.amount >= 36 and mv0._sky.is_processing(), "rain on every zone and the Map isn't raining: %s" % str(mv0._sky.showing()))
 	for z in range(Data.ZONES.size()):
 		sim.weather[z] = ""
 	main._missions._shown = ""
@@ -13576,7 +13576,7 @@ func _fill_up_checks(main) -> void:
 	# card's empty words are the new ones
 	if rn._view != null:
 		var sky_v: Dictionary = rn._view._sky.showing()
-		var w_now: String = sim.weather_of(int(sim.mission["tier"]))
+		var w_now: String = sim.fight_weather_of(int(sim.mission["tier"]))
 		_check(bool(sky_v["rain"]) == (w_now == "Rain") and bool(sky_v["fog"]) == (w_now == "Fog") and bool(sky_v["night"]) == sim.is_night(), "the fight's sky disagrees with the sim: %s against %s, night %s" % [str(sky_v), w_now, str(sim.is_night())])
 		var held_w: Array = sim.weather.duplicate()
 		var held_at = sim.weather_at
@@ -13584,7 +13584,20 @@ func _fill_up_checks(main) -> void:
 			sim.weather[z] = "Rain"
 		sim.weather_at = 1e9
 		main.refresh()
-		_check(bool(rn._view._sky.showing()["rain"]) and rn._view._sky._light.emitting and rn._view._sky._light.amount >= 24, "rain set and the fight's layer isn't raining: %s" % str(rn._view._sky.showing()))
+		var tier_was: int = int(sim.mission["tier"])
+		for i in range(Data.TIERS.size()):     # the view itself on every site: outdoors it rains, under a roof it's dry (25 Oct; the reviewer: both branches, every run)
+			sim.mission["tier"] = i
+			main.refresh()
+			var roofed_v: bool = str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES
+			if roofed_v:
+				_check(not bool(rn._view._sky.showing()["rain"]), "rain set and it's raining inside %s" % Data.TIERS[i]["name"])
+			else:
+				_check(bool(rn._view._sky.showing()["rain"]) and rn._view._sky._light.emitting and rn._view._sky._light.amount >= 12, "rain set and %s's fight isn't raining: %s" % [Data.TIERS[i]["name"], str(rn._view._sky.showing())])
+		sim.mission["tier"] = tier_was
+		main.refresh()
+		for i in range(Data.TIERS.size()):     # dry under a roof, the Map's card still the zone's (25 Oct)
+			var roofed: bool = str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES
+			_check(sim.weather_of(i) == "Rain" and sim.fight_weather_of(i) == ("" if roofed else "Rain"), "%s's fight sky reads '%s' in the rain" % [Data.TIERS[i]["name"], sim.fight_weather_of(i)])
 		_check(rn._view._sky.get_index() < rn._view._cover.get_index() and rn._view._sky.get_index() > rn._view._plate.get_index(), "the fight's sky isn't between the plate and the wall")
 		# the fight's fog thinner than the Map's (23 Oct)
 		for z in range(Data.ZONES.size()):

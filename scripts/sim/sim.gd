@@ -1699,6 +1699,12 @@ func weather_of(i: int) -> String:
 	return str(weather[int(Data.TIERS[i]["zone"])])
 
 
+## The sky in a site's fight: its zone's, but no rain under a roof (Data.INDOOR_SITES; the Map keeps the zone's).
+func fight_weather_of(i: int) -> String:
+	var w := weather_of(i)
+	return "" if w == "Rain" and str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES else w
+
+
 ## How picked over a site is, 0 to 1: full on the clear, gone RECOVER_H later.
 func wear(i: int) -> float:
 	if worn[i] < 0.0 or int(worn_depth[i]) != depth[i]:

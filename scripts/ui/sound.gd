@@ -70,7 +70,6 @@ const WORLD := "World"
 const BED := "Bed"
 const UI_IDS := ["ui_click", "ui_tab", "equip", "sell", "buy", "craft", "build", "level_up", "point_spent", "heal_clinic",
 	"radio_on", "radio_code", "gate_open", "the_end_burn", "the_end_sell"]
-const INDOOR := ["The Bank", "The Hospital", "Shopping Centre", "The Garden Centre"]     # a roof over the fight: the echo
 const OPEN_HZ := 20500.0           # the low-pass wide open
 const DUCK_HZ := 700.0             # down behind the wall
 const HURT_HZ := 2400.0            # under a quarter of your HP
@@ -498,7 +497,7 @@ func _place(sim, m: Dictionary) -> void:
 	var w: String = sim.weather_of(int(m["tier"]))
 	set_loop("weather", "rain" if w == "Rain" else ("fog" if w == "Fog" else ("night" if sim.is_night() else "")))
 	_hurt = sim.hp < sim.max_hp() * 0.25
-	_indoor = str(Data.TIERS[int(m["tier"])]["name"]) in INDOOR
+	_indoor = str(Data.TIERS[int(m["tier"])]["name"]) in Data.INDOOR_SITES     # a roof over the fight: the echo
 	set_loop("low_hp", "low_hp" if _hurt else "")
 	var clock: float = float(m.get("clock", 999.0))
 	set_loop("clock", "clock_warn" if clock > 0.0 and clock <= 10.0 else "")
