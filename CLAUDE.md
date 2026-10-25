@@ -16,7 +16,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 
 - From a cloud session the smoke is `bash $HOME/flaky/run.sh N` in the device shell: it drops the flag, waits for a
   fresh `smoke.done`, copies the log to `$HOME/flaky/smoke_N.txt` and greps `CHECK FAILED\|SCRIPT ERROR`. Check the
-  done timestamp is new (it's Matt's local time, UTC+1). The verdict is run.sh's own "run N (done ...)" line, never
+  done timestamp is new (it's Matt's local time: UK time, GMT in winter, BST in summer). The verdict is run.sh's own "run N (done ...)" line, never
   `smoke_N.txt` read on its own: the numbers wrap and an old run's file sits there (23 Oct: runs 61-63 read "green" off
   the 19th's files while the smoke hung). A run that writes no done file within run.sh's wait has hung: find where
   `docs/balance/smoke.txt` stopped, and the hung Godot has to be killed on Matt's machine before the next flag.
@@ -129,7 +129,7 @@ standing rules before (21 Oct: balance reads were run in the cloud against the r
 
 - Voiced lines: the story, the room intros and Kev's story intro are ElevenLabs recordings. Changing their text means
   a re-record (propose the words to Matt; the text waits for his takes).
-- Times to Matt in his local time, UTC+1.
+- Times to Matt in his local time: UK time (GMT from 25 Oct 2026, BST from the last Sunday in March).
 - Images to Matt as files (SendUserFile), not described.
 - `.bat` and `.ps1` files are CRLF (`.gitattributes`); one edited from the cloud arrives as written, so write them CRLF.
 - Art tools: `python3 tools/art_lint.py [manifests]` (unique seeds, sizes, style images, nothing under art/ui/) before
