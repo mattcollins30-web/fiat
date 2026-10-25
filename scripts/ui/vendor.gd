@@ -995,6 +995,9 @@ func _on_acted() -> void:
 ## What the Fence or the medic says: a visit line when the screen opens,
 ## a word on a buy, a sell, a treatment, the town opening, a new runner.
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and _sell != null:
+		_sell._arm.clear()                    # out of the room, a rarity row's Sell arm goes (the second review)
+		_sell._shown = ""
 	if what == NOTIFICATION_VISIBILITY_CHANGED and visible and sim != null:
 		_visits += 1
 		_on_visit()

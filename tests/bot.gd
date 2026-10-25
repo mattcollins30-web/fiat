@@ -693,7 +693,10 @@ func _build_lines() -> Array:
 
 ## Tempering (25 Oct, the endgame): the cheapest worn piece a level up while the scrap and the tins run to it, the
 ## Build column's scrap kept back - so the climb goes as fast as the piles allow, as a player's would.
-const TEMPER_SLOTS := ["Primary", "Armour", "Helmet", "Secondary", "Rig", "Charm", "Backpack"]
+const TEMPER_SLOTS := ["Primary", "Armour", "Helmet", "Secondary"]     # the bags take no temper now (the second review)
+## What a temper on a slot is worth to the bot, against its scrap: the gun is the whole offence (the second review: the
+## cheapest-first rotation gave it one temper in seven).
+const TEMPER_WEIGHT := {"Primary": 3.0, "Armour": 1.5, "Helmet": 1.0, "Secondary": 1.0}
 const TEMPERS_A_PASS := 24
 var tempers := 0                  # every temper the read made (the summary's)
 
@@ -702,20 +705,22 @@ func _temper(sim, floor_cash: float) -> void:
 	var keep: int = Data.BUILD_GUN * 3
 	var done := 0
 	for n in range(TEMPERS_A_PASS):
-		var best = null
-		var best_scrap := 0
+		# the most worth a cost first, its tins counted in scrap at the Fence's rate; one it can't pay for is passed over,
+		# not the end of the pass (the reviewer: the gun's tins short stopped every temper)
+		var picks: Array = []
 		for sl in TEMPER_SLOTS:
 			var it = sim.equipped.get(sl)
 			if it == null or sim.temper_block(it) != "":
 				continue
 			var sc: int = sim.temper_scrap(it)
-			if best == null or sc < best_scrap:
-				best = it
-				best_scrap = sc
-		if best == null or sim.scrap - best_scrap < keep:
+			var cc: int = sim.craft_cost(it, "temper")
+			if cc < 0 or sim.scrap - sc < keep or sim.cash - cc < floor_cash:
+				continue
+			picks.append([float(TEMPER_WEIGHT[sl]) / float(maxi(1, sc) + cc / float(Data.SCRAP_PER_POUND)), it])
+		if picks.is_empty():
 			break
-		var cc: int = sim.craft_cost(best, "temper")
-		if cc < 0 or sim.cash - cc < floor_cash or not sim.craft(best["id"], "temper"):
+		picks.sort_custom(func(a, b): return a[0] > b[0])
+		if not sim.craft(picks[0][1]["id"], "temper"):
 			break
 		done += 1
 		tempers += 1

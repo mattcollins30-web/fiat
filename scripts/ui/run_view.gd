@@ -34,6 +34,9 @@ const KIT_DIR := "res://art/fight_new/%s.png"
 ## The walls tall (23 Oct, tools/make_fight_walls_manifest.py; Matt: ducked "you can see the same tiled wall 3 times"):
 ## 744x256, one piece reaching the frame's foot at the full duck, so nothing is tiled under them. Read first.
 const WALLS_DIR := "res://art/fight_walls/%s.png"
+## A boss's own den (25 Oct, Matt: "unique fight art backdrops for each boss including pinnacles";
+## tools/make_boss_backdrops_manifest.py): a plate and a cover a head or a pinnacle, read first while he's out.
+const BOSS_DIR := "res://art/fight_boss/%s.png"
 const DUCK_REACH_SLACK := 6.0                     # the jolt's most (3 px x1.5) under a ducked wall
 const PLATE_VIEW_W := 688.0                       # a plate's width in the frame's space, whatever its picture's
 const COVER_VIEW_W := 688.0
@@ -202,7 +205,8 @@ static func tex(nm: String) -> Texture2D:
 	if _tex.has(nm):
 		return _tex[nm]
 	var t: Texture2D = null
-	var dirs: Array = ([WALLS_DIR] if nm.ends_with("_cover") else []) + ([KIT_DIR] if (nm.ends_with("_plate") or nm.ends_with("_cover")) else []) + [FULL_DIR, DIR]
+	var scene: bool = nm.ends_with("_plate") or nm.ends_with("_cover")
+	var dirs: Array = ([BOSS_DIR] if scene else []) + ([WALLS_DIR] if nm.ends_with("_cover") else []) + ([KIT_DIR] if scene else []) + [FULL_DIR, DIR]
 	for dir in dirs:
 		var path: String = dir % nm
 		if ResourceLoader.exists(path):
@@ -554,8 +558,19 @@ static func cover_reaches(ct: Texture2D) -> bool:
 
 ## Whether a site's plate and wall are the kit's (art/fight_new/), both.
 static func kit_pair(key: String) -> bool:
+	if boss_pair(key):
+		return true                          # a den's pair is drawn at the kit's size
 	for nm in [key + "_plate", key + "_cover"]:
 		var path: String = KIT_DIR % nm
+		if not (ResourceLoader.exists(path) or FileAccess.file_exists(path)):
+			return false
+	return true
+
+
+## A boss's own plate and cover are both on disk (art/fight_boss).
+static func boss_pair(key: String) -> bool:
+	for nm in [key + "_plate", key + "_cover"]:
+		var path: String = BOSS_DIR % nm
 		if not (ResourceLoader.exists(path) or FileAccess.file_exists(path)):
 			return false
 	return true
@@ -733,10 +748,11 @@ func show_state(sim, m: Dictionary) -> void:
 	var boss_on: bool = m.has("boss") and m["boss"]["started"] and m["boss"]["alive"]
 	# the site's own art, its zone's gang, the head when he's out
 	var site: Dictionary = Data.TIERS[int(m["tier"])]
-	if site_key(str(site["name"])) != _site_key:
-		_site(site_key(str(site["name"])))
-	_zone_key = ZONE_KEYS[mini(int(site["zone"]), ZONE_KEYS.size() - 1)]
 	_boss_key = site_key(str(m["boss"]["name"])) if boss_on else ""
+	var scene_key: String = _boss_key if _boss_key != "" and boss_pair(_boss_key) else site_key(str(site["name"]))     # his den while he's out, when it's drawn
+	if scene_key != _site_key:
+		_site(scene_key)
+	_zone_key = ZONE_KEYS[mini(int(site["zone"]), ZONE_KEYS.size() - 1)]
 	var gang: int = 0
 	if int(m["remaining"]) > 0:
 		gang = 1 if boss_on else mini(int(m["remaining"]), maxi(1, sim.contact(m["t"])))

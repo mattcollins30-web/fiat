@@ -23,7 +23,7 @@ const SOUNDS := {
 	# places and weather (loops)
 	"amb_outskirts": {"db": -16.0, "old": "ambient_estate"}, "amb_estate": {"db": -16.0, "old": "ambient_estate"},
 	"amb_town": {"db": -16.0, "old": "ambient_town"}, "amb_city": {"db": -16.0, "old": "ambient_city"},
-	"amb_yard": {"db": -18.0}, "rain": {"db": -18.0, "old": "rain"}, "fog": {"db": -20.0}, "night": {"db": -20.0},
+	"amb_yard": {"db": -18.0}, "rain": {"db": -18.0, "old": "rain"}, "rain_roof": {"db": -21.0, "like": "rain"}, "fog": {"db": -20.0}, "night": {"db": -20.0},
 	# the fight
 	"shot_improvised": {"db": -10.0, "old": "tick_improvised"}, "shot_pistol": {"db": -10.0, "old": "tick_pistol"},
 	"shot_shotgun": {"db": -10.0, "old": "tick_shotgun"}, "shot_rifle": {"db": -10.0, "old": "tick_rifle"},
@@ -233,6 +233,8 @@ func takes(id: String) -> Array:
 		var o := stream(str(SOUNDS[id]["old"]))
 		if o != null:
 			out.append(o)
+	if out.is_empty() and SOUNDS.get(id, {}).has("like"):
+		out = takes(str(SOUNDS[id]["like"]))     # a new sound not yet made: its nearest that is (rain on the roof: the rain)
 	_takes[id] = out
 	return out
 
@@ -495,7 +497,8 @@ func _place(sim, m: Dictionary) -> void:
 	var zone: int = int(Data.TIERS[int(m["tier"])]["zone"])
 	set_loop("amb", ["amb_outskirts", "amb_estate", "amb_town", "amb_city"][mini(zone, 3)])
 	var w: String = sim.weather_of(int(m["tier"]))
-	set_loop("weather", "rain" if w == "Rain" else ("fog" if w == "Fog" else ("night" if sim.is_night() else "")))
+	var roofed: bool = w == "Rain" and sim.fight_weather_of(int(m["tier"])) == ""
+	set_loop("weather", "rain_roof" if roofed else ("rain" if w == "Rain" else ("fog" if w == "Fog" else ("night" if sim.is_night() else ""))))     # under a roof, the rain on it (25 Oct)
 	_hurt = sim.hp < sim.max_hp() * 0.25
 	_indoor = str(Data.TIERS[int(m["tier"])]["name"]) in Data.INDOOR_SITES     # a roof over the fight: the echo
 	set_loop("low_hp", "low_hp" if _hurt else "")

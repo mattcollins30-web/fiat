@@ -257,12 +257,14 @@ const SMOKE_WALL_MS := 600000            # the bot loops' guard: ten minutes of 
 
 
 func _init() -> void:
-	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` none
+	# fixed dice (25 Oct, the tools review): a red replays with the same seed; `-- seed N` picks another, `-- seed random` a fresh one, printed
 	var args := OS.get_cmdline_user_args()
 	var si := args.find("seed")
 	var seed_word: String = str(args[si + 1]) if si >= 0 and si + 1 < args.size() else str(SMOKE_SEED)
-	Sim.fixed_seed = 0 if seed_word == "random" else int(seed_word)
-	seed(Sim.fixed_seed if Sim.fixed_seed != 0 else int(Time.get_ticks_usec()))
+	if seed_word == "random":
+		seed_word = str(1 + (int(Time.get_ticks_usec()) % 999983))     # a fresh one, printed so its red replays with `-- seed N` (the second review)
+	Sim.fixed_seed = int(seed_word)
+	seed(Sim.fixed_seed)
 	print("SMOKE seed %s" % seed_word)
 	var main = load("res://scripts/ui/main.gd").new()
 	main.intro = false
@@ -3725,7 +3727,7 @@ func _unique_rules_checks(main) -> void:
 	# the burner: all fire, spreads; it takes rounds now (25 Oct, the review: trimmed)
 	var burner := Items.roll_unique(sim._unique_named("The Council's Weed Burner"), sim.rng)
 	sim.equipped["Primary"] = burner
-	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and sim.has_rounds(burner) and Items.ammo_words(burner) != "Takes no rounds", "the burner is not all fire, or still free: %s" % str(sim.conversion()))
+	_check(is_equal_approx(sim.conversion()["fire"], 1.0) and Items.ammo_words(burner) != "Takes no rounds" and not Items.free_rounds(burner), "the burner is not all fire, or still free: %s" % str(sim.conversion()))
 	sim.equipped["Primary"] = sim._plain("Primary", "Army SMG")
 	# Jump Leads: a third shock
 	sim.equipped["Secondary"] = Items.roll_unique(sim._unique_named("Jump Leads"), sim.rng)
@@ -9760,21 +9762,30 @@ func _over_level_checks(sim) -> void:
 	_check(sim._odds_key_common() != key_lv1, "the odds' key doesn't move with the level: the Map's reading goes stale as the fight hardens")
 	sim.xp = Data.xp_for_level(50)
 	_check(sim.over_level_share(int(low["level"]) + 100) == 1.0 and sim.over_level_share(-100) == Data.OVER_LEVEL_FLOOR, "the share isn't whole over you or floored far under")
-	# held at a wall (D12): a level-50 runner who hasn't got past the Estate is paid whole there
+	# the campaign (25 Oct, the second review; D12's clamp gone): your level against the level the site's gear wants
 	for i in range(sim.best_depth.size()):
 		sim.best_depth[i] = 1 if i <= 4 else 0
 	for z in range(sim.bosses_beaten.size()):
 		sim.bosses_beaten[z] = false
-	var top: int = sim.deepest_cleared_level()
-	var held: float = sim.over_level_share(top)
-	var under: float = sim.over_level_share(top - int(Data.OVER_LEVEL_FREE) - 1)
-	_check(is_equal_approx(held, 1.0) and is_equal_approx(under, 1.0 - Data.OVER_LEVEL_STEP),
-		"a runner held at the Carpet Man: paid %.2f at his last site (want 1), %.2f six under it (want %.2f)" % [held, under, 1.0 - Data.OVER_LEVEL_STEP])
+	sim.xp = Data.xp_for_level(30)                 # past WEAR_FLAT: a level of wear an item level, so both are there to find
+	var at_free := -1
+	var past_free := -1
+	for lv in range(1, 80):
+		if Items.wear_for(lv) == 30 - int(Data.OVER_LEVEL_FREE) and at_free < 0:
+			at_free = lv
+		if Items.wear_for(lv) == 29 - int(Data.OVER_LEVEL_FREE) and past_free < 0:
+			past_free = lv
+	_check(at_free > 0 and past_free > 0, "no item level wears at %d or %d" % [30 - int(Data.OVER_LEVEL_FREE), 29 - int(Data.OVER_LEVEL_FREE)])
+	if at_free > 0 and past_free > 0:
+		var share_free: float = sim.over_level_share(at_free)
+		var share_past: float = sim.over_level_share(past_free)
+		_check(is_equal_approx(share_free, 1.0) and is_equal_approx(share_past, 1.0 - Data.OVER_LEVEL_STEP),
+			"a level-30 runner in the campaign: paid %.2f where the gear wants %d levels under him (want 1), %.2f a level further (want %.2f)" % [share_free, int(Data.OVER_LEVEL_FREE), share_past, 1.0 - Data.OVER_LEVEL_STEP])
 	sim.best_depth = bd0
 	sim.bosses_beaten = bb0
 	sim.reach = reach0
 	sim.xp = xp0
-	print("over-levelled ok: whole to five under, less a level past, floored; XP and tins")
+	print("over-levelled ok: whole to %d under, less a level past, floored; XP and tins" % int(Data.OVER_LEVEL_FREE))
 
 
 func _loot_table_checks(sim) -> void:
@@ -19509,7 +19520,7 @@ func _review_fix_checks(main) -> void:
 	sim.cash = 1e12
 	var lv0: int = Items.ilvl(gun)
 	_check(sim.temper_block(gun) == "" and sim.craft(992001, "temper") and Items.ilvl(gun) == lv0 + 1 and int(sim.scrap) == 1000000 - sc0, "a temper didn't take: '%s', level %d" % [sim.temper_block(gun), Items.ilvl(gun)])
-	_check(Items.dps(gun) > dps0 and Items.worth(gun) > worth0 and sim.temper_scrap(gun) > sc0, "a temper grew nothing: dps %.0f from %.0f, worth %.0f from %.0f, next %d from %d" % [Items.dps(gun), dps0, Items.worth(gun), worth0, sim.temper_scrap(gun), sc0])
+	_check(Items.dps(gun) > dps0 and Items.worth(gun) > worth0 and sim.temper_scrap(gun) >= sc0, "a temper grew nothing: dps %.0f from %.0f, worth %.0f from %.0f, next %d from %d" % [Items.dps(gun), dps0, Items.worth(gun), worth0, sim.temper_scrap(gun), sc0])
 	var uq: Dictionary = Items.roll_unique(sim._unique_named("The Butcher's Steel"), sim.rng, 10)
 	_check(sim.temper_block(uq) == "", "a unique won't temper: '%s'" % sim.temper_block(uq))
 	var myth: Dictionary = gun.duplicate(true)
@@ -19548,11 +19559,92 @@ func _review_fix_checks(main) -> void:
 	var n_before: int = sim.stash.size()
 	fs._sell(0)
 	main.refresh()
-	_check(sim.stash.size() == n_before and fs.row_of(0)["sell"].text == Words.FENCE_SURE, "the Fence's Sell didn't ask twice: '%s'" % fs.row_of(0)["sell"].text)
+	_check(sim.stash.size() == n_before and fs.row_of(0)["sell"].text.begins_with("Sell") and fs.row_of(0)["sell"].text.ends_with("?"), "the Fence's Sell didn't ask twice: '%s'" % fs.row_of(0)["sell"].text)
 	fs._sell(0)
 	_check(not sim.stash.has(spare_common), "the Fence's second press didn't sell")
+	# the arm goes with the room, and with a changed count (the second review: armed, away, back with more - one press sold them)
+	var spare2: Dictionary = sim._plain("Primary", "Army SMG")
+	spare2["rarity"] = 0
+	sim.stash.append(spare2)
+	main.refresh()
+	fs._sell(0)
+	main.show_room(main.RUNNER)
+	main.refresh()
+	main.show_room(main.MARKET)
+	main._fence._show("shelf")
+	main.refresh()
+	fs.show_state(sim)
+	_check(fs._arm.sig() == "" and fs.row_of(0)["sell"].text == "Sell", "the Fence's arm outlived the room: '%s'" % fs.row_of(0)["sell"].text)
+	fs._sell(0)
+	var spare3: Dictionary = sim._plain("Primary", "Army SMG")
+	spare3["rarity"] = 0
+	sim.stash.append(spare3)
+	main.refresh()
+	fs._sell(0)
+	_check(sim.stash.has(spare2) and sim.stash.has(spare3), "the Fence sold on an arm whose count had changed")
+	fs._arm.clear()
+	sim.stash.erase(spare2)
+	sim.stash.erase(spare3)
 	sim.equipped["Primary"] = worn_was
-	fs._armed = -1
+	# a class's own tab: the row neither counts it spare nor sells it (the second review)
+	if not sim.loadouts.is_empty() or true:
+		var own: Dictionary = sim._plain("Primary", "Army SMG")
+		own["rarity"] = 0
+		own["tab"] = sim.cls if sim.cls != "" else "Poacher"
+		sim.stash.append(own)
+		if sim.tab_of(own) != "":
+			var sp0: Array = sim.rarity_spare(0)
+			var sold0: int = sim.sell_rarity(0)
+			_check(sim.stash.has(own) and int(sp0[0]) == sold0, "the Fence's count and its sale disagree: %d counted, %d sold, the tab's piece %s" % [int(sp0[0]), sold0, "kept" if sim.stash.has(own) else "sold"])
+		sim.stash.erase(own)
+	# the temper tile says why it can't (the second review): a charm, short of scrap
+	var charm: Dictionary = sim._plain("Charm", "Lucky penny")
+	charm["id"] = 992002
+	sim.stash.append(charm)
+	_check(sim.temper_block(charm) == Words.TEMPER["no_grow"], "a charm tempers: '%s'" % sim.temper_block(charm))
+	main.show_room(main.WORKSHOP)
+	main._workshop.open_piece(992002)
+	main.refresh()
+	var tk: int = main._workshop.JOBS.find("temper")
+	var tw: String = " ".join(main._workshop._job_tiles[tk]["words"].map(func(l): return l.text)).strip_edges()
+	_check(tw == Words.TEMPER["no_grow"], "the temper tile doesn't say why a charm can't: '%s'" % tw)
+	var scrap_was: int = int(sim.scrap)
+	if not sim.stash.has(gun):
+		sim.stash.append(gun)                  # the Fence's commons row above sold it
+	sim.scrap = 0
+	main._workshop.open_piece(992001)
+	main.refresh()
+	if sim.temper_block(gun) == "":
+		_check(main._workshop._job_tiles[tk]["price"].text.begins_with("Needs"), "the temper tile doesn't say scrap is short: '%s'" % main._workshop._job_tiles[tk]["price"].text)
+	sim.scrap = scrap_was
+	sim.stash.erase(charm)
+	# a temper grows the piece's flat lines as a deeper drop's (the second review)
+	var vest: Dictionary = sim._plain("Armour", "Ballistic vest")
+	vest["id"] = 992003
+	vest["ilvl"] = 60
+	vest["tier"] = 1
+	vest["affixes"] = [{"stat": "hp", "value": 100, "tier": 1}]
+	sim.stash.append(vest)
+	if sim.temper_block(vest) == "":
+		sim.craft(992003, "temper")
+		_check(int(vest["affixes"][0]["value"]) > 100, "a temper didn't grow the vest's HP line: %d" % int(vest["affixes"][0]["value"]))
+	sim.stash.erase(vest)
+	# the first tempers don't raise the level to wear a piece (Matt, 25 Oct)
+	var w0: int = Items.wear_level({"slot": "Primary", "base": "Pump shotgun", "tier": 1, "ilvl": 40, "tempered": 0})
+	_check(Items.wear_level({"slot": "Primary", "base": "Pump shotgun", "tier": 1, "ilvl": 40 + Data.TEMPER_PAST_WEAR, "tempered": Data.TEMPER_PAST_WEAR}) == w0 and Items.wear_level({"slot": "Primary", "base": "Pump shotgun", "tier": 1, "ilvl": 41 + Data.TEMPER_PAST_WEAR, "tempered": Data.TEMPER_PAST_WEAR + 1}) > w0, "the first %d tempers raise the wear, or the next doesn't" % Data.TEMPER_PAST_WEAR)
+	# the paragon: damage and HP each on the last, the tins added (the second review)
+	_check(Data.PARAGON_COMPOUND == ["damage", "hp"] and not "tins" in Data.PARAGON_COMPOUND, "the paragon's compounding rows are %s" % str(Data.PARAGON_COMPOUND))
+	# a roofed site in the zone's rain: no rain's bite, the card says Roofed (Matt, 25 Oct)
+	for i in range(Data.TIERS.size()):
+		if str(Data.TIERS[i]["name"]) in Data.INDOOR_SITES:
+			var w_hold: Array = sim.weather.duplicate()
+			sim.weather[int(Data.TIERS[i]["zone"])] = ""
+			var dry: Dictionary = sim.effective(i)
+			sim.weather[int(Data.TIERS[i]["zone"])] = "Rain"
+			var wet: Dictionary = sim.effective(i)
+			sim.weather = w_hold
+			_check(wet["intel"].has("Roofed") and not wet["intel"].has("Rain") and is_equal_approx(float(wet["search"]), float(dry["search"])) and is_equal_approx(float(wet["patrol"]), float(dry["patrol"])), "%s in the rain: %s, search ×%.2f against ×%.2f" % [Data.TIERS[i]["name"], str(wet["intel"]), float(wet["search"]), float(dry["search"])])
+			break
 	# the top bar and the fire tile shorten a big figure, never cut it
 	var lab: Label = main._top_labels["dps"]
 	var forms: Array = main.top_dps_forms(256613.0)
@@ -19570,8 +19662,28 @@ func _review_fix_checks(main) -> void:
 	var tree_n: int = sim.tree.size()
 	sim.cash = 1e9
 	bk._on_respec()
-	_check(bk.respec_armed and sim.tree.size() == tree_n, "Reset trees didn't ask twice")
-	bk.respec_armed = false
+	_check(bk.respec_armed() and sim.tree.size() == tree_n, "Reset trees didn't ask twice")
+	# armed on the trees, a ring node picked: the arm's gone, the ring's reset isn't armed (the second review)
+	var ring_was: String = bk.selected
+	bk.selected = "%s/0" % Data.RING_TREE
+	main.refresh()
+	_check(not bk.respec_armed(), "the trees' reset arm carried to the ring")
+	bk.selected = ring_was
+	bk._respec_arm.clear()
+	main.refresh()
+	bk._on_respec()
+	main.show_room(main.RUNNER)
+	main.refresh()
+	main.show_room(main.BARRACKS)
+	main.refresh()
+	_check(not bk.respec_armed() and not bk._respec.text.begins_with("Again"), "the reset's arm outlived the room: '%s'" % bk._respec.text)
+	# the On you row stops short of the skill buttons (25 Oct: a med's chip sat under 'Auto')
+	var runv = main._run
+	if runv != null and runv._skills != null and not runv._skills.buttons.is_empty():
+		runv._skill_shift(true)
+		var chips_r: float = runv._runner["chips"].position.x + runv._runner["chips"].size.x
+		var btn_l: float = runv._skills.position.x + runv._skills.buttons[0]["btn"].position.x
+		_check(chips_r <= btn_l, "the On you row runs to %.0f, past the skills' first button at %.0f" % [chips_r, btn_l])
 	sim.load_dict(hold)
 	main.refresh()
 	print("the review's fixes ok: the camp's nodes through a read, the skills by class, Floored one man, skills resisted, the Fence keeps, the figures shorten, the resets ask")

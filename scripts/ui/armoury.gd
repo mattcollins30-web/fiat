@@ -13,6 +13,7 @@ signal acted
 signal bench(id)                   # the Bench's menu for this item
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -214,7 +215,7 @@ func _show_strip() -> void:
 
 ## Everything the screen's look depends on, as one string.
 func _signature() -> String:
-	var parts := [str(sim.loadouts.get(sim.cls, [])), str(sim.skill_slots), str(sim.rig.size()), str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, str(_bin_armed), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
+	var parts := [str(sim.loadouts.get(sim.cls, [])), str(sim.skill_slots), str(sim.rig.size()), str(selected), str(sim.on_mission()), str(sim.stash.size()), str(_inv.many), str(sim.auto_equip), str(sim.junk_upto), sim.junk_keep, _bin_arm.sig() + _save_arm.sig(), str(sim.level()), str(sim.book.size())]     # the level: a padlock comes off (15 Oct)
 	var sel := _selected_item()
 	if not sel.is_empty():
 		parts.append(str(sel["affixes"]) + str(sel.get("ilvl", 0)) + str(sel["attachments"].keys()))   # the Bench changes these in place
@@ -332,20 +333,19 @@ func _show_panel() -> void:
 	# the bin (13 Oct, Matt's playtest): anything in the stash but the deeds, for its scrap; a unique or a set piece asks twice
 	if selected.get("kind", "") == "stash" and sim.can_bin(it) and buttons.size() < PickPanel.BUTTONS:
 		var precious: bool = it.has("unique") or it.has("set")
-		var armed: bool = _bin_armed == int(it["id"])
+		var armed: bool = _bin_arm.holds(int(it["id"]))
 		buttons.append({"text": ("Scrap it: %d scrap" % sim.scrap_of(it)) if armed else "Scrap", "action": _bin_press.bind(int(it["id"]), precious), "enabled": true, "primary": false, "tone": "bad" if armed else ""})
 	_set_buttons(buttons)
 
 
-var _bin_armed := -1                   # a unique or set piece's first Bin press: the second bins it
+var _bin_arm := Arm.new()               # a unique or set piece's first Bin press: the second bins it (a while, or out of the room, disarms)
 
 
 func _bin_press(id: int, precious: bool) -> void:
-	if precious and _bin_armed != id:
-		_bin_armed = id
+	if precious and not _bin_arm.press(id):
 		_keep_pick = true                   # still picked: the button now says what it'll do
 		return
-	_bin_armed = -1
+	_bin_arm.clear()
 	sim.bin(id)
 
 
@@ -401,6 +401,10 @@ func _split_button(it: Dictionary) -> Dictionary:
 
 ## Leaving the room shuts the rules panel: back in, the stash shows (the review).
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
+		_bin_arm.clear()                     # and the bin's and a kit's save's arms go (the second review)
+		_save_arm.clear()
+		_shown = ""
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and rules_panel != null and rules_panel.visible:
 		rules_panel.visible = false
 		_shown = ""
@@ -435,29 +439,28 @@ func _show_loadouts() -> void:
 		c["wear"].disabled = st == "empty" or st == "worn" or sim.on_mission()
 		c["wear"].tooltip_text = Words.LOADOUTS["wear_tip"]
 		c["save"].disabled = sim.on_mission() or sim.cls == ""
-		var armed: bool = _save_armed == i and st != "empty"
+		var armed: bool = _save_arm.holds(i) and st != "empty"
 		c["save"].text = Words.LOADOUTS["save_sure"] if armed else Words.LOADOUTS["save"]
 		UI.style_button(c["save"], false, "bad" if armed else "")
 
 
 func _wear_loadout(i: int) -> void:
-	_save_armed = -1
+	_save_arm.clear()
 	if sim.loadout_wear(i):
 		acted.emit()
 	show_state(sim)
 
 
 ## Saving over a kit asks twice: it's the one press here that loses something (the language pass).
-var _save_armed := -1
+var _save_arm := Arm.new()
 
 
 func _save_loadout(i: int) -> void:
-	if sim.loadout_state(i) != "empty" and _save_armed != i:
-		_save_armed = i
+	if sim.loadout_state(i) != "empty" and not _save_arm.press(i):
 		_shown = ""
 		show_state(sim)
 		return
-	_save_armed = -1
+	_save_arm.clear()
 	if sim.loadout_save(i):
 		acted.emit()
 	_shown = ""
@@ -571,7 +574,7 @@ func _on_equip_drop(id: int) -> void:
 
 ## The grid's pick: an id, or -1 when its bars changed or Select-many toggled.
 func _on_inv_pick(id: int) -> void:
-	_bin_armed = -1                           # a new pick: a unique's bin asks twice again (the review)
+	_bin_arm.clear()                          # a new pick: a unique's bin asks twice again (the review)
 	if id >= 0:
 		selected = {"kind": "stash", "id": id}
 	elif _inv.many or (selected.get("kind", "") == "stash" and _selected_item().is_empty()):

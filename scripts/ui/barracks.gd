@@ -9,6 +9,7 @@ extends Control
 
 signal acted
 
+const Arm := preload("res://scripts/ui/arm.gd")
 const Pal := preload("res://scripts/ui/palette.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
@@ -482,7 +483,7 @@ func show_state(s) -> void:
 	if _armed != "" and (sim.cls != _armed_cls or sim.on_mission()):
 		_armed = ""
 	var sig := "%s|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%s|%d|%s|%s|%d|%s|%d|%s" % [selected, str(sim.tree), sim.training_points, int(sim.cash), sim.cls, str(sim.on_mission()), alt, "", sim.book.size() * 1000 + sim.heard.size(), drawer_page, sim.shelf.size(),
-		sim.gun_type(), sim.level(), "", _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
+		sim.gun_type(), sim.level(), _respec_arm.sig(), _armed, int(sim.elapsed / 60.0), sim.has_rule("qm_manual"), sim.past.size(), str(sim.shelf_tier) + str(sim.keepsakes.size()) + str(sim.ring) + str(int(sim.paragon_xp))]   # the gun in hand idles typed nodes; the level opens the second past; a trade opens a top; prices inflate by the minute
 	if sig == _shown:
 		return
 	_shown = sig
@@ -1008,13 +1009,14 @@ func _show_panel() -> void:
 			_train.text = ("Train (%d paragon point%s)" if nd.has("ring") else "Train (%d point%s)") % [cost, "" if cost == 1 else "s"]
 			_train.disabled = not sim.can_train(selected)
 			_train.size.x = ceilf(UI.text_width(_train, _train.text)) + 48
+	var armed: bool = respec_armed()
 	if selected != "" and sim.is_ring(selected):
-		_respec.text = "Reset the ring for %s" % Fmt.money(sim.paragon_reset_cost())
+		_respec.text = (Words.BUILD["ring_sure"] if armed else "Reset the ring for %s") % Fmt.money(sim.paragon_reset_cost())
 		_respec.disabled = sim.paragon_spent() == 0 or sim.cash < sim.paragon_reset_cost()
 	else:
-		_respec.text = (Words.BUILD["reset_sure"] % Fmt.money(sim.respec_cost())) if respec_armed else "Reset trees for %s" % Fmt.money(sim.respec_cost())
+		_respec.text = (Words.BUILD["reset_sure"] if armed else "Reset trees for %s") % Fmt.money(sim.respec_cost())
 		_respec.disabled = sim.tree.is_empty() or sim.cash < sim.respec_cost()
-	UI.style_button(_respec, false, "bad" if respec_armed else "")
+	UI.style_button(_respec, false, "bad" if armed else "")
 	_respec.size.x = ceilf(UI.text_width(_respec, _respec.text)) + 48
 	var x: float = Pal.GRID_W - PAD
 	x -= _respec.size.x
@@ -1147,18 +1149,30 @@ func _on_train() -> void:
 
 
 ## The reset asks twice (25 Oct, the review: one press threw a whole build away): the first arms it; the second resets,
-## with the build's code copied first so it can be pasted back.
-var respec_armed := false
+## with the build's code copied first so it can be pasted back. Armed on what it resets - the trees, or the ring - and
+## on what's picked and trained: picking or training anything disarms it (the second review: armed on the trees, a ring
+## node picked, the second press reset the ring).
+var _respec_arm := Arm.new()
+
+
+func _respec_key() -> String:
+	return "ring" if selected != "" and sim.is_ring(selected) else "trees"
+
+
+func _respec_fp() -> String:
+	return "%s|%d|%d" % [selected, sim.tree.size(), sim.paragon_spent()]
+
+
+func respec_armed() -> bool:
+	return sim != null and _respec_arm.holds(_respec_key(), _respec_fp())
 
 
 func _on_respec() -> void:
 	_armed = ""
-	if not respec_armed:
-		respec_armed = true
+	if not _respec_arm.press(_respec_key(), _respec_fp()):
 		_shown = ""
 		show_state(sim)
 		return
-	respec_armed = false
 	var ring_one: bool = selected != "" and sim.is_ring(selected)
 	if not ring_one:
 		DisplayServer.clipboard_set(sim.build_code())
@@ -1265,7 +1279,8 @@ func _retrain_build() -> void:
 ## Leaving the room drops a pasted code's plan.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
-		respec_armed = false                 # out of the room, the reset's arm goes
+		_respec_arm.clear()                  # out of the room, the reset's arm goes
+		_shown = ""                          # and its button is drawn again on the way back (the second review)
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible and code_panel != null and code_panel.visible:
 		pending_build = {}
 		code_panel.visible = false

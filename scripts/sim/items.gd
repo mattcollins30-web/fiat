@@ -460,7 +460,31 @@ static func ilvl(it: Dictionary) -> int:
 static func wear_level(it: Dictionary) -> int:
 	if not (str(it.get("slot", "")) in Data.SLOTS) or it.get("mythic", false):
 		return 1
-	return wear_for(ilvl(it))
+	return wear_for(ilvl(it) - mini(int(it.get("tempered", 0)), Data.TEMPER_PAST_WEAR))     # its first tempers don't raise its wear (the second review)
+
+
+## A piece a temper grows: a base with damage or armour (a rig, a pack, a charm has neither).
+static func grows(it: Dictionary) -> bool:
+	var b := base_of(it)
+	return b.has("damage") or b.has("armour")
+
+
+## A temper's flat lines: each FLAT_GROW affix as a drop one item level deeper rolls it - from the figure it had before
+## its first temper ("v0" at "lv0"), so a small line grows rather than rounding back each time (the reviewer: +8 HP).
+static func temper_lines(it: Dictionary) -> void:
+	var lv := ilvl(it)
+	for a in it.get("affixes", []):
+		var st := str(a["stat"])
+		if not (st in Data.FLAT_GROW):
+			continue
+		if not a.has("v0"):
+			a["v0"] = float(a["value"])
+			a["lv0"] = lv
+		var r: float = affix_mult(st, lv + 1) / maxf(0.0001, affix_mult(st, int(a["lv0"])))
+		if is_tenths(st):
+			a["value"] = snappedf(float(a["v0"]) * r, 0.1)
+		else:
+			a["value"] = int(round(float(a["v0"]) * r))
 
 
 ## An item level's wear (21 Oct, the crew's read): the campaign's curve to WEAR_FLAT (the City's 12-16), then the

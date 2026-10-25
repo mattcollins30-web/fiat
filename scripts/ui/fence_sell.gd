@@ -14,6 +14,7 @@ const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
 const Items := preload("res://scripts/sim/items.gd")
 const ItemCell := preload("res://scripts/ui/item_cell.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 
 const ROW_H := 50.0
 const ROW_GAP := 6.0
@@ -89,7 +90,7 @@ func worn_types() -> Array:
 
 func show_state(s) -> void:
 	sim = s
-	var sig := "%d|%d|%s|%s|%s" % [_armed, int(sim.cash), str(sim.stash.map(func(it): return int(it["id"]))), str(worn_types()), str(sim.yard_has("racks"))]
+	var sig := "%s|%d|%s|%s|%s" % [_arm.sig(), int(sim.cash), str(sim.stash.map(func(it): return int(it["id"]))), str(worn_types()), str(sim.yard_has("racks"))]
 	if sig == _shown:
 		return
 	_shown = sig
@@ -112,10 +113,12 @@ func show_state(s) -> void:
 			row["count"].text = words[0]
 		UI.fit(row["worth"], [Fmt.group(int(spare[1])), Fmt.short_num(int(spare[1]))] if n > 0 else ["–"])
 		row["sell"].disabled = n == 0
-		if _armed == r and n == 0:
-			_armed = -1
-		row["sell"].text = Words.FENCE_SURE if _armed == r else "Sell"
-		UI.style_button(row["sell"], false, "bad" if _armed == r else "")
+		var armed: bool = _arm.holds(r, _spare_fp(r))     # armed on this row and the very pieces it showed
+		if armed:
+			UI.fit_button(row["sell"], [Words.FENCE_SURE % n, "Sell?"])
+		else:
+			row["sell"].text = "Sell"
+		UI.style_button(row["sell"], false, "bad" if armed else "")
 	# the boxes: your guns' first, lit; then the others in a fixed order; the rest named under them
 	var worn: Array = worn_types()
 	var order: Array = worn.duplicate()
@@ -155,20 +158,28 @@ func _both(ty: String) -> bool:
 	return n > 1
 
 
-## A row's Sell asks twice (25 Oct, the review: one press sold a rarity's worth): the first arms it, the second sells.
-var _armed := -1
+## A row's Sell asks twice (25 Oct, the review: one press sold a rarity's worth): the first arms it on the count it
+## shows, the second sells; a changed count, a while, or leaving the room disarms it (the second review).
+var _arm := Arm.new()
 
 
 func _sell(r: int) -> void:
-	if _armed != r:
-		_armed = r
+	if sim == null:
+		return
+	if not _arm.press(r, _spare_fp(r)):
 		_shown = ""
 		show_state(sim)
 		return
-	_armed = -1
-	if sim != null and sim.sell_rarity(r) > 0:
+	if sim.sell_rarity(r) > 0:
 		_shown = ""
 		acted.emit()
+
+
+## The pieces a row's Sell would sell, as a fingerprint for its arm (the reviewer: one sold and one found kept the count).
+func _spare_fp(r: int) -> String:
+	var ids: Array = sim.stash.filter(func(it): return sim._spare(it, r) and sim.tab_of(it) == "").map(func(it): return int(it["id"]))
+	ids.sort()
+	return str(hash(ids))
 
 
 func _buy(k: int) -> void:
@@ -193,3 +204,10 @@ func text_nodes() -> Array:
 	for b in _boxes:
 		out.append_array([b["name"], b["buy"]] + b["line"])
 	return out
+
+
+## Out of the room, the Sell's arm goes (the second review).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_arm.clear()
+		_shown = ""

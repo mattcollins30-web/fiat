@@ -820,7 +820,7 @@ const UNIQUES := [
 	# zone, SITE_UNIQUE_DROP a find - the estate's at 12, the town's at 9, the city's at 6, so the streets' is the deepest dig
 	# in the game and the Barracks' the hardest fight. Never loose, never the mate's: the shelf shows the nine as gaps until found.
 	{"name": "The Council's Weed Burner", "slot": "Primary", "base": "Pipe shotgun", "rule": "weed_burner", "band": "core", "range": [4, 9], "depth": 6,
-		"words": "All damage is fire and hits everyone on you", "short": "All fire, hits all on you", "affixes": [{"stat": "fire_pct", "value": 40}, {"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},
+		"words": "All damage is fire and hits everyone on you", "short": "All fire, hits all on you", "affixes": [{"stat": "dot_pct", "value": 30}, {"stat": "speed_pct", "value": -10}]},     # its +40% fire off (the second review: it out-hit every element gun on five builds)
 	{"name": "Jump Leads", "slot": "Secondary", "base": "Service pistol", "rule": "jump_leads", "band": "core", "range": [4, 9], "depth": 6,
 		"words": "33% of damage becomes shock; shock hits everyone on you", "short": "33% as shock, hits all", "affixes": [{"stat": "shock_pct", "value": 40}, {"stat": "first_pct", "value": 20}]},
 	{"name": "The Rat Man's Bag", "slot": "Backpack", "base": "Hiking pack", "rule": "rat_mans_bag", "band": "core", "range": [4, 9], "depth": 6,
@@ -1494,12 +1494,13 @@ const CONVOY_HP := 0.55           # 0.25 to 0.4 to 0.7 to 0.55 (12 Oct: at 0.7/1
 const CONVOY_DPS := 0.85          # 0.75 to 1.0 to 0.85 (12 Oct, with CONVOY_HP)
 const LORRY_MULT := 1.12          # 1.25 to 1.12 (12 Oct: with the lorry off, the moves in 16 h fell from 9-20 to 1-9 - the ×1.25 outran a depth's ×1.14 and each leg came easier than the last); the Yard's damage and HP, times this a lorry beaten, kept across moves: the prestige
 ## The paragon board (21 Oct, the crew): a point a paragon level, the crew's, on any row, no top. "pct" a point.
+const PARAGON_COMPOUND := ["damage", "hp"]     # the rows that compound, each point on the last (25 Oct); the rest add
 const PARAGON_BOARD := [
 	{"key": "damage", "name": "Damage", "pct": 2.0, "words": "+2% damage a point, each on the last"},
 	{"key": "hp", "name": "HP", "pct": 2.0, "words": "+2% max HP a point, each on the last"},
 	{"key": "resists", "name": "Resists", "pct": 1.0, "words": "+1% to every resist a point, to the cap"},
 	{"key": "find", "name": "Find", "pct": 3.0, "words": "+3% loot quality a point"},
-	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point, each on the last"},
+	{"key": "tins", "name": "Tins", "pct": 3.0, "words": "+3% tins off a run a point"},
 ]
 
 
@@ -2407,12 +2408,14 @@ const CRAFT := {
 	"strip": {"name": "Strip the affixes", "cash": 10, "words": "Removes every affix; it becomes Common, worth less"},
 	"bump": {"name": "Raise the item's level", "notes": 10, "words": "+3 item levels, so the lowest affix tiers stop rolling; up to item level base tier + 20"},
 	# 25 Oct (the review, Matt's go: the endgame stall): past the raise, a level at a time, on any piece but a mythic -
-	# the base's damage and armour grow with it; scrap dearer a level (TEMPER_GROW), and tins by item level
-	"temper": {"name": "Temper", "scrap": 20, "cash": 150, "words": "+1 item level past the raise: its damage and armour grow 5%; any piece but a mythic"},
+	# the base's damage and armour grow with it; scrap by item level (TEMPER_GROW past ILVL_GROW_FROM), tins a share of its sale
+	"temper": {"name": "Temper", "scrap": 100, "cash": 0, "words": "+1 item level past Item level +3: its damage, armour and flat lines grow as a deeper drop's; not a mythic, a rig, a pack or a charm"},     # scrap 20 to 100, priced by item level; tins a share of its sale (the second review)
 }
 const GREED_QUALITY := 0.10          # greed after the clear (25 Oct): loot quality a gang that comes after it, for the rest of the run
 const GREED_QUANTITY := 0.05         # and quantity
-const TEMPER_GROW := 1.10             # a temper's scrap, this much dearer each level past the raise: the climb's pace is its price
+const TEMPER_GROW := 1.035             # a temper's scrap, 1.10 to 1.035 (the second review): this much dearer an item level past ILVL_GROW_FROM, as income grows: the climb's pace is its price
+const TEMPER_CASH := 4.0              # a temper's tins: four times what the piece sells for (the second review: a flat price sank nothing)
+const TEMPER_PAST_WEAR := 3           # a piece's first three tempers don't raise the level to wear it (Matt, 25 Oct: ease "reach 50 or stall")
 const LOCK_PRICE := 1.0               # a padlock adds this share of a re-roll's price (20 Oct)
 const LOCKS := 1                      # padlocks at the Bench; the Pitch's Two locks adds one (Matt: "2 locks with one as an upgrade")
 const BUMP_LEVELS := 3
@@ -2946,6 +2949,7 @@ const MODIFIERS := [
 	{"name": "Night", "words": "Pace −20%, loot quality +50%", "pace": 0.8, "rarity": 0.5, "sky": true},
 	{"name": "Rain", "words": "Searches 30% slower, gangs 25% later", "search": 1.3, "patrol": 1.25, "sky": true},
 	{"name": "Fog", "words": "One fewer on you, drops −10%", "contact": -1, "drop": 0.9, "sky": true},
+	{"name": "Roofed", "words": "Raining outside, dry in here", "sky": true},     # a roofed site in the zone's rain: nothing bites (25 Oct)
 ]
 
 ## Map juicing (9 Oct, docs/design/juicing.md): the Radio's words. Each has a bite (what makes the run harder)

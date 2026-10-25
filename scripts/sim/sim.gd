@@ -292,7 +292,10 @@ func paragon_pct(key: String) -> float:
 ## Compounding (25 Oct, the review: added, the board fell behind crews that compound): each point multiplies, so the
 ## board grows at its stated rate for good - damage and HP 2% a point on the last, the tins 3%.
 func paragon_mult(key: String) -> float:
-	return pow(1.0 + float(Data.paragon_row(key).get("pct", 0.0)) / 100.0, paragon_pts(key))
+	var pct: float = float(Data.paragon_row(key).get("pct", 0.0)) / 100.0
+	if key in Data.PARAGON_COMPOUND:
+		return pow(1.0 + pct, paragon_pts(key))     # damage and HP: each on the last (25 Oct, the review)
+	return 1.0 + pct * paragon_pts(key)              # the rest add (the second review: the tins row was never meant to compound)
 
 
 ## A paragon point on the ring's nearest open node of a row (the bot's and the tests' way in): one with room on it
@@ -1789,7 +1792,7 @@ func site_state(i: int) -> String:
 
 ## The sky over a site, in words: the clock, night or day, the weather.
 func sky_words(i: int, with_weather := true) -> String:
-	var w := weather_of(i) if with_weather else ""
+	var w := fight_weather_of(i) if with_weather else ""     # the site's own: dry under a roof
 	return "%s, %s%s" % [clock_words(), Words.SKY["night"] if is_night() else Words.SKY["day"], (", " + Words.SKY[w.to_lower()]) if w != "" else ""]
 
 
@@ -2095,8 +2098,10 @@ func temper_over(it: Dictionary) -> int:
 	return int(it.get("tempered", 0))         # the tempers it has had (the review: a unique rolled deep started 30 "over")
 
 
+## A temper's scrap: by the piece's item level, as its worth and its scrap grow, so price and income climb together and
+## a low piece is cheap to catch up (the second review: by the count, the price outran income and the reach stood).
 func temper_scrap(it: Dictionary) -> int:
-	return int(round(float(Data.CRAFT["temper"]["scrap"]) * pow(Data.TEMPER_GROW, temper_over(it))))
+	return int(round(float(Data.CRAFT["temper"]["scrap"]) * pow(Data.TEMPER_GROW, maxi(0, Items.ilvl(it) - Data.ILVL_GROW_FROM))))
 
 
 func temper_block(it: Dictionary) -> String:
@@ -2105,17 +2110,22 @@ func temper_block(it: Dictionary) -> String:
 	if it.get("mythic", false):
 		return Words.TEMPER["mythic"]
 	var special: bool = it.has("unique") or it.has("set")
+	if not Items.grows(it):
+		return Words.TEMPER["no_grow"]          # a rig, a pack, a charm: nothing on it grows (the second review)
 	if not special and Items.ilvl(it) < int(it["tier"]) + bump_cap():
 		return Words.TEMPER["raise_first"]
-	if Items.wear_for(Items.ilvl(it) + 1) > level():
-		return Words.TEMPER["too_high"]
+	var next: Dictionary = it.duplicate()
+	next["ilvl"] = Items.ilvl(it) + 1
+	next["tempered"] = temper_over(it) + 1
+	if Items.wear_level(next) > level():
+		return Words.TEMPER["too_high"]         # its first TEMPER_PAST_WEAR tempers don't raise its wear (the second review)
 	return ""
 
 
 func _temper_cash(it: Dictionary) -> int:
 	if temper_block(it) != "":
 		return -1
-	return _inf(int(Data.CRAFT["temper"]["cash"]) * (Items.ilvl(it) + 1))
+	return maxi(1, _inf(Items.worth(it) * Data.TEMPER_CASH))     # a share of the piece's worth, so the sink grows with income; not the Fence's bonuses (the second review, and its reviewer)
 
 
 ## The Bench's padlocks (20 Oct): the stats locked on a piece (still on it), how many it may have, and the toggle.
@@ -2402,6 +2412,7 @@ func craft(id: int, kind: String, stat := "") -> bool:
 			it["ilvl"] = mini(int(it["tier"]) + bump_cap(), Items.ilvl(it) + bump_levels())
 		"temper":
 			scrap -= temper_scrap(it)
+			Items.temper_lines(it)                   # its flat lines grow as a drop a level deeper has them (the second review)
 			it["ilvl"] = Items.ilvl(it) + 1
 			it["tempered"] = int(it.get("tempered", 0)) + 1
 	# what the Bench did, in words the player can check against the piece
@@ -3196,7 +3207,7 @@ func has_rounds(gun: Dictionary) -> bool:
 			return true
 		return rounds_for(gun) > 0 or _rounds_held().any(func(x): return Items.is_ammo(x) and Items.base_of(x)["type"] == type)
 	if Items.ammo_type(gun) == "none" or Items.free_rounds(gun):
-		return true                          # a bat never runs dry; the burner takes nothing
+		return true                          # a bat never runs dry; nor the spare key
 	return Items.ammo_type(gun) != "" and rounds_for(gun) > 0
 
 
@@ -4254,14 +4265,18 @@ func dug_depth(i: int) -> int:
 ## The deepest level among the sites cleared (D6, the gamble's gate: the next zone's first site, open and not yet
 ## cleared, put the gamble a level past every drop the runner had seen).
 ## What a site of level `lv` pays you (D9, 15 Oct, Matt: "fall off past 5 levels"): whole up to OVER_LEVEL_FREE site levels
-## under you, OVER_LEVEL_STEP less a level past that, never under OVER_LEVEL_FLOOR. Your level read as a site's - the
-## item level you wear at - and never past the furthest you've got (D12: the deepest site cleared, or the highest
-## signal won): a runner held at the Carpet Man was paid a tenth for the Estate he was stuck in, and never got out.
+## under you, OVER_LEVEL_STEP less a level past that, never under OVER_LEVEL_FLOOR. In the campaign, your level against
+## the level the site's gear wants (25 Oct; D12's clamp to the deepest clear is gone); after it, the item level you wear
+## at against the site's.
 func over_level_share(lv: int) -> float:
-	var mine: float = float(mini(Items.max_ilvl_for(level()), Data.MAX_LEVEL))     # the item level you wear at (21 Oct: past WEAR_FLAT, your level)
+	var beyond: float
 	if not campaign_done():
-		mine = minf(mine, float(deepest_cleared_level()))     # held at a wall: its last sites pay whole (D12)
-	var beyond: float = mine - float(lv) - Data.OVER_LEVEL_FREE
+		# the campaign: your level against the level its gear wants (Matt, 25 Oct, the second review: the D12 clamp paid every
+		# frontier run whole, so OVER_LEVEL_FREE never bit; read in item levels it fell off a cliff at WEAR_FLAT)
+		beyond = float(level() - Items.wear_for(lv)) - Data.OVER_LEVEL_FREE
+	else:
+		var mine: float = float(mini(Items.max_ilvl_for(level()), Data.MAX_LEVEL))     # the item level you wear at (21 Oct: past WEAR_FLAT, your level)
+		beyond = mine - float(lv) - Data.OVER_LEVEL_FREE
 	return clampf(1.0 - Data.OVER_LEVEL_STEP * maxf(0.0, beyond), Data.OVER_LEVEL_FLOOR, 1.0)
 
 
@@ -5159,9 +5174,11 @@ func effective(i: int) -> Dictionary:
 		e["loot_tier"] = mini(loot_cap(lv), int(e["loot_tier"]) + 1)
 	if night_run and yard_has("dead_air"):
 		e["patrol"] *= Data.FX["yard/dead_air"]                  # the Radio's Dead air
-	var sky: String = weather_of(i)
+	var sky: String = fight_weather_of(i)     # under a roof the rain bites nothing and pays no forecast (Matt, 25 Oct)
 	if sky != "":
 		e["intel"].append(sky)               # applied with the words below, softened by the Radio's Weather set
+	elif weather_of(i) == "Rain":
+		e["intel"].append("Roofed")          # the card says why it's dry: rain on the zone, none in here
 	if sky != "" and yard_has("forecast"):
 		e["cash"] *= Data.FX["yard/forecast"]                     # the Radio's forecast: a run under the weather pays
 	var w := wear(i)
@@ -6375,7 +6392,7 @@ func _odds_key(i: int) -> Array:
 	# lands a hair under read as nine tenths and re-read); the figures in steps of 2%, so a paragon level or an
 	# affix's hair doesn't re-read the odds (8 Oct, the pass at an hour: nearly every pick re-read)
 	var common: Array = _odds_key_common()
-	return common + [depth[i], str(words[i]), weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
+	return common + [depth[i], str(words[i]), fight_weather_of(i), boss_armed.get(i, false), int(clear_level.get(i, 0)),     # the first clear sets the tax's floor (21 Oct)
 		int(_sig["id"]) if not _sig.is_empty() and int(_sig["site"]) == i else 0]     # a signal laid on the site reads apart from it (15 Oct)
 
 
@@ -8430,7 +8447,7 @@ func _clear(m: Dictionary, t: Dictionary) -> void:
 ## The searches a cleared site's crates add up to (29; the crates since 13 Oct): by depth, and quantity pushes it.
 func thin_after(t: Dictionary) -> int:
 	var n: float = Data.THIN_AFTER + Data.THIN_PER_DEPTH * int(t["depth"])
-	return int(roundf(n * (1.0 + maxf(0.0, loot_bonus()))))
+	return int(roundf(n * (1.0 + maxf(0.0, loot_bonus() - greed_quantity()))))     # greed's finds come on the search's extra, not more searches too (the second review)
 
 
 ## The lookout's top level (31): the first gang after the clear waits for the call, and the call is a full pack.
@@ -9136,6 +9153,7 @@ func _refund_runner_trees() -> void:
 			kept.append(id)                  # the Pitch's and the elements' (slice 3) are the camp's: they stay
 	tree = kept
 	_dry_memo.clear()
+	_skills_known_only()                     # the dead runner's skills leave the slots with his trees (the second review)
 	var freed := spent_before - points_spent()
 	if freed > 0:
 		log_event(Words.YARD["runner_refund"] % [freed, "" if freed == 1 else "s"])
@@ -9344,7 +9362,7 @@ func _kit_parts() -> Array:
 	var lot: bool = mission != null and (not mission.get("cleared", false) or mission.get("ghost_pending", false))     # First lot counts until the clear
 	var pack: int = pack_used(mission) if mission != null else -1        # armour a free cell (the review)
 	return [equipped, level(), tree, cls, wounds.keys(), _rig_grades(), _stash_grades(), rig.size(), pack, yard_picks, yard_ranks, mission != null, lot, ring, hp < max_hp() * 0.5, front_tier(), _rounds_on_hand(),
-			weather_of(front_tier()), is_night(), skill_slots, skill_auto]     # the skills a run takes, and their rules on or off (milestone 8); the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
+			fight_weather_of(front_tier()), is_night(), skill_slots, skill_auto]     # the skills a run takes, and their rules on or off (milestone 8); the front: the body's figure reads the fight being pushed, under its sky (14 Oct: a verdict under rain stood after it cleared)
 
 
 ## The rounds in the rig as the guns see them: each stack with rounds left, by its grade, in the rig's order.
@@ -10026,6 +10044,8 @@ func _spare(it: Dictionary, r: int) -> bool:
 func sell_kept(it: Dictionary) -> bool:
 	if it.has("unique") or it.has("set") or it.has("pattern") or it.get("built", false):
 		return true
+	if tab_of(it) != "":
+		return true                          # a class's own tab (21 Oct): kept, and counted kept (the second review: the row counted it spare)
 	if loot_rule_act(it) in ["keep", "highlight"]:
 		return true
 	for c in loadouts:

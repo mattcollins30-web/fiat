@@ -16,6 +16,7 @@ signal craft(id, kind, stat)       # a Bench job from the Craft view; main runs 
 signal built(kind, name)            # the Build view (21 Oct, out of the old menu): main builds it and toasts it
 
 const Pal := preload("res://scripts/ui/palette.gd")
+const Arm := preload("res://scripts/ui/arm.gd")
 const UI := preload("res://scripts/ui/ui.gd")
 const Fmt := preload("res://scripts/ui/fmt.gd")
 const Data := preload("res://scripts/sim/data.gd")
@@ -64,7 +65,7 @@ const JOB_W := (BODY_W - 2 * PAD - JOB_GAP) / JOB_COLS        # 280
 const JOBS := ["add", "socket", "strip", "bump", "temper", "scrap"]      # the re-rolls are the piece card's now, by its padlocks (20 Oct); Temper the sixth tile (25 Oct)
 const JOB_NAMES := {"bump": "Item level +3", "temper": "Temper +1", "scrap": "Scrap it", "strip": "Strip affixes"}
 const JOB_WORDS := {"add": "One more affix, the rarity a step up", "socket": "Adds a socket, up to %d", "strip": "Every affix gone; it goes Common",
-	"bump": "The lowest affix tiers stop rolling", "temper": "Past the raise: damage and armour +5%", "scrap": "Broken down for scrap; gone for good"}
+	"bump": "The lowest affix tiers stop rolling", "temper": "+1 item level: damage, armour, HP grow", "scrap": "Broken down for scrap; gone for good"}
 const RE_ROLLS := ["values", "affixes"]
 const ORDINAL := ["first", "second", "third", "fourth", "fifth"]
 const FOOT_H := 44
@@ -705,7 +706,7 @@ func _all_attachments(socketables: bool) -> Array:
 
 func _signature() -> String:
 	@warning_ignore("integer_division")
-	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sel_pattern), str(_break_armed), str(sim.patterns.size()), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
+	var parts := [view, sel_slot, sel_mount, str(sel_id), str(sel_pattern), _break_arm.sig(), str(sim.patterns.size()), sel_stat, str(sim.on_mission()), str(sim.yard_picks.get("bench", [])) + str(sim.yard_rank("bench")), str(int(sim.cash) / 100), str(_inv.many),
 		str(sim.notes), str(sim.scrap), str(sim.last_craft.get("id", -1)), str(sim.last_craft.get("words", "")), build_kind, sel_build, str(build_page), str(sim.stash.size()), str(sim.stash_used()), str(sim.gun_types_held()), str(sim.deepest_site_level()), _inv.tab]
 	# the craft view's piece changes under the Bench: its level, affixes and sockets are in the signature too
 	var picked := _selected_item()
@@ -1035,6 +1036,8 @@ func _show_craft(it: Dictionary) -> void:
 		var b: Button = t["button"]
 		UI.fit(t["name"], [JOB_NAMES.get(kind, Data.CRAFT.get(kind, {}).get("name", kind))])
 		var jw: String = JOB_WORDS.get(kind, Data.CRAFT.get(kind, {}).get("words", ""))
+		if kind == "temper" and not it.is_empty() and sim.temper_block(it) != "":
+			jw = sim.temper_block(it)                  # why it can't, in its words: nothing grows, a mythic, Item level +3 first, past your level (the second review)
 		UI.wrap(t["words"], jw % sim.socket_max() if kind == "socket" else jw)     # "up to %d": the real cap (18 Oct)
 		var cost: int = -1
 		if not it.is_empty():
@@ -1042,7 +1045,10 @@ func _show_craft(it: Dictionary) -> void:
 		var can: bool = false
 		if cost >= 0:
 			can = on_bench and (true if kind == "scrap" else sim.can_craft(it["id"], kind))
-			if kind == "temper":
+			if kind == "temper" and sim.scrap < sim.temper_scrap(it):
+				var also: String = (" · " + Fmt.money_k(cost)) if sim.cash < float(cost) else ""     # and the tins, when they're short too (the reviewer)
+				UI.fit(t["price"], [Words.TEMPER["short"] % Fmt.group(sim.temper_scrap(it)) + also, Words.TEMPER["short"] % Fmt.short_num(sim.temper_scrap(it)) + also, Words.TEMPER["short"] % Fmt.short_num(sim.temper_scrap(it))])     # short of scrap: says so (the second review)
+			elif kind == "temper":
 				UI.fit(t["price"], [Words.TEMPER["price"] % [Fmt.group(sim.temper_scrap(it)), Fmt.money(cost)], Words.TEMPER["price"] % [Fmt.short_num(sim.temper_scrap(it)), Fmt.money_k(cost)]])
 			else:
 				t["price"].text = ("+%d scrap" % cost) if kind == "scrap" else (("%d notes" % cost) if sim.craft_in_notes(kind) else Fmt.money(cost))
@@ -1337,7 +1343,7 @@ func _show_patterns() -> void:
 	_pat_labels["power"].text = str(rule_words[0]) if not rule_words.is_empty() else ""
 	var why_b: String = sim.can_break(it) if is_u else Words.PATTERNS["pick_unique"]
 	_pat_break.disabled = why_b != ""
-	var armed: bool = is_u and _break_armed == int(it["id"])
+	var armed: bool = is_u and _break_arm.holds(int(it["id"]))
 	_pat_break.text = Words.PATTERNS["break_sure"] if armed else Words.PATTERNS["break"]
 	UI.style_button(_pat_break, not armed, "bad" if armed else "")
 	_pat_labels["gone"].text = Words.PATTERNS["gone"] if why_b == "" else why_b
@@ -1371,18 +1377,16 @@ func _pick_pattern(k: int) -> void:
 
 
 ## A unique's break asks twice, as the Kit's bin does (the review): the first press arms it, the second breaks it.
-var _break_armed := -1
+var _break_arm := Arm.new()                # a while, another piece, or leaving the room disarms it (the second review)
 
 
 func _do_break() -> void:
 	var it := _selected_item()
 	if it.is_empty():
 		return
-	if _break_armed != int(it["id"]):
-		_break_armed = int(it["id"])
+	if not _break_arm.press(int(it["id"])):
 		_show_patterns()
 		return
-	_break_armed = -1
 	if sim.break_unique(it):
 		sel_id = -1
 		sel_pattern = sim.patterns.size() - 1
@@ -1403,3 +1407,9 @@ func pattern_text_nodes() -> Array:
 	out.append_array([_pat_break, _pat_put])
 	out.append_array(_pat_cost.text_nodes() if _pat_cost.visible else [])
 	return out
+
+
+## Out of the room, the break's arm goes (the second review).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
+		_break_arm.clear()
