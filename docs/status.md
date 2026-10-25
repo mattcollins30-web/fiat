@@ -6861,3 +6861,25 @@ order, each reviewed, each with its smoke area:
   capstone gate (four builds 2.1-2.7 h after the QM). Matt's last record (24 Oct): the Manager at 54 min, level 13.
   The smoke on his machine found Knuckles' name off its starter (Windows measures the words wider): placed with slack,
   the far name first; smoke 243 green.
+
+## The review's fixes and the second pass's numbers (25 Oct)
+
+From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt took:
+- **Sim bugs.** A respec reads the camp's nodes back; a runner's skill slots and Auto are its own; the Revolver's
+  printed hit is one shot's, not the volley's; Flattened halves one man's fire, not the gang's (the floor likewise);
+  Clean kills pays its own bonus; printed men down heal and count for the skills; skills hit off your hits and are cut
+  by resist and lifted by shock as a gun's are; the Arsonist's Rig grows with the fight; the element notables' dots and
+  Hit and run's pay come from the effects table. The fight's swing is held a second, and a skill casts as often as
+  its quarter-second tick lets it, so the tick no longer changes a build's damage.
+- **UI safety.** The Fence's Sell and Training's Reset ask twice (Reset copies the build code first); the Fence's
+  rarity rows keep uniques, sets, patterned and built pieces, ruled ones and any class's kit; the top bar's figures
+  shorten rather than cut; the Clinic says Hurt under 90%; "dmg/s" and "Item level" on screen.
+- **Tools.** Balance reads write to docs/balance/pass/ (the smoke log survives the wipe), each read time-limited by
+  tools/balance_read.bat (run_limited.ps1) and the import too; the summary marks each red design, bot timing or bot
+  play. The smoke's dice are fixed (seed 1025; `-- seed N` or `random`).
+- **The endgame.** Tempering at the Bench (+1 item level a press, scrap 20 × 1.10 a temper, cash by level; not on a
+  mythic; never past the level you can wear); item level now raises a piece's worth at the Fence, the scrapper and the
+  market (insurance stays on base value); paragon points compound (each on the last); the Weed Burner spends rounds;
+  greed after the clear (+10% quality, +5% finds a gang that comes after it, a chip by Your HP); over-level free
+  levels 5 → 3.
+- Smoke: the cloud's full run green but for its 12 art-less reds. The second 32 h pass follows.
