@@ -13,11 +13,14 @@ extends SceneTree
 ## figure and is left to Matt's count.
 
 const FOLDER := "res://docs/balance/pass"     # the pass's own folder (25 Oct): the smoke's log stays out of it
+const NOT_BUILDS := ["smoke.txt", "checkpoint.txt", "loot_read.txt", "expected.txt"]     # .txt in the pass folder that aren't a build's read
 const SUMMARY := "res://docs/balance/summary.md"
 ## Each gate's kind (25 Oct, Matt: bot timings aren't tuned before a playtest; the bot doesn't take a player's risks):
 ## "design" a red to fix; "bot timing" his play sets the figure; "bot play" the bot's caution, shown for the shape.
 const TIMING_GATES := ["1.", "2.", "3.", "5.", "7.", "8.", "17.", "P4."]
-const BOT_PLAY_GATES := ["P1.", "P2.", "P3.", "Wounds (as played)", "Deaths (as played)", "Deaths and wounds"]
+const BOT_PLAY_GATES := ["P1.", "P2.", "P3.", "P6.", "Wounds (as played)", "Deaths (as played)", "Deaths and wounds"]     # P6 (25 Oct, the tools review): the bot runs a full signal only at PUSH, or at COIN with three held
+## Why a gate can go unjudged, for the header (25 Oct, the tools review: "19 RED" didn't say one went unread)
+const UNJUDGED_WHY := {"11.": "the bot leaves at the second gang, bar a head's run", "8.": "the reads were shorter than the window", "P3.": "no first clears or heads recorded", "P6.": "no signals run"}
 
 # the pass's gates (15 Oct, Matt approved; docs/design/balance_gates.md): twice the campaign as it stands, the bot at
 # BOT_PACE of a hand's time (the 13 Oct reads' Bank against Matt's own the next day; his playtest re-measures it)
@@ -38,7 +41,8 @@ const ODDS_MED := [0.70, 0.90]     # the odds at the gate, the median run
 const REACH_STAND := 1.2           # the endgame's stall: the reach never stands more than about an hour (bot hours)
 const FAINT_WON := 0.85            # a faint signal won about nine in ten
 const FULL_WON := [0.35, 0.65]     # a full one at the reach about a coin flip
-const GK := [0.3, 0.5]          # the Gamekeeper beaten, the Outskirts done (17 Oct, Matt: "about 25 minutes" by hand)
+const HAND_GK := [0.3, 0.5]     # the Gamekeeper beaten, the Outskirts done (17 Oct, Matt: "about 25 minutes" by hand)
+const GK := [HAND_GK[0] * BOT_PACE, HAND_GK[1] * BOT_PACE]     # bot hours as every hand figure (25 Oct, the tools review: it was the one left unscaled)
 const GK_LEVEL := 3             # and the runner at least this level leaving them
 const SITE_LEVEL_UNDER := 1     # at a site's first clear, the runner no more than this under the level to wear its gear (17 Oct, Matt)
 const SITE_LEVEL_OVER := 3      # nor more than this over it (the Outskirts' grind not a level ahead of the gear for long)
@@ -92,10 +96,31 @@ func _init() -> void:
 						parity.append(pp)
 						got = true
 			if not got:
-				parity.append({"build": f.substr(7, f.length() - 11).replace("-", " as "), "error": "no PARITY line (the read crashed or was cut off)"})     # counted, not dropped (the review)
-		elif f.ends_with(".txt") and f != "smoke.txt" and f != "checkpoint.txt":
+				var pn: PackedStringArray = f.get_basename().substr(7).split("-")     # parity-<class>-<element>[-<read>]
+				parity.append({"build": "%s as %s" % [pn[0], pn[1] if pn.size() > 1 else "?"], "error": "no PARITY line (the read crashed or was cut off)"})     # counted, not dropped (the review)
+		elif f.ends_with(".txt") and not f in NOT_BUILDS:
 			names.append(f)
 	names.sort()
+	# how each read ended (25 Oct, the tools review: a killed read read as crashed, and one that never wrote went unnamed):
+	# its .done from tools/balance_read.bat ("done ok", "done killed-time", ...; the checkpoint's kept as .end), the
+	# names balance.bat started (pass/expected.txt), and whether the pass's five-hour deadline fired (pass/deadline.log)
+	var deadline: bool = FileAccess.file_exists(FOLDER + "/deadline.log")
+	var ends: Dictionary = {}
+	for f in dir.get_files():
+		if f.ends_with(".done") or f == "checkpoint.end":
+			ends[f.get_basename()] = FileAccess.get_file_as_string(FOLDER + "/" + f).strip_edges().trim_prefix("done").strip_edges()
+	var expected: Array = []
+	for line in FileAccess.get_file_as_string(FOLDER + "/expected.txt").split("\n"):
+		if line.strip_edges() != "":
+			expected.append(line.strip_edges())
+	var bad_ends: Array = []
+	var to_check: Array = (expected + ["checkpoint"]) if not expected.is_empty() else []     # the checkpoint runs first in every pass
+	for nm in to_check:
+		var end = ends.get(nm, null)
+		if not FileAccess.file_exists(FOLDER + "/" + nm + ".txt"):
+			bad_ends.append("%s: no file (the read never started or never wrote)" % nm)
+		elif end == null or not str(end) in ["ok", ""]:
+			bad_ends.append("%s: %s" % [nm, _end_words(end, deadline)])
 	for f in names:
 		var g: Dictionary = {}
 		var found := false
@@ -165,13 +190,27 @@ func _init() -> void:
 	# build parity: from the one checkpoint, the same spell, every build's reach gained against the best's
 	if not parity.is_empty():
 		var ok_p: Array = parity.filter(func(pp): return not pp.has("error"))
-		var gains: Array = ok_p.map(func(pp): return int(pp.get("reach_gain", 0)))
-		var best_g: int = gains.max() if not gains.is_empty() else 0
-		var behind: Array = ok_p.filter(func(pp): return float(pp.get("reach_gain", 0)) < PARITY_BAND * best_g).map(func(pp): return "%s +%d" % [pp["build"], int(pp.get("reach_gain", 0))])
+		# two reads a build (25 Oct, the second review: one death decided a 4 h read): judged on their mean
+		var by_b: Dictionary = {}
+		for pp in ok_p:
+			if not by_b.has(pp["build"]):
+				by_b[pp["build"]] = []
+			by_b[pp["build"]].append(float(pp.get("reach_gain", 0)))
+		var mean_g: Dictionary = {}
+		for bn in by_b:
+			var tot := 0.0
+			for g in by_b[bn]:
+				tot += g
+			mean_g[bn] = tot / float(by_b[bn].size())
+		var best_g: int = int(round(mean_g.values().max())) if not mean_g.is_empty() else 0
+		var behind: Array = []
+		for bn in mean_g:
+			if float(mean_g[bn]) < PARITY_BAND * best_g:
+				behind.append("%s +%d%s" % [bn, int(round(mean_g[bn])), "" if by_b[bn].size() < 2 else " (%s)" % ", ".join(by_b[bn].map(func(g): return "+%d" % int(g)))])
 		for pp in ok_p:
 			if pp.get("cut_short", false):
 				behind.append("%s cut short at %.1f h" % [pp["build"], float(pp.get("played_h", 0.0))])
-		rows.append(["P. Build parity", "from the Radio's checkpoint, %.0f h each: every build's reach gained at least %.0f%% of the best's (+%d)" % [float(ok_p[0].get("hours", 0.0)) if not ok_p.is_empty() else 0.0, PARITY_BAND * 100.0, best_g],
+		rows.append(["P. Build parity", "from the Radio's checkpoint, %.0f h each: every build's reach gained, the mean of its reads, at least %.0f%% of the best's (+%d)" % [float(ok_p[0].get("hours", 0.0)) if not ok_p.is_empty() else 0.0, PARITY_BAND * 100.0, best_g],
 			("every build" if behind.is_empty() else "behind: " + ", ".join(behind)) + ("" if ok_p.size() == parity.size() else " (%d reads gave no figures: see the table)" % (parity.size() - ok_p.size())), behind.is_empty() and ok_p.size() == parity.size() and best_g > 0])
 	# shown, not judged: the playtest's (deaths, wounds) - the bot doesn't take a player's risks
 	var shown: Array = []
@@ -186,19 +225,38 @@ func _init() -> void:
 		if r[3] is bool and not r[3]:
 			reds += 1
 			reds_by[_kind(str(r[0]))] += 1
+	# the gates nothing could judge (25 Oct, the tools review), named in the header; a "(shown)" row is never judged
+	var unjudged: Array = []
+	for r in rows:
+		if r[3] == null and not str(r[0]).contains("(shown)"):
+			var why := "nothing to read"
+			for k in UNJUDGED_WHY:
+				if str(r[0]).begins_with(k):
+					why = UNJUDGED_WHY[k]
+			unjudged.append("%s: %s" % [r[0], why])
+	# the commit the pass ran on (25 Oct, the tools review: balance.bat wrote it and nothing read it)
+	var commit := FileAccess.get_file_as_string(FOLDER + "/commit.log").strip_edges().trim_prefix("The pass on ")
 	var out: Array = []
 	out.append("# Balance summary")
 	out.append("")
-	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds (%d element, %d plain)%s. %s" % [
+	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds (%d element, %d plain)%s, on commit %s. %s%s" % [
 		Time.get_datetime_string_from_system(false, true), reads.size(), full.size() + plains.size(), full.size(), plains.size(), " and the probe" if not probe.is_empty() else " (no probe)",
-		("%d RED: %d design, %d bot timing, %d bot play." % [reds, reds_by["design"], reds_by["bot timing"], reds_by["bot play"]]) if reds > 0 else "No reds."])
+		commit if commit != "" else "unknown (no pass/commit.log)",
+		("%d RED: %d design, %d bot timing, %d bot play." % [reds, reds_by["design"], reds_by["bot timing"], reds_by["bot play"]]) if reds > 0 else "No reds.",
+		(" %d not judged (%s)." % [unjudged.size(), "; ".join(unjudged)]) if not unjudged.is_empty() else ""])
 	var missing: Array = []
 	for b in builds:
 		if b.get("missing", false):
-			missing.append(b["build"])
+			missing.append("%s (%s)" % [b["build"], _end_words(ends.get(b["build"], null), deadline)])
 	if not missing.is_empty():
 		out.append("")
-		out.append("No GATES line in: " + ", ".join(missing) + " (the read crashed or was cut short; see its .txt).")
+		out.append("No GATES line in: " + ", ".join(missing) + "; see its .txt.")
+	if not bad_ends.is_empty():
+		out.append("")
+		out.append("Reads that didn't finish ok: " + "; ".join(bad_ends) + ".")
+	if expected.is_empty():
+		out.append("")
+		out.append("No pass/expected.txt (a pass from before 25 Oct): a read that never wrote can't be named.")
 	out.append("")
 	out.append("| Gate | Kind | Green when | Read | |")
 	out.append("| --- | --- | --- | --- | --- |")
@@ -208,8 +266,8 @@ func _init() -> void:
 	out.append("")
 	out.append("## The builds")
 	out.append("")
-	out.append("| Build | Hours | Manager | Quartermaster (level) | Level 30 | Level 50 | Radio | Signal gap / reach gap | Story | Reach | Level | Runs | Bails | Wounded | Into gang 3 (gone by 5) | Cash | Scrap (crafts/h) | Odds by tier | Kit |")
-	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	out.append("| Build | Hours | Manager | Quartermaster (level) | Level 30 | Level 50 | Radio | Signal gap / reach gap | Story | Reach | Level | Runs | Bails | Wounded | Into gang 3 (gone by 5) | Cash | Scrap (crafts/h) | Tempers | Odds by tier | Kit |")
+	out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for b in reads:
 		var wnd: float = (float(b["wounded_runs"]) / float(b["runs"])) if int(b["runs"]) > 0 else 0.0
 		var dearest_b := float(b.get("dearest_build", 0))
@@ -217,12 +275,12 @@ func _init() -> void:
 		var odds: Array = []
 		for o in b.get("odds", []):
 			odds.append("T%d %.0f%%" % [int(o[0]), float(o[1]) * 100.0])
-		out.append("| %s | %.1f (%.0f s wall) | %s | %s (%d) | %s | %s | %s | %s / %s | %s | %d | %d | %d | %d | %.0f%% | %d (%d) | %d | %d (%.1f) | %s | %s |" % [
+		out.append("| %s | %.1f (%.0f s wall) | %s | %s (%d) | %s | %s | %s | %s / %s | %s | %d | %d | %d | %d | %.0f%% | %d (%d) | %d | %d (%.1f) | %s | %s | %s |" % [
 			b["build"], float(b.get("elapsed_h", b["hours"])), float(b.get("wall_s", 0)), _hours(float(b.get("manager_at", -1.0))),
 			_hours(float(b.get("qm_at", -1.0))), int(b.get("level_at_qm", -1)), _hours(float(b.get("lv30_at", -1.0))), _hours(float(b.get("lv50_at", -1.0))),
 			_hours(float(b.get("radio_at", -1.0))), _mins(float(b.get("signal_gap_h", -1.0))), _mins(float(b.get("reach_gap_h", -1.0))), _hours(float(b.get("story_at", -1.0))),
 			int(b.get("reach", 0)), int(b.get("level", 0)), int(b["runs"]), int(b.get("bails", 0)), wnd * 100.0, int(b.get("gang3_runs", 0)), int(b.get("left_by5", 0)),
-			int(b["cash_end"]), int(b["scrap_end"]), crafts_b, " ".join(odds), str(b.get("kit", ""))])
+			int(b["cash_end"]), int(b["scrap_end"]), crafts_b, str(int(b["tempers"])) if b.has("tempers") else "-", " ".join(odds), str(b.get("kit", ""))])     # the Bench's tempers (25 Oct)
 	out.append("")
 	if reads.any(func(b): return b.get("one_save", false)):
 		out.append("The one save's classes (25 Oct): each read from the Poacher, the target build when its class opened, the crew's swaps after.")
@@ -314,15 +372,23 @@ func _pass_rows(rows: Array, full: Array) -> void:
 		return
 	var off: Array = []
 	var all_t: Array = []
+	var old_reads := false
 	for bd in full:
-		var runs: int = int(bd.get("runs", 0))
-		var deaths: int = int(bd.get("deaths", 0))
-		var every: float = float(runs) / float(deaths) if deaths > 0 else INF
+		# the campaign's runs alone, a bail (left under a quarter HP) counted as a death (25 Oct, Matt; the tools review: the
+		# bails are the bot's near-deaths); a read from before then has the whole read's deaths only, and says so
+		var campaign: bool = bd.has("campaign_runs")
+		old_reads = old_reads or not campaign
+		var runs: int = int(bd.get("campaign_runs", bd.get("runs", 0)))
+		var losses: int = int(bd.get("campaign_deaths", 0)) + int(bd.get("campaign_bails", 0)) if campaign else int(bd.get("deaths", 0))
+		var every: float = float(runs) / float(losses) if losses > 0 else INF
 		var fd: float = float(bd.get("first_death_at", -1.0))
-		all_t.append("%s 1 in %s, first %s" % [bd["build"], ("%.0f" % every) if not is_inf(every) else "never", _hours(fd)])
+		var fb: float = float(bd.get("first_bail_at", -1.0))
+		all_t.append("%s 1 in %s (%d deaths, %d bails of %d runs), first death %s, first bail %s" % [bd["build"], ("%.0f" % every) if not is_inf(every) else "never",
+			int(bd.get("campaign_deaths", bd.get("deaths", 0))), int(bd.get("campaign_bails", 0)), runs, _hours(fd), _hours(fb)])
 		if is_inf(every) or every < DEATH_EVERY[0] or every > DEATH_EVERY[1] or fd < 0.0 or fd > FIRST_DEATH_BY * BOT_PACE:
 			off.append(all_t[-1])
-	rows.append(["P1. Deaths", "a death one run in %.0f-%.0f, the first by %.1f h (bot)" % [DEATH_EVERY[0], DEATH_EVERY[1], FIRST_DEATH_BY * BOT_PACE], ("off: " + "; ".join(off)) if not off.is_empty() else "every build: " + "; ".join(all_t), off.is_empty()])
+	rows.append(["P1. Deaths", "in the campaign (to the Quartermaster: past level 50 a death starts again at level 1 by design), a death or a bail (left under a quarter HP) one run in %.0f-%.0f; the first death by %.1f h (bot)" % [DEATH_EVERY[0], DEATH_EVERY[1], FIRST_DEATH_BY * BOT_PACE],
+		(("off: " + "; ".join(off)) if not off.is_empty() else "every build: " + "; ".join(all_t)) + (" (reads from before 25 Oct: their whole read's deaths, no bails)" if old_reads else ""), off.is_empty()])
 	off = []
 	all_t = []
 	for bd in full:
@@ -332,9 +398,23 @@ func _pass_rows(rows: Array, full: Array) -> void:
 		if w < WOUNDED[0] or w > WOUNDED[1]:
 			off.append(all_t[-1])
 	rows.append(["P2. Wounds", "%.0f-%.0f%% of runs wounded" % [WOUNDED[0] * 100.0, WOUNDED[1] * 100.0], ("off: " + ", ".join(off)) if not off.is_empty() else "every build: " + ", ".join(all_t), off.is_empty()])
-	var meds: Array = full.map(func(bd): return float(bd.get("odds_median", -1.0))).filter(func(v): return v >= 0.0)
-	var mo: float = _median(meds) if not meds.is_empty() else -1.0
-	rows.append(["P3. Odds at the gate", "the median run went in at %.0f-%.0f%%" % [ODDS_MED[0] * 100.0, ODDS_MED[1] * 100.0], "median %.0f%% (builds %.0f%% to %.0f%%)" % [mo * 100.0, (meds.min() if not meds.is_empty() else -1.0) * 100.0, (meds.max() if not meds.is_empty() else -1.0) * 100.0], mo >= ODDS_MED[0] and mo <= ODDS_MED[1]])
+	# judged on the first clears and the heads not yet beaten (25 Oct, Matt; the tools review: the bot farms at PUSH, so
+	# every farm run reads 92-100% by construction): the runs it takes at a person's odds, pooled; the farm's shown
+	var firsts: Array = []
+	var meds: Array = []
+	for bd in full:
+		var fo: Array = bd.get("first_odds", [])
+		firsts.append_array(fo)
+		if not fo.is_empty():
+			meds.append(_median(fo))
+	var farms: Array = full.map(func(bd): return float(bd.get("farm_odds_median", -1.0))).filter(func(v): return v >= 0.0)
+	var mo: float = _median(firsts) if not firsts.is_empty() else -1.0
+	var p3: Variant = null                   # unjudged with none recorded
+	if not firsts.is_empty():
+		p3 = mo >= ODDS_MED[0] and mo <= ODDS_MED[1]
+	rows.append(["P3. Odds at the gate", "the median first clear and head (a site never cleared, a head not yet beaten) went in at %.0f-%.0f%%; the farm's runs shown" % [ODDS_MED[0] * 100.0, ODDS_MED[1] * 100.0],
+		("median %.0f%% of %d runs (builds %.0f%% to %.0f%%)" % [mo * 100.0, firsts.size(), meds.min() * 100.0, meds.max() * 100.0] if not firsts.is_empty() else "no first clears or heads recorded (a read from before 25 Oct)")
+		+ ("; the farm's median %.0f%% (builds %.0f%% to %.0f%%)" % [_median(farms) * 100.0, farms.min() * 100.0, farms.max() * 100.0] if not farms.is_empty() else ""), p3])
 	var lv: Array = []
 	var never: Array = []
 	for bd in full:
@@ -427,8 +507,9 @@ func _pace_rows(rows: Array, full: Array) -> void:
 	var gk_lvs: Array = full.filter(func(bd): return int(bd.get("level_at_gk", -1)) >= 0).map(func(bd): return float(bd["level_at_gk"]))
 	var gk_med: float = _median(gks) if gks.size() == full.size() and not gks.is_empty() else -1.0
 	var gk_lv: int = int(_median(gk_lvs)) if not gk_lvs.is_empty() else -1
-	rows.append(["17. The Outskirts", "the Gamekeeper beaten at %.1f-%.1f h, the median build, at level %d or more" % [GK[0], GK[1], GK_LEVEL],
-		"median %s at level %d (%s to %s)" % [_hours(gk_med), gk_lv, _hours(gks.min() if not gks.is_empty() else -1.0), _hours(gks.max() if not gks.is_empty() else -1.0)],
+	# to two places (25 Oct, the tools review: a median of 0.25-0.29 h printed "0.3 h" against a 0.3 floor and read red)
+	rows.append(["17. The Outskirts", "the Gamekeeper beaten at %.2f-%.2f h, the median build, at level %d or more (bot, %.2f of a hand)" % [GK[0], GK[1], GK_LEVEL, BOT_PACE],
+		"median %s at level %d (%s to %s)" % [_hours2(gk_med), gk_lv, _hours2(gks.min() if not gks.is_empty() else -1.0), _hours2(gks.max() if not gks.is_empty() else -1.0)],
 		gk_med >= GK[0] and gk_med <= GK[1] and gk_lv >= GK_LEVEL])
 
 
@@ -644,7 +725,7 @@ func _merged(gs: Array) -> Dictionary:
 	if gs.size() == 1:
 		return gs[0]
 	var m: Dictionary = gs[0].duplicate(true)
-	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk", "odds_median"]:
+	for key in ["bank_at", "keystone_at", "capstone_at", "lorry_at", "manager_at", "qm_at", "lv30_at", "lv50_at", "radio_at", "story_at", "signal_gap_h", "reach_gap_h", "level_at_qm", "gk_at", "level_at_gk", "odds_median", "farm_odds_median"]:
 		if not gs[0].has(key):
 			continue
 		# by their median, a never counted as later than any (the review, 15 Oct: one read of two that never got there
@@ -662,8 +743,8 @@ func _merged(gs: Array) -> Dictionary:
 		for g in gs:
 			total += float(g.get(key, 0))
 		m[key] = snappedf(total / gs.size(), 0.01)
-	for key in ["runs", "deaths", "wounded_runs", "timeouts", "dry_timeouts", "bails", "moves", "lorries", "gang3_runs", "left_by5"]:
-		if not gs[0].has(key) and key in ["timeouts", "dry_timeouts"]:
+	for key in ["runs", "deaths", "wounded_runs", "timeouts", "dry_timeouts", "bails", "moves", "lorries", "gang3_runs", "left_by5", "campaign_runs", "campaign_deaths", "campaign_bails", "tempers"]:
+		if not gs[0].has(key) and key in ["timeouts", "dry_timeouts", "campaign_runs", "campaign_deaths", "campaign_bails", "tempers"]:
 			continue                      # a read from before the clock (9 Oct) lacks them: the Clock row reads the lack
 		var n := 0
 		for g in gs:
@@ -674,6 +755,12 @@ func _merged(gs: Array) -> Dictionary:
 	m["reach_stand_h"] = -1.0 if stands.any(func(v): return v < 0.0) else stands.max()
 	var firsts: Array = gs.map(func(g): return float(g.get("first_death_at", -1.0))).filter(func(v): return v >= 0.0)
 	m["first_death_at"] = firsts.min() if not firsts.is_empty() else -1.0
+	var bails_at: Array = gs.map(func(g): return float(g.get("first_bail_at", -1.0))).filter(func(v): return v >= 0.0)
+	m["first_bail_at"] = bails_at.min() if not bails_at.is_empty() else -1.0
+	var fo: Array = []                       # P3's runs, every read's (25 Oct)
+	for g in gs:
+		fo.append_array(g.get("first_odds", []))
+	m["first_odds"] = fo
 	for key in ["faint", "full_at_reach"]:
 		var sum := [0, 0]
 		for g in gs:
@@ -741,6 +828,27 @@ func _median(vals: Array) -> float:
 
 func _hours(v: float) -> String:
 	return "never" if v < 0.0 else "%.1f h" % v
+
+
+func _hours2(v: float) -> String:
+	return "never" if v < 0.0 else "%.2f h" % v
+
+
+## How a read ended, in words, from its .done's word (null for no .done: still going at the deadline, or never ended;
+## "" for a bare "done", from before 25 Oct).
+static func _end_words(end: Variant, deadline: bool) -> String:
+	if end == null:
+		return "still going at the five-hour deadline" if deadline else "no .done: it never finished"
+	match str(end):
+		"ok", "":
+			return "it finished"
+		"killed-time":
+			return "killed: it ran past its minutes"
+		"killed-error":
+			return "killed: silent after a SCRIPT ERROR"
+		"crashed":
+			return "crashed: Godot ended with an error"
+	return "ended '%s'" % end
 
 
 ## A gate's kind, by its name: "bot timing", "bot play" or "design".

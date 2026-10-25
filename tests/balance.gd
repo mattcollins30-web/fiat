@@ -276,7 +276,14 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		"loose_unique_by_qm": false, "reach_log": [], "gang3_runs": 0, "left_by5": 0,
 		# the levels against the sites (17 Oct, Matt: "you should be at the correct level round about the time you hit the
 		# zone the gear starts to drop"): the level at each site's first clear, and the Outskirts' head
-		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save}
+		"first_clear_lv": {}, "gk_at": -1.0, "level_at_gk": -1, "one_save": one_save,
+		# P1 on the campaign alone (25 Oct, Matt: past level 50 a death starts again at level 1 by design; the death band is
+		# the campaign's): the runs, deaths and bails (left under a quarter HP) until the Quartermaster falls
+		"campaign_runs": 0, "campaign_deaths": 0, "campaign_bails": 0, "first_bail_at": -1.0,
+		# P3 on the runs the bot takes at a person's odds (25 Oct, the tools review: farmed at PUSH, the median is 100% by
+		# construction): the odds at the gate of every first clear and every head not yet beaten; the farm's apart
+		"first_odds": []}
+	var farm_odds: Array = []
 	var boss_uniques: Dictionary = {}
 	for u in Data.UNIQUES:
 		if u.get("boss", false):
@@ -303,11 +310,26 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 			for it in sim.stash + sim.equipped.values() + sim.rig:
 				if it is Dictionary and it.has("unique"):
 					uniques_before[int(it["id"])] = true
+		var c0: int = sim.chronicle.size()           # the run's own line is past here (P3)
+		var bails0: int = bot.bails
+		var depth0: Array = sim.best_depth.duplicate()
+		var beaten0: Array = sim.bosses_beaten.duplicate()
+		var lorry0: bool = sim.lorry_done
+		var in_campaign: bool = float(g["qm_at"]) < 0.0
 		var p0 := Time.get_ticks_usec()
 		var t: int = bot.step(sim)
 		step_us += Time.get_ticks_usec() - p0
 		if t >= 0:
 			g["runs"] += 1
+			_first_or_farm(sim, c0, depth0, beaten0, lorry0, g["first_odds"], farm_odds)
+			if in_campaign:
+				g["campaign_runs"] += 1
+				if sim.operators_lost > lost_before:
+					g["campaign_deaths"] += 1
+				elif bot.bails > bails0:
+					g["campaign_bails"] += 1      # a bail that died anyway counts once, as the death
+			if bot.bails > bails0 and float(g["first_bail_at"]) < 0.0:
+				g["first_bail_at"] = snappedf(sim.elapsed / 3600.0, 0.01)
 			mark_runs += 1
 			var r = sim.last_report
 			if bool(r.get("timed_out", false)):
@@ -497,6 +519,9 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	gate_odds.sort()
 	@warning_ignore("integer_division")
 	g["odds_median"] = gate_odds[gate_odds.size() / 2] if not gate_odds.is_empty() else -1.0
+	farm_odds.sort()
+	@warning_ignore("integer_division")
+	g["farm_odds_median"] = farm_odds[farm_odds.size() / 2] if not farm_odds.is_empty() else -1.0
 	# the ladders at the first lorry (the first yard's, read in the loop below when it fell; Matt, 8 Oct: the spread
 	# widens as the yards compound, and the design's figure was a first yard's); at the end when it never fell
 	if first_ladder.is_empty() and sim.campaign_done():
@@ -533,6 +558,26 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 		g["end_save"] = save_path
 	print("GATES " + JSON.stringify(g))
 	quit(0)
+
+
+## A run's odds at the gate (25 Oct, P3), from its chronicle line past `c0`: a first clear (the site never cleared
+## before it) or a head not yet beaten (the lorry while it stands) to `first`, any other campaign run to `farm`; a
+## signal's run, and a card read part-way (-1), to neither.
+static func _first_or_farm(sim, c0: int, depth0: Array, beaten0: Array, lorry0: bool, first: Array, farm: Array) -> void:
+	for k in range(c0, sim.chronicle.size()):
+		var e: Dictionary = sim.chronicle[k]
+		if str(e.get("k", "")) != "run" or e.get("signal", false) or float(e.get("odds", -1.0)) < 0.0:
+			continue
+		var i: int = int(e.get("tier", -1))
+		var fresh: bool = i >= 0 and i < depth0.size() and int(depth0[i]) <= 0
+		if e.has("boss"):
+			var b: Dictionary = sim.boss_of(i)
+			fresh = fresh or (not lorry0 if b.is_empty() else not bool(beaten0[int(b["zone"])]))
+		if fresh:
+			first.append(snappedf(float(e["odds"]), 0.01))
+		else:
+			farm.append(snappedf(float(e["odds"]), 0.01))
+		return
 
 
 ## The deepest depth the streets and the barracks read `push` in the kit as it stands: the runner whole and armed (a

@@ -11,7 +11,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 | Job | Drop | Runs | Results | Done |
 |---|---|---|---|---|
 | Smoke | `smoke.flag` (empty) | `tools\smoke.bat` (~1.5 min) | `docs\balance\smoke.txt`; last line is the verdict | `smoke.done` (a timestamp) |
-| Balance pass | `balance.flag` with the hours in it, e.g. `32` | `tools\balance.bat <hours>`: first the Radio's checkpoint (a new game to the Radio, `radio_checkpoint.save`), then side by side every element build as one save from the Poacher (its class taken when it opens) twice, every build 4 h from the checkpoint (`parity-*.txt`, `PARITY {json}`), and the loot probe. Each read runs through `tools\balance_read.bat <name> <minutes> <args>` (run_limited.ps1: killed past its minutes, or 15 min silent after a SCRIPT ERROR) | `docs\balance\pass\<build>-N.txt` (half-hour lines, purchases, a `GATES {json}` line; the folder is the pass's own, wiped at its start), the summary `docs\balance\summary.md` (each red with its kind: design, bot timing, bot play) | `balance.done`, each read `pass\<build>-N.done` |
+| Balance pass | `balance.flag` with the hours in it, e.g. `32` | `tools\balance.bat <hours>`: first the Radio's checkpoint (a new game to the Radio, `radio_checkpoint.save`), then side by side every element build as one save from the Poacher (its class taken when it opens) twice, every build 4 h from the checkpoint twice (`parity-<class>-<element>-N.txt`, `PARITY {json}`, judged on the mean), the probe and the loot read. Each read runs through `tools\balance_read.bat <name> <minutes> <args>` (or `<name> <minutes> script <res path> <args>`; run_limited.ps1: killed past its minutes, or 15 min silent after a SCRIPT ERROR), and its `.done` says how it ended (`done ok`, `killed-time`, `killed-error`, `crashed`); `pass\expected.txt` lists every read started, `pass\deadline.log` marks the 5 h deadline firing; the summary names any read that didn't end ok | `docs\balance\pass\<build>-N.txt` (half-hour lines, purchases, a `GATES {json}` line; the folder is the pass's own, wiped at its start), the summary `docs\balance\summary.md` (each red with its kind: design, bot timing, bot play) | `balance.done`, each read `pass\<build>-N.done` |
 | Playtest read | `playtest.flag` with a save path (or empty) | `tools\playtest.bat` | the playtest summary | `playtest.done` |
 
 - From a cloud session the smoke is `bash $HOME/flaky/run.sh N` in the device shell: it drops the flag, waits for a
@@ -131,6 +131,9 @@ standing rules before (21 Oct: balance reads were run in the cloud against the r
   a re-record (propose the words to Matt; the text waits for his takes).
 - Times to Matt in his local time, UTC+1.
 - Images to Matt as files (SendUserFile), not described.
+- `.bat` and `.ps1` files are CRLF (`.gitattributes`); one edited from the cloud arrives as written, so write them CRLF.
+- Art tools: `python3 tools/art_lint.py [manifests]` (unique seeds, sizes, style images, nothing under art/ui/) before
+  any run; `tools\art.bat <manifest>` dry-runs, then asks before spending.
 - Generated art (PixelLab manifests): the lessons every manifest is checked against, the costs, and the handoff between
   the session that writes a manifest and the one that runs it (`docs/art/handoff/art.flag` -> `art.done`) are in
   docs/art/pixellab_lessons.md (23 Oct). Read it before writing, checking or running a manifest.
