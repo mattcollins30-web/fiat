@@ -12,7 +12,12 @@ extends SceneTree
 ## settles them. Deaths (the player's own, from the playtest save) is not a bot
 ## figure and is left to Matt's count.
 
-const FOLDER := "res://docs/balance"
+const FOLDER := "res://docs/balance/pass"     # the pass's own folder (25 Oct): the smoke's log stays out of it
+const SUMMARY := "res://docs/balance/summary.md"
+## Each gate's kind (25 Oct, Matt: bot timings aren't tuned before a playtest; the bot doesn't take a player's risks):
+## "design" a red to fix; "bot timing" his play sets the figure; "bot play" the bot's caution, shown for the shape.
+const TIMING_GATES := ["1.", "2.", "3.", "5.", "7.", "8.", "17.", "P4."]
+const BOT_PLAY_GATES := ["P1.", "P2.", "P3.", "Wounds (as played)", "Deaths (as played)", "Deaths and wounds"]
 
 # the pass's gates (15 Oct, Matt approved; docs/design/balance_gates.md): twice the campaign as it stands, the bot at
 # BOT_PACE of a hand's time (the 13 Oct reads' Bank against Matt's own the next day; his playtest re-measures it)
@@ -176,15 +181,17 @@ func _init() -> void:
 		shown.append("%s: bails one in %s, wounded %.0f%%" % [bd["build"], ("%.0f" % every) if every < 999.0 else "never", wnd * 100.0])
 	rows.append(["Deaths and wounds (shown)", "the bails and wounds a build", "; ".join(shown), null])
 	var reds := 0
+	var reds_by := {"design": 0, "bot timing": 0, "bot play": 0}
 	for r in rows:
 		if r[3] is bool and not r[3]:
 			reds += 1
+			reds_by[_kind(str(r[0]))] += 1
 	var out: Array = []
 	out.append("# Balance summary")
 	out.append("")
 	out.append("Written %s by tools/balance_summary.gd from %d reads of %d builds (%d element, %d plain)%s. %s" % [
 		Time.get_datetime_string_from_system(false, true), reads.size(), full.size() + plains.size(), full.size(), plains.size(), " and the probe" if not probe.is_empty() else " (no probe)",
-		("%d RED." % reds) if reds > 0 else "No reds."])
+		("%d RED: %d design, %d bot timing, %d bot play." % [reds, reds_by["design"], reds_by["bot timing"], reds_by["bot play"]]) if reds > 0 else "No reds."])
 	var missing: Array = []
 	for b in builds:
 		if b.get("missing", false):
@@ -193,10 +200,10 @@ func _init() -> void:
 		out.append("")
 		out.append("No GATES line in: " + ", ".join(missing) + " (the read crashed or was cut short; see its .txt).")
 	out.append("")
-	out.append("| Gate | Green when | Read | |")
-	out.append("| --- | --- | --- | --- |")
+	out.append("| Gate | Kind | Green when | Read | |")
+	out.append("| --- | --- | --- | --- | --- |")
 	for r in rows:
-		out.append("| %s | %s | %s | %s |" % [r[0], r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
+		out.append("| %s | %s | %s | %s | %s |" % [r[0], _kind(str(r[0])), r[1], r[2], "—" if r[3] == null else ("GREEN" if r[3] else "RED")])
 	var head := out.size()
 	out.append("")
 	out.append("## The builds")
@@ -270,7 +277,7 @@ func _init() -> void:
 				b["build"], wall, int(p["surv_s"]) - int(p["ladder_s"]), int(p["surv_reads"]), int(p["surv_calls"]), int(p["dry_runs"]), _thousands(int(p["dry_ticks"])), int(p["snap_s"]),
 				int(p["real_s"]), _thousands(int(p["real_ticks"])), int(p["tidy_s"]), (" (" + ", ".join(parts) + ")") if not parts.is_empty() else "", int(p["ladder_s"]), rest])
 		out.append("")
-	var f := FileAccess.open(FOLDER + "/summary.md", FileAccess.WRITE)
+	var f := FileAccess.open(SUMMARY, FileAccess.WRITE)
 	f.store_string("\n".join(out))
 	f.close()
 	for k in range(head):
@@ -353,8 +360,11 @@ func _pass_rows(rows: Array, full: Array) -> void:
 			fu[k] += int(bd.get("full_at_reach", [0, 0])[k])
 	var fa_r: float = float(fa[1]) / float(fa[0]) if fa[0] > 0 else -1.0
 	var fu_r: float = float(fu[1]) / float(fu[0]) if fu[0] > 0 else -1.0
-	rows.append(["P6. The signals", "faint won %.0f%% or more; full at the reach won %.0f-%.0f%%" % [FAINT_WON * 100.0, FULL_WON[0] * 100.0, FULL_WON[1] * 100.0], "faint %d of %d (%.0f%%); full at the reach %d of %d (%.0f%%)" % [fa[1], fa[0], fa_r * 100.0, fu[1], fu[0], fu_r * 100.0],
-		fa[0] > 0 and fu[0] > 0 and fa_r >= FAINT_WON and fu_r >= FULL_WON[0] and fu_r <= FULL_WON[1]])
+	# a 0 of 0 is no read, not a red (25 Oct, the tools review): the part with none is shown and left out of the verdict
+	var fa_words: String = ("faint %d of %d (%.0f%%)" % [fa[1], fa[0], fa_r * 100.0]) if fa[0] > 0 else "no faint signals run"
+	var fu_words: String = ("full at the reach %d of %d (%.0f%%)" % [fu[1], fu[0], fu_r * 100.0]) if fu[0] > 0 else "no full signals at the reach run"
+	var p6 = null if fa[0] == 0 and fu[0] == 0 else ((fa[0] == 0 or fa_r >= FAINT_WON) and (fu[0] == 0 or (fu_r >= FULL_WON[0] and fu_r <= FULL_WON[1])))
+	rows.append(["P6. The signals", "faint won %.0f%% or more; full at the reach won %.0f-%.0f%%" % [FAINT_WON * 100.0, FULL_WON[0] * 100.0, FULL_WON[1] * 100.0], "%s; %s" % [fa_words, fu_words], p6])
 
 
 ## Gates 1-5: the Manager, the Quartermaster, the builds' band, the level at him, level 30 after him.
@@ -731,3 +741,14 @@ func _median(vals: Array) -> float:
 
 func _hours(v: float) -> String:
 	return "never" if v < 0.0 else "%.1f h" % v
+
+
+## A gate's kind, by its name: "bot timing", "bot play" or "design".
+static func _kind(name: String) -> String:
+	for g in BOT_PLAY_GATES:
+		if name.begins_with(g):
+			return "bot play"
+	for g in TIMING_GATES:
+		if name.begins_with(g):
+			return "bot timing"
+	return "design"

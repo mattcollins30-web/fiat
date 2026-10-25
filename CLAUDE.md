@@ -11,7 +11,7 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 | Job | Drop | Runs | Results | Done |
 |---|---|---|---|---|
 | Smoke | `smoke.flag` (empty) | `tools\smoke.bat` (~1.5 min) | `docs\balance\smoke.txt`; last line is the verdict | `smoke.done` (a timestamp) |
-| Balance pass | `balance.flag` with the hours in it, e.g. `32` | `tools\balance.bat <hours>`: first the Radio's checkpoint (a new game to the Radio, `radio_checkpoint.save`), then side by side every element build as one save from the Poacher (its class taken when it opens) twice, every build 4 h from the checkpoint (`parity-*.txt`, `PARITY {json}`), and the loot probe (25 Oct) | `docs\balance\<build>-N.txt` (half-hour lines, purchases, a `GATES {json}` line), the summary `docs\balance\summary.md` | `balance.done`, each read `<build>-N.done` |
+| Balance pass | `balance.flag` with the hours in it, e.g. `32` | `tools\balance.bat <hours>`: first the Radio's checkpoint (a new game to the Radio, `radio_checkpoint.save`), then side by side every element build as one save from the Poacher (its class taken when it opens) twice, every build 4 h from the checkpoint (`parity-*.txt`, `PARITY {json}`), and the loot probe. Each read runs through `tools\balance_read.bat <name> <minutes> <args>` (run_limited.ps1: killed past its minutes, or 15 min silent after a SCRIPT ERROR) | `docs\balance\pass\<build>-N.txt` (half-hour lines, purchases, a `GATES {json}` line; the folder is the pass's own, wiped at its start), the summary `docs\balance\summary.md` (each red with its kind: design, bot timing, bot play) | `balance.done`, each read `pass\<build>-N.done` |
 | Playtest read | `playtest.flag` with a save path (or empty) | `tools\playtest.bat` | the playtest summary | `playtest.done` |
 
 - From a cloud session the smoke is `bash $HOME/flaky/run.sh N` in the device shell: it drops the flag, waits for a
@@ -24,6 +24,8 @@ The watcher (`tools\watch.bat`, a window Matt leaves open) runs jobs from flag f
 - With the watcher off, a cloud session runs the full smoke in the cloud on a snapshot of its copy (xvfb, opengl3). Its
   known cloud-only reds are art the cloud copy lacks: gang faces, muzzle flashes, the Recruit's portraits, item
   pictures (a cell's words standing in, e.g. 'AMO'); every other red is real.
+- The smoke's dice are fixed (seed 1025) so a red repeats; `-- seed N` runs it on another, `-- seed random` on a fresh
+  one (its `SMOKE seed` line says which). `-- only <area>` runs one area.
 - Long sim and balance runs are Matt's machine's (6 Oct: it's about twice as fast). One quick read between passes:
   `tools\read.bat <hours> <class> [element]`.
 - gdlint shows 0 before any commit (`tools/gdlint.py`).

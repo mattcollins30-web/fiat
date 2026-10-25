@@ -17,7 +17,7 @@ const Items := preload("res://scripts/sim/items.gd")
 const Sim := preload("res://scripts/sim/sim.gd")
 const Bot := preload("res://tests/bot.gd")
 const Feel := preload("res://tools/feel_gates.gd")
-const CHECKPOINT := "res://docs/balance/radio_checkpoint.save"     # the parity reads' start (25 Oct): the one save as the Radio opens
+const CHECKPOINT := "res://docs/balance/pass/radio_checkpoint.save"     # the parity reads' start (25 Oct): the one save as the Radio opens
 
 
 func _init() -> void:
@@ -459,6 +459,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	# the endgame's two (7 Oct): the lorry's hour and the moves, and the ladders' spread - the deepest depth the
 	# streets and the barracks read PUSH in the kit as it stands (the depth set past the ladder for the read)
 	g["lorry_at"] = snappedf(bot.lorry_at, 0.01) if bot.lorry_at >= 0.0 else -1.0
+	g["tempers"] = bot.tempers           # the Bench's tempers the read made (25 Oct)
 	g["crew_swaps"] = bot.crew_swaps     # the crew (21 Oct, step 7): swaps, the classes played, the board's level
 	g["route"] = bot.bought.filter(func(x): return str(x[1]).begins_with("crew") or str(x[1]).begins_with("the target")).map(func(x): return [snappedf(float(x[0]) / 3600.0, 0.01), str(x[1])])     # the one save's classes, when (25 Oct)
 	g["crew"] = sim.crew_played().map(func(c): return "%s %d" % [c, sim.crew_level(c)])
@@ -524,7 +525,7 @@ func _gate(hours: float, cls: String, element: String, seed_v := 0, one_save := 
 	for b in bot.bought:
 		print("  %s at %s" % [b[1], _hm(b[0])])
 	# the yard as the read left it, for reading a gate offline (the convoy's odds at hour 16, say): docs/balance/<build>.save
-	var save_path := "res://docs/balance/%s.save" % build.replace(" as ", "-")
+	var save_path := "res://docs/balance/pass/%s.save" % build.replace(" as ", "-")
 	var sf := FileAccess.open(save_path, FileAccess.WRITE)
 	if sf != null:
 		sf.store_string(JSON.stringify({"sim": sim.to_dict()}))
