@@ -2414,7 +2414,7 @@ const CRAFT := {
 const GREED_QUALITY := 0.10          # greed after the clear (25 Oct): loot quality a gang that comes after it, for the rest of the run
 const GREED_QUANTITY := 0.05         # and quantity
 const TEMPER_GROW := 1.035             # a temper's scrap, 1.10 to 1.035 (the second review): this much dearer an item level past ILVL_GROW_FROM, as income grows: the climb's pace is its price
-const TEMPER_CASH := 4.0              # a temper's tins: four times what the piece sells for (the second review: a flat price sank nothing)
+const TEMPER_CASH := 8.0              # 4 to 8 (the third pass: four builds held 2.0-3.8 h of income); a temper's tins: eight times the piece's worth (the second review: a flat price sank nothing)
 const TEMPER_PAST_WEAR := 3           # a piece's first three tempers don't raise the level to wear it (Matt, 25 Oct: ease "reach 50 or stall")
 const LOCK_PRICE := 1.0               # a padlock adds this share of a re-roll's price (20 Oct)
 const LOCKS := 1                      # padlocks at the Bench; the Pitch's Two locks adds one (Matt: "2 locks with one as an upgrade")
@@ -3342,7 +3342,7 @@ static func pinnacle(key: String) -> Dictionary:
 ## Over-levelled (D9, 15 Oct, Matt; the D8 read: a level-50 Scrapper farmed the Bank at depth 1 in three-second runs at full
 ## pay): past OVER_LEVEL_FREE site levels under you a site pays OVER_LEVEL_STEP less XP and tins a level, to OVER_LEVEL_FLOOR.
 const OVER_LEVEL_FREE := 3.0     # 5 to 3 (25 Oct, Matt: the campaign's levels track its gear; the bot was 4-8 over each site's)
-const OVER_LEVEL_STEP := 0.15
+const OVER_LEVEL_STEP := 0.25     # 0.15 to 0.25 (the third pass: from the Services on, the bot 5 over each site's gear)
 const OVER_LEVEL_FLOOR := 0.1
 ## The level to wear an item level: WEAR_PER_ILVL x it - WEAR_OFFSET, at least 1 (19 Oct, Matt's playtest: at x2.5 - 1.5 he
 ## reached the Parade a level under its drops and the Barracks five under; 2 x - 2 is the levels he reached them at:
@@ -3370,7 +3370,7 @@ const XP_RAMP_FROM := 1.0
 const XP_RAMP_TO := 12
 const XP_TAPER_FROM := 22
 const XP_TAPER_TO := 40
-const XP_TAPER_END := 3.4     # D29 3.4 (D28's slower pay: six ended at 41-49 at 24 h); D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
+const XP_TAPER_END := 3.1     # 3.4 to 3.1 (the third pass: level 50's median at 31 h, 11 of 24 never; want 12-24);  D29 3.4 (D28's slower pay: six ended at 41-49 at 24 h); D27 4.0, between (Matt, 16 Oct); D26 5.0 (D25's one-a-win reach: level 50 at 7.7-11.4 h on eight); D24 3.0 (the two-read: one read of four builds in the window, the other at 44-48 at 24 h); D14: no taper (level 50 at hour 4-7 at 0.4); D16 rising to x3.6 by 40 - 50 at 7-11 h on five; D22 x3.2 (four ended at 47-49)
 
 
 static func xp_scale(l: int) -> float:

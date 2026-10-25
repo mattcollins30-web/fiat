@@ -6918,3 +6918,6 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
   stale), the reach standing 5-25 h late on, retirement's median 31 h (11 of 24 never), the capstone and the lorry
   (bot timing), and the bot's safety (odds 100% even on first clears, deaths and bails one in 50-1,000). No runaway:
   the top reach 70, tempers 47-228 a read.
+- The fourth pass's numbers (25 Oct, Matt: "do as you recommend"): TEMPER_CASH 4 to 8, OVER_LEVEL_STEP 0.15 to 0.25,
+  XP_TAPER_END 3.4 to 3.1; gate 15 judges scrap held in hours of the whole read's scrap income, as gate 14 cash.
+  Smoke 247 green; the fourth 32 h pass flagged 16:43 GMT.

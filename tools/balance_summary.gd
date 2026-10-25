@@ -66,8 +66,8 @@ const LEAVE_BY5 := 0.5          # of the runs that stay into the third gang, the
 const CITY_TOP := [0.08, 0.16]  # the loot read: epic or better in the City's gear (D6: the read counts gear alone now; 5-10% of every find was 8-16% of the gear)
 const SETS_UNDER := 1.0 / 50.0  # set pieces a roll, everywhere in the read
 const CASH_HOURS := 2.0         # cash in hand at the end, in hours of the build's income
-const SCRAP_TOP_OF := {"Scrapper": 8.0}
-const SCRAP := [0.5, 7.0]       # scrap earned an hour, in the dearest craft's worth
+const SCRAP_HOURS := 2.0        # scrap in hand at the end, in hours of the build's scrap income (25 Oct, the third pass: as
+                                 # cash; the old yardstick, a 120-scrap build, was a price nothing paid once tempering came)
 const PLAIN_BY := 24.0          # a plain build (no element tree) only has to finish the campaign by this
 const TOP_SHARE := 0.02         # the probe: the top rarity at +35% quality (the plain share the weights' own)
 const TOP_SHARE_PLAIN := 0.008
@@ -658,13 +658,19 @@ func _economy_rows(rows: Array, full: Array) -> void:
 			over.append("%s holds %d tins, %.1f hours' income" % [bd["build"], int(bd["cash_end"]), held])
 	rows.append(["14. Cash sink", "cash in hand at the end no more than %.0f hours' income" % CASH_HOURS, "; ".join(over) if not over.is_empty() else "every build under (most %.1f)" % most, over.is_empty()])
 	var off: Array = []
+	var most_s := 0.0
 	for bd in full:
-		var dearest := float(bd.get("dearest_build", 0))
-		var crafts: float = (float(bd.get("scrap_per_h", 0.0)) / dearest) if dearest > 0.0 else 0.0
-		bd["_crafts"] = crafts
-		if crafts < SCRAP[0] or crafts > float(SCRAP_TOP_OF.get(str(bd.get("class", "")), SCRAP[1])):
-			off.append("%s %.1f crafts/h" % [bd["build"], crafts])
-	rows.append(["15. Scrap", "scrap earned an hour worth %.1f to %.0f of the dearest craft (the Scrapper to %.0f)" % [SCRAP[0], SCRAP[1], SCRAP_TOP_OF["Scrapper"]], "; ".join(off) if not off.is_empty() else "every build in the band", off.is_empty()])
+		# the whole read's rate, as the cash's (the reviewer: the first sixteen hours' under-read a deep kit's scrap)
+		var per_hs: float = (float(bd.get("scrap_end", 0)) + float(bd.get("scrap_spent", 0))) / maxf(0.01, float(bd.get("elapsed_h", 0.0)))
+		if per_hs <= 0.0:
+			if int(bd.get("scrap_end", 0)) > 0:
+				off.append("%s holds %d scrap and earned none" % [bd["build"], int(bd.get("scrap_end", 0))])
+			continue
+		var held_s: float = float(bd.get("scrap_end", 0)) / per_hs
+		most_s = maxf(most_s, held_s)
+		if held_s > SCRAP_HOURS:
+			off.append("%s holds %d scrap, %.1f hours' scrap" % [bd["build"], int(bd.get("scrap_end", 0)), held_s])
+	rows.append(["15. Scrap", "scrap in hand at the end no more than %.0f hours' scrap income (the tempers spend it)" % SCRAP_HOURS, "; ".join(off) if not off.is_empty() else "every build under (most %.1f)" % most_s, off.is_empty()])
 
 
 ## The loot read's tables: {"Outskirts": {rolls, drops: [{rar: [C,U,R,E,L], wear, sets}], gamble: [...]}, ...} for the
