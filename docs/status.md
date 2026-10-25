@@ -6793,3 +6793,61 @@ the hundreds of millions); "at least 30ish" hours of endgame for an indie ARPG a
   12-24 h at 43-79 by read (P5 red on every build; full at the reach won 85%, the climb power-limited). Cash still piles
   on five builds (kill tins); deaths and wounds near none, as before. For after the playtest, with the chase plan.
 - VERSION 0.8.1 (the endgame slowed). Smoke 242. Next: Matt's evening playtest.
+
+## Parked from the 0.8.1 playtest (24 Oct evening)
+
+1. The web's joints: make each class-to-element joint symmetric, as Live (shock)'s two are: split evenly between its
+   two neighbours round the circle, by moving classes or elements round the wheel, if the layout allows.
+2. The Pitch has no visible link to the elements, though the classes join them: the web would read better with an
+   obvious one. Matt's idea: the Pitch becomes a circle in the middle, and each element's starter node sits on it,
+   open at any time with no pathing, but it takes a Pitch point committed there to start levelling that element. It
+   also stops physical being a free tree just from the way the game is played.
+   Mocked on the canvas for items 1 and 2 (24 Oct, "Fiat – The web's joints and the Pitch circle"): moving classes or
+   elements alone tops out at 3 of 6 even joints (as now); 6 of 6 needs three classes to swap one element (option B:
+   Paramedic poison to shock, Recruit bleed to poison, Drifter shock to bleed). Waiting on Matt's word.
+3. A new game opens on a blank runner and then the Poacher pick: with the unlocks, a new game should start with the
+   Poacher already chosen.
+4. The first active skill a class unlocks sits behind level 7 / 7 points in its tree: it should come with the first
+   point into that class's tree.
+
+## The endgame chase, built (24-25 Oct): 0.9.0
+
+Matt's go (24 Oct): "everything plus a single balance pass after everything using the new balance method", mockups on
+the canvas ("Fiat – The endgame chase and the web"), the calls in docs/design/endgame_chase.md "The go". Built in
+order, each reviewed, each with its smoke area:
+
+- **The parked four.** Joints B (the Paramedic shock/frost, the Recruit physical/poison, the Drifter fire/bleed; the
+  swapped notables and halves renamed: Defib, Cut-throat, Tear gas, Paramedic's paddles, Drifter's razor, Recruit's
+  gas); the Pitch circle (an element's starter costs a Pitch point and opens it for every class; only an opened
+  element's meter fills; "shut" in the key); a new game starts as the Poacher; each class's first skill comes with
+  the first point in its tree. Overdose went with the Paramedic's poison: Flatline (shock) replaces it
+  (broken_builds.md). SAVE_VERSION 9.
+- **The fight's breakdown.** The Stats room's Last run: "The fight ›", damage by source (guns by name, dots, skills,
+  grenades, rules), what hit you by type, the skills used.
+- **The true pinnacles' mechanics.** The Lineman: a shield of 30% of his HP, 6 s to break it, then a 3 s stun. The
+  Registrar: stamps a skill every 12 s for 5 s; none slotted, red tape (−30% gun damage). The Issuer: prints a man
+  every 8 s, six on you at most. Their uniques beside the old: the Lineman's Tool Bag (backpack; the Ambulance set has
+  the rig), the Registrar's Stamp, the Issuer's Revolver; the first win gives one of the two.
+- **Patterns** (the Workshop's fifth view): break a unique down (asks twice) to keep its power as a one-use pattern;
+  put it on a Rare or better of the same slot for a pinnacle drop, the zone's material and tins. A patterned piece is
+  kept like a unique (never junk, never a contract's).
+- **The loot filter** ("Loot rules" on the Kit's stash bar): up to 8 rules by kind, rarity, slot, weapon, best affix;
+  keep, highlight (an amber edge) or scrap; checked top down as a run comes home, before the Bins; a kept piece is
+  never sold or binned; a unique, set piece, mythic or patterned piece is never scrapped; the runner's own come-back
+  kit is spared; a new rule starts off.
+- **The collection** (the Record's "The collection ›"): uniques and mythics found, sites by level marks, classes at
+  50, the order beaten, sets complete; every unique listed, the unfound by slot. No power.
+- **Kits and build codes.** Three saved kits a runner in the Kit's empty pick panel (Wear, Save worn, asks twice over
+  one); a build code in Training (Copy build, Paste build, the plan and the reset's price before Retrain; versioned,
+  the class's own perks only).
+- **The language pass** (skills.md §11, the chase's words): two reviewers, my calls; banned words off screen (Kit not
+  loadout, perk not node, level not depth), one meaning a word (stamped, printed, build code), the broken pattern
+  lines fixed, the hidden consequences said before the press.
+- **The harness plays one save** (step 8). Each element build is a read from a new game as the Poacher, taking its
+  class when it opens (its head, or Kev's first story for the Drifter); the crew swaps after the target reaches the
+  cap. A checkpoint run writes the save as the Radio opens; every build plays 4 h from it at the checkpoint runner's
+  level, points and kit (the parity table and gate P). balance.bat rewritten; the plain-class reads retired (their
+  floor row goes with them); the campaign gates now read the Poacher's route on every read.
+- **Art.** tools/pixellab_chase_art_manifest.json (23 jobs, about $1.84): the three uniques and the 20 web nodes with
+  no picture (the renamed six and the Recruit's fourteen fillers), checked against pixellab_lessons.md; art.flag set.
+- VERSION 0.9.0. Smoke: the cloud's full run green but for its known art-less reds (the watcher was off).
