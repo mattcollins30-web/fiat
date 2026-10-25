@@ -6892,3 +6892,21 @@ From the full review (docs/review/{game,ui,tools}.md), every recommendation Matt
 - The second review (docs/review/game2.md, ui2.md, tools2.md, manifests.md): tempering's price and its wear cap at the
   heart of the stall, OVER_LEVEL_FREE clamped out in the campaign, the Fence's arm never clearing, the temper tile not
   saying why it's blocked, gate 17's window and P3's odds measured so they can't pass; the outstanding art and sound.
+
+## The second review's fixes (25 Oct, Matt's go on all of it)
+- One ask-twice arm (scripts/ui/arm.gd) for the Fence's rows, Training's reset, the Workshop's break, the Kit's bin and
+  kit save: armed on what it would act on (the Fence's on the very pieces, "Sell N?"), gone after 8 s, on another pick,
+  or out of the room. The temper tile says why it can't, and "Needs N scrap" when short.
+- Tempering: priced by item level (100 scrap × 1.035 a level past 20), its tins four times the piece's worth; it grows
+  the piece's flat lines as a deeper drop's; not on a rig, pack or charm; a piece's first three tempers don't raise the
+  level to wear it. The bot tempers the gun first.
+- The campaign's over-level pay reads your level against the site's gear (D12's clamp gone), so OVER_LEVEL_FREE 3
+  bites. The Weed Burner's +40% fire off. Paragon tins add again. A death clears the dead runner's skills; greed's
+  finds counted once a search; a class's own tab counted kept at the Fence.
+- Under a roof the rain bites nothing and pays no forecast; the card says Roofed; the sound is rain on the roof
+  (tools/sound_manifest.json `rain_roof`, the rain until made: `powershell -File tools/eleven_batch.ps1 -Only rain_roof`).
+- Boss dens: the fight reads art/fight_boss/<boss>_plate and _cover while he's out (tools/pixellab_boss_backdrops,
+  7 bosses, seeds 105000-105013, a Manager test pair first; not run). tools/art_lint.py and tools\art.bat.
+- The summary: gate 17 at the bot's pace, P1 the campaign's with bails, P3 on first clears and heads, P6 bot play,
+  parity twice a build on the mean, each read's ending named. .gitattributes: .bat and .ps1 CRLF.
+- The chase art flagged again for the art session (it wasn't open the first time). Smoke 246 green.
